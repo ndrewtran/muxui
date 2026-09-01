@@ -72,7 +72,7 @@ export function renderFamilyPlan(entry, fixture, runtime) {
     }
     case 'ProgressBar': {
       const value = entry.state === 'indeterminate' ? undefined : entry.state === 'complete' ? 100 : data.values.progress;
-      return h(p.Root, { ...props, label: copy, value }, h(p.Header, null, h(p.Label, null, copy), h(p.Value, null, entry.state === 'indeterminate' ? 'Loading' : `${value}%`)), h(p.Track, null, h(p.Indicator, { value })));
+      return h(p.Root, { ...props, label: copy, value, 'data-complete': entry.state === 'complete' ? 'true' : undefined }, h(p.Header, null, h(p.Label, null, copy), h(p.Value, null, entry.state === 'indeterminate' ? 'Loading' : `${value}%`)), h(p.Track, null, h(p.Indicator, { value })));
     }
     case 'Separator': return h(p.Separator, props);
     case 'ToggleButton': return h(p.ToggleButton, props, copy);
@@ -114,7 +114,7 @@ export function renderFamilyPlan(entry, fixture, runtime) {
     case 'ColorSwatchPicker': {
       return h(p.Root, { ...props, 'aria-label': copy, defaultValue: entry.state === 'selected' ? colorValue(model.selected.color, p) : undefined }, data.items.map((item) => h(p.Item, { ...disabledProps, key: item.id, id: item.id, color: item.color }, h(ColorSwatchPackage.ColorSwatch, disabledProps))));
     }
-    case 'ColorWheel': return h(p.Root, { ...props, 'aria-label': copy, outerRadius: 12, innerRadius: 8, defaultValue: colorValue(data.color, p) }, h(p.Track, null), h(p.Thumb, null));
+    case 'ColorWheel': return h(p.Root, { ...props, 'aria-label': copy, outerRadius: 96, innerRadius: 64, defaultValue: colorValue(data.color, p) }, h(p.Track, null), h(p.Thumb, null));
     case 'ComboBox': return h(p.Root, { ...props, label: fieldProps('ComboBox').label, defaultSelectedKey: entry.state === 'selected' ? model.selected.item : undefined }, h(p.Label, null, fieldProps('ComboBox').label), h(p.InputGroup, null, h(p.Input, { placeholder: fieldProps('ComboBox').placeholder }), h(p.Trigger)), h(p.Popover, null, h(p.ListBox, null, data.items.map((item, index) => h(p.Item, { key: item, id: item, textValue: item }, item)))));
     case 'GridList': { const items = entry.state === 'empty' ? [] : data.items; return h(p.Root, { ...props, 'aria-label': copy, selectionMode: entry.state === 'selected' ? 'single' : undefined, defaultSelectedKeys: entry.state === 'selected' ? [model.selected.itemId] : undefined }, items.map((item, index) => h(p.Item, { ...disabledProps, key: item.id ?? item, id: item.id ?? item, textValue: typeof item === 'object' ? item.label ?? item.name ?? String(item.value ?? item.id) : String(item) }, textItem(item, index)))); }
     case 'ListBox': { const items = entry.state === 'empty' ? [] : data.items; return h(p.Root, { ...props, 'aria-label': copy, selectionMode: entry.state === 'selected' ? 'single' : undefined, defaultSelectedKeys: entry.state === 'selected' ? [model.selected.itemId] : undefined }, items.map((item, index) => h(p.Item, { ...disabledProps, key: item.id ?? item, id: item.id ?? item, textValue: typeof item === 'object' ? item.label ?? item.name ?? String(item.value ?? item.id) : String(item) }, textItem(item, index)))); }

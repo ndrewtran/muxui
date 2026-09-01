@@ -12,7 +12,10 @@ const appRoot = resolve(import.meta.dirname, '..');
 const host = '127.0.0.1';
 const serverTimeoutMs = 90_000;
 const storyTimeoutMs = 15_000;
-const testTimeoutMs = 180_000;
+// The gate intentionally executes 53 family proofs in both color schemes in
+// addition to the full axe sweep. Keep a bounded budget that accommodates the
+// 106 real Storybook navigations on slower CI hosts.
+const testTimeoutMs = 420_000;
 
 function browserCandidates() {
   return [
@@ -216,6 +219,10 @@ async function waitForDocumentAnimations(page) {
     document.getAnimations().forEach((animation) => animation.cancel());
     await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
   });
+  // Overlay and lifecycle stories settle their open/close attributes on a
+  // 300ms timer. Let that deterministic transition finish before axe samples
+  // opacity-blended text colors.
+  await page.waitForTimeout(350);
 }
 
 async function runAxe(page, contextSelector) {
@@ -259,6 +266,37 @@ async function waitForInteractionClosed(page, family) {
   }, { triggerSelector: locators.trigger, overlaySelector: locators.overlay }, { timeout: storyTimeoutMs });
 }
 
+async function waitForBrowserProof(page, story, baseUrl, scheme) {
+  const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+  await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, scheme);
+  try {
+    await page.waitForFunction(() => document.querySelector('[data-muxui-browser-proof-status="passed"], [data-muxui-browser-proof-status="failed"]'), { timeout: storyTimeoutMs });
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      url: location.href,
+      body: document.body?.innerText?.slice(0, 800),
+      proofError: document.querySelector('[data-muxui-browser-proof-error]')?.getAttribute('data-muxui-browser-proof-error'),
+      storybookError: document.querySelector('.sb-errordisplay')?.textContent?.slice(0, 800),
+    })).catch(() => ({ url: '', body: '', storybookError: '' }));
+    throw new Error(`${scheme} ${story.id} Browser proof did not complete: ${JSON.stringify(diagnostic)}`, { cause: error });
+  }
+  const proofErrorLocator = page.locator('[data-muxui-browser-proof-error]');
+  const proofError = await proofErrorLocator.count() > 0
+    ? await proofErrorLocator.first().getAttribute('data-muxui-browser-proof-error')
+    : null;
+  assert.equal(proofError, null, `${scheme} ${story.id} Browser proof failed: ${proofError ?? ''}`);
+  const failure = await page.evaluate(() => {
+    const element = document.querySelector('.sb-errordisplay');
+    if (!element) return null;
+    const style = getComputedStyle(element);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0'
+      ? element.textContent?.slice(0, 200) ?? 'Storybook error'
+      : null;
+  });
+  assert.equal(failure, null, `${scheme} ${story.id} Browser proof reported a Storybook error: ${failure ?? ''}`);
+}
+
 /** Select can open while focus remains on Storybook's body; move focus into its dialog before Escape. */
 async function focusInteractionOverlayForDismissal(page, family) {
   if (family !== 'Select') return;
@@ -276,6 +314,100 @@ async function focusInteractionOverlayForDismissal(page, family) {
     const overlay = document.querySelector(`${overlaySelector}:not([hidden])`);
     return overlay instanceof HTMLElement && (overlay === document.activeElement || overlay.contains(document.activeElement));
   }, locators.overlay, { timeout: storyTimeoutMs });
+}
+
+async function assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme) {
+  const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+  await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, scheme);
+  const input = page.locator('.muxui-autocomplete input');
+  await input.focus();
+  await page.waitForFunction(() => {
+    const list = document.querySelector('.muxui-autocomplete-list');
+    return Boolean(list && !list.hasAttribute('hidden') && document.querySelectorAll('.muxui-autocomplete-option').length === 3);
+  });
+  const disabled = page.locator('.muxui-autocomplete-option[data-disabled="true"]').first();
+  assert.equal(await disabled.getAttribute('aria-disabled'), 'true');
+  await disabled.evaluate((node) => node.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+  assert.equal(await input.inputValue(), '', 'disabled options do not select on pointer activation');
+
+  for (let index = 0; index < 3; index += 1) {
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => {
+      const inputElement = document.querySelector('.muxui-autocomplete input');
+      const activeId = inputElement?.getAttribute('aria-activedescendant');
+      const active = activeId ? document.getElementById(activeId) : null;
+      return Boolean(active) && active.getAttribute('aria-disabled') !== 'true';
+    });
+    const activeId = await input.getAttribute('aria-activedescendant');
+    const active = activeId ? page.locator(`#${activeId}`) : undefined;
+    assert.ok(active, 'ArrowDown must expose an active option');
+    assert.equal(await active.getAttribute('aria-disabled'), null, 'ArrowDown skips disabled options');
+    assert.equal((await active.textContent())?.trim(), 'Enabled', 'the enabled option is the only keyboard target');
+  }
+}
+
+async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
+  await page.emulateMedia({
+    colorScheme: 'light',
+    contrast: 'more',
+    forcedColors: 'active',
+    reducedMotion: 'reduce',
+  });
+  const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent('colorScheme:light;direction:rtl')}`;
+  await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, 'light');
+  await waitForDocumentAnimations(page);
+  const modes = await page.evaluate(() => ({
+    direction: document.documentElement.getAttribute('data-muxui-direction'),
+    dir: document.documentElement.dir,
+    forcedColors: window.matchMedia('(forced-colors: active)').matches,
+    highContrast: window.matchMedia('(prefers-contrast: more)').matches,
+  }));
+  assert.deepEqual(modes, {
+    direction: 'rtl',
+    dir: 'rtl',
+    forcedColors: true,
+    highContrast: true,
+  }, 'Storybook must expose RTL, high-contrast, and forced-colors modes to the rendered story');
+  await page.addScriptTag({ content: axe.source });
+  const result = await runAxe(page);
+  assert.equal(
+    result.violations.length,
+    0,
+    `forced-colors/high-contrast/rtl ${story.id} has axe violations:\n${formatViolations(result.violations)}`,
+  );
+  const highContrastStoryUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(contrastStory.id)}&viewMode=story&globals=${encodeURIComponent('colorScheme:light;direction:rtl')}`;
+  await page.goto(highContrastStoryUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, 'light');
+  await waitForDocumentAnimations(page);
+  const forcedContrastStyle = await page.evaluate(() => {
+    const selected = [...document.querySelectorAll('.muxui-storybook-state')]
+      .find((section) => section.querySelector('h3')?.textContent === 'selected');
+    const indicator = selected?.querySelector('.muxui-checkbox-indicator');
+    if (!indicator) throw new Error('Checkbox selected indicator missing from high-contrast proof');
+    const style = getComputedStyle(indicator);
+    return { borderWidth: style.borderTopWidth, borderColor: style.borderTopColor, backgroundColor: style.backgroundColor };
+  });
+  await page.emulateMedia({ contrast: 'no-preference', forcedColors: 'none' });
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await waitForStory(page, 'light');
+  await waitForDocumentAnimations(page);
+  const standardContrastStyle = await page.evaluate(() => {
+    const selected = [...document.querySelectorAll('.muxui-storybook-state')]
+      .find((section) => section.querySelector('h3')?.textContent === 'selected');
+    const indicator = selected?.querySelector('.muxui-checkbox-indicator');
+    if (!indicator) throw new Error('Checkbox selected indicator missing from standard-contrast proof');
+    const style = getComputedStyle(indicator);
+    return { borderWidth: style.borderTopWidth, borderColor: style.borderTopColor, backgroundColor: style.backgroundColor };
+  });
+  assert.notDeepEqual(forcedContrastStyle, standardContrastStyle, 'prefers-contrast/forced-colors must change a real component style');
+  await page.emulateMedia({
+    colorScheme: 'light',
+    contrast: 'no-preference',
+    forcedColors: 'none',
+    reducedMotion: 'no-preference',
+  });
 }
 
 test('all Mux UI React Storybook families are axe-clean in light and dark', { timeout: testTimeoutMs }, async () => {
@@ -304,17 +436,26 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
     const stories = Object.values(index.entries).filter(({ type }) => type === 'story');
     const defaults = stories.filter(({ name }) => name === 'Default');
     const states = stories.filter(({ name }) => name === 'States');
+    const browserProofs = stories.filter(({ name }) => name?.toLowerCase() === 'browser proof');
+    const buttonStates = states.find((story) => storyFamily(story) === 'Button');
+    const checkboxStates = states.find((story) => storyFamily(story) === 'Checkbox');
+    const autocompleteInteraction = stories.find(({ name }) => name === 'Disabled items keyboard navigation');
     const expectedFamilies = new Set(manifest.families.map(({ family }) => family));
     assert.equal(expectedFamilies.size, 53, 'the generated Storybook manifest must contain 53 families');
     assert.equal(defaults.length, expectedFamilies.size, 'Storybook must expose one Default story for every family');
     assert.equal(states.length, expectedFamilies.size, 'Storybook must expose one States story for every family');
+    assert.equal(browserProofs.length, expectedFamilies.size, 'Storybook must expose one Browser proof story for every family');
     assert.deepEqual(new Set(defaults.map(storyFamily)), expectedFamilies, 'Default stories must cover every manifest family');
     assert.deepEqual(new Set(states.map(storyFamily)), expectedFamilies, 'States stories must cover every manifest family');
+    assert.deepEqual(new Set(browserProofs.map(storyFamily)), expectedFamilies, 'Browser proof stories must cover every manifest family');
     assert.deepEqual(
       new Set(defaults.map(storyFamily)),
       new Set(states.map(storyFamily)),
       'Default and States stories must cover the same families',
     );
+    assert.ok(autocompleteInteraction, 'Storybook must expose the disabled-item Autocomplete interaction story');
+    assert.ok(buttonStates, 'Storybook must expose the Button States story for focused platform-mode proof');
+    assert.ok(checkboxStates, 'Storybook must expose the Checkbox States story for focused contrast proof');
 
     browser = await chromium.launch({ executablePath, headless: true });
     const page = await browser.newPage();
@@ -322,6 +463,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
     page.setDefaultTimeout(storyTimeoutMs);
 
     for (const scheme of ['light', 'dark']) {
+      await assertDisabledAutocompleteKeyboard(page, baseUrl, autocompleteInteraction, scheme);
       for (const story of [...defaults, ...states]) {
         try {
           const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
@@ -339,9 +481,12 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
               0,
               `${scheme} ${story.id} (${family}) open portal has axe violations:\n${formatViolations(portalResult.violations)}`,
             );
-            await focusInteractionOverlayForDismissal(page, family);
-            await page.keyboard.press('Escape');
-            await waitForInteractionClosed(page, family);
+            const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
+            if (!controlledOpen) {
+              await focusInteractionOverlayForDismissal(page, family);
+              await page.keyboard.press('Escape');
+              await waitForInteractionClosed(page, family);
+            }
           }
           const result = await runAxe(page);
           assert.equal(
@@ -368,6 +513,12 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
         }
       }
     }
+    for (const story of browserProofs) {
+      for (const scheme of ['light', 'dark']) {
+        await waitForBrowserProof(page, story, baseUrl, scheme);
+      }
+    }
+    await assertPlatformModeCoverage(page, baseUrl, buttonStates, checkboxStates);
     await page.close();
   } finally {
     await browser?.close();

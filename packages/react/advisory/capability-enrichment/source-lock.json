@@ -1,0 +1,883 @@
+{
+  "schema": "muxui-react-capability-enrichment-source-lock-v1",
+  "policy": {
+    "immutableSources": true,
+    "noMovingRefs": true,
+    "noRuntimeDependency": true,
+    "retainedCheckoutOnly": true
+  },
+  "sources": {
+    "reactAriaComponents": {
+      "commit": "5ecb3333001313e83898cd07644227897e3bae1f",
+      "files": [
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Autocomplete.mdx",
+          "blob": "d955f28f353e6c74157521c7dc3b6a68fea198f2"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Breadcrumbs.mdx",
+          "blob": "2b60dd90cbabb9f62e1fb6943b84d0e67ec46d1f"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Button.mdx",
+          "blob": "33478c4307cd0574d37db503919f777886ad3648"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Calendar.mdx",
+          "blob": "cd73c8e7adf10ee23241ec468a7be63f78b6fcda"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Checkbox.mdx",
+          "blob": "c8afd936c8bb8b7cfcea2c977d1b72a36bc156c7"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/CheckboxGroup.mdx",
+          "blob": "3c84272973ba6d71518f1ed11c5ad0ae1ea67b2b"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorArea.mdx",
+          "blob": "13befb871add2bdfbad8280079af7f71d05415d3"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorField.mdx",
+          "blob": "2ff529d64416a1d43457e927b0e3a42453ad39f0"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorPicker.mdx",
+          "blob": "7203218524d7512d7bdecd9fdd9fdbdf35fd91aa"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorSlider.mdx",
+          "blob": "f90b1c3b1ed06346f22c1dea4472280bf34b033e"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorSwatch.mdx",
+          "blob": "f4435671cd4e3499eb1f68ba55a977a6e834db32"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorSwatchPicker.mdx",
+          "blob": "7d296a4dab4f82d9eefe3e5d9f3e954b55892492"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ColorWheel.mdx",
+          "blob": "9a88d7fb4adf8fca8e8e34bfa5cdc4c2315fb79c"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ComboBox.mdx",
+          "blob": "765e1785af2da6b0b06af5909809b3f53c5903d0"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/DateField.mdx",
+          "blob": "b2e944de20c80ab3c17503de89bbfc9ec16bb308"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/DatePicker.mdx",
+          "blob": "f0dd8eecb92499ff1a503315b718d7b2ff86a594"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/DateRangePicker.mdx",
+          "blob": "176825ba86866e01745de2a81589154bc3d87019"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Disclosure.mdx",
+          "blob": "1197d80e1df6d0436529f1522338988ef66a6a19"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/DisclosureGroup.mdx",
+          "blob": "68cc4c4908ebf5b73e59be277c9dec70890cc3fd"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/DropZone.mdx",
+          "blob": "dcf1cb17703ea2c9b4dca426135f81f7f33d2cb8"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/FileTrigger.mdx",
+          "blob": "fd6477aa1667aea5cbe827e1f14805b9d2f415f9"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Form.mdx",
+          "blob": "3442b109ac21206f7581ddb07d6224b526d5b446"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/GridList.mdx",
+          "blob": "cd378e598ea43dff22c5d5fb05d8d397aa2d7e32"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Group.mdx",
+          "blob": "9eeaaa6cb09f2ed9db868331107acd3c4bcd690d"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Link.mdx",
+          "blob": "4b87b3f713e93cd7da8f7ccf1e86d2706386415f"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ListBox.mdx",
+          "blob": "80efcbd5d9290ffc98b0a6f2dd18b3e3443b17a5"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Menu.mdx",
+          "blob": "f90d86cfceebdd9bd855f53d21573b6beb2098d0"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Meter.mdx",
+          "blob": "483c0916f31076d5f6b540fe1556913481e62da3"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Modal.mdx",
+          "blob": "61bb957eb6f50df8eaf51de890d3e37c91578dc3"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/NumberField.mdx",
+          "blob": "a65e2600ebd1fa402f8310afb94336ed38290ab0"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Popover.mdx",
+          "blob": "baa40cbd137de66a8a01a6539c2aa1c4f7335407"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/PreviewTrigger.mdx",
+          "blob": "fe39cdb3472cc08bc6c53493a0d92bc68a03ba15"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ProgressBar.mdx",
+          "blob": "97bd9904cc4600b318a3444bad672519c9848642"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/RadioGroup.mdx",
+          "blob": "ec2a617cbb488ca9fef7a99339e1ad1bef04d93a"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/RangeCalendar.mdx",
+          "blob": "07bcca98b569c9062ee32ad5cdd756906060b57d"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/SearchField.mdx",
+          "blob": "cdcbe510334a9840d32aa05f1569bf61d095537e"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Select.mdx",
+          "blob": "9127c0d87cfbe90783ee29471000a96006817441"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Separator.mdx",
+          "blob": "b9a52a4cfadd031d1ce920ec137ff5d376ceb8a6"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Slider.mdx",
+          "blob": "893ff592436bedc6eab238960051f9f3e39b33f5"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Switch.mdx",
+          "blob": "f4d28c8a4642082136a87e9e7bebe3f0d8d33524"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Table.mdx",
+          "blob": "d60cfaebcccd9359480217fac6efe32411799480"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Tabs.mdx",
+          "blob": "ad1e3ea5b5a0463f597e370fd5aacaa8892aa7f6"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/TagGroup.mdx",
+          "blob": "6a670ef953e51540ec4808715732fcfaaa580d69"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/TextField.mdx",
+          "blob": "a76f2d374c8219f5c0e76d6950dcb0bbd3db8157"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/TimeField.mdx",
+          "blob": "df6ecaa7620a37259851141f13010059785e945b"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Toast.mdx",
+          "blob": "cd203171a6e92dcdda03436fc9116d6b760af90d"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ToggleButton.mdx",
+          "blob": "cd6e97c03c9cd6effa738be0b60ac358e683e153"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/ToggleButtonGroup.mdx",
+          "blob": "543cccd9c9ba67468ce8e2bece3918c09e1ff932"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/TokenField.mdx",
+          "blob": "b634f87a53830cdf3eb1dd3101848fe74915c7b1"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Toolbar.mdx",
+          "blob": "28632e52cc6eb5ebecd32e1b88b333b85ca65982"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Tooltip.mdx",
+          "blob": "19d7e98967042d8d97e6c6019efd1c0a7959a50f"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Tree.mdx",
+          "blob": "590a4ce1c26876f01496e1e27a969984dfad14c7"
+        },
+        {
+          "path": "packages/dev/s2-docs/pages/react-aria/Virtualizer.mdx",
+          "blob": "4cffc5d34da4af18adce7d84ee11bf1d8357d790"
+        },
+        {
+          "path": "packages/react-aria-components/src/Autocomplete.tsx",
+          "blob": "e8fadc0f6ebe5801a28b26ba7ac650638384ccb4"
+        },
+        {
+          "path": "packages/react-aria-components/src/Breadcrumbs.tsx",
+          "blob": "cb5b3677d8add0e7c475e32f93ee493079a8d1dc"
+        },
+        {
+          "path": "packages/react-aria-components/src/Button.tsx",
+          "blob": "d7a662042654f49a898fc423daa751783393a019"
+        },
+        {
+          "path": "packages/react-aria-components/src/Calendar.tsx",
+          "blob": "b6573a380d73fcebdfc507656118bdee439ede9b"
+        },
+        {
+          "path": "packages/react-aria-components/src/Checkbox.tsx",
+          "blob": "45404c4eba8c480fcc33d9e3211731e03238019e"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorArea.tsx",
+          "blob": "3281c24be973d21cd599ebbca566e09eaa9e0d4c"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorField.tsx",
+          "blob": "2f4d2d8be6e4043fafa78e1a4ac3825ebcf68fe8"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorPicker.tsx",
+          "blob": "05109485590b01ca6498d362fa6b99451f270a89"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorSlider.tsx",
+          "blob": "d603fe4e4377f09965a152fda192c66c389bde97"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorSwatch.tsx",
+          "blob": "64f554f3583e20918a7de13dd442deb85426b4ed"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorSwatchPicker.tsx",
+          "blob": "85efcdc9d0227f7727a0070a3e576e0f7e58cb9c"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorThumb.tsx",
+          "blob": "ba28399f7dbd9e96b40fd5bf390258f1b6a0dfe9"
+        },
+        {
+          "path": "packages/react-aria-components/src/ColorWheel.tsx",
+          "blob": "93fa61302f2ee1af26caeab4c6f1d02460297b1d"
+        },
+        {
+          "path": "packages/react-aria-components/src/ComboBox.tsx",
+          "blob": "1899cb90ed9e942828ca4b3672418d1b3bfe5ec9"
+        },
+        {
+          "path": "packages/react-aria-components/src/DateField.tsx",
+          "blob": "502966301e321e48ca7a545f8f241e1fcd00fac7"
+        },
+        {
+          "path": "packages/react-aria-components/src/DatePicker.tsx",
+          "blob": "0f6484a159d10ecad0d05025fceb2673573d15fb"
+        },
+        {
+          "path": "packages/react-aria-components/src/Disclosure.tsx",
+          "blob": "c4b414a6cda23a30b05ac9b8933f1450783f53e9"
+        },
+        {
+          "path": "packages/react-aria-components/src/DropZone.tsx",
+          "blob": "ec6829a9e6a9fc0e68d4fe961d01ffcda56fbb37"
+        },
+        {
+          "path": "packages/react-aria-components/src/FileTrigger.tsx",
+          "blob": "7564a8a500ed479862e03b7445d897b7607c6a1f"
+        },
+        {
+          "path": "packages/react-aria-components/src/Form.tsx",
+          "blob": "e7ff9fa57ef6a7d672cfcee768e3f29c035230cc"
+        },
+        {
+          "path": "packages/react-aria-components/src/GridList.tsx",
+          "blob": "22ea560aef62b20de4ca37be162b95345f790534"
+        },
+        {
+          "path": "packages/react-aria-components/src/Group.tsx",
+          "blob": "87aa7f8db37b4672eb492a10a5115322b8734dbd"
+        },
+        {
+          "path": "packages/react-aria-components/src/Link.tsx",
+          "blob": "bb7f9d5d5a89edf92ff100af3c01a27dca4eca76"
+        },
+        {
+          "path": "packages/react-aria-components/src/ListBox.tsx",
+          "blob": "55c8e8d9c5bff197b4ea00a0038f7a9518f38e9f"
+        },
+        {
+          "path": "packages/react-aria-components/src/Menu.tsx",
+          "blob": "f88987a8ef9f83d8d948b761f67ebcdebf4fb9a2"
+        },
+        {
+          "path": "packages/react-aria-components/src/Meter.tsx",
+          "blob": "d2060e40f95346f8b800d47a4683ae4fd7e8e9a6"
+        },
+        {
+          "path": "packages/react-aria-components/src/Modal.tsx",
+          "blob": "d8312073fd6be6ce68150738e52e38da221b80e7"
+        },
+        {
+          "path": "packages/react-aria-components/src/NumberField.tsx",
+          "blob": "d664883aa2c86ee4cba9bdbd61ca477c2998e1c3"
+        },
+        {
+          "path": "packages/react-aria-components/src/Popover.tsx",
+          "blob": "8d15321a51ff933c96b31b174a3a5d42fb529a3f"
+        },
+        {
+          "path": "packages/react-aria-components/src/PreviewTrigger.tsx",
+          "blob": "2e86981623b9b738b7229023f831715814df8491"
+        },
+        {
+          "path": "packages/react-aria-components/src/ProgressBar.tsx",
+          "blob": "c57ee4fbbc1ffeda7a44fc9548d2dd703b5d9bab"
+        },
+        {
+          "path": "packages/react-aria-components/src/RadioGroup.tsx",
+          "blob": "4f9f59dfe8fcb611da2deb516e2d4ce296168931"
+        },
+        {
+          "path": "packages/react-aria-components/src/SearchField.tsx",
+          "blob": "6b39066b84e2b2d65e4ba42519c89bf22f02aad3"
+        },
+        {
+          "path": "packages/react-aria-components/src/Select.tsx",
+          "blob": "220f598e792880a24dc4d2cd2ce5a44328d81b88"
+        },
+        {
+          "path": "packages/react-aria-components/src/Separator.tsx",
+          "blob": "fa80a6633b4850d4bc5f01ccbd54bb15ab79a1f1"
+        },
+        {
+          "path": "packages/react-aria-components/src/Slider.tsx",
+          "blob": "7129ae20c184d34b9367e40220e5f86d089812b3"
+        },
+        {
+          "path": "packages/react-aria-components/src/Switch.tsx",
+          "blob": "b81cd69c0b34b145cb74a3ffbaab81cfcbed2eb5"
+        },
+        {
+          "path": "packages/react-aria-components/src/Table.tsx",
+          "blob": "b4c8c9f3b8cd576f6863d635e5df76598d209968"
+        },
+        {
+          "path": "packages/react-aria-components/src/Tabs.tsx",
+          "blob": "d2932620df585c4de92eafa6d5d9f499ef875dbf"
+        },
+        {
+          "path": "packages/react-aria-components/src/TagGroup.tsx",
+          "blob": "878be7776eb79e562319c20c9ecafdab9916ae8e"
+        },
+        {
+          "path": "packages/react-aria-components/src/TextField.tsx",
+          "blob": "0cdfb660904a9fb8e0ea4d283ab9fa4d088dbd14"
+        },
+        {
+          "path": "packages/react-aria-components/src/Toast.tsx",
+          "blob": "4c7315a5c6721aa77bdbd2635bbdcf9d24e26166"
+        },
+        {
+          "path": "packages/react-aria-components/src/ToggleButton.tsx",
+          "blob": "d449ac0297e621641bde742b8e09e7c1c7aaaf6a"
+        },
+        {
+          "path": "packages/react-aria-components/src/ToggleButtonGroup.tsx",
+          "blob": "057dfb1c521504106acdf3f9861a7c14800f4eac"
+        },
+        {
+          "path": "packages/react-aria-components/src/TokenField.tsx",
+          "blob": "ddc96c403e327db859a9a78f60521a4c37b131fd"
+        },
+        {
+          "path": "packages/react-aria-components/src/Toolbar.tsx",
+          "blob": "057dc0ba8246ee62727dbb87b73e3c7d494b2590"
+        },
+        {
+          "path": "packages/react-aria-components/src/Tooltip.tsx",
+          "blob": "fc426d9f79a210acc080800b830306e0ef65b440"
+        },
+        {
+          "path": "packages/react-aria-components/src/Tree.tsx",
+          "blob": "85e47c5aaa0775877b300918c1c02e13749f1ca6"
+        },
+        {
+          "path": "packages/react-aria-components/src/Virtualizer.tsx",
+          "blob": "62cd214d7a93c03ff2120998fa3af0de426585d8"
+        },
+        {
+          "path": "packages/react-aria/src/dnd/useDrop.ts",
+          "blob": "af3248817e97f37ccef868baece45fd72bcf46f8"
+        },
+        {
+          "path": "packages/react-aria/src/dnd/utils.ts",
+          "blob": "6d03fcdc7a6895cc5a4ae273240b40daed3e449e"
+        },
+        {
+          "path": "packages/react-aria/src/overlays/Overlay.tsx",
+          "blob": "4cd974a4eda5678536e8742fa88be8f8fea10b75"
+        },
+        {
+          "path": "packages/react-aria/src/overlays/useModalOverlay.ts",
+          "blob": "654c5d751de747bcad69a3d02b71e3f031e3c8a7"
+        },
+        {
+          "path": "packages/react-aria/src/overlays/useOverlayPosition.ts",
+          "blob": "b50f57525de131c7ffc6ee7499b7e21269f60c91"
+        },
+        {
+          "path": "packages/react-aria/src/slider/useSliderThumb.ts",
+          "blob": "100b713eb182c726c77e1319db50956d743e56ad"
+        },
+        {
+          "path": "packages/react-aria/src/toast/useToast.ts",
+          "blob": "ce80225dccbbf65b862d29b7c9e21cbf6959b378"
+        },
+        {
+          "path": "packages/react-aria/src/toast/useToastRegion.ts",
+          "blob": "af05a2a475a9f3a03014ec8275b6b40b4e5584f7"
+        },
+        {
+          "path": "packages/react-aria/src/tooltip/usePreviewTrigger.ts",
+          "blob": "103a21c0297f7133eb5ff454d48e7e59c497c2c1"
+        },
+        {
+          "path": "packages/react-aria/src/tooltip/useTooltipTrigger.ts",
+          "blob": "4c392242cb8c24653dd155aa8632f97ca0377154"
+        },
+        {
+          "path": "packages/react-stately/src/disclosure/useDisclosureGroupState.ts",
+          "blob": "d63d7c4d1620bd9e1d1cc74de1f825e9d8f950c6"
+        },
+        {
+          "path": "packages/react-stately/src/overlays/useOverlayTriggerState.ts",
+          "blob": "5c1378cda80719966308074fc66a9d7603ed20e9"
+        },
+        {
+          "path": "packages/react-stately/src/slider/useSliderState.ts",
+          "blob": "ccc1d755665c25c716a67f308532456284b5b87d"
+        },
+        {
+          "path": "packages/react-stately/src/toast/useToastState.ts",
+          "blob": "49817edce3e90abdb0f5970baa1cbd0115f91796"
+        },
+        {
+          "path": "packages/react-stately/src/tooltip/useTooltipTriggerState.ts",
+          "blob": "34435a9cdbb57a0d94a4a75484473a8fcfe840c7"
+        },
+        {
+          "path": "packages/react-stately/src/virtualizer/OverscanManager.ts",
+          "blob": "cc25053ba250138e23c14e958a6d5f1193cf2ba5"
+        },
+        {
+          "path": "packages/react-stately/src/virtualizer/Virtualizer.ts",
+          "blob": "bfa3bef8538954c523ae2fd0ef85c5fb13bc3e23"
+        }
+      ]
+    },
+    "baseUi": {
+      "commit": "254f4744f0a241c20697b9eeab33402f4469a081",
+      "documentationFiles": [
+        {
+          "path": "docs/src/app/(docs)/react/components/accordion/page.mdx",
+          "blob": "3cc8ff5231b3c686711985c5b63377433a1ffb18"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/autocomplete/page.mdx",
+          "blob": "6407b7c3274242fd0dde32110b735c06071afd2e"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/button/page.mdx",
+          "blob": "6eb3194185481942882d0462def7499a2879c9ac"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/checkbox-group/page.mdx",
+          "blob": "95e7ec7b01887d3a4fbfff56c70470b7861bcd2b"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/checkbox/page.mdx",
+          "blob": "e24593de35229c9f327849e87c10d08b791d883f"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/collapsible/page.mdx",
+          "blob": "34ad38f46c76eaf019391441c652083d7d832d2b"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/combobox/page.mdx",
+          "blob": "48bd610f74be790c578658492409c908f41ec0df"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/dialog/page.mdx",
+          "blob": "784a3e70a176d04369c2ced9b89cff46db03d3ef"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/form/page.mdx",
+          "blob": "913e36d75727da3b4f9d8dfc5f32c97e9a4adbce"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/menu/page.mdx",
+          "blob": "fcbafc8fb25bee46635b3eddd33f8a38a9034398"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/meter/page.mdx",
+          "blob": "24416675dbe0b63d36de92e30a9394d3231b5909"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/number-field/page.mdx",
+          "blob": "220ba1dcf368bc725ce53dca554b1a59acecd3b4"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/popover/page.mdx",
+          "blob": "98da7125ccd4e5f2b690023536b903275689333a"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/preview-card/page.mdx",
+          "blob": "dfb68bff3904b3b19dd9ea830d83a229778ba1c9"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/progress/page.mdx",
+          "blob": "b5424e40c4b08353a40db6a31755c34d2fb4be79"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/radio-group/types.md",
+          "blob": "ddb1565474616a84853e24eb97043a2599985979"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/select/page.mdx",
+          "blob": "2deeaea78e8450488655addd60b2f83f506dd729"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/slider/page.mdx",
+          "blob": "cdb9284568cdd075926cceedc545b72cf86dc7f4"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/switch/page.mdx",
+          "blob": "d1e416c26a965aa2fe4db12ff59a3b8c4e7614e9"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/tabs/page.mdx",
+          "blob": "bf6ff688878fdea55f811582c50b0f96a7949165"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/toast/page.mdx",
+          "blob": "52496ae36ebc63286067e09faf782ff00a4ae269"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/toggle-group/page.mdx",
+          "blob": "3b84795efda67809661cb63d185ec9230a16936d"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/toggle/page.mdx",
+          "blob": "75eac8711d56a5477e57db5cc196c9e0868f8bda"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/toolbar/page.mdx",
+          "blob": "9c9875af841b66e490b7fb731a827e62ca139225"
+        },
+        {
+          "path": "docs/src/app/(docs)/react/components/tooltip/page.mdx",
+          "blob": "9c0b561b77431c01cb15534a67d8854165b6b844"
+        }
+      ],
+      "files": [
+        {
+          "path": "packages/react/src/accordion/item/AccordionItem.tsx",
+          "blob": "7d23871cd9831a10c60efddb99a9cd32baf4faa3"
+        },
+        {
+          "path": "packages/react/src/accordion/panel/AccordionPanel.tsx",
+          "blob": "236800e17876f559cce7ea2a2c4943e7995b8802"
+        },
+        {
+          "path": "packages/react/src/accordion/root/AccordionRoot.tsx",
+          "blob": "fd4b6b799a984f11dba9245054d1c5d9c7a219bf"
+        },
+        {
+          "path": "packages/react/src/accordion/trigger/AccordionTrigger.tsx",
+          "blob": "346cacc769bec3e3ed8e7d50e03c87abd310ab7b"
+        },
+        {
+          "path": "packages/react/src/autocomplete/item/AutocompleteItem.tsx",
+          "blob": "b6c06d08bd9faf59996b5fe752847751dd6f8798"
+        },
+        {
+          "path": "packages/react/src/autocomplete/root/AutocompleteRoot.tsx",
+          "blob": "a5db3477ccbb2fe403c7a25f60e9d69963cc0fc8"
+        },
+        {
+          "path": "packages/react/src/button/Button.test.tsx",
+          "blob": "eb48e29a6dbd7bea413126fe7a89a28c5275d9a2"
+        },
+        {
+          "path": "packages/react/src/button/Button.tsx",
+          "blob": "494dbc480cedc1da7f36129c803a6a1f56da0eeb"
+        },
+        {
+          "path": "packages/react/src/checkbox-group/CheckboxGroup.tsx",
+          "blob": "d122efdfe919539ab0caffbda2cfe839754d1b0e"
+        },
+        {
+          "path": "packages/react/src/checkbox/indicator/CheckboxIndicator.tsx",
+          "blob": "69d219aa939286783ae28c8925a119a422f62196"
+        },
+        {
+          "path": "packages/react/src/checkbox/root/CheckboxRoot.tsx",
+          "blob": "86fd9eee50794a37570d095d169bf7eaa54cc2b1"
+        },
+        {
+          "path": "packages/react/src/collapsible/panel/CollapsiblePanel.tsx",
+          "blob": "4e7f2ce3a641f95d71ec0ee687ef9ba366b63a03"
+        },
+        {
+          "path": "packages/react/src/collapsible/root/CollapsibleRoot.tsx",
+          "blob": "1c66250eea208a946a50b45757963527ff0b0b96"
+        },
+        {
+          "path": "packages/react/src/collapsible/trigger/CollapsibleTrigger.tsx",
+          "blob": "15b48d774474d25cf1f9f129a54da111fa9d1239"
+        },
+        {
+          "path": "packages/react/src/combobox/item/ComboboxItem.tsx",
+          "blob": "b37dee598f5dbbd93cb9a0794f2b237a51a11c40"
+        },
+        {
+          "path": "packages/react/src/combobox/root/ComboboxRoot.tsx",
+          "blob": "015c785d1880f7e5b4a04e3baa7f7821d9288a0b"
+        },
+        {
+          "path": "packages/react/src/dialog/index.ts",
+          "blob": "e1fe4dbc727c6d244aac4d9d92e63ef4f02193a8"
+        },
+        {
+          "path": "packages/react/src/dialog/portal/DialogPortal.tsx",
+          "blob": "07b73afeb3b55aabfab2284aa91ad72b1ee0016f"
+        },
+        {
+          "path": "packages/react/src/dialog/root/DialogRoot.tsx",
+          "blob": "25efdd801c430eff9412cf424d36b1f256e69d84"
+        },
+        {
+          "path": "packages/react/src/dialog/trigger/DialogTrigger.tsx",
+          "blob": "44dc901a179f1cbaf936ba4aa4b2257d76c3996e"
+        },
+        {
+          "path": "packages/react/src/fieldset/root/FieldsetRoot.tsx",
+          "blob": "482386c82697bcf7dd003240a8bdc1deb3068808"
+        },
+        {
+          "path": "packages/react/src/form/Form.tsx",
+          "blob": "cdea05d4b7356c478150bf2947ed164bd3b6fee9"
+        },
+        {
+          "path": "packages/react/src/index.ts",
+          "blob": "c2c9c5d56de3fcf331d21ef99a85b809bbb2d9e5"
+        },
+        {
+          "path": "packages/react/src/internals/useAnchorPositioning.ts",
+          "blob": "f6e30fb97deaf46e32f21376504f4b0e132b875f"
+        },
+        {
+          "path": "packages/react/src/menu/item/MenuItem.tsx",
+          "blob": "55f12663bd50eec1dd1a299e2cffb6057624f607"
+        },
+        {
+          "path": "packages/react/src/menu/root/MenuRoot.tsx",
+          "blob": "fd12d4427feaafdccf03777828438bf78c2e605e"
+        },
+        {
+          "path": "packages/react/src/meter/indicator/MeterIndicator.tsx",
+          "blob": "c9637e6ce2f3a7d245a8e328838669f754532643"
+        },
+        {
+          "path": "packages/react/src/meter/root/MeterRoot.tsx",
+          "blob": "0089dd6b208d8d45cef071bba920024e9825e059"
+        },
+        {
+          "path": "packages/react/src/meter/track/MeterTrack.tsx",
+          "blob": "15a88d919611bb5ec5284e182836cf485e300a23"
+        },
+        {
+          "path": "packages/react/src/navigation-menu/link/NavigationMenuLink.tsx",
+          "blob": "3c5e2d96b6f595d9e4b435189960d0eb7b125e48"
+        },
+        {
+          "path": "packages/react/src/number-field/decrement/NumberFieldDecrement.tsx",
+          "blob": "04a7a18ebd57de1b5a2654865299b268c90dd04b"
+        },
+        {
+          "path": "packages/react/src/number-field/increment/NumberFieldIncrement.tsx",
+          "blob": "b24ec99dbb84d558abd2826411919fea8182c1a6"
+        },
+        {
+          "path": "packages/react/src/number-field/input/NumberFieldInput.tsx",
+          "blob": "66f3cc6df38fa197995b54b1a85c17ea6dac5567"
+        },
+        {
+          "path": "packages/react/src/number-field/root/NumberFieldRoot.tsx",
+          "blob": "e9277de78cced27dd363949394245b4373591d90"
+        },
+        {
+          "path": "packages/react/src/popover/index.ts",
+          "blob": "fc762c3b9b938f1e6e319aac7c0c3a3f78bd1555"
+        },
+        {
+          "path": "packages/react/src/popover/portal/PopoverPortal.tsx",
+          "blob": "f919d422f1a186233e253e12f83a3f49268a7b25"
+        },
+        {
+          "path": "packages/react/src/popover/positioner/PopoverPositioner.tsx",
+          "blob": "e2fa272effc2a74e118fb3c8a0d0c5e55bc76acf"
+        },
+        {
+          "path": "packages/react/src/popover/root/PopoverRoot.tsx",
+          "blob": "a2ea94ea9aa2a26cde28a1384ea83ade565f3bff"
+        },
+        {
+          "path": "packages/react/src/popover/trigger/PopoverTrigger.tsx",
+          "blob": "61d6b79d0d14476ea646af4a1b7a0fa5256aad23"
+        },
+        {
+          "path": "packages/react/src/preview-card/index.ts",
+          "blob": "76156101bf62f73a746072b665d8917f6f645f5d"
+        },
+        {
+          "path": "packages/react/src/preview-card/positioner/PreviewCardPositioner.tsx",
+          "blob": "812e0a45ab4ccae47f1a0e96e21a70f152ef7a3e"
+        },
+        {
+          "path": "packages/react/src/preview-card/root/PreviewCardRoot.tsx",
+          "blob": "c8ad5e079bb7f40d3dbdc39c153e7998cf699eef"
+        },
+        {
+          "path": "packages/react/src/preview-card/trigger/PreviewCardTrigger.tsx",
+          "blob": "0f72413e0a7486ced2f0cc2a15323224b5d8e5c9"
+        },
+        {
+          "path": "packages/react/src/progress/indicator/ProgressIndicator.tsx",
+          "blob": "d8cbda59a77b13f34d4c0edcafe5cb4aba8ec65d"
+        },
+        {
+          "path": "packages/react/src/progress/root/ProgressRoot.tsx",
+          "blob": "0186a43f98321cec9b2b74e47753971db913fed6"
+        },
+        {
+          "path": "packages/react/src/progress/track/ProgressTrack.tsx",
+          "blob": "1ac1767146216a41f69b9a0ecc6cff1cee2059f8"
+        },
+        {
+          "path": "packages/react/src/radio-group/RadioGroup.tsx",
+          "blob": "5dc238cda7916b4fe2a130f46777e829b5d9a732"
+        },
+        {
+          "path": "packages/react/src/select/item/SelectItem.tsx",
+          "blob": "7a56b592c289310f49b03a3fd18a87eb80ce2f64"
+        },
+        {
+          "path": "packages/react/src/select/root/SelectRoot.tsx",
+          "blob": "3a1e1625ec1fde403ab5186bb9f338ae109db7ee"
+        },
+        {
+          "path": "packages/react/src/separator/Separator.tsx",
+          "blob": "48a07d477a703c3b5ef7dc49431ce43bfc848fa4"
+        },
+        {
+          "path": "packages/react/src/slider/root/SliderRoot.tsx",
+          "blob": "652aeabcbd5a64a55c68ceedb58e504c610392f3"
+        },
+        {
+          "path": "packages/react/src/slider/thumb/SliderThumb.tsx",
+          "blob": "e423ed5f9842699b939d89b7335d9668e2c22161"
+        },
+        {
+          "path": "packages/react/src/switch/root/SwitchRoot.tsx",
+          "blob": "631ed3c050c89595542f15e792b7fba6dd601321"
+        },
+        {
+          "path": "packages/react/src/switch/thumb/SwitchThumb.tsx",
+          "blob": "8ce0c00c0c1fb119a657a3bd40e11d85ff955dd0"
+        },
+        {
+          "path": "packages/react/src/tabs/panel/TabsPanel.tsx",
+          "blob": "e3ccc1c7b81bf6552522c9f55fc8a6dcae9216e8"
+        },
+        {
+          "path": "packages/react/src/tabs/root/TabsRoot.tsx",
+          "blob": "bde4c6bfe012a08a818863be7e8535466ef2e0ec"
+        },
+        {
+          "path": "packages/react/src/tabs/tab/TabsTab.tsx",
+          "blob": "1b18ab9dc4fb7e06f322ea803749fffa19b82097"
+        },
+        {
+          "path": "packages/react/src/toast/index.ts",
+          "blob": "ad3099a17662ecd4c2b08c82460ea7ecbfcfd770"
+        },
+        {
+          "path": "packages/react/src/toast/provider/ToastProvider.tsx",
+          "blob": "f87e70ef83e6379dc929579f25bd3e01a7e98455"
+        },
+        {
+          "path": "packages/react/src/toast/store.ts",
+          "blob": "1ab75c1c60a7c4d9de42c4be05083c3997573f22"
+        },
+        {
+          "path": "packages/react/src/toast/useToastManager.ts",
+          "blob": "5f55cbb59316e0e9527a7f29de4804d6a6a5cf00"
+        },
+        {
+          "path": "packages/react/src/toggle-group/ToggleGroup.tsx",
+          "blob": "6bf8ca99a159cac319c515c167b6b037cbfb070d"
+        },
+        {
+          "path": "packages/react/src/toggle/Toggle.test.tsx",
+          "blob": "aa7b4378cb772877b25eb8b0577b5645250b92f8"
+        },
+        {
+          "path": "packages/react/src/toggle/Toggle.tsx",
+          "blob": "09d7bf6e5105aa2cc8e4a9f975e4e21b3d6773be"
+        },
+        {
+          "path": "packages/react/src/toolbar/link/ToolbarLink.tsx",
+          "blob": "e9024a8228f78759eafece60f09fd954b708b7c1"
+        },
+        {
+          "path": "packages/react/src/toolbar/root/ToolbarRoot.tsx",
+          "blob": "bd524289dde833feed582d0d746007de984719cf"
+        },
+        {
+          "path": "packages/react/src/tooltip/index.ts",
+          "blob": "6e7492ef246c34f90ed24cdbead3047eb4fd9bf0"
+        },
+        {
+          "path": "packages/react/src/tooltip/portal/TooltipPortal.tsx",
+          "blob": "c263da273db6d2a691125d369f6acc707b039707"
+        },
+        {
+          "path": "packages/react/src/tooltip/positioner/TooltipPositioner.tsx",
+          "blob": "0ef6afc40e3b953fe30221d7bb6423d7abab0785"
+        },
+        {
+          "path": "packages/react/src/tooltip/root/TooltipRoot.tsx",
+          "blob": "9f7239dfc8df84dedce0309e231623314ca2a8fc"
+        },
+        {
+          "path": "packages/react/src/tooltip/trigger/TooltipTrigger.tsx",
+          "blob": "606395d0f2f50f83a88b309b23d8967f51739d55"
+        }
+      ]
+    }
+  }
+}

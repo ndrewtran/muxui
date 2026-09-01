@@ -1,7 +1,16 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6181786a10d6eb6f934fbe3c4641fc8e9d054d9295cc33d471cf63c27c762aee
+// @generated-content-sha256: sha256:06e25b9bd343ba2038f85ecaf99e592b2a32a17f0c238cca4ba2be61765a09ca
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
@@ -10,10 +19,12 @@ const binding = {
       "max": 100,
       "min": 0,
       "orientation": "horizontal",
+      "readOnly": false,
       "step": 1
     },
     "events": [
-      "change"
+      "change",
+      "changeEnd"
     ],
     "parts": [
       "root",
@@ -31,6 +42,7 @@ const binding = {
       "max",
       "step",
       "disabled",
+      "readOnly",
       "orientation"
     ]
   },
@@ -60,6 +72,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned Slider family.',
@@ -70,3 +89,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

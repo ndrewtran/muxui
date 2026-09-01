@@ -59,7 +59,7 @@ const expectedDonorRepository = 'https://github.com/Tale-UI/tale-ui';
 const expectedDonorCommit = '94bf62a26c02605c8928dfeb24f0ddc4be1c92fd';
 export const expectedStoryId = migrationStoryId;
 export const expectedStoryQuery = migrationQuery;
-export const expectedDonorBindingSha256 = 'sha256:6565fb6fcfe2196f17b483dcadab0d792d658330bbf6fb1579df1dbc4026a3dc';
+export const expectedDonorBindingSha256 = 'sha256:ea042e0f5f7b1143f3f2256dbcba6fb5658eb79381305646a77a0ffae162fbfd';
 export const expectedThresholds = Object.freeze({ maxDiffPixelRatio: 0, pixelThreshold: 0.1 });
 const safeCaseIdPattern = /^[a-z0-9]+(?:-+[a-z0-9]+)*$/u;
 const safeResultSuffixPattern = /^[a-z0-9-]+\.[a-z0-9]+$/u;
@@ -116,14 +116,14 @@ function hashJson(value) {
 // content-addressed case identity stable while current DOM selectors use the
 // Mux UI namespace. Only action/region selector strings are normalized here;
 // the live manifest still validates those fields against the current contract.
-function historicalCaseIdentity(value) {
+export function historicalCaseIdentity(value) {
   if (typeof value === 'string') return value.replaceAll('muxui', 'core');
   if (Array.isArray(value)) return value.map(historicalCaseIdentity);
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, historicalCaseIdentity(item)]));
   return value;
 }
 
-function historicalRuntimeFixtureSha256(entry) {
+export function historicalRuntimeFixtureSha256(entry) {
   return fixtureContractSha256(historicalCaseIdentity(sharedFixtureInput(entry)));
 }
 

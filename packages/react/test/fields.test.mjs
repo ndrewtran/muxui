@@ -21,9 +21,11 @@ import {
 } from '../src/components.mjs';
 
 function installDom(dom) {
-  const keys = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement', 'HTMLLabelElement', 'HTMLDivElement', 'HTMLFormElement', 'SVGElement', 'Node', 'NodeFilter', 'Event', 'InputEvent', 'MouseEvent', 'KeyboardEvent', 'FocusEvent', 'PointerEvent', 'CustomEvent', 'MutationObserver', 'FormData', 'CSS', 'getComputedStyle'];
+  const keys = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement', 'HTMLLabelElement', 'HTMLDivElement', 'HTMLFormElement', 'SVGElement', 'Node', 'NodeFilter', 'Event', 'InputEvent', 'MouseEvent', 'KeyboardEvent', 'FocusEvent', 'PointerEvent', 'CustomEvent', 'MutationObserver', 'FormData', 'CSS', 'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame'];
   const previous = Object.fromEntries(keys.map((key) => [key, globalThis[key]]));
   Object.assign(globalThis, Object.fromEntries(keys.map((key) => [key, dom.window[key] ?? globalThis[key]])));
+  globalThis.requestAnimationFrame ??= (callback) => setTimeout(callback, 0);
+  globalThis.cancelAnimationFrame ??= (handle) => clearTimeout(handle);
   globalThis.CSS ??= { escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/gu, (character) => `\\${character}`) };
   dom.window.HTMLElement.prototype.attachEvent ??= () => {};
   dom.window.HTMLElement.prototype.detachEvent ??= () => {};
@@ -97,6 +99,109 @@ test('R1.2 fields preserve MuxUI labels, errors, SSR, hydration, and state callb
   }
 });
 
+test('Form renders name-keyed external validation errors through field error parts', () => {
+  const validationErrors = {
+    username: 'Username is already taken',
+    quantity: ['Quantity is required', 'Quantity must be positive'],
+  };
+  const markup = renderToString(React.createElement(Form, {
+    validationBehavior: 'aria',
+    validationErrors,
+  },
+  React.createElement(TextField, { name: 'username', label: 'Username' }),
+  React.createElement(NumberField, { name: 'quantity', label: 'Quantity' }),
+  React.createElement(TextField, { name: 'valid', label: 'Valid field' })));
+  const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
+  const root = dom.window.document.querySelector('form');
+  const errors = [...root.querySelectorAll('.muxui-field-error')];
+  assert.equal(errors.length, 2);
+  assert.match(errors[0].textContent, /Username is already taken/u);
+  assert.match(errors[1].textContent, /Quantity is required Quantity must be positive/u);
+  const usernameInput = root.querySelector('input[name="username"]');
+  const quantityInput = root.querySelector('.muxui-number-field input:not([type="hidden"])');
+  const validInput = root.querySelector('input[name="valid"]');
+  assert.ok(usernameInput);
+  assert.ok(quantityInput);
+  assert.ok(validInput);
+  assert.equal(usernameInput.getAttribute('aria-invalid'), 'true');
+  assert.equal(quantityInput.closest('.muxui-number-field')?.getAttribute('data-invalid'), 'true');
+  assert.equal(quantityInput.getAttribute('aria-invalid'), 'true');
+  const usernameDescriptions = usernameInput.getAttribute('aria-describedby')?.split(' ') ?? [];
+  assert.equal(usernameDescriptions.some((id) => root.ownerDocument.getElementById(id)?.textContent.includes('Username is already taken')), true);
+  const validField = validInput.closest('.muxui-text-field');
+  assert.ok(validField);
+  assert.equal(validField.querySelector('.muxui-field-error'), null);
+  const invalidFields = [...root.querySelectorAll('[data-invalid]')];
+  assert.equal(invalidFields.length >= 2, true);
+  dom.window.close();
+});
+
+test('Form validation errors cover Mux-owned temporal names without duplicate FormData', async () => {
+  const validationErrors = {
+    startTime: ['Start time is required', 'Start time must be in business hours'],
+    tripStart: 'Trip must start on an available date',
+    tripEnd: 'Trip must end after it starts',
+    localTime: 'Server error is hidden by the local message',
+  };
+  const renderFields = (errors) => React.createElement(Form, {
+    validationBehavior: 'aria',
+    validationErrors: errors,
+  },
+  React.createElement(TimeField, { label: 'Start time', name: 'startTime', defaultValue: '09:30' }),
+  React.createElement(TimeField, { label: 'Local time', name: 'localTime', defaultValue: '10:00', errorMessage: 'Local error' }),
+  React.createElement(DateRangePicker, {
+    label: 'Trip',
+    startName: 'tripStart',
+    endName: 'tripEnd',
+    defaultValue: { start: '2026-08-26', end: '2026-09-01' },
+  }));
+  const server = renderToString(renderFields(validationErrors));
+  assert.match(server, /Start time is required Start time must be in business hours/u);
+  assert.match(server, /Trip must start on an available date Trip must end after it starts/u);
+  assert.match(server, /Local error/u);
+  assert.doesNotMatch(server, /Server error is hidden by the local message/u);
+
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(renderFields(validationErrors)));
+    const form = host.querySelector('form');
+    const time = host.querySelector('.muxui-time-field');
+    const localTime = host.querySelectorAll('.muxui-time-field')[1];
+    const range = host.querySelector('.muxui-date-range-picker');
+    assert.equal(form?.noValidate, true);
+    assert.equal(time?.getAttribute('data-invalid'), 'true');
+    assert.equal(time?.querySelector('[data-type="hour"]')?.getAttribute('aria-invalid'), 'true');
+    assert.match(time?.querySelector('.muxui-field-error')?.textContent ?? '', /Start time is required Start time must be in business hours/u);
+    assert.equal(localTime?.getAttribute('data-invalid'), 'true');
+    assert.match(localTime?.querySelector('.muxui-field-error')?.textContent ?? '', /Local error/u);
+    assert.doesNotMatch(localTime?.textContent ?? '', /Server error is hidden by the local message/u);
+    assert.equal(range?.getAttribute('data-invalid'), 'true');
+    assert.equal(range?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    assert.match(range?.querySelector('.muxui-field-error')?.textContent ?? '', /Trip must start on an available date Trip must end after it starts/u);
+
+    const formData = new dom.window.FormData(form);
+    assert.deepEqual(formData.getAll('startTime'), ['09:30']);
+    assert.deepEqual(formData.getAll('localTime'), ['10:00']);
+    assert.deepEqual(formData.getAll('tripStart'), ['2026-08-26']);
+    assert.deepEqual(formData.getAll('tripEnd'), ['2026-09-01']);
+
+    await act(async () => root.render(renderFields({})));
+    assert.equal(time?.getAttribute('data-invalid'), null);
+    assert.equal(time?.querySelector('.muxui-field-error'), null);
+    assert.equal(time?.querySelector('[data-type="hour"]')?.getAttribute('aria-invalid'), null);
+    assert.equal(range?.getAttribute('data-invalid'), null);
+    assert.equal(range?.querySelector('.muxui-field-error'), null);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
 test('SearchField keeps its clear action in the input control grid with supporting text', async () => {
   const markup = renderToString(React.createElement(SearchField, {
     label: 'Search',
@@ -135,15 +240,61 @@ test('SearchField clear control keeps RAC clearing and the MuxUI callback', asyn
     })));
     const input = host.querySelector('.muxui-search-field input');
     const clear = host.querySelector('.muxui-search-clear');
+    assert.equal(host.querySelector('.muxui-search-field').hasAttribute('data-empty'), false);
     assert.equal(input.value, 'MuxUI');
     await act(async () => clear.click());
     assert.equal(input.value, '');
     assert.equal(clears, 1);
+    assert.equal(host.querySelector('.muxui-search-field').getAttribute('data-empty'), 'true');
   } finally {
     await act(async () => root.unmount());
     env();
     dom.window.close();
   }
+});
+
+test('TextField keeps standard native input attributes on the input part', () => {
+  const markup = renderToString(React.createElement(TextField, {
+    label: 'Name',
+    autoComplete: 'name',
+    autoFocus: true,
+    inputMode: 'email',
+    maxLength: 80,
+    minLength: 2,
+    pattern: '[A-Za-z]+',
+    spellCheck: false,
+  }));
+  const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
+  const root = dom.window.document.querySelector('.muxui-text-field');
+  const input = root?.querySelector('input');
+  assert.ok(root);
+  assert.ok(input);
+  assert.equal(input.getAttribute('autocomplete'), 'name');
+  assert.equal(input.autofocus, true);
+  assert.equal(input.inputMode, 'email');
+  assert.equal(input.maxLength, 80);
+  assert.equal(input.minLength, 2);
+  assert.equal(input.pattern, '[A-Za-z]+');
+  assert.equal(input.getAttribute('spellcheck'), 'false');
+  assert.equal(root.hasAttribute('autocomplete'), false);
+  assert.equal(root.hasAttribute('maxlength'), false);
+  dom.window.close();
+});
+
+test('Switch exposes required and invalid states alongside its description and error parts', () => {
+  const markup = renderToString(React.createElement(Switch, {
+    label: 'Enabled',
+    description: 'Apply changes',
+    errorMessage: 'Choose a setting',
+    required: true,
+    invalid: true,
+  }));
+  const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
+  const root = dom.window.document.querySelector('.muxui-switch-field');
+  assert.equal(root?.getAttribute('data-required'), 'true');
+  assert.equal(root?.getAttribute('data-invalid'), 'true');
+  assert.match(root?.textContent ?? '', /Apply changes.*Choose a setting/u);
+  dom.window.close();
 });
 
 test('ComboBox input transitions stay scoped away from TextField', async () => {
@@ -176,6 +327,65 @@ test('NumberField steppers expose stable direction hooks and Tale edge geometry'
   assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid #d5d2d1;[^}]*border-radius:\s*10px 0 0 10px/u);
   assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid #d5d2d1;[^}]*border-radius:\s*0 10px 10px 0/u);
   dom.window.close();
+});
+
+test('NumberField steps by keyboard, clamps to bounds, preserves empty input, and applies formatOptions', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(React.Fragment, null,
+      React.createElement(NumberField, { label: 'Quantity', defaultValue: 2, minValue: 1, maxValue: 3, step: 1 }),
+      React.createElement(NumberField, { label: 'Empty quantity', minValue: 1, maxValue: 3, step: 1 }),
+      React.createElement(NumberField, { label: 'Formatted amount', defaultValue: 1234.5, step: 0.1, formatOptions: { style: 'decimal', useGrouping: false } }))));
+    const fields = [...host.querySelectorAll('.muxui-number-field')];
+    const input = fields[0].querySelector('input');
+    const increment = fields[0].querySelector('.muxui-number-stepper-increment');
+    const decrement = fields[0].querySelector('.muxui-number-stepper-decrement');
+    assert.equal(input.value, '2');
+    await act(async () => {
+      input.focus();
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    });
+    assert.equal(input.value, '3');
+    await act(async () => {
+      increment.click();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    });
+    assert.equal(input.value, '3');
+    await act(async () => {
+      decrement.click();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    });
+    assert.equal(input.value, '2');
+    await act(async () => {
+      decrement.click();
+      decrement.click();
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    });
+    assert.equal(input.value, '1');
+
+    const emptyInput = fields[1].querySelector('input');
+    assert.equal(emptyInput.value, '');
+    await act(async () => emptyInput.focus());
+    emptyInput.value = '';
+    await act(async () => {
+      emptyInput.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.equal(emptyInput.value, '');
+
+    const formattedInput = fields[2].querySelector('input');
+    assert.equal(formattedInput.value, '1234.5');
+    assert.equal(formattedInput.getAttribute('aria-valuetext'), null);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
 });
 
 test('R1.2 form controls support controlled callbacks, keyboard-compatible input, and submit/reset', async () => {
@@ -286,6 +496,186 @@ test('date picker calendar triggers retain Tale icon wrapper sizing and scoped p
   assert.match(styles, /\[data-muxui-color-scheme='dark'\] \.muxui-date-popover\s*\{[^}]*border-color:\s*var\(--muxui-reference-color-neutral-96\)/u);
 });
 
+test('DatePicker and DateRangePicker expose controlled open-change callbacks', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const openChanges = [];
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(React.Fragment, null,
+      React.createElement(DatePicker, {
+        label: 'Due date',
+        value: '2026-08-26',
+        onOpenChange: (open) => openChanges.push(['date', open]),
+      }),
+      React.createElement(DateRangePicker, {
+        label: 'Trip',
+        value: { start: '2026-08-26', end: '2026-09-01' },
+        onOpenChange: (open) => openChanges.push(['range', open]),
+      }))));
+    await act(async () => host.querySelector('.muxui-date-picker .muxui-date-trigger').click());
+    await act(async () => host.querySelector('.muxui-date-range-picker .muxui-date-trigger').click());
+    assert.equal(openChanges.some(([kind, open]) => kind === 'date' && open), true);
+    assert.equal(openChanges.some(([kind, open]) => kind === 'range' && open), true);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('temporal enrichment parses strict values, preserves invalid bounds, and serializes unavailable callbacks', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
+  const restore = installDom(dom);
+  let root;
+  try {
+    const seenDateValues = [];
+    const seenRangeValues = [];
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(React.Fragment, null,
+      React.createElement(DateField, {
+        label: 'Date',
+        defaultValue: '2026-01-01',
+        minValue: '2026-02-01',
+        maxValue: '2026-03-01',
+        unavailableDateMatcher: (date) => { seenDateValues.push(date); return date === '2026-02-15'; },
+      }),
+      React.createElement(TimeField, {
+        label: 'Time',
+        defaultValue: '09:00',
+        minValue: '10:00',
+        maxValue: '11:00',
+      }),
+      React.createElement(DatePicker, {
+        label: 'Picker',
+        defaultValue: '2026-01-01',
+        minValue: '2026-02-01',
+        maxValue: '2026-03-01',
+        unavailableDateMatcher: (date) => { seenDateValues.push(date); return false; },
+      }),
+      React.createElement(DateRangePicker, {
+        label: 'Range',
+        defaultValue: { start: '2026-01-01', end: '2026-04-01' },
+        minValue: '2026-02-01',
+        maxValue: '2026-03-01',
+        unavailableDateMatcher: (date, anchorDate) => { seenRangeValues.push([date, anchorDate]); return false; },
+      }))));
+    assert.equal(host.querySelector('.muxui-date-field input[type="text"]')?.value, '2026-01-01');
+    assert.equal(host.querySelector('.muxui-time-field input[type="text"]')?.value, '09:00:00');
+    assert.equal(host.querySelector('.muxui-date-picker input[type="text"]')?.value, '2026-01-01');
+    assert.equal(host.querySelector('.muxui-date-range-picker input[type="text"]')?.value, '2026-01-01');
+    await act(async () => host.querySelector('.muxui-date-range-picker .muxui-date-trigger').click());
+    const firstRangeCell = document.body.querySelector('.muxui-range-calendar-cell');
+    assert.ok(firstRangeCell);
+    await act(async () => firstRangeCell.click());
+    assert.equal(seenDateValues.length > 0, true);
+    assert.equal(seenDateValues.every((value) => typeof value === 'string'), true);
+    assert.equal(seenRangeValues.length > 0, true);
+    assert.equal(seenRangeValues.every(([date, anchorDate]) => typeof date === 'string' && (anchorDate === null || typeof anchorDate === 'string')), true);
+    assert.equal(seenRangeValues.some(([, anchorDate]) => anchorDate === null), true);
+    assert.equal(seenRangeValues.some(([, anchorDate]) => typeof anchorDate === 'string'), true);
+    assert.throws(() => renderToString(React.createElement(DateField, { label: 'Date', value: 20260101 })), /Mux UI date values must use YYYY-MM-DD ISO format/u);
+    assert.throws(() => renderToString(React.createElement(TimeField, { label: 'Time', value: '25:00' })), /Mux UI time values must use HH:mm\[:ss\[\.fraction\]\] ISO format/u);
+    assert.throws(() => renderToString(React.createElement(DateRangePicker, { label: 'Range', value: { start: '', end: '2026-03-01' } })), /Mux UI date ranges must include start and end ISO dates/u);
+    assert.throws(() => renderToString(React.createElement(DateRangePicker, { label: 'Range', defaultValue: { start: '2026-02-01', end: null } })), /Mux UI date ranges must include start and end ISO dates/u);
+    assert.throws(() => renderToString(React.createElement(DatePicker, { label: 'Picker', minValue: '2026-03-01', maxValue: '2026-02-01' })), /Mux UI date minValue must be less than or equal to maxValue/u);
+    assert.throws(() => renderToString(React.createElement(TimeField, { label: 'Time', minValue: '11:00', maxValue: '10:00' })), /Mux UI time minValue must be less than or equal to maxValue/u);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('temporal bounds and reversed ranges stay visible and use built-in Form validation', async () => {
+  const renderFields = () => React.createElement(Form, { validationBehavior: 'aria' },
+    React.createElement(DateField, { label: 'Underflow date', defaultValue: '2026-01-01', minValue: '2026-02-01', maxValue: '2026-03-01' }),
+    React.createElement(DatePicker, { label: 'Overflow date', defaultValue: '2026-04-01', minValue: '2026-02-01', maxValue: '2026-03-01' }),
+    React.createElement(TimeField, { label: 'Underflow time', defaultValue: '09:00', minValue: '10:00', maxValue: '11:00' }),
+    React.createElement(DateRangePicker, { label: 'Reversed controlled range', value: { start: '2026-09-01', end: '2026-08-26' } }),
+    React.createElement(DateRangePicker, { label: 'Reversed default range', defaultValue: { start: '2026-09-01', end: '2026-08-26' } }),
+    React.createElement(DateRangePicker, { label: 'Equal range', value: { start: '2026-08-26', end: '2026-08-26' } }));
+  const server = renderToString(renderFields());
+  assert.match(server, /2026-01-01/u);
+  assert.match(server, /2026-04-01/u);
+  assert.match(server, /2026-09-01/u);
+
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(renderFields()));
+    const dateField = host.querySelector('.muxui-date-field');
+    const datePicker = host.querySelector('.muxui-date-picker');
+    const timeField = host.querySelector('.muxui-time-field');
+    const ranges = host.querySelectorAll('.muxui-date-range-picker');
+    const serializedInput = (field) => field?.querySelector('input[type="hidden"]:not(.muxui-form-reset-anchor)');
+    assert.equal(host.querySelector('form')?.noValidate, true);
+    assert.equal(serializedInput(dateField)?.value, '2026-01-01');
+    assert.equal(serializedInput(datePicker)?.value, '2026-04-01');
+    assert.equal(serializedInput(timeField)?.value, '09:00:00');
+    assert.equal(dateField?.getAttribute('data-invalid'), 'true');
+    assert.equal(datePicker?.getAttribute('data-invalid'), 'true');
+    assert.equal(timeField?.getAttribute('data-invalid'), 'true');
+    assert.equal(dateField?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(datePicker?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    assert.equal(timeField?.querySelector('[data-type="hour"]')?.getAttribute('aria-invalid'), 'true');
+    for (const field of [dateField, datePicker, timeField, ranges[0], ranges[1]]) {
+      assert.ok(field?.querySelector('.muxui-field-error')?.textContent.trim());
+    }
+    for (const range of [ranges[0], ranges[1]]) {
+      assert.equal(range?.getAttribute('data-invalid'), 'true');
+      assert.equal(range?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), 'true');
+    }
+    assert.deepEqual([...ranges[0].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form-reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
+    assert.deepEqual([...ranges[1].querySelectorAll('input[type="hidden"]')].filter((input) => !input.classList.contains('muxui-form-reset-anchor')).map((input) => input.value), ['2026-09-01', '2026-08-26']);
+    assert.equal(ranges[2]?.getAttribute('data-invalid'), null);
+    assert.equal(ranges[2]?.querySelector('.muxui-field-error'), null);
+    assert.equal(ranges[2]?.querySelector('[data-type="day"]')?.getAttribute('aria-invalid'), null);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('temporal picker open ownership is independent and honors disabled/read-only state', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
+  const restore = installDom(dom);
+  let root;
+  try {
+    const openChanges = [];
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(React.Fragment, null,
+      React.createElement(DatePicker, { label: 'Controlled', value: '2026-08-26', open: false, onOpenChange: (open) => openChanges.push(['controlled', open]) }),
+      React.createElement(DateRangePicker, { label: 'Default', defaultValue: { start: '2026-08-26', end: '2026-09-01' }, defaultOpen: true }),
+      React.createElement(DatePicker, { label: 'Disabled', disabled: true }),
+      React.createElement(DatePicker, { label: 'Read only', readOnly: true }),
+      React.createElement(DateField, { label: 'Read only field', readOnly: true }))));
+    const controlled = host.querySelector('.muxui-date-picker');
+    const defaultOpen = host.querySelector('.muxui-date-range-picker');
+    const pickers = host.querySelectorAll('.muxui-date-picker');
+    assert.equal(controlled?.getAttribute('data-open'), null);
+    assert.equal(defaultOpen?.getAttribute('data-open'), 'true');
+    await act(async () => controlled.querySelector('.muxui-date-trigger').click());
+    assert.deepEqual(openChanges, [['controlled', true]]);
+    assert.equal(controlled.getAttribute('data-open'), null);
+    assert.equal(pickers[1]?.querySelector('.muxui-date-trigger')?.disabled, true);
+    assert.equal(pickers[2]?.querySelector('.muxui-date-trigger')?.disabled, true);
+    assert.equal(host.querySelector('.muxui-date-field .muxui-date-segment')?.getAttribute('data-readonly'), 'true');
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
 test('read-only date segments retain accessible semantic contrast', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   assert.match(styles, /\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*#79716b;/u);
@@ -298,7 +688,7 @@ test('read-only date segments retain accessible semantic contrast', async () => 
 });
 
 test('R1.2 date ranges own paired FormData names and reset to their default', async () => {
-  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const dom = new JSDOM('<!doctype html><div id="root"></div>', { pretendToBeVisual: true });
   const restore = installDom(dom);
   let root;
   try {
@@ -500,6 +890,42 @@ test('R1.2 autocomplete preserves rich labels for SSR and text filtering', async
   }
 });
 
+test('Autocomplete disabled items map to inert options and suppress callbacks', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const changes = [];
+  const selected = [];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    const items = [
+      { id: 'disabled', label: 'Disabled', value: 'disabled', disabled: true },
+      { id: 'enabled', label: 'Enabled', value: 'enabled' },
+      { id: 'also-disabled', label: 'Also disabled', value: 'also-disabled', disabled: true },
+    ];
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Autocomplete, {
+      label: 'City',
+      items,
+      onChange: (value) => changes.push(value),
+      onSelect: (item) => selected.push(item?.id),
+    })));
+    const options = [...host.querySelectorAll('.muxui-autocomplete-option')];
+    assert.equal(options.length, 3);
+    assert.deepEqual(options.map((option) => option.getAttribute('data-disabled')), ['true', null, 'true']);
+    assert.deepEqual(options.map((option) => option.getAttribute('aria-disabled')), ['true', null, 'true']);
+
+    await act(async () => options[0].click());
+    assert.deepEqual(changes, []);
+    assert.deepEqual(selected, []);
+
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
 test('R1.2 readonly autocomplete only permits viewing suggestions', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -567,7 +993,6 @@ test('R1.2 fields do not forward unsupported validation props', () => {
     React.createElement(DateRangePicker, { label: 'Trip' }),
     React.createElement(TimeField, { label: 'Start' }),
     React.createElement(Autocomplete, { label: 'City' }),
-    React.createElement(Switch, { label: 'Enabled', required: true, invalid: true }),
   ];
   for (const field of fieldsWithUnsupportedValidation) {
     const markup = renderToString(React.cloneElement(field, { validationBehavior: 'native' }));

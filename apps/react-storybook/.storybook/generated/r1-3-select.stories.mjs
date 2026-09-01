@@ -1,18 +1,29 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:66026d275e2aa1c3e5c16a7cf719ca9338d354445cd6e3dc4fb57e981e761cc0
+// @generated-content-sha256: sha256:fd3838a6db2a20d9e93e3ede5c6aaa18f5ff167d438e987da09ff860b39b9c67
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
+      "defaultOpen": false,
       "disabled": false,
       "invalid": false,
       "readOnly": false,
       "required": false
     },
     "events": [
-      "change"
+      "change",
+      "openChange"
     ],
     "parts": [
       "root",
@@ -30,6 +41,8 @@ const binding = {
       "items",
       "value",
       "defaultValue",
+      "open",
+      "defaultOpen",
       "disabled",
       "readOnly",
       "required",
@@ -66,6 +79,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned Select family.',
@@ -76,3 +96,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

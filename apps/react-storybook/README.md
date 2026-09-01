@@ -37,9 +37,9 @@ new donor assets.
 
 The migration closure covers all 51 applicable canonical families, with
 `Group` and `TokenField` recorded as the two exact `no-applicable-donor`
-families. It contains 212 semantic cases, including an idle case for every
+families. It contains 215 semantic cases, including an idle case for every
 applicable family and only contract-derived high-signal states, captured in
-both light and dark modes for 424 donor/Mux UI comparisons. Each case records
+both light and dark modes for 430 donor/Mux UI comparisons. Each case records
 its shared copy/data/frame contract, renderer-specific adaptation, and
 equivalent-part style facts. Future intentional Mux UI changes update the
 Mux UI-owned baselines through an explicit Mux UI-local flow; they are never
@@ -48,7 +48,7 @@ integrity, and sealed report; browser comparison remains opt-in. Both local and
 CI-capable comparisons use only Mux UI Storybook and the checked-in Mux UI-owned
 artifacts. The current one-time report records its machine-checked pass/fail
 counts in `visual-migration/results/comparison.json` (the present capture has
-424 passing and 0 failing component-region comparisons), so the donor parity
+430 passing and 0 failing component-region comparisons), so the donor parity
 review remains decision bearing; the verifier derives these counts from the
 sealed PNG pairs and report rather than accepting a handwritten result. No public API
 or accessibility behavior was changed to chase pixels.
@@ -63,8 +63,8 @@ override.
 
 For an intentional, reviewed Mux UI visual change, run
 `pnpm --filter @muxui/react-storybook update:visual:migration`. This captures
-all 212 cases in both modes from Mux UI Storybook, writes a new content-addressed
-424-image snapshot under `visual-migration/baselines/`, and atomically activates
+all 215 cases in both modes from Mux UI Storybook, writes a new content-addressed
+430-image snapshot under `visual-migration/baselines/`, and atomically activates
 it with one manifest-file replacement while recording the capture environment.
 An existing matching snapshot is verified and reused; old inactive snapshots
 are only cleaned up after activation. Review the resulting Mux UI-owned diff

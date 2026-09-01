@@ -14,9 +14,12 @@
   "scripts": {
     "prepack": "node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
-    "check": "node src/generate.mjs --check && node --test test/*.test.mjs && tsc --noEmit -p test/tsconfig.json",
-    "generate": "node src/generate.mjs",
-    "generate:check": "node src/generate.mjs --check"
+    "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test --test-concurrency=1 test/*.test.mjs && tsc --noEmit -p test/tsconfig.json",
+    "check:capability-enrichment:strict": "MUXUI_CAPABILITY_ENRICHMENT_STRICT=1 node --test test/capability-enrichment.test.mjs",
+    "generate": "node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs",
+    "generate:capability-enrichment": "node advisory/capability-enrichment/generate-status.mjs",
+    "generate:check:capability-enrichment": "node advisory/capability-enrichment/generate-status.mjs --check",
+    "generate:check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check"
   },
   "dependencies": {
     "@internationalized/date": "3.12.3",

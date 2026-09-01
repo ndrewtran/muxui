@@ -13,11 +13,10 @@ import {
   migrationFrame,
   migrationStoryId,
   noApplicableDonorFamilies,
-  sharedFixtureInput,
   stateCoverage,
   supplementalStateCoverage,
 } from '../../src/visual-migration-contract.mjs';
-import { canonicalize, fixtureContractSha256, sha256, taleStyleInventoryPath, taleStyleInventorySha256 } from '../../src/visual-migration.mjs';
+import { fixtureContractSha256, historicalCaseIdentity, historicalRuntimeFixtureSha256, sha256, taleStyleInventoryPath, taleStyleInventorySha256 } from '../../src/visual-migration.mjs';
 import {
   donorActionFor,
   donorAdapterSourcePath,
@@ -300,7 +299,7 @@ async function captureOne(page, baseUrl, entry, mode, outputDir) {
       mode,
       sha256: sha256(bytes),
       fixtureContractSha256: fixtureContractSha256(entry.fixture),
-      runtimeFixtureSha256: fixtureContractSha256(sharedFixtureInput(entry)),
+      runtimeFixtureSha256: historicalRuntimeFixtureSha256(entry),
       donorSource: donorEntrySourcePath,
       semanticRegion: selectors,
       action: donorActionFor(entry),
@@ -330,7 +329,14 @@ async function main() {
     started = await startTaleServer(taleRoot, temporary.temporaryRoot);
     const executablePath = await browserPath();
     browser = await chromium.launch({ headless: true, executablePath });
-    const context = await browser.newContext({ viewport: migrationFrame.viewport, deviceScaleFactor: migrationFrame.deviceScaleFactor, colorScheme: 'light' });
+    const manifest = JSON.parse(await readFile(resolve(appRoot, 'visual-migration/manifest.json'), 'utf8'));
+    const context = await browser.newContext({
+      viewport: migrationFrame.viewport,
+      deviceScaleFactor: migrationFrame.deviceScaleFactor,
+      colorScheme: 'light',
+      timezoneId: manifest.capture.clock.timezone,
+    });
+    await context.clock.install({ time: manifest.capture.clock.time });
     await context.grantPermissions([], { origin: started.url });
     await context.route('**/*', async (route) => {
       const requestUrl = new URL(route.request().url());
@@ -354,7 +360,14 @@ async function main() {
     await context.close();
     const expectedIds = entries.flatMap(({ id }) => ['light', 'dark'].map((mode) => `${id}--${mode}`));
     if (captures.length !== expectedIds.length || captures.some(({ captureId }, index) => captureId !== expectedIds[index])) throw new Error('Tale capture inventory does not match the canonical ordered fixture inventory');
-    const fixtureCaseSha256 = sha256(Buffer.from(JSON.stringify(canonicalize(migrationCases.map(({ id, component, state, fixture, action, region }) => ({ id, component, state, fixture, action, region })))), 'utf8'));
+    const fixtureCaseSha256 = fixtureContractSha256(migrationCases.map(({ id, component, state, fixture, action, region }) => ({
+      id,
+      component,
+      state,
+      fixture,
+      action: historicalCaseIdentity(action),
+      region: historicalCaseIdentity(region),
+    })));
     const metadata = {
       schema: 'core-ui-react-visual-migration-donor-capture-v2',
       donor: pinnedDonor,
@@ -369,6 +382,8 @@ async function main() {
       renderPlanSourceSha256: sha256(renderPlanSource),
       fixtureMapSourceSha256: sha256(fixtureMapSource),
       browser: { executable: executablePath, executableSha256: sha256(await readFile(executablePath)) },
+      caseCount: entries.length,
+      captureCount: captures.length,
       captures,
     };
     await writeFile(metadataPath, `${JSON.stringify(metadata, null, 2)}\n`);

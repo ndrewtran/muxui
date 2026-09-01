@@ -1,7 +1,16 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:14149e72e057634fb4f6918bd8a8fca4d39b8e5cf0ba280da33388cb3095f2ad
+// @generated-content-sha256: sha256:5cb11ad580308f2f6f422817cec05c9b926d41ed8e93b6ee36cf72949f9f1fb7
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
@@ -11,7 +20,8 @@ const binding = {
       "required": false
     },
     "events": [
-      "change"
+      "change",
+      "focusChange"
     ],
     "parts": [
       "root",
@@ -25,6 +35,8 @@ const binding = {
       "aria-labelledby",
       "value",
       "defaultValue",
+      "focusedValue",
+      "unavailableDateMatcher",
       "minValue",
       "maxValue",
       "disabled",
@@ -60,6 +72,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned RangeCalendar family.',
@@ -70,3 +89,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

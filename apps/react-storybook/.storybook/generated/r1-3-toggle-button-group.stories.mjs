@@ -1,13 +1,23 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:370f3d89ad817b1a6cb2f676b99906b52fd23df15cc361b209db4b336e04715a
+// @generated-content-sha256: sha256:407c9e39456157bf6279f8a7ac6fdc9489ee7d21b440762c885744f321f160a0
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
       "disabled": false,
-      "orientation": "horizontal"
+      "orientation": "horizontal",
+      "selectionMode": "single"
     },
     "events": [
       "selectionChange"
@@ -21,6 +31,7 @@ const binding = {
       "aria-labelledby",
       "selectedIds",
       "defaultSelectedIds",
+      "selectionMode",
       "disabled",
       "orientation"
     ]
@@ -50,6 +61,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned ToggleButtonGroup family.',
@@ -60,3 +78,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

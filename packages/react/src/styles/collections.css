@@ -70,12 +70,17 @@
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-calendar-cell[data-disabled],
-.muxui-calendar-cell[data-unavailable] {
+.muxui-calendar-cell[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.muxui-calendar-cell[data-unavailable] {
+  background-color: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-default);
+  cursor: not-allowed;
 }
 
 .muxui-calendar[data-disabled] .muxui-calendar-previous > svg,
@@ -504,12 +509,17 @@
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-range-calendar-cell[data-disabled],
-.muxui-range-calendar-cell[data-unavailable] {
+.muxui-range-calendar-cell[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.muxui-range-calendar-cell[data-unavailable] {
+  background-color: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-default);
+  cursor: not-allowed;
 }
 
 .muxui-range-calendar-cell[data-focus-visible] {

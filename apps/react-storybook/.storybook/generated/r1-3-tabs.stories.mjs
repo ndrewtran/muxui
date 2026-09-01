@@ -1,12 +1,22 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:a774f8afabb298215377b124691e4f5d8bfd02cf4e8384f95149427452f05dff
+// @generated-content-sha256: sha256:fc9495d9ede5fdf01a1b07430c77c664689f409c019bc54e0a725044df2abfd7
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
       "disabled": false,
+      "keyboardActivation": "automatic",
       "orientation": "horizontal"
     },
     "events": [
@@ -25,6 +35,7 @@ const binding = {
       "items",
       "value",
       "defaultValue",
+      "keyboardActivation",
       "disabled",
       "orientation"
     ]
@@ -54,6 +65,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned Tabs family.',
@@ -64,3 +82,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

@@ -43,6 +43,12 @@
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
+.muxui-autocomplete-option[data-disabled] {
+  color: var(--muxui-semantic-content-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .muxui-autocomplete .muxui-autocomplete-search[data-invalid] .muxui-field-input:not(:focus, [data-focused]) {
   border-color: var(--muxui-field-border-color);
   box-shadow: none;
@@ -670,6 +676,10 @@
 [data-muxui-color-scheme='dark'] .muxui-switch::before {
   background-color: var(--muxui-reference-color-neutral-88);
   border-color: var(--muxui-reference-color-neutral-70);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-switch[data-invalid]::before {
+  border-color: var(--muxui-reference-color-red-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected]::before {

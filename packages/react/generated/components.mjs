@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/components.mjs
-// @generated-content-sha256: sha256:6279cc40f66a5101de0888fb958b35648877ed9575585fb633d83a19d720e086
+// @generated-content-sha256: sha256:1bcf08afb9019170b38b47231ebdf058af2f96e86a78b12d61b9f5a5acb0dcf6
 import React from 'react';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
@@ -67,7 +67,7 @@ export const Breadcrumbs = React.forwardRef(function Breadcrumbs({
         className: 'muxui-breadcrumbs-item',
       }, item.href && !current
         ? React.createElement(AriaLink, { href: item.href, isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, className: 'muxui-breadcrumbs-link' }, item.label)
-        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'data-disabled': item.disabled || undefined }, item.label));
+        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'aria-disabled': item.disabled || undefined, 'data-disabled': item.disabled || undefined }, item.label));
     },
   }));
 });
@@ -260,6 +260,7 @@ export const ProgressBar = React.forwardRef(function ProgressBar({
   className,
   ...props
 }, ref) {
+  const complete = value !== undefined && !Number.isNaN(value) && maxValue > minValue && value >= maxValue;
   return React.createElement(AriaProgressBar, {
     ...props,
     ref,
@@ -268,6 +269,7 @@ export const ProgressBar = React.forwardRef(function ProgressBar({
     maxValue,
     isIndeterminate: value === undefined,
     'data-indeterminate': value === undefined || undefined,
+    'data-complete': complete || undefined,
     className: classNames('muxui-progress-bar', className),
     children: ({ percentage }) => React.createElement(React.Fragment, null,
       React.createElement('div', { className: 'muxui-progress-bar-header' }, React.createElement(AriaLabel, { className: 'muxui-value-label' }, label), React.createElement('span', { className: 'muxui-value-output' }, value === undefined ? 'Loading' : `${percentage}%`)),

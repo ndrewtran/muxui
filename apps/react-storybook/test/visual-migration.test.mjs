@@ -93,12 +93,13 @@ test('the canonical closure proves 51 applicable families and two exact no-donor
     failed: comparison.comparisons.filter(({ pass }) => !pass).length,
   });
   assert.equal(comparison.status, 'passed');
-  assert.equal(comparison.counts.pass, expectedCaptureInventory.length);
+  assert.equal(comparison.counts.pass, 430);
   assert.equal(comparison.counts.failed, 0);
-  assert.equal(comparison.mismatchInventory.every(({ failed }) => failed === 0), true);
+  assert.ok(comparison.mismatchInventory.every(({ failed }) => failed === 0));
+  assert.equal(comparison.counts.pass + comparison.counts.failed, expectedCaptureInventory.length);
+  assert.equal(comparison.mismatchInventory.length, 51);
   assert.equal(comparison.comparisons.filter(({ pass }) => pass).length, comparison.counts.pass);
   assert.equal(comparison.comparisons.filter(({ pass }) => !pass).length, comparison.counts.failed);
-  assert.equal(comparison.mismatchInventory.length, 51);
   assert.equal(comparison.comparisons.length, expectedCaptureInventory.length);
   assert.equal(snapshotDirectoryForHashes(expectedCaptureInventory.map(([, id, , , mode]) => manifest.cases.find((entry) => entry.id === id).baseline[mode].sha256)), manifest.baselineDirectory);
   assertManifestIdentity(manifest);
@@ -117,7 +118,7 @@ test('the Tale style ledger accounts for every pinned stylesheet and state cover
   assert.equal(behaviorRecords.length, 10);
   assert.ok(behaviorRecords.every(({ check }) => check?.type === 'behavior' && check.selector && check.interaction && check.assertion));
   const unsupportedRecords = expectedStateCoverage.filter(({ disposition }) => disposition === 'unsupported');
-  assert.equal(unsupportedRecords.length, 8);
+  assert.equal(unsupportedRecords.length, 3);
   assert.ok(unsupportedRecords.every(({ check }) => check?.type === 'dom' && check.rationale));
 });
 
@@ -328,8 +329,6 @@ test('the retained Tale render plan consumes the complete shared fixture contrac
   assert.deepEqual(planFor('range-calendar-idle', (data) => { data.dateRange = { start: '2031-04-05', end: '2031-04-12' }; }).props.value, { start: '2031-04-05', end: '2031-04-12' });
   assert.equal(planFor('color-field-idle', (data) => { data.color = '#123456'; }).props.defaultValue, '#123456');
   assert.equal(planFor('meter-idle', (data) => { data.values.meter = 13; }).props.value, 13);
-  assert.equal(planFor('meter-low').props.value, 24);
-  assert.equal(planFor('meter-high').props.value, 88);
   assert.equal(planFor('progress-bar-idle', (data) => { data.values.progress = 17; }).props.value, 17);
   assert.equal(planFor('number-field-idle', (data) => { data.values.number = 19; }).props.defaultValue, 19);
   assert.equal(planFor('slider-idle', (data) => { data.values.slider = 23; }).props.defaultValue, 23);

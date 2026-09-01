@@ -1,15 +1,29 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:aad7e8f7db81bf8625bd7f3e2aaccf58cce29dfe58a5c770a9ceb1fc547a913e
+// @generated-content-sha256: sha256:87931df5091e5f39bdf0e153204bdcec564059c85798a236800c73dc4f866ce1
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
       "closeDelay": 200,
+      "containerPadding": 12,
+      "crossOffset": 0,
       "defaultOpen": false,
       "delay": 600,
-      "placement": "top"
+      "disabled": false,
+      "offset": 8,
+      "placement": "top",
+      "shouldFlip": true
     },
     "events": [
       "openChange"
@@ -26,7 +40,12 @@ const binding = {
       "closeDelay",
       "open",
       "defaultOpen",
+      "disabled",
       "placement",
+      "offset",
+      "crossOffset",
+      "shouldFlip",
+      "containerPadding",
       "onOpenChange",
       "className",
       "aria-label",
@@ -58,6 +77,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned PreviewTrigger family.',
@@ -68,3 +94,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

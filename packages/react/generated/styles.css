@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:37bfd1f14011d822a97b9984ad765f83551badcc8fafeafe45ec22c83254a6c3
+ * @generated-content-sha256: sha256:c4dfbbc25c09ea112e3cd3ff7806ff2d69365b5018e0cd253bf520fec425e076
  */
 :root {
   --muxui-component-button-background: #025768;
@@ -2303,6 +2303,12 @@
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
+.muxui-autocomplete-option[data-disabled] {
+  color: var(--muxui-semantic-content-muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .muxui-autocomplete .muxui-autocomplete-search[data-invalid] .muxui-field-input:not(:focus, [data-focused]) {
   border-color: var(--muxui-field-border-color);
   box-shadow: none;
@@ -2932,6 +2938,10 @@
   border-color: #5f5954;
 }
 
+[data-muxui-color-scheme='dark'] .muxui-switch[data-invalid]::before {
+  border-color: #dc2626;
+}
+
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected]::before {
   background-color: #539198;
   border-color: #539198;
@@ -3154,12 +3164,17 @@
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-calendar-cell[data-disabled],
-.muxui-calendar-cell[data-unavailable] {
+.muxui-calendar-cell[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.muxui-calendar-cell[data-unavailable] {
+  background-color: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-default);
+  cursor: not-allowed;
 }
 
 .muxui-calendar[data-disabled] .muxui-calendar-previous > svg,
@@ -3588,12 +3603,17 @@
   color: var(--muxui-semantic-content-faint);
 }
 
-.muxui-range-calendar-cell[data-disabled],
-.muxui-range-calendar-cell[data-unavailable] {
+.muxui-range-calendar-cell[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.muxui-range-calendar-cell[data-unavailable] {
+  background-color: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-default);
+  cursor: not-allowed;
 }
 
 .muxui-range-calendar-cell[data-focus-visible] {

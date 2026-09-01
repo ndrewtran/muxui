@@ -218,6 +218,31 @@ test('Dialog and Toast close controls use decorative Lucide X icons', async () =
   }
 });
 
+test('Dialog dismissable false rejects trigger toggles after opening', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(Dialog, {
+      title: 'Details',
+      dismissable: false,
+      onOpenChange: (open) => changes.push(open),
+      trigger: React.createElement('button', { id: 'dialog-trigger' }, 'Open dialog'),
+    }, 'Dialog body')));
+    const trigger = document.querySelector('#dialog-trigger');
+    await act(async () => trigger.click());
+    assert.ok(document.body.querySelector('.muxui-dialog'));
+    assert.deepEqual(changes, [true]);
+    await act(async () => trigger.click());
+    assert.ok(document.body.querySelector('.muxui-dialog'));
+    assert.deepEqual(changes, [true]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.4 label guards reject empty hosts, fragments, and arrays while preserving valid labels', () => {
   for (const empty of [React.createElement('span'), React.createElement(React.Fragment), []]) {
     assert.throws(() => renderToString(React.createElement(Dialog, { title: empty })), /Dialog requires a title or accessible name/u);
@@ -235,9 +260,10 @@ test('DropZone and FileTrigger normalize browser inputs to Mux UI-owned values',
   const host = document.querySelector('#root');
   const root = createRoot(host);
   const drops = [];
+  const activations = [];
   const selections = [];
   try {
-    await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload', onDrop: (event) => drops.push(event) }, 'Drop here')));
+    await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload', onDrop: (event) => drops.push(event), onActivate: (event) => activations.push(event) }, 'Drop here')));
     const pasteTarget = host.querySelector('.muxui-drop-zone button');
     await act(async () => pasteTarget.focus());
     const pasteEvent = new Event('paste', { bubbles: true, cancelable: true });
@@ -256,6 +282,9 @@ test('DropZone and FileTrigger normalize browser inputs to Mux UI-owned values',
     assert.equal(drops[0].items[0].kind, 'text');
     assert.deepEqual([...drops[0].items[0].types], ['text/plain']);
     assert.equal(await drops[0].items[0].getText('text/plain'), 'MuxUI clipboard text');
+    const dropButton = host.querySelector('.muxui-drop-zone button');
+    await act(async () => dropButton.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })));
+    assert.deepEqual(activations, [{ type: 'activate', x: 0, y: 0 }]);
 
     await act(async () => root.render(React.createElement(FileTrigger, {
       acceptedFileTypes: ['.txt', 'text/plain'],
@@ -276,6 +305,16 @@ test('DropZone and FileTrigger normalize browser inputs to Mux UI-owned values',
     assert.equal(Array.isArray(selections[0]), true);
     assert.deepEqual(selections[0], [file]);
     assert.deepEqual(selections[1], []);
+    // Native picker cancellation has no change event and therefore no callback.
+    assert.equal(selections.length, 2);
+    await act(async () => root.render(React.createElement(FileTrigger, {
+      disabled: true,
+      onSelect: (files) => selections.push(files),
+    }, 'Choose files')));
+    const disabledInput = host.querySelector('input[type="file"]');
+    Object.defineProperty(disabledInput, 'files', { configurable: true, value: [file] });
+    await act(async () => disabledInput.dispatchEvent(new Event('change', { bubbles: true })));
+    assert.equal(selections.length, 2);
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -286,12 +325,16 @@ test('DropZone mirrors disabled state on its public root for assistive technolog
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
+  const activations = [];
   try {
-    await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload', disabled: true }, 'Drop here')));
+    await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload', disabled: true, onActivate: (event) => activations.push(event) }, 'Drop here')));
     const dropZone = host.querySelector('.muxui-drop-zone');
     assert.ok(dropZone);
     assert.equal(dropZone.getAttribute('data-disabled'), 'true');
     assert.equal(dropZone.getAttribute('aria-disabled'), 'true');
+    const dropButton = dropZone.querySelector('button');
+    await act(async () => dropButton.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })));
+    assert.deepEqual(activations, []);
 
     await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload' }, 'Drop here')));
     assert.equal(dropZone.getAttribute('data-disabled'), null);
@@ -326,6 +369,93 @@ test('Popover dismissable false prevents Escape and outside-press dismissal', as
       document.body.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0 }));
     });
     assert.ok(document.body.querySelector('.muxui-popover'));
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.4 overlay geometry accepts only the bounded Mux contract', () => {
+  const trigger = React.createElement('button', null, 'Open');
+  assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': 'Actions', trigger, offset: Number.NaN }, 'Body')), TypeError);
+  assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': 'Actions', trigger, placement: 'left' }, 'Body')), TypeError);
+  assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': 'Actions', trigger, shouldFlip: 'yes' }, 'Body')), TypeError);
+  assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': 'Actions', trigger, containerPadding: -1 }, 'Body')), TypeError);
+  assert.throws(() => renderToString(React.createElement(PreviewTrigger, { 'aria-label': 'Preview', trigger, delay: -1 }, 'Body')), TypeError);
+  assert.throws(() => renderToString(React.createElement(Tooltip, { trigger, content: 'Help', crossOffset: Infinity })), TypeError);
+  assert.throws(() => renderToString(React.createElement(ToastProvider, { maxVisible: Number.NaN })), TypeError);
+  assert.throws(() => renderToString(React.createElement(ToastProvider, { placement: 'middle' })), TypeError);
+  assert.doesNotThrow(() => renderToString(React.createElement(Popover, {
+    'aria-label': 'Actions', trigger, placement: 'start', offset: 0, crossOffset: -2, shouldFlip: false, containerPadding: 0,
+  }, 'Body')));
+});
+
+test('timed overlays mask and cancel disabled interactions without disabling triggers', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const changes = [];
+  const previewTrigger = (props = {}) => React.createElement(PreviewTrigger, {
+    'aria-label': 'Preview', trigger: React.createElement('button', { id: 'preview-trigger' }, 'Preview'), onOpenChange: (open) => changes.push(open), ...props,
+  }, 'Preview body');
+  try {
+    await act(async () => root.render(previewTrigger()));
+    assert.equal(document.body.querySelector('.muxui-preview-trigger'), null);
+    const openTrigger = document.querySelector('#preview-trigger');
+    await act(async () => openTrigger.focus());
+    assert.equal(document.activeElement, openTrigger);
+    await act(async () => root.render(previewTrigger({ disabled: true })));
+    assert.equal(document.body.querySelector('.muxui-preview-trigger'), null);
+    assert.deepEqual(changes, [false]);
+    const disabledTrigger = document.querySelector('#preview-trigger');
+    assert.equal(document.activeElement, disabledTrigger);
+    assert.equal(disabledTrigger.disabled, false);
+    assert.equal(disabledTrigger.getAttribute('aria-disabled'), 'true');
+    assert.equal(disabledTrigger.getAttribute('data-disabled'), 'true');
+    act(() => disabledTrigger.focus());
+    assert.equal(document.activeElement, disabledTrigger);
+
+    await act(async () => root.render(previewTrigger({ defaultOpen: true })));
+    assert.equal(document.body.querySelector('.muxui-preview-trigger'), null);
+    await act(async () => root.render(previewTrigger({ delay: 100 })));
+    const pendingTrigger = document.querySelector('#preview-trigger');
+    await act(async () => {
+      pendingTrigger.blur();
+      pendingTrigger.focus();
+    });
+    await act(async () => root.render(previewTrigger({ delay: 100, disabled: true })));
+    assert.deepEqual(changes, [false, false]);
+    await act(async () => root.render(previewTrigger({ delay: 100 })));
+    await act(async () => new Promise((resolve) => setTimeout(resolve, 125)));
+    assert.equal(document.body.querySelector('.muxui-preview-trigger'), null);
+
+    const controlledChanges = [];
+    const controlled = (disabled) => React.createElement(PreviewTrigger, {
+      key: 'controlled', 'aria-label': 'Controlled preview', open: true, disabled, trigger: React.createElement('button', { id: 'controlled-preview' }, 'Preview'), onOpenChange: (open) => controlledChanges.push(open),
+    }, 'Preview body');
+    await act(async () => root.render(controlled(false)));
+    assert.ok(document.body.querySelector('.muxui-preview-trigger'));
+    await act(async () => root.render(controlled(true)));
+    assert.equal(document.body.querySelector('.muxui-preview-trigger'), null);
+    assert.deepEqual(controlledChanges, [false]);
+    await act(async () => root.render(controlled(true)));
+    assert.deepEqual(controlledChanges, [false]);
+    await act(async () => root.render(controlled(false)));
+    assert.ok(document.body.querySelector('.muxui-preview-trigger'));
+
+    const tooltipChanges = [];
+    const tooltip = (disabled) => React.createElement(Tooltip, {
+      content: 'Helpful text', disabled, trigger: React.createElement('button', { id: 'tooltip-trigger' }, 'Help'), onOpenChange: (open) => tooltipChanges.push(open),
+    });
+    await act(async () => root.render(tooltip(false)));
+    const tooltipTrigger = document.querySelector('#tooltip-trigger');
+    await act(async () => tooltipTrigger.focus());
+    assert.equal(document.activeElement, tooltipTrigger);
+    await act(async () => root.render(tooltip(true)));
+    assert.equal(document.activeElement, document.querySelector('#tooltip-trigger'));
+    assert.equal(document.querySelector('#tooltip-trigger').getAttribute('aria-disabled'), 'true');
+    assert.equal(document.querySelector('#tooltip-trigger').disabled, false);
+    assert.deepEqual(tooltipChanges, [true, false]);
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -434,7 +564,7 @@ test('title-less useToast notifications have an accessible RAC name', async () =
   }
 });
 
-test('declarative Toast teardown cancels its timer and settles onDismiss once', async () => {
+test('declarative Toast teardown cancels its timer without settling onDismiss', async () => {
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
@@ -474,7 +604,7 @@ test('declarative Toast teardown cancels its timer and settles onDismiss once', 
     await act(async () => root.unmount());
     await Promise.resolve();
     assert.equal(activeTimers.size, 0);
-    assert.equal(dismissed, 1);
+    assert.equal(dismissed, 0);
     assert.equal(document.body.querySelector('.muxui-toast'), null);
   } finally {
     for (const handle of activeTimers) originalClearTimeout(handle);
@@ -485,7 +615,7 @@ test('declarative Toast teardown cancels its timer and settles onDismiss once', 
   }
 });
 
-test('Toast keeps one stable MuxUI manager and settles dismissal callbacks once', async () => {
+test('Toast keeps one stable MuxUI manager and settles accepted dismissals once', async () => {
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
@@ -515,7 +645,7 @@ test('Toast keeps one stable MuxUI manager and settles dismissal callbacks once'
     await act(async () => { manager.add('Pending teardown', { duration: 60000, onDismiss: () => { dismissed += 1; } }); });
     await act(async () => { root.unmount(); await Promise.resolve(); });
     await Promise.resolve();
-    assert.equal(dismissed, 2);
+    assert.equal(dismissed, 1);
     assert.equal(document.body.querySelector('.muxui-toast'), null);
   } finally {
     if (host.isConnected && host.hasChildNodes()) await act(async () => root.unmount());

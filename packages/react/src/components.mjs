@@ -65,7 +65,7 @@ export const Breadcrumbs = React.forwardRef(function Breadcrumbs({
         className: 'muxui-breadcrumbs-item',
       }, item.href && !current
         ? React.createElement(AriaLink, { href: item.href, isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, className: 'muxui-breadcrumbs-link' }, item.label)
-        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'data-disabled': item.disabled || undefined }, item.label));
+        : React.createElement('span', { className: 'muxui-breadcrumbs-current', 'aria-current': current ? 'page' : undefined, 'aria-disabled': item.disabled || undefined, 'data-disabled': item.disabled || undefined }, item.label));
     },
   }));
 });
@@ -258,6 +258,7 @@ export const ProgressBar = React.forwardRef(function ProgressBar({
   className,
   ...props
 }, ref) {
+  const complete = value !== undefined && !Number.isNaN(value) && maxValue > minValue && value >= maxValue;
   return React.createElement(AriaProgressBar, {
     ...props,
     ref,
@@ -266,6 +267,7 @@ export const ProgressBar = React.forwardRef(function ProgressBar({
     maxValue,
     isIndeterminate: value === undefined,
     'data-indeterminate': value === undefined || undefined,
+    'data-complete': complete || undefined,
     className: classNames('muxui-progress-bar', className),
     children: ({ percentage }) => React.createElement(React.Fragment, null,
       React.createElement('div', { className: 'muxui-progress-bar-header' }, React.createElement(AriaLabel, { className: 'muxui-value-label' }, label), React.createElement('span', { className: 'muxui-value-output' }, value === undefined ? 'Loading' : `${percentage}%`)),

@@ -58,11 +58,11 @@ import {
   TokenInput as AriaTokenInput,
   Token as AriaToken,
   Toolbar as AriaToolbar,
+  Virtualizer as AriaVirtualizer,
+  ListLayout,
   Tree as AriaTree,
   TreeItem as AriaTreeItem,
-  Virtualizer as AriaVirtualizer,
   Group as AriaGroup,
-  ListLayout,
   TreeItemContent as AriaTreeItemContent,
   Label as AriaLabel,
   Input as AriaInput,
@@ -108,6 +108,25 @@ function keyList(value) {
   return value === 'all' ? 'all' : [...(value ?? [])].map(String);
 }
 
+function readonlyKeyArray(value, property) {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.some((key) => typeof key !== 'string')) {
+    throw new TypeError(`${property} must be a readonly string array`);
+  }
+  return [...value];
+}
+
+function readonlyKeySet(value, property, selectionMode) {
+  if (selectionMode !== 'single' && selectionMode !== 'multiple') {
+    throw new TypeError('ToggleButtonGroup selectionMode must be single or multiple');
+  }
+  const keys = readonlyKeyArray(value, property);
+  if (keys && selectionMode === 'single' && keys.length > 1) {
+    throw new TypeError(`${property} must contain at most one ID in single selection mode`);
+  }
+  return keys === undefined ? undefined : new Set(keys);
+}
+
 function accessibleName(props, componentName) {
   const { label, ariaLabel, ariaLabelledby } = props;
   if ((label === undefined || label === null || label === '') && !ariaLabel && !ariaLabelledby) {
@@ -125,6 +144,12 @@ function serializeDateValue(value) {
   return value ? String(value) : undefined;
 }
 
+function dateUnavailableCallback(callback, name) {
+  if (callback === undefined) return undefined;
+  if (typeof callback !== 'function') throw new TypeError(`${name} unavailableDateMatcher must be a function`);
+  return (date) => Boolean(callback(serializeDateValue(date)));
+}
+
 function colorValue(value, name) {
   if (value === undefined || value === null || value === '') return undefined;
   if (typeof value !== 'string') throw new TypeError(`${name} values must be Mux UI color strings`);
@@ -136,24 +161,59 @@ function colorValue(value, name) {
 // context keeps fragments and wrapper elements transparent to the contract.
 const ColorPickerContext = React.createContext({ disabled: false, readOnly: false });
 
+const readOnlyInteractionEvents = [
+  'beforeinput', 'change', 'click', 'input', 'keydown', 'mousedown', 'mousemove',
+  'pointerdown', 'pointermove', 'touchstart', 'touchmove',
+];
+const readOnlyTargetGuards = new WeakMap();
+
+function setReadOnlyTargetGuard(target, readOnly) {
+  const existingGuard = readOnlyTargetGuards.get(target);
+  if (readOnly && !existingGuard) {
+    const guard = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+    };
+    for (const eventName of readOnlyInteractionEvents) target.addEventListener(eventName, guard, true);
+    readOnlyTargetGuards.set(target, guard);
+  } else if (!readOnly && existingGuard) {
+    for (const eventName of readOnlyInteractionEvents) target.removeEventListener(eventName, existingGuard, true);
+    readOnlyTargetGuards.delete(target);
+  }
+}
+
+function updateReadOnlyTargets(scope, readOnly, selector) {
+  if (!scope) return;
+  const targets = [
+    ...(scope.matches(selector) ? [scope] : []),
+    ...scope.querySelectorAll(selector),
+  ];
+  for (const target of targets) {
+    if (readOnly) {
+      target.setAttribute('aria-readonly', 'true');
+      target.setAttribute('data-readonly', 'true');
+    } else {
+      target.removeAttribute('aria-readonly');
+      target.removeAttribute('data-readonly');
+    }
+    setReadOnlyTargetGuard(target, readOnly);
+  }
+}
+
 function useReadOnlyTargets(forwardedRef, readOnly, selector) {
   const scopeRef = React.useRef(null);
   const assignRef = React.useCallback((node) => {
     scopeRef.current = node;
     if (typeof forwardedRef === 'function') forwardedRef(node);
     else if (forwardedRef) forwardedRef.current = node;
-  }, [forwardedRef]);
-  React.useEffect(() => {
-    const scope = scopeRef.current;
-    if (!scope) return;
-    const targets = [
-      ...(scope.matches(selector) ? [scope] : []),
-      ...scope.querySelectorAll(selector),
-    ];
-    for (const target of targets) {
-      if (readOnly) target.setAttribute('aria-readonly', 'true');
-      else target.removeAttribute('aria-readonly');
-    }
+    // SSR can carry owned root/thumb data markers. RAC-private range inputs are
+    // decorated by this callback during commit, so no private internals/imports
+    // are needed to expose readOnly semantics on the actual targets.
+    updateReadOnlyTargets(node, readOnly, selector);
+  }, [forwardedRef, readOnly, selector]);
+  const useReadOnlyLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+  useReadOnlyLayoutEffect(() => {
+    updateReadOnlyTargets(scopeRef.current, readOnly, selector);
   }, [readOnly, selector]);
   return assignRef;
 }
@@ -175,7 +235,7 @@ function calendarHeader() {
 }
 
 function calendarProps(props, name, labelId) {
-  const { value, defaultValue, focusedValue, minValue, maxValue, onChange, onFocusChange, disabled, readOnly, required, invalid, label, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className, ...rest } = props;
+  const { value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, isDateUnavailable: _upstreamDateUnavailable, onChange, onFocusChange, disabled, readOnly, required, invalid, label, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className, ...rest } = props;
   accessibleName({ label, ariaLabel, ariaLabelledby }, name);
   return {
     ...rest,
@@ -184,6 +244,7 @@ function calendarProps(props, name, labelId) {
     focusedValue: dateValue(focusedValue, name),
     minValue: dateValue(minValue, name),
     maxValue: dateValue(maxValue, name),
+    isDateUnavailable: dateUnavailableCallback(unavailableDateMatcher, name),
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
@@ -207,7 +268,7 @@ export const Calendar = React.forwardRef(function Calendar(props, ref) {
 Calendar.displayName = 'Calendar';
 
 export const RangeCalendar = React.forwardRef(function RangeCalendar(props, ref) {
-  const { label, description: _description, errorMessage: _errorMessage, value, defaultValue, minValue, maxValue, onChange,
+  const { label, description: _description, errorMessage: _errorMessage, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, isDateUnavailable: _upstreamDateUnavailable, onChange, onFocusChange,
     disabled = false, readOnly = false, required = false, invalid = false, className,
     'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...rest } = props;
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'RangeCalendar');
@@ -218,8 +279,10 @@ export const RangeCalendar = React.forwardRef(function RangeCalendar(props, ref)
     ref,
     value: mapRange(value),
     defaultValue: mapRange(defaultValue),
+    focusedValue: dateValue(focusedValue, 'RangeCalendar'),
     minValue: dateValue(minValue, 'RangeCalendar'),
     maxValue: dateValue(maxValue, 'RangeCalendar'),
+    isDateUnavailable: dateUnavailableCallback(unavailableDateMatcher, 'RangeCalendar'),
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
@@ -228,6 +291,7 @@ export const RangeCalendar = React.forwardRef(function RangeCalendar(props, ref)
     'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
     className: classNames('muxui-range-calendar', className),
     onChange: (next) => { if (!disabled && !readOnly) onChange?.(next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined); },
+    onFocusChange: (next) => { if (!disabled) onFocusChange?.(serializeDateValue(next)); },
   },
   label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
   calendarHeader(),
@@ -258,53 +322,120 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
 });
 ColorField.displayName = 'ColorField';
 
-export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, invalid: _invalid, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorArea');
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
   const labelId = React.useId();
   const labelledby = ariaLabelledby ?? (label !== undefined ? labelId : undefined);
-  const assignAreaRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]:not([tabindex="-1"])');
+  const assignAreaRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
   const preventReadOnlyInteraction = (event) => {
     if (effectiveReadOnly) {
       event.preventDefault();
       event.stopPropagation();
     }
   };
-  return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined }, label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null, React.createElement(AriaColorArea, { ...props, ref: assignAreaRef, value: colorValue(value, 'ColorArea'), defaultValue: colorValue(defaultValue, 'ColorArea'), onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); }, isDisabled: effectiveDisabled, 'aria-label': ariaLabel, 'aria-labelledby': labelledby, 'aria-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, className: classNames('muxui-color-area', className) }, React.createElement(AriaColorThumb, { className: 'muxui-color-area-thumb' })));
+  return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+    label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
+    React.createElement(AriaColorArea, {
+      ...props,
+      ref: assignAreaRef,
+      value: colorValue(value, 'ColorArea'),
+      defaultValue: colorValue(defaultValue, 'ColorArea'),
+      onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
+      isDisabled: effectiveDisabled,
+      'aria-label': ariaLabel,
+      'aria-labelledby': labelledby,
+      'data-readonly': effectiveReadOnly || undefined,
+      onPointerDownCapture: preventReadOnlyInteraction,
+      onMouseDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: preventReadOnlyInteraction,
+      onTouchStartCapture: preventReadOnlyInteraction,
+      onClickCapture: preventReadOnlyInteraction,
+      onChangeCapture: preventReadOnlyInteraction,
+      className: classNames('muxui-color-area', className),
+    }, React.createElement(AriaColorThumb, {
+      className: 'muxui-color-area-thumb',
+      'data-readonly': effectiveReadOnly || undefined,
+    })),
+  );
 });
 ColorArea.displayName = 'ColorArea';
 
-export const ColorSlider = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const ColorSlider = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = pickerState.readOnly;
+  const effectiveReadOnly = readOnly || pickerState.readOnly;
   const preventReadOnlyInteraction = (event) => {
     if (effectiveReadOnly) {
       event.preventDefault();
       event.stopPropagation();
     }
   };
-  const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]:not([tabindex="-1"])');
-  return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction }, React.createElement(AriaColorSlider, { ...props, ref: assignSliderRef, channel, colorSpace, value: colorValue(value, 'ColorSlider'), defaultValue: colorValue(defaultValue, 'ColorSlider'), onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); }, isDisabled: effectiveDisabled, orientation, 'aria-readonly': effectiveReadOnly || undefined, className: classNames('muxui-color-slider', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaSliderTrack, { className: 'muxui-color-slider-track' }, React.createElement(AriaSliderFill, { className: 'muxui-color-slider-fill' }), React.createElement(AriaColorThumb, { className: 'muxui-color-slider-thumb' }))));
+  const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
+  return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+    React.createElement(AriaColorSlider, {
+      ...props,
+      ref: assignSliderRef,
+      channel,
+      colorSpace,
+      value: colorValue(value, 'ColorSlider'),
+      defaultValue: colorValue(defaultValue, 'ColorSlider'),
+      onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
+      isDisabled: effectiveDisabled,
+      orientation,
+      'data-readonly': effectiveReadOnly || undefined,
+      className: classNames('muxui-color-slider', className),
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+    },
+    label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
+    React.createElement(AriaSliderTrack, { className: 'muxui-color-slider-track' },
+      React.createElement(AriaSliderFill, { className: 'muxui-color-slider-fill' }),
+      React.createElement(AriaColorThumb, { className: 'muxui-color-slider-thumb', 'data-readonly': effectiveReadOnly || undefined }))),
+  );
 });
 ColorSlider.displayName = 'ColorSlider';
 
-export const ColorWheel = React.forwardRef(function ColorWheel({ value, defaultValue, onChange, disabled = false, className, outerRadius = 96, innerRadius = 64, label: _label, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+function assertColorWheelGeometry(outerRadius, innerRadius) {
+  if (typeof outerRadius !== 'number' || !Number.isFinite(outerRadius) || outerRadius < 0) throw new TypeError('ColorWheel outerRadius must be a finite nonnegative number');
+  if (typeof innerRadius !== 'number' || !Number.isFinite(innerRadius) || innerRadius < 0) throw new TypeError('ColorWheel innerRadius must be a finite nonnegative number');
+  if (innerRadius >= outerRadius) throw new TypeError('ColorWheel innerRadius must be less than outerRadius');
+}
+
+export const ColorWheel = React.forwardRef(function ColorWheel({ value, defaultValue, onChange, disabled = false, readOnly = false, className, outerRadius = 96, innerRadius = 64, label: _label, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ ariaLabel, ariaLabelledby }, 'ColorWheel');
+  assertColorWheelGeometry(outerRadius, innerRadius);
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = pickerState.readOnly;
+  const effectiveReadOnly = readOnly || pickerState.readOnly;
   const preventReadOnlyInteraction = (event) => {
     if (effectiveReadOnly) {
       event.preventDefault();
       event.stopPropagation();
     }
   };
-  const assignWheelRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]:not([tabindex="-1"])');
-  return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction }, React.createElement(AriaColorWheel, { ...props, ref: assignWheelRef, outerRadius, innerRadius, value: colorValue(value, 'ColorWheel'), defaultValue: colorValue(defaultValue, 'ColorWheel'), onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); }, isDisabled: effectiveDisabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-readonly': effectiveReadOnly || undefined, className: classNames('muxui-color-wheel', className) }, React.createElement(AriaColorWheelTrack, { className: 'muxui-color-wheel-track' }), React.createElement(AriaColorThumb, { className: 'muxui-color-wheel-thumb' })));
+  const assignWheelRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
+  return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+    React.createElement(AriaColorWheel, {
+      ...props,
+      ref: assignWheelRef,
+      outerRadius,
+      innerRadius,
+      value: colorValue(value, 'ColorWheel'),
+      defaultValue: colorValue(defaultValue, 'ColorWheel'),
+      onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
+      isDisabled: effectiveDisabled,
+      'data-readonly': effectiveReadOnly || undefined,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+      className: classNames('muxui-color-wheel', className),
+    },
+    React.createElement(AriaColorWheelTrack, { className: 'muxui-color-wheel-track' }),
+    React.createElement(AriaColorThumb, { className: 'muxui-color-wheel-thumb', 'data-readonly': effectiveReadOnly || undefined })),
+  );
 });
 ColorWheel.displayName = 'ColorWheel';
 
@@ -313,11 +444,11 @@ export const ColorPicker = React.forwardRef(function ColorPicker({ value, defaul
 });
 ColorPicker.displayName = 'ColorPicker';
 
-export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, readOnly = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const normalized = normalizeItems(items);
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = pickerState.readOnly;
+  const effectiveReadOnly = readOnly || pickerState.readOnly;
   accessibleName({ ariaLabel, ariaLabelledby }, 'ColorSwatchPicker');
   const preventReadOnlyInteraction = (event) => {
     if (effectiveReadOnly) {
@@ -326,7 +457,53 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
     }
   };
   const assignSwatchPickerRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="listbox"]');
-  return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction }, React.createElement(AriaColorSwatchPicker, { ...props, ref: assignSwatchPickerRef, value: colorValue(value, 'ColorSwatchPicker'), defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'), onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); }, isDisabled: effectiveDisabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-readonly': effectiveReadOnly || undefined, className: classNames('muxui-color-swatch-picker', className) }, normalized.map((item) => React.createElement(AriaColorSwatchPickerItem, { key: item.id, color: colorValue(item.color ?? item.value, 'ColorSwatchPicker'), id: item.id, isDisabled: effectiveDisabled || item.disabled, className: 'muxui-color-swatch-picker-item' }, React.createElement(AriaColorSwatch, { color: colorValue(item.color ?? item.value, 'ColorSwatchPicker'), isDisabled: effectiveDisabled || item.disabled, 'aria-disabled': effectiveDisabled || item.disabled || undefined, 'data-disabled': effectiveDisabled || item.disabled || undefined, className: 'muxui-color-swatch' })))));
+  return React.createElement(
+    'div',
+    {
+      'aria-disabled': effectiveDisabled || undefined,
+      'data-disabled': effectiveDisabled || undefined,
+      'data-readonly': effectiveReadOnly || undefined,
+      onPointerDownCapture: preventReadOnlyInteraction,
+      onMouseDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: preventReadOnlyInteraction,
+      onTouchStartCapture: preventReadOnlyInteraction,
+      onClickCapture: preventReadOnlyInteraction,
+      onChangeCapture: preventReadOnlyInteraction,
+    },
+    React.createElement(
+      AriaColorSwatchPicker,
+      {
+        ...props,
+        ref: assignSwatchPickerRef,
+        value: colorValue(value, 'ColorSwatchPicker'),
+        defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'),
+        onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
+        isDisabled: effectiveDisabled,
+        'data-readonly': effectiveReadOnly || undefined,
+        'aria-label': ariaLabel,
+        'aria-labelledby': ariaLabelledby,
+        className: classNames('muxui-color-swatch-picker', className),
+      },
+      normalized.map((item) => React.createElement(
+        AriaColorSwatchPickerItem,
+        {
+          key: item.id,
+          color: colorValue(item.color ?? item.value, 'ColorSwatchPicker'),
+          id: item.id,
+          isDisabled: effectiveDisabled || item.disabled,
+          'data-readonly': effectiveReadOnly || undefined,
+          className: 'muxui-color-swatch-picker-item',
+        },
+        React.createElement(AriaColorSwatch, {
+          color: colorValue(item.color ?? item.value, 'ColorSwatchPicker'),
+          isDisabled: effectiveDisabled || item.disabled,
+          'aria-disabled': effectiveDisabled || item.disabled || undefined,
+          'data-disabled': effectiveDisabled || item.disabled || undefined,
+          className: 'muxui-color-swatch',
+        }),
+      )),
+    ),
+  );
 });
 ColorSwatchPicker.displayName = 'ColorSwatchPicker';
 
@@ -346,7 +523,7 @@ ListBox.displayName = 'ListBox';
 
 export const GridList = React.forwardRef(function GridList(props, ref) {
   const { normalized, rest, selectedKeys, defaultSelectedKeys, onSelectionChange, onAction, selectionMode, className, disabled, disabledKeys } = collectionProps(props, 'grid-list');
-  return React.createElement(AriaGridList, { ...rest, ref, items: normalized, selectionMode, selectedKeys, defaultSelectedKeys, disabledKeys, onSelectionChange, onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-disabled': disabled || undefined, className }, (item) => React.createElement(AriaGridListItem, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, className: 'muxui-grid-list-item' }, item.label));
+  return React.createElement(AriaGridList, { ...rest, ref, items: normalized, selectionMode, selectedKeys, defaultSelectedKeys, disabledKeys, onSelectionChange, onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-disabled': disabled || undefined, className }, (item) => React.createElement(AriaGridListItem, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, 'data-disabled': disabled || item.disabled || undefined, 'aria-disabled': disabled || item.disabled || undefined, className: 'muxui-grid-list-item' }, item.label));
 });
 GridList.displayName = 'GridList';
 
@@ -375,11 +552,11 @@ export const ComboBox = React.forwardRef(function ComboBox({ label, description,
 });
 ComboBox.displayName = 'ComboBox';
 
-export const Select = React.forwardRef(function Select({ label, description, errorMessage, items = [], value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, placeholder = 'Select an option', name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const Select = React.forwardRef(function Select({ label, description, errorMessage, items = [], value, defaultValue, open, defaultOpen = false, onOpenChange, onChange, disabled = false, readOnly = false, required = false, invalid = false, placeholder = 'Select an option', name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'Select');
   const normalized = normalizeItems(items);
   const handleSelection = (key) => { if (!disabled && !readOnly) onChange?.(key == null ? undefined : String(key)); };
-  return React.createElement(AriaSelect, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-select', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+  return React.createElement(AriaSelect, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue, isOpen: open, defaultOpen, onOpenChange, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-select', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
     label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
     React.createElement(AriaButton, { className: 'muxui-select-trigger', 'data-disabled': disabled || undefined, 'aria-disabled': disabled || undefined }, React.createElement(AriaSelectValue, { className: 'muxui-select-value', children: ({ selectedText }) => selectedText || placeholder }), React.createElement(ChevronDownIcon, { className: 'muxui-select-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
     description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
@@ -389,44 +566,94 @@ export const Select = React.forwardRef(function Select({ label, description, err
 });
 Select.displayName = 'Select';
 
-export const RadioGroup = React.forwardRef(function RadioGroup({ label, options = [], value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+export const RadioGroup = React.forwardRef(function RadioGroup({ label, options = [], value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
-  return React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-radio-group', className) }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, options.map((option) => React.createElement(AriaRadio, { key: String(option.id ?? option.value), value: String(option.value ?? option.id), isDisabled: disabled || option.disabled, className: 'muxui-radio' }, React.createElement('span', { 'aria-hidden': 'true', className: 'muxui-radio-indicator' }), option.label ?? option.value)));
+  return React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-radio-group', className) }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, options.map((option) => React.createElement(AriaRadio, { key: String(option.id ?? option.value), value: String(option.value ?? option.id), isDisabled: disabled || option.disabled, className: 'muxui-radio' }, React.createElement('span', { 'aria-hidden': 'true', className: 'muxui-radio-indicator' }), option.label ?? option.value)));
 });
 RadioGroup.displayName = 'RadioGroup';
 
-export const Slider = React.forwardRef(function Slider({ label, value, defaultValue, onChange, min = 0, max = 100, step = 1, disabled = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const Slider = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'Slider');
+  const readOnlyRef = useReadOnlyTargets(ref, readOnly, '[role="slider"], input[type="range"]');
+  const preventReadOnlyInteraction = React.useCallback((event) => {
+    if (readOnly) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, [readOnly]);
+  const handleChange = React.useCallback((next) => {
+    if (!disabled && !readOnly) onChange?.(next);
+  }, [disabled, onChange, readOnly]);
+  const handleChangeEnd = React.useCallback((next) => {
+    if (!disabled && !readOnly) onChangeEnd?.(next);
+  }, [disabled, onChangeEnd, readOnly]);
   const assignSliderRef = React.useCallback((node) => {
     if (node) {
       if (disabled) node.setAttribute('aria-disabled', 'true');
       else node.removeAttribute('aria-disabled');
     }
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-  }, [disabled, ref]);
-  return React.createElement(AriaSlider, { ...props, ref: assignSliderRef, value, defaultValue, onChange: (next) => { if (!disabled) onChange?.(next); }, minValue: min, maxValue: max, step, isDisabled: disabled, orientation, className: classNames('muxui-slider', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(AriaSliderTrack, { className: 'muxui-slider-track' }, React.createElement(AriaSliderFill, { className: 'muxui-slider-fill' }), React.createElement(AriaSliderThumb, { className: 'muxui-slider-thumb' }))));
+    readOnlyRef(node);
+  }, [disabled, readOnlyRef]);
+  return React.createElement(AriaSlider, {
+    ...props,
+    ref: assignSliderRef,
+    value,
+    defaultValue,
+    onChange: handleChange,
+    onChangeEnd: readOnly ? undefined : handleChangeEnd,
+    minValue: min,
+    maxValue: max,
+    step,
+    isDisabled: disabled,
+    orientation,
+    'data-readonly': readOnly || undefined,
+    onMouseDownCapture: preventReadOnlyInteraction,
+    onTouchStartCapture: preventReadOnlyInteraction,
+    onPointerDownCapture: preventReadOnlyInteraction,
+    onPointerMoveCapture: preventReadOnlyInteraction,
+    onTouchMoveCapture: preventReadOnlyInteraction,
+    onClickCapture: preventReadOnlyInteraction,
+    onKeyDownCapture: preventReadOnlyInteraction,
+    onChangeCapture: preventReadOnlyInteraction,
+    className: classNames('muxui-slider', className),
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledby,
+  }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(AriaSliderTrack, { className: 'muxui-slider-track' }, React.createElement(AriaSliderFill, { className: 'muxui-slider-fill' }), React.createElement(AriaSliderThumb, { className: 'muxui-slider-thumb', 'data-readonly': readOnly || undefined }))));
 });
 Slider.displayName = 'Slider';
 
 const AriaOutput = AriaSliderOutput;
 
-export const Table = React.forwardRef(function Table({ columns = [], rows = [], selectedIds, defaultSelectedIds, onSelectionChange, onRowAction, selectionMode = 'none', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, ...props }, ref) {
+function normalizeSortDescriptor(value, columns) {
+  if (value === undefined) return undefined;
+  const keys = value && typeof value === 'object' && !Array.isArray(value) ? Object.keys(value) : [];
+  if (!value || typeof value !== 'object' || Array.isArray(value) || keys.length !== 2
+    || !keys.includes('column') || !keys.includes('direction') || typeof value.column !== 'string'
+    || (value.direction !== 'ascending' && value.direction !== 'descending')) {
+    throw new TypeError('Table sortDescriptor must be {column: string; direction: ascending|descending}');
+  }
+  const column = columns.find((candidate) => candidate.id === value.column);
+  if (!column || !column.sortable) throw new TypeError(`Table sortDescriptor column must be sortable: ${value.column}`);
+  return { column: value.column, direction: value.direction };
+}
+
+export const Table = React.forwardRef(function Table({ columns = [], rows = [], selectedIds, defaultSelectedIds, onSelectionChange, onRowAction, sortDescriptor, onSortChange, selectionMode = 'none', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, ...props }, ref) {
   const normalizedRows = normalizeItems(rows);
   const normalizedColumns = normalizeItems(columns);
+  const normalizedSortDescriptor = normalizeSortDescriptor(sortDescriptor, normalizedColumns);
   accessibleName({ ariaLabel }, 'Table');
   const disabledKeys = disabled ? new Set(normalizedRows.map((row) => row.id)) : new Set(normalizedRows.filter((row) => row.disabled).map((row) => row.id));
-  return React.createElement(AriaTable, { ...props, ref, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), disabledKeys, isDisabled: disabled, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onRowAction: (key) => { const row = normalizedRows.find((item) => item.id === String(key)); if (!disabled && !row?.disabled) onRowAction?.(row); }, 'aria-label': ariaLabel, 'aria-disabled': disabled || undefined, className: classNames('muxui-table', className) },
+  return React.createElement(AriaTable, { ...props, ref, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), sortDescriptor: normalizedSortDescriptor, disabledKeys, isDisabled: disabled, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onSortChange: (next) => { if (disabled || !next) return; const descriptor = normalizeSortDescriptor({ column: String(next.column), direction: next.direction }, normalizedColumns); onSortChange?.(descriptor); }, onRowAction: (key) => { const row = normalizedRows.find((item) => item.id === String(key)); if (!disabled && !row?.disabled) onRowAction?.(row); }, 'aria-label': ariaLabel, 'aria-disabled': disabled || undefined, className: classNames('muxui-table', className) },
     React.createElement(AriaTableHeader, { columns: normalizedColumns, className: 'muxui-table-header' }, (column) => React.createElement(AriaColumn, { id: column.id, isRowHeader: column.isRowHeader, allowsSorting: column.sortable, className: 'muxui-table-column' }, column.label)),
     React.createElement(AriaTableBody, { items: normalizedRows, className: 'muxui-table-body' }, (row) => React.createElement(AriaRow, { id: row.id, className: 'muxui-table-row' }, normalizedColumns.map((column) => React.createElement(AriaCell, { key: column.id, className: 'muxui-table-cell' }, row[column.id] ?? row.values?.[column.id] ?? '')))),
   );
 });
 Table.displayName = 'Table';
 
-export const Tabs = React.forwardRef(function Tabs({ items = [], value, defaultValue, onChange, orientation = 'horizontal', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const Tabs = React.forwardRef(function Tabs({ items = [], value, defaultValue, onChange, keyboardActivation = 'automatic', orientation = 'horizontal', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const normalized = normalizeItems(items);
   accessibleName({ ariaLabel, ariaLabelledby }, 'Tabs');
-  return React.createElement(AriaTabs, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue ?? normalized[0]?.id, onSelectionChange: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); }, orientation, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tabs', className) },
+  return React.createElement(AriaTabs, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue ?? normalized[0]?.id, onSelectionChange: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); }, orientation, keyboardActivation, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tabs', className) },
     React.createElement(AriaTabList, { items: normalized, className: 'muxui-tab-list' }, (item) => React.createElement(AriaTab, { id: item.id, isDisabled: disabled || item.disabled, 'data-disabled': disabled || item.disabled || undefined, 'aria-disabled': disabled || item.disabled || undefined, className: 'muxui-tab' }, item.label)),
     React.createElement(AriaTabPanels, { items: normalized, className: 'muxui-tab-panels' }, (item) => React.createElement(AriaTabPanel, { id: item.id, className: 'muxui-tab-panel' }, item.panel)),
   );
@@ -440,9 +667,11 @@ export const TagGroup = React.forwardRef(function TagGroup({ label, items = [], 
 });
 TagGroup.displayName = 'TagGroup';
 
-export const ToggleButtonGroup = React.forwardRef(function ToggleButtonGroup({ selectedIds, defaultSelectedIds, onSelectionChange, orientation = 'horizontal', disabled = false, children, className, ...props }, ref) {
+export const ToggleButtonGroup = React.forwardRef(function ToggleButtonGroup({ selectedIds, defaultSelectedIds, onSelectionChange, selectionMode = 'single', orientation = 'horizontal', disabled = false, children, className, ...props }, ref) {
   accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'ToggleButtonGroup');
-  return React.createElement(AriaToggleButtonGroup, { ...props, ref, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, orientation, isDisabled: disabled, className: classNames('muxui-toggle-button-group', className) }, children);
+  const selectedKeys = readonlyKeySet(selectedIds, 'selectedIds', selectionMode);
+  const defaultSelectedKeys = readonlyKeySet(defaultSelectedIds, 'defaultSelectedIds', selectionMode);
+  return React.createElement(AriaToggleButtonGroup, { ...props, ref, selectedKeys, defaultSelectedKeys, selectionMode, onSelectionChange: (keys) => { if (!disabled) { if (keys === 'all') throw new TypeError('ToggleButtonGroup selection cannot be all'); onSelectionChange?.([...keys].map(String)); } }, orientation, isDisabled: disabled, className: classNames('muxui-toggle-button-group', className) }, children);
 });
 ToggleButtonGroup.displayName = 'ToggleButtonGroup';
 
@@ -504,9 +733,9 @@ export const TokenField = React.forwardRef(function TokenField({ label, value, d
 });
 TokenField.displayName = 'TokenField';
 
-export const Toolbar = React.forwardRef(function Toolbar({ orientation = 'horizontal', disabled = false, children, className, ...props }, ref) {
+export const Toolbar = React.forwardRef(function Toolbar({ orientation = 'horizontal', disabled: _disabled, children, className, ...props }, ref) {
   accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'Toolbar');
-  return React.createElement(AriaToolbar, { ...props, ref, orientation, isDisabled: disabled, 'aria-disabled': disabled || undefined, className: classNames('muxui-toolbar', className) }, children);
+  return React.createElement(AriaToolbar, { ...props, ref, orientation, className: classNames('muxui-toolbar', className) }, children);
 });
 Toolbar.displayName = 'Toolbar';
 
@@ -568,7 +797,37 @@ function assertPositiveVirtualizerNumber(value, property) {
 }
 
 function assertNonNegativeVirtualizerNumber(value, property) {
-  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) throw new TypeError(`Virtualizer ${property} must be a finite number greater than or equal to 0`);
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || !Number.isInteger(value)) throw new TypeError(`Virtualizer ${property} must be a finite number greater than or equal to 0`);
+}
+
+// Mux owns the row-count overscan policy while RAC still owns the collection,
+// focus persistence, scroll anchoring, and visible-rect lifecycle.
+class MuxFixedRowListLayout extends ListLayout {
+  update(invalidationContext) {
+    this.overscan = invalidationContext.layoutOptions?.overscan ?? 2;
+    super.update(invalidationContext);
+  }
+
+  shouldInvalidateLayoutOptions(newOptions, oldOptions) {
+    return newOptions?.overscan !== oldOptions?.overscan || super.shouldInvalidateLayoutOptions(newOptions, oldOptions);
+  }
+
+  getVisibleLayoutInfos(rect) {
+    const visibleRect = this.virtualizer?.visibleRect;
+    const rowSize = (this.rowSize ?? this.estimatedRowSize ?? 48) + this.gap;
+    if (!visibleRect || visibleRect.width <= 0 || visibleRect.height <= 0 || rowSize <= 0) return super.getVisibleLayoutInfos(rect);
+    const expandedRect = visibleRect.copy();
+    const overscanSize = rowSize * (this.overscan ?? 2);
+    expandedRect.y = Math.max(0, expandedRect.y - overscanSize);
+    expandedRect.height += overscanSize * 2;
+    const start = Math.max(0, Math.floor(visibleRect.y / rowSize) - (this.overscan ?? 2));
+    const end = Math.ceil((visibleRect.y + visibleRect.height) / rowSize) + (this.overscan ?? 2);
+    return super.getVisibleLayoutInfos(expandedRect).filter((layoutInfo) => {
+      if (layoutInfo.type !== 'item') return true;
+      const index = Math.round((layoutInfo.rect.y - this.padding) / rowSize);
+      return (index >= start && index < end) || this.virtualizer.isPersistedKey(layoutInfo.key);
+    });
+  }
 }
 
 export const Virtualizer = React.forwardRef(function Virtualizer({ items = [], renderItem: _renderItem, itemHeight = 40, height = 240, overscan = 2, disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, style, onScroll, ...props }, ref) {
@@ -577,12 +836,7 @@ export const Virtualizer = React.forwardRef(function Virtualizer({ items = [], r
   assertPositiveVirtualizerNumber(height, 'height');
   assertNonNegativeVirtualizerNumber(overscan, 'overscan');
   const normalized = normalizeItems(items);
-  // RAC manages the rendered window from the viewport and row size. The
-  // padding option is layout padding, not overscan, so passing it visibly
-  // offsets the first item and shifts the virtual content. Keep overscan in
-  // the public contract while leaving window placement to RAC.
-  const layoutOptions = { rowSize: itemHeight };
-  return React.createElement(AriaVirtualizer, { layout: ListLayout, layoutOptions },
+  return React.createElement(AriaVirtualizer, { layout: MuxFixedRowListLayout, layoutOptions: { rowSize: itemHeight, overscan } },
     React.createElement(AriaListBox, {
       ...props,
       ref,

@@ -134,13 +134,8 @@ const behaviorStateEvidence = Object.freeze({
 
 const unsupportedStateRationales = Object.freeze({
   'Form/invalid': 'The public Form API exposes validationBehavior but no invalid prop; field-level invalid state is covered by the field families.',
-  'ColorArea/invalid': 'The public ColorArea API has no invalid prop or validation event; invalid color text is covered by ColorField.',
-  'ColorSlider/read-only': 'The public ColorSlider API has no readOnly prop; its value and disabled state remain covered visually.',
-  'ColorWheel/read-only': 'The public ColorWheel API has no readOnly prop; its value and disabled state remain covered visually.',
   'Menu/open': 'The public Menu API is the already-mounted collection surface and has no open prop; overlay ownership is covered by Select, ComboBox, and the overlay families.',
-  'Slider/read-only': 'The public Slider API has no readOnly prop; its value, focus, and disabled states remain covered visually.',
   'Slider/selected': 'The public Slider API has no selected prop; its value state is represented by the canonical idle/focused visual cases.',
-  'TagGroup/selected': 'The public TagGroup API has no selection prop; removable anatomy is separately recorded as Mux UI-only because the pinned Tale donor has no remove part.',
 });
 
 function normalizedState(state) {
@@ -193,7 +188,7 @@ function hasState(record, state) {
   if (normalized === 'low' || normalized === 'high') return family === 'Meter' && props.has('value');
   if (normalized === 'progress' || normalized === 'complete') return family === 'ProgressBar' && props.has('value');
   if (normalized === 'filled') return family === 'SearchField' && props.has('value');
-  if (normalized === 'empty') return props.has('items') || props.has('rows');
+  if (normalized === 'empty') return family === 'SearchField' && props.has('value') || props.has('items') || props.has('rows');
   if (normalized === 'placement') return props.has('placement');
   if (normalized === 'timed') return family === 'Toast' && props.has('duration');
   if (normalized === 'current') return family === 'Breadcrumbs' || props.has('current');

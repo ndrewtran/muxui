@@ -58,7 +58,8 @@
       },
       "behavior": [
         "Determinate values are clamped to the range",
-        "Omitted value produces an indeterminate progressbar"
+        "Omitted value produces an indeterminate progressbar",
+        "Determinate completion is exposed when value reaches or exceeds maxValue"
       ],
       "accessibility": [
         "Expose progressbar role and value semantics without continuous motion"
@@ -140,7 +141,8 @@
       },
       "behavior": [
         "Determinate values are clamped to the range",
-        "Omitted value produces an indeterminate progressbar"
+        "Omitted value produces an indeterminate progressbar",
+        "Determinate completion is exposed when value reaches or exceeds maxValue"
       ],
       "accessibility": [
         "Expose progressbar role and value semantics without continuous motion"

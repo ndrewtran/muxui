@@ -2,8 +2,9 @@ import { spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
-import { readFile, writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { cp, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -12,7 +13,16 @@ import { ToastProvider } from '@muxui/react';
 import {
   argTypesForBinding,
   adapterNames,
+  BROWSER_PROOF_FAMILIES,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
   createStory,
+  createUncontrolledStory,
+  controlledDefaultPairsForBinding,
+  eventBindingsForBinding,
+  eventCallbackPropForChannel,
   renderFamily,
   renderStateCoverage,
   stateArgsForBinding,
@@ -67,7 +77,7 @@ function installRuntimeDom() {
   const globals = [
     'window', 'document', 'Document', 'DocumentFragment', 'Element', 'HTMLElement', 'HTMLButtonElement',
     'HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement', 'HTMLDivElement', 'SVGElement', 'Node',
-    'NodeFilter', 'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'FocusEvent', 'PointerEvent',
+    'NodeFilter', 'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'InputEvent', 'FocusEvent', 'PointerEvent',
     'MutationObserver', 'File', 'Blob', 'FileReader', 'DOMRect', 'ResizeObserver', 'CSS', 'getComputedStyle',
     'requestAnimationFrame', 'cancelAnimationFrame',
   ];
@@ -130,7 +140,7 @@ test('private host and exact Mux UI React family projection', async () => {
   assert.deepEqual(manifest.families.map(({ family }) => family).sort(), snapshot.families.map(({ muxuiPublicFamily, corePublicFamily }) => muxuiPublicFamily ?? corePublicFamily).sort());
 });
 
-test('uses standard generation scripts and check mode preserves drift for diagnosis', async () => {
+test('uses standard generation scripts and checks drift in an isolated projection', async () => {
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
   assert.equal(packageManifest.scripts.generate, 'node src/generate-stories.mjs');
   assert.equal(packageManifest.scripts['generate:check'], 'node src/generate-stories.mjs --check');
@@ -138,9 +148,14 @@ test('uses standard generation scripts and check mode preserves drift for diagno
   assert.equal(packageManifest.scripts.build, 'pnpm generate && storybook build --output-dir dist');
   assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test test/*.test.mjs');
 
-  const storyPath = resolve(appRoot, '.storybook/generated/r1-1-button.stories.mjs');
+  const sourceRoot = resolve(appRoot, '.storybook/generated');
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-storybook-generation-check-'));
+  await cp(sourceRoot, temporaryRoot, { recursive: true });
+  const storyPath = resolve(temporaryRoot, 'r1-1-button.stories.mjs');
   const original = await readFile(storyPath, 'utf8');
   const drifted = `${original}\n// temporary drift\n`;
+  const previousRoot = process.env.MUXUI_STORYBOOK_GENERATED_ROOT;
+  process.env.MUXUI_STORYBOOK_GENERATED_ROOT = temporaryRoot;
   await writeFile(storyPath, drifted, 'utf8');
   try {
     const result = spawnSync(
@@ -153,7 +168,9 @@ test('uses standard generation scripts and check mode preserves drift for diagno
     assert.match(`${result.stdout}\n${result.stderr}`, /generated output drift in/u);
     assert.equal(await readFile(storyPath, 'utf8'), drifted);
   } finally {
-    await writeFile(storyPath, original, 'utf8');
+    if (previousRoot === undefined) delete process.env.MUXUI_STORYBOOK_GENERATED_ROOT;
+    else process.env.MUXUI_STORYBOOK_GENERATED_ROOT = previousRoot;
+    await rm(temporaryRoot, { recursive: true, force: true });
   }
 });
 
@@ -166,6 +183,154 @@ test('every story exposes exactly its canonical Mux UI-owned properties', () => 
     assert.deepEqual(record.props, binding.api.props, record.family);
     assert.equal(record.tranche, snapshot.families.find(({ muxuiPublicFamily, corePublicFamily }) => (muxuiPublicFamily ?? corePublicFamily) === record.family).tranche, record.family);
   }
+});
+
+test('generated metadata exposes every canonical event, part, state, and controlled pair', async () => {
+  const byFamily = new Map(descriptor.bindings.map((binding) => [binding.export, binding]));
+  let partCount = 0;
+  for (const record of manifest.families) {
+    const binding = byFamily.get(record.family);
+    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const tranche = record.tranche.replace('.', '-').toLowerCase();
+    const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+    const metadata = story.default.parameters.muxuiApi;
+    assert.deepEqual(metadata.props, binding.api.props, `${record.family} props`);
+    assert.deepEqual(metadata.events, binding.api.events, `${record.family} events`);
+    assert.deepEqual(metadata.parts, binding.api.parts, `${record.family} parts`);
+    assert.deepEqual(metadata.states, binding.states, `${record.family} states`);
+    assert.deepEqual(metadata.controlled, controlledDefaultPairsForBinding(binding), `${record.family} controlled pairs`);
+    assert.equal(new Set(metadata.parts).size, metadata.parts.length, `${record.family} duplicate parts`);
+    partCount += metadata.parts.length;
+  }
+  assert.equal(partCount, 201);
+});
+
+test('generated proof stories expose live controls, events, modes, anatomy, and browser plays', async () => {
+  assert.deepEqual(
+    [...BROWSER_PROOF_FAMILIES].sort(),
+    manifest.families.map(({ family }) => family).sort(),
+    'every exact manifest family has a substantive Browser Proof plan',
+  );
+  const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/index.d.ts'), 'utf8');
+  let pairCount = 0;
+  let eventCount = 0;
+  let partCount = 0;
+  for (const record of manifest.families) {
+    const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
+    assert.ok(binding, `${record.family} descriptor binding`);
+    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const tranche = record.tranche.replace('.', '-').toLowerCase();
+    const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+    for (const name of ['Controlled', 'Uncontrolled', 'Events', 'Anatomy', 'BrowserProof']) {
+      assert.equal(typeof story[name]?.render, 'function', `${record.family}/${name} render`);
+    }
+    assert.equal(typeof story.BrowserProof.play, 'function', `${record.family}/BrowserProof play`);
+    assert.equal(story.BrowserProof.parameters.muxuiProof.browser, true, `${record.family}/BrowserProof metadata`);
+    const pairs = controlledDefaultPairsForBinding(binding);
+    pairCount += pairs.length;
+    assert.deepEqual(
+      Object.keys(story.Controlled.args).filter((name) => pairs.some(({ controlled }) => controlled === name)).sort(),
+      pairs.map(({ controlled }) => controlled).sort(),
+      `${record.family} controlled args`,
+    );
+    assert.deepEqual(
+      Object.keys(story.Uncontrolled.args).filter((name) => pairs.some(({ uncontrolled }) => uncontrolled === name)).sort(),
+      pairs.map(({ uncontrolled }) => uncontrolled).sort(),
+      `${record.family} uncontrolled args`,
+    );
+    const events = eventBindingsForBinding(binding);
+    eventCount += events.length;
+    for (const { prop } of events) assert.match(publicTypes, new RegExp(`\\b${prop}\\b`, 'u'), `${record.family}/${prop} must be a real public callback`);
+    partCount += binding.api.parts.length;
+    const anatomyMarkup = renderToStaticMarkup(story.Anatomy.render(story.Anatomy.args));
+    assert.equal(
+      (anatomyMarkup.match(/data-muxui-storybook-api-part-status=/gu) ?? []).length,
+      binding.api.parts.length,
+      `${record.family} anatomy parts`,
+    );
+  }
+  assert.equal(pairCount, 42, 'every descriptor controlled/default pair gets a pair of proof stories');
+  assert.equal(eventCount, 68, 'every descriptor event channel gets a live event binding');
+  assert.equal(partCount, 201, 'every descriptor API part gets an anatomy proof row');
+});
+
+test('generated event and mode harnesses are behaviorally live', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const byFamily = new Map(descriptor.bindings.map((binding) => [binding.export, binding]));
+  const loadStory = async (family) => {
+    const record = manifest.families.find(({ family: name }) => name === family);
+    const slug = family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const tranche = record.tranche.replace('.', '-').toLowerCase();
+    return import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+  };
+  try {
+    const button = await loadStory('Button');
+    await act(async () => root.render(button.Events.render(button.Events.args)));
+    await act(async () => host.querySelector('.muxui-button').click());
+    assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /activate:/u);
+
+    const checkbox = await loadStory('Checkbox');
+    await act(async () => root.render(checkbox.Controlled.render(checkbox.Controlled.args)));
+    const controlledInput = host.querySelector('.muxui-checkbox input');
+    assert.ok(controlledInput, 'controlled Checkbox input');
+    await act(async () => controlledInput.click());
+    assert.match(host.querySelector('[data-muxui-controlled-values]').textContent, /"checked":true/u);
+    assert.equal(host.querySelector('.muxui-checkbox').getAttribute('data-selected'), 'true');
+
+    await act(async () => root.render(checkbox.Uncontrolled.render(checkbox.Uncontrolled.args)));
+    const uncontrolledInput = host.querySelector('.muxui-checkbox input');
+    assert.ok(uncontrolledInput, 'uncontrolled Checkbox input');
+    const uncontrolledDefaults = host.querySelector('[data-muxui-uncontrolled-values]').textContent;
+    await act(async () => uncontrolledInput.click());
+    assert.equal(host.querySelector('[data-muxui-uncontrolled-values]').textContent, uncontrolledDefaults);
+    assert.equal(host.querySelector('.muxui-checkbox').getAttribute('data-selected'), 'true');
+
+    const anatomy = await loadStory('ColorPicker');
+    await act(async () => root.render(anatomy.Anatomy.render(anatomy.Anatomy.args)));
+    await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, 20)));
+    const anatomyParts = [...host.querySelectorAll('[data-muxui-storybook-api-parts] [data-muxui-storybook-api-part-status]')];
+    assert.ok(anatomyParts.length >= byFamily.get('ColorPicker').api.parts.length, 'ColorPicker anatomy rows are rendered');
+    assert.ok(anatomyParts.some((part) => part.getAttribute('data-muxui-storybook-api-part-status') === 'found'), 'ColorPicker anatomy resolves live DOM hooks');
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
+test('anatomy proof resolves every canonical part to a live DOM or executable route', async () => {
+  const unresolved = [];
+  for (const record of manifest.families) {
+    const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
+    const env = installRuntimeDom();
+    const host = document.querySelector('#root');
+    const root = createRoot(host);
+    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const tranche = record.tranche.replace('.', '-').toLowerCase();
+    try {
+      const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+      await act(async () => root.render(story.Anatomy.render(story.Anatomy.args)));
+      // Toast is queued by a declarative effect and rendered by RAC's region on
+      // the following task; allow that portal-like queue update to settle.
+      await act(async () => new Promise((resolvePromise) => setTimeout(resolvePromise, record.family === 'Toast' ? 100 : 20)));
+      const rows = [...host.querySelectorAll(`[data-muxui-storybook-api-parts="${record.family}"] > li`)];
+      assert.equal(rows.length, binding.api.parts.length, `${record.family} anatomy part rows`);
+      assert.ok(rows.every((row) => row.getAttribute('data-muxui-storybook-api-part-route')), `${record.family} anatomy routes`);
+      const missing = rows.filter((row) => {
+        const status = row.getAttribute('data-muxui-storybook-api-part-status');
+        if (status === 'found') return false;
+        return status !== 'executable' || row.getAttribute('data-muxui-storybook-api-part-proof') !== 'browser';
+      }).map((row) => row.querySelector('code')?.textContent);
+      if (missing.length) unresolved.push(`${record.family}: ${missing.join(', ')}`);
+    } finally {
+      await act(async () => root.unmount());
+      env.resolveAnimations();
+      env.restore();
+    }
+  }
+  assert.deepEqual(unresolved, [], 'anatomy unresolved parts');
 });
 
 test('control inference and composition adapters preserve canonical values', () => {
@@ -278,6 +443,20 @@ test('default and state stories use uncontrolled pairs without collapsing state 
   assert.equal(stateArgsForBinding(bindings.get('ToggleButton'), 'selected', 'ToggleButton').selected, true);
   assert.equal(stateArgsForBinding(bindings.get('Switch'), 'selected', 'Switch').selected, true);
   assert.equal(storyArgsForBinding(bindings.get('Autocomplete'), 'default', 'Autocomplete').defaultValue, '');
+  const emptySearchArgs = stateArgsForBinding(bindings.get('SearchField'), 'empty', 'SearchField');
+  assert.equal(emptySearchArgs.value, '');
+  assert.match(renderToStaticMarkup(renderFamily('SearchField', emptySearchArgs)), /data-empty="true"/u);
+});
+
+test('SearchField empty state renders in the generated States showcase', () => {
+  const binding = descriptor.bindings.find(({ export: family }) => family === 'SearchField');
+  const emptySearchStates = renderToStaticMarkup(renderStateCoverage({
+    family: 'SearchField',
+    tranche: 'R1.2',
+    binding,
+  }));
+  assert.doesNotMatch(emptySearchStates, /Unavailable: MuxUI SearchField has no public prop or supported interaction for the empty state/u);
+  assert.match(emptySearchStates, /<h3[^>]*>empty<\/h3>[\s\S]*data-empty="true"/u);
 });
 
 test('state coverage metadata exposes isolated supported states with canonical args', () => {
@@ -307,7 +486,7 @@ test('state coverage metadata exposes isolated supported states with canonical a
   assert.equal(stateArgsForBinding(binding('Checkbox'), 'disabled', 'Checkbox').invalid, false);
   assert.equal(stateArgsForBinding(binding('Checkbox'), 'invalid', 'Checkbox').invalid, true);
   assert.equal(stateArgsForBinding(binding('Checkbox'), 'indeterminate', 'Checkbox').indeterminate, true);
-  assert.equal(stateArgsForBinding(binding('TextField'), 'readonly', 'TextField').readOnly, true);
+  assert.equal(stateArgsForBinding(binding('TextField'), 'read-only', 'TextField').readOnly, true);
   assert.equal(stateArgsForBinding(binding('Disclosure'), 'expanded', 'Disclosure').expanded, true);
   assert.equal(stateArgsForBinding(binding('Dialog'), 'open', 'Dialog').open, true);
   assert.equal(stateArgsForBinding(binding('DropZone'), 'drop-target', 'DropZone').disabled, false);
@@ -329,10 +508,6 @@ test('unsupported state coverage is explicit while supported state args remain o
     ['ToggleButton', 'pressed'],
     ['Form', 'submitting'],
     ['Form', 'invalid'],
-    ['ColorArea', 'invalid'],
-    ['ColorSlider', 'read-only'],
-    ['ColorWheel', 'read-only'],
-    ['Slider', 'read-only'],
     ['Slider', 'selected'],
     ['TokenField', 'invalid'],
     ['Menu', 'open'],
@@ -664,6 +839,10 @@ test('Breadcrumbs defaults show the adapter sample while explicit empty items st
 
   const emptyMarkup = renderToStaticMarkup(renderFamily('Breadcrumbs', { ...defaultArgs, items: [] }));
   assert.doesNotMatch(emptyMarkup, /Home|Docs/u);
+
+  const disabledMarkup = renderToStaticMarkup(renderFamily('Breadcrumbs', stateArgsForBinding(binding, 'disabled', 'Breadcrumbs')));
+  assert.match(disabledMarkup, /data-disabled="true"/u);
+  assert.match(disabledMarkup, /aria-current="page"/u);
 });
 
 test('generated stories are stock CSF modules with default and state coverage', async () => {
@@ -682,6 +861,9 @@ test('generated stories are stock CSF modules with default and state coverage', 
   const buttonBinding = descriptor.bindings.find(({ export: name }) => name === 'Button');
   const buttonStory = await import('../.storybook/generated/r1-1-button.stories.mjs');
   assert.deepEqual(buttonStory.default.parameters.controls.include, buttonBinding.api.props);
+  const autocompleteStory = await readFile(resolve(appRoot, '.storybook/generated/r1-2-autocomplete.stories.mjs'), 'utf8');
+  assert.match(autocompleteStory, /DisabledItemsInteraction/u);
+  assert.match(autocompleteStory, /disabled: true/u);
 });
 
 test('showcase does not expose React Aria or Tale UI as a public import', async () => {
@@ -700,7 +882,7 @@ test('showcase does not expose React Aria or Tale UI as a public import', async 
   assert.doesNotMatch(preview, /react-aria-components|@tale-ui/);
 });
 
-test('preview exposes the Mux UI light/dark host theme contract', async () => {
+test('preview exposes the Mux UI theme and direction host contract', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
   const previewCss = await readFile(resolve(appRoot, '.storybook/preview.css'), 'utf8');
 
@@ -708,7 +890,12 @@ test('preview exposes the Mux UI light/dark host theme contract', async () => {
   assert.match(preview, /colorScheme/);
   assert.match(preview, /value: 'light'/);
   assert.match(preview, /value: 'dark'/);
+  assert.match(preview, /value: 'ltr'/);
+  assert.match(preview, /value: 'rtl'/);
   assert.match(preview, /document\.documentElement\.setAttribute\('data-muxui-color-scheme'/);
+  assert.match(preview, /document\.documentElement\.setAttribute\('data-muxui-direction'/);
+  assert.match(preview, /document\.documentElement\.dir = direction/);
+  assert.doesNotMatch(preview, /data-muxui-contrast|contrastItems|applyAccessibilityModes/u);
   assert.match(preview, /className: 'muxui-storybook-surface'/);
   assert.match(preview, /viewMode === 'story'/);
   assert.match(preview, /const surfaceElement = viewMode === 'story' \? 'main' : 'div'/);
@@ -725,6 +912,8 @@ test('preview exposes the Mux UI light/dark host theme contract', async () => {
   assert.match(preview, /element\.removeAttribute\('aria-label'\)/);
   assert.doesNotMatch(preview, /\.append\(/u);
   assert.match(preview, /'data-muxui-color-scheme': scheme/);
+  assert.match(preview, /'data-muxui-direction': direction/);
+  assert.doesNotMatch(preview, /'data-muxui-contrast'/u);
   assert.match(preview, /test: 'error'/);
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
   assert.equal(packageManifest.devDependencies['axe-core'], '4.13.0');

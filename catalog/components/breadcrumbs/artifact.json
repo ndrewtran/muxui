@@ -57,10 +57,11 @@
       },
       "behavior": [
         "Items render in source order",
-        "The current item is not an activation target"
+        "The current item is derived from the final item and is not an activation target",
+        "Disabled items are not activation targets"
       ],
       "accessibility": [
-        "Expose a navigation landmark, accessible name, and current page"
+        "Expose a navigation landmark, accessible name, current page, and disabled state"
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
@@ -135,10 +136,11 @@
       },
       "behavior": [
         "Items render in source order",
-        "The current item is not an activation target"
+        "The current item is derived from the final item and is not an activation target",
+        "Disabled items are not activation targets"
       ],
       "accessibility": [
-        "Expose a navigation landmark, accessible name, and current page"
+        "Expose a navigation landmark, accessible name, current page, and disabled state"
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",

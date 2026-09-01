@@ -303,6 +303,7 @@ async function applyAction(page, scope, entry) {
     return () => page.mouse.up();
   }
   if (entry.action.type === 'open') {
+    if (await target.getAttribute('aria-expanded') === 'true') return () => {};
     await target.click();
     return () => {};
   }
