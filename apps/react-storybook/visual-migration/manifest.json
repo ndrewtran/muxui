@@ -61678,7 +61678,7 @@
     "renderPlanSourceSha256": "sha256:151eb1158ebb35f118cbafc2d722ac6445a34d36c4026d4fc1f646f674152cb7",
     "muxuiCaptureProvenance": {
       "path": "visual-migration/results/muxui-capture-provenance.json",
-      "sha256": "sha256:d1ee743a58f20503092bf8face27f8e5a3b08f25447f15e6a39e8e08305a9e52"
+      "sha256": "sha256:7e2356efc76fb2c699bc3d0d212bbf5e974f32c944b5ce5b93322ccb9efcff63"
     },
     "muxuiCaptureRunnerSourceSha256": "sha256:9beb666c17474fe3d928f090f0428051749a37ce9f67986a615258ab8376c30e"
   }

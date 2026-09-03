@@ -5,7 +5,7 @@
   "captureCount": 430,
   "fixtureContractSha256": "sha256:f8dd1fe7fe798093252502222110ff11b1a512a40d2ce78ad8c6e0d957ff06c5",
   "muxuiFixtureSourceSha256": "sha256:0fcfd2e29e71c56d8a802f9119930140dbd004d15f2be7060969d653f4f6ad4b",
-  "muxuiFactorySourceSha256": "sha256:cc3ebe8008b7e43d29a948b711ac8e4557cd0217810b1b6df10bae10ed37418c",
+  "muxuiFactorySourceSha256": "sha256:ea06f2437fd6aef36ace3b87611f4bcd6cac54c49f356a1ef27d170f43c03a7c",
   "muxuiFixtureMapSourceSha256": "sha256:3d7715604fdd7f01b7d0c5b19962e64ff24a134df93fde50f602334c87cd80b0",
   "muxuiCaptureRunnerSourceSha256": "sha256:9beb666c17474fe3d928f090f0428051749a37ce9f67986a615258ab8376c30e",
   "muxuiGeneratedTree": {
