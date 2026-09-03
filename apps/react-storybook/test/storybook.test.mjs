@@ -377,6 +377,19 @@ test('control inference and composition adapters preserve canonical values', () 
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Group')).role.options.includes('textbox'),
     false,
   );
+  const group = renderFamily('Group', storyArgsForBinding(
+    descriptor.bindings.find(({ export: name }) => name === 'Group'),
+    'default',
+    'Group',
+  ));
+  const groupMarkup = renderToStaticMarkup(group);
+  assert.match(groupMarkup, /role="group"/u);
+  assert.match(groupMarkup, /aria-label="Document actions"/u);
+  assert.equal((groupMarkup.match(/<button\b/gu) ?? []).length, 3);
+  assert.deepEqual(
+    React.Children.toArray(group.props.children).map((child) => React.Children.toArray(child.props.children).join('')),
+    ['Save', 'Duplicate', 'Archive'],
+  );
   const tooltipBinding = descriptor.bindings.find(({ export: name }) => name === 'Tooltip');
   assert.equal(argTypesForBinding(tooltipBinding).content.control, 'text');
   for (const name of ['Dialog', 'Popover', 'PreviewTrigger', 'Tooltip']) {

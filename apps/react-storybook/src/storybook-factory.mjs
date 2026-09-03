@@ -524,7 +524,13 @@ const ADAPTERS = {
   Checkbox: (args) => e(MuxUI.Checkbox, args, fixtureCopy(args, 'Enable notifications')),
   Disclosure: (args) => e(MuxUI.Disclosure, { ...args, title: fixtureCopy(args, 'Details') }, fixtureCopy(args, 'Details') + ' content'),
   DisclosureGroup: (args) => e(MuxUI.DisclosureGroup, args, ...fixtureChildren(args, 'disclosureGroup', [{ id: 'one', title: 'One', content: 'First panel' }, { id: 'two', title: 'Two', content: 'Second panel' }]).map(({ id, title, content }) => e(MuxUI.Disclosure, { key: id, id, title }, content))),
-  Group: (args) => e(MuxUI.Group, { ...args, 'aria-label': fallback(args['aria-label'], 'Actions') }, e(MuxUI.Button, null, 'Save')),
+  Group: (args) => e(
+    MuxUI.Group,
+    { ...args, 'aria-label': fallback(args['aria-label'], 'Document actions') },
+    e(MuxUI.Button, null, 'Save'),
+    e(MuxUI.Button, null, 'Duplicate'),
+    e(MuxUI.Button, null, 'Archive'),
+  ),
   Link: (args) => e(MuxUI.Link, { ...args, href: fallback(args.href, '/settings') }, fixtureCopy(args, 'Settings')),
   Meter: (args) => {
     const state = fixtureState(args);
@@ -1362,7 +1368,13 @@ const BROWSER_PROOF_PLANS = Object.freeze({
   Group: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-group', 'Group');
     assertBrowser(root.getAttribute('role') === 'group', 'group exposes its declared role');
-    assertBrowser(root.querySelector('button, [role="button"]'), 'group content includes an actionable control');
+    assertBrowser(root.getAttribute('aria-label')?.trim(), 'group exposes an accessible name');
+    const controls = root.querySelectorAll('button, [role="button"]');
+    assertBrowser(controls.length === 3, 'group content includes three related actionable controls');
+    assertBrowser(
+      [...controls].map((control) => control.textContent?.trim()).join('|') === 'Save|Duplicate|Archive',
+      'group content preserves the document action labels',
+    );
   },
   Link: activationPlan('Link', '.muxui-link', 'activate'),
   Meter: async ({ canvasElement }) => {
