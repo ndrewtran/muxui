@@ -413,8 +413,10 @@
 .muxui-date-range-separator {
   display: inline-block;
   inline-size: var(--muxui-semantic-layout-tight-inset);
-  overflow: hidden;
-  font-size: 0;
+  overflow: visible;
+  color: var(--muxui-semantic-content-strong);
+  font-size: var(--muxui-semantic-typography-body-size);
+  line-height: 1.5;
   flex: 0 0 auto;
 }
 

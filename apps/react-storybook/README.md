@@ -28,8 +28,10 @@ During bootstrap, committed Tale screenshots and computed style facts were
 consulted once to choose comparable selectors. The checked-in PNGs are the
 resulting Mux UI captures, so later checks do not need donor pixels or a Tale
 runtime. The sealed `results/comparison.json` retains the full component-pixel
-comparison and records genuine mismatches; anatomical adaptations explain
-DOM-part mappings but never waive component pixels.
+comparison and records genuine mismatches; the DateRangePicker's existing
+aria-hidden en dash is an explicit Mux-only visual adaptation because the
+pinned Tale fixture omits that decorative separator. Anatomical adaptations
+never waive component pixels.
 The PNG comparison is consequently sensitive to the selected browser, OS font
 metrics, and device scale. Keep those capture inputs stable and treat a
 diagnostic diff as an intentional Mux UI-local review, not as a reason to fetch
@@ -48,7 +50,9 @@ integrity, and sealed report; browser comparison remains opt-in. Both local and
 CI-capable comparisons use only Mux UI Storybook and the checked-in Mux UI-owned
 artifacts. The current one-time report records its machine-checked pass/fail
 counts in `visual-migration/results/comparison.json` (the present capture has
-430 passing and 0 failing component-region comparisons), so the donor parity
+418 passing and 12 failing component-region comparisons, covering all six
+DateRangePicker states in both modes because of the recorded separator
+adaptation), so the donor parity
 review remains decision bearing; the verifier derives these counts from the
 sealed PNG pairs and report rather than accepting a handwritten result. No public API
 or accessibility behavior was changed to chase pixels.

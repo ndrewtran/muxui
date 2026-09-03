@@ -496,6 +496,23 @@ test('date picker calendar triggers retain Tale icon wrapper sizing and scoped p
   assert.match(styles, /\[data-muxui-color-scheme='dark'\] \.muxui-date-popover\s*\{[^}]*border-color:\s*var\(--muxui-reference-color-neutral-96\)/u);
 });
 
+test('DateRangePicker renders its visual separator without exposing it to assistive technology', async () => {
+  const markup = renderToString(React.createElement(DateRangePicker, {
+    label: 'Trip',
+    defaultValue: { start: '2026-08-26', end: '2026-09-01' },
+  }));
+  const dom = new JSDOM(`<!doctype html>${markup}`);
+  const separator = dom.window.document.querySelector('.muxui-date-range-separator');
+  assert.ok(separator);
+  assert.equal(separator.textContent, '–');
+  assert.equal(separator.getAttribute('aria-hidden'), 'true');
+  const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
+  assert.match(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*var\(--muxui-semantic-layout-tight-inset\);[^}]*font-size:\s*var\(--muxui-semantic-typography-body-size\);/u);
+  assert.doesNotMatch(styles, /\.muxui-date-range-separator\s*\{[^}]*font-size:\s*0/u);
+  assert.doesNotMatch(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*0/u);
+  dom.window.close();
+});
+
 test('DatePicker and DateRangePicker expose controlled open-change callbacks', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);

@@ -92,10 +92,10 @@ test('the canonical closure proves 51 applicable families and two exact no-donor
     pass: comparison.comparisons.filter(({ pass }) => pass).length,
     failed: comparison.comparisons.filter(({ pass }) => !pass).length,
   });
-  assert.equal(comparison.status, 'passed');
-  assert.equal(comparison.counts.pass, 430);
-  assert.equal(comparison.counts.failed, 0);
-  assert.ok(comparison.mismatchInventory.every(({ failed }) => failed === 0));
+  assert.equal(comparison.status, 'genuine-component-region-mismatches-require-review');
+  assert.equal(comparison.counts.pass, 418);
+  assert.equal(comparison.counts.failed, 12);
+  assert.deepEqual(comparison.mismatchInventory.filter(({ failed }) => failed > 0).map(({ component }) => component), ['DateRangePicker']);
   assert.equal(comparison.counts.pass + comparison.counts.failed, expectedCaptureInventory.length);
   assert.equal(comparison.mismatchInventory.length, 51);
   assert.equal(comparison.comparisons.filter(({ pass }) => pass).length, comparison.counts.pass);
@@ -120,6 +120,18 @@ test('the Tale style ledger accounts for every pinned stylesheet and state cover
   const unsupportedRecords = expectedStateCoverage.filter(({ disposition }) => disposition === 'unsupported');
   assert.equal(unsupportedRecords.length, 3);
   assert.ok(unsupportedRecords.every(({ check }) => check?.type === 'dom' && check.rationale));
+});
+
+test('DateRangePicker separator adaptation keeps the pinned donor comparison honest', () => {
+  const rangeEntries = manifest.cases.filter(({ component }) => component === 'DateRangePicker');
+  assert.equal(rangeEntries.length, 6);
+  assert.ok(rangeEntries.every(({ adaptations }) => adaptations.some(({ part, reason }) => part === 'DateRangePicker.separator'
+    && reason.includes('pinned Tale donor fixture omits this decorative separator'))));
+
+  const separatorMismatches = comparison.comparisons.filter(({ component, pass }) => component === 'DateRangePicker' && !pass);
+  assert.equal(separatorMismatches.length, 12);
+  assert.ok(separatorMismatches.every(({ pixelComparison, componentRegion }) => !pixelComparison.pass && componentRegion.status === 'compared'));
+  assert.equal(comparison.adaptations.filter(({ component, part }) => component === 'DateRangePicker' && part === 'DateRangePicker.separator').length, 12);
 });
 
 test('the pinned Storybook fixture requires the canonical story and private query', () => {

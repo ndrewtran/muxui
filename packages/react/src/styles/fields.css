@@ -755,11 +755,6 @@
   width: calc(var(--muxui-field-min-height) + 9px);
 }
 
-.muxui-date-range-separator {
-  inline-size: 0;
-  flex-basis: 0;
-}
-
 [data-muxui-color-scheme='light'] .muxui-date-control,
 [data-muxui-color-scheme='light'] .muxui-date-range-control {
   background-color: var(--muxui-reference-color-neutral-5);

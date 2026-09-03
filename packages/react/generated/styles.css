@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:c4dfbbc25c09ea112e3cd3ff7806ff2d69365b5018e0cd253bf520fec425e076
+ * @generated-content-sha256: sha256:9133ae4e7f469ecc8e25a79c88cc403e4c46a9aca50ef455d2ee926af7840897
  */
 :root {
   --muxui-component-button-background: #025768;
@@ -819,8 +819,10 @@
 .muxui-date-range-separator {
   display: inline-block;
   inline-size: var(--muxui-semantic-layout-tight-inset);
-  overflow: hidden;
-  font-size: 0;
+  overflow: visible;
+  color: var(--muxui-semantic-content-strong);
+  font-size: var(--muxui-semantic-typography-body-size);
+  line-height: 1.5;
   flex: 0 0 auto;
 }
 
@@ -3013,11 +3015,6 @@
 
 .muxui-date-range-control .muxui-date-trigger {
   width: calc(var(--muxui-field-min-height) + 9px);
-}
-
-.muxui-date-range-separator {
-  inline-size: 0;
-  flex-basis: 0;
 }
 
 [data-muxui-color-scheme='light'] .muxui-date-control,
