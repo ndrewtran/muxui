@@ -256,6 +256,14 @@ test('generated proof stories expose live controls, events, modes, anatomy, and 
   assert.equal(partCount, 201, 'every descriptor API part gets an anatomy proof row');
 });
 
+test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {
+  const story = await import('../.storybook/generated/r1-2-time-field.stories.mjs');
+  assert.equal(story.Controlled.args.value, '09:30');
+  assert.equal(story.Uncontrolled.args.defaultValue, '09:30');
+  assert.doesNotThrow(() => renderToStaticMarkup(story.Controlled.render(story.Controlled.args)));
+  assert.doesNotThrow(() => renderToStaticMarkup(story.Uncontrolled.render(story.Uncontrolled.args)));
+});
+
 test('Button Matrix statically covers every finite visual tuple and States keeps pending/disabled', () => {
   const binding = descriptor.bindings.find(({ export: family }) => family === 'Button');
   assert.ok(binding, 'Button descriptor binding');

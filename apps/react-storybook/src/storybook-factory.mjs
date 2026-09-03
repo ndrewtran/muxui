@@ -162,7 +162,8 @@ function sampleControlledValue(binding, family, controlled, uncontrolled, source
   if (controlled !== 'value') return undefined;
   if (family === 'CheckboxGroup' || family === 'TokenField') return [];
   if (family === 'DateRangePicker' || family === 'RangeCalendar') return { start: '2026-08-26', end: '2026-09-01' };
-  if (family === 'DateField' || family === 'DatePicker' || family === 'TimeField' || family === 'Calendar') return '2026-08-26';
+  if (family === 'TimeField') return '09:30';
+  if (family === 'DateField' || family === 'DatePicker' || family === 'Calendar') return '2026-08-26';
   if (family.startsWith('Color')) return '#ff0000';
   if (family === 'NumberField') return 2;
   if (family === 'Slider') return 60;
