@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { generatedText, loadPolicy } from '../../../tooling/audits/repository-policy/src/policy.mjs';
+import { transformWithOxc } from 'vite';
 import { adapterNames } from './storybook-factory.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -13,6 +14,13 @@ const descriptor = JSON.parse(await readFile(descriptorPath, 'utf8'));
 const snapshot = JSON.parse(await readFile(snapshotPath, 'utf8'));
 const policy = await loadPolicy(repositoryRoot);
 const generatedSource = 'apps/react-storybook/src/generate-stories.mjs';
+const canonicalExampleSource = 'catalog/components/link/examples/react/icon-composition.tsx';
+const canonicalExampleCode = await readFile(resolve(repositoryRoot, canonicalExampleSource), 'utf8');
+const transformedExample = await transformWithOxc(canonicalExampleCode, canonicalExampleSource, {
+  lang: 'tsx',
+  jsx: { runtime: 'automatic' },
+  sourcemap: false,
+});
 
 function fail(message) {
   throw new Error(`REACT_STORYBOOK_GENERATION_ERROR: ${message}`);
@@ -60,7 +68,7 @@ import {
   createEventsStory,
   createStory,
   createUncontrolledStory,
-} from '../../src/storybook-factory.mjs';
+} from '../../src/storybook-factory.mjs';${record.family === 'Link' ? "\nimport React from 'react';\nimport { LinkIconCompositionExample } from './link-icon-composition.example.mjs';" : ''}
 
 const binding = ${JSON.stringify(record.binding, null, 2)};
 const record = { family: '${record.family}', tranche: '${record.tranche}', binding };
@@ -95,8 +103,20 @@ export const Controlled = createControlledStory(record);
 export const Uncontrolled = createUncontrolledStory(record);
 export const Events = createEventsStory(record);
 export const Anatomy = createAnatomyStory(record);
-export const BrowserProof = createBrowserProofStory(record);
-${record.family === 'Autocomplete' ? `export const DisabledItemsInteraction = {
+export const BrowserProof = createBrowserProofStory(record);${record.family === 'Link' ? `
+export const IconComposition = {
+  name: 'Icon composition',
+  parameters: {
+    docs: {
+      source: {
+        code: ${JSON.stringify(canonicalExampleCode)},
+        language: 'tsx',
+      },
+    },
+  },
+  render: () => React.createElement(LinkIconCompositionExample),
+};` : ''}${record.family === 'Autocomplete' ? `
+export const DisabledItemsInteraction = {
   name: 'Disabled items keyboard navigation',
   args: {
     label: 'Choose a city',
@@ -107,18 +127,24 @@ ${record.family === 'Autocomplete' ? `export const DisabledItemsInteraction = {
     ],
   },
   render: (args) => createStory(record, 'default').render(args),
-};` : ''}`;
+};` : ''}${record.family === 'Autocomplete' ? '' : '\n'}`;
 }
 
 const outputs = new Map(records.map((record) => [
   `${record.tranche.replaceAll('.', '-').toLowerCase()}-${familySlug(record.family)}.stories.mjs`,
   generatedText({ source: generatedSource, body: storySource(record), policy }),
 ]));
+outputs.set('link-icon-composition.example.mjs', generatedText({
+  source: generatedSource,
+  body: transformedExample.code.endsWith('\n') ? transformedExample.code : `${transformedExample.code}\n`,
+  policy,
+}));
 const manifest = {
   schema: 'muxui-react-storybook-manifest-v1',
   generatedFrom: [
     'packages/react/generated/descriptor.json',
     'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json',
+    canonicalExampleSource,
   ],
   count: records.length,
   families: records.map(({ family, tranche, binding }) => ({
@@ -172,4 +198,4 @@ if (checkOnly) {
   for (const [name, content] of outputs) await writeFile(resolve(generatedRoot, name), content, 'utf8');
 }
 
-console.log(`React Storybook projection: ${records.length}/53 families, ${outputs.size - 1} stories`);
+console.log(`React Storybook projection: ${records.length}/53 families, ${records.length} stories`);

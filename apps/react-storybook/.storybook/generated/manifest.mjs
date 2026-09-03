@@ -1,10 +1,11 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:298bd83b252068d331df647761e0f878dd11df60664b601386156c958810dba0
+// @generated-content-sha256: sha256:d694882547caee375a61fbe66717a5df200c6dbc722e86e8e7ddbf3af3df08e2
 export const manifest = Object.freeze({
   "schema": "muxui-react-storybook-manifest-v1",
   "generatedFrom": [
     "packages/react/generated/descriptor.json",
-    "catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json"
+    "catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json",
+    "catalog/components/link/examples/react/icon-composition.tsx"
   ],
   "count": 53,
   "families": [

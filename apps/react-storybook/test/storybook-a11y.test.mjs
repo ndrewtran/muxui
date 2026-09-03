@@ -13,8 +13,8 @@ const host = '127.0.0.1';
 const serverTimeoutMs = 90_000;
 const storyTimeoutMs = 15_000;
 // The gate intentionally executes 53 family proofs in both color schemes in
-// addition to the full axe sweep. Keep a bounded budget that accommodates the
-// 106 real Storybook navigations on slower CI hosts.
+// addition to the full axe sweep and targeted interaction coverage. Keep a
+// bounded budget for the repeated Storybook navigations on slower CI hosts.
 const testTimeoutMs = 420_000;
 
 function browserCandidates() {
@@ -437,6 +437,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
     const defaults = stories.filter(({ name }) => name === 'Default');
     const states = stories.filter(({ name }) => name === 'States');
     const browserProofs = stories.filter(({ name }) => name?.toLowerCase() === 'browser proof');
+    const linkIconComposition = stories.find((story) => story.name === 'Icon composition' && storyFamily(story) === 'Link');
     const buttonStates = states.find((story) => storyFamily(story) === 'Button');
     const checkboxStates = states.find((story) => storyFamily(story) === 'Checkbox');
     const autocompleteInteraction = stories.find(({ name }) => name === 'Disabled items keyboard navigation');
@@ -454,6 +455,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
       'Default and States stories must cover the same families',
     );
     assert.ok(autocompleteInteraction, 'Storybook must expose the disabled-item Autocomplete interaction story');
+    assert.ok(linkIconComposition, 'Storybook must expose the Link icon composition story');
     assert.ok(buttonStates, 'Storybook must expose the Button States story for focused platform-mode proof');
     assert.ok(checkboxStates, 'Storybook must expose the Checkbox States story for focused contrast proof');
 
@@ -464,7 +466,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
 
     for (const scheme of ['light', 'dark']) {
       await assertDisabledAutocompleteKeyboard(page, baseUrl, autocompleteInteraction, scheme);
-      for (const story of [...defaults, ...states]) {
+      for (const story of [...defaults, ...states, linkIconComposition]) {
         try {
           const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
           await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });

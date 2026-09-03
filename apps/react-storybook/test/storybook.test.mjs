@@ -9,6 +9,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
+import { transformWithOxc } from 'vite';
 import { ToastProvider } from '@muxui/react';
 import {
   argTypesForBinding,
@@ -151,7 +152,7 @@ test('uses standard generation scripts and checks drift in an isolated projectio
   const sourceRoot = resolve(appRoot, '.storybook/generated');
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-storybook-generation-check-'));
   await cp(sourceRoot, temporaryRoot, { recursive: true });
-  const storyPath = resolve(temporaryRoot, 'r1-1-button.stories.mjs');
+  const storyPath = resolve(temporaryRoot, 'link-icon-composition.example.mjs');
   const original = await readFile(storyPath, 'utf8');
   const drifted = `${original}\n// temporary drift\n`;
   const previousRoot = process.env.MUXUI_STORYBOOK_GENERATED_ROOT;
@@ -529,6 +530,61 @@ test('unsupported state coverage is explicit while supported state args remain o
   assert.match(link, /aria-current="page"/u);
   const toggle = renderToStaticMarkup(renderFamily('ToggleButton', stateArgsForBinding(byFamily.get('ToggleButton'), 'selected', 'ToggleButton')));
   assert.match(toggle, /aria-pressed="true"/u);
+});
+
+test('Link icon composition story renders the canonical leading and trailing SVG children', async () => {
+  const canonicalSource = await readFile(resolve(repositoryRoot, 'catalog/components/link/examples/react/icon-composition.tsx'), 'utf8');
+  const source = await readFile(resolve(appRoot, '.storybook/generated/r1-1-link.stories.mjs'), 'utf8');
+  assert.match(source, /link-icon-composition\.example\.mjs/u);
+  assert.match(source, /export const IconComposition/u);
+
+  const story = await import('../.storybook/generated/r1-1-link.stories.mjs');
+  assert.equal(story.IconComposition.name, 'Icon composition');
+  assert.deepEqual(story.IconComposition.parameters.docs.source, { code: canonicalSource, language: 'tsx' });
+  const markup = renderToStaticMarkup(story.IconComposition.render());
+  const ltr = new JSDOM(`<!doctype html><body dir="ltr">${markup}</body>`);
+  const rtl = new JSDOM(`<!doctype html><body dir="rtl">${markup}</body>`);
+  try {
+    for (const document of [ltr.window.document, rtl.window.document]) {
+      const navigation = document.querySelector('nav');
+      assert.equal(navigation?.getAttribute('aria-label'), 'Example navigation links', `${document.body.dir} navigation name`);
+      const navigationStyle = navigation?.getAttribute('style') ?? '';
+      assert.match(navigationStyle, /display:inline-flex/u, `${document.body.dir} navigation display`);
+      assert.match(navigationStyle, /flex-wrap:wrap/u, `${document.body.dir} navigation wrapping`);
+      assert.match(navigationStyle, /gap:0\.75rem/u, `${document.body.dir} navigation spacing`);
+      const links = [...document.querySelectorAll('a.muxui-link')];
+      assert.equal(links.length, 2, `${document.body.dir} Link count`);
+      assert.equal(links[0].firstElementChild?.tagName, 'svg', `${document.body.dir} leading icon order`);
+      assert.equal(links[1].lastElementChild?.tagName, 'svg', `${document.body.dir} trailing icon order`);
+      assert.equal(links[0].textContent, 'Dashboard', `${document.body.dir} leading link name`);
+      assert.equal(links[1].textContent, 'Settings', `${document.body.dir} trailing link name`);
+      for (const icon of document.querySelectorAll('a.muxui-link > svg')) {
+        assert.equal(icon.getAttribute('aria-hidden'), 'true', `${document.body.dir} decorative icon visibility`);
+        assert.equal(icon.getAttribute('focusable'), 'false', `${document.body.dir} decorative icon focusability`);
+        assert.equal(icon.getAttribute('width'), '1em', `${document.body.dir} icon width`);
+        assert.equal(icon.getAttribute('height'), '1em', `${document.body.dir} icon height`);
+        assert.equal(icon.getAttribute('stroke'), 'currentColor', `${document.body.dir} icon color`);
+      }
+    }
+  } finally {
+    ltr.window.close();
+    rtl.window.close();
+  }
+});
+
+test('Link icon composition helper is an Oxc projection of the canonical TSX source', async () => {
+  const canonicalSourcePath = 'catalog/components/link/examples/react/icon-composition.tsx';
+  const canonicalSource = await readFile(resolve(repositoryRoot, canonicalSourcePath), 'utf8');
+  const helperSource = await readFile(resolve(appRoot, '.storybook/generated/link-icon-composition.example.mjs'), 'utf8');
+  const helperBody = generatedBody(helperSource, 'link-icon-composition.example.mjs');
+  const transformed = await transformWithOxc(canonicalSource, canonicalSourcePath, {
+    lang: 'tsx',
+    jsx: { runtime: 'automatic' },
+    sourcemap: false,
+  });
+  const expected = transformed.code.endsWith('\n') ? transformed.code : `${transformed.code}\n`;
+  assert.equal(helperBody, expected);
+  assert.equal(manifest.generatedFrom.includes(canonicalSourcePath), true);
 });
 
 test('behavior-only state evidence executes the focused Mux UI interactions', async () => {

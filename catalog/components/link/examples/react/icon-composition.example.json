@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:link-icon-composition-react",
+  "kind": "example",
+  "name": "React Link icon composition",
+  "summary": "Compose leading and trailing decorative inline SVGs as Link children.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:link#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "advanced",
+  "prerequisites": [],
+  "source": "catalog/components/link/examples/react/icon-composition.tsx"
+}
