@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "storybook": "pnpm generate && storybook dev -p 6006",
+    "storybook": "pnpm generate && pnpm exec storybook dev -p 6006",
     "build": "pnpm generate && storybook build --output-dir dist",
     "generate": "node src/generate-stories.mjs",
     "generate:check": "node src/generate-stories.mjs --check",
