@@ -215,6 +215,54 @@ test('R1.1 Breadcrumbs disabled items and ProgressBar completion stay within the
   }
 });
 
+test('Checkbox and Radio focus rings stay on indicators with a 1px keyline gap', async () => {
+  const [components, collections, generated] = await Promise.all([
+    readFile(new URL('../src/styles/components.css', import.meta.url), 'utf8'),
+    readFile(new URL('../src/styles/collections.css', import.meta.url), 'utf8'),
+    readFile(new URL('../generated/styles.css', import.meta.url), 'utf8'),
+  ]);
+  const rootFocusOutline = /\.muxui-(?:checkbox|radio)(?::focus-within|\[data-focus-visible\])\s*\{[^}]*outline:/u;
+  const focusRules = [
+    ['Checkbox focus-visible indicator', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-content-inverse\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Checkbox focus-within indicator', /\.muxui-checkbox:focus-within \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-content-inverse\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-content-inverse\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Radio mode-aware focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-focus-ring-inner\),\s*0 0 0 3px var\(--muxui-focus-ring-outer\)[^}]*\}/u],
+  ];
+  const forcedColorsFocusRules = [
+    ['Checkbox forced-colors indicator', components, /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
+    ['Radio forced-colors indicator', collections, /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
+  ];
+
+  assert.doesNotMatch(components, rootFocusOutline);
+  assert.doesNotMatch(generated, rootFocusOutline);
+  for (const [label, rule] of focusRules) {
+    const source = label.startsWith('Radio') ? collections : components;
+    assert.match(source, rule, `${label} source declaration is missing`);
+    assert.match(generated, rule, `${label} generated declaration is missing`);
+  }
+  for (const [label, source, rule] of forcedColorsFocusRules) {
+    assert.match(source, rule, `${label} source declaration is missing`);
+    assert.match(generated, rule, `${label} generated declaration is missing`);
+  }
+});
+
+test('Checkbox and Radio generated CSS suppresses native input outlines', async () => {
+  const [components, collections, generated] = await Promise.all([
+    readFile(new URL('../src/styles/components.css', import.meta.url), 'utf8'),
+    readFile(new URL('../src/styles/collections.css', import.meta.url), 'utf8'),
+    readFile(new URL('../generated/styles.css', import.meta.url), 'utf8'),
+  ]);
+  const inputOutlineRules = [
+    ['Checkbox', components, /\.muxui-checkbox input\[type='checkbox'\]\s*\{[^}]*outline:\s*none;/u],
+    ['Radio', collections, /\.muxui-radio input\[type='radio'\]\s*\{[^}]*outline:\s*none;/u],
+  ];
+
+  for (const [label, source, rule] of inputOutlineRules) {
+    assert.match(source, rule, `${label} source input reset is missing`);
+    assert.match(generated, rule, `${label} generated input reset is missing`);
+  }
+});
+
 test('DisclosureGroup uses accordion trigger geometry without changing standalone Disclosure sizing', async () => {
   const server = renderToString(React.createElement(React.Fragment, null,
     React.createElement(Disclosure, { title: 'Standalone' }, 'Content'),

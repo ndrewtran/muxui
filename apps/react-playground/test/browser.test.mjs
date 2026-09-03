@@ -71,6 +71,27 @@ async function assertNoAxeViolations(scope, label) {
   if (result.violations.length) throw new Error(`${label} axe violations: ${JSON.stringify(result.violations.map(({ id, help }) => ({ id, help })))}`);
 }
 
+async function readChoiceFocusStyles(root) {
+  return root.evaluate((node) => {
+    const input = node.querySelector('input');
+    const indicator = node.querySelector('.muxui-checkbox-indicator, .muxui-radio-indicator');
+    const rootStyle = getComputedStyle(node);
+    const inputStyle = input ? getComputedStyle(input) : null;
+    const indicatorStyle = indicator ? getComputedStyle(indicator) : null;
+    return {
+      active: document.activeElement === input,
+      focusVisible: node.hasAttribute('data-focus-visible'),
+      rootOutlineStyle: rootStyle.outlineStyle,
+      inputOutlineStyle: inputStyle?.outlineStyle,
+      indicatorBoxShadow: indicatorStyle?.boxShadow,
+      indicatorOutlineColor: indicatorStyle?.outlineColor,
+      indicatorOutlineOffset: indicatorStyle?.outlineOffset,
+      indicatorOutlineStyle: indicatorStyle?.outlineStyle,
+      indicatorOutlineWidth: indicatorStyle?.outlineWidth,
+    };
+  });
+}
+
 test('R1.4 React component browser and axe matrix', async () => {
   if (!executablePath) throw new Error('R1_BROWSER_REQUIRED: Chrome or Chromium was not found');
   const appRoot = resolve(import.meta.dirname, '..');
@@ -154,6 +175,43 @@ test('R1.4 React component browser and axe matrix', async () => {
       await disabled.focus();
       if (await disabled.evaluate((node) => document.activeElement === node)) throw new Error(`${expected} disabled Button must not be focusable`);
       if (expected === expectedProfiles[0]) {
+        for (const [label, rootSelector, keyboardAction] of [
+          ['Checkbox', '[data-component="checkbox"] .muxui-checkbox', 'Tab'],
+          ['Radio', '[data-component="radio-group"] .muxui-radio', 'ArrowDown'],
+        ]) {
+          const choices = profile.locator(rootSelector);
+          if (await choices.count() < 2) throw new Error(`${label} focus fixture must expose at least two choices`);
+          const first = choices.nth(0);
+          const second = choices.nth(1);
+          await first.click();
+          const pointerState = await readChoiceFocusStyles(first);
+          if (!pointerState.active) throw new Error(`${label} pointer click must focus its native input`);
+          if (pointerState.rootOutlineStyle !== 'none') throw new Error(`${label} pointer click must not paint a root outline`);
+          if (pointerState.inputOutlineStyle !== 'none') throw new Error(`${label} pointer click must not paint a native input outline`);
+
+          await page.keyboard.press(keyboardAction);
+          await waitForDocumentAnimations(page);
+          const keyboardState = await readChoiceFocusStyles(second);
+          if (!keyboardState.active || !keyboardState.focusVisible) throw new Error(`${label} ${keyboardAction} must expose keyboard focus on the next choice`);
+          if (!/0(?:px)? 0(?:px)? 0(?:px)? 1px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 3px/u.test(keyboardState.indicatorBoxShadow ?? '')) {
+            throw new Error(`${label} ${keyboardAction} focus must retain its indicator ring: ${JSON.stringify(keyboardState)}`);
+          }
+
+          await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
+          await waitForDocumentAnimations(page);
+          const forcedState = await readChoiceFocusStyles(second);
+          if (forcedState.indicatorOutlineStyle !== 'solid'
+            || forcedState.indicatorOutlineWidth !== '2px'
+            || forcedState.indicatorOutlineOffset !== '1px'
+            || forcedState.indicatorOutlineColor === 'transparent') {
+            throw new Error(`${label} forced-colors focus must use a visible 2px system-color outline with a 1px gap: ${JSON.stringify(forcedState)}`);
+          }
+          if (forcedState.rootOutlineStyle !== 'none' || forcedState.inputOutlineStyle !== 'none') {
+            throw new Error(`${label} forced-colors focus must keep root and native input outlines suppressed`);
+          }
+          await page.emulateMedia({ forcedColors: 'none', reducedMotion: 'no-preference' });
+        }
+
         const autocompleteInput = profile.locator('[data-component="autocomplete"] .muxui-autocomplete input');
         await autocompleteInput.fill('');
         await autocompleteInput.focus();

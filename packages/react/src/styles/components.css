@@ -21,7 +21,6 @@
 .muxui-checkbox-indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-semantic-content-faint); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-semantic-surface-raised); color: var(--muxui-semantic-surface-canvas); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
 .muxui-checkbox-indicator[data-selected], .muxui-checkbox-indicator[data-indeterminate] { border-color: var(--muxui-semantic-selection-track); background: var(--muxui-semantic-selection-track); color: var(--muxui-semantic-action-foreground); }
 .muxui-checkbox input { accent-color: var(--muxui-semantic-selection-track); }
-.muxui-checkbox:focus-within, .muxui-checkbox[data-focus-visible] { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: 2px; }
 .muxui-checkbox[data-invalid] .muxui-checkbox-indicator { border-color: var(--muxui-semantic-feedback-invalid); }
 .muxui-checkbox[data-disabled] { color: var(--muxui-semantic-content-default); cursor: not-allowed; }
 
@@ -272,8 +271,8 @@
 
 .muxui-checkbox[data-focus-visible] .muxui-checkbox-indicator {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
-    0 0 0 4px var(--muxui-semantic-focus-ring);
+    0 0 0 1px var(--muxui-semantic-content-inverse),
+    0 0 0 3px var(--muxui-semantic-focus-ring);
 }
 
 .muxui-checkbox[data-selected] .muxui-checkbox-indicator {
@@ -677,13 +676,21 @@
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
+  outline: none;
 }
 
 .muxui-checkbox[data-focus-visible] .muxui-checkbox-indicator,
 .muxui-checkbox:focus-within .muxui-checkbox-indicator {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
-    0 0 0 4px var(--muxui-semantic-focus-ring);
+    0 0 0 1px var(--muxui-semantic-content-inverse),
+    0 0 0 3px var(--muxui-semantic-focus-ring);
+}
+
+@media (forced-colors: active) {
+  .muxui-checkbox[data-focus-visible] .muxui-checkbox-indicator {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
 }
 
 /* MuxUI Button has one public visual variant: the pinned primary treatment. */

@@ -459,8 +459,13 @@
 
 .muxui-radio[data-focus-visible] .muxui-radio-indicator {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
-    0 0 0 4px var(--muxui-semantic-focus-ring);
+    0 0 0 1px var(--muxui-semantic-content-inverse),
+    0 0 0 3px var(--muxui-semantic-focus-ring);
+}
+
+/* RAC keeps the native input as the focus target; the indicator owns focus paint. */
+.muxui-radio input[type='radio'] {
+  outline: none;
 }
 
 .muxui-radio[data-selected] .muxui-radio-indicator {
@@ -1358,6 +1363,11 @@
     outline: 2px solid Highlight;
     outline-offset: 1px;
   }
+
+  .muxui-radio[data-focus-visible] .muxui-radio-indicator {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
 }
 
 :where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag, .muxui-virtualizer) {
@@ -2005,8 +2015,8 @@
 
 .muxui-radio[data-focus-visible] .muxui-radio-indicator {
   box-shadow:
-    0 0 0 2px var(--muxui-focus-ring-inner),
-    0 0 0 4px var(--muxui-focus-ring-outer);
+    0 0 0 1px var(--muxui-focus-ring-inner),
+    0 0 0 3px var(--muxui-focus-ring-outer);
 }
 
 .muxui-radio {
