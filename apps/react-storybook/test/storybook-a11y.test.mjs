@@ -410,6 +410,73 @@ async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
   });
 }
 
+test('NumberField sizing story computes fit-content, 12rem, and full container widths', { timeout: testTimeoutMs }, async () => {
+  const executablePath = await findBrowser();
+  assert.ok(executablePath, 'Chrome or Chromium is required for the NumberField sizing browser proof (set MUXUI_CHROME_EXECUTABLE to override)');
+
+  const preferredPort = configuredPort();
+  let port;
+  try {
+    port = await reservePort(preferredPort);
+  } catch (error) {
+    if (preferredPort === undefined) throw error;
+    port = await reservePort(undefined);
+  }
+
+  let storybook;
+  let browser;
+  try {
+    const started = await startStorybook(port);
+    storybook = started.child;
+    const baseUrl = started.baseUrl;
+    const index = await fetch(`${baseUrl}/index.json`).then(async (response) => {
+      assert.ok(response.ok, `Storybook index request failed with HTTP ${response.status}`);
+      return response.json();
+    });
+    const story = Object.values(index.entries).find((entry) => (
+      entry.type === 'story' && entry.name === 'Sizing' && storyFamily(entry) === 'NumberField'
+    ));
+    assert.ok(story, 'Storybook must expose the NumberField Sizing story');
+
+    browser = await chromium.launch({ executablePath, headless: true });
+    const page = await browser.newPage({ viewport: { width: 1_000, height: 800 } });
+    page.setDefaultNavigationTimeout(storyTimeoutMs);
+    page.setDefaultTimeout(storyTimeoutMs);
+    const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent('colorScheme:light')}`;
+    await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+    await waitForStory(page, 'light');
+    await waitForDocumentAnimations(page);
+
+    const measurements = await page.evaluate(() => {
+      const expectedFixedWidth = 12 * parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const fields = [...document.querySelectorAll('.muxui-number-field-sizing-example .muxui-number-field')].map((field) => {
+        const style = getComputedStyle(field);
+        return {
+          customProperty: style.getPropertyValue('--muxui-component-number-field-width').trim(),
+          width: field.getBoundingClientRect().width,
+          parentWidth: field.parentElement?.getBoundingClientRect().width ?? 0,
+        };
+      });
+      return { expectedFixedWidth, fields };
+    });
+    assert.equal(measurements.fields.length, 3);
+    assert.equal(measurements.fields[0].customProperty, '');
+    assert.ok(measurements.fields[0].width > 0);
+    assert.ok(measurements.fields[0].width < measurements.fields[2].width, 'default fit-content should not fill the container');
+    assert.equal(measurements.fields[1].customProperty, '12rem');
+    assert.ok(
+      Math.abs(measurements.fields[1].width - measurements.expectedFixedWidth) < 0.5,
+      `fixed width should be 12rem (${measurements.expectedFixedWidth}px), got ${measurements.fields[1].width}px`,
+    );
+    assert.equal(measurements.fields[2].customProperty, '100%');
+    assert.ok(Math.abs(measurements.fields[2].width - measurements.fields[2].parentWidth) < 0.5, 'full width should match its container');
+    await page.close();
+  } finally {
+    await browser?.close();
+    await terminateProcess(storybook);
+  }
+});
+
 test('all Mux UI React Storybook families are axe-clean in light and dark', { timeout: testTimeoutMs }, async () => {
   const executablePath = await findBrowser();
   assert.ok(executablePath, 'Chrome or Chromium is required for the Storybook a11y gate (set MUXUI_CHROME_EXECUTABLE to override)');

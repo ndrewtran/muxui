@@ -278,6 +278,11 @@
       "sourcePath": "catalog/components/number-field/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/number-field/examples/react/sizing.example.json",
+      "sourcePath": "catalog/components/number-field/examples/react/sizing.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/number-field-usage.json",
       "sourcePath": "catalog/guides/number-field-usage.md"

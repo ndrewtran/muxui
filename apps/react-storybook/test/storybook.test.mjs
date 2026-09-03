@@ -600,6 +600,56 @@ test('Link icon composition helper is an Oxc projection of the canonical TSX sou
   assert.equal(manifest.generatedFrom.includes(canonicalSourcePath), true);
 });
 
+test('NumberField sizing story renders the canonical fit-content, fixed, and full-width cases', async () => {
+  const canonicalSourcePath = 'catalog/components/number-field/examples/react/sizing.tsx';
+  const canonicalSource = await readFile(resolve(repositoryRoot, canonicalSourcePath), 'utf8');
+  const source = await readFile(resolve(appRoot, '.storybook/generated/r1-2-number-field.stories.mjs'), 'utf8');
+  assert.match(source, /number-field-sizing\.example\.mjs/u);
+  assert.match(source, /export const Sizing/u);
+
+  const story = await import('../.storybook/generated/r1-2-number-field.stories.mjs');
+  assert.equal(story.Sizing.name, 'Sizing');
+  assert.deepEqual(story.Sizing.parameters.docs.source, { code: canonicalSource, language: 'tsx' });
+  const markup = renderToStaticMarkup(story.Sizing.render());
+  const dom = new JSDOM(`<!doctype html><body>${markup}</body>`);
+  try {
+    const example = dom.window.document.querySelector('.muxui-number-field-sizing-example');
+    assert.ok(example, 'sizing example root');
+    const fields = [...example.querySelectorAll('.muxui-number-field')];
+    assert.equal(fields.length, 3);
+    assert.deepEqual(fields.map((field) => field.querySelector('.muxui-field-label')?.textContent), [
+      'Default fit-content',
+      'Fixed 12rem',
+      'Full container width',
+    ]);
+    assert.equal(fields[0].classList.contains('muxui-number-field-sizing-fixed'), false);
+    assert.equal(fields[0].classList.contains('muxui-number-field-sizing-full'), false);
+    assert.equal(fields[1].classList.contains('muxui-number-field-sizing-fixed'), true);
+    assert.equal(fields[2].classList.contains('muxui-number-field-sizing-full'), true);
+    const styleText = [...example.querySelectorAll('style')].map((style) => style.textContent).join('\n');
+    assert.match(styleText, /--muxui-component-number-field-width:\s*12rem/u);
+    assert.match(styleText, /--muxui-component-number-field-width:\s*100%/u);
+    assert.doesNotMatch(canonicalSource, /<NumberField[^>]*\bwidth\s*=/u);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('NumberField sizing helper is an Oxc projection of the canonical TSX source', async () => {
+  const canonicalSourcePath = 'catalog/components/number-field/examples/react/sizing.tsx';
+  const canonicalSource = await readFile(resolve(repositoryRoot, canonicalSourcePath), 'utf8');
+  const helperSource = await readFile(resolve(appRoot, '.storybook/generated/number-field-sizing.example.mjs'), 'utf8');
+  const helperBody = generatedBody(helperSource, 'number-field-sizing.example.mjs');
+  const transformed = await transformWithOxc(canonicalSource, canonicalSourcePath, {
+    lang: 'tsx',
+    jsx: { runtime: 'automatic' },
+    sourcemap: false,
+  });
+  const expected = transformed.code.endsWith('\n') ? transformed.code : `${transformed.code}\n`;
+  assert.equal(helperBody, expected);
+  assert.equal(manifest.generatedFrom.includes(canonicalSourcePath), true);
+});
+
 test('behavior-only state evidence executes the focused Mux UI interactions', async () => {
   const env = installRuntimeDom();
   const host = document.querySelector('#root');

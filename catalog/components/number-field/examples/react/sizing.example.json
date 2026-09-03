@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:number-field-sizing-react",
+  "kind": "example",
+  "name": "React NumberField sizing",
+  "summary": "Compare the default fit-content, fixed 12rem, and full container widths.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:number-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/number-field/examples/react/sizing.tsx"
+}
