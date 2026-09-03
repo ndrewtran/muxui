@@ -20,7 +20,7 @@
   "dispositions": ["adopt", "adapt", "defer", "reject", "no-applicable-donor"],
   "button": {
     "disposition": "adapt",
-    "consumedRules": ["--color-60", "--color-60-fg", "--radius-m", "--space-xs", "2.25rem minimum height", "focus-ring color/rule", "feedback transition duration", "inherited typography", "donor shadow and opacity details"],
+    "consumedRules": ["--color-60", "--color-60-fg", "--radius-m", "--space-xs", "2.25rem minimum height", "focus-ring color/rule", "feedback transition duration", "inherited typography", "donor shadow and opacity details", "donor primary/default → Mux primary recipe", "donor secondary/default (neutral) → Mux secondary recipe", "donor ghost/default → Mux ghost recipe", "donor primary/destructive (danger) → Mux primary destructive recipe", "donor secondary/destructive (danger-neutral) → Mux secondary destructive recipe", "donor ghost/destructive (danger-ghost) → Mux ghost destructive recipe", "donor sm/md/lg sizes → Mux sm/md/lg sizes"],
     "rules": [
       { "input": "--color-60", "core": "component.button.background", "disposition": "adapt" },
       { "input": "--color-60-fg", "core": "component.button.foreground", "disposition": "adapt" },
@@ -30,7 +30,14 @@
       { "input": "focus-ring color/rule", "core": "semantic.focus.ring", "disposition": "adapt" },
       { "input": "feedback transition duration", "core": "semantic.motion.feedback", "disposition": "adapt" },
       { "input": "inherited typography", "core": "consumer/Core inheritance", "disposition": "reasoned-non-token-adaptation" },
-      { "input": "donor shadow and opacity details", "core": "private implementation constants", "disposition": "adapt" }
+      { "input": "donor shadow and opacity details", "core": "private implementation constants", "disposition": "adapt" },
+      { "input": "donor primary/default → Mux primary recipe", "core": "component.button.background", "disposition": "adapt" },
+      { "input": "donor secondary/default (neutral) → Mux secondary recipe", "core": "semantic.surface.raised", "disposition": "adapt" },
+      { "input": "donor ghost/default → Mux ghost recipe", "core": "semantic.content.link", "disposition": "adapt" },
+      { "input": "donor primary/destructive (danger) → Mux primary destructive recipe", "core": "semantic.feedback.invalid", "disposition": "adapt" },
+      { "input": "donor secondary/destructive (danger-neutral) → Mux secondary destructive recipe", "core": "semantic.feedback.invalid", "disposition": "adapt" },
+      { "input": "donor ghost/destructive (danger-ghost) → Mux ghost destructive recipe", "core": "semantic.feedback.invalid", "disposition": "adapt" },
+      { "input": "donor sm/md/lg sizes → Mux sm/md/lg sizes", "core": "component.button.min-height", "disposition": "adapt" }
     ]
   },
   "components": {

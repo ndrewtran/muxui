@@ -1,10 +1,11 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d21207badcc71691aa6a2effc153a05aed5268ba51c4c576ce47b9ad1be9a847
+// @generated-content-sha256: sha256:84fb7d0f7e335c82cd626a2a9a82d5973b72a3eca88f0adfb4a4af7db3558ff1
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
   controlledDefaultPairsForBinding,
   createAnatomyStory,
+  createButtonMatrixStory,
   createBrowserProofStory,
   createControlledStory,
   createEventsStory,
@@ -16,7 +17,10 @@ const binding = {
   "api": {
     "defaults": {
       "disabled": false,
-      "pending": false
+      "pending": false,
+      "size": "md",
+      "tone": "default",
+      "variant": "primary"
     },
     "events": [
       "activate"
@@ -27,7 +31,10 @@ const binding = {
     ],
     "props": [
       "disabled",
-      "pending"
+      "pending",
+      "variant",
+      "tone",
+      "size"
     ]
   },
   "binding": "muxui:component:button#web.react",
@@ -76,3 +83,11 @@ export const Uncontrolled = createUncontrolledStory(record);
 export const Events = createEventsStory(record);
 export const Anatomy = createAnatomyStory(record);
 export const BrowserProof = createBrowserProofStory(record);
+const buttonMatrix = createButtonMatrixStory(record);
+export const Matrix = {
+  name: 'Variant × tone × size',
+  args: buttonMatrix.args,
+  argTypes: buttonMatrix.argTypes,
+  parameters: buttonMatrix.parameters,
+  render: buttonMatrix.render,
+};

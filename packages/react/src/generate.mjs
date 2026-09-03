@@ -61,8 +61,28 @@ const runtimeSources = {
 };
 const buttonArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8'));
 const buttonBinding = buttonArtifact.bindings['web.react'];
-if (!buttonBinding || !buttonBinding.api.props.includes('pending')
-  || buttonBinding.api.props.includes('isPending') || buttonBinding.api.props.includes('isDisabled')) {
+const expectedButtonProps = ['disabled', 'pending', 'variant', 'tone', 'size'];
+const expectedButtonDefaults = {
+  disabled: false,
+  pending: false,
+  variant: 'primary',
+  tone: 'default',
+  size: 'md',
+};
+const expectedButtonFiniteApi = {
+  variant: ['primary', 'secondary', 'ghost'],
+  tone: ['default', 'destructive'],
+  size: ['sm', 'md', 'lg'],
+};
+const expectedButtonFiniteDeclarations = [
+  ['BUTTON_VARIANTS', expectedButtonFiniteApi.variant],
+  ['BUTTON_TONES', expectedButtonFiniteApi.tone],
+  ['BUTTON_SIZES', expectedButtonFiniteApi.size],
+].map(([name, values]) => `const ${name} = new Set([${values.map((value) => `'${value}'`).join(', ')}]);`);
+if (!buttonBinding
+  || JSON.stringify(buttonBinding.api.props) !== JSON.stringify(expectedButtonProps)
+  || JSON.stringify(buttonBinding.api.defaults) !== JSON.stringify(expectedButtonDefaults)
+  || expectedButtonFiniteDeclarations.some((declaration) => !buttonSource.includes(declaration))) {
   throw new Error('MUXUI_REACT_BUTTON_CANONICAL_API_DRIFT');
 }
 assertReactR10SourceContracts({ snapshot, upstreamExports, upstreamExportsBytes: upstreamExportsRaw, crosswalk, license });
@@ -116,7 +136,12 @@ for (const artifact of componentArtifacts) {
 const consumedRules = [
   '--color-60', '--color-60-fg', '--radius-m', '--space-xs', '2.25rem minimum height',
   'focus-ring color/rule', 'feedback transition duration', 'inherited typography',
-  'donor shadow and opacity details',
+  'donor shadow and opacity details', 'donor primary/default → Mux primary recipe',
+  'donor secondary/default (neutral) → Mux secondary recipe', 'donor ghost/default → Mux ghost recipe',
+  'donor primary/destructive (danger) → Mux primary destructive recipe',
+  'donor secondary/destructive (danger-neutral) → Mux secondary destructive recipe',
+  'donor ghost/destructive (danger-ghost) → Mux ghost destructive recipe',
+  'donor sm/md/lg sizes → Mux sm/md/lg sizes',
 ];
 if (canonicalJson(crosswalk.button.consumedRules) !== canonicalJson(consumedRules)) {
   throw new Error('MUXUI_REACT_DONOR_CROSSWALK_DRIFT');
@@ -201,6 +226,9 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
   className?: string;
   disabled?: boolean;
   pending?: boolean;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  tone?: 'default' | 'destructive';
+  size?: 'sm' | 'md' | 'lg';
   style?: React.CSSProperties;
   onActivate?: (event: ButtonActivationEvent) => void;
 }

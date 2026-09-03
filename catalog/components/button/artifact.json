@@ -58,12 +58,22 @@
       "lifecycle": "experimental",
       "strategy": "direct",
       "api": {
-        "props": ["disabled", "pending"],
+        "props": ["disabled", "pending", "variant", "tone", "size"],
         "events": ["activate"],
         "parts": ["root", "label"],
-        "defaults": { "disabled": false, "pending": false }
+        "defaults": {
+          "disabled": false,
+          "pending": false,
+          "variant": "primary",
+          "tone": "default",
+          "size": "md"
+        }
       },
-      "behavior": ["Activation requests one immediate action", "Pending suppresses activation while retaining focusability"],
+      "behavior": [
+        "Activation requests one immediate action",
+        "Pending suppresses activation while retaining focusability",
+        "Variant, tone, and size select finite orthogonal visual recipes"
+      ],
       "accessibility": ["Expose accessible name, disabled state, and busy state"],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",

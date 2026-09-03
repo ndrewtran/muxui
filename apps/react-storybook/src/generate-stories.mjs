@@ -94,7 +94,7 @@ import {
   argTypesForBinding,
   controlledDefaultPairsForBinding,
   createAnatomyStory,
-  createBrowserProofStory,
+${record.family === 'Button' ? '  createButtonMatrixStory,\n' : ''}  createBrowserProofStory,
   createControlledStory,
   createEventsStory,
   createStory,
@@ -148,6 +148,14 @@ export const ${canonicalExample.exportName} = {
     },
   },
   render: () => React.createElement(${canonicalExample.importName}),
+};` : ''}${record.family === 'Button' ? `
+const buttonMatrix = createButtonMatrixStory(record);
+export const Matrix = {
+  name: 'Variant × tone × size',
+  args: buttonMatrix.args,
+  argTypes: buttonMatrix.argTypes,
+  parameters: buttonMatrix.parameters,
+  render: buttonMatrix.render,
 };` : ''}${record.family === 'Autocomplete' ? `
 export const DisabledItemsInteraction = {
   name: 'Disabled items keyboard navigation',

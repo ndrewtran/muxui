@@ -232,6 +232,16 @@
           "path": "packages/react/test/components.test.mjs",
           "lines": null,
           "anchor": null
+        },
+        {
+          "path": "apps/react-storybook/test/storybook.test.mjs",
+          "lines": null,
+          "anchor": null
+        },
+        {
+          "path": "apps/react-storybook/test/storybook-a11y.test.mjs",
+          "lines": null,
+          "anchor": null
         }
       ]
     },
@@ -332,6 +342,21 @@
       "proof": [
         {
           "path": "packages/react/test/components.test.mjs",
+          "lines": null,
+          "anchor": null
+        },
+        {
+          "path": "packages/react/test/fixture.test.mjs",
+          "lines": null,
+          "anchor": null
+        },
+        {
+          "path": "apps/react-storybook/test/storybook.test.mjs",
+          "lines": null,
+          "anchor": null
+        },
+        {
+          "path": "apps/react-storybook/test/storybook-a11y.test.mjs",
           "lines": null,
           "anchor": null
         }

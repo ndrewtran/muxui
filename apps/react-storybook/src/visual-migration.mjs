@@ -29,6 +29,19 @@ export const donorEntrySourcePath = 'visual-migration/bootstrap/donor-entry.mjs'
 export const donorRenderPlanSourcePath = 'visual-migration/bootstrap/donor-render-plan.mjs';
 export const muxuiCaptureRunnerSourcePath = 'test/run-visual-migration.mjs';
 export const muxuiCaptureProvenancePath = 'visual-migration/results/muxui-capture-provenance.json';
+export const muxuiGeneratedTreePath = 'packages/react/generated';
+export const muxuiGeneratedRequiredFiles = Object.freeze([
+  'button.mjs',
+  'collections.mjs',
+  'compatibility.mjs',
+  'components.mjs',
+  'fields.mjs',
+  'index.d.ts',
+  'index.mjs',
+  'overlays.mjs',
+  'styles.css',
+  'testing.mjs',
+]);
 export const baselineRootDirectory = 'visual-migration/baselines';
 export const donorRootDirectory = 'visual-migration/donors';
 export const taleStyleInventoryPath = 'visual-migration/tale-style-inventory.json';
@@ -44,7 +57,7 @@ export const expectedCompatibilityStateCount = compatibilityStateCoverage.length
 export const expectedSupplementalStateCount = supplementalStateCoverage.length;
 export const expectedSettling = Object.freeze({
   donor: 'document.fonts.ready plus two consecutive byte-identical screenshots (maximum 8 attempts)',
-  muxui: 'document.fonts.ready plus animation cancellation and two requestAnimationFrame ticks',
+  muxui: 'document.fonts.ready plus animation cancellation, private-host caret suppression, and two consecutive byte-identical screenshots (maximum 8 attempts)',
 });
 export const expectedCaptureClock = Object.freeze({
   time: '2026-08-30T12:00:00+10:00',
@@ -110,6 +123,51 @@ export function canonicalize(value) {
 
 function hashJson(value) {
   return sha256(Buffer.from(JSON.stringify(canonicalize(value)), 'utf8'));
+}
+
+async function generatedTreeFiles(root) {
+  const treeRoot = resolve(root, muxuiGeneratedTreePath);
+  const files = [];
+  async function collect(directory, prefix = '') {
+    const entries = await readdir(directory, { withFileTypes: true });
+    entries.sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0));
+    for (const entry of entries) {
+      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolutePath = resolve(directory, entry.name);
+      if (entry.isDirectory()) {
+        await collect(absolutePath, relativePath);
+      } else if (entry.isFile()) {
+        files.push({
+          path: `${muxuiGeneratedTreePath}/${relativePath}`,
+          sha256: sha256(await readFile(absolutePath)),
+        });
+      } else {
+        throw new Error(`Mux UI generated tree contains unsupported entry: ${relativePath}`);
+      }
+    }
+  }
+  await collect(treeRoot);
+  return files;
+}
+
+/**
+ * Bind visual captures to every generated React artifact used by Storybook.
+ * The generated tree is deliberately outside the Storybook output tree, so
+ * this digest cannot self-reference captured screenshots or migration files.
+ */
+export async function muxuiGeneratedTreeProvenance({ root = resolve(appRoot, '../..') } = {}) {
+  const files = await generatedTreeFiles(root);
+  const filePaths = new Set(files.map(({ path }) => path.slice(`${muxuiGeneratedTreePath}/`.length)));
+  for (const requiredFile of muxuiGeneratedRequiredFiles) {
+    if (!filePaths.has(requiredFile)) throw new Error(`Mux UI generated tree is missing ${requiredFile}`);
+  }
+  return {
+    path: muxuiGeneratedTreePath,
+    fileCount: files.length,
+    requiredFiles: muxuiGeneratedRequiredFiles,
+    files,
+    sha256: hashJson(files),
+  };
 }
 
 // The one-time Tale capture predates the Mux UI identity reset. Keep its
@@ -537,7 +595,8 @@ async function validateMuxuiCaptureProvenance(manifest, { root = appRoot, proven
   const factorySourceSha256 = sha256(factorySource);
   const fixtureMapSourceSha256 = sha256(fixtureMapSource);
   const muxuiCaptureRunnerSourceSha256 = sha256(muxuiCaptureRunnerSource);
-  if (provenance?.schema !== 'muxui-react-visual-migration-muxui-capture-v1'
+  const generatedTree = await muxuiGeneratedTreeProvenance({ root: resolve(root, '../..') });
+  if (provenance?.schema !== 'muxui-react-visual-migration-muxui-capture-v2'
     || provenance.directory !== manifest.baselineDirectory
     || provenance.caseCount !== migrationCases.length
     || provenance.captureCount !== expectedCaptureInventory.length
@@ -546,6 +605,7 @@ async function validateMuxuiCaptureProvenance(manifest, { root = appRoot, proven
     || provenance.muxuiFactorySourceSha256 !== factorySourceSha256
     || provenance.muxuiFixtureMapSourceSha256 !== fixtureMapSourceSha256
     || provenance.muxuiCaptureRunnerSourceSha256 !== muxuiCaptureRunnerSourceSha256
+    || JSON.stringify(provenance.muxuiGeneratedTree) !== JSON.stringify(generatedTree)
     || JSON.stringify(provenance.settling) !== JSON.stringify(expectedSettling)
     || JSON.stringify(provenance.captureEnvironment) !== JSON.stringify(manifest.capture)
     || !Array.isArray(provenance.captures)
@@ -585,8 +645,8 @@ async function validateMuxuiCaptureProvenance(manifest, { root = appRoot, proven
   return provenance;
 }
 
-export async function validateManifest(manifest, { root = appRoot, allowMissingMuxuiCaptureProvenance = false, allowMuxuiCaptureRunnerSourceDrift = false, muxuiCaptureProvenance: suppliedMuxuiCaptureProvenance } = {}) {
-  if (allowMuxuiCaptureRunnerSourceDrift && !allowMissingMuxuiCaptureProvenance) throw new Error('Mux UI capture runner source drift is available only during update-only validation');
+export async function validateManifest(manifest, { root = appRoot, allowMissingMuxuiCaptureProvenance = false, allowMuxuiCaptureRunnerSourceDrift = false, allowMuxuiSettlingDrift = false, muxuiCaptureProvenance: suppliedMuxuiCaptureProvenance } = {}) {
+  if ((allowMuxuiCaptureRunnerSourceDrift || allowMuxuiSettlingDrift) && !allowMissingMuxuiCaptureProvenance) throw new Error('Mux UI capture runner or settling drift is available only during update-only validation');
   validateTaleStyleInventory();
   if (manifest?.schema !== 'muxui-react-visual-migration-manifest-v2' || manifest.version !== 2) throw new Error('visual migration manifest has an unknown schema or version');
   assertManifestIdentity(manifest);
@@ -629,7 +689,7 @@ export async function validateManifest(manifest, { root = appRoot, allowMissingM
     const entry = manifest.cases.find(({ id }) => id === caseId);
     if (!capture || capture.caseId !== caseId || capture.mode !== mode || capture.sha256 !== entry.donor.artifacts[mode].sha256 || capture.fixtureContractSha256 !== entry.fixtureContractSha256 || capture.runtimeFixtureSha256 !== entry.runtimeFixtureSha256 || capture.donorSource !== donorEntrySourcePath || JSON.stringify(capture.semanticRegion) !== JSON.stringify(entry.donor.artifacts[mode].semanticRegion) || JSON.stringify(capture.equivalentPart) !== JSON.stringify(entry.donor.artifacts[mode].equivalentPart)) throw new Error(`${captureId} donor provenance must bind the canonical fixture, donor source, semantic parts, runtimeFixtureSha256, and emitted PNG`);
   }
-  if (!manifest.capture || manifest.capture.viewport?.width !== 1000 || manifest.capture.viewport?.height !== 700 || manifest.capture.deviceScaleFactor !== 1 || JSON.stringify(manifest.capture.modes) !== JSON.stringify(['light', 'dark']) || manifest.capture.reducedMotion !== true || JSON.stringify(manifest.capture.settling) !== JSON.stringify(expectedSettling)) throw new Error('manifest.capture must pin the shared 1000x700 light/dark reduced-motion capture and settling contract');
+  if (!manifest.capture || manifest.capture.viewport?.width !== 1000 || manifest.capture.viewport?.height !== 700 || manifest.capture.deviceScaleFactor !== 1 || JSON.stringify(manifest.capture.modes) !== JSON.stringify(['light', 'dark']) || manifest.capture.reducedMotion !== true || (!allowMuxuiSettlingDrift && JSON.stringify(manifest.capture.settling) !== JSON.stringify(expectedSettling))) throw new Error('manifest.capture must pin the shared 1000x700 light/dark reduced-motion capture and settling contract');
   if (JSON.stringify(manifest.capture.clock) !== JSON.stringify(expectedCaptureClock)) throw new Error('manifest.capture must pin the deterministic donor-date browser clock');
   if (!manifest.capture.background || manifest.capture.background.light !== '#ffffff' || manifest.capture.background.dark !== '#000000') throw new Error('manifest.capture must pin light/dark frame backgrounds');
   if (!manifest.capture.browser || typeof manifest.capture.browser.name !== 'string' || typeof manifest.capture.browser.version !== 'string' || !/^sha256:[0-9a-f]{64}$/u.test(manifest.capture.browser.executableSha256) || manifest.capture.platform !== 'darwin' || manifest.capture.architecture !== 'arm64' || typeof manifest.capture.osVersion !== 'string' || typeof manifest.capture.osBuildVersion !== 'string') throw new Error('manifest.capture must record the pinned browser and macOS environment');

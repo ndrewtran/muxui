@@ -26,9 +26,12 @@ import {
   expectedStateCoverage,
   expectedStateDispositionCounts,
   expectedDonorBindingSha256,
+  expectedSettling,
   expectedStoryId,
   expectedStoryQuery,
+  jsonSha256,
   migrationCases,
+  muxuiGeneratedTreeProvenance,
   noApplicableDonorFamilies,
   readManifest,
   recoverVisualMigrationActivation,
@@ -45,7 +48,7 @@ import { renderFamily, stateArgsForBinding, storyArgsForBinding } from '../src/s
 import { migrationFixtureSymbol, sharedFixtureInput } from '../src/visual-migration-contract.mjs';
 import { fixtureFieldPropsFor, fixtureRenderModel } from '../src/visual-migration-fixture-map.mjs';
 import { renderFamilyPlan } from '../visual-migration/bootstrap/donor-render-plan.mjs';
-import { visualMigrationStoryReady } from './run-visual-migration.mjs';
+import { migrationCaretSuppressionCss, visualMigrationStoryReady } from './run-visual-migration.mjs';
 import * as visualMigrationModule from '../src/visual-migration.mjs';
 import { taleStyleInventory, validateTaleStyleInventory } from '../src/tale-style-inventory.mjs';
 
@@ -93,9 +96,9 @@ test('the canonical closure proves 51 applicable families and two exact no-donor
     failed: comparison.comparisons.filter(({ pass }) => !pass).length,
   });
   assert.equal(comparison.status, 'genuine-component-region-mismatches-require-review');
-  assert.equal(comparison.counts.pass, 418);
-  assert.equal(comparison.counts.failed, 12);
-  assert.deepEqual(comparison.mismatchInventory.filter(({ failed }) => failed > 0).map(({ component }) => component), ['DateRangePicker']);
+  assert.equal(comparison.counts.pass, 416);
+  assert.equal(comparison.counts.failed, 14);
+  assert.deepEqual(comparison.mismatchInventory.filter(({ failed }) => failed > 0).map(({ component }) => component), ['DateRangePicker', 'RadioGroup']);
   assert.equal(comparison.counts.pass + comparison.counts.failed, expectedCaptureInventory.length);
   assert.equal(comparison.mismatchInventory.length, 51);
   assert.equal(comparison.comparisons.filter(({ pass }) => pass).length, comparison.counts.pass);
@@ -150,6 +153,20 @@ test('migration focus actions establish keyboard modality without donor autofocu
   for (const source of [donorCapture, muxuiCapture]) {
     assert.match(source, /page\.mouse\.click\(0, 0\);\s*await page\.keyboard\.press\('Tab'\);\s*await target\.focus\(\)/u);
   }
+});
+
+test('migration capture settling suppresses private-host carets and requires stable screenshots', async () => {
+  assert.equal(
+    migrationCaretSuppressionCss,
+    '\n[data-muxui-migration-run-token],\n[data-muxui-migration-run-token] * {\n  caret-color: transparent !important;\n}',
+  );
+  const captureSource = await readFile(resolve(appRoot, 'test/run-visual-migration.mjs'), 'utf8');
+  assert.match(captureSource, /page\.addStyleTag\(\{ content: migrationCaretSuppressionCss \}\)/u);
+  assert.match(captureSource, /const stableScreenshotAttempts = 8;/u);
+  assert.match(captureSource, /previous\?\.equals\(bytes\)/u);
+  assert.match(captureSource, /stableMuxuiScreenshot\(page, screenshotOptions,/u);
+  assert.doesNotMatch(captureSource, /(?:^|\n)\s*\*\s*\{[\s\S]*caret-color/u);
+  assert.doesNotMatch(captureSource, /body[^\n]*caret-color/u);
 });
 
 test('migration host resets stay private and expanded triggers are not pressed buttons', async () => {
@@ -696,6 +713,23 @@ test('Mux UI capture provenance rejects substituted computed styles even after r
   await assert.rejects(validateSealedComparison(substituted, { report: rebuilt }), /Mux UI capture provenance/);
 });
 
+test('Mux UI capture provenance binds the complete generated React tree', async () => {
+  const provenance = JSON.parse(await readFile(resolve(appRoot, manifest.bootstrap.muxuiCaptureProvenance.path), 'utf8'));
+  assert.deepEqual(provenance.muxuiGeneratedTree, await muxuiGeneratedTreeProvenance());
+  assert.ok(provenance.muxuiGeneratedTree.files.some(({ path }) => path.endsWith('/button.mjs')));
+  assert.ok(provenance.muxuiGeneratedTree.files.some(({ path }) => path.endsWith('/styles.css')));
+
+  const substituted = structuredClone(manifest);
+  const changedProvenance = structuredClone(provenance);
+  const styles = changedProvenance.muxuiGeneratedTree.files.find(({ path }) => path.endsWith('/styles.css'));
+  styles.sha256 = `sha256:${'0'.repeat(64)}`;
+  substituted.bootstrap.muxuiCaptureProvenance.sha256 = jsonSha256(changedProvenance);
+  await assert.rejects(
+    validateManifest(substituted, { muxuiCaptureProvenance: changedProvenance }),
+    /Mux UI capture provenance does not match the canonical contract/u,
+  );
+});
+
 test('manifest validation rejects changed baseline identity and weakened thresholds', async () => {
   const changed = structuredClone(manifest);
   changed.cases[0].baseline.light.sha256 = `sha256:${'0'.repeat(64)}`;
@@ -768,6 +802,18 @@ test('Mux UI capture runner drift is update-only and update identity binds the c
   }));
   const rebound = updateManifestIdentity(manifest, { baselineSha256: hashes, muxuiCaptureRunnerSourceSha256: currentRunnerHash });
   assert.equal(rebound.bootstrap.muxuiCaptureRunnerSourceSha256, currentRunnerHash);
+
+  const staleSettling = structuredClone(manifest);
+  staleSettling.bootstrap.muxuiCaptureRunnerSourceSha256 = currentRunnerHash;
+  staleSettling.capture.settling.muxui = 'stale settling contract';
+  await assert.rejects(validateManifest(staleSettling, { allowMissingMuxuiCaptureProvenance: true }), /settling contract/);
+  await assert.rejects(validateManifest(staleSettling, { allowMuxuiSettlingDrift: true }), /available only during update-only validation/);
+  await assert.doesNotReject(validateManifest(staleSettling, {
+    allowMissingMuxuiCaptureProvenance: true,
+    allowMuxuiSettlingDrift: true,
+  }));
+  const reboundSettling = updateManifestIdentity(manifest, { baselineSha256: hashes, capture: { settling: expectedSettling } });
+  assert.deepEqual(reboundSettling.capture.settling, expectedSettling);
 });
 
 test('semantic negative cases fail closed: portal omission, no-op action, fixture/report substitution, and pixel exclusion', async () => {

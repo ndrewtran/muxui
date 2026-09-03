@@ -75,11 +75,20 @@ const SELECT_PROPS = Object.freeze({
   variant: ['neutral', 'success', 'warning', 'danger'],
 });
 
+const BUTTON_SELECT_PROPS = Object.freeze({
+  variant: ['primary', 'secondary', 'ghost'],
+  tone: ['default', 'destructive'],
+  size: ['sm', 'md', 'lg'],
+});
+
 const callbackType = { summary: 'MuxUI callback' };
 
-function inferControl(name, defaults, props) {
+function inferControl(name, defaults, props, family) {
   if (name.startsWith('on')) return { control: false, table: { type: callbackType } };
   if (name === 'trigger') return { control: false, table: { type: { summary: 'React element' } } };
+  if (family === 'Button' && BUTTON_SELECT_PROPS[name]) {
+    return { control: { type: 'select' }, options: BUTTON_SELECT_PROPS[name] };
+  }
   if (SELECT_PROPS[name]) return { control: { type: 'select' }, options: SELECT_PROPS[name] };
   if (BOOLEAN_PROPS.has(name) || typeof defaults[name] === 'boolean') return { control: 'boolean' };
   if ((name === 'value' || name === 'defaultValue')
@@ -101,13 +110,14 @@ function inferControl(name, defaults, props) {
 
 export function argTypesForBinding(binding) {
   const defaults = binding.api.defaults ?? {};
+  const family = binding.export;
   return Object.fromEntries(binding.api.props.map((name) => [
     name,
     {
-      ...inferControl(name, defaults, binding.api.props),
+      ...inferControl(name, defaults, binding.api.props, family),
       description: `Mux UI-owned ${name} property`,
       table: {
-        ...(inferControl(name, defaults, binding.api.props).table ?? {}),
+        ...(inferControl(name, defaults, binding.api.props, family).table ?? {}),
         defaultValue: defaults[name] === undefined ? undefined : { summary: defaults[name] },
       },
     },
@@ -1679,6 +1689,42 @@ export function createBrowserProofStory(record) {
         throw error;
       }
     },
+  };
+}
+
+const BUTTON_MATRIX_VARIANTS = Object.freeze(['primary', 'secondary', 'ghost']);
+const BUTTON_MATRIX_TONES = Object.freeze(['default', 'destructive']);
+const BUTTON_MATRIX_SIZES = Object.freeze(['sm', 'md', 'lg']);
+
+/** Render every adopted Button axis combination in one compact inspection story. */
+export function createButtonMatrixStory(record) {
+  if (record.family !== 'Button') throw new TypeError('Button matrix stories require the Button family');
+  return {
+    name: 'Variant × tone × size',
+    args: {},
+    argTypes: argTypesForBinding(record.binding),
+    parameters: {
+      controls: { disable: true },
+      muxuiButtonMatrix: { combinations: 18 },
+    },
+    render: (args = {}) => e(
+      'div',
+      {
+        className: 'muxui-button-matrix',
+        role: 'group',
+        'aria-label': 'Button variant, tone, and size combinations',
+        style: { display: 'grid', gridTemplateColumns: 'repeat(3, max-content)', gap: '1rem' },
+      },
+      ...BUTTON_MATRIX_SIZES.flatMap((size) => BUTTON_MATRIX_TONES.flatMap((tone) => BUTTON_MATRIX_VARIANTS.map((variant) => {
+        const label = `${variant} / ${tone} / ${size}`;
+        return e(
+          'div',
+          { key: label, style: { display: 'grid', gap: '0.25rem' } },
+          e('span', { style: { fontFamily: 'monospace', fontSize: '0.75rem' } }, label),
+          e(MuxUI.Button, { ...args, variant, tone, size }, 'Action'),
+        );
+      }))),
+    ),
   };
 }
 

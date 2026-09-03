@@ -40,6 +40,11 @@ function parseReference(reference) {
 }
 
 function assertProofNamespace(parsed, reference) {
+  if (parsed.path.startsWith('apps/react-storybook/test/')) {
+    assert(/^apps\/react-storybook\/test\/(?:[^/]+\.)?test\.mjs$/u.test(parsed.path), `PROOF_NAMESPACE:${reference}`);
+    assert(!parsed.lines && !parsed.anchor, `PROOF_LOCATOR:${reference}`);
+    return 'test';
+  }
   if (parsed.path.startsWith('packages/react/test/')) {
     assert(/^packages\/react\/test\/(?:[^/]+\.)?test\.(?:mjs|tsx)$/u.test(parsed.path), `PROOF_NAMESPACE:${reference}`);
     assert(!parsed.lines && !parsed.anchor, `PROOF_LOCATOR:${reference}`);

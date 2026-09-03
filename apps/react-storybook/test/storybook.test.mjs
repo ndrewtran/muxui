@@ -16,6 +16,7 @@ import {
   adapterNames,
   BROWSER_PROOF_FAMILIES,
   createAnatomyStory,
+  createButtonMatrixStory,
   createBrowserProofStory,
   createControlledStory,
   createEventsStory,
@@ -253,6 +254,33 @@ test('generated proof stories expose live controls, events, modes, anatomy, and 
   assert.equal(pairCount, 42, 'every descriptor controlled/default pair gets a pair of proof stories');
   assert.equal(eventCount, 68, 'every descriptor event channel gets a live event binding');
   assert.equal(partCount, 201, 'every descriptor API part gets an anatomy proof row');
+});
+
+test('Button Matrix statically covers every finite visual tuple and States keeps pending/disabled', () => {
+  const binding = descriptor.bindings.find(({ export: family }) => family === 'Button');
+  assert.ok(binding, 'Button descriptor binding');
+  const record = { family: 'Button', tranche: 'R1.1', binding };
+  const matrix = createButtonMatrixStory(record);
+  assert.equal(matrix.name, 'Variant × tone × size');
+  const matrixMarkup = renderToStaticMarkup(matrix.render(matrix.args));
+  const matrixDom = new JSDOM(matrixMarkup).window.document;
+  const buttons = [...matrixDom.querySelectorAll('.muxui-button')];
+  const tuples = buttons.map((button) => [
+    button.getAttribute('data-variant'),
+    button.getAttribute('data-tone'),
+    button.getAttribute('data-size'),
+  ].join('/'));
+  assert.equal(buttons.length, 18, 'Button Matrix renders all finite tuples');
+  assert.equal(new Set(tuples).size, 18, 'Button Matrix tuples are unique');
+  assert.deepEqual(new Set(tuples), new Set(
+    ['sm', 'md', 'lg'].flatMap((size) => ['default', 'destructive'].flatMap((tone) => ['primary', 'secondary', 'ghost'].map((variant) => `${variant}/${tone}/${size}`))),
+  ));
+  assert.deepEqual(Object.keys(matrix.argTypes).sort(), binding.api.props.slice().sort());
+
+  const states = createStory(record, 'states');
+  const statesMarkup = renderToStaticMarkup(states.render(states.args));
+  assert.match(statesMarkup, /<h3[^>]*>pending<\/h3>/u, 'Button States includes pending');
+  assert.match(statesMarkup, /<h3[^>]*>disabled<\/h3>/u, 'Button States includes disabled');
 });
 
 test('generated event and mode harnesses are behaviorally live', async () => {

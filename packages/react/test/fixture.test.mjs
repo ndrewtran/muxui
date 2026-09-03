@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -19,7 +20,7 @@ test('R1.1 Button owns MuxUI selectors and required token crosswalk', async () =
   assert.equal(comparison.donor.commit, '94bf62a26c02605c8928dfeb24f0ddc4be1c92fd');
   assert.equal(comparison.result.selector, '.muxui-button');
   assert.equal(comparison.result.status, 'adapted-for-r1.1-button');
-  assert.equal(comparison.consumedRules.length, 9);
+  assert.equal(comparison.consumedRules.length, 16);
 });
 
 test('R1.4 component selectors and donor dispositions stay Mux UI-owned', async () => {
@@ -143,11 +144,84 @@ test('R1.1 MuxUI Button proves SSR, hydration, disabled and pending state', asyn
   }
 });
 
+test('Button exposes finite orthogonal visual axes with stable root hooks', async () => {
+  const variants = ['primary', 'secondary', 'ghost'];
+  const tones = ['default', 'destructive'];
+  const sizes = ['sm', 'md', 'lg'];
+  const defaults = renderToString(React.createElement(Button, null, 'Save'));
+  assert.match(defaults, /data-variant="primary"/u);
+  assert.match(defaults, /data-tone="default"/u);
+  assert.match(defaults, /data-size="md"/u);
+
+  for (const variant of variants) {
+    for (const tone of tones) {
+      for (const size of sizes) {
+        const markup = renderToString(React.createElement(Button, {
+          variant,
+          tone,
+          size,
+          className: 'consumer-button',
+          style: { minWidth: '5rem' },
+          'data-consumer-hook': 'preserved',
+        }, 'Action'));
+        assert.match(markup, new RegExp(`data-variant="${variant}"`, 'u'));
+        assert.match(markup, new RegExp(`data-tone="${tone}"`, 'u'));
+        assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+        assert.match(markup, /class="muxui-button consumer-button"/u);
+        assert.match(markup, /style="min-width:5rem"/u);
+        assert.match(markup, /data-consumer-hook="preserved"/u);
+      }
+    }
+  }
+
+  assert.throws(
+    () => renderToString(React.createElement(Button, { variant: 'neutral' }, 'Save')),
+    /Button variant must be one of/u,
+  );
+  assert.throws(
+    () => renderToString(React.createElement(Button, { tone: 'danger' }, 'Delete')),
+    /Button tone must be one of/u,
+  );
+  assert.throws(
+    () => renderToString(React.createElement(Button, { size: 'medium' }, 'Save')),
+    /Button size must be one of/u,
+  );
+
+  const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
+  for (const variant of variants) {
+    for (const tone of tones) {
+      assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]\\[data-tone='${tone}'\\]`, 'u'));
+    }
+  }
+  for (const size of sizes) assert.match(css, new RegExp(`\\.muxui-button\\[data-size='${size}'\\]`, 'u'));
+  assert.match(css, /\.muxui-r1-button\s*\{[^}]*--muxui-button-background:/u);
+  const destructivePrimaryRule = css.match(/\.muxui-button\[data-variant='primary'\]\[data-tone='destructive'\]\s*\{[^}]*\}/u)?.[0] ?? '';
+  assert.ok(destructivePrimaryRule);
+  assert.doesNotMatch(destructivePrimaryRule, /\bblack\b/u);
+  assert.match(destructivePrimaryRule, /--muxui-button-foreground:\s*var\(--muxui-semantic-surface-canvas\)/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-button\[data-variant='primary'\]\[data-tone='default'\]\[data-pressed\]/u);
+  assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*padding-inline:\s*calc\(var\(--muxui-semantic-control-padding-inline\)\s*\+\s*var\(--muxui-semantic-layout-tight-inset\)\)/u);
+});
+
+test('Button generator guard binds the canonical finite API contract', async () => {
+  const source = await readFile(resolve(import.meta.dirname, '../src/generate.mjs'), 'utf8');
+  assert.match(source, /const expectedButtonProps = \['disabled', 'pending', 'variant', 'tone', 'size'\];/u);
+  assert.match(source, /const expectedButtonDefaults = \{[\s\S]*variant: 'primary',[\s\S]*tone: 'default',[\s\S]*size: 'md',[\s\S]*\};/u);
+  assert.match(source, /const expectedButtonFiniteApi = \{[\s\S]*variant: \['primary', 'secondary', 'ghost'\],[\s\S]*tone: \['default', 'destructive'\],[\s\S]*size: \['sm', 'md', 'lg'\],[\s\S]*\};/u);
+  const result = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
+    cwd: resolve(import.meta.dirname, '..'),
+    encoding: 'utf8',
+    env: { ...process.env, npm_config_engine_strict: 'false' },
+  });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test('MuxUI styles bind donor states and public theme hooks', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
 
   assert.match(css, /\.muxui-button[\s\S]*border: 1px solid transparent;[\s\S]*font-size: var\(--muxui-semantic-typography-body-size\)/u);
-  assert.match(css, /\.muxui-button[\s\S]*box-shadow: var\(--muxui-semantic-elevation-control\)/u);
+  assert.match(css, /\.muxui-button[\s\S]*box-shadow: var\(--muxui-button-shadow\)/u);
+  assert.match(css, /--muxui-button-shadow: var\(--muxui-semantic-elevation-control\)/u);
   assert.match(css, /\.muxui-button\[data-hovered\][\s\S]*var\(--muxui-semantic-action-background-hover\)/u);
   assert.match(css, /\.muxui-button\[data-pressed\][\s\S]*var\(--muxui-semantic-action-background-pressed\)/u);
   assert.match(css, /\.muxui-button\[data-pressed\]:not\(\[data-disabled\], \[data-pending\], \[aria-expanded='true'\]\)/u);
@@ -187,6 +261,7 @@ test('MuxUI styles bind donor states and public theme hooks', async () => {
   assert.match(css, /--muxui-semantic-feedback-invalid: #cc3330;/u);
   assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-content-link: #a4c7c9;/u);
   assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-feedback-invalid: #e59796;/u);
+  assert.match(css, /@media \(forced-colors: active\)[\s\S]*--muxui-button-background: ButtonFace !important;/u);
   assert.match(css, /@media \(forced-colors: active\)[\s\S]*\.muxui-file-trigger \{[^}]*background: ButtonFace;[^}]*color: ButtonText;/u);
 
   assert.doesNotMatch(css, /var\(--muxui-reference-/u);

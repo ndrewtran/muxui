@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:0621a78914b4c50a6b0fba7c8ef753cc7af4d97bc15cc132c8fd62114898d896 -->
+<!-- @generated-content-sha256: sha256:cdb4a04cf7816351f2004a4bd64e9f5a3d14853c5e0651add4f80053738e9c9d -->
 # @muxui/react
 
 R1.5 React breadth closure for the standalone Mux UI renderer.
@@ -43,7 +43,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 
 | Export | Lifecycle | Selector | Public props |
 | --- | --- | --- | --- |
-| Button | experimental | .muxui-button | disabled, pending |
+| Button | experimental | .muxui-button | disabled, pending, variant, tone, size |
 | Breadcrumbs | experimental | .muxui-breadcrumbs | items, aria-label |
 | Checkbox | experimental | .muxui-checkbox | checked, defaultChecked, disabled, indeterminate, name, required, value, invalid |
 | Disclosure | experimental | .muxui-disclosure | expanded, defaultExpanded, disabled, id |

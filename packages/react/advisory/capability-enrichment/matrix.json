@@ -352,18 +352,20 @@
       "dimensions": {
         "requiredWorkflows": {
           "status": "assessed",
-          "summary": "Keep the accepted Mux Button workflow and public name: activation with Mux pending and disabled boundaries.",
+          "summary": "Keep the accepted Mux Button workflow and public name: activation with Mux pending and disabled boundaries, plus orthogonal visual variant, tone, and size axes.",
           "decisions": [
             {
               "disposition": "adopt",
               "rationale": "Adopt the canonical Mux Button required workflow and public naming; no upstream-only naming is proposed.",
               "workflowRationale": "Mux consumers enter through the Button required workflow and public naming; upstream naming remains non-authoritative.",
-              "proposedMuxSemantics": "Preserve the current Mux Button required workflow and public naming.",
+              "proposedMuxSemantics": "Preserve the Mux Button required workflow and public naming while adding finite Mux-owned variant, tone, and size props.",
               "portability": "High: the existing Mux semantics are portable as authored.",
-              "apiCost": "None: preserve existing Mux names and props.",
-              "testingCost": "Focused behavior and accessibility proof for the existing boundary.",
+              "apiCost": "Low: add finite variant, tone, and size props while preserving disabled, pending, and activate.",
+              "testingCost": "All 18 tuples receive runtime/type/DOM and Storybook coverage; browser checks render all 18, run whole-Matrix axe in light and dark, verify unique tuples, representative primary/default size geometry, destructive-primary contrast, and all six md recipe pointer-press states; visual migration preserves default-primary compatibility for idle, pending, and disabled.",
               "proofRefs": [
-                "packages/react/test/components.test.mjs"
+                "packages/react/test/components.test.mjs",
+                "apps/react-storybook/test/storybook.test.mjs",
+                "apps/react-storybook/test/storybook-a11y.test.mjs"
               ],
               "proofRequirements": [
                 "Proof the Mux Button required workflow and public naming against the canonical artifact and direct upstream refs without copying upstream inventories.",
@@ -492,21 +494,25 @@
         },
         "stylingAndDomHooks": {
           "status": "assessed",
-          "summary": "Keep Button's Mux-owned classes and data hooks; upstream styling hooks are evidence only.",
+          "summary": "Keep Button's Mux-owned classes and stable data-variant, data-tone, and data-size hooks; upstream styling hooks are evidence only.",
           "decisions": [
             {
               "disposition": "adopt",
-              "rationale": "Keep the Mux-owned Button styling and DOM hooks; donor selectors are not copied.",
-              "workflowRationale": "Mux styling hooks remain package-owned for the Button styling and DOM hooks.",
-              "proposedMuxSemantics": "Use Mux-owned Button styling and DOM hooks; no donor selector becomes public.",
+              "rationale": "Adopt the bounded Mux Button visual-axis recipes and DOM hooks; donor selectors are not copied.",
+              "workflowRationale": "Mux styling hooks remain package-owned for Button recipes across all 18 variant/tone/size combinations.",
+              "proposedMuxSemantics": "Use Mux-owned Button styling and DOM hooks, including the finite variant, tone, and size axes; no donor selector becomes public.",
               "portability": "High: the existing Mux semantics are portable as authored.",
-              "apiCost": "None: preserve existing Mux names and props.",
-              "testingCost": "Focused behavior and accessibility proof for the existing boundary.",
+              "apiCost": "Low: add finite variant, tone, and size props and stable data hooks without exposing donor names.",
+              "testingCost": "All 18 tuples receive runtime/type/DOM and Storybook coverage; browser checks render all 18, run whole-Matrix axe in light and dark, verify unique tuples, representative primary/default size geometry, destructive-primary contrast, and all six md recipe pointer-press states; visual migration preserves default-primary compatibility for idle, pending, and disabled.",
               "proofRefs": [
-                "packages/react/test/components.test.mjs"
+                "packages/react/test/components.test.mjs",
+                "packages/react/test/fixture.test.mjs",
+                "apps/react-storybook/test/storybook.test.mjs",
+                "apps/react-storybook/test/storybook-a11y.test.mjs"
               ],
               "proofRequirements": [
                 "Proof the Mux Button styling and DOM hooks against the canonical artifact and direct upstream refs without copying upstream inventories.",
+                "Verify all 18 tuples receive runtime/type/DOM and Storybook coverage; browser checks render all 18, run whole-Matrix axe in light and dark, verify unique tuples, representative primary/default size geometry, destructive-primary contrast, and all six md recipe pointer-press states; the existing visual migration remains limited to default-primary idle, pending, and disabled compatibility.",
                 "Verify no new runtime dependency or package export is introduced by this advisory decision."
               ],
               "evidenceRefKeys": [
@@ -554,7 +560,7 @@
               "disposition": "omit",
               "rationale": "Omit raw isDisabled, isPending, and onPress* names from Mux Button; no public API is added for these candidates.",
               "workflowRationale": "Keep Button consumers on the Mux disabled, pending, and activate names rather than exposing raw upstream state or press callback names.",
-              "proposedMuxSemantics": "Mux Button exposes disabled, pending, and activate only; raw isDisabled, isPending, and onPress* names remain omitted.",
+              "proposedMuxSemantics": "Mux Button exposes disabled, pending, variant, tone, size, and activate; raw isDisabled, isPending, and onPress* names remain omitted.",
               "portability": "Not applicable: omitted surface is not a Mux capability.",
               "apiCost": "None: no public Mux API is added.",
               "testingCost": "Low: prove the omission and preserve existing behavior.",

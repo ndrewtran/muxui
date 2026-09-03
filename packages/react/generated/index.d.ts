@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/generate.mjs
-// @generated-content-sha256: sha256:2169914d91f517d833ace46aaffaed57a222e00f56e3289089f5a5da911d6331
+// @generated-content-sha256: sha256:db5b8ef322fc61fd9383345dd65075491e0ce74d80e7492469a3e547adfce874
 import type * as React from 'react';
 
 export type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;
@@ -14,6 +14,9 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
   className?: string;
   disabled?: boolean;
   pending?: boolean;
+  variant?: 'primary' | 'secondary' | 'ghost';
+  tone?: 'default' | 'destructive';
+  size?: 'sm' | 'md' | 'lg';
   style?: React.CSSProperties;
   onActivate?: (event: ButtonActivationEvent) => void;
 }

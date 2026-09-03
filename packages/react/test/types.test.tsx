@@ -69,6 +69,9 @@ const button = (
     aria-label="Save"
     disabled={false}
     pending
+    variant="secondary"
+    tone="destructive"
+    size="lg"
     onActivate={(event) => {
       const activationType: 'activate' = event.type;
       const pointerType = event.pointerType;
@@ -81,6 +84,17 @@ const button = (
   </Button>
 );
 void button;
+
+// Button visual axes are finite MuxUI-owned values.
+// @ts-expect-error Button variants do not expose arbitrary strings.
+const invalidButtonVariant = <Button variant="neutral">Save</Button>;
+void invalidButtonVariant;
+// @ts-expect-error Button tones do not expose arbitrary strings.
+const invalidButtonTone = <Button tone="danger">Delete</Button>;
+void invalidButtonTone;
+// @ts-expect-error Button sizes do not expose arbitrary strings.
+const invalidButtonSize = <Button size="medium">Save</Button>;
+void invalidButtonSize;
 
 // React Aria names remain internal implementation details of MuxUI Button.
 // @ts-expect-error MuxUI owns `disabled`, not the upstream `isDisabled` prop.

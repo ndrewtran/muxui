@@ -22,6 +22,7 @@ import {
   sha256,
   baselineRootDirectory,
   muxuiCaptureProvenancePath,
+  muxuiGeneratedTreeProvenance,
   muxuiCaptureRunnerSourcePath,
   fixtureMapSourcePath,
   expectedCaptureInventory,
@@ -41,6 +42,16 @@ const host = '127.0.0.1';
 const serverTimeoutMs = 90_000;
 const storyTimeoutMs = 15_000;
 const execFileAsync = promisify(execFile);
+const stableScreenshotAttempts = 8;
+
+// Caret painting can race the screenshot boundary after a focus action. Keep
+// this stabilization scoped to the private migration fixture root so normal
+// Storybook stories retain their native caret behavior.
+export const migrationCaretSuppressionCss = `
+[data-muxui-migration-run-token],
+[data-muxui-migration-run-token] * {
+  caret-color: transparent !important;
+}`;
 
 function browserCandidates() {
   return [
@@ -100,6 +111,7 @@ async function currentCaptureEnvironment(executablePath) {
     osVersion,
     osBuildVersion,
     clock: expectedCaptureClock,
+    settling: expectedSettling,
   };
 }
 
@@ -276,6 +288,17 @@ async function settleAnimations(page) {
   });
 }
 
+async function stableMuxuiScreenshot(page, options, caseId) {
+  let previous;
+  for (let attempt = 0; attempt < stableScreenshotAttempts; attempt += 1) {
+    await page.evaluate(() => new Promise((resolvePromise) => requestAnimationFrame(() => requestAnimationFrame(resolvePromise))));
+    const bytes = await page.screenshot(options);
+    if (previous?.equals(bytes)) return bytes;
+    previous = bytes;
+  }
+  throw new Error(`${caseId}: Mux UI semantic region did not settle to a reproducible screenshot`);
+}
+
 async function applyAction(page, scope, entry) {
   if (!entry.action) return () => {};
   const target = entry.action.type === 'drop-target'
@@ -408,6 +431,7 @@ async function captureCase(page, baseUrl, manifest, entry, mode, runToken) {
     if (!matchMedia('(prefers-reduced-motion: reduce)').matches) throw new Error('capture did not enforce reduced motion');
     if (!getComputedStyle(document.documentElement).fontFamily.includes(frame.fontFamily)) throw new Error(`capture did not enforce declared font ${frame.fontFamily}`);
   }, { scheme: mode, frame: manifest.fixtureContract.frame });
+  await page.addStyleTag({ content: migrationCaretSuppressionCss });
   const viewport = page.viewportSize();
   if (viewport?.width !== manifest.capture.viewport.width || viewport?.height !== manifest.capture.viewport.height) throw new Error(`${entry.id}: capture viewport does not match the shared frame`);
   await waitForStory(page, mode, runToken, canonical.selector);
@@ -431,8 +455,8 @@ async function captureCase(page, baseUrl, manifest, entry, mode, runToken) {
     await settleAnimations(page);
     await assertStateReached(page, scope, canonical);
     await assertRequiredParts(page, scope, canonical);
-    let actualBytes;
-    if (entry.region.capture === 'viewport') actualBytes = await page.screenshot({ animations: 'disabled' });
+    let screenshotOptions;
+    if (entry.region.capture === 'viewport') screenshotOptions = { animations: 'disabled' };
     else {
       const box = await scope.boundingBox();
       if (!box) throw new Error(`${entry.id}: Mux UI semantic region has no bounds`);
@@ -442,8 +466,9 @@ async function captureCase(page, baseUrl, manifest, entry, mode, runToken) {
           throw new Error(`${entry.id}: Mux UI Virtualizer semantic region must match the fixed migration viewport`);
         }
       }
-      actualBytes = await page.screenshot({ animations: 'disabled', clip: { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) } });
+      screenshotOptions = { animations: 'disabled', clip: { x: Math.floor(box.x), y: Math.floor(box.y), width: Math.ceil(box.width), height: Math.ceil(box.height) } };
     }
+    const actualBytes = await stableMuxuiScreenshot(page, screenshotOptions, `${entry.id}/${mode}`);
     const actualStyleFacts = await readStyleFacts(scope, entry.styleFacts);
     const equivalentRoot = entry.region.capture === 'viewport' ? page.locator('body') : scope;
     const actualEquivalentPartFacts = await readStyleFacts(equivalentRoot, entry.equivalentPartFacts.muxui);
@@ -555,6 +580,7 @@ async function buildMuxuiCaptureProvenance(manifest, captures) {
   const muxuiFactorySourceSha256 = sha256(await readFile(resolve(appRoot, 'src/storybook-factory.mjs')));
   const muxuiFixtureMapSourceSha256 = sha256(await readFile(resolve(appRoot, fixtureMapSourcePath)));
   const muxuiCaptureRunnerSourceSha256 = sha256(await readFile(resolve(appRoot, muxuiCaptureRunnerSourcePath)));
+  const muxuiGeneratedTree = await muxuiGeneratedTreeProvenance();
   const captureRecords = expectedCaptureInventory.map(([captureId, caseId, component, state, mode]) => {
     const entry = manifest.cases.find(({ id }) => id === caseId);
     const captured = captures.get(`${caseId}--${mode}`);
@@ -591,7 +617,7 @@ async function buildMuxuiCaptureProvenance(manifest, captures) {
     };
   });
   return {
-    schema: 'muxui-react-visual-migration-muxui-capture-v1',
+    schema: 'muxui-react-visual-migration-muxui-capture-v2',
     directory: manifest.baselineDirectory,
     caseCount: migrationCases.length,
     captureCount: captureRecords.length,
@@ -600,6 +626,7 @@ async function buildMuxuiCaptureProvenance(manifest, captures) {
     muxuiFactorySourceSha256,
     muxuiFixtureMapSourceSha256,
     muxuiCaptureRunnerSourceSha256,
+    muxuiGeneratedTree,
     settling: expectedSettling,
     captureEnvironment: manifest.capture,
     captures: captureRecords,
@@ -667,6 +694,7 @@ async function main() {
   await validateManifest(manifest, {
     allowMissingMuxuiCaptureProvenance: updateMode,
     allowMuxuiCaptureRunnerSourceDrift: updateMode,
+    allowMuxuiSettlingDrift: updateMode,
   });
   if (!updateMode) await validateSealedComparison(manifest);
   const executablePath = await findBrowser();

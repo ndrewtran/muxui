@@ -257,6 +257,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const dialog = page.locator('[data-r1-4-overlay="dialog"]');
         if (await dialog.count() !== 1 || !await dialog.isVisible()) throw new Error('Dialog must open from its keyboard trigger');
         await page.keyboard.press('Escape');
+        await waitForDocumentAnimations(page);
         if (await dialog.count() !== 0) throw new Error('Dialog Escape must dismiss the dialog');
 
         const popoverTrigger = profile.locator('[data-r1-4-control="popover-open"]');
@@ -265,6 +266,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const popover = page.locator('[data-r1-4-overlay="popover"]');
         if (await popover.count() !== 1 || !await popover.isVisible()) throw new Error('Popover must open from its keyboard trigger');
         await page.keyboard.press('Escape');
+        await waitForDocumentAnimations(page);
         if (await popover.count() !== 0) throw new Error('Popover Escape must dismiss the popover');
 
         const previewTrigger = profile.locator('[data-r1-4-control="preview-trigger"]');

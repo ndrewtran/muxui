@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:aa48381735c41063fb664c79f94fc64672efd1421c64e205b462754ee253ab2f
+// @generated-content-sha256: sha256:8c7235c6abdfa035eb78a621bbee1129fc9bdc00ac34b9e44138f24591b6f7fe
 export const manifest = Object.freeze({
   "schema": "muxui-react-storybook-manifest-v1",
   "generatedFrom": [
@@ -15,11 +15,17 @@ export const manifest = Object.freeze({
       "tranche": "R1.1",
       "props": [
         "disabled",
-        "pending"
+        "pending",
+        "variant",
+        "tone",
+        "size"
       ],
       "defaults": {
         "disabled": false,
-        "pending": false
+        "pending": false,
+        "size": "md",
+        "tone": "default",
+        "variant": "primary"
       },
       "states": [
         "idle",

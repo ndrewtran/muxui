@@ -1,5 +1,5 @@
 // @generated-from: packages/catalog/catalog-sources.json
-// @generated-content-sha256: sha256:1960c117ccc4dad28807830605cf85fc3ee26eb9a9c3d382d62300dc27e68345
+// @generated-content-sha256: sha256:3fd06e120fa7306d006f1e15061d94e619f2fa44232318f414e18b87c01d7469
 export interface ButtonWebHtmlBinding {
   readonly bindingRef: "muxui:component:button#web.html";
   readonly props: {
@@ -16,6 +16,9 @@ export interface ButtonWebReactBinding {
   readonly props: {
     readonly "disabled"?: boolean;
     readonly "pending"?: boolean;
+    readonly "variant"?: string;
+    readonly "tone"?: string;
+    readonly "size"?: string;
   };
   readonly events: {
     readonly "activate": CustomEvent<void>;
