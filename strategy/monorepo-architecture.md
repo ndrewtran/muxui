@@ -1038,9 +1038,11 @@ Mux UI examples for component development, state/theme/mode coverage, automated
 accessibility checks, and visual donor comparison. It owns no example,
 component, token, styling-hook, lifecycle, support, or release fact and is not a
 public documentation surface. Public React documentation and explorer delivery
-remain P2.3. Tale's Scale application is only a deferred donor candidate for a
-later admitted theme-authoring capability; R1 may preserve compatible token and
-theme outputs but does not port, publish, or depend on Scale.
+remain P2.3. The former deferral of Tale's Scale application is superseded by
+Decision 0013: its bounded Mux-owned port is the private `apps/scale`
+theme-authoring projection for R1.6. It may edit and preview canonical Mux UI
+themes, but it does not own token/theme facts, publish a package, or become a
+Tale dependency.
 
 R1.0 also owns a license and attribution audit for every copied or adapted
 donor input. Any distributed substantial portion must preserve the applicable
@@ -1371,6 +1373,7 @@ muxui/
 ├── apps/
 │   ├── docs/                         # catalog client
 │   ├── react-playground/             # private R1 generated example/donor-comparison host
+│   ├── scale/                         # private R1.6 Mux theme-authoring projection/editor
 │   ├── explorer-web/                 # later P2.3 React, then W1 HTML examples
 │   └── explorer-native/              # Expo/native example host
 ├── tooling/
@@ -2494,8 +2497,9 @@ reviews that deliver the tranche. Ordinary implementation does not require a
 task-local operation descriptor or a separate human evidence-acceptance gate.
 
 RSC/client-boundary support, framework-free web, React Native, React Native Web,
-cross-renderer equivalence, Scale, stable support, and `latest` remain later or
-separately admitted work. Npm publication, dist-tag changes, and the final
+cross-renderer equivalence, stable support, and `latest` remain later or
+separately admitted work. The private Scale theme-authoring capability is
+admitted only under the bounded R1.6 milestone below. Npm publication, dist-tag changes, and the final
 R1-exit pull-request merge remain separate exact human stops.
 
 ## R1 icon affordance dependency boundary
@@ -2551,3 +2555,103 @@ This boundary has no React Native, `web.html`, or React Native Web implication,
 and changes no support, lifecycle, compatibility, package-publication, or
 release claim. It does not authorize npm publication, a dist-tag mutation, or
 the final R1-exit pull-request merge.
+
+## Decision 0013: Tale parity and private Mux theme-authoring boundary
+
+Decision 0013 records the user-directed expansion of the prepublication React
+baseline. It is an accepted, bounded authority change; implementation and
+milestone completion still require the R1.6 evidence below. The companion
+decision record is issue [#119](https://github.com/ndrewtran/muxui/issues/119),
+and the accepted request is preserved in
+`decisions/0013-theme-parity-and-private-authoring-acceptance.md`.
+
+### Donor and parity boundary
+
+The current Tale styling donor remains the exact pinned commit
+`94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` and its existing source trees. No
+donor refresh, alternate source, or moving Tale checkout is selected by this
+decision. The current donor inventory is 125 styles, including 70 donor-only
+styles without a fixed R1 family root. It is the classification universe, not a
+blanket standalone API/export requirement. R1.6 must identify the complete
+applicable React Aria-backed roots and support styles, map them to Mux UI-owned
+binding identities, and explicitly exclude wholly unrelated marketing/layout
+roots with reasons. Each applicable mapping records the binding, visual and
+interaction surface, state/variant coverage, and every difference with a
+reason. A missing state or fixture is a failed assertion; it cannot be counted
+as parity.
+
+The fixed 53-family R1 release inventory remains the historical floor. Decision
+0013 explicitly admits applicable donor-derived React Aria families outside it
+under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001`; each requires an exact supplemental
+mapping/list and Mux UI-owned API, CSS, interaction, export, and proof closure
+before availability. Wholly unrelated donor roots remain outside the component
+scope with an explicit exclusion reason. No non-Aria component is introduced.
+The parity claim remains unproved until the complete applicable mapping and
+matched fixtures pass; existing Mux UI screenshot regressions alone are
+insufficient.
+
+The current known direct React Aria-backed supplemental roots are `AlertDialog`,
+`ButtonGroup`, `Card`, `CheckboxField`, `ColorModeToggle`, `CommandPalette`,
+`HeaderNav`, `InputTags`, `Input`, `MultiSelect`, `PaymentInput`,
+`ProgressCircle`, `RadioField`, `Sidebar`, `SwitchField`, `TagSelect`,
+`TextArea`, and `TextEditor`; `Resizable` uses `react-aria/useMove`. The
+indirect React Aria-backed roots `Lightbox` and `Markdown` are also included.
+`Drawer` and `FileUpload` are standalone vanilla controls outside this
+supplemental React Aria scope; `RadioGroup` and `ToggleGroup` are already
+covered by existing mappings. These 21 roots are inventory mapping targets,
+not current exports or availability claims. Any supplemental family requires a
+Mux UI binding map and proof before it becomes available.
+
+Matched light and dark fixtures compare Mux UI-owned CSS, anatomy, interaction,
+variants, and states. The transfer also covers token values, modes, font
+families, and typography names. These facts are transferred into the Mux UI
+namespace and validated through canonical token/theme records; Tale names and
+selectors remain migration provenance, never public Mux UI API. The complete
+parity inventory includes the donor's Inter, Playfair Display, and Roboto Mono
+font families, display/heading/title/label/body/mono/expressive typography
+roles, standard and mono presets, and all donor palette families, including
+neutral, neutral-warm, cool, slate, gray, onyx, and mono families retained only
+in historical deferred classifications. Deterministic
+local font assets may be bundled only with
+their applicable third-party license notices; Mux UI owns the token names,
+values, and role definitions. Historical token classifications remain immutable
+history; this amendment admits the additional Mux-owned facts without rewriting
+them.
+
+### Canonical ownership and the private Scale projection
+
+`catalog/tokens/` remains the sole canonical source for token and theme data.
+`@muxui/tokens` owns deterministic web, native, and consumer build transforms.
+`@muxui/react` owns React DOM behavior and CSS. The ported Scale application at
+`apps/scale` is a private maintainer projection/editor over those owners; it
+does not create a token registry, theme database, component inventory, or CSS
+owner. Current Storybook examples consume canonical Mux UI tokens and themes
+and remain the active visual/example surface for R1 work.
+
+The private Scale capability must load, edit, preview, import, export, persist,
+and round-trip themes under canonical types, modes, aliases, and override
+policy. Import/export is bounded by stable Mux UI identity and explicit loss or
+rejection diagnostics. It does not imply a public hosted Scale deployment,
+general external design-tool interchange, stable support, or a package release.
+Any safety adaptation required by Mux UI accessibility, platform, or runtime
+ownership rules is recorded as an explicit difference rather than hidden as
+successful donor parity.
+
+### Optional Tailwind consumer integration
+
+Tailwind is an optional consumer build integration generated from Mux UI-owned
+token/theme transforms. It remains a consumer build dependency and never enters
+the Mux UI runtime, peer, generated-source, or styling-engine closure. The
+integration is accepted only with an actual clean consumer compilation proof,
+and its absence or failure cannot change React CSS ownership or canonical
+theme/token truth.
+
+### Platform and release boundaries
+
+Shared token and semantic sources remain renderer-neutral and contain no React,
+DOM, or CSS runtime assumptions. Framework-free web and React Native remain
+separately activated tracks; this authority adds no native or vanilla parity,
+support, or release claim. General design-tool interchange remains the later
+G3.5 capability. No package publication, dist-tag mutation, production or
+consumer mutation, stable promotion, or `latest` support claim follows from
+Decision 0013.

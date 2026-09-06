@@ -1,5 +1,5 @@
 ---
-scopeVersion: 7.0.0
+scopeVersion: 8.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -34,17 +34,18 @@ tracker may reference scope and milestone IDs but cannot change product scope.
 This is not a status report. Git history records changes to product commitment;
 the tracker records delivery progress.
 
-Product Scope `7.0.0` records Decision 0012's pre-publication reset from the
+Product Scope `8.0.0` records Decision 0012's pre-publication reset from the
 predecessor display, machine, and package identities to Mux UI / `muxui` /
-`@muxui/*`.
-The major increment reflects the repository, package, namespace, CLI, and
-public styling-hook rename. It adds no Scope ID, commitment, family, tranche
-membership, public behavior, platform, lifecycle, support claim, release
-boundary, non-goal, or product meaning. The accepted 53-family table,
-immutable Stage 1 snapshot, and R1.0 baseline remain the existing R1 lock;
-ordinary component delivery does not require another lock, digest acceptance,
-or human evidence-acceptance gate. Historical decisions, acceptance records,
-evidence, and URLs retain their original bytes and identities.
+`@muxui/*`, followed by Decision 0013's bounded parity and private
+theme-authoring expansion.
+The major increment reflects the repository identity rename plus the
+prepublication React parity/theme-builder boundary, admitted additional themes,
+private authoring capability, and optional consumer integration. The accepted
+53-family table, immutable Stage 1 snapshot, and R1.0 baseline remain the
+existing R1 lock; R1.6 adds parity and private authoring proof without a
+blanket all-donor-style standalone API requirement. Historical decisions,
+acceptance records, evidence, and URLs retain their original bytes and
+identities.
 
 ## Scope vocabulary
 
@@ -209,6 +210,7 @@ boundary.
 | `SCOPE-OUTCOME-REACT-PRIMARY` | `committed` | Installable React prerelease using Mux UI-owned experimental bindings and generated package guidance. | R1.0–R1 exit |
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, pinned one-time Tale styling donor with Mux UI-owned crosswalk, and tranche delivery. | R1.0–R1.5 |
 | `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
+| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports for applicable Tale donor-derived React Aria families outside the historical fixed 53-family table, admitted only through the exact R1.6 supplemental inventory and proof. | R1.6 and R1 exit |
 | `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
 
@@ -277,7 +279,7 @@ The `0.1` boundary also commits:
 
 | Scope ID | Commitment | Deliverable | Roadmap |
 | --- | --- | --- | --- |
-| `SCOPE-SYSTEM-TOKENS` | `committed` | Pinned Tale-derived non-semantic reference baseline plus the semantic/component recipes, default theme, target transforms, fallbacks, requirement sets, and override system needed by the fixed slices. | G1.0 after the three-phase Gate 0 correction |
+| `SCOPE-SYSTEM-TOKENS` | `committed` | Pinned Tale-derived non-semantic reference baseline plus the complete Mux-owned token/theme/font/typography values, semantic/component recipes, target transforms, fallbacks, requirement sets, and override system needed by the fixed slices and R1.6 parity. | G1.0 after the three-phase Gate 0 correction; R1.6 parity closure |
 | `SCOPE-SYSTEM-WEB` | `deferred` | Historical combined framework-free/React substrate; split into active React and deferred framework-free successor IDs. | R1 plus later W1 |
 | `SCOPE-SYSTEM-NATIVE` | `deferred` | Native substrate, iOS/Android behavior, native token output, and explicit React Native Web profile semantics. | N1 |
 | `SCOPE-SYSTEM-CURRICULUM` | `committed` | Deterministic example selection by compatibility, binding/profile, purpose, prerequisites, preference, and complexity. | R1.1–R1.5 for React; later tracks extend it |
@@ -478,7 +480,7 @@ without truncation.
 
 | Scope ID | Commitment | Deliverable | Boundary |
 | --- | --- | --- | --- |
-| `SCOPE-THEME-DEFAULT` | `committed` | First-party brand-agnostic default theme whose Mux UI-owned reference baseline is classified from the pinned Tale UI source | `0.1` |
+| `SCOPE-THEME-DEFAULT` | `committed` | First-party brand-agnostic default theme whose Mux UI-owned reference baseline, palette values, font families, and typography roles are classified from the pinned Tale UI source | `0.1` and R1.6 parity closure |
 | `SCOPE-TOKEN-LAYERS` | `committed` | Reference, semantic, and component token layers with acyclic allowed alias direction | `0.1` |
 | `SCOPE-TOKEN-MODES` | `committed` | Applicable typed color-scheme, contrast, motion, density, and direction axes | `0.1` |
 | `SCOPE-TOKEN-TRANSFORMS` | `committed` | Static React CSS output at R1; native theme-object transforms remain retained historical/later N1 input and become current only when N1 activates | R1 now; N1 later |
@@ -487,8 +489,8 @@ without truncation.
 | `SCOPE-TOKEN-OVERRIDES` | `committed` | `fixed`, `theme`, and `instance` override policies with consumer-theme validation | `0.1` |
 | `SCOPE-THEME-ACCESSIBILITY` | `committed` | Observable forced-colors/high-contrast React behavior at R1; native dynamic-color/accessibility mappings activate and are independently fulfilled/evidenced only at N1. Owning bindings satisfy `SCOPE-THEME-PLATFORM-SAFETY`; this item does not own requirement identity or the non-disable rule. | R1 now; N1 later |
 | `SCOPE-THEME-RUNTIME` | `admitted` | Runtime theme switching per explicitly supported/proved profile; complete static output remains mandatory | Productization or capability release |
-| `SCOPE-THEME-ADDITIONAL` | `deferred` | Additional first-party or consumer themes | Capability release after stable token contract |
-| `SCOPE-DESIGN-TOOL` | `admitted` | One named design-tool interchange profile and proposal-only round-trip | Capability release through G3.5 |
+| `SCOPE-THEME-ADDITIONAL` | `admitted` | Additional first-party themes and local consumer theme editing through the private Mux UI theme-authoring capability | R1.6 private authoring proof; public or hosted release remains separately admitted |
+| `SCOPE-DESIGN-TOOL` | `admitted` | One named external design-tool interchange profile and proposal-only round-trip | Capability release through G3.5; it does not own the private theme-authoring capability |
 
 CSS-derived values never become native authority. Consumer themes can assign
 only permitted existing roles and cannot change Mux UI token identity, type,
@@ -580,7 +582,7 @@ proposal but is not proved merely because canonical changes were approved.
 | `SCOPE-PROOF-CONFORMANCE` | `committed` | Spec/code/export/token conformance | Generated types, renderer refinements, exports, CSS hooks, examples, and declarations match canonical specs. |
 | `SCOPE-PROOF-BEHAVIOR` | `committed` | Unit, state, browser, and native behavior | Implementations satisfy binding transitions, runtime ownership, SSR/hydration, input, focus, and platform behavior. |
 | `SCOPE-PROOF-A11Y` | `committed` | Accessibility | Automated and risk-proportionate retained manual evidence supports every stable interaction/profile claim. |
-| `SCOPE-PROOF-VISUAL` | `committed` | Visual | Canonical examples are checked across applicable themes, modes, density, direction, and platforms; R1 additionally proves the applicable pinned Tale donor comparison and every intentional visual adaptation. |
+| `SCOPE-PROOF-VISUAL` | `committed` | Visual | Canonical examples are checked across applicable themes, modes, density, direction, and platforms; R1.6 additionally proves the complete applicable donor-declared React Aria inventory, matched light/dark visual/interaction fixtures, and every intentional visual adaptation. |
 | `SCOPE-PROOF-PACKAGE` | `committed` | Packed consumers | Published artifacts resolve declared exports, types, styles, assets, descriptors, and engines. |
 | `SCOPE-PROOF-PARITY` | `committed` | Surface parity | API, CLI, dense, MCP, site, explorer, and static projections agree where enabled. |
 | `SCOPE-PROOF-GENERATION` | `committed` | Generation identity | Clean repeated builds produce the same catalog and release digests. |
@@ -629,7 +631,9 @@ explicit no-activation decision without making Mux UI incomplete.
 | `SCOPE-CAP-MIGRATION` | `deferred` | Declarative migrations and reviewed codemods | A real version-bounded supported migration need with retrievable old/new specs and bounded transformation. | G3.2 |
 | `SCOPE-CAP-MCP-HOSTED` | `deferred` | Read-only hosted MCP | Stable query/compatibility policy plus privacy, security, availability, cache isolation, and failure separation. | G3.3 |
 | `SCOPE-CAP-AGENT-GATES` | `admitted` | Promote selected agent evaluations | Repeated baseline, predeclared threshold/variance/retry policy, canonical prompt IDs, and a failure owner. | G3.4 |
-| `SCOPE-CAP-DESIGN-TOOL` | `admitted` | Additional themes and one named design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. | G3.5 |
+| `SCOPE-CAP-DESIGN-TOOL` | `admitted` | One named external design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. Additional themes are governed by `SCOPE-CAP-THEME-AUTHORING-PRIVATE`. | G3.5 |
+| `SCOPE-CAP-THEME-AUTHORING-PRIVATE` | `admitted` | Private `apps/scale` maintainer capability for adding, editing, previewing, importing, exporting, persisting, and round-tripping Mux UI themes | Canonical token/theme ownership, typed override safety, complete donor/theme parity proof, and a disable path that leaves canonical sources authoritative. | R1.6 |
+| `SCOPE-CAP-TAILWIND-CONSUMER` | `admitted` | Optional Tailwind consumer build adapter generated from Mux UI-owned token/theme transforms | Actual consumer compilation proof; Tailwind is a consumer build dependency only and never a Mux UI runtime, peer, or styling-engine dependency. | R1.6 |
 | `SCOPE-CAP-PROMPT-SEMANTICS` | `admitted` | Promptable-semantics discovery | Privacy-safe task corpus and baseline over existing tokens, variants, patterns, decision context, and examples. Activation of any field remains separately admitted. | G3.6 |
 | `SCOPE-CAP-EXTENSIONS` | `deferred` | Extension or consumer-overlay trust model | Observed demand plus threat model, namespace, integrity, permission, confinement, timeout, revocation, and compatibility proof. | G3.7 |
 | `SCOPE-CAP-HIGHER-ORDER` | `deferred` | Page, flow, journey, or other higher-order artifact kind | Repeated unsupported design-system-owned workflows prove patterns/guides insufficient and full ontology admission passes. | G3.8 |
@@ -1778,3 +1782,70 @@ implication and changes no support, lifecycle, compatibility, release,
 publication, or package-publication boundary. It authorizes no npm publication,
 dist-tag mutation, Project or consumer/production mutation, or final R1-exit
 pull-request merge.
+
+## Product Scope 8.0.0: Tale parity and private Mux theme authoring
+
+Decision 0013 and issue [#119](https://github.com/ndrewtran/muxui/issues/119)
+record the user-directed expansion of the prepublication Mux UI foundation.
+Product Scope advances from `7.0.0` to `8.0.0`. The major effect is required
+because the change materially redefines the committed React prerelease exit
+boundary: complete applicable donor-declared React Aria parity and the private
+theme-authoring proof now precede publication eligibility. It also admits
+additional first-party themes and local consumer theme editing, adds a private
+authoring capability and optional Tailwind consumer adapter, and establishes
+new ownership and release boundaries. This is not a claim that implementation
+or parity evidence has already passed.
+
+### Current commitments and boundaries
+
+The exact accepted user instructions and the detailed R1.6 acceptance record
+are preserved in `decisions/0013-theme-parity-and-private-authoring-acceptance.md`.
+They admit `SCOPE-THEME-ADDITIONAL` for additional first-party themes and local
+consumer editing, and activate the existing `SCOPE-THEME-RUNTIME` only where a
+profile is explicitly proved. The new admitted capability IDs
+`SCOPE-CAP-THEME-AUTHORING-PRIVATE` and `SCOPE-CAP-TAILWIND-CONSUMER` are
+defined in the conditional capability table above. The committed
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` item admits applicable donor-derived React
+Aria families outside the historical fixed 53 table through the exact R1.6
+supplemental mapping and proof; no duplicate scope registry is created here.
+
+The current exact supplemental root list is: `alert-dialog`, `button-group`,
+`card`, `checkbox-field`, `color-mode-toggle`, `command-palette`, `header-nav`,
+`input-tags`, `input`, `multi-select`, `payment-input`, `progress-circle`,
+`radio-field`, `sidebar`, `switch-field`, `tag-select`, `text-area`,
+`text-editor`, `resizable`, `lightbox`, and `markdown`. `Resizable` uses
+`react-aria/useMove`; `Lightbox` and `Markdown` are indirect React Aria-backed
+roots. `Drawer` and `FileUpload` are standalone vanilla controls outside this
+supplemental React Aria scope, while `RadioGroup` and `ToggleGroup` are already
+covered by existing mappings. These names are admitted mapping targets, not
+current exports or availability claims until R1.6 proof passes.
+
+R1.6 is required between R1.5 and R1 exit. Its evidence owner must classify
+the 125-style donor inventory, including the 70 donor-only styles, identify
+applicable React Aria-backed roots/support styles, record explicit exclusions
+for unrelated marketing/layout roots, and maintain an exact supplemental list
+for any applicable family outside the fixed 53 release floor. There is no
+blanket all-125 standalone API/export requirement, no absent-state pass, and no
+non-Aria component admission.
+
+R1.6 also owns complete Mux-namespaced transfer of all donor values, modes,
+palette families, including formerly deferred cool/slate/gray/onyx/mono,
+Inter/Playfair Display/Roboto Mono font families,
+display/heading/title/label/body/mono/expressive typography roles, and
+standard/mono presets; matched light/dark CSS/anatomy/interaction/variant/state
+fixtures; current canonical-token Storybook examples; private Scale load/edit/
+preview/import/export/persist/round-trip behavior; and clean-consumer proof
+for the optional Tailwind build adapter. Mux UI owns token role names/values;
+unmodified bundled font assets retain their Google Fonts SIL Open Font License
+1.1 notices and the Playfair Display binary remains unchanged.
+
+Canonical ownership remains `catalog/tokens/` for data, `@muxui/tokens` for
+transforms, `@muxui/react` for React CSS/behavior, and `apps/scale` for the
+private editor/projection. Shared sources remain renderer-neutral. React Native,
+framework-free web, React Native Web, cross-renderer equivalence, general
+external design-tool interchange, package publication, hosted/public Scale,
+stable support, `latest`, and production/consumer mutation remain outside this
+scope. Tailwind remains a consumer build dependency only, never a Mux UI
+runtime, peer, generated-source, or styling engine. Reversal is append-only:
+disable the private capability while retaining canonical source truth and
+historical donor/token records.
