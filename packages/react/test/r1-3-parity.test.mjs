@@ -210,6 +210,16 @@ test('R1.3 collection source preserves donor glyph alignment state selectors', a
   assert.match(styles, /\[data-muxui-color-scheme='dark'\] :where\(\.muxui-calendar, \.muxui-range-calendar\) \{\s*background-color: var\(--muxui-reference-color-neutral-20\);\s*border-color: var\(--muxui-reference-color-neutral-10\);/u);
 });
 
+test('R1.3 calendars reserve seven token-sized day columns', async () => {
+  const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
+  const calendarRule = /\.muxui-calendar,\n\.muxui-range-calendar\s*\{[^}]*\}/u;
+  const calendarRuleMatch = styles.match(calendarRule);
+  assert.ok(calendarRuleMatch, 'Calendar and RangeCalendar share one root sizing rule');
+  const calendarRuleSource = calendarRuleMatch[0];
+  assert.match(calendarRuleSource, /inline-size: calc\(var\(--muxui-calendar-cell-size\) \* 7\);/u);
+  assert.doesNotMatch(calendarRuleSource, /width:\s*max-content;/u);
+});
+
 test('R1.3 temporal adapters preserve ISO values and calendar navigation', async () => {
   const server = renderToString(React.createElement(Calendar, { label: 'Start date', defaultValue: '2025-01-15' }));
   assert.match(server, /January 2025/u);

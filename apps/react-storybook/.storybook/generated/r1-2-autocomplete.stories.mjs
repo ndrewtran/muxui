@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:fa51b1f2bef8db29fb23a63b1c7cef3dd73869218c2b75982af5e928ea5c4539
+// @generated-content-sha256: sha256:a7bed70061c8e88a8e0010e28d285ed9c514f96db0e49f37e19adf52068a119a
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -30,6 +30,7 @@ const binding = {
       "root",
       "label",
       "input",
+      "popover",
       "list"
     ],
     "props": [

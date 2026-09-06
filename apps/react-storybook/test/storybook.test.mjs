@@ -204,7 +204,7 @@ test('generated metadata exposes every canonical event, part, state, and control
     assert.equal(new Set(metadata.parts).size, metadata.parts.length, `${record.family} duplicate parts`);
     partCount += metadata.parts.length;
   }
-  assert.equal(partCount, 201);
+  assert.equal(partCount, 202);
 });
 
 test('generated proof stories expose live controls, events, modes, anatomy, and browser plays', async () => {
@@ -253,7 +253,7 @@ test('generated proof stories expose live controls, events, modes, anatomy, and 
   }
   assert.equal(pairCount, 42, 'every descriptor controlled/default pair gets a pair of proof stories');
   assert.equal(eventCount, 68, 'every descriptor event channel gets a live event binding');
-  assert.equal(partCount, 201, 'every descriptor API part gets an anatomy proof row');
+  assert.equal(partCount, 202, 'every descriptor API part gets an anatomy proof row');
 });
 
 test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {
@@ -1078,5 +1078,7 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.match(previewCss, /background: #000/);
   assert.match(previewCss, /color: #fff/);
   assert.match(previewCss, /font-family: ui-sans-serif, system-ui/);
+  assert.match(previewCss, /#storybook-root,\s*main\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
+  assert.doesNotMatch(previewCss, /(?:^|\n)\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
   assert.doesNotMatch(previewCss, /Inter|@tale-ui|\.tale-/i);
 });

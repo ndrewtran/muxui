@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:8c7235c6abdfa035eb78a621bbee1129fc9bdc00ac34b9e44138f24591b6f7fe
+// @generated-content-sha256: sha256:1fc24e99ffe5a00da8ab41207e8ebc24b6ad88eb64bebc0836f6e4e67cc022ec
 export const manifest = Object.freeze({
   "schema": "muxui-react-storybook-manifest-v1",
   "generatedFrom": [
@@ -9,6 +9,36 @@ export const manifest = Object.freeze({
     "catalog/components/number-field/examples/react/sizing.tsx"
   ],
   "count": 53,
+  "foundations": {
+    "schema": "muxui-react-storybook-foundations-v1",
+    "source": "catalog/tokens/default-theme.json",
+    "categories": [
+      {
+        "id": "colors",
+        "label": "Colors and semantic roles"
+      },
+      {
+        "id": "typography",
+        "label": "Typography"
+      },
+      {
+        "id": "spacing",
+        "label": "Spacing and dimensions"
+      },
+      {
+        "id": "radii-shadows",
+        "label": "Radii and shadows"
+      },
+      {
+        "id": "motion",
+        "label": "Motion"
+      },
+      {
+        "id": "component",
+        "label": "Component tokens"
+      }
+    ]
+  },
   "families": [
     {
       "family": "Button",

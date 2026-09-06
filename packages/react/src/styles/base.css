@@ -620,7 +620,7 @@
   border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-semantic-control-radius);
   user-select: none;
-  width: max-content;
+  inline-size: calc(var(--muxui-calendar-cell-size) * 7);
 }
 
 .muxui-calendar-header-cell {

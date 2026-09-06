@@ -44,6 +44,20 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
 const DATE_PLACEHOLDER = parseDate('2000-01-01');
 const TIME_PLACEHOLDER = parseTime('00:00');
+const MUX_RUNTIME_SCOPE_SELECTOR = [
+  '[data-muxui-color-scheme]',
+  '[data-muxui-contrast]',
+  '[data-muxui-motion]',
+  '[data-muxui-density]',
+  '[data-muxui-direction]',
+].join(', ');
+
+function autocompletePortalContainer(input) {
+  if (typeof document === 'undefined' || !input) return undefined;
+  const scope = input.closest(MUX_RUNTIME_SCOPE_SELECTOR);
+  if (!scope || scope === document.documentElement || scope === document.body) return undefined;
+  return scope;
+}
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -861,6 +875,20 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     return normalizedItems.filter((item) => autocompleteItemText(item).toLocaleLowerCase().includes(query));
   }, [effectiveInputValue, normalizedItems]);
   const [isOpen, setIsOpen] = React.useState(false);
+  const inputRef = React.useRef(null);
+  const popoverRef = React.useRef(null);
+  const suggestionsOpen = isOpen && filteredItems.length > 0;
+  const portalContainer = autocompletePortalContainer(inputRef.current);
+  React.useEffect(() => {
+    if (!suggestionsOpen) return undefined;
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (inputRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setIsOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [suggestionsOpen]);
   const filter = (textValue, inputValue) => textValue.toLocaleLowerCase().includes(inputValue.toLocaleLowerCase());
   const handleSelect = (key) => {
     if (disabled || readOnly) return;
@@ -885,7 +913,9 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     ref,
     className: classNames('muxui-autocomplete', className),
     onBlurCapture: (event) => {
-      if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
+      if (!event.relatedTarget || (!event.currentTarget.contains(event.relatedTarget) && !popoverRef.current?.contains(event.relatedTarget))) {
+        setIsOpen(false);
+      }
     },
   }, React.createElement(AriaAutocomplete, {
     ...props,
@@ -904,6 +934,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     description,
     errorMessage,
     input: React.createElement(AriaInput, {
+      ref: inputRef,
       className: 'muxui-field-input',
       placeholder,
       onFocus: () => setIsOpen(!disabled),
@@ -913,13 +944,26 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
       },
     }),
   })),
-  React.createElement(AriaListBox, {
+  React.createElement(AriaPopover, {
+    ref: popoverRef,
+    isOpen: suggestionsOpen,
+    onOpenChange: setIsOpen,
+    isNonModal: true,
+    triggerRef: inputRef,
+    placement: 'bottom',
+    // Zero padding keeps a full-width field's overlay aligned at the viewport
+    // edge; the position hook still performs collision-aware placement.
+    containerPadding: 0,
+    // Keep portals inside subtree-scoped Mux runtime profiles so their tokens,
+    // direction, and other inherited custom properties remain available.
+    UNSTABLE_portalContainer: portalContainer,
+    className: 'muxui-autocomplete-popover',
+  }, React.createElement(AriaListBox, {
     items: filteredItems,
     className: 'muxui-autocomplete-list',
-    hidden: !isOpen || filteredItems.length === 0,
     selectionMode: readOnly ? 'none' : 'single',
     onAction: handleSelect,
-  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, className: 'muxui-autocomplete-option' }, item.label))));
+  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, className: 'muxui-autocomplete-option' }, item.label)))));
 });
 
 Autocomplete.displayName = 'Autocomplete';

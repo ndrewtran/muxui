@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { generatedText, loadPolicy } from '../../../tooling/audits/repository-policy/src/policy.mjs';
+import { FOUNDATIONS_CATEGORY_INVENTORY } from './foundations-gallery.mjs';
 import { transformWithOxc } from 'vite';
 import { adapterNames } from './storybook-factory.mjs';
 
@@ -182,6 +183,26 @@ for (const canonicalExample of canonicalStoryExamples.values()) {
     policy,
   }));
 }
+const foundationsStoryBody = `import { createFoundationsGalleryStory } from '../../src/foundations-gallery.mjs';
+
+export default {
+  title: 'Foundations',
+  id: 'muxui-react-foundations',
+  parameters: {
+    docs: {
+      description: {
+        component: 'A visual index of the canonical Mux UI theme tokens and their mode behavior.',
+      },
+    },
+  },
+};
+
+export const Gallery = createFoundationsGalleryStory();`;
+outputs.set('foundations.stories.mjs', generatedText({
+  source: generatedSource,
+  body: foundationsStoryBody,
+  policy,
+}));
 const manifest = {
   schema: 'muxui-react-storybook-manifest-v1',
   generatedFrom: [
@@ -190,6 +211,11 @@ const manifest = {
     ...canonicalStoryDefinitions.map(({ source }) => source),
   ],
   count: records.length,
+  foundations: {
+    schema: 'muxui-react-storybook-foundations-v1',
+    source: 'catalog/tokens/default-theme.json',
+    categories: FOUNDATIONS_CATEGORY_INVENTORY,
+  },
   families: records.map(({ family, tranche, binding }) => ({
     family,
     tranche,
@@ -241,4 +267,4 @@ if (checkOnly) {
   for (const [name, content] of outputs) await writeFile(resolve(generatedRoot, name), content, 'utf8');
 }
 
-console.log(`React Storybook projection: ${records.length}/53 families, ${records.length} stories`);
+console.log(`React Storybook projection: ${records.length}/53 families, ${outputs.size - canonicalStoryDefinitions.length - 1} stories`);

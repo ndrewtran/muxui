@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:448d684b7127329ee0e65b5856c6829b57d07c1d3db98e1e0e0e0e5f58000977
+ * @generated-content-sha256: sha256:2396099a054151b8db28ece4e13b9939205ccfd4ba35d4a91c50bc089023c133
  */
 :root {
   --muxui-component-button-background: #025768;
@@ -1026,7 +1026,7 @@
   border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-semantic-control-radius);
   user-select: none;
-  width: max-content;
+  inline-size: calc(var(--muxui-calendar-cell-size) * 7);
 }
 
 .muxui-calendar-header-cell {
@@ -2388,17 +2388,31 @@
   display: inline;
 }
 
+.muxui-autocomplete-popover {
+  box-sizing: border-box;
+  width: var(--trigger-width);
+  min-width: var(--trigger-width);
+  max-width: 100vw;
+  background-color: var(--muxui-semantic-overlay-background);
+  padding: var(--muxui-semantic-layout-tight-inset);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+[data-muxui-direction='ltr'] .muxui-autocomplete-popover {
+  direction: ltr;
+}
+
+[data-muxui-direction='rtl'] .muxui-autocomplete-popover {
+  direction: rtl;
+}
+
 .muxui-autocomplete-list {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-inset);
-  padding: var(--muxui-semantic-layout-tight-inset);
-}
-
-/* Author styles otherwise override the user-agent [hidden] rule. The list is
-   a live suggestion region and must stay absent until the input opens it. */
-.muxui-autocomplete-list[hidden] {
-  display: none;
+  padding: 0;
+  overflow: visible;
 }
 
 .muxui-autocomplete-option[data-selected] {
@@ -2861,8 +2875,8 @@
   border-color: #3b3634;
 }
 
-[data-muxui-color-scheme='dark'] .muxui-autocomplete-list {
-  background-color: #11100f;
+[data-muxui-color-scheme='dark'] .muxui-autocomplete-popover {
+  background-color: var(--muxui-semantic-overlay-background);
   border-color: #2b2826;
 }
 
@@ -4726,6 +4740,7 @@
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start]:hover,
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end]:hover {
   background-color: #02485b;
+  color: #e6f0f0;
 }
 
 [data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected]:hover,
@@ -4733,6 +4748,7 @@
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start]:hover,
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end]:hover {
   background-color: #02485b;
+  color: #e6f0f0;
 }
 
 [data-muxui-color-scheme='light'] .muxui-menu {
@@ -5018,7 +5034,7 @@
 /* Keep collection popups on Tale's shared radius/shadow primitives. Mux UI's
    overlay elevation is intentionally stronger, while the donor popup uses
    the low-alpha long-tail shadow and the 10px radius token. */
-.muxui-autocomplete-list,
+.muxui-autocomplete-popover,
 .muxui-combo-box-popover,
 .muxui-menu,
 .muxui-select-popover {
@@ -5438,6 +5454,13 @@
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
   background-color: #211e1d;
   border-color: #a9a4a0;
+}
+
+/* Calendar palettes invert foreground/background on state changes, so do not
+   interpolate through low-contrast transition frames. */
+.muxui-calendar-cell,
+.muxui-range-calendar-cell {
+  transition: none;
 }
 
 /* Mux UI-owned overlay parity source. */

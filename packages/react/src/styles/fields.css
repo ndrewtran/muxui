@@ -25,17 +25,31 @@
   display: inline;
 }
 
+.muxui-autocomplete-popover {
+  box-sizing: border-box;
+  width: var(--trigger-width);
+  min-width: var(--trigger-width);
+  max-width: 100vw;
+  background-color: var(--muxui-semantic-overlay-background);
+  padding: var(--muxui-semantic-layout-tight-inset);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+[data-muxui-direction='ltr'] .muxui-autocomplete-popover {
+  direction: ltr;
+}
+
+[data-muxui-direction='rtl'] .muxui-autocomplete-popover {
+  direction: rtl;
+}
+
 .muxui-autocomplete-list {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-inset);
-  padding: var(--muxui-semantic-layout-tight-inset);
-}
-
-/* Author styles otherwise override the user-agent [hidden] rule. The list is
-   a live suggestion region and must stay absent until the input opens it. */
-.muxui-autocomplete-list[hidden] {
-  display: none;
+  padding: 0;
+  overflow: visible;
 }
 
 .muxui-autocomplete-option[data-selected] {
@@ -498,8 +512,8 @@
   border-color: var(--muxui-reference-color-neutral-84);
 }
 
-[data-muxui-color-scheme='dark'] .muxui-autocomplete-list {
-  background-color: var(--muxui-reference-color-neutral-100);
+[data-muxui-color-scheme='dark'] .muxui-autocomplete-popover {
+  background-color: var(--muxui-semantic-overlay-background);
   border-color: var(--muxui-reference-color-neutral-90);
 }
 

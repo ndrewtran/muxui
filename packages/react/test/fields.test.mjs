@@ -860,7 +860,7 @@ test('R1.2 autocomplete is closed on SSR, filters while focused, and selects Mux
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] }));
   assert.match(server, /type="search"/u);
   assert.doesNotMatch(server, /role="combobox"/u);
-  assert.match(server, /hidden=""/u);
+  assert.doesNotMatch(server, /muxui-autocomplete-popover|muxui-autocomplete-list/u);
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   let root;
@@ -872,10 +872,13 @@ test('R1.2 autocomplete is closed on SSR, filters while focused, and selects Mux
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'], onSelect: (item) => { selected.push(item?.value); selectedItems.push(item); } })));
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
-    assert.equal(host.querySelector('.muxui-autocomplete-list').hidden, false);
+    const list = document.querySelector('.muxui-autocomplete-list');
+    assert.ok(list);
+    assert.equal(list.parentElement?.classList.contains('muxui-autocomplete-popover'), true);
+    assert.equal(host.contains(list), false);
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', value: 'Mel', items: ['Melbourne', 'Sydney'], onSelect: (item) => { selected.push(item?.value); selectedItems.push(item); } })));
-    assert.equal(host.querySelectorAll('.muxui-autocomplete-option').length, 1);
-    await act(async () => host.querySelector('.muxui-autocomplete-option').click());
+    assert.equal(document.querySelectorAll('.muxui-autocomplete-option').length, 1);
+    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
     assert.deepEqual(selected, ['Melbourne']);
     assert.deepEqual(selectedItems, [{ id: 'Melbourne', label: 'Melbourne', value: 'Melbourne' }]);
     await act(async () => root.unmount());
@@ -885,10 +888,32 @@ test('R1.2 autocomplete is closed on SSR, filters while focused, and selects Mux
   }
 });
 
+test('Autocomplete portals into the nearest scoped runtime profile', async () => {
+  const dom = new JSDOM('<!doctype html><section id="scope" data-muxui-color-scheme="dark"><div id="root"></div></section>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const scope = document.querySelector('#scope');
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] })));
+    const input = host.querySelector('.muxui-autocomplete input');
+    await act(async () => input.focus());
+    const popover = document.querySelector('.muxui-autocomplete-popover');
+    assert.ok(popover);
+    assert.equal(scope.contains(popover), true);
+    assert.equal(host.contains(popover), false);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
 test('R1.2 autocomplete preserves rich labels for SSR and text filtering', async () => {
   const items = [{ id: 'mel', label: React.createElement('strong', null, 'Melbourne'), value: 'Melbourne' }];
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', items }));
-  assert.match(server, /<strong>Melbourne<\/strong>/u);
+  assert.doesNotMatch(server, /muxui-autocomplete-list/u);
   assert.doesNotMatch(server, /\[object Object\]/u);
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -897,7 +922,9 @@ test('R1.2 autocomplete preserves rich labels for SSR and text filtering', async
     const host = document.querySelector('#root');
     root = createRoot(host);
     await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', value: 'Mel', items })));
-    const option = host.querySelector('.muxui-autocomplete-option');
+    const input = host.querySelector('.muxui-autocomplete input');
+    await act(async () => input.focus());
+    const option = document.querySelector('.muxui-autocomplete-option');
     assert.ok(option);
     assert.match(option.innerHTML, /<strong>Melbourne<\/strong>/u);
   } finally {
@@ -927,7 +954,9 @@ test('Autocomplete disabled items map to inert options and suppress callbacks', 
       onChange: (value) => changes.push(value),
       onSelect: (item) => selected.push(item?.id),
     })));
-    const options = [...host.querySelectorAll('.muxui-autocomplete-option')];
+    const input = host.querySelector('.muxui-autocomplete input');
+    await act(async () => input.focus());
+    const options = [...document.querySelectorAll('.muxui-autocomplete-option')];
     assert.equal(options.length, 3);
     assert.deepEqual(options.map((option) => option.getAttribute('data-disabled')), ['true', null, 'true']);
     assert.deepEqual(options.map((option) => option.getAttribute('aria-disabled')), ['true', null, 'true']);
@@ -964,13 +993,13 @@ test('R1.2 readonly autocomplete only permits viewing suggestions', async () => 
     const input = host.querySelector('.muxui-autocomplete input');
     await act(async () => input.focus());
     assert.equal(input.readOnly, true);
-    assert.equal(host.querySelector('.muxui-autocomplete-list').hidden, false);
+    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
     input.value = 'Sydney';
     await act(async () => input.dispatchEvent(new Event('input', { bubbles: true })));
-    await act(async () => host.querySelector('.muxui-autocomplete-option').click());
+    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
     assert.deepEqual(changes, []);
     assert.deepEqual(selected, []);
-    assert.equal(host.querySelector('.muxui-autocomplete-list').hidden, false);
+    assert.equal(document.querySelector('.muxui-autocomplete-list')?.hidden, false);
     await act(async () => root.render(renderAutocomplete()));
     assert.equal(input.value, 'Melbourne');
     await act(async () => root.unmount());

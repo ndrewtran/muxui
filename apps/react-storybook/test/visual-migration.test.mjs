@@ -931,7 +931,8 @@ test('routine checker and fixture contain no Tale runtime, dependency, path, or 
   assert.doesNotMatch(JSON.stringify(manifest), /VITE_MUXUI_MIGRATION_RUN_TOKEN|runToken/iu);
 });
 
-test('generated Storybook projection remains exactly 53 families', async () => {
+test('generated Storybook projection keeps 53 family stories plus Foundations', async () => {
   const generatedStories = (await readdir(resolve(appRoot, '.storybook/generated'))).filter((entry) => entry.endsWith('.stories.mjs'));
-  assert.equal(generatedStories.length, 53);
+  assert.equal(generatedStories.length, 54);
+  assert.ok(generatedStories.includes('foundations.stories.mjs'));
 });

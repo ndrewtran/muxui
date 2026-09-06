@@ -1,0 +1,729 @@
+.muxui-foundations-gallery {
+  --foundations-border: color-mix(in srgb, currentColor 18%, transparent);
+  --foundations-muted: color-mix(in srgb, currentColor 64%, transparent);
+  --foundations-soft: color-mix(in srgb, currentColor 8%, transparent);
+  --foundations-accent: #0b7de3;
+  min-block-size: 100vh;
+  box-sizing: border-box;
+  padding: clamp(1rem, 3vw, 3rem);
+  background: #fff;
+  color: #171717;
+}
+
+.muxui-foundations-gallery[data-muxui-foundations-scheme='dark'] {
+  --foundations-accent: #79c7ff;
+  background: #000;
+  color: #fff;
+}
+
+.muxui-foundations-gallery *,
+.muxui-foundations-gallery *::before,
+.muxui-foundations-gallery *::after {
+  box-sizing: border-box;
+}
+
+.muxui-foundations-header,
+.muxui-foundations-toolbar,
+.muxui-foundations-comparisons,
+.muxui-foundations-layout {
+  max-inline-size: 90rem;
+  margin-inline: auto;
+}
+
+.muxui-foundations-header,
+.muxui-foundations-toolbar,
+.muxui-foundations-content-header,
+.muxui-foundations-comparisons-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.muxui-foundations-header {
+  border-block-end: 1px solid var(--foundations-border);
+  padding-block-end: 1.5rem;
+}
+
+.muxui-foundations-eyebrow {
+  margin: 0 0 0.4rem;
+  color: var(--foundations-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.muxui-foundations-header h1,
+.muxui-foundations-content h2,
+.muxui-foundations-comparisons h2,
+.muxui-foundations-content h3,
+.muxui-foundations-color-group h3,
+.muxui-foundations-typography-group h3 {
+  margin: 0;
+  letter-spacing: -0.03em;
+}
+
+.muxui-foundations-header h1 {
+  font-size: clamp(2rem, 5vw, 4rem);
+}
+
+.muxui-foundations-header p:last-child,
+.muxui-foundations-content-header p,
+.muxui-foundations-comparisons-heading > p {
+  margin: 0.5rem 0 0;
+  color: var(--foundations-muted);
+}
+
+.muxui-foundations-status {
+  min-block-size: 1.25rem;
+  color: #007a55;
+  font-size: 0.8rem;
+  text-align: end;
+}
+
+.muxui-foundations-gallery[data-muxui-foundations-scheme='dark'] .muxui-foundations-status {
+  color: #7ce8b5;
+}
+
+.muxui-foundations-toolbar {
+  flex-wrap: wrap;
+  margin-block: 1.5rem;
+}
+
+.muxui-foundations-search,
+.muxui-foundations-control {
+  display: grid;
+  gap: 0.4rem;
+  color: var(--foundations-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.muxui-foundations-search {
+  flex: 1 1 20rem;
+}
+
+.muxui-foundations-search input,
+.muxui-foundations-control select {
+  min-block-size: 2.5rem;
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.75rem;
+  background: inherit;
+  color: inherit;
+  font: inherit;
+  font-weight: 400;
+}
+
+.muxui-foundations-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.muxui-foundations-modes legend {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.muxui-foundations-search input:focus-visible,
+.muxui-foundations-control select:focus-visible,
+.muxui-foundations-categories button:focus-visible,
+.muxui-foundations-copy:focus-visible,
+.muxui-foundations-motion-trigger:focus-visible,
+.muxui-foundations-motion-comparison-trigger:focus-visible,
+.muxui-foundations-component-button:focus-visible,
+.muxui-foundations-component-mini-button:focus-visible {
+  outline: 3px solid var(--foundations-accent);
+  outline-offset: 2px;
+}
+
+.muxui-foundations-comparisons {
+  margin-block: 1.5rem 2.5rem;
+  border-block: 1px solid var(--foundations-border);
+  padding-block: 1.25rem;
+}
+
+.muxui-foundations-comparisons-heading {
+  align-items: baseline;
+  margin-block-end: 1rem;
+}
+
+.muxui-foundations-comparison-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.muxui-foundations-comparison-panel {
+  display: grid;
+  gap: 0.65rem;
+  min-block-size: 8.5rem;
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.5rem;
+  padding: 0.85rem;
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-comparison-label {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.muxui-foundations-comparison-label code,
+.muxui-foundations-comparison-value {
+  color: var(--foundations-muted);
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
+}
+
+.muxui-foundations-comparison-color {
+  position: relative;
+  display: block;
+  min-block-size: 3.3rem;
+  overflow: hidden;
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.35rem;
+}
+
+.muxui-foundations-comparison-color-backing,
+.muxui-foundations-comparison-color-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.muxui-foundations-comparison-color-backing {
+  background-image: repeating-conic-gradient(#0002 0 25%, #fff2 0 50%);
+  background-size: 0.75rem 0.75rem;
+}
+
+.muxui-foundations-comparison-color-fill {
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.muxui-foundations-comparison-measure {
+  min-block-size: 1.25rem;
+  align-self: center;
+  border-radius: 0.2rem;
+  background: currentColor;
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.7rem;
+  line-height: 1.25rem;
+  text-align: end;
+}
+
+.muxui-foundations-comparison-motion {
+  display: grid;
+  align-content: center;
+  min-block-size: 3.3rem;
+  border-block-end: 2px solid currentColor;
+  color: inherit;
+}
+
+.muxui-foundations-comparison-motion span {
+  display: block;
+  inline-size: 2rem;
+  block-size: 1.5rem;
+  border-radius: 0.2rem;
+  background: currentColor;
+  transition: inline-size var(--muxui-foundations-motion-duration, 0ms) ease-out;
+}
+
+.muxui-foundations-motion-comparison {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 0.65rem;
+  border-block-start: 1px solid var(--foundations-border);
+  padding-block-start: 0.65rem;
+}
+
+.muxui-foundations-motion-comparison-static,
+.muxui-foundations-motion-comparison-pair {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.muxui-foundations-motion-comparison-row {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: 0.5rem;
+  align-items: center;
+  color: inherit;
+  font-size: 0.7rem;
+}
+
+.muxui-foundations-motion-comparison-trajectory {
+  display: block;
+  min-block-size: 0.5rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.muxui-foundations-motion-comparison-track {
+  min-block-size: 1.5rem;
+  overflow: hidden;
+  border-block-end: 2px solid currentColor;
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-motion-comparison-fill {
+  display: block;
+  inline-size: 100%;
+  block-size: 1.5rem;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--muxui-foundations-motion-duration, 0ms) ease-out;
+  background: currentColor;
+}
+
+.muxui-foundations-motion-comparison-fill.is-running {
+  transform: scaleX(1);
+}
+
+.muxui-foundations-motion-comparison-trigger {
+  justify-self: start;
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.55rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.muxui-foundations-motion-comparison-trigger:hover {
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: clamp(1rem, 4vw, 3rem);
+}
+
+.muxui-foundations-categories {
+  position: sticky;
+  inset-block-start: 1rem;
+  align-self: start;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.muxui-foundations-categories button {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  border-inline-start: 3px solid transparent;
+  border-radius: 0.2rem;
+  padding: 0.75rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+}
+
+.muxui-foundations-categories button:hover,
+.muxui-foundations-categories button.is-selected {
+  border-inline-start-color: currentColor;
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-count,
+.muxui-foundations-layer {
+  color: var(--foundations-muted);
+  font-size: 0.7rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.muxui-foundations-content {
+  min-inline-size: 0;
+}
+
+.muxui-foundations-content-header {
+  align-items: baseline;
+  border-block-end: 1px solid var(--foundations-border);
+  padding-block-end: 1rem;
+}
+
+.muxui-foundations-content-header > code {
+  color: var(--foundations-muted);
+  font-size: 0.7rem;
+}
+
+.muxui-foundations-color-groups,
+.muxui-foundations-typography-groups {
+  display: grid;
+  gap: 2rem;
+}
+
+.muxui-foundations-color-group,
+.muxui-foundations-typography-group {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.muxui-foundations-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: 0.8rem;
+}
+
+.muxui-foundations-color-card,
+.muxui-foundations-typography-card,
+.muxui-foundations-spacing-card,
+.muxui-foundations-shape-card,
+.muxui-foundations-motion-card,
+.muxui-foundations-component-card {
+  min-inline-size: 0;
+  border-block-end: 1px solid var(--foundations-border);
+  padding-block-end: 0.8rem;
+}
+
+.muxui-foundations-color-tile {
+  position: relative;
+  min-block-size: 6rem;
+  overflow: hidden;
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.35rem;
+}
+
+.muxui-foundations-color-tile-backing,
+.muxui-foundations-color-tile-fill {
+  position: absolute;
+  inset: 0;
+}
+
+.muxui-foundations-color-tile-backing {
+  background-image: repeating-conic-gradient(#0002 0 25%, #fff2 0 50%);
+  background-size: 0.75rem 0.75rem;
+}
+
+.muxui-foundations-color-tile-fill {
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.muxui-foundations-color-tile-value {
+  display: none;
+}
+
+.muxui-foundations-token-caption {
+  display: grid;
+  gap: 0.4rem;
+  margin-block-start: 0.7rem;
+}
+
+.muxui-foundations-token-id {
+  overflow-wrap: anywhere;
+}
+
+.muxui-foundations-meaning,
+.muxui-foundations-alias {
+  margin: 0;
+  color: var(--foundations-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.muxui-foundations-alias-chain {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: center;
+  color: var(--foundations-muted);
+  font-size: 0.7rem;
+}
+
+.muxui-foundations-alias-node {
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.25rem;
+  padding: 0.2rem 0.3rem;
+  overflow-wrap: anywhere;
+}
+
+.muxui-foundations-alias-link {
+  color: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.muxui-foundations-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.muxui-foundations-copy,
+.muxui-foundations-motion-trigger {
+  border: 1px solid var(--foundations-border);
+  border-radius: 0.35rem;
+  padding: 0.4rem 0.55rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.7rem;
+}
+
+.muxui-foundations-copy:hover,
+.muxui-foundations-motion-trigger:hover {
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-css-var {
+  max-inline-size: 100%;
+  color: var(--foundations-muted);
+  font-size: 0.68rem;
+  overflow-wrap: anywhere;
+}
+
+.muxui-foundations-typography-list,
+.muxui-foundations-spacing-list,
+.muxui-foundations-shape-list,
+.muxui-foundations-motion-list,
+.muxui-foundations-component-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.muxui-foundations-typography-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.muxui-foundations-typography-sample {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: inherit;
+  font-size: 1.5rem;
+}
+
+.muxui-foundations-spacing-card,
+.muxui-foundations-shape-card,
+.muxui-foundations-motion-card {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.8fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+}
+
+.muxui-foundations-spacing-visual {
+  display: grid;
+  gap: 0.6rem;
+  min-block-size: 4rem;
+  align-content: center;
+  border-inline-start: 1px solid var(--foundations-border);
+  padding-inline-start: 0.6rem;
+}
+
+.muxui-foundations-spacing-ruler {
+  min-block-size: 0.65rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.muxui-foundations-spacing-box {
+  min-inline-size: 0.5rem;
+  min-block-size: 0.5rem;
+  border: 1px solid currentColor;
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-shape-visual {
+  display: flex;
+  gap: 1.1rem;
+  min-block-size: 6rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--foundations-border);
+  padding: 1.25rem;
+}
+
+.muxui-foundations-shape-box,
+.muxui-foundations-shape-box-inner {
+  inline-size: 5rem;
+  block-size: 4rem;
+  border: 2px solid currentColor;
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-shape-box-inner {
+  inline-size: 3rem;
+  block-size: 2.5rem;
+  border-width: 1px;
+}
+
+.muxui-foundations-motion-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.muxui-foundations-motion-timeline {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.muxui-foundations-motion-track {
+  min-block-size: 1.6rem;
+  overflow: hidden;
+  border-block-end: 2px solid currentColor;
+  background: var(--foundations-soft);
+}
+
+.muxui-foundations-motion-fill {
+  min-block-size: 1.6rem;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--muxui-foundations-motion-duration, 0ms) ease-out;
+  background: currentColor;
+}
+
+.muxui-foundations-motion-fill.is-running {
+  transform: scaleX(1);
+}
+
+.muxui-foundations-motion-easing {
+  margin: 0.5rem 0 0;
+  color: var(--foundations-muted);
+  font-size: 0.7rem;
+}
+
+.muxui-foundations-component-hero {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  border-block-end: 1px solid var(--foundations-border);
+  padding-block-end: 1.5rem;
+}
+
+.muxui-foundations-component-button,
+.muxui-foundations-component-mini-button {
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+}
+
+.muxui-foundations-component-button {
+  min-block-size: 2.75rem;
+}
+
+.muxui-foundations-component-hero p {
+  margin: 0;
+  color: var(--foundations-muted);
+  font-size: 0.8rem;
+}
+
+.muxui-foundations-component-card {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.6fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: center;
+}
+
+.muxui-foundations-component-token-visual {
+  display: grid;
+  min-block-size: 4rem;
+  place-items: center;
+  border: 1px dashed var(--foundations-border);
+}
+
+.muxui-foundations-component-mini-button {
+  min-block-size: 2rem;
+  padding-inline: 0.75rem;
+}
+
+.muxui-foundations-empty {
+  color: var(--foundations-muted);
+}
+
+@media (max-width: 70rem) {
+  .muxui-foundations-comparison-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 48rem) {
+  .muxui-foundations-gallery {
+    padding: 1rem;
+  }
+
+  .muxui-foundations-header,
+  .muxui-foundations-comparisons-heading {
+    display: grid;
+  }
+
+  .muxui-foundations-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .muxui-foundations-categories {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .muxui-foundations-categories button {
+    min-inline-size: 0;
+    border-inline-start: 3px solid transparent;
+    border-block-end: 0;
+    padding: 0.6rem;
+  }
+
+  .muxui-foundations-categories button:hover,
+  .muxui-foundations-categories button.is-selected {
+    border-inline-start-color: currentColor;
+  }
+
+  .muxui-foundations-comparison-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .muxui-foundations-typography-card,
+  .muxui-foundations-spacing-card,
+  .muxui-foundations-shape-card,
+  .muxui-foundations-motion-card,
+  .muxui-foundations-component-card {
+    grid-template-columns: 1fr;
+  }
+
+  .muxui-foundations-color-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .muxui-foundations-component-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muxui-foundations-gallery *,
+  .muxui-foundations-gallery *::before,
+  .muxui-foundations-gallery *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+  }
+}

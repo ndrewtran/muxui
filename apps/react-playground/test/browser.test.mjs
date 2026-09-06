@@ -213,32 +213,101 @@ test('R1.4 React component browser and axe matrix', async () => {
         }
 
         const autocompleteInput = profile.locator('[data-component="autocomplete"] .muxui-autocomplete input');
+        const autocompleteArticle = profile.locator('[data-component="autocomplete"]');
+        const contentBelowAutocomplete = autocompleteArticle.locator('xpath=following-sibling::*[1]');
+        const autocompletePopover = page.locator('.muxui-autocomplete-popover');
+        const contentBefore = await contentBelowAutocomplete.boundingBox();
+        if (!contentBefore) throw new Error('Autocomplete geometry proof requires following content before opening');
         await autocompleteInput.fill('');
         await autocompleteInput.focus();
-        if (await profile.locator('.muxui-autocomplete-list').getAttribute('hidden') !== null) throw new Error('Autocomplete must show matching options while focused');
+        await autocompletePopover.waitFor({ state: 'visible' });
+        await waitForDocumentAnimations(page);
+        const inputBox = await autocompleteInput.boundingBox();
+        const popoverBox = await autocompletePopover.boundingBox();
+        if (!inputBox || !popoverBox) throw new Error('Autocomplete geometry proof requires input and overlay boxes');
+        if (Math.abs(popoverBox.x - inputBox.x) > 1 || Math.abs(popoverBox.width - inputBox.width) > 1) throw new Error('Autocomplete overlay must align to the input width and center');
+        if (popoverBox.y < inputBox.y + inputBox.height - 1) throw new Error('Autocomplete overlay must be anchored below the input');
+        const [popoverZIndex, contentZIndex] = await Promise.all([
+          autocompletePopover.evaluate((node) => Number.parseInt(getComputedStyle(node).zIndex, 10)),
+          contentBelowAutocomplete.evaluate((node) => Number.parseInt(getComputedStyle(node).zIndex, 10) || 0),
+        ]);
+        if (!(popoverZIndex > contentZIndex)) throw new Error('Autocomplete overlay must stack above following content');
+        const contentAfterOpen = await contentBelowAutocomplete.boundingBox();
+        if (!contentAfterOpen || Math.abs(contentAfterOpen.y - contentBefore.y) > 1) throw new Error('Autocomplete overlay must not move following content');
+        const localPortalDetails = await profile.evaluate((profileNode) => {
+          const popover = document.querySelector('.muxui-autocomplete-popover');
+          return {
+            containsPopover: Boolean(popover && profileNode.contains(popover)),
+            position: popover ? getComputedStyle(popover).position : '',
+          };
+        });
+        if (!localPortalDetails.containsPopover || !['absolute', 'fixed'].includes(localPortalDetails.position)) {
+          throw new Error('Autocomplete suggestions must use a scoped floating portal without participating in layout');
+        }
         await autocompleteInput.press('ArrowDown');
         const activeDescendant = await autocompleteInput.getAttribute('aria-activedescendant');
         if (!activeDescendant) throw new Error('Autocomplete ArrowDown must expose an active descendant');
-        if (await profile.locator(`#${activeDescendant}`).count() !== 1) throw new Error('Autocomplete active descendant must identify an option');
+        if (await page.locator(`#${activeDescendant}`).count() !== 1) throw new Error('Autocomplete active descendant must identify an option');
         await autocompleteInput.press('Enter');
         if (await autocompleteInput.inputValue() !== 'Melbourne') throw new Error('Autocomplete Enter must select the active option');
-        if (await profile.locator('.muxui-autocomplete-list').getAttribute('hidden') === null) throw new Error('Autocomplete Enter selection must dismiss suggestions');
+        await autocompletePopover.waitFor({ state: 'detached' });
         await autocompleteInput.fill('');
-        await autocompleteInput.focus();
         await autocompleteInput.press('Escape');
         if (await autocompleteInput.getAttribute('aria-activedescendant') !== null) throw new Error('Autocomplete Escape must clear the active descendant');
-        if (await profile.locator('.muxui-autocomplete-list').getAttribute('hidden') === null) throw new Error('Autocomplete Escape must dismiss suggestions');
-        await autocompleteInput.evaluate((node) => node.blur());
-        await autocompleteInput.focus();
-        if (await profile.locator('.muxui-autocomplete-list').getAttribute('hidden') !== null) throw new Error('Autocomplete input focus must reopen suggestions');
+        await autocompletePopover.waitFor({ state: 'detached' });
         await autocompleteInput.fill('Syd');
-        if (await profile.locator('.muxui-autocomplete-option').count() !== 1) throw new Error('Autocomplete input must filter options');
-        await profile.locator('.muxui-autocomplete-option').click();
+        await autocompleteInput.press('ArrowDown');
+        await autocompletePopover.waitFor({ state: 'visible' });
+        if (await page.locator('.muxui-autocomplete-option').count() !== 1) throw new Error('Autocomplete input must filter options');
+        await page.locator('.muxui-autocomplete-option').click();
         if (await autocompleteInput.inputValue() !== 'Sydney') throw new Error('Autocomplete click selection must update the Mux UI input value');
-        if (await profile.locator('.muxui-autocomplete-list').getAttribute('hidden') === null) throw new Error('Autocomplete click selection must dismiss suggestions');
-        await autocompleteInput.evaluate((node) => node.blur());
-        await autocompleteInput.focus();
-        if (await profile.locator('.muxui-autocomplete-list').getAttribute('hidden') !== null) throw new Error('Autocomplete focus after selection must reopen suggestions');
+        await autocompletePopover.waitFor({ state: 'detached' });
+        await autocompleteInput.fill('');
+        await autocompleteInput.press('ArrowDown');
+        await autocompletePopover.waitFor({ state: 'visible' });
+        await profile.locator(':scope > h2').click();
+        await autocompletePopover.waitFor({ state: 'detached' });
+
+        for (const scopedProfileName of expectedProfiles.slice(1, 2).concat(expectedProfiles.slice(-1))) {
+          const scopedProfile = page.locator(`[data-profile="${scopedProfileName}"]`);
+          const scopedInput = scopedProfile.locator('[data-component="autocomplete"] .muxui-autocomplete input');
+          await scopedInput.click();
+          await scopedInput.press('ArrowDown');
+          await autocompletePopover.waitFor({ state: 'visible' });
+          await waitForDocumentAnimations(page);
+          const [scopedInputBox, scopedPopoverBox] = await Promise.all([
+            scopedInput.boundingBox(),
+            autocompletePopover.boundingBox(),
+          ]);
+          if (!scopedInputBox || !scopedPopoverBox) throw new Error(`${scopedProfileName} Autocomplete geometry proof requires input and overlay boxes`);
+          if (scopedProfileName.endsWith('/rtl')
+            && (Math.abs(scopedPopoverBox.x - scopedInputBox.x) > 1 || Math.abs(scopedPopoverBox.width - scopedInputBox.width) > 1)) {
+            throw new Error('RTL Autocomplete overlay must align to the input width and physical position');
+          }
+          const scopedPortalDetails = await scopedProfile.evaluate((profileNode) => {
+            const popover = document.querySelector('.muxui-autocomplete-popover');
+            const style = popover ? getComputedStyle(popover) : null;
+            return {
+              containsPopover: Boolean(popover && profileNode.contains(popover)),
+              profile: popover?.closest('[data-profile]')?.getAttribute('data-profile'),
+              direction: style?.direction,
+              background: style?.backgroundColor,
+              overlayToken: style?.getPropertyValue('--muxui-semantic-overlay-background').trim(),
+            };
+          });
+          if (!scopedPortalDetails.containsPopover || scopedPortalDetails.profile !== scopedProfileName) {
+            throw new Error(`${scopedProfileName} Autocomplete must keep its scoped runtime portal`);
+          }
+          if (scopedProfileName.endsWith('/rtl') && scopedPortalDetails.direction !== 'rtl') {
+            throw new Error('RTL Autocomplete portal must inherit scoped direction');
+          }
+          if (scopedProfileName.startsWith('dark/')
+            && (scopedPortalDetails.background !== 'rgb(17, 16, 15)' || scopedPortalDetails.overlayToken !== '#11100f')) {
+            throw new Error('Dark Autocomplete portal must inherit the semantic overlay background');
+          }
+          await scopedInput.press('Escape');
+          await autocompletePopover.waitFor({ state: 'detached' });
+        }
 
         const dropZone = profile.locator('[data-r1-4-control="drop-zone"]');
         await dropZone.hover();

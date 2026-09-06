@@ -568,10 +568,13 @@ const ADAPTERS = {
   TimeField: (args) => e(MuxUI.TimeField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Start time')), defaultValue: args.value === undefined ? fixtureData(args, 'time', fallback(args.defaultValue, '09:30')) : args.defaultValue }),
   Calendar: (args) => e(MuxUI.Calendar, {
     ...args,
-    // The shared migration fixture gives calendars an accessible name, while
-    // ordinary stories retain their existing visible-label default.
-    label: args[migrationFixtureSymbol] ? undefined : fallback(args.label, fixtureCopy(args, 'Date')),
-    'aria-label': args[migrationFixtureSymbol] ? fixtureCopy(args, 'Date') : args['aria-label'],
+    // Migration fixtures stay visually unlabeled with their historical
+    // accessible name; ordinary stories default to an accessible-only name
+    // unless a visible label is explicitly supplied.
+    label: args[migrationFixtureSymbol] ? undefined : args.label,
+    'aria-label': args[migrationFixtureSymbol]
+      ? fixtureCopy(args, 'Date')
+      : args.label !== undefined ? args['aria-label'] : fallback(args['aria-label'], 'Choose a date'),
     defaultValue: args.value === undefined ? fixtureData(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue,
   }),
   ColorArea: (args) => e(MuxUI.ColorArea, {
@@ -1037,6 +1040,8 @@ const CANONICAL_PART_SELECTORS = Object.freeze({
   Switch: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
   TextField: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
   TimeField: { segment: ['.muxui-time-field .muxui-date-segment'], description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
+  Autocomplete: { popover: ['.muxui-autocomplete-popover'], list: ['.muxui-autocomplete-list'] },
+  Calendar: { label: ['.muxui-calendar-heading'] },
   ColorArea: { area: ['.muxui-color-area'] },
   ColorField: { description: ['.muxui-field-description'], error: ['.muxui-field-error'] },
   ColorPicker: { field: ['.muxui-color-picker .muxui-color-field'], area: ['.muxui-color-picker .muxui-color-area'], slider: ['.muxui-color-picker .muxui-color-slider'], swatch: ['.muxui-color-picker .muxui-color-swatch'] },
@@ -1054,6 +1059,15 @@ const CANONICAL_PART_SELECTORS = Object.freeze({
   PreviewTrigger: { content: ['.muxui-preview-content'] },
   Tooltip: { trigger: ['.muxui-tooltip-trigger', '.muxui-tooltip ~ button', 'button'] },
 });
+
+const EXECUTABLE_ANATOMY_PARTS = Object.freeze({
+  Autocomplete: new Set(['popover', 'list']),
+  Virtualizer: new Set(['item']),
+});
+
+function executableAnatomyPart(family, part) {
+  return EXECUTABLE_ANATOMY_PARTS[family]?.has(part) ?? false;
+}
 
 function partSelectors(binding, part) {
   const root = binding.selector;
@@ -1125,10 +1139,10 @@ function AnatomyHarness({ record, args }) {
     e('p', null, 'The state matrix below renders the live component parts. Each row resolves its real DOM hook after mount.'),
     e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => e('li', {
       key: part,
-      'data-muxui-storybook-api-part-status': matches[part] > 0 ? 'found' : record.family === 'Virtualizer' && part === 'item' ? 'executable' : 'unresolved',
-      'data-muxui-storybook-api-part-proof': record.family === 'Virtualizer' && part === 'item' ? 'browser' : undefined,
+      'data-muxui-storybook-api-part-status': matches[part] > 0 ? 'found' : executableAnatomyPart(record.family, part) ? 'executable' : 'unresolved',
+      'data-muxui-storybook-api-part-proof': executableAnatomyPart(record.family, part) ? 'browser' : undefined,
       'data-muxui-storybook-api-part-route': partSelectors(record.binding, part).join(' | '),
-    }, e('code', null, `${partSelectors(record.binding, part)[0]} (${part})`), `: ${matches[part] > 0 ? `${matches[part]} live node(s)` : record.family === 'Virtualizer' && part === 'item' ? 'executable Browser Proof route' : 'unresolved route'}`))),
+    }, e('code', null, `${partSelectors(record.binding, part)[0]} (${part})`), `: ${matches[part] > 0 ? `${matches[part]} live node(s)` : executableAnatomyPart(record.family, part) ? 'executable Browser Proof route' : 'unresolved route'}`))),
     renderStateCoverage(record, anatomyArgs),
     anatomySupport,
   );

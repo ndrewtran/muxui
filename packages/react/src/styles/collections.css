@@ -1534,6 +1534,7 @@
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start]:hover,
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end]:hover {
   background-color: var(--muxui-reference-color-bluegreen-70);
+  color: var(--muxui-reference-color-bluegreen-5);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected]:hover,
@@ -1541,6 +1542,7 @@
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start]:hover,
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end]:hover {
   background-color: var(--muxui-reference-color-bluegreen-70);
+  color: var(--muxui-reference-color-bluegreen-5);
 }
 
 [data-muxui-color-scheme='light'] .muxui-menu {
@@ -1826,7 +1828,7 @@
 /* Keep collection popups on Tale's shared radius/shadow primitives. Mux UI's
    overlay elevation is intentionally stronger, while the donor popup uses
    the low-alpha long-tail shadow and the 10px radius token. */
-.muxui-autocomplete-list,
+.muxui-autocomplete-popover,
 .muxui-combo-box-popover,
 .muxui-menu,
 .muxui-select-popover {
@@ -2246,4 +2248,11 @@
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-94);
   border-color: var(--muxui-reference-color-neutral-40);
+}
+
+/* Calendar palettes invert foreground/background on state changes, so do not
+   interpolate through low-contrast transition frames. */
+.muxui-calendar-cell,
+.muxui-range-calendar-cell {
+  transition: none;
 }
