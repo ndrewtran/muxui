@@ -1400,14 +1400,16 @@ tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof are
 required before availability. No upstream editor/parser type or object is
 public. The Lucide dependency has npm integrity
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
-ISC license, Feather-derived MIT notice, and React peer compatibility. It is
-limited to existing R1 `DatePicker`/`DateRangePicker` calendar triggers,
+ISC license, Feather-derived MIT notice, and React peer compatibility. Under
+the pre-R1.6 baseline, it was limited to existing R1
+`DatePicker`/`DateRangePicker` calendar triggers,
 `Calendar`/`RangeCalendar` previous/next, `ComboBox`/`Select` and `Tree`
 chevrons, `SearchField` clear, `NumberField` plus/minus, `Checkbox`
-check/indeterminate, `TagGroup` remove, and `Dialog`/`Toast` close, plus the
-nine R1.6 donor affordance roots `AlertDialog`, `CommandPalette`, `HeaderNav`,
-`Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
-`TextEditor`. There is no Mux UI workspace runtime edge or `@muxui/web`
+check/indeterminate, `TagGroup` remove, and `Dialog`/`Toast` close. Decision
+0013 supersedes that historical limit and allows the nine R1.6 donor
+affordance roots `AlertDialog`, `CommandPalette`, `HeaderNav`, `Lightbox`,
+`MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and `TextEditor`. There
+is no Mux UI workspace runtime edge or `@muxui/web`
 dependency. Private Mux UI
 packages may generate tarball contents but do not become runtime dependencies;
 Lucide exports, types, names, props, paths, or Icon API/catalog/package are
@@ -1750,15 +1752,17 @@ has npm integrity
 ISC license with its Feather-derived MIT notice, and React peer compatibility
 with the existing React and React DOM peer boundary.
 
-This is an internal, replaceable dependency for existing R1 control affordances
-only. The allowed boundary is: `DatePicker`/`DateRangePicker` calendar
+This is an internal, replaceable dependency. Under the fixed pre-R1.6 baseline,
+it was limited to existing R1 control affordances. Decision 0013 supersedes
+that historical limit for its nine named R1.6 donor affordance roots. The
+pre-R1.6 allowed boundary was: `DatePicker`/`DateRangePicker` calendar
 triggers; `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and
 `Tree` chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
 check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close. Breadcrumb
 separators remain text, and no Search icon is added. Mux UI owns all public
 contracts. No Lucide export, type, name, prop, or import path is public; no
-public Icon API, icon catalog, or icon package is added; no component or new
-decorative affordance is added.
+public Icon API, icon catalog, or icon package is added. Under that historical
+baseline, no component or new decorative affordance was added.
 
 The affected existing Scope IDs remain `committed`, with no new Scope IDs and
 no commitment transitions: `SCOPE-COMP-CHECKBOX-REACT`,

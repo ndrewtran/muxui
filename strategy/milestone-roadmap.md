@@ -725,14 +725,17 @@ affordances and the nine R1.6 donor affordance roots `AlertDialog`,
 `Sidebar`, `TagSelect`, and `TextEditor`. Its npm integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
 the package is ISC with its Feather-derived MIT notice and is React
-peer-compatible. The allowed use is `DatePicker`/`DateRangePicker` calendar
+peer-compatible. The following allowed-use list records the fixed pre-R1.6
+boundary: `DatePicker`/`DateRangePicker` calendar
 triggers; `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and
 `Tree` chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
-check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close. No Lucide
-export, type, name, prop, import path, public Icon API/catalog/package,
-component, or new decorative affordance is admitted. Breadcrumb separators
-remain text and no Search icon is added; Mux UI-owned labels and decorative
-semantics remain binding. R1.6 also admits the exact internal, replaceable
+check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close. Under
+that baseline, no Lucide export, type, name, prop, import path, public Icon
+API/catalog/package, component, or new decorative affordance was admitted.
+Breadcrumb separators remain text and no Search icon is added; Mux UI-owned
+labels and decorative semantics remain binding. Decision 0013 supersedes that
+historical limitation for the nine R1.6 donor affordance roots named above.
+R1.6 also admits the exact internal, replaceable
 `react-aria@3.51.0` edge for `Resizable`, `marked@13.0.3` for the typed
 Markdown parser boundary, and the eight `@tiptap/*@3.22.3` packages for
 `TextEditor`. Their lockfile, integrity, license/notice, peer-compatibility,
@@ -2896,23 +2899,26 @@ registry mutation requires a
 separate exact publication authorization and a final registry/version/dist-tag
 collision and authorization-drift check. This authority publishes nothing.
 
-## R1 icon affordance dependency clarification
+## Historical pre-R1.6 icon affordance dependency clarification
 
 Product Scope `6.0.4` and Decision 0011 amendment 02 add one exact direct
 internal runtime edge to the existing R1 React graph:
 `lucide-react@1.37.0`, npm integrity
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
 ISC license with its Feather-derived MIT notice, and React peer-compatible with
-the existing React/React DOM peer boundary. It is replaceable and limited to
-existing control affordances.
+the existing React/React DOM peer boundary. It is replaceable and, under the
+pre-R1.6 baseline, was limited to existing control affordances. Decision 0013
+supersedes that historical limit for its nine named R1.6 donor affordance
+roots.
 
-The allowed affordance boundary follows the fixed tranches: R1.1
+The pre-R1.6 allowed affordance boundary followed the fixed tranches: R1.1
 `Checkbox` check/indeterminate; R1.2 `SearchField` clear, `NumberField`
 plus/minus, and `DatePicker`/`DateRangePicker` calendar triggers; R1.3
 `Calendar`/`RangeCalendar` previous/next, `ComboBox`/`Select` and `Tree`
 chevrons, and `TagGroup` remove; and R1.4 `Dialog`/`Toast` close. Breadcrumb
-separators remain text and no Search icon is added. No new component or
-decorative affordance is admitted. Mux UI-owned labels, states, roles,
+separators remain text and no Search icon is added. Under that historical
+baseline, no new component or decorative affordance was admitted. Mux UI-owned
+labels, states, roles,
 relationships, keyboard behavior, and focus remain binding obligations; these
 icons are decorative/non-focusable unless an existing Mux UI binding requires
 another explicit semantic.

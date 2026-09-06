@@ -2537,7 +2537,12 @@ separately admitted work. The private Scale theme-authoring capability is
 admitted only under the bounded R1.6 milestone below. Npm publication, dist-tag changes, and the final
 R1-exit pull-request merge remain separate exact human stops.
 
-## R1 icon affordance dependency boundary
+## Historical pre-R1.6 icon affordance dependency boundary
+
+The boundary below records the fixed pre-R1.6 R1 baseline. Decision 0013's
+current allowance for the nine named R1.6 donor affordance roots supersedes
+that historical component and affordance limitation; the internal-only,
+no-public-Icon, license, and semantic requirements remain binding.
 
 Decision 0011 amendment 02 accepts `lucide-react@1.37.0` as an exact direct
 internal runtime dependency of `@muxui/react`. Its npm integrity is
@@ -2557,15 +2562,17 @@ The exact R1 dependency graph is:
 └── peer: react-dom >=19.2.0 <20
 ```
 
-Lucide is permitted only for these existing R1 control affordances: the
+Under that pre-R1.6 baseline, Lucide was permitted only for these existing R1
+control affordances: the
 `DatePicker`/`DateRangePicker` calendar triggers; `Calendar`/`RangeCalendar`
 previous/next controls; `ComboBox`/`Select` and `Tree` chevrons;
 `SearchField` clear; `NumberField` plus/minus; `Checkbox` check/indeterminate;
 `TagGroup` remove; and `Dialog`/`Toast` close. Breadcrumb separators remain
 text, and no Search icon is added. Mux UI owns every public contract. No Lucide
 export, type, name, prop, or import path may cross the package boundary, and
-there is no public Icon API, icon catalog, or icon package. This adds no
-component and no new decorative affordance.
+there is no public Icon API, icon catalog, or icon package. That baseline added
+no component and no new decorative affordance; Decision 0013 supersedes that
+limitation for its nine named R1.6 donor affordance roots.
 
 Accessible names, roles, states, relationships, keyboard behavior, and focus
 remain the Mux UI binding obligations. Icons used in these affordances are
