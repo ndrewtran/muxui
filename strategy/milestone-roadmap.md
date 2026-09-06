@@ -720,7 +720,9 @@ or release commitment.
 
 The approved R1 target graph also includes the exact direct internal,
 replaceable runtime dependency `lucide-react@1.37.0` for existing control
-affordances only. Its npm integrity is
+affordances and the nine R1.6 donor affordance roots `AlertDialog`,
+`CommandPalette`, `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`,
+`Sidebar`, `TagSelect`, and `TextEditor`. Its npm integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
 the package is ISC with its Feather-derived MIT notice and is React
 peer-compatible. The allowed use is `DatePicker`/`DateRangePicker` calendar
@@ -730,7 +732,13 @@ check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close. No Lucide
 export, type, name, prop, import path, public Icon API/catalog/package,
 component, or new decorative affordance is admitted. Breadcrumb separators
 remain text and no Search icon is added; Mux UI-owned labels and decorative
-semantics remain binding.
+semantics remain binding. R1.6 also admits the exact internal, replaceable
+`react-aria@3.51.0` edge for `Resizable`, `marked@13.0.3` for the typed
+Markdown parser boundary, and the eight `@tiptap/*@3.22.3` packages for
+`TextEditor`. Their lockfile, integrity, license/notice, peer-compatibility,
+module-isolation, tree-shaking, SSR/hydration, packed-consumer, and Markdown
+security proof is required; no upstream implementation type or object is
+public.
 
 Each bounded pull request changes the earliest canonical owners, regenerates
 projections, keeps React Aria internal, migrates applicable Tale styling into
@@ -954,6 +962,13 @@ neither canonical examples nor token/theme data.
 - An optional Tailwind consumer adapter and an actual clean consumer
   compilation proof. Tailwind remains a consumer build dependency only and is
   absent from Mux runtime, peer, generated-source, and styling-engine closure.
+- Exact internal, replaceable donor-affordance dependencies are admitted only
+  at the owning Mux modules: the pinned Lucide edge for the nine listed roots,
+  `react-aria@3.51.0` for `Resizable`, `marked@13.0.3` for the typed Markdown
+  parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`.
+  Their license/notice, integrity, peer-compatibility, lockfile, isolation,
+  tree-shaking, SSR/hydration, packed-consumer, and Markdown security proofs
+  are required; no upstream implementation type or object becomes public.
 
 **Acceptance evidence**
 
@@ -2858,11 +2873,26 @@ R1 exit remains an exact prerelease of only `@muxui/react` under `next`, with
 the already-authorized React/React DOM peer boundary and exact internal runtime
 dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.3`
 limited to the six named value-adapter families above, and
-`lucide-react@1.37.0` limited to the approved existing R1 control affordances.
-The Lucide edge carries npm integrity
+`lucide-react@1.37.0` for the approved existing R1 control affordances plus
+the nine R1.6 donor affordance roots `AlertDialog`, `CommandPalette`,
+`HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
+and `TextEditor`. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
+`useMove`, `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
+and `@tiptap/core@3.22.3`, `@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`,
+`@tiptap/starter-kit@3.22.3`, `@tiptap/extension-image@3.22.3`,
+`@tiptap/extension-placeholder@3.22.3`,
+`@tiptap/extension-text-align@3.22.3`, and
+`@tiptap/extension-text-style@3.22.3` for `TextEditor` only. All are
+internal, replaceable, module-isolated implementation edges; no Tale package,
+upstream public type, Tiptap editor object, or parser object crosses the Mux UI
+public boundary. The Lucide edge carries npm integrity
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
 ISC license with its Feather-derived MIT notice, and React peer compatibility.
-Every registry mutation requires a
+R1.6 dependency proof must retain package licenses/notices, exact npm integrity,
+React peer compatibility, lockfile pins, focused Markdown security review
+(typed AST, escaping, and source bounds), component-local import isolation,
+tree-shaking, SSR/hydration, and exact packed-consumer resolution. Every
+registry mutation requires a
 separate exact publication authorization and a final registry/version/dist-tag
 collision and authorization-drift check. This authority publishes nothing.
 

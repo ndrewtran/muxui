@@ -36,3 +36,12 @@ authority amendments. It does not claim implementation, 100% parity, evidence
 pass, milestone completion, package publication, hosted Scale deployment,
 stable support, or any external mutation. No approval timestamp, provider
 metadata, hosted comment, or release outcome is asserted here.
+
+Decision 0013 also records the bounded internal dependency allowance required
+to realize the approved donor affordances: the pinned Lucide edge for nine
+R1.6 roots, `react-aria@3.51.0` for `Resizable`, `marked@13.0.3` for the typed
+Markdown parser boundary, and the eight `@tiptap/*@3.22.3` packages for
+`TextEditor`. These Mux-owned implementation edges remain subject to
+license/notice, integrity, peer, lockfile, isolation, tree-shaking,
+SSR/hydration, packed-consumer, and Markdown security proof; they do not admit
+Tale dependencies or upstream public editor/parser types and objects.

@@ -47,6 +47,26 @@ covered by existing mappings. These 21 roots are inventory mapping targets,
 not current exports or availability claims. Any supplemental family requires a
 Mux UI binding map and proof before it becomes available.
 
+The existing pinned internal `lucide-react@1.37.0` edge may be used for the
+nine donor affordance roots `AlertDialog`, `CommandPalette`, `HeaderNav`,
+`Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
+`TextEditor`. The applicable donor implementations may also use exact,
+internal, replaceable Mux package edges: `react-aria@3.51.0` only for
+`Resizable`'s `useMove`; `marked@13.0.3` only for the `Markdown` lexer behind a
+Mux-owned typed parser/AST boundary; and `@tiptap/core@3.22.3`,
+`@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`, `@tiptap/starter-kit@3.22.3`,
+`@tiptap/extension-image@3.22.3`, `@tiptap/extension-placeholder@3.22.3`,
+`@tiptap/extension-text-align@3.22.3`, and
+`@tiptap/extension-text-style@3.22.3` only for `TextEditor`. These are not Tale
+dependencies and do not authorize upstream public types, editor/parser
+objects, or package API leakage. `react-aria@3.51.0` must resolve to the
+existing pinned React Aria Components closure rather than introduce a second
+version. License/notice, exact integrity, React peer
+compatibility, lockfile, module isolation, tree-shaking, SSR/hydration,
+packed-consumer, and focused Markdown security checks remain unproved
+implementation obligations. Ordinary Button consumers must not load the
+editor or parser.
+
 The parity transfer includes all donor token values, modes, and all donor
 palette families, including formerly deferred cool, slate, gray, onyx, and
 mono families, plus font families and typography names in the Mux UI namespace.
@@ -93,7 +113,9 @@ R1.6 is inserted between R1.5 and R1 exit. Its required evidence is:
   applicable React Aria-backed root/support mapping and unrelated-root
   exclusions, including the 70 donor-only styles;
 - `E-R1.6-02`: Mux-namespaced token, mode, palette, font, typography, and
-  preset transfer with license/dependency closure;
+  preset transfer with license/dependency closure, including exact internal
+  donor-affordance pins, lockfile/integrity/peer proof, module isolation, and
+  no upstream editor/parser type or object leakage;
 - `E-R1.6-03`: matched light/dark CSS, anatomy, interaction, variant, and
   state fixtures with every difference reported;
 - `E-R1.6-04`: current Storybook examples and canonical-source provenance;

@@ -993,10 +993,33 @@ DOM peer boundary. Use is limited to `DatePicker`/`DateRangePicker` calendar
 triggers; `Calendar`/`RangeCalendar` previous/next controls;
 `ComboBox`/`Select` and `Tree` chevrons; `SearchField` clear;
 `NumberField` plus/minus; `Checkbox` check/indeterminate; `TagGroup` remove;
-and `Dialog`/`Toast` close. Mux UI owns all labels and public contracts. No
-Lucide export, type, name, prop, or import path, and no public Icon API,
-catalog, or package, may cross the package boundary. Breadcrumb separators are
-text and no Search icon is added.
+and `Dialog`/`Toast` close. R1.6 also permits the same pinned internal Lucide
+edge for the donor affordances in `AlertDialog`, `CommandPalette`, `HeaderNav`,
+`Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
+`TextEditor`. Mux UI owns all labels and public contracts. No Lucide export,
+type, name, prop, or import path, and no public Icon API, catalog, or package,
+may cross the package boundary. Breadcrumb separators are text and no Search
+icon is added.
+
+R1.6 additionally admits exact, internal, replaceable runtime dependencies
+needed by the applicable donor implementations: `react-aria@3.51.0` only for
+`Resizable`'s `useMove` behavior. It is the already-resolved React Aria
+closure of the pinned `react-aria-components@1.20.0` baseline, so the direct
+declaration must not introduce a second version. `marked@13.0.3` only for the `Markdown`
+lexer behind a Mux UI-owned typed parser/AST boundary; and
+`@tiptap/core@3.22.3`, `@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`,
+`@tiptap/starter-kit@3.22.3`, `@tiptap/extension-image@3.22.3`,
+`@tiptap/extension-placeholder@3.22.3`,
+`@tiptap/extension-text-align@3.22.3`, and
+`@tiptap/extension-text-style@3.22.3` only for `TextEditor`. These are direct
+Mux package implementation edges, never Tale packages or runtime/build/dev/
+peer/generated-source dependencies. Their package licenses, notices, npm
+integrity, React peer compatibility, and exact lockfile pins are proof
+obligations, not completed evidence. Imports stay isolated to the owning
+component modules; tree-shaking and packed-consumer proof must show that
+ordinary Button consumers do not load the editor or Markdown parser. Tiptap
+types and editor objects never enter the Mux UI public API, and Markdown input
+retains typed AST, escaping, source-size bounds, and focused security proof.
 
 #### Tale styling donor boundary
 
@@ -1141,7 +1164,10 @@ flowchart TD
   react["@muxui/react@0.1.0-alpha.N\nfirst public component package"]
   aria["react-aria-components@1.20.0\nexact internal runtime dependency"]
   temporal["@internationalized/date@3.12.3\napproved internal temporal adapter dependency"]
-  lucide["lucide-react@1.37.0\ninternal R1 control affordances only"]
+  lucide["lucide-react@1.37.0\nR1 + R1.6 internal affordances"]
+  resizable["react-aria@3.51.0\nResizable useMove only"]
+  markdown["marked@13.0.3\nMarkdown lexer only"]
+  editor["Tiptap 3.22.3 packages\nTextEditor only"]
   peers["react + react-dom\n>=19.2.0 <20 peers"]
   web["@muxui/web\nlater W1 track"]
   native["@muxui/react-native\nlater N1 track"]
@@ -1150,6 +1176,9 @@ flowchart TD
   aria --> react
   temporal --> react
   lucide --> react
+  resizable --> react
+  markdown --> react
+  editor --> react
   peers --> react
   canonical -. later activation .-> web
   canonical -. later activation .-> native
@@ -1172,12 +1201,18 @@ contain no unresolved `workspace:` dependency, repository-only or source-tree
 import, undeclared file dependency, or `@muxui/web` import.
 
 The same graph includes the exact direct internal runtime dependency
-`lucide-react@1.37.0` for the existing R1 control affordances only. Its npm
-integrity is
+`lucide-react@1.37.0` for the existing R1 control affordances and the nine
+approved R1.6 donor affordance roots: `AlertDialog`, `CommandPalette`,
+`HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
+and `TextEditor`. Its npm integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
 the package is ISC with the Feather-derived MIT notice, and React
 peer-compatible. No Lucide export, type, name, prop, import path, or public
-Icon API/catalog/package is part of the Mux UI surface.
+Icon API/catalog/package is part of the Mux UI surface. R1.6 also admits
+`react-aria@3.51.0` for `Resizable`/`useMove`, `marked@13.0.3` for the typed
+`Markdown` parser boundary, and the exact eight `@tiptap/*@3.22.3` packages
+for `TextEditor`. These module-local edges remain internal and replaceable; no
+upstream runtime types or editor/parser objects are public.
 
 | Package | Responsibility | Must not own |
 | --- | --- | --- |

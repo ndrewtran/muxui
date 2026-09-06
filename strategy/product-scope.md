@@ -761,8 +761,11 @@ accessibility, package, compatibility, integrity, or generation failures.
   `react-aria-components@1.20.0`, and the approved direct internal
   `@internationalized/date@3.12.3` dependency limited to Mux UI value adapters
   in `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-  `RangeCalendar`, with no Mux UI workspace runtime edge or upstream public API
-  leak;
+  `RangeCalendar`, plus the R1.6 internal, replaceable donor-affordance edges
+  `react-aria@3.51.0` for `Resizable`, `marked@13.0.3` for the typed Markdown
+  parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`;
+  no Mux UI workspace runtime edge, Tale package, or upstream public API/type
+  leak is permitted;
 - the first-party default token/theme system satisfies every applicable React
   requirement and accessibility adaptation;
 - package exports, types, CSS, guidance, descriptors, compatibility metadata,
@@ -1385,18 +1388,27 @@ canonical example source.
 
 The approved R1 target graph is exactly `@muxui/react@0.1.0-alpha.N` with
 direct internal runtime dependencies `react-aria-components@1.20.0`,
-`@internationalized/date@3.12.3`, and `lucide-react@1.37.0`; React peer
+`@internationalized/date@3.12.3`, and `lucide-react@1.37.0`; R1.6 additionally
+admits `react-aria@3.51.0`, `marked@13.0.3`, and the eight
+`@tiptap/*@3.22.3` packages within their named component modules. React peer
 `>=19.2.0 <20`, and React DOM peer `>=19.2.0 <20`. The date dependency is
 limited to Mux UI value adapters in `DateField`, `DatePicker`, `DateRangePicker`,
 `TimeField`, `Calendar`, and `RangeCalendar`; it exposes no upstream public
-contract. The Lucide dependency has npm integrity
+contract. The R1.6 edges are internal and replaceable; their exact pins,
+lockfile/integrity, license/notice, React peer, module-isolation,
+tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof are
+required before availability. No upstream editor/parser type or object is
+public. The Lucide dependency has npm integrity
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
 ISC license, Feather-derived MIT notice, and React peer compatibility. It is
 limited to existing R1 `DatePicker`/`DateRangePicker` calendar triggers,
 `Calendar`/`RangeCalendar` previous/next, `ComboBox`/`Select` and `Tree`
 chevrons, `SearchField` clear, `NumberField` plus/minus, `Checkbox`
-check/indeterminate, `TagGroup` remove, and `Dialog`/`Toast` close. There is no
-Mux UI workspace runtime edge or `@muxui/web` dependency. Private Mux UI
+check/indeterminate, `TagGroup` remove, and `Dialog`/`Toast` close, plus the
+nine R1.6 donor affordance roots `AlertDialog`, `CommandPalette`, `HeaderNav`,
+`Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
+`TextEditor`. There is no Mux UI workspace runtime edge or `@muxui/web`
+dependency. Private Mux UI
 packages may generate tarball contents but do not become runtime dependencies;
 Lucide exports, types, names, props, paths, or Icon API/catalog/package are
 not public.
@@ -1838,6 +1850,18 @@ preview/import/export/persist/round-trip behavior; and clean-consumer proof
 for the optional Tailwind build adapter. Mux UI owns token role names/values;
 unmodified bundled font assets retain their Google Fonts SIL Open Font License
 1.1 notices and the Playfair Display binary remains unchanged.
+
+The existing pinned internal `lucide-react@1.37.0` edge may cover the nine
+R1.6 donor affordance roots `AlertDialog`, `CommandPalette`, `HeaderNav`,
+`Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
+`TextEditor`. R1.6 also admits `react-aria@3.51.0` for `Resizable`'s
+`useMove`, `marked@13.0.3` only behind the typed Markdown parser boundary, and
+the eight `@tiptap/*@3.22.3` packages only inside `TextEditor`. These are
+Mux-owned, internal, replaceable implementation edges. Package licenses and
+notices, exact npm integrity, React peer compatibility, lockfile pins,
+component-local isolation, tree-shaking, SSR/hydration, packed-consumer
+resolution, and focused Markdown security are acceptance evidence obligations;
+upstream editor/parser types and objects remain outside the public API.
 
 Canonical ownership remains `catalog/tokens/` for data, `@muxui/tokens` for
 transforms, `@muxui/react` for React CSS/behavior, and `apps/scale` for the
