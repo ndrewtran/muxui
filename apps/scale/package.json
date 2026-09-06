@@ -1,0 +1,22 @@
+{
+  "name": "@muxui/scale",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "check": "vite build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@muxui/react": "workspace:*",
+    "@muxui/tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "vite": "8.2.1"
+  }
+}
