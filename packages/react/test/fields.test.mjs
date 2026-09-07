@@ -310,7 +310,7 @@ test('ComboBox input transitions stay scoped away from TextField', async () => {
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input\s*\{[\s\S]*transition:/u);
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
   assert.doesNotMatch(comboCss, /^\.muxui-field-input\s*\{/mu);
-  assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color 0\.15s ease/u);
+  assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\)/u);
 });
 
 test('NumberField steppers expose stable direction hooks and Tale edge geometry', async () => {
@@ -324,8 +324,8 @@ test('NumberField steppers expose stable direction hooks and Tale edge geometry'
   assert.equal(increment.getAttribute('slot'), 'increment');
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
-  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-reference-color-neutral-22\);[^}]*border-radius:\s*var\(--muxui-reference-dimension-radius-m\) 0 0 var\(--muxui-reference-dimension-radius-m\)/u);
-  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-reference-color-neutral-22\);[^}]*border-radius:\s*0 var\(--muxui-reference-dimension-radius-m\) var\(--muxui-reference-dimension-radius-m\) 0/u);
+  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*var\(--muxui-semantic-control-radius\) 0 0 var\(--muxui-semantic-control-radius\)/u);
+  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*0 var\(--muxui-semantic-control-radius\) var\(--muxui-semantic-control-radius\) 0/u);
   assert.match(css, /--muxui-reference-color-neutral-22:\s*#d5d2d1;/u);
   dom.window.close();
 });
@@ -493,7 +493,7 @@ test('date picker calendar triggers retain Tale icon wrapper sizing and scoped p
   const styles = await readFile(new URL('../src/styles/base.css', import.meta.url), 'utf8');
   assert.match(styles, /\.muxui-icon\s*\{[^}]*width:\s*1\.5rem;[^}]*height:\s*1\.5rem;/u);
   assert.match(styles, /\.muxui-icon--sm\s*\{[^}]*width:\s*1rem;[^}]*height:\s*1rem;/u);
-  assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-surface-hover\)/u);
+  assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-border-faint\)/u);
   assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-popover\s*\{/u);
 });
 

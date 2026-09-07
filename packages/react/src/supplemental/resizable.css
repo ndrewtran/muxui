@@ -2,10 +2,10 @@
 .muxui-resizable--horizontal { flex-direction: row; }
 .muxui-resizable--vertical { flex-direction: column; height: 100%; }
 .muxui-resizable-panel { min-width: 0; min-height: 0; overflow: auto; }
-.muxui-resizable-handle { position: relative; flex: 0 0 var(--muxui-reference-dimension-space-3xs); border: 0; background-color: var(--muxui-semantic-color-neutral-20); outline: none; touch-action: none; user-select: none; }
+.muxui-resizable-handle { position: relative; flex: 0 0 var(--muxui-semantic-layout-resize-handle-size); border: 0; background-color: var(--muxui-semantic-color-neutral-20); outline: none; touch-action: none; user-select: none; }
 .muxui-resizable--horizontal > .muxui-resizable-handle { cursor: col-resize; }
 .muxui-resizable--vertical > .muxui-resizable-handle { cursor: row-resize; }
-.muxui-resizable-handle::after { position: absolute; inset: var(--muxui-reference-dimension-space-4xs); border-radius: var(--muxui-reference-dimension-radius-full); background-color: var(--muxui-semantic-color-neutral-40); content: ''; }
+.muxui-resizable-handle::after { position: absolute; inset: var(--muxui-semantic-layout-tight-inset); border-radius: var(--muxui-semantic-shape-pill-radius); background-color: var(--muxui-semantic-color-neutral-40); content: ''; }
 .muxui-resizable-handle:focus-visible { outline: 2px solid var(--muxui-focus-ring-color); outline-offset: 2px; z-index: 1; }
 .muxui-resizable-handle[data-disabled] { cursor: default; opacity: .45; }
 .muxui-resizable[data-invalid] > .muxui-resizable-handle { cursor: default; }
