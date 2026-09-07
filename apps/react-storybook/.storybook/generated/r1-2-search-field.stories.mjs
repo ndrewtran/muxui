@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:9662b6f9911e34a7c904094607564b245ca41c29462b0ec523a301230f1a0d38
+// @generated-content-sha256: sha256:5b519a993a2eb427ca3ef6579de83f2f02e51c2e2b54b788545fa041ba69c53a
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -70,7 +70,7 @@ const binding = {
 const record = { family: 'SearchField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/SearchField',
+  title: 'Mux UI React/SearchField',
   id: 'muxui-react-r1-2-search-field',
   component: MuxUI.SearchField,
   tags: ['autodocs'],

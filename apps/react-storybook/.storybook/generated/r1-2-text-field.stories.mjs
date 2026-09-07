@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:91835b61aa25f8f81daf6f404d3afdda99fe307486888bd037c5c5857fa60f3d
+// @generated-content-sha256: sha256:a5c81932e172aba2a6540db4c05b09dfa8d0ab8b8c582f716c828389da70f3d0
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -74,7 +74,7 @@ const binding = {
 const record = { family: 'TextField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/TextField',
+  title: 'Mux UI React/TextField',
   id: 'muxui-react-r1-2-text-field',
   component: MuxUI.TextField,
   tags: ['autodocs'],

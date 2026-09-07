@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6b3c2ea5d864796d782d079bb09297d1bc4e584dbe7fb922ee2c208e583730b2
+// @generated-content-sha256: sha256:77ab6604502d9f8a717c2796a2bb83d566bd3a0c14ed63378ef8a30b52a582df
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -55,7 +55,7 @@ const binding = {
 const record = { family: 'Virtualizer', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Virtualizer',
+  title: 'Mux UI React/Virtualizer',
   id: 'muxui-react-r1-3-virtualizer',
   component: MuxUI.Virtualizer,
   tags: ['autodocs'],

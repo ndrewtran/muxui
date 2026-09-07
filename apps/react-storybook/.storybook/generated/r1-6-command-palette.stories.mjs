@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:704799e80afb9a6d8f9f0729bef804686196670243b17384705424a491c64d9d
+// @generated-content-sha256: sha256:99e5ab64a5f9a68c8eeacad76346c9a833f1b5c7288515afc6a8db61b50b030b
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -90,7 +90,7 @@ const binding = {
 const record = { family: 'CommandPalette', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/CommandPalette',
+  title: 'Mux UI React/CommandPalette',
   id: 'muxui-react-r1-6-command-palette',
   component: MuxUI.CommandPalette,
   tags: ['autodocs'],

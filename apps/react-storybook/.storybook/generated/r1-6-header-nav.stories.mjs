@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:1c5f6489fdfdd4993dc200ff049140b69245e88d6e2ff9a3f88055e42e61b369
+// @generated-content-sha256: sha256:74067359b3f7a9ca33a48233c36865c6f4b4446e6df71569e8c9310914576f35
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -50,7 +50,7 @@ const binding = {
 const record = { family: 'HeaderNav', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/HeaderNav',
+  title: 'Mux UI React/HeaderNav',
   id: 'muxui-react-r1-6-header-nav',
   component: MuxUI.HeaderNav,
   tags: ['autodocs'],

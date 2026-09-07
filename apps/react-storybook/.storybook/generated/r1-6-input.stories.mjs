@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:95f2697c4f454446e722ff671191835b11dce32a4de1c2a9bbd18bc7f8e60fca
+// @generated-content-sha256: sha256:16b1fe0a65ed4bf72bdb13616721265043da67e922fe58ac0017e9f8d86e483c
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -63,7 +63,7 @@ const binding = {
 const record = { family: 'Input', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/Input',
+  title: 'Mux UI React/Input',
   id: 'muxui-react-r1-6-input',
   component: MuxUI.Input,
   tags: ['autodocs'],

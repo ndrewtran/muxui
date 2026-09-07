@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:c51773628795ec3b275f5f3abfabff5d3c13aaf58d4182d0f05dbaf309f154f0
+// @generated-content-sha256: sha256:d512d827a9d839f1bc7595e407d9e6926d1ef004e2c54544d00f93124b5a53d6
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -55,7 +55,7 @@ const binding = {
 const record = { family: 'ListBox', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ListBox',
+  title: 'Mux UI React/ListBox',
   id: 'muxui-react-r1-3-list-box',
   component: MuxUI.ListBox,
   tags: ['autodocs'],

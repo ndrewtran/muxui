@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:defc700038c7dcb0ff43c282d9314d8b6681bbecaf3635d659159e375e2344f6
+// @generated-content-sha256: sha256:484e93b25c2e644620a10e3582dcd34b2790065c8ec37b635729c91df696638f
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -63,7 +63,7 @@ const binding = {
 const record = { family: 'TextArea', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/TextArea',
+  title: 'Mux UI React/TextArea',
   id: 'muxui-react-r1-6-text-area',
   component: MuxUI.TextArea,
   tags: ['autodocs'],

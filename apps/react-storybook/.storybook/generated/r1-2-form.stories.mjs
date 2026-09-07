@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:1b462905f55d519c34ac7f99b1e15e754d1158de2139588d3c3bcc9ef76d3220
+// @generated-content-sha256: sha256:9b440a3089a4dcb2898883c1b8de11c9d8ec1c7bcf10d88ff63128c504c67834
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -52,7 +52,7 @@ const binding = {
 const record = { family: 'Form', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/Form',
+  title: 'Mux UI React/Form',
   id: 'muxui-react-r1-2-form',
   component: MuxUI.Form,
   tags: ['autodocs'],

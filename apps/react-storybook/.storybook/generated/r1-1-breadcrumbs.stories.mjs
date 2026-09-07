@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:670c60e5740c35034542ce8654d982dc972d19533112289b94368dce40bab078
+// @generated-content-sha256: sha256:6bae854a1f4b893286a0713014c96c3718babe4a1fe00f5ddbd526ae42dd11f2
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -49,7 +49,7 @@ const binding = {
 const record = { family: 'Breadcrumbs', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/Breadcrumbs',
+  title: 'Mux UI React/Breadcrumbs',
   id: 'muxui-react-r1-1-breadcrumbs',
   component: MuxUI.Breadcrumbs,
   tags: ['autodocs'],

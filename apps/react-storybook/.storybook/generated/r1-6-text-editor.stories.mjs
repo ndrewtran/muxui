@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:52c47b02e115ec86bc5a2352bb8c51be2755a012ce2281d676ac42de8073eb80
+// @generated-content-sha256: sha256:a26c9584b7ca9fb9ec6b06617d1cfc8631c6ae0adaa72b58e573bb9d34149515
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -85,7 +85,7 @@ const binding = {
 const record = { family: 'TextEditor', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/TextEditor',
+  title: 'Mux UI React/TextEditor',
   id: 'muxui-react-r1-6-text-editor',
   component: TextEditorSubpath,
   tags: ['autodocs'],

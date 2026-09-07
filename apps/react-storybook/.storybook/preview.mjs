@@ -176,6 +176,12 @@ export default {
     },
   ],
   parameters: {
+    options: {
+      storySort: {
+        method: 'alphabetical',
+        order: ['Foundations', '*'],
+      },
+    },
     controls: {
       expanded: true,
     },

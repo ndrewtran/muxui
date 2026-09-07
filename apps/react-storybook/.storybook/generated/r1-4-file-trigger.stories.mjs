@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ed5b63a9e0db1483259d8bd07e9194658196d269cc35d1d92627f896f2a42e05
+// @generated-content-sha256: sha256:63e4ac65c53a85fe957d4439a7cbe15a6d6d5e93cbfa7177b1a37ed473b67512
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,7 @@ const binding = {
 const record = { family: 'FileTrigger', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/FileTrigger',
+  title: 'Mux UI React/FileTrigger',
   id: 'muxui-react-r1-4-file-trigger',
   component: MuxUI.FileTrigger,
   tags: ['autodocs'],

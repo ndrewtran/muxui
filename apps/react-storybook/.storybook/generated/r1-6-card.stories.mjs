@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:59346ba30a8379a7ce081137d32946328513db23838e3735c377d8ac477c86a3
+// @generated-content-sha256: sha256:7a782e8b9872ff8b53851615e9410cc5cd3a57dc19d4a50476ff0654732ea9dc
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -60,7 +60,7 @@ const binding = {
 const record = { family: 'Card', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/Card',
+  title: 'Mux UI React/Card',
   id: 'muxui-react-r1-6-card',
   component: MuxUI.Card,
   tags: ['autodocs'],

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:497a4d94a862371395a0b58f04c29f20c471e76db1770e4e0e6212d13d7ec97c
+// @generated-content-sha256: sha256:c06baf31dd08818c3ba841c0bad8c6bf6fd303b66bd558945b462fdcc0159958
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -53,7 +53,7 @@ const binding = {
 const record = { family: 'DropZone', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/DropZone',
+  title: 'Mux UI React/DropZone',
   id: 'muxui-react-r1-4-drop-zone',
   component: MuxUI.DropZone,
   tags: ['autodocs'],

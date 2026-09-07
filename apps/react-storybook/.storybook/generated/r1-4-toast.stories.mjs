@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:9d9575b49569f24b3e4c0671af40d7cc639627b1b9de0a778675f651704cbd1a
+// @generated-content-sha256: sha256:fdf385f452705849479bc9c4a58225373927c81646e8bfe0a53bf8ec76e1a5a6
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,7 @@ const binding = {
 const record = { family: 'Toast', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/Toast',
+  title: 'Mux UI React/Toast',
   id: 'muxui-react-r1-4-toast',
   component: MuxUI.Toast,
   tags: ['autodocs'],

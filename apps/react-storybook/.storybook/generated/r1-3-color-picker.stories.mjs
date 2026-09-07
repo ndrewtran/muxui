@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d3fd473813ab25e7d7473f8c7691eff8777802efda7208be334b1f60a7c640c8
+// @generated-content-sha256: sha256:6b34f5a1854d6e5bb4e967458a386b12dfec6188855e2217eeeb1cd9f607cadd
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,7 @@ const binding = {
 const record = { family: 'ColorPicker', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ColorPicker',
+  title: 'Mux UI React/ColorPicker',
   id: 'muxui-react-r1-3-color-picker',
   component: MuxUI.ColorPicker,
   tags: ['autodocs'],

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:322028102012f90ac225022fe1def291980275ddb69eaeb8c53a6b50dfea2b0d
+// @generated-content-sha256: sha256:20b7f1d63aad4430c2743ab28b975dad23a1e4facc642ea4967593f9b58a3a01
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -68,7 +68,7 @@ const binding = {
 const record = { family: 'CheckboxGroup', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/CheckboxGroup',
+  title: 'Mux UI React/CheckboxGroup',
   id: 'muxui-react-r1-2-checkbox-group',
   component: MuxUI.CheckboxGroup,
   tags: ['autodocs'],

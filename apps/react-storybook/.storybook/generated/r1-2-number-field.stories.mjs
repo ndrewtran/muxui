@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:a8eed02c5fc926b08076428a1fcf9c60122f3fb89cd2fedba98149b3528f5e04
+// @generated-content-sha256: sha256:a163f41f5756dc7c65b518c6834b21e96feacdb0e0ea6329122bbc8eefdcb2d6
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -73,7 +73,7 @@ const binding = {
 const record = { family: 'NumberField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/NumberField',
+  title: 'Mux UI React/NumberField',
   id: 'muxui-react-r1-2-number-field',
   component: MuxUI.NumberField,
   tags: ['autodocs'],

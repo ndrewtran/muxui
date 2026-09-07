@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:cfa26198fddac699b4dd75251bdaac0b53ab69c5993e2f0a830dba0e738a48af
+// @generated-content-sha256: sha256:6e122c9c51037e6e266e65b4d0328271ec81e5ede755dbf72f075c595b7c3cb9
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -68,7 +68,7 @@ const binding = {
 const record = { family: 'DateField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/DateField',
+  title: 'Mux UI React/DateField',
   id: 'muxui-react-r1-2-date-field',
   component: MuxUI.DateField,
   tags: ['autodocs'],

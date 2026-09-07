@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6af44bcda94abe481a1cc77fc31bb75e9c19fce4e08f835ae109801d1b1456b4
+// @generated-content-sha256: sha256:809599a24098c07598de46aa56f522be0ba98112e5490d24a5810aa35a38b0bf
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -70,7 +70,7 @@ const binding = {
 const record = { family: 'Autocomplete', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/Autocomplete',
+  title: 'Mux UI React/Autocomplete',
   id: 'muxui-react-r1-2-autocomplete',
   component: MuxUI.Autocomplete,
   tags: ['autodocs'],

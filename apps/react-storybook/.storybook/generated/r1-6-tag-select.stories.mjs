@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:1d9cf867605b9ac9e968c7d063df230583ddf00289f8093d2e5e16fa72fb40ce
+// @generated-content-sha256: sha256:a467ffe09db5a2c214ce0862e9b1780f1a85628f5b7b026b1efec0bd9bbaae8b
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -75,7 +75,7 @@ const binding = {
 const record = { family: 'TagSelect', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/TagSelect',
+  title: 'Mux UI React/TagSelect',
   id: 'muxui-react-r1-6-tag-select',
   component: MuxUI.TagSelect,
   tags: ['autodocs'],

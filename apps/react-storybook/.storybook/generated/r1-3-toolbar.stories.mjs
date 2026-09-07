@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:f93eeb558e0502b3a3e71df1cdec85525132a1601003b3d144976e4e27ed4576
+// @generated-content-sha256: sha256:b6670f7417619c5e630de7dde6c6894876b82a170e2b1c32759d09d2e451382f
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -44,7 +44,7 @@ const binding = {
 const record = { family: 'Toolbar', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Toolbar',
+  title: 'Mux UI React/Toolbar',
   id: 'muxui-react-r1-3-toolbar',
   component: MuxUI.Toolbar,
   tags: ['autodocs'],
