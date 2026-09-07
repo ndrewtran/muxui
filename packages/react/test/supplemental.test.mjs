@@ -325,11 +325,11 @@ test('supplemental declarations and CSS do not leak donor API names or selectors
   assert.doesNotMatch(styles, /\.tale-|--(?:neutral|color|red|success|space|radius|shadow)-/u);
   assert.match(styles, /--muxui-(?:semantic|reference)-/u);
   assert.doesNotMatch(styles, /--muxui-reference-color-neutral-/u);
-  assert.doesNotMatch(styles, /--muxui-semantic-elevation-(?:control|overlay|indicator)/u);
-  assert.match(styles, /--muxui-reference-effect-shadow-(?:s|m|l)/u);
+  assert.match(styles, /--muxui-semantic-elevation-(?:floating|overlay|modal)/u);
+  assert.doesNotMatch(styles, /--muxui-reference-effect-shadow-/u);
   assert.doesNotMatch(styles, /var\(--(?:text-line-height|mono-font-family|mono-xs-font-size|text-font-weight|transparent)\b/u);
   assert.match(styles, /--muxui-semantic-typography-body-line-height/u);
-  assert.match(styles, /--muxui-reference-typography-mono-font/u);
+  assert.match(styles, /--muxui-semantic-typography-mono-font/u);
   assert.match(styles, /--muxui-semantic-typography-mono-xs-font-size/u);
   assert.match(styles, /--muxui-semantic-typography-text-font-weight/u);
   assert.match(styles, /\.muxui-multi-select__value--placeholder\s*\{\s*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
@@ -344,7 +344,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal)$/u.test(name));
   const unknown = [...references].filter((name) => !foundations.includes(name) && !localHooks.includes(name) && !runtimeLocals.includes(name));
   assert.ok(foundations.some((name) => name.startsWith('muxui-semantic-')));
-  assert.ok(foundations.some((name) => name.startsWith('muxui-reference-')));
+  assert.ok(foundations.every((name) => name.startsWith('muxui-semantic-')));
   assert.ok(localHooks.some((name) => name.startsWith('muxui-field-')));
   assert.ok(runtimeLocals.length > 0);
   assert.deepEqual(unknown, []);

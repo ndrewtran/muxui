@@ -546,6 +546,613 @@
       "alias": "semantic.color.color-60-fg",
       "equivalence": "semantic-equivalence"
     },
+    "semantic.action.danger-background": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Background for destructive actions.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-60"
+    },
+    "semantic.action.danger-background-hover": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Destructive action background while hovered.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-50"
+    },
+    "semantic.action.danger-background-pressed": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Destructive action background while pressed.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-40"
+    },
+    "semantic.action.danger-background-subtle": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Subtle destructive action background.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-10"
+    },
+    "semantic.action.danger-background-muted": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Muted destructive action background.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-20"
+    },
+    "semantic.action.danger-foreground": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Foreground content on destructive actions.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-70"
+    },
+    "semantic.action.danger-border": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Border for destructive actions.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-30"
+    },
+    "semantic.action.selection-background": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Background for selected controls in the dark scheme.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.brand-40"
+    },
+    "semantic.action.selection-background-hover": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Selected control background while hovered in the dark scheme.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.brand-50"
+    },
+    "semantic.action.selection-pressed": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Pressed primary action background in the dark scheme.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.brand-60"
+    },
+    "semantic.action.selection-foreground": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Foreground for selected controls in the dark scheme.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.brand-100"
+    },
+    "semantic.action.selection-indicator": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Indicator accent for selected controls in the dark scheme.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.brand-20"
+    },
+    "semantic.surface.emphasis": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Emphasized neutral fill for selected or inverted surfaces.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-80",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.content.on-solid": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Neutral foreground on solid or inverse control fills.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-5",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.content.on-strong": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Subdued foreground on strong popup surfaces.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.neutral-20",
+      "modes": {
+        "colorScheme.dark": { "alias": "reference.color.neutral-70" }
+      }
+    },
+    "semantic.border.contrast": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "High-contrast edge around inverse surfaces.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-100",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.border.faint": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Low-emphasis edge for quiet controls and collection dividers.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-14",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.border.emphasis": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Emphasized edge around interactive content.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-90",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.selection.background-strong": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Strong accent fill for selected collection content.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-70",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.focus.inner": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Contrast separation between the focused control and its outer focus ring.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-100",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.border.indicator": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Default edge of compact choice indicators.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-40",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.selection.indicator": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Accent mark inside selected choice indicators.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-100",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.border.indicator-hover": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Hovered edge of compact choice indicators.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-50",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.surface.track": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Neutral background of unfilled control tracks.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.neutral-22",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.neutral-60"
+        }
+      }
+    },
+    "semantic.surface.disabled": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Low-emphasis fill for disabled control indicators.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-40",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.surface.pressed": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Neutral fill for pressed controls and quiet tracks.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.neutral-20",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "reference.color.neutral-70"
+        }
+      }
+    },
+    "semantic.surface.strong": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Strong neutral fill and tint ink for interactive surfaces.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-90",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.surface.contrast": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Maximum-contrast neutral fill and tint ink for interactive surfaces.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-100",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.surface.muted": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Muted neutral fill for pressed or low-emphasis surfaces.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-50",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.typography.compact-line-height": {
+      "layer": "semantic",
+      "type": "number",
+      "unit": "unitless",
+      "meaning": "Line height for compact labels, supporting content, or readable prose, respectively.",
+      "overridePolicy": "theme",
+      "value": 1.3
+    },
+    "semantic.typography.supporting-line-height": {
+      "layer": "semantic",
+      "type": "number",
+      "unit": "unitless",
+      "meaning": "Line height for compact labels, supporting content, or readable prose, respectively.",
+      "overridePolicy": "theme",
+      "value": 1.4
+    },
+    "semantic.typography.prose-line-height": {
+      "layer": "semantic",
+      "type": "number",
+      "unit": "unitless",
+      "meaning": "Line height for compact labels, supporting content, or readable prose, respectively.",
+      "overridePolicy": "theme",
+      "value": 1.6
+    },
+    "semantic.motion.interaction-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of standard pointer, field, and popup feedback.",
+      "overridePolicy": "theme",
+      "value": 150
+    },
+    "semantic.motion.interaction-easing": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Easing curve for the named interaction phase.",
+      "overridePolicy": "theme",
+      "value": "ease"
+    },
+    "semantic.layout.dense-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Dense separation between toolbar items and navigation rows.",
+      "overridePolicy": "theme",
+      "value": 2,
+      "relative": {
+        "value": 0.125,
+        "unit": "rem"
+      }
+    },
+    "semantic.layout.utility-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Inset inside compact editor toolbars and utility actions.",
+      "overridePolicy": "theme",
+      "value": 4,
+      "relative": {
+        "value": 0.25,
+        "unit": "rem"
+      }
+    },
+    "semantic.shape.editor-mark-radius": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Corner radius for the named editor or navigation surface.",
+      "overridePolicy": "theme",
+      "value": 2
+    },
+    "semantic.motion.quick-transition-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of short control transitions and dismissals.",
+      "overridePolicy": "theme",
+      "value": 100
+    },
+    "semantic.layout.swatch-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Separation between compact color swatches.",
+      "overridePolicy": "theme",
+      "value": 4,
+      "relative": {
+        "value": 0.25,
+        "unit": "rem"
+      }
+    },
+    "semantic.motion.quick-feedback-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of immediate small-control feedback.",
+      "overridePolicy": "theme",
+      "value": 80
+    },
+    "semantic.motion.reveal-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of content and control reveal transitions.",
+      "overridePolicy": "theme",
+      "value": 200
+    },
+    "semantic.motion.mode-toggle-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of the color-mode toggle transition.",
+      "overridePolicy": "theme",
+      "value": 500
+    },
+    "semantic.motion.panel-enter-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of auxiliary panels entering.",
+      "overridePolicy": "theme",
+      "value": 180
+    },
+    "semantic.layout.micro-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Minimal separation between stacked command text.",
+      "overridePolicy": "theme",
+      "value": 1,
+      "relative": {
+        "value": 0.0625,
+        "unit": "rem"
+      }
+    },
+    "semantic.layout.shortcut-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Separation between keys in a keyboard shortcut.",
+      "overridePolicy": "theme",
+      "value": 3,
+      "relative": {
+        "value": 0.1875,
+        "unit": "rem"
+      }
+    },
+    "semantic.shape.navigation-radius": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Corner radius for the named editor or navigation surface.",
+      "overridePolicy": "theme",
+      "value": 6
+    },
+    "semantic.typography.badge-size": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Text size for utility controls or compact count badges, respectively.",
+      "overridePolicy": "theme",
+      "value": 11,
+      "relative": {
+        "value": 0.6875,
+        "unit": "rem"
+      }
+    },
+    "semantic.motion.selection-enter-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of compact selection popovers entering.",
+      "overridePolicy": "theme",
+      "value": 120
+    },
+    "semantic.motion.reveal-easing": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Easing curve for the named interaction phase.",
+      "overridePolicy": "theme",
+      "value": "ease-out"
+    },
+    "semantic.motion.dismiss-easing": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Easing curve for the named interaction phase.",
+      "overridePolicy": "theme",
+      "value": "ease-in"
+    },
+    "semantic.layout.payment-icon-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Trailing clearance for an embedded field affordance.",
+      "overridePolicy": "theme",
+      "value": 40,
+      "relative": {
+        "value": 2.5,
+        "unit": "rem"
+      }
+    },
+    "semantic.motion.progress-update-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of progress value interpolation.",
+      "overridePolicy": "theme",
+      "value": 300
+    },
+    "semantic.motion.progress-spin-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Period of an indeterminate progress indicator rotation.",
+      "overridePolicy": "theme",
+      "value": 1000
+    },
+    "semantic.motion.constant-easing": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Easing curve for the named interaction phase.",
+      "overridePolicy": "theme",
+      "value": "linear"
+    },
+    "semantic.motion.progress-sweep-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Period of an indeterminate progress indicator arc sweep.",
+      "overridePolicy": "theme",
+      "value": 1200
+    },
+    "semantic.motion.progress-easing": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Easing curve for the named interaction phase.",
+      "overridePolicy": "theme",
+      "value": "ease-in-out"
+    },
+    "semantic.layout.navigation-inset-block": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Block inset within navigation search fields.",
+      "overridePolicy": "theme",
+      "value": 6,
+      "relative": {
+        "value": 0.375,
+        "unit": "rem"
+      }
+    },
+    "semantic.layout.navigation-inset-inline": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Inline inset within navigation search and utility actions.",
+      "overridePolicy": "theme",
+      "value": 10,
+      "relative": {
+        "value": 0.625,
+        "unit": "rem"
+      }
+    },
+    "semantic.layout.navigation-search-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Leading clearance for the navigation search icon.",
+      "overridePolicy": "theme",
+      "value": 34,
+      "relative": {
+        "value": 2.125,
+        "unit": "rem"
+      }
+    },
+    "semantic.shape.navigation-surface-radius": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Corner radius for navigation search surfaces.",
+      "overridePolicy": "theme",
+      "value": 10
+    },
+    "semantic.shape.feature-card-radius": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Corner radius for feature cards.",
+      "overridePolicy": "theme",
+      "value": 12
+    },
+    "semantic.layout.description-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Separation between compact feature descriptions and their surrounding content.",
+      "overridePolicy": "theme",
+      "value": 4,
+      "relative": {
+        "value": 0.25,
+        "unit": "rem"
+      }
+    },
+    "semantic.motion.content-resize-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of content-height interpolation.",
+      "overridePolicy": "theme",
+      "value": 600
+    },
+    "semantic.motion.progress-travel-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Period of an indeterminate progress bar traversal.",
+      "overridePolicy": "theme",
+      "value": 1500
+    },
+    "semantic.layout.search-clear-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Trailing clearance for an embedded field affordance.",
+      "overridePolicy": "theme",
+      "value": 32,
+      "relative": {
+        "value": 2,
+        "unit": "rem"
+      }
+    },
+    "semantic.typography.utility-size": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Text size for utility controls or compact count badges, respectively.",
+      "overridePolicy": "theme",
+      "value": 16,
+      "relative": {
+        "value": 1,
+        "unit": "rem"
+      }
+    },
     "semantic.control.min-height": {
       "layer": "semantic",
       "type": "dimension",
@@ -567,6 +1174,14 @@
         }
       }
     },
+    "semantic.control.padding-block": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Block spacing inside controls.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-3xs"
+    },
     "semantic.control.radius": {
       "layer": "semantic",
       "type": "dimension",
@@ -584,6 +1199,51 @@
       "alias": "semantic.color.neutral-5",
       "equivalence": "semantic-equivalence"
     },
+    "semantic.field.border": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Default border for editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-26",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.field.content": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Primary content inside editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-90",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.field.placeholder": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Placeholder content for editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-50",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.field.label": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label content for editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-70",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.field.description": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Description content for editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-60",
+      "equivalence": "semantic-equivalence"
+    },
     "semantic.feedback.invalid": {
       "layer": "semantic",
       "type": "color",
@@ -597,6 +1257,22 @@
         }
       }
     },
+    "semantic.feedback.invalid-border": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Border and focus accent for invalid controls.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-60"
+    },
+    "semantic.feedback.invalid-content": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Validation text and invalid labels using the fixed red palette shade; independent of invalid control borders.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.red-60"
+    },
     "semantic.focus.ring": {
       "layer": "semantic",
       "type": "color",
@@ -604,6 +1280,24 @@
       "meaning": "Visible focus indicator.",
       "overridePolicy": "fixed",
       "alias": "semantic.color.color-60",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.focus.neutral-ring": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Neutral focus outline for controls and editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-50",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.focus.neutral-glow": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Neutral focus glow around controls and editable fields.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-60",
       "equivalence": "semantic-equivalence"
     },
     "semantic.motion.feedback": {
@@ -686,6 +1380,15 @@
       "alias": "semantic.color.neutral-50",
       "equivalence": "semantic-equivalence"
     },
+    "semantic.content.secondary": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Secondary content for values and supporting controls.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-60",
+      "equivalence": "semantic-equivalence"
+    },
     "semantic.content.default": {
       "layer": "semantic",
       "type": "color",
@@ -752,6 +1455,24 @@
           "alias": "reference.color.neutral-70"
         }
       }
+    },
+    "semantic.border.popup": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Low-emphasis edge around floating popup surfaces.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-20",
+      "equivalence": "semantic-equivalence"
+    },
+    "semantic.border.dragging": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Emphasized outline of a dragged control thumb.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.neutral-80",
+      "equivalence": "semantic-equivalence"
     },
     "semantic.border.default": {
       "layer": "semantic",
@@ -836,6 +1557,156 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.space-4xs"
     },
+    "semantic.layout.inset-tiny": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Tiny inset for compact content containers.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-3xs"
+    },
+    "semantic.layout.control-content-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Density-aware separation between related controls and compound content groups.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-xs",
+      "modes": {
+        "density.compact": { "alias": "reference.dimension.space-3xs" }
+      }
+    },
+    "semantic.layout.control-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Density-aware inset on either axis within compound control surfaces.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-xs",
+      "modes": {
+        "density.compact": { "alias": "reference.dimension.space-3xs" }
+      }
+    },
+    "semantic.layout.resize-handle-size": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Thickness of a resizable panel divider along its resize axis.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-3xs"
+    },
+    "semantic.layout.viewport-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Minimum clearance between floating content and the viewport edges.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-s"
+    },
+    "semantic.layout.content-margin": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Outer separation around grouped content, on either axis.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-s"
+    },
+    "semantic.layout.inset-small": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Small inset for collection items and compact fields.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-2xs"
+    },
+    "semantic.layout.inset-medium": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Medium inset for content and control surfaces.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-xs"
+    },
+    "semantic.layout.inset-large": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Large inset for section content and calendar surfaces.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-s"
+    },
+    "semantic.layout.inset-xlarge": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Extra-large inset for readable content blocks.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-m"
+    },
+    "semantic.layout.inset-xxlarge": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Very large inset for media captions and spacious content.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-2xl"
+    },
+    "semantic.layout.overlay-title-inset": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Inline inset reserved for overlay title affordances.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-xl"
+    },
+    "semantic.layout.tight-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Tight gap between compact content items.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-4xs"
+    },
+    "semantic.layout.content-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Gap between readable content blocks.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-m"
+    },
+    "semantic.layout.content-indent": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Indent for nested readable content.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-l"
+    },
+    "semantic.layout.action-gap": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Gap between related actions and their supporting content.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-xs"
+    },
+    "semantic.layout.icon-size": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Default compact icon and affordance size.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-xs"
+    },
+    "semantic.layout.content-row-min-height": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Minimum height for compact content rows.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-m"
+    },
     "semantic.shape.indicator-radius": {
       "layer": "semantic",
       "type": "dimension",
@@ -843,6 +1714,22 @@
       "meaning": "Corner radius for compact choice indicators.",
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-xs"
+    },
+    "semantic.shape.micro-radius": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Minimal radius for compact status marks.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-4xs"
+    },
+    "semantic.shape.compact-radius": {
+      "layer": "semantic",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Compact radius for small utility surfaces.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.space-3xs"
     },
     "semantic.shape.container-radius": {
       "layer": "semantic",
@@ -947,6 +1834,94 @@
       "meaning": "Tiny text size for compact indicators and calendar headers.",
       "overridePolicy": "theme",
       "alias": "reference.dimension.font-size-xs"
+    },
+    "semantic.typography.display-font": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Font family for display, heading, and title content.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.display-font"
+    },
+    "semantic.typography.body-font": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Font family for body and control content.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.body-font"
+    },
+    "semantic.typography.expressive-font": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Expressive font family for decorative content.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.expressive-font"
+    },
+    "semantic.typography.expressive-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Expressive font family alias.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.expressive-font-family"
+    },
+    "semantic.typography.mono-font": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Monospace font family for code and technical content.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.mono-font"
+    },
+    "semantic.typography.display-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Display family alias for heading and title roles.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.display-font-family"
+    },
+    "semantic.typography.heading-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Heading font family.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.heading-font-family"
+    },
+    "semantic.typography.title-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Title font family.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.title-font-family"
+    },
+    "semantic.typography.label-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Label font family.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.label-font-family"
+    },
+    "semantic.typography.text-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Text font family.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.text-font-family"
+    },
+    "semantic.typography.mono-font-family": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Monospace font family alias.",
+      "overridePolicy": "theme",
+      "alias": "reference.typography.mono-font-family"
     },
     "semantic.typography.heading-weight": {
       "layer": "semantic",
