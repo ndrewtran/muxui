@@ -75,7 +75,6 @@ function assertRecordOverrides(overrides, assignments) {
   if (Object.keys(overrides).some((id) => Object.hasOwn(assignments, id))) throw new TypeError('MUXUI_SCALE_OVERRIDE_CONFLICT');
 }
 
-export function documentFromSettings(settings, options = {}) { return validateScaleDocument(createScaleDocument(settings, options)); }
 export function settingsFromDocument(document) {
   validateScaleDocument(document);
   const generated = generateScaleTheme({ source: defaultThemeSource, ...document.scale });
@@ -83,7 +82,6 @@ export function settingsFromDocument(document) {
   return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: document.scale.contrastPivot, curvature: document.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(document.modes), additionalOverrides: Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
 }
 export function serializeScaleDocument(document) { return serializeThemeAuthoringDocument(validateScaleDocument(document), { source: defaultThemeSource }); }
-export function digestScaleDocument(document) { return `source:${validateScaleDocument(document).id}`; }
 export function presetSettings(family, presetId) {
   if (!['standard', 'mono'].includes(family)) throw new TypeError('MUXUI_SCALE_MODE_INVALID');
   const preset = (family === 'mono' ? MONO_PRESETS : STANDARD_PRESETS).find(([id]) => id === presetId);

@@ -917,7 +917,6 @@ assertReactR15GeneratedContracts({
   runtimeSources,
   styles: fullCssBody,
 });
-const fixed53Slugs = new Set(r15Families.map(({ slug }) => slug));
 const supplementalSource = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8').catch(() => '');
 const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8').catch(() => '');
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');

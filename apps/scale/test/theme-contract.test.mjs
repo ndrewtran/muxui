@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import {
   DEFAULT_SETTINGS,
   createScaleDocument,
-  digestScaleDocument,
   previewCss,
   previewPalette,
   previewTheme,
@@ -21,7 +20,7 @@ test('Scale source round-trips through the strict typed document boundary', () =
   const serialized = serializeScaleDocument(document);
   const restored = JSON.parse(serialized);
   assert.deepEqual(restored, document);
-  assert.equal(digestScaleDocument(restored), 'source:muxui:theme:round-trip');
+  assert.equal(restored.id, 'muxui:theme:round-trip');
 });
 
 test('Scale source rejects unknown fields and unsafe slugs', () => {
