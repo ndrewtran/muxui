@@ -26,7 +26,8 @@ runtime objects; this work does not activate additional platform renderers.
 
 Mux retains its own public component API and serializable values. The transfer
 also corrects confirmed defects: accessible names and error relationships,
-enabled control text contrast (including dark danger-ghost buttons), read-only selection behavior, controlled payment formatting, indeterminate
+enabled text contrast (including dark danger-ghost buttons, HeaderNav, and Sidebar),
+read-only selection behavior, controlled payment formatting, indeterminate
 progress semantics, and scoped editor shortcuts. Editor images use durable
 URLs through the existing consumer callback or URL prompt so saved documents
 do not contain temporary browser object URLs. Scale preview/export and shadow
@@ -40,8 +41,29 @@ The detailed donor fixtures remain optional migration diagnostics.
 
 ## Validation
 
-Final workspace validation and delivery review are in progress. Successful
-commands and remaining limitations will be recorded here before delivery.
+Validated with Node 24.19.0 and pnpm 10.33.0:
+
+- `pnpm generate`: all 12 workspace projects passed.
+- `pnpm check:all`: package checks passed, including strict packed consumer
+  examples and TypeScript. The Storybook findings from that run were corrected
+  and its affected checks rerun successfully below.
+- Storybook unit checks: 27/27 passed; foundation checks also passed in the
+  workspace run. `pnpm --filter @muxui/react-storybook check:a11y`: 2/2 passed,
+  covering light/dark component accessibility and interaction stories.
+  A focused browser-proof sweep also passed all 148 light/dark cases.
+- `pnpm --filter @muxui/react check:browser`: 4/4 passed.
+- Scale `check`, `build`, and `check:browser`: passed, including the complete
+  theme authoring and persistence flow in an isolated theme directory.
+- The isolated Tailwind consumer frozen install and `check`: passed.
+- `pnpm --filter @muxui/react-storybook build`: passed.
+- `pnpm generate:check`: two generation runs in a clean checkout left no drift.
+- Independent review findings in token effects, editor shortcuts, and durable
+  editor image URLs were corrected and rechecked.
+
+Representative visual review included the foundation gallery, Button variants
+and sizes in both modes, Scale's themed component previews, and the theme
+control's first-click behavior. This is not a claim of literal pixel equality
+across every browser or a requirement to preserve Tale equality in future work.
 
 ## Future changes
 

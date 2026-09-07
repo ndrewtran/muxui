@@ -1,9 +1,24 @@
 import React from 'react';
+import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
 import { migrationFixtureSymbol } from './visual-migration-contract.mjs';
 import { fixtureFieldPropsFor, fixtureRenderModel } from './visual-migration-fixture-map.mjs';
+
+// Keep the theme control and Storybook toolbar on the same mode.
+function ColorModeTogglePreview(args) {
+  const theme = React.useContext(StorybookThemeContext);
+  return React.createElement(MuxUI.ColorModeToggle, {
+    ...args,
+    mode: args.mode ?? theme?.scheme,
+    'aria-label': 'Toggle color mode',
+    onModeChange: (mode) => {
+      args.onModeChange?.(mode);
+      theme?.setScheme(mode);
+    },
+  });
+}
 
 const MUXUI_SEARCH_FIELD_VALUE = 'MuxUI';
 const HISTORICAL_MIGRATION_SEARCH_FIELD_VALUE = ['C', 'o', 'r', 'e'].join('');
@@ -738,7 +753,7 @@ Object.assign(ADAPTERS, {
     e(MuxUI.CheckboxField.Description, null, 'Optional setting'),
     e(MuxUI.CheckboxField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
-  ColorModeToggle: (args) => e(MuxUI.ColorModeToggle, { ...args, 'aria-label': 'Toggle color mode' }, 'Toggle mode'),
+  ColorModeToggle: (args) => e(ColorModeTogglePreview, args),
   CommandPalette: (args) => e(MuxUI.CommandPalette.Root, { ...args, open: args.open ?? false },
     e(MuxUI.CommandPalette.Trigger, { disabled: args.disabled }, 'Open command palette'),
     e(MuxUI.CommandPalette.Backdrop),
@@ -1605,8 +1620,8 @@ const BROWSER_PROOF_PLANS = {
     const input = root.querySelector('input');
     assertBrowser(input, 'autocomplete input');
     input.focus();
-    await waitForVisibleBrowserElement('.muxui-autocomplete-list', 'Autocomplete');
-    const option = root.querySelector('.muxui-autocomplete-option');
+    const list = await waitForVisibleBrowserElement('.muxui-autocomplete-list', 'Autocomplete');
+    const option = list.querySelector('.muxui-autocomplete-option');
     assertBrowser(option, 'autocomplete option');
     option.click();
     await waitForBrowserEvent(canvasElement, 'change', 'Autocomplete');

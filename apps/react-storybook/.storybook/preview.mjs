@@ -1,4 +1,6 @@
 import React from 'react';
+import { useGlobals } from 'storybook/preview-api';
+import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { isMigrationFixtureRequest } from '../src/visual-migration-contract.mjs';
 import { MigrationFixture } from '../src/migration-visual.fixture.mjs';
@@ -117,6 +119,7 @@ export default {
   },
   decorators: [
     (Story, context) => {
+      const [, updateGlobals] = useGlobals();
       const scheme = context.globals?.colorScheme === 'dark' ? 'dark' : 'light';
       const direction = context.globals?.direction === 'rtl' ? 'rtl' : 'ltr';
       const migration = isMigrationFixtureRequest(context.id, window.location.search);
@@ -131,7 +134,11 @@ export default {
       return React.createElement(
         StorySurface,
         { scheme, direction, viewMode: context.viewMode, migration },
-        React.createElement(MuxUI.ToastProvider, { placement: migration ? 'bottom-end' : undefined }, story),
+        React.createElement(
+          StorybookThemeContext.Provider,
+          { value: { scheme, setScheme: (colorScheme) => updateGlobals({ colorScheme }) } },
+          React.createElement(MuxUI.ToastProvider, { placement: migration ? 'bottom-end' : undefined }, story),
+        ),
       );
     },
   ],

@@ -1065,14 +1065,21 @@
 [data-muxui-color-scheme='dark'] .muxui-header-nav {
   background: var(--muxui-semantic-color-neutral-14);
   border-color: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn {
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn:hover {
   background: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn--current {
   background: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-header-nav__mobile-trigger:hover {
@@ -2515,6 +2522,27 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 [data-muxui-color-scheme='dark'] .muxui-sidebar {
   background: var(--muxui-semantic-color-neutral-14);
   border-color: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+[data-muxui-color-scheme='dark'] :is(
+  .muxui-sidebar__nav-link,
+  .muxui-sidebar__nav-link:hover,
+  .muxui-sidebar__nav-link--current,
+  .muxui-sidebar__nav-btn,
+  .muxui-sidebar__nav-btn:hover,
+  .muxui-sidebar__nav-btn--current,
+  .muxui-sidebar__account-name,
+  .muxui-sidebar__feature-card-title
+) {
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+[data-muxui-color-scheme='dark'] :is(
+  .muxui-sidebar__account-email,
+  .muxui-sidebar__feature-card-description
+) {
+  color: var(--muxui-semantic-color-neutral-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-sidebar__search-input {

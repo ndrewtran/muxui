@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/supplemental/styles.css
- * @generated-content-sha256: sha256:a5a03b312e4f628ae7ac61011128730e9b11e9419ed0521183377bd29d4d95de
+ * @generated-content-sha256: sha256:c9b3980976e97954e8a923b62cc4f62f0c2faae325e8b4df2a3943472e045c7c
  */
 /* Mux UI supplemental React Aria parity styles. Values are expressed through the Mux token graph. */
 
@@ -1068,14 +1068,21 @@
 [data-muxui-color-scheme='dark'] .muxui-header-nav {
   background: var(--muxui-semantic-color-neutral-14);
   border-color: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn {
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn:hover {
   background: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn--current {
   background: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-header-nav__mobile-trigger:hover {
@@ -2518,6 +2525,27 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 [data-muxui-color-scheme='dark'] .muxui-sidebar {
   background: var(--muxui-semantic-color-neutral-14);
   border-color: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+[data-muxui-color-scheme='dark'] :is(
+  .muxui-sidebar__nav-link,
+  .muxui-sidebar__nav-link:hover,
+  .muxui-sidebar__nav-link--current,
+  .muxui-sidebar__nav-btn,
+  .muxui-sidebar__nav-btn:hover,
+  .muxui-sidebar__nav-btn--current,
+  .muxui-sidebar__account-name,
+  .muxui-sidebar__feature-card-title
+) {
+  color: var(--muxui-semantic-color-neutral-100);
+}
+
+[data-muxui-color-scheme='dark'] :is(
+  .muxui-sidebar__account-email,
+  .muxui-sidebar__feature-card-description
+) {
+  color: var(--muxui-semantic-color-neutral-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-sidebar__search-input {
