@@ -4,7 +4,9 @@ import { resolve } from 'node:path';
 import { parseFragment } from 'parse5';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
-const docsDist = resolve(repositoryRoot, 'apps/docs/dist');
+const docsDist = process.argv[2] === undefined
+	? resolve(repositoryRoot, 'apps/docs/dist')
+	: resolve(process.argv[2]);
 const canonicalCatalog = createRequire(import.meta.url)('@muxui/catalog');
 
 function assert(condition, message) {

@@ -95,16 +95,25 @@ if (!isCatalogModule(loadedCatalog)) {
 
 const catalog = loadedCatalog;
 
-const repositoryRoot = [
+function isCanonicalRepositoryRoot(candidate: string): boolean {
+	return existsSync(resolve(candidate, 'catalog'))
+		&& existsSync(resolve(candidate, 'packages/catalog/package.json'));
+}
+
+const configuredRepositoryRoot = process.env.MUXUI_REPOSITORY_ROOT;
+const repositoryCandidates = [
+	configuredRepositoryRoot === undefined ? undefined : resolve(configuredRepositoryRoot),
+	resolve(process.cwd(), '../..'),
 	resolve(import.meta.dirname, '../../../../'),
 	resolve(import.meta.dirname, '../../../../../'),
 	resolve(process.cwd()),
-].find((candidate) => existsSync(resolve(candidate, 'catalog')));
+].filter((candidate): candidate is string => candidate !== undefined);
+const repositoryRoot = repositoryCandidates.find(isCanonicalRepositoryRoot);
 
 if (!repositoryRoot) {
-	throw new Error('Mux UI docs could not locate the canonical catalog sources.');
+	throw new Error('Mux UI docs could not locate the canonical catalog sources. Set MUXUI_REPOSITORY_ROOT to the repository root when running from a generated output directory.');
 }
-const canonicalRepositoryRoot = repositoryRoot;
+export const canonicalRepositoryRoot = repositoryRoot;
 
 function requiredString(value: unknown, field: string): string {
 	if (typeof value !== 'string' || value.length === 0) {

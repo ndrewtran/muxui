@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
 const canonicalCatalog = createRequire(import.meta.url)('@muxui/catalog');
+const { executeCommand, parseCliArguments } = createRequire(import.meta.url)('@muxui/tooling');
+const { commandRegistry } = createRequire(import.meta.url)('@muxui/tooling/registry');
 
 function assert(condition, message) {
 	if (!condition) throw new Error(message);
@@ -88,6 +90,39 @@ for (const guide of guides) {
 	if (guide.source.contentDigest !== undefined) {
 		assert(`sha256:${createHash('sha256').update(sourceText).digest('hex')}` === guide.source.contentDigest, `The guide ${guide.id} source digest is stale.`);
 	}
+}
+
+const discoveryGuide = guides.find(({ id }) => id === 'muxui:guide:discovery');
+assert(discoveryGuide !== undefined, 'The canonical Discovery & CLI guide is missing from the guide inventory.');
+const discoverySource = discoveryGuide.source?.content;
+assert(typeof discoverySource === 'string' && discoverySource.length > 0, 'The canonical Discovery & CLI guide has no source path.');
+const discoveryText = readFileSync(resolve(repositoryRoot, discoverySource), 'utf8');
+const commandExamples = new Set(commandRegistry.commands.flatMap(({ examples }) => examples));
+const discoveryCommands = [...discoveryText.matchAll(/```(?:bash|sh)\n([\s\S]*?)```/gu)]
+	.flatMap(([, block]) => block.split('\n').map((line) => line.trim()).filter(Boolean));
+assert(discoveryCommands.length > 0, 'The canonical Discovery & CLI guide has no shell examples.');
+const discoveredCommandNames = new Set();
+for (const commandLine of discoveryCommands) {
+	assert(commandExamples.has(commandLine), `The Discovery & CLI guide contains a command absent from the canonical CLI registry: ${commandLine}`);
+	const tokens = commandLine.split(/\s+/u);
+	assert(tokens.shift() === 'muxui', `The Discovery & CLI guide command must begin with muxui: ${commandLine}`);
+	const parsed = parseCliArguments(tokens);
+	assert(parsed.kind === 'command' && parsed.error === undefined, `The Discovery & CLI guide command failed canonical parsing: ${commandLine}`);
+	discoveredCommandNames.add(parsed.command);
+	const output = executeCommand(parsed.command, parsed.request, canonicalCatalog);
+	const definition = commandRegistry.commands.find(({ name }) => name === parsed.command);
+	assert(definition !== undefined, `The parsed Discovery & CLI command is absent from the canonical CLI registry: ${commandLine}`);
+	assert(
+		typeof output === 'object'
+			&& output !== null
+			&& !Array.isArray(output)
+			&& output.type !== 'error'
+			&& (output.type === definition.responseType || (parsed.command === 'get' && output.type === 'artifact.detail.section-page')),
+		`The Discovery & CLI guide command did not return its canonical success envelope: ${commandLine}`,
+	);
+}
+for (const { name } of commandRegistry.commands) {
+	assert(discoveredCommandNames.has(name), `The Discovery & CLI guide does not demonstrate canonical CLI command ${name}.`);
 }
 
 const missing = canonicalCatalog.getArtifact({

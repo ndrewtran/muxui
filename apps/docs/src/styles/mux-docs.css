@@ -253,6 +253,21 @@ main > .content-panel:nth-child(2) {
 	max-width: 50rem;
 }
 
+.api-binding {
+	display: flex;
+	align-items: baseline;
+	gap: var(--muxui-reference-dimension-space-xs);
+	margin-block: 0 var(--muxui-reference-dimension-space-s);
+	color: var(--muxui-semantic-content-default);
+	font-family: var(--muxui-reference-typography-mono-font);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+}
+
+.api-binding strong {
+	color: var(--muxui-semantic-content-strong);
+	font-weight: var(--muxui-semantic-typography-label-weight);
+}
+
 .related-guidance {
 	max-width: 50rem;
 	margin-block-start: var(--muxui-reference-dimension-space-m);
@@ -348,30 +363,6 @@ main > .content-panel:nth-child(2) {
 	background: var(--muxui-semantic-surface-raised);
 }
 
-.cli-command-list {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	border-block-start: 1px solid var(--muxui-semantic-border-default);
-	border-inline-start: 1px solid var(--muxui-semantic-border-default);
-}
-
-.cli-command {
-	padding: var(--muxui-reference-dimension-space-s);
-	border-inline-end: 1px solid var(--muxui-semantic-border-default);
-	border-block-end: 1px solid var(--muxui-semantic-border-default);
-}
-
-.cli-command h2 {
-	margin-block: 0 var(--muxui-reference-dimension-space-2xs);
-	font-family: var(--muxui-reference-typography-mono-font);
-	font-size: var(--muxui-semantic-typography-heading-s-font-size);
-}
-
-.cli-command p {
-	margin-block: 0 var(--muxui-reference-dimension-space-s);
-}
-
-.cli-command pre,
 pre {
 	margin: 0;
 	border: 1px solid var(--muxui-semantic-border-subtle);
@@ -592,7 +583,6 @@ site-search dialog {
 	:root { --sl-content-pad-x: var(--muxui-reference-dimension-space-s); }
 	.mux-two-column { display: block; }
 	.home-showcase { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-	.cli-command-list { grid-template-columns: 1fr; }
 	.demo-live { padding: var(--muxui-reference-dimension-space-s); }
 	main > .content-panel:nth-child(2) { padding-block-start: var(--muxui-reference-dimension-space-s); }
 	.showcase-item { min-height: 10rem; }

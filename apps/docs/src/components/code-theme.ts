@@ -15,7 +15,7 @@ export const muxCodeTheme: MuxCodeTheme = {
 	settings: [
 		{
 			scope: ['comment', 'punctuation.definition.comment'],
-			settings: { foreground: 'var(--muxui-semantic-content-muted)' },
+			settings: { foreground: 'var(--muxui-semantic-content-default)' },
 		},
 		{
 			scope: ['string', 'constant.other.symbol', 'entity.name.tag', 'support.class.component'],
@@ -27,7 +27,7 @@ export const muxCodeTheme: MuxCodeTheme = {
 		},
 		{
 			scope: ['constant.numeric', 'constant.language'],
-			settings: { foreground: 'var(--muxui-semantic-status-warning)' },
+			settings: { foreground: 'var(--muxui-semantic-content-link)' },
 		},
 	],
 };

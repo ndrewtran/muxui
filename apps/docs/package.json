@@ -11,7 +11,7 @@
     "check:docs:rendered": "node scripts/check-rendered-source.mjs",
     "preview": "astro preview",
     "astro": "astro",
-    "check": "astro check"
+    "check": "node scripts/check.mjs"
   },
   "dependencies": {
     "@astrojs/react": "5.0.7",
@@ -25,6 +25,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.10",
+    "@muxui/tooling": "workspace:*",
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "parse5": "8.0.1",

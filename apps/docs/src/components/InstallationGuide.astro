@@ -2,12 +2,12 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import CodeBlock from './CodeBlock.astro';
+import { canonicalRepositoryRoot } from '../lib/catalog.ts';
 
-const repositoryRoot = resolve(import.meta.dirname, '../../../../../');
 const packageManifest: unknown = JSON.parse(
-	readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8'),
+	readFileSync(resolve(canonicalRepositoryRoot, 'packages/react/package.json'), 'utf8'),
 );
-const packageReadme = readFileSync(resolve(repositoryRoot, 'packages/react/README.md'), 'utf8');
+const packageReadme = readFileSync(resolve(canonicalRepositoryRoot, 'packages/react/README.md'), 'utf8');
 
 function isPackageManifest(value: unknown): value is { name: string; version: string } {
 	return typeof value === 'object'
