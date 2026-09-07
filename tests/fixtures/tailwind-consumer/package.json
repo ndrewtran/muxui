@@ -1,0 +1,12 @@
+{
+  "name": "@muxui/tokens-tailwind-consumer-fixture",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "4.1.13",
+    "tailwindcss": "4.1.13"
+  }
+}

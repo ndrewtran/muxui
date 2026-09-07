@@ -120,7 +120,7 @@ test('E-G1.2-04 native themes are exact @muxui/tokens projections with no CSS au
   assert.equal(nativeThemeProjection.componentSupportClaim, 'none');
   assert.equal(nativeThemeProjection.source.tokenId, tokenArtifact.id);
   assert.equal(nativeThemeProjection.source.tokenSourceRevision, tokenArtifact.contentRevision);
-  assert.equal(nativeThemeProjection.source.tokenContractVersion, '2.0.0');
+  assert.equal(nativeThemeProjection.source.tokenContractVersion, tokenArtifact.record.tokenContractVersion);
   assert.equal(nativeThemeProjection.source.transformOwner, '@muxui/tokens#compileNativeTheme');
   for (const [platform, profile] of [['ios', 'native.ios'], ['android', 'native.android']]) {
     const expected = compileNativeTheme(tokenArtifact.record, { profile });

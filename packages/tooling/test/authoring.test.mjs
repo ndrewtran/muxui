@@ -448,6 +448,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
   assert.deepEqual(closure.packages.map(({ name }) => name), [
     '@muxui/react-playground',
     '@muxui/react-storybook',
+    '@muxui/scale',
     '@muxui/catalog',
     '@muxui/react',
     '@muxui/react-native',
@@ -457,6 +458,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
   ]);
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react-playground check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react-storybook check'));
+  assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/scale check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/catalog check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react-native check'));
@@ -477,6 +479,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
   assert.deepEqual(schemaClosure.packages.map(({ name }) => name), [
     '@muxui/react-playground',
     '@muxui/react-storybook',
+    '@muxui/scale',
     '@muxui/catalog',
     '@muxui/react',
     '@muxui/react-native',
@@ -572,7 +575,11 @@ test('E-R1.5-02: every React family and example source passes canonical diagnosi
     kind === 'example' && record.binding?.ref?.endsWith('#web.react')
   ));
   assert.equal(components.length, 53);
-  assert.equal(examples.length, 53);
+  assert.ok(examples.length >= components.length);
+  assert.deepEqual(
+    [...new Set(examples.map(({ record }) => record.binding.ref))].sort(),
+    components.map(({ id }) => `${id}#web.react`).sort(),
+  );
   for (const artifact of [...components, ...examples]) {
     const diagnosis = diagnoseCanonicalSource({
       context,

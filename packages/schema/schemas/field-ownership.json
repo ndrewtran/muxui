@@ -3335,14 +3335,21 @@
       "name": "value",
       "owner": "token-source-contract",
       "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/valueOrAlias/oneOf/0/properties/value"
+      "schemaPointer": "#/$defs/valueOrAlias/anyOf/0/properties/value"
     },
     {
       "class": "authored",
       "name": "alias",
       "owner": "token-source-contract",
       "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/valueOrAlias/oneOf/1/properties/alias"
+      "schemaPointer": "#/$defs/valueOrAlias/anyOf/1/properties/alias"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "mix",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/valueOrAlias/anyOf/2/properties/mix"
     },
     {
       "class": "authored",
@@ -3763,6 +3770,825 @@
       "schema": "token-source.schema.json",
       "name": "sourceCrosswalk",
       "schemaPointer": "#/properties/sourceCrosswalk"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "fonts",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/properties/theme/properties/fonts"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "typography",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/properties/theme/properties/typography"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "scale",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/properties/theme/properties/scale"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "fluid",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/properties/fluid"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "formula",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/properties/formula"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "relative",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/properties/relative"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "mix",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/properties/mix"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "min",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/min"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "max",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/max"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "coefficient",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/coefficient"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "offset",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/offset"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "lengthUnit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/lengthUnit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "viewportUnit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/viewportUnit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/dimensionFormula/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "token",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/dimensionFormula/properties/token"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "factor",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/dimensionFormula/properties/factor"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/relativeDimension/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "unit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/relativeDimension/properties/unit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "space",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/colorMix/properties/space"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "token",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/colorMix/properties/token"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "color",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/colorMix/properties/color"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "weight",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/colorMix/properties/weight"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectLength/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "unit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectLength/properties/unit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "offsetX",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectShadowLayer/properties/offsetX"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "offsetY",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectShadowLayer/properties/offsetY"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "blur",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectShadowLayer/properties/blur"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "spread",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectShadowLayer/properties/spread"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "color",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectShadowLayer/properties/color"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "inset",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectShadowLayer/properties/inset"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectValue/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "layers",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectValue/properties/layers"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "path",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFontAsset/properties/path"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "sha256",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFontAsset/properties/sha256"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "token",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/token"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "assets",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/assets"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "normal",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/assets/properties/normal"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "italic",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/assets/properties/italic"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "license",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/license"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "provenance",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/provenance"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "repository",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/provenance/properties/repository"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "revision",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFont/properties/provenance/properties/revision"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "display",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFonts/properties/display"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "body",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFonts/properties/body"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "expressive",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFonts/properties/expressive"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "mono",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeFonts/properties/mono"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "fontSize",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyVariant/properties/fontSize"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "fontWeight",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyVariant/properties/fontWeight"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "lineHeight",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyVariant/properties/lineHeight"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "letterSpacing",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyVariant/properties/letterSpacing"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "fontFamily",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyRole/properties/fontFamily"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "color",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyRole/properties/color"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "variants",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypographyRole/properties/variants"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "roles",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "display",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/display"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "heading",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/heading"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "title",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/title"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "label",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/label"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "body",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/body"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "mono",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/mono"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "expressive",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeTypography/properties/roles/properties/expressive"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "id",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themePreset/properties/id"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "name",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themePreset/properties/name"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "description",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themePreset/properties/description"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "namedColor",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themePreset/properties/namedColor"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "neutralColor",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themePreset/properties/neutralColor"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "id",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeMonochromePreset/properties/id"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "name",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeMonochromePreset/properties/name"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "description",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeMonochromePreset/properties/description"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "color",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeMonochromePreset/properties/color"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "algorithm",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/algorithm"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "namedShades",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/namedShades"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "neutralShades",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/neutralShades"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "defaults",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/defaults"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "standard",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/defaults/properties/standard"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "monochrome",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/defaults/properties/monochrome"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "standardPresets",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/standardPresets"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "monochromePresets",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/monochromePresets"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "radius",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/radius"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "contrast",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeScale/properties/contrast"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "unit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/unit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "base",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/base"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "curvature",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/curvature"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "multipliers",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "default",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/curvature/properties/default"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "minimum",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/curvature/properties/minimum"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "maximum",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/curvature/properties/maximum"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "step",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/curvature/properties/step"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "xs",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers/properties/xs"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "s",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers/properties/s"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "m",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers/properties/m"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "l",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers/properties/l"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "xl",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers/properties/xl"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "2xl",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeRadius/properties/multipliers/properties/2xl"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "algorithm",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeContrast/properties/algorithm"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "defaultPivot",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeContrast/properties/defaultPivot"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "pivots",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeContrast/properties/pivots"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "foregrounds",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/themeContrast/properties/foregrounds"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "default",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/fluidRecipe/properties/default"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectModeValueOrAlias/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "alias",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectModeValueOrAlias/properties/alias"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "type",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/0/properties/type"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "unit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/0/properties/unit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/0/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "modes",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/0/properties/modes"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectColor/oneOf/0/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "alpha",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectColor/oneOf/0/properties/alpha"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectColor/oneOf/1/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "alpha",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectColor/oneOf/1/properties/alpha"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectBlur/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "unit",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/effectBlur/properties/unit"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/nonEffectModeValueOrAlias/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "alias",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/nonEffectModeValueOrAlias/properties/alias"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "mix",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/nonEffectModeValueOrAlias/properties/mix"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "type",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/1/properties/type"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/1/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "modes",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/token/allOf/1/oneOf/1/properties/modes"
     }
   ],
   "governedSchemas": [

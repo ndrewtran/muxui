@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/fields.mjs
-// @generated-content-sha256: sha256:7ea8e3542b9a9870e6eb85ad1382298ae32912e5953f045c864195a45715fabd
+// @generated-content-sha256: sha256:2ad2f7165b0d83a1048846101601c4e6b945bfe494325fd93ea7207526422776
 import React from 'react';
 import {
   Autocomplete as AriaAutocomplete,
@@ -41,11 +41,26 @@ import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
+import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
 const DATE_PLACEHOLDER = parseDate('2000-01-01');
 const TIME_PLACEHOLDER = parseTime('00:00');
+const MUX_RUNTIME_SCOPE_SELECTOR = [
+  '[data-muxui-color-scheme]',
+  '[data-muxui-contrast]',
+  '[data-muxui-motion]',
+  '[data-muxui-density]',
+  '[data-muxui-direction]',
+].join(', ');
+
+function autocompletePortalContainer(input) {
+  if (typeof document === 'undefined' || !input) return undefined;
+  const scope = input.closest(MUX_RUNTIME_SCOPE_SELECTOR);
+  if (!scope || scope === document.documentElement || scope === document.body) return undefined;
+  return scope;
+}
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -66,7 +81,7 @@ function fieldDescription(description) {
 }
 
 function fieldError(errorMessage) {
-  return errorMessage === undefined ? null : React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage);
+  return React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage);
 }
 
 // Keep the approved Tale-era calendar geometry Mux UI-owned instead of importing the 1.37 glyph.
@@ -101,27 +116,95 @@ function fieldChildren({ label, description, errorMessage, children, input }) {
   );
 }
 
+// RAC's named validation context covers its own field serialization. These
+// wrappers keep their Mux-owned hidden inputs, so they need the same external
+// errors without forwarding names into RAC and creating duplicate values.
+const MuxFormValidationContext = React.createContext(null);
+
+function normalizeValidationMessages(value) {
+  if (value === undefined || value === null) return [];
+  return (Array.isArray(value) ? value : [value])
+    .filter((message) => message !== undefined && message !== null)
+    .map(String);
+}
+
+function useMuxFormValidation(names) {
+  const validationErrors = React.useContext(MuxFormValidationContext);
+  const messages = (Array.isArray(names) ? names : [names]).flatMap((name) => {
+    if (!name || !validationErrors || !Object.prototype.hasOwnProperty.call(validationErrors, name)) return [];
+    return normalizeValidationMessages(validationErrors[name]);
+  });
+  return { isInvalid: messages.length > 0, message: messages.join(' ') };
+}
+
 function validationProps({ disabled, readOnly, required, invalid, errorMessage }) {
   return {
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
-    isInvalid: invalid || errorMessage !== undefined,
+    // Leave invalid uncontrolled when no local error is present so Form's
+    // name-keyed server validation can flow through RAC's context.
+    isInvalid: invalid || errorMessage !== undefined ? true : undefined,
   };
 }
 
 function dateOrUndefined(value) {
-  if (!value) return undefined;
-  const text = String(value);
-  if (!ISO_DATE_PATTERN.test(text)) throw new TypeError('Mux UI date values must use YYYY-MM-DD ISO format');
-  return parseDate(text);
+  if (value === undefined || value === null || value === '') return undefined;
+  const message = 'Mux UI date values must use YYYY-MM-DD ISO format';
+  if (typeof value !== 'string' || !ISO_DATE_PATTERN.test(value)) throw new TypeError(message);
+  try {
+    return parseDate(value);
+  } catch {
+    throw new TypeError(message);
+  }
 }
 
 function timeOrUndefined(value) {
-  if (!value) return undefined;
-  const text = String(value);
-  if (!ISO_TIME_PATTERN.test(text)) throw new TypeError('MuxUI time values must use HH:mm[:ss[.sss]] ISO format');
-  return parseTime(text);
+  if (value === undefined || value === null || value === '') return undefined;
+  const message = 'Mux UI time values must use HH:mm[:ss[.fraction]] ISO format';
+  if (typeof value !== 'string' || !ISO_TIME_PATTERN.test(value)) throw new TypeError(message);
+  try {
+    return parseTime(value);
+  } catch {
+    throw new TypeError(message);
+  }
+}
+
+function dateRangeOrUndefined(value) {
+  if (value === undefined || value === null) return undefined;
+  const message = 'Mux UI date ranges must include start and end ISO dates';
+  if (typeof value !== 'object' || Array.isArray(value) || value.start === undefined || value.start === null || value.start === '' || value.end === undefined || value.end === null || value.end === '') {
+    throw new TypeError(message);
+  }
+  return { start: dateOrUndefined(value.start), end: dateOrUndefined(value.end) };
+}
+
+function assertTemporalBounds(minValue, maxValue, valueName) {
+  if (minValue && maxValue && minValue.compare(maxValue) > 0) {
+    throw new TypeError(`Mux UI ${valueName} minValue must be less than or equal to maxValue`);
+  }
+}
+
+function dateBounds(minValue, maxValue) {
+  const parsedMinValue = dateOrUndefined(minValue);
+  const parsedMaxValue = dateOrUndefined(maxValue);
+  assertTemporalBounds(parsedMinValue, parsedMaxValue, 'date');
+  return { minValue: parsedMinValue, maxValue: parsedMaxValue };
+}
+
+function timeBounds(minValue, maxValue) {
+  const parsedMinValue = timeOrUndefined(minValue);
+  const parsedMaxValue = timeOrUndefined(maxValue);
+  assertTemporalBounds(parsedMinValue, parsedMaxValue, 'time');
+  return { minValue: parsedMinValue, maxValue: parsedMaxValue };
+}
+
+function unavailableDateCallback(callback, range = false) {
+  if (callback === undefined) return undefined;
+  if (typeof callback !== 'function') throw new TypeError('unavailableDateMatcher must be a function');
+  return range
+    ? (date, anchorDate) => callback(String(date), anchorDate ? String(anchorDate) : null)
+    : (date) => callback(String(date));
 }
 
 function serializeDateValue(value) {
@@ -371,6 +454,8 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
   defaultValue,
   onChange,
   disabled = false,
+  orientation = 'vertical',
+  size,
   readOnly = false,
   required = false,
   invalid = false,
@@ -383,7 +468,11 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'CheckboxGroup');
-  return React.createElement(AriaCheckboxGroup, {
+  if (orientation !== 'horizontal' && orientation !== 'vertical') {
+    throw new TypeError('CheckboxGroup orientation must be horizontal or vertical');
+  }
+  const resolvedSize = size === undefined ? undefined : normalizeChoiceControlSize(size, 'CheckboxGroup');
+  const group = React.createElement(AriaCheckboxGroup, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
@@ -394,14 +483,17 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     // checkbox, including fragments and wrapper components.
     name,
     className: classNames('muxui-checkbox-group', className),
-    'aria-label': ariaLabel,
+    'data-orientation': orientation,
+    'aria-label': ariaLabel ?? (typeof label === 'string' ? label : undefined),
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
-    label,
-    description,
-    errorMessage,
-    children,
-  }));
+  }, children, fieldDescription(description), fieldError(errorMessage));
+  const field = React.createElement('div', { className: 'muxui-checkbox-group-field' },
+    fieldLabel(label),
+    group,
+  );
+  return resolvedSize === undefined
+    ? field
+    : React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, field);
 });
 
 CheckboxGroup.displayName = 'CheckboxGroup';
@@ -416,8 +508,8 @@ export const Switch = React.forwardRef(function Switch({
   readOnly = false,
   description,
   errorMessage,
-  required: _required,
-  invalid: _invalid,
+  required = false,
+  invalid = false,
   validationBehavior: _validationBehavior,
   name,
   value,
@@ -431,7 +523,7 @@ export const Switch = React.forwardRef(function Switch({
   return React.createElement(AriaSwitchField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
     isSelected: selected,
     defaultSelected,
     name,
@@ -455,6 +547,7 @@ export const Form = React.forwardRef(function Form({
   children,
   className,
   validationBehavior = 'native',
+  validationErrors,
   onSubmit,
   onReset,
   ...props
@@ -464,9 +557,10 @@ export const Form = React.forwardRef(function Form({
     ref,
     className: classNames('muxui-form', className),
     validationBehavior,
+    validationErrors,
     onSubmit,
     onReset,
-  }, children);
+  }, React.createElement(MuxFormValidationContext.Provider, { value: validationErrors ?? {} }, children));
 });
 
 Form.displayName = 'Form';
@@ -477,6 +571,10 @@ export const DateField = React.forwardRef(function DateField({
   errorMessage,
   value,
   defaultValue,
+  minValue,
+  maxValue,
+  unavailableDateMatcher,
+  isDateUnavailable: _upstreamDateUnavailable,
   onChange,
   disabled = false,
   readOnly = false,
@@ -492,12 +590,16 @@ export const DateField = React.forwardRef(function DateField({
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateField');
   const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
+  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
   return React.createElement(AriaDateField, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
     value: parsedValue,
     defaultValue: parsedDefaultValue,
+    minValue: parsedMinValue,
+    maxValue: parsedMaxValue,
+    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
     placeholderValue: DATE_PLACEHOLDER,
     onChange: (next) => onChange?.(serializeDateValue(next)),
     name,
@@ -515,6 +617,8 @@ export const TimeField = React.forwardRef(function TimeField({
   errorMessage,
   value,
   defaultValue,
+  minValue,
+  maxValue,
   onChange,
   disabled = false,
   readOnly = false,
@@ -528,8 +632,11 @@ export const TimeField = React.forwardRef(function TimeField({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'TimeField');
+  const externalValidation = useMuxFormValidation(name);
+  const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
   React.useMemo(() => timeOrUndefined(value), [value]);
   React.useMemo(() => timeOrUndefined(defaultValue), [defaultValue]);
+  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = timeBounds(minValue, maxValue);
   const [formValue, setFormValue] = React.useState(() => value ?? defaultValue ?? '');
   const resettingRef = React.useRef(false);
   React.useEffect(() => {
@@ -550,11 +657,14 @@ export const TimeField = React.forwardRef(function TimeField({
   return React.createElement(AriaTimeField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
     value: effectiveParsedValue,
+    minValue: parsedMinValue,
+    maxValue: parsedMaxValue,
     placeholderValue: TIME_PLACEHOLDER,
     onChange: handleChange,
-    // RAC 1.20 does not own a form input for TimeField; MuxUI owns this contract below.
+    // Keep RAC's name private: Mux owns one normalized hidden value so FormData
+    // stays stable and cannot duplicate an upstream field input.
     name: undefined,
     className: classNames('muxui-time-field', className),
     'aria-label': ariaLabel,
@@ -562,7 +672,7 @@ export const TimeField = React.forwardRef(function TimeField({
   }, fieldChildren({
     label,
     description,
-    errorMessage,
+    errorMessage: effectiveErrorMessage,
     input: dateInput(),
     children: React.createElement(React.Fragment, null,
       formResetAnchor(resetInputRef),
@@ -578,7 +688,14 @@ export const DatePicker = React.forwardRef(function DatePicker({
   errorMessage,
   value,
   defaultValue,
+  minValue,
+  maxValue,
+  unavailableDateMatcher,
+  isDateUnavailable: _upstreamDateUnavailable,
   onChange,
+  onOpenChange,
+  open,
+  defaultOpen,
   disabled = false,
   readOnly = false,
   required = false,
@@ -593,14 +710,21 @@ export const DatePicker = React.forwardRef(function DatePicker({
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
   const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
+  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
   return React.createElement(AriaDatePicker, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
     value: parsedValue,
     defaultValue: parsedDefaultValue,
+    minValue: parsedMinValue,
+    maxValue: parsedMaxValue,
+    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
     placeholderValue: DATE_PLACEHOLDER,
     onChange: (next) => onChange?.(serializeDateValue(next)),
+    isOpen: open,
+    defaultOpen,
+    onOpenChange,
     name,
     className: classNames('muxui-date-picker', className),
     'aria-label': ariaLabel,
@@ -622,12 +746,22 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
   errorMessage,
   value,
   defaultValue,
+  minValue,
+  maxValue,
+  unavailableDateMatcher,
+  isDateUnavailable: _upstreamDateUnavailable,
   onChange,
+  onOpenChange,
+  open,
+  defaultOpen,
   disabled = false,
   readOnly = false,
   required = false,
   invalid = false,
   validationBehavior: _validationBehavior,
+  allowsNonContiguousRanges: _allowsNonContiguousRanges,
+  closeOnSelect: _closeOnSelect,
+  shouldCloseOnSelect: _shouldCloseOnSelect,
   startName,
   endName,
   className,
@@ -636,8 +770,10 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
-  React.useMemo(() => (value ? { start: dateOrUndefined(value.start), end: dateOrUndefined(value.end) } : undefined), [value?.start, value?.end]);
-  React.useMemo(() => (defaultValue ? { start: dateOrUndefined(defaultValue.start), end: dateOrUndefined(defaultValue.end) } : undefined), [defaultValue?.start, defaultValue?.end]);
+  const externalValidation = useMuxFormValidation([startName, endName]);
+  const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
+  const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
+  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
   const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
   const resettingRef = React.useRef(false);
   React.useEffect(() => {
@@ -653,15 +789,21 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
     if (value === undefined) setFormValue(defaultValue);
   };
   const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-  const effectiveValue = value ?? formValue;
-  const effectiveValueObject = React.useMemo(() => (effectiveValue ? { start: dateOrUndefined(effectiveValue.start), end: dateOrUndefined(effectiveValue.end) } : undefined), [effectiveValue?.start, effectiveValue?.end]);
+  const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
+  const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
   return React.createElement(AriaDateRangePicker, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
     value: effectiveValueObject,
+    minValue: parsedMinValue,
+    maxValue: parsedMaxValue,
+    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher, true),
     placeholderValue: DATE_PLACEHOLDER,
     onChange: handleChange,
+    isOpen: open,
+    defaultOpen,
+    onOpenChange,
     name: undefined,
     className: classNames('muxui-date-range-picker', className),
     'aria-label': ariaLabel,
@@ -669,7 +811,7 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
   }, fieldChildren({
     label,
     description,
-    errorMessage,
+    errorMessage: effectiveErrorMessage,
     input: React.createElement(AriaGroup, { className: 'muxui-date-range-control' },
       React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
       React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
@@ -712,6 +854,16 @@ function autocompleteItemText(item) {
   return autocompleteNodeText(item.label) || fallback;
 }
 
+const AUTOCOMPLETE_SIZES = new Set(['sm', 'md']);
+
+function normalizeAutocompleteSize(size) {
+  const resolved = size ?? 'md';
+  if (!AUTOCOMPLETE_SIZES.has(resolved)) {
+    throw new TypeError(`Autocomplete size must be one of: ${[...AUTOCOMPLETE_SIZES].join(', ')}`);
+  }
+  return resolved;
+}
+
 export const Autocomplete = React.forwardRef(function Autocomplete({
   label,
   description,
@@ -725,6 +877,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   placeholder,
@@ -734,6 +887,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Autocomplete');
+  const resolvedSize = normalizeAutocompleteSize(size);
   const normalizedItems = React.useMemo(() => normalizeAutocompleteItems(items), [items]);
   const [inputValue, setInputValue] = React.useState(() => value ?? defaultValue ?? '');
   React.useEffect(() => {
@@ -745,12 +899,27 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     return normalizedItems.filter((item) => autocompleteItemText(item).toLocaleLowerCase().includes(query));
   }, [effectiveInputValue, normalizedItems]);
   const [isOpen, setIsOpen] = React.useState(false);
+  const inputRef = React.useRef(null);
+  const popoverRef = React.useRef(null);
+  const suggestionsOpen = isOpen && filteredItems.length > 0;
+  const portalContainer = autocompletePortalContainer(inputRef.current);
+  React.useEffect(() => {
+    if (!suggestionsOpen) return undefined;
+    const handlePointerDown = (event) => {
+      const target = event.target;
+      if (inputRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+      setIsOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown, true);
+    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+  }, [suggestionsOpen]);
   const filter = (textValue, inputValue) => textValue.toLocaleLowerCase().includes(inputValue.toLocaleLowerCase());
   const handleSelect = (key) => {
     if (disabled || readOnly) return;
     const keyText = String(key);
     const item = filteredItems.find((candidate) => String(candidate.id) === keyText);
     if (item) {
+      if (item.disabled) return;
       const nextValue = String(item.value);
       setInputValue(nextValue);
       onChange?.(nextValue);
@@ -767,8 +936,12 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
   return React.createElement('div', {
     ref,
     className: classNames('muxui-autocomplete', className),
+    'data-size': resolvedSize,
+    'data-part': 'root',
     onBlurCapture: (event) => {
-      if (!event.currentTarget.contains(event.relatedTarget)) setIsOpen(false);
+      if (!event.relatedTarget || (!event.currentTarget.contains(event.relatedTarget) && !popoverRef.current?.contains(event.relatedTarget))) {
+        setIsOpen(false);
+      }
     },
   }, React.createElement(AriaAutocomplete, {
     ...props,
@@ -780,6 +953,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
     name,
     className: 'muxui-autocomplete-search',
+    'data-part': 'search-field',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -787,7 +961,9 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     description,
     errorMessage,
     input: React.createElement(AriaInput, {
+      ref: inputRef,
       className: 'muxui-field-input',
+      'data-part': 'input',
       placeholder,
       onFocus: () => setIsOpen(!disabled),
       onKeyDown: (event) => {
@@ -796,13 +972,30 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
       },
     }),
   })),
-  React.createElement(AriaListBox, {
+  React.createElement(AriaPopover, {
+    ref: popoverRef,
+    isOpen: suggestionsOpen,
+    onOpenChange: setIsOpen,
+    isNonModal: true,
+    triggerRef: inputRef,
+    placement: 'bottom',
+    offset: 0,
+    // Zero padding keeps a full-width field's overlay aligned at the viewport
+    // edge; the position hook still performs collision-aware placement.
+    containerPadding: 0,
+    // Keep portals inside subtree-scoped Mux runtime profiles so their tokens,
+    // direction, and other inherited custom properties remain available.
+    UNSTABLE_portalContainer: portalContainer,
+    className: 'muxui-autocomplete-popover',
+    'data-part': 'popover',
+  }, React.createElement(AriaListBox, {
     items: filteredItems,
-    className: 'muxui-autocomplete-list',
-    hidden: !isOpen || filteredItems.length === 0,
+    className: classNames('muxui-autocomplete-list', resolvedSize === 'md' ? undefined : `muxui-autocomplete-list--${resolvedSize}`),
+    'data-part': 'list',
+    'data-size': resolvedSize,
     selectionMode: readOnly ? 'none' : 'single',
     onAction: handleSelect,
-  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), className: 'muxui-autocomplete-option' }, item.label))));
+  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, 'data-part': 'option', className: 'muxui-autocomplete-option' }, item.label)))));
 });
 
 Autocomplete.displayName = 'Autocomplete';

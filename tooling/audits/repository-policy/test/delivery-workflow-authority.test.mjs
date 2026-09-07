@@ -81,26 +81,57 @@ const writeR1Acceptance = (fixtureRoot) => {
   ));
 };
 
-const makeR1Fixture = (receiptState = 'staged') => {
+const materializeStagedIndex = (sourceRoot, fixtureRoot) => {
+  const stagedPaths = execFileSync('git', ['diff', '--cached', '--name-only', '-z'], {
+    cwd: sourceRoot,
+    encoding: 'utf8',
+  }).split('\0').filter(Boolean);
+  const stagedEntries = new Map();
+  const indexSource = execFileSync('git', ['ls-files', '--cached', '--stage', '-z'], {
+    cwd: sourceRoot,
+    encoding: 'buffer',
+  });
+  let indexEntryStart = 0;
+  while (indexEntryStart < indexSource.length) {
+    const indexEntryEnd = indexSource.indexOf(0, indexEntryStart);
+    if (indexEntryEnd < 0) throw new Error('Malformed staged index entry');
+    const indexEntry = indexSource.subarray(indexEntryStart, indexEntryEnd);
+    const metadataEnd = indexEntry.indexOf(0x09);
+    if (metadataEnd < 0) throw new Error('Malformed staged index entry');
+    const metadata = indexEntry.subarray(0, metadataEnd).toString('ascii').split(' ');
+    stagedEntries.set(indexEntry.subarray(metadataEnd + 1).toString('utf8'), metadata[1]);
+    indexEntryStart = indexEntryEnd + 1;
+  }
+  for (const relativePath of stagedPaths) {
+    const destination = path.join(fixtureRoot, relativePath);
+    fs.rmSync(destination, {recursive: true, force: true});
+    const objectId = stagedEntries.get(relativePath);
+    if (objectId === undefined) continue;
+    const source = execFileSync('git', ['cat-file', 'blob', objectId], {
+      cwd: sourceRoot,
+      encoding: 'buffer',
+    });
+    fs.mkdirSync(path.dirname(destination), {recursive: true});
+    fs.writeFileSync(destination, source);
+  }
+  if (stagedPaths.length > 0) {
+    execFileSync('git', ['add', '--all', '--', ...stagedPaths], {cwd: fixtureRoot, stdio: 'ignore'});
+  }
+  return stagedPaths;
+};
+
+const makeStagedIndexFixture = (sourceRoot) => {
   const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'muxui-r1-authority-fixture-'));
-  execFileSync('git', ['clone', '--no-local', '--no-tags', '--no-checkout', repositoryRoot, fixtureRoot], {
+  execFileSync('git', ['clone', '--no-local', '--no-tags', '--no-checkout', sourceRoot, fixtureRoot], {
     stdio: 'ignore',
   });
   execFileSync('git', ['checkout', '--quiet', '--detach', 'HEAD'], {cwd: fixtureRoot, stdio: 'ignore'});
-  const stagedPaths = execFileSync('git', ['diff', '--cached', '--name-only'], {
-    cwd: repositoryRoot,
-    encoding: 'utf8',
-  }).trim().split('\n').filter(Boolean).filter((relativePath) => (
-    fs.existsSync(path.join(fixtureRoot, relativePath))
-  ));
-  for (const relativePath of stagedPaths) {
-    const destination = path.join(fixtureRoot, relativePath);
-    fs.mkdirSync(path.dirname(destination), {recursive: true});
-    fs.copyFileSync(path.join(repositoryRoot, relativePath), destination);
-  }
-  if (stagedPaths.length > 0) {
-    execFileSync('git', ['add', '--', ...stagedPaths], {cwd: fixtureRoot, stdio: 'ignore'});
-  }
+  materializeStagedIndex(sourceRoot, fixtureRoot);
+  return fixtureRoot;
+};
+
+const makeR1Fixture = (receiptState = 'staged') => {
+  const fixtureRoot = makeStagedIndexFixture(repositoryRoot);
   execFileSync('git', ['rm', '--ignore-unmatch', '--', r1AcceptancePath], {
     cwd: fixtureRoot,
     stdio: 'ignore',
@@ -113,6 +144,48 @@ const makeR1Fixture = (receiptState = 'staged') => {
   }
   return fixtureRoot;
 };
+
+const replaySourceRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'muxui-r1-index-replay-source-'));
+try {
+  execFileSync('git', ['init', '--quiet'], {cwd: replaySourceRoot});
+  execFileSync('git', ['config', 'user.email', 'muxui-tests@example.invalid'], {cwd: replaySourceRoot});
+  execFileSync('git', ['config', 'user.name', 'Mux UI Tests'], {cwd: replaySourceRoot});
+  fs.writeFileSync(path.join(replaySourceRoot, 'staged-deletion.txt'), 'base deletion\n');
+  fs.writeFileSync(path.join(replaySourceRoot, 'staged-modification.txt'), 'base modification\n');
+  execFileSync('git', ['add', '--', 'staged-deletion.txt', 'staged-modification.txt'], {cwd: replaySourceRoot});
+  execFileSync('git', ['commit', '--quiet', '-m', 'base'], {cwd: replaySourceRoot});
+
+  fs.rmSync(path.join(replaySourceRoot, 'staged-deletion.txt'));
+  execFileSync('git', ['add', '--all', '--', 'staged-deletion.txt'], {cwd: replaySourceRoot});
+  fs.writeFileSync(path.join(replaySourceRoot, 'staged-deletion.txt'), 'unstaged recreation\n');
+  fs.writeFileSync(path.join(replaySourceRoot, 'staged-modification.txt'), 'staged bytes\n');
+  execFileSync('git', ['add', '--', 'staged-modification.txt'], {cwd: replaySourceRoot});
+  fs.writeFileSync(path.join(replaySourceRoot, 'staged-modification.txt'), 'unstaged edit\n');
+
+  const replayFixture = makeStagedIndexFixture(replaySourceRoot);
+  try {
+    assert.equal(fs.existsSync(path.join(replayFixture, 'staged-deletion.txt')), false);
+    assert.deepEqual(
+      fs.readFileSync(path.join(replayFixture, 'staged-modification.txt')),
+      Buffer.from('staged bytes\n'),
+    );
+    assert.match(
+      execFileSync('git', ['diff', '--cached', '--name-status', '--', 'staged-deletion.txt'], {
+        cwd: replayFixture,
+        encoding: 'utf8',
+      }),
+      /^D\tstaged-deletion\.txt\n$/u,
+    );
+    assert.deepEqual(
+      execFileSync('git', ['show', ':staged-modification.txt'], {cwd: replayFixture, encoding: 'buffer'}),
+      Buffer.from('staged bytes\n'),
+    );
+  } finally {
+    fs.rmSync(replayFixture, {recursive: true, force: true});
+  }
+} finally {
+  fs.rmSync(replaySourceRoot, {recursive: true, force: true});
+}
 
 const rejectAt = (root, options, label) => {
   try {

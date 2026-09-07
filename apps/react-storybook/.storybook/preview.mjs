@@ -1,4 +1,6 @@
 import React from 'react';
+import { useGlobals } from 'storybook/preview-api';
+import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { isMigrationFixtureRequest } from '../src/visual-migration-contract.mjs';
 import { MigrationFixture } from '../src/migration-visual.fixture.mjs';
@@ -10,11 +12,22 @@ const colorSchemeItems = [
   { value: 'dark', title: 'Dark' },
 ];
 
+const directionItems = [
+  { value: 'ltr', title: 'LTR' },
+  { value: 'rtl', title: 'RTL' },
+];
+
 function applyColorScheme(scheme) {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
     document.documentElement.style.setProperty('--muxui-migration-frame-background', scheme === 'dark' ? '#000000' : '#ffffff');
   }
+}
+
+function applyDirection(direction) {
+  if (typeof document === 'undefined') return;
+  document.documentElement.setAttribute('data-muxui-direction', direction);
+  document.documentElement.dir = direction;
 }
 
 function applyMigrationHost(migration) {
@@ -23,7 +36,7 @@ function applyMigrationHost(migration) {
   else document.body.removeAttribute('data-muxui-migration-host');
 }
 
-function StorySurface({ children, scheme, viewMode, migration }) {
+function StorySurface({ children, scheme, direction, viewMode, migration }) {
   const surfaceRef = React.useRef(null);
 
   React.useEffect(() => {
@@ -73,6 +86,7 @@ function StorySurface({ children, scheme, viewMode, migration }) {
       ref: surfaceRef,
       className: 'muxui-storybook-surface',
       'data-muxui-color-scheme': scheme,
+      'data-muxui-direction': direction,
       'data-muxui-migration-host': migration ? 'true' : undefined,
     },
     children,
@@ -92,12 +106,25 @@ export default {
         dynamicTitle: true,
       },
     },
+    direction: {
+      name: 'Direction',
+      description: 'Choose the document writing direction.',
+      defaultValue: 'ltr',
+      toolbar: {
+        icon: 'transfer',
+        items: directionItems,
+        dynamicTitle: true,
+      },
+    },
   },
   decorators: [
     (Story, context) => {
+      const [, updateGlobals] = useGlobals();
       const scheme = context.globals?.colorScheme === 'dark' ? 'dark' : 'light';
+      const direction = context.globals?.direction === 'rtl' ? 'rtl' : 'ltr';
       const migration = isMigrationFixtureRequest(context.id, window.location.search);
       applyColorScheme(scheme);
+      applyDirection(direction);
       applyMigrationHost(migration);
       const story = migration
         ? React.createElement(MigrationFixture, {
@@ -106,8 +133,12 @@ export default {
         : React.createElement(Story);
       return React.createElement(
         StorySurface,
-        { scheme, viewMode: context.viewMode, migration },
-        React.createElement(MuxUI.ToastProvider, { placement: migration ? 'bottom-end' : undefined }, story),
+        { scheme, direction, viewMode: context.viewMode, migration },
+        React.createElement(
+          StorybookThemeContext.Provider,
+          { value: { scheme, setScheme: (colorScheme) => updateGlobals({ colorScheme }) } },
+          React.createElement(MuxUI.ToastProvider, { placement: migration ? 'bottom-end' : undefined }, story),
+        ),
       );
     },
   ],

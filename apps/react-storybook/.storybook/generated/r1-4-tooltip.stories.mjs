@@ -1,14 +1,28 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:bffbb4a5e186a7c2ac94abf584feecbfe7d4922d3a21b1f964fb7caffc02cd85
+// @generated-content-sha256: sha256:9ad626c15536a1fce2453bf064c02a81e0266249a18d5414a4871bdfd1b2198d
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
       "closeDelay": 0,
+      "containerPadding": 12,
+      "crossOffset": 0,
       "delay": 500,
-      "placement": "top"
+      "disabled": false,
+      "offset": 0,
+      "placement": "top",
+      "shouldFlip": true
     },
     "events": [
       "openChange"
@@ -23,8 +37,13 @@ const binding = {
       "delay",
       "closeDelay",
       "placement",
+      "offset",
+      "crossOffset",
+      "shouldFlip",
+      "containerPadding",
       "open",
       "defaultOpen",
+      "disabled",
       "onOpenChange",
       "className"
     ]
@@ -41,7 +60,8 @@ const binding = {
     "open",
     "closing"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'Tooltip', tranche: 'R1.4', binding };
 
@@ -54,6 +74,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned Tooltip family.',
@@ -64,3 +91,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

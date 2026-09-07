@@ -1,4 +1,5 @@
 import { canonicalDigest, canonicalJson, validateFamily } from '@muxui/schema';
+import { compilePureTokenGraph, cssName, cssValue } from './core.mjs';
 
 const LAYER_RANK = Object.freeze({ reference: 0, semantic: 1, component: 2 });
 const UNIT_BY_TYPE = Object.freeze({
@@ -7,6 +8,7 @@ const UNIT_BY_TYPE = Object.freeze({
   duration: new Set(['ms']),
   number: new Set(['unitless']),
   string: new Set(['string']),
+  effect: new Set(['structured']),
 });
 const MODE_AXES = Object.freeze(['colorScheme', 'contrast', 'motion', 'density', 'direction']);
 const PROFILE_IDS = new Set([
@@ -274,7 +276,8 @@ export function validateSourceCrosswalk(source, { baselineOccurrences } = {}) {
 }
 
 function validateLiteral(type, unit, value, path) {
-  const expected = ['dimension', 'duration', 'number'].includes(type) ? 'number' : 'string';
+  const expected = ['dimension', 'duration', 'number'].includes(type) ? 'number'
+    : type === 'effect' ? 'object' : 'string';
   if (typeof value !== expected || (typeof value === 'number' && !Number.isFinite(value))) {
     fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a ${expected}`, { path, type, unit });
   }
@@ -284,6 +287,30 @@ function validateLiteral(type, unit, value, path) {
   if (type === 'color' && !/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(value)) {
     fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a six- or eight-digit hex color`, { path });
   }
+  if (type === 'effect') validateEffect(value, path);
+}
+
+function validateEffect(value, path) {
+  if (!isObject(value) || value.kind !== 'shadow' || !Array.isArray(value.layers) || value.layers.length < 1) {
+    fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a typed shadow effect`, { path });
+  }
+  for (const [index, layer] of value.layers.entries()) {
+    const layerPath = `${path}/layers/${index}`;
+    if (!isObject(layer) || !isObject(layer.offsetX) || !isObject(layer.offsetY)
+      || !isObject(layer.blur) || !isObject(layer.spread) || !isObject(layer.color)) {
+      fail('MUXUI_TOKEN_TYPE_MISMATCH', `${layerPath} must declare typed shadow geometry`, { path: layerPath });
+    }
+    for (const key of ['offsetX', 'offsetY', 'blur', 'spread']) {
+      const length = layer[key];
+      if (!Number.isFinite(length.value) || !['px', 'rem'].includes(length.unit)) {
+        fail('MUXUI_TOKEN_TYPE_MISMATCH', `${layerPath}/${key} must be a finite px/rem length`, { path: `${layerPath}/${key}` });
+      }
+    }
+    if (typeof layer.color.value !== 'string' || !/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(layer.color.value)
+      || (layer.color.alpha !== undefined && (!Number.isFinite(layer.color.alpha) || layer.color.alpha < 0 || layer.color.alpha > 1))) {
+      fail('MUXUI_TOKEN_TYPE_MISMATCH', `${layerPath}/color must be a hex color with optional alpha`, { path: `${layerPath}/color` });
+    }
+  }
 }
 
 function selectedBranch(definition, modes) {
@@ -292,6 +319,18 @@ function selectedBranch(definition, modes) {
     if (Object.hasOwn(definition.modes ?? {}, key)) return definition.modes[key];
   }
   return definition;
+}
+
+function tokenDecoration(definition, target) {
+  const decoration = {};
+  if (definition.fluid !== undefined) decoration.fluid = structuredClone(definition.fluid);
+  if (definition.formula !== undefined) decoration.formula = structuredClone(definition.formula);
+  if (definition.effect !== undefined) decoration.effect = structuredClone(definition.effect);
+  if (definition.type === 'effect' && definition.value !== undefined) decoration.effect = structuredClone(definition.value);
+  if (target?.fluid !== undefined) decoration.fluid = structuredClone(target.fluid);
+  if (target?.formula !== undefined) decoration.formula = structuredClone(target.formula);
+  if (target?.effect !== undefined) decoration.effect = structuredClone(target.effect);
+  return decoration;
 }
 
 function assertModes(source, modes) {
@@ -349,95 +388,27 @@ function normalizeOverrides(source, overrides = {}) {
 }
 
 export function compileTokenGraph(source, options = {}) {
-  if (
-    !isObject(options)
-    || Object.keys(options).some((key) => !['modes', 'overrides'].includes(key))
-  ) {
+  if (!isObject(options) || Object.keys(options).some((key) => !['modes', 'overrides', 'responsive'].includes(key))) {
     fail('MUXUI_TOKEN_OPTIONS_INVALID', 'token compilation options must be closed', {
       fields: isObject(options) ? Object.keys(options).sort(compareText) : [],
     });
   }
-  const { modes, overrides } = options;
   validateFamily('token-source', source);
   assertThemeContract(source);
-  const selectedModes = assertModes(source, modes);
-  const normalizedOverrides = normalizeOverrides(source, overrides);
-  const resolved = new Map();
-  const dependencies = new Map();
-  const visiting = [];
-
-  function resolveToken(tokenId) {
-    if (resolved.has(tokenId)) return resolved.get(tokenId);
-    const definition = source.tokens[tokenId];
-    if (!definition) fail('MUXUI_TOKEN_ALIAS_MISSING', `${tokenId} does not exist`, { tokenId });
-    if (visiting.includes(tokenId)) {
-      fail('MUXUI_TOKEN_ALIAS_CYCLE', `token alias cycle: ${[...visiting, tokenId].join(' -> ')}`, {
-        cycle: [...visiting, tokenId],
-      });
-    }
-    const override = normalizedOverrides[tokenId];
-    if (override) {
-      const result = Object.freeze({
-        id: tokenId,
-        layer: definition.layer,
-        type: definition.type,
-        unit: definition.unit,
-        value: override.value,
-        overridePolicy: definition.overridePolicy,
-        source: 'consumer-theme',
-      });
-      dependencies.set(tokenId, []);
-      resolved.set(tokenId, result);
-      return result;
-    }
-    visiting.push(tokenId);
-    const branch = selectedBranch(definition, selectedModes);
-    let value;
-    let sourceKind = 'literal';
-    if (Object.hasOwn(branch, 'alias')) {
-      const targetId = branch.alias;
-      const target = source.tokens[targetId];
-      if (!target) fail('MUXUI_TOKEN_ALIAS_MISSING', `${tokenId} aliases missing ${targetId}`, { tokenId, targetId });
-      if (LAYER_RANK[target.layer] > LAYER_RANK[definition.layer]) {
-        fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} cannot alias forward to ${targetId}`, { tokenId, targetId });
-      }
-      if (target.layer === definition.layer && definition.equivalence !== 'semantic-equivalence' && definition.equivalence !== 'deprecation-bridge') {
-        fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} same-layer alias requires an explicit equivalence`, { tokenId, targetId });
-      }
-      if (target.type !== definition.type || target.unit !== definition.unit) {
-        fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} and ${targetId} have incompatible type or unit`, { tokenId, targetId });
-      }
-      value = resolveToken(targetId).value;
-      dependencies.set(tokenId, [targetId]);
-      sourceKind = 'alias';
-    } else {
-      validateLiteral(definition.type, definition.unit, branch.value, `tokens/${tokenId}`);
-      value = branch.value;
-      dependencies.set(tokenId, []);
-    }
-    visiting.pop();
-    const result = Object.freeze({
-      id: tokenId,
-      layer: definition.layer,
-      type: definition.type,
-      unit: definition.unit,
-      value,
-      overridePolicy: definition.overridePolicy,
-      source: sourceKind,
-    });
-    resolved.set(tokenId, result);
-    return result;
-  }
-
-  for (const tokenId of Object.keys(source.tokens).sort(compareText)) resolveToken(tokenId);
+  const graph = compilePureTokenGraph(source, {
+    modes: options.modes,
+    responsive: options.responsive,
+    overrides: options.overrides,
+    fail,
+  });
   return Object.freeze({
     sourceId: source.id,
     sourceRevision: canonicalDigest(source),
     tokenContractVersion: source.tokenContractVersion,
     theme: source.theme.name,
-    modes: selectedModes,
-    tokens: Object.freeze(Object.fromEntries([...resolved.entries()].sort(([a], [b]) => compareText(a, b)))),
-    dependencies: Object.freeze(Object.fromEntries([...dependencies.entries()].sort(([a], [b]) => compareText(a, b)))),
+    modes: graph.modes,
+    tokens: graph.tokens,
+    dependencies: graph.dependencies,
   });
 }
 
@@ -611,16 +582,6 @@ function publicTokenEntries(graph) {
   return Object.values(graph.tokens);
 }
 
-function cssName(tokenId) {
-  return `--muxui-${tokenId.replaceAll('.', '-')}`;
-}
-
-function cssValue(token) {
-  if (token.unit === 'px') return `${token.value}px`;
-  if (token.unit === 'ms') return `${token.value}ms`;
-  return String(token.value);
-}
-
 export function compileWebTheme(source, options = {}) {
   const graph = compileTokenGraph(source, options);
   const declarations = publicTokenEntries(graph)
@@ -639,11 +600,31 @@ export function compileWebTheme(source, options = {}) {
   });
 }
 
-export function compileNativeTheme(source, { profile, ...options } = {}) {
+export function compileNativeTheme(source, { profile, rootFontSizePx, ...options } = {}) {
   if (!['native.ios', 'native.android'].includes(profile)) {
     fail('MUXUI_TOKEN_PROFILE_INVALID', `${profile} has no native transform`, { profile });
   }
+  if (rootFontSizePx !== undefined && (!Number.isFinite(rootFontSizePx) || rootFontSizePx <= 0)) {
+    fail('MUXUI_TOKEN_ROOT_METRIC_INVALID', 'rootFontSizePx must be a positive finite number', { rootFontSizePx });
+  }
   const graph = compileTokenGraph(source, options);
+  const diagnostics = [];
+  const theme = {};
+  for (const token of publicTokenEntries(graph)) {
+    const code = token.fluid ? 'MUXUI_TOKEN_FLUID_RECIPE_DEFERRED'
+      : token.formula ? 'MUXUI_TOKEN_FORMULA_DEFERRED'
+        : token.relative && rootFontSizePx === undefined ? 'MUXUI_TOKEN_RELATIVE_ROOT_METRIC_REQUIRED' : null;
+    if (code) {
+      diagnostics.push(Object.freeze({ code, id: token.id, profile }));
+      continue;
+    }
+    theme[token.id] = Object.freeze({
+      type: token.type,
+      unit: token.unit,
+      value: token.relative ? token.relative.value * rootFontSizePx : token.value,
+      ...(token.effect === undefined ? {} : { effect: token.effect }),
+    });
+  }
   return Object.freeze({
     kind: 'native.theme.static',
     format: 'muxui-native-theme-v1',
@@ -654,10 +635,7 @@ export function compileNativeTheme(source, { profile, ...options } = {}) {
     modes: graph.modes,
     runtimeSwitching: false,
     provenance: Object.freeze({ source: 'canonical-token-source', digest: graph.sourceRevision }),
-    theme: Object.freeze(Object.fromEntries(publicTokenEntries(graph).map((token) => [token.id, Object.freeze({
-      type: token.type,
-      unit: token.unit,
-      value: token.value,
-    })]))),
+    theme: Object.freeze(theme),
+    diagnostics: Object.freeze(diagnostics),
   });
 }

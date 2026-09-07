@@ -1,0 +1,522 @@
+/*
+ * TextEditor — @muxui/react
+ *
+ * Styled with Mux UI design tokens.
+ * Built on Tiptap v3. The ProseMirror editable area is injected by Tiptap
+ * inside the .muxui-text-editor__content wrapper.
+ *
+ * State data-attributes:
+ *   Root: [data-disabled] [data-invalid]
+ */
+
+/* ─── Root ─────────────────────────────────────────────────────────────────── */
+
+.muxui-text-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--muxui-reference-dimension-space-2xs);
+  width: 100%;
+}
+
+/* ─── Label ────────────────────────────────────────────────────────────────── */
+
+.muxui-text-editor__label {
+  color: var(--muxui-field-label-color);
+  font-family: var(--muxui-reference-typography-label-font-family);
+  font-size: var(--muxui-field-label-font-size);
+  font-weight: var(--muxui-field-label-font-weight);
+  line-height: 1.3;
+  cursor: default;
+}
+
+.muxui-text-editor[data-disabled] .muxui-text-editor__label {
+  opacity: 0.45;
+}
+
+.muxui-text-editor[data-invalid] .muxui-text-editor__label {
+  color: var(--muxui-reference-color-red-60);
+}
+
+/* ─── HintText ─────────────────────────────────────────────────────────────── */
+
+.muxui-text-editor__hint {
+  margin: 0;
+  font-family: var(--muxui-reference-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+  color: var(--muxui-semantic-color-neutral-40);
+  line-height: 1.4;
+}
+
+.muxui-text-editor__hint--invalid {
+  color: var(--muxui-reference-color-red-60);
+}
+
+/* ─── Content wrapper ──────────────────────────────────────────────────────── */
+
+.muxui-text-editor__content {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* ─── ProseMirror (Tiptap editable area) ───────────────────────────────────── */
+
+.muxui-text-editor__content .ProseMirror {
+  box-sizing: border-box;
+  min-height: 7.5rem;
+  width: 100%;
+  border-radius: var(--muxui-field-radius);
+  background-color: var(--muxui-field-bg);
+  padding: var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-s);
+  font-family: var(--muxui-field-font-family);
+  font-size: var(--muxui-field-font-size);
+  color: var(--muxui-field-color);
+  line-height: 1.6;
+  box-shadow: 0 0 0 1px var(--muxui-field-border-color);
+  outline: none;
+  transition:
+    box-shadow 0.15s ease,
+    background-color 0.15s ease;
+  cursor: text;
+}
+
+.muxui-text-editor__content .ProseMirror:focus {
+  box-shadow:
+    0 0 0 1px var(--muxui-field-focus-border),
+    var(--muxui-field-focus-glow);
+}
+
+.muxui-text-editor__content .ProseMirror > * + * {
+  margin-top: var(--muxui-reference-dimension-space-3xs);
+}
+
+.muxui-text-editor__content .ProseMirror p {
+  margin: 0;
+}
+
+.muxui-text-editor__content .ProseMirror h1,
+.muxui-text-editor__content .ProseMirror h2,
+.muxui-text-editor__content .ProseMirror h3,
+.muxui-text-editor__content .ProseMirror h4 {
+  margin: var(--muxui-reference-dimension-space-xs) 0 var(--muxui-reference-dimension-space-3xs);
+  font-family: var(--muxui-reference-typography-label-font-family);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  line-height: 1.3;
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+/* The donor's --label-xl-font-size is undefined, so its h1 declaration is a no-op. */
+.muxui-text-editor__content .ProseMirror h2 {
+  font-size: var(--muxui-semantic-typography-label-l-font-size);
+}
+.muxui-text-editor__content .ProseMirror h3 {
+  font-size: var(--muxui-semantic-typography-label-m-font-size);
+}
+.muxui-text-editor__content .ProseMirror h4 {
+  font-size: var(--muxui-semantic-typography-label-s-font-size);
+}
+
+.muxui-text-editor__content .ProseMirror ul,
+.muxui-text-editor__content .ProseMirror ol {
+  margin: var(--muxui-reference-dimension-space-3xs) 0;
+  padding-left: var(--muxui-reference-dimension-space-m);
+}
+
+.muxui-text-editor__content .ProseMirror li {
+  margin-bottom: var(--muxui-reference-dimension-space-4xs);
+}
+
+.muxui-text-editor__content .ProseMirror strong {
+  font-weight: 600;
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-text-editor__content .ProseMirror em {
+  font-style: italic;
+}
+
+.muxui-text-editor__content .ProseMirror u {
+  text-decoration: underline;
+}
+
+.muxui-text-editor__content .ProseMirror a {
+  color: var(--muxui-semantic-color-color-60);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.muxui-text-editor__content .ProseMirror a:hover {
+  color: var(--muxui-semantic-color-color-70);
+}
+
+.muxui-text-editor__content .ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--muxui-reference-dimension-radius-m);
+}
+
+.muxui-text-editor__content .ProseMirror blockquote {
+  margin: var(--muxui-reference-dimension-space-xs) 0;
+  padding-left: var(--muxui-reference-dimension-space-s);
+  border-left: 3px solid var(--muxui-semantic-color-neutral-26);
+  color: var(--muxui-semantic-color-neutral-60);
+  font-style: italic;
+}
+
+.muxui-text-editor__content .ProseMirror code {
+  background-color: var(--muxui-semantic-color-neutral-18);
+  border-radius: var(--muxui-reference-dimension-radius-s);
+  padding: 0.1em 0.3em;
+  font-family: var(--muxui-reference-typography-mono-font-family, monospace);
+  font-size: 0.9em;
+  color: var(--muxui-semantic-color-neutral-80);
+}
+
+.muxui-text-editor__content .ProseMirror pre {
+  background-color: var(--muxui-semantic-color-neutral-14);
+  border-radius: var(--muxui-reference-dimension-radius-m);
+  padding: var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-s);
+  margin: var(--muxui-reference-dimension-space-xs) 0;
+  overflow-x: auto;
+}
+
+.muxui-text-editor__content .ProseMirror pre code {
+  background: none;
+  padding: 0;
+}
+
+/* Placeholder */
+.muxui-text-editor__content .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--muxui-field-placeholder-color);
+  pointer-events: none;
+  height: 0;
+}
+
+/* Disabled */
+.muxui-text-editor[data-disabled] .muxui-text-editor__content .ProseMirror {
+  opacity: 0.45;
+  cursor: not-allowed;
+  background-color: var(--muxui-semantic-color-neutral-18);
+  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22);
+}
+
+/* Invalid */
+.muxui-text-editor[data-invalid] .muxui-text-editor__content .ProseMirror {
+  box-shadow: 0 0 0 1px var(--muxui-reference-color-red-60);
+}
+
+.muxui-text-editor[data-invalid] .muxui-text-editor__content .ProseMirror:focus {
+  box-shadow:
+    0 0 0 1px var(--muxui-reference-color-red-60),
+    0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-red-60) 20%, transparent);
+}
+
+/* ─── Toolbar ──────────────────────────────────────────────────────────────── */
+
+.muxui-text-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  align-items: center;
+}
+
+.muxui-text-editor__toolbar--floating {
+  position: relative;
+  background: var(--muxui-semantic-color-neutral-100);
+  border-radius: var(--muxui-reference-dimension-radius-m);
+  padding: 0.25rem;
+  box-shadow: var(--muxui-reference-effect-shadow-l);
+  border: 1px solid var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-text-editor__toolbar--advanced {
+  flex-wrap: wrap;
+  gap: 0.125rem;
+}
+
+/* ─── Separator ────────────────────────────────────────────────────────────── */
+
+.muxui-text-editor__separator {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--muxui-semantic-color-neutral-30);
+  margin: 0 var(--muxui-reference-dimension-space-4xs);
+  border-radius: 2px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+/* ─── Toolbar button ───────────────────────────────────────────────────────── */
+
+.muxui-text-editor__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--muxui-reference-dimension-radius-xs);
+  border: none;
+  background: transparent;
+  color: var(--muxui-semantic-color-neutral-60);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease;
+  padding: 0;
+}
+
+.muxui-text-editor__btn:hover {
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-90) 7%, transparent);
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-text-editor__btn:active {
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-90) 20%, transparent);
+}
+
+.muxui-text-editor__btn--active {
+  background-color: var(--muxui-semantic-color-neutral-94);
+  color: var(--muxui-semantic-color-neutral-10);
+}
+
+.muxui-text-editor__btn--active:hover {
+  background-color: var(--muxui-semantic-color-neutral-80);
+  color: var(--muxui-semantic-color-neutral-10);
+}
+
+.muxui-text-editor__btn:focus-visible {
+  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline-offset: 2px;
+}
+
+.muxui-text-editor__btn[data-disabled='true'],
+.muxui-text-editor__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ─── Color picker popup ───────────────────────────────────────────────────── */
+
+.muxui-text-editor__color-popup {
+  background: var(--muxui-semantic-color-neutral-100);
+  border: 1px solid var(--muxui-semantic-color-neutral-88);
+  border-radius: var(--muxui-reference-dimension-radius-m);
+  box-shadow: var(--muxui-reference-effect-shadow-m);
+  padding: var(--muxui-reference-dimension-space-xs);
+  min-width: 10.75rem;
+  z-index: 100;
+}
+
+.muxui-text-editor__color-dialog {
+  outline: none;
+}
+
+.muxui-text-editor__color-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.25rem;
+  margin-bottom: var(--muxui-reference-dimension-space-xs);
+}
+
+.muxui-text-editor__color-swatch {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
+  transition: transform 80ms ease;
+}
+
+.muxui-text-editor__color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.muxui-text-editor__color-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--muxui-reference-dimension-space-4xs);
+}
+
+.muxui-text-editor__color-field-label {
+  font-family: var(--muxui-reference-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-s-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  color: var(--muxui-semantic-color-neutral-60);
+}
+
+.muxui-text-editor__color-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.muxui-text-editor__color-field input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--muxui-field-min-height);
+  padding: var(--muxui-field-padding-block) var(--muxui-field-padding-inline);
+  border: 1px solid var(--muxui-field-border-color);
+  border-radius: var(--muxui-field-radius);
+  background-color: var(--muxui-field-bg);
+  color: var(--muxui-field-color);
+  font-family: var(--muxui-field-font-family);
+  font-size: var(--muxui-field-font-size);
+  outline: none;
+}
+
+.muxui-text-editor__color-field input:focus {
+  border-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
+}
+
+/* ─── Select controls (font family, font size) ─────────────────────────────── */
+
+.muxui-text-editor__select {
+  box-sizing: border-box;
+  height: 2rem;
+  padding: 0 var(--muxui-reference-dimension-space-3xs);
+  border: 1px solid var(--muxui-semantic-color-neutral-30);
+  border-radius: var(--muxui-reference-dimension-radius-s);
+  background-color: transparent;
+  color: var(--muxui-semantic-color-neutral-60);
+  font-family: var(--muxui-reference-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+  cursor: pointer;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.muxui-text-editor__select:hover {
+  border-color: var(--muxui-semantic-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-text-editor__select:focus-visible {
+  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline-offset: 2px;
+}
+
+.muxui-text-editor__select:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ─── Bubble menu ──────────────────────────────────────────────────────────── */
+
+.muxui-text-editor__bubble-menu {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+  padding: 0.25rem;
+  background: var(--muxui-semantic-color-neutral-10);
+  border: 1px solid var(--muxui-semantic-color-neutral-20);
+  border-radius: var(--muxui-reference-dimension-radius-m);
+  box-shadow: var(--muxui-reference-effect-shadow-l);
+}
+
+.muxui-text-editor__bubble-menu .muxui-text-editor__btn {
+  color: var(--muxui-semantic-color-neutral-70);
+}
+
+.muxui-text-editor__bubble-menu .muxui-text-editor__btn:hover {
+  background-color: var(--muxui-semantic-color-neutral-18);
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-text-editor__bubble-menu .muxui-text-editor__btn--active {
+  background-color: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+/* ─── Dark mode ────────────────────────────────────────────────────────────── */
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__content .ProseMirror {
+  background-color: var(--muxui-semantic-color-neutral-14);
+  color: var(--muxui-semantic-color-neutral-90);
+  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__content .ProseMirror:focus {
+  box-shadow:
+    0 0 0 1px var(--muxui-field-focus-border),
+    var(--muxui-field-focus-glow);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__content .ProseMirror strong {
+  color: var(--muxui-semantic-color-neutral-94);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__toolbar--floating {
+  background: var(--muxui-semantic-color-neutral-14);
+  border-color: var(--muxui-semantic-color-neutral-22);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__separator {
+  background: var(--muxui-semantic-color-neutral-22);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__btn:hover {
+  background-color: var(--muxui-semantic-color-neutral-18);
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__btn--active {
+  background-color: var(--muxui-semantic-color-neutral-22);
+  color: var(--muxui-semantic-color-neutral-96);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__color-popup {
+  background: var(--muxui-semantic-color-neutral-14);
+  border-color: var(--muxui-semantic-color-neutral-22);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__select {
+  background-color: transparent;
+  color: var(--muxui-semantic-color-neutral-60);
+  border-color: var(--muxui-semantic-color-neutral-22);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor__select:hover {
+  border-color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-80);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-text-editor[data-disabled] .muxui-text-editor__content .ProseMirror {
+  background-color: var(--muxui-semantic-color-neutral-12);
+  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-18);
+}
+
+/* Mux-owned field composition and accessible state hooks. */
+.muxui-text-editor__description,
+.muxui-text-editor__error {
+  margin: 0;
+  font-family: var(--muxui-reference-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+  color: var(--muxui-semantic-color-neutral-40);
+  line-height: 1.4;
+}
+
+.muxui-text-editor__error,
+.muxui-text-editor__hint--invalid {
+  color: var(--muxui-semantic-feedback-invalid);
+}
+
+.muxui-text-editor[data-invalid] .muxui-text-editor__description {
+  color: var(--muxui-reference-color-red-60);
+}
+
+.muxui-text-editor[data-readonly] .muxui-text-editor__content .ProseMirror {
+  cursor: default;
+}
+
+.muxui-text-editor[data-required] .muxui-text-editor__label::after {
+  content: ' *';
+  color: var(--muxui-semantic-selection-track);
+}

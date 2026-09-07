@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:alert-dialog-basic-react",
+  "kind": "example",
+  "name": "Basic React AlertDialog",
+  "summary": "A source-faithful React alert-dialog example using the Mux-owned compound API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:alert-dialog#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/alert-dialog/examples/react/basic.tsx"
+}

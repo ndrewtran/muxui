@@ -1,5 +1,13 @@
 import { Button } from '@muxui/react';
 
 export function BasicButtonExample() {
-  return <Button onActivate={() => undefined}>Save</Button>;
+  return (
+    <Button
+      variant="danger"
+      size="sm"
+      onActivate={() => undefined}
+    >
+      Delete
+    </Button>
+  );
 }

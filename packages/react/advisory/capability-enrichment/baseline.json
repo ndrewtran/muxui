@@ -1,0 +1,55 @@
+{
+  "schema": "muxui-react-capability-enrichment-baseline-v1",
+  "status": "locked",
+  "advisoryOnly": true,
+  "evidenceRole": "input-only",
+  "policy": {
+    "immutableSources": true,
+    "noMovingRefs": true,
+    "noRuntimeDependency": true,
+    "noBuildDependency": true,
+    "noPackageSurface": true,
+    "canonicalOwnersRemainAuthoritative": true,
+    "runtimeDependenciesAdded": [],
+    "notes": [
+      "Commit and tree identities are immutable inputs; moving refs are not accepted as baseline identity.",
+      "This advisory comparison does not add a runtime or build dependency.",
+      "Canonical component and binding files remain the owners of all Mux UI capability and support facts."
+    ]
+  },
+  "retrievalDate": "2026-09-01",
+  "sources": {
+    "muxUi": {
+      "repository": "ndrewtran/muxui",
+      "commit": "933dc0e25eb0745d86154c2d0ad06962f8c1d9b9"
+    },
+    "reactAriaComponents": {
+      "repository": "adobe/react-spectrum",
+      "package": "react-aria-components",
+      "version": "1.20.0",
+      "acceptedSnapshot": {
+        "commit": "5ecb3333001313e83898cd07644227897e3bae1f",
+        "rootTree": "eb6f6e25b83b2095536c4ab7671a0d977726738c",
+        "packageTree": "cf646e6aba1680d1d62caa8a24d9efeae96d2251",
+        "docsTree": "03d35846665158610a6edfcfbc55695dc8973fb8",
+        "npmIntegrity": "sha512-BMbpIgoV9aELeBrB0Y120NgoigHb5OdcJwc+4e7uSnbTbamea6lo+gqcc4LAxzMaK3Jf+7LI1oCDE6yANsmxIQ=="
+      }
+    },
+    "baseUi": {
+      "repository": "mui/base-ui",
+      "package": "@base-ui/react",
+      "version": "1.7.0",
+      "tag": "v1.7.0",
+      "tagObject": "c79b80c9068936a1a39e352433900ae6cec07573",
+      "commit": "254f4744f0a241c20697b9eeab33402f4469a081",
+      "rootTree": "04588e3fd4b1807d09d439fd57b7531270f048f7",
+      "packagesReactTree": "d8bab30bb90cc19ae78abdce28adf8011e95be45",
+      "docsTree": "efd39d0f313a083481f17c7a693ffd1722b84fa6",
+      "docsSrcTree": "a6aac28d856ac23b493dcb0c40cdeb550ef84bf3",
+      "npmIntegrity": "sha512-j+8QjX44C32jrXD/qyEAGpFr70FRpGL2CY61mQd9nBPWN737CK0xxD1ceJ055rW4RtdvFDT1e7otzdlfxvsYug==",
+      "releaseDate": "2026-08-04",
+      "releaseTimestamp": "2026-08-04T19:48:08+10:00",
+      "retrievalDate": "2026-09-01"
+    }
+  }
+}

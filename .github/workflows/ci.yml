@@ -30,5 +30,17 @@ jobs:
       - name: Run affected deterministic checks
         run: pnpm check
 
+      - name: Verify theme authoring in browser
+        run: pnpm --filter @muxui/scale check:browser
+
+      - name: Verify complex React interactions in Chrome
+        run: pnpm --filter @muxui/react check:browser
+
+      - name: Install isolated Tailwind consumer
+        run: pnpm --dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile
+
+      - name: Compile isolated Tailwind consumer
+        run: pnpm --dir tests/fixtures/tailwind-consumer check
+
       - name: Verify generation identity
         run: pnpm generate:check

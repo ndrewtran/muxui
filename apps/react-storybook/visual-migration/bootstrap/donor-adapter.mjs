@@ -82,6 +82,9 @@ export function donorSemanticSelectors(family, state) {
 export function donorActionFor(entry) {
   if (!entry?.action) return undefined;
   const selector = entry.action.selector
+    .replace('.muxui-date-trigger', entry.component === 'DateRangePicker' ? '.tale-date-range-picker__trigger' : '.tale-date-picker__trigger')
+    .replace('.muxui-combo-box-trigger', '.tale-combobox__trigger')
+    .replace('.muxui-select-trigger', '.tale-select__trigger')
     .replace('.core-date-trigger', entry.component === 'DateRangePicker' ? '.tale-date-range-picker__trigger' : '.tale-date-picker__trigger')
     .replace('.core-combo-box-trigger', '.tale-combobox__trigger')
     .replace('.core-select-trigger', '.tale-select__trigger');

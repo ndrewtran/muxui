@@ -1041,7 +1041,12 @@ export function createCatalogApi(inputBundle, options = {}) {
         ? undefined
         : Object.fromEntries(Object.entries(artifact.platformSafetyRequirementSets)
           .filter(([key]) => key.startsWith(`${selectedBinding.bindingId}:`)));
-      const { sourceCrosswalk: _sourceCrosswalk, tokens: _tokens, ...tokenRecordSummary } = artifact.record;
+      const {
+        sourceCrosswalk: _sourceCrosswalk,
+        tokens: _tokens,
+        extensions: _extensions,
+        ...tokenRecordSummary
+      } = artifact.record;
       const selectedRecord = artifact.kind === 'token'
         ? normalized.queryApiVersion === '2.0.0'
           ? { ...tokenRecordSummary, ...tokenSectionSummary(artifact) }

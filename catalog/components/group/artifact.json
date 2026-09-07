@@ -22,7 +22,7 @@
     "idle",
     "disabled",
     "invalid",
-    "readonly"
+    "read-only"
   ],
   "accessibility": {
     "nameRequired": false,

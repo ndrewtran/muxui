@@ -1,0 +1,133 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:checkbox-field",
+  "kind": "component",
+  "name": "CheckboxField",
+  "summary": "Capture an independent yes-or-no choice with supporting validation text.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Capturing an independent option that can be selected alongside other options."
+    ],
+    "avoidWhen": [
+      "For mutually exclusive choices or an immediate setting toggle."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "button",
+    "indicator",
+    "description",
+    "error"
+  ],
+  "states": [
+    "unchecked",
+    "checked",
+    "indeterminate",
+    "disabled",
+    "invalid",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Root supports controlled and uncontrolled selection plus native name/value form serialization with field description and error linkage."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "checked",
+          "defaultChecked",
+          "indeterminate",
+          "name",
+          "value",
+          "size",
+          "disabled",
+          "invalid",
+          "required",
+          "readOnly",
+          "onChange"
+        ],
+        "events": [
+          "change"
+        ],
+        "parts": [
+          "root",
+          "button",
+          "indicator",
+          "description",
+          "error"
+        ],
+        "defaults": {
+          "size": "md",
+          "disabled": false,
+          "invalid": false,
+          "required": false,
+          "readOnly": false
+        }
+      },
+      "behavior": [
+        "Root supports controlled and uncontrolled selection plus native name/value form serialization with field description and error linkage."
+      ],
+      "accessibility": [
+        "Root supports controlled and uncontrolled selection plus native name/value form serialization with field description and error linkage."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

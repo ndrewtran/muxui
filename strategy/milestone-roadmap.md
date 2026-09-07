@@ -975,6 +975,8 @@ neither canonical examples nor token/theme data.
 
 **Acceptance evidence**
 
+For R1.6, apply Decision 0013's [one-time migration clarification](../decisions/0013-theme-parity-and-private-authoring.md#one-time-migration-clarification): source comparison, representative visual states, meaningful interactions, and ordinary Mux checks establish the initial transfer. The assertions below do not require exhaustive property-by-property classification, strict screenshot replay, or ongoing Tale equality after migration. The migration report records material adaptations and validation limits.
+
 | ID | Required assertion | Retained evidence |
 | --- | --- | --- |
 | `E-R1.6-01` | The 125-style donor inventory is classification-complete, and every applicable React Aria-backed root/support style, including the known supplemental roots, maps to a Mux UI-owned binding identity through an explicit supplemental list where needed; unrelated marketing/layout roots have explicit exclusion reasons; every difference is explicit, and missing state/fixture coverage fails. | Complete donor inventory, supplemental mapping, and negative coverage report. |

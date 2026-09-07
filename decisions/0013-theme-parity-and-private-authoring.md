@@ -140,3 +140,22 @@ Reversal is append-only. Disable the private authoring or Tailwind capability
 and retain canonical Mux UI source truth; do not rewrite the pinned donor,
 historical token classifications, or retained evidence. Any future parity,
 platform, public-surface, or release expansion requires a successor decision.
+
+## One-time migration clarification
+
+Andrew clarified during implementation that he intends to change the components
+after this pass and that Tale parity is not an ongoing measurement. The transfer
+and its comparison records establish the initial Mux-owned foundation. Future
+Mux component, token, theme, and Storybook changes do not require a Tale checkout,
+updated donor comparisons, or continued equality with this reference.
+
+Implementation verification remains proportional: review the transferred source
+and representative light/dark visual states, exercise meaningful interactions,
+and run current Mux type, component, accessibility, build, and consumer checks.
+Record material differences and limitations in the migration report. Exhaustive
+per-leaf classifications and strict screenshot replay are not required delivery
+gates. Existing migration diagnostics and historical evidence may be retained
+as opt-in reference material; they must not constrain ordinary Mux generation
+or future design changes. The accepted component scope, ownership, independent
+platform boundaries, private Scale functionality, and optional Tailwind
+integration remain unchanged.

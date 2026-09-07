@@ -1,3 +1,4 @@
+import { createRef } from 'react';
 import {
   Autocomplete,
   type AutocompleteSelectionItem,
@@ -23,6 +24,7 @@ import {
   DropZone,
   FileTrigger,
   Form,
+  type MuxUIValidationErrors,
   GridList,
   Group,
   ListBox,
@@ -33,6 +35,7 @@ import {
   ProgressBar,
   Popover,
   PreviewTrigger,
+  RadioField,
   RadioGroup,
   RangeCalendar,
   SearchField,
@@ -58,15 +61,53 @@ import {
   reactCompatibility,
   useToast,
 } from '@muxui/react';
+import type { TextEditorDocument } from '../src/text-editor/index.d.ts';
 
 const schema: Readonly<Record<string, unknown>> = reactCompatibility;
 void schema;
+
+const textEditorDocument: TextEditorDocument = {
+  type: 'doc',
+  content: [{
+    type: 'bulletList',
+    content: [{
+      type: 'listItem',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Parent' }] }, {
+        type: 'orderedList',
+        attrs: { start: 3, type: 'a' },
+        content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Child' }] }] }],
+      }],
+    }],
+  }],
+};
+void textEditorDocument;
+// @ts-expect-error The document root accepts block nodes, never inline text.
+const textEditorRootText: TextEditorDocument = { type: 'doc', content: [{ type: 'text', text: 'Invalid root text' }] };
+void textEditorRootText;
+// @ts-expect-error Lists contain list items, whose first child is a paragraph.
+const textEditorListParagraph: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'paragraph' }] }] };
+void textEditorListParagraph;
+// @ts-expect-error Code blocks contain plain text nodes, not paragraph blocks.
+const textEditorCodeParagraph: TextEditorDocument = { type: 'doc', content: [{ type: 'codeBlock', content: [{ type: 'paragraph' }] }] };
+void textEditorCodeParagraph;
+// @ts-expect-error Lists must be nonempty to match the portable runtime grammar.
+const textEditorEmptyList: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [] }] };
+void textEditorEmptyList;
+// @ts-expect-error Block quotes must be nonempty to match the portable runtime grammar.
+const textEditorEmptyBlockquote: TextEditorDocument = { type: 'doc', content: [{ type: 'blockquote', content: [] }] };
+void textEditorEmptyBlockquote;
+// @ts-expect-error Ordered-list marker types are finite portable values.
+const textEditorInvalidOrderedListType: TextEditorDocument = { type: 'doc', content: [{ type: 'orderedList', attrs: { type: 'decimal' }, content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] }] };
+void textEditorInvalidOrderedListType;
 
 const button = (
   <Button
     aria-label="Save"
     disabled={false}
     pending
+    variant="secondary"
+    tone="destructive"
+    size="lg"
     onActivate={(event) => {
       const activationType: 'activate' = event.type;
       const pointerType = event.pointerType;
@@ -79,6 +120,17 @@ const button = (
   </Button>
 );
 void button;
+
+// Button visual axes are finite MuxUI-owned values.
+// @ts-expect-error Button variants do not expose arbitrary strings.
+const invalidButtonVariant = <Button variant="experimental">Save</Button>;
+void invalidButtonVariant;
+// @ts-expect-error Button tones do not expose arbitrary strings.
+const invalidButtonTone = <Button tone="danger">Delete</Button>;
+void invalidButtonTone;
+// @ts-expect-error Button sizes do not expose arbitrary strings.
+const invalidButtonSize = <Button size="medium">Save</Button>;
+void invalidButtonSize;
 
 // React Aria names remain internal implementation details of MuxUI Button.
 // @ts-expect-error MuxUI owns `disabled`, not the upstream `isDisabled` prop.
@@ -93,8 +145,8 @@ void navigation;
 
 const componentSlice = (
   <>
-    <Breadcrumbs aria-label="Breadcrumb" items={[{ label: 'Home', href: '/' }, { label: 'Docs' }]} />
-    <Checkbox defaultChecked onChange={(checked) => { const value: boolean = checked; void value; }}>Accept</Checkbox>
+    <Breadcrumbs aria-label="Breadcrumb" items={[{ label: 'Home', href: '/', disabled: true }, { label: 'Docs' }]} />
+    <Checkbox defaultChecked size="sm" onChange={(checked) => { const value: boolean = checked; void value; }}>Accept</Checkbox>
     <Disclosure title="Details" defaultExpanded onExpandedChange={(expanded) => { const value: boolean = expanded; void value; }}>Content</Disclosure>
     <DisclosureGroup defaultExpandedIds={['one']} multiple={false} onExpandedChange={(ids) => { const value: string[] = ids; void value; }}>
       <Disclosure id="one" title="One">First</Disclosure>
@@ -104,23 +156,23 @@ const componentSlice = (
     <Meter label="Storage" value={72} />
     <ProgressBar label="Upload" value={64} />
     <Separator orientation="vertical" />
-    <ToggleButton defaultSelected onChange={(selected) => { const value: boolean = selected; void value; }}>Bold</ToggleButton>
+    <ToggleButton defaultSelected size="sm" onChange={(selected) => { const value: boolean = selected; void value; }}>Bold</ToggleButton>
   </>
 );
 void componentSlice;
 
 const fields = (
-  <Form onSubmit={(event) => event.preventDefault()}>
-    <TextField label="Name" value="Andrew" onChange={(value) => { const text: string = value; void text; }} />
+  <Form onSubmit={(event) => event.preventDefault()} validationErrors={{ name: 'Name is already taken' }}>
+    <TextField label="Name" value="Andrew" autoComplete="name" autoFocus inputMode="text" maxLength={80} minLength={2} pattern=".+" spellCheck={false} onChange={(value) => { const text: string = value; void text; }} />
     <SearchField label="Search" defaultValue="MuxUI" onSubmit={(value) => { const text: string = value; void text; }} />
     <NumberField label="Quantity" defaultValue={2} onChange={(value) => { const amount: number = value; void amount; }} />
     <CheckboxGroup label="Alerts" defaultValue={['email']}><Checkbox value="email">Email</Checkbox></CheckboxGroup>
-    <Switch label="Enabled" selected onChange={(selected) => { const value: boolean = selected; void value; }} />
+    <Switch label="Enabled" selected required invalid onChange={(selected) => { const value: boolean = selected; void value; }} />
     <DateField label="Birthday" value="2026-08-26" onChange={(value) => { const date: string | undefined = value; void date; }} />
-    <DatePicker label="Due" defaultValue="2026-08-26" />
-    <DateRangePicker label="Trip" startName="tripStart" endName="tripEnd" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} />
-    <TimeField label="Start" defaultValue="09:30" />
-    <Autocomplete label="City" items={['Melbourne', { label: 'Sydney' }, {}]} onSelect={(item) => {
+    <DatePicker label="Due" defaultValue="2026-08-26" minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date) => { const value: string = date; void value; return false; }} />
+    <DateRangePicker label="Trip" startName="tripStart" endName="tripEnd" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date, anchorDate) => { const value: string = date; const anchor: string | null = anchorDate; void value; void anchor; return false; }} />
+    <TimeField label="Start" defaultValue="09:30" minValue="09:00" maxValue="17:00" />
+    <Autocomplete label="City" size="sm" items={['Melbourne', { label: 'Sydney' }, {}]} onSelect={(item) => {
       if (!item) return;
       const normalized: AutocompleteSelectionItem = item;
       const id: string = normalized.id;
@@ -134,6 +186,9 @@ const fields = (
 );
 void fields;
 
+const validationErrors: MuxUIValidationErrors = { name: 'Name is already taken', quantity: ['Must be at least one'] };
+void validationErrors;
+
 // Mux UI's public field contracts do not expose RAC prop names or temporal objects.
 // @ts-expect-error MuxUI owns `disabled`, not the upstream `isDisabled` prop.
 const upstreamFieldProp = <TextField label="Name" isDisabled />;
@@ -141,6 +196,24 @@ void upstreamFieldProp;
 // @ts-expect-error Date fields accept MuxUI ISO strings, not upstream date objects.
 const upstreamDateValue = <DateField label="Birthday" value={{ year: 2026, month: 8, day: 26 }} />;
 void upstreamDateValue;
+// @ts-expect-error Temporal bounds remain serialized MuxUI values.
+const numericDateBound = <DateField label="Birthday" minValue={20260826} />;
+void numericDateBound;
+// @ts-expect-error Temporal bounds are owned by temporal fields, not TextField.
+const temporalTextFieldProp = <TextField label="Name" minValue="2026-01-01" />;
+void temporalTextFieldProp;
+// @ts-expect-error TimeField only accepts serialized local-time values.
+const numericTimeBound = <TimeField label="Start" minValue={930} />;
+void numericTimeBound;
+// @ts-expect-error Open state is boolean and owned independently from value state.
+const stringOpen = <DatePicker label="Due" open="true" />;
+void stringOpen;
+// @ts-expect-error Date unavailable callbacks receive MuxUI strings, not upstream date objects.
+const upstreamUnavailableCallback = <DateRangePicker label="Trip" unavailableDateMatcher={(date) => { const year: number = date.year; return year > 0; }} />;
+void upstreamUnavailableCallback;
+// @ts-expect-error React Aria's substrate callback name is not part of the public MuxUI API.
+const upstreamUnavailableProp = <DatePicker label="Due" isDateUnavailable={() => false} />;
+void upstreamUnavailableProp;
 
 const ariaNamedField = <TextField aria-label="Name" />;
 const labelledByField = <TextField aria-labelledby="name-heading" />;
@@ -152,13 +225,6 @@ void unnamedTextField;
 // @ts-expect-error Switch uses the same MuxUI accessible-name contract.
 const unnamedSwitch = <Switch>Enabled</Switch>;
 void unnamedSwitch;
-// Switch's canonical contract intentionally excludes field validation props.
-// @ts-expect-error Switch does not expose required.
-const switchRequired = <Switch label="Enabled" required />;
-void switchRequired;
-// @ts-expect-error Switch does not expose invalid.
-const switchInvalid = <Switch label="Enabled" invalid />;
-void switchInvalid;
 // @ts-expect-error R1.2 fields do not expose the upstream validationBehavior prop.
 const fieldValidationBehavior = <TextField label="Name" validationBehavior="native" />;
 void fieldValidationBehavior;
@@ -208,6 +274,7 @@ const r13Collections = (
     <ListBox aria-label="Files" items={[{ id: 'readme', label: <strong>README</strong> }]} />
     <Menu aria-label="Actions" items={[{ id: 'edit', label: <strong>Edit</strong> }]} />
     <RadioGroup label="Plan" options={[{ value: 'pro', label: <strong>Pro</strong> }]} />
+    <RadioGroup label="Plan"><RadioField.Root value="pro"><RadioField.Button>Pro</RadioField.Button></RadioField.Root></RadioGroup>
     <RangeCalendar label="Trip" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} />
     <Select label="Color" items={[{ id: 'red', label: <strong>Red</strong> }]} />
     <Slider label="Volume" defaultValue={50} />
@@ -222,6 +289,40 @@ const r13Collections = (
   </>
 );
 void r13Collections;
+
+const r13EnrichedCollections = (
+  <>
+    <Calendar label="Date" focusedValue="2026-08-26" unavailableDateMatcher={(date) => date === '2026-08-27'} onFocusChange={(date) => { const value: string | undefined = date; void value; }} />
+    <RangeCalendar label="Trip" focusedValue="2026-08-26" unavailableDateMatcher={(date) => date === '2026-08-27'} onFocusChange={(date) => { const value: string | undefined = date; void value; }} />
+    <Select label="Color" open={false} defaultOpen={false} onOpenChange={(open) => { const value: boolean = open; void value; }} />
+    <Table aria-label="People" columns={[{ id: 'name', label: 'Name', sortable: true }]} sortDescriptor={{ column: 'name', direction: 'ascending' }} onSortChange={(next) => { const column: string = next.column; void column; }} />
+    <Tabs aria-label="Sections" keyboardActivation="manual" />
+    <CheckboxGroup aria-label="Choices" orientation="horizontal" size="sm" />
+    <RadioGroup aria-label="Choice" size="sm" />
+    <ToggleButtonGroup aria-label="Styles" size="sm" disallowEmptySelection selectionMode="multiple" selectedIds={['bold'] as readonly string[]} onSelectionChange={(ids) => { const value: readonly string[] = ids; void value; }} />
+    <ColorSlider aria-label="Red" readOnly />
+    <ColorSwatchPicker aria-label="Palette" readOnly />
+    <ColorWheel aria-label="Hue" outerRadius={96} innerRadius={64} readOnly />
+    <Slider aria-label="Volume" readOnly onChangeEnd={(value) => { const numberValue: number = value; void numberValue; }} />
+    <RadioGroup aria-label="Plan" orientation="horizontal" />
+    <Virtualizer aria-label="Results" overscan={2} />
+  </>
+);
+void r13EnrichedCollections;
+
+// R1.3 enriched state remains bounded to Mux-owned primitives and shapes.
+// @ts-expect-error ToggleButtonGroup never accepts the upstream `all` selection sentinel.
+const toggleAllSelection = <ToggleButtonGroup aria-label="Styles" selectedIds="all" />;
+void toggleAllSelection;
+// @ts-expect-error Toolbar does not claim to disable arbitrary children.
+const disabledToolbar = <Toolbar aria-label="Actions" disabled />;
+void disabledToolbar;
+// @ts-expect-error Table sort direction is a bounded Mux descriptor.
+const invalidSortDirection = <Table aria-label="People" sortDescriptor={{ column: 'name', direction: 'sideways' }} />;
+void invalidSortDirection;
+// @ts-expect-error Virtualizer overscan is numeric, not a custom layout object.
+const customVirtualizerOverscan = <Virtualizer aria-label="Results" overscan={{ rows: 2 }} />;
+void customVirtualizerOverscan;
 
 // R1.3 public collection contracts intentionally keep naming and item rendering Mux UI-owned.
 // @ts-expect-error ARIA-only controls do not expose a `label` prop.
@@ -278,6 +379,10 @@ void radioGroupErrorMessage;
 // @ts-expect-error RadioGroup does not expose a generic field name.
 const radioGroupName = <RadioGroup label="Plan" name="unsupported" />;
 void radioGroupName;
+// @ts-expect-error RadioField.Root requires a stable value for RadioGroup selection identity.
+const radioFieldWithoutValue = <RadioField.Root><RadioField.Button>Missing value</RadioField.Button></RadioField.Root>;
+void radioFieldWithoutValue;
+
 // @ts-expect-error TagGroup does not expose generic field descriptions.
 const tagGroupDescription = <TagGroup label="Tags" description="Unsupported" />;
 void tagGroupDescription;
@@ -337,13 +442,13 @@ const r14Overlays = (
       }
       void operation;
     }}>Drop files</DropZone>
-    <FileTrigger acceptedFileTypes={['image/png', 'image/jpeg'] as const} allowsMultiple onSelect={(files) => { const selected: File[] = files; void selected; }}>Choose files</FileTrigger>
+    <FileTrigger ref={createRef<HTMLInputElement>()} acceptedFileTypes={['image/png', 'image/jpeg'] as const} allowsMultiple onSelect={(files) => { const selected: File[] = files; void selected; }}>Choose files</FileTrigger>
     <Dialog title="Confirm" trigger={<button type="button">Open</button>}>Dialog content</Dialog>
     <Dialog aria-label="Programmatic dialog" open={false}>Dialog content</Dialog>
-    <Popover aria-label="Details" trigger={<button type="button">Details</button>}>Popover content</Popover>
-    <PreviewTrigger aria-label="Item preview" trigger={<a href="/items/1">Preview</a>} open={false}>Preview content</PreviewTrigger>
+    <Popover aria-label="Details" trigger={<button type="button">Details</button>} placement="start" offset={8} crossOffset={0} shouldFlip containerPadding={12}>Popover content</Popover>
+    <PreviewTrigger aria-label="Item preview" trigger={<a href="/items/1">Preview</a>} open={false} disabled placement="end" offset={8} crossOffset={0} shouldFlip containerPadding={12}>Preview content</PreviewTrigger>
     <ToastProvider><Toast message="Saved" variant="success" onDismiss={() => undefined} /></ToastProvider>
-    <Tooltip trigger={<button type="button">Help</button>} content="Helpful information" delay={500} closeDelay={0} />
+    <Tooltip trigger={<button type="button">Help</button>} content="Helpful information" delay={500} closeDelay={0} disabled placement="bottom" offset={0} crossOffset={0} shouldFlip containerPadding={12} />
   </>
 );
 void r14Overlays;

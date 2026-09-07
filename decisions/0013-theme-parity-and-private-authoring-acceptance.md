@@ -45,3 +45,21 @@ Markdown parser boundary, and the eight `@tiptap/*@3.22.3` packages for
 license/notice, integrity, peer, lockfile, isolation, tree-shaking,
 SSR/hydration, packed-consumer, and Markdown security proof; they do not admit
 Tale dependencies or upstream public editor/parser types and objects.
+
+## Implementation clarification
+
+Andrew subsequently clarified:
+
+> I intend to make some changes to the components after the Tale parity pass is
+> completed. Parity is not to be an ongoing measurement after the initial parity
+> pass is completed.
+
+He then instructed:
+
+> Resume your work on Scale, consolidating the branches, and delivering the
+> migration.
+
+This clarification makes the donor comparison a one-time migration activity.
+Normal Mux development uses its own current component contracts, tests, and
+Storybook without maintaining Tale equality or donor proof records. It does not
+assert that the migration has already completed.

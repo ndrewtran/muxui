@@ -1,0 +1,310 @@
+{
+  "schema": "muxui-react-r1-6-differences-v1",
+  "authority": "decisions/0013-theme-parity-and-private-authoring.md",
+  "status": "proof-required",
+  "records": [
+    {
+      "id": "mux-owned-api",
+      "scope": "all applicable React bindings",
+      "kind": "api-adaptation",
+      "reason": "Mux owns finite props, events, identity and serializable values. Donor React Aria, Lucide, editor and parser types or objects are not public Mux contracts.",
+      "requiredProof": [
+        "canonical-example-types",
+        "packed-export-types-runtime-agreement",
+        "controlled-default-interactions",
+        "no-upstream-public-type-or-object-leakage"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "button-pending-accessible-name",
+      "scope": "Button.pending with hidden text and no caller-supplied accessible name",
+      "kind": "accessibility-correction",
+      "reason": "The pinned donor hides the existing content span with visibility:hidden while making its spinner aria-hidden, without connecting the hidden content as an accessible naming source. Mux keeps that visible pending design and uses a stable ID reference to the existing content only when no caller accessible name is supplied. Explicit caller labels and the ordinary visible-text states retain their naming precedence.",
+      "donorInputs": [
+        "packages/react/src/button/Button.styled.tsx"
+      ],
+      "requiredProof": [
+        "button-donor-hidden-pending-content-naming",
+        "button-initial-pending-accessible-name",
+        "button-pending-state-name-preservation",
+        "button-caller-label-precedence-and-optional-undefined",
+        "button-paired-pending-appearance"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "select-drop-zone-text-contrast",
+      "scope": "enabled Select placeholder and enabled DropZone default text",
+      "kind": "accessibility-correction",
+      "reason": "The pinned donor uses neutral-50 for Select placeholder text and inherited DropZone text. The accepted warm palette measures 3.17:1 for #918b86 on #f9f8f8 in light mode and 4.04:1 in dark mode. Mux uses the local mode-aware semantic neutral-60 token for enabled default text, yielding 4.52:1 light and 5.74:1 dark, while preserving global token values, geometry, disabled styling and active drag colors. The resulting paired color differences require retained proof.",
+      "donorInputs": [
+        "packages/styles/src/select.css",
+        "packages/styles/src/drop-zone.css"
+      ],
+      "requiredProof": [
+        "select-placeholder-light-dark-contrast",
+        "drop-zone-text-light-dark-contrast",
+        "select-drop-zone-disabled-and-drag-style-preservation",
+        "select-drop-zone-paired-geometry-and-color-differences"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "mux-owned-color-control-states",
+      "scope": "ColorArea.readOnly, ColorSlider.readOnly, ColorWheel.readOnly, ColorSwatch.disabled",
+      "kind": "api-adaptation",
+      "reason": "Mux owns these additional control states. Its color pickers guard value-changing input when read-only, and its swatch projects an explicit disabled state. The pinned Tale wrappers and their React Aria contracts do not expose corresponding read-only picker or disabled swatch props. Attempted donor-state failures are retained; the extra Mux behavior requires separate interaction proof. Shared applicable appearances and interactions still require paired comparison.",
+      "donorInputs": [
+        "packages/react/src/color-area/ColorArea.styled.tsx",
+        "packages/react/src/color-slider/ColorSlider.styled.tsx",
+        "packages/react/src/color-wheel/ColorWheel.styled.tsx",
+        "packages/react/src/color-swatch/ColorSwatch.styled.tsx"
+      ],
+      "requiredProof": [
+        "donor-color-control-state-contract-absence",
+        "donor-unsupported-state-failed-fixtures",
+        "mux-color-read-only-value-change-rejection",
+        "mux-color-swatch-disabled-semantics",
+        "paired-applicable-color-control-styles"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "mux-owned-slider-read-only",
+      "scope": "Slider.readOnly",
+      "kind": "api-adaptation",
+      "reason": "Mux owns a read-only numeric slider state that rejects value-changing keyboard and pointer input while preserving its value and focus access. The pinned Tale Slider forwards the React Aria slider contract, whose state props expose disabled but no read-only option. Attempted donor-state failures are retained; Mux read-only behavior requires separate interaction proof. All shared slider variants and appearances still require paired comparison.",
+      "donorInputs": [
+        "packages/react/src/slider/Slider.styled.tsx"
+      ],
+      "requiredProof": [
+        "donor-slider-read-only-contract-absence",
+        "donor-slider-read-only-failed-fixture",
+        "mux-slider-read-only-keyboard-and-pointer-rejection",
+        "paired-applicable-slider-styles"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "mux-owned-virtualizer-overscan",
+      "scope": "Virtualizer.overscan",
+      "kind": "api-adaptation",
+      "reason": "Mux exposes row-count overscan through its owned fixed-row layout. The pinned donor reexports React Aria ListLayout, whose geometry and velocity overscan policy has no matching row-count option. Height and item height map to the donor viewport and row size and remain paired; the additional overscan policy requires Mux-only range and interaction proof.",
+      "donorInputs": [
+        "packages/react/src/virtualizer/index.ts"
+      ],
+      "requiredProof": [
+        "donor-virtualizer-overscan-contract-absence",
+        "virtualizer-height-and-item-height-paired-fixtures",
+        "mux-virtualizer-overscan-rendered-range"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "editor-url-boundary",
+      "scope": "TextEditor",
+      "kind": "interaction-safety",
+      "reason": "Mux validates link and image destinations through its owned command boundary. Images use durable HTTP(S) URLs supplied through the existing consumer request callback or URL prompt, rather than inserting temporary browser object URLs into saved documents. Link shortcuts apply only inside the focused editable instance. These corrections preserve the toolbar design while avoiding lost saved images and shortcuts affecting unrelated controls.",
+      "requiredProof": [
+        "safe-link-and-image-actions",
+        "unsafe-scheme-and-credential-rejection",
+        "formatting-round-trip",
+        "ssr-hydration-listener-cleanup"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "editor-custom-color-control",
+      "scope": "TextEditor",
+      "kind": "interaction-correction",
+      "reason": "The donor color popup uses a bare trigger button, renders ColorField without an input, and formats custom colors by interpolating a Color object into an invalid CSS value. Mux retains the donor popup, swatches and field styling while providing an operable React Aria trigger, a hex input and valid hex serialization.",
+      "donorInputs": [
+        "packages/react/src/text-editor/TextEditor.styled.tsx",
+        "packages/styles/src/text-editor.css"
+      ],
+      "requiredProof": [
+        "text-editor-donor-color-trigger-failure",
+        "text-editor-color-popup-keyboard-open-close",
+        "text-editor-custom-hex-color-selection",
+        "text-editor-color-popup-common-style-and-anatomy-reference"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "markdown-url-boundary",
+      "scope": "Markdown",
+      "kind": "interaction-safety",
+      "reason": "Mux retains bounded parsing and raw HTML removal behind its typed renderer and rejects credential-bearing links and bases in addition to unsafe schemes.",
+      "requiredProof": [
+        "allowed-markdown-anatomy",
+        "source-line-depth-node-bounds",
+        "raw-html-removal",
+        "url-scheme-and-credential-rejection"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "payment-input-controlled-value",
+      "scope": "PaymentInput",
+      "kind": "interaction-correction",
+      "reason": "The pinned donor initializes its internal digits to an empty string even for a supplied value, so a prefilled number remains unformatted and its card icon reports unknown. After typing, those internal digits also override later controlled values. Mux derives formatting and card type from the current owned value and preserves parent acceptance or rejection of edits. Controlled donor differences remain reported; matching uncontrolled typing fixtures separately prove the shared formatting and card appearance.",
+      "donorInputs": [
+        "packages/react/src/payment-input/PaymentInput.styled.tsx"
+      ],
+      "requiredProof": [
+        "payment-input-donor-prefilled-and-controlled-differences",
+        "payment-input-controlled-prefill-format-and-card-type",
+        "payment-input-controlled-parent-update-and-rejection",
+        "payment-input-paired-uncontrolled-typing-format-and-card-type"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "progress-circle-indeterminate-semantics",
+      "scope": "ProgressCircle",
+      "kind": "accessibility-correction",
+      "reason": "For an indeterminate value, the pinned donor animates its circle but forwards null to React Aria without its indeterminate flag, producing an announced value of 0%. Mux retains the circle styling and animation while explicitly exposing indeterminate progress without aria-valuenow or a fabricated percentage.",
+      "donorInputs": [
+        "packages/react/src/progress-circle/ProgressCircle.styled.tsx"
+      ],
+      "requiredProof": [
+        "progress-circle-donor-indeterminate-zero-announcement",
+        "progress-circle-indeterminate-accessible-value-absence",
+        "progress-circle-finite-range-semantics",
+        "progress-circle-paired-indeterminate-appearance-and-motion"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "color-mode-toggle-hydration",
+      "scope": "ColorModeToggle",
+      "kind": "hydration-correction",
+      "reason": "The donor reads saved and operating-system color preferences during the initial browser render, which can disagree with server markup. Mux uses a deterministic initial render, then restores the saved preference before the explicit default or operating-system preference. The settled control design and preference precedence remain the donor behavior.",
+      "donorInputs": [
+        "packages/react/src/color-mode-toggle/ColorModeToggle.styled.tsx"
+      ],
+      "requiredProof": [
+        "color-mode-toggle-persisted-dark-hydration",
+        "color-mode-toggle-preference-precedence",
+        "color-mode-toggle-paired-settled-state"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "multi-select-placeholder-contrast",
+      "scope": "MultiSelect",
+      "kind": "accessibility-correction",
+      "reason": "The donor placeholder uses the muted field token, which measures 3.17:1 against the default light field surface and 4.04:1 in dark mode. Mux uses the mode-aware semantic neutral-60 token locally for the MultiSelect placeholder, yielding 4.52:1 light and 5.74:1 dark. Global placeholder tokens and component geometry retain donor values.",
+      "donorInputs": [
+        "packages/react/src/multi-select/MultiSelect.styled.tsx",
+        "packages/styles/src/multi-select.css"
+      ],
+      "requiredProof": [
+        "multi-select-placeholder-light-dark-contrast",
+        "multi-select-paired-default-geometry"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "input-tags-input-semantics",
+      "scope": "InputTags",
+      "kind": "accessibility-correction",
+      "reason": "The pinned donor labels its group but leaves the editable input without the visible label, description or error references, and places required and invalid state on the group. Mux connects the actual input to stable per-instance label and mounted help or error IDs, preserves caller references, and exposes required and invalid state on that input. Visible text, placement and styling remain paired.",
+      "donorInputs": [
+        "packages/react/src/input-tags/InputTags.styled.tsx"
+      ],
+      "requiredProof": [
+        "input-tags-donor-input-relationship-absence",
+        "input-tags-unique-stable-label-and-message-ids",
+        "input-tags-live-description-error-and-caller-references",
+        "input-tags-editable-input-invalid-required-state",
+        "input-tags-paired-common-appearance"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "radio-field-error-slot",
+      "scope": "RadioField",
+      "kind": "accessibility-correction",
+      "reason": "The pinned donor renders React Aria FieldError inside RadioField even though that field only provides a description slot. Under an invalid RadioGroup, this throws an invalid errorMessage slot exception. Mux preserves the error styling while rendering an error only for an invalid field or group, linking the actual radio input to the mounted error, and preserving description and caller references.",
+      "donorInputs": [
+        "packages/react/src/radio-field/RadioField.styled.tsx",
+        "packages/styles/src/radio-field.css"
+      ],
+      "requiredProof": [
+        "radio-field-donor-invalid-error-slot-failure",
+        "radio-field-invalid-error-mount-and-removal",
+        "radio-field-group-invalid-inheritance",
+        "radio-field-custom-error-id-and-description-linkage",
+        "radio-field-paired-invalid-root-styling"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "scale-radius-round-trip",
+      "scope": "private Scale authoring",
+      "kind": "authoring-correction",
+      "reason": "Donor Scale displays its 0.125rem radius base at curvature 1 but omits the CSS override at that value, leaving the library's 0.07813rem base active. Mux Scale emits its displayed radius values consistently for preview, saved documents and exported CSS. The library's default radius values remain the pinned donor defaults.",
+      "donorInputs": [
+        "playground/scale/src/App.jsx",
+        "playground/scale/src/utils.js"
+      ],
+      "requiredProof": [
+        "scale-radius-preview-export-round-trip",
+        "unchanged-library-default-radius"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "scale-contrast-pivot-export",
+      "scope": "private Scale authoring",
+      "kind": "authoring-correction",
+      "reason": "Donor Scale exposes a manual contrast pivot but its CSS export ignores that setting. Mux applies the selected pivot through the shared compiler so preview, saved documents and exported CSS agree; swatches report their resulting contrast. Automatic pivot behavior preserves the captured donor palette results.",
+      "donorInputs": [
+        "playground/scale/src/App.jsx",
+        "playground/scale/src/utils.js"
+      ],
+      "requiredProof": [
+        "scale-manual-pivot-preview-export-round-trip",
+        "scale-automatic-palette-reference"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    },
+    {
+      "id": "scale-mux-authoring",
+      "scope": "private Scale authoring",
+      "kind": "authoring-extension",
+      "reason": "Mux Scale adds validated Mux theme identity, JSON import/export, local save/load and stale-write rejection to the donor palette editor. Preview and export use the same Mux token compiler.",
+      "requiredProof": [
+        "scale-browser-round-trip",
+        "invalid-import-rejection",
+        "stale-write-rejection",
+        "preserved-overrides-and-constrained-modes"
+      ],
+      "visualWaiver": false,
+      "status": "proof-required"
+    }
+  ],
+  "visualComparison": {
+    "status": "pending",
+    "policy": "Record every measured difference in current paired evidence. These adaptations do not waive missing visual states, anatomy or interactions."
+  }
+}

@@ -1,0 +1,128 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:card",
+  "kind": "component",
+  "name": "Card",
+  "summary": "Present related content in a bordered, filled, or elevated surface.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Grouping related content, metadata, and actions into a single surface."
+    ],
+    "avoidWhen": [
+      "For page-level layout, dense data tables, or a standalone action."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "button",
+    "header",
+    "body",
+    "footer"
+  ],
+  "states": [
+    "elevated",
+    "outlined",
+    "filled",
+    "selected",
+    "pending",
+    "disabled",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Card.Button is the interactive alternate root and exposes selected and pending state."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "variant",
+          "padding",
+          "selected",
+          "pending",
+          "disabled",
+          "onActivate"
+        ],
+        "events": [
+          "activate"
+        ],
+        "parts": [
+          "root",
+          "button",
+          "header",
+          "body",
+          "footer"
+        ],
+        "defaults": {
+          "variant": "outlined",
+          "padding": "md",
+          "disabled": false,
+          "pending": false
+        }
+      },
+      "behavior": [
+        "Card.Button is the interactive alternate root and exposes selected and pending state."
+      ],
+      "accessibility": [
+        "Card.Button is the interactive alternate root and exposes selected and pending state."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:button-group",
+  "kind": "component",
+  "name": "ButtonGroup",
+  "summary": "Keep related actions together with shared orientation and attached styling.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Presenting two or more related actions as one visual group."
+    ],
+    "avoidWhen": [
+      "For unrelated actions or a navigation list."
+    ]
+  },
+  "anatomy": [
+    "root"
+  ],
+  "states": [
+    "horizontal",
+    "vertical",
+    "attached",
+    "disabled"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Preserves child action order and keyboard focus order.",
+      "Presentation groups require no accessible name; named groups expose group semantics."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "orientation",
+          "attached",
+          "disabled",
+          "aria-label",
+          "aria-labelledby"
+        ],
+        "events": [],
+        "parts": [
+          "root"
+        ],
+        "defaults": {
+          "orientation": "horizontal",
+          "attached": false,
+          "disabled": false
+        }
+      },
+      "behavior": [
+        "Preserves child action order and keyboard focus order.",
+        "Presentation groups require no accessible name; named groups expose group semantics."
+      ],
+      "accessibility": [
+        "Preserves child action order and keyboard focus order.",
+        "Presentation groups require no accessible name; named groups expose group semantics."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

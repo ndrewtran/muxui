@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/overlays.mjs
-// @generated-content-sha256: sha256:77bba905c0c9f58cd8bd0575d5739c834e9037d191502efef8e333de258112d7
+// @generated-content-sha256: sha256:eee777aa87b06519c1e0f5a465c38c8c374d7079eb3cb1ec6b83301ca9857105
 import React from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { Button as MuxUIButton } from './button.mjs';
@@ -29,8 +29,45 @@ function classNames(base, className) {
 }
 
 function normalizeMaxVisible(value) {
-  const normalized = Number.isFinite(value) ? Math.floor(value) : 5;
+  if (value !== undefined && !Number.isFinite(value)) throw new TypeError('Toast maxVisible must be finite');
+  const normalized = value === undefined ? 5 : Math.floor(value);
   return normalized > 0 ? normalized : 5;
+}
+
+const OVERLAY_PLACEMENTS = new Set(['top', 'bottom', 'start', 'end']);
+
+function normalizePlacement(value, fallback, name) {
+  const normalized = value === undefined ? fallback : value;
+  if (!OVERLAY_PLACEMENTS.has(normalized)) throw new TypeError(`${name} must be one of top, bottom, start, or end`);
+  return normalized;
+}
+
+function normalizeFinite(value, fallback, name) {
+  if (value === undefined) return fallback;
+  if (!Number.isFinite(value)) throw new TypeError(`${name} must be finite`);
+  return value;
+}
+
+function normalizeNonNegativeFinite(value, fallback, name) {
+  const normalized = normalizeFinite(value, fallback, name);
+  if (normalized < 0) throw new TypeError(`${name} must be nonnegative`);
+  return normalized;
+}
+
+function normalizeBoolean(value, fallback, name) {
+  if (value === undefined) return fallback;
+  if (typeof value !== 'boolean') throw new TypeError(`${name} must be a boolean`);
+  return value;
+}
+
+function overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, defaults, name) {
+  return {
+    placement: normalizePlacement(placement, defaults.placement, name),
+    offset: normalizeFinite(offset, defaults.offset, `${name} offset`),
+    crossOffset: normalizeFinite(crossOffset, defaults.crossOffset, `${name} crossOffset`),
+    shouldFlip: normalizeBoolean(shouldFlip, defaults.shouldFlip, `${name} shouldFlip`),
+    containerPadding: normalizeNonNegativeFinite(containerPadding, defaults.containerPadding, `${name} containerPadding`),
+  };
 }
 
 function hasRenderableLabel(value) {
@@ -77,7 +114,16 @@ function normalizeDropEvent(event) {
     x: event.x,
     y: event.y,
     dropOperation: event.dropOperation,
-    items: event.items.map(normalizeDropItem),
+    items: (event.items ?? []).map(normalizeDropItem),
+  };
+}
+
+function composeEventHandlers(first, second) {
+  if (!first) return second;
+  if (!second) return first;
+  return (event) => {
+    first(event);
+    if (!event.defaultPrevented) second(event);
   };
 }
 
@@ -104,11 +150,17 @@ export const DropZone = React.forwardRef(function DropZone({
   className,
   ...props
 }, ref) {
+  const disabledRef = React.useRef(disabled);
+  disabledRef.current = disabled;
   const handleDrop = React.useCallback((event) => {
+    if (disabledRef.current) return;
     onDrop?.(normalizeDropEvent(event));
   }, [onDrop]);
-  const handleDropActivate = React.useCallback((event) => {
-    onActivate?.({ type: 'activate', x: event.x, y: event.y });
+  const handleActivate = React.useCallback((event) => {
+    // RAC's hidden drop button reports keyboard activation through a native
+    // click; detail=0 excludes ordinary pointer clicks on consumer content.
+    if (event.detail !== 0 || disabledRef.current) return;
+    onActivate?.({ type: 'activate', x: event.clientX ?? 0, y: event.clientY ?? 0 });
   }, [onActivate]);
   const assignDropZoneRef = React.useCallback((node) => {
     if (node) {
@@ -123,7 +175,7 @@ export const DropZone = React.forwardRef(function DropZone({
     ref: assignDropZoneRef,
     isDisabled: disabled,
     onDrop: handleDrop,
-    onDropActivate: handleDropActivate,
+    onClickCapture: handleActivate,
     className: classNames('muxui-drop-zone', className),
   }, children);
 });
@@ -142,6 +194,8 @@ export const FileTrigger = React.forwardRef(function FileTrigger({
   className,
   ...props
 }, ref) {
+  const disabledRef = React.useRef(disabled);
+  disabledRef.current = disabled;
   const trigger = React.isValidElement(children)
     ? React.cloneElement(children, { className: classNames('muxui-file-trigger', classNames(children.props.className, className)), disabled: disabled || children.props.disabled, 'aria-disabled': disabled || undefined })
     : React.createElement(MuxUIButton, { className: classNames('muxui-file-trigger', className), disabled }, children);
@@ -152,7 +206,10 @@ export const FileTrigger = React.forwardRef(function FileTrigger({
     allowsMultiple,
     defaultCamera,
     acceptDirectory,
-    onSelect: (files) => onSelect?.(fileList(files)),
+    onSelect: (files) => {
+      if (disabledRef.current) return;
+      onSelect?.(fileList(files));
+    },
   }, pressableTrigger(trigger, disabled));
 });
 
@@ -174,6 +231,20 @@ function DialogOverlay({ dismissable, children, ...props }) {
   }, React.createElement(AriaModal, { className: 'muxui-dialog-modal' }, children));
 }
 
+function useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange }) {
+  const controlled = open !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const handleOpenChange = React.useCallback((nextOpen) => {
+    if (!dismissable && !nextOpen) return;
+    if (!controlled) setUncontrolledOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [controlled, dismissable, onOpenChange]);
+  return {
+    isOpen: controlled ? open : uncontrolledOpen,
+    onOpenChange: handleOpenChange,
+  };
+}
+
 /** RAC Modal/ModalOverlay provide topmost overlay arbitration, inertness, focus scope, and portal lifecycle. */
 export const Dialog = React.forwardRef(function Dialog({
   children,
@@ -189,10 +260,11 @@ export const Dialog = React.forwardRef(function Dialog({
 }, ref) {
   const hasTitle = hasRenderableLabel(title);
   if (!hasTitle && !hasAccessibleName(ariaLabel) && !hasAccessibleName(props['aria-labelledby'])) throw new Error('Dialog requires a title or accessible name');
+  const triggerState = useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange });
   const content = React.createElement(DialogOverlay, { dismissable },
     React.createElement(DialogContent, { ...props, contentRef: ref, title, ariaLabel, dismissable, className }, children));
   if (React.isValidElement(trigger)) {
-    return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
+    return React.createElement(AriaDialogTrigger, triggerState, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
   }
   return React.createElement(AriaModalOverlay, {
     isOpen: open,
@@ -206,11 +278,15 @@ export const Dialog = React.forwardRef(function Dialog({
 
 Dialog.displayName = 'Dialog';
 
-const PopupContent = React.forwardRef(function PopupContent({ children, className, placement, dismissable, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+const PopupContent = React.forwardRef(function PopupContent({ children, className, geometry, dismissable, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   return React.createElement(AriaPopover, {
     ...props,
     ref,
-    placement,
+    placement: geometry.placement,
+    offset: geometry.offset,
+    crossOffset: geometry.crossOffset,
+    shouldFlip: geometry.shouldFlip,
+    containerPadding: geometry.containerPadding,
     className: 'muxui-popover-positioner',
     isKeyboardDismissDisabled: !dismissable,
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
@@ -229,13 +305,24 @@ export const Popover = React.forwardRef(function Popover({
   defaultOpen = false,
   dismissable = true,
   placement = 'bottom',
+  offset,
+  crossOffset,
+  shouldFlip,
+  containerPadding,
   onOpenChange,
   className,
   ...props
 }, ref) {
   if (!React.isValidElement(trigger)) throw new Error('Popover requires a focusable React element as trigger');
   if (!hasAccessibleName(props['aria-label']) && !hasAccessibleName(props['aria-labelledby'])) throw new Error('Popover requires an accessible name');
-  const content = React.createElement(PopupContent, { ...props, ref, placement, className, dismissable }, children);
+  const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, {
+    placement: 'bottom',
+    offset: 8,
+    crossOffset: 0,
+    shouldFlip: true,
+    containerPadding: 12,
+  }, 'Popover');
+  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable }, children);
   return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-overlay-pop-trigger'), content);
 });
 
@@ -250,6 +337,85 @@ const PreviewContent = React.forwardRef(function PreviewContent({ children, 'ari
   }, children);
 });
 
+function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) {
+  const controlled = open !== undefined;
+  const disabledRef = React.useRef(disabled);
+  const openRef = React.useRef(controlled ? open === true : defaultOpen);
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState(controlled || disabled ? false : defaultOpen);
+  const pendingRef = React.useRef(false);
+  // Initial disabled state masks the donor without representing a transition.
+  const previousDisabledRef = React.useRef(disabled);
+  const suppressStaleOpenRef = React.useRef(false);
+  disabledRef.current = disabled;
+  if (controlled) openRef.current = open === true;
+
+  const markPending = React.useCallback(() => {
+    if (!disabledRef.current) {
+      pendingRef.current = true;
+      suppressStaleOpenRef.current = false;
+    }
+  }, []);
+  const clearPending = React.useCallback(() => {
+    pendingRef.current = false;
+  }, []);
+  const handleOpenChange = React.useCallback((nextOpen) => {
+    if (disabledRef.current) return;
+    if (nextOpen && suppressStaleOpenRef.current && !pendingRef.current) {
+      suppressStaleOpenRef.current = false;
+      return;
+    }
+    suppressStaleOpenRef.current = false;
+    openRef.current = nextOpen;
+    if (!nextOpen) pendingRef.current = false;
+    if (!controlled) setUncontrolledOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  }, [controlled, onOpenChange]);
+
+  React.useEffect(() => {
+    const wasDisabled = previousDisabledRef.current;
+    if (disabled && !wasDisabled) {
+      const wasOpen = controlled ? open === true : openRef.current;
+      const shouldRequestClose = wasOpen || pendingRef.current;
+      openRef.current = false;
+      pendingRef.current = false;
+      suppressStaleOpenRef.current = true;
+      if (!controlled) setUncontrolledOpen(false);
+      if (shouldRequestClose) onOpenChange?.(false);
+    } else if (!disabled && wasDisabled) {
+      // The adapter-owned uncontrolled state remains closed after a disable cycle.
+      pendingRef.current = false;
+    }
+    previousDisabledRef.current = disabled;
+  }, [controlled, disabled, onOpenChange, open]);
+
+  return {
+    controlled,
+    disabledRef,
+    isOpen: disabled ? false : controlled ? open === true : uncontrolledOpen,
+    markPending,
+    clearPending,
+    handleOpenChange,
+  };
+}
+
+function overlayTrigger(trigger, { disabled, className, markPending, clearPending }) {
+  if (!React.isValidElement(trigger)) return trigger;
+  return React.cloneElement(trigger, {
+    className: classNames(trigger.props.className, className),
+    'aria-disabled': disabled ? 'true' : trigger.props['aria-disabled'],
+    'data-disabled': disabled ? 'true' : trigger.props['data-disabled'],
+    onPointerEnter: composeEventHandlers(trigger.props.onPointerEnter, disabled ? undefined : markPending),
+    onPointerDown: composeEventHandlers(trigger.props.onPointerDown, disabled ? undefined : markPending),
+    onMouseEnter: composeEventHandlers(trigger.props.onMouseEnter, disabled ? undefined : markPending),
+    onTouchStart: composeEventHandlers(trigger.props.onTouchStart, disabled ? undefined : markPending),
+    onFocus: composeEventHandlers(trigger.props.onFocus, disabled ? undefined : markPending),
+    onKeyDown: composeEventHandlers(trigger.props.onKeyDown, disabled ? undefined : markPending),
+    onPointerLeave: composeEventHandlers(trigger.props.onPointerLeave, clearPending),
+    onMouseLeave: composeEventHandlers(trigger.props.onMouseLeave, clearPending),
+    onBlur: composeEventHandlers(trigger.props.onBlur, clearPending),
+  });
+}
+
 /** RAC PreviewTrigger owns long press, warmup/cooldown timers, focus, Escape, and safe-area positioning. */
 export const PreviewTrigger = React.forwardRef(function PreviewTrigger({
   children,
@@ -258,8 +424,13 @@ export const PreviewTrigger = React.forwardRef(function PreviewTrigger({
   closeDelay = 200,
   open,
   defaultOpen = false,
+  disabled = false,
   onOpenChange,
   placement = 'top',
+  offset,
+  crossOffset,
+  shouldFlip,
+  containerPadding,
   className,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledby,
@@ -267,10 +438,36 @@ export const PreviewTrigger = React.forwardRef(function PreviewTrigger({
 }, ref) {
   if (!React.isValidElement(trigger)) throw new Error('PreviewTrigger requires a focusable React element as trigger');
   if (!hasAccessibleName(ariaLabel) && !hasAccessibleName(ariaLabelledby)) throw new Error('PreviewTrigger requires an accessible name');
-  return React.createElement(AriaPreviewTrigger, { delay, closeDelay, isOpen: open, defaultOpen, onOpenChange },
-    pressableTrigger(trigger),
-    React.createElement(AriaPopover, { ...props, ref, isNonModal: true, trigger: 'PreviewTrigger', placement, className: classNames('muxui-preview-trigger', className) },
-      React.createElement(PreviewContent, { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, children)));
+  const normalizedDelay = normalizeNonNegativeFinite(delay, 600, 'PreviewTrigger delay');
+  const normalizedCloseDelay = normalizeNonNegativeFinite(closeDelay, 200, 'PreviewTrigger closeDelay');
+  const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, {
+    placement: 'top',
+    offset: 8,
+    crossOffset: 0,
+    shouldFlip: true,
+    containerPadding: 12,
+  }, 'PreviewTrigger');
+  const adapter = useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange });
+  const normalizedTrigger = overlayTrigger(trigger, { disabled, className: undefined, markPending: adapter.markPending, clearPending: adapter.clearPending });
+  return React.createElement(AriaPreviewTrigger, {
+    delay: normalizedDelay,
+    closeDelay: normalizedCloseDelay,
+    isOpen: adapter.isOpen,
+    onOpenChange: adapter.handleOpenChange,
+  },
+  pressableTrigger(normalizedTrigger),
+  React.createElement(AriaPopover, {
+    ...props,
+    ref,
+    isNonModal: true,
+    trigger: 'PreviewTrigger',
+    placement: geometry.placement,
+    offset: geometry.offset,
+    crossOffset: geometry.crossOffset,
+    shouldFlip: geometry.shouldFlip,
+    containerPadding: geometry.containerPadding,
+    className: classNames('muxui-preview-trigger', className),
+  }, React.createElement(PreviewContent, { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, children)));
 });
 
 PreviewTrigger.displayName = 'PreviewTrigger';
@@ -282,27 +479,52 @@ export const Tooltip = React.forwardRef(function Tooltip({
   delay = 500,
   closeDelay = 0,
   placement = 'top',
+  offset,
+  crossOffset,
+  shouldFlip,
+  containerPadding,
   open,
   defaultOpen = false,
+  disabled = false,
   onOpenChange,
   className,
   ...props
 }, ref) {
   if (!React.isValidElement(trigger)) throw new Error('Tooltip requires a focusable React element as trigger');
   if (!hasRenderableLabel(content)) throw new Error('Tooltip requires content');
+  const normalizedDelay = normalizeNonNegativeFinite(delay, 500, 'Tooltip delay');
+  const normalizedCloseDelay = normalizeNonNegativeFinite(closeDelay, 0, 'Tooltip closeDelay');
+  const geometry = overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, {
+    placement: 'top',
+    offset: 0,
+    crossOffset: 0,
+    shouldFlip: true,
+    containerPadding: 12,
+  }, 'Tooltip');
+  const adapter = useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange });
+  const normalizedTrigger = overlayTrigger(trigger, { disabled, className: undefined, markPending: adapter.markPending, clearPending: adapter.clearPending });
   return React.createElement(AriaTooltipTrigger, {
-    delay,
-    closeDelay,
-    isOpen: open,
-    defaultOpen,
-    onOpenChange,
-  }, pressableTrigger(trigger), React.createElement(AriaTooltip, { ...props, ref, placement, className: classNames('muxui-tooltip', className) }, content));
+    delay: normalizedDelay,
+    closeDelay: normalizedCloseDelay,
+    isOpen: adapter.isOpen,
+    onOpenChange: adapter.handleOpenChange,
+  }, pressableTrigger(normalizedTrigger), React.createElement(AriaTooltip, {
+    ...props,
+    ref,
+    placement: geometry.placement,
+    offset: geometry.offset,
+    crossOffset: geometry.crossOffset,
+    shouldFlip: geometry.shouldFlip,
+    containerPadding: geometry.containerPadding,
+    className: classNames('muxui-tooltip', className),
+  }, content));
 });
 
 Tooltip.displayName = 'Tooltip';
 
 const ToastContext = React.createContext(null);
 const TOAST_FALLBACK_TITLE = 'Notification';
+const TOAST_PLACEMENTS = new Set(['top-start', 'top-end', 'bottom-start', 'bottom-end']);
 
 function ToastView({ toast }) {
   const value = toast.content;
@@ -316,18 +538,23 @@ function ToastView({ toast }) {
 
 /** Stable MuxUI facade over RAC's unstable queue/region implementation. */
 export const ToastProvider = function ToastProvider({ children, maxVisible = 5, className, placement = 'top-end' }) {
+  if (!TOAST_PLACEMENTS.has(placement)) throw new TypeError('Toast placement must be one of top-start, top-end, bottom-start, or bottom-end');
   const queueRef = React.useRef(null);
   if (!queueRef.current) queueRef.current = new UNSTABLE_ToastQueue({ maxVisibleToasts: normalizeMaxVisible(maxVisible) });
   const queue = queueRef.current;
   const callbacksRef = React.useRef(new Map());
+  const activeRef = React.useRef(true);
+  const teardownRequestedRef = React.useRef(false);
   const notifyDismissed = React.useCallback((key) => {
+    if (!activeRef.current || teardownRequestedRef.current) return;
     if (!callbacksRef.current.has(key)) return;
     const callback = callbacksRef.current.get(key);
     callbacksRef.current.delete(key);
     callback?.();
   }, []);
-  const add = React.useCallback((message, options = {}) => {
+  const add = React.useCallback((message, options = {}, allowDuringTeardown = false) => {
     if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
+    if (!activeRef.current || (teardownRequestedRef.current && !allowDuringTeardown)) return '';
     const { duration, onDismiss, ...content } = options;
     let key;
     key = queue.add({ ...content, message }, {
@@ -337,26 +564,35 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     callbacksRef.current.set(key, onDismiss);
     return key;
   }, [notifyDismissed, queue]);
-  const remove = React.useCallback((id) => queue.close(id), [queue]);
+  const remove = React.useCallback((id) => {
+    if (!activeRef.current || teardownRequestedRef.current) return;
+    queue.close(id);
+  }, [queue]);
   const dispose = React.useCallback((id, settle = true) => {
+    if (!activeRef.current || teardownRequestedRef.current) return;
     queue.visibleToasts.find((toast) => toast.key === id)?.timer?.pause();
     if (!settle) callbacksRef.current.delete(id);
     queue.close(id);
   }, [queue]);
+  const addDeclarative = React.useCallback((message, options = {}) => add(message, options, true), [add]);
   const lifecycleRef = React.useRef(0);
   React.useEffect(() => {
+    activeRef.current = true;
+    teardownRequestedRef.current = false;
     const generation = ++lifecycleRef.current;
-    return () => queueMicrotask(() => {
+    return () => {
+      teardownRequestedRef.current = true;
+      queueMicrotask(() => {
       if (lifecycleRef.current !== generation) return;
+      activeRef.current = false;
       queue.pauseAll();
       queue.clear();
-      const callbacks = [...callbacksRef.current.values()];
       callbacksRef.current.clear();
-      for (const callback of callbacks) callback?.();
-    });
+      });
+    };
   }, [queue]);
   const manager = React.useMemo(() => ({ add, remove }), [add, remove]);
-  const value = React.useMemo(() => ({ manager, dispose }), [dispose, manager]);
+  const value = React.useMemo(() => ({ manager, addDeclarative, dispose }), [addDeclarative, dispose, manager]);
   return React.createElement(ToastContext.Provider, { value }, children,
     React.createElement(UNSTABLE_ToastRegion, { queue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
       ({ toast }) => React.createElement(ToastView, { toast })));
@@ -381,7 +617,7 @@ export const Toast = function Toast({
   const context = React.useContext(ToastContext);
   if (!context) throw new Error('Toast must be used within ToastProvider');
   if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
-  const { add } = context.manager;
+  const { addDeclarative: add } = context;
   const { dispose } = context;
   const keyRef = React.useRef(null);
   React.useEffect(() => {
@@ -394,9 +630,9 @@ export const Toast = function Toast({
     });
     keyRef.current = key;
     return () => queueMicrotask(() => {
-      const isCurrent = keyRef.current === key;
-      if (isCurrent) keyRef.current = null;
-      dispose(key, isCurrent);
+      if (keyRef.current === key) keyRef.current = null;
+      // Declarative lifecycle changes are teardown, not accepted dismissals.
+      dispose(key, false);
     });
   }, [add, dispose, message, title, variant, duration, onDismiss, className]);
   return null;

@@ -4,17 +4,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "storybook": "pnpm generate && storybook dev -p 6006",
+    "storybook": "pnpm generate && pnpm exec storybook dev -p 6006",
     "build": "pnpm generate && storybook build --output-dir dist",
     "generate": "node src/generate-stories.mjs",
     "generate:check": "node src/generate-stories.mjs --check",
     "check": "pnpm generate:check && node --test test/*.test.mjs",
+    "check:migration": "node --test test/current-finite-render-plan.migration.mjs test/original-finite-render-plan.migration.mjs test/finite-capture-integrity.migration.mjs test/r1-6-motion-preference.migration.mjs test/visual-migration.migration.mjs",
     "check:a11y": "node --test test/storybook-a11y.test.mjs",
     "check:visual:migration": "node test/run-visual-migration.mjs",
     "update:visual:migration": "node test/run-visual-migration.mjs --update"
   },
   "dependencies": {
-    "@muxui/react": "workspace:*"
+    "@muxui/react": "workspace:*",
+    "@muxui/tokens": "workspace:*"
   },
   "devDependencies": {
     "@storybook/addon-a11y": "10.5.10",

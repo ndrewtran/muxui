@@ -1,12 +1,20 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:451598800446fd3377808eed94c093014f300554a2bc10242590fe2aaeb484ce
+// @generated-content-sha256: sha256:f93eeb558e0502b3a3e71df1cdec85525132a1601003b3d144976e4e27ed4576
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
-      "disabled": false,
       "orientation": "horizontal"
     },
     "events": [],
@@ -17,8 +25,7 @@ const binding = {
     "props": [
       "aria-label",
       "aria-labelledby",
-      "orientation",
-      "disabled"
+      "orientation"
     ]
   },
   "binding": "muxui:component:toolbar#web.react",
@@ -29,10 +36,10 @@ const binding = {
   "selector": ".muxui-toolbar",
   "states": [
     "idle",
-    "focused",
-    "disabled"
+    "focused"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Toolbar', tranche: 'R1.3', binding };
 
@@ -45,6 +52,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned Toolbar family.',
@@ -55,3 +69,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

@@ -1,0 +1,126 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:progress-circle",
+  "kind": "component",
+  "name": "ProgressCircle",
+  "summary": "Show determinate or indeterminate progress in a compact circular indicator.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Showing completion for a task with a known or unknown progress value."
+    ],
+    "avoidWhen": [
+      "For long-running activity without a meaningful completion measure or for linear comparisons."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "track",
+    "label",
+    "value"
+  ],
+  "states": [
+    "indeterminate",
+    "zero",
+    "partial",
+    "complete",
+    "sm",
+    "md",
+    "lg"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Clamps determinate values to the min/max range and exposes accessible progress values.",
+      "Indeterminate progress omits aria-valuenow and uses the Mux motion recipe."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "value",
+          "minValue",
+          "maxValue",
+          "size",
+          "label"
+        ],
+        "events": [],
+        "parts": [
+          "root",
+          "track",
+          "label",
+          "value"
+        ],
+        "defaults": {
+          "value": null,
+          "minValue": 0,
+          "maxValue": 100,
+          "size": "md"
+        }
+      },
+      "behavior": [
+        "Clamps determinate values to the min/max range and exposes accessible progress values.",
+        "Indeterminate progress omits aria-valuenow and uses the Mux motion recipe."
+      ],
+      "accessibility": [
+        "Clamps determinate values to the min/max range and exposes accessible progress values.",
+        "Indeterminate progress omits aria-valuenow and uses the Mux motion recipe."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

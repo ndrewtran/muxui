@@ -92,19 +92,19 @@ test('R1.1 packed package exposes a clean MuxUI component surface', async () => 
 test('R1.2 public surface exports the MuxUI component slice without upstream types', async () => {
   const packageRoot = resolve(import.meta.dirname, '..');
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
-  assert.deepEqual(Object.keys(manifest.exports).sort(), ['.', './compatibility', './styles.css', './testing']);
+  assert.deepEqual(Object.keys(manifest.exports).sort(), ['.', './compatibility', './markdown', './styles.css', './testing', './text-editor']);
   const entry = await import('../generated/index.mjs');
   assert.equal(entry.reactCompatibility.support, 'unproved; R1.5 React exports only');
   const componentNames = ['Button', 'Breadcrumbs', 'Checkbox', 'Disclosure', 'DisclosureGroup', 'Group', 'Link', 'Meter', 'ProgressBar', 'Separator', 'ToggleButton', 'Autocomplete', 'CheckboxGroup', 'DateField', 'DatePicker', 'DateRangePicker', 'Form', 'NumberField', 'SearchField', 'Switch', 'TextField', 'TimeField', 'Calendar', 'ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatch', 'ColorSwatchPicker', 'ColorWheel', 'ComboBox', 'GridList', 'ListBox', 'Menu', 'RadioGroup', 'RangeCalendar', 'Select', 'Slider', 'Table', 'Tabs', 'TagGroup', 'ToggleButtonGroup', 'TokenField', 'Toolbar', 'Tree', 'Virtualizer', 'DropZone', 'FileTrigger', 'Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'Tooltip'];
   for (const name of componentNames) assert.equal(name in entry, true);
   assert.equal('ButtonProps' in entry, false);
   const release = JSON.parse(await readFile(resolve(packageRoot, 'generated/release.json'), 'utf8'));
-  assert.deepEqual(release.componentExports.map(({ name }) => name), componentNames);
-  assert.deepEqual(release.bindings.map(({ binding }) => binding), componentNames.map((name) => `muxui:component:${name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}#web.react`));
+  assert.deepEqual(release.historical.componentExports.map(({ name }) => name), componentNames);
+  assert.deepEqual(release.historical.bindings.map(({ binding }) => binding), componentNames.map((name) => `muxui:component:${name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}#web.react`));
   assert.deepEqual(release.runtimeProfiles, ['web.react']);
-  assert.equal(release.catalog.status, 'bound');
+  assert.equal(release.historical.catalog.status, 'bound');
   assert.equal(release.evidence.status, 'pending');
-  assert.deepEqual(release.evidence.ids, ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06']);
+  assert.deepEqual(release.historical.evidence.ids, ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06']);
   assert.equal(release.publication.status, 'disabled');
   assert.deepEqual(release.publication.requires, ['explicit external publish authorization']);
   assert.doesNotMatch(JSON.stringify(release), /digest-specific human evidence acceptance/u);
@@ -262,9 +262,9 @@ test('R1.0 binds current reusable token facts and keeps historical proof provena
   const repositoryRoot = resolve(import.meta.dirname, '../../..');
   const source = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/tokens/default-theme.json'), 'utf8'));
   assert.equal(source.schemaVersion, '2.1.0');
-  assert.equal(source.tokenContractVersion, '2.0.0');
-  assert.equal(Object.keys(source.tokens).length, 357);
-  assert.deepEqual(Object.values(source.tokens).reduce((counts, token) => ({ ...counts, [token.layer]: (counts[token.layer] ?? 0) + 1 }), {}), { reference: 296, semantic: 56, component: 5 });
+  assert.equal(source.tokenContractVersion, '2.1.0');
+  assert.equal(Object.keys(source.tokens).length, 813);
+  assert.deepEqual(Object.values(source.tokens).reduce((counts, token) => ({ ...counts, [token.layer]: (counts[token.layer] ?? 0) + 1 }), {}), { reference: 551, semantic: 257, component: 5 });
   assert.deepEqual(source.theme.modeAxes, {
     colorScheme: ['light', 'dark'], contrast: ['standard', 'more'], motion: ['full', 'reduced'], density: ['comfortable', 'compact'], direction: ['ltr', 'rtl'],
   });

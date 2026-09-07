@@ -35,7 +35,10 @@ function slug(name) {
   return name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-const allRecords = descriptor.bindings.map((binding) => ({
+const historicalDescriptor = descriptor.historical?.bindings
+  ? { ...descriptor, bindings: descriptor.historical.bindings, exports: descriptor.historical.exports }
+  : descriptor;
+const allRecords = historicalDescriptor.bindings.map((binding) => ({
   family: binding.export,
   slug: slug(binding.export),
   tranche: snapshotFamilies.get(binding.export)?.tranche,
@@ -114,12 +117,16 @@ export function fixtureContractFor(record, state = 'idle') {
 
 const portalFamilies = new Set(['Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'Tooltip']);
 const openPortalFamilies = new Set(['DatePicker', 'DateRangePicker', 'ComboBox', 'Select']);
-const behaviorOnlyStates = new Set(['pressed', 'dismissed', 'submitting', 'opening', 'closing', 'entering', 'exiting']);
+const behaviorOnlyStates = new Set(['hovered', 'pressed', 'dismissed', 'submitting', 'opening', 'closing', 'entering', 'exiting']);
 
 // These states are intentionally not rasterized: they are transient or have
 // no public MuxUI state prop. Keep the proof target explicit so a future state
 // cannot silently fall back to a generic unsupported claim.
 const behaviorStateEvidence = Object.freeze({
+  'Button/hovered': { selector: '.muxui-button', interaction: 'hover', assertion: 'The Button hover state is exercised through the existing Storybook interaction harness.' },
+  'Button/pressed': { selector: '.muxui-button', interaction: 'press', assertion: 'The Button pressed state is exercised through the existing Storybook interaction harness.' },
+  'Link/hovered': { selector: '.muxui-link', interaction: 'hover', assertion: 'The Link hover state is exercised through the existing Storybook interaction harness.' },
+  'ToggleButton/hovered': { selector: '.muxui-toggle-button', interaction: 'hover', assertion: 'The ToggleButton hover state is exercised through the existing Storybook interaction harness.' },
   'Link/pressed': { selector: '.muxui-link', interaction: 'press', assertion: 'The focused Link is pressed through the existing Storybook interaction harness.' },
   'ToggleButton/pressed': { selector: '.muxui-toggle-button', interaction: 'press', assertion: 'The focused ToggleButton is pressed through the existing Storybook interaction harness.' },
   'Form/submitting': { selector: '.muxui-form', interaction: 'submit', assertion: 'The Form submit event is exercised by the existing Storybook interaction harness.' },
@@ -134,13 +141,8 @@ const behaviorStateEvidence = Object.freeze({
 
 const unsupportedStateRationales = Object.freeze({
   'Form/invalid': 'The public Form API exposes validationBehavior but no invalid prop; field-level invalid state is covered by the field families.',
-  'ColorArea/invalid': 'The public ColorArea API has no invalid prop or validation event; invalid color text is covered by ColorField.',
-  'ColorSlider/read-only': 'The public ColorSlider API has no readOnly prop; its value and disabled state remain covered visually.',
-  'ColorWheel/read-only': 'The public ColorWheel API has no readOnly prop; its value and disabled state remain covered visually.',
   'Menu/open': 'The public Menu API is the already-mounted collection surface and has no open prop; overlay ownership is covered by Select, ComboBox, and the overlay families.',
-  'Slider/read-only': 'The public Slider API has no readOnly prop; its value, focus, and disabled states remain covered visually.',
   'Slider/selected': 'The public Slider API has no selected prop; its value state is represented by the canonical idle/focused visual cases.',
-  'TagGroup/selected': 'The public TagGroup API has no selection prop; removable anatomy is separately recorded as Mux UI-only because the pinned Tale donor has no remove part.',
 });
 
 function normalizedState(state) {
@@ -193,7 +195,7 @@ function hasState(record, state) {
   if (normalized === 'low' || normalized === 'high') return family === 'Meter' && props.has('value');
   if (normalized === 'progress' || normalized === 'complete') return family === 'ProgressBar' && props.has('value');
   if (normalized === 'filled') return family === 'SearchField' && props.has('value');
-  if (normalized === 'empty') return props.has('items') || props.has('rows');
+  if (normalized === 'empty') return family === 'SearchField' && props.has('value') || props.has('items') || props.has('rows');
   if (normalized === 'placement') return props.has('placement');
   if (normalized === 'timed') return family === 'Toast' && props.has('duration');
   if (normalized === 'current') return family === 'Breadcrumbs' || props.has('current');

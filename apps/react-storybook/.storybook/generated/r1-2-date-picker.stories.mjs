@@ -1,11 +1,21 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:b2a7cd03dad8d4221f95d49fbb4257c66e68ac878aa73abd2367730777ad12e3
+// @generated-content-sha256: sha256:d7f25aa07f414e366332a2ecf33cee70b751f9870d5609362731ab6fd23f7140
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
+      "defaultOpen": false,
       "disabled": false,
       "invalid": false,
       "readOnly": false,
@@ -13,7 +23,7 @@ const binding = {
     },
     "events": [
       "change",
-      "open"
+      "openChange"
     ],
     "parts": [
       "root",
@@ -33,6 +43,11 @@ const binding = {
       "aria-labelledby",
       "value",
       "defaultValue",
+      "minValue",
+      "maxValue",
+      "unavailableDateMatcher",
+      "open",
+      "defaultOpen",
       "disabled",
       "readOnly",
       "required",
@@ -50,11 +65,12 @@ const binding = {
     "idle",
     "open",
     "disabled",
-    "readonly",
+    "read-only",
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'DatePicker', tranche: 'R1.2', binding };
 
@@ -67,6 +83,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned DatePicker family.',
@@ -77,3 +100,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

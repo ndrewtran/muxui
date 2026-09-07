@@ -1,7 +1,16 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ccfc1e1da43676b6c4862bb7ad891aad5f1d618e5b56703b247471592079e0cd
+// @generated-content-sha256: sha256:cfa26198fddac699b4dd75251bdaac0b53ab69c5993e2f0a830dba0e738a48af
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
@@ -30,6 +39,9 @@ const binding = {
       "aria-labelledby",
       "value",
       "defaultValue",
+      "minValue",
+      "maxValue",
+      "unavailableDateMatcher",
       "disabled",
       "readOnly",
       "required",
@@ -46,11 +58,12 @@ const binding = {
   "states": [
     "idle",
     "disabled",
-    "readonly",
+    "read-only",
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'DateField', tranche: 'R1.2', binding };
 
@@ -63,6 +76,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned DateField family.',
@@ -73,3 +93,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

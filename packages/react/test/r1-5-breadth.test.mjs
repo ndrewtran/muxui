@@ -49,15 +49,18 @@ test('R1.5 generated closure proves each family graph and Mux UI-owned styling',
     donor.components.reduce((counts, { disposition }) => ({ ...counts, [disposition]: (counts[disposition] ?? 0) + 1 }), {}),
     { adapt: 51, 'no-applicable-donor': 2 },
   );
-  assert.deepEqual(release.evidence.ids, ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06']);
-  assert.equal(descriptor.support, 'unproved; R1.5 React exports only');
+  assert.equal(release.tranche, 'R1.6');
+  assert.equal(release.historical.familyCount, 53);
+  assert.deepEqual(release.historical.evidence.ids, ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06']);
+  assert.equal(descriptor.support, 'unproved; R1.6 React current union projection');
+  assert.equal(descriptor.historical.familyCount, 53);
   for (const family of closure.families) {
     assert.equal(family.contract.binding, `muxui:component:${family.slug}#web.react`);
     assert.equal(family.contract.lifecycle, 'experimental');
     assert.equal(family.export.module, '.');
     assert.equal(family.lifecycle.binding, 'experimental');
     assert.equal(family.evidence.status, 'pending');
-    assert.deepEqual(family.evidence.final, release.evidence.ids);
+    assert.deepEqual(family.evidence.final, release.historical.evidence.ids);
     assert.equal(family.packed.private, true);
     assert.equal(family.packed.runtimeProfile, 'web.react');
     assert.equal(family.donor.ownership, 'Mux UI-owned token/style results');

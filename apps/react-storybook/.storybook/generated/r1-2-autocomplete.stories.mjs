@@ -1,7 +1,16 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:93254c1346c8cb379cf2e166f73ac20d6ddf0e08d3fc5950527b59ad597651b3
+// @generated-content-sha256: sha256:6af44bcda94abe481a1cc77fc31bb75e9c19fce4e08f835ae109801d1b1456b4
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
@@ -11,6 +20,7 @@ const binding = {
       "invalid": false,
       "readOnly": false,
       "required": false,
+      "size": "md",
       "value": ""
     },
     "events": [
@@ -21,6 +31,7 @@ const binding = {
       "root",
       "label",
       "input",
+      "popover",
       "list"
     ],
     "props": [
@@ -32,6 +43,7 @@ const binding = {
       "value",
       "defaultValue",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -52,7 +64,8 @@ const binding = {
     "disabled",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'Autocomplete', tranche: 'R1.2', binding };
 
@@ -65,6 +78,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned Autocomplete family.',
@@ -75,3 +95,20 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);
+export const DisabledItemsInteraction = {
+  name: 'Disabled items keyboard navigation',
+  args: {
+    label: 'Choose a city',
+    items: [
+      { id: 'disabled', label: 'Disabled', value: 'disabled', disabled: true },
+      { id: 'enabled', label: 'Enabled', value: 'enabled' },
+      { id: 'also-disabled', label: 'Also disabled', value: 'also-disabled', disabled: true },
+    ],
+  },
+  render: (args) => createStory(record, 'default').render(args),
+};

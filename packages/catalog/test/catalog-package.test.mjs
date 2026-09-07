@@ -49,7 +49,12 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
   assert.equal(identity.releaseManifest.catalog.id.startsWith('@muxui/catalog@'), true);
   assert.equal(identity.releaseManifest.catalog.digest, bundle.catalogDigest);
   assert.equal(identity.releaseManifest.sourceRevision, bundle.sourceRevision);
-  assert.equal(identity.releaseManifest.tokenContractVersion, '2.0.0');
+  const tokenSource = bundle.artifacts.find(({ kind }) => kind === 'token');
+  assert.ok(tokenSource, 'catalog bundle must include its canonical token source');
+  assert.equal(
+    identity.releaseManifest.tokenContractVersion,
+    tokenSource.record.tokenContractVersion,
+  );
   assert.deepEqual(identity.releaseManifest.bindings, []);
   const component = bundle.artifacts.find(({ id }) => id === 'muxui:component:button');
   for (const [key, set] of Object.entries(component.tokenRequirementSets)) {

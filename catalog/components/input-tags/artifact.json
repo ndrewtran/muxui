@@ -1,0 +1,158 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:input-tags",
+  "kind": "component",
+  "name": "InputTags",
+  "summary": "Enter and manage a list of free-form tags with keyboard chip navigation.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Collecting multiple user-entered values that should remain visible as chips."
+    ],
+    "avoidWhen": [
+      "For one scalar value or a closed set of predefined options."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "label",
+    "group",
+    "tag-wrapper",
+    "tag-group",
+    "tag-list",
+    "tag",
+    "input",
+    "description",
+    "error"
+  ],
+  "states": [
+    "inline",
+    "below",
+    "focused",
+    "disabled",
+    "invalid",
+    "tag-focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Enter adds a validated tag; Backspace or ArrowLeft transfers focus to the last tag.",
+      "Delete removes a focused tag and restores input focus when the list empties.",
+      "Stable tag IDs preserve controlled duplicate-value reconciliation."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "tagPlacement",
+          "size",
+          "placeholder",
+          "value",
+          "defaultValue",
+          "label",
+          "description",
+          "errorMessage",
+          "allowDuplicates",
+          "maxTags",
+          "validate",
+          "disabled",
+          "invalid",
+          "required",
+          "onChange",
+          "onTagAdded",
+          "onTagRemoved"
+        ],
+        "events": [
+          "change",
+          "tagAdded",
+          "tagRemoved"
+        ],
+        "parts": [
+          "root",
+          "label",
+          "group",
+          "tag-wrapper",
+          "tag-group",
+          "tag-list",
+          "tag",
+          "input",
+          "description",
+          "error"
+        ],
+        "defaults": {
+          "tagPlacement": "inline",
+          "size": "md",
+          "allowDuplicates": false,
+          "disabled": false,
+          "invalid": false,
+          "required": false
+        }
+      },
+      "behavior": [
+        "Enter adds a validated tag; Backspace or ArrowLeft transfers focus to the last tag.",
+        "Delete removes a focused tag and restores input focus when the list empties.",
+        "Stable tag IDs preserve controlled duplicate-value reconciliation."
+      ],
+      "accessibility": [
+        "Enter adds a validated tag; Backspace or ArrowLeft transfers focus to the last tag.",
+        "Delete removes a focused tag and restores input focus when the list empties.",
+        "Stable tag IDs preserve controlled duplicate-value reconciliation."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

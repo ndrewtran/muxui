@@ -1,12 +1,24 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:0254e33de8cbdcc0fb0c07bd95e8a10bd17380dc66f4745d7b0c76fbe8449e6d
+// @generated-content-sha256: sha256:3b3d386a8d5dc2b79370a406ccde3f4abb0f9af2d539e0f3d5f3abf728e0a8a7
 import * as MuxUI from '@muxui/react';
-import { argTypesForBinding, createStory } from '../../src/storybook-factory.mjs';
+import {
+  argTypesForBinding,
+  controlledDefaultPairsForBinding,
+  createAnatomyStory,
+  createBrowserProofStory,
+  createControlledStory,
+  createEventsStory,
+  createStory,
+  createUncontrolledStory,
+} from '../../src/storybook-factory.mjs';
 
 const binding = {
   "api": {
     "defaults": {
-      "disabled": false
+      "disabled": false,
+      "innerRadius": 64,
+      "outerRadius": 96,
+      "readOnly": false
     },
     "events": [
       "change"
@@ -21,6 +33,9 @@ const binding = {
       "aria-labelledby",
       "value",
       "defaultValue",
+      "outerRadius",
+      "innerRadius",
+      "readOnly",
       "disabled"
     ]
   },
@@ -36,7 +51,8 @@ const binding = {
     "disabled",
     "read-only"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorWheel', tranche: 'R1.3', binding };
 
@@ -49,6 +65,13 @@ export default {
     controls: {
       include: binding.api.props,
     },
+    muxuiApi: {
+      props: binding.api.props,
+      events: binding.api.events,
+      parts: binding.api.parts,
+      states: binding.states,
+      controlled: controlledDefaultPairsForBinding(binding),
+    },
     docs: {
       description: {
         component: 'Private development showcase for the Mux UI-owned ColorWheel family.',
@@ -59,3 +82,8 @@ export default {
 };
 export const Default = createStory(record, 'default');
 export const States = createStory(record, 'states');
+export const Controlled = createControlledStory(record);
+export const Uncontrolled = createUncontrolledStory(record);
+export const Events = createEventsStory(record);
+export const Anatomy = createAnatomyStory(record);
+export const BrowserProof = createBrowserProofStory(record);

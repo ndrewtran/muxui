@@ -119,6 +119,11 @@
       "sourcePath": "catalog/components/link/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/link/examples/react/icon-composition.example.json",
+      "sourcePath": "catalog/components/link/examples/react/icon-composition.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/link-usage.json",
       "sourcePath": "catalog/guides/link-usage.md"
@@ -271,6 +276,11 @@
       "family": "example",
       "path": "catalog/components/number-field/examples/react/basic.example.json",
       "sourcePath": "catalog/components/number-field/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/number-field/examples/react/sizing.example.json",
+      "sourcePath": "catalog/components/number-field/examples/react/sizing.tsx"
     },
     {
       "family": "guide",
