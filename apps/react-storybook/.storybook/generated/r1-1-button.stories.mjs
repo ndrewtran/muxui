@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6e24ce825f4b31dd64931aca233bd5196b237394edaf798cd7e126215c6fdb2e
+// @generated-content-sha256: sha256:649824fbb1d0a6ea780e65c3fc6c6feb1d211dd34f92298210abfde218590cf5
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -56,7 +56,7 @@ const binding = {
 const record = { family: 'Button', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/Button',
+  title: 'Mux UI React/Button',
   id: 'muxui-react-r1-1-button',
   component: MuxUI.Button,
   tags: ['autodocs'],

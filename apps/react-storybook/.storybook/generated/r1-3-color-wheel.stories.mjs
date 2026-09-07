@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:3b3d386a8d5dc2b79370a406ccde3f4abb0f9af2d539e0f3d5f3abf728e0a8a7
+// @generated-content-sha256: sha256:6e3e6e1b0dec2af388bbc50df2b7fdc51d2e5d9d86a17842b4cbe2a4324f35c9
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -57,7 +57,7 @@ const binding = {
 const record = { family: 'ColorWheel', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ColorWheel',
+  title: 'Mux UI React/ColorWheel',
   id: 'muxui-react-r1-3-color-wheel',
   component: MuxUI.ColorWheel,
   tags: ['autodocs'],

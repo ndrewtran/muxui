@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:c709906ea146268af3576a362669f79e348a46efd0f124ec1c6909719d22fb8e
+// @generated-content-sha256: sha256:e608f246e99237aae3b77d062cc7ffde0d7d46e6ee1694a2dbc02c8501449b88
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -65,7 +65,7 @@ const binding = {
 const record = { family: 'RangeCalendar', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/RangeCalendar',
+  title: 'Mux UI React/RangeCalendar',
   id: 'muxui-react-r1-3-range-calendar',
   component: MuxUI.RangeCalendar,
   tags: ['autodocs'],

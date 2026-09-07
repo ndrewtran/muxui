@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ab22174c4bc0fe35b3d853686f34c2632f95437b45e8440bf442c6f2f97e652b
+// @generated-content-sha256: sha256:61430c0931537218601c9d61a09d36dd4f8fd69776c149fe5e6eca8ebf2031c9
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -50,7 +50,7 @@ const binding = {
 const record = { family: 'ProgressBar', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/ProgressBar',
+  title: 'Mux UI React/ProgressBar',
   id: 'muxui-react-r1-1-progress-bar',
   component: MuxUI.ProgressBar,
   tags: ['autodocs'],

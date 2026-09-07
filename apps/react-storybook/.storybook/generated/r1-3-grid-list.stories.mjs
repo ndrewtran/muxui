@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:dba3c01b362a2f0dcb9ffd4203514def3660866227dd31130d1858b952061711
+// @generated-content-sha256: sha256:cf3ad283b69964d5934ea8c5c04f0bea289e2a19a6b38559ecbc572da21b205b
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -55,7 +55,7 @@ const binding = {
 const record = { family: 'GridList', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/GridList',
+  title: 'Mux UI React/GridList',
   id: 'muxui-react-r1-3-grid-list',
   component: MuxUI.GridList,
   tags: ['autodocs'],

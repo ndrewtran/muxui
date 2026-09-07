@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d87545229f9ccbdd6821285f5877f99efc9692ce9aef4a7ef6dcd2b6c6c1676e
+// @generated-content-sha256: sha256:5dc47e4927a60e9767bc321d339b31318ccd30d5cb591c673ec854899001c692
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -89,7 +89,7 @@ const binding = {
 const record = { family: 'MultiSelect', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/MultiSelect',
+  title: 'Mux UI React/MultiSelect',
   id: 'muxui-react-r1-6-multi-select',
   component: MuxUI.MultiSelect,
   tags: ['autodocs'],

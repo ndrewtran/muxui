@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:a184a9c091a61b34b7029acc5ebf08f1f14110a6d315570a14f95c5cd95a9e10
+// @generated-content-sha256: sha256:820f15b4c599c63323b46f95808c9f90a188ed2ab398e628138824cde137a633
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -59,7 +59,7 @@ const binding = {
 const record = { family: 'AlertDialog', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/AlertDialog',
+  title: 'Mux UI React/AlertDialog',
   id: 'muxui-react-r1-6-alert-dialog',
   component: MuxUI.AlertDialog,
   tags: ['autodocs'],

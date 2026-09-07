@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:aae1cbf4c079f670536a95617c2466605bf20ad62d194acd77998937782a1871
+// @generated-content-sha256: sha256:e2072d824843a171bf34061499cc2eb7463ed5e31b303c7c287f24bddcc859af
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -41,7 +41,7 @@ const binding = {
 const record = { family: 'Separator', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/Separator',
+  title: 'Mux UI React/Separator',
   id: 'muxui-react-r1-1-separator',
   component: MuxUI.Separator,
   tags: ['autodocs'],

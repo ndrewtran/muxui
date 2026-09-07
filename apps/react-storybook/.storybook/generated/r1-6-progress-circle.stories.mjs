@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ed71f62901f813bef67ce667beeb0246fac6b43c0b58dd2ffb556b13f44cbefb
+// @generated-content-sha256: sha256:5850315e537445c69ef13e5d5d2a3f10b105ec59d32a4d79f37b2ae20320e7f4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -56,7 +56,7 @@ const binding = {
 const record = { family: 'ProgressCircle', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/ProgressCircle',
+  title: 'Mux UI React/ProgressCircle',
   id: 'muxui-react-r1-6-progress-circle',
   component: MuxUI.ProgressCircle,
   tags: ['autodocs'],

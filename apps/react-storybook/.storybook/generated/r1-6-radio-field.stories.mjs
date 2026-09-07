@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:232e621edf0e1da8559605dc23853f1caf472ec016fc48b238d32f33e99a6a7c
+// @generated-content-sha256: sha256:c9e4ba87dfc0e3331c0eca66ab74fd7a3bc198796ae157a13698fbf1d4d554a1
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -58,7 +58,7 @@ const binding = {
 const record = { family: 'RadioField', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/RadioField',
+  title: 'Mux UI React/RadioField',
   id: 'muxui-react-r1-6-radio-field',
   component: MuxUI.RadioField,
   tags: ['autodocs'],

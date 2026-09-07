@@ -1974,7 +1974,7 @@ export function createStoryMeta(record) {
   const component = MuxUI[record.family];
   if (!component) throw new Error(`Missing @muxui/react export for ${record.family}`);
   return {
-    title: `Mux UI React/${record.tranche}/${record.family}`,
+    title: `Mux UI React/${record.family}`,
     component,
     tags: ['autodocs'],
     parameters: {

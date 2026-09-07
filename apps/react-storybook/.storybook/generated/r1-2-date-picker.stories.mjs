@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d7f25aa07f414e366332a2ecf33cee70b751f9870d5609362731ab6fd23f7140
+// @generated-content-sha256: sha256:f93607931b32873f1abce479aa6f15b1293960a2749cc24c42546b80038d4ddd
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -75,7 +75,7 @@ const binding = {
 const record = { family: 'DatePicker', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/DatePicker',
+  title: 'Mux UI React/DatePicker',
   id: 'muxui-react-r1-2-date-picker',
   component: MuxUI.DatePicker,
   tags: ['autodocs'],

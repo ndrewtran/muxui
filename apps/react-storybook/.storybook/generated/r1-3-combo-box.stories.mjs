@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:f5063ea8d90434546549bd771a240fae7a37b0e82b35081b7e11934616ff5656
+// @generated-content-sha256: sha256:8c4eea32b6233d4caa68848787b272c914e64062529b334584547cd05fb043be
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -70,7 +70,7 @@ const binding = {
 const record = { family: 'ComboBox', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ComboBox',
+  title: 'Mux UI React/ComboBox',
   id: 'muxui-react-r1-3-combo-box',
   component: MuxUI.ComboBox,
   tags: ['autodocs'],
