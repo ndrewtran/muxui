@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:discovery",
+  "kind": "guide",
+  "name": "Discovery & CLI",
+  "summary": "Portable guidance for discovering Mux UI facts through the catalog CLI.",
+  "lifecycle": "experimental",
+  "keywords": ["discovery", "cli", "catalog", "query"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/discovery.md"
+}

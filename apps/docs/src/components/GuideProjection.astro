@@ -1,0 +1,24 @@
+---
+import { getGuide } from '../lib/catalog.ts';
+import { getCanonicalGuideModule } from './canonical-guides.ts';
+
+interface Props {
+	id: string;
+}
+
+const { id } = Astro.props;
+const guide = getGuide(id);
+if (!guide) throw new Error('Missing canonical guide: ' + id);
+
+const CanonicalContent = getCanonicalGuideModule(guide).Content;
+
+const repositorySourceUrl = `https://github.com/ndrewtran/muxui/blob/main/${guide.source.content}`;
+---
+
+<div class="guide-projection" data-guide-id={guide.id}>
+	<div class="guide-identity">
+		<strong>{guide.name}</strong>
+		<a href={repositorySourceUrl} target="_blank" rel="noreferrer">{guide.source.content}</a>
+	</div>
+	<CanonicalContent />
+</div>

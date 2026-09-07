@@ -1,0 +1,40 @@
+---
+const { siteTitleHref } = Astro.locals.starlightRoute;
+---
+
+<a href={siteTitleHref} class="mux-site-title">
+	<span class="mux-name">Mux UI</span>
+</a>
+
+<script is:inline>
+	(() => {
+		const syncMuxTheme = () => {
+			document.documentElement.setAttribute(
+				'data-muxui-color-scheme',
+				document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
+			);
+		};
+		syncMuxTheme();
+		new MutationObserver(syncMuxTheme).observe(document.documentElement, {
+			attributes: true,
+			attributeFilter: ['data-theme'],
+		});
+	})();
+</script>
+
+<style>
+	.mux-site-title {
+		display: inline-flex;
+		align-items: center;
+		min-width: 0;
+		color: var(--muxui-semantic-content-strong);
+		font-family: var(--muxui-reference-typography-display-font);
+		font-weight: var(--muxui-semantic-typography-display-font-weight);
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.mux-name {
+		font-size: var(--muxui-semantic-typography-label-l-font-size);
+	}
+</style>

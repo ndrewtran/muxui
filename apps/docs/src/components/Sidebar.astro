@@ -1,0 +1,118 @@
+---
+import MobileMenuFooter from '@astrojs/starlight/components/MobileMenuFooter.astro';
+import Search from '@astrojs/starlight/components/Search.astro';
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import SidebarSublist from '@astrojs/starlight/components/SidebarSublist.astro';
+
+const { sidebar } = Astro.locals.starlightRoute;
+---
+
+<SidebarPersister>
+	<div class="mux-sidebar-rail" aria-hidden="true"></div>
+	<div class="mux-sidebar-content">
+		<div class="mux-sidebar-search"><Search /></div>
+		<SidebarSublist sublist={sidebar} />
+	</div>
+</SidebarPersister>
+
+<div class="md:sl-hidden"><MobileMenuFooter /></div>
+
+<style>
+	:global(.mux-sidebar-rail) {
+		position: absolute;
+		inset-block: 0;
+		inset-inline-start: 0;
+		display: grid;
+		place-items: start center;
+		width: var(--muxui-reference-dimension-space-xl);
+		padding-block-start: var(--muxui-reference-dimension-space-xs);
+		border-inline-end: 1px solid var(--muxui-semantic-border-subtle);
+		color: var(--muxui-semantic-content-link);
+		font-family: var(--muxui-reference-typography-display-font);
+		font-weight: var(--muxui-semantic-typography-display-font-weight);
+	}
+
+	:global(.mux-sidebar-content) {
+		margin-inline-start: var(--muxui-reference-dimension-space-xl);
+		min-height: 100%;
+		padding: var(--muxui-reference-dimension-space-xs) var(--sl-sidebar-pad-x) 0;
+	}
+
+	:global(.mux-sidebar-search) {
+		margin-block-end: var(--muxui-reference-dimension-space-xs);
+	}
+
+	:global(.mux-sidebar-search site-search) {
+		display: block;
+	}
+
+	:global(.mux-sidebar-search button[data-open-modal]) {
+		width: 100%;
+		max-width: none;
+		min-height: var(--muxui-semantic-control-min-height);
+		padding-inline: var(--muxui-reference-dimension-space-xs);
+		border: 1px solid var(--muxui-semantic-border-subtle);
+		border-radius: var(--muxui-semantic-control-radius);
+		background: var(--muxui-semantic-surface-raised);
+		color: var(--muxui-semantic-content-muted);
+		font-family: var(--muxui-reference-typography-text-font-family);
+		font-size: var(--muxui-semantic-typography-text-s-font-size);
+	}
+
+	:global(.mux-sidebar-search button[data-open-modal]:hover) {
+		border-color: var(--muxui-semantic-border-default);
+		background: var(--muxui-semantic-surface-hover);
+		color: var(--muxui-semantic-content-strong);
+	}
+
+	:global(.mux-sidebar-content ul) {
+		padding-inline-start: 0;
+	}
+
+	:global(.mux-sidebar-content .top-level > li + li) {
+		margin-block-start: var(--muxui-reference-dimension-space-3xs);
+	}
+
+	:global(.mux-sidebar-content ul ul li) {
+		margin-inline-start: 0;
+		border-inline-start: 0;
+		padding-inline-start: 0;
+	}
+
+	:global(.mux-sidebar-content details > summary) {
+		margin-block-start: var(--muxui-reference-dimension-space-s);
+		padding-block: var(--muxui-reference-dimension-space-2xs);
+		border-block-start: 1px solid var(--muxui-semantic-border-subtle);
+	}
+
+	:global(.mux-sidebar-content a) {
+		border-radius: var(--muxui-semantic-control-radius);
+		color: var(--muxui-semantic-content-default);
+		font-size: var(--muxui-semantic-typography-text-s-font-size);
+		font-weight: var(--muxui-semantic-typography-text-font-weight);
+	}
+
+	:global(.mux-sidebar-content a:hover),
+	:global(.mux-sidebar-content a:focus-visible) {
+		background: var(--muxui-semantic-surface-hover);
+		color: var(--muxui-semantic-content-strong);
+	}
+
+	:global(.mux-sidebar-content [aria-current='page']),
+	:global(.mux-sidebar-content [aria-current='page']:hover) {
+		border-inline-start: 2px solid var(--muxui-semantic-content-link);
+		background: var(--muxui-semantic-surface-hover);
+		color: var(--muxui-semantic-content-strong);
+		padding-inline-start: calc(var(--muxui-reference-dimension-space-xs) - 2px);
+	}
+
+	:global(.mux-sidebar-content summary) {
+		color: var(--muxui-semantic-content-strong);
+	}
+
+	@media (max-width: 50rem) {
+		:global(.mux-sidebar-rail) { display: none; }
+		:global(.mux-sidebar-content) { margin-inline-start: 0; }
+		:global(.mux-sidebar-content) { padding-block-start: var(--muxui-reference-dimension-space-s); }
+	}
+</style>

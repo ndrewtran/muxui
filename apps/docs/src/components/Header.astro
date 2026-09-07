@@ -1,0 +1,48 @@
+---
+import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
+import SiteTitle from './SiteTitle.astro';
+import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
+---
+
+<div class="mux-header">
+	<div class="mux-header-title"><SiteTitle /></div>
+	<div class="mux-header-actions">
+		<span class="mux-header-package">@muxui/react</span>
+		<ThemeSelect />
+		<LanguageSelect />
+	</div>
+</div>
+
+<style>
+	.mux-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--muxui-reference-dimension-space-s);
+		height: 100%;
+	}
+
+	.mux-header-title {
+		min-width: 0;
+	}
+
+	.mux-header-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--muxui-reference-dimension-space-xs);
+		min-width: 0;
+	}
+
+	.mux-header-package {
+		color: var(--muxui-semantic-content-muted);
+		font-family: var(--muxui-reference-typography-mono-font);
+		font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	}
+
+	@media (max-width: 50rem) {
+		.mux-header-package,
+		.mux-header-actions :global(select[aria-label*='language' i]) {
+			display: none;
+		}
+	}
+</style>

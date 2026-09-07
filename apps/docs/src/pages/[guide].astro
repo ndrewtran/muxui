@@ -1,0 +1,19 @@
+---
+import GuidePage from '../components/GuidePage.astro';
+import InstallationPage from '../components/InstallationPage.astro';
+
+export function getStaticPaths() {
+	return [
+		{ slug: 'accessibility', id: 'muxui:guide:accessibility' },
+		{ slug: 'contribution', id: 'muxui:guide:contribution' },
+		{ slug: 'discovery', id: 'muxui:guide:discovery' },
+		{ slug: 'installation', id: 'installation' },
+		{ slug: 'lifecycle', id: 'muxui:guide:lifecycle' },
+		{ slug: 'themes', id: 'muxui:guide:themes' },
+	].map((route) => ({ params: { guide: route.slug }, props: { id: route.id } }));
+}
+
+const { id } = Astro.props as { id: string };
+---
+
+{id === 'installation' ? <InstallationPage /> : <GuidePage id={id} />}

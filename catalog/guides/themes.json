@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:themes",
+  "kind": "guide",
+  "name": "Themes & tokens",
+  "summary": "Portable guidance for using Mux UI themes and semantic tokens.",
+  "lifecycle": "experimental",
+  "keywords": ["themes", "tokens", "colors", "typography", "react"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/themes.md"
+}

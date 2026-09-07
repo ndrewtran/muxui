@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:dialog-controlled-react",
+  "kind": "example",
+  "name": "Controlled Dialog",
+  "summary": "Control Dialog open state from React while retaining focus and dismissal behavior.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:dialog#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/dialog/examples/react/controlled.tsx"
+}

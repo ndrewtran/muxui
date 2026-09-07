@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:lifecycle",
+  "kind": "guide",
+  "name": "Lifecycle",
+  "summary": "Portable guidance for Mux UI lifecycle and release boundaries.",
+  "lifecycle": "experimental",
+  "keywords": ["lifecycle", "release", "experimental", "react"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/lifecycle.md"
+}

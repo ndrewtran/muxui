@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:button-states-react",
+  "kind": "example",
+  "name": "Button interaction states",
+  "summary": "Trigger a bounded pending state and compare it with disabled content.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 2
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/button/examples/react/states.tsx"
+}

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:button-variants-react",
+  "kind": "example",
+  "name": "Button variants and sizes",
+  "summary": "Compare the supported Button variant, tone, and size axes.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/button/examples/react/variants.tsx"
+}
