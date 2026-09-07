@@ -23,6 +23,24 @@ function documentFor(overrides, scale = { mode: 'standard', presetId: 'harbour',
   return { ...base, overrides, scale };
 }
 
+test('selection, focus and link interaction roles follow authored palettes in both modes', () => {
+  for (const namedColor of ['#9227ad', '#207c39']) {
+    const scale = { ...documentFor({}).scale, namedColor };
+    const generated = generateScaleTheme({ source, ...scale });
+    const document = documentFor(generated.assignments, scale);
+    for (const colorScheme of ['light', 'dark']) {
+      const { tokens } = compileThemeAuthoringDocument(document, { source, modes: { colorScheme } });
+      for (const [role, palette] of [
+        ['semantic.selection.track', 'semantic.color.color-60'],
+        ['semantic.focus.ring', 'semantic.color.color-60'],
+        ['semantic.content.link-hover', 'semantic.color.color-100'],
+        ['semantic.content.link-pressed', 'semantic.color.color-90'],
+        ['semantic.action.foreground', 'semantic.color.color-60-fg'],
+      ]) assert.equal(tokens[role].value, tokens[palette].value, `${colorScheme}: ${role}`);
+    }
+  }
+});
+
 function effectSource(value, id = 'semantic.test.effect') {
   const candidate = structuredClone(source);
   candidate.tokens[id] = {

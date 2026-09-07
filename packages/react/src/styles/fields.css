@@ -724,13 +724,13 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected]::before {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-reference-color-brand-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected][data-hovered]:not([data-disabled])::before {
-  background-color: var(--muxui-reference-color-bluegreen-50);
-  border-color: var(--muxui-reference-color-bluegreen-50);
+  background-color: var(--muxui-reference-color-brand-50);
+  border-color: var(--muxui-reference-color-brand-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
@@ -744,7 +744,7 @@
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected] .muxui-switch-indicator,
 [data-muxui-color-scheme='dark'] .muxui-switch-indicator[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-100);
+  background-color: var(--muxui-reference-color-brand-100);
 }
 
 .muxui-switch[data-focus-visible]::before,

@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:ea9e4b8a3d28e652db5618e7985b83922591adb41c2d1081eb914b534131656d
+ * @generated-content-sha256: sha256:12def5e3938228be81b9a0561d11c2ba0b875e16b662d15566bed4d8a114af92
  */
 :root {
   --muxui-component-button-background: #025768;
@@ -728,7 +728,7 @@
   --muxui-semantic-elevation-tooltip: 0px 1.5px 3px 0px rgba(0, 0, 0, 0.15);
   --muxui-semantic-feedback-invalid: #cc3330;
   --muxui-semantic-field-background: #f9f8f8;
-  --muxui-semantic-focus-ring: #5d5aeb;
+  --muxui-semantic-focus-ring: #025768;
   --muxui-semantic-layout-control-gap: 0.4375rem;
   --muxui-semantic-layout-group-gap: 0.61875rem;
   --muxui-semantic-layout-section-gap: 1.2375rem;
@@ -968,6 +968,7 @@
   --muxui-semantic-content-strong: #dad7d6;
   --muxui-semantic-feedback-invalid: #e59796;
   --muxui-semantic-field-background: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 85%, #000000);
+  --muxui-semantic-focus-ring: #539198;
   --muxui-semantic-overlay-background: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 85%, #000000);
   --muxui-semantic-selection-track: #539198;
   --muxui-semantic-surface-background: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 85%, #000000);
@@ -2858,7 +2859,7 @@
 
 /* Tale's pressed dark button recipe uses the reference blue-green value. */
 [data-muxui-color-scheme='dark'] .muxui-button[data-variant='primary'][data-tone='default'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
-  background-color: var(--muxui-reference-color-bluegreen-60);
+  background-color: var(--muxui-reference-color-brand-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-button[data-variant='danger-ghost'][data-tone='default'] {
@@ -3313,15 +3314,15 @@
 
 /* Ordinary dark link and disclosure recipes use the Tale mode-indexed scale. */
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button) {
-  color: var(--muxui-reference-color-bluegreen-30);
+  color: var(--muxui-reference-color-brand-30);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button)[data-hovered] {
-  color: var(--muxui-reference-color-bluegreen-5);
+  color: var(--muxui-reference-color-brand-5);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button)[data-pressed] {
-  color: var(--muxui-reference-color-bluegreen-10);
+  color: var(--muxui-reference-color-brand-10);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button):is([aria-current='page'], [data-current]) {
@@ -3422,12 +3423,12 @@
 
 [data-muxui-color-scheme='dark'] .muxui-checkbox[data-selected] .muxui-checkbox-indicator,
 [data-muxui-color-scheme='dark'] .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-reference-color-brand-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-checkbox-indicator svg {
-  color: var(--muxui-reference-color-bluegreen-100);
+  color: var(--muxui-reference-color-brand-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
@@ -4299,13 +4300,13 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected]::before {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-reference-color-brand-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected][data-hovered]:not([data-disabled])::before {
-  background-color: var(--muxui-reference-color-bluegreen-50);
-  border-color: var(--muxui-reference-color-bluegreen-50);
+  background-color: var(--muxui-reference-color-brand-50);
+  border-color: var(--muxui-reference-color-brand-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
@@ -4319,7 +4320,7 @@
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected] .muxui-switch-indicator,
 [data-muxui-color-scheme='dark'] .muxui-switch-indicator[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-100);
+  background-color: var(--muxui-reference-color-brand-100);
 }
 
 .muxui-switch[data-focus-visible]::before,
@@ -5840,83 +5841,6 @@
   }
 }
 
-/* Ordinary dark collection recipes mirror Tale's neutral collection scale. */
-[data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) {
-  background-color: var(--muxui-reference-color-neutral-90);
-  border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) {
-  background-color: var(--muxui-reference-color-neutral-20);
-  border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-header-cell {
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-heading {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-header-cell {
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-heading {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar-cell, .muxui-range-calendar-cell) {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar-cell, .muxui-range-calendar-cell) {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar-previous, .muxui-calendar-next) {
-  background-color: var(--muxui-reference-color-neutral-80);
-  border-color: var(--muxui-reference-color-neutral-90);
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar-previous, .muxui-calendar-next) {
-  background-color: var(--muxui-reference-color-neutral-28);
-  border-color: var(--muxui-reference-color-neutral-18);
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-30);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-}
-
 /* Calendar cells keep Tale's transparent disabled/outside-month treatment. */
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-disabled],
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-outside-month],
@@ -5925,7 +5849,7 @@
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-unavailable] {
   background-color: transparent;
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-content-default);
   opacity: 0.35;
 }
 
@@ -5936,7 +5860,7 @@
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-unavailable] {
   background-color: transparent;
-  color: var(--muxui-reference-color-neutral-90);
+  color: var(--muxui-semantic-content-default);
   opacity: 0.35;
 }
 
@@ -5950,72 +5874,6 @@
   box-shadow:
     0 0 0 2px var(--muxui-semantic-color-neutral-100),
     0 0 0 4px var(--muxui-semantic-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell:hover {
-  background-color: var(--muxui-reference-color-neutral-80);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell:hover {
-  background-color: var(--muxui-reference-color-neutral-30);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end]:hover {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end]:hover {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu {
-  background-color: var(--muxui-reference-color-neutral-90);
-  border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu {
-  background-color: var(--muxui-reference-color-neutral-20);
-  border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-reference-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu-item {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu-item {
-  color: var(--muxui-reference-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-80);
-  color: var(--muxui-reference-color-neutral-10);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-30);
-  color: var(--muxui-reference-color-neutral-100);
 }
 
 [data-muxui-color-scheme='light'] .muxui-toolbar {
@@ -6265,12 +6123,12 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator::after {
-  background-color: var(--muxui-reference-color-bluegreen-20);
+  background-color: var(--muxui-reference-color-brand-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-selected] .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
@@ -6536,14 +6394,14 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
-  color: var(--muxui-reference-color-bluegreen-100);
+  background-color: var(--muxui-reference-color-brand-40);
+  border-color: var(--muxui-reference-color-brand-40);
+  color: var(--muxui-reference-color-brand-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-selected][data-hovered] {
-  background-color: var(--muxui-reference-color-bluegreen-50);
-  border-color: var(--muxui-reference-color-bluegreen-50);
+  background-color: var(--muxui-reference-color-brand-50);
+  border-color: var(--muxui-reference-color-brand-50);
 }
 
 .muxui-tag[data-focus-visible],
@@ -6602,20 +6460,6 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-red-60) 20%, transparent);
 }
 
-/* Selection paint must win over the outside-month disabled recipe when a
-   range ends in the following month. */
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
 .muxui-range-calendar-cell[data-selection-start] {
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
@@ -6638,17 +6482,24 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator::after {
-  background-color: var(--muxui-reference-color-bluegreen-20);
+  background-color: var(--muxui-reference-color-brand-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-selected] .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-94);
   border-color: var(--muxui-reference-color-neutral-40);
+}
+
+/* Range endpoints keep selection paint when they fall outside this month. */
+[data-muxui-color-scheme] .muxui-range-calendar-cell[data-selection-start],
+[data-muxui-color-scheme] .muxui-range-calendar-cell[data-selection-end] {
+  background-color: var(--muxui-semantic-selection-track);
+  color: var(--muxui-semantic-action-foreground);
 }
 
 /* Calendar palettes invert foreground/background on state changes, so do not
@@ -6705,9 +6556,9 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-drop-zone[data-drop-target] {
-  border-color: var(--muxui-reference-color-bluegreen-40);
-  background-color: color-mix(in srgb, var(--muxui-reference-color-bluegreen-40) 8%, transparent);
-  color: var(--muxui-reference-color-bluegreen-40);
+  border-color: var(--muxui-reference-color-brand-40);
+  background-color: color-mix(in srgb, var(--muxui-reference-color-brand-40) 8%, transparent);
+  color: var(--muxui-reference-color-brand-40);
 }
 /* MuxUI component source: file-trigger.css */
 

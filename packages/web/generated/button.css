@@ -1,5 +1,5 @@
 /* @generated-from: packages/catalog/catalog-sources.json
- * @generated-content-sha256: sha256:469bba290d700c1d1a56eb27dc9742bd0874c5e6669892436d3dedcfae8b133e
+ * @generated-content-sha256: sha256:37e3a2bcb994e834c529c07ea9b3b563a584b7d58639b56050cdfa609bd6fb30
  */
 :root {
   --muxui-component-button-background: #025768;
@@ -728,7 +728,7 @@
   --muxui-semantic-elevation-tooltip: 0px 1.5px 3px 0px rgba(0, 0, 0, 0.15);
   --muxui-semantic-feedback-invalid: #cc3330;
   --muxui-semantic-field-background: #f9f8f8;
-  --muxui-semantic-focus-ring: #5d5aeb;
+  --muxui-semantic-focus-ring: #025768;
   --muxui-semantic-layout-control-gap: 0.4375rem;
   --muxui-semantic-layout-group-gap: 0.61875rem;
   --muxui-semantic-layout-section-gap: 1.2375rem;

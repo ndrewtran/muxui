@@ -567,7 +567,7 @@
 
 /* Tale's pressed dark button recipe uses the reference blue-green value. */
 [data-muxui-color-scheme='dark'] .muxui-button[data-variant='primary'][data-tone='default'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
-  background-color: var(--muxui-reference-color-bluegreen-60);
+  background-color: var(--muxui-reference-color-brand-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-button[data-variant='danger-ghost'][data-tone='default'] {
@@ -1022,15 +1022,15 @@
 
 /* Ordinary dark link and disclosure recipes use the Tale mode-indexed scale. */
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button) {
-  color: var(--muxui-reference-color-bluegreen-30);
+  color: var(--muxui-reference-color-brand-30);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button)[data-hovered] {
-  color: var(--muxui-reference-color-bluegreen-5);
+  color: var(--muxui-reference-color-brand-5);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button)[data-pressed] {
-  color: var(--muxui-reference-color-bluegreen-10);
+  color: var(--muxui-reference-color-brand-10);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button):is([aria-current='page'], [data-current]) {
@@ -1131,12 +1131,12 @@
 
 [data-muxui-color-scheme='dark'] .muxui-checkbox[data-selected] .muxui-checkbox-indicator,
 [data-muxui-color-scheme='dark'] .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-reference-color-brand-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-checkbox-indicator svg {
-  color: var(--muxui-reference-color-bluegreen-100);
+  color: var(--muxui-reference-color-brand-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])

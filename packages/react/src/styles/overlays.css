@@ -45,9 +45,9 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-drop-zone[data-drop-target] {
-  border-color: var(--muxui-reference-color-bluegreen-40);
-  background-color: color-mix(in srgb, var(--muxui-reference-color-bluegreen-40) 8%, transparent);
-  color: var(--muxui-reference-color-bluegreen-40);
+  border-color: var(--muxui-reference-color-brand-40);
+  background-color: color-mix(in srgb, var(--muxui-reference-color-brand-40) 8%, transparent);
+  color: var(--muxui-reference-color-brand-40);
 }
 /* MuxUI component source: file-trigger.css */
 

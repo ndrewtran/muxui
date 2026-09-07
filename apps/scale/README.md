@@ -7,7 +7,7 @@ native projections.
 Run it from the repository root with:
 
 ```sh
-pnpm --filter @muxui/scale dev
+pnpm run scale
 ```
 
 The development server binds to `127.0.0.1:5174`. Saving a theme writes a

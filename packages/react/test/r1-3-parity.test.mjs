@@ -209,7 +209,8 @@ test('R1.3 collection source preserves donor glyph alignment state selectors', a
   assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform 0\.15s ease;/u);
   assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
   assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
-  assert.match(styles, /\[data-muxui-color-scheme='dark'\] :where\(\.muxui-calendar, \.muxui-range-calendar\) \{\s*background-color: var\(--muxui-reference-color-neutral-20\);\s*border-color: var\(--muxui-reference-color-neutral-10\);/u);
+  const baseStyles = await readFile(resolve(import.meta.dirname, '../src/styles/base.css'), 'utf8');
+  assert.match(baseStyles, /\.muxui-calendar,\s*\.muxui-range-calendar\s*\{[^}]*background: var\(--muxui-semantic-surface-raised\);[^}]*border: 1px solid var\(--muxui-semantic-border-strong\);/u);
 });
 
 test('R1.3 calendars reserve seven token-sized day columns', async () => {
