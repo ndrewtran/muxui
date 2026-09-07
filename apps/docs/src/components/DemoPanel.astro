@@ -1,0 +1,68 @@
+---
+import { Code } from 'astro:components';
+import { muxCodeTheme } from './code-theme.ts';
+
+interface Props {
+	id: string;
+	source: string;
+	sourceCode: string;
+	label?: string;
+}
+
+const { id, source, sourceCode, label = 'React example' } = Astro.props;
+const sourceId = `${id}-source`;
+const codeId = `${id}-code`;
+// Astro's Shiki helper removes one terminal newline, so preserve source text by adding it back at render time.
+const highlightedCode = sourceCode.endsWith('\n') ? `${sourceCode}\n` : sourceCode;
+
+---
+
+<div class="demo-panel">
+	<div class="demo-live" aria-label={`${label} live demo`}>
+		<slot name="live" />
+	</div>
+	<div class="demo-source" id={sourceId}>
+		<div class="demo-source-header">
+			<span>{label}</span>
+			<button type="button" data-copy-code={codeId} data-pagefind-ignore>Copy</button>
+		</div>
+		<div class="demo-code" id={codeId}>
+			<Code code={highlightedCode} lang="tsx" theme={muxCodeTheme} wrap={false} />
+		</div>
+		<p class="demo-source-path">{source}</p>
+	</div>
+</div>
+
+<script>
+	document.querySelectorAll<HTMLButtonElement>('[data-copy-code]').forEach((button) => {
+		if (button.dataset.copyReady) return;
+		button.dataset.copyReady = 'true';
+		button.addEventListener('click', async () => {
+			const target = document.getElementById(button.dataset.copyCode ?? '');
+			if (!target) return;
+			const code = target.querySelector('code')?.textContent ?? target.textContent ?? '';
+			let copied = false;
+			try {
+				if (navigator.clipboard) {
+					await navigator.clipboard.writeText(code);
+					copied = true;
+				}
+			} catch {
+				copied = false;
+			}
+			if (!copied) {
+				const textarea = document.createElement('textarea');
+				textarea.value = code;
+				textarea.setAttribute('readonly', '');
+				textarea.style.position = 'fixed';
+				document.body.append(textarea);
+				textarea.select();
+				copied = (document as unknown as { execCommand(commandId: string): boolean }).execCommand('copy');
+				textarea.remove();
+			}
+			const original = button.textContent;
+			button.textContent = copied ? 'Copied' : 'Copy failed';
+			window.setTimeout(() => { button.textContent = original; }, 1200);
+		});
+	});
+</script>

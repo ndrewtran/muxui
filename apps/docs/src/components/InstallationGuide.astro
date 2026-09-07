@@ -1,0 +1,43 @@
+---
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import CodeBlock from './CodeBlock.astro';
+
+const repositoryRoot = resolve(import.meta.dirname, '../../../../../');
+const packageManifest: unknown = JSON.parse(
+	readFileSync(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8'),
+);
+const packageReadme = readFileSync(resolve(repositoryRoot, 'packages/react/README.md'), 'utf8');
+
+function isPackageManifest(value: unknown): value is { name: string; version: string } {
+	return typeof value === 'object'
+		&& value !== null
+		&& 'name' in value
+		&& typeof value.name === 'string'
+		&& 'version' in value
+		&& typeof value.version === 'string';
+}
+
+if (!isPackageManifest(packageManifest)) {
+	throw new Error('The React package manifest is missing its canonical name or version.');
+}
+
+const shellExample = packageReadme.match(/```sh\n([\s\S]*?)```/u)?.[1]?.trim();
+const tsxExample = packageReadme.match(/```tsx\n([\s\S]*?)```/u)?.[1]?.trim();
+
+if (!shellExample || !tsxExample) {
+	throw new Error('The generated React package README is missing its canonical usage examples.');
+}
+---
+
+<p>Install <code>{packageManifest.name}@{packageManifest.version}</code> from the current local package candidate.</p>
+
+<h2 id="local-tarball">Local tarball</h2>
+
+<p>Build or obtain the versioned local candidate, then install it from the package directory.</p>
+
+<CodeBlock id="installation-shell-code" code={shellExample} lang="bash" label="shell" />
+
+<h2 id="usage">Usage</h2>
+
+<CodeBlock id="installation-usage-code" code={tsxExample} lang="tsx" label="tsx" />

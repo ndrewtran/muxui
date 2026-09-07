@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:contribution",
+  "kind": "guide",
+  "name": "Contribution & authoring",
+  "summary": "Portable guidance for authoring Mux UI catalog facts and examples.",
+  "lifecycle": "experimental",
+  "keywords": ["contribution", "authoring", "catalog", "examples"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/contribution.md"
+}

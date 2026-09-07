@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:accessibility",
+  "kind": "guide",
+  "name": "Accessibility",
+  "summary": "Portable accessibility guidance for Mux UI React bindings.",
+  "lifecycle": "experimental",
+  "keywords": ["accessibility", "keyboard", "focus", "react"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/accessibility.md"
+}

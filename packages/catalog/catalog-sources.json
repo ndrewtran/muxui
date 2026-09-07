@@ -16,6 +16,31 @@
       "path": "catalog/capabilities/query-baseline.json"
     },
     {
+      "family": "guide",
+      "path": "catalog/guides/accessibility.json",
+      "sourcePath": "catalog/guides/accessibility.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/contribution.json",
+      "sourcePath": "catalog/guides/contribution.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/discovery.json",
+      "sourcePath": "catalog/guides/discovery.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/lifecycle.json",
+      "sourcePath": "catalog/guides/lifecycle.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/themes.json",
+      "sourcePath": "catalog/guides/themes.md"
+    },
+    {
       "family": "component",
       "path": "catalog/components/button/artifact.json"
     },
@@ -28,6 +53,16 @@
       "family": "example",
       "path": "catalog/components/button/examples/react/basic.example.json",
       "sourcePath": "catalog/components/button/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/button/examples/react/states.example.json",
+      "sourcePath": "catalog/components/button/examples/react/states.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/button/examples/react/variants.example.json",
+      "sourcePath": "catalog/components/button/examples/react/variants.tsx"
     },
     {
       "family": "guide",
@@ -715,6 +750,11 @@
       "family": "example",
       "path": "catalog/components/dialog/examples/react/basic.example.json",
       "sourcePath": "catalog/components/dialog/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/dialog/examples/react/controlled.example.json",
+      "sourcePath": "catalog/components/dialog/examples/react/controlled.tsx"
     },
     {
       "family": "guide",

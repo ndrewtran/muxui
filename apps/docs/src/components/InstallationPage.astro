@@ -1,0 +1,19 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import InstallationGuide from './InstallationGuide.astro';
+
+const headings = [
+	{ depth: 2, text: 'Local tarball', slug: 'local-tarball' },
+	{ depth: 2, text: 'Usage', slug: 'usage' },
+];
+---
+
+<StarlightPage
+	frontmatter={{
+		title: 'Installation',
+		description: 'Install the current private Mux UI React prerelease locally.',
+	}}
+	headings={headings}
+>
+	<InstallationGuide />
+</StarlightPage>

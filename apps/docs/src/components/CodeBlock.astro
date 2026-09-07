@@ -1,0 +1,58 @@
+---
+import { Code } from 'astro:components';
+import { muxCodeTheme } from './code-theme.ts';
+
+interface Props {
+	id: string;
+	code: string;
+	lang: 'bash' | 'tsx';
+	label: string;
+}
+
+const { id, code, lang, label } = Astro.props;
+const highlightedCode = code.endsWith('\n') ? `${code}\n` : code;
+---
+
+<div class="code-block">
+	<div class="code-block-header" data-pagefind-ignore>
+		<span>{label}</span>
+		<button type="button" data-copy-code={id}>Copy</button>
+	</div>
+	<div class="code-block-content" id={id}>
+		<Code code={highlightedCode} lang={lang} theme={muxCodeTheme} wrap={false} />
+	</div>
+</div>
+
+<script>
+	document.querySelectorAll<HTMLButtonElement>('[data-copy-code]').forEach((button) => {
+		if (button.dataset.copyReady) return;
+		button.dataset.copyReady = 'true';
+		button.addEventListener('click', async () => {
+			const target = document.getElementById(button.dataset.copyCode ?? '');
+			if (!target) return;
+			const code = target.querySelector('code')?.textContent ?? target.textContent ?? '';
+			let copied = false;
+			try {
+				if (navigator.clipboard) {
+					await navigator.clipboard.writeText(code);
+					copied = true;
+				}
+			} catch {
+				copied = false;
+			}
+			if (!copied) {
+				const textarea = document.createElement('textarea');
+				textarea.value = code;
+				textarea.setAttribute('readonly', '');
+				textarea.style.position = 'fixed';
+				document.body.append(textarea);
+				textarea.select();
+				copied = (document as unknown as { execCommand(commandId: string): boolean }).execCommand('copy');
+				textarea.remove();
+			}
+			const original = button.textContent;
+			button.textContent = copied ? 'Copied' : 'Copy failed';
+			window.setTimeout(() => { button.textContent = original; }, 1200);
+		});
+	});
+</script>

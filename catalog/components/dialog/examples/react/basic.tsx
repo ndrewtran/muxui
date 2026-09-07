@@ -1,2 +1,2 @@
-import { Dialog } from '@muxui/react';
-export function BasicDialogExample() { return <Dialog title="Confirm action" trigger={<button type="button">Open</button>}>Dialog content</Dialog>; }
+import { Button, Dialog } from '@muxui/react';
+export function BasicDialogExample() { return <Dialog title="Confirm action" trigger={<Button>Open</Button>}>Dialog content</Dialog>; }

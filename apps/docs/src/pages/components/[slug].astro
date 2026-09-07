@@ -1,0 +1,129 @@
+---
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { componentSummaries, getComponentPage } from '../../lib/catalog.ts';
+import { assertExampleSource } from '../../lib/example-modules.tsx';
+import DemoPanel from '../../components/DemoPanel.astro';
+import ExampleHost from '../../components/ExampleHost.tsx';
+import GuideProjection from '../../components/GuideProjection.astro';
+
+export const prerender = true;
+
+interface Props {
+	page: NonNullable<ReturnType<typeof getComponentPage>>;
+}
+
+const repositoryRoot = resolve(import.meta.dirname, '../../../../../');
+
+export function getStaticPaths() {
+	return componentSummaries.map(({ id }) => {
+		const slug = id.slice(id.lastIndexOf(':') + 1);
+		const page = getComponentPage(slug);
+		if (!page) throw new Error(`Missing catalog page data for ${id}.`);
+		return { params: { slug }, props: { page } };
+	});
+}
+
+const { page } = Astro.props as Props;
+const { artifact, examples, summary } = page;
+const reactBinding = artifact.bindings['web.react'];
+const basicExample = examples[0];
+if (!basicExample) throw new Error(`Mux UI docs received no basic React example for ${summary.id}.`);
+const basicSource = basicExample.source.content;
+const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
+
+for (const example of examples) {
+	assertExampleSource(example.source.content);
+}
+
+function sourceText(source: string | undefined) {
+	return source ? readFileSync(resolve(repositoryRoot, source), 'utf8') : '';
+}
+
+function slugify(value: string) {
+	return value.toLocaleLowerCase().replace(/[^a-z0-9]+/gu, '-').replace(/^-|-$/gu, '');
+}
+
+const headings = [
+	{ depth: 2, text: 'Installation', slug: 'installation' },
+	{ depth: 2, text: 'Usage', slug: 'usage' },
+	{ depth: 2, text: 'Examples', slug: 'examples' },
+	...examples.slice(1).map((example, index) => ({
+		depth: 3,
+		text: example.name,
+		slug: `example-${index}-${slugify(example.name)}`,
+	})),
+	{ depth: 2, text: 'API reference', slug: 'api-reference' },
+	{ depth: 3, text: 'Props', slug: 'api-props' },
+	{ depth: 3, text: 'Events', slug: 'api-events' },
+	{ depth: 3, text: 'Parts', slug: 'api-parts' },
+	{ depth: 3, text: 'States', slug: 'api-states' },
+	{ depth: 3, text: 'Accessibility', slug: 'api-accessibility' },
+];
+---
+
+<StarlightPage
+	frontmatter={{ title: summary.name, description: summary.summary }}
+	headings={headings}
+>
+	<section id="basic" class="docs-section">
+		<h2 class="visually-hidden">Basic</h2>
+		<DemoPanel id={basicDemoId} source={basicSource} sourceCode={sourceText(basicSource)}>
+			<ExampleHost slot="live" source={basicSource} client:load />
+		</DemoPanel>
+	</section>
+
+	<section id="installation" class="docs-section">
+		<h2>Installation</h2>
+		<p>Follow the <a href="/installation/">canonical package installation guidance</a> before importing this component.</p>
+	</section>
+
+	<section id="usage" class="docs-section">
+		<h2>Usage</h2>
+		<p>{artifact.intent?.useWhen?.[0] ?? summary.summary}</p>
+		{artifact.intent?.avoidWhen?.length ? <p>Avoid it when {artifact.intent.avoidWhen[0].toLocaleLowerCase()}.</p> : null}
+		{reactBinding.behavior?.length ? <ul>{reactBinding.behavior.map((item) => <li>{item}</li>)}</ul> : null}
+		{page.guides.map((guide) => (
+			<aside class="related-guidance">
+				<h3>Related usage guidance</h3>
+				<GuideProjection id={guide.id} />
+			</aside>
+		))}
+	</section>
+
+	<section id="examples" class="docs-section">
+		<h2>Examples</h2>
+		{examples.length > 1 ? examples.slice(1).map((example, index) => {
+			const source = example.source.content;
+			return (
+				<div class="named-example">
+					<h3 id={`example-${index}-${slugify(example.name)}`}>{example.name}</h3>
+					<p>{example.summary}</p>
+					<DemoPanel id={`${summary.id.replaceAll(':', '-')}-example-${index}`} source={source} sourceCode={sourceText(source)}>
+						<ExampleHost slot="live" source={source} client:load />
+					</DemoPanel>
+				</div>
+			);
+		}) : <p>No additional named examples are declared for this component yet.</p>}
+	</section>
+
+	<section id="api-reference" class="docs-section">
+		<h2>API reference</h2>
+		<h3 id="api-props">Props</h3>
+		<table>
+			<thead><tr><th scope="col">Prop</th><th scope="col">Default</th></tr></thead>
+			<tbody>
+				{reactBinding.api.props.map((prop) => <tr><th scope="row"><code>{prop}</code></th><td><code>{reactBinding.api.defaults[prop] === undefined ? 'Not specified' : JSON.stringify(reactBinding.api.defaults[prop])}</code></td></tr>)}
+			</tbody>
+		</table>
+		<h3 id="api-events">Events</h3>
+		<p>{reactBinding.api.events.length ? reactBinding.api.events.map((event) => <code class="inline-code">{event}</code>) : 'This binding does not declare events.'}</p>
+		<h3 id="api-parts">Parts</h3>
+		<p>{reactBinding.api.parts.map((part) => <code class="inline-code">{part}</code>)}</p>
+		<h3 id="api-states">States</h3>
+		<p>{artifact.states.map((state) => <code class="inline-code">{state}</code>)}</p>
+		<h3 id="api-accessibility">Accessibility</h3>
+		<ul>{(reactBinding.accessibility ?? artifact.accessibility.obligations).map((obligation) => <li>{obligation}</li>)}</ul>
+	</section>
+</StarlightPage>

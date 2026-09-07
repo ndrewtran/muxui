@@ -1,0 +1,174 @@
+---
+import { getComponentPage, getGuide } from '../lib/catalog.ts';
+
+const { entry } = Astro.locals.starlightRoute;
+const pathname = Astro.url.pathname;
+const componentSlug = pathname.match(/^\/components\/([^/]+)\/?$/u)?.[1];
+const guideIds: Record<string, string> = {
+	accessibility: 'muxui:guide:accessibility',
+	contribution: 'muxui:guide:contribution',
+	discovery: 'muxui:guide:discovery',
+	lifecycle: 'muxui:guide:lifecycle',
+	themes: 'muxui:guide:themes',
+};
+const guideSlug = pathname.replace(/^\//u, '').replace(/\/$/u, '');
+const sourcePath = componentSlug
+	? getComponentPage(componentSlug)?.examples[0]?.source.content
+	: guideIds[guideSlug]
+		? getGuide(guideIds[guideSlug])?.source.content
+		: guideSlug === 'installation'
+			? 'packages/react/README.md'
+			: undefined;
+const sourceHref = sourcePath ? `https://github.com/ndrewtran/muxui/blob/main/${sourcePath}` : undefined;
+const pageTitleId = '_top';
+---
+
+{componentSlug ? (
+	<div class="mux-page-title" data-component-page={componentSlug}>
+		<div class="mux-page-title-heading">
+			<h1 id={pageTitleId}>{entry.data.title}</h1>
+			<div class="mux-page-title-actions" data-pagefind-ignore>
+				{sourceHref && <a href={sourceHref} target="_blank" rel="noreferrer">Source</a>}
+				<button type="button" data-copy-page>Copy page</button>
+				<span class="mux-copy-status" data-copy-status aria-live="polite"></span>
+			</div>
+		</div>
+		{entry.data.description && <p>{entry.data.description}</p>}
+	</div>
+) : pathname === '/' ? (
+	<div data-home-title>
+		<h1 id={pageTitleId} class="visually-hidden">{entry.data.title}</h1>
+	</div>
+) : (
+	<div class="mux-page-title">
+		<div class="mux-page-title-heading">
+			<h1 id={pageTitleId}>{entry.data.title}</h1>
+			<div class="mux-page-title-actions" data-pagefind-ignore>
+				{sourceHref && <a href={sourceHref} target="_blank" rel="noreferrer">Source</a>}
+				<button type="button" data-copy-page>Copy page</button>
+				<span class="mux-copy-status" data-copy-status aria-live="polite"></span>
+			</div>
+		</div>
+		{entry.data.description && <p>{entry.data.description}</p>}
+	</div>
+)}
+
+{pathname !== '/' && (
+	<script>
+		const copyButton = document.querySelector<HTMLButtonElement>('[data-copy-page]');
+		const status = document.querySelector<HTMLElement>('[data-copy-status]');
+		if (copyButton && status) {
+			copyButton.addEventListener('click', async () => {
+				const title = document.querySelector('.mux-page-title h1')?.textContent?.trim() ?? document.title;
+			const content = document.querySelector<HTMLElement>('.sl-markdown-content')?.innerText.trim() ?? '';
+				const value = [`# ${title}`, content].filter(Boolean).join('\n\n');
+				let copied = false;
+				try {
+					if (navigator.clipboard) {
+						await navigator.clipboard.writeText(value);
+						copied = true;
+					}
+				} catch {
+					copied = false;
+				}
+				if (!copied) {
+					const textarea = document.createElement('textarea');
+					textarea.value = value;
+					textarea.setAttribute('readonly', '');
+					textarea.style.position = 'fixed';
+					document.body.append(textarea);
+					textarea.select();
+					copied = (document as unknown as { execCommand(commandId: string): boolean }).execCommand('copy');
+					textarea.remove();
+				}
+				status.textContent = copied ? 'Copied' : 'Copy failed';
+				window.setTimeout(() => { status.textContent = ''; }, 1400);
+			});
+		}
+	</script>
+)}
+
+<style>
+	.mux-page-title {
+		padding-block: var(--muxui-reference-dimension-space-m) var(--muxui-reference-dimension-space-l);
+	}
+
+	.mux-page-title-heading {
+		display: flex;
+		align-items: start;
+		justify-content: space-between;
+		gap: var(--muxui-reference-dimension-space-m);
+	}
+
+	.mux-page-title h1 {
+		margin: 0;
+		font-size: var(--muxui-semantic-typography-display-m-font-size);
+		font-weight: var(--muxui-semantic-typography-display-font-weight);
+		line-height: var(--muxui-semantic-typography-display-line-height);
+		letter-spacing: var(--muxui-semantic-typography-display-letter-spacing);
+		color: var(--muxui-semantic-content-strong);
+	}
+
+	.mux-page-title p {
+		max-width: 48rem;
+		margin: var(--muxui-reference-dimension-space-2xs) 0 0;
+		color: var(--muxui-semantic-content-default);
+		font-size: var(--muxui-semantic-typography-text-l-font-size);
+		line-height: var(--muxui-semantic-typography-text-line-height);
+	}
+
+	.mux-page-title-actions {
+		display: flex;
+		align-items: center;
+		justify-content: end;
+		gap: var(--muxui-reference-dimension-space-xs);
+		padding-block-start: var(--muxui-reference-dimension-space-3xs);
+		font-family: var(--muxui-reference-typography-mono-font);
+		font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+		white-space: nowrap;
+	}
+
+	.mux-page-title-actions a,
+	.mux-page-title-actions button {
+		min-height: var(--muxui-semantic-control-min-height);
+		padding: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-2xs);
+		border: 1px solid var(--muxui-semantic-border-default);
+		border-radius: var(--muxui-semantic-control-radius);
+		background: transparent;
+		color: var(--muxui-semantic-content-default);
+		font: inherit;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.mux-page-title-actions a:hover,
+	.mux-page-title-actions button:hover {
+		background: var(--muxui-semantic-surface-hover);
+		color: var(--muxui-semantic-content-strong);
+	}
+
+	.mux-copy-status {
+		min-width: 3.5em;
+		color: var(--muxui-semantic-content-muted);
+	}
+
+	[data-home-title] {
+		position: absolute;
+		inset: 0 auto auto 0;
+		width: 1px;
+		height: 1px;
+		overflow: hidden;
+		clip: rect(0 0 0 0);
+		clip-path: inset(50%);
+		white-space: nowrap;
+	}
+
+	@media (max-width: 50rem) {
+		.mux-page-title-heading {
+			flex-direction: column;
+		}
+		.mux-page-title-actions {
+			justify-content: start;
+		}
+	}
+</style>

@@ -1,0 +1,25 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import { getGuide } from '../lib/catalog.ts';
+import { getCanonicalGuideModule } from './canonical-guides.ts';
+import GuideProjection from './GuideProjection.astro';
+
+interface Props {
+	id: string;
+}
+
+const { id } = Astro.props;
+const guide = getGuide(id);
+if (!guide) throw new Error(`Missing canonical guide: ${id}.`);
+
+const headings = getCanonicalGuideModule(guide)
+	.getHeadings()
+	.filter((heading) => heading.depth >= 2);
+---
+
+<StarlightPage
+	frontmatter={{ title: guide.name, description: guide.summary }}
+	headings={headings}
+>
+	<GuideProjection id={guide.id} />
+</StarlightPage>

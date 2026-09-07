@@ -1,2 +1,2 @@
-import { Tooltip } from '@muxui/react';
-export function BasicTooltipExample() { return <Tooltip trigger={<button type="button">Help</button>} content="Helpful information" />; }
+import { Button, Tooltip } from '@muxui/react';
+export function BasicTooltipExample() { return <Tooltip trigger={<Button>Help</Button>} content="Helpful information" />; }
