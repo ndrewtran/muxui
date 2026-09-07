@@ -11,6 +11,7 @@
   "scripts": {
     "check": "node tooling/audits/repository-policy/src/run-workspace-task.mjs check --affected",
     "check:all": "node tooling/audits/repository-policy/src/run-workspace-task.mjs check",
+    "docs": "pnpm --filter @muxui/docs run dev",
     "generate": "node tooling/audits/repository-policy/src/run-workspace-task.mjs generate",
     "storybook": "pnpm --filter @muxui/react-storybook run storybook",
     "generate:check": "node tooling/audits/repository-policy/src/generation-identity.mjs",

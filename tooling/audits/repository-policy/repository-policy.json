@@ -64,6 +64,7 @@
   "requiredRootCommands": [
     "check",
     "check:all",
+    "docs",
     "generate",
     "generate:check",
     "storybook",
