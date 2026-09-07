@@ -102,12 +102,6 @@ async function resolveReference(reference, { jsonPointer = false } = {}) {
   return { path: parsed.path, lines: parsed.lines ?? null, anchor: parsed.anchor };
 }
 
-function artifactSlug(family) {
-  return family === 'Modal'
-    ? 'dialog'
-    : family.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-}
-
 async function canonicalOwner(family) {
   const artifactPath = family.canonical?.artifactRef;
   const componentId = family.canonical?.componentId;

@@ -64,7 +64,12 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     configFile: false,
     root: repositoryRoot,
     logLevel: 'error',
-    optimizeDeps: { force: true, include: ['react', 'react-dom', 'react-dom/client'] },
+    optimizeDeps: {
+      force: true,
+      // The middleware HTML is virtual, so scan its real entry before browser requests.
+      entries: ['packages/react/test/fixtures/tree-toggle-browser-entry.mjs'],
+      include: ['react', 'react-dom', 'react-dom/client'],
+    },
     server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
     plugins: [{
       name: 'tree-toggle-fixture-document',

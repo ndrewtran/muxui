@@ -1,7 +1,6 @@
 import { canonicalDigest, canonicalJson, validateFamily } from '@muxui/schema';
 import { compilePureTokenGraph, cssName, cssValue } from './core.mjs';
 
-const LAYER_RANK = Object.freeze({ reference: 0, semantic: 1, component: 2 });
 const UNIT_BY_TYPE = Object.freeze({
   color: new Set(['hex']),
   dimension: new Set(['px']),
@@ -313,39 +312,6 @@ function validateEffect(value, path) {
   }
 }
 
-function selectedBranch(definition, modes) {
-  for (const axis of MODE_AXES) {
-    const key = `${axis}.${modes[axis]}`;
-    if (Object.hasOwn(definition.modes ?? {}, key)) return definition.modes[key];
-  }
-  return definition;
-}
-
-function tokenDecoration(definition, target) {
-  const decoration = {};
-  if (definition.fluid !== undefined) decoration.fluid = structuredClone(definition.fluid);
-  if (definition.formula !== undefined) decoration.formula = structuredClone(definition.formula);
-  if (definition.effect !== undefined) decoration.effect = structuredClone(definition.effect);
-  if (definition.type === 'effect' && definition.value !== undefined) decoration.effect = structuredClone(definition.value);
-  if (target?.fluid !== undefined) decoration.fluid = structuredClone(target.fluid);
-  if (target?.formula !== undefined) decoration.formula = structuredClone(target.formula);
-  if (target?.effect !== undefined) decoration.effect = structuredClone(target.effect);
-  return decoration;
-}
-
-function assertModes(source, modes) {
-  const selected = {};
-  for (const axis of MODE_AXES) {
-    const values = source.theme.modeAxes[axis];
-    const value = modes?.[axis] ?? source.theme.defaultModes[axis];
-    if (!values.includes(value)) {
-      fail('MUXUI_TOKEN_MODE_INVALID', `${axis}.${value} is not declared`, { axis, value });
-    }
-    selected[axis] = value;
-  }
-  return Object.freeze(selected);
-}
-
 function assertThemeContract(source) {
   if (source.theme.runtimeSwitching !== 'unavailable') {
     fail('MUXUI_THEME_RUNTIME_UNAVAILABLE', 'G1.0 permits static theme output only', {
@@ -362,29 +328,6 @@ function assertThemeContract(source) {
       fail('MUXUI_TOKEN_MODE_INVALID', `${axis} default is not declared`, { axis, defaultValue });
     }
   }
-}
-
-function normalizeOverrides(source, overrides = {}) {
-  if (!isObject(overrides)) {
-    fail('MUXUI_TOKEN_OVERRIDE_UNAUTHORIZED', 'consumer overrides must be an object');
-  }
-  const normalized = {};
-  for (const tokenId of Object.keys(overrides).sort(compareText)) {
-    const definition = source.tokens[tokenId];
-    if (!definition || definition.layer === 'reference' || definition.overridePolicy === 'fixed') {
-      fail('MUXUI_TOKEN_OVERRIDE_UNAUTHORIZED', `${tokenId} cannot be overridden`, { tokenId });
-    }
-    const override = overrides[tokenId];
-    if (!isObject(override) || Object.keys(override).some((key) => !['type', 'unit', 'value'].includes(key))) {
-      fail('MUXUI_TOKEN_OVERRIDE_UNAUTHORIZED', `${tokenId} override must be a typed literal`, { tokenId });
-    }
-    if (override.type !== definition.type || override.unit !== definition.unit) {
-      fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} override changes type or unit`, { tokenId });
-    }
-    validateLiteral(override.type, override.unit, override.value, `overrides/${tokenId}`);
-    normalized[tokenId] = structuredClone(override);
-  }
-  return normalized;
 }
 
 export function compileTokenGraph(source, options = {}) {

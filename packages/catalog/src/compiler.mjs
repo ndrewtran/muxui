@@ -10,7 +10,6 @@ import {
   compilePlatformSafetyRequirementSets,
   contentRevision,
   parseJsonStrict,
-  relationEdges,
   sha256Digest,
   validateCatalogRecords,
   validateFamily,
@@ -297,12 +296,11 @@ export async function compileCatalog({
         'utf8',
       );
     }
-    let crosswalkValidation;
     if (record.kind === 'token') {
       const baselineOccurrences = baselineOccurrencesBytes === undefined
         ? undefined
         : parseJsonStrict(baselineOccurrencesBytes);
-      crosswalkValidation = validateSourceCrosswalk(record, { baselineOccurrences });
+      validateSourceCrosswalk(record, { baselineOccurrences });
     }
     loaded.push({
       entry,
@@ -310,7 +308,6 @@ export async function compileCatalog({
       recordBytes,
       sourceBytes,
       baselineOccurrencesBytes,
-      crosswalkValidation,
     });
   }
 
@@ -325,7 +322,7 @@ export async function compileCatalog({
       .map(({ record, sourceBytes }) => [record.id, sourceBytes]),
   );
 
-  const artifacts = loaded.map(({ entry, record, sourceBytes, crosswalkValidation }) => {
+  const artifacts = loaded.map(({ entry, record, sourceBytes }) => {
     const revision = contentRevision(entry.family, record, { sourceBytes });
     const tokenRequirementSets = record.kind === 'component'
       ? Object.fromEntries(Object.entries(record.bindings)

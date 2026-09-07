@@ -662,13 +662,9 @@ function ModeComparisons({ theme, modes }) {
       renderComparisonSpecimen(panel),
       panel.axis === 'motion' && panel.value === 'full' ? renderMotionComparison(panels.filter(({ axis }) => axis === 'motion')) : null,
       panel.axis === 'contrast' ? renderContrastNote(panel) : null,
-      h('code', { className: 'muxui-foundations-comparison-value' }, displayValue(panel.resolved)),
+      h('code', { className: 'muxui-foundations-comparison-value' }, formatValue(panel.resolved)),
     ))),
   );
-}
-
-function displayValue(result) {
-  return formatValue(result);
 }
 
 function ResponsiveDimensionPreview({ theme, modes }) {
