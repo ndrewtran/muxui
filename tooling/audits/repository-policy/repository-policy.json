@@ -67,6 +67,7 @@
     "docs",
     "generate",
     "generate:check",
+    "scale",
     "storybook",
     "test:agent",
     "release:prepare"

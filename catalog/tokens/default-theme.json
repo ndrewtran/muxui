@@ -603,7 +603,8 @@
       "unit": "hex",
       "meaning": "Visible focus indicator.",
       "overridePolicy": "fixed",
-      "alias": "reference.color.indigo-60"
+      "alias": "semantic.color.color-60",
+      "equivalence": "semantic-equivalence"
     },
     "semantic.motion.feedback": {
       "layer": "semantic",
@@ -628,12 +629,8 @@
       "unit": "hex",
       "meaning": "Track for boolean selection controls.",
       "overridePolicy": "theme",
-      "alias": "reference.color.bluegreen-60",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "reference.color.bluegreen-40"
-        }
-      }
+      "alias": "semantic.color.color-60",
+      "equivalence": "semantic-equivalence"
     },
     "semantic.surface.canvas": {
       "layer": "semantic",
@@ -731,12 +728,8 @@
       "unit": "hex",
       "meaning": "Link content while hovered.",
       "overridePolicy": "theme",
-      "alias": "reference.color.bluegreen-100",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "reference.color.bluegreen-5"
-        }
-      }
+      "alias": "semantic.color.color-100",
+      "equivalence": "semantic-equivalence"
     },
     "semantic.content.link-pressed": {
       "layer": "semantic",
@@ -744,12 +737,8 @@
       "unit": "hex",
       "meaning": "Link content while pressed.",
       "overridePolicy": "theme",
-      "alias": "reference.color.bluegreen-90",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "reference.color.bluegreen-10"
-        }
-      }
+      "alias": "semantic.color.color-90",
+      "equivalence": "semantic-equivalence"
     },
     "semantic.border.subtle": {
       "layer": "semantic",

@@ -23,7 +23,7 @@ const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'),
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
 const tokenRaw = await readFile(tokenPath);
 const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
-const expectedTokenSha256 = 'c42821d052398b61d393a8cc464924224063e63a5723f3872f838d431199cd75';
+const expectedTokenSha256 = '17686a273effca3785d3ccfa7d436582a51852547b6845875f2c4cce6a1c5ef9';
 if (tokenSha256 !== expectedTokenSha256) throw new Error('MUXUI_REACT_TOKEN_SOURCE_DRIFT');
 const tokenSource = JSON.parse(tokenRaw);
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-snapshot.json'), 'utf8'));

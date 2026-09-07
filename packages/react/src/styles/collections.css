@@ -1395,83 +1395,6 @@
   }
 }
 
-/* Ordinary dark collection recipes mirror Tale's neutral collection scale. */
-[data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) {
-  background-color: var(--muxui-reference-color-neutral-90);
-  border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) {
-  background-color: var(--muxui-reference-color-neutral-20);
-  border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-header-cell {
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-heading {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-header-cell {
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-heading {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar-cell, .muxui-range-calendar-cell) {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar-cell, .muxui-range-calendar-cell) {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar-previous, .muxui-calendar-next) {
-  background-color: var(--muxui-reference-color-neutral-80);
-  border-color: var(--muxui-reference-color-neutral-90);
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar-previous, .muxui-calendar-next) {
-  background-color: var(--muxui-reference-color-neutral-28);
-  border-color: var(--muxui-reference-color-neutral-18);
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-30);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-}
-
 /* Calendar cells keep Tale's transparent disabled/outside-month treatment. */
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-disabled],
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-outside-month],
@@ -1480,7 +1403,7 @@
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-unavailable] {
   background-color: transparent;
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-content-default);
   opacity: 0.35;
 }
 
@@ -1491,7 +1414,7 @@
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-unavailable] {
   background-color: transparent;
-  color: var(--muxui-reference-color-neutral-90);
+  color: var(--muxui-semantic-content-default);
   opacity: 0.35;
 }
 
@@ -1505,72 +1428,6 @@
   box-shadow:
     0 0 0 2px var(--muxui-semantic-color-neutral-100),
     0 0 0 4px var(--muxui-semantic-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell:hover {
-  background-color: var(--muxui-reference-color-neutral-80);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell:hover {
-  background-color: var(--muxui-reference-color-neutral-30);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end]:hover {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end]:hover {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu {
-  background-color: var(--muxui-reference-color-neutral-90);
-  border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu {
-  background-color: var(--muxui-reference-color-neutral-20);
-  border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-reference-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu-item {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu-item {
-  color: var(--muxui-reference-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-80);
-  color: var(--muxui-reference-color-neutral-10);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-30);
-  color: var(--muxui-reference-color-neutral-100);
 }
 
 [data-muxui-color-scheme='light'] .muxui-toolbar {
@@ -1820,12 +1677,12 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator::after {
-  background-color: var(--muxui-reference-color-bluegreen-20);
+  background-color: var(--muxui-reference-color-brand-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-selected] .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
@@ -2091,14 +1948,14 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
-  color: var(--muxui-reference-color-bluegreen-100);
+  background-color: var(--muxui-reference-color-brand-40);
+  border-color: var(--muxui-reference-color-brand-40);
+  color: var(--muxui-reference-color-brand-100);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-selected][data-hovered] {
-  background-color: var(--muxui-reference-color-bluegreen-50);
-  border-color: var(--muxui-reference-color-bluegreen-50);
+  background-color: var(--muxui-reference-color-brand-50);
+  border-color: var(--muxui-reference-color-brand-50);
 }
 
 .muxui-tag[data-focus-visible],
@@ -2157,20 +2014,6 @@
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-red-60) 20%, transparent);
 }
 
-/* Selection paint must win over the outside-month disabled recipe when a
-   range ends in the following month. */
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
 .muxui-range-calendar-cell[data-selection-start] {
   border-radius: var(--muxui-semantic-shape-pill-radius) 0 0 var(--muxui-semantic-shape-pill-radius);
 }
@@ -2193,17 +2036,24 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator::after {
-  background-color: var(--muxui-reference-color-bluegreen-20);
+  background-color: var(--muxui-reference-color-brand-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-selected] .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  border-color: var(--muxui-reference-color-brand-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
   background-color: var(--muxui-reference-color-neutral-94);
   border-color: var(--muxui-reference-color-neutral-40);
+}
+
+/* Range endpoints keep selection paint when they fall outside this month. */
+[data-muxui-color-scheme] .muxui-range-calendar-cell[data-selection-start],
+[data-muxui-color-scheme] .muxui-range-calendar-cell[data-selection-end] {
+  background-color: var(--muxui-semantic-selection-track);
+  color: var(--muxui-semantic-action-foreground);
 }
 
 /* Calendar palettes invert foreground/background on state changes, so do not
