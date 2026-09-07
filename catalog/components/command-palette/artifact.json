@@ -1,0 +1,184 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:command-palette",
+  "kind": "component",
+  "name": "CommandPalette",
+  "summary": "Offer keyboard-first search and activation for application commands.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Providing fast keyboard access to a broad or frequently used command set."
+    ],
+    "avoidWhen": [
+      "For a short list of visible actions that does not need search."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "trigger",
+    "backdrop",
+    "popup",
+    "title",
+    "description",
+    "close",
+    "content",
+    "search-field",
+    "input",
+    "clear-button",
+    "listbox",
+    "section",
+    "section-header",
+    "item",
+    "separator",
+    "item-icon",
+    "item-content",
+    "item-title",
+    "item-description",
+    "item-meta",
+    "shortcut",
+    "load-more-item",
+    "empty",
+    "footer",
+    "chips",
+    "chip",
+    "chip-remove"
+  ],
+  "states": [
+    "closed",
+    "open",
+    "filtered",
+    "empty",
+    "disabled",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Search and collection navigation preserve React Aria keyboard semantics.",
+      "Escape closes the modal and closeOnSelect controls item activation dismissal."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "open",
+          "defaultOpen",
+          "onOpenChange",
+          "size",
+          "closeOnSelect",
+          "dismissable",
+          "disabled",
+          "id",
+          "title",
+          "description",
+          "href",
+          "onActivate"
+        ],
+        "events": [
+          "openChange",
+          "activate"
+        ],
+        "parts": [
+          "root",
+          "trigger",
+          "backdrop",
+          "popup",
+          "title",
+          "description",
+          "close",
+          "content",
+          "search-field",
+          "input",
+          "clear-button",
+          "listbox",
+          "section",
+          "section-header",
+          "item",
+          "separator",
+          "item-icon",
+          "item-content",
+          "item-title",
+          "item-description",
+          "item-meta",
+          "shortcut",
+          "load-more-item",
+          "empty",
+          "footer",
+          "chips",
+          "chip",
+          "chip-remove"
+        ],
+        "defaults": {
+          "defaultOpen": false,
+          "size": "md",
+          "closeOnSelect": true,
+          "disabled": false,
+          "dismissable": true
+        }
+      },
+      "behavior": [
+        "Search and collection navigation preserve React Aria keyboard semantics.",
+        "Escape closes the modal and closeOnSelect controls item activation dismissal."
+      ],
+      "accessibility": [
+        "Search and collection navigation preserve React Aria keyboard semantics.",
+        "Escape closes the modal and closeOnSelect controls item activation dismissal."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

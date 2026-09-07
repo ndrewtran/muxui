@@ -8,11 +8,15 @@
   },
   "exports": {
     ".": "./src/index.mjs",
+    "./core": "./src/core.mjs",
+    "./authoring": "./src/authoring.mjs",
+    "./tailwind": "./src/tailwind.mjs",
     "./identity-migration": "./src/default-theme-identity-migration.mjs",
     "./materialization": "./src/tale-token-materialization.mjs"
   },
   "dependencies": {
-    "@muxui/schema": "workspace:*"
+    "@muxui/schema": "workspace:*",
+    "culori": "4.0.2"
   },
   "scripts": {
     "check": "node src/generate.mjs --check && node --test test/*.test.mjs",

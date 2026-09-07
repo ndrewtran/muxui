@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:df0eb2ae4740cb57583fe1cd6f89ebd286dc36430a05b039b4b681c06ed8267b
+// @generated-content-sha256: sha256:768d3c405f9abf31d6352ec1122aa9ee0665080a86b39d523966c4e6d453ceaa
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -61,7 +61,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'TimeField', tranche: 'R1.2', binding };
 

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:multi-select-basic-react",
+  "kind": "example",
+  "name": "Basic React MultiSelect",
+  "summary": "A source-faithful React multi-select example using the Mux-owned compound API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:multi-select#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/multi-select/examples/react/basic.tsx"
+}

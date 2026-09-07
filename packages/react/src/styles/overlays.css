@@ -6,11 +6,11 @@
   justify-content: center;
   min-height: 5rem;
   padding: var(--muxui-semantic-layout-section-gap);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-semantic-color-neutral-50);
   background-color: var(--muxui-semantic-surface-canvas);
-  border: 2px dashed var(--muxui-semantic-border-strong);
+  border: 2px dashed var(--muxui-semantic-color-neutral-26);
   border-radius: var(--muxui-semantic-layout-control-gap);
   outline: none;
   transition:
@@ -30,6 +30,10 @@
   color: var(--muxui-semantic-selection-track);
 }
 
+.muxui-drop-zone:not([data-disabled], [aria-disabled='true'], [data-drop-target]) {
+  color: var(--muxui-semantic-color-neutral-60);
+}
+
 .muxui-drop-zone[data-disabled] {
   cursor: not-allowed;
   pointer-events: none;
@@ -37,12 +41,7 @@
 
 [data-muxui-color-scheme='dark'] .muxui-drop-zone {
   background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-drop-zone:not([data-drop-target]) {
-  color: var(--muxui-reference-color-neutral-70);
+  border-color: var(--muxui-semantic-color-neutral-26);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-drop-zone[data-drop-target] {
@@ -84,8 +83,6 @@
 
 .muxui-dialog-close {
   aspect-ratio: 1;
-  width: calc(1rem + var(--muxui-semantic-layout-tight-inset) + var(--muxui-semantic-layout-tight-inset) + 2px);
-  height: calc(1rem + var(--muxui-semantic-layout-tight-inset) + var(--muxui-semantic-layout-tight-inset) + 2px);
   min-height: auto;
   padding: var(--muxui-semantic-layout-tight-inset);
   border-radius: var(--muxui-semantic-shape-option-radius);
@@ -95,7 +92,7 @@
 
 .muxui-dialog-content {
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-weight: var(--muxui-semantic-typography-body-weight);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.6;
@@ -103,7 +100,7 @@
 
 .muxui-dialog-content > p {
   margin: 0;
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.6;
 }
@@ -139,7 +136,7 @@
   background-color: var(--muxui-semantic-content-strong);
   border-color: var(--muxui-semantic-content-inverse);
   color: var(--muxui-semantic-border-subtle);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
     0 13px 13px -10px rgb(0 0 0 / 6%),
@@ -275,8 +272,8 @@
   align-items: start;
   width: 100%;
   padding: var(--muxui-semantic-control-padding-inline);
-  color: var(--muxui-semantic-content-strong);
-  font-family: Inter, sans-serif;
+  color: var(--muxui-semantic-color-neutral-90);
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   line-height: var(--muxui-semantic-typography-body-line-height);
   pointer-events: auto;
@@ -298,7 +295,7 @@
 }
 
 .muxui-toast[data-variant='neutral'] {
-  border-inline-start-color: var(--muxui-semantic-content-muted);
+  border-inline-start-color: var(--muxui-semantic-color-neutral-60);
 }
 
 .muxui-toast[data-variant='success'] {
@@ -346,17 +343,19 @@
 
 .muxui-toast-message {
   margin: 0;
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-semantic-color-neutral-70);
 }
 
 .muxui-toast-dismiss {
   aspect-ratio: 1;
-  width: calc(1rem + var(--muxui-semantic-layout-tight-inset) + var(--muxui-semantic-layout-tight-inset) + 2px);
-  height: calc(1rem + var(--muxui-semantic-layout-tight-inset) + var(--muxui-semantic-layout-tight-inset) + 2px);
   min-height: auto;
   padding: var(--muxui-semantic-layout-tight-inset);
   border-radius: var(--muxui-semantic-shape-option-radius);
   flex: none;
+  color: var(--muxui-semantic-color-neutral-80);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
 }
 
 @media (max-width: 30rem) {
@@ -374,8 +373,8 @@
 /* MuxUI component source: tooltip.css */
 .muxui-tooltip {
   background-color: var(--muxui-semantic-content-default);
-  color: var(--muxui-semantic-action-foreground);
-  font-family: Inter, sans-serif;
+  color: var(--muxui-semantic-surface-canvas);
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1.4;
@@ -384,7 +383,7 @@
   max-width: 15rem;
   overflow-wrap: anywhere;
   box-shadow: 0 1.5px 3px rgb(0 0 0 / 15%);
-  margin-block-start: -1px;
+  margin-block-start: 0;
   transition:
     opacity 0.1s ease,
     transform 0.1s ease;
@@ -440,7 +439,19 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-toast[data-variant='neutral'] {
-  border-inline-start-color: var(--muxui-reference-color-neutral-50);
+  border-inline-start-color: var(--muxui-semantic-color-neutral-60);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='success'] {
+  border-inline-start-color: var(--muxui-semantic-status-success);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='warning'] {
+  border-inline-start-color: var(--muxui-semantic-status-warning);
+}
+
+[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='danger'] {
+  border-inline-start-color: var(--muxui-semantic-feedback-invalid);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-toast-title {
@@ -509,32 +520,13 @@
   transition-duration: 0s !important;
 }
 
-/* Lifecycle attributes can be placed on the RAC positioner or modal host. */
-.muxui-dialog-modal[data-entering] .muxui-dialog,
-.muxui-dialog-modal[data-exiting] .muxui-dialog {
-  animation-duration: var(--muxui-semantic-motion-feedback);
-  animation-timing-function: ease;
-}
-
-.muxui-dialog-modal[data-entering] .muxui-dialog,
-.muxui-popover-positioner[data-entering] .muxui-popover,
-.muxui-tooltip[data-entering] {
-  animation-name: muxui-overlay-enter;
-}
-
-.muxui-dialog-modal[data-exiting] .muxui-dialog,
-.muxui-popover-positioner[data-exiting] .muxui-popover,
-.muxui-tooltip[data-exiting],
-.muxui-toast[data-exiting] {
-  animation-name: muxui-overlay-exit;
-}
-
-@keyframes muxui-overlay-enter {
-  from { opacity: 0; transform: scale(0.97); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-@keyframes muxui-overlay-exit {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0; transform: scale(0.97); }
+/* Match Tale's reduced-motion contract: animations are settled immediately
+   while retaining its measurable 1ms duration and transition reset. */
+:where([data-reduced-motion], [data-muxui-motion='reduced']) * {
+  animation-delay: -1ms !important;
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  transition-delay: 0s !important;
+  transition-duration: 0s !important;
+  scroll-behavior: auto !important;
 }

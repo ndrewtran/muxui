@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { spawn } from 'node:child_process';
+import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
+import { compileTailwindConsumer } from '../../../packages/tokens/src/tailwind.mjs';
+
+const fixtureRoot = resolve(import.meta.dirname);
+const run = (command, args, options) => new Promise((resolvePromise, reject) => {
+  const child = spawn(command, args, { ...options, stdio: ['ignore', 'pipe', 'pipe'] });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.on('data', (chunk) => { stdout += chunk; });
+  child.stderr.on('data', (chunk) => { stderr += chunk; });
+  child.on('error', reject);
+  child.on('close', (code) => code === 0 ? resolvePromise({ stdout, stderr }) : reject(new Error(`${command} ${args.join(' ')} exited ${code}\n${stderr}`)));
+});
+
+const tempRoot = await mkdtemp(join(fixtureRoot, '.tmp-'));
+const inputPath = join(tempRoot, 'input.css');
+const outputPath = join(tempRoot, 'output.css');
+const input = `@layer theme, base, muxui, components, utilities;\n@import "tailwindcss";\n${compileTailwindConsumer(source, { muxuiCss: '@import "../../../../packages/react/generated/styles.css" layer(muxui);' })}\n@layer components { .consumer-button { --muxui-component-button-background: #7c3aed; @apply bg-muxui-component-button-background text-muxui-component-button-foreground rounded-muxui-component-button-radius font-muxui-reference-typography-body-font leading-muxui-semantic-typography-body-line-height ease-muxui-reference-motion-easing-linear duration-muxui-reference-duration-fast text-muxui-semantic-typography-body-size tracking-muxui-semantic-typography-display-letter-spacing font-muxui-semantic-typography-body-weight shadow-muxui-reference-effect-shadow-m; } }\n`;
+await writeFile(inputPath, input);
+await run('pnpm', ['exec', 'tailwindcss', '-i', inputPath, '-o', outputPath, '--minify'], { cwd: fixtureRoot });
+const output = await readFile(outputPath, 'utf8');
+assert.match(output, /\.consumer-button\{[^}]*--muxui-component-button-background:#7c3aed/u);
+assert.match(output, /background-color:var\(--muxui-component-button-background\)/u);
+assert.match(output, /color:var\(--muxui-component-button-foreground\)/u);
+assert.match(output, /border-radius:var\(--muxui-component-button-radius\)/u);
+assert.match(output, /font-family:var\(--muxui-reference-typography-body-font\)/u);
+assert.match(output, /transition-timing-function:var\(--muxui-reference-motion-easing-linear\)/u);
+assert.match(output, /transition-duration:var\(--muxui-reference-duration-fast\)/u);
+assert.match(output, /font-size:var\(--muxui-semantic-typography-body-size\)/u);
+assert.match(output, /font-weight:var\(--muxui-semantic-typography-body-weight\)/u);
+assert.match(output, /letter-spacing:var\(--muxui-semantic-typography-display-letter-spacing\)/u);
+assert.match(output, /line-height:var\(--muxui-semantic-typography-body-line-height\)/u);
+assert.ok(output.includes('.muxui-button'));
+assert.ok(output.indexOf('@layer muxui{') < output.indexOf('.consumer-button{'));
+await rm(tempRoot, { recursive: true, force: true });
+console.log('[tailwind-consumer] compiled isolated Tailwind 4.1.13 consumer with Mux variables and hook override');

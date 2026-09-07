@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:84fb7d0f7e335c82cd626a2a9a82d5973b72a3eca88f0adfb4a4af7db3558ff1
+// @generated-content-sha256: sha256:6e24ce825f4b31dd64931aca233bd5196b237394edaf798cd7e126215c6fdb2e
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,6 +18,7 @@ const binding = {
     "defaults": {
       "disabled": false,
       "pending": false,
+      "showTextWhileLoading": false,
       "size": "md",
       "tone": "default",
       "variant": "primary"
@@ -32,6 +33,7 @@ const binding = {
     "props": [
       "disabled",
       "pending",
+      "showTextWhileLoading",
       "variant",
       "tone",
       "size"
@@ -48,7 +50,8 @@ const binding = {
     "pending",
     "disabled"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Button', tranche: 'R1.1', binding };
 
@@ -85,7 +88,7 @@ export const Anatomy = createAnatomyStory(record);
 export const BrowserProof = createBrowserProofStory(record);
 const buttonMatrix = createButtonMatrixStory(record);
 export const Matrix = {
-  name: 'Variant × tone × size',
+  name: 'Variant × size',
   args: buttonMatrix.args,
   argTypes: buttonMatrix.argTypes,
   parameters: buttonMatrix.parameters,

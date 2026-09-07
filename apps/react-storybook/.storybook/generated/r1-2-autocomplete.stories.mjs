@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:a7bed70061c8e88a8e0010e28d285ed9c514f96db0e49f37e19adf52068a119a
+// @generated-content-sha256: sha256:6af44bcda94abe481a1cc77fc31bb75e9c19fce4e08f835ae109801d1b1456b4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -20,6 +20,7 @@ const binding = {
       "invalid": false,
       "readOnly": false,
       "required": false,
+      "size": "md",
       "value": ""
     },
     "events": [
@@ -42,6 +43,7 @@ const binding = {
       "value",
       "defaultValue",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -62,7 +64,8 @@ const binding = {
     "disabled",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'Autocomplete', tranche: 'R1.2', binding };
 

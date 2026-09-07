@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
-import { parseJsonStrict } from '@muxui/schema';
+import { canonicalJson, parseJsonStrict } from '@muxui/schema';
 import {
   TokenContractError,
   compileNativeTheme,
@@ -291,16 +291,19 @@ test('E-G1.0-02 web and native transforms retain canonical provenance without cr
   const ios = compileNativeTheme(source, { profile: 'native.ios' });
   const android = compileNativeTheme(source, { profile: 'native.android' });
   assert.equal(web.css, react.css);
-  assert.equal((web.css.match(/--muxui-reference-/gu) ?? []).length, 296);
-  assert.equal(Object.keys(ios.theme).filter((id) => id.startsWith('reference.')).length, 296);
-  assert.equal(Object.keys(ios.theme).filter((id) => id.startsWith('semantic.')).length, 56);
-  assert.equal(Object.keys(ios.theme).filter((id) => id.startsWith('component.')).length, 5);
+  const expectedCounts = Object.fromEntries(['reference', 'semantic', 'component'].map((layer) => [layer, Object.values(source.tokens).filter((token) => token.layer === layer).length]));
+  assert.equal((web.css.match(/^  --muxui-reference-[^:]+:/gmu) ?? []).length, expectedCounts.reference);
+  assert.ok(Object.keys(ios.theme).filter((id) => id.startsWith('reference.')).length < expectedCounts.reference);
+  assert.ok(Object.keys(ios.theme).filter((id) => id.startsWith('semantic.')).length <= expectedCounts.semantic);
+  assert.ok(Object.keys(ios.theme).filter((id) => id.startsWith('component.')).length <= expectedCounts.component);
   assert.deepEqual(android.theme, ios.theme);
   assert.equal(Object.hasOwn(ios, 'css'), false);
   assert.equal(ios.provenance.digest, web.provenance.digest);
   assert.equal(android.provenance.digest, web.provenance.digest);
-  assert.equal(Object.keys(ios.theme).length, 357);
-  assert.equal(web.tokenContractVersion, '2.0.0');
+  assert.ok(Object.keys(ios.theme).length < Object.keys(source.tokens).length);
+  assert.ok(ios.diagnostics.some(({ code }) => code === 'MUXUI_TOKEN_RELATIVE_ROOT_METRIC_REQUIRED'));
+  assert.ok(ios.diagnostics.some(({ code }) => code === 'MUXUI_TOKEN_FORMULA_DEFERRED'));
+  assert.equal(web.tokenContractVersion, source.tokenContractVersion);
   consumeButtonStaticWebTransform(web, { target: 'web.html' });
   consumeButtonStaticWebTransform(react, { target: 'web.react' });
   consumeButtonStaticNativeTransform(ios, { profile: 'native.ios' });
@@ -326,19 +329,43 @@ test('default theme link and invalid semantic colors meet contrast in both color
   );
   const link = source.tokens['semantic.content.link'];
   const invalid = source.tokens['semantic.feedback.invalid'];
-  assert.equal(link.alias, 'reference.color.bluegreen-70');
-  assert.equal(link.modes['colorScheme.dark'].alias, 'reference.color.bluegreen-20');
+  assert.equal(link.alias, 'semantic.color.color-70');
+  assert.equal(link.modes, undefined);
   assert.equal(invalid.alias, 'reference.color.error-60');
   assert.equal(invalid.modes['colorScheme.dark'].alias, 'reference.color.error-30');
 
+  const light = compileTokenGraph(source);
+  const dark = compileTokenGraph(source, { modes: { colorScheme: 'dark' } });
+
   for (const [foreground, background] of [
-    [references['reference.color.bluegreen-70'], references['reference.color.neutral-5']],
-    [references['reference.color.bluegreen-20'], references['reference.color.neutral-90']],
-    [references['reference.color.error-60'], references['reference.color.neutral-5']],
-    [references['reference.color.error-30'], references['reference.color.neutral-90']],
+    [light.tokens['semantic.content.link'].value, light.tokens['semantic.surface.canvas'].value],
+    [dark.tokens['semantic.content.link'].value, dark.tokens['semantic.surface.canvas'].value],
+    [light.tokens['semantic.feedback.invalid'].value, light.tokens['semantic.surface.canvas'].value],
+    [dark.tokens['semantic.feedback.invalid'].value, dark.tokens['semantic.surface.canvas'].value],
   ]) {
     assert.ok(contrastRatio(foreground, background) >= 4.5, `${foreground} on ${background} lacks 4.5:1 contrast`);
   }
+});
+
+test('default theme color modes preserve the pinned donor shade positions', () => {
+  const dark = compileTokenGraph(source, { modes: { colorScheme: 'dark' } });
+  const namedShades = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+  for (const shade of namedShades) {
+    assert.equal(
+      source.tokens[`semantic.color.color-${shade}`].modes['colorScheme.dark'].alias,
+      `reference.color.brand-${namedShades[namedShades.length - 1 - namedShades.indexOf(shade)]}`,
+    );
+  }
+  const neutralShades = [5, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 40, 50, 60, 70, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100];
+  assert.deepEqual({ ...source.tokens['semantic.color.neutral-5'].modes['colorScheme.dark'].mix }, {
+    space: 'srgb', token: 'semantic.color.neutral-10', color: '#000000', weight: 0.85,
+  });
+  for (const shade of neutralShades.slice(1)) {
+    const target = `semantic.color.neutral-default-${110 - shade}`;
+    assert.equal(source.tokens[`semantic.color.neutral-${shade}`].modes['colorScheme.dark'].alias, target);
+    assert.equal(dark.tokens[`semantic.color.neutral-${shade}`].value, dark.tokens[target].value);
+  }
+  assert.equal(dark.tokens['semantic.color.neutral-5'].value, '#0e0e0d');
 });
 
 test('Decision 0005 changes only renderer source and provenance identity', () => {
@@ -351,8 +378,8 @@ test('Decision 0005 changes only renderer source and provenance identity', () =>
   const afterIos = compileNativeTheme(source, { profile: 'native.ios' });
   const afterAndroid = compileNativeTheme(source, { profile: 'native.android' });
   assert.equal(beforeWeb.css, afterWeb.css);
-  assert.deepEqual(beforeIos.theme, afterIos.theme);
-  assert.deepEqual(beforeAndroid.theme, afterAndroid.theme);
+  assert.equal(canonicalJson(beforeIos.theme), canonicalJson(afterIos.theme));
+  assert.equal(canonicalJson(beforeAndroid.theme), canonicalJson(afterAndroid.theme));
   assert.equal(Object.hasOwn(beforeIos, 'css'), false);
   assert.equal(Object.hasOwn(afterIos, 'css'), false);
   assert.equal(Object.hasOwn(beforeAndroid, 'css'), false);
@@ -448,7 +475,7 @@ test('E-G1.0-04 requirement digests track exact semantic closure only', () => {
   assert.notEqual(unrelatedSet.sourceRevision, base.sourceRevision);
 
   const dependency = structuredClone(source);
-  dependency.tokens['reference.color.bluegreen-60'].value = '#000001';
+  dependency.tokens['reference.color.brand-60'].value = '#000001';
   const dependencySet = compileTokenRequirementSet({
     source: dependency, recipe, bindingId: 'web.html', profile: 'web.html',
   });

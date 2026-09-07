@@ -3,8 +3,7 @@ import { Button } from '@muxui/react';
 export function BasicButtonExample() {
   return (
     <Button
-      variant="secondary"
-      tone="destructive"
+      variant="danger"
       size="sm"
       onActivate={() => undefined}
     >

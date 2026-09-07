@@ -1,0 +1,29 @@
+Mux UI token authoring includes a one-time port of the Scale palette algorithm
+from Tale UI commit 94bf62a26c02605c8928dfeb24f0ddc4be1c92fd.
+The resulting code is maintained by Mux UI; Tale UI is not a dependency.
+
+Color conversion uses culori 4.0.2 under its MIT license. An unchanged copy
+of that dependency's license is retained in licenses/culori.MIT.txt.
+
+The MIT License (MIT)
+
+Copyright (c) 2025 Tale UI contributors
+Portions Copyright (c) 2019 Material-UI SAS
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

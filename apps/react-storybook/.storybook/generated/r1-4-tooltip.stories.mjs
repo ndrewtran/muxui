@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6043b3af0f8a037bb97c243eca13871c90132fd0227d5687ee4afb491d8366d4
+// @generated-content-sha256: sha256:9ad626c15536a1fce2453bf064c02a81e0266249a18d5414a4871bdfd1b2198d
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -60,7 +60,8 @@ const binding = {
     "open",
     "closing"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'Tooltip', tranche: 'R1.4', binding };
 

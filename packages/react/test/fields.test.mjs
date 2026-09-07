@@ -324,8 +324,9 @@ test('NumberField steppers expose stable direction hooks and Tale edge geometry'
   assert.equal(increment.getAttribute('slot'), 'increment');
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
-  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid #d5d2d1;[^}]*border-radius:\s*10px 0 0 10px/u);
-  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid #d5d2d1;[^}]*border-radius:\s*0 10px 10px 0/u);
+  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-reference-color-neutral-22\);[^}]*border-radius:\s*var\(--muxui-reference-dimension-radius-m\) 0 0 var\(--muxui-reference-dimension-radius-m\)/u);
+  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-reference-color-neutral-22\);[^}]*border-radius:\s*0 var\(--muxui-reference-dimension-radius-m\) var\(--muxui-reference-dimension-radius-m\) 0/u);
+  assert.match(css, /--muxui-reference-color-neutral-22:\s*#d5d2d1;/u);
   dom.window.close();
 });
 
@@ -493,7 +494,7 @@ test('date picker calendar triggers retain Tale icon wrapper sizing and scoped p
   assert.match(styles, /\.muxui-icon\s*\{[^}]*width:\s*1\.5rem;[^}]*height:\s*1\.5rem;/u);
   assert.match(styles, /\.muxui-icon--sm\s*\{[^}]*width:\s*1rem;[^}]*height:\s*1rem;/u);
   assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-surface-hover\)/u);
-  assert.match(styles, /\[data-muxui-color-scheme='dark'\] \.muxui-date-popover\s*\{[^}]*border-color:\s*var\(--muxui-reference-color-neutral-96\)/u);
+  assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-popover\s*\{/u);
 });
 
 test('DateRangePicker renders its visual separator without exposing it to assistive technology', async () => {
@@ -507,7 +508,7 @@ test('DateRangePicker renders its visual separator without exposing it to assist
   assert.equal(separator.textContent, '–');
   assert.equal(separator.getAttribute('aria-hidden'), 'true');
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*var\(--muxui-semantic-layout-tight-inset\);[^}]*font-size:\s*var\(--muxui-semantic-typography-body-size\);/u);
+  assert.match(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*auto;[^}]*font-size:\s*var\(--muxui-semantic-typography-body-size\);/u);
   assert.doesNotMatch(styles, /\.muxui-date-range-separator\s*\{[^}]*font-size:\s*0/u);
   assert.doesNotMatch(styles, /\.muxui-date-range-separator\s*\{[^}]*inline-size:\s*0/u);
   dom.window.close();
@@ -695,8 +696,10 @@ test('temporal picker open ownership is independent and honors disabled/read-onl
 
 test('read-only date segments retain accessible semantic contrast', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*#79716b;/u);
-  assert.match(styles, /\[data-muxui-color-scheme='dark'\] \.muxui-date-segment\[data-readonly\]:not\(\[data-type='literal'\]\)\s*\{[^}]*color:\s*#918b86;/u);
+  assert.match(styles, /\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
+  assert.match(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
+  assert.match(styles, /--muxui-reference-color-neutral-60:\s*#79716b;/u);
+  assert.match(styles, /--muxui-reference-color-neutral-50:\s*#918b86;/u);
   const foreground = styles.match(/--muxui-semantic-content-default:\s*(#[0-9a-f]{6});/iu)?.[1];
   const background = styles.match(/--muxui-semantic-surface-canvas:\s*(#[0-9a-f]{6});/iu)?.[1];
   assert.ok(foreground);
@@ -1022,6 +1025,44 @@ test('R1.2 autocomplete placeholder stays aligned across artifact, types, and ru
   assert.match(server, /placeholder="Search city"/u);
 });
 
+test('Autocomplete preserves the donor compact size axis and part hooks', async () => {
+  const server = renderToString(React.createElement(Autocomplete, {
+    label: 'City',
+    size: 'sm',
+    items: ['Melbourne'],
+  }));
+  assert.match(server, /data-size="sm"/u);
+  assert.match(server, /data-part="root"/u);
+  assert.throws(
+    () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'lg' })),
+    /Autocomplete size must be one of: sm, md/u,
+  );
+
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Autocomplete, {
+      label: 'City',
+      size: 'sm',
+      items: ['Melbourne'],
+    })));
+    await act(async () => host.querySelector('.muxui-autocomplete input').focus());
+    const list = document.querySelector('.muxui-autocomplete-list');
+    assert.ok(list);
+    assert.match(list.className, /muxui-autocomplete-list--sm/u);
+    assert.equal(list.getAttribute('data-size'), 'sm');
+    assert.equal(list.getAttribute('data-part'), 'list');
+    assert.equal(document.querySelector('.muxui-autocomplete-option')?.getAttribute('data-part'), 'option');
+    await act(async () => root.unmount());
+  } finally {
+    restore();
+    dom.window.close();
+  }
+});
+
 test('R1.2 name-required fields reject dangling unnamed runtime instances', () => {
   assert.throws(() => renderToString(React.createElement(TextField)), /requires label, aria-label, or aria-labelledby/u);
   assert.throws(() => renderToString(React.createElement(Switch, null, 'Enabled')), /requires label, aria-label, or aria-labelledby/u);
@@ -1067,6 +1108,37 @@ test('R1.2 CheckboxGroup owns option names for required FormData submission', as
     assert.equal(host.querySelector('[role="group"]').getAttribute('data-required'), 'true');
     await act(async () => root.unmount());
   } finally {
+    restore();
+    dom.window.close();
+  }
+});
+
+test('CheckboxGroup keeps invalid error content inside its validation context', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    const renderGroup = (props) => React.createElement(CheckboxGroup, {
+      label: 'Alerts',
+      ...props,
+    }, React.createElement(Checkbox, { value: 'email' }, 'Email'));
+    root = createRoot(host);
+    await act(async () => root.render(renderGroup({ invalid: true, errorMessage: 'A value is required' })));
+    const group = host.querySelector('.muxui-checkbox-group');
+    const input = host.querySelector('input[type="checkbox"]');
+    assert.equal(group?.getAttribute('data-invalid'), 'true');
+    assert.match(host.querySelector('.muxui-field-error')?.textContent ?? '', /A value is required/u);
+    const describedBy = input?.getAttribute('aria-describedby')?.split(' ') ?? [];
+    assert.equal(describedBy.some((id) => host.ownerDocument.getElementById(id)?.textContent.includes('A value is required')), true);
+
+    await act(async () => root.render(renderGroup({ invalid: false })));
+    assert.equal(host.querySelector('.muxui-field-error'), null);
+    assert.equal(group?.getAttribute('data-invalid'), null);
+    const remainingDescriptions = input?.getAttribute('aria-describedby')?.split(' ') ?? [];
+    assert.equal(remainingDescriptions.some((id) => host.ownerDocument.getElementById(id)?.textContent.includes('A value is required')), false);
+  } finally {
+    await act(async () => root?.unmount());
     restore();
     dom.window.close();
   }

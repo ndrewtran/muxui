@@ -174,12 +174,17 @@ test('Foundations Gallery supports navigation, modes, copy feedback, keyboard fo
     const search = page.locator('[data-muxui-foundations-search]');
     const status = page.locator('[data-muxui-foundations-copy-status]');
     assert.ok(await contrastRatio(status) >= 4.5, 'copy status must remain readable in light mode');
-    const lightAlphaFill = page.locator('[data-muxui-foundations-color-fill="reference.color.scrim-default"]');
+    const lightAlphaFill = page.locator('[data-muxui-foundations-color-fill="semantic.effect.scrim"]');
     assert.equal(await lightAlphaFill.textContent(), '', 'exact color fills must not contain overlaid labels');
     assert.ok((await lightAlphaFill.getAttribute('style'))?.includes('background-color'), 'alpha color must use an exact inline fill');
-    assert.equal(await page.locator('[data-muxui-foundations-color-swatch="reference.color.scrim-default"]').textContent(), '', 'swatches must keep value text outside the fill');
+    assert.equal(await page.locator('[data-muxui-foundations-color-swatch="semantic.effect.scrim"]').textContent(), '', 'swatches must keep value text outside the fill');
     await page.locator('[data-muxui-foundations-category="radii-shadows"]').click();
     await waitForHeading(page, 'Radii and shadows');
+    await search.fill('semantic.elevation.control');
+    const controlElevation = page.locator('[data-muxui-foundations-radii-specimen="semantic.elevation.control"]').first();
+    const controlElevationShadow = await controlElevation.locator('.muxui-foundations-shape-box').first().evaluate((element) => getComputedStyle(element).boxShadow);
+    assert.match(controlElevationShadow, /inset/u, 'structured elevation must retain inset layers');
+    assert.match(controlElevationShadow, /rgba\(/u, 'structured elevation must retain alpha colors');
     await search.fill('radius');
     assert.ok(await page.locator('[data-muxui-foundations-token]').count() > 0, 'search should retain matching radius rows');
     await search.fill('query-with-no-results');
@@ -219,6 +224,13 @@ test('Foundations Gallery supports navigation, modes, copy feedback, keyboard fo
     await waitForHeading(page, 'Typography');
     const lineHeightSample = page.locator('[data-muxui-foundations-typography-sample="semantic.typography.body-line-height"]');
     assert.equal(await lineHeightSample.locator('br').count(), 1, 'line-height specimens must show multiple lines');
+    await search.fill('display-l-font-size');
+    const displaySampleStyle = await page.locator('[data-muxui-foundations-typography-sample="semantic.typography.display-l-font-size"]').getAttribute('style');
+    assert.match(displaySampleStyle ?? '', /color:/u, 'typography specimens must apply the role color');
+    assert.match(displaySampleStyle ?? '', /letter-spacing:\s*normal/u, 'typography specimens must apply role letter spacing');
+    await search.fill('');
+    await assertNativeTypographyRoles(page, 'light');
+    await assertNativeTypographyRoles(page, 'dark');
 
     const spacingCategory = page.locator('[data-muxui-foundations-category="spacing"]');
     await spacingCategory.focus();
@@ -302,6 +314,66 @@ test('Foundations Gallery supports navigation, modes, copy feedback, keyboard fo
 
 async function waitForHeading(page, expected) {
   await page.waitForFunction((value) => document.querySelector('.muxui-foundations-content h2')?.textContent === value, expected);
+}
+
+async function assertNativeTypographyRoles(page, colorScheme) {
+  const result = await page.evaluate((scheme) => {
+    document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
+    const fixture = document.createElement('div');
+    fixture.setAttribute('data-muxui-typography-role-proof', scheme);
+    fixture.style.cssText = 'position:fixed;inset:-10000px auto auto -10000px;visibility:hidden;';
+    const roleDefinitions = [
+      ['h1', 'display', 'm'],
+      ['h2', 'display', 's'],
+      ['h3', 'heading', 'l'],
+      ['h4', 'heading', 'm'],
+      ['h5', 'title', 'l'],
+      ['h6', 'title', 'm'],
+      ['span.muxui-text--display-m', 'display', 'm'],
+      ['span.muxui-text--title-m', 'title', 'm'],
+      ['span.muxui-text--label-l', 'label', 'l'],
+    ];
+    const properties = ['color', 'fontFamily', 'fontSize', 'fontWeight', 'lineHeight', 'letterSpacing', 'marginTop', 'marginBottom'];
+    const expectedStyles = (role, size) => {
+      const expected = document.createElement('span');
+      expected.textContent = 'expected';
+      const familyRole = role === 'label' ? 'label' : role;
+      const colorRole = role === 'label' && size === 'l' ? 'display' : role === 'label' ? 'text' : 'display';
+      expected.style.cssText = [
+        `color:var(--muxui-semantic-typography-${colorRole}-color)`,
+        `font-family:var(--muxui-reference-typography-${familyRole}-font-family)`,
+        `font-size:var(--muxui-semantic-typography-${role}-${size}-font-size)`,
+        `font-weight:var(--muxui-semantic-typography-${role}-font-weight)`,
+        `line-height:var(--muxui-semantic-typography-${role}-line-height)`,
+        `letter-spacing:var(--muxui-semantic-typography-${role}-letter-spacing)`,
+        'margin:0',
+      ].join(';');
+      fixture.append(expected);
+      return expected;
+    };
+    const samples = roleDefinitions.map(([selector, role, size]) => {
+      const elementName = selector.startsWith('h') ? selector : 'span';
+      const element = document.createElement(elementName);
+      if (selector.includes('.')) element.className = selector.split('.').slice(1).join(' ');
+      element.textContent = selector;
+      fixture.append(element);
+      return { selector, element, expected: expectedStyles(role, size) };
+    });
+    document.body.append(fixture);
+    const mismatches = [];
+    for (const { selector, element, expected } of samples) {
+      const actualStyle = getComputedStyle(element);
+      const expectedStyle = getComputedStyle(expected);
+      for (const property of properties) {
+        if (actualStyle[property] !== expectedStyle[property]) {
+          mismatches.push({ selector, property, actual: actualStyle[property], expected: expectedStyle[property] });
+        }
+      }
+    }
+    fixture.remove();
+    return { scheme, mismatches };
+  }, colorScheme);
+  assert.deepEqual(result.mismatches, [], `native typography roles must resolve canonical ${result.scheme} mappings`);
 }
 
 async function runAxe(page) {

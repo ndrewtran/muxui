@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:4b23dfdb55475fa909b2e3d2d0aac6d55b7c12ba150a5434b232dd83da79e8c6
+// @generated-content-sha256: sha256:9662b6f9911e34a7c904094607564b245ca41c29462b0ec523a301230f1a0d38
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -64,7 +64,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'SearchField', tranche: 'R1.2', binding };
 

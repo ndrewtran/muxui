@@ -48,7 +48,9 @@ import { renderFamily, stateArgsForBinding, storyArgsForBinding } from '../src/s
 import { migrationFixtureSymbol, sharedFixtureInput } from '../src/visual-migration-contract.mjs';
 import { fixtureFieldPropsFor, fixtureRenderModel } from '../src/visual-migration-fixture-map.mjs';
 import { renderFamilyPlan } from '../visual-migration/bootstrap/donor-render-plan.mjs';
+import { manifest as storybookManifest } from '../.storybook/generated/manifest.mjs';
 import { migrationCaretSuppressionCss, visualMigrationStoryReady } from './run-visual-migration.mjs';
+import { stageHistoricalVisualMigrationRoot } from './historical-visual-migration-snapshot.mjs';
 import * as visualMigrationModule from '../src/visual-migration.mjs';
 import { taleStyleInventory, validateTaleStyleInventory } from '../src/tale-style-inventory.mjs';
 
@@ -60,6 +62,7 @@ function mutatedMigrationElement(caseId, mutate) {
   const fixture = sharedFixtureInput(entry);
   mutate(fixture.data, fixture);
   const baseArgs = storyArgsForBinding(record.binding, 'default', entry.component);
+  if (entry.component === 'Meter') delete baseArgs.value;
   Object.defineProperty(baseArgs, migrationFixtureSymbol, { value: fixture });
   const args = {
     ...stateArgsForBinding(record.binding, entry.state, entry.component, baseArgs),
@@ -70,9 +73,20 @@ function mutatedMigrationElement(caseId, mutate) {
 
 const manifest = await readManifest();
 const comparison = JSON.parse(await readFile(resolve(appRoot, 'visual-migration/results/comparison.json'), 'utf8'));
+const historicalSnapshot = await stageHistoricalVisualMigrationRoot();
+const historicalValidationRoot = historicalSnapshot.appRoot;
+test.after(() => historicalSnapshot.cleanup());
+const validateHistoricalManifest = (value, options = {}) => validateManifest(value, { root: historicalValidationRoot, ...options });
+const validateHistoricalComparison = (value, options = {}) => validateSealedComparison(value, { root: historicalValidationRoot, ...options });
+
+test('live Mux source provenance rejects drift while the pinned historical source validates', async () => {
+  await assert.rejects(validateManifest(manifest), /Mux UI capture provenance/);
+  await assert.doesNotReject(validateHistoricalManifest(manifest));
+  await assert.doesNotReject(validateHistoricalComparison(manifest, { report: comparison }));
+});
 
 test('the canonical closure proves 51 applicable families and two exact no-donor families', async () => {
-  await validateManifest(manifest);
+  await validateHistoricalManifest(manifest);
   assert.equal(applicableMigrationRecords.length, 51);
   assert.deepEqual(noApplicableDonorFamilies, ['Group', 'TokenField']);
   assert.equal(manifest.coverage.applicableFamilyCount, 51);
@@ -85,7 +99,7 @@ test('the canonical closure proves 51 applicable families and two exact no-donor
   assert.equal(manifest.coverage.supplementalStateCount, expectedSupplementalStateCount);
   assert.equal(manifest.coverage.stateCoverageCount, expectedStateCoverage.length);
   assert.deepEqual(manifest.coverage.stateDispositions, expectedStateDispositionCounts);
-  await validateSealedComparison(manifest);
+  await validateHistoricalComparison(manifest);
   assert.deepEqual(manifest.capture.modes, ['light', 'dark']);
   assert.deepEqual(comparison.counts, {
     families: 51,
@@ -240,28 +254,28 @@ test('pinned donor binding rejects a coordinated donor artifact, provenance, and
 test('manifest validation rejects canonical selector and fixture-data substitution', async () => {
   const selectorSubstitution = structuredClone(manifest);
   selectorSubstitution.cases[0].selector = '[data-muxui-migration-case="switch-idle"]';
-  await assert.rejects(validateManifest(selectorSubstitution), /selector must equal the canonical case selector/);
+  await assert.rejects(validateHistoricalManifest(selectorSubstitution), /selector must equal the canonical case selector/);
   const dataSubstitution = structuredClone(manifest);
   dataSubstitution.cases[0].fixture.data.items[0] = 'Substituted';
-  await assert.rejects(validateManifest(dataSubstitution), /fixture must equal the canonical shared fixture contract/);
+  await assert.rejects(validateHistoricalManifest(dataSubstitution), /fixture must equal the canonical shared fixture contract/);
   const runtimeFixtureSubstitution = structuredClone(manifest);
   runtimeFixtureSubstitution.cases[0].runtimeFixtureSha256 = `sha256:${'0'.repeat(64)}`;
-  await assert.rejects(validateManifest(runtimeFixtureSubstitution), /runtimeFixtureSha256/);
+  await assert.rejects(validateHistoricalManifest(runtimeFixtureSubstitution), /runtimeFixtureSha256/);
   const fixtureMapSubstitution = structuredClone(manifest);
   fixtureMapSubstitution.bootstrap.fixtureMapSourceSha256 = `sha256:${'0'.repeat(64)}`;
-  await assert.rejects(validateManifest(fixtureMapSubstitution), /donor capture provenance/);
+  await assert.rejects(validateHistoricalManifest(fixtureMapSubstitution), /donor capture provenance/);
   const donorSourceSubstitution = structuredClone(manifest);
   donorSourceSubstitution.cases[0].donor.source = 'changed.css';
   donorSourceSubstitution.donorBindingSha256 = donorBindingSha256(donorSourceSubstitution);
-  await assert.rejects(validateManifest(donorSourceSubstitution), /pinned donor artifact contract/u);
+  await assert.rejects(validateHistoricalManifest(donorSourceSubstitution), /pinned donor artifact contract/u);
   const donorRuntimeSubstitution = structuredClone(manifest);
   donorRuntimeSubstitution.cases[0].donor.runtimeFixtureSha256 = `sha256:${'0'.repeat(64)}`;
   donorRuntimeSubstitution.donorBindingSha256 = donorBindingSha256(donorRuntimeSubstitution);
-  await assert.rejects(validateManifest(donorRuntimeSubstitution), /pinned donor artifact contract/u);
+  await assert.rejects(validateHistoricalManifest(donorRuntimeSubstitution), /pinned donor artifact contract/u);
   const donorSourceHashSubstitution = structuredClone(manifest);
   donorSourceHashSubstitution.cases[0].donor.sourceSha256 = `sha256:${'0'.repeat(64)}`;
   donorSourceHashSubstitution.donorBindingSha256 = donorBindingSha256(donorSourceHashSubstitution);
-  await assert.rejects(validateManifest(donorSourceHashSubstitution), /pinned donor artifact contract/);
+  await assert.rejects(validateHistoricalManifest(donorSourceHashSubstitution), /pinned donor artifact contract/);
 });
 
 function fakeComponent() {}
@@ -710,12 +724,12 @@ test('Mux UI capture provenance rejects substituted computed styles even after r
   }
   substituted.cases[0].equivalentPartFacts.muxui.properties.fontSize = '99px';
   const rebuilt = await buildComparisonReport(substituted);
-  await assert.rejects(validateSealedComparison(substituted, { report: rebuilt }), /Mux UI capture provenance/);
+  await assert.rejects(validateHistoricalComparison(substituted, { report: rebuilt }), /Mux UI capture provenance/);
 });
 
 test('Mux UI capture provenance binds the complete generated React tree', async () => {
   const provenance = JSON.parse(await readFile(resolve(appRoot, manifest.bootstrap.muxuiCaptureProvenance.path), 'utf8'));
-  assert.deepEqual(provenance.muxuiGeneratedTree, await muxuiGeneratedTreeProvenance());
+  assert.deepEqual(provenance.muxuiGeneratedTree, await muxuiGeneratedTreeProvenance({ root: resolve(historicalValidationRoot, '../..') }));
   assert.ok(provenance.muxuiGeneratedTree.files.some(({ path }) => path.endsWith('/button.mjs')));
   assert.ok(provenance.muxuiGeneratedTree.files.some(({ path }) => path.endsWith('/styles.css')));
 
@@ -725,7 +739,7 @@ test('Mux UI capture provenance binds the complete generated React tree', async 
   styles.sha256 = `sha256:${'0'.repeat(64)}`;
   substituted.bootstrap.muxuiCaptureProvenance.sha256 = jsonSha256(changedProvenance);
   await assert.rejects(
-    validateManifest(substituted, { muxuiCaptureProvenance: changedProvenance }),
+    validateHistoricalManifest(substituted, { muxuiCaptureProvenance: changedProvenance }),
     /Mux UI capture provenance does not match the canonical contract/u,
   );
 });
@@ -733,13 +747,13 @@ test('Mux UI capture provenance binds the complete generated React tree', async 
 test('manifest validation rejects changed baseline identity and weakened thresholds', async () => {
   const changed = structuredClone(manifest);
   changed.cases[0].baseline.light.sha256 = `sha256:${'0'.repeat(64)}`;
-  await assert.rejects(validateManifest(changed), /SHA-256 does not match/);
+  await assert.rejects(validateHistoricalManifest(changed), /SHA-256 does not match/);
   const weakened = structuredClone(manifest);
   weakened.thresholds.maxDiffPixelRatio = 1;
-  await assert.rejects(validateManifest(weakened), /thresholds/);
+  await assert.rejects(validateHistoricalManifest(weakened), /thresholds/);
   const changedPath = structuredClone(manifest);
   changedPath.cases[0].baseline.dark.path = `${changedPath.baselineDirectory}/switch-idle--dark.png`;
-  await assert.rejects(validateManifest(changedPath), /pinned capture file/);
+  await assert.rejects(validateHistoricalManifest(changedPath), /pinned capture file/);
 });
 
 test('diagnostic paths and content-addressed snapshot paths reject traversal', () => {
@@ -794,9 +808,9 @@ test('Mux UI capture runner drift is update-only and update identity binds the c
   const currentRunnerHash = sha256(currentRunnerSource);
   const drifted = structuredClone(manifest);
   drifted.bootstrap.muxuiCaptureRunnerSourceSha256 = `sha256:${'0'.repeat(64)}`;
-  await assert.rejects(validateManifest(drifted, { allowMissingMuxuiCaptureProvenance: true }), /Mux UI capture runner source SHA-256 does not match/);
-  await assert.rejects(validateManifest(drifted, { allowMuxuiCaptureRunnerSourceDrift: true }), /available only during update-only validation/);
-  await assert.doesNotReject(validateManifest(drifted, {
+  await assert.rejects(validateHistoricalManifest(drifted, { allowMissingMuxuiCaptureProvenance: true }), /Mux UI capture runner source SHA-256 does not match/);
+  await assert.rejects(validateHistoricalManifest(drifted, { allowMuxuiCaptureRunnerSourceDrift: true }), /available only during update-only validation/);
+  await assert.doesNotReject(validateHistoricalManifest(drifted, {
     allowMissingMuxuiCaptureProvenance: true,
     allowMuxuiCaptureRunnerSourceDrift: true,
   }));
@@ -806,9 +820,9 @@ test('Mux UI capture runner drift is update-only and update identity binds the c
   const staleSettling = structuredClone(manifest);
   staleSettling.bootstrap.muxuiCaptureRunnerSourceSha256 = currentRunnerHash;
   staleSettling.capture.settling.muxui = 'stale settling contract';
-  await assert.rejects(validateManifest(staleSettling, { allowMissingMuxuiCaptureProvenance: true }), /settling contract/);
-  await assert.rejects(validateManifest(staleSettling, { allowMuxuiSettlingDrift: true }), /available only during update-only validation/);
-  await assert.doesNotReject(validateManifest(staleSettling, {
+  await assert.rejects(validateHistoricalManifest(staleSettling, { allowMissingMuxuiCaptureProvenance: true }), /settling contract/);
+  await assert.rejects(validateHistoricalManifest(staleSettling, { allowMuxuiSettlingDrift: true }), /available only during update-only validation/);
+  await assert.doesNotReject(validateHistoricalManifest(staleSettling, {
     allowMissingMuxuiCaptureProvenance: true,
     allowMuxuiSettlingDrift: true,
   }));
@@ -819,37 +833,37 @@ test('Mux UI capture runner drift is update-only and update identity binds the c
 test('semantic negative cases fail closed: portal omission, no-op action, fixture/report substitution, and pixel exclusion', async () => {
   const portalOmission = structuredClone(manifest);
   portalOmission.cases.find(({ id }) => id === 'dialog-open').region.requiredSelectors = ['.muxui-dialog'];
-  await assert.rejects(validateManifest(portalOmission), /region must equal the canonical semantic-region contract/);
+  await assert.rejects(validateHistoricalManifest(portalOmission), /region must equal the canonical semantic-region contract/);
 
   const noOpAction = structuredClone(manifest);
   const actionCase = noOpAction.cases.find(({ action }) => action?.type === 'open');
   actionCase.action = { type: 'focus', selector: '.missing-action-target' };
-  await assert.rejects(validateManifest(noOpAction), /action must equal the canonical matched state action/);
+  await assert.rejects(validateHistoricalManifest(noOpAction), /action must equal the canonical matched state action/);
 
   const fixtureSubstitution = structuredClone(manifest);
   fixtureSubstitution.cases[0].fixture.copy = 'Substituted';
-  await assert.rejects(validateManifest(fixtureSubstitution), /fixture must equal the canonical shared fixture contract/);
+  await assert.rejects(validateHistoricalManifest(fixtureSubstitution), /fixture must equal the canonical shared fixture contract/);
 
   const reportSubstitution = structuredClone(comparison);
   reportSubstitution.comparisons[0].pixelComparison.mismatchedPixels = 1;
-  await assert.rejects(validateSealedComparison(manifest, { report: reportSubstitution }), /independently recomputed PNG comparison/);
+  await assert.rejects(validateHistoricalComparison(manifest, { report: reportSubstitution }), /independently recomputed PNG comparison/);
 
   const pixelExclusion = structuredClone(manifest);
   pixelExclusion.cases[0].adaptations[0].excludedFromPixelRegion = true;
-  await assert.rejects(validateManifest(pixelExclusion), /without excluding component pixels/);
+  await assert.rejects(validateHistoricalManifest(pixelExclusion), /without excluding component pixels/);
 });
 
 test('interrupted activation preserves the active Mux UI manifest, report, and baseline', async () => {
-  const manifestBytes = await readFile(resolve(appRoot, 'visual-migration/manifest.json'));
-  const reportBytes = await readFile(resolve(appRoot, 'visual-migration/results/comparison.json'));
-  const muxuiProvenanceBytes = await readFile(resolve(appRoot, manifest.bootstrap.muxuiCaptureProvenance.path));
-  const baselineFiles = await readdir(resolve(appRoot, manifest.baselineDirectory));
-  await assert.rejects(activateVisualMigrationArtifacts(manifest, { nextManifest: manifest, report: comparison, failureAt: 'after-report' }), /injected visual migration activation interruption/);
-  assert.deepEqual(await readFile(resolve(appRoot, 'visual-migration/manifest.json')), manifestBytes);
-  assert.deepEqual(await readFile(resolve(appRoot, 'visual-migration/results/comparison.json')), reportBytes);
-  assert.deepEqual(await readFile(resolve(appRoot, manifest.bootstrap.muxuiCaptureProvenance.path)), muxuiProvenanceBytes);
-  assert.deepEqual(await readdir(resolve(appRoot, manifest.baselineDirectory)), baselineFiles);
-  await validateManifest(manifest);
+  const manifestBytes = await readFile(resolve(historicalValidationRoot, 'visual-migration/manifest.json'));
+  const reportBytes = await readFile(resolve(historicalValidationRoot, 'visual-migration/results/comparison.json'));
+  const muxuiProvenanceBytes = await readFile(resolve(historicalValidationRoot, manifest.bootstrap.muxuiCaptureProvenance.path));
+  const baselineFiles = await readdir(resolve(historicalValidationRoot, manifest.baselineDirectory));
+  await assert.rejects(activateVisualMigrationArtifacts(manifest, { root: historicalValidationRoot, nextManifest: manifest, report: comparison, failureAt: 'after-report' }), /injected visual migration activation interruption/);
+  assert.deepEqual(await readFile(resolve(historicalValidationRoot, 'visual-migration/manifest.json')), manifestBytes);
+  assert.deepEqual(await readFile(resolve(historicalValidationRoot, 'visual-migration/results/comparison.json')), reportBytes);
+  assert.deepEqual(await readFile(resolve(historicalValidationRoot, manifest.bootstrap.muxuiCaptureProvenance.path)), muxuiProvenanceBytes);
+  assert.deepEqual(await readdir(resolve(historicalValidationRoot, manifest.baselineDirectory)), baselineFiles);
+  await validateHistoricalManifest(manifest);
 });
 
 test('PNG and computed-style comparisons fail closed', () => {
@@ -931,8 +945,8 @@ test('routine checker and fixture contain no Tale runtime, dependency, path, or 
   assert.doesNotMatch(JSON.stringify(manifest), /VITE_MUXUI_MIGRATION_RUN_TOKEN|runToken/iu);
 });
 
-test('generated Storybook projection keeps 53 family stories plus Foundations', async () => {
+test('generated Storybook projection covers canonical manifest families plus Foundations', async () => {
   const generatedStories = (await readdir(resolve(appRoot, '.storybook/generated'))).filter((entry) => entry.endsWith('.stories.mjs'));
-  assert.equal(generatedStories.length, 54);
+  assert.equal(generatedStories.length, storybookManifest.count + 1);
   assert.ok(generatedStories.includes('foundations.stories.mjs'));
 });

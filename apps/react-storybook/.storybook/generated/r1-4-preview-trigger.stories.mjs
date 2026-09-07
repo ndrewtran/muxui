@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:87931df5091e5f39bdf0e153204bdcec564059c85798a236800c73dc4f866ce1
+// @generated-content-sha256: sha256:43cf3b90f09436c9d90167baed4769f59f6611cfb1a2c5ddde7382bcdfb8dd13
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -64,7 +64,8 @@ const binding = {
     "open",
     "closing"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'PreviewTrigger', tranche: 'R1.4', binding };
 

@@ -1,5 +1,7 @@
 import React from 'react';
 import * as MuxUI from '@muxui/react';
+import { Markdown } from '../../../packages/react/generated/markdown.mjs';
+import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
 import { migrationFixtureSymbol } from './visual-migration-contract.mjs';
 import { fixtureFieldPropsFor, fixtureRenderModel } from './visual-migration-fixture-map.mjs';
 
@@ -10,6 +12,7 @@ const BOOLEAN_PROPS = new Set([
   'acceptDirectory', 'allowsMultiple', 'checked', 'current', 'defaultChecked',
   'defaultExpanded', 'defaultOpen', 'defaultSelected', 'disabled', 'dismissable',
   'expanded', 'invalid', 'indeterminate', 'open', 'pending', 'readOnly', 'required',
+  'showTextWhileLoading',
   'shouldCloseOnSelect',
 ]);
 
@@ -76,7 +79,7 @@ const SELECT_PROPS = Object.freeze({
 });
 
 const BUTTON_SELECT_PROPS = Object.freeze({
-  variant: ['primary', 'secondary', 'ghost'],
+  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary'],
   tone: ['default', 'destructive'],
   size: ['sm', 'md', 'lg'],
 });
@@ -229,14 +232,16 @@ function stateVariantNames(binding, family) {
   return [...new Set(names)];
 }
 
-function resetStateArgs(binding, sourceArgs) {
+function resetStateArgs(binding, sourceArgs, preserveExplicit = false) {
+  if (preserveExplicit) return { ...sourceArgs };
   const props = new Set(binding.api.props);
   const args = { ...sourceArgs };
   for (const name of STATE_BOOLEAN_PROPS) {
-    if (props.has(name)) args[name] = false;
+    if (props.has(name) && (!preserveExplicit || !Object.hasOwn(args, name))) args[name] = false;
   }
   for (const [controlled, uncontrolled] of CONTROLLED_DEFAULT_PAIRS) {
     if (!props.has(controlled) || !props.has(uncontrolled)) continue;
+    if (preserveExplicit && (Object.hasOwn(args, controlled) || Object.hasOwn(args, uncontrolled))) continue;
     delete args[controlled];
     if (args[uncontrolled] === undefined) {
       const defaults = binding.api.defaults ?? {};
@@ -251,10 +256,16 @@ function fixtureDataFromInput(fixtureInput, name, defaultValue) {
   return fixtureInput ? fixtureRenderModel(fixtureInput).data[name] ?? defaultValue : defaultValue;
 }
 
-function setSelectedState(args, props, family, fixtureInput) {
+function canSupplyStateValue(args, props, name, preserveExplicit) {
+  if (!preserveExplicit) return true;
+  const fallback = UNCONTROLLED_PROPS.get(name);
+  return !Object.hasOwn(args, name) && !(fallback && props.has(fallback) && Object.hasOwn(args, fallback));
+}
+
+function setSelectedState(args, props, family, fixtureInput, preserveExplicit) {
   const model = fixtureInput ? fixtureRenderModel(fixtureInput) : undefined;
-  if (props.has('checked')) return setControlledArg(args, props, 'checked', true);
-  if (props.has('selected')) return setControlledArg(args, props, 'selected', true);
+  if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) return setControlledArg(args, props, 'checked', true);
+  if (props.has('selected') && canSupplyStateValue(args, props, 'selected', preserveExplicit)) return setControlledArg(args, props, 'selected', true);
   if (props.has('selectedIds')) {
     if (props.has('selectionMode')) args.selectionMode = 'single';
     const selectedId = family === 'Tree'
@@ -264,10 +275,12 @@ function setSelectedState(args, props, family, fixtureInput) {
         : family === 'ToggleButtonGroup'
           ? model?.selected.toggleId ?? 'bold'
           : model?.selected.itemId ?? 'Melbourne';
-    return setControlledArg(args, props, 'selectedIds', [selectedId]);
+    if (canSupplyStateValue(args, props, 'selectedIds', preserveExplicit)) return setControlledArg(args, props, 'selectedIds', [selectedId]);
+    return undefined;
   }
-  if (props.has('selectedId')) return setControlledArg(args, props, 'selectedId', model?.selected.itemId ?? 'Melbourne');
+  if (props.has('selectedId') && canSupplyStateValue(args, props, 'selectedId', preserveExplicit)) return setControlledArg(args, props, 'selectedId', model?.selected.itemId ?? 'Melbourne');
   if (!props.has('value')) return undefined;
+  if (!canSupplyStateValue(args, props, 'value', preserveExplicit)) return undefined;
   if (family === 'CheckboxGroup') return setControlledArg(args, props, 'value', [model?.selected.choice ?? 'email']);
   if (family === 'RadioGroup') return setControlledArg(args, props, 'value', model?.selected.option ?? 's');
   if (family === 'Tabs') return setControlledArg(args, props, 'value', model?.selected.item ?? 'overview');
@@ -356,12 +369,12 @@ function stateIsSupported(binding, state, family) {
   }
 }
 
-function applyStateArgs(args, binding, state, family, fixtureInput) {
+function applyStateArgs(args, binding, state, family, fixtureInput, preserveExplicit = false) {
   const props = new Set(binding.api.props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
     case 'disabled':
-      if (props.has('disabled')) args.disabled = true;
+      if (props.has('disabled') && canSupplyStateValue(args, props, 'disabled', preserveExplicit)) args.disabled = true;
       if (family === 'Breadcrumbs' && props.has('items')) {
         args.items = [
           { id: 'home', label: 'Home', href: '#', disabled: true },
@@ -370,16 +383,16 @@ function applyStateArgs(args, binding, state, family, fixtureInput) {
       }
       break;
     case 'invalid':
-      if (props.has('invalid')) args.invalid = true;
+      if (props.has('invalid') && canSupplyStateValue(args, props, 'invalid', preserveExplicit)) args.invalid = true;
       break;
     case 'readonly':
-      if (props.has('readOnly')) args.readOnly = true;
+      if (props.has('readOnly') && canSupplyStateValue(args, props, 'readOnly', preserveExplicit)) args.readOnly = true;
       break;
     case 'required':
-      if (props.has('required')) args.required = true;
+      if (props.has('required') && canSupplyStateValue(args, props, 'required', preserveExplicit)) args.required = true;
       break;
     case 'selected':
-      setSelectedState(args, props, family, fixtureInput);
+      setSelectedState(args, props, family, fixtureInput, preserveExplicit);
       break;
     case 'indeterminate':
       if (props.has('indeterminate')) args.indeterminate = true;
@@ -473,8 +486,17 @@ export function storyArgsForBinding(binding, variant, family) {
   return stateArgsForBinding(binding, variant, family);
 }
 
-export function stateArgsForBinding(binding, state, family, sourceArgs = normalizeDefaultArgs(binding)) {
-  return applyStateArgs(resetStateArgs(binding, sourceArgs), binding, state, family, sourceArgs[migrationFixtureSymbol]);
+export function stateArgsForBinding(binding, state, family, sourceArgs) {
+  const explicitArgs = sourceArgs !== undefined;
+  const args = sourceArgs ?? normalizeDefaultArgs(binding);
+  const projected = applyStateArgs(resetStateArgs(binding, args, explicitArgs), binding, state, family, args[migrationFixtureSymbol], explicitArgs);
+  if (!explicitArgs) return projected;
+  // A state supplies missing demonstration values. Explicit controls retain
+  // precedence, including false, empty values, and uncontrolled defaults.
+  for (const [controlled, uncontrolled] of CONTROLLED_DEFAULT_PAIRS) {
+    if (Object.hasOwn(sourceArgs, uncontrolled) && !Object.hasOwn(sourceArgs, controlled)) delete projected[controlled];
+  }
+  return { ...projected, ...sourceArgs };
 }
 
 export function stateCoverageForBinding(binding, family) {
@@ -497,6 +519,7 @@ function fixtureCopy(args, defaultValue) {
 
 function fixtureData(args, name, defaultValue) {
   const fixture = args[migrationFixtureSymbol];
+  if (Object.hasOwn(args, name)) return args[name];
   return fixture ? fixtureRenderModel(fixture).data[name] ?? defaultValue : defaultValue;
 }
 
@@ -545,10 +568,12 @@ const ADAPTERS = {
   Link: (args) => e(MuxUI.Link, { ...args, href: fallback(args.href, '/settings') }, fixtureCopy(args, 'Settings')),
   Meter: (args) => {
     const state = fixtureState(args);
-    const fixtureValue = state === 'low' ? 24 : state === 'high' ? 88 : fixtureData(args, 'values', {}).meter ?? args.value ?? 72;
+    const fixtureValue = Object.hasOwn(args, 'value')
+      ? args.value
+      : state === 'low' ? 24 : state === 'high' ? 88 : fixtureData(args, 'values', {}).meter ?? 72;
     return e(MuxUI.Meter, { ...args, label: fallback(args.label, fixtureCopy(args, 'Storage')), value: fixtureValue });
   },
-  ProgressBar: (args) => e(MuxUI.ProgressBar, { ...args, label: fallback(args.label, fixtureCopy(args, 'Upload')), value: args.indeterminate || Object.hasOwn(args, 'value') && args.value === undefined ? undefined : fixtureState(args) === 'complete' ? 100 : (fixtureData(args, 'values', {}).progress ?? (Object.hasOwn(args, 'value') ? args.value : 64)) }),
+  ProgressBar: (args) => e(MuxUI.ProgressBar, { ...args, label: fallback(args.label, fixtureCopy(args, 'Upload')), value: args.indeterminate || Object.hasOwn(args, 'value') && args.value == null ? undefined : Object.hasOwn(args, 'value') ? args.value : fixtureState(args) === 'complete' ? 100 : (fixtureData(args, 'values', {}).progress ?? 64) }),
   Separator: (args) => e(MuxUI.Separator, args),
   ToggleButton: (args) => e(MuxUI.ToggleButton, args, fixtureCopy(args, 'Pin')),
   Autocomplete: (args) => e(MuxUI.Autocomplete, { ...args, ...fixtureFieldProps(args, 'Autocomplete', { label: fallback(args.label, fixtureCopy(args, 'Choose a city')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Choose a city')) }), items: fixtureData(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
@@ -589,7 +614,7 @@ const ADAPTERS = {
   ColorSlider: (args) => e(MuxUI.ColorSlider, { ...args, label: fallback(args.label, fixtureCopy(args, 'Red')), channel: fallback(args.channel, 'red'), defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
   ColorSwatch: (args) => e(MuxUI.ColorSwatch, { ...args, color: fixtureData(args, 'color', fallback(args.color, '#ff0000')) }),
   ColorSwatchPicker: (args) => e(MuxUI.ColorSwatchPicker, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Palette')), items: fixtureData(args, 'items', fallback(args.items, [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }])) }),
-  ColorWheel: (args) => e(MuxUI.ColorWheel, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Hue')), outerRadius: args.outerRadius ?? 12, innerRadius: args.innerRadius ?? 8, defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
+  ColorWheel: (args) => e(MuxUI.ColorWheel, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Hue')), outerRadius: args.outerRadius ?? 96, innerRadius: args.innerRadius ?? 64, defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
   ComboBox: (args) => e(MuxUI.ComboBox, { ...args, ...fixtureFieldProps(args, 'ComboBox', { label: fallback(args.label, fixtureCopy(args, 'Choose a city')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Choose a city')) }), items: fixtureData(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
   GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Grid')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['One', 'Two'])) }),
   ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'List')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['One', 'Two'])) }),
@@ -612,7 +637,7 @@ const ADAPTERS = {
   Tree: (args) => e(MuxUI.Tree, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Files')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, [{ id: 'src', label: 'src', children: [{ id: 'main', label: 'main.jsx' }] }])), defaultExpandedIds: args.expandedIds === undefined ? (args.defaultExpandedIds ?? (args[migrationFixtureSymbol] ? undefined : ['src'])) : args.defaultExpandedIds }),
   Virtualizer: (args) => {
     const viewport = args[migrationFixtureSymbol]?.frame?.virtualizer;
-    const height = viewport?.height ?? args.height ?? 180;
+    const height = args.height ?? viewport?.height ?? 180;
     if (!Number.isFinite(height) || height <= 0) throw new Error('MuxUI migration Virtualizer requires a finite positive height');
     const items = fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['Result 1', 'Result 2', 'Result 3']));
     const migration = Boolean(viewport);
@@ -620,26 +645,20 @@ const ADAPTERS = {
       ...args,
       'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Results')),
       items,
-      // Tale's virtualizer contracts its empty list to its border while the
-      // populated fixture uses a 76px inner viewport inside the 340x180 host.
-      // Keep the host dimensions stable but map the empty state to the same
-      // deterministic inner geometry instead of forcing an empty 76px panel.
-      height: migration ? (fixtureState(args) === 'empty' ? 12 : 76) : height,
-      itemHeight: migration ? 32 : args.itemHeight ?? 32,
-      style: migration && fixtureState(args) === 'empty'
-        ? { ...(args.style ?? {}), marginBlockStart: '1px' }
-        : args.style,
-    });
-    return migration
-      ? e('div', {
-        style: {
+      height,
+      itemHeight: args.itemHeight ?? 32,
+      style: migration
+        ? {
+          ...(args.style ?? {}),
           boxSizing: 'border-box',
           width: `${viewport.width}px`,
-          height: `${viewport.height}px`,
+          height: `${height}px`,
+          maxHeight: `${height}px`,
           overflow: 'auto',
-        },
-      }, virtualizer)
-      : virtualizer;
+        }
+        : args.style,
+    });
+    return virtualizer;
   },
   DropZone: (args) => e(MuxUI.DropZone, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Upload files')) }, fallback(args.children, fixtureCopy(args, 'Drop files here'))),
   FileTrigger: (args) => e(MuxUI.FileTrigger, { ...args }, fallback(args.children, e(MuxUI.Button, null, fixtureCopy(args, 'Choose files')))),
@@ -668,7 +687,17 @@ const ADAPTERS = {
   }, fallback(args.children, args[migrationFixtureSymbol]
     ? `${fixtureCopy(args, 'Document preview')} content.`
     : e('p', null, `${fixtureCopy(args, 'Document preview')} content.`))),
-  Toast: (args) => e(MuxUI.Toast, { ...args, message: fallback(args.message, fixtureCopy(args, 'Saved')), title: fallback(args.title, fixtureCopy(args, 'Saved')) }),
+  Toast: (args) => {
+    const toast = e(MuxUI.Toast, {
+      ...args,
+      variant: args.variant === 'info' ? 'neutral' : args.variant,
+      message: fallback(args.message, fixtureCopy(args, 'Saved')),
+      title: fallback(args.title, fixtureCopy(args, 'Saved')),
+    });
+    return args[migrationFixtureSymbol]
+      ? e(MuxUI.ToastProvider, { placement: 'bottom-end' }, toast)
+      : toast;
+  },
   Tooltip: (args) => e(MuxUI.Tooltip, {
     ...args,
     content: fallback(args.content, fixtureCopy(args, 'Keyboard shortcut: ⌘K')),
@@ -677,6 +706,156 @@ const ADAPTERS = {
     trigger: fallback(args.trigger, e(MuxUI.Button, null, fixtureCopy(args, 'Keyboard help'))),
   }),
 };
+
+// R1.6 families use their authored compound anatomy in the private showcase.
+// These adapters deliberately keep the fixture data small while exercising
+// the public root or dedicated subpath export and every catalogued part.
+Object.assign(ADAPTERS, {
+  AlertDialog: (args) => e(MuxUI.AlertDialog.Root, { defaultOpen: args.open ?? false, className: args.className },
+    e(MuxUI.AlertDialog.Trigger, { disabled: args.disabled }, 'Open alert'),
+    e(MuxUI.AlertDialog.Backdrop),
+    e(MuxUI.AlertDialog.Popup, null,
+      e(MuxUI.AlertDialog.Content, null,
+        e(MuxUI.AlertDialog.Title, null, 'Delete draft'),
+        e(MuxUI.AlertDialog.Description, null, 'This action cannot be undone.'),
+        e(MuxUI.AlertDialog.Actions, null,
+          e(MuxUI.AlertDialog.Close, { disabled: args.disabled }, 'Cancel'),
+        ),
+      ),
+    ),
+  ),
+  ButtonGroup: (args) => e(MuxUI.ButtonGroup, { ...args },
+    e(MuxUI.Button, { disabled: args.disabled }, 'Primary'),
+    e(MuxUI.Button, { disabled: args.disabled, variant: 'neutral' }, 'Secondary'),
+  ),
+  Card: (args) => e(MuxUI.Card.Root, { className: args.className },
+    e(MuxUI.Card.Header, null, 'Card title'),
+    e(MuxUI.Card.Body, null, 'Card content'),
+    e(MuxUI.Card.Footer, null, e(MuxUI.Button, { disabled: args.disabled }, 'Action')),
+  ),
+  CheckboxField: (args) => e(MuxUI.CheckboxField.Root, { ...args },
+    e(MuxUI.CheckboxField.Button, { disabled: args.disabled }, 'Enable notifications', e(MuxUI.CheckboxField.Indicator)),
+    e(MuxUI.CheckboxField.Description, null, 'Optional setting'),
+    e(MuxUI.CheckboxField.Error, null, args.invalid ? 'Invalid value' : null),
+  ),
+  ColorModeToggle: (args) => e(MuxUI.ColorModeToggle, { ...args, 'aria-label': 'Toggle color mode' }, 'Toggle mode'),
+  CommandPalette: (args) => e(MuxUI.CommandPalette.Root, { ...args, open: args.open ?? false },
+    e(MuxUI.CommandPalette.Trigger, { disabled: args.disabled }, 'Open command palette'),
+    e(MuxUI.CommandPalette.Backdrop),
+    e(MuxUI.CommandPalette.Popup, null,
+      e(MuxUI.CommandPalette.Title, null, 'Commands'),
+      e(MuxUI.CommandPalette.Description, null, 'Choose an action'),
+      e(MuxUI.CommandPalette.Content, null,
+        e(MuxUI.CommandPalette.SearchField, null, e(MuxUI.CommandPalette.Input, { placeholder: 'Search commands' })),
+        e(MuxUI.CommandPalette.ListBox, null,
+          e(MuxUI.CommandPalette.Item, { id: 'save', title: 'Save' }, 'Save'),
+        ),
+      ),
+      e(MuxUI.CommandPalette.Close, null, 'Close'),
+    ),
+  ),
+  HeaderNav: (args) => e(MuxUI.HeaderNav.Root, { ...args },
+    e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
+    e(MuxUI.HeaderNav.Secondary, { 'aria-label': `${args['aria-label'] ?? 'Header navigation'} secondary` }, 'Docs'),
+    e(MuxUI.HeaderNav.NavButton, { href: '#components' }, 'Components'),
+    e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, { disabled: args.disabled }, 'Sign in')),
+    e(MuxUI.HeaderNav.MobileTrigger, null, 'Menu'),
+  ),
+  InputTags: (args) => e(MuxUI.InputTags.Root, { ...args, defaultValue: ['Mux', 'UI'], label: 'Tags', 'aria-label': 'Tags', placeholder: 'Add a tag' }),
+  Input: (args) => e(MuxUI.Input.Root, { ...args },
+    e(MuxUI.Input.Label, null, 'Name'),
+    e(MuxUI.Input.Input, { placeholder: 'Enter a name', disabled: args.disabled }),
+    e(MuxUI.Input.Description, null, 'Your display name'),
+    e(MuxUI.Input.Error, null, args.invalid ? 'Name is invalid' : null),
+  ),
+  MultiSelect: (args) => e(MuxUI.MultiSelect.Root, { ...args, label: 'Notifications', items: [{ id: 'email', label: 'Email' }, { id: 'sms', label: 'SMS' }] },
+    e(MuxUI.MultiSelect.Item, { id: 'email' }, 'Email'),
+    e(MuxUI.MultiSelect.Item, { id: 'sms' }, 'SMS'),
+    e(MuxUI.MultiSelect.Footer, null, '2 options'),
+    e(MuxUI.MultiSelect.EmptyState, null, 'No options'),
+  ),
+  PaymentInput: (args) => e(MuxUI.PaymentInput.Root, args,
+    e(MuxUI.PaymentInput.Label, null, 'Card number'),
+    e(MuxUI.PaymentInput.Group, null,
+      e(MuxUI.PaymentInput.Input, { placeholder: '4242 4242 4242 4242', disabled: args.disabled }),
+      e(MuxUI.PaymentInput.CardIcon, null, 'VISA'),
+    ),
+    e(MuxUI.PaymentInput.Description, null, 'Secure payment'),
+    e(MuxUI.PaymentInput.Error, null, args.invalid ? 'Invalid card' : null),
+  ),
+  ProgressCircle: (args) => e(MuxUI.ProgressCircle.Root, { ...args, value: args.value ?? 64, label: 'Upload progress' },
+    e(MuxUI.ProgressCircle.Track),
+    e(MuxUI.ProgressCircle.Label, null, 'Upload'),
+    e(MuxUI.ProgressCircle.Value),
+  ),
+  // RadioField is a compound control whose context is supplied by RadioGroup.
+  // The Storybook workspace consumes the public Mux package only, so use its
+  // options API here instead of reaching through to RAC's private context.
+  RadioField: (args) => e('div', { className: 'muxui-radio-field', 'data-invalid': args.invalid || undefined, 'data-disabled': args.disabled || undefined },
+    e(MuxUI.RadioGroup, {
+      'aria-label': 'Preferred',
+      value: args.value,
+      defaultValue: args.defaultValue ?? 'preferred',
+      disabled: args.disabled,
+      readOnly: args.readOnly,
+      required: args.required,
+      invalid: args.invalid,
+      options: [
+        { value: 'preferred', label: 'Preferred' },
+        { value: 'alternative', label: 'Alternative' },
+      ],
+      className: 'muxui-radio-field__group',
+    }),
+    e('span', { className: 'muxui-radio-field__description' }, 'Choose one option'),
+    args.invalid ? e('span', { className: 'muxui-radio-field__error' }, 'Invalid choice') : null,
+  ),
+  Sidebar: (args) => e(MuxUI.Sidebar.Root, { ...args },
+    e(MuxUI.Sidebar.Header, null, 'Workspace'),
+    e(MuxUI.Sidebar.Search, { placeholder: 'Search' }),
+    e(MuxUI.Sidebar.Divider),
+    e(MuxUI.Sidebar.NavList, null,
+      e(MuxUI.Sidebar.NavItem, { href: '#home', current: true }, 'Home'),
+      e(MuxUI.Sidebar.NavItem, { href: '#settings' }, 'Settings'),
+    ),
+    e(MuxUI.Sidebar.AccountCard, { name: 'Andrew', email: 'andrew@example.com' }),
+    e(MuxUI.Sidebar.AccountMenu, null, 'Account'),
+    e(MuxUI.Sidebar.MobileTrigger, null, 'Menu'),
+    e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens' }),
+  ),
+  SwitchField: (args) => e(MuxUI.SwitchField.Root, { ...args },
+    e(MuxUI.SwitchField.Button, { disabled: args.disabled }, 'Enabled', e(MuxUI.SwitchField.Thumb)),
+    e(MuxUI.SwitchField.Description, null, 'Enable updates'),
+    e(MuxUI.SwitchField.Error, null, args.invalid ? 'Invalid value' : null),
+  ),
+  TagSelect: (args) => e(MuxUI.TagSelect.Root, { ...args, label: 'Topics', items: [{ id: 'design', label: 'Design' }, { id: 'code', label: 'Code' }] },
+    e(MuxUI.TagSelect.Item, { id: 'design' }, 'Design'),
+    e(MuxUI.TagSelect.Item, { id: 'code' }, 'Code'),
+  ),
+  TextArea: (args) => e(MuxUI.TextArea.Root, { ...args },
+    e(MuxUI.TextArea.Label, null, 'Notes'),
+    e(MuxUI.TextArea.TextArea, { placeholder: 'Add notes', disabled: args.disabled }),
+    e(MuxUI.TextArea.Description, null, 'Optional'),
+    e(MuxUI.TextArea.Error, null, args.invalid ? 'Invalid notes' : null),
+  ),
+  Resizable: (args) => e(MuxUI.Resizable, { ...args, defaultSizes: args.defaultSizes ?? { main: 60, side: 40 } },
+    e(MuxUI.ResizablePanel, { id: 'main' }, 'Main'),
+    e(MuxUI.ResizableHandle, { id: 'main-side', before: 'main', after: 'side', 'aria-label': 'Resize panels' }),
+    e(MuxUI.ResizablePanel, { id: 'side' }, 'Side'),
+  ),
+  Lightbox: (args) => e(MuxUI.Lightbox, { ...args, items: args.items ?? [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }] },
+    e(MuxUI.LightboxTrigger, { itemKey: 'one', disabled: args.disabled }, 'Open gallery'),
+    e(MuxUI.LightboxBackdrop, null,
+      e(MuxUI.LightboxPopup, null,
+        e(MuxUI.LightboxContent, null, e(MuxUI.LightboxCaption, null, 'Gallery item')),
+        e(MuxUI.LightboxPrevious, null),
+        e(MuxUI.LightboxNext, null),
+        e(MuxUI.LightboxClose, null),
+      ),
+    ),
+  ),
+  Markdown: (args) => e(Markdown, { ...args, source: args.source ?? '## Mux UI\n\nA **bounded** example.' }),
+  TextEditor: (args) => e(TextEditor, { ...args, defaultValue: args.defaultValue ?? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Mux UI' }] }] } }),
+});
 
 export const adapterNames = Object.freeze(Object.keys(ADAPTERS));
 
@@ -875,7 +1054,7 @@ function StateVariant({ family, state, args, available }) {
   // The matrix intentionally mounts several landmark instances at once. Give
   // Mux UI's nav/group adapters unique accessible names without adding a prop
   // to the public API or changing the controls contract.
-  if (family === 'Breadcrumbs' || family === 'Group') {
+  if (family === 'Breadcrumbs' || family === 'Group' || family === 'HeaderNav') {
     variantArgs['aria-label'] = `${family} ${state}`;
   }
   const labelId = `muxui-storybook-state-${family}-${state.replaceAll(/[^a-z0-9]+/gi, '-').toLowerCase()}`;
@@ -1384,7 +1563,7 @@ async function toastBrowserProof({ canvasElement }) {
   await waitForBrowserEvent(canvasElement, 'dismiss', family);
 }
 
-const BROWSER_PROOF_PLANS = Object.freeze({
+const BROWSER_PROOF_PLANS = {
   Button: activationPlan('Button', '.muxui-button'),
   Breadcrumbs: activationPlan('Breadcrumbs', '.muxui-breadcrumbs-link', 'navigate'),
   Checkbox: activationPlan('Checkbox', '.muxui-checkbox input', 'change'),
@@ -1627,8 +1806,42 @@ const BROWSER_PROOF_PLANS = Object.freeze({
   PreviewTrigger: timedOverlayBrowserProof,
   Toast: toastBrowserProof,
   Tooltip: timedOverlayBrowserProof,
-});
+};
 
+const HISTORICAL_BROWSER_PROOF_PLAN_NAMES = Object.freeze(Object.keys(BROWSER_PROOF_PLANS));
+const R16_BROWSER_PROOF_ROOTS = Object.freeze({
+  AlertDialog: '.muxui-alert-dialog__trigger',
+  ButtonGroup: '.muxui-button-group button',
+  Card: '.muxui-card',
+  CheckboxField: '.muxui-checkbox-field__button',
+  ColorModeToggle: '.muxui-color-mode-toggle',
+  CommandPalette: '.muxui-command-palette__trigger',
+  HeaderNav: '.muxui-header-nav__mobile-trigger',
+  InputTags: '.muxui-input-tags input',
+  Input: '.muxui-input',
+  Lightbox: '.muxui-lightbox-trigger',
+  Markdown: '.muxui-markdown',
+  MultiSelect: '.muxui-multi-select__trigger',
+  PaymentInput: '.muxui-payment-input__input',
+  ProgressCircle: '.muxui-progress-circle',
+  RadioField: '.muxui-radio-field .muxui-radio',
+  Resizable: '.muxui-resizable-handle',
+  Sidebar: '.muxui-sidebar__mobile-menu-btn',
+  SwitchField: '.muxui-switch-field__button',
+  TagSelect: '.muxui-tag-select__input',
+  TextArea: '.muxui-text-area__textarea',
+  TextEditor: '.muxui-text-editor__btn',
+});
+for (const [family, selector] of Object.entries(R16_BROWSER_PROOF_ROOTS)) {
+  BROWSER_PROOF_PLANS[family] = async ({ canvasElement }) => {
+    const target = browserProofElement(canvasElement, selector, family);
+    target.focus?.();
+    if (target.matches?.('button, a, input, textarea, [role="button"]')) target.click?.();
+    assertBrowser(target.isConnected, `${family} public proof target remains connected after interaction`);
+  };
+}
+
+export const HISTORICAL_BROWSER_PROOF_FAMILIES = Object.freeze(HISTORICAL_BROWSER_PROOF_PLAN_NAMES);
 export const BROWSER_PROOF_FAMILIES = Object.freeze(Object.keys(BROWSER_PROOF_PLANS));
 
 async function runBrowserProof(family, canvasElement) {
@@ -1707,38 +1920,37 @@ export function createBrowserProofStory(record) {
   };
 }
 
-const BUTTON_MATRIX_VARIANTS = Object.freeze(['primary', 'secondary', 'ghost']);
-const BUTTON_MATRIX_TONES = Object.freeze(['default', 'destructive']);
+const BUTTON_MATRIX_VARIANTS = Object.freeze(['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse']);
 const BUTTON_MATRIX_SIZES = Object.freeze(['sm', 'md', 'lg']);
 
 /** Render every adopted Button axis combination in one compact inspection story. */
 export function createButtonMatrixStory(record) {
   if (record.family !== 'Button') throw new TypeError('Button matrix stories require the Button family');
   return {
-    name: 'Variant × tone × size',
+    name: 'Variant × size',
     args: {},
     argTypes: argTypesForBinding(record.binding),
     parameters: {
       controls: { disable: true },
-      muxuiButtonMatrix: { combinations: 18 },
+      muxuiButtonMatrix: { combinations: 21 },
     },
     render: (args = {}) => e(
       'div',
       {
         className: 'muxui-button-matrix',
         role: 'group',
-        'aria-label': 'Button variant, tone, and size combinations',
+        'aria-label': 'Button variant and size combinations',
         style: { display: 'grid', gridTemplateColumns: 'repeat(3, max-content)', gap: '1rem' },
       },
-      ...BUTTON_MATRIX_SIZES.flatMap((size) => BUTTON_MATRIX_TONES.flatMap((tone) => BUTTON_MATRIX_VARIANTS.map((variant) => {
-        const label = `${variant} / ${tone} / ${size}`;
+      ...BUTTON_MATRIX_SIZES.flatMap((size) => BUTTON_MATRIX_VARIANTS.map((variant) => {
+        const label = `${variant} / ${size}`;
         return e(
           'div',
           { key: label, style: { display: 'grid', gap: '0.25rem' } },
           e('span', { style: { fontFamily: 'monospace', fontSize: '0.75rem' } }, label),
-          e(MuxUI.Button, { ...args, variant, tone, size }, 'Action'),
+          e(MuxUI.Button, { ...args, variant, size }, 'Action'),
         );
-      }))),
+      })),
     ),
   };
 }
@@ -1769,6 +1981,12 @@ export function createStoryMeta(record) {
 }
 
 export function createStory(record, variant) {
+  const render = (args) => {
+    const content = variant === 'states'
+      ? renderStateCoverage(record, args)
+      : renderFamily(record.family, args);
+    return record.family === 'Toast' ? e(MuxUI.ToastProvider, null, content) : content;
+  };
   return {
     name: variant === 'states' ? 'States' : 'Default',
     args: storyArgsForBinding(record.binding, variant, record.family),
@@ -1776,8 +1994,6 @@ export function createStory(record, variant) {
     parameters: variant === 'states'
       ? { muxuiStateCoverage: stateCoverageForBinding(record.binding, record.family) }
       : undefined,
-    render: (args) => variant === 'states'
-      ? renderStateCoverage(record, args)
-      : renderFamily(record.family, args),
+    render,
   };
 }

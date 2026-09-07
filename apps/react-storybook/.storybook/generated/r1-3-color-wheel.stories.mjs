@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:cf1e04c414addf5aec911d36ad58e6ed7bbf916b9616de50b16af8e0a05c66cf
+// @generated-content-sha256: sha256:3b3d386a8d5dc2b79370a406ccde3f4abb0f9af2d539e0f3d5f3abf728e0a8a7
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -51,7 +51,8 @@ const binding = {
     "disabled",
     "read-only"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorWheel', tranche: 'R1.3', binding };
 

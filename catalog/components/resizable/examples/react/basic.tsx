@@ -1,0 +1,2 @@
+import { Resizable, ResizableHandle, ResizablePanel } from '@muxui/react';
+export function BasicResizable() { return <Resizable defaultSizes={{ start: 40, end: 60 }} aria-label="Workspace"><ResizablePanel id="start" minSize={20}>Files</ResizablePanel><ResizableHandle id="split" before="start" after="end" aria-label="Resize panels" /><ResizablePanel id="end" minSize={20}>Preview</ResizablePanel></Resizable>; }

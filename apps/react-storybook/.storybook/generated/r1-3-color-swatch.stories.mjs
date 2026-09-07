@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6110994d7b5def4bdea965557c57c9bb87965334ac8f4d0a0ee6ee54352383f1
+// @generated-content-sha256: sha256:00e6d83b3b9343834d17201214b8997a2a133650d1c73660359dfd4ffe922bcd
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -36,7 +36,8 @@ const binding = {
     "idle",
     "disabled"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorSwatch', tranche: 'R1.3', binding };
 

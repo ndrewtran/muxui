@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6aed5d8dd50c4ab44dbf7e9ca5e1d9cc40acb3f0ef10ee556b940023672bcdb9
+// @generated-content-sha256: sha256:8319babef364aaf1b92c765115a425bfe634b661390a493f552b8544664db042
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -63,7 +63,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'Switch', tranche: 'R1.2', binding };
 

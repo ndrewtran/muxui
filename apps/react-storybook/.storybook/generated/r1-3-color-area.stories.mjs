@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:1ad29f49a25d4d2ab92c772dafebd4886d520e8805d6e1592b3778371fc09d3c
+// @generated-content-sha256: sha256:403999fd73e77270adc01715380e7ede7d5db51b9ed3ea5c889e177292a7dbd1
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -48,7 +48,8 @@ const binding = {
     "disabled",
     "read-only"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorArea', tranche: 'R1.3', binding };
 

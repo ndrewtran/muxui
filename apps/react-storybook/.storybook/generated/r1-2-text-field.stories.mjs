@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:e32f8f171a3683967acbd3a5dfcfcbc5035c8952a1fb0a33d4d324a1ec21581a
+// @generated-content-sha256: sha256:91835b61aa25f8f81daf6f404d3afdda99fe307486888bd037c5c5857fa60f3d
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -68,7 +68,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'TextField', tranche: 'R1.2', binding };
 

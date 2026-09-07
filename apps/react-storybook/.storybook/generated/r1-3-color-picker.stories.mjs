@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:7f36b35813056808991b146e5525e6b5fb1f6efcc24ecbe808dd825d526bb6b9
+// @generated-content-sha256: sha256:d3fd473813ab25e7d7473f8c7691eff8777802efda7208be334b1f60a7c640c8
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -48,7 +48,8 @@ const binding = {
     "disabled",
     "read-only"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorPicker', tranche: 'R1.3', binding };
 

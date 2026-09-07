@@ -1,0 +1,150 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:tag-select",
+  "kind": "component",
+  "name": "TagSelect",
+  "summary": "Choose multiple collection items while keeping selected values visible as tags.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Selecting several predefined values with visible removable tags."
+    ],
+    "avoidWhen": [
+      "For free-form values, one choice, or a collection too large for a compact field."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "label",
+    "combobox",
+    "group",
+    "tag",
+    "tag-text",
+    "tag-remove",
+    "input",
+    "listbox",
+    "item",
+    "description",
+    "error"
+  ],
+  "states": [
+    "empty",
+    "filtered",
+    "selected",
+    "disabled",
+    "invalid",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Filters unselected items, adds selected IDs, and removes tags without exposing upstream key types."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "items",
+          "size",
+          "selectedKeys",
+          "defaultSelectedKeys",
+          "getItemLabel",
+          "label",
+          "placeholder",
+          "description",
+          "errorMessage",
+          "disabled",
+          "invalid",
+          "required",
+          "onSelectionChange"
+        ],
+        "events": [
+          "selectionChange",
+          "remove"
+        ],
+        "parts": [
+          "root",
+          "label",
+          "combobox",
+          "group",
+          "tag",
+          "tag-text",
+          "tag-remove",
+          "input",
+          "listbox",
+          "item",
+          "description",
+          "error"
+        ],
+        "defaults": {
+          "size": "md",
+          "items": [],
+          "disabled": false,
+          "invalid": false,
+          "required": false
+        }
+      },
+      "behavior": [
+        "Filters unselected items, adds selected IDs, and removes tags without exposing upstream key types."
+      ],
+      "accessibility": [
+        "Filters unselected items, adds selected IDs, and removes tags without exposing upstream key types."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

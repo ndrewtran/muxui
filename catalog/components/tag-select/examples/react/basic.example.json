@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tag-select-basic-react",
+  "kind": "example",
+  "name": "Basic React TagSelect",
+  "summary": "A source-faithful React tag-select example using the Mux-owned compound API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tag-select#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/tag-select/examples/react/basic.tsx"
+}

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:fd3838a6db2a20d9e93e3ede5c6aaa18f5ff167d438e987da09ff860b39b9c67
+// @generated-content-sha256: sha256:6b038591a06e17b57f0397e39f6f1b6134e1609c0dd4e68590cfcb03e9d449d0
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -66,7 +66,8 @@ const binding = {
     "invalid",
     "selected"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Select', tranche: 'R1.3', binding };
 

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:e93a1f37f8093fb92c68c9861d0fc77f0e1cde656e5dcec74fa8dd9e57b3510c
+// @generated-content-sha256: sha256:c51773628795ec3b275f5f3abfabff5d3c13aaf58d4182d0f05dbaf309f154f0
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -49,7 +49,8 @@ const binding = {
     "selected",
     "empty"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ListBox', tranche: 'R1.3', binding };
 

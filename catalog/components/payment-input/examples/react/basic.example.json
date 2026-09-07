@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:payment-input-basic-react",
+  "kind": "example",
+  "name": "Basic React PaymentInput",
+  "summary": "A source-faithful React payment-input example using the Mux-owned compound API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:payment-input#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/payment-input/examples/react/basic.tsx"
+}

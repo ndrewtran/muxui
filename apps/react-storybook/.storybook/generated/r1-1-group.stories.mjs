@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:27de4cc5c6d0ba26fe7c40bf1cb97db30614c602c0f2f59b482c2e263dd3ba67
+// @generated-content-sha256: sha256:ff9fdf94321eda129ee3248c0bef7b99a2f4c37fc3d9bd6c3b6f6b9ff72337da
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -46,7 +46,8 @@ const binding = {
     "invalid",
     "read-only"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Group', tranche: 'R1.1', binding };
 

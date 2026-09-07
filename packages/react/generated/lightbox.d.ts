@@ -1,0 +1,32 @@
+// @generated-from: packages/react/src/supplemental/lightbox.d.ts
+// @generated-content-sha256: sha256:c8366d99cc2699aaa9f63f09f453c33d09829900756bdb31d19f40dd74a6a671
+import type * as React from 'react';
+export type LightboxKey = string | number;
+export type LightboxItem = { key: LightboxKey; label?: string };
+export type LightboxRenderContext = { key: LightboxKey; index: number; count: number };
+export type LightboxContentRenderContext = LightboxRenderContext & { item: LightboxItem };
+export type LightboxRenderContent = (item: LightboxItem, context: LightboxRenderContext) => React.ReactNode;
+export interface LightboxProps extends React.HTMLAttributes<HTMLDivElement> {
+  items: readonly LightboxItem[];
+  renderContent?: LightboxRenderContent;
+  selectedKey?: LightboxKey | null;
+  defaultSelectedKey?: LightboxKey | null;
+  onSelectedChange?: (key: LightboxKey | null, item?: LightboxItem | null) => void;
+  open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  loop?: boolean;
+  swipeNavigation?: boolean;
+}
+export declare function Lightbox(props: LightboxProps): React.ReactElement;
+export type LightboxTriggerProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'onClick'> & { itemKey: LightboxKey; disabled?: boolean; pending?: boolean; showTextWhileLoading?: boolean; variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse' | 'secondary'; tone?: 'default' | 'destructive'; size?: 'sm' | 'md' | 'lg'; onActivate?: (event: { readonly type: 'activate'; readonly pointerType: 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined; readonly target: HTMLButtonElement }) => void };
+export declare const LightboxTrigger: React.ForwardRefExoticComponent<LightboxTriggerProps & React.RefAttributes<HTMLButtonElement>>;
+export declare function LightboxBackdrop(props: React.HTMLAttributes<HTMLDivElement> & { dismissable?: boolean }): React.ReactElement | null;
+export declare function LightboxPopup(props: React.HTMLAttributes<HTMLDivElement>): React.ReactElement | null;
+export declare function LightboxContent(props: React.HTMLAttributes<HTMLDivElement> & { renderContent?: (context: LightboxContentRenderContext) => React.ReactNode }): React.ReactElement | null;
+export declare const LightboxCaption: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLParagraphElement> & React.RefAttributes<HTMLParagraphElement>>;
+export type LightboxControlActivation = { readonly type: 'activate'; readonly pointerType: 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined; readonly target: HTMLButtonElement };
+export type LightboxControlProps = React.ButtonHTMLAttributes<HTMLButtonElement> & { disabled?: boolean; onActivate?: (event: LightboxControlActivation) => void };
+export declare function LightboxPrevious(props: LightboxControlProps): React.ReactElement;
+export declare function LightboxNext(props: LightboxControlProps): React.ReactElement;
+export declare function LightboxClose(props: LightboxControlProps): React.ReactElement;

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:76d0672249211f23d3cd28a25d47b000572dc8d592b010bca228ba6665188a02
+// @generated-content-sha256: sha256:8830f554b3cf8461b4575b730c980e3aa32799c691eb4fa117f1cb82bb7a73ff
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -47,7 +47,8 @@ const binding = {
     "disabled",
     "pressed"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Link', tranche: 'R1.1', binding };
 

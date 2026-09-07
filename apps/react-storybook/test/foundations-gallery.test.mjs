@@ -14,6 +14,7 @@ import {
   foundationCategoryCounts,
   foundationTokenRows,
   foundationVisualSpecimenKind,
+  responsiveFoundationRows,
   resolveTokenValue,
 } from '../src/foundations-gallery.mjs';
 
@@ -22,8 +23,8 @@ const appRoot = resolve(import.meta.dirname, '..');
 test('Foundations binds directly to the canonical token source and covers every supported token', async () => {
   const source = await readFile(resolve(appRoot, 'src/foundations-gallery.mjs'), 'utf8');
   assert.match(source, /catalog\/tokens\/default-theme\.json/u);
-  assert.equal(foundationTokenRows(defaultTheme).length, 357);
-  assert.equal(foundationTokenRows(defaultTheme).length, Object.keys(defaultTheme.tokens).length);
+  assert.equal(foundationTokenRows(defaultTheme).length, 813);
+  assert.equal(Object.keys(defaultTheme.tokens).length - foundationTokenRows(defaultTheme).length, 0);
   assert.deepEqual(
     FOUNDATIONS_CATEGORY_INVENTORY.map(({ id }) => id),
     ['colors', 'typography', 'spacing', 'radii-shadows', 'motion', 'component'],
@@ -32,15 +33,15 @@ test('Foundations binds directly to the canonical token source and covers every 
     Object.keys(foundationCategoryCounts(defaultTheme)),
     FOUNDATIONS_CATEGORY_INVENTORY.map(({ id }) => id),
   );
-  assert.equal(foundationCategoryCounts(defaultTheme).colors, 279);
+  assert.equal(foundationCategoryCounts(defaultTheme).colors, 641);
   assert.equal(foundationCategoryCounts(defaultTheme).component, 5);
   const rows = foundationTokenRows(defaultTheme);
   const coveredIds = new Set(rows.flatMap(({ id, facets }) => facets.map(() => id)));
-  assert.equal(rows.length, 357);
-  assert.equal(new Set(rows.map(({ id }) => id)).size, 357);
-  assert.equal(new Set(rows.filter(({ facets }) => facets.includes('colors')).map(({ id }) => id)).size, 279);
+  assert.equal(rows.length, 813);
+  assert.equal(new Set(rows.map(({ id }) => id)).size, 813);
+  assert.equal(new Set(rows.filter(({ facets }) => facets.includes('colors')).map(({ id }) => id)).size, 641);
   assert.equal(new Set(rows.filter(({ facets }) => facets.includes('component')).map(({ id }) => id)).size, 5);
-  assert.equal(coveredIds.size, 357);
+  assert.equal(coveredIds.size, 813);
   assert.ok(foundationTokenRows(defaultTheme).every(({ cssVariable }) => cssVariable.startsWith('--muxui-')));
 });
 
@@ -55,9 +56,9 @@ test('every category emits a visual specimen kind and every color token gets a s
     component: 'component-schematic',
   };
   for (const row of rows) assert.equal(row.visualKind, expectedKinds[row.category], row.id);
-  assert.equal(rows.filter(({ facets }) => facets.includes('colors')).length, 279);
+  assert.equal(rows.filter(({ facets }) => facets.includes('colors')).length, 641);
   const markup = renderToStaticMarkup(React.createElement(FoundationsGallery, { theme: defaultTheme }));
-  assert.equal((markup.match(/data-muxui-foundations-color-swatch=/gu) ?? []).length, 279);
+  assert.equal((markup.match(/data-muxui-foundations-color-swatch=/gu) ?? []).length, 641);
   assert.equal(foundationVisualSpecimenKind('semantic.control.radius', defaultTheme.tokens['semantic.control.radius']), 'shape-box');
   assert.equal(foundationVisualSpecimenKind('semantic.control.padding-inline', defaultTheme.tokens['semantic.control.padding-inline']), 'measurement-ruler');
 });
@@ -92,13 +93,16 @@ test('alias chains and selected mode overrides resolve from source data', () => 
   assert.equal(dark.status, 'resolved');
   assert.equal(light.value, defaultTheme.tokens[light.sourceTokenId].value);
   assert.equal(dark.value, defaultTheme.tokens[dark.sourceTokenId].value);
-  assert.deepEqual(light.chain, ['semantic.action.background', 'reference.color.bluegreen-60']);
-  assert.deepEqual(dark.chain, ['semantic.action.background', 'reference.color.bluegreen-40']);
+  assert.deepEqual(light.chain, ['semantic.action.background', 'semantic.color.color-60', 'reference.color.brand-60']);
+  assert.deepEqual(dark.chain, ['semantic.action.background', 'semantic.color.color-60', 'reference.color.brand-40']);
 
   const compact = resolveTokenValue(defaultTheme, 'semantic.control.padding-inline', { density: 'compact' });
   assert.equal(compact.value, defaultTheme.tokens['reference.dimension.space-3xs'].value);
   const reduced = resolveTokenValue(defaultTheme, 'reference.duration.fast', { motion: 'reduced' });
   assert.equal(reduced.value, 0);
+  const title = resolveTokenValue(defaultTheme, 'semantic.typography.title-l-font-size');
+  assert.equal(title.value, defaultTheme.tokens['reference.dimension.text-xl'].value * 1.1);
+  assert.deepEqual(title.formula, defaultTheme.tokens['semantic.typography.title-l-font-size'].formula);
 });
 
 test('malformed aliases and unsupported token facts fail closed', () => {
@@ -133,6 +137,9 @@ test('malformed aliases and unsupported token facts fail closed', () => {
 
 test('rendered gallery exposes category navigation, searchable rows, mode comparisons, and copy controls', () => {
   const markup = renderToStaticMarkup(React.createElement(FoundationsGallery, { theme: defaultTheme }));
+  const responsiveRows = responsiveFoundationRows(defaultTheme);
+  assert.equal(responsiveRows.length, 5);
+  assert.ok(responsiveRows.every(({ staticValue, responsiveValue }) => staticValue !== responsiveValue));
   assert.match(markup, /data-muxui-foundations-gallery="true"/u);
   for (const { id } of FOUNDATIONS_CATEGORY_INVENTORY) assert.match(markup, new RegExp(`data-muxui-foundations-category="${id}"`, 'u'));
   assert.match(markup, /data-muxui-foundations-search/iu);
@@ -150,6 +157,11 @@ test('rendered gallery exposes category navigation, searchable rows, mode compar
   assert.match(markup, /data-muxui-foundations-alias-link=/u);
   assert.match(markup, /data-muxui-foundations-copy="--muxui-semantic-action-background"/u);
   assert.match(markup, /Copy CSS variable --muxui-semantic-action-background/u);
+  assert.match(markup, /data-muxui-foundations-responsive="true"/u);
+  assert.match(markup, /Static by default, responsive by choice/u);
+  assert.match(markup, /data-muxui-foundations-responsive-mode="static"/u);
+  assert.match(markup, /data-muxui-foundations-responsive-mode="responsive"/u);
+  assert.match(markup, /data-muxui-responsive/u);
 });
 
 test('visual comparison panels resolve canonical values and reduced motion is one-shot safe', () => {
@@ -175,9 +187,22 @@ test('color, typography, and component facets render exact visual contracts', ()
   const componentRows = rows.filter(({ facets }) => facets.includes('component'));
   assert.equal(componentRows.length, 5);
   assert.ok(rows.filter(({ facets }) => facets.includes('colors')).every(({ visualKind }) => visualKind === 'color-swatch' || visualKind === 'component-schematic'));
+  assert.equal(rows.find(({ id }) => id === 'reference.typography.heading-font-family').category, 'typography');
+  assert.equal(rows.find(({ id }) => id === 'reference.motion.easing-linear').category, 'motion');
+  assert.equal(rows.find(({ id }) => id === 'semantic.effect.scrim').category, 'colors');
+  assert.equal(foundationVisualSpecimenKind('reference.typography.heading-font-family', defaultTheme.tokens['reference.typography.heading-font-family']), 'typography-sample');
+  assert.equal(foundationVisualSpecimenKind('reference.motion.easing-linear', defaultTheme.tokens['reference.motion.easing-linear']), 'motion-timeline');
+  assert.equal(foundationVisualSpecimenKind('semantic.effect.scrim', defaultTheme.tokens['semantic.effect.scrim']), 'color-swatch');
   const markup = renderToStaticMarkup(React.createElement(FoundationsGallery, { theme: defaultTheme }));
-  assert.match(markup, /data-muxui-foundations-color-fill="reference.color.scrim-default"[^>]+style="background-color:#11100f7a"/u);
-  assert.match(markup, /data-muxui-foundations-color-fill="reference\.color\.scrim-default"[^>]+style="background-color:#11100f7a"><\/div>/u);
+  assert.match(markup, /data-muxui-foundations-color-fill="semantic.effect.scrim"[^>]+style="background-color:#11100f7a"/u);
+  assert.match(markup, /data-muxui-foundations-color-fill="semantic\.effect\.scrim"[^>]+style="background-color:#11100f7a"><\/div>/u);
+});
+
+test('structured elevation captions preserve shared inset and alpha formatting', () => {
+  const row = foundationTokenRows(defaultTheme).find(({ id }) => id === 'semantic.elevation.control');
+  assert.ok(row);
+  assert.match(row.defaultDisplay, /inset 0px 0px 0px 1px rgba\(0, 0, 0, 0\)/u);
+  assert.match(row.defaultDisplay, /inset 0px 0px 0px 1px rgba\(10, 13, 18, 0\.18\)/u);
 });
 
 test('copy helper reports Clipboard API success and graceful unavailability', async () => {

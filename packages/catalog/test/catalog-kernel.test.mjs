@@ -382,6 +382,7 @@ test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.
   assert.deepEqual(v20.data.artifact.availableSections, ['tokens', 'source-crosswalk']);
   for (const response of [v11, v12, v20]) {
     assert.equal(Object.hasOwn(response.data.artifact, 'sourceCrosswalk'), false);
+    assert.equal(Object.hasOwn(response.data.artifact, 'extensions'), false);
   }
   validateFamily('query-envelope', v20);
   for (const queryApiVersion of ['1.1.0', '1.2.0', '2.0.0']) {

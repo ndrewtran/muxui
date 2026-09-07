@@ -39,6 +39,7 @@ import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
+import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
@@ -451,6 +452,8 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
   defaultValue,
   onChange,
   disabled = false,
+  orientation = 'vertical',
+  size,
   readOnly = false,
   required = false,
   invalid = false,
@@ -463,7 +466,11 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'CheckboxGroup');
-  return React.createElement(AriaCheckboxGroup, {
+  if (orientation !== 'horizontal' && orientation !== 'vertical') {
+    throw new TypeError('CheckboxGroup orientation must be horizontal or vertical');
+  }
+  const resolvedSize = size === undefined ? undefined : normalizeChoiceControlSize(size, 'CheckboxGroup');
+  const group = React.createElement(AriaCheckboxGroup, {
     ...props,
     ref,
     ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
@@ -474,14 +481,17 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     // checkbox, including fragments and wrapper components.
     name,
     className: classNames('muxui-checkbox-group', className),
-    'aria-label': ariaLabel,
+    'data-orientation': orientation,
+    'aria-label': ariaLabel ?? (typeof label === 'string' ? label : undefined),
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
-    label,
-    description,
-    errorMessage,
-    children,
-  }));
+  }, children, fieldDescription(description), fieldError(errorMessage));
+  const field = React.createElement('div', { className: 'muxui-checkbox-group-field' },
+    fieldLabel(label),
+    group,
+  );
+  return resolvedSize === undefined
+    ? field
+    : React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, field);
 });
 
 CheckboxGroup.displayName = 'CheckboxGroup';
@@ -842,6 +852,16 @@ function autocompleteItemText(item) {
   return autocompleteNodeText(item.label) || fallback;
 }
 
+const AUTOCOMPLETE_SIZES = new Set(['sm', 'md']);
+
+function normalizeAutocompleteSize(size) {
+  const resolved = size ?? 'md';
+  if (!AUTOCOMPLETE_SIZES.has(resolved)) {
+    throw new TypeError(`Autocomplete size must be one of: ${[...AUTOCOMPLETE_SIZES].join(', ')}`);
+  }
+  return resolved;
+}
+
 export const Autocomplete = React.forwardRef(function Autocomplete({
   label,
   description,
@@ -855,6 +875,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   placeholder,
@@ -864,6 +885,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Autocomplete');
+  const resolvedSize = normalizeAutocompleteSize(size);
   const normalizedItems = React.useMemo(() => normalizeAutocompleteItems(items), [items]);
   const [inputValue, setInputValue] = React.useState(() => value ?? defaultValue ?? '');
   React.useEffect(() => {
@@ -912,6 +934,8 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
   return React.createElement('div', {
     ref,
     className: classNames('muxui-autocomplete', className),
+    'data-size': resolvedSize,
+    'data-part': 'root',
     onBlurCapture: (event) => {
       if (!event.relatedTarget || (!event.currentTarget.contains(event.relatedTarget) && !popoverRef.current?.contains(event.relatedTarget))) {
         setIsOpen(false);
@@ -927,6 +951,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
     name,
     className: 'muxui-autocomplete-search',
+    'data-part': 'search-field',
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -936,6 +961,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     input: React.createElement(AriaInput, {
       ref: inputRef,
       className: 'muxui-field-input',
+      'data-part': 'input',
       placeholder,
       onFocus: () => setIsOpen(!disabled),
       onKeyDown: (event) => {
@@ -951,6 +977,7 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     isNonModal: true,
     triggerRef: inputRef,
     placement: 'bottom',
+    offset: 0,
     // Zero padding keeps a full-width field's overlay aligned at the viewport
     // edge; the position hook still performs collision-aware placement.
     containerPadding: 0,
@@ -958,12 +985,15 @@ export const Autocomplete = React.forwardRef(function Autocomplete({
     // direction, and other inherited custom properties remain available.
     UNSTABLE_portalContainer: portalContainer,
     className: 'muxui-autocomplete-popover',
+    'data-part': 'popover',
   }, React.createElement(AriaListBox, {
     items: filteredItems,
-    className: 'muxui-autocomplete-list',
+    className: classNames('muxui-autocomplete-list', resolvedSize === 'md' ? undefined : `muxui-autocomplete-list--${resolvedSize}`),
+    'data-part': 'list',
+    'data-size': resolvedSize,
     selectionMode: readOnly ? 'none' : 'single',
     onAction: handleSelect,
-  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, className: 'muxui-autocomplete-option' }, item.label)))));
+  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, 'data-part': 'option', className: 'muxui-autocomplete-option' }, item.label)))));
 });
 
 Autocomplete.displayName = 'Autocomplete';

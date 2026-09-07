@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:27569914f00c67de83bb20abbda1caa05b423a3a6643243aa71ae694883771ff
+// @generated-content-sha256: sha256:30aeb6432aecd1156490135ea0170b21f2b93911d17d9d25b3943e274d504a08
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -45,7 +45,8 @@ const binding = {
     "expanded",
     "disabled"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Disclosure', tranche: 'R1.1', binding };
 

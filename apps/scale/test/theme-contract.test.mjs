@@ -6,6 +6,11 @@ import {
   digestScaleDocument,
   previewCss,
   previewPalette,
+  previewTheme,
+  previewSwatches,
+  presetSettings,
+  settingsFromDocument,
+  validateScaleSettings,
   randomScaleSettings,
   serializeScaleDocument,
   validateScaleDocument,
@@ -47,4 +52,74 @@ test('Scale projects shared palettes, scoped CSS, and deterministic WCAG randomi
   assert.match(randomized.namedColor, /^#[0-9a-f]{6}$/u);
   assert.match(randomized.neutralColor, /^#[0-9a-f]{6}$/u);
   assert.match(previewCss(randomized), /^\.muxui-scale-preview \{/u);
+});
+
+
+test('import, edit and export preserve additional typed overrides and constrained modes', () => {
+  const original = createScaleDocument(DEFAULT_SETTINGS, { slug: 'custom-source' });
+  original.overrides['semantic.action.background'] = {
+    type: 'color', unit: 'hex', value: '#123456',
+    mix: { space: 'srgb', token: 'reference.color.brand-60', weight: 0.5, color: '#00000000' },
+  };
+  original.modes = { colorScheme: ['dark'], contrast: ['more'], motion: ['reduced'], density: ['compact'], direction: ['rtl'] };
+  validateScaleDocument(original);
+  const restored = settingsFromDocument(original);
+  assert.equal(restored.background, 'dark');
+  assert.deepEqual(createScaleDocument(restored, { slug: 'custom-source' }), original);
+  const edited = { ...restored, ...presetSettings('mono', 'forest'), curvature: 1.5 };
+  const exported = createScaleDocument(edited, { slug: 'custom-source' });
+  assert.deepEqual(exported.modes, original.modes);
+  assert.deepEqual(exported.overrides['semantic.action.background'], original.overrides['semantic.action.background']);
+  const compiled = previewTheme(edited);
+  assert.deepEqual(compiled.modes, { colorScheme: 'dark', contrast: 'more', motion: 'reduced', density: 'compact', direction: 'rtl' });
+  assert.match(previewCss(edited, { selector: ':root' }), /^:root \{/u);
+});
+
+test('swatches use compiled backgrounds and foregrounds for both color modes', () => {
+  for (const colorMode of ['light', 'dark']) {
+    const compiled = previewTheme({ ...DEFAULT_SETTINGS, colorMode, background: colorMode });
+    for (const [kind, prefix, steps] of [['named', 'color', [5, 60, 100]], ['neutral', 'neutral', [5, 10, 12, 98, 100]]]) {
+      for (const swatch of previewSwatches(compiled, kind, steps)) {
+        assert.equal(swatch.background, compiled.tokens[`semantic.color.${prefix}-${swatch.step}`].value);
+        assert.equal(swatch.foreground, compiled.tokens[`semantic.color.${prefix}-${swatch.step}-fg`].value);
+        assert.ok(Number.isFinite(swatch.ratio));
+      }
+    }
+  }
+});
+
+test('manual contrast pivots survive serialization and reach preview, CSS export and contrast diagnostics', () => {
+  const settings = { ...DEFAULT_SETTINGS, contrastPivot: 5 };
+  const document = createScaleDocument(settings, { slug: 'manual-pivot' });
+  const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
+  assert.equal(restored.contrastPivot, 5);
+  for (const colorMode of ['light', 'dark']) {
+    const selected = { ...restored, colorMode, background: colorMode };
+    const compiled = previewTheme(selected);
+    const swatch = previewSwatches(compiled, 'named', [5])[0];
+    assert.equal(swatch.foreground, swatch.background);
+    assert.equal(swatch.ratio, 1);
+    assert.equal(swatch.badge, 'Fail');
+    assert.ok(compiled.diagnostics.some(({ code, token, colorScheme }) => code === 'MUXUI_SCALE_CONTRAST_UNSAFE'
+      && token === 'semantic.color.color-5-fg' && (colorScheme ?? 'light') === colorMode));
+    assert.ok(previewCss(selected, { selector: ':root' }).includes(`--muxui-semantic-color-color-5-fg: ${swatch.foreground};`));
+  }
+});
+
+test('active-palette randomization preserves the other anchor and mono uses one anchor', () => {
+  const random = () => 0.5;
+  const named = randomScaleSettings(DEFAULT_SETTINGS, { random, kind: 'named' });
+  assert.equal(named.neutralColor, DEFAULT_SETTINGS.neutralColor);
+  const neutral = randomScaleSettings(DEFAULT_SETTINGS, { random, kind: 'neutral' });
+  assert.equal(neutral.namedColor, DEFAULT_SETTINGS.namedColor);
+  const mono = randomScaleSettings({ ...DEFAULT_SETTINGS, family: 'mono' }, { random, kind: 'neutral' });
+  assert.equal(mono.namedColor, mono.neutralColor);
+});
+
+test('stored UI settings reject invalid palettes, modes and hidden override conflicts', () => {
+  assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, family: 'unknown' }));
+  assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, whiteAnchor: 'false' }));
+  assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, background: 'dark', colorMode: 'light' }));
+  assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, themeModes: { ...DEFAULT_SETTINGS.themeModes, extra: ['value'] } }));
+  assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, additionalOverrides: { 'reference.color.brand-60': { type: 'color', value: '#123456' } } }));
 });

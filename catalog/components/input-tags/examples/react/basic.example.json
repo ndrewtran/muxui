@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:input-tags-basic-react",
+  "kind": "example",
+  "name": "Basic React InputTags",
+  "summary": "A source-faithful React input-tags example using the Mux-owned compound API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:input-tags#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/input-tags/examples/react/basic.tsx"
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:switch-field-basic-react",
+  "kind": "example",
+  "name": "Basic React SwitchField",
+  "summary": "A source-faithful React switch-field example using the Mux-owned compound API.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:switch-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/switch-field/examples/react/basic.tsx"
+}

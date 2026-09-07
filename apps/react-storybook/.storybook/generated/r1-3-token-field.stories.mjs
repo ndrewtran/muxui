@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:b283bfa0421a0d8ed23bb82e2221aeccb5dd1b8ed732d803ecc02fd941b3237b
+// @generated-content-sha256: sha256:7c34dce47a63c1d8c03ee12aa882944d675d80f62368baeaa35fd1104ec07345
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -52,7 +52,8 @@ const binding = {
     "read-only",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'TokenField', tranche: 'R1.3', binding };
 

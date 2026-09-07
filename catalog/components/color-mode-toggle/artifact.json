@@ -1,0 +1,117 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:color-mode-toggle",
+  "kind": "component",
+  "name": "ColorModeToggle",
+  "summary": "Let users switch between light and dark color modes with persistence.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Allowing users to choose a light or dark presentation for the application."
+    ],
+    "avoidWhen": [
+      "When the product supports one fixed color scheme."
+    ]
+  },
+  "anatomy": [
+    "root"
+  ],
+  "states": [
+    "light",
+    "dark",
+    "disabled",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Reads bounded localStorage and prefers-color-scheme defaults without accessing browser globals during SSR.",
+      "Writes the Mux data-muxui-color-scheme hook on the document root."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "mode",
+          "defaultMode",
+          "storageKey",
+          "disabled",
+          "onModeChange"
+        ],
+        "events": [
+          "modeChange"
+        ],
+        "parts": [
+          "root"
+        ],
+        "defaults": {
+          "storageKey": "muxui-color-mode",
+          "disabled": false
+        }
+      },
+      "behavior": [
+        "Reads bounded localStorage and prefers-color-scheme defaults without accessing browser globals during SSR.",
+        "Writes the Mux data-muxui-color-scheme hook on the document root."
+      ],
+      "accessibility": [
+        "Reads bounded localStorage and prefers-color-scheme defaults without accessing browser globals during SSR.",
+        "Writes the Mux data-muxui-color-scheme hook on the document root."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

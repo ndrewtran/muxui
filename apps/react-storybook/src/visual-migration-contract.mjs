@@ -35,7 +35,10 @@ function slug(name) {
   return name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-const allRecords = descriptor.bindings.map((binding) => ({
+const historicalDescriptor = descriptor.historical?.bindings
+  ? { ...descriptor, bindings: descriptor.historical.bindings, exports: descriptor.historical.exports }
+  : descriptor;
+const allRecords = historicalDescriptor.bindings.map((binding) => ({
   family: binding.export,
   slug: slug(binding.export),
   tranche: snapshotFamilies.get(binding.export)?.tranche,
@@ -114,12 +117,16 @@ export function fixtureContractFor(record, state = 'idle') {
 
 const portalFamilies = new Set(['Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'Tooltip']);
 const openPortalFamilies = new Set(['DatePicker', 'DateRangePicker', 'ComboBox', 'Select']);
-const behaviorOnlyStates = new Set(['pressed', 'dismissed', 'submitting', 'opening', 'closing', 'entering', 'exiting']);
+const behaviorOnlyStates = new Set(['hovered', 'pressed', 'dismissed', 'submitting', 'opening', 'closing', 'entering', 'exiting']);
 
 // These states are intentionally not rasterized: they are transient or have
 // no public MuxUI state prop. Keep the proof target explicit so a future state
 // cannot silently fall back to a generic unsupported claim.
 const behaviorStateEvidence = Object.freeze({
+  'Button/hovered': { selector: '.muxui-button', interaction: 'hover', assertion: 'The Button hover state is exercised through the existing Storybook interaction harness.' },
+  'Button/pressed': { selector: '.muxui-button', interaction: 'press', assertion: 'The Button pressed state is exercised through the existing Storybook interaction harness.' },
+  'Link/hovered': { selector: '.muxui-link', interaction: 'hover', assertion: 'The Link hover state is exercised through the existing Storybook interaction harness.' },
+  'ToggleButton/hovered': { selector: '.muxui-toggle-button', interaction: 'hover', assertion: 'The ToggleButton hover state is exercised through the existing Storybook interaction harness.' },
   'Link/pressed': { selector: '.muxui-link', interaction: 'press', assertion: 'The focused Link is pressed through the existing Storybook interaction harness.' },
   'ToggleButton/pressed': { selector: '.muxui-toggle-button', interaction: 'press', assertion: 'The focused ToggleButton is pressed through the existing Storybook interaction harness.' },
   'Form/submitting': { selector: '.muxui-form', interaction: 'submit', assertion: 'The Form submit event is exercised by the existing Storybook interaction harness.' },

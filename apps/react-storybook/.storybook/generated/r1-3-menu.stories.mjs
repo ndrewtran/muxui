@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:045ee5405e219818c4e4f5b8bc74bc20ad97d7324267e45701b3f0f450f062e7
+// @generated-content-sha256: sha256:d56170c76f5ae77ed2765f33204acd698f3a7a3945f1d156cbb5ab065cb30486
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -46,7 +46,8 @@ const binding = {
     "disabled",
     "open"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Menu', tranche: 'R1.3', binding };
 

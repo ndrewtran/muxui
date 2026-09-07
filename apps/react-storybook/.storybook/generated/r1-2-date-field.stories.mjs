@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:bde84a61a764095abef316054634df8a2ee002b120144614962546dcc5fecb04
+// @generated-content-sha256: sha256:cfa26198fddac699b4dd75251bdaac0b53ab69c5993e2f0a830dba0e738a48af
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -62,7 +62,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'DateField', tranche: 'R1.2', binding };
 

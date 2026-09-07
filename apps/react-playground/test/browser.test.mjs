@@ -29,13 +29,20 @@ async function waitForServer(url) {
   throw new Error('playground preview did not become ready');
 }
 
-async function waitForDocumentAnimations(page) {
+async function waitForFiniteDocumentAnimations(page) {
   await page.evaluate(async (timeoutMs) => {
     const startedAt = performance.now();
     let timeoutId;
+    const isUnfinishedFiniteAnimation = (animation) => {
+      if (animation.playState === 'finished' || animation.playState === 'idle') return false;
+      const timing = animation.effect?.getComputedTiming?.();
+      return Number.isFinite(timing?.endTime) && Number.isFinite(timing?.iterations);
+    };
     const describeAnimations = () => document.getAnimations().map((animation) => ({
       playState: animation.playState,
       currentTime: animation.currentTime,
+      endTime: animation.effect?.getComputedTiming?.().endTime,
+      iterations: animation.effect?.getComputedTiming?.().iterations,
       target: animation.effect?.target?.outerHTML?.slice(0, 240),
     }));
     const deadline = new Promise((_, reject) => {
@@ -51,14 +58,14 @@ async function waitForDocumentAnimations(page) {
       // Flush the media-query style change before collecting its transitions.
       void document.documentElement.offsetWidth;
       await waitForFrame();
-      let animations = document.getAnimations();
+      let animations = document.getAnimations().filter(isUnfinishedFiniteAnimation);
       while (animations.length > 0) {
         await Promise.race([
           Promise.all(animations.map((animation) => animation.finished.catch(() => undefined))),
           deadline,
         ]);
         await waitForFrame();
-        animations = document.getAnimations();
+        animations = document.getAnimations().filter(isUnfinishedFiniteAnimation);
       }
     } finally {
       clearTimeout(timeoutId);
@@ -115,7 +122,7 @@ test('R1.4 React component browser and axe matrix', async () => {
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
     if (!await page.locator('[data-profile]').first().isVisible()) throw new Error('R1.2 forced-colors profile did not render');
     await page.emulateMedia({ forcedColors: 'none', reducedMotion: 'no-preference' });
-    await waitForDocumentAnimations(page);
+    await waitForFiniteDocumentAnimations(page);
     const profiles = await page.locator('[data-profile]').evaluateAll((nodes) => nodes.map((node) => node.dataset.profile));
     const expectedProfiles = ['light/standard/full/comfortable/ltr', 'dark/standard/full/comfortable/ltr', 'light/more/full/comfortable/ltr', 'light/standard/reduced/comfortable/ltr', 'light/standard/full/compact/ltr', 'light/standard/full/comfortable/rtl'];
     for (const expected of expectedProfiles) {
@@ -166,6 +173,11 @@ test('R1.4 React component browser and axe matrix', async () => {
       await pending.focus();
       if (!await pending.evaluate((node) => document.activeElement === node)) throw new Error(`${expected} pending Button must remain focusable`);
       if (await pending.evaluate((node) => node.disabled)) throw new Error(`${expected} pending Button must not become HTML-disabled`);
+      const pendingAccessibleName = await pending.evaluate((node) => {
+        const ids = node.getAttribute('aria-labelledby')?.split(/\s+/u) ?? [];
+        return ids.map((id) => document.getElementById(id)?.textContent ?? '').join(' ').trim();
+      });
+      if (!pendingAccessibleName.includes('Working')) throw new Error(`${expected} pending Button must retain its hidden child accessible name: ${pendingAccessibleName}`);
       await pending.evaluate((node) => node.click());
       if (await pendingFixture.getAttribute('data-muxui-press-count') !== '0') throw new Error(`${expected} pending Button must suppress activation`);
       const disabledFixture = profile.locator('[data-muxui-fixture-state="disabled"]');
@@ -174,6 +186,8 @@ test('R1.4 React component browser and axe matrix', async () => {
       if (await disabledFixture.getAttribute('data-muxui-press-count') !== '0') throw new Error(`${expected} disabled Button must suppress activation`);
       await disabled.focus();
       if (await disabled.evaluate((node) => document.activeElement === node)) throw new Error(`${expected} disabled Button must not be focusable`);
+      const idleAccessibleName = await idleFixture.locator('button').getAttribute('aria-labelledby');
+      if (idleAccessibleName?.includes('muxui-button-label-')) throw new Error(`${expected} idle Button must not retain pending-only naming`);
       if (expected === expectedProfiles[0]) {
         for (const [label, rootSelector, keyboardAction] of [
           ['Checkbox', '[data-component="checkbox"] .muxui-checkbox', 'Tab'],
@@ -190,15 +204,18 @@ test('R1.4 React component browser and axe matrix', async () => {
           if (pointerState.inputOutlineStyle !== 'none') throw new Error(`${label} pointer click must not paint a native input outline`);
 
           await page.keyboard.press(keyboardAction);
-          await waitForDocumentAnimations(page);
+          await waitForFiniteDocumentAnimations(page);
           const keyboardState = await readChoiceFocusStyles(second);
           if (!keyboardState.active || !keyboardState.focusVisible) throw new Error(`${label} ${keyboardAction} must expose keyboard focus on the next choice`);
-          if (!/0(?:px)? 0(?:px)? 0(?:px)? 1px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 3px/u.test(keyboardState.indicatorBoxShadow ?? '')) {
+          const expectedRing = label === 'Radio'
+            ? /0(?:px)? 0(?:px)? 0(?:px)? 2px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 4px/u
+            : /0(?:px)? 0(?:px)? 0(?:px)? 1px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 3px/u;
+          if (!expectedRing.test(keyboardState.indicatorBoxShadow ?? '')) {
             throw new Error(`${label} ${keyboardAction} focus must retain its indicator ring: ${JSON.stringify(keyboardState)}`);
           }
 
           await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
-          await waitForDocumentAnimations(page);
+          await waitForFiniteDocumentAnimations(page);
           const forcedState = await readChoiceFocusStyles(second);
           if (forcedState.indicatorOutlineStyle !== 'solid'
             || forcedState.indicatorOutlineWidth !== '2px'
@@ -216,12 +233,15 @@ test('R1.4 React component browser and axe matrix', async () => {
         const autocompleteArticle = profile.locator('[data-component="autocomplete"]');
         const contentBelowAutocomplete = autocompleteArticle.locator('xpath=following-sibling::*[1]');
         const autocompletePopover = page.locator('.muxui-autocomplete-popover');
+        await autocompleteInput.scrollIntoViewIfNeeded();
         const contentBefore = await contentBelowAutocomplete.boundingBox();
         if (!contentBefore) throw new Error('Autocomplete geometry proof requires following content before opening');
+        // Click first so the focus handler opens the list even when the
+        // preceding composite focus proof left this input already focused.
+        await autocompleteInput.click();
         await autocompleteInput.fill('');
-        await autocompleteInput.focus();
         await autocompletePopover.waitFor({ state: 'visible' });
-        await waitForDocumentAnimations(page);
+        await waitForFiniteDocumentAnimations(page);
         const inputBox = await autocompleteInput.boundingBox();
         const popoverBox = await autocompletePopover.boundingBox();
         if (!inputBox || !popoverBox) throw new Error('Autocomplete geometry proof requires input and overlay boxes');
@@ -271,10 +291,18 @@ test('R1.4 React component browser and axe matrix', async () => {
         for (const scopedProfileName of expectedProfiles.slice(1, 2).concat(expectedProfiles.slice(-1))) {
           const scopedProfile = page.locator(`[data-profile="${scopedProfileName}"]`);
           const scopedInput = scopedProfile.locator('[data-component="autocomplete"] .muxui-autocomplete input');
+          await scopedInput.scrollIntoViewIfNeeded();
           await scopedInput.click();
-          await scopedInput.press('ArrowDown');
-          await autocompletePopover.waitFor({ state: 'visible' });
-          await waitForDocumentAnimations(page);
+          try {
+            await autocompletePopover.waitFor({ state: 'visible', timeout: 1000 });
+          } catch {
+            // RAC may process the click's focus update after this locator
+            // observes the closed state. ArrowDown is the user-visible
+            // fallback that opens the active autocomplete collection.
+            await scopedInput.press('ArrowDown');
+            await autocompletePopover.waitFor({ state: 'visible' });
+          }
+          await waitForFiniteDocumentAnimations(page);
           const [scopedInputBox, scopedPopoverBox] = await Promise.all([
             scopedInput.boundingBox(),
             autocompletePopover.boundingBox(),
@@ -287,12 +315,20 @@ test('R1.4 React component browser and axe matrix', async () => {
           const scopedPortalDetails = await scopedProfile.evaluate((profileNode) => {
             const popover = document.querySelector('.muxui-autocomplete-popover');
             const style = popover ? getComputedStyle(popover) : null;
+            const profileStyle = getComputedStyle(profileNode);
+            const overlayProbe = document.createElement('span');
+            overlayProbe.style.cssText = 'position:absolute;width:0;height:0;background-color:var(--muxui-semantic-overlay-background);';
+            profileNode.append(overlayProbe);
+            const expectedOverlayBackground = getComputedStyle(overlayProbe).backgroundColor;
+            overlayProbe.remove();
             return {
               containsPopover: Boolean(popover && profileNode.contains(popover)),
               profile: popover?.closest('[data-profile]')?.getAttribute('data-profile'),
               direction: style?.direction,
               background: style?.backgroundColor,
               overlayToken: style?.getPropertyValue('--muxui-semantic-overlay-background').trim(),
+              expectedOverlayBackground,
+              expectedOverlayToken: profileStyle.getPropertyValue('--muxui-semantic-overlay-background').trim(),
             };
           });
           if (!scopedPortalDetails.containsPopover || scopedPortalDetails.profile !== scopedProfileName) {
@@ -301,9 +337,9 @@ test('R1.4 React component browser and axe matrix', async () => {
           if (scopedProfileName.endsWith('/rtl') && scopedPortalDetails.direction !== 'rtl') {
             throw new Error('RTL Autocomplete portal must inherit scoped direction');
           }
-          if (scopedProfileName.startsWith('dark/')
-            && (scopedPortalDetails.background !== 'rgb(17, 16, 15)' || scopedPortalDetails.overlayToken !== '#11100f')) {
-            throw new Error('Dark Autocomplete portal must inherit the semantic overlay background');
+          if (scopedPortalDetails.background !== scopedPortalDetails.expectedOverlayBackground
+            || scopedPortalDetails.overlayToken !== scopedPortalDetails.expectedOverlayToken) {
+            throw new Error(`${scopedProfileName} Autocomplete portal must inherit the scoped semantic overlay background`);
           }
           await scopedInput.press('Escape');
           await autocompletePopover.waitFor({ state: 'detached' });
@@ -326,7 +362,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const dialog = page.locator('[data-r1-4-overlay="dialog"]');
         if (await dialog.count() !== 1 || !await dialog.isVisible()) throw new Error('Dialog must open from its keyboard trigger');
         await page.keyboard.press('Escape');
-        await waitForDocumentAnimations(page);
+        await waitForFiniteDocumentAnimations(page);
         if (await dialog.count() !== 0) throw new Error('Dialog Escape must dismiss the dialog');
 
         const popoverTrigger = profile.locator('[data-r1-4-control="popover-open"]');
@@ -335,7 +371,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const popover = page.locator('[data-r1-4-overlay="popover"]');
         if (await popover.count() !== 1 || !await popover.isVisible()) throw new Error('Popover must open from its keyboard trigger');
         await page.keyboard.press('Escape');
-        await waitForDocumentAnimations(page);
+        await waitForFiniteDocumentAnimations(page);
         if (await popover.count() !== 0) throw new Error('Popover Escape must dismiss the popover');
 
         const previewTrigger = profile.locator('[data-r1-4-control="preview-trigger"]');
@@ -373,7 +409,7 @@ test('R1.4 React component browser and axe matrix', async () => {
       }
     }
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
-    await waitForDocumentAnimations(page);
+    await waitForFiniteDocumentAnimations(page);
     await assertNoAxeViolations(page.locator('[data-profile]').first().locator('[data-r1-4-section]'), 'R1.4 forced-colors');
     await page.emulateMedia({ forcedColors: 'none', reducedMotion: 'reduce' });
     await assertNoAxeViolations(page.locator('[data-profile="light/standard/reduced/comfortable/ltr"] [data-r1-4-section]'), 'R1.4 reduced-motion');

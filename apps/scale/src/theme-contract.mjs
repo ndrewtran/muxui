@@ -1,26 +1,27 @@
 import {
   compileThemeAuthoringDocument,
   generateScaleTheme,
+  getScaleContrastRatio,
   randomScaleBaseColor,
   serializeThemeAuthoringDocument,
   validateThemeAuthoringDocument,
 } from '@muxui/tokens/authoring';
+import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultThemeSource from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 
 const HEX = /^#[0-9a-f]{6}$/iu;
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
-const SOURCE_KEYS = ['schema', 'id', 'source', 'tokenContractVersion', 'modes', 'overrides', 'scale'];
 const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'curvature'];
-
-export const DEFAULT_SETTINGS = Object.freeze({ presetId: 'harbour', family: 'standard', namedColor: '#025768', neutralColor: '#79716b', contrastPivot: 'auto', whiteAnchor: false, curvature: 1, background: 'light', colorMode: 'light' });
-export const STANDARD_PRESETS = Object.freeze([
-  ['harbour', 'Harbour', '#025768', '#79716b'], ['lagoon', 'Lagoon', '#006a6b', '#677472'], ['blueprint', 'Blueprint', '#215d9a', '#68717a'], ['violet-dusk', 'Violet Dusk', '#6552a3', '#706d78'], ['wildflower', 'Wildflower', '#8f3d65', '#746b70'], ['terracotta', 'Terracotta', '#9b3f35', '#756b68'], ['amber-grove', 'Amber Grove', '#8a5a0a', '#756f64'], ['fern', 'Fern', '#3b6b43', '#6a7169'],
-]);
-export const MONO_PRESETS = Object.freeze([
-  ['antique', 'Antique', '#936400'], ['forest', 'Forest', '#317d00'], ['mauve', 'Mauve', '#9b5267'], ['mountain-meadow', 'Mountain Meadow', '#007e64'], ['rosewater', 'Rosewater', '#c60648'], ['teal', 'Teal', '#25778d'], ['terracotta', 'Terracotta', '#a64300'],
-]);
-export const NAMED_STEPS = Object.freeze([5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
-export const NEUTRAL_STEPS = Object.freeze([5, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 40, 50, 60, 70, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100]);
+const scaleMetadata = defaultThemeSource.theme.scale;
+const sourceTokens = compilePureTokenGraph(defaultThemeSource).tokens;
+export const STANDARD_PRESETS = Object.freeze(scaleMetadata.standardPresets.map(({ id, name, namedColor, neutralColor }) => Object.freeze([id, name, sourceTokens[namedColor].value, sourceTokens[neutralColor].value])));
+export const MONO_PRESETS = Object.freeze(scaleMetadata.monochromePresets.map(({ id, name, color }) => Object.freeze([id, name, sourceTokens[color].value])));
+export const NAMED_STEPS = Object.freeze([...scaleMetadata.namedShades]);
+export const NEUTRAL_STEPS = Object.freeze([...scaleMetadata.neutralShades]);
+export const RADIUS_TOKENS = Object.freeze(Object.entries(scaleMetadata.radius.multipliers));
+export const RADIUS_SETTINGS = Object.freeze({ ...scaleMetadata.radius.curvature });
+const defaultPreset = STANDARD_PRESETS.find(([id]) => id === scaleMetadata.defaults.standard);
+export const DEFAULT_SETTINGS = Object.freeze({ presetId: defaultPreset[0], family: 'standard', namedColor: defaultPreset[2], neutralColor: defaultPreset[3], contrastPivot: scaleMetadata.contrast.defaultPivot, whiteAnchor: false, curvature: RADIUS_SETTINGS.default, background: 'light', colorMode: 'light', additionalOverrides: {}, themeModes: structuredClone(defaultThemeSource.theme.modeAxes) });
 export const BACKGROUNDS = Object.freeze([['light', 'Light'], ['dark', 'Dark'], ['accent', 'Accent']]);
 
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
@@ -35,34 +36,26 @@ function assertScaleInputs(scale) {
   assertHex(scale.namedColor, 'scale.namedColor'); assertHex(scale.neutralColor, 'scale.neutralColor');
   if (typeof scale.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: whiteAnchor');
   if (!(scale.contrastPivot === 'auto' || (Number.isInteger(scale.contrastPivot) && NAMED_STEPS.includes(scale.contrastPivot)))) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: contrastPivot');
-  if (typeof scale.curvature !== 'number' || !Number.isFinite(scale.curvature) || scale.curvature < 0 || scale.curvature > 2) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: curvature');
+  if (typeof scale.curvature !== 'number' || !Number.isFinite(scale.curvature) || scale.curvature < RADIUS_SETTINGS.minimum || scale.curvature > RADIUS_SETTINGS.maximum) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID: curvature');
 }
 
 function scaleInputsFromSettings(settings) {
   return {
-    mode: settings.family === 'mono' ? 'mono' : 'standard',
+    mode: settings.family,
     presetId: settings.presetId,
     namedColor: assertHex(settings.namedColor, 'namedColor'),
     neutralColor: assertHex(settings.neutralColor, 'neutralColor'),
-    whiteAnchor: Boolean(settings.whiteAnchor),
-    contrastPivot: settings.contrastPivot === 'auto' ? 'auto' : Number(settings.contrastPivot),
-    curvature: Number(settings.curvature),
+    whiteAnchor: settings.whiteAnchor,
+    contrastPivot: settings.contrastPivot,
+    curvature: settings.curvature,
   };
 }
 
 export function validateScaleDocument(document) {
   if (!isRecord(document)) throw new TypeError('MUXUI_SCALE_DOCUMENT_INVALID');
-  assertKeys(document, SOURCE_KEYS, 'document');
-  if (document.schema !== 'muxui-theme-authoring-v1') throw new TypeError('MUXUI_SCALE_SCHEMA_INVALID');
   if (typeof document.id !== 'string' || !document.id.startsWith('muxui:theme:')) throw new TypeError('MUXUI_SCALE_SOURCE_ID_INVALID');
   assertSlug(document.id.slice('muxui:theme:'.length));
-  if (document.source !== 'muxui:token:default-theme') throw new TypeError('MUXUI_SCALE_SOURCE_INVALID');
-  if (document.tokenContractVersion !== '2.1.0') throw new TypeError('MUXUI_SCALE_TOKEN_CONTRACT_INVALID');
-  if (!isRecord(document.modes)) throw new TypeError('MUXUI_SCALE_MODES_INVALID');
-  for (const axis of ['colorScheme', 'contrast', 'motion', 'density', 'direction']) if (!Array.isArray(document.modes[axis]) || document.modes[axis].length < 1 || document.modes[axis].some((value) => typeof value !== 'string')) throw new TypeError(`MUXUI_SCALE_MODE_INVALID: ${axis}`);
-  if (!isRecord(document.overrides)) throw new TypeError('MUXUI_SCALE_OVERRIDES_INVALID');
   if (!isRecord(document.scale)) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID');
-  assertScaleInputs(document.scale);
   validateThemeAuthoringDocument(document, { source: defaultThemeSource });
   return document;
 }
@@ -72,52 +65,87 @@ export function createScaleDocument(settings, { slug = 'draft' } = {}) {
   const inputs = scaleInputsFromSettings(settings);
   assertScaleInputs(inputs);
   const generated = generateScaleTheme({ source: defaultThemeSource, ...inputs });
-  return { schema: 'muxui-theme-authoring-v1', id: `muxui:theme:${slug}`, source: 'muxui:token:default-theme', tokenContractVersion: '2.1.0', modes: { colorScheme: ['light', 'dark'], contrast: ['standard', 'more'], motion: ['full', 'reduced'], density: ['comfortable', 'compact'], direction: ['ltr', 'rtl'] }, overrides: generated.overrides ?? generated.assignments ?? generated.tokens ?? {}, scale: inputs };
+  const additionalOverrides = settings.additionalOverrides ?? {};
+  assertRecordOverrides(additionalOverrides, generated.assignments);
+  return validateScaleDocument({ schema: 'muxui-theme-authoring-v1', id: `muxui:theme:${slug}`, source: defaultThemeSource.id, tokenContractVersion: defaultThemeSource.tokenContractVersion, modes: structuredClone(settings.themeModes ?? defaultThemeSource.theme.modeAxes), overrides: { ...additionalOverrides, ...generated.assignments }, scale: inputs });
+}
+
+function assertRecordOverrides(overrides, assignments) {
+  if (!isRecord(overrides)) throw new TypeError('MUXUI_SCALE_OVERRIDES_INVALID');
+  if (Object.keys(overrides).some((id) => Object.hasOwn(assignments, id))) throw new TypeError('MUXUI_SCALE_OVERRIDE_CONFLICT');
 }
 
 export function documentFromSettings(settings, options = {}) { return validateScaleDocument(createScaleDocument(settings, options)); }
-export function settingsFromDocument(document) { validateScaleDocument(document); return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: String(document.scale.contrastPivot), curvature: document.scale.curvature }; }
+export function settingsFromDocument(document) {
+  validateScaleDocument(document);
+  const generated = generateScaleTheme({ source: defaultThemeSource, ...document.scale });
+  const colorMode = document.modes.colorScheme.includes(defaultThemeSource.theme.defaultModes.colorScheme) ? defaultThemeSource.theme.defaultModes.colorScheme : document.modes.colorScheme[0];
+  return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: document.scale.contrastPivot, curvature: document.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(document.modes), additionalOverrides: Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
+}
 export function serializeScaleDocument(document) { return serializeThemeAuthoringDocument(validateScaleDocument(document), { source: defaultThemeSource }); }
 export function digestScaleDocument(document) { return `source:${validateScaleDocument(document).id}`; }
-export function presetSettings(family, presetId) { const list = family === 'mono' ? MONO_PRESETS : STANDARD_PRESETS; const preset = list.find(([id]) => id === presetId) ?? list[0]; return family === 'mono' ? { ...DEFAULT_SETTINGS, family, presetId: preset[0], namedColor: preset[2], neutralColor: preset[2] } : { ...DEFAULT_SETTINGS, family, presetId: preset[0], namedColor: preset[2], neutralColor: preset[3] }; }
+export function presetSettings(family, presetId) {
+  if (!['standard', 'mono'].includes(family)) throw new TypeError('MUXUI_SCALE_MODE_INVALID');
+  const preset = (family === 'mono' ? MONO_PRESETS : STANDARD_PRESETS).find(([id]) => id === presetId);
+  if (!preset) throw new TypeError('MUXUI_SCALE_PRESET_INVALID');
+  return { family, presetId: preset[0], namedColor: preset[2], neutralColor: family === 'mono' ? preset[2] : preset[3] };
+}
 
 // Scale swatches are projected from the shared typed palette result.
 export function previewPalette(settings, kind, steps) {
   const generated = generateScaleTheme({ source: defaultThemeSource, ...scaleInputsFromSettings(settings) });
-  const palettes = generated.palettes ?? {};
-  const palette = palettes[kind] ?? generated[`${kind}Palette`] ?? generated[kind] ?? [];
-  const entries = Array.isArray(palette) ? palette : Object.entries(palette).map(([step, value]) => ({ step, value }));
-  if (!Array.isArray(entries)) throw new TypeError('MUXUI_SCALE_PALETTE_PROJECTION_INVALID');
-  const byStep = new Map(entries.map((entry) => [Number(entry.step ?? entry.shade), entry.hex ?? entry.value]));
+  const palette = generated.palettes[kind];
+  if (!palette) throw new TypeError('MUXUI_SCALE_PALETTE_PROJECTION_INVALID');
+  const byStep = new Map(palette.map(({ shade, hex }) => [shade, hex]));
   return steps.map((step) => {
     const value = byStep.get(step);
     if (typeof value !== 'string') throw new TypeError(`MUXUI_SCALE_PALETTE_STEP_MISSING: ${kind}-${step}`);
     return { step, value };
   });
 }
-export function previewCss(settings) {
+export function previewTheme(settings, { selector = '.muxui-scale-preview' } = {}) {
   const compiled = compileThemeAuthoringDocument(createScaleDocument(settings, { slug: 'preview' }), {
     source: defaultThemeSource,
     target: 'web.css',
-    selector: '.muxui-scale-preview',
-    modes: {
-      colorScheme: settings.colorMode,
-      contrast: 'standard',
-      motion: 'full',
-      density: 'comfortable',
-      direction: 'ltr',
-    },
+    selector,
+    modes: { colorScheme: settings.colorMode },
   });
   if (!compiled || typeof compiled.css !== 'string') throw new TypeError('MUXUI_SCALE_CSS_PROJECTION_INVALID');
-  return compiled.css;
+  return compiled;
+}
+export function previewCss(settings, options) { return previewTheme(settings, options).css; }
+
+export function previewSwatches(compiled, kind, steps) {
+  const prefix = kind === 'named' ? 'color' : 'neutral';
+  return steps.map((step) => {
+    const background = compiled.tokens[`semantic.color.${prefix}-${step}`].value;
+    const foreground = compiled.tokens[`semantic.color.${prefix}-${step}-fg`].value;
+    const ratio = getScaleContrastRatio(background, foreground);
+    return { step, value: background, background, foreground, ratio, badge: ratio >= 7 ? 'AAA' : ratio >= 4.5 ? 'AA' : ratio >= 3 ? 'AA·LG' : 'Fail' };
+  });
 }
 
-export function randomScaleSettings(settings, { random = Math.random } = {}) {
-  const namedMode = settings.family === 'mono' ? 'monochrome' : 'named';
-  return {
-    ...settings,
-    presetId: 'custom',
-    namedColor: randomScaleBaseColor(namedMode, { source: defaultThemeSource, whiteAnchor: Boolean(settings.whiteAnchor), random }),
-    neutralColor: randomScaleBaseColor('neutral', { source: defaultThemeSource, whiteAnchor: Boolean(settings.whiteAnchor), random }),
+export function radiusValue(multiplier, factor) { return `${multiplier * scaleMetadata.radius.base * factor}rem`; }
+
+export function validateScaleSettings(settings) {
+  assertKeys(settings, Object.keys(DEFAULT_SETTINGS), 'settings');
+  if (!['standard', 'mono'].includes(settings.family) || !BACKGROUNDS.some(([value]) => value === settings.background)
+    || !settings.themeModes?.colorScheme?.includes(settings.colorMode)
+    || (settings.background === 'light') !== (settings.colorMode === 'light')) throw new TypeError('MUXUI_SCALE_SETTINGS_INVALID');
+  if (typeof settings.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_SCALE_SETTINGS_INVALID');
+  createScaleDocument(settings);
+  return settings;
+}
+
+export function randomScaleSettings(settings, { random = Math.random, kind = 'both' } = {}) {
+  if (!['named', 'neutral', 'both'].includes(kind)) throw new TypeError('MUXUI_SCALE_PALETTE_PROJECTION_INVALID');
+  const options = { whiteAnchor: settings.whiteAnchor, random };
+  if (settings.family === 'mono') {
+    const color = randomScaleBaseColor('monochrome', options);
+    return { ...settings, presetId: 'custom', namedColor: color, neutralColor: color };
+  }
+  return { ...settings, presetId: 'custom',
+    namedColor: kind === 'neutral' ? settings.namedColor : randomScaleBaseColor('named', options),
+    neutralColor: kind === 'named' ? settings.neutralColor : randomScaleBaseColor('neutral', options),
   };
 }

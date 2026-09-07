@@ -35,6 +35,7 @@ import {
   ProgressBar,
   Popover,
   PreviewTrigger,
+  RadioField,
   RadioGroup,
   RangeCalendar,
   SearchField,
@@ -60,9 +61,44 @@ import {
   reactCompatibility,
   useToast,
 } from '@muxui/react';
+import type { TextEditorDocument } from '../src/text-editor/index.d.ts';
 
 const schema: Readonly<Record<string, unknown>> = reactCompatibility;
 void schema;
+
+const textEditorDocument: TextEditorDocument = {
+  type: 'doc',
+  content: [{
+    type: 'bulletList',
+    content: [{
+      type: 'listItem',
+      content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Parent' }] }, {
+        type: 'orderedList',
+        attrs: { start: 3, type: 'a' },
+        content: [{ type: 'listItem', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Child' }] }] }],
+      }],
+    }],
+  }],
+};
+void textEditorDocument;
+// @ts-expect-error The document root accepts block nodes, never inline text.
+const textEditorRootText: TextEditorDocument = { type: 'doc', content: [{ type: 'text', text: 'Invalid root text' }] };
+void textEditorRootText;
+// @ts-expect-error Lists contain list items, whose first child is a paragraph.
+const textEditorListParagraph: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [{ type: 'paragraph' }] }] };
+void textEditorListParagraph;
+// @ts-expect-error Code blocks contain plain text nodes, not paragraph blocks.
+const textEditorCodeParagraph: TextEditorDocument = { type: 'doc', content: [{ type: 'codeBlock', content: [{ type: 'paragraph' }] }] };
+void textEditorCodeParagraph;
+// @ts-expect-error Lists must be nonempty to match the portable runtime grammar.
+const textEditorEmptyList: TextEditorDocument = { type: 'doc', content: [{ type: 'bulletList', content: [] }] };
+void textEditorEmptyList;
+// @ts-expect-error Block quotes must be nonempty to match the portable runtime grammar.
+const textEditorEmptyBlockquote: TextEditorDocument = { type: 'doc', content: [{ type: 'blockquote', content: [] }] };
+void textEditorEmptyBlockquote;
+// @ts-expect-error Ordered-list marker types are finite portable values.
+const textEditorInvalidOrderedListType: TextEditorDocument = { type: 'doc', content: [{ type: 'orderedList', attrs: { type: 'decimal' }, content: [{ type: 'listItem', content: [{ type: 'paragraph' }] }] }] };
+void textEditorInvalidOrderedListType;
 
 const button = (
   <Button
@@ -87,7 +123,7 @@ void button;
 
 // Button visual axes are finite MuxUI-owned values.
 // @ts-expect-error Button variants do not expose arbitrary strings.
-const invalidButtonVariant = <Button variant="neutral">Save</Button>;
+const invalidButtonVariant = <Button variant="experimental">Save</Button>;
 void invalidButtonVariant;
 // @ts-expect-error Button tones do not expose arbitrary strings.
 const invalidButtonTone = <Button tone="danger">Delete</Button>;
@@ -110,7 +146,7 @@ void navigation;
 const componentSlice = (
   <>
     <Breadcrumbs aria-label="Breadcrumb" items={[{ label: 'Home', href: '/', disabled: true }, { label: 'Docs' }]} />
-    <Checkbox defaultChecked onChange={(checked) => { const value: boolean = checked; void value; }}>Accept</Checkbox>
+    <Checkbox defaultChecked size="sm" onChange={(checked) => { const value: boolean = checked; void value; }}>Accept</Checkbox>
     <Disclosure title="Details" defaultExpanded onExpandedChange={(expanded) => { const value: boolean = expanded; void value; }}>Content</Disclosure>
     <DisclosureGroup defaultExpandedIds={['one']} multiple={false} onExpandedChange={(ids) => { const value: string[] = ids; void value; }}>
       <Disclosure id="one" title="One">First</Disclosure>
@@ -120,7 +156,7 @@ const componentSlice = (
     <Meter label="Storage" value={72} />
     <ProgressBar label="Upload" value={64} />
     <Separator orientation="vertical" />
-    <ToggleButton defaultSelected onChange={(selected) => { const value: boolean = selected; void value; }}>Bold</ToggleButton>
+    <ToggleButton defaultSelected size="sm" onChange={(selected) => { const value: boolean = selected; void value; }}>Bold</ToggleButton>
   </>
 );
 void componentSlice;
@@ -136,7 +172,7 @@ const fields = (
     <DatePicker label="Due" defaultValue="2026-08-26" minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date) => { const value: string = date; void value; return false; }} />
     <DateRangePicker label="Trip" startName="tripStart" endName="tripEnd" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date, anchorDate) => { const value: string = date; const anchor: string | null = anchorDate; void value; void anchor; return false; }} />
     <TimeField label="Start" defaultValue="09:30" minValue="09:00" maxValue="17:00" />
-    <Autocomplete label="City" items={['Melbourne', { label: 'Sydney' }, {}]} onSelect={(item) => {
+    <Autocomplete label="City" size="sm" items={['Melbourne', { label: 'Sydney' }, {}]} onSelect={(item) => {
       if (!item) return;
       const normalized: AutocompleteSelectionItem = item;
       const id: string = normalized.id;
@@ -238,6 +274,7 @@ const r13Collections = (
     <ListBox aria-label="Files" items={[{ id: 'readme', label: <strong>README</strong> }]} />
     <Menu aria-label="Actions" items={[{ id: 'edit', label: <strong>Edit</strong> }]} />
     <RadioGroup label="Plan" options={[{ value: 'pro', label: <strong>Pro</strong> }]} />
+    <RadioGroup label="Plan"><RadioField.Root value="pro"><RadioField.Button>Pro</RadioField.Button></RadioField.Root></RadioGroup>
     <RangeCalendar label="Trip" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} />
     <Select label="Color" items={[{ id: 'red', label: <strong>Red</strong> }]} />
     <Slider label="Volume" defaultValue={50} />
@@ -260,7 +297,9 @@ const r13EnrichedCollections = (
     <Select label="Color" open={false} defaultOpen={false} onOpenChange={(open) => { const value: boolean = open; void value; }} />
     <Table aria-label="People" columns={[{ id: 'name', label: 'Name', sortable: true }]} sortDescriptor={{ column: 'name', direction: 'ascending' }} onSortChange={(next) => { const column: string = next.column; void column; }} />
     <Tabs aria-label="Sections" keyboardActivation="manual" />
-    <ToggleButtonGroup aria-label="Styles" selectionMode="multiple" selectedIds={['bold'] as readonly string[]} onSelectionChange={(ids) => { const value: readonly string[] = ids; void value; }} />
+    <CheckboxGroup aria-label="Choices" orientation="horizontal" size="sm" />
+    <RadioGroup aria-label="Choice" size="sm" />
+    <ToggleButtonGroup aria-label="Styles" size="sm" disallowEmptySelection selectionMode="multiple" selectedIds={['bold'] as readonly string[]} onSelectionChange={(ids) => { const value: readonly string[] = ids; void value; }} />
     <ColorSlider aria-label="Red" readOnly />
     <ColorSwatchPicker aria-label="Palette" readOnly />
     <ColorWheel aria-label="Hue" outerRadius={96} innerRadius={64} readOnly />
@@ -340,6 +379,10 @@ void radioGroupErrorMessage;
 // @ts-expect-error RadioGroup does not expose a generic field name.
 const radioGroupName = <RadioGroup label="Plan" name="unsupported" />;
 void radioGroupName;
+// @ts-expect-error RadioField.Root requires a stable value for RadioGroup selection identity.
+const radioFieldWithoutValue = <RadioField.Root><RadioField.Button>Missing value</RadioField.Button></RadioField.Root>;
+void radioFieldWithoutValue;
+
 // @ts-expect-error TagGroup does not expose generic field descriptions.
 const tagGroupDescription = <TagGroup label="Tags" description="Unsupported" />;
 void tagGroupDescription;

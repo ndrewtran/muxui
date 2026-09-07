@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:9893d46ec4fd3e07ab4a9241ac92469f374aa1973b47e99ae55b28063ee0ab14
+// @generated-content-sha256: sha256:0d3724717c829de31bd624d740a5968e07011c04ef6eff9d8c5655d3cefde9b1
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -53,7 +53,8 @@ const binding = {
     "focused",
     "dismissed"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'Dialog', tranche: 'R1.4', binding };
 

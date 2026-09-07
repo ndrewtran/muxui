@@ -1,8 +1,9 @@
 // @generated-from: packages/react/src/components.mjs
-// @generated-content-sha256: sha256:1bcf08afb9019170b38b47231ebdf058af2f96e86a78b12d61b9f5a5acb0dcf6
+// @generated-content-sha256: sha256:cefb6eccc47dd3c951ac292e3effaa5064432c8d293df5b4439fb8b1ae366b0a
 import React from 'react';
 import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
 import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
+import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import {
   Breadcrumb as AriaBreadcrumb,
   Breadcrumbs as AriaBreadcrumbs,
@@ -18,10 +19,14 @@ import {
   ToggleButton as AriaToggleButton,
   Button as AriaButton,
 } from 'react-aria-components';
+import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
+import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
 }
+
+const DisclosureGroupContext = React.createContext(false);
 
 function activationEvent(event, target) {
   return {
@@ -79,6 +84,7 @@ export const Checkbox = React.forwardRef(function Checkbox({
   checked,
   defaultChecked = false,
   disabled = false,
+  size,
   indeterminate = false,
   invalid = false,
   name,
@@ -88,10 +94,13 @@ export const Checkbox = React.forwardRef(function Checkbox({
   onChange,
   ...props
 }, ref) {
+  const inheritedSize = React.useContext(ChoiceControlSizeContext);
+  const resolvedSize = normalizeChoiceControlSize(size ?? inheritedSize, 'Checkbox');
   return React.createElement(AriaCheckbox, {
     ...props,
     ref,
-    className: classNames('muxui-checkbox', className),
+    className: classNames(`muxui-checkbox${resolvedSize === 'md' ? '' : ` muxui-checkbox--${resolvedSize}`}`, className),
+    'data-size': resolvedSize,
     isSelected: checked,
     defaultSelected: defaultChecked,
     isDisabled: disabled,
@@ -135,7 +144,7 @@ export const DisclosureGroup = React.forwardRef(function DisclosureGroup({
     expandedKeys: expandedIds === undefined ? undefined : mapKeys(expandedIds),
     defaultExpandedKeys: mapKeys(defaultExpandedIds),
     onExpandedChange: (keys) => onExpandedChange?.([...keys].map(String)),
-  }, children);
+  }, React.createElement(DisclosureGroupContext.Provider, { value: true }, children));
 });
 
 DisclosureGroup.displayName = 'DisclosureGroup';
@@ -151,6 +160,10 @@ export const Disclosure = React.forwardRef(function Disclosure({
   onExpandedChange,
   ...props
 }, ref) {
+  const grouped = React.useContext(DisclosureGroupContext);
+  const trigger = React.createElement(AriaButton, { slot: 'trigger', className: 'muxui-disclosure-trigger' }, title, grouped
+    ? React.createElement(ChevronDownIcon, { className: 'muxui-disclosure-trigger-icon', 'aria-hidden': 'true', focusable: 'false' })
+    : null);
   return React.createElement(AriaDisclosure, {
     ...props,
     ref,
@@ -160,7 +173,10 @@ export const Disclosure = React.forwardRef(function Disclosure({
     defaultExpanded,
     isDisabled: disabled,
     onExpandedChange,
-  }, React.createElement(AriaButton, { slot: 'trigger', className: 'muxui-disclosure-trigger' }, title), React.createElement(AriaDisclosurePanel, { role: 'region', className: 'muxui-disclosure-panel' }, children));
+  }, grouped
+    ? React.createElement('div', { className: 'muxui-disclosure-header' }, trigger)
+    : trigger,
+  React.createElement(AriaDisclosurePanel, { role: 'region', className: 'muxui-disclosure-panel' }, children));
 });
 
 Disclosure.displayName = 'Disclosure';
@@ -299,18 +315,22 @@ export const ToggleButton = React.forwardRef(function ToggleButton({
   selected,
   defaultSelected = false,
   disabled = false,
+  size,
   className,
   onChange,
   onActivate,
   ...props
 }, ref) {
+  const inheritedSize = React.useContext(ToggleButtonSizeContext);
+  const resolvedSize = normalizeToggleButtonSize(size ?? inheritedSize);
   return React.createElement(AriaToggleButton, {
     ...props,
     ref,
     isSelected: selected,
     defaultSelected,
     isDisabled: disabled,
-    className: classNames('muxui-toggle-button', className),
+    className: classNames(`muxui-toggle-button muxui-toggle-button--${resolvedSize}`, className),
+    'data-size': resolvedSize,
     onChange,
     onPress: (event) => onActivate?.(activationEvent(event, event.target)),
   }, children);

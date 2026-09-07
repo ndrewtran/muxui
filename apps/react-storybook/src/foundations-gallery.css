@@ -152,6 +152,60 @@
   padding-block: 1.25rem;
 }
 
+.muxui-foundations-responsive {
+  max-inline-size: 90rem;
+  margin: 0 auto 2.5rem;
+  border-block-end: 1px solid var(--foundations-border);
+  padding-block-end: 1.25rem;
+}
+
+.muxui-foundations-responsive-heading {
+  display: flex;
+  gap: 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-block-end: 1rem;
+}
+
+.muxui-foundations-responsive-heading > p {
+  max-inline-size: 42rem;
+  margin: 0.5rem 0 0;
+  color: var(--foundations-muted);
+}
+
+.muxui-foundations-responsive-grid {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.muxui-foundations-responsive-row {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1.2fr) repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: baseline;
+  border-block-start: 1px solid var(--foundations-border);
+  padding-block: 0.7rem;
+}
+
+.muxui-foundations-responsive-id,
+.muxui-foundations-responsive-value code {
+  overflow-wrap: anywhere;
+  color: var(--foundations-muted);
+  font-size: 0.72rem;
+}
+
+.muxui-foundations-responsive-value {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.muxui-foundations-responsive-value > span {
+  color: var(--foundations-muted);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
 .muxui-foundations-comparisons-heading {
   align-items: baseline;
   margin-block-end: 1rem;
@@ -670,8 +724,14 @@
   }
 
   .muxui-foundations-header,
-  .muxui-foundations-comparisons-heading {
+  .muxui-foundations-comparisons-heading,
+  .muxui-foundations-responsive-heading {
     display: grid;
+  }
+
+  .muxui-foundations-responsive-row {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
   }
 
   .muxui-foundations-layout {

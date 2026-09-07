@@ -14,6 +14,7 @@ import { ToastProvider } from '@muxui/react';
 import {
   argTypesForBinding,
   adapterNames,
+  HISTORICAL_BROWSER_PROOF_FAMILIES,
   BROWSER_PROOF_FAMILIES,
   createAnatomyStory,
   createButtonMatrixStory,
@@ -36,7 +37,14 @@ const appRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(appRoot, '../..');
 const packageRequire = createRequire(resolve(repositoryRoot, 'packages/react/package.json'));
 const { JSDOM } = packageRequire('jsdom');
-const descriptor = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/react/generated/descriptor.json'), 'utf8'));
+const descriptorSource = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/react/generated/descriptor.json'), 'utf8'));
+const descriptor = descriptorSource.historical?.bindings
+  ? {
+      ...descriptorSource,
+      bindings: descriptorSource.historical.bindings,
+      exports: descriptorSource.historical.exports,
+    }
+  : descriptorSource;
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
 
 function generatedBody(source, fileName) {
@@ -53,6 +61,13 @@ function generatedBody(source, fileName) {
 const manifestSource = await readFile(resolve(appRoot, '.storybook/generated/manifest.mjs'), 'utf8');
 generatedBody(manifestSource, 'manifest.mjs');
 const { default: manifest } = await import('../.storybook/generated/manifest.mjs');
+const historicalFamilyNames = new Set(descriptor.bindings.map(({ export: name }) => name));
+const manifestByFamily = new Map(manifest.families.map((record) => [record.family, record]));
+const historicalManifest = {
+  ...manifest,
+  count: historicalFamilyNames.size,
+  families: descriptor.bindings.map(({ export: name }) => manifestByFamily.get(name)).filter(Boolean),
+};
 
 function installRuntimeDom() {
   const dom = new JSDOM('<!doctype html><div id="root"></div>', { url: 'http://localhost/' });
@@ -135,11 +150,34 @@ test('private host and exact Mux UI React family projection', async () => {
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
   assert.equal(packageManifest.private, true);
   assert.equal(manifest.schema, 'muxui-react-storybook-manifest-v1');
-  assert.equal(manifest.count, 53);
-  assert.deepEqual(manifest.families.map(({ family }) => family), descriptor.bindings.map(({ export: name }) => name));
-  assert.equal(new Set(manifest.families.map(({ family }) => family)).size, 53);
-  assert.deepEqual(adapterNames.slice().sort(), descriptor.bindings.map(({ export: name }) => name).sort());
-  assert.deepEqual(manifest.families.map(({ family }) => family).sort(), snapshot.families.map(({ muxuiPublicFamily, corePublicFamily }) => muxuiPublicFamily ?? corePublicFamily).sort());
+  assert.equal(historicalManifest.count, 53);
+  assert.deepEqual(historicalManifest.families.map(({ family }) => family), descriptor.bindings.map(({ export: name }) => name));
+  assert.equal(new Set(historicalManifest.families.map(({ family }) => family)).size, 53);
+  assert.deepEqual(adapterNames.filter((name) => historicalFamilyNames.has(name)).sort(), descriptor.bindings.map(({ export: name }) => name).sort());
+  assert.deepEqual(historicalManifest.families.map(({ family }) => family).sort(), snapshot.families.map(({ muxuiPublicFamily, corePublicFamily }) => muxuiPublicFamily ?? corePublicFamily).sort());
+});
+
+test('current Storybook manifest covers the complete package union', () => {
+  assert.equal(manifest.count, descriptorSource.bindings.length);
+  assert.equal(new Set(manifest.families.map(({ family }) => family)).size, descriptorSource.bindings.length);
+  assert.deepEqual(manifest.families.map(({ family }) => family), descriptorSource.bindings.map(({ export: name }) => name));
+  assert.deepEqual(adapterNames.slice().sort(), descriptorSource.bindings.map(({ export: name }) => name).sort());
+  assert.deepEqual([...BROWSER_PROOF_FAMILIES].sort(), descriptorSource.bindings.map(({ export: name }) => name).sort());
+});
+
+test('current Storybook default stories render through their published package routes', async () => {
+  const failures = [];
+  for (const record of manifest.families) {
+    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const tranche = record.tranche.replace('.', '-').toLowerCase();
+    try {
+      const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+      renderToStaticMarkup(story.Default.render(story.Default.args));
+    } catch (error) {
+      failures.push(`${record.family}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  assert.deepEqual(failures, [], 'all current default stories must render');
 });
 
 test('uses standard generation scripts and checks drift in an isolated projection', async () => {
@@ -178,7 +216,7 @@ test('uses standard generation scripts and checks drift in an isolated projectio
 
 test('every story exposes exactly its canonical Mux UI-owned properties', () => {
   const byFamily = new Map(descriptor.bindings.map((binding) => [binding.export, binding]));
-  for (const record of manifest.families) {
+  for (const record of historicalManifest.families) {
     const binding = byFamily.get(record.family);
     assert.ok(binding, `unknown manifest family ${record.family}`);
     assert.deepEqual(Object.keys(argTypesForBinding(binding)).sort(), binding.api.props.slice().sort(), record.family);
@@ -190,7 +228,7 @@ test('every story exposes exactly its canonical Mux UI-owned properties', () => 
 test('generated metadata exposes every canonical event, part, state, and controlled pair', async () => {
   const byFamily = new Map(descriptor.bindings.map((binding) => [binding.export, binding]));
   let partCount = 0;
-  for (const record of manifest.families) {
+  for (const record of historicalManifest.families) {
     const binding = byFamily.get(record.family);
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
@@ -204,20 +242,20 @@ test('generated metadata exposes every canonical event, part, state, and control
     assert.equal(new Set(metadata.parts).size, metadata.parts.length, `${record.family} duplicate parts`);
     partCount += metadata.parts.length;
   }
-  assert.equal(partCount, 202);
+  assert.equal(partCount, descriptor.bindings.reduce((count, binding) => count + binding.api.parts.length, 0));
 });
 
 test('generated proof stories expose live controls, events, modes, anatomy, and browser plays', async () => {
   assert.deepEqual(
-    [...BROWSER_PROOF_FAMILIES].sort(),
-    manifest.families.map(({ family }) => family).sort(),
+    [...HISTORICAL_BROWSER_PROOF_FAMILIES].sort(),
+    historicalManifest.families.map(({ family }) => family).sort(),
     'every exact manifest family has a substantive Browser Proof plan',
   );
   const publicTypes = await readFile(resolve(repositoryRoot, 'packages/react/generated/index.d.ts'), 'utf8');
   let pairCount = 0;
   let eventCount = 0;
   let partCount = 0;
-  for (const record of manifest.families) {
+  for (const record of historicalManifest.families) {
     const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
     assert.ok(binding, `${record.family} descriptor binding`);
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
@@ -251,9 +289,9 @@ test('generated proof stories expose live controls, events, modes, anatomy, and 
       `${record.family} anatomy parts`,
     );
   }
-  assert.equal(pairCount, 42, 'every descriptor controlled/default pair gets a pair of proof stories');
-  assert.equal(eventCount, 68, 'every descriptor event channel gets a live event binding');
-  assert.equal(partCount, 202, 'every descriptor API part gets an anatomy proof row');
+  assert.equal(pairCount, descriptor.bindings.reduce((count, binding) => count + controlledDefaultPairsForBinding(binding).length, 0), 'every descriptor controlled/default pair gets a pair of proof stories');
+  assert.equal(eventCount, descriptor.bindings.reduce((count, binding) => count + eventBindingsForBinding(binding).length, 0), 'every descriptor event channel gets a live event binding');
+  assert.equal(partCount, descriptor.bindings.reduce((count, binding) => count + binding.api.parts.length, 0), 'every descriptor API part gets an anatomy proof row');
 });
 
 test('TimeField controlled and uncontrolled stories use canonical local time args', async () => {
@@ -269,19 +307,18 @@ test('Button Matrix statically covers every finite visual tuple and States keeps
   assert.ok(binding, 'Button descriptor binding');
   const record = { family: 'Button', tranche: 'R1.1', binding };
   const matrix = createButtonMatrixStory(record);
-  assert.equal(matrix.name, 'Variant × tone × size');
+  assert.equal(matrix.name, 'Variant × size');
   const matrixMarkup = renderToStaticMarkup(matrix.render(matrix.args));
   const matrixDom = new JSDOM(matrixMarkup).window.document;
   const buttons = [...matrixDom.querySelectorAll('.muxui-button')];
   const tuples = buttons.map((button) => [
     button.getAttribute('data-variant'),
-    button.getAttribute('data-tone'),
     button.getAttribute('data-size'),
   ].join('/'));
-  assert.equal(buttons.length, 18, 'Button Matrix renders all finite tuples');
-  assert.equal(new Set(tuples).size, 18, 'Button Matrix tuples are unique');
+  assert.equal(buttons.length, 21, 'Button Matrix renders all finite donor variants and sizes');
+  assert.equal(new Set(tuples).size, 21, 'Button Matrix tuples are unique');
   assert.deepEqual(new Set(tuples), new Set(
-    ['sm', 'md', 'lg'].flatMap((size) => ['default', 'destructive'].flatMap((tone) => ['primary', 'secondary', 'ghost'].map((variant) => `${variant}/${tone}/${size}`))),
+    ['sm', 'md', 'lg'].flatMap((size) => ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'].map((variant) => `${variant}/${size}`)),
   ));
   assert.deepEqual(Object.keys(matrix.argTypes).sort(), binding.api.props.slice().sort());
 
@@ -297,7 +334,7 @@ test('generated event and mode harnesses are behaviorally live', async () => {
   const root = createRoot(host);
   const byFamily = new Map(descriptor.bindings.map((binding) => [binding.export, binding]));
   const loadStory = async (family) => {
-    const record = manifest.families.find(({ family: name }) => name === family);
+    const record = historicalManifest.families.find(({ family: name }) => name === family);
     const slug = family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
     return import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
@@ -339,7 +376,7 @@ test('generated event and mode harnesses are behaviorally live', async () => {
 
 test('anatomy proof resolves every canonical part to a live DOM or executable route', async () => {
   const unresolved = [];
-  for (const record of manifest.families) {
+  for (const record of historicalManifest.families) {
     const binding = descriptor.bindings.find(({ export: name }) => name === record.family);
     const env = installRuntimeDom();
     const host = document.querySelector('#root');
@@ -515,7 +552,7 @@ test('state coverage metadata exposes isolated supported states with canonical a
     name,
     args: Object.fromEntries(Object.entries(args).map(([prop, value]) => [prop, typeof value === 'function' ? '[callback]' : value])),
   }));
-  for (const record of manifest.families) {
+  for (const record of historicalManifest.families) {
     const binding = byFamily.get(record.family);
     const coverage = stateCoverageForBinding(binding, record.family);
     assert.ok(coverage.length >= record.states.length, record.family);
@@ -845,7 +882,7 @@ test('lifecycle state coverage drives observable Mux UI transitions', async () =
       const binding = bindings.get(family);
       const coverage = renderStateCoverage({
         family,
-        tranche: manifest.families.find((record) => record.family === family).tranche,
+        tranche: historicalManifest.families.find((record) => record.family === family).tranche,
         binding,
       });
       const transitionHistory = [];
@@ -1001,7 +1038,7 @@ test('Breadcrumbs defaults show the adapter sample while explicit empty items st
 });
 
 test('generated stories are stock CSF modules with default and state coverage', async () => {
-  for (const record of manifest.families) {
+  for (const record of historicalManifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
     const fileName = `${tranche}-${slug}.stories.mjs`;

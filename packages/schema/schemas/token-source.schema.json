@@ -44,6 +44,9 @@
           }
         },
         "runtimeSwitching": { "const": "unavailable" }
+        ,"fonts": { "$ref": "#/$defs/themeFonts" }
+        ,"typography": { "$ref": "#/$defs/themeTypography" }
+        ,"scale": { "$ref": "#/$defs/themeScale" }
       }
     },
     "tokens": {
@@ -161,35 +164,401 @@
     },
     "valueOrAlias": {
       "type": "object",
-      "oneOf": [
-        { "required": ["value"], "properties": { "value": { "anyOf": [{ "type": "string" }, { "type": "number" }] } } },
-        { "required": ["alias"], "properties": { "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" } } }
+      "not": {
+        "required": ["alias"],
+        "anyOf": [
+          { "required": ["value"] },
+          { "required": ["fluid"] },
+          { "required": ["formula"] },
+          { "required": ["relative"] },
+          { "required": ["mix"] },
+          { "required": ["effect"] }
+        ]
+      },
+      "anyOf": [
+        { "required": ["value"], "properties": { "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "$ref": "#/$defs/effectValue" }] } } },
+        { "required": ["alias"], "properties": { "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" } } },
+        { "required": ["mix"], "properties": { "mix": { "$ref": "#/$defs/colorMix" } } }
       ]
+    },
+    "effectModeValueOrAlias": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": { "$ref": "#/$defs/effectValue" },
+        "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" }
+      },
+      "oneOf": [
+        { "required": ["value"] },
+        { "required": ["alias"] }
+      ]
+    },
+    "effectModes": {
+      "type": "object",
+      "propertyNames": { "pattern": "^(colorScheme|contrast|motion|density|direction)\\.[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/effectModeValueOrAlias" }
+    },
+    "nonEffectModeValueOrAlias": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "value": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" },
+        "mix": { "$ref": "#/$defs/colorMix" }
+      },
+      "not": {
+        "required": ["alias"],
+        "anyOf": [
+          { "required": ["value"] },
+          { "required": ["mix"] }
+        ]
+      },
+      "anyOf": [
+        { "required": ["value"] },
+        { "required": ["alias"] },
+        { "required": ["mix"] }
+      ]
+    },
+    "nonEffectModes": {
+      "type": "object",
+      "propertyNames": { "pattern": "^(colorScheme|contrast|motion|density|direction)\\.[a-z0-9]+(?:-[a-z0-9]+)*$" },
+      "additionalProperties": { "$ref": "#/$defs/nonEffectModeValueOrAlias" }
     },
     "token": {
       "type": "object",
       "additionalProperties": false,
       "required": ["layer", "type", "unit", "meaning", "overridePolicy"],
-      "allOf": [{ "$ref": "#/$defs/valueOrAlias" }],
+      "allOf": [
+        { "$ref": "#/$defs/valueOrAlias" },
+        {
+          "oneOf": [
+            {
+              "required": ["type", "unit"],
+              "properties": {
+                "type": { "const": "effect" },
+                "unit": { "const": "structured" },
+                "value": { "$ref": "#/$defs/effectValue" },
+                "modes": { "$ref": "#/$defs/effectModes" }
+              },
+              "not": {
+                "anyOf": [
+                  { "required": ["fluid"] },
+                  { "required": ["formula"] },
+                  { "required": ["relative"] },
+                  { "required": ["mix"] }
+                ]
+              }
+            },
+            {
+              "required": ["type"],
+              "properties": {
+                "type": { "enum": ["color", "dimension", "duration", "number", "string"] },
+                "value": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+                "modes": { "$ref": "#/$defs/nonEffectModes" }
+              }
+            }
+          ]
+        }
+      ],
       "properties": {
         "layer": { "enum": ["reference", "semantic", "component"] },
-        "type": { "enum": ["color", "dimension", "duration", "number", "string"] },
-        "unit": { "enum": ["hex", "px", "ms", "unitless", "string"] },
+        "type": { "enum": ["color", "dimension", "duration", "number", "string", "effect"] },
+        "unit": { "enum": ["hex", "px", "ms", "unitless", "string", "structured"] },
         "meaning": { "type": "string", "minLength": 1 },
         "overridePolicy": { "enum": ["fixed", "theme", "instance"] },
-        "value": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "object" }] },
         "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" },
         "equivalence": { "enum": ["semantic-equivalence", "deprecation-bridge"] },
+        "fluid": { "$ref": "#/$defs/fluidRecipe" },
+        "formula": { "$ref": "#/$defs/dimensionFormula" },
+        "relative": { "$ref": "#/$defs/relativeDimension" },
+        "mix": { "$ref": "#/$defs/colorMix" },
         "modes": {
           "type": "object",
           "propertyNames": { "pattern": "^(colorScheme|contrast|motion|density|direction)\\.[a-z0-9]+(?:-[a-z0-9]+)*$" },
-          "additionalProperties": { "$ref": "#/$defs/valueOrAlias" }
+          "additionalProperties": {
+            "$ref": "#/$defs/valueOrAlias",
+            "propertyNames": { "enum": ["value", "alias", "fluid", "formula", "relative", "mix"] }
+          }
         },
         "platformRestrictions": {
           "type": "array",
           "uniqueItems": true,
           "items": { "enum": ["web.html", "web.react", "native.ios", "native.android", "native.react-native-web"] }
         }
+      }
+    },
+    "tokenReference": {
+      "type": "string",
+      "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$"
+    },
+    "fluidRecipe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["min", "max", "coefficient", "offset", "lengthUnit", "viewportUnit"],
+      "properties": {
+        "min": { "type": "number" },
+        "max": { "type": "number" },
+        "coefficient": { "type": "number" },
+        "offset": { "type": "number" },
+        "lengthUnit": { "enum": ["rem", "px"] },
+        "viewportUnit": { "const": "vw" },
+        "default": { "$ref": "#/$defs/relativeDimension" }
+      }
+    },
+    "dimensionFormula": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "token", "factor"],
+      "properties": {
+        "kind": { "const": "multiply" },
+        "token": { "$ref": "#/$defs/tokenReference" },
+        "factor": { "type": "number" }
+      }
+    },
+    "relativeDimension": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "const": "rem" }
+      }
+    },
+    "colorMix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["space", "token", "color", "weight"],
+      "properties": {
+        "space": { "const": "srgb" },
+        "token": { "$ref": "#/$defs/tokenReference" },
+        "color": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$" },
+        "weight": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "effectLength": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number" },
+        "unit": { "enum": ["px", "rem"] }
+      }
+    },
+    "effectColor": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value"],
+          "properties": {
+            "value": { "type": "string", "pattern": "^#[a-fA-F0-9]{6}$" },
+            "alpha": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value"],
+          "not": { "required": ["alpha"] },
+          "properties": {
+            "value": { "type": "string", "pattern": "^#[a-fA-F0-9]{8}$" },
+            "alpha": { "type": "number", "minimum": 0, "maximum": 1 }
+          }
+        }
+      ]
+    },
+    "effectBlur": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value", "unit"],
+      "properties": {
+        "value": { "type": "number", "minimum": 0 },
+        "unit": { "enum": ["px", "rem"] }
+      }
+    },
+    "effectShadowLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["offsetX", "offsetY", "blur", "spread", "color"],
+      "properties": {
+        "offsetX": { "$ref": "#/$defs/effectLength" },
+        "offsetY": { "$ref": "#/$defs/effectLength" },
+        "blur": { "$ref": "#/$defs/effectBlur" },
+        "spread": { "$ref": "#/$defs/effectLength" },
+        "color": { "$ref": "#/$defs/effectColor" },
+        "inset": { "type": "boolean" }
+      }
+    },
+    "effectValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "layers"],
+      "properties": {
+        "kind": { "const": "shadow" },
+        "layers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/effectShadowLayer" } }
+      }
+    },
+    "themeFontAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/digest" }
+      }
+    },
+    "themeFont": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["token", "assets", "license", "provenance"],
+      "properties": {
+        "token": { "$ref": "#/$defs/tokenReference" },
+        "assets": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["normal", "italic"],
+          "properties": {
+            "normal": { "$ref": "#/$defs/themeFontAsset" },
+            "italic": { "$ref": "#/$defs/themeFontAsset" }
+          }
+        },
+        "license": { "type": "string", "minLength": 1 },
+        "provenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "revision"],
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "revision": { "type": "string", "pattern": "^[a-f0-9]{40}$" }
+          }
+        }
+      }
+    },
+    "themeFonts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["display", "body", "expressive", "mono"],
+      "properties": {
+        "display": { "$ref": "#/$defs/themeFont" },
+        "body": { "$ref": "#/$defs/themeFont" },
+        "expressive": { "$ref": "#/$defs/themeFont" },
+        "mono": { "$ref": "#/$defs/themeFont" }
+      }
+    },
+    "themeTypographyVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fontSize", "fontWeight", "lineHeight", "letterSpacing"],
+      "properties": {
+        "fontSize": { "$ref": "#/$defs/tokenReference" },
+        "fontWeight": { "$ref": "#/$defs/tokenReference" },
+        "lineHeight": { "$ref": "#/$defs/tokenReference" },
+        "letterSpacing": { "$ref": "#/$defs/tokenReference" }
+      }
+    },
+    "themeTypographyRole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fontFamily", "color", "variants"],
+      "properties": {
+        "fontFamily": { "$ref": "#/$defs/tokenReference" },
+        "color": { "$ref": "#/$defs/tokenReference" },
+        "variants": {
+          "type": "object",
+          "minProperties": 1,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9-]*$" },
+          "additionalProperties": { "$ref": "#/$defs/themeTypographyVariant" }
+        }
+      }
+    },
+    "themeTypography": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roles"],
+      "properties": {
+        "roles": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["display", "heading", "title", "label", "body", "mono", "expressive"],
+          "properties": {
+            "display": { "$ref": "#/$defs/themeTypographyRole" },
+            "heading": { "$ref": "#/$defs/themeTypographyRole" },
+            "title": { "$ref": "#/$defs/themeTypographyRole" },
+            "label": { "$ref": "#/$defs/themeTypographyRole" },
+            "body": { "$ref": "#/$defs/themeTypographyRole" },
+            "mono": { "$ref": "#/$defs/themeTypographyRole" },
+            "expressive": { "$ref": "#/$defs/themeTypographyRole" }
+          }
+        }
+      }
+    },
+    "themePreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "namedColor", "neutralColor"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "namedColor": { "$ref": "#/$defs/tokenReference" },
+        "neutralColor": { "$ref": "#/$defs/tokenReference" }
+      }
+    },
+    "themeMonochromePreset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "description", "color"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+        "name": { "type": "string", "minLength": 1 },
+        "description": { "type": "string", "minLength": 1 },
+        "color": { "$ref": "#/$defs/tokenReference" }
+      }
+    },
+    "themeScale": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "namedShades", "neutralShades", "defaults", "standardPresets", "monochromePresets"],
+      "properties": {
+        "algorithm": { "const": "muxui-oklch-v1" },
+        "namedShades": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 100 } },
+        "neutralShades": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "minimum": 1, "maximum": 100 } },
+        "defaults": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["standard", "monochrome"],
+          "properties": {
+            "standard": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" },
+            "monochrome": { "type": "string", "pattern": "^[a-z][a-z0-9-]*$" }
+          }
+        },
+        "standardPresets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/themePreset" } },
+        "monochromePresets": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/themeMonochromePreset" } },
+        "radius": { "$ref": "#/$defs/themeRadius" },
+        "contrast": { "$ref": "#/$defs/themeContrast" }
+      }
+    },
+    "themeRadius": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["unit", "base", "curvature", "multipliers"],
+      "properties": {
+        "unit": { "const": "rem" },
+        "base": { "const": 0.125 },
+        "curvature": { "type": "object", "additionalProperties": false, "required": ["default", "minimum", "maximum", "step"], "properties": { "default": { "const": 1 }, "minimum": { "const": 0 }, "maximum": { "const": 2 }, "step": { "const": 0.01 } } },
+        "multipliers": { "type": "object", "additionalProperties": false, "required": ["xs", "s", "m", "l", "xl", "2xl"], "properties": { "xs": { "const": 4 }, "s": { "const": 6 }, "m": { "const": 8 }, "l": { "const": 12 }, "xl": { "const": 16 }, "2xl": { "const": 24 } } }
+      }
+    },
+    "themeContrast": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "defaultPivot", "pivots", "foregrounds"],
+      "properties": {
+        "algorithm": { "const": "wcag2-endpoint-v1" },
+        "defaultPivot": { "const": "auto" },
+        "pivots": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "integer", "enum": [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100] } },
+        "foregrounds": { "const": "per-shade" }
       }
     }
   }

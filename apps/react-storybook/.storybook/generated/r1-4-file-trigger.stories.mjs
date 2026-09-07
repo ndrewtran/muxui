@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:fe9589520c327b6d305b5a58746b3020e508c8d0df07bb8fe1f29dee1c70dc8a
+// @generated-content-sha256: sha256:ed5b63a9e0db1483259d8bd07e9194658196d269cc35d1d92627f896f2a42e05
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -48,7 +48,8 @@ const binding = {
     "focused",
     "disabled"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'FileTrigger', tranche: 'R1.4', binding };
 

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
 import { compileWebTheme } from '@muxui/tokens';
@@ -18,11 +18,12 @@ import { EXPECTED_R14_COMPONENT_SLUGS, EXPECTED_R14_DONOR_CONTRACT } from './r1-
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const generatedRoot = resolve(packageRoot, 'generated');
+const migrationMode = process.argv.includes('--r1-6-migration');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
 const tokenRaw = await readFile(tokenPath);
 const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
-const expectedTokenSha256 = 'ce714ebe6ffd9dbd29777a7bdf6ac3894a9448c23a9a21360da95721c0fb29a7';
+const expectedTokenSha256 = 'c42821d052398b61d393a8cc464924224063e63a5723f3872f838d431199cd75';
 if (tokenSha256 !== expectedTokenSha256) throw new Error('MUXUI_REACT_TOKEN_SOURCE_DRIFT');
 const tokenSource = JSON.parse(tokenRaw);
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-snapshot.json'), 'utf8'));
@@ -34,6 +35,10 @@ const r12Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/
 const r13Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-3/donor-crosswalk.json'), 'utf8'));
 const r14Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-4/donor-crosswalk.json'), 'utf8'));
 const r15ClosureSource = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
+const r16Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-6/donor-crosswalk.json'), 'utf8'));
+const r16FiniteFixtures = migrationMode
+  ? JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-6/finite-fixtures.json'), 'utf8'))
+  : undefined;
 const license = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/license.json'), 'utf8'));
 const r11Slugs = ['button', 'breadcrumbs', 'checkbox', 'disclosure', 'disclosure-group', 'group', 'link', 'meter', 'progress-bar', 'separator', 'toggle-button'];
 const r12Slugs = [...EXPECTED_R12_COMPONENT_SLUGS];
@@ -41,6 +46,8 @@ const r13Slugs = [...EXPECTED_R13_COMPONENT_SLUGS];
 const r14Slugs = [...EXPECTED_R14_COMPONENT_SLUGS];
 const buttonSource = await readFile(resolve(packageRoot, 'src/button.mjs'), 'utf8');
 const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
+const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
+const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const collectionsSource = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
 const overlaysSource = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
@@ -60,17 +67,30 @@ const runtimeSources = {
   'packages/react/src/overlays.mjs': overlaysSource,
 };
 const buttonArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/button/artifact.json'), 'utf8'));
+const toggleButtonArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/toggle-button/artifact.json'), 'utf8'));
+const toggleButtonGroupArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/toggle-button-group/artifact.json'), 'utf8'));
+const checkboxArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/checkbox/artifact.json'), 'utf8'));
+const checkboxGroupArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/checkbox-group/artifact.json'), 'utf8'));
+const radioGroupArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/radio-group/artifact.json'), 'utf8'));
+const autocompleteArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/autocomplete/artifact.json'), 'utf8'));
 const buttonBinding = buttonArtifact.bindings['web.react'];
-const expectedButtonProps = ['disabled', 'pending', 'variant', 'tone', 'size'];
+const toggleButtonBinding = toggleButtonArtifact.bindings['web.react'];
+const toggleButtonGroupBinding = toggleButtonGroupArtifact.bindings['web.react'];
+const checkboxBinding = checkboxArtifact.bindings['web.react'];
+const checkboxGroupBinding = checkboxGroupArtifact.bindings['web.react'];
+const radioGroupBinding = radioGroupArtifact.bindings['web.react'];
+const autocompleteBinding = autocompleteArtifact.bindings['web.react'];
+const expectedButtonProps = ['disabled', 'pending', 'showTextWhileLoading', 'variant', 'tone', 'size'];
 const expectedButtonDefaults = {
   disabled: false,
   pending: false,
+  showTextWhileLoading: false,
   variant: 'primary',
   tone: 'default',
   size: 'md',
 };
 const expectedButtonFiniteApi = {
-  variant: ['primary', 'secondary', 'ghost'],
+  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary'],
   tone: ['default', 'destructive'],
   size: ['sm', 'md', 'lg'],
 };
@@ -85,6 +105,97 @@ if (!buttonBinding
   || expectedButtonFiniteDeclarations.some((declaration) => !buttonSource.includes(declaration))) {
   throw new Error('MUXUI_REACT_BUTTON_CANONICAL_API_DRIFT');
 }
+const expectedToggleButtonProps = ['selected', 'defaultSelected', 'disabled', 'size'];
+const expectedToggleButtonDefaults = {
+  selected: false,
+  defaultSelected: false,
+  disabled: false,
+  size: 'md',
+};
+const expectedToggleButtonGroupProps = ['aria-label', 'aria-labelledby', 'selectedIds', 'defaultSelectedIds', 'selectionMode', 'disabled', 'orientation', 'disallowEmptySelection', 'size'];
+const expectedToggleButtonGroupDefaults = {
+  disabled: false,
+  orientation: 'horizontal',
+  selectionMode: 'single',
+  disallowEmptySelection: false,
+};
+const toggleButtonSizeDeclaration = `export const TOGGLE_BUTTON_SIZES = Object.freeze([${['sm', 'md', 'lg'].map((value) => `'${value}'`).join(', ')}]);`;
+if (!toggleButtonBinding
+  || JSON.stringify(toggleButtonBinding.api.props) !== JSON.stringify(expectedToggleButtonProps)
+  || JSON.stringify(toggleButtonBinding.api.defaults) !== JSON.stringify(expectedToggleButtonDefaults)
+  || !toggleButtonContextSource.includes(toggleButtonSizeDeclaration)) {
+  throw new Error('MUXUI_REACT_TOGGLE_BUTTON_CANONICAL_API_DRIFT');
+}
+if (!toggleButtonGroupBinding
+  || JSON.stringify(toggleButtonGroupBinding.api.props) !== JSON.stringify(expectedToggleButtonGroupProps)
+  || JSON.stringify(toggleButtonGroupBinding.api.defaults) !== JSON.stringify(expectedToggleButtonGroupDefaults)
+  || !collectionsSource.includes('disallowEmptySelection')) {
+  throw new Error('MUXUI_REACT_TOGGLE_BUTTON_GROUP_CANONICAL_API_DRIFT');
+}
+const expectedCheckboxProps = ['checked', 'defaultChecked', 'disabled', 'size', 'indeterminate', 'name', 'required', 'value', 'invalid'];
+const expectedCheckboxDefaults = {
+  checked: false,
+  defaultChecked: false,
+  disabled: false,
+  size: 'md',
+  indeterminate: false,
+  invalid: false,
+};
+const expectedCheckboxGroupProps = ['label', 'description', 'errorMessage', 'aria-label', 'aria-labelledby', 'value', 'defaultValue', 'disabled', 'readOnly', 'required', 'invalid', 'name', 'orientation', 'size'];
+const expectedCheckboxGroupDefaults = {
+  disabled: false,
+  readOnly: false,
+  required: false,
+  invalid: false,
+  orientation: 'vertical',
+  size: 'md',
+};
+const expectedRadioGroupProps = ['label', 'aria-label', 'aria-labelledby', 'options', 'children', 'value', 'defaultValue', 'disabled', 'readOnly', 'required', 'invalid', 'orientation', 'size'];
+const expectedRadioGroupDefaults = {
+  disabled: false,
+  readOnly: false,
+  required: false,
+  invalid: false,
+  orientation: 'vertical',
+  size: 'md',
+};
+const choiceSizeDeclaration = `export const CHOICE_CONTROL_SIZES = Object.freeze([${['sm', 'md'].map((value) => `'${value}'`).join(', ')}]);`;
+if (!checkboxBinding
+  || JSON.stringify(checkboxBinding.api.props) !== JSON.stringify(expectedCheckboxProps)
+  || JSON.stringify(checkboxBinding.api.defaults) !== JSON.stringify(expectedCheckboxDefaults)
+  || !componentSource.includes('normalizeChoiceControlSize')) {
+  throw new Error('MUXUI_REACT_CHECKBOX_CANONICAL_API_DRIFT');
+}
+if (!checkboxGroupBinding
+  || JSON.stringify(checkboxGroupBinding.api.props) !== JSON.stringify(expectedCheckboxGroupProps)
+  || JSON.stringify(checkboxGroupBinding.api.defaults) !== JSON.stringify(expectedCheckboxGroupDefaults)
+  || !fieldsSource.includes('ChoiceControlSizeContext')) {
+  throw new Error('MUXUI_REACT_CHECKBOX_GROUP_CANONICAL_API_DRIFT');
+}
+if (!radioGroupBinding
+  || JSON.stringify(radioGroupBinding.api.props) !== JSON.stringify(expectedRadioGroupProps)
+  || JSON.stringify(radioGroupBinding.api.defaults) !== JSON.stringify(expectedRadioGroupDefaults)
+  || !collectionsSource.includes('normalizeChoiceControlSize')
+  || !choiceContextSource.includes(choiceSizeDeclaration)) {
+  throw new Error('MUXUI_REACT_RADIO_GROUP_CANONICAL_API_DRIFT');
+}
+const expectedAutocompleteProps = ['label', 'description', 'errorMessage', 'aria-label', 'aria-labelledby', 'value', 'defaultValue', 'disabled', 'size', 'readOnly', 'required', 'invalid', 'name', 'items', 'placeholder'];
+const expectedAutocompleteDefaults = {
+  value: '',
+  defaultValue: '',
+  disabled: false,
+  readOnly: false,
+  required: false,
+  invalid: false,
+  size: 'md',
+};
+if (!autocompleteBinding
+  || JSON.stringify(autocompleteBinding.api.props) !== JSON.stringify(expectedAutocompleteProps)
+  || JSON.stringify(autocompleteBinding.api.defaults) !== JSON.stringify(expectedAutocompleteDefaults)
+  || !fieldsSource.includes("const AUTOCOMPLETE_SIZES = new Set(['sm', 'md']);")
+  || !fieldsSource.includes('normalizeAutocompleteSize')) {
+  throw new Error('MUXUI_REACT_AUTOCOMPLETE_CANONICAL_API_DRIFT');
+}
 assertReactR10SourceContracts({ snapshot, upstreamExports, upstreamExportsBytes: upstreamExportsRaw, crosswalk, license });
 const componentArtifacts = [
   buttonArtifact,
@@ -96,6 +207,58 @@ const componentArtifacts = [
 ];
 if (componentArtifacts.length !== 53 || new Set(componentArtifacts.map(({ id }) => id)).size !== 53) {
   throw new Error('MUXUI_REACT_R1_COMPONENT_ALLOCATION_DRIFT');
+}
+const allCatalogArtifacts = (await Promise.all(
+  (await readdir(resolve(repositoryRoot, 'catalog/components'), { withFileTypes: true }))
+    .filter((entry) => entry.isDirectory())
+    .map(async ({ name }) => {
+      try {
+        return JSON.parse(await readFile(resolve(repositoryRoot, `catalog/components/${name}/artifact.json`), 'utf8'));
+      } catch {
+        return undefined;
+      }
+    }),
+)).filter(Boolean);
+const allCatalogArtifactsBySlug = new Map(allCatalogArtifacts.map((artifact) => [artifact.id.slice('muxui:component:'.length), artifact]));
+const mappedR16Slugs = new Set(r16Crosswalk.supplemental.map(({ slug }) => slug));
+const historicalCatalogSlugs = new Set(familySnapshot.families.map(({ family }) => (family === 'Modal' ? 'dialog' : family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase())));
+const unexpectedCurrentSlugs = [...allCatalogArtifactsBySlug.keys()].filter((slug) => !historicalCatalogSlugs.has(slug) && !mappedR16Slugs.has(slug));
+if (!Array.isArray(r16Crosswalk.supplemental) || unexpectedCurrentSlugs.length > 0) {
+  throw new Error('MUXUI_REACT_R16_CANONICAL_MAPPING_DRIFT');
+}
+if (migrationMode && (r16FiniteFixtures.schema !== 'muxui-react-r1-6-finite-fixtures-v2'
+  || r16FiniteFixtures.current.familyCount !== 74
+  || r16FiniteFixtures.current.historicalCount !== 53
+  || r16FiniteFixtures.current.supplementalCount !== 21
+  || r16FiniteFixtures.components.length !== 74)) {
+  throw new Error('MUXUI_REACT_R16_MIGRATION_FIXTURE_DRIFT');
+}
+const finiteFixtureBySlug = migrationMode
+  ? new Map(r16FiniteFixtures.components.map((fixture) => [fixture.slug, fixture]))
+  : undefined;
+for (const entry of r16Crosswalk.supplemental) {
+  const artifact = allCatalogArtifactsBySlug.get(entry.slug);
+  const module = entry.export?.module;
+  if (!artifact || artifact.id !== `muxui:component:${entry.slug}`
+    || artifact.name !== entry.export?.name
+    || !entry.binding || entry.binding !== `${artifact.id}#web.react`
+    || !entry.apiOwner || !entry.stateOwner || !entry.anatomyOwner
+    || !entry.runtimeSource || !entry.styleSource
+    || (module === './text-editor' && entry.slug !== 'text-editor')
+    || (module === './markdown' && entry.slug !== 'markdown')
+    || (module === '.' && entry.export.isolation !== 'root')
+    || (module !== '.' && entry.export.isolation !== 'subpath-only')) {
+    throw new Error(`MUXUI_REACT_R16_MAPPING_ENTRY_DRIFT: ${entry.slug}`);
+  }
+  for (const relativePath of [entry.artifact, entry.runtimeSource, entry.styleSource]) {
+    if (!await readFile(resolve(repositoryRoot, relativePath), 'utf8').catch(() => null)) {
+      throw new Error(`MUXUI_REACT_R16_MAPPING_INPUT_MISSING: ${entry.slug}:${relativePath}`);
+    }
+  }
+}
+if (new Set(r16Crosswalk.supplemental.map(({ export: componentExport }) => componentExport.name)).size !== r16Crosswalk.supplemental.length
+  || new Set(r16Crosswalk.supplemental.map(({ binding }) => binding)).size !== r16Crosswalk.supplemental.length) {
+  throw new Error('MUXUI_REACT_R16_MAPPING_IDENTITY_DRIFT');
 }
 for (const artifact of componentArtifacts) {
   const binding = artifact.bindings['web.react'];
@@ -167,17 +330,16 @@ function declarations(css) {
   return new Map([...css.matchAll(/^  (--[^:]+): (.+);$/gm)].map((match) => [match[1], match[2]]));
 }
 
-function resolveReferenceTokens(css, tokenDeclarations) {
-  return css.replace(/var\((--muxui-reference-[^)]+)\)/gu, (_match, name) => {
-    const value = tokenDeclarations.get(name);
-    if (!value) throw new Error(`MUXUI_REACT_REFERENCE_TOKEN_MISSING: ${name}`);
-    return value;
-  });
-}
-
 const axes = [['colorScheme', 'dark'], ['contrast', 'more'], ['motion', 'reduced'], ['density', 'compact']];
 const baseTheme = compileWebTheme(tokenSource);
 const baseDeclarations = declarations(baseTheme.css);
+const responsiveTheme = compileWebTheme(tokenSource, { responsive: true });
+const responsiveDeclarations = declarations(responsiveTheme.css);
+const responsiveChanges = [...responsiveDeclarations]
+  .filter(([name, tokenValue]) => baseDeclarations.get(name) !== tokenValue);
+const responsiveBlock = `[data-muxui-responsive] {\n${responsiveChanges.length === 0
+  ? '  /* canonical theme has no responsive token delta */'
+  : responsiveChanges.map(([name, tokenValue]) => `  ${name}: ${tokenValue};`).join('\n')}\n}`;
 const modeBlocks = axes.map(([axis, value]) => {
   const variant = declarations(compileWebTheme(tokenSource, { modes: { [axis]: value } }).css);
   const changed = [...variant].filter(([name, tokenValue]) => baseDeclarations.get(name) !== tokenValue);
@@ -186,8 +348,8 @@ const modeBlocks = axes.map(([axis, value]) => {
   return `[data-muxui-${dataAxis}='${value}'] {\n${values}\n}`;
 });
 
-const cssBody = `${baseTheme.css.trim()}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='rtl'] { direction: rtl; }`;
-const fullCssBody = `${cssBody}\n\n${resolveReferenceTokens(authoredCss, baseDeclarations)}`;
+const cssBody = `${baseTheme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='rtl'] { direction: rtl; }`;
+const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 
 const compatibility = {
   schema: 'muxui-react-compatibility-v1',
@@ -226,7 +388,8 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
   className?: string;
   disabled?: boolean;
   pending?: boolean;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  showTextWhileLoading?: boolean;
+  variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse' | 'secondary';
   tone?: 'default' | 'destructive';
   size?: 'sm' | 'md' | 'lg';
   style?: React.CSSProperties;
@@ -236,7 +399,7 @@ export declare const Button: React.ForwardRefExoticComponent<ButtonProps & React
 export interface BreadcrumbItem { id?: string; label: React.ReactNode; href?: string; disabled?: boolean; }
 export interface BreadcrumbsProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className' | 'aria-label'> { items?: BreadcrumbItem[]; className?: string; 'aria-label': string; onNavigate?: (item: BreadcrumbItem) => void; }
 export declare const Breadcrumbs: React.ForwardRefExoticComponent<BreadcrumbsProps & React.RefAttributes<HTMLElement>>;
-export interface CheckboxProps extends Omit<React.LabelHTMLAttributes<HTMLLabelElement>, 'children' | 'className' | 'onChange'> { children?: React.ReactNode; className?: string; checked?: boolean; defaultChecked?: boolean; disabled?: boolean; indeterminate?: boolean; invalid?: boolean; name?: string; required?: boolean; value?: string; onChange?: (checked: boolean) => void; }
+export interface CheckboxProps extends Omit<React.LabelHTMLAttributes<HTMLLabelElement>, 'children' | 'className' | 'onChange'> { children?: React.ReactNode; className?: string; checked?: boolean; defaultChecked?: boolean; disabled?: boolean; size?: 'sm' | 'md'; indeterminate?: boolean; invalid?: boolean; name?: string; required?: boolean; value?: string; onChange?: (checked: boolean) => void; }
 export declare const Checkbox: React.ForwardRefExoticComponent<CheckboxProps & React.RefAttributes<HTMLLabelElement>>;
 export interface DisclosureProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className' | 'id' | 'title'> { title: React.ReactNode; children?: React.ReactNode; id?: string; expanded?: boolean; defaultExpanded?: boolean; disabled?: boolean; className?: string; onExpandedChange?: (expanded: boolean) => void; }
 export declare const Disclosure: React.ForwardRefExoticComponent<DisclosureProps & React.RefAttributes<HTMLDivElement>>;
@@ -254,7 +417,7 @@ export declare const ProgressBar: React.ForwardRefExoticComponent<ProgressBarPro
 export interface SeparatorProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className'> { orientation?: 'horizontal' | 'vertical'; className?: string; }
 export declare const Separator: React.ForwardRefExoticComponent<SeparatorProps & React.RefAttributes<HTMLElement>>;
 export interface ToggleButtonActivationEvent { readonly type: 'activate'; readonly pointerType: ComponentPointerType; readonly target: HTMLButtonElement; }
-export interface ToggleButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'onChange' | 'onClick'> { children?: React.ReactNode; className?: string; selected?: boolean; defaultSelected?: boolean; disabled?: boolean; onChange?: (selected: boolean) => void; onActivate?: (event: ToggleButtonActivationEvent) => void; }
+export interface ToggleButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'children' | 'className' | 'onChange' | 'onClick'> { children?: React.ReactNode; className?: string; selected?: boolean; defaultSelected?: boolean; disabled?: boolean; size?: 'sm' | 'md' | 'lg'; onChange?: (selected: boolean) => void; onActivate?: (event: ToggleButtonActivationEvent) => void; }
 export declare const ToggleButton: React.ForwardRefExoticComponent<ToggleButtonProps & React.RefAttributes<HTMLButtonElement>>;
 export const reactCompatibility: Readonly<Record<string, unknown>>;
 `;
@@ -278,7 +441,7 @@ export type SearchFieldProps = NamedFieldProps & { value?: string; defaultValue?
 export declare const SearchField: React.ForwardRefExoticComponent<SearchFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type NumberFieldProps = NamedFieldProps & { value?: number; defaultValue?: number; onChange?: (value: number) => void; name?: string; minValue?: number; maxValue?: number; step?: number; formatOptions?: Intl.NumberFormatOptions; };
 export declare const NumberField: React.ForwardRefExoticComponent<NumberFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type CheckboxGroupProps = NamedFieldProps & { value?: string[]; defaultValue?: string[]; onChange?: (value: string[]) => void; name?: string; children?: React.ReactNode; };
+export type CheckboxGroupProps = NamedFieldProps & { value?: string[]; defaultValue?: string[]; onChange?: (value: string[]) => void; name?: string; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md'; children?: React.ReactNode; };
 export declare const CheckboxGroup: React.ForwardRefExoticComponent<CheckboxGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type SwitchProps = MuxUIAccessibleName & { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; children?: React.ReactNode; selected?: boolean; defaultSelected?: boolean; onChange?: (selected: boolean) => void; name?: string; value?: string; };
 export declare const Switch: React.ForwardRefExoticComponent<SwitchProps & React.RefAttributes<HTMLDivElement>>;
@@ -295,7 +458,7 @@ export type DateRangePickerProps = NamedFieldProps & { value?: MuxUIDateRange; d
 export declare const DateRangePicker: React.ForwardRefExoticComponent<DateRangePickerProps & React.RefAttributes<HTMLDivElement>>;
 export interface AutocompleteItem { id?: string; label?: React.ReactNode; value?: string; disabled?: boolean; }
 export interface AutocompleteSelectionItem { id: string; label: React.ReactNode; value: string; }
-export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteItem | string>; value?: string; defaultValue?: string; onChange?: (value: string) => void; onSelect?: (item?: AutocompleteSelectionItem) => void; name?: string; placeholder?: string; };
+export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteItem | string>; value?: string; defaultValue?: string; onChange?: (value: string) => void; onSelect?: (item?: AutocompleteSelectionItem) => void; name?: string; placeholder?: string; size?: 'sm' | 'md'; };
 export declare const Autocomplete: React.ForwardRefExoticComponent<AutocompleteProps & React.RefAttributes<HTMLDivElement>>;
 `;
 const collectionsTypes = `
@@ -329,7 +492,7 @@ export declare const ListBox: React.ForwardRefExoticComponent<ListBoxProps & Rea
 export type MenuProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; disabled?: boolean; shouldCloseOnSelect?: boolean; onAction?: (item?: MuxUICollectionItem) => void; onSelect?: (item?: MuxUICollectionItem) => void; className?: string; };
 export declare const Menu: React.ForwardRefExoticComponent<MenuProps & React.RefAttributes<HTMLDivElement>>;
 export type RadioOption = { id?: string; value: string; label?: React.ReactNode; disabled?: boolean; };
-export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; onChange?: (value: string) => void; className?: string; };
+export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md'; onChange?: (value: string) => void; className?: string; };
 export declare const RadioGroup: React.ForwardRefExoticComponent<RadioGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type SelectProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; name?: string; placeholder?: string; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
 export declare const Select: React.ForwardRefExoticComponent<SelectProps & React.RefAttributes<HTMLDivElement>>;
@@ -346,7 +509,7 @@ export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: 
 export declare const Tabs: React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<HTMLDivElement>>;
 export type TagGroupProps = MuxUIAccessibleName & { items?: MuxUIItems; disabled?: boolean; onRemove?: (items: MuxUICollectionItem[]) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
 export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type ToggleButtonGroupProps = MuxUIAriaAccessibleName & { selectedIds?: readonly string[]; defaultSelectedIds?: readonly string[]; selectionMode?: 'single' | 'multiple'; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; onSelectionChange?: (ids: readonly string[]) => void; children?: React.ReactNode; className?: string; };
+export type ToggleButtonGroupProps = MuxUIAriaAccessibleName & { selectedIds?: readonly string[]; defaultSelectedIds?: readonly string[]; selectionMode?: 'single' | 'multiple'; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; disallowEmptySelection?: boolean; size?: 'sm' | 'md' | 'lg'; onSelectionChange?: (ids: readonly string[]) => void; children?: React.ReactNode; className?: string; };
 export declare const ToggleButtonGroup: React.ForwardRefExoticComponent<ToggleButtonGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type TokenFieldProps = MuxUIAccessibleName & { value?: string[]; defaultValue?: string[]; disabled?: boolean; readOnly?: boolean; name?: string; placeholder?: string; onChange?: (value: string[]) => void; className?: string; };
 export declare const TokenField: React.ForwardRefExoticComponent<TokenFieldProps & React.RefAttributes<HTMLDivElement>>;
@@ -389,19 +552,21 @@ export declare const Tooltip: React.ForwardRefExoticComponent<TooltipProps & Rea
 `;
 const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${fieldsTypes}${collectionsTypes}${overlaysTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
-const readmeBody = `# @muxui/react\n\nR1.5 React breadth closure for the standalone Mux UI renderer.\n\n- The 53 Mux UI-owned family exports are listed below for the \`web.react\` binding.\n- React Aria Components 1.20.0 is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- Tale UI is a pinned styling donor; generated styling results are Mux UI-owned and Tale UI is not a dependency.\n`;
+const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components 1.20.0 is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- Tale UI is a pinned one-time styling donor; generated styling results are Mux UI-owned and Tale UI is not a dependency.\n- The historical R1.5 closure retains its fixed family membership and evidence separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
-const readmeComponentRows = componentArtifacts.map((artifact) => {
+const readmeMappingBySlug = new Map(r16Crosswalk.supplemental.map((entry) => [entry.slug, entry]));
+const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.localeCompare(right.name)).map((artifact) => {
   const slug = artifact.id.slice('muxui:component:'.length);
   const binding = artifact.bindings['web.react'];
-  return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | .muxui-${slug} | ${markdownCell(binding.api.props.join(', ') || 'none')} |`;
+  const module = readmeMappingBySlug.get(slug)?.export.module ?? '.';
+  return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | ${module} | .muxui-${slug} | ${markdownCell(binding.api.props.join(', ') || 'none')} |`;
 }).join('\n');
 const readmeGuidance = `
 ## R1 exit publication candidate
 
 The exact R1 exit candidate is \`@muxui/react@0.1.0-rc.1\`, for the \`next\`
 dist-tag on the npm registry. The candidate contains only the standalone
-\`web.react\` renderer and its three internal runtime dependencies. All 53
+\`web.react\` renderer and its internal runtime dependencies. All current
 Mux UI-owned component exports remain experimental; no stable, secondary-renderer,
 or cross-platform support claim is made. Publication, dist-tag mutation, and
 post-publication verification are separate authorized operations.
@@ -427,10 +592,12 @@ export function Example() {
 
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
+Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
+
 Supporting runtime exports: \`ToastProvider\` and \`useToast\` are available alongside \`Toast\` for managed notifications.
 
-| Export | Lifecycle | Selector | Public props |
-| --- | --- | --- | --- |
+| Export | Lifecycle | Module | Selector | Public props |
+| --- | --- | --- | --- | --- |
 ${readmeComponentRows}
 `;
 const descriptorRecord = {
@@ -750,8 +917,180 @@ assertReactR15GeneratedContracts({
   runtimeSources,
   styles: fullCssBody,
 });
-const descriptor = `${canonicalJson(descriptorRecord)}\n`;
-const release = `${canonicalJson(releaseRecord)}\n`;
+const fixed53Slugs = new Set(r15Families.map(({ slug }) => slug));
+const supplementalSource = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8').catch(() => '');
+const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8').catch(() => '');
+const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
+const generatedSupplementalSource = supplementalSource
+  .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'")
+  .replaceAll("from '../button.mjs'", "from './button.mjs'");
+const currentMappedRecords = (await Promise.all(r16Crosswalk.supplemental.map(async (entry) => {
+  const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
+  const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
+  const artifact = allCatalogArtifactsBySlug.get(entry.slug);
+  return {
+    family: entry.family,
+    slug: entry.slug,
+    exportName: entry.export.name,
+    source: entry.runtimeSource,
+    module: entry.export.module,
+    styleSource: entry.styleSource,
+    artifact,
+    sourceText: sourceText
+      .replaceAll("from '../button.mjs'", "from './button.mjs'")
+      .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'"),
+    style,
+    subpath: entry.export.module !== '.',
+    ...(migrationMode ? {
+      mapping: entry,
+      donor: {
+        disposition: 'pending-proof',
+        donorInputs: entry.donor.inputs,
+        rules: entry.differenceRecords.map((input) => ({ input, disposition: 'documented-adaptation' })),
+        tokenHooks: [],
+        ownership: 'Mux UI-owned token/style results',
+      },
+    } : {}),
+  };
+}))).sort((left, right) => left.slug.localeCompare(right.slug));
+const currentSubpathRecords = currentMappedRecords.filter(({ subpath }) => subpath);
+const currentEagerRecords = currentMappedRecords.filter(({ subpath, source }) => !subpath && source !== 'packages/react/src/supplemental/index.mjs');
+const currentFamilyRecords = [
+  ...r15Families.map((source) => {
+    const artifact = artifactBySlug.get(source.slug);
+    return {
+      family: source.family,
+      slug: source.slug,
+      exportName: source.exportName,
+      tranche: source.tranche,
+      module: '.',
+      source: source.runtimeSource,
+      artifact,
+      subpath: false,
+      donor: source.slug === 'button' ? crosswalk.button : crosswalkBySlug.get(source.slug),
+    };
+  }),
+  ...currentMappedRecords.map((source) => ({
+    family: source.family,
+    slug: source.slug,
+    exportName: source.exportName,
+    tranche: 'R1.6',
+    module: source.module === '.' ? '.' : source.module,
+    source: source.source,
+    artifact: source.artifact,
+    subpath: source.subpath,
+    ...(source.donor ? { donor: source.donor } : {}),
+    ...(source.mapping ? { mapping: source.mapping } : {}),
+  })),
+];
+const currentBindings = currentFamilyRecords.map((source) => ({
+  binding: `muxui:component:${source.slug}#web.react`,
+  export: source.exportName,
+  module: source.module,
+  tranche: source.tranche,
+  lifecycle: source.artifact.lifecycle,
+  strategy: source.artifact.bindings['web.react'].strategy,
+  runtimeProfile: 'web.react',
+  selector: `.muxui-${source.slug}`,
+  states: source.artifact.states,
+  api: source.artifact.bindings['web.react'].api,
+  ...(source.subpath ? { subpath: source.module } : {}),
+}));
+const currentExports = currentFamilyRecords.map((source) => ({
+  name: source.exportName,
+  kind: 'component',
+  binding: `muxui:component:${source.slug}#web.react`,
+  module: source.module,
+  ...(source.subpath ? { subpath: source.module } : {}),
+}));
+const currentDescriptorRecord = {
+  ...descriptorRecord,
+  support: 'unproved; R1.6 React current union projection',
+  tranche: 'R1.6',
+  bindings: currentBindings,
+  exports: currentExports,
+  historical: {
+    tranche: 'R1.5',
+    source: 'catalog/react-r1-5/closure.json',
+    familyCount: r15Families.length,
+    bindings: descriptorRecord.bindings,
+    exports: descriptorRecord.exports,
+  },
+};
+const currentReleaseRecord = {
+  ...releaseRecord,
+  tranche: 'R1.6',
+  componentExports: currentFamilyRecords.map((source) => ({ name: source.exportName, export: source.exportName, binding: `muxui:component:${source.slug}#web.react`, module: source.module, ...(source.subpath ? { subpath: source.module } : {}) })),
+  bindings: currentBindings.map(({ binding, export: exportName, module, lifecycle, strategy, runtimeProfile, subpath }) => ({ binding, package: manifest.name, export: exportName, module, lifecycle, strategy, runtimeProfile, ...(subpath ? { subpath } : {}) })),
+  catalog: { status: 'bound', components: currentFamilyRecords.map((source) => ({ component: source.artifact.id, binding: `muxui:component:${source.slug}#web.react`, states: source.artifact.states, ...(source.subpath ? { subpath: source.module } : {}) })) },
+  evidence: { status: 'pending', ids: [] },
+  publication: { status: 'disabled', requires: ['explicit external publish authorization'] },
+  historical: {
+    tranche: 'R1.5',
+    source: 'catalog/react-r1-5/closure.json',
+    familyCount: r15Families.length,
+    componentExports: releaseRecord.componentExports,
+    bindings: releaseRecord.bindings,
+    catalog: releaseRecord.catalog,
+    evidence: releaseRecord.evidence,
+  },
+};
+const currentContractRecord = migrationMode ? {
+  schema: 'muxui-react-r1-6-contract-v1',
+  generatedFrom: 'packages/react/src/generate.mjs',
+  package: manifest.name,
+  version: manifest.version,
+  tranche: 'R1.6',
+  donor: { name: 'Tale UI', repository: r16Crosswalk.donor.repository, commit: r16Crosswalk.donor.commit, tree: r16Crosswalk.donor.tree, styleTree: r16Crosswalk.donor.styleTree, dependency: false },
+  historical: { tranche: 'R1.5', source: 'catalog/react-r1-5/closure.json', familyCount: r15Families.length },
+  current: {
+    familyCount: currentFamilyRecords.length,
+    fixed53Count: r15Families.length,
+    supplementalCount: currentMappedRecords.length,
+    subpathCount: currentSubpathRecords.length,
+    rootExports: currentFamilyRecords.filter(({ subpath }) => !subpath).map(({ exportName }) => exportName),
+    subpaths: currentSubpathRecords.map(({ exportName, module }) => ({ export: exportName, module })),
+  },
+  components: currentFamilyRecords.map((source) => ({
+    family: source.family,
+    slug: source.slug,
+    tranche: source.tranche,
+    binding: `muxui:component:${source.slug}#web.react`,
+    module: source.module,
+    ...(source.source ? { source: source.source } : {}),
+    lifecycle: source.artifact.lifecycle,
+    states: source.artifact.states,
+    api: source.artifact.bindings['web.react'].api,
+    parts: source.artifact.anatomy,
+    donor: source.donor,
+    fixture: finiteFixtureBySlug.get(source.slug),
+  })),
+  evidence: { status: 'pending', ids: r16Crosswalk.proof.assertions },
+} : undefined;
+const currentDonorComparisonRecord = migrationMode ? {
+  schema: 'muxui-react-r1-6-donor-comparison-v1',
+  generatedFrom: 'packages/react/src/generate.mjs',
+  tranche: 'R1.6',
+  donor: currentContractRecord.donor,
+  historical: { source: 'packages/react/generated/r1-5-donor-comparison.json', componentCount: r15Families.length },
+  components: currentFamilyRecords.map((source) => ({
+    component: source.exportName,
+    family: source.family,
+    binding: `muxui:component:${source.slug}#web.react`,
+    disposition: source.donor.disposition,
+    selector: `.muxui-${source.slug}`,
+    donorInputs: source.donor.donorInputs ?? [],
+    tokenHooks: source.donor.tokenHooks ?? [],
+    rules: source.donor.rules ?? [],
+    ownership: source.donor.ownership ?? 'Mux UI-owned token/style results',
+    result: { cssSelector: `.muxui-${source.slug}`, status: source.donor.disposition === 'pending-proof' ? 'pending-proof' : 'adapted-for-r1.6' },
+  })),
+} : undefined;
+const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.mjs';\n`).join('')}`;
+const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
+const currentStylesBody = `${fullCssBody}${supplementalStylesSource ? `\n\n${supplementalStylesSource.trim()}` : ''}${[...currentSubpathRecords, ...currentEagerRecords].map(({ style }) => style ? `\n\n${style.trim()}` : '').join('')}`;
+const descriptor = `${canonicalJson(currentDescriptorRecord)}\n`;
+const release = `${canonicalJson(currentReleaseRecord)}\n`;
 const donorComparison = `${canonicalJson(donorComparisonRecord)}\n`;
 const componentDonorComparison = generatedText(
   'packages/react/src/generate.mjs',
@@ -777,6 +1116,14 @@ const r15Closure = generatedText(
   'catalog/react-r1-5/closure.json',
   `${canonicalJson(r15ClosureRecord)}\n`,
 );
+const r16Contract = migrationMode ? generatedText(
+  'packages/react/src/generate.mjs',
+  `${canonicalJson(currentContractRecord)}\n`,
+) : undefined;
+const r16DonorComparison = migrationMode ? generatedText(
+  'packages/react/src/generate.mjs',
+  `${canonicalJson(currentDonorComparisonRecord)}\n`,
+) : undefined;
 function provenance(path, bytes) {
   const body = `${canonicalJson({ path: `packages/react/generated/${path}`, sha256: `sha256:${sha256(bytes)}` })}\n`;
   return generatedText('packages/react/src/generate.mjs', body);
@@ -784,11 +1131,11 @@ function provenance(path, bytes) {
 
 const outputs = new Map([
   ['compatibility.mjs', generatedText('packages/react/src/generate.mjs', compatibilityBody)],
-  ['index.mjs', generatedText('packages/react/src/generate.mjs', indexBody)],
-  ['index.d.ts', generatedText('packages/react/src/generate.mjs', reactTypesBody)],
+  ['index.mjs', generatedText('packages/react/src/generate.mjs', currentIndexBody)],
+  ['index.d.ts', generatedText('packages/react/src/generate.mjs', currentTypesBody)],
   ['button.mjs', generatedText('packages/react/src/button.mjs', buttonSource)],
   ['testing.mjs', generatedText('packages/react/src/generate.mjs', testingBody)],
-  ['styles.css', generatedCss('packages/react/src/generate.mjs', fullCssBody)],
+  ['styles.css', generatedCss('packages/react/src/generate.mjs', currentStylesBody)],
   ['descriptor.json', descriptor],
   ['descriptor.json.provenance', provenance('descriptor.json', descriptor)],
   ['release.json', release],
@@ -805,13 +1152,30 @@ const outputs = new Map([
   ['r1-5-donor-comparison.json.provenance', provenance('r1-5-donor-comparison.json', r15DonorComparison)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
+  ['supplemental.mjs', generatedText('packages/react/src/supplemental/index.mjs', `${generatedSupplementalSource}`)],
+  ['supplemental.d.ts', generatedText('packages/react/src/supplemental/index.d.ts', `${supplementalTypesSource}`)],
+  ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', supplementalStylesSource)],
   ['component-donor-comparison.json', componentDonorComparison],
   ['component-donor-comparison.json.provenance', provenance('component-donor-comparison.json', componentDonorComparison)],
+  ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],
+  ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
   ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
   ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],
 ]);
+if (migrationMode) {
+  outputs.set('r1-6-contract.json', r16Contract);
+  outputs.set('r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract));
+  outputs.set('r1-6-donor-comparison.json', r16DonorComparison);
+  outputs.set('r1-6-donor-comparison.json.provenance', provenance('r1-6-donor-comparison.json', r16DonorComparison));
+}
+for (const source of [...currentSubpathRecords, ...currentEagerRecords]) {
+  outputs.set(`${source.slug}.mjs`, generatedText(source.source, source.sourceText));
+  const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');
+  const typesSource = await readFile(resolve(repositoryRoot, typesPath), 'utf8').catch(() => null);
+  if (typesSource) outputs.set(`${source.slug}.d.ts`, generatedText(typesPath, typesSource));
+}
 const readme = generatedText('packages/react/src/generate.mjs', `${readmeBody}${readmeGuidance}`, '<!--', ' -->');
 
 if (process.argv.includes('--check')) {
@@ -829,4 +1193,4 @@ if (process.argv.includes('--check')) {
   await writeFile(resolve(packageRoot, 'README.md'), readme);
 }
 
-console.log('[react] generated standalone R1.5 breadth closure projections from canonical owners');
+console.log('[react] generated current R1.6 union projection with historical R1.5 closure records');

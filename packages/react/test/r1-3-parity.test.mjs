@@ -206,7 +206,9 @@ test('R1.3 collection source preserves donor glyph alignment state selectors', a
   assert.match(styles, /\.muxui-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) > svg[\s\S]*?opacity: 0\.45;/u);
   assert.match(styles, /\.muxui-range-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) > svg[\s\S]*?opacity: 0\.45;/u);
   assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding: var\(--muxui-semantic-layout-group-gap\) var\(--muxui-reference-dimension-space-m\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-toggle::before\s*\{[\s\S]*?inset-inline-start: -0\.25px;/u);
+  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform 0\.15s ease;/u);
+  assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
+  assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
   assert.match(styles, /\[data-muxui-color-scheme='dark'\] :where\(\.muxui-calendar, \.muxui-range-calendar\) \{\s*background-color: var\(--muxui-reference-color-neutral-20\);\s*border-color: var\(--muxui-reference-color-neutral-10\);/u);
 });
 
@@ -760,6 +762,65 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
     await act(async () => options[0].click());
     assert.deepEqual(changes, ['red']);
     assert.deepEqual([...new FormData(document.querySelector('#form')).getAll('color')], ['red']);
+
+    await act(async () => root.render(React.createElement(Select, {
+      key: 'read-only',
+      label: 'Read-only color',
+      items: [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }],
+      defaultValue: 'blue',
+      readOnly: true,
+      onChange: (value) => changes.push(value),
+    })));
+    const readOnlyTrigger = container.querySelector('.muxui-select-trigger');
+    assert.equal(container.querySelector('.muxui-select')?.getAttribute('data-readonly'), 'true');
+    await act(async () => readOnlyTrigger.click());
+    await act(async () => document.querySelector('.muxui-select-option')?.click());
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Blue');
+    assert.deepEqual(changes, ['red']);
+
+    await act(async () => root.render(React.createElement(Select, {
+      key: 'empty-read-only',
+      label: 'Empty read-only color',
+      items: [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }],
+      readOnly: true,
+      placeholder: 'Choose a color',
+      onChange: (value) => changes.push(value),
+    })));
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Choose a color');
+    const emptyReadOnlyTrigger = container.querySelector('.muxui-select-trigger');
+    await act(async () => emptyReadOnlyTrigger.click());
+    await act(async () => document.querySelector('.muxui-select-option')?.click());
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Choose a color');
+
+    await act(async () => root.render(React.createElement(Select, {
+      key: 'toggle-read-only',
+      label: 'Toggle read-only color',
+      items: [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }],
+      defaultValue: 'blue',
+      onChange: (value) => changes.push(value),
+    })));
+    const editableTrigger = container.querySelector('.muxui-select-trigger');
+    await act(async () => editableTrigger.click());
+    await act(async () => [...document.querySelectorAll('.muxui-select-option')].find((option) => option.textContent === 'Red')?.click());
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    await act(async () => root.render(React.createElement(Select, {
+      key: 'toggle-read-only',
+      label: 'Toggle read-only color',
+      items: [{ id: 'red', label: 'Red' }, { id: 'blue', label: 'Blue' }],
+      readOnly: true,
+      placeholder: 'Choose a color',
+      onChange: (value) => changes.push(value),
+    })));
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    const toggledReadOnlyTrigger = container.querySelector('.muxui-select-trigger');
+    toggledReadOnlyTrigger.focus();
+    await act(async () => toggledReadOnlyTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })));
+    await act(async () => toggledReadOnlyTrigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    await act(async () => toggledReadOnlyTrigger.click());
+    await act(async () => [...document.querySelectorAll('.muxui-select-option')].find((option) => option.textContent === 'Blue')?.click());
+    assert.equal(container.querySelector('.muxui-select-value')?.textContent, 'Red');
+    assert.deepEqual(changes, ['red', 'red']);
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -894,8 +955,9 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
     assert.equal(toggle?.querySelector('svg')?.getAttribute('focusable'), 'false');
     assert.equal(toggle?.querySelector('svg')?.classList.contains('lucide-chevron-right'), true);
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-    assert.doesNotMatch(styles, /\.muxui-tree-item\[data-has-child-items\].*::before/u);
-    assert.match(styles, /\.muxui-tree-toggle\s*\{[^}]*transform:|\.muxui-tree-item\[data-expanded\] \.muxui-tree-toggle/u);
+    assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
+    assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
+    assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
     await act(async () => child.click());
     assert.deepEqual(actions, []);
   } finally {

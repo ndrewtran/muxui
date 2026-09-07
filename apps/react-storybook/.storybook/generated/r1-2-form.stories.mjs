@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:3633b64d767563b8a092492db159f21c6f1dec8453dfbb49fcc964f7a62d54a6
+// @generated-content-sha256: sha256:1b462905f55d519c34ac7f99b1e15e754d1158de2139588d3c3bcc9ef76d3220
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -46,7 +46,8 @@ const binding = {
     "submitting",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'Form', tranche: 'R1.2', binding };
 

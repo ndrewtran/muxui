@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:f01c54b2f1e03a250aa9363ac26cd6a0cee75aa731e2cf3317eefc7a798b4acb
+// @generated-content-sha256: sha256:0b7de414b6b36faa2053f52fddf74602d5c1faa1c0737f6c41a4f90b3cbd1614
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -59,7 +59,8 @@ const binding = {
     "invalid",
     "selected"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Calendar', tranche: 'R1.3', binding };
 

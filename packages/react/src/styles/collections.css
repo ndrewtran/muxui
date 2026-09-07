@@ -20,7 +20,7 @@
 .muxui-calendar-header-cell {
   text-align: center;
   padding: var(--muxui-semantic-layout-group-gap) var(--muxui-semantic-layout-control-gap);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   color: var(--muxui-semantic-content-default);
@@ -40,7 +40,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-default);
   transition: background 0.1s ease, color 0.1s ease;
@@ -91,7 +91,7 @@
 }
 
 .muxui-calendar-cell[data-focus-visible] {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-content-inverse), 0 0 0 4px var(--muxui-semantic-focus-ring);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-color-neutral-100), 0 0 0 4px var(--muxui-semantic-color-neutral-50);
 }
 
 /* MuxUI component source: color-area.css */
@@ -110,7 +110,7 @@
 .muxui-color-field {
   display: flex;
   flex-direction: column;
-  gap: calc(var(--muxui-semantic-layout-control-gap) + 2px);
+  gap: var(--muxui-semantic-layout-control-gap);
 }
 
 .muxui-color-field .muxui-field-input {
@@ -119,7 +119,7 @@
   width: 100%;
   min-height: 2.25rem;
   padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-layout-group-gap);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.5;
   color: var(--muxui-semantic-content-strong);
@@ -162,13 +162,13 @@
 }
 
 .muxui-color-field .muxui-field-description {
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-muted);
 }
 
 .muxui-color-field .muxui-field-error {
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-feedback-invalid);
 }
@@ -327,7 +327,7 @@
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
   padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-layout-group-gap);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.5;
   color: var(--muxui-semantic-content-strong);
@@ -457,10 +457,21 @@
   opacity: 0;
 }
 
+.muxui-radio.muxui-radio--sm .muxui-radio-indicator {
+  --muxui-component-radio-dot-size: 0.375rem;
+  width: var(--muxui-reference-dimension-space-xs);
+  height: var(--muxui-reference-dimension-space-xs);
+}
+
+.muxui-radio.muxui-radio--sm .muxui-radio-indicator::after {
+  width: 0.375rem;
+  height: 0.375rem;
+}
+
 .muxui-radio[data-focus-visible] .muxui-radio-indicator {
   box-shadow:
-    0 0 0 1px var(--muxui-semantic-content-inverse),
-    0 0 0 3px var(--muxui-semantic-focus-ring);
+    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
 /* RAC keeps the native input as the focus target; the indicator owns focus paint. */
@@ -528,7 +539,7 @@
 }
 
 .muxui-range-calendar-cell[data-focus-visible] {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-content-inverse), 0 0 0 4px var(--muxui-semantic-focus-ring);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-color-neutral-100), 0 0 0 4px var(--muxui-semantic-color-neutral-50);
 }
 
 .muxui-range-calendar-cell[data-selected] {
@@ -571,6 +582,8 @@
   gap: var(--muxui-semantic-control-padding-inline);
   height: var(--muxui-field-min-height);
   min-width: 10rem;
+  position: static;
+  line-height: inherit;
   cursor: pointer;
   transition:
     border-color 0.15s ease,
@@ -599,7 +612,7 @@
 }
 
 .muxui-select-value[data-placeholder] {
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-semantic-color-neutral-50);
 }
 
 .muxui-select-popover {
@@ -762,7 +775,7 @@
 
 .muxui-slider-output {
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   line-height: 1.3;
 }
@@ -802,7 +815,7 @@
 .muxui-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.5;
   color: var(--muxui-semantic-content-strong);
@@ -916,7 +929,7 @@
   border: none;
   background-color: transparent;
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.5;
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -960,7 +973,7 @@
 .muxui-tab-panel {
   padding: calc(var(--muxui-semantic-layout-section-gap) * 1.414141) 0;
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.6;
   outline: none;
@@ -996,7 +1009,7 @@
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background-color: var(--muxui-semantic-surface-subtle);
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1;
@@ -1082,7 +1095,7 @@
 
 .muxui-tag-group .muxui-field-label {
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1.3;
@@ -1111,7 +1124,7 @@
   border-radius: var(--muxui-reference-dimension-radius-m);
   background: transparent;
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1.5;
@@ -1138,7 +1151,7 @@
 .muxui-tree {
   display: flex;
   flex-direction: column;
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: 1.5;
   color: var(--muxui-semantic-content-strong);
@@ -1195,6 +1208,7 @@
 }
 
 .muxui-tree-item-content {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-inset);
@@ -1202,46 +1216,30 @@
 }
 
 .muxui-tree-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 0.5rem;
-  width: 0.5rem;
-  height: 0.5rem;
+  position: absolute;
+  inset-inline-start: var(--muxui-semantic-layout-group-gap);
+  inset-block-start: 0;
+  width: 0.75rem;
+  height: 100%;
   padding: 0;
   border: 0;
-  border-radius: var(--muxui-semantic-shape-indicator-radius);
   background: transparent;
-  color: var(--muxui-semantic-content-muted);
-  font-size: 0.6em;
-  line-height: 1;
+  opacity: 0;
   cursor: pointer;
   outline: none;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
 }
 
-.muxui-tree-item[data-expanded] .muxui-tree-toggle {
+/* Keep the actual RAC chevron button over the visible donor-style indicator
+   so pointer and keyboard expansion use the same control. */
+.muxui-tree-item[data-has-child-items] .muxui-tree-item-content::before {
+  content: '\25B6';
+  display: inline-block;
+  font-size: 0.6em;
+  transition: transform 0.15s ease;
+}
+
+.muxui-tree-item[data-expanded] .muxui-tree-item-content::before {
   transform: rotate(90deg);
-}
-
-.muxui-tree-toggle[data-hovered] {
-  background: var(--muxui-semantic-surface-hover);
-  color: var(--muxui-semantic-content-strong);
-}
-
-.muxui-tree-toggle:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--muxui-focus-ring-inner),
-    0 0 0 4px var(--muxui-focus-ring-outer);
-}
-
-.muxui-tree-toggle[data-disabled] {
-  color: var(--muxui-semantic-content-default);
-  cursor: not-allowed;
-  pointer-events: none;
 }
 
 /* RAC state attributes are mirrored by the wrappers for deterministic styling. */
@@ -1401,7 +1399,7 @@
 [data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) {
   background-color: var(--muxui-reference-color-neutral-90);
   border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-90);
 }
 
 [data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
@@ -1411,7 +1409,7 @@
 [data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) {
   background-color: var(--muxui-reference-color-neutral-20);
   border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-reference-color-neutral-88);
+  color: var(--muxui-semantic-color-neutral-90);
 }
 
 [data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
@@ -1505,8 +1503,8 @@
 .muxui-calendar-cell[data-focus-visible],
 .muxui-range-calendar-cell[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-focus-ring-inner),
-    0 0 0 4px var(--muxui-focus-ring-outer);
+    0 0 0 2px var(--muxui-semantic-color-neutral-100),
+    0 0 0 4px var(--muxui-semantic-color-neutral-50);
 }
 
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected] {
@@ -1647,12 +1645,16 @@
 }
 
 .muxui-combo-box-trigger {
+  position: static;
   width: 1.125rem;
   height: 1.125rem;
   min-height: 0;
   margin-inline-end: var(--muxui-semantic-layout-control-gap);
   padding: 0;
+  gap: normal;
+  border-radius: 0;
   color: var(--muxui-reference-color-neutral-60);
+  transition: transform 0.2s ease;
 }
 
 .muxui-combo-box-arrow {
@@ -1670,7 +1672,7 @@
   .muxui-select-arrow,
   .muxui-combo-box-trigger
 ) {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select-trigger[data-placeholder],
@@ -1682,7 +1684,7 @@
   .muxui-select-trigger,
   .muxui-select-arrow
 ) {
-  color: var(--muxui-reference-color-neutral-50);
+  color: var(--muxui-semantic-color-neutral-50);
 }
 
 [data-muxui-color-scheme='dark'] :where(.muxui-select-option, .muxui-combo-box-option) {
@@ -1695,15 +1697,21 @@
 }
 
 [data-muxui-color-scheme='light'] .muxui-select-value[data-placeholder] {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select-value[data-placeholder] {
-  color: var(--muxui-reference-color-neutral-50);
+  color: var(--muxui-semantic-color-neutral-50);
+}
+
+/* Enabled placeholder text needs the local neutral-60 contrast correction;
+   disabled controls retain Tale's neutral-50 plus disabled treatment. */
+.muxui-select:not([data-disabled], [aria-disabled='true']) .muxui-select-value[data-placeholder] {
+  color: var(--muxui-semantic-color-neutral-60);
 }
 
 [data-muxui-color-scheme='light'] .muxui-select-arrow {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tab-list {
@@ -1763,9 +1771,9 @@
   color: var(--muxui-reference-color-neutral-20);
 }
 
-[data-muxui-color-scheme='dark'] .muxui-list-box {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-88);
+[data-muxui-color-scheme='dark'] :where(.muxui-list-box, .muxui-virtualizer) {
+  background-color: var(--muxui-semantic-color-neutral-10);
+  border-color: var(--muxui-semantic-color-neutral-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-list-box-item {
@@ -1873,20 +1881,21 @@
     0 40px 60px -10px rgb(0 0 0 / 8%);
 }
 
-/* Virtualizer renders the same RAC list item anatomy as ListBox. Keep the
-   fixed inline viewport supplied by the wrapper while reusing its consumer
-   surface and item recipe. */
+/* Virtualizer composes the same visible list surface as ListBox while keeping
+   its own fixed viewport and virtualized item layout. */
 .muxui-virtualizer {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-inset);
-  max-height: 17.5rem;
+  max-height: none;
   padding: var(--muxui-semantic-layout-tight-inset);
   background-color: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-popup-border-color);
   border-radius: var(--muxui-reference-dimension-radius-m);
   box-shadow: var(--muxui-popup-shadow);
+  outline: none;
+  overflow: auto;
 }
 
 .muxui-virtualizer-item {
@@ -1897,7 +1906,7 @@
   padding: var(--muxui-item-padding-block) var(--muxui-item-padding-inline);
   border-radius: var(--muxui-item-radius);
   color: var(--muxui-item-color);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-item-font-size);
   line-height: 1.5;
   cursor: pointer;
@@ -1920,11 +1929,6 @@
   color: var(--muxui-item-focus-color);
 }
 
-[data-muxui-color-scheme='dark'] .muxui-virtualizer {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-90);
-}
-
 [data-muxui-color-scheme='dark'] .muxui-virtualizer-item {
   color: var(--muxui-reference-color-neutral-40);
 }
@@ -1934,7 +1938,7 @@
   color: var(--muxui-reference-color-neutral-18);
 }
 
-[data-muxui-color-scheme='light'] :where(.muxui-list-box, .muxui-virtualizer) {
+[data-muxui-color-scheme='light'] .muxui-list-box {
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
     0 13px 13px -10px rgb(0 0 0 / 6%),
@@ -1947,49 +1951,8 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-/* Preserve the RAC chevron button while matching Tale's inherited triangle. */
-.muxui-tree-toggle {
-  appearance: none;
-  color: inherit;
-  font-family: inherit;
-  font-size: inherit;
-  position: relative;
-  inset-inline-start: 0.25px;
-  inset-block-start: 1px;
-}
-
-.muxui-tree-toggle > svg {
-  display: none;
-}
-
-.muxui-tree-toggle::before {
-  content: '\25B6';
-  display: inline-block;
-  font-size: 0.6em;
-  transition: transform 0.15s ease;
-}
-
-.muxui-tree-item[data-expanded] .muxui-tree-toggle::before {
-  transform: rotate(90deg);
-  position: relative;
-  inset-inline-start: -0.25px;
-}
-
 .muxui-tree-item-label {
-  position: relative;
-  inset-inline-start: 0.5px;
-}
-
-/* The donor's expanded chevron and leaf label align to the integer grid while
-   preserving the fractional offset used by the other Tree states. */
-.muxui-tree-item[data-expanded] .muxui-tree-toggle {
-  transform: none;
-  inset-inline-start: 0;
-  inset-block-start: 0;
-}
-
-.muxui-tree-item:not([data-has-child-items]) .muxui-tree-item-label {
-  inset-inline-start: 0;
+  position: static;
 }
 
 [data-muxui-color-scheme] .muxui-tree[data-focus-visible],
@@ -1997,13 +1960,6 @@
   box-shadow:
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
-}
-
-/* Tale's pseudo-element chevron makes its focused item one device pixel wider.
-   Keep Mux UI's real RAC chevron button and extend only the visual focus edge. */
-[data-muxui-color-scheme] .muxui-tree-item[data-focus-visible] {
-  box-sizing: border-box;
-  width: calc(100% + 1px);
 }
 
 /* Tale's light menu uses the low-alpha, long-tail popup shadow. Keep this
@@ -2017,8 +1973,8 @@
 
 .muxui-radio[data-focus-visible] .muxui-radio-indicator {
   box-shadow:
-    0 0 0 1px var(--muxui-focus-ring-inner),
-    0 0 0 3px var(--muxui-focus-ring-outer);
+    0 0 0 2px var(--muxui-focus-ring-inner),
+    0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
 .muxui-radio {
@@ -2053,11 +2009,11 @@
   color: var(--muxui-reference-color-neutral-90);
 }
 
-[data-muxui-color-scheme='light'] .muxui-radio-group .muxui-field-label {
+[data-muxui-color-scheme='light'] :where(.muxui-radio-group, .muxui-radio-group-field) .muxui-field-label {
   color: var(--muxui-reference-color-neutral-70);
 }
 
-[data-muxui-color-scheme='light'] .muxui-radio-group[data-invalid] .muxui-field-label {
+[data-muxui-color-scheme='light'] :where(.muxui-radio-group[data-invalid], .muxui-radio-group-field[data-invalid]) .muxui-field-label {
   color: var(--muxui-reference-color-neutral-70);
 }
 

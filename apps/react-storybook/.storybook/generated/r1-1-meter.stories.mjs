@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6a5d7dac55c1922fad3489173f30f182fbc3837816ad3ace476a62785d64c691
+// @generated-content-sha256: sha256:fc56cba7e340b81e4eeb0d10e60f3055b637d563d998e719de855013da6b95ba
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -43,7 +43,8 @@ const binding = {
   "states": [
     "idle"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Meter', tranche: 'R1.1', binding };
 

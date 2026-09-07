@@ -554,8 +554,8 @@ test('title-less useToast notifications have an accessible RAC name', async () =
     assert.equal(dismiss.querySelector('svg')?.getAttribute('focusable'), 'false');
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
     assert.match(styles, /:where\([\s\S]*\.muxui-toast-dismiss[\s\S]*border:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
-    assert.match(styles, /\.muxui-toast-dismiss\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*width:\s*calc\(1rem \+ var\(--muxui-semantic-layout-tight-inset\) \+ var\(--muxui-semantic-layout-tight-inset\) \+ 2px\);[\s\S]*height:\s*calc\(1rem \+ var\(--muxui-semantic-layout-tight-inset\) \+ var\(--muxui-semantic-layout-tight-inset\) \+ 2px\);[\s\S]*padding:\s*var\(--muxui-semantic-layout-tight-inset\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
-    assert.match(styles, /\.muxui-dialog-close\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*width:\s*calc\(1rem \+ var\(--muxui-semantic-layout-tight-inset\) \+ var\(--muxui-semantic-layout-tight-inset\) \+ 2px\);[\s\S]*height:\s*calc\(1rem \+ var\(--muxui-semantic-layout-tight-inset\) \+ var\(--muxui-semantic-layout-tight-inset\) \+ 2px\);/u);
+    assert.match(styles, /\.muxui-toast-dismiss\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-tight-inset\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
+    assert.match(styles, /\.muxui-dialog-close\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-tight-inset\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
     assert.match(styles, /\.muxui-toast\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/u);
     assert.match(styles, /\.muxui-toast-content\s*\{[^}]*display:\s*grid/u);
   } finally {

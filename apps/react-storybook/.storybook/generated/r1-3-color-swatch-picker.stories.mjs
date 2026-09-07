@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:83ba5188ef20d0486baa05633b2677bf73cc5799cc1e812402de86fe71f0a781
+// @generated-content-sha256: sha256:ad2d31d20826e5c79ccf590d6beaa5b98cfeb4bc0670f7bafb4102f5c0a0126f
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -48,7 +48,8 @@ const binding = {
     "disabled",
     "selected"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorSwatchPicker', tranche: 'R1.3', binding };
 

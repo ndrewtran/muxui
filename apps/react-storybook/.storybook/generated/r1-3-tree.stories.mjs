@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:3d67a4bdf540ebc3d46d4432cbca017d4b608409596e52f653b149d95bdec45b
+// @generated-content-sha256: sha256:823560c3d105b1ab8de4b6e1e796c07510ad38e83a65d8f67b91dfd595fe70a7
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,8 @@ const binding = {
     "expanded",
     "empty"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Tree', tranche: 'R1.3', binding };
 

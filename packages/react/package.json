@@ -3,18 +3,40 @@
   "version": "0.1.0-alpha.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24.19.0 <25" },
-  "files": ["generated", "README.md", "LICENSE", "NOTICE", "package.json"],
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "files": [
+    "generated",
+    "assets",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "package.json",
+    "licenses"
+  ],
   "exports": {
-    ".": { "types": "./generated/index.d.ts", "default": "./generated/index.mjs" },
+    ".": {
+      "types": "./generated/index.d.ts",
+      "default": "./generated/index.mjs"
+    },
     "./compatibility": "./generated/compatibility.mjs",
     "./styles.css": "./generated/styles.css",
-    "./testing": "./generated/testing.mjs"
+    "./testing": "./generated/testing.mjs",
+    "./text-editor": {
+      "types": "./generated/text-editor.d.ts",
+      "default": "./generated/text-editor.mjs"
+    },
+    "./markdown": {
+      "types": "./generated/markdown.d.ts",
+      "default": "./generated/markdown.mjs"
+    }
   },
   "scripts": {
     "prepack": "node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
     "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test --test-concurrency=1 test/*.test.mjs && tsc --noEmit -p test/tsconfig.json",
+    "check:browser": "node --test --test-concurrency=1 test/browser/*.test.mjs",
     "check:capability-enrichment:strict": "MUXUI_CAPABILITY_ENRICHMENT_STRICT=1 node --test test/capability-enrichment.test.mjs",
     "generate": "node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs",
     "generate:capability-enrichment": "node advisory/capability-enrichment/generate-status.mjs",
@@ -23,10 +45,23 @@
   },
   "dependencies": {
     "@internationalized/date": "3.12.3",
+    "@tiptap/core": "3.22.3",
+    "@tiptap/extension-image": "3.22.3",
+    "@tiptap/extension-placeholder": "3.22.3",
+    "@tiptap/extension-text-align": "3.22.3",
+    "@tiptap/extension-text-style": "3.22.3",
+    "@tiptap/pm": "3.22.3",
+    "@tiptap/react": "3.22.3",
+    "@tiptap/starter-kit": "3.22.3",
     "lucide-react": "1.37.0",
+    "marked": "13.0.3",
+    "react-aria": "3.51.0",
     "react-aria-components": "1.20.0"
   },
-  "peerDependencies": { "react": ">=19.2.0 <20", "react-dom": ">=19.2.0 <20" },
+  "peerDependencies": {
+    "react": ">=19.2.0 <20",
+    "react-dom": ">=19.2.0 <20"
+  },
   "devDependencies": {
     "@muxui/catalog": "workspace:*",
     "@muxui/schema": "workspace:*",
@@ -35,8 +70,10 @@
     "@types/react": "19.2.18",
     "@types/react-dom": "19.2.4",
     "jsdom": "30.0.1",
+    "playwright-core": "1.62.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "vite": "8.2.1"
   }
 }

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:e391a52094c95f5680784317a8fdc2831f632f83b7444d791ac0f65bab5775cd
+// @generated-content-sha256: sha256:9c86b57039aa89ef8c1fc370c983f56c0a4b57d8d7842d919c7c471b6e0604f9
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -19,7 +19,8 @@ const binding = {
       "defaultChecked": false,
       "disabled": false,
       "indeterminate": false,
-      "invalid": false
+      "invalid": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -34,6 +35,7 @@ const binding = {
       "checked",
       "defaultChecked",
       "disabled",
+      "size",
       "indeterminate",
       "name",
       "required",
@@ -54,7 +56,8 @@ const binding = {
     "disabled",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Checkbox', tranche: 'R1.1', binding };
 

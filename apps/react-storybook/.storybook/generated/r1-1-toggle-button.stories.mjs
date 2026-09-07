@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:cd146a5d155aceccc27a75c518b6af44d130148ae7f703f4d4f5ac22aa084c92
+// @generated-content-sha256: sha256:4753c87f85b1355bc118e3841c4855b7a51dfd15f52a58bfd559dd006ad4c3ed
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -17,7 +17,8 @@ const binding = {
     "defaults": {
       "defaultSelected": false,
       "disabled": false,
-      "selected": false
+      "selected": false,
+      "size": "md"
     },
     "events": [
       "change",
@@ -30,7 +31,8 @@ const binding = {
     "props": [
       "selected",
       "defaultSelected",
-      "disabled"
+      "disabled",
+      "size"
     ]
   },
   "binding": "muxui:component:toggle-button#web.react",
@@ -45,7 +47,8 @@ const binding = {
     "disabled",
     "pressed"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'ToggleButton', tranche: 'R1.1', binding };
 

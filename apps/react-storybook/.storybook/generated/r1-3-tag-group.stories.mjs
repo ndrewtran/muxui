@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:507036c08d923f201db15a49d7c01e63ff7e51f82a7f75d997b7127bed71587d
+// @generated-content-sha256: sha256:696470cc6d533523209481bae66ac2ce9e4016a9a50e6c66e6dd0d788d11824e
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -48,7 +48,8 @@ const binding = {
     "disabled",
     "empty"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'TagGroup', tranche: 'R1.3', binding };
 

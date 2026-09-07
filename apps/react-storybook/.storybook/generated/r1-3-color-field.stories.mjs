@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:8a7cc1afc26f716bff889ab8783e1b2e06d15df42bd6c6a76138d00ac87ef983
+// @generated-content-sha256: sha256:4bd50deb809aece96e42f1bb361ac7c1434162adec11fecb7aa03bb674652488
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -58,7 +58,8 @@ const binding = {
     "read-only",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorField', tranche: 'R1.3', binding };
 

@@ -1,0 +1,168 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:multi-select",
+  "kind": "component",
+  "name": "MultiSelect",
+  "summary": "Choose multiple items from a searchable popup with a compact selection summary.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Selecting several values from a collection while keeping the field compact."
+    ],
+    "avoidWhen": [
+      "For one choice, free-form tags, or a short list that can remain visible."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "label",
+    "trigger",
+    "value",
+    "icon",
+    "popup",
+    "dialog",
+    "search",
+    "search-input",
+    "listbox",
+    "item",
+    "empty",
+    "footer"
+  ],
+  "states": [
+    "closed",
+    "open",
+    "filtered",
+    "empty",
+    "selected",
+    "disabled",
+    "invalid"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Supports serializable item IDs, controlled or uncontrolled multiple selection, filtering, reset and select-all actions.",
+      "Escape and modal focus semantics come from React Aria."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "items",
+          "size",
+          "selectedKeys",
+          "defaultSelectedKeys",
+          "onSelectionChange",
+          "label",
+          "placeholder",
+          "description",
+          "errorMessage",
+          "supportingText",
+          "showSearch",
+          "showFooter",
+          "emptyStateTitle",
+          "emptyStateDescription",
+          "onReset",
+          "onSelectAll",
+          "selectedCountFormatter",
+          "disabled",
+          "invalid",
+          "required"
+        ],
+        "events": [
+          "selectionChange",
+          "reset",
+          "selectAll"
+        ],
+        "parts": [
+          "root",
+          "label",
+          "trigger",
+          "value",
+          "icon",
+          "popup",
+          "dialog",
+          "search",
+          "search-input",
+          "listbox",
+          "item",
+          "empty",
+          "footer"
+        ],
+        "defaults": {
+          "size": "md",
+          "placeholder": "Select",
+          "showSearch": true,
+          "showFooter": true,
+          "emptyStateTitle": "No results found",
+          "emptyStateDescription": "Please try a different search term.",
+          "disabled": false,
+          "invalid": false,
+          "required": false
+        }
+      },
+      "behavior": [
+        "Supports serializable item IDs, controlled or uncontrolled multiple selection, filtering, reset and select-all actions.",
+        "Escape and modal focus semantics come from React Aria."
+      ],
+      "accessibility": [
+        "Supports serializable item IDs, controlled or uncontrolled multiple selection, filtering, reset and select-all actions.",
+        "Escape and modal focus semantics come from React Aria."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

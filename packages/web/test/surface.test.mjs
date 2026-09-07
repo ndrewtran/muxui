@@ -17,7 +17,7 @@ test('E-G1.1-02 machine-enumerates only binding and token-policy derived hooks',
     assert.deepEqual(surface.slots, ['[data-muxui-slot="label"]']);
     assert.deepEqual(surface.states, surface === html
       ? ['data-muxui-state-disabled']
-      : ['data-muxui-state-disabled', 'data-muxui-state-pending']);
+      : ['data-muxui-state-disabled', 'data-muxui-state-pending', 'data-muxui-state-showTextWhileLoading']);
     assert.deepEqual(surface.events, ['muxui:activate']);
     assert.deepEqual(surface.publicCustomProperties, [
       '--muxui-component-button-background',
@@ -34,7 +34,7 @@ test('E-G1.1-02 machine-enumerates only binding and token-policy derived hooks',
   assert.equal(webCompatibility.bindings['web.html'].lifecycle, 'experimental');
   assert.equal(webCompatibility.bindings['web.react'].lifecycle, 'experimental');
   assert.deepEqual(button.record.bindings['web.html'].api.props, ['disabled']);
-  assert.deepEqual(button.record.bindings['web.react'].api.props, ['disabled', 'pending', 'variant', 'tone', 'size']);
+  assert.deepEqual(button.record.bindings['web.react'].api.props, ['disabled', 'pending', 'showTextWhileLoading', 'variant', 'tone', 'size']);
   assert.doesNotMatch(JSON.stringify(html), /pending|variant|tone|size/u);
   assert.match(JSON.stringify(react), /pending/u);
 });
@@ -44,8 +44,9 @@ test('E-G1.1-02 framework-free web output does not inherit React-only props', as
   const stylesheet = await readFile(new URL('../generated/button.css', import.meta.url), 'utf8');
   const [htmlTypes, reactTypes] = bindings.split('\n\n');
   assert.doesNotMatch(htmlTypes, /pending|variant|tone|size/u);
-  for (const prop of ['pending', 'variant', 'tone', 'size']) assert.match(reactTypes, new RegExp(prop, 'u'));
-  assert.doesNotMatch(stylesheet, /pending/u);
+  for (const prop of ['pending', 'showTextWhileLoading', 'variant', 'tone', 'size']) assert.match(reactTypes, new RegExp(prop, 'u'));
+  assert.doesNotMatch(htmlTypes, /showTextWhileLoading/u);
+  assert.doesNotMatch(stylesheet, /pending|showTextWhileLoading/u);
 });
 
 test('E-G1.1-02 refuses nonexistent exports and non-component identities', () => {

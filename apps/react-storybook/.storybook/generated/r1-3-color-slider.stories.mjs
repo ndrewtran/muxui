@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:b2d9ce6acc05217ec21ecd85cbef730b73a6e11ddde9e77ad68ae078e45b249f
+// @generated-content-sha256: sha256:d01d12d45b6672caba84f56a0d1e3e51130da4c26ed535d0dcb4be120c8263c5
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,8 @@ const binding = {
     "disabled",
     "read-only"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ColorSlider', tranche: 'R1.3', binding };
 

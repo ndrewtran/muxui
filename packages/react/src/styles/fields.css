@@ -31,9 +31,19 @@
   min-width: var(--trigger-width);
   max-width: 100vw;
   background-color: var(--muxui-semantic-overlay-background);
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: 0;
+  border: 1px solid var(--muxui-popup-border-color);
+  border-radius: var(--muxui-popup-radius);
+  box-shadow: var(--muxui-popup-shadow);
   overflow-x: hidden;
   overflow-y: auto;
+}
+
+.muxui-autocomplete-popover > .muxui-autocomplete-list {
+  padding: var(--muxui-semantic-layout-tight-inset);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 }
 
 [data-muxui-direction='ltr'] .muxui-autocomplete-popover {
@@ -50,6 +60,23 @@
   gap: var(--muxui-semantic-layout-tight-inset);
   padding: 0;
   overflow: visible;
+}
+
+/* Matches the donor's compact dropdown item axis while keeping the canonical
+ * Mux item variables as the single source for shared collection geometry. */
+.muxui-autocomplete-list--sm {
+  --muxui-item-padding-block: var(--muxui-reference-dimension-space-4xs);
+  --muxui-item-padding-inline: var(--muxui-reference-dimension-space-2xs);
+  --muxui-item-gap: var(--muxui-reference-dimension-space-4xs);
+  --muxui-item-font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+
+.muxui-autocomplete-list--sm [data-part='header'] {
+  padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs);
+}
+
+.muxui-autocomplete-list--sm [data-part='separator'] {
+  margin: 2px 0;
 }
 
 .muxui-autocomplete-option[data-selected] {
@@ -143,7 +170,7 @@
   border: none;
   background-color: transparent;
   color: var(--muxui-semantic-content-strong);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   text-align: center;
   outline: none;
@@ -160,7 +187,7 @@
   background-color: var(--muxui-semantic-surface-raised);
   color: var(--muxui-reference-color-neutral-70);
   font-size: var(--muxui-semantic-typography-body-size);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
 }
 
 .muxui-number-stepper > svg {
@@ -338,7 +365,7 @@
   min-height: var(--muxui-component-switch-track-height);
   padding-inline-start: calc(var(--muxui-component-switch-track-width) + var(--muxui-semantic-layout-control-gap));
   color: var(--muxui-semantic-content-default);
-  font-family: Inter, sans-serif;
+  font-family: var(--muxui-reference-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   cursor: pointer;
@@ -354,8 +381,8 @@
   width: var(--muxui-component-switch-track-width);
   height: var(--muxui-component-switch-track-height);
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  border: 1.5px solid var(--muxui-semantic-content-faint);
-  background-color: var(--muxui-semantic-border-subtle);
+  border: 1.5px solid var(--muxui-semantic-color-neutral-30);
+  background-color: var(--muxui-semantic-color-neutral-20);
   transform: translateY(-50%);
   transition:
     background-color 0.2s ease,
@@ -380,8 +407,8 @@
 }
 
 .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
-  border-color: var(--muxui-semantic-content-muted);
-  background-color: var(--muxui-semantic-border-strong);
+  border-color: var(--muxui-semantic-color-neutral-50);
+  background-color: var(--muxui-semantic-color-neutral-26);
 }
 
 .muxui-switch[data-invalid]::before {
@@ -544,8 +571,8 @@
   color: var(--muxui-reference-color-neutral-20);
 }
 
-[data-muxui-color-scheme='dark'] .muxui-date-segment[data-readonly]:not([data-type='literal']) {
-  color: var(--muxui-reference-color-neutral-50);
+[data-muxui-color-scheme='dark'] .muxui-date-segment[data-readonly] {
+  color: var(--muxui-semantic-color-neutral-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-segment[data-type='literal'],
@@ -680,16 +707,16 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch {
-  color: var(--muxui-reference-color-neutral-28);
+  color: var(--muxui-semantic-color-neutral-80);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch-label {
-  color: var(--muxui-reference-color-neutral-28);
+  color: var(--muxui-semantic-color-neutral-80);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch::before {
-  background-color: var(--muxui-reference-color-neutral-88);
-  border-color: var(--muxui-reference-color-neutral-70);
+  background-color: var(--muxui-semantic-color-neutral-20);
+  border-color: var(--muxui-semantic-color-neutral-30);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-invalid]::before {
@@ -707,12 +734,12 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
-  background-color: var(--muxui-reference-color-neutral-82);
-  border-color: var(--muxui-reference-color-neutral-50);
+  background-color: var(--muxui-semantic-color-neutral-26);
+  border-color: var(--muxui-semantic-color-neutral-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch-indicator {
-  background-color: var(--muxui-reference-color-neutral-28);
+  background-color: var(--muxui-semantic-color-neutral-80);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected] .muxui-switch-indicator,
@@ -796,7 +823,7 @@
 [data-muxui-color-scheme='dark'] .muxui-date-range-control .muxui-date-trigger {
   border-left-color: var(--muxui-reference-color-neutral-84);
   background-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-80);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-search-clear {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { compilePureTokenGraph, cssValue } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 
 const h = React.createElement;
@@ -14,7 +15,7 @@ export const FOUNDATIONS_CATEGORY_INVENTORY = Object.freeze([
 
 const CATEGORY_BY_ID = new Map(FOUNDATIONS_CATEGORY_INVENTORY.map((category) => [category.id, category]));
 const SUPPORTED_LAYERS = new Set(['reference', 'semantic', 'component']);
-const SUPPORTED_TYPES = new Set(['color', 'dimension', 'duration', 'number', 'string']);
+const SUPPORTED_TYPES = new Set(['color', 'dimension', 'duration', 'number', 'string', 'effect']);
 const MODE_AXES = Object.freeze(['colorScheme', 'contrast', 'density', 'motion']);
 const MODE_LABELS = Object.freeze({
   colorScheme: Object.freeze({ light: 'Light', dark: 'Dark' }),
@@ -30,6 +31,13 @@ const VISUAL_KIND_BY_CATEGORY = Object.freeze({
   motion: 'motion-timeline',
   component: 'component-schematic',
 });
+const RESPONSIVE_PREVIEW_TOKEN_IDS = Object.freeze([
+  'reference.dimension.space-xs',
+  'reference.dimension.space-xl',
+  'reference.dimension.section-space-xl',
+  'reference.dimension.text-m',
+  'reference.dimension.text-5xl',
+]);
 
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -44,34 +52,17 @@ function tokenCategories(tokenId, token) {
   const categories = [];
   if (token.type === 'color') categories.push('colors');
   if (token.type === 'duration') categories.push('motion');
-  if (tokenId.includes('.typography.') || /font-size|font-weight|line-height/u.test(tokenId)) categories.push('typography');
-  if (tokenId.includes('.shape.') || tokenId.includes('.elevation.') || /(?:^|[.-])(radius|shadow)(?:$|[.-])/u.test(tokenId)) categories.push('radii-shadows');
+  if (tokenId.includes('.typography.') || /font-family|font-size|font-weight|line-height|letter-spacing/u.test(tokenId)) categories.push('typography');
+  if (token.type === 'effect' || tokenId.includes('.effect.') || tokenId.includes('.shape.') || tokenId.includes('.elevation.') || /(?:^|[.-])(radius|shadow)(?:$|[.-])/u.test(tokenId)) categories.push('radii-shadows');
   if (token.type === 'dimension') categories.push('spacing');
   if (token.type === 'number' && /weight|line-height/u.test(tokenId)) categories.push('typography');
+  if (token.type === 'duration' || tokenId.includes('.motion.') || /easing/u.test(tokenId)) categories.push('motion');
   if (token.layer === 'component') categories.push('component');
   return [...new Set(categories)];
 }
 
 function tokenCategory(tokenId, token) {
   return tokenCategories(tokenId, token)[0] ?? null;
-}
-
-function validTokenSource(source) {
-  if (!isRecord(source)) return false;
-  if (typeof source.alias === 'string' && source.alias.length > 0) return true;
-  if (typeof source.value === 'number') return Number.isFinite(source.value);
-  return typeof source.value === 'string' && source.value.length > 0;
-}
-
-function sourceForMode(token, modes) {
-  const overrides = isRecord(token?.modes) ? token.modes : {};
-  for (const axis of MODE_AXES) {
-    const value = modes?.[axis];
-    if (typeof value !== 'string') continue;
-    const key = axis + '.' + value;
-    if (Object.hasOwn(overrides, key)) return overrides[key];
-  }
-  return token;
 }
 
 function defaultModesFor(theme) {
@@ -85,26 +76,80 @@ function defaultModesFor(theme) {
   ]));
 }
 
-/** Resolve a token through aliases and mode overrides without guessing malformed facts. */
-export function resolveTokenValue(theme, tokenId, modes = {}, stack = []) {
+const graphCache = new WeakMap();
+
+function graphFor(theme, modes, responsive = false) {
+  if (!validTheme(theme)) return { graph: null, error: null };
+  const key = JSON.stringify({ modes, responsive });
+  let entries = graphCache.get(theme);
+  if (!entries) {
+    entries = new Map();
+    graphCache.set(theme, entries);
+  }
+  if (entries.has(key)) return entries.get(key);
+  try {
+    const result = { graph: compilePureTokenGraph(theme, { modes, responsive }), error: null };
+    entries.set(key, result);
+    return result;
+  } catch (error) {
+    const result = { graph: null, error };
+    entries.set(key, result);
+    return result;
+  }
+}
+
+function graphChain(graph, tokenId) {
+  const chain = [tokenId];
+  const seen = new Set(chain);
+  let current = tokenId;
+  while (graph.dependencies[current]?.length) {
+    const next = graph.dependencies[current][0];
+    if (seen.has(next)) break;
+    chain.push(next);
+    seen.add(next);
+    current = next;
+  }
+  return chain;
+}
+
+function compilerErrorReason(error) {
+  const code = typeof error?.message === 'string' ? error.message.split(':', 1)[0] : '';
+  if (code === 'MUXUI_TOKEN_ALIAS_MISSING') return 'missing-alias-target';
+  if (code === 'MUXUI_TOKEN_ALIAS_CYCLE') return 'alias-cycle';
+  return 'invalid-token-source';
+}
+
+/** Resolve through the shared pure token compiler so Storybook and package transforms agree. */
+export function resolveTokenValue(theme, tokenId, modes = {}) {
   const token = theme?.tokens?.[tokenId];
-  const chain = [...stack, tokenId];
+  const chain = [tokenId];
   if (!isRecord(token) || !SUPPORTED_LAYERS.has(token.layer) || !SUPPORTED_TYPES.has(token.type)) {
     return { status: 'unresolved', tokenId, chain, reason: 'unsupported-token' };
   }
-  if (stack.includes(tokenId)) return { status: 'unresolved', tokenId, chain, reason: 'alias-cycle' };
-  const source = sourceForMode(token, modes);
-  if (!validTokenSource(source)) return { status: 'unresolved', tokenId, chain, reason: 'invalid-token-source' };
-  if (typeof source.alias === 'string') {
-    if (!theme?.tokens?.[source.alias]) return { status: 'unresolved', tokenId, chain: [...chain, source.alias], reason: 'missing-alias-target' };
-    const resolved = resolveTokenValue(theme, source.alias, modes, chain);
-    return { ...resolved, tokenId, alias: source.alias, chain: resolved.chain, type: token.type, unit: token.unit };
-  }
-  return { status: 'resolved', tokenId, value: source.value, chain, sourceTokenId: tokenId, type: token.type, unit: token.unit };
+  const { graph, error } = graphFor(theme, { ...defaultModesFor(theme), ...modes });
+  if (!graph) return { status: 'unresolved', tokenId, chain, reason: compilerErrorReason(error) };
+  const resolved = graph.tokens[tokenId];
+  if (!resolved) return { status: 'unresolved', tokenId, chain, reason: 'unsupported-token' };
+  return {
+    status: 'resolved',
+    tokenId,
+    value: resolved.value,
+    chain: graphChain(graph, tokenId),
+    sourceTokenId: graphChain(graph, tokenId).at(-1),
+    type: resolved.type,
+    unit: resolved.unit,
+    ...(typeof token.alias === 'string' ? { alias: token.alias } : {}),
+    ...(resolved.fluid === undefined ? {} : { fluid: resolved.fluid }),
+    ...(resolved.formula === undefined ? {} : { formula: resolved.formula }),
+    ...(resolved.relative === undefined ? {} : { relative: resolved.relative }),
+    ...(resolved.mix === undefined ? {} : { mix: resolved.mix }),
+    ...(resolved.effect === undefined ? {} : { effect: resolved.effect }),
+  };
 }
 
 function formatValue(result) {
   if (result.status !== 'resolved') return 'Unavailable';
+  if (result.type === 'effect') return cssValue(result);
   if (result.unit === 'px') return result.value + 'px';
   if (result.unit === 'ms') return result.value + 'ms';
   return String(result.value);
@@ -120,6 +165,26 @@ function visualSpecimenKind(category, token) {
 
 export function foundationVisualSpecimenKind(tokenId, token) {
   return visualSpecimenKind(tokenCategory(tokenId, token), token);
+}
+
+/** Show the static default beside the explicit responsive recipe from the same graph compiler. */
+export function responsiveFoundationRows(theme = defaultTheme, modes = defaultModesFor(theme)) {
+  const staticResult = graphFor(theme, modes, false);
+  const responsiveResult = graphFor(theme, modes, true);
+  if (!staticResult.graph || !responsiveResult.graph) return [];
+  return RESPONSIVE_PREVIEW_TOKEN_IDS
+    .map((id) => {
+      const staticToken = staticResult.graph.tokens[id];
+      const responsiveToken = responsiveResult.graph.tokens[id];
+      if (!staticToken || !responsiveToken) return null;
+      return Object.freeze({
+        id,
+        cssVariable: cssVariableName(id),
+        staticValue: cssValue(staticToken),
+        responsiveValue: cssValue(responsiveToken),
+      });
+    })
+    .filter(Boolean);
 }
 
 function colorGroup(id, layer) {
@@ -154,7 +219,7 @@ export function foundationTokenRows(theme = defaultTheme) {
   return Object.entries(theme.tokens).map(([id, token]) => {
     const facets = tokenCategories(id, token);
     const category = facets[0];
-    if (!category || !validTokenSource(token)) return null;
+    if (!category) return null;
     const defaultValue = resolveTokenValue(theme, id, modes);
     return Object.freeze({
       id,
@@ -318,14 +383,49 @@ function typographyProperty(row) {
   return 'role';
 }
 
+function typographyRoleForToken(theme, tokenId, modes) {
+  const roles = theme?.theme?.typography?.roles;
+  if (!isRecord(roles)) return undefined;
+  const resolution = resolveTokenValue(theme, tokenId, modes);
+  const tokenIds = new Set([tokenId, ...(resolution.chain ?? [])]);
+  for (const [name, role] of Object.entries(roles)) {
+    if (!isRecord(role)) continue;
+    if (tokenIds.has(role.fontFamily) || tokenIds.has(role.color)) return { name, role };
+    for (const [variant, properties] of Object.entries(role.variants ?? {})) {
+      if (isRecord(properties) && Object.values(properties).some((propertyTokenId) => tokenIds.has(propertyTokenId))) {
+        return { name, role, variant, properties };
+      }
+    }
+  }
+  return undefined;
+}
+
+function resolvedString(theme, tokenId, modes) {
+  if (typeof tokenId !== 'string') return undefined;
+  const result = resolveTokenValue(theme, tokenId, modes);
+  return result.status === 'resolved' && typeof result.value === 'string' ? result.value : undefined;
+}
+
 function typographyStyle(theme, row, modes) {
   const value = numericValue(theme, row, modes);
   const property = typographyProperty(row);
-  if (value === undefined) return undefined;
-  if (property === 'size') return { fontSize: value + 'px' };
-  if (property === 'weight') return { fontWeight: value };
-  if (property === 'line-height') return { lineHeight: value };
-  return undefined;
+  const roleBinding = typographyRoleForToken(theme, row.id, modes);
+  const role = roleBinding?.role;
+  const style = {};
+  const color = resolvedString(theme, role?.color, modes);
+  if (color !== undefined) style.color = color;
+  const letterSpacing = resolvedString(theme, roleBinding?.properties?.letterSpacing, modes);
+  if (letterSpacing !== undefined) style.letterSpacing = letterSpacing;
+  if (row.id.includes('font-family')) {
+    const resolved = resolveTokenValue(theme, row.id, modes);
+    if (resolved.status === 'resolved' && typeof resolved.value === 'string') style.fontFamily = resolved.value;
+  }
+  if (value !== undefined) {
+    if (property === 'size') style.fontSize = value + 'px';
+    if (property === 'weight') style.fontWeight = value;
+    if (property === 'line-height') style.lineHeight = value;
+  }
+  return Object.keys(style).length > 0 ? style : undefined;
 }
 
 function typographySample(row) {
@@ -377,7 +477,7 @@ function renderSpacingGallery({ theme, rows, modes, onCopy }) {
 }
 
 function isShadowRow(row) {
-  return row.type === 'string' || /shadow|elevation/u.test(row.id);
+  return row.type === 'effect' || /shadow|elevation/u.test(row.id);
 }
 
 function renderShapeGallery({ theme, rows, modes, onCopy }) {
@@ -386,7 +486,8 @@ function renderShapeGallery({ theme, rows, modes, onCopy }) {
       const result = resolveTokenValue(theme, row.id, modes);
       const value = result.status === 'resolved' ? result.value : undefined;
       const shadow = isShadowRow(row);
-      const boxStyle = shadow ? (typeof value === 'string' ? { boxShadow: value } : undefined)
+      const boxStyle = shadow ? (typeof value === 'string' || row.type === 'effect' ? { boxShadow: formatValue(result) } : undefined)
+        : row.id.includes('.effect.') && typeof value === 'string' ? { backgroundColor: value }
         : typeof value === 'number' ? { borderRadius: value + 'px' } : undefined;
       return h('article', { key: row.id, className: 'muxui-foundations-shape-card', 'data-muxui-foundations-token': row.id },
         h('div', { className: 'muxui-foundations-shape-visual', 'data-muxui-foundations-radii-specimen': row.id },
@@ -415,7 +516,9 @@ function renderMotionGallery({ theme, rows, modes, onCopy, activeDemo, run, onTr
           ),
           h('button', { type: 'button', className: 'muxui-foundations-motion-trigger', 'data-muxui-foundations-motion-trigger': row.id, onClick: () => onTrigger(row.id) }, 'Play once'),
         ),
-        h('p', { className: 'muxui-foundations-motion-easing' }, 'Ease-out renderer timeline'),
+        h('p', { className: 'muxui-foundations-motion-easing', 'data-muxui-foundations-motion-easing': row.id }, row.type === 'string'
+          ? 'Easing: ' + formatValue(resolveTokenValue(theme, row.id, modes))
+          : 'Ease-out renderer timeline'),
         h(TokenCaption, { theme, row, modes, onCopy }),
       );
     }),
@@ -568,6 +671,21 @@ function displayValue(result) {
   return formatValue(result);
 }
 
+function ResponsiveDimensionPreview({ theme, modes }) {
+  const rows = responsiveFoundationRows(theme, modes);
+  return h('section', { className: 'muxui-foundations-responsive', 'data-muxui-foundations-responsive': true, 'aria-labelledby': 'muxui-foundations-responsive-title' },
+    h('div', { className: 'muxui-foundations-responsive-heading' },
+      h('div', null, h('p', { className: 'muxui-foundations-eyebrow' }, 'Opt-in viewport recipes'), h('h2', { id: 'muxui-foundations-responsive-title' }, 'Static by default, responsive by choice')),
+      h('p', null, 'The default Mux UI theme keeps donor dimensions static. Add ', h('code', null, 'data-muxui-responsive'), ' to a theme scope to activate the canonical clamp recipes.'),
+    ),
+    h('div', { className: 'muxui-foundations-responsive-grid' }, rows.map((row) => h('article', { key: row.id, className: 'muxui-foundations-responsive-row', 'data-muxui-foundations-responsive-token': row.id },
+      h('code', { className: 'muxui-foundations-responsive-id' }, row.cssVariable),
+      h('div', { className: 'muxui-foundations-responsive-value', 'data-muxui-foundations-responsive-mode': 'static' }, h('span', null, 'Default'), h('code', null, row.staticValue)),
+      h('div', { className: 'muxui-foundations-responsive-value', 'data-muxui-foundations-responsive-mode': 'responsive' }, h('span', null, 'Responsive'), h('code', null, row.responsiveValue)),
+    ))),
+  );
+}
+
 function CategoryNav({ selected, counts, onSelect }) {
   return h('nav', { className: 'muxui-foundations-categories', 'aria-label': 'Foundation categories' },
     FOUNDATIONS_CATEGORY_INVENTORY.map(({ id, label }) => h('button', { key: id, type: 'button', className: selected === id ? 'is-selected' : undefined, 'aria-current': selected === id ? 'page' : undefined, onClick: () => onSelect(id), 'data-muxui-foundations-category': id },
@@ -662,6 +780,7 @@ export function FoundationsGallery({ theme = defaultTheme } = {}) {
       ),
     ),
     h(ModeComparisons, { theme, modes }),
+    h(ResponsiveDimensionPreview, { theme, modes }),
     h('div', { className: 'muxui-foundations-layout' },
       h(CategoryNav, { selected: selectedCategory, counts, onSelect: setCategory }),
       h('div', { className: 'muxui-foundations-content' },

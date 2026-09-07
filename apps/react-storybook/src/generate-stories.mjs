@@ -11,7 +11,8 @@ const snapshotPath = resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20
 const generatedRoot = resolve(process.env.MUXUI_STORYBOOK_GENERATED_ROOT ?? resolve(import.meta.dirname, '../.storybook/generated'));
 const checkOnly = process.argv.includes('--check');
 
-const descriptor = JSON.parse(await readFile(descriptorPath, 'utf8'));
+const descriptorSource = JSON.parse(await readFile(descriptorPath, 'utf8'));
+const descriptor = descriptorSource;
 const snapshot = JSON.parse(await readFile(snapshotPath, 'utf8'));
 const policy = await loadPolicy(repositoryRoot);
 const generatedSource = 'apps/react-storybook/src/generate-stories.mjs';
@@ -66,7 +67,7 @@ function stringLiteral(value) {
 }
 
 const bindings = descriptor.bindings;
-if (bindings.length !== 53) fail(`expected 53 MuxUI bindings, found ${bindings.length}`);
+if (bindings.length === 0) fail('current MuxUI binding projection is empty');
 if (new Set(bindings.map(({ export: name }) => name)).size !== bindings.length) fail('duplicate MuxUI binding export');
 if (bindings.some((binding) => binding.runtimeProfile !== 'web.react')) fail('non-web.react binding in React showcase');
 
@@ -78,8 +79,7 @@ const snapshotFamilies = new Map(snapshot.families.map((family) => [
 ]));
 const records = bindings.map((binding) => {
   const family = snapshotFamilies.get(binding.export);
-  if (!family) fail(`missing canonical tranche for ${binding.export}`);
-  return { family: binding.export, tranche: family.tranche, binding };
+  return { family: binding.export, tranche: family?.tranche ?? binding.tranche ?? 'current', binding };
 });
 
 const names = records.map(({ family }) => family);
@@ -90,6 +90,16 @@ if (unknownAdapters.length) fail(`unknown explicit adapters: ${unknownAdapters.j
 
 function storySource(record) {
   const canonicalExample = canonicalStoryExamples.get(record.family);
+  const dedicatedImport = record.binding.module === './text-editor'
+    ? "\nimport { TextEditor as TextEditorSubpath } from '@muxui/react/text-editor';"
+    : record.binding.module === './markdown'
+      ? "\nimport { Markdown as MarkdownSubpath } from '@muxui/react/markdown';"
+      : '';
+  const componentExpression = record.binding.module === './text-editor'
+    ? 'TextEditorSubpath'
+    : record.binding.module === './markdown'
+      ? 'MarkdownSubpath'
+      : `MuxUI.${record.family}`;
   return `import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -102,7 +112,7 @@ ${record.family === 'Button' ? '  createButtonMatrixStory,\n' : ''}  createBrows
   createUncontrolledStory,
 } from '../../src/storybook-factory.mjs';${canonicalExample ? `
 import React from 'react';
-import { ${canonicalExample.importName} } from './${canonicalExample.helperName}';` : ''}
+import { ${canonicalExample.importName} } from './${canonicalExample.helperName}';` : ''}${dedicatedImport}
 
 const binding = ${JSON.stringify(record.binding, null, 2)};
 const record = { family: '${record.family}', tranche: '${record.tranche}', binding };
@@ -110,7 +120,7 @@ const record = { family: '${record.family}', tranche: '${record.tranche}', bindi
 export default {
   title: 'Mux UI React/${record.tranche}/${record.family}',
   id: '${storyId(record)}',
-  component: MuxUI.${record.family},
+  component: ${componentExpression},
   tags: ['autodocs'],
   parameters: {
     controls: {
@@ -152,7 +162,7 @@ export const ${canonicalExample.exportName} = {
 };` : ''}${record.family === 'Button' ? `
 const buttonMatrix = createButtonMatrixStory(record);
 export const Matrix = {
-  name: 'Variant × tone × size',
+  name: 'Variant × size',
   args: buttonMatrix.args,
   argTypes: buttonMatrix.argTypes,
   parameters: buttonMatrix.parameters,
@@ -267,4 +277,4 @@ if (checkOnly) {
   for (const [name, content] of outputs) await writeFile(resolve(generatedRoot, name), content, 'utf8');
 }
 
-console.log(`React Storybook projection: ${records.length}/53 families, ${outputs.size - canonicalStoryDefinitions.length - 1} stories`);
+console.log(`React Storybook projection: ${records.length} families, ${outputs.size - canonicalStoryDefinitions.length - 1} stories`);

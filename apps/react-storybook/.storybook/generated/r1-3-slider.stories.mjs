@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:06e25b9bd343ba2038f85ecaf99e592b2a32a17f0c238cca4ba2be61765a09ca
+// @generated-content-sha256: sha256:329f4c5261ad06cf855e2818c719c121015b4c41de53bcef25e91eb3b61c29a4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -59,7 +59,8 @@ const binding = {
     "read-only",
     "selected"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Slider', tranche: 'R1.3', binding };
 

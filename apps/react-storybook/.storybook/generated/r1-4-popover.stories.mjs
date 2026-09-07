@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:58c16590b8cd67173821c6bc1f06a91553134488a0ed0e7f6d8046d2dc057bf1
+// @generated-content-sha256: sha256:0801b87075aff818c37ef50e1efa2aa4ecfb14add2809505d7eeb4461b2d6dba
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -60,7 +60,8 @@ const binding = {
     "focused",
     "dismissed"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'Popover', tranche: 'R1.4', binding };
 

@@ -50,20 +50,44 @@ integrity, and sealed report; browser comparison remains opt-in. Both local and
 CI-capable comparisons use only Mux UI Storybook and the checked-in Mux UI-owned
 artifacts. The current one-time report records its machine-checked pass/fail
 counts in `visual-migration/results/comparison.json` (the present capture has
-418 passing and 12 failing component-region comparisons, covering all six
+416 passing and 14 failing component-region comparisons, covering all six
 DateRangePicker states in both modes because of the recorded separator
-adaptation), so the donor parity
+adaptation plus the focused RadioGroup geometry), so the donor parity
 review remains decision bearing; the verifier derives these counts from the
 sealed PNG pairs and report rather than accepting a handwritten result. No public API
 or accessibility behavior was changed to chase pixels.
 
-The migration fixture is not a registered Storybook story. Storybook registers
-only the 53 generated family modules (the normal 106 Default/States entries).
-The runner reuses the generated `muxui-react-r1-1-button--default` iframe entry
-and passes the private `muxui-migration=1` query; the existing preview renders
-the source-owned fixture only for that query. The runner always reserves a port
-and starts Storybook from this checkout, so there is no external Storybook URL
-override.
+The historical migration fixture is not a registered Storybook story. The
+sealed history remains the fixed 53-family closure (the normal 106
+Default/States entries in that historical projection), while the current
+Storybook projection describes the complete 74-family package union: 72 eager
+root exports plus the isolated `TextEditor` and `Markdown` subpaths. Current
+stories and browser checks must derive from the current descriptor and finite
+fixture catalog rather than treating the retained 53-family history as the
+available package surface.
+Routine provenance tests stage the four pinned Mux capture sources and the
+complete generated React tree from the sealed source revision in a temporary
+test root before validating the retained manifest, report, and PNGs. The live
+checkout is still required to reject stale provenance; the test does not
+rewrite or reseal historical evidence.
+
+Current raw donor/Mux diagnostics are separate from the normal Mux-only
+Storybook replay. The diagnostic runner uses the pinned Tale checkout and the
+Mux-owned bundled Inter, Playfair Display, and Roboto Mono assets only for a
+same-browser reference comparison; it writes disposable evidence outside the
+repository and never feeds donor pixels back into generated baselines:
+
+```sh
+MUXUI_CHROME_EXECUTABLE="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" \
+node apps/react-storybook/test/run-r1-6-finite-paired.mjs \
+  --current --mode light --output-dir /private/tmp/muxui-r1-6-current-light
+```
+
+The current raw report records every finite variant, interaction case,
+renderer error, reached-state result, local-font proof, and raster mismatch.
+The Storybook browser gate remains the current Mux-only replay and does not
+silently convert a missing donor state or an unequal pair into a passing
+baseline.
 
 For an intentional, reviewed Mux UI visual change, run
 `pnpm --filter @muxui/react-storybook update:visual:migration`. This captures

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d96fee512fe36541388e34aa7064ec8ef4332984a5eb8fb224a577bc00d92cb4
+// @generated-content-sha256: sha256:aae1cbf4c079f670536a95617c2466605bf20ad62d194acd77998937782a1871
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -35,7 +35,8 @@ const binding = {
     "horizontal",
     "vertical"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Separator', tranche: 'R1.1', binding };
 

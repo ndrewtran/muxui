@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:25a4cfc4de9158243e89916a80941ef5cb47fd676a28229ac113a5b254e05d3d
+// @generated-content-sha256: sha256:497a4d94a862371395a0b58f04c29f20c471e76db1770e4e0e6212d13d7ec97c
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -47,7 +47,8 @@ const binding = {
     "focused",
     "disabled"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'DropZone', tranche: 'R1.4', binding };
 

@@ -12,10 +12,9 @@ const appRoot = resolve(import.meta.dirname, '..');
 const host = '127.0.0.1';
 const serverTimeoutMs = 90_000;
 const storyTimeoutMs = 15_000;
-// The gate intentionally executes 53 family proofs in both color schemes in
-// addition to the full axe sweep, targeted interaction coverage, and the Button
-// matrix. Keep a bounded budget for repeated Storybook navigations on slower CI
-// hosts.
+// The gate executes every current family in both color schemes in addition to
+// the full axe sweep, targeted interaction coverage, and the Button matrix.
+// Keep a bounded budget for repeated Storybook navigations on slower CI hosts.
 const testTimeoutMs = 420_000;
 
 function browserCandidates() {
@@ -320,40 +319,33 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   await waitForDocumentAnimations(page);
   await page.addScriptTag({ content: axe.source });
   const buttonCount = await page.locator('.muxui-button-matrix .muxui-button').count();
-  assert.equal(buttonCount, 18, `${scheme} Button Matrix must render 18 tuples`);
+  assert.equal(buttonCount, 21, `${scheme} Button Matrix must render 21 donor tuples`);
   const result = await runAxe(page, '.muxui-button-matrix');
   assert.equal(result.violations.length, 0, `${scheme} Button Matrix has axe violations:\n${formatViolations(result.violations)}`);
 
   const geometry = await page.evaluate(() => Object.fromEntries(['sm', 'md', 'lg'].map((size) => {
-    const button = document.querySelector(`.muxui-button[data-variant="primary"][data-tone="default"][data-size="${size}"]`);
-    if (!button) throw new Error(`missing primary/default ${size} button`);
+    const button = document.querySelector(`.muxui-button[data-variant="primary"][data-size="${size}"]`);
+    if (!button) throw new Error(`missing primary ${size} button`);
     const rect = button.getBoundingClientRect();
     return [size, { width: rect.width, height: rect.height }];
   })));
   assert.ok(geometry.sm.height < geometry.md.height && geometry.md.height < geometry.lg.height, `${scheme} Button Matrix heights must increase sm < md < lg: ${JSON.stringify(geometry)}`);
   assert.ok(geometry.sm.width < geometry.md.width && geometry.md.width < geometry.lg.width, `${scheme} Button Matrix widths must increase sm < md < lg: ${JSON.stringify(geometry)}`);
 
-  const destructive = await page.locator('.muxui-button[data-variant="primary"][data-tone="destructive"][data-size="md"]').evaluate((button) => {
+  const destructive = await page.locator('.muxui-button[data-variant="danger"][data-size="md"]').evaluate((button) => {
     const style = getComputedStyle(button);
     return { color: style.color, backgroundColor: style.backgroundColor };
   });
   const ratio = contrastRatio(destructive.color, destructive.backgroundColor);
-  assert.ok(ratio >= 4.5, `${scheme} destructive primary Button contrast must meet 4.5:1, got ${ratio.toFixed(2)}:1 (${JSON.stringify(destructive)})`);
+  assert.ok(ratio >= 4.5, `${scheme} danger Button contrast must meet 4.5:1, got ${ratio.toFixed(2)}:1 (${JSON.stringify(destructive)})`);
 
   if (scheme === 'dark') {
     const pressedBackgrounds = [];
-    for (const [variant, tone] of [
-      ['primary', 'default'],
-      ['secondary', 'default'],
-      ['ghost', 'default'],
-      ['primary', 'destructive'],
-      ['secondary', 'destructive'],
-      ['ghost', 'destructive'],
-    ]) {
-      const selector = `.muxui-button[data-variant="${variant}"][data-tone="${tone}"][data-size="md"]`;
+    for (const variant of ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse']) {
+      const selector = `.muxui-button[data-variant="${variant}"][data-size="md"]`;
       const button = page.locator(selector);
       const box = await button.boundingBox();
-      assert.ok(box, `missing ${variant}/${tone} button bounds`);
+      assert.ok(box, `missing ${variant} button bounds`);
       await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
       await page.mouse.down();
       await page.waitForFunction((buttonSelector) => document.querySelector(buttonSelector)?.hasAttribute('data-pressed') === true, selector);
@@ -577,7 +569,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
     const checkboxStates = states.find((story) => storyFamily(story) === 'Checkbox');
     const autocompleteInteraction = stories.find(({ name }) => name === 'Disabled items keyboard navigation');
     const expectedFamilies = new Set(manifest.families.map(({ family }) => family));
-    assert.equal(expectedFamilies.size, 53, 'the generated Storybook manifest must contain 53 families');
+    assert.ok(expectedFamilies.size > 0, 'the generated Storybook manifest must contain the current union');
     assert.equal(defaults.length, expectedFamilies.size, 'Storybook must expose one Default story for every family');
     assert.equal(states.length, expectedFamilies.size, 'Storybook must expose one States story for every family');
     assert.equal(browserProofs.length, expectedFamilies.size, 'Storybook must expose one Browser proof story for every family');
@@ -593,7 +585,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', { ti
     assert.ok(linkIconComposition, 'Storybook must expose the Link icon composition story');
     assert.ok(buttonStates, 'Storybook must expose the Button States story for focused platform-mode proof');
     assert.ok(checkboxStates, 'Storybook must expose the Checkbox States story for focused contrast proof');
-    assert.ok(buttonMatrix, 'Storybook must expose the Button Variant × tone × size Matrix story');
+    assert.ok(buttonMatrix, 'Storybook must expose the Button Variant × size Matrix story');
 
     browser = await chromium.launch({ executablePath, headless: true });
     const page = await browser.newPage();

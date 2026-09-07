@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:5e91ec67444cca5335522b45f2409dbd82b882b9e301729ca77a99a09e013998
+// @generated-content-sha256: sha256:f5063ea8d90434546549bd771a240fae7a37b0e82b35081b7e11934616ff5656
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -64,7 +64,8 @@ const binding = {
     "read-only",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ComboBox', tranche: 'R1.3', binding };
 

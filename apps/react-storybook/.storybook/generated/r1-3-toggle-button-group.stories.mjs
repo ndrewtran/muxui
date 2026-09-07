@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:407c9e39456157bf6279f8a7ac6fdc9489ee7d21b440762c885744f321f160a0
+// @generated-content-sha256: sha256:b628906c36923054749e1f490b005a3b0d247aae7aa5037a44c904000f6dbcf2
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -16,6 +16,7 @@ const binding = {
   "api": {
     "defaults": {
       "disabled": false,
+      "disallowEmptySelection": false,
       "orientation": "horizontal",
       "selectionMode": "single"
     },
@@ -33,7 +34,9 @@ const binding = {
       "defaultSelectedIds",
       "selectionMode",
       "disabled",
-      "orientation"
+      "orientation",
+      "disallowEmptySelection",
+      "size"
     ]
   },
   "binding": "muxui:component:toggle-button-group#web.react",
@@ -48,7 +51,8 @@ const binding = {
     "disabled",
     "selected"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'ToggleButtonGroup', tranche: 'R1.3', binding };
 

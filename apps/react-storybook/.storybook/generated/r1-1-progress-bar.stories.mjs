@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:0da64604a423e7732bd770282c9f5ae9c2fb72c7640d2dff12ed1f0fb0076a95
+// @generated-content-sha256: sha256:ab22174c4bc0fe35b3d853686f34c2632f95437b45e8440bf442c6f2f97e652b
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -44,7 +44,8 @@ const binding = {
     "indeterminate",
     "complete"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'ProgressBar', tranche: 'R1.1', binding };
 

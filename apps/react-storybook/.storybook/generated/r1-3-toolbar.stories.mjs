@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:8c39b8891b6a6bab24e5268538059b0b759b1a1a6f31d1fb6ab296f90df88f13
+// @generated-content-sha256: sha256:f93eeb558e0502b3a3e71df1cdec85525132a1601003b3d144976e4e27ed4576
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -38,7 +38,8 @@ const binding = {
     "idle",
     "focused"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Toolbar', tranche: 'R1.3', binding };
 

@@ -39,7 +39,8 @@
         "props": [
           "selected",
           "defaultSelected",
-          "disabled"
+          "disabled",
+          "size"
         ],
         "events": [
           "change",
@@ -52,7 +53,8 @@
         "defaults": {
           "selected": false,
           "defaultSelected": false,
-          "disabled": false
+          "disabled": false,
+          "size": "md"
         }
       },
       "behavior": [
@@ -126,7 +128,8 @@
         "props": [
           "selected",
           "defaultSelected",
-          "disabled"
+          "disabled",
+          "size"
         ],
         "events": [
           "change",
@@ -139,7 +142,8 @@
         "defaults": {
           "selected": false,
           "defaultSelected": false,
-          "disabled": false
+          "disabled": false,
+          "size": "md"
         }
       },
       "behavior": [

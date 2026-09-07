@@ -1,9 +1,12 @@
 // @generated-from: packages/react/src/button.mjs
-// @generated-content-sha256: sha256:13fec9945a04f11e655bce5898d869f53d5f5c5d76c9acbfa6263021e547ceab
+// @generated-content-sha256: sha256:51b32acd0d0a4dbdc05b34ffd7cc034b53a44de9820f9455ea1414ce959201c9
 import React from 'react';
 import { Button as AriaButton } from 'react-aria-components';
 
-const BUTTON_VARIANTS = new Set(['primary', 'secondary', 'ghost']);
+// The seven donor variants are the canonical axis. `secondary` remains a
+// compatibility spelling for the earlier Mux UI surface and maps to neutral
+// styling in CSS; `tone` likewise remains an orthogonal legacy alias.
+const BUTTON_VARIANTS = new Set(['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary']);
 const BUTTON_TONES = new Set(['default', 'destructive']);
 const BUTTON_SIZES = new Set(['sm', 'md', 'lg']);
 
@@ -23,6 +26,7 @@ export const Button = React.forwardRef(function Button({
   className,
   disabled = false,
   pending = false,
+  showTextWhileLoading = false,
   variant = 'primary',
   tone = 'default',
   size = 'md',
@@ -44,11 +48,17 @@ export const Button = React.forwardRef(function Button({
     onActivate?.(activation);
   };
 
+  const showPendingText = pending && showTextWhileLoading;
+  const callerNamesButton = props['aria-label'] != null || props['aria-labelledby'] != null;
+  const pendingContentLabelId = `muxui-button-label-${React.useId()}`;
+  const labelPendingContent = pending && !showTextWhileLoading && !callerNamesButton;
   const content = React.createElement('span', {
-    className: 'muxui-button-content',
+    className: ['muxui-button-content', showPendingText ? 'muxui-button-content--with-spinner' : ''].filter(Boolean).join(' '),
+    id: labelPendingContent ? pendingContentLabelId : undefined,
+    style: pending && !showTextWhileLoading ? { visibility: 'hidden' } : undefined,
   }, children);
   const spinner = pending ? React.createElement('svg', {
-    className: 'muxui-button-spinner',
+    className: ['muxui-button-spinner', showPendingText ? 'muxui-button-spinner--inline' : ''].filter(Boolean).join(' '),
     viewBox: '0 0 24 24',
     fill: 'none',
     'aria-hidden': 'true',
@@ -66,6 +76,9 @@ export const Button = React.forwardRef(function Button({
     isPending: pending,
     render: (domProps) => React.createElement('button', {
       ...domProps,
+      ...(labelPendingContent && !callerNamesButton
+        ? { 'aria-labelledby': pendingContentLabelId }
+        : {}),
       'data-variant': variant,
       'data-tone': tone,
       'data-size': size,

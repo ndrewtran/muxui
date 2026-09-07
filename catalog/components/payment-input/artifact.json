@@ -1,0 +1,138 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:payment-input",
+  "kind": "component",
+  "name": "PaymentInput",
+  "summary": "Collect and format a payment card number with bounded card-type detection.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Collecting a primary payment card number during checkout."
+    ],
+    "avoidWhen": [
+      "For non-card payment credentials or generic numeric input."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "group",
+    "input",
+    "label",
+    "description",
+    "error",
+    "card-icon"
+  ],
+  "states": [
+    "empty",
+    "visa",
+    "mastercard",
+    "amex",
+    "discover",
+    "unknown",
+    "disabled",
+    "invalid"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Strips non-digits and formats Visa, Mastercard, Amex and Discover groups.",
+      "Formatting and card detection do not validate payment credentials."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "value",
+          "defaultValue",
+          "disabled",
+          "invalid",
+          "required",
+          "readOnly",
+          "onChange"
+        ],
+        "events": [
+          "change"
+        ],
+        "parts": [
+          "root",
+          "group",
+          "input",
+          "label",
+          "description",
+          "error",
+          "card-icon"
+        ],
+        "defaults": {
+          "defaultValue": "",
+          "disabled": false,
+          "invalid": false,
+          "required": false,
+          "readOnly": false
+        }
+      },
+      "behavior": [
+        "Strips non-digits and formats Visa, Mastercard, Amex and Discover groups.",
+        "Formatting and card detection do not validate payment credentials."
+      ],
+      "accessibility": [
+        "Strips non-digits and formats Visa, Mastercard, Amex and Discover groups.",
+        "Formatting and card detection do not validate payment credentials."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.feedback",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

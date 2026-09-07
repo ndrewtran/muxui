@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:27e52cd33c7297edf7c93225718f609b3e908fa06b8b081e82a2b25c2e8ed4b0
+// @generated-content-sha256: sha256:670c60e5740c35034542ce8654d982dc972d19533112289b94368dce40bab078
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -43,7 +43,8 @@ const binding = {
     "disabled",
     "current"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.1"
 };
 const record = { family: 'Breadcrumbs', tranche: 'R1.1', binding };
 

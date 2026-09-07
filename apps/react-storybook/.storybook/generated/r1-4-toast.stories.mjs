@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:8d80e8acbc1749422f62477ec670c33ec980916e7301ac99c5992c57806c7831
+// @generated-content-sha256: sha256:9d9575b49569f24b3e4c0671af40d7cc639627b1b9de0a778675f651704cbd1a
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -48,7 +48,8 @@ const binding = {
     "timed",
     "dismissed"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.4"
 };
 const record = { family: 'Toast', tranche: 'R1.4', binding };
 

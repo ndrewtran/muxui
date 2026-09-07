@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:825dec1aa9d71e0a7b4efc7fddfbec5c14ab600a95998cbb78d85b9509efe847
+// @generated-content-sha256: sha256:9b35b37115871a4257d943b55175412904595621633deccb35b347434f9a663d
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -19,7 +19,8 @@ const binding = {
       "invalid": false,
       "orientation": "vertical",
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -34,13 +35,15 @@ const binding = {
       "aria-label",
       "aria-labelledby",
       "options",
+      "children",
       "value",
       "defaultValue",
       "disabled",
       "readOnly",
       "required",
       "invalid",
-      "orientation"
+      "orientation",
+      "size"
     ]
   },
   "binding": "muxui:component:radio-group#web.react",
@@ -57,7 +60,8 @@ const binding = {
     "invalid",
     "selected"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'RadioGroup', tranche: 'R1.3', binding };
 

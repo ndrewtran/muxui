@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6a433343b73d82418bae8cd7708e37b991afec245935177dce6ecf3be467bf3f
+// @generated-content-sha256: sha256:6b3c2ea5d864796d782d079bb09297d1bc4e584dbe7fb922ee2c208e583730b2
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -49,7 +49,8 @@ const binding = {
     "disabled",
     "empty"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'Virtualizer', tranche: 'R1.3', binding };
 

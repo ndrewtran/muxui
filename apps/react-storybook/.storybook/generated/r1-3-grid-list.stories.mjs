@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:a73e4c0ffd5b60ef6e4dd0f6d4711b6fffa96f5b8145359d062bb7d287a52535
+// @generated-content-sha256: sha256:dba3c01b362a2f0dcb9ffd4203514def3660866227dd31130d1858b952061711
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -49,7 +49,8 @@ const binding = {
     "selected",
     "empty"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.3"
 };
 const record = { family: 'GridList', tranche: 'R1.3', binding };
 

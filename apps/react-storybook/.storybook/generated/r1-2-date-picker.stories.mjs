@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:340646b1140cf0258a67078583683bd31b0936207cf30a805fc23910d003b7d0
+// @generated-content-sha256: sha256:d7f25aa07f414e366332a2ecf33cee70b751f9870d5609362731ab6fd23f7140
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -69,7 +69,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'DatePicker', tranche: 'R1.2', binding };
 

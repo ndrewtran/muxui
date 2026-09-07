@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:c983d1f7a708b8c8e0535c2f2120f6224b5cd2ee4846a935a01429bb02758a7b
+// @generated-content-sha256: sha256:322028102012f90ac225022fe1def291980275ddb69eaeb8c53a6b50dfea2b0d
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -17,8 +17,10 @@ const binding = {
     "defaults": {
       "disabled": false,
       "invalid": false,
+      "orientation": "vertical",
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -42,7 +44,9 @@ const binding = {
       "readOnly",
       "required",
       "invalid",
-      "name"
+      "name",
+      "orientation",
+      "size"
     ]
   },
   "binding": "muxui:component:checkbox-group#web.react",
@@ -58,7 +62,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'CheckboxGroup', tranche: 'R1.2', binding };
 

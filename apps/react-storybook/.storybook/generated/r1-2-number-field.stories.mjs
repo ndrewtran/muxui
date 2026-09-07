@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:7bb942574f8c749bc52527ac22341359945ecf2d98ca4c8d4012e96de46b7c8e
+// @generated-content-sha256: sha256:a8eed02c5fc926b08076428a1fcf9c60122f3fb89cd2fedba98149b3528f5e04
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -67,7 +67,8 @@ const binding = {
     "required",
     "invalid"
   ],
-  "strategy": "direct"
+  "strategy": "direct",
+  "tranche": "R1.2"
 };
 const record = { family: 'NumberField', tranche: 'R1.2', binding };
 
