@@ -67,6 +67,75 @@ test('calendar, field and collection hooks respond independently to gap and inse
   }
 });
 
+test('generated aliases rebind through combined and nested mode scopes', { timeout: 30_000 }, async () => {
+  const css = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
+  const browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+    await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>
+      <section id="default-scope">
+        <div id="default-calendar" class="muxui-calendar">Calendar</div>
+        <button id="default-button" class="muxui-button">Button</button>
+        <div id="default-title" class="muxui-text--title-l">Title</div>
+      </section>
+      <section id="combined-scope" data-muxui-color-scheme="dark" data-muxui-density="compact" data-muxui-responsive>
+        <div id="combined-calendar" class="muxui-calendar">Calendar</div>
+        <button id="combined-button" class="muxui-button">Button</button>
+        <div id="combined-title" class="muxui-text--title-l">Title</div>
+        <section id="nested-scope" data-muxui-color-scheme="light" data-muxui-density="comfortable" data-muxui-responsive>
+          <div id="nested-calendar" class="muxui-calendar">Calendar</div>
+          <button id="nested-button" class="muxui-button">Button</button>
+          <div id="nested-title" class="muxui-text--title-l">Title</div>
+        </section>
+      </section>
+    </body></html>`);
+    const observe = (ids) => page.evaluate((elementIds) => Object.fromEntries(elementIds.map((id) => {
+      const style = getComputedStyle(document.getElementById(id));
+      return [id, {
+        padding: style.padding,
+        paddingInline: style.paddingLeft,
+        background: style.backgroundColor,
+        fontSize: style.fontSize,
+      }];
+    })), ids);
+
+    const baseline = await observe(['default-calendar', 'default-button', 'default-title']);
+    assert.equal(baseline['default-calendar'].paddingInline, '14px');
+    assert.equal(baseline['default-button'].paddingInline, '14px');
+    assert.equal(baseline['default-title'].fontSize, '24.09px');
+
+    const combined = await observe(['combined-calendar', 'combined-button', 'combined-title']);
+    assert.equal(combined['combined-calendar'].paddingInline, '12.68px', 'responsive inset follows its reference alias');
+    assert.equal(combined['combined-button'].paddingInline, '6.88px', 'compact control padding follows responsive space-3xs');
+    assert.equal(combined['combined-button'].background, 'rgb(83, 145, 152)', 'dark mode rebinds the action target');
+    assert.equal(combined['combined-title'].fontSize, '21.318px', 'descendant title uses responsive formula inputs');
+
+    const nested = await observe(['nested-calendar', 'nested-button', 'nested-title']);
+    assert.equal(nested['nested-calendar'].paddingInline, '12.68px', 'nested responsive scope retains responsive inset');
+    assert.equal(nested['nested-button'].paddingInline, '12.68px', 'comfortable reset rebinds control padding');
+    assert.equal(nested['nested-button'].background, 'rgb(2, 87, 104)', 'nested light scope rebinds the mode target');
+    assert.equal(nested['nested-title'].fontSize, '21.318px', 'nested title inherits responsive formula inputs');
+
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--muxui-reference-dimension-space-xs', '19px');
+      document.documentElement.style.setProperty('--muxui-semantic-control-padding-inline', '17px');
+    });
+    const componentPadding = await page.evaluate(() => getComputedStyle(document.documentElement)
+      .getPropertyValue('--muxui-component-button-padding-inline').trim());
+    assert.equal(componentPadding, '17px', 'the component alias itself follows the overridden semantic role');
+    const overrides = await observe(['default-calendar', 'default-button']);
+    assert.equal(overrides['default-calendar'].paddingInline, '19px', 'reference spacing propagates through the calendar inset alias');
+    assert.equal(overrides['default-button'].paddingInline, '17px', 'semantic control padding propagates to the button');
+
+    await page.evaluate(() => document.getElementById('nested-scope').style.setProperty('--muxui-reference-dimension-text-xl', '18px'));
+    const formulaOverride = await observe(['nested-title', 'combined-title']);
+    assert.equal(formulaOverride['nested-title'].fontSize, '19.8px', 'nested formula responds to its local reference input');
+    assert.equal(formulaOverride['combined-title'].fontSize, '21.318px', 'nested formula override does not repaint its ancestor scope');
+  } finally {
+    await browser.close();
+  }
+});
+
 test('focus, choice geometry, and validation text have independent semantic overrides', { timeout: 30_000 }, async () => {
   const css = (await Promise.all(['generated/styles.css', 'generated/supplemental.css', 'src/text-editor/text-editor.css']
     .map((path) => readFile(resolve(packageRoot, path), 'utf8')))).join('\n');

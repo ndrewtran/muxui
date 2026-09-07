@@ -1,4 +1,4 @@
-import { compilePureTokenGraph, cssName, cssValue } from './core.mjs';
+import { compilePureTokenGraph, cssDeclaration } from './core.mjs';
 import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getContrastRatio as contrastRatio } from './scale-palette.mjs';
 export { NAMED_SHADES, NEUTRAL_SHADES, randomScaleBaseColor } from './scale-palette.mjs';
 export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
@@ -356,7 +356,7 @@ export function compileThemeAuthoringDocument(document, { source, target = 'web.
     fail: (code, message) => { throw new TypeError(`${code}: ${message}`); },
   });
   const tokens = graph.tokens;
-  if (target === 'web.css') return { css: `${selector} {\n${Object.entries(tokens).sort(([a], [b]) => a.localeCompare(b)).map(([id, token]) => `  ${cssName(id)}: ${cssValue(token)};`).join('\n')}\n}`, tokens, modes: graph.modes, diagnostics };
+  if (target === 'web.css') return { css: `${selector} {\n${Object.values(tokens).sort((left, right) => left.id.localeCompare(right.id)).map((token) => cssDeclaration(token, graph.dependencies)).join('\n')}\n}`, tokens, modes: graph.modes, diagnostics };
   const native = nativeTheme(tokens, target, rootFontSizePx);
   return { tokens: native.tokens, modes: graph.modes, diagnostics: [...diagnostics, ...native.diagnostics] };
 }

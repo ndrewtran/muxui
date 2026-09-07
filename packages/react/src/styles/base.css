@@ -938,7 +938,7 @@
   gap: var(--muxui-semantic-layout-control-content-gap);
   line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
-  padding: var(--muxui-semantic-layout-inset-large);
+  padding: var(--muxui-semantic-layout-inset-medium);
   background: var(--muxui-semantic-surface-raised);
   border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-semantic-control-radius);

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { validateFamily } from '@muxui/schema';
-import { compilePureTokenGraph } from '../src/core.mjs';
+import { compilePureTokenGraph, cssValue } from '../src/core.mjs';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
-import { compileTokenGraph, compileWebTheme } from '../src/index.mjs';
+import { compileNativeTheme, compileTokenGraph, compileWebTheme } from '../src/index.mjs';
 import {
   compileThemeAuthoringDocument,
   generateScaleTheme,
@@ -200,6 +200,52 @@ test('effect color alpha representations preserve transparency through Node and 
   const authored = compileThemeAuthoringDocument({ ...base, overrides: {} }, { source: candidate });
   assert.match(authored.css, /--muxui-semantic-test-effect-alpha: 0px 1px 2px 0px rgba\(255, 0, 0, 0\.5\);/u);
   assert.match(authored.css, /--muxui-semantic-test-effect-rgba: 0px 1px 2px 0px #00ff0080;/u);
+});
+
+test('web serializers preserve authored aliases while resolved graph and native values remain unchanged', () => {
+  const graph = compilePureTokenGraph(source);
+  const web = compileWebTheme(source);
+  const compactWeb = compileWebTheme(source, { modes: { density: 'compact' } });
+  const native = compileNativeTheme(source, { profile: 'native.ios' });
+
+  assert.equal(graph.tokens['semantic.control.radius'].value, source.tokens['reference.dimension.scale'].value * 8);
+  assert.equal(cssValue(graph.tokens['semantic.control.radius']), 'calc(var(--muxui-reference-dimension-scale) * 8)');
+  assert.match(web.css, /--muxui-semantic-control-radius: var\(--muxui-reference-dimension-radius-m\);/u);
+  assert.match(web.css, /--muxui-component-button-padding-inline: var\(--muxui-semantic-control-padding-inline\);/u);
+  assert.match(compactWeb.css, /--muxui-semantic-control-padding-inline: var\(--muxui-reference-dimension-space-3xs\);/u);
+  assert.equal(native.theme['semantic.action.background'].value, graph.tokens['semantic.action.background'].value);
+  assert.equal(native.theme['component.button.background'].value, graph.tokens['component.button.background'].value);
+
+  const overridden = compileWebTheme(source, {
+    overrides: { 'semantic.control.radius': { type: 'dimension', unit: 'px', value: 3 } },
+  });
+  assert.match(overridden.css, /--muxui-semantic-control-radius: 3px;/u);
+  assert.doesNotMatch(overridden.css, /--muxui-semantic-control-radius: var\(/u);
+
+  assert.match(web.css, /--muxui-reference-dimension-radius-m: calc\(var\(--muxui-reference-dimension-scale\) \* 8\);/u);
+  assert.match(web.css, /--muxui-semantic-effect-scrim-subtle: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-default-100\) 24%, #00000000\);/u);
+  assert.match(compileWebTheme(source, { responsive: true }).css, /--muxui-reference-dimension-section-space-l: clamp\(/u);
+
+  const effectAliasSource = structuredClone(source);
+  effectAliasSource.tokens['semantic.test.effect-alias'] = {
+    layer: 'semantic',
+    type: 'effect',
+    unit: 'structured',
+    meaning: 'Effect alias serializer test.',
+    overridePolicy: 'theme',
+    alias: 'reference.effect.shadow-xs',
+    equivalence: 'semantic-equivalence',
+  };
+  const effectGraph = compilePureTokenGraph(effectAliasSource);
+  const effectWeb = compileWebTheme(effectAliasSource);
+  const effectNative = compileNativeTheme(effectAliasSource, { profile: 'native.ios' });
+  assert.match(effectWeb.css, /--muxui-semantic-test-effect-alias: var\(--muxui-reference-effect-shadow-xs\);/u);
+  assert.deepEqual(effectNative.theme['semantic.test.effect-alias'], {
+    type: 'effect',
+    unit: 'structured',
+    value: effectGraph.tokens['semantic.test.effect-alias'].value,
+    effect: effectGraph.tokens['semantic.test.effect-alias'].effect,
+  });
 });
 
 test('authoring cannot substitute defaults for absent canonical metadata', () => {

@@ -277,19 +277,19 @@ test('MuxUI styles bind donor states and public theme hooks', async () => {
   assert.match(css, /\.muxui-button-spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate var\(--muxui-semantic-motion-progress-spin-duration\) var\(--muxui-semantic-motion-constant-easing\) infinite;/u);
   assert.match(css, /\.muxui-button-spinner-arc\s*\{[\s\S]*animation: muxui-button-spinner-dash var\(--muxui-semantic-motion-progress-sweep-duration\) var\(--muxui-semantic-motion-progress-easing\) infinite;/u);
 
-  assert.match(css, /--muxui-component-button-background: #025768;/u);
-  assert.match(css, /--muxui-component-button-foreground: #e6f0f0;/u);
-  assert.match(css, /--muxui-component-button-min-height: 36px;/u);
-  assert.match(css, /--muxui-component-button-radius: calc\(var\(--muxui-reference-dimension-scale\) \* 8\);/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-background: #539198;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-foreground: #012334;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-field-background: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\);/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-overlay-background: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\);/u);
-  assert.match(css, /--muxui-semantic-selection-track: #025768;/u);
-  assert.match(css, /--muxui-semantic-content-link: #02485b;/u);
-  assert.match(css, /--muxui-semantic-feedback-invalid: #cc3330;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-content-link: #7badb1;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-feedback-invalid: #e59796;/u);
+  assert.match(css, /--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
+  assert.match(css, /--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);
+  assert.match(css, /--muxui-component-button-min-height: var\(--muxui-semantic-control-min-height\);/u);
+  assert.match(css, /--muxui-component-button-radius: var\(--muxui-semantic-control-radius\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-field-background: var\(--muxui-semantic-color-neutral-5\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-overlay-background: var\(--muxui-semantic-color-neutral-5\);/u);
+  assert.match(css, /--muxui-semantic-selection-track: var\(--muxui-semantic-color-color-60\);/u);
+  assert.match(css, /--muxui-semantic-content-link: var\(--muxui-semantic-color-color-70\);/u);
+  assert.match(css, /--muxui-semantic-feedback-invalid: var\(--muxui-reference-color-error-60\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-content-link: var\(--muxui-semantic-color-color-70\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-feedback-invalid: var\(--muxui-reference-color-error-30\);/u);
   assert.match(css, /@media \(forced-colors: active\)[\s\S]*--muxui-button-background: ButtonFace !important;/u);
   assert.match(css, /@media \(forced-colors: active\)[\s\S]*\.muxui-file-trigger \{[^}]*background: ButtonFace;[^}]*color: ButtonText;/u);
 

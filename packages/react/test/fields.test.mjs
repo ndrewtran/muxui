@@ -700,10 +700,21 @@ test('read-only date segments retain accessible semantic contrast', async () => 
   assert.match(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /--muxui-reference-color-neutral-60:\s*#79716b;/u);
   assert.match(styles, /--muxui-reference-color-neutral-50:\s*#918b86;/u);
-  const foreground = styles.match(/--muxui-semantic-content-default:\s*(#[0-9a-f]{6});/iu)?.[1];
-  const background = styles.match(/--muxui-semantic-surface-canvas:\s*(#[0-9a-f]{6});/iu)?.[1];
-  assert.ok(foreground);
-  assert.ok(background);
+  assert.match(styles, /--muxui-semantic-content-default:\s*var\(--muxui-semantic-color-neutral-80\);/u);
+  assert.match(styles, /--muxui-semantic-surface-canvas:\s*var\(--muxui-semantic-color-neutral-5\);/u);
+  const rootBody = styles.match(/:root \{([\s\S]*?)\n\}/u)?.[1] ?? '';
+  const rootDeclarations = new Map([...rootBody.matchAll(/^\s+(--[^:]+):\s*(.+);$/gmu)].map(([, name, value]) => [name, value]));
+  const resolveRoot = (name, seen = new Set()) => {
+    if (seen.has(name)) return undefined;
+    const value = rootDeclarations.get(name);
+    if (!value) return undefined;
+    const target = value.match(/^var\((--[^)]+)\)$/u)?.[1];
+    return target ? resolveRoot(target, new Set([...seen, name])) : value;
+  };
+  const foreground = resolveRoot('--muxui-semantic-content-default');
+  const background = resolveRoot('--muxui-semantic-surface-canvas');
+  assert.match(foreground ?? '', /^#[0-9a-f]{6}$/iu);
+  assert.match(background ?? '', /^#[0-9a-f]{6}$/iu);
   assert.ok(contrastRatio(foreground, background) >= 4.5, `${foreground} on ${background} lacks 4.5:1 contrast`);
 });
 
