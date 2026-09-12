@@ -37,6 +37,23 @@ main.muxui-storybook-surface {
   padding: 1.5rem;
 }
 
+/* The lifecycle harness is Storybook chrome, so native controls use Mux UI tokens too. */
+[data-muxui-storybook-lifecycle-select] {
+  background: var(--muxui-semantic-surface-canvas);
+  border: 1px solid var(--muxui-semantic-border-default);
+  color: var(--muxui-semantic-content-strong);
+}
+
+[data-muxui-storybook-lifecycle-select]:focus-visible {
+  outline: 2px solid var(--muxui-semantic-action-background);
+  outline-offset: 2px;
+}
+
+[data-muxui-storybook-lifecycle-select] option {
+  background: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-semantic-content-strong);
+}
+
 /* Docs and syntax are Storybook-owned chrome inside the preview iframe. */
 .sbdocs.sbdocs-wrapper,
 .sbdocs.sbdocs-preview {
@@ -92,58 +109,58 @@ main.muxui-storybook-surface {
   background: var(--muxui-semantic-surface-hover);
 }
 
-.sbdocs .prismjs {
+.sbdocs.sbdocs-preview .prismjs {
   background: var(--muxui-semantic-surface-strong);
   color: var(--muxui-semantic-content-strong);
   font-family: var(--muxui-semantic-typography-mono-font-family);
 }
 
-.sbdocs .prismjs .token {
+.sbdocs.sbdocs-preview .prismjs .token {
   font-family: var(--muxui-semantic-typography-mono-font-family);
 }
 
-.sbdocs .prismjs .token.comment,
-.sbdocs .prismjs .token.prolog,
-.sbdocs .prismjs .token.doctype,
-.sbdocs .prismjs .token.cdata {
+.sbdocs.sbdocs-preview .prismjs .token.comment,
+.sbdocs.sbdocs-preview .prismjs .token.prolog,
+.sbdocs.sbdocs-preview .prismjs .token.doctype,
+.sbdocs.sbdocs-preview .prismjs .token.cdata {
   color: var(--muxui-semantic-content-muted);
 }
 
-.sbdocs .prismjs .token.string,
-.sbdocs .prismjs .token.url,
-.sbdocs .prismjs .token.symbol,
-.sbdocs .prismjs .token.number,
-.sbdocs .prismjs .token.boolean,
-.sbdocs .prismjs .token.variable,
-.sbdocs .prismjs .token.constant,
-.sbdocs .prismjs .token.inserted,
-.sbdocs .prismjs .token.class-name,
-.sbdocs .prismjs .token.property,
-.sbdocs .prismjs .token.attr-name,
-.sbdocs .prismjs .token.regex,
-.sbdocs .prismjs .token.entity {
+.sbdocs.sbdocs-preview .prismjs .token.string,
+.sbdocs.sbdocs-preview .prismjs .token.url,
+.sbdocs.sbdocs-preview .prismjs .token.symbol,
+.sbdocs.sbdocs-preview .prismjs .token.number,
+.sbdocs.sbdocs-preview .prismjs .token.boolean,
+.sbdocs.sbdocs-preview .prismjs .token.variable,
+.sbdocs.sbdocs-preview .prismjs .token.constant,
+.sbdocs.sbdocs-preview .prismjs .token.inserted,
+.sbdocs.sbdocs-preview .prismjs .token.class-name,
+.sbdocs.sbdocs-preview .prismjs .token.property,
+.sbdocs.sbdocs-preview .prismjs .token.attr-name,
+.sbdocs.sbdocs-preview .prismjs .token.regex,
+.sbdocs.sbdocs-preview .prismjs .token.entity {
   color: var(--muxui-semantic-content-link);
 }
 
-.sbdocs .prismjs .token.tag,
-.sbdocs .prismjs .token.selector,
-.sbdocs .prismjs .token.atrule,
-.sbdocs .prismjs .token.keyword,
-.sbdocs .prismjs .token.attr-value {
+.sbdocs.sbdocs-preview .prismjs .token.tag,
+.sbdocs.sbdocs-preview .prismjs .token.selector,
+.sbdocs.sbdocs-preview .prismjs .token.atrule,
+.sbdocs.sbdocs-preview .prismjs .token.keyword,
+.sbdocs.sbdocs-preview .prismjs .token.attr-value {
   color: var(--muxui-semantic-action-background);
 }
 
-.sbdocs .prismjs .token.punctuation,
-.sbdocs .prismjs .token.operator,
-.sbdocs .prismjs .token.function {
+.sbdocs.sbdocs-preview .prismjs .token.punctuation,
+.sbdocs.sbdocs-preview .prismjs .token.operator,
+.sbdocs.sbdocs-preview .prismjs .token.function {
   color: var(--muxui-semantic-content-strong);
 }
 
-.sbdocs .prismjs .token.deleted {
+.sbdocs.sbdocs-preview .prismjs .token.deleted {
   color: var(--muxui-semantic-action-danger-background);
 }
 
-.sbdocs .prismjs .token.directive.tag .tag {
+.sbdocs.sbdocs-preview .prismjs .token.directive.tag .tag {
   background: var(--muxui-semantic-surface-hover);
   color: var(--muxui-semantic-content-strong);
 }

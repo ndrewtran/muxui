@@ -63,27 +63,27 @@ export function managerThemeCss() {
   border-color: var(--muxui-storybook-border-subtle);
 }
 
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype] {
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype] {
   color: var(--muxui-storybook-content-strong);
 }
 
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype]:hover,
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype]:focus-within {
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype]:hover,
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype]:focus-within {
   background: var(--muxui-storybook-surface-hover);
 }
 
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype] svg[type] {
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype] svg[type] {
   color: var(--muxui-storybook-content-link);
 }
 
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype][data-selected='true'],
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype][data-selected='true']:hover,
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype][data-selected='true']:focus-within {
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype][data-selected='true'],
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype][data-selected='true']:hover,
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype][data-selected='true']:focus-within {
   background: var(--muxui-storybook-action-background);
   color: var(--muxui-storybook-action-foreground);
 }
 
-#storybook-sidebar-region [data-ref-id='storybook_internal'] .sidebar-item[data-nodetype][data-selected='true'] svg[type] {
+#storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype][data-selected='true'] svg[type] {
   color: var(--muxui-storybook-action-foreground);
 }
 
@@ -174,6 +174,37 @@ export function managerThemeCss() {
 #storybook-sidebar-region [role='option']:focus-visible,
 #storybook-panel-region [role='menuitem']:focus-visible,
 #storybook-panel-region [role='option']:focus-visible {
+  outline: 2px solid var(--muxui-storybook-action-background);
+  outline-offset: -2px;
+}
+
+/* React Aria portals context menus outside the sidebar and panel regions. */
+.react-aria-Popover[role='dialog'],
+.react-aria-Popover[role='dialog'] .sb-list,
+body > [role='menu'],
+body > [role='listbox'] {
+  background: var(--muxui-storybook-surface-canvas);
+  color: var(--muxui-storybook-content-strong);
+  border-color: var(--muxui-storybook-border-default);
+}
+
+.react-aria-Popover[role='dialog'] .sb-list button,
+body > [role='menu'] [role='menuitem'],
+body > [role='listbox'] [role='option'] {
+  color: var(--muxui-storybook-content-strong);
+}
+
+.react-aria-Popover[role='dialog'] .sb-list button:hover,
+.react-aria-Popover[role='dialog'] .sb-list button:focus-visible,
+body > [role='menu'] [role='menuitem']:hover,
+body > [role='listbox'] [role='option']:hover {
+  background: var(--muxui-storybook-surface-hover);
+  color: var(--muxui-storybook-content-strong);
+}
+
+.react-aria-Popover[role='dialog'] .sb-list button:focus-visible,
+body > [role='menu'] [role='menuitem']:focus-visible,
+body > [role='listbox'] [role='option']:focus-visible {
   outline: 2px solid var(--muxui-storybook-action-background);
   outline-offset: -2px;
 }
