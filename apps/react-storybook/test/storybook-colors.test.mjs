@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { access, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
@@ -48,6 +48,69 @@ async function startStorybook() {
     }
     throw new Error(`Storybook did not start: ${output}`);
   } catch (error) { stop(); throw error; }
+}
+
+function colourAuditArtifactDirectory() {
+  return process.env.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR ?? process.env.RUNNER_TEMP ?? tmpdir();
+}
+
+async function captureToolState(page, previewFrame, { label, stylePrefix, expected, stage }) {
+  const directory = colourAuditArtifactDirectory();
+  await mkdir(directory, { recursive: true });
+  const stem = `storybook-colours-${process.pid}-${Date.now()}`;
+  const state = {
+    stage,
+    label,
+    stylePrefix,
+    expected,
+    manager: await page.evaluate(() => ({
+      url: location.href,
+      switches: [...document.querySelectorAll('[role="switch"]')].map((element) => ({
+        label: element.getAttribute('aria-label'),
+        checked: element.getAttribute('aria-checked'),
+      })),
+    })).catch((error) => ({ error: String(error) })),
+    preview: await previewFrame.locator('body').evaluate((_, prefix) => ({
+      url: location.href,
+      styles: [...document.querySelectorAll(`style[id^="${prefix}"]`)].map((element) => element.id),
+    }), stylePrefix).catch((error) => ({ error: String(error) })),
+  };
+  const statePath = resolve(directory, `${stem}.json`);
+  const screenshotPath = resolve(directory, `${stem}.png`);
+  await writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
+  await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => {});
+  return { statePath, screenshotPath, state };
+}
+
+async function waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, enabled, stage }) {
+  const expected = String(enabled);
+  try {
+    await page.waitForFunction(({ label: expectedLabel, expectedState }) => [...document.querySelectorAll('[role="switch"]')]
+      .some((element) => element.getAttribute('aria-label') === expectedLabel
+        && element.getAttribute('aria-checked') === expectedState), { label, expectedState: expected });
+    await previewFrame.locator(`style[id^="${stylePrefix}"]`).first().waitFor({ state: enabled ? 'attached' : 'detached' });
+  } catch (error) {
+    const diagnostics = await captureToolState(page, previewFrame, { label, stylePrefix, expected, stage });
+    throw new Error(`${stage}: Storybook did not reach ${label}=${expected}; diagnostics: ${diagnostics.statePath}, ${diagnostics.screenshotPath}`, { cause: error });
+  }
+  assert.equal(await tool.getAttribute('aria-checked'), expected, `${stage}: ${label} state`);
+}
+
+async function ensureToolState(page, previewFrame, tool, { label, stylePrefix, enabled, stage }) {
+  const current = await tool.getAttribute('aria-checked');
+  assert.ok(current === 'true' || current === 'false', `${stage}: ${label} must expose aria-checked`);
+  if (current !== String(enabled)) await tool.click();
+  await waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, enabled, stage });
+}
+
+async function exactPreviewFrame(page) {
+  const iframe = page.locator('#storybook-preview-iframe');
+  await iframe.waitFor();
+  const handle = await iframe.elementHandle();
+  assert.ok(handle, 'Storybook preview iframe element must exist');
+  const frame = await handle.contentFrame();
+  assert.ok(frame, 'Storybook preview iframe content must exist');
+  return frame;
 }
 
 test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pseudo-element leaks', async () => {
@@ -174,7 +237,9 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   const report = { storybookVersion: '10.5.10', tokenSource: 'catalog/tokens/default-theme.json', states: [] };
-  const reportPath = process.env.MUXUI_STORYBOOK_COLORS_REPORT ?? resolve(tmpdir(), `muxui-storybook-colors-${process.pid}.json`);
+  const reportPath = process.env.MUXUI_STORYBOOK_COLORS_REPORT
+    ?? resolve(colourAuditArtifactDirectory(), `muxui-storybook-colors-${process.pid}.json`);
+  await mkdir(dirname(reportPath), { recursive: true });
   try {
     const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
     await page.addInitScript(() => {
@@ -338,7 +403,7 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       for (const label of ['Reload story', 'Grid visibility', 'Measure tool', 'Outline tool', 'Open in isolation mode', 'Enter full screen', 'Open in editor']) {
         await hoverAndFocus(scheme, `toolbar/${label}`, page.locator(`[aria-label="${label}"]`).first());
       }
-      const diagnostics = page.frame({ url: /iframe\.html/u });
+      const diagnostics = await exactPreviewFrame(page);
       for (const [label, styleId] of [['Grid visibility', 'addon-backgrounds-grid'], ['Outline tool', 'addon-outline']]) {
         const tool = page.getByRole('switch', { name: label, exact: true });
         await tool.click();
@@ -465,8 +530,7 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
         await snapshot(scheme, `addon/${name}`);
       }
       await page.getByRole('tab', { name: 'Actions', exact: true }).click();
-      const frame = page.frame({ url: /iframe\.html/u });
-      assert.ok(frame, 'Story preview frame must exist');
+      const frame = await exactPreviewFrame(page);
       // Feed the real Actions renderer through its installed channel protocol.
       await frame.evaluate(() => {
         const channel = globalThis.__STORYBOOK_ADDONS_PREVIEW?.getChannel();
@@ -564,25 +628,27 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       await page.goto(`${server.url}/?path=/docs/muxui-react-r1-1-breadcrumbs--docs&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
       const docs = page.frameLocator('#storybook-preview-iframe');
       await docs.locator('.sbdocs-wrapper').waitFor();
-      const docsFrame = page.frame({ url: /iframe\.html/u });
-      assert.ok(docsFrame, 'Docs frame must exist');
-      await snapshot(scheme, 'docs/default', docsFrame, 'docs');
+      await snapshot(scheme, 'docs/default', await exactPreviewFrame(page), 'docs');
       for (const [label, stylePrefix] of [['Grid visibility', 'addon-backgrounds-grid-docs-'], ['Outline tool', 'addon-outline-docs-']]) {
         const tool = page.getByRole('switch', { name: label, exact: true });
-        await tool.click();
-        await docsFrame.locator(`style[id^="${stylePrefix}"]`).first().waitFor({ state: 'attached' });
-        await snapshot(scheme, `docs/${label}/active`, docsFrame, 'docs');
-        if (label === 'Outline tool') await tokenPaint(scheme, docsFrame.locator('.muxui-breadcrumbs a').first(), 'outlineColor', 'semantic.focus.ring');
-        await tool.click();
-        await docsFrame.locator(`style[id^="${stylePrefix}"]`).first().waitFor({ state: 'detached' });
+        const preview = page.frameLocator('#storybook-preview-iframe');
+        await ensureToolState(page, preview, tool, {
+          label, stylePrefix, enabled: true, stage: `docs/${label}/enable`,
+        });
+        const activeDocsFrame = await exactPreviewFrame(page);
+        await snapshot(scheme, `docs/${label}/active`, activeDocsFrame, 'docs');
+        if (label === 'Outline tool') await tokenPaint(scheme, preview.locator('.muxui-breadcrumbs a').first(), 'outlineColor', 'semantic.focus.ring');
+        await ensureToolState(page, preview, tool, {
+          label, stylePrefix, enabled: false, stage: `docs/${label}/disable`,
+        });
       }
       for (const selected of ['light', 'dark']) {
         await page.locator('button[aria-label^="Preview background"]').click();
         await page.getByRole('option', { name: selected === 'light' ? 'Light' : 'Dark', exact: true }).click();
-        await docsFrame.waitForFunction((value) => [...document.querySelectorAll('style[id^="addon-backgrounds-docs-"]')]
+        await (await exactPreviewFrame(page)).waitForFunction((value) => [...document.querySelectorAll('style[id^="addon-backgrounds-docs-"]')]
           .some((element) => element.textContent.includes(value)), graphs[selected]['semantic.surface.canvas'].value);
         await tokenPaint(selected, docs.locator('.docs-story').first(), 'backgroundColor', 'semantic.surface.canvas');
-        await snapshot(scheme, `docs/background-${selected}`, docsFrame, 'docs', { selectedBackground: graphs[selected]['semantic.surface.canvas'] });
+        await snapshot(scheme, `docs/background-${selected}`, await exactPreviewFrame(page), 'docs', { selectedBackground: graphs[selected]['semantic.surface.canvas'] });
       }
       await page.locator('button[aria-label^="Preview background"]').click();
       await page.getByRole('option', { name: 'Reset background', exact: true }).click();
@@ -592,15 +658,15 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
         const range = document.createRange(); range.selectNodeContents(element);
         document.getSelection().removeAllRanges(); document.getSelection().addRange(range);
       });
-      await snapshot(scheme, 'docs/text-selection', docsFrame, 'docs');
-      await docsFrame.evaluate(() => document.getSelection().removeAllRanges());
+      await snapshot(scheme, 'docs/text-selection', await exactPreviewFrame(page), 'docs');
+      await (await exactPreviewFrame(page)).evaluate(() => document.getSelection().removeAllRanges());
       const sourceToggles = docs.getByRole('switch', { name: 'Show code', exact: true });
       await sourceToggles.first().waitFor();
       assert.ok(await sourceToggles.count(), 'Docs must expose source controls');
       await sourceToggles.first().click();
       await docs.getByRole('switch', { name: 'Hide code', exact: true }).first().waitFor();
       await docs.locator('.prismjs:visible').first().waitFor();
-      await snapshot(scheme, 'docs/source', docsFrame, 'docs');
+      await snapshot(scheme, 'docs/source', await exactPreviewFrame(page), 'docs');
       const syntaxColors = await docs.locator('.prismjs:visible .token').evaluateAll((elements) =>
         [...new Set(elements.map((element) => getComputedStyle(element).color))]);
       assert.ok(syntaxColors.length > 1, 'Docs must preserve syntax colour distinctions');
@@ -617,7 +683,7 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       });
       assert.ok(sourceContrast >= 4.5, `${scheme}: source text must remain readable (${sourceContrast.toFixed(2)}:1)`);
       await docs.locator('.prismjs:visible').first().hover();
-      await snapshot(scheme, 'docs/source-hover', docsFrame, 'docs');
+      await snapshot(scheme, 'docs/source-hover', await exactPreviewFrame(page), 'docs');
       await docs.locator('.muxui-breadcrumbs a').first().waitFor();
       const link = await docs.locator('.muxui-breadcrumbs a').first().evaluate((element) => ({ color: getComputedStyle(element).color,
         token: getComputedStyle(document.documentElement).getPropertyValue('--muxui-semantic-content-link').trim() }));
