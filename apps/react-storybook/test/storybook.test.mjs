@@ -202,7 +202,7 @@ test('uses standard generation scripts and checks drift in an isolated projectio
   assert.equal(packageManifest.scripts['generate:check'], 'node src/generate-stories.mjs --check');
   assert.equal(packageManifest.scripts.storybook, 'pnpm generate && pnpm exec storybook dev -p 6006');
   assert.equal(packageManifest.scripts.build, 'pnpm generate && storybook build --output-dir dist');
-  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test test/*.test.mjs');
+  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs');
 
   const sourceRoot = resolve(appRoot, '.storybook/generated');
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-storybook-generation-check-'));
@@ -1130,7 +1130,7 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.match(previewCss, /background: var\(--muxui-semantic-surface-canvas\)/);
   assert.match(previewCss, /color: var\(--muxui-semantic-content-strong\)/);
   assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]\s*\{[^}]*background: var\(--muxui-semantic-surface-canvas\);[^}]*color: var\(--muxui-semantic-content-strong\);/u);
-  assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]:focus-visible\s*\{[^}]*var\(--muxui-semantic-action-background\)/u);
+  assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]:focus-visible\s*\{[^}]*var\(--muxui-semantic-focus-ring\)/u);
   assert.match(previewCss, /font-family: ui-sans-serif, system-ui/);
   assert.doesNotMatch(previewCss, /#(?:fff|000|171717)/iu);
   assert.match(previewCss, /#storybook-root,\s*main\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);

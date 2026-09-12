@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { managerThemeCss, previewThemeCss } from './theme.mjs';
+import { measurePaletteViteConfig } from './measure-palette.mjs';
 
 const reactAssets = resolve(import.meta.dirname, '../../../packages/react/assets');
 const reactStyles = readFileSync(
@@ -30,6 +31,7 @@ export default {
     name: '@storybook/react-vite',
     options: {},
   },
+  viteFinal: measurePaletteViteConfig,
   typescript: {
     reactDocgen: false,
   },
