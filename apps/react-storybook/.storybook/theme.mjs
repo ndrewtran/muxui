@@ -6,6 +6,8 @@ const COLOR_SCHEMES = Object.freeze(['light', 'dark']);
 
 const MANAGER_TOKEN_IDS = Object.freeze({
   actionBackground: 'semantic.action.background',
+  actionBackgroundHover: 'semantic.action.background-hover',
+  actionBackgroundPressed: 'semantic.action.background-pressed',
   actionForeground: 'semantic.action.foreground',
   borderDefault: 'semantic.border.default',
   borderSubtle: 'semantic.border.subtle',
@@ -138,8 +140,35 @@ body,
   fill: var(--muxui-storybook-action-foreground);
 }
 
-#storybook-sidebar-region [aria-label='Open onboarding guide'] svg path {
+#storybook-sidebar-region [aria-label^='Open onboarding guide'] svg path {
   fill: var(--muxui-storybook-content-muted);
+}
+
+#storybook-checklist-widget [aria-label^='Open onboarding guide'] span {
+  color: inherit;
+  transition-property: transform, opacity !important;
+}
+
+#storybook-checklist-widget button:is(:hover, :focus-visible, :active) {
+  background: var(--muxui-storybook-surface-hover) !important;
+  color: var(--muxui-storybook-content-link) !important;
+}
+
+#storybook-checklist-widget button:focus-visible {
+  outline: 2px solid var(--muxui-storybook-focus-ring) !important;
+  outline-offset: -2px;
+}
+
+#storybook-sidebar-region div:has(> #storybook-checklist-widget)::before {
+  background-image: linear-gradient(
+    45deg,
+    var(--muxui-storybook-vision-red),
+    var(--muxui-storybook-vision-orange),
+    var(--muxui-storybook-vision-yellow),
+    var(--muxui-storybook-vision-green),
+    var(--muxui-storybook-vision-blue),
+    var(--muxui-storybook-vision-purple)
+  ) !important;
 }
 
 #storybook-sidebar-region svg use,
@@ -789,6 +818,43 @@ body > div:has(> [role='listbox']) {
   border-color: var(--muxui-storybook-border-default) !important;
   box-shadow: 0 0 0 1px var(--muxui-storybook-border-subtle) inset !important;
   color: var(--muxui-storybook-content-strong) !important;
+}
+
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button * {
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button:is(:hover, :focus-visible, :active) {
+  background: var(--muxui-storybook-surface-hover) !important;
+}
+
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button:focus-visible {
+  outline: 2px solid var(--muxui-storybook-focus-ring) !important;
+  outline-offset: 2px;
+}
+
+/* Checklist actions precede Skip; the AI setup Copy action comes last. */
+#main-content-wrapper [aria-labelledby$='-tab-guide'] ol button:not([aria-label]):has(+ button),
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button:not([aria-label]):not(ol button):last-child {
+  background: var(--muxui-storybook-action-background) !important;
+  color: var(--muxui-storybook-action-foreground) !important;
+  -webkit-text-fill-color: var(--muxui-storybook-action-foreground) !important;
+}
+
+#main-content-wrapper [aria-labelledby$='-tab-guide'] ol button:not([aria-label]):has(+ button):hover,
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button:not([aria-label]):not(ol button):last-child:hover {
+  background: var(--muxui-storybook-action-background-hover) !important;
+}
+
+#main-content-wrapper [aria-labelledby$='-tab-guide'] ol button:not([aria-label]):has(+ button):active,
+#main-content-wrapper [aria-labelledby$='-tab-guide'] button:not([aria-label]):not(ol button):last-child:active {
+  background: var(--muxui-storybook-action-background-pressed) !important;
 }
 
 #main-content-wrapper [role='tabpanel'] [aria-checked='true'],

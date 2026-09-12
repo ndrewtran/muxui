@@ -96,13 +96,6 @@ async function waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, 
   assert.equal(await tool.getAttribute('aria-checked'), expected, `${stage}: ${label} state`);
 }
 
-async function ensureToolState(page, previewFrame, tool, { label, stylePrefix, enabled, stage }) {
-  const current = await tool.getAttribute('aria-checked');
-  assert.ok(current === 'true' || current === 'false', `${stage}: ${label} must expose aria-checked`);
-  if (current !== String(enabled)) await tool.click();
-  await waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, enabled, stage });
-}
-
 async function exactPreviewFrame(page) {
   const iframe = page.locator('#storybook-preview-iframe');
   await iframe.waitFor();
@@ -274,10 +267,29 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
         })));
       report.states.push({ scheme, state, scope, ...result });
     }
-    async function openStory(scheme, story = 'muxui-react-r1-1-button--default') {
-      await page.goto(`${server.url}/?path=/story/${story}&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
+    async function openStory(scheme, story = 'muxui-react-r1-1-button--default', globals = '') {
+      await page.goto(`${server.url}/?path=/story/${story}&globals=colorScheme:${scheme}${globals}`, { waitUntil: 'domcontentloaded' });
       await page.locator('#storybook-sidebar-region').waitFor();
       await page.frameLocator('#storybook-preview-iframe').locator('.muxui-storybook-surface').waitFor();
+    }
+    async function resetOnboardingChecklist(page) {
+      await page.evaluate(() => {
+        const store = globalThis.__STORYBOOK_API__?.internal_universalChecklistStore;
+        const state = store?.getState?.();
+        if (!store?.setState || !state?.items) throw new Error('Storybook checklist store is unavailable');
+        if (!('whatsNewStorybook10' in state.items)) throw new Error('Storybook onboarding action changed');
+        store.setState({
+          ...state,
+          aiOptIn: false,
+          items: Object.fromEntries(Object.keys(state.items).map((id) => [id, { status: 'open' }])),
+          widget: {},
+          loaded: true,
+        });
+      });
+      const widget = page.locator('#storybook-checklist-widget');
+      await widget.waitFor();
+      await widget.locator('[aria-label^="Open onboarding guide"]').first().waitFor();
+      return widget;
     }
     async function hoverAndFocus(scheme, label, locator) {
       await locator.hover();
@@ -334,7 +346,28 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       }
       await openStory(scheme);
       assert.equal(await page.locator('#muxui-storybook-theme').textContent(), managerThemeCss(), 'Audit server must serve the current manager projection');
+      const onboarding = await resetOnboardingChecklist(page);
       await snapshot(scheme, 'manager/default');
+      await snapshot(scheme, 'onboarding/default');
+      await onboarding.hover();
+      await snapshot(scheme, 'onboarding/hover');
+      // Make the real checklist action available regardless of previous
+      // Storybook usage, including its generated hover and pressed colours.
+      await page.evaluate(() => {
+        const store = globalThis.__STORYBOOK_API__.internal_universalChecklistStore;
+        const state = store.getState();
+        store.setState({ ...state, items: Object.fromEntries(Object.keys(state.items).map((id) =>
+          [id, { status: id === 'whatsNewStorybook10' ? 'open' : 'accepted' }])) });
+      });
+      const onboardingAction = onboarding.locator('button[data-target-id="whatsNewStorybook10"]');
+      await onboardingAction.locator('..').hover();
+      await hoverAndFocus(scheme, 'onboarding/action', onboardingAction);
+      await onboardingAction.hover();
+      await page.mouse.down();
+      await snapshot(scheme, 'onboarding/action/pressed');
+      await page.mouse.move(1400, 950);
+      await page.mouse.up();
+      await openStory(scheme);
       await page.locator('#storybook-sidebar-region').getByText('Mux UI', { exact: true }).first().evaluate((element) => {
         const range = document.createRange(); range.selectNodeContents(element);
         document.getSelection().removeAllRanges(); document.getSelection().addRange(range);
@@ -474,6 +507,36 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       await page.getByRole('tab', { name: 'Guide', exact: true }).click();
       await page.waitForURL(/settings\/guide/u);
       await snapshot(scheme, 'settings/onboarding');
+      const guide = page.locator('#main-content-wrapper [aria-labelledby$="-tab-guide"]');
+      const guideAction = guide.getByRole('button', { name: 'Go', exact: true });
+      await hoverAndFocus(scheme, 'settings/onboarding/action', guideAction);
+      await guideAction.hover();
+      await page.mouse.down();
+      await snapshot(scheme, 'settings/onboarding/action/pressed');
+      await page.mouse.move(1400, 950);
+      await page.mouse.up();
+      await page.evaluate(() => {
+        const store = globalThis.__STORYBOOK_API__.internal_universalChecklistStore;
+        const state = store.getState();
+        store.setState({ ...state, aiOptIn: true, items: { ...state.items, aiSetup: { status: 'open' } } });
+      });
+      const copyPrompt = guide.getByRole('button', { name: 'Copy prompt', exact: true });
+      await copyPrompt.waitFor();
+      await tokenPaint(scheme, copyPrompt, 'backgroundColor', 'semantic.action.background');
+      await snapshot(scheme, 'settings/onboarding/ai/default');
+      for (const name of ['Copy prompt', 'Skip']) {
+        const action = copyPrompt.locator('..').getByRole('button', { name, exact: true });
+        await hoverAndFocus(scheme, `settings/onboarding/ai/${name}`, action);
+        await action.hover();
+        await page.mouse.down();
+        await snapshot(scheme, `settings/onboarding/ai/${name}/pressed`);
+        await page.mouse.move(1400, 950);
+        await page.mouse.up();
+      }
+      await page.evaluate(() => {
+        const store = globalThis.__STORYBOOK_API__.internal_universalChecklistStore;
+        store.setState({ ...store.getState(), aiOptIn: false });
+      });
       await page.getByRole('tab', { name: 'Keyboard shortcuts', exact: true }).click();
       await page.waitForURL(/settings\/shortcuts/u);
       await snapshot(scheme, 'settings/shortcuts');
@@ -524,7 +587,9 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       await objectTree.waitFor();
       await objectTree.hover();
       await snapshot(scheme, 'controls/object/tree-hover');
-      await openStory(scheme);
+      // Automatic scans must not replace the colour fixtures while their
+      // actual result renderer and highlights are being inspected.
+      await openStory(scheme, 'muxui-react-r1-1-button--default', ';a11y.manual:!true');
       for (const name of ['Actions', 'Interactions', 'Accessibility']) {
         await page.getByRole('tab', { name, exact: true }).click();
         await snapshot(scheme, `addon/${name}`);
@@ -625,35 +690,42 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       const canvasLinkColor = await canvasLink.evaluate((element) => getComputedStyle(element).color);
       await canvasLink.hover();
       const canvasLinkHoverColor = await canvasLink.evaluate((element) => getComputedStyle(element).color);
-      await page.goto(`${server.url}/?path=/docs/muxui-react-r1-1-breadcrumbs--docs&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
       const docs = page.frameLocator('#storybook-preview-iframe');
-      await docs.locator('.sbdocs-wrapper').waitFor();
+      // Storybook 10.5 remounts Docs examples on globals updates. A pending
+      // example teardown can reload the iframe and discard the next click.
+      // Load each paint state independently; Canvas above covers tool clicks.
+      async function openDocs(globals = '') {
+        await page.goto(`${server.url}/?path=/docs/muxui-react-r1-1-breadcrumbs--docs&globals=colorScheme:${scheme}${globals}`, { waitUntil: 'domcontentloaded' });
+        await docs.locator('.sbdocs-wrapper').waitFor();
+        await docs.locator('.muxui-breadcrumbs a').first().waitFor();
+      }
+      await openDocs();
       await snapshot(scheme, 'docs/default', await exactPreviewFrame(page), 'docs');
-      for (const [label, stylePrefix] of [['Grid visibility', 'addon-backgrounds-grid-docs-'], ['Outline tool', 'addon-outline-docs-']]) {
+      for (const [label, stylePrefix, global] of [
+        ['Grid visibility', 'addon-backgrounds-grid-docs-', 'backgrounds.grid'],
+        ['Outline tool', 'addon-outline-docs-', 'outline'],
+      ]) {
         const tool = page.getByRole('switch', { name: label, exact: true });
-        const preview = page.frameLocator('#storybook-preview-iframe');
-        await ensureToolState(page, preview, tool, {
-          label, stylePrefix, enabled: true, stage: `docs/${label}/enable`,
+        await openDocs(`;${global}:!true`);
+        await waitForToolStyle(page, docs, tool, {
+          label, stylePrefix, enabled: true, stage: `docs/${label}/enabled`,
         });
-        const activeDocsFrame = await exactPreviewFrame(page);
-        await snapshot(scheme, `docs/${label}/active`, activeDocsFrame, 'docs');
-        if (label === 'Outline tool') await tokenPaint(scheme, preview.locator('.muxui-breadcrumbs a').first(), 'outlineColor', 'semantic.focus.ring');
-        await ensureToolState(page, preview, tool, {
-          label, stylePrefix, enabled: false, stage: `docs/${label}/disable`,
+        await snapshot(scheme, `docs/${label}/active`, await exactPreviewFrame(page), 'docs');
+        if (label === 'Outline tool') await tokenPaint(scheme, docs.locator('.muxui-breadcrumbs a').first(), 'outlineColor', 'semantic.focus.ring');
+        await openDocs();
+        await waitForToolStyle(page, docs, tool, {
+          label, stylePrefix, enabled: false, stage: `docs/${label}/disabled`,
         });
       }
       for (const selected of ['light', 'dark']) {
-        await page.locator('button[aria-label^="Preview background"]').click();
-        await page.getByRole('option', { name: selected === 'light' ? 'Light' : 'Dark', exact: true }).click();
+        await openDocs(`;backgrounds.value:${selected}`);
         await (await exactPreviewFrame(page)).waitForFunction((value) => [...document.querySelectorAll('style[id^="addon-backgrounds-docs-"]')]
           .some((element) => element.textContent.includes(value)), graphs[selected]['semantic.surface.canvas'].value);
         await tokenPaint(selected, docs.locator('.docs-story').first(), 'backgroundColor', 'semantic.surface.canvas');
         await snapshot(scheme, `docs/background-${selected}`, await exactPreviewFrame(page), 'docs', { selectedBackground: graphs[selected]['semantic.surface.canvas'] });
       }
-      await page.locator('button[aria-label^="Preview background"]').click();
-      await page.getByRole('option', { name: 'Reset background', exact: true }).click();
+      await openDocs();
       await docs.locator('style[id^="addon-backgrounds-docs-"]').first().waitFor({ state: 'detached' });
-      await docs.locator('.sbdocs-wrapper').waitFor();
       await docs.locator('h1').first().evaluate((element) => {
         const range = document.createRange(); range.selectNodeContents(element);
         document.getSelection().removeAllRanges(); document.getSelection().addRange(range);
