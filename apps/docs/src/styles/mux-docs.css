@@ -1126,10 +1126,18 @@ site-search button > kbd {
 	.foundation-timing-sample { animation-duration: 0s !important; animation-play-state: paused !important; }
 }
 .foundation-timing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: var(--muxui-reference-dimension-space-xs); }
-.foundation-timing { display: grid; gap: var(--muxui-reference-dimension-space-2xs); padding: var(--muxui-reference-dimension-space-s); border: 1px solid var(--muxui-semantic-border-subtle); }
+.foundation-timing-groups { display: grid; gap: var(--muxui-reference-dimension-section-space-xs); }
+.foundation-timing-group { min-width: 0; }
+.foundation-timing-group-heading { margin-block-end: var(--muxui-reference-dimension-space-s); }
+.foundation-timing-group-heading h3 { margin: 0; color: var(--muxui-semantic-content-strong); font-size: var(--muxui-semantic-typography-heading-s-font-size); font-weight: var(--muxui-semantic-typography-heading-font-weight); line-height: var(--muxui-semantic-typography-heading-line-height); }
+.foundation-timing { display: grid; min-width: 0; gap: var(--muxui-reference-dimension-space-2xs); padding: var(--muxui-reference-dimension-space-s); border: 1px solid var(--muxui-semantic-border-subtle); }
+.foundation-timing-meta { display: grid; min-width: 0; gap: var(--muxui-reference-dimension-space-4xs); }
 .foundation-timing strong { color: var(--muxui-semantic-content-strong); font-family: var(--muxui-reference-typography-mono-font); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
-.foundation-timing span { display: block; color: var(--muxui-semantic-content-link); font-size: var(--muxui-semantic-typography-title-l-font-size); }
-.foundation-timing code { color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
+.foundation-timing-meta small,
+.foundation-timing-alias { overflow-wrap: anywhere; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+.foundation-timing-sample { display: block; color: var(--muxui-semantic-content-link); font-size: var(--muxui-semantic-typography-title-l-font-size); }
+.foundation-timing code { overflow-wrap: anywhere; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
+.foundation-timing-alias a { color: var(--muxui-semantic-content-link); }
 
 .foundation-component-preview { display: grid; grid-template-columns: minmax(12rem, 1fr) minmax(0, 1.2fr); align-items: center; gap: var(--muxui-reference-dimension-space-l); padding: var(--muxui-reference-dimension-space-l); border-block: 1px solid var(--muxui-semantic-border-default); background: var(--muxui-semantic-surface-raised); }
 .foundation-component-button-wrap { display: grid; place-items: center; min-height: 8rem; background: var(--muxui-semantic-surface-canvas); }

@@ -462,7 +462,7 @@
         "unit": "rem",
         "base": 0.125,
         "curvature": {
-          "default": 0.5,
+          "default": 1,
           "minimum": 0,
           "maximum": 2,
           "step": 0.01

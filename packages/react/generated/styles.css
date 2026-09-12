@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:7f87fc03c81ea1f36362f0abadc748a5a285cf17ac5b68a9bd96f32008547ac2
+ * @generated-content-sha256: sha256:6326131fd868344846920c4500eb27feace20ed4504f92ac53dbc4988f59b3ff
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -4127,6 +4127,11 @@
 .muxui-autocomplete-option[data-selected] {
   color: var(--muxui-semantic-selection-track);
   font-weight: var(--muxui-semantic-typography-control-weight);
+}
+
+.muxui-autocomplete-option:where([data-hovered]:not([data-disabled], [data-selected], [data-focused])) {
+  background-color: var(--muxui-item-focus-bg);
+  color: var(--muxui-item-focus-color);
 }
 
 .muxui-autocomplete-option[data-disabled] {

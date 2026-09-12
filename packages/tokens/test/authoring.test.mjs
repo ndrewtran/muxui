@@ -304,13 +304,20 @@ test('authoring compile uses canonical scale data and propagates radius and fore
 
 test('authoring defaults curvature from the canonical Scale metadata', () => {
   const generated = generateScaleTheme({ source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false });
-  assert.equal(source.theme.scale.radius.curvature.default, 0.5);
-  assert.equal(generated.radius.curvature, 0.5);
-  for (const [name, px, rem] of [['xs', 4, 0.25], ['s', 6, 0.375], ['m', 8, 0.5], ['l', 12, 0.75], ['xl', 16, 1], ['2xl', 24, 1.5]]) {
+  assert.equal(source.theme.scale.radius.curvature.default, 1);
+  assert.equal(generated.radius.curvature, 1);
+  for (const [name, sourcePx, sourceRem, generatedPx, generatedRem] of [
+    ['xs', 4, 0.25, 8, 0.5],
+    ['s', 6, 0.375, 12, 0.75],
+    ['m', 8, 0.5, 16, 1],
+    ['l', 12, 0.75, 24, 1.5],
+    ['xl', 16, 1, 32, 2],
+    ['2xl', 24, 1.5, 48, 3],
+  ]) {
     const id = `reference.dimension.radius-${name}`;
-    assert.deepEqual(source.tokens[id].relative, { value: rem, unit: 'rem' });
-    assert.equal(source.tokens[id].value, px);
-    assert.deepEqual(generated.assignments[id], { type: 'dimension', unit: 'px', value: px, relative: { value: rem, unit: 'rem' } });
+    assert.deepEqual(source.tokens[id].relative, { value: sourceRem, unit: 'rem' });
+    assert.equal(source.tokens[id].value, sourcePx);
+    assert.deepEqual(generated.assignments[id], { type: 'dimension', unit: 'px', value: generatedPx, relative: { value: generatedRem, unit: 'rem' } });
   }
 });
 

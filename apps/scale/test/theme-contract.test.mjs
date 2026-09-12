@@ -23,11 +23,11 @@ test('Scale source round-trips through the strict typed document boundary', () =
   assert.equal(restored.id, 'muxui:theme:round-trip');
 });
 
-test('Scale starts at the canonical half-radius default and preserves explicit curvature', () => {
-  assert.equal(DEFAULT_SETTINGS.curvature, 0.5);
+test('Scale starts at the canonical radius default and preserves explicit curvature', () => {
+  assert.equal(DEFAULT_SETTINGS.curvature, 1);
   const fresh = createScaleDocument(DEFAULT_SETTINGS, { slug: 'fresh-default' });
-  assert.equal(fresh.scale.curvature, 0.5);
-  for (const [name, px] of [['xs', 4], ['s', 6], ['m', 8], ['l', 12], ['xl', 16], ['2xl', 24]]) {
+  assert.equal(fresh.scale.curvature, 1);
+  for (const [name, px] of [['xs', 8], ['s', 12], ['m', 16], ['l', 24], ['xl', 32], ['2xl', 48]]) {
     assert.equal(fresh.overrides[`reference.dimension.radius-${name}`].value, px);
   }
 

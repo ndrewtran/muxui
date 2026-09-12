@@ -415,11 +415,118 @@ function ElevationPage({ data }: { data: FoundationData }) {
 	return <div className="foundation-page"><SectionIntro title="Depth as a role">Effects are typed shadow values, not anonymous decoration. These equal-size surfaces show how the reference shadow primitives resolve into semantic elevation roles.</SectionIntro><section className="foundation-section"><div className="foundation-elevation-grid">{effects.map((token) => <div className="foundation-elevation-specimen" key={token.id}><div className="foundation-surface" style={{ boxShadow: cssReference(token) }}><span>{token.id.split('.').at(-1)}</span></div><code><TokenPath value={token.id} token={token} /></code><small><TokenExpression value={token.defaultCssValue} tokens={data.tokens} /></small></div>)}</div></section><TokenInventory tokens={effects} allTokens={data.tokens} title="Effect inventory" description="Search every canonical typed effect, including reference shadows and semantic elevation roles." /></div>;
 }
 
+type MotionTimingGroup = {
+	id: string;
+	title: string;
+	description: string;
+	tokens: readonly FoundationToken[];
+};
+
+function titleCaseMotionLabel(value: string): string {
+	return value.split('-').map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ');
+}
+
+function motionTimingLabel(token: FoundationToken): string {
+	const leaf = token.id.split('.').at(-1) ?? token.id;
+	const withoutDuration = leaf.replace(/^duration-/u, '').replace(/-duration$/u, '');
+	return withoutDuration === 'feedback' ? 'Feedback role' : titleCaseMotionLabel(withoutDuration);
+}
+
+function motionTimingScope(token: FoundationToken): string {
+	if (token.id.startsWith('reference.duration.')) return 'Reference scale';
+	if (token.id.startsWith('reference.motion.')) return 'Motion reference';
+	return 'Semantic role';
+}
+
+function sortMotionTimings(tokens: readonly FoundationToken[]): readonly FoundationToken[] {
+	return [...tokens].sort((left, right) => {
+		const leftValue = Number(left.defaultValue);
+		const rightValue = Number(right.defaultValue);
+		const valueOrder = leftValue - rightValue;
+		if (valueOrder !== 0) return valueOrder;
+		return motionTimingLabel(left).localeCompare(motionTimingLabel(right)) || left.id.localeCompare(right.id);
+	});
+}
+
+function motionTimingGroups(durations: readonly FoundationToken[]): readonly MotionTimingGroup[] {
+	const entryPattern = /^semantic\.motion\.(?:selection-enter|panel-enter|reveal|content-resize|enter|exit|content)-duration$/u;
+	return [
+		{
+			id: 'reference',
+			title: 'Reference speed scale',
+			description: 'Base speeds, from instant to deliberate.',
+			tokens: durations.filter((token) => token.layer === 'reference'),
+		},
+		{
+			id: 'feedback',
+			title: 'Feedback and control changes',
+			description: 'Short feedback, control state changes, and mode switches.',
+			tokens: durations.filter((token) => token.layer !== 'reference' && !token.id.startsWith('semantic.motion.progress-') && !entryPattern.test(token.id)),
+		},
+		{
+			id: 'entry',
+			title: 'Entry and content transitions',
+			description: 'Entering, leaving, revealing, and resizing content.',
+			tokens: durations.filter((token) => entryPattern.test(token.id)),
+		},
+		{
+			id: 'progress',
+			title: 'Progress timings',
+			description: 'Value updates and longer progress cycles. Each replay runs once.',
+			tokens: durations.filter((token) => token.id.startsWith('semantic.motion.progress-')),
+		},
+	].map((group) => ({ ...group, tokens: sortMotionTimings(group.tokens) }));
+}
+
+function MotionTimingEntry({ token, replay, allTokens }: { token: FoundationToken; replay: number; allTokens: readonly FoundationToken[] }) {
+	return <div className="foundation-timing">
+		<div className="foundation-timing-meta"><strong>{motionTimingLabel(token)}</strong><small>{motionTimingScope(token)}</small></div>
+		<span className="foundation-timing-sample" key={`${token.id}-${replay}`} style={{ animationName: replay ? 'foundation-timing-replay' : 'none', animationDuration: cssReference(token) }}>Aa</span>
+		<code><TokenPath value={token.id} token={token} /></code>
+		{token.authoredAlias ? <small className="foundation-timing-alias">Alias to <a href={`/foundations/${foundationRouteForToken(token.authoredAlias)}/#${tokenIdForAnchor(token.authoredAlias)}`}><TokenName id={token.authoredAlias} tokens={allTokens} /></a></small> : null}
+		<code className="foundation-timing-value">{displayValue(token.defaultValue)} {token.unit}</code>
+	</div>;
+}
+
+function MotionTimingGroup({ group, replay, allTokens, onReplay }: { group: MotionTimingGroup; replay: number; allTokens: readonly FoundationToken[]; onReplay: () => void }) {
+	const headingId = `foundation-timing-group-${group.id}`;
+	return <section className="foundation-timing-group" aria-labelledby={headingId}>
+		<div className="foundation-section-heading foundation-timing-group-heading">
+			<div><h3 id={headingId}>{group.title}</h3><p>{group.description}</p></div>
+			<button type="button" className="foundation-action" onClick={onReplay}>Replay motion</button>
+		</div>
+		<div className="foundation-timing-grid">{group.tokens.map((token) => <MotionTimingEntry key={token.id} token={token} replay={replay} allTokens={allTokens} />)}</div>
+	</section>;
+}
+
 function MotionPage({ data }: { data: FoundationData }) {
 	const durations = data.tokens.filter((token) => token.type === 'duration');
 	const easings = data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'string');
 	const [replay, setReplay] = useState(0);
-	return <div className="foundation-page"><SectionIntro title="Finite and intentional">Motion specimens replay only after a user action. The same custom properties drive duration and easing, while the reduced-motion mode collapses the animation to an instant state.</SectionIntro><section className="foundation-section foundation-motion-section"><div className="foundation-section-heading"><div><h2>Easing plot</h2><p>Replay a single transition to compare the canonical easing roles.</p></div><button type="button" className="foundation-action" onClick={() => setReplay((value) => value + 1)}>Replay motion</button></div><div className="foundation-motion-plot">{easings.map((easing) => { const durationId = easing.id.replace(/-easing$/u, '-duration'); const duration = durations.find((token) => token.id === durationId) ?? durations.find((token) => token.id.includes('duration-fast')); return <div className="foundation-motion-row" key={easing.id}><code><TokenName id={easing.id} tokens={data.tokens} /></code><div className="foundation-motion-track"><span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference(duration ?? 'reference.duration.fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>; })}</div></section><section className="foundation-section"><div className="foundation-section-heading"><div><h2>Timing roles</h2><p>Replay the same finite motion to see each duration at its canonical scale.</p></div><button type="button" className="foundation-action" onClick={() => setReplay((value) => value + 1)}>Replay motion</button></div><div className="foundation-timing-grid">{durations.map((token) => <div className="foundation-timing" key={token.id}><strong>{token.id.split('.').at(-1)}</strong><span className="foundation-timing-sample" key={`${token.id}-${replay}`} style={{ animationName: replay ? 'foundation-timing-replay' : 'none', animationDuration: cssReference(token) }}>Aa</span><code>{displayValue(token.defaultValue)} {token.unit}</code></div>)}</div></section><TokenInventory tokens={[...durations, ...easings]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration and easing tokens, including mode-aware semantic roles." /></div>;
+	const groups = motionTimingGroups(durations);
+	const replayMotion = () => setReplay((value) => value + 1);
+	return <div className="foundation-page">
+		<SectionIntro title="Finite and intentional">Motion specimens replay only after a user action. The same custom properties drive duration and easing, while the reduced-motion mode collapses the animation to an instant state.</SectionIntro>
+		<section className="foundation-section foundation-motion-section">
+			<div className="foundation-section-heading">
+				<div><h2>Easing plot</h2><p>Replay a single transition to compare the canonical easing roles.</p></div>
+				<button type="button" className="foundation-action" onClick={replayMotion}>Replay motion</button>
+			</div>
+			<div className="foundation-motion-plot">{easings.map((easing) => {
+				const durationId = easing.id.replace(/-easing$/u, '-duration');
+				const duration = durations.find((token) => token.id === durationId) ?? durations.find((token) => token.id.includes('duration-fast'));
+				return <div className="foundation-motion-row" key={easing.id}><code><TokenName id={easing.id} tokens={data.tokens} /></code><div className="foundation-motion-track"><span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference(duration ?? 'reference.duration.fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
+			})}</div>
+		</section>
+		<section className="foundation-section foundation-timing-section" aria-labelledby="foundation-timing-roles-title">
+			<div className="foundation-section-heading">
+				<div><h2 id="foundation-timing-roles-title">Timing roles</h2><p>Replay the same finite motion to see each duration at its canonical scale.</p></div>
+				<button type="button" className="foundation-action" onClick={replayMotion}>Replay motion</button>
+			</div>
+			<div className="foundation-timing-groups">{groups.map((group) => <MotionTimingGroup key={group.id} group={group} replay={replay} allTokens={data.tokens} onReplay={replayMotion} />)}</div>
+		</section>
+		<TokenInventory tokens={[...durations, ...easings]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration and easing tokens, including mode-aware semantic roles." />
+	</div>;
 }
 
 function ComponentTokensPage({ data }: { data: FoundationData }) {
