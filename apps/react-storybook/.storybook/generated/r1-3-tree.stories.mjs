@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:823560c3d105b1ab8de4b6e1e796c07510ad38e83a65d8f67b91dfd595fe70a7
+// @generated-content-sha256: sha256:a60e6a8811a544e3c97c5474f23f64349851ec021237f50483ccb076e8cfe7c7
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -60,7 +60,7 @@ const binding = {
 const record = { family: 'Tree', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Tree',
+  title: 'Mux UI React/Tree',
   id: 'muxui-react-r1-3-tree',
   component: MuxUI.Tree,
   tags: ['autodocs'],

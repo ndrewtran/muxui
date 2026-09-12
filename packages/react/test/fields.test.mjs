@@ -57,6 +57,19 @@ function contrastRatio(foreground, background) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+test('single-line field families expose the shared sm/md/lg size axis', () => {
+  const controls = [TextField, SearchField, NumberField, Switch, DateField, DatePicker, DateRangePicker, TimeField];
+  for (const size of ['sm', 'md', 'lg']) {
+    for (const Control of controls) {
+      const props = { label: 'Value', size };
+      if (Control === DateRangePicker) props['aria-label'] = 'Range';
+      const markup = renderToString(React.createElement(Control, props));
+      assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+    }
+  }
+  assert.throws(() => renderToString(React.createElement(TextField, { label: 'Value', size: 'xl' })), /TextField size must be one of/u);
+});
+
 function fields({ onText, onNumber, onSearch, onDate, onTime, onRange, onSwitch, onGroup, onSubmit, onReset } = {}) {
   return React.createElement(React.Fragment, null,
     React.createElement(TextField, { label: 'Name', description: 'Display name', errorMessage: 'Name is required', invalid: true, defaultValue: 'Andrew', onChange: onText }),
@@ -310,10 +323,10 @@ test('ComboBox input transitions stay scoped away from TextField', async () => {
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input\s*\{[\s\S]*transition:/u);
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
   assert.doesNotMatch(comboCss, /^\.muxui-field-input\s*\{/mu);
-  assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color 0\.15s ease/u);
+  assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\)/u);
 });
 
-test('NumberField steppers expose stable direction hooks and Tale edge geometry', async () => {
+test('NumberField steppers expose stable direction hooks and edge geometry', async () => {
   const markup = renderToString(React.createElement(NumberField, { label: 'Quantity', defaultValue: 2 }));
   const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
   const decrement = dom.window.document.querySelector('.muxui-number-stepper-decrement');
@@ -323,9 +336,9 @@ test('NumberField steppers expose stable direction hooks and Tale edge geometry'
   assert.equal(decrement.getAttribute('slot'), 'decrement');
   assert.equal(increment.getAttribute('slot'), 'increment');
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
-  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-reference-color-neutral-22\);[^}]*border-radius:\s*var\(--muxui-reference-dimension-radius-m\) 0 0 var\(--muxui-reference-dimension-radius-m\)/u);
-  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-reference-color-neutral-22\);[^}]*border-radius:\s*0 var\(--muxui-reference-dimension-radius-m\) var\(--muxui-reference-dimension-radius-m\) 0/u);
+  assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
+  assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*var\(--muxui-semantic-control-radius\) 0 0 var\(--muxui-semantic-control-radius\)/u);
+  assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*0 var\(--muxui-semantic-control-radius\) var\(--muxui-semantic-control-radius\) 0/u);
   assert.match(css, /--muxui-reference-color-neutral-22:\s*#d5d2d1;/u);
   dom.window.close();
 });
@@ -454,7 +467,7 @@ test('DateRangePicker popover uses range calendar cells for contiguous selection
   }
 });
 
-test('date picker calendar triggers retain Tale icon wrapper sizing and scoped popover border tokens', async () => {
+test('date picker calendar triggers retain icon wrapper sizing and scoped popover border tokens', async () => {
   const markup = renderToString(React.createElement(React.Fragment, null,
     React.createElement(DatePicker, { label: 'Due date', defaultValue: '2026-08-26' }),
     React.createElement(DateRangePicker, { label: 'Trip', defaultValue: { start: '2026-08-26', end: '2026-09-01' } }),
@@ -493,7 +506,7 @@ test('date picker calendar triggers retain Tale icon wrapper sizing and scoped p
   const styles = await readFile(new URL('../src/styles/base.css', import.meta.url), 'utf8');
   assert.match(styles, /\.muxui-icon\s*\{[^}]*width:\s*1\.5rem;[^}]*height:\s*1\.5rem;/u);
   assert.match(styles, /\.muxui-icon--sm\s*\{[^}]*width:\s*1rem;[^}]*height:\s*1rem;/u);
-  assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-surface-hover\)/u);
+  assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-border-faint\)/u);
   assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-popover\s*\{/u);
 });
 
@@ -700,10 +713,21 @@ test('read-only date segments retain accessible semantic contrast', async () => 
   assert.match(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /--muxui-reference-color-neutral-60:\s*#79716b;/u);
   assert.match(styles, /--muxui-reference-color-neutral-50:\s*#918b86;/u);
-  const foreground = styles.match(/--muxui-semantic-content-default:\s*(#[0-9a-f]{6});/iu)?.[1];
-  const background = styles.match(/--muxui-semantic-surface-canvas:\s*(#[0-9a-f]{6});/iu)?.[1];
-  assert.ok(foreground);
-  assert.ok(background);
+  assert.match(styles, /--muxui-semantic-content-default:\s*var\(--muxui-semantic-color-neutral-80\);/u);
+  assert.match(styles, /--muxui-semantic-surface-canvas:\s*var\(--muxui-semantic-color-neutral-5\);/u);
+  const rootBody = styles.match(/:root \{([\s\S]*?)\n\}/u)?.[1] ?? '';
+  const rootDeclarations = new Map([...rootBody.matchAll(/^\s+(--[^:]+):\s*(.+);$/gmu)].map(([, name, value]) => [name, value]));
+  const resolveRoot = (name, seen = new Set()) => {
+    if (seen.has(name)) return undefined;
+    const value = rootDeclarations.get(name);
+    if (!value) return undefined;
+    const target = value.match(/^var\((--[^)]+)\)$/u)?.[1];
+    return target ? resolveRoot(target, new Set([...seen, name])) : value;
+  };
+  const foreground = resolveRoot('--muxui-semantic-content-default');
+  const background = resolveRoot('--muxui-semantic-surface-canvas');
+  assert.match(foreground ?? '', /^#[0-9a-f]{6}$/iu);
+  assert.match(background ?? '', /^#[0-9a-f]{6}$/iu);
   assert.ok(contrastRatio(foreground, background) >= 4.5, `${foreground} on ${background} lacks 4.5:1 contrast`);
 });
 
@@ -1025,7 +1049,7 @@ test('R1.2 autocomplete placeholder stays aligned across artifact, types, and ru
   assert.match(server, /placeholder="Search city"/u);
 });
 
-test('Autocomplete preserves the donor compact size axis and part hooks', async () => {
+test('Autocomplete preserves the compact size axis and part hooks', async () => {
   const server = renderToString(React.createElement(Autocomplete, {
     label: 'City',
     size: 'sm',
@@ -1034,8 +1058,8 @@ test('Autocomplete preserves the donor compact size axis and part hooks', async 
   assert.match(server, /data-size="sm"/u);
   assert.match(server, /data-part="root"/u);
   assert.throws(
-    () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'lg' })),
-    /Autocomplete size must be one of: sm, md/u,
+    () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'xl' })),
+    /Autocomplete size must be one of: sm, md, lg/u,
   );
 
   const dom = new JSDOM('<!doctype html><div id="root"></div>');

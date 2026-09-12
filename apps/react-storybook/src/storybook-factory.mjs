@@ -3,8 +3,9 @@ import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
-import { migrationFixtureSymbol } from './visual-migration-contract.mjs';
-import { fixtureFieldPropsFor, fixtureRenderModel } from './visual-migration-fixture-map.mjs';
+const storyFixtureSymbol = Symbol.for('muxui.storybook.fixture');
+function fixtureRenderModel(fixture) { return fixture; }
+function fixtureFieldPropsFor() { return {}; }
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview(args) {
@@ -21,7 +22,6 @@ function ColorModeTogglePreview(args) {
 }
 
 const MUXUI_SEARCH_FIELD_VALUE = 'MuxUI';
-const HISTORICAL_MIGRATION_SEARCH_FIELD_VALUE = ['C', 'o', 'r', 'e'].join('');
 
 const BOOLEAN_PROPS = new Set([
   'acceptDirectory', 'allowsMultiple', 'checked', 'current', 'defaultChecked',
@@ -432,7 +432,7 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
     case 'open':
     case 'opening':
     case 'entering':
-      // Migration open cases use the same user action in both renderers. Keep
+      // Story open cases use the same user action in both renderers. Keep
       // DatePicker variants closed at mount so the capture runner can click
       // the public trigger before taking the paired screenshot.
       if (props.has('open') && !(fixtureInput && normalizedState === 'open' && ['DatePicker', 'DateRangePicker'].includes(family))) {
@@ -467,7 +467,7 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
       break;
     case 'filled':
       if (props.has('value') && (typeof args.value === 'string' || args.value === undefined)) {
-        setControlledArg(args, props, 'value', fixtureInput ? HISTORICAL_MIGRATION_SEARCH_FIELD_VALUE : MUXUI_SEARCH_FIELD_VALUE);
+        setControlledArg(args, props, 'value', MUXUI_SEARCH_FIELD_VALUE);
       }
       break;
     case 'empty':
@@ -504,7 +504,7 @@ export function storyArgsForBinding(binding, variant, family) {
 export function stateArgsForBinding(binding, state, family, sourceArgs) {
   const explicitArgs = sourceArgs !== undefined;
   const args = sourceArgs ?? normalizeDefaultArgs(binding);
-  const projected = applyStateArgs(resetStateArgs(binding, args, explicitArgs), binding, state, family, args[migrationFixtureSymbol], explicitArgs);
+  const projected = applyStateArgs(resetStateArgs(binding, args, explicitArgs), binding, state, family, args[storyFixtureSymbol], explicitArgs);
   if (!explicitArgs) return projected;
   // A state supplies missing demonstration values. Explicit controls retain
   // precedence, including false, empty values, and uncontrolled defaults.
@@ -528,18 +528,18 @@ function fallback(value, defaultValue) {
 }
 
 function fixtureCopy(args, defaultValue) {
-  const fixture = args[migrationFixtureSymbol];
+  const fixture = args[storyFixtureSymbol];
   return fixture ? fixtureRenderModel(fixture).copy ?? defaultValue : defaultValue;
 }
 
 function fixtureData(args, name, defaultValue) {
-  const fixture = args[migrationFixtureSymbol];
+  const fixture = args[storyFixtureSymbol];
   if (Object.hasOwn(args, name)) return args[name];
   return fixture ? fixtureRenderModel(fixture).data[name] ?? defaultValue : defaultValue;
 }
 
 function fixtureState(args) {
-  return args[migrationFixtureSymbol]?.state;
+  return args[storyFixtureSymbol]?.state;
 }
 
 function fixtureChildren(args, name, defaultValue) {
@@ -548,11 +548,11 @@ function fixtureChildren(args, name, defaultValue) {
 }
 
 function fixtureFieldProps(args, family, defaults) {
-  const fixture = args[migrationFixtureSymbol];
+  const fixture = args[storyFixtureSymbol];
   if (!fixture) return defaults;
   const fieldProps = fixtureFieldPropsFor(fixture, family);
-  // Tale's Select.Value documents "Select an item" as its empty-state copy;
-  // keep Mux UI's migration adapter equivalent while preserving explicit fixture
+  // Select.Value documents "Select an item" as its empty-state copy;
+  // keep Mux UI's Storybook adapter equivalent while preserving explicit fixture
   // placeholder mutations for contract tests and consumer stories.
   return family === 'Select' && fieldProps.placeholder === 'Enter a name'
     ? { ...fieldProps, placeholder: 'Select an item' }
@@ -602,18 +602,18 @@ const ADAPTERS = {
   SearchField: (args) => e(MuxUI.SearchField, {
     ...args,
     ...fixtureFieldProps(args, 'SearchField', { label: fallback(args.label, fixtureCopy(args, 'Search')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Search')) }),
-    onClear: args.onClear ?? (args[migrationFixtureSymbol] && args.value ? () => {} : undefined),
+    onClear: args.onClear ?? (args[storyFixtureSymbol] && args.value ? () => {} : undefined),
   }),
   Switch: (args) => e(MuxUI.Switch, { ...args, label: fallback(args.label, fixtureCopy(args, 'Notifications')) }),
   TextField: (args) => e(MuxUI.TextField, { ...args, label: fixtureData(args, 'label', fallback(args.label, fixtureCopy(args, 'Name'))), placeholder: fixtureData(args, 'placeholder', fallback(args.placeholder, fixtureCopy(args, 'Enter a name'))) }),
   TimeField: (args) => e(MuxUI.TimeField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Start time')), defaultValue: args.value === undefined ? fixtureData(args, 'time', fallback(args.defaultValue, '09:30')) : args.defaultValue }),
   Calendar: (args) => e(MuxUI.Calendar, {
     ...args,
-    // Migration fixtures stay visually unlabeled with their historical
+    // Story fixtures stay visually unlabeled with their historical
     // accessible name; ordinary stories default to an accessible-only name
     // unless a visible label is explicitly supplied.
-    label: args[migrationFixtureSymbol] ? undefined : args.label,
-    'aria-label': args[migrationFixtureSymbol]
+    label: args[storyFixtureSymbol] ? undefined : args.label,
+    'aria-label': args[storyFixtureSymbol]
       ? fixtureCopy(args, 'Date')
       : args.label !== undefined ? args['aria-label'] : fallback(args['aria-label'], 'Choose a date'),
     defaultValue: args.value === undefined ? fixtureData(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue,
@@ -638,32 +638,32 @@ const ADAPTERS = {
   RadioGroup: (args) => e(MuxUI.RadioGroup, { ...args, label: fallback(args.label, fixtureCopy(args, 'Size')), options: fixtureData(args, 'options', fallback(args.options, [{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }])) }),
   RangeCalendar: (args) => e(MuxUI.RangeCalendar, {
     ...args,
-    label: args[migrationFixtureSymbol] ? undefined : fallback(args.label, fixtureCopy(args, 'Trip')),
-    'aria-label': args[migrationFixtureSymbol] ? fixtureCopy(args, 'Trip') : args['aria-label'],
+    label: args[storyFixtureSymbol] ? undefined : fallback(args.label, fixtureCopy(args, 'Trip')),
+    'aria-label': args[storyFixtureSymbol] ? fixtureCopy(args, 'Trip') : args['aria-label'],
     defaultValue: args.value === undefined ? fixtureData(args, 'dateRange', fallback(args.defaultValue, { start: '2026-08-26', end: '2026-09-01' })) : args.defaultValue,
   }),
   Select: (args) => e(MuxUI.Select, { ...args, ...fixtureFieldProps(args, 'Select', { label: fallback(args.label, fixtureCopy(args, 'Choose a city')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Choose a city')) }), items: fixtureData(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
   Slider: (args) => e(MuxUI.Slider, { ...args, label: fallback(args.label, fixtureCopy(args, 'Volume')), defaultValue: args.value === undefined ? (fixtureData(args, 'values', {}).slider ?? args.defaultValue ?? 60) : args.defaultValue }),
   Table: (args) => e(MuxUI.Table, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'People')), columns: fixtureData(args, 'columns', fallback(args.columns, [{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'role', label: 'Role' }])), rows: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'rows', fallback(args.rows, [{ id: 'ada', values: { name: 'Ada', role: 'Engineer' } }, { id: 'grace', values: { name: 'Grace', role: 'Designer' } }])) }),
   Tabs: (args) => e(MuxUI.Tabs, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Sections')), items: fixtureData(args, 'items', fallback(args.items, [{ id: 'overview', label: 'Overview', panel: 'Overview content' }, { id: 'details', label: 'Details', panel: 'Details content' }])) }),
-  TagGroup: (args) => e(MuxUI.TagGroup, { ...args, label: fallback(args.label, fixtureCopy(args, 'Tags')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['Design', 'Engineering'])), onRemove: args.onRemove ?? (args[migrationFixtureSymbol] && args.removable ? () => {} : undefined) }),
+  TagGroup: (args) => e(MuxUI.TagGroup, { ...args, label: fallback(args.label, fixtureCopy(args, 'Tags')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['Design', 'Engineering'])), onRemove: args.onRemove ?? (args[storyFixtureSymbol] && args.removable ? () => {} : undefined) }),
   ToggleButtonGroup: (args) => e(MuxUI.ToggleButtonGroup, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Formatting')) }, ...fixtureChildren(args, 'toggleButtonGroup', [{ id: 'bold', label: 'Bold' }, { id: 'italic', label: 'Italic' }]).map(({ id, label }) => e(MuxUI.ToggleButton, { key: id, id }, label))),
   TokenField: (args) => e(MuxUI.TokenField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Recipients')), defaultValue: args.value === undefined ? (args.defaultValue ?? ['Andrew', 'Mux UI']) : args.defaultValue, placeholder: fallback(args.placeholder, 'Add recipient') }),
   Toolbar: (args) => e(MuxUI.Toolbar, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Formatting')) }, ...fixtureChildren(args, 'toolbar', ['Bold', 'Italic']).map((label) => e(MuxUI.Button, { key: label }, label))),
-  Tree: (args) => e(MuxUI.Tree, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Files')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, [{ id: 'src', label: 'src', children: [{ id: 'main', label: 'main.jsx' }] }])), defaultExpandedIds: args.expandedIds === undefined ? (args.defaultExpandedIds ?? (args[migrationFixtureSymbol] ? undefined : ['src'])) : args.defaultExpandedIds }),
+  Tree: (args) => e(MuxUI.Tree, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Files')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, [{ id: 'src', label: 'src', children: [{ id: 'main', label: 'main.jsx' }] }])), defaultExpandedIds: args.expandedIds === undefined ? (args.defaultExpandedIds ?? (args[storyFixtureSymbol] ? undefined : ['src'])) : args.defaultExpandedIds }),
   Virtualizer: (args) => {
-    const viewport = args[migrationFixtureSymbol]?.frame?.virtualizer;
+    const viewport = args[storyFixtureSymbol]?.frame?.virtualizer;
     const height = args.height ?? viewport?.height ?? 180;
-    if (!Number.isFinite(height) || height <= 0) throw new Error('MuxUI migration Virtualizer requires a finite positive height');
+    if (!Number.isFinite(height) || height <= 0) throw new Error('MuxUI Storybook Virtualizer requires a finite positive height');
     const items = fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['Result 1', 'Result 2', 'Result 3']));
-    const migration = Boolean(viewport);
+    const hasViewport = Boolean(viewport);
     const virtualizer = e(MuxUI.Virtualizer, {
       ...args,
       'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Results')),
       items,
       height,
       itemHeight: args.itemHeight ?? 32,
-      style: migration
+      style: hasViewport
         ? {
           ...(args.style ?? {}),
           boxSizing: 'border-box',
@@ -687,7 +687,7 @@ const ADAPTERS = {
     ...args,
     'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'More actions')),
     trigger: fallback(args.trigger, e(MuxUI.Button, null, fixtureCopy(args, 'More actions'))),
-  }, fallback(args.children, args[migrationFixtureSymbol]
+  }, fallback(args.children, args[storyFixtureSymbol]
     ? e(React.Fragment, null,
       e('h2', { className: 'muxui-popover-title' }, fixtureCopy(args, 'More actions')),
       e('p', { className: 'muxui-popover-description' }, `${fixtureCopy(args, 'More actions')} content.`),
@@ -698,9 +698,9 @@ const ADAPTERS = {
     'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Document preview')),
     delay: args.delay ?? 0,
     closeDelay: args.closeDelay ?? 0,
-    placement: args.placement ?? (args[migrationFixtureSymbol] ? 'bottom' : undefined),
-    trigger: fallback(args.trigger, e(MuxUI.Button, null, args[migrationFixtureSymbol] ? fixtureCopy(args, 'Document preview') : 'Preview document')),
-  }, fallback(args.children, args[migrationFixtureSymbol]
+    placement: args.placement ?? (args[storyFixtureSymbol] ? 'bottom' : undefined),
+    trigger: fallback(args.trigger, e(MuxUI.Button, null, args[storyFixtureSymbol] ? fixtureCopy(args, 'Document preview') : 'Preview document')),
+  }, fallback(args.children, args[storyFixtureSymbol]
     ? `${fixtureCopy(args, 'Document preview')} content.`
     : e('p', null, `${fixtureCopy(args, 'Document preview')} content.`))),
   Toast: (args) => {
@@ -710,7 +710,7 @@ const ADAPTERS = {
       message: fallback(args.message, fixtureCopy(args, 'Saved')),
       title: fallback(args.title, fixtureCopy(args, 'Saved')),
     });
-    return args[migrationFixtureSymbol]
+    return args[storyFixtureSymbol]
       ? e(MuxUI.ToastProvider, { placement: 'bottom-end' }, toast)
       : toast;
   },
@@ -1958,17 +1958,34 @@ export function createButtonMatrixStory(record) {
         className: 'muxui-button-matrix',
         role: 'group',
         'aria-label': 'Button variant and size combinations',
-        style: { display: 'grid', gridTemplateColumns: 'repeat(3, max-content)', gap: '1rem' },
+        style: { display: 'grid', gap: '1.5rem' },
       },
-      ...BUTTON_MATRIX_SIZES.flatMap((size) => BUTTON_MATRIX_VARIANTS.map((variant) => {
-        const label = `${variant} / ${size}`;
-        return e(
+      ...BUTTON_MATRIX_SIZES.map((size) => e(
+        'section',
+        {
+          key: size,
+          'aria-label': `${size} button size`,
+          style: { display: 'grid', gap: '0.5rem' },
+        },
+        e('h3', {
+          style: {
+            fontFamily: 'monospace',
+            fontSize: '0.75rem',
+            margin: 0,
+            textTransform: 'uppercase',
+          },
+        }, size),
+        e(
           'div',
-          { key: label, style: { display: 'grid', gap: '0.25rem' } },
-          e('span', { style: { fontFamily: 'monospace', fontSize: '0.75rem' } }, label),
-          e(MuxUI.Button, { ...args, variant, size }, 'Action'),
-        );
-      })),
+          { style: { display: 'flex', flexWrap: 'wrap', gap: '1rem' } },
+          ...BUTTON_MATRIX_VARIANTS.map((variant) => e(
+            'div',
+            { key: variant, style: { display: 'grid', gap: '0.25rem' } },
+            e('span', { style: { fontFamily: 'monospace', fontSize: '0.75rem' } }, variant),
+            e(MuxUI.Button, { ...args, variant, size }, 'Action'),
+          )),
+        ),
+      )),
     ),
   };
 }
@@ -1977,7 +1994,7 @@ export function createStoryMeta(record) {
   const component = MuxUI[record.family];
   if (!component) throw new Error(`Missing @muxui/react export for ${record.family}`);
   return {
-    title: `Mux UI React/${record.tranche}/${record.family}`,
+    title: `Mux UI React/${record.family}`,
     component,
     tags: ['autodocs'],
     parameters: {

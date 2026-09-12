@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:892964718231d2c7f06604ac927025cc1903f0961ff14e8f723c34d60d4ccc6b
+// @generated-content-sha256: sha256:30bb4ad067d29c185c9debc6383bc58591e2836216cdadd26346114d060165d9
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -61,7 +61,7 @@ const binding = {
 const record = { family: 'Table', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Table',
+  title: 'Mux UI React/Table',
   id: 'muxui-react-r1-3-table',
   component: MuxUI.Table,
   tags: ['autodocs'],

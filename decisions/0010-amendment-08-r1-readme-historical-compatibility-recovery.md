@@ -44,8 +44,8 @@ passes.
 
 Architecture, Roadmap, and Product Scope remain byte-unchanged. Product Scope
 stays 6.0.1 with the same 53 families, tranche membership, Core-owned public
-contracts, internal React Aria Components 1.20.0 substrate, and pinned Tale
-styling donor.
+contracts, internal React Aria Components 1.20.0 substrate, and Mux UI styling
+baseline.
 
 No component, schema grammar, operation kind, package, dependency, lockfile,
 catalog, generated output, renderer, binding, CSS, token, example, evidence,

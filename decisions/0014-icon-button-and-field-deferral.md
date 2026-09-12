@@ -13,16 +13,16 @@ existing Mux Button, accepts caller-supplied icon content, requires an explicit
 accessible name, and adds square sizing. Mux owns its API, tokens, and styles;
 React Aria remains an internal, replaceable implementation dependency.
 
-The existing pinned Tale IconButton is a one-time reference. Mux deliberately
-aligns the square control with its own minimum Button heights and uses a static pending
-indicator. No new dependency, public Icon family, or icon-library contract is
-introduced. Existing internal close controls retain their current geometry.
+Mux deliberately aligns the square control with its own minimum Button heights
+and uses a static pending indicator. No new dependency, public Icon family, or
+icon-library contract is introduced. Existing internal close controls retain
+their current geometry.
 
 The current mapping grows from 21 to 22 supplemental families: 75 families in
 total, with 73 root exports and the same two isolated subpaths. The historical
 53-family inventory and completed R1.6 evidence remain unchanged. The earliest
-owners are the component artifact, renderer source, and existing supplemental
-crosswalk; downstream catalog, package guidance, and Storybook are generated.
+owners are the component artifact, renderer source, and current supplemental
+mapping; downstream catalog, package guidance, and Storybook are generated.
 
 ## Field deferral
 

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:4c03eb0d8b2e3a8fc2d505ef50a016702dc21fe9077150575e71ec574c539425
+// @generated-content-sha256: sha256:50015f236762839e350a15ebfb5f03be2f7bf6ff8a4b347d0e69167412160a6e
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -60,7 +60,7 @@ const binding = {
 const record = { family: 'IconButton', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/IconButton',
+  title: 'Mux UI React/IconButton',
   id: 'muxui-react-r1-6-icon-button',
   component: MuxUI.IconButton,
   tags: ['autodocs'],

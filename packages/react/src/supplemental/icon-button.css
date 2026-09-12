@@ -1,12 +1,22 @@
 /* Scope square sizing to public IconButton instances, preserving private close controls. */
 .muxui-button.muxui-icon-button[data-muxui-icon-button] {
-  --muxui-icon-button-size: var(--muxui-button-min-height);
+  /* Keep the square control on Button's private minimum-height owner for md,
+     while matching Button's explicit sm and lg size tokens below. */
+  --muxui-icon-button-size: var(--muxui-component-button-min-height, var(--muxui-control-size-md));
   box-sizing: border-box;
   flex: 0 0 auto;
   width: var(--muxui-icon-button-size);
   height: var(--muxui-icon-button-size);
   min-height: var(--muxui-icon-button-size);
   padding: 0;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button][data-size='sm'] {
+  --muxui-icon-button-size: var(--muxui-control-size-sm);
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button][data-size='lg'] {
+  --muxui-icon-button-size: var(--muxui-control-size-lg);
 }
 
 .muxui-icon-button-icon {

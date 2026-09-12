@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:8319babef364aaf1b92c765115a425bfe634b661390a493f552b8544664db042
+// @generated-content-sha256: sha256:85a6beeb75b8c87e040ab5f7acf474545d19ad6f21077bf5a48d963a32d2f163
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -20,7 +20,8 @@ const binding = {
       "invalid": false,
       "readOnly": false,
       "required": false,
-      "selected": false
+      "selected": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -42,6 +43,7 @@ const binding = {
       "selected",
       "defaultSelected",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -69,7 +71,7 @@ const binding = {
 const record = { family: 'Switch', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/Switch',
+  title: 'Mux UI React/Switch',
   id: 'muxui-react-r1-2-switch',
   component: MuxUI.Switch,
   tags: ['autodocs'],

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ef3a72225c967b2955efb88601aa7adf2d2cb4048f71aef265876ffe743ed1d6
+// @generated-content-sha256: sha256:b47bb275dba873faad958a224136285b2dba1c920779f866eb1d0e2b45acf0a4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -50,7 +50,7 @@ const binding = {
 const record = { family: 'ColorModeToggle', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/ColorModeToggle',
+  title: 'Mux UI React/ColorModeToggle',
   id: 'muxui-react-r1-6-color-mode-toggle',
   component: MuxUI.ColorModeToggle,
   tags: ['autodocs'],

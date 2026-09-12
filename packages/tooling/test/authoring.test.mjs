@@ -65,6 +65,11 @@ async function setup() {
 
 async function temporaryCatalogRepository() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-g0-5-'));
+  const sourceManifest = JSON.parse(await readFile(
+    resolve(repositoryRoot, 'packages/catalog/catalog-sources.json'),
+    'utf8',
+  ));
+  const authorityDecisionPath = sourceManifest.authorityDecisionPath;
   await Promise.all([
     mkdir(resolve(temporaryRoot, 'packages/tooling'), { recursive: true }),
     mkdir(resolve(temporaryRoot, 'packages/tokens'), { recursive: true }),
@@ -76,8 +81,8 @@ async function temporaryCatalogRepository() {
   await Promise.all([
     cp(resolve(repositoryRoot, 'catalog'), resolve(temporaryRoot, 'catalog'), { recursive: true }),
     cp(
-      resolve(repositoryRoot, 'decisions/0003-tale-token-classification-annex.json'),
-      resolve(temporaryRoot, 'decisions/0003-tale-token-classification-annex.json'),
+      resolve(repositoryRoot, authorityDecisionPath),
+      resolve(temporaryRoot, authorityDecisionPath),
     ),
     cp(
       resolve(repositoryRoot, 'packages/catalog'),
@@ -87,11 +92,6 @@ async function temporaryCatalogRepository() {
     cp(
       resolve(repositoryRoot, 'packages/tooling/command-registry.json'),
       resolve(temporaryRoot, 'packages/tooling/command-registry.json'),
-      { recursive: true },
-    ),
-    cp(
-      resolve(repositoryRoot, 'packages/tokens/generated'),
-      resolve(temporaryRoot, 'packages/tokens/generated'),
       { recursive: true },
     ),
     cp(

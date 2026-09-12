@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:b8b1089ca88cea60ea69f369a74a659e93e810995b19c87cd1dca4b7b83cd0f7
+// @generated-content-sha256: sha256:b1cae5dd86653d42099b993ba05cd371d79c270e6ad188f4115300848f8c3c08
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -79,7 +79,7 @@ const binding = {
 const record = { family: 'InputTags', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/InputTags',
+  title: 'Mux UI React/InputTags',
   id: 'muxui-react-r1-6-input-tags',
   component: MuxUI.InputTags,
   tags: ['autodocs'],

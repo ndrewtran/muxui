@@ -18,10 +18,6 @@ const source = parseJsonStrict(await readFile(
   new URL('../../../catalog/tokens/default-theme.json', import.meta.url),
   'utf8',
 ));
-const baselineOccurrences = parseJsonStrict(await readFile(
-  new URL('../generated/tale-token-occurrences.json', import.meta.url),
-  'utf8',
-));
 const recipe = {
   source: source.id,
   requirements: [
@@ -64,7 +60,7 @@ function crosswalkFixture() {
   const candidate = structuredClone(source);
   candidate.sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui',
+      repository: 'reference/tokens',
       revision: 'a'.repeat(40),
       path: 'packages/tokens/tokens.json',
       sha256: `sha256:${'b'.repeat(64)}`,
@@ -100,7 +96,7 @@ function selectorCrosswalkFixture() {
   const candidate = structuredClone(source);
   candidate.sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui', revision: 'a'.repeat(40), path: 'packages/tokens/tokens.json',
+      repository: 'reference/tokens', revision: 'a'.repeat(40), path: 'catalog/tokens/default-theme.json',
       sha256: `sha256:${'b'.repeat(64)}`, baseFontSizePx: 16, declarationOccurrences: 2,
       customPropertyOccurrences: 2, uniqueCustomPropertyNames: 1, nonCustomPropertyOccurrences: 0,
     },
@@ -135,7 +131,7 @@ function modeCrosswalkFixture() {
   const candidate = structuredClone(source);
   candidate.sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui', revision: 'a'.repeat(40), path: 'packages/tokens/tokens.json',
+      repository: 'reference/tokens', revision: 'a'.repeat(40), path: 'catalog/tokens/default-theme.json',
       sha256: `sha256:${'b'.repeat(64)}`, baseFontSizePx: 16, declarationOccurrences: 3,
       customPropertyOccurrences: 3, uniqueCustomPropertyNames: 1, nonCustomPropertyOccurrences: 0,
     },
@@ -162,10 +158,9 @@ function expectCrosswalkInvalid(value) {
   );
 }
 
-test('TALE-TOKEN-C source-crosswalk validation binds coverage, reference targets, groups, and digest', () => {
-  const canonical = validateSourceCrosswalk(source, { baselineOccurrences });
-  assert.equal(canonical.status, 'available');
-  assert.equal(canonical.digest, 'sha256:5189cd61005c0e8d733465034d7252238bfffbc517aee4d1cdbf072ee400fd8d');
+test('source-crosswalk validation is optional and binds coverage when supplied', () => {
+  const canonical = validateSourceCrosswalk(source);
+  assert.deepEqual(canonical, { status: 'absent', digest: null, crosswalk: null });
   const { candidate, occurrences } = crosswalkFixture();
   const validated = validateSourceCrosswalk(candidate, { baselineOccurrences: occurrences });
   assert.equal(validated.status, 'available');
@@ -347,7 +342,7 @@ test('default theme link and invalid semantic colors meet contrast in both color
   }
 });
 
-test('default theme color modes preserve the pinned donor shade positions', () => {
+test('default theme color modes preserve canonical shade positions', () => {
   const dark = compileTokenGraph(source, { modes: { colorScheme: 'dark' } });
   const namedShades = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
   for (const shade of namedShades) {
@@ -368,7 +363,7 @@ test('default theme color modes preserve the pinned donor shade positions', () =
   assert.equal(dark.tokens['semantic.color.neutral-5'].value, '#0e0e0d');
 });
 
-test('Decision 0005 changes only renderer source and provenance identity', () => {
+test('changing source identity changes provenance while preserving renderer output', () => {
   const decision0004 = structuredClone(source);
   decision0004.id = 'muxui:token:button-minimum';
   const beforeWeb = compileWebTheme(decision0004);

@@ -8,14 +8,12 @@ import {
   auditAliases,
   auditCurrentIdentity,
   auditRepository,
-  classifyPath,
   generatedText,
   loadPolicy,
   sha256,
   validateGeneratedFile,
 } from '../src/policy.mjs';
 import { GenerationProofError, verifyGenerationState } from '../src/generation-proof.mjs';
-import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const policy = await loadPolicy(repositoryRoot);
@@ -42,7 +40,7 @@ test('identity reset audit rejects stale current names but permits explicit hist
   );
   await writeFile(
     join(root, 'history/retained.txt'),
-    'core-ui-react-r1-0-donor-crosswalk-v1 coreFixtureSourceSha256 coreSource\n',
+    'retired-react-r1-0-crosswalk-v1 coreFixtureSourceSha256 coreSource\n',
   );
   const identityPolicy = {
     identityReset: {
@@ -92,31 +90,6 @@ test('E-G0.0-03: generated output validates against its source and digest', asyn
     policy,
   );
   assert.equal(result.source, 'catalog/source.txt');
-});
-
-test('TALE-TOKEN-C retained installed catalogs remain proof fixtures, not live projections', () => {
-  assert.equal(
-    classifyPath(
-      'tests/fixtures/tale-token-phase-b/installed-catalog/generated/catalog.json',
-      policy,
-    ),
-    'proof',
-  );
-  assert.equal(classifyPath('packages/catalog/generated/catalog.json', policy), 'projection');
-});
-
-test('TALE-TOKEN-C runtime catalog caches cannot become workspace package owners', async () => {
-  const root = await mkdtemp(join(tmpdir(), 'muxui-workspace-cache-'));
-  await mkdir(join(root, 'packages/live/.cache/catalog'), { recursive: true });
-  await writeFile(join(root, 'packages/live/package.json'), '{"name":"@muxui/live"}\n');
-  await writeFile(
-    join(root, 'packages/live/.cache/catalog/package.json'),
-    '{"name":"@muxui/catalog"}\n',
-  );
-  assert.deepEqual(
-    (await discoverWorkspacePackages(root)).map(({ name }) => name),
-    ['@muxui/live'],
-  );
 });
 
 test('E-G0.0-03 negative: a direct projection edit is rejected with its owner', async () => {

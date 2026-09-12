@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:control-sizing-usage",
+  "kind": "guide",
+  "name": "Interactive control sizing",
+  "summary": "Shared sm, md, and lg targets for Mux UI interactive controls.",
+  "lifecycle": "experimental",
+  "keywords": ["sizing", "controls", "accessibility"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/control-sizing-usage.md"
+}

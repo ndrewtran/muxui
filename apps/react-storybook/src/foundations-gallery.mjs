@@ -39,6 +39,12 @@ const RESPONSIVE_PREVIEW_TOKEN_IDS = Object.freeze([
   'reference.dimension.text-5xl',
 ]);
 
+export const CONTROL_SIZE_GUIDE = Object.freeze([
+  Object.freeze({ id: 'semantic.control.size-sm', label: 'sm', pixels: '32px', rem: '2rem', usage: 'Compact single-line controls' }),
+  Object.freeze({ id: 'semantic.control.size-md', label: 'md', pixels: '36px', rem: '2.25rem', usage: 'Default single-line controls' }),
+  Object.freeze({ id: 'semantic.control.size-lg', label: 'lg', pixels: '40px', rem: '2.5rem', usage: 'Enlarged single-line controls' }),
+]);
+
 function isRecord(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -545,6 +551,13 @@ function componentStyles(theme, rows, modes) {
   };
 }
 
+function controlSizeSpecimenStyle(theme, tokenId, modes) {
+  const resolved = resolveTokenValue(theme, tokenId, modes);
+  if (resolved.status !== 'resolved' || typeof resolved.value !== 'number') return {};
+  const size = `${resolved.value}px`;
+  return { blockSize: size, minBlockSize: size };
+}
+
 function renderComponentGallery({ theme, rows, allRows, modes, onCopy }) {
   const componentRows = rows.filter((row) => row.facets.includes('component'));
   const styles = componentStyles(theme, allRows, modes);
@@ -558,6 +571,30 @@ function renderComponentGallery({ theme, rows, allRows, modes, onCopy }) {
           : row.id.endsWith('.padding-inline') ? { transform: 'scaleX(1.08)' } : { outlineStyle: 'dashed' }),
   });
   return h('div', { className: 'muxui-foundations-component-gallery', 'data-muxui-foundations-visual-kind': 'component-schematic' },
+    h('section', { className: 'muxui-foundations-control-sizing', 'data-muxui-foundations-control-sizing': true },
+      h('div', { className: 'muxui-foundations-control-sizing-heading' },
+        h('h2', null, 'Interactive control sizing'),
+        h('p', null, 'Shared targets apply to single-line text fields, buttons, toggles, selects, autocomplete, date controls, choice rows, collection options, tabs, tree rows, and toolbar actions. md is the default.'),
+      ),
+      h('div', { className: 'muxui-foundations-control-sizing-table', role: 'table', 'aria-label': 'Interactive control size targets' }, CONTROL_SIZE_GUIDE.map((entry) => {
+        const resolved = resolveTokenValue(theme, entry.id, modes);
+        const value = resolved.status === 'resolved' ? formatValue(resolved) : entry.pixels;
+        return h('div', { key: entry.id, className: 'muxui-foundations-control-sizing-row', role: 'row', 'data-muxui-control-size': entry.label },
+          h('code', { role: 'cell' }, entry.label),
+          h('strong', { role: 'cell' }, `${entry.rem} / ${value}`),
+          h('span', { role: 'cell' }, entry.usage),
+        );
+      })),
+      h('div', { className: 'muxui-foundations-control-sizing-specimens', 'aria-label': 'Resolved control size specimens' }, CONTROL_SIZE_GUIDE.map((entry) => {
+        const style = controlSizeSpecimenStyle(theme, entry.id, modes);
+        return h('div', { key: entry.id, className: 'muxui-foundations-control-sizing-specimen', 'data-muxui-control-size': entry.label },
+          h('code', null, entry.label),
+          h('button', { type: 'button', style }, 'Button'),
+          h('input', { type: 'text', style, 'aria-label': `${entry.label} Text field`, placeholder: 'Text field' }),
+        );
+      })),
+      h('p', { className: 'muxui-foundations-control-sizing-notes' }, 'Targets are minimum block sizes for text-bearing controls so enlarged text can grow. Icon-only controls are square. Checkbox, radio, and switch indicators remain visually smaller inside their target rows. Textareas, multiline panels, sliders, color areas, cards, tables, and calendar containers stay content- or geometry-driven. Documented small exceptions are tag removal, calendar cells/navigation, and popup close; each segmented number-stepper action remains independently sized and is never counted as a combined target.'),
+    ),
     h('div', { className: 'muxui-foundations-component-hero', 'data-muxui-foundations-component-specimen': true },
       h('button', { type: 'button', className: 'muxui-foundations-component-button', style: styles }, 'Button specimen'),
       h('p', null, 'Resolved component tokens applied together'),
@@ -672,7 +709,7 @@ function ResponsiveDimensionPreview({ theme, modes }) {
   return h('section', { className: 'muxui-foundations-responsive', 'data-muxui-foundations-responsive': true, 'aria-labelledby': 'muxui-foundations-responsive-title' },
     h('div', { className: 'muxui-foundations-responsive-heading' },
       h('div', null, h('p', { className: 'muxui-foundations-eyebrow' }, 'Opt-in viewport recipes'), h('h2', { id: 'muxui-foundations-responsive-title' }, 'Static by default, responsive by choice')),
-      h('p', null, 'The default Mux UI theme keeps donor dimensions static. Add ', h('code', null, 'data-muxui-responsive'), ' to a theme scope to activate the canonical clamp recipes.'),
+      h('p', null, 'The default Mux UI theme keeps foundation dimensions static. Add ', h('code', null, 'data-muxui-responsive'), ' to a theme scope to activate the canonical clamp recipes.'),
     ),
     h('div', { className: 'muxui-foundations-responsive-grid' }, rows.map((row) => h('article', { key: row.id, className: 'muxui-foundations-responsive-row', 'data-muxui-foundations-responsive-token': row.id },
       h('code', { className: 'muxui-foundations-responsive-id' }, row.cssVariable),

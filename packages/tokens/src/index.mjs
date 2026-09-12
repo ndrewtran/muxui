@@ -1,5 +1,5 @@
 import { canonicalDigest, canonicalJson, validateFamily } from '@muxui/schema';
-import { compilePureTokenGraph, cssName, cssValue } from './core.mjs';
+import { compilePureTokenGraph, cssDeclaration } from './core.mjs';
 
 const UNIT_BY_TYPE = Object.freeze({
   color: new Set(['hex']),
@@ -528,7 +528,7 @@ function publicTokenEntries(graph) {
 export function compileWebTheme(source, options = {}) {
   const graph = compileTokenGraph(source, options);
   const declarations = publicTokenEntries(graph)
-    .map((token) => `  ${cssName(token.id)}: ${cssValue(token)};`)
+    .map((token) => cssDeclaration(token, graph.dependencies))
     .join('\n');
   return Object.freeze({
     kind: 'web.css.static',

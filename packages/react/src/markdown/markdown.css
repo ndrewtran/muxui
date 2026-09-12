@@ -6,7 +6,7 @@
 
 .muxui-markdown {
   color: var(--muxui-semantic-color-neutral-90);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-m-font-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
   overflow-wrap: anywhere;
@@ -21,9 +21,9 @@
 }
 
 .muxui-markdown :where(h1, h2, h3, h4, h5, h6) {
-  margin-block: var(--muxui-reference-dimension-space-m) var(--muxui-reference-dimension-space-xs);
+  margin-block: var(--muxui-semantic-layout-content-gap) var(--muxui-semantic-layout-action-gap);
   color: var(--muxui-semantic-color-neutral-100);
-  font-family: var(--muxui-reference-typography-heading-font-family);
+  font-family: var(--muxui-semantic-typography-heading-font-family);
   font-weight: var(--muxui-semantic-typography-heading-font-weight);
   line-height: var(--muxui-semantic-typography-heading-line-height);
 }
@@ -41,32 +41,32 @@
 }
 
 .muxui-markdown :where(p, ul, ol, .muxui-markdown-blockquote, .muxui-markdown-code-block) {
-  margin-block: 0 var(--muxui-reference-dimension-space-s);
+  margin-block: 0 var(--muxui-semantic-layout-section-gap);
 }
 
 .muxui-markdown :where(ul, ol) {
-  padding-inline-start: var(--muxui-reference-dimension-space-l);
+  padding-inline-start: var(--muxui-semantic-layout-content-indent);
 }
 
 .muxui-markdown li > :where(p, ul, ol) {
-  margin-block-end: var(--muxui-reference-dimension-space-2xs);
+  margin-block-end: var(--muxui-semantic-layout-group-gap);
 }
 
 .muxui-markdown hr {
-  margin-block: var(--muxui-reference-dimension-space-m);
+  margin-block: var(--muxui-semantic-layout-content-gap);
   border: 0;
   border-block-start: 1px solid var(--muxui-semantic-color-neutral-20);
 }
 
-/* Private donor helper compositions used by Markdown output. */
+/* Private helper compositions used by Markdown output. */
 .muxui-markdown-blockquote {
   margin: 0;
-  padding-block: var(--muxui-reference-dimension-space-xs);
-  padding-inline: var(--muxui-reference-dimension-space-s);
+  padding-block: var(--muxui-semantic-layout-inset-medium);
+  padding-inline: var(--muxui-semantic-layout-inset-large);
   border-inline-start: 0.25rem solid var(--muxui-semantic-color-color-40);
   background: var(--muxui-semantic-color-neutral-10);
   color: var(--muxui-semantic-color-neutral-90);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
 }
 
 .muxui-markdown-blockquote__content {
@@ -77,7 +77,7 @@
 }
 
 .muxui-markdown-blockquote__attribution {
-  margin-block-start: var(--muxui-reference-dimension-space-xs);
+  margin-block-start: var(--muxui-semantic-layout-action-gap);
   color: var(--muxui-semantic-color-neutral-70);
   font-size: var(--muxui-semantic-typography-label-s-font-size);
   font-weight: var(--muxui-semantic-typography-label-font-weight);
@@ -85,12 +85,12 @@
 }
 
 .muxui-markdown-code {
-  padding-block: var(--muxui-reference-dimension-space-4xs);
-  padding-inline: var(--muxui-reference-dimension-space-3xs);
-  border-radius: var(--muxui-reference-dimension-radius-xs);
+  padding-block: var(--muxui-semantic-layout-tight-inset);
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
+  border-radius: var(--muxui-semantic-shape-indicator-radius);
   background: var(--muxui-semantic-color-neutral-12);
   color: var(--muxui-semantic-color-neutral-90);
-  font-family: var(--muxui-reference-typography-mono-font-family);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
   font-size: var(--muxui-semantic-typography-mono-s-font-size);
   line-height: var(--muxui-semantic-typography-mono-line-height);
   overflow-wrap: anywhere;
@@ -100,13 +100,13 @@
   box-sizing: border-box;
   max-inline-size: 100%;
   margin: 0;
-  padding: var(--muxui-reference-dimension-space-xs);
+  padding: var(--muxui-semantic-layout-inset-medium);
   overflow: auto;
   border: 1px solid var(--muxui-semantic-color-neutral-20);
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  border-radius: var(--muxui-semantic-control-radius);
   background: var(--muxui-semantic-color-neutral-10);
   color: var(--muxui-semantic-color-neutral-90);
-  font-family: var(--muxui-reference-typography-mono-font-family);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
   font-size: var(--muxui-semantic-typography-mono-s-font-size);
   line-height: var(--muxui-semantic-typography-mono-line-height);
   tab-size: 2;

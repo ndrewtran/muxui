@@ -9,24 +9,16 @@ import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { Button } from '../src/button.mjs';
 import { R1ButtonFixture } from '../src/button-fixture.mjs';
-import { EXPECTED_R12_DONOR_CONTRACT } from '../src/r1-2-donor-contract.mjs';
 
-test('R1.1 Button owns MuxUI selectors and required token crosswalk', async () => {
+test('Button owns MuxUI selectors and required token bindings', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  const comparison = JSON.parse(await readFile(resolve(import.meta.dirname, '../generated/button-donor-comparison.json'), 'utf8'));
   assert.match(css, /\.muxui-r1-button/);
   for (const token of ['muxui-component-button-background', 'muxui-component-button-foreground', 'muxui-component-button-radius', 'muxui-component-button-padding-inline', 'muxui-component-button-min-height']) assert.match(css, new RegExp(token));
-  assert.doesNotMatch(css, /--color-60|\.tale-/);
-  assert.equal(comparison.donor.commit, '94bf62a26c02605c8928dfeb24f0ddc4be1c92fd');
-  assert.equal(comparison.result.selector, '.muxui-button');
-  assert.equal(comparison.result.status, 'adapted-for-r1.1-button');
-  assert.equal(comparison.consumedRules.length, 16);
+  assert.doesNotMatch(css, /--color-60/);
 });
 
-test('R1.4 component selectors and donor dispositions stay Mux UI-owned', async () => {
+test('component selectors stay Mux UI-owned', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  const comparisonSource = await readFile(resolve(import.meta.dirname, '../generated/component-donor-comparison.json'), 'utf8');
-  const comparison = JSON.parse(comparisonSource.replace(/^\/\/ @generated-from:.*\n\/\/ @generated-content-sha256:.*\n/u, ''));
   const names = ['Button', 'Breadcrumbs', 'Checkbox', 'Disclosure', 'DisclosureGroup', 'Group', 'Link', 'Meter', 'ProgressBar', 'Separator', 'ToggleButton', 'Autocomplete', 'CheckboxGroup', 'DateField', 'DatePicker', 'DateRangePicker', 'Form', 'NumberField', 'SearchField', 'Switch', 'TextField', 'TimeField', 'Calendar', 'ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatch', 'ColorSwatchPicker', 'ColorWheel', 'ComboBox', 'GridList', 'ListBox', 'Menu', 'RadioGroup', 'RangeCalendar', 'Select', 'Slider', 'Table', 'Tabs', 'TagGroup', 'ToggleButtonGroup', 'TokenField', 'Toolbar', 'Tree', 'Virtualizer', 'DropZone', 'FileTrigger', 'Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'Tooltip'];
   for (const name of names) {
     if (name === 'FileTrigger') continue;
@@ -37,11 +29,7 @@ test('R1.4 component selectors and donor dispositions stay Mux UI-owned', async 
   assert.match(css, /\.muxui-checkbox-indicator/);
   assert.match(css, /data-indeterminate/);
   assert.match(css, /semantic-feedback-invalid/);
-  assert.equal(comparison.components.length, names.length);
-  assert.deepEqual(comparison.components.map(({ component }) => component), names);
-  assert.equal(comparison.components.find(({ component }) => component === 'Group').disposition, 'no-applicable-donor');
-  assert.ok(comparison.components.filter(({ disposition }) => disposition === 'adapt').length >= 9);
-  assert.doesNotMatch(css, /(?:\\.tale-|--color-60)/u);
+  assert.doesNotMatch(css, /--color-60/u);
 });
 
 test('generated theme keeps static defaults and exposes responsive dimensions only on the opt-in scope', async () => {
@@ -57,29 +45,6 @@ test('generated theme keeps static defaults and exposes responsive dimensions on
   assert.match(responsiveBlock, /clamp\(/u);
   assert.match(responsiveBlock, /--muxui-reference-dimension-space-xl/u);
   assert.match(responsiveBlock, /--muxui-reference-dimension-text-5xl/u);
-});
-
-test('R1.2 donor crosswalk is exact, adapted, and dependency-free', async () => {
-  const repositoryRoot = resolve(import.meta.dirname, '../../..');
-  const crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-2/donor-crosswalk.json'), 'utf8'));
-  const slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field'];
-  assert.equal(crosswalk.schema, 'muxui-react-r1-2-donor-crosswalk-v1');
-  assert.deepEqual(crosswalk, EXPECTED_R12_DONOR_CONTRACT);
-  assert.equal(crosswalk.donor.commit, '94bf62a26c02605c8928dfeb24f0ddc4be1c92fd');
-  assert.equal(crosswalk.dependency, false);
-  assert.deepEqual(crosswalk.sharedPrimitives, [
-    { path: 'packages/styles/src/_primitives.css', blob: 'b54d4ab7296f992731cfd844b4edac28d5254ee8' },
-    { path: 'packages/styles/src/button.css', blob: '32227dc8969351bb11499d53e7773425b3fe7e68' },
-  ]);
-  assert.deepEqual(Object.keys(crosswalk.components).sort(), slugs.sort());
-  for (const slug of slugs) {
-    const entry = crosswalk.components[slug];
-    assert.equal(entry.disposition, 'adapt');
-    assert.deepEqual(entry.rules.map(({ input }) => input), entry.consumedRules);
-    assert.ok(entry.donorInputs.length >= 3);
-    assert.ok(entry.donorInputs.every(({ path, blob }) => path && /^[0-9a-f]{40}$/u.test(blob)));
-  }
-  assert.match(await readFile(resolve(repositoryRoot, 'packages/react/NOTICE'), 'utf8'), /Tale UI contributors/);
 });
 
 test('R1.1 MuxUI Button proves SSR, hydration, disabled and pending state', async () => {
@@ -163,7 +128,7 @@ test('R1.1 MuxUI Button proves SSR, hydration, disabled and pending state', asyn
   }
 });
 
-test('Button exposes donor variants and compatibility tone aliases with stable root hooks', async () => {
+test('Button exposes variants and compatibility tone aliases with stable root hooks', async () => {
   const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
   const tones = ['default', 'destructive'];
   const sizes = ['sm', 'md', 'lg'];
@@ -219,7 +184,7 @@ test('Button exposes donor variants and compatibility tone aliases with stable r
   assert.doesNotMatch(destructivePrimaryRule, /\bblack\b/u);
   assert.match(destructivePrimaryRule, /--muxui-button-foreground:\s*var\(--muxui-semantic-color-error-60-fg\)/u);
   assert.match(css, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-button\[data-variant='primary'\]\[data-tone='default'\]\[data-pressed\]/u);
-  assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding:\s*var\(--muxui-reference-dimension-space-2xs\)\s+var\(--muxui-reference-dimension-space-s\)/u);
+  assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
 
   const pendingWithText = renderToString(React.createElement(Button, { pending: true, showTextWhileLoading: true }, 'Saving'));
   assert.match(pendingWithText, /muxui-button-content--with-spinner/u);
@@ -240,10 +205,10 @@ test('Button generator guard binds the canonical finite API contract', async () 
   assert.equal(result.status, 0, result.stderr);
 });
 
-test('MuxUI styles bind donor states and public theme hooks', async () => {
+test('MuxUI styles bind states and public theme hooks', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
 
-  assert.match(css, /\.muxui-button[\s\S]*border: 1px solid transparent;[\s\S]*font-size: var\(--muxui-semantic-typography-body-size\)/u);
+  assert.match(css, /\.muxui-button[\s\S]*border: 0;[\s\S]*outline: 1px solid transparent;[\s\S]*font-size: var\(--muxui-semantic-typography-body-size\)/u);
   assert.match(css, /\.muxui-button[\s\S]*box-shadow: var\(--muxui-button-shadow\)/u);
   assert.match(css, /--muxui-button-shadow: var\(--muxui-semantic-elevation-control\)/u);
   assert.match(css, /\.muxui-button\[data-hovered\][\s\S]*var\(--muxui-semantic-action-background-hover\)/u);
@@ -274,28 +239,28 @@ test('MuxUI styles bind donor states and public theme hooks', async () => {
   const infiniteAnimationRules = [...css.matchAll(/([^{}]+\{[^{}]*animation:[^;]*infinite[^{}]*\})/gu)].map(([rule]) => rule);
   assert.ok(infiniteAnimationRules.length > 0, 'current union retains the explicit indeterminate progress behavior');
   assert.ok(infiniteAnimationRules.every((rule) => /\.muxui-(?:progress-(?:bar|circle)|button-spinner)/u.test(rule)), 'continuous animation is restricted to indeterminate progress and pending button spinners');
-  assert.match(css, /\.muxui-button-spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate 1s linear infinite;/u);
-  assert.match(css, /\.muxui-button-spinner-arc\s*\{[\s\S]*animation: muxui-button-spinner-dash 1\.2s ease-in-out infinite;/u);
+  assert.match(css, /\.muxui-button-spinner\s*\{[\s\S]*animation: muxui-button-spinner-rotate var\(--muxui-semantic-motion-progress-spin-duration\) var\(--muxui-semantic-motion-constant-easing\) infinite;/u);
+  assert.match(css, /\.muxui-button-spinner-arc\s*\{[\s\S]*animation: muxui-button-spinner-dash var\(--muxui-semantic-motion-progress-sweep-duration\) var\(--muxui-semantic-motion-progress-easing\) infinite;/u);
 
-  assert.match(css, /--muxui-component-button-background: #025768;/u);
-  assert.match(css, /--muxui-component-button-foreground: #e6f0f0;/u);
-  assert.match(css, /--muxui-component-button-min-height: 36px;/u);
-  assert.match(css, /--muxui-component-button-radius: calc\(var\(--muxui-reference-dimension-scale\) \* 8\);/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-background: #539198;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-foreground: #012334;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-field-background: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\);/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-overlay-background: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-10\) 85%, #000000\);/u);
-  assert.match(css, /--muxui-semantic-selection-track: #025768;/u);
-  assert.match(css, /--muxui-semantic-content-link: #02485b;/u);
-  assert.match(css, /--muxui-semantic-feedback-invalid: #cc3330;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-content-link: #7badb1;/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-feedback-invalid: #e59796;/u);
+  assert.match(css, /--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
+  assert.match(css, /--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);
+  assert.match(css, /--muxui-component-button-min-height: var\(--muxui-semantic-control-min-height\);/u);
+  assert.match(css, /--muxui-component-button-radius: var\(--muxui-semantic-control-radius\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-field-background: var\(--muxui-semantic-color-neutral-5\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-overlay-background: var\(--muxui-semantic-color-neutral-5\);/u);
+  assert.match(css, /--muxui-semantic-selection-track: var\(--muxui-semantic-color-color-60\);/u);
+  assert.match(css, /--muxui-semantic-content-link: var\(--muxui-semantic-color-color-70\);/u);
+  assert.match(css, /--muxui-semantic-feedback-invalid: var\(--muxui-reference-color-error-60\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-content-link: var\(--muxui-semantic-color-color-70\);/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-semantic-feedback-invalid: var\(--muxui-reference-color-error-30\);/u);
   assert.match(css, /@media \(forced-colors: active\)[\s\S]*--muxui-button-background: ButtonFace !important;/u);
   assert.match(css, /@media \(forced-colors: active\)[\s\S]*\.muxui-file-trigger \{[^}]*background: ButtonFace;[^}]*color: ButtonText;/u);
 
   assert.match(css, /--muxui-reference-color-brand-60: #025768;/u);
   assert.doesNotMatch(css, /var\(--muxui-private-/u);
-  assert.doesNotMatch(css, /(?:\.tale-|--color-60|--radius-m|--space-xs)/u);
+  assert.doesNotMatch(css, /(?:--color-60|--radius-m|--space-xs)/u);
 });
 
 test('pending Button preserves its accessible name without overriding caller naming', () => {

@@ -8,7 +8,7 @@
     "build": "vite build",
     "check": "node src/check.mjs",
     "check:browser": "node --test test/browser/theme-builder.test.mjs",
-    "check:browser:foundation": "node --test test/browser/foundation-parity.test.mjs"
+    "check:browser:docs": "node --test test/browser/docs-theme.test.mjs"
   },
   "dependencies": {
     "@muxui/react": "workspace:*",

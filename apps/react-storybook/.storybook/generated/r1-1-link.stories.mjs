@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:8830f554b3cf8461b4575b730c980e3aa32799c691eb4fa117f1cb82bb7a73ff
+// @generated-content-sha256: sha256:9b10179f9869b263e6412f29d32aeba0fd4595b77744281904379b87b67e35c4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -53,7 +53,7 @@ const binding = {
 const record = { family: 'Link', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/Link',
+  title: 'Mux UI React/Link',
   id: 'muxui-react-r1-1-link',
   component: MuxUI.Link,
   tags: ['autodocs'],

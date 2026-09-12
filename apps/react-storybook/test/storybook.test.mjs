@@ -165,6 +165,18 @@ test('current Storybook manifest covers the complete package union', () => {
   assert.deepEqual([...BROWSER_PROOF_FAMILIES].sort(), descriptorSource.bindings.map(({ export: name }) => name).sort());
 });
 
+test('Storybook navigation is alphabetical with Foundations first and stable deep links', async () => {
+  const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
+  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical',\s*order: \['Foundations', '\*'\]/u);
+  for (const record of manifest.families) {
+    const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+    const tranche = record.tranche.replace('.', '-').toLowerCase();
+    const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
+    assert.equal(story.default.title, `Mux UI React/${record.family}`, record.family);
+    assert.equal(story.default.id, `muxui-react-${tranche}-${slug}`, record.family);
+  }
+});
+
 test('current Storybook default stories render through their published package routes', async () => {
   const failures = [];
   for (const record of manifest.families) {
@@ -315,7 +327,7 @@ test('Button Matrix statically covers every finite visual tuple and States keeps
     button.getAttribute('data-variant'),
     button.getAttribute('data-size'),
   ].join('/'));
-  assert.equal(buttons.length, 21, 'Button Matrix renders all finite donor variants and sizes');
+  assert.equal(buttons.length, 21, 'Button Matrix renders all finite variants and sizes');
   assert.equal(new Set(tuples).size, 21, 'Button Matrix tuples are unique');
   assert.deepEqual(new Set(tuples), new Set(
     ['sm', 'md', 'lg'].flatMap((size) => ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'].map((variant) => `${variant}/${size}`)),
@@ -941,7 +953,9 @@ test('lifecycle state coverage drives observable Mux UI transitions', async () =
         const initialOverlayObservation = family === 'Toast' && closing
           ? observeInitialOverlay(marker)
           : undefined;
-        await act(async () => {
+        // Sample the committed lifecycle state before its requestAnimationFrame
+        // transition can mount an entering overlay.
+        act(() => {
           lifecycleSelect.value = state;
           lifecycleSelect.dispatchEvent(new Event('change', { bubbles: true }));
         });
@@ -1058,20 +1072,19 @@ test('generated stories are stock CSF modules with default and state coverage', 
   assert.match(autocompleteStory, /disabled: true/u);
 });
 
-test('showcase does not expose React Aria or Tale UI as a public import', async () => {
+test('showcase does not expose React Aria as a public import', async () => {
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
   assert.equal(packageManifest.dependencies['@muxui/react'], 'workspace:*');
   assert.equal(packageManifest.devDependencies['react-aria-components'], undefined);
-  assert.equal(packageManifest.devDependencies['@tale-ui/react'], undefined);
   assert.equal(packageManifest.devDependencies['@storybook/addon-docs'], '10.5.10');
   const factory = await readFile(resolve(appRoot, 'src/storybook-factory.mjs'), 'utf8');
-  assert.doesNotMatch(factory, /react-aria-components|@tale-ui/i);
+  assert.doesNotMatch(factory, /react-aria-components/i);
   const main = await readFile(resolve(appRoot, '.storybook/main.mjs'), 'utf8');
   assert.match(main, /@storybook\/addon-docs/);
   assert.match(main, /reactDocgen: false/);
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
   assert.match(preview, /@muxui\/react/);
-  assert.doesNotMatch(preview, /react-aria-components|@tale-ui/);
+  assert.doesNotMatch(preview, /react-aria-components/);
 });
 
 test('preview exposes the Mux UI theme and direction host contract', async () => {
@@ -1089,9 +1102,7 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.match(preview, /document\.documentElement\.dir = direction/);
   assert.doesNotMatch(preview, /data-muxui-contrast|contrastItems|applyAccessibilityModes/u);
   assert.match(preview, /className: 'muxui-storybook-surface'/);
-  assert.match(preview, /viewMode === 'story'/);
-  assert.match(preview, /const surfaceElement = viewMode === 'story' \? 'main' : 'div'/);
-  assert.match(preview, /React\.createElement\(\s*surfaceElement/u);
+  assert.match(preview, /return React\.createElement\(\s*viewMode === 'story' \? 'main' : 'div',/u);
   assert.match(preview, /MutationObserver/);
   assert.match(preview, /observer\.observe\(document\.body, \{ childList: true \}\)/);
   assert.match(preview, /element\.style\.display === 'contents'/);
@@ -1117,5 +1128,5 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.match(previewCss, /font-family: ui-sans-serif, system-ui/);
   assert.match(previewCss, /#storybook-root,\s*main\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
   assert.doesNotMatch(previewCss, /(?:^|\n)\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
-  assert.doesNotMatch(previewCss, /Inter|@tale-ui|\.tale-/i);
+  assert.doesNotMatch(previewCss, /Inter/i);
 });

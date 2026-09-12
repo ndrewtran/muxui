@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:696470cc6d533523209481bae66ac2ce9e4016a9a50e6c66e6dd0d788d11824e
+// @generated-content-sha256: sha256:32745a4b9593a0aeca51683f109dbbac43ede99f1ad5a078b7a0df09022a6c2d
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,7 @@ const binding = {
 const record = { family: 'TagGroup', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/TagGroup',
+  title: 'Mux UI React/TagGroup',
   id: 'muxui-react-r1-3-tag-group',
   component: MuxUI.TagGroup,
   tags: ['autodocs'],

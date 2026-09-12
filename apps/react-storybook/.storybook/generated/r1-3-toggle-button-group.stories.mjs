@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:b628906c36923054749e1f490b005a3b0d247aae7aa5037a44c904000f6dbcf2
+// @generated-content-sha256: sha256:294b6a9b83c24c1bb11d7975eb0d8865f631faf4b12c37173c5fe2ecbae8336c
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,7 +18,8 @@ const binding = {
       "disabled": false,
       "disallowEmptySelection": false,
       "orientation": "horizontal",
-      "selectionMode": "single"
+      "selectionMode": "single",
+      "size": "md"
     },
     "events": [
       "selectionChange"
@@ -57,7 +58,7 @@ const binding = {
 const record = { family: 'ToggleButtonGroup', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ToggleButtonGroup',
+  title: 'Mux UI React/ToggleButtonGroup',
   id: 'muxui-react-r1-3-toggle-button-group',
   component: MuxUI.ToggleButtonGroup,
   tags: ['autodocs'],

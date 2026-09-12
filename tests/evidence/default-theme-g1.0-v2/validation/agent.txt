@@ -1,5 +1,0 @@
-
-> @core-ui/workspace@0.0.0 test:agent <repository>
-> node tooling/audits/repository-policy/src/agent-eval-status.mjs
-
-No model-based evaluation is enabled; deterministic checks remain authoritative.

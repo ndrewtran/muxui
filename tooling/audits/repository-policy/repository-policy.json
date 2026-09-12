@@ -21,44 +21,22 @@
       "tests/fixtures/g0.4/",
       "tests/fixtures/g1.0/",
       "tests/fixtures/g1.2/",
-      "tests/fixtures/tale-token-phase-b/",
-      "apps/react-storybook/src/visual-migration.mjs",
-      "apps/react-storybook/visual-migration/bootstrap/capture.mjs",
-      "apps/react-storybook/visual-migration/bootstrap/donor-adapter.mjs",
-      "apps/react-storybook/visual-migration/results/donor-capture-provenance.json",
-      "apps/react-storybook/visual-migration/results/muxui-capture-provenance.json",
       "packages/react-native/test/contract.test.mjs",
-      "packages/tokens/src/default-theme-identity-migration.mjs",
-      "packages/tokens/src/internal/default-theme-repository-transition.mjs",
-      "packages/tokens/src/tale-token-materialization.mjs",
-      "packages/tokens/test/default-theme-identity-migration.test.mjs",
-      "packages/tokens/test/default-theme-repository-transition.test.mjs",
-      "packages/tokens/test/tale-token-materialization.test.mjs",
       "packages/tokens/fixtures/button-minimum-phase-b.json",
       "tooling/audits/repository-policy/src/policy.mjs",
       "tooling/audits/repository-policy/test/repository-policy.test.mjs",
       "packages/schema/schemas/react-r1.schema.json",
       "packages/tooling/test/local-resolver.test.mjs",
-      "tooling/audits/repository-policy/src/default-theme-identity-correction-verify.mjs",
       "tooling/audits/repository-policy/src/delivery-workflow-authority-verify.mjs",
       "tooling/audits/repository-policy/src/evidence-applicability-supersession.mjs",
       "tooling/audits/repository-policy/src/evidence-verify.mjs",
       "tooling/audits/repository-policy/src/g1-2-applicability-continuity-verify.mjs",
-      "tooling/audits/repository-policy/src/phase-c-applicability-topology-correction-verify.mjs",
       "tooling/audits/repository-policy/src/r1-continuous-authority-compatibility.mjs",
       "tooling/audits/repository-policy/src/react-aria-family-evaluate.mjs",
       "tooling/audits/repository-policy/src/react-aria-stage1-source-verify.mjs",
-      "tooling/audits/repository-policy/src/tale-token-annex-acceptance.mjs",
-      "tooling/audits/repository-policy/src/tale-token-annex-verify.mjs",
-      "tooling/audits/repository-policy/src/tale-token-baseline-reset-verify.mjs",
-      "tooling/audits/repository-policy/tale-token-annex-profile.json",
-      "tooling/audits/repository-policy/test/default-theme-identity-correction.test.mjs",
       "tooling/audits/repository-policy/test/delivery-workflow-authority.test.mjs",
-      "tooling/audits/repository-policy/test/historical-catalog-compatibility.mjs",
-      "tooling/audits/repository-policy/test/historical-catalog-compatibility.test.mjs",
       "tooling/audits/repository-policy/test/evidence-integrity.test.mjs",
-      "tooling/audits/repository-policy/test/phase-c-applicability-capture.test.mjs",
-      "tooling/audits/repository-policy/test/tale-token-annex.test.mjs"
+      "tooling/audits/repository-policy/test/historical-catalog-compatibility.test.mjs"
     ]
   },
   "requiredRootCommands": [
@@ -67,6 +45,7 @@
     "docs",
     "generate",
     "generate:check",
+    "scale",
     "storybook",
     "test:agent",
     "release:prepare"
@@ -108,16 +87,8 @@
       "provenance": "packages/react/generated/descriptor.json.provenance"
     },
     {
-      "path": "packages/react/generated/button-donor-comparison.json",
-      "provenance": "packages/react/generated/button-donor-comparison.json.provenance"
-    },
-    {
       "path": "packages/react/generated/release.json",
       "provenance": "packages/react/generated/release.json.provenance"
-    },
-    {
-      "path": "packages/tokens/generated/tale-token-occurrences.json",
-      "provenance": "packages/tokens/generated/tale-token-occurrences.json.provenance"
     }
   ],
   "generatorProjectionGroups": [

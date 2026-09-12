@@ -4,8 +4,6 @@ import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events';
 import { DocsContainer } from '@storybook/addon-docs/blocks';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
-import { isMigrationFixtureRequest } from '../src/visual-migration-contract.mjs';
-import { MigrationFixture } from '../src/migration-visual.fixture.mjs';
 import { buildTheme } from './theme.mjs';
 import '@muxui/react/styles.css';
 import './preview.css';
@@ -21,22 +19,13 @@ const directionItems = [
 ];
 
 function applyColorScheme(scheme) {
-  if (typeof document !== 'undefined') {
-    document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
-    document.documentElement.style.setProperty('--muxui-migration-frame-background', scheme === 'dark' ? '#000000' : '#ffffff');
-  }
+  if (typeof document !== 'undefined') document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
 }
 
 function applyDirection(direction) {
   if (typeof document === 'undefined') return;
   document.documentElement.setAttribute('data-muxui-direction', direction);
   document.documentElement.dir = direction;
-}
-
-function applyMigrationHost(migration) {
-  if (typeof document === 'undefined' || !document.body) return;
-  if (migration) document.body.setAttribute('data-muxui-migration-host', 'true');
-  else document.body.removeAttribute('data-muxui-migration-host');
 }
 
 function colorSchemeFromQuery() {
@@ -69,9 +58,7 @@ function MuxUIDocsContainer({ context, children }) {
   return React.createElement(DocsContainer, { context, theme: buildTheme(scheme) }, children);
 }
 
-function StorySurface({ children, scheme, direction, viewMode, migration }) {
-  const surfaceRef = React.useRef(null);
-
+function StorySurface({ children, scheme, direction, viewMode }) {
   React.useEffect(() => {
     if (viewMode !== 'story') return undefined;
     const managed = new Map();
@@ -86,9 +73,7 @@ function StorySurface({ children, scheme, direction, viewMode, migration }) {
         const originalRole = child.getAttribute('role');
         const originalLabel = child.getAttribute('aria-label');
         if (!originalRole) child.setAttribute('role', 'region');
-        if (!originalLabel && !child.hasAttribute('aria-labelledby')) {
-          child.setAttribute('aria-label', 'Mux UI overlay');
-        }
+        if (!originalLabel && !child.hasAttribute('aria-labelledby')) child.setAttribute('aria-label', 'Mux UI overlay');
         managed.set(child, { originalRole, originalLabel });
       }
     };
@@ -98,56 +83,39 @@ function StorySurface({ children, scheme, direction, viewMode, migration }) {
     return () => {
       observer.disconnect();
       for (const [element, { originalRole, originalLabel }] of managed) {
-        if (originalRole === null) {
-          if (element.getAttribute('role') === 'region') element.removeAttribute('role');
-        } else if (element.getAttribute('role') === 'region') {
-          element.setAttribute('role', originalRole);
-        }
-        if (originalLabel === null) {
-          if (element.getAttribute('aria-label') === 'Mux UI overlay') element.removeAttribute('aria-label');
-        } else if (element.getAttribute('aria-label') === 'Mux UI overlay') {
-          element.setAttribute('aria-label', originalLabel);
-        }
+        if (originalRole === null && element.getAttribute('role') === 'region') element.removeAttribute('role');
+        else if (originalRole !== null && element.getAttribute('role') === 'region') element.setAttribute('role', originalRole);
+        if (originalLabel === null && element.getAttribute('aria-label') === 'Mux UI overlay') element.removeAttribute('aria-label');
+        else if (originalLabel !== null && element.getAttribute('aria-label') === 'Mux UI overlay') element.setAttribute('aria-label', originalLabel);
       }
     };
   }, [viewMode]);
 
-  const surfaceElement = viewMode === 'story' ? 'main' : 'div';
   return React.createElement(
-    surfaceElement,
+    viewMode === 'story' ? 'main' : 'div',
     {
-      ref: surfaceRef,
       className: 'muxui-storybook-surface',
       'data-muxui-color-scheme': scheme,
       'data-muxui-direction': direction,
-      'data-muxui-migration-host': migration ? 'true' : undefined,
     },
     children,
   );
 }
 
-/** Keep every story inside the MuxUI toast context so the Toast family is interactive. */
+/** Keep every story inside the Mux UI toast context so the Toast family is interactive. */
 export default {
   globalTypes: {
     colorScheme: {
       name: 'Color scheme',
-      description: 'Choose the MuxUI light or dark theme.',
+      description: 'Choose the Mux UI light or dark theme.',
       defaultValue: 'light',
-      toolbar: {
-        icon: 'contrast',
-        items: colorSchemeItems,
-        dynamicTitle: true,
-      },
+      toolbar: { icon: 'contrast', items: colorSchemeItems, dynamicTitle: true },
     },
     direction: {
       name: 'Direction',
       description: 'Choose the document writing direction.',
       defaultValue: 'ltr',
-      toolbar: {
-        icon: 'transfer',
-        items: directionItems,
-        dynamicTitle: true,
-      },
+      toolbar: { icon: 'transfer', items: directionItems, dynamicTitle: true },
     },
   },
   decorators: [
@@ -155,33 +123,23 @@ export default {
       const [, updateGlobals] = useGlobals();
       const scheme = context.globals?.colorScheme === 'dark' ? 'dark' : 'light';
       const direction = context.globals?.direction === 'rtl' ? 'rtl' : 'ltr';
-      const migration = isMigrationFixtureRequest(context.id, window.location.search);
       applyColorScheme(scheme);
       applyDirection(direction);
-      applyMigrationHost(migration);
-      const story = migration
-        ? React.createElement(MigrationFixture, {
-          runToken: import.meta.env.VITE_MUXUI_MIGRATION_RUN_TOKEN,
-        })
-        : React.createElement(Story);
       return React.createElement(
         StorySurface,
-        { scheme, direction, viewMode: context.viewMode, migration },
+        { scheme, direction, viewMode: context.viewMode },
         React.createElement(
           StorybookThemeContext.Provider,
           { value: { scheme, setScheme: (colorScheme) => updateGlobals({ colorScheme }) } },
-          React.createElement(MuxUI.ToastProvider, { placement: migration ? 'bottom-end' : undefined }, story),
+          React.createElement(MuxUI.ToastProvider, null, React.createElement(Story)),
         ),
       );
     },
   ],
   parameters: {
-    controls: {
-      expanded: true,
-    },
-    a11y: {
-      test: 'error',
-    },
+    options: { storySort: { method: 'alphabetical', order: ['Foundations', '*'] } },
+    controls: { expanded: true },
+    a11y: { test: 'error' },
     docs: {
       theme: buildTheme('light'),
       container: MuxUIDocsContainer,

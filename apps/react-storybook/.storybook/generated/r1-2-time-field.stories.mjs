@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:768d3c405f9abf31d6352ec1122aa9ee0665080a86b39d523966c4e6d453ceaa
+// @generated-content-sha256: sha256:b324eb1d5abdc00c280a9d3ef59223b1981cc92799a6eb9ba47b66e5ba47b492
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,7 +18,8 @@ const binding = {
       "disabled": false,
       "invalid": false,
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -42,6 +43,7 @@ const binding = {
       "minValue",
       "maxValue",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -67,7 +69,7 @@ const binding = {
 const record = { family: 'TimeField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/TimeField',
+  title: 'Mux UI React/TimeField',
   id: 'muxui-react-r1-2-time-field',
   component: MuxUI.TimeField,
   tags: ['autodocs'],

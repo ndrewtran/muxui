@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d56170c76f5ae77ed2765f33204acd698f3a7a3945f1d156cbb5ab065cb30486
+// @generated-content-sha256: sha256:bcd12beb30d3961600100df3e61e0f10169bcd7b5c677f0c7c7d4cea2565ad2d
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -52,7 +52,7 @@ const binding = {
 const record = { family: 'Menu', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Menu',
+  title: 'Mux UI React/Menu',
   id: 'muxui-react-r1-3-menu',
   component: MuxUI.Menu,
   tags: ['autodocs'],

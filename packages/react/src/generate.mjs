@@ -2,48 +2,29 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
-import { compileWebTheme } from '@muxui/tokens';
-import {
-  assertReactR10SourceContracts,
-  assertReactR11GeneratedContracts,
-  assertReactR12GeneratedContracts,
-  assertReactR13GeneratedContracts,
-  assertReactR14GeneratedContracts,
-  assertReactR15GeneratedContracts,
-} from './r1-contracts.mjs';
-import { EXPECTED_R12_COMPONENT_SLUGS, EXPECTED_R12_DONOR_CONTRACT } from './r1-2-donor-contract.mjs';
-import { EXPECTED_R13_COMPONENT_SLUGS, EXPECTED_R13_DONOR_CONTRACT } from './r1-3-donor-contract.mjs';
-import { EXPECTED_R14_COMPONENT_SLUGS, EXPECTED_R14_DONOR_CONTRACT } from './r1-4-donor-contract.mjs';
+import { compileTokenGraph, compileWebTheme } from '@muxui/tokens';
+import { cssName } from '@muxui/tokens/core';
+import { assertReactR10SourceContracts, assertReactR15GeneratedContracts } from './r1-contracts.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const generatedRoot = resolve(packageRoot, 'generated');
-const migrationMode = process.argv.includes('--r1-6-migration');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
 const tokenRaw = await readFile(tokenPath);
 const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
-const expectedTokenSha256 = 'c42821d052398b61d393a8cc464924224063e63a5723f3872f838d431199cd75';
-if (tokenSha256 !== expectedTokenSha256) throw new Error('MUXUI_REACT_TOKEN_SOURCE_DRIFT');
 const tokenSource = JSON.parse(tokenRaw);
-const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-snapshot.json'), 'utf8'));
-const familySnapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+const upstreamSnapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-snapshot.json'), 'utf8'));
 const upstreamExportsRaw = await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-exports.json'));
 const upstreamExports = JSON.parse(upstreamExportsRaw);
-const crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/donor-crosswalk.json'), 'utf8'));
-const r12Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-2/donor-crosswalk.json'), 'utf8'));
-const r13Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-3/donor-crosswalk.json'), 'utf8'));
-const r14Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-4/donor-crosswalk.json'), 'utf8'));
+assertReactR10SourceContracts({ snapshot: upstreamSnapshot, upstreamExports, upstreamExportsBytes: upstreamExportsRaw });
+const familySnapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
 const r15ClosureSource = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
-const r16Crosswalk = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-6/donor-crosswalk.json'), 'utf8'));
-const r16FiniteFixtures = migrationMode
-  ? JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-6/finite-fixtures.json'), 'utf8'))
-  : undefined;
-const license = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/license.json'), 'utf8'));
+const r16Supplemental = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-6/supplemental-components.json'), 'utf8'));
 const r11Slugs = ['button', 'breadcrumbs', 'checkbox', 'disclosure', 'disclosure-group', 'group', 'link', 'meter', 'progress-bar', 'separator', 'toggle-button'];
-const r12Slugs = [...EXPECTED_R12_COMPONENT_SLUGS];
-const r13Slugs = [...EXPECTED_R13_COMPONENT_SLUGS];
-const r14Slugs = [...EXPECTED_R14_COMPONENT_SLUGS];
+const r12Slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field'];
+const r13Slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
+const r14Slugs = ['drop-zone', 'file-trigger', 'dialog', 'popover', 'preview-trigger', 'toast', 'tooltip'];
 const buttonSource = await readFile(resolve(packageRoot, 'src/button.mjs'), 'utf8');
 const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
@@ -118,6 +99,7 @@ const expectedToggleButtonGroupDefaults = {
   orientation: 'horizontal',
   selectionMode: 'single',
   disallowEmptySelection: false,
+  size: 'md',
 };
 const toggleButtonSizeDeclaration = `export const TOGGLE_BUTTON_SIZES = Object.freeze([${['sm', 'md', 'lg'].map((value) => `'${value}'`).join(', ')}]);`;
 if (!toggleButtonBinding
@@ -159,7 +141,7 @@ const expectedRadioGroupDefaults = {
   orientation: 'vertical',
   size: 'md',
 };
-const choiceSizeDeclaration = `export const CHOICE_CONTROL_SIZES = Object.freeze([${['sm', 'md'].map((value) => `'${value}'`).join(', ')}]);`;
+const choiceSizeDeclaration = `export const CHOICE_CONTROL_SIZES = Object.freeze([${['sm', 'md', 'lg'].map((value) => `'${value}'`).join(', ')}]);`;
 if (!checkboxBinding
   || JSON.stringify(checkboxBinding.api.props) !== JSON.stringify(expectedCheckboxProps)
   || JSON.stringify(checkboxBinding.api.defaults) !== JSON.stringify(expectedCheckboxDefaults)
@@ -192,11 +174,10 @@ const expectedAutocompleteDefaults = {
 if (!autocompleteBinding
   || JSON.stringify(autocompleteBinding.api.props) !== JSON.stringify(expectedAutocompleteProps)
   || JSON.stringify(autocompleteBinding.api.defaults) !== JSON.stringify(expectedAutocompleteDefaults)
-  || !fieldsSource.includes("const AUTOCOMPLETE_SIZES = new Set(['sm', 'md']);")
+  || !fieldsSource.includes("const AUTOCOMPLETE_SIZES = new Set(['sm', 'md', 'lg']);")
   || !fieldsSource.includes('normalizeAutocompleteSize')) {
   throw new Error('MUXUI_REACT_AUTOCOMPLETE_CANONICAL_API_DRIFT');
 }
-assertReactR10SourceContracts({ snapshot, upstreamExports, upstreamExportsBytes: upstreamExportsRaw, crosswalk, license });
 const componentArtifacts = [
   buttonArtifact,
   ...await Promise.all([
@@ -220,23 +201,13 @@ const allCatalogArtifacts = (await Promise.all(
     }),
 )).filter(Boolean);
 const allCatalogArtifactsBySlug = new Map(allCatalogArtifacts.map((artifact) => [artifact.id.slice('muxui:component:'.length), artifact]));
-const mappedR16Slugs = new Set(r16Crosswalk.supplemental.map(({ slug }) => slug));
+const mappedR16Slugs = new Set(r16Supplemental.components.map(({ slug }) => slug));
 const historicalCatalogSlugs = new Set(familySnapshot.families.map(({ family }) => (family === 'Modal' ? 'dialog' : family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase())));
 const unexpectedCurrentSlugs = [...allCatalogArtifactsBySlug.keys()].filter((slug) => !historicalCatalogSlugs.has(slug) && !mappedR16Slugs.has(slug));
-if (!Array.isArray(r16Crosswalk.supplemental) || unexpectedCurrentSlugs.length > 0) {
+if (!Array.isArray(r16Supplemental.components) || unexpectedCurrentSlugs.length > 0) {
   throw new Error('MUXUI_REACT_R16_CANONICAL_MAPPING_DRIFT');
 }
-if (migrationMode && (r16FiniteFixtures.schema !== 'muxui-react-r1-6-finite-fixtures-v2'
-  || r16FiniteFixtures.current.familyCount !== 74
-  || r16FiniteFixtures.current.historicalCount !== 53
-  || r16FiniteFixtures.current.supplementalCount !== 21
-  || r16FiniteFixtures.components.length !== 74)) {
-  throw new Error('MUXUI_REACT_R16_MIGRATION_FIXTURE_DRIFT');
-}
-const finiteFixtureBySlug = migrationMode
-  ? new Map(r16FiniteFixtures.components.map((fixture) => [fixture.slug, fixture]))
-  : undefined;
-for (const entry of r16Crosswalk.supplemental) {
+for (const entry of r16Supplemental.components) {
   const artifact = allCatalogArtifactsBySlug.get(entry.slug);
   const module = entry.export?.module;
   if (!artifact || artifact.id !== `muxui:component:${entry.slug}`
@@ -256,8 +227,8 @@ for (const entry of r16Crosswalk.supplemental) {
     }
   }
 }
-if (new Set(r16Crosswalk.supplemental.map(({ export: componentExport }) => componentExport.name)).size !== r16Crosswalk.supplemental.length
-  || new Set(r16Crosswalk.supplemental.map(({ binding }) => binding)).size !== r16Crosswalk.supplemental.length) {
+if (new Set(r16Supplemental.components.map(({ export: componentExport }) => componentExport.name)).size !== r16Supplemental.components.length
+  || new Set(r16Supplemental.components.map(({ binding }) => binding)).size !== r16Supplemental.components.length) {
   throw new Error('MUXUI_REACT_R16_MAPPING_IDENTITY_DRIFT');
 }
 for (const artifact of componentArtifacts) {
@@ -265,52 +236,6 @@ for (const artifact of componentArtifacts) {
   if (!binding || binding.api.props.some((prop) => /^is[A-Z]/u.test(prop))) {
     throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_CANONICAL_API_DRIFT`);
   }
-  if (artifact.name !== 'Button' && r11Slugs.includes(artifact.id.slice('muxui:component:'.length))) {
-    const slug = artifact.id.slice('muxui:component:'.length);
-    const componentCrosswalk = crosswalk.components?.[slug];
-    if (!componentCrosswalk
-      || canonicalJson(componentCrosswalk.consumedRules) !== canonicalJson(componentCrosswalk.rules.map(({ input }) => input))) {
-      throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_DONOR_CROSSWALK_DRIFT`);
-    }
-  } else if (r12Slugs.includes(artifact.id.slice('muxui:component:'.length))) {
-    const slug = artifact.id.slice('muxui:component:'.length);
-    const componentCrosswalk = r12Crosswalk.components?.[slug];
-    if (!componentCrosswalk
-      || canonicalJson(componentCrosswalk.consumedRules) !== canonicalJson(componentCrosswalk.rules.map(({ input }) => input))) {
-      throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_DONOR_CROSSWALK_DRIFT`);
-    }
-  } else if (r13Slugs.includes(artifact.id.slice('muxui:component:'.length))) {
-    const slug = artifact.id.slice('muxui:component:'.length);
-    const componentCrosswalk = r13Crosswalk.components?.[slug];
-    if (!componentCrosswalk
-      || canonicalJson(componentCrosswalk.consumedRules) !== canonicalJson(componentCrosswalk.rules.map(({ input }) => input))) {
-      throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_DONOR_CROSSWALK_DRIFT`);
-    }
-  } else if (r14Slugs.includes(artifact.id.slice('muxui:component:'.length))) {
-    const slug = artifact.id.slice('muxui:component:'.length);
-    const componentCrosswalk = r14Crosswalk.components?.[slug];
-    if (!componentCrosswalk
-      || canonicalJson(componentCrosswalk.consumedRules) !== canonicalJson(componentCrosswalk.rules.map(({ input }) => input))) {
-      throw new Error(`MUXUI_REACT_${artifact.name.toUpperCase()}_DONOR_CROSSWALK_DRIFT`);
-    }
-  }
-}
-
-const consumedRules = [
-  '--color-60', '--color-60-fg', '--radius-m', '--space-xs', '2.25rem minimum height',
-  'focus-ring color/rule', 'feedback transition duration', 'inherited typography',
-  'donor shadow and opacity details', 'donor primary/default → Mux primary recipe',
-  'donor secondary/default (neutral) → Mux secondary recipe', 'donor ghost/default → Mux ghost recipe',
-  'donor primary/destructive (danger) → Mux primary destructive recipe',
-  'donor secondary/destructive (danger-neutral) → Mux secondary destructive recipe',
-  'donor ghost/destructive (danger-ghost) → Mux ghost destructive recipe',
-  'donor sm/md/lg sizes → Mux sm/md/lg sizes',
-];
-if (canonicalJson(crosswalk.button.consumedRules) !== canonicalJson(consumedRules)) {
-  throw new Error('MUXUI_REACT_DONOR_CROSSWALK_DRIFT');
-}
-if (canonicalJson(crosswalk.button.rules.map(({ input }) => input)) !== canonicalJson(consumedRules)) {
-  throw new Error('MUXUI_REACT_DONOR_RULE_UNMAPPED');
 }
 
 function sha256(value) {
@@ -330,25 +255,96 @@ function declarations(css) {
   return new Map([...css.matchAll(/^  (--[^:]+): (.+);$/gm)].map((match) => [match[1], match[2]]));
 }
 
-const axes = [['colorScheme', 'dark'], ['contrast', 'more'], ['motion', 'reduced'], ['density', 'compact']];
-const baseTheme = compileWebTheme(tokenSource);
-const baseDeclarations = declarations(baseTheme.css);
-const responsiveTheme = compileWebTheme(tokenSource, { responsive: true });
-const responsiveDeclarations = declarations(responsiveTheme.css);
-const responsiveChanges = [...responsiveDeclarations]
-  .filter(([name, tokenValue]) => baseDeclarations.get(name) !== tokenValue);
-const responsiveBlock = `[data-muxui-responsive] {\n${responsiveChanges.length === 0
-  ? '  /* canonical theme has no responsive token delta */'
-  : responsiveChanges.map(([name, tokenValue]) => `  ${name}: ${tokenValue};`).join('\n')}\n}`;
-const modeBlocks = axes.map(([axis, value]) => {
-  const variant = declarations(compileWebTheme(tokenSource, { modes: { [axis]: value } }).css);
-  const changed = [...variant].filter(([name, tokenValue]) => baseDeclarations.get(name) !== tokenValue);
+function themeBundle(options = {}) {
+  const theme = compileWebTheme(tokenSource, options);
+  const graph = compileTokenGraph(tokenSource, options);
+  const cssDeclarations = declarations(theme.css);
+  const values = new Map(Object.keys(graph.tokens).map((id) => [id, cssDeclarations.get(cssName(id))]));
+  return { theme, graph, values };
+}
+
+function changedTokenIds(base, variant) {
+  return new Set([...variant.values].filter(([id, value]) => base.values.get(id) !== value).map(([id]) => id));
+}
+
+function dependentClosure(seedIds, ...graphs) {
+  const dependents = new Map();
+  for (const graph of graphs) {
+    for (const [id, dependencies] of Object.entries(graph.dependencies)) {
+      for (const dependency of dependencies) {
+        const ids = dependents.get(dependency) ?? [];
+        ids.push(id);
+        dependents.set(dependency, ids);
+      }
+    }
+  }
+  const closure = new Set(seedIds);
+  const pending = [...closure];
+  while (pending.length > 0) {
+    const id = pending.pop();
+    for (const dependent of dependents.get(id) ?? []) {
+      if (closure.has(dependent)) continue;
+      closure.add(dependent);
+      pending.push(dependent);
+    }
+  }
+  return closure;
+}
+
+function serializeDeclarations(bundle, tokenIds) {
+  return [...tokenIds].sort((left, right) => left.localeCompare(right))
+    .map((id) => `  ${cssName(id)}: ${bundle.values.get(id)};`)
+    .join('\n');
+}
+
+function deltaBlock(selector, bundle, tokenIds, emptyComment) {
+  const values = tokenIds.size === 0 ? `  /* ${emptyComment} */` : serializeDeclarations(bundle, tokenIds);
+  return `${selector} {\n${values}\n}`;
+}
+
+const axes = [
+  ['colorScheme', ['light', 'dark']],
+  ['contrast', ['standard', 'more']],
+  ['motion', ['full', 'reduced']],
+  ['density', ['comfortable', 'compact']],
+];
+const baseTheme = themeBundle();
+const responsiveTheme = themeBundle({ responsive: true });
+const responsiveChanges = dependentClosure(
+  changedTokenIds(baseTheme, responsiveTheme),
+  baseTheme.graph,
+  responsiveTheme.graph,
+);
+const responsiveBlock = deltaBlock(
+  '[data-muxui-responsive]',
+  responsiveTheme,
+  responsiveChanges,
+  'canonical theme has no responsive token delta',
+);
+const modeBlocks = axes.flatMap(([axis, values]) => {
+  const variants = values.map((value) => [value, themeBundle({ modes: { [axis]: value } })]);
+  const variantGraphs = variants.map(([, bundle]) => bundle.graph);
+  const axisChanges = new Set();
+  const changesByValue = new Map();
+  for (const [value, bundle] of variants) {
+    const changes = changedTokenIds(baseTheme, bundle);
+    changesByValue.set(value, changes);
+    if (value !== values[0]) for (const id of changes) axisChanges.add(id);
+  }
   const dataAxis = axis.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  const values = changed.length === 0 ? '  /* canonical mode has no token delta */' : changed.map(([name, tokenValue]) => `  ${name}: ${tokenValue};`).join('\n');
-  return `[data-muxui-${dataAxis}='${value}'] {\n${values}\n}`;
+  return variants.map(([value, bundle]) => {
+    const seedIds = value === values[0] ? axisChanges : changesByValue.get(value);
+    const tokenIds = dependentClosure(seedIds, baseTheme.graph, ...variantGraphs);
+    return deltaBlock(
+      `[data-muxui-${dataAxis}='${value}']`,
+      bundle,
+      tokenIds,
+      'canonical mode has no token delta',
+    );
+  });
 });
 
-const cssBody = `${baseTheme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='rtl'] { direction: rtl; }`;
+const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
 const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 
 const compatibility = {
@@ -356,7 +352,7 @@ const compatibility = {
   package: manifest.name,
   version: manifest.version,
   upstream: { package: 'react-aria-components', version: '1.20.0', gitHead: '5ecb3333001313e83898cd07644227897e3bae1f' },
-  tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: expectedTokenSha256 },
+  tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: tokenSha256 },
   compatibilityProfile: {
     runtimeProfile: r15ClosureSource.compatibility.runtimeProfile,
     status: r15ClosureSource.compatibility.status,
@@ -399,7 +395,7 @@ export declare const Button: React.ForwardRefExoticComponent<ButtonProps & React
 export interface BreadcrumbItem { id?: string; label: React.ReactNode; href?: string; disabled?: boolean; }
 export interface BreadcrumbsProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'className' | 'aria-label'> { items?: BreadcrumbItem[]; className?: string; 'aria-label': string; onNavigate?: (item: BreadcrumbItem) => void; }
 export declare const Breadcrumbs: React.ForwardRefExoticComponent<BreadcrumbsProps & React.RefAttributes<HTMLElement>>;
-export interface CheckboxProps extends Omit<React.LabelHTMLAttributes<HTMLLabelElement>, 'children' | 'className' | 'onChange'> { children?: React.ReactNode; className?: string; checked?: boolean; defaultChecked?: boolean; disabled?: boolean; size?: 'sm' | 'md'; indeterminate?: boolean; invalid?: boolean; name?: string; required?: boolean; value?: string; onChange?: (checked: boolean) => void; }
+export interface CheckboxProps extends Omit<React.LabelHTMLAttributes<HTMLLabelElement>, 'children' | 'className' | 'onChange'> { children?: React.ReactNode; className?: string; checked?: boolean; defaultChecked?: boolean; disabled?: boolean; size?: 'sm' | 'md' | 'lg'; indeterminate?: boolean; invalid?: boolean; name?: string; required?: boolean; value?: string; onChange?: (checked: boolean) => void; }
 export declare const Checkbox: React.ForwardRefExoticComponent<CheckboxProps & React.RefAttributes<HTMLLabelElement>>;
 export interface DisclosureProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'className' | 'id' | 'title'> { title: React.ReactNode; children?: React.ReactNode; id?: string; expanded?: boolean; defaultExpanded?: boolean; disabled?: boolean; className?: string; onExpandedChange?: (expanded: boolean) => void; }
 export declare const Disclosure: React.ForwardRefExoticComponent<DisclosureProps & React.RefAttributes<HTMLDivElement>>;
@@ -425,7 +421,8 @@ const fieldsTypes = `
 export type MuxUIDateValue = string;
 export type MuxUITimeValue = string;
 export interface MuxUIDateRange { start: MuxUIDateValue; end: MuxUIDateValue; }
-export interface FieldValidationProps { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; }
+export type ControlSize = 'sm' | 'md' | 'lg';
+export interface FieldValidationProps { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; }
 export type MuxUIAccessibleName =
   | { label: Exclude<React.ReactNode, null | undefined | boolean>; 'aria-label'?: never; 'aria-labelledby'?: never }
   | { label?: never; 'aria-label': string; 'aria-labelledby'?: never }
@@ -441,16 +438,16 @@ export type SearchFieldProps = NamedFieldProps & { value?: string; defaultValue?
 export declare const SearchField: React.ForwardRefExoticComponent<SearchFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type NumberFieldProps = NamedFieldProps & { value?: number; defaultValue?: number; onChange?: (value: number) => void; name?: string; minValue?: number; maxValue?: number; step?: number; formatOptions?: Intl.NumberFormatOptions; };
 export declare const NumberField: React.ForwardRefExoticComponent<NumberFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type CheckboxGroupProps = NamedFieldProps & { value?: string[]; defaultValue?: string[]; onChange?: (value: string[]) => void; name?: string; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md'; children?: React.ReactNode; };
+export type CheckboxGroupProps = NamedFieldProps & { value?: string[]; defaultValue?: string[]; onChange?: (value: string[]) => void; name?: string; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; children?: React.ReactNode; };
 export declare const CheckboxGroup: React.ForwardRefExoticComponent<CheckboxGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type SwitchProps = MuxUIAccessibleName & { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; children?: React.ReactNode; selected?: boolean; defaultSelected?: boolean; onChange?: (selected: boolean) => void; name?: string; value?: string; };
+export type SwitchProps = MuxUIAccessibleName & { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; children?: React.ReactNode; selected?: boolean; defaultSelected?: boolean; onChange?: (selected: boolean) => void; name?: string; value?: string; };
 export declare const Switch: React.ForwardRefExoticComponent<SwitchProps & React.RefAttributes<HTMLDivElement>>;
 export type MuxUIValidationErrors = Readonly<Record<string, string | string[]>>;
 export interface FormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, 'children' | 'className' | 'onSubmit' | 'onReset'> { children?: React.ReactNode; className?: string; validationBehavior?: 'aria' | 'native'; validationErrors?: MuxUIValidationErrors; onSubmit?: React.FormEventHandler<HTMLFormElement>; onReset?: React.FormEventHandler<HTMLFormElement>; }
 export declare const Form: React.ForwardRefExoticComponent<FormProps & React.RefAttributes<HTMLFormElement>>;
 export type DateFieldProps = NamedFieldProps & { value?: MuxUIDateValue; defaultValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateValue) => void; name?: string; };
 export declare const DateField: React.ForwardRefExoticComponent<DateFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type TimeFieldProps = NamedFieldProps & { value?: MuxUITimeValue; defaultValue?: MuxUITimeValue; minValue?: MuxUITimeValue; maxValue?: MuxUITimeValue; onChange?: (value?: MuxUITimeValue) => void; name?: string; };
+export type TimeFieldProps = NamedFieldProps & { value?: MuxUITimeValue; defaultValue?: MuxUITimeValue; minValue?: MuxUITimeValue; maxValue?: MuxUITimeValue; onChange?: (value?: MuxUITimeValue) => void; name?: string; size?: ControlSize; };
 export declare const TimeField: React.ForwardRefExoticComponent<TimeFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type DatePickerProps = DateFieldProps & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; };
 export declare const DatePicker: React.ForwardRefExoticComponent<DatePickerProps & React.RefAttributes<HTMLDivElement>>;
@@ -458,7 +455,7 @@ export type DateRangePickerProps = NamedFieldProps & { value?: MuxUIDateRange; d
 export declare const DateRangePicker: React.ForwardRefExoticComponent<DateRangePickerProps & React.RefAttributes<HTMLDivElement>>;
 export interface AutocompleteItem { id?: string; label?: React.ReactNode; value?: string; disabled?: boolean; }
 export interface AutocompleteSelectionItem { id: string; label: React.ReactNode; value: string; }
-export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteItem | string>; value?: string; defaultValue?: string; onChange?: (value: string) => void; onSelect?: (item?: AutocompleteSelectionItem) => void; name?: string; placeholder?: string; size?: 'sm' | 'md'; };
+export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteItem | string>; value?: string; defaultValue?: string; onChange?: (value: string) => void; onSelect?: (item?: AutocompleteSelectionItem) => void; name?: string; placeholder?: string; size?: 'sm' | 'md' | 'lg'; };
 export declare const Autocomplete: React.ForwardRefExoticComponent<AutocompleteProps & React.RefAttributes<HTMLDivElement>>;
 `;
 const collectionsTypes = `
@@ -472,7 +469,7 @@ export type RangeCalendarProps = MuxUIAccessibleName & { value?: MuxUIDateRange;
 export declare const RangeCalendar: React.ForwardRefExoticComponent<RangeCalendarProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorAreaProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorArea: React.ForwardRefExoticComponent<ColorAreaProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; onChange?: (value: MuxUIColorValue) => void; name?: string; };
+export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; onChange?: (value: MuxUIColorValue) => void; name?: string; size?: ControlSize; };
 export declare const ColorField: React.ForwardRefExoticComponent<ColorFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; children?: React.ReactNode; className?: string; };
 export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
@@ -492,11 +489,11 @@ export declare const ListBox: React.ForwardRefExoticComponent<ListBoxProps & Rea
 export type MenuProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; disabled?: boolean; shouldCloseOnSelect?: boolean; onAction?: (item?: MuxUICollectionItem) => void; onSelect?: (item?: MuxUICollectionItem) => void; className?: string; };
 export declare const Menu: React.ForwardRefExoticComponent<MenuProps & React.RefAttributes<HTMLDivElement>>;
 export type RadioOption = { id?: string; value: string; label?: React.ReactNode; disabled?: boolean; };
-export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md'; onChange?: (value: string) => void; className?: string; };
+export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; onChange?: (value: string) => void; className?: string; };
 export declare const RadioGroup: React.ForwardRefExoticComponent<RadioGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type SelectProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; name?: string; placeholder?: string; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
+export type SelectProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
 export declare const Select: React.ForwardRefExoticComponent<SelectProps & React.RefAttributes<HTMLDivElement>>;
-export type ComboBoxProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; selectedId?: string; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; name?: string; placeholder?: string; onChange?: (value: string) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
+export type ComboBoxProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; selectedId?: string; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
 export declare const ComboBox: React.ForwardRefExoticComponent<ComboBoxProps & React.RefAttributes<HTMLDivElement>>;
 export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
 export declare const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<HTMLDivElement>>;
@@ -505,7 +502,7 @@ export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<str
 export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };
 export type TableProps = MuxUIAriaLabel & { columns?: MuxUITableColumn[]; rows?: MuxUITableRow[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; sortDescriptor?: MuxUITableSortDescriptor; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onRowAction?: (row?: MuxUITableRow) => void; onSortChange?: (next: MuxUITableSortDescriptor) => void; className?: string; };
 export declare const Table: React.ForwardRefExoticComponent<TableProps & React.RefAttributes<HTMLTableElement>>;
-export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: string; defaultValue?: string; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; keyboardActivation?: 'automatic' | 'manual'; onChange?: (value: string) => void; className?: string; };
+export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: string; defaultValue?: string; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; keyboardActivation?: 'automatic' | 'manual'; size?: ControlSize; onChange?: (value: string) => void; className?: string; };
 export declare const Tabs: React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<HTMLDivElement>>;
 export type TagGroupProps = MuxUIAccessibleName & { items?: MuxUIItems; disabled?: boolean; onRemove?: (items: MuxUICollectionItem[]) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
 export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & React.RefAttributes<HTMLDivElement>>;
@@ -552,9 +549,9 @@ export declare const Tooltip: React.ForwardRefExoticComponent<TooltipProps & Rea
 `;
 const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${fieldsTypes}${collectionsTypes}${overlaysTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
-const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components 1.20.0 is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- Tale UI is a pinned one-time styling donor; generated styling results are Mux UI-owned and Tale UI is not a dependency.\n- The historical R1.5 closure retains its fixed family membership and evidence separately from this current union.\n`;
+const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components 1.20.0 is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
-const readmeMappingBySlug = new Map(r16Crosswalk.supplemental.map((entry) => [entry.slug, entry]));
+const readmeMappingBySlug = new Map(r16Supplemental.components.map((entry) => [entry.slug, entry]));
 const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.localeCompare(right.name)).map((artifact) => {
   const slug = artifact.id.slice('muxui:component:'.length);
   const binding = artifact.bindings['web.react'];
@@ -594,6 +591,10 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
+Component styles consume semantic roles from \`catalog/tokens/default-theme.json\`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
+
+Structural CSS remains literal where it expresses geometry rather than a theme choice: zero/reset values, percentages and intrinsic sizing, border overlaps, visually hidden accessibility patterns, calendar grids, and text-segment alignment. The styling-token tests cover all authored component stylesheets; the browser check verifies gap/inset override isolation.
+
 Supporting runtime exports: \`ToastProvider\` and \`useToast\` are available alongside \`Toast\` for managed notifications.
 
 | Export | Lifecycle | Module | Selector | Public props |
@@ -618,7 +619,7 @@ const releaseRecord = {
   runtimeProfiles: ['web.react'],
   packagePrivate: manifest.private,
   catalog: { status: 'bound', components: componentArtifacts.map((artifact) => ({ component: artifact.id, binding: `${artifact.id}#web.react`, states: artifact.states })) },
-  tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: expectedTokenSha256 },
+  tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: tokenSha256 },
   evidence: { status: 'pending', ids: ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06'] },
   advisories: [], exceptions: [],
   publication: { status: 'disabled', requires: ['explicit external publish authorization'] },
@@ -659,146 +660,6 @@ const releaseRecord = {
     rollback: 'restore the previously verified next pointer through a separately authorized dist-tag mutation; retain the immutable rc.1 version and its manifest',
   },
 };
-for (const rule of crosswalk.button.rules) {
-  if (rule.core.includes('.') && !fullCssBody.includes(`--muxui-${rule.core.replaceAll('.', '-')}`)) throw new Error(`MUXUI_REACT_DONOR_RESULT_MISSING: ${rule.input}`);
-}
-if (!authoredCss.includes('font: inherit') || !authoredCss.includes('box-shadow:') || !authoredCss.includes('[data-disabled]')) {
-  throw new Error('MUXUI_REACT_DONOR_NON_TOKEN_RESULT_MISSING');
-}
-const donorComparisonRecord = {
-  schema: 'muxui-react-button-donor-comparison-v1', generatedFrom: 'packages/react/src/generate.mjs',
-  donor: { commit: crosswalk.donor.commit, tree: crosswalk.donor.tree, buttonBlobs: crosswalk.buttonBlobs },
-  disposition: crosswalk.button.disposition, consumedRules: crosswalk.button.rules,
-  result: { cssSha256: `sha256:${sha256(fullCssBody)}`, selector: '.muxui-button', status: 'adapted-for-r1.1-button' },
-};
-const componentDonorComparisonRecord = {
-  schema: 'muxui-react-component-donor-comparison-v1', generatedFrom: 'packages/react/src/generate.mjs',
-  donor: { name: crosswalk.donor.name, commit: crosswalk.donor.commit, tree: crosswalk.donor.tree },
-  components: componentArtifacts.map((artifact) => {
-    const slug = artifact.id.slice('muxui:component:'.length);
-    const source = artifact.name === 'Button' ? crosswalk.button : crosswalk.components[slug] ?? r12Crosswalk.components[slug] ?? r13Crosswalk.components[slug] ?? r14Crosswalk.components[slug];
-    return { ...(source?.donorInputs ? { donorInputs: source.donorInputs } : {}), component: artifact.name, binding: `${artifact.id}#web.react`, disposition: source.disposition, selector: `.muxui-${slug}`, rules: source.rules };
-  }),
-};
-const r11Artifacts = componentArtifacts.filter((artifact) => {
-  const slug = artifact.id.slice('muxui:component:'.length);
-  return !r12Slugs.includes(slug) && !r13Slugs.includes(slug) && !r14Slugs.includes(slug);
-});
-const r11DescriptorRecord = {
-  ...descriptorRecord,
-  support: 'unproved; R1.1 React exports only',
-  bindings: descriptorRecord.bindings.filter(({ binding }) => !r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r13Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  exports: descriptorRecord.exports.filter(({ binding }) => !r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r13Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-};
-const r11ReleaseRecord = {
-  ...releaseRecord,
-  componentExports: releaseRecord.componentExports.filter(({ binding }) => !r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r13Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  bindings: releaseRecord.bindings.filter(({ binding }) => !r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r13Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`) && !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  catalog: { ...releaseRecord.catalog, components: releaseRecord.catalog.components.filter(({ component }) => !r12Slugs.includes(component.slice('muxui:component:'.length)) && !r13Slugs.includes(component.slice('muxui:component:'.length)) && !r14Slugs.includes(component.slice('muxui:component:'.length))) },
-  evidence: { status: 'pending', ids: ['E-R1.1-01', 'E-R1.1-02', 'E-R1.1-03', 'E-R1.1-04'] },
-};
-const r11ComponentDonorComparisonRecord = {
-  ...componentDonorComparisonRecord,
-  components: componentDonorComparisonRecord.components.filter(({ component }) => r11Artifacts.some(({ name }) => name === component)),
-};
-assertReactR11GeneratedContracts({ descriptor: r11DescriptorRecord, release: r11ReleaseRecord, donorComparison: donorComparisonRecord, componentDonorComparison: r11ComponentDonorComparisonRecord, manifest, crosswalk });
-const r12DonorComparisonRecord = {
-  schema: 'muxui-react-r1-2-donor-comparison-v1',
-  generatedFrom: 'packages/react/src/generate.mjs',
-  donor: r12Crosswalk.donor,
-  components: r12Slugs.map((slug) => {
-  const source = EXPECTED_R12_DONOR_CONTRACT.components[slug];
-    return { component: componentArtifacts.find(({ id }) => id === `muxui:component:${slug}`).name, binding: `muxui:component:${slug}#web.react`, disposition: source.disposition, selector: `.muxui-${slug}`, donorInputs: source.donorInputs, tokenHooks: source.tokenHooks, rules: source.rules, result: { cssSelector: `.muxui-${slug}`, status: 'adapted-for-r1.2' } };
-  }),
-};
-for (const slug of r12Slugs) {
-  for (const hook of EXPECTED_R12_DONOR_CONTRACT.components[slug].tokenHooks) {
-    if (!fullCssBody.includes(`--muxui-${hook.replaceAll('.', '-')}`)) throw new Error(`MUXUI_REACT_R12_TOKEN_HOOK_UNCONSUMED: ${slug}:${hook}`);
-  }
-}
-const r12DescriptorRecord = {
-  ...descriptorRecord,
-  support: 'unproved; R1.2 React exports only',
-  bindings: descriptorRecord.bindings.filter(({ binding }) => r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  exports: descriptorRecord.exports.filter(({ binding }) => r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-};
-const r12ReleaseRecord = {
-  ...releaseRecord,
-  componentExports: releaseRecord.componentExports.filter(({ binding }) => r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  bindings: releaseRecord.bindings.filter(({ binding }) => r12Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  catalog: { ...releaseRecord.catalog, components: releaseRecord.catalog.components.filter(({ component }) => r12Slugs.includes(component.slice('muxui:component:'.length))) },
-  evidence: { status: 'pending', ids: ['E-R1.2-01', 'E-R1.2-02', 'E-R1.2-03', 'E-R1.2-04'] },
-};
-assertReactR12GeneratedContracts({ descriptor: r12DescriptorRecord, release: r12ReleaseRecord, donorComparison: r12DonorComparisonRecord, manifest, componentNames: r12Slugs.map((slug) => componentArtifacts.find(({ id }) => id === `muxui:component:${slug}`).name), crosswalk: r12Crosswalk });
-const r13DonorComparisonRecord = {
-  schema: 'muxui-react-r1-3-donor-comparison-v1',
-  generatedFrom: 'packages/react/src/generate.mjs',
-  donor: r13Crosswalk.donor,
-  components: r13Slugs.map((slug) => {
-    const source = EXPECTED_R13_DONOR_CONTRACT.components[slug];
-    const artifact = componentArtifacts.find(({ id }) => id === `muxui:component:${slug}`);
-    return {
-      component: artifact.name,
-      binding: `${artifact.id}#web.react`,
-      disposition: source.disposition,
-      selector: `.muxui-${slug}`,
-      donorInputs: source.donorInputs,
-      tokenHooks: source.tokenHooks,
-      rules: source.rules,
-      result: { cssSelector: `.muxui-${slug}`, status: source.disposition === 'no-applicable-donor' ? 'no-applicable-donor' : 'adapted-for-r1.3' },
-    };
-  }),
-};
-for (const slug of r13Slugs) {
-  const source = EXPECTED_R13_DONOR_CONTRACT.components[slug];
-  for (const hook of source.tokenHooks) {
-    if (!fullCssBody.includes(`--muxui-${hook.replaceAll('.', '-')}`)) throw new Error(`MUXUI_REACT_R13_TOKEN_HOOK_UNCONSUMED: ${slug}:${hook}`);
-  }
-}
-const r13DescriptorRecord = {
-  ...descriptorRecord,
-  support: 'unproved; R1.3 React exports only',
-  bindings: descriptorRecord.bindings.filter(({ binding }) => !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  exports: descriptorRecord.exports.filter(({ binding }) => !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-};
-const r13ReleaseRecord = {
-  ...releaseRecord,
-  componentExports: releaseRecord.componentExports.filter(({ binding }) => !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  bindings: releaseRecord.bindings.filter(({ binding }) => !r14Slugs.some((slug) => binding === `muxui:component:${slug}#web.react`)),
-  catalog: { ...releaseRecord.catalog, components: releaseRecord.catalog.components.filter(({ component }) => !r14Slugs.includes(component.slice('muxui:component:'.length))) },
-  evidence: { status: 'pending', ids: ['E-R1.3-01', 'E-R1.3-02', 'E-R1.3-03', 'E-R1.3-04', 'E-R1.3-05'] },
-};
-assertReactR13GeneratedContracts({ descriptor: r13DescriptorRecord, release: r13ReleaseRecord, donorComparison: r13DonorComparisonRecord, manifest, componentNames: r13DescriptorRecord.exports.map(({ name }) => name), crosswalk: r13Crosswalk, collectionsSource });
-const r14DonorComparisonRecord = {
-  schema: 'muxui-react-r1-4-donor-comparison-v1',
-  generatedFrom: 'packages/react/src/generate.mjs',
-  donor: r14Crosswalk.donor,
-  components: r14Slugs.map((slug) => {
-    const source = EXPECTED_R14_DONOR_CONTRACT.components[slug];
-    const artifact = componentArtifacts.find(({ id }) => id === `muxui:component:${slug}`);
-    return {
-      component: artifact.name,
-      binding: `${artifact.id}#web.react`,
-      disposition: source.disposition,
-      selector: `.muxui-${slug}`,
-      donorInputs: source.donorInputs,
-      tokenHooks: source.tokenHooks,
-      rules: source.rules,
-      result: { cssSelector: `.muxui-${slug}`, status: 'adapted-for-r1.4' },
-    };
-  }),
-};
-for (const slug of r14Slugs) {
-  for (const hook of EXPECTED_R14_DONOR_CONTRACT.components[slug].tokenHooks) {
-    if (!fullCssBody.includes(`--muxui-${hook.replaceAll('.', '-')}`)) throw new Error(`MUXUI_REACT_R14_TOKEN_HOOK_UNCONSUMED: ${slug}:${hook}`);
-  }
-}
-const r14DescriptorRecord = { ...descriptorRecord, support: 'unproved; R1.4 React exports only' };
-const r14ReleaseRecord = { ...releaseRecord, evidence: { status: 'pending', ids: ['E-R1.4-01', 'E-R1.4-02', 'E-R1.4-03', 'E-R1.4-04', 'E-R1.4-05', 'E-R1.4-06'] } };
-assertReactR14GeneratedContracts({ descriptor: r14DescriptorRecord, release: r14ReleaseRecord, donorComparison: r14DonorComparisonRecord, manifest, componentNames: r14Slugs.map((slug) => componentArtifacts.find(({ id }) => id === `muxui:component:${slug}`).name), crosswalk: r14Crosswalk, overlaysSource });
-
-const crosswalkSources = [crosswalk, r12Crosswalk, r13Crosswalk, r14Crosswalk];
-const crosswalkBySlug = new Map(crosswalkSources.flatMap((source) => Object.entries(source.components ?? {})));
 const snapshotByFamily = new Map(familySnapshot.families.map((family) => [family.family, family]));
 const artifactBySlug = new Map(componentArtifacts.map((artifact) => [artifact.id.slice('muxui:component:'.length), artifact]));
 const R15_EVIDENCE_IDS = Object.freeze(['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06']);
@@ -839,23 +700,10 @@ const r15ClosureRecord = {
     documentedFamilies: familySnapshot.counts.documentedFamilies,
     rawDispositionCounts: familySnapshot.counts.rawDispositionCounts,
   },
-  donor: {
-    name: crosswalk.donor.name,
-    commit: crosswalk.donor.commit,
-    tree: crosswalk.donor.tree,
-    dependency: false,
-    ownership: 'Mux UI-owned token/style results',
-    sourceCrosswalks: ['catalog/react-r1-0/donor-crosswalk.json', 'catalog/react-r1-2/donor-crosswalk.json', 'catalog/react-r1-3/donor-crosswalk.json', 'catalog/react-r1-4/donor-crosswalk.json'],
-  },
   families: r15Families.map((source) => {
     const artifact = artifactBySlug.get(source.slug);
     const binding = artifact.bindings['web.react'];
     const upstreamFamily = snapshotByFamily.get(source.family);
-    const donor = source.slug === 'button' ? crosswalk.button : crosswalkBySlug.get(source.slug);
-    const donorInputs = source.slug === 'button'
-      ? Object.entries(crosswalk.buttonBlobs).map(([kind, blob]) => ({ kind, blob }))
-      : donor.donorInputs;
-    const tokenHooks = donor.tokenHooks ?? [...new Set(donor.rules.map(({ core }) => core).filter((core) => core.includes('.')))];
     return {
       family: source.family,
       slug: source.slug,
@@ -874,56 +722,20 @@ const r15ClosureRecord = {
       lifecycle: { artifact: artifact.lifecycle, binding: binding.lifecycle, strategy: binding.strategy },
       evidence: { tranche: r15TrancheEvidence(source.tranche), final: R15_EVIDENCE_IDS, status: 'pending', support: 'unproved; R1.5 React exports only' },
       packed: { package: manifest.name, version: manifest.version, private: manifest.private, entry: 'generated/index.mjs', types: 'generated/index.d.ts', styles: 'generated/styles.css', binding: `${artifact.id}#web.react`, export: source.exportName, runtimeProfile: 'web.react', selector: `.muxui-${source.slug}` },
-      donor: { disposition: donor.disposition, donorInputs, rules: donor.rules, tokenHooks, ownership: 'Mux UI-owned token/style results' },
     };
   }),
   evidence: { status: 'pending', ids: R15_EVIDENCE_IDS, support: 'unproved; R1.5 React exports only' },
   compatibility: r15ClosureSource.compatibility,
   performance: r15ClosureSource.performance,
-  agentDiscovery: r15ClosureSource.agentDiscovery,
-  evidenceCapture: r15ClosureSource.evidenceCapture,
-  exceptions: r15ClosureSource.exceptions,
-  advisories: r15ClosureSource.advisories,
   publication: r15ClosureSource.publication,
 };
-const r15DonorComparisonRecord = {
-  schema: 'muxui-react-r1-5-donor-comparison-v1',
-  generatedFrom: 'packages/react/src/generate.mjs',
-  tranche: 'R1.5',
-  donor: r15ClosureRecord.donor,
-  components: r15ClosureRecord.families.map(({ slug, export: componentExport, donor }) => ({
-    component: componentExport.name,
-    family: r15ClosureRecord.families.find(({ slug: value }) => value === slug).family,
-    binding: `muxui:component:${slug}#web.react`,
-    disposition: donor.disposition,
-    selector: `.muxui-${slug}`,
-    donorInputs: donor.donorInputs,
-    tokenHooks: donor.tokenHooks,
-    rules: donor.rules,
-    ownership: donor.ownership,
-    result: { cssSelector: `.muxui-${slug}`, status: donor.disposition === 'no-applicable-donor' ? 'no-applicable-donor' : 'adapted-for-r1.5' },
-  })),
-};
-assertReactR15GeneratedContracts({
-  closure: r15ClosureSource,
-  snapshot: familySnapshot,
-  componentArtifacts,
-  crosswalks: crosswalkSources,
-  descriptor: descriptorRecord,
-  release: releaseRecord,
-  donorComparison: r15DonorComparisonRecord,
-  closureRecord: r15ClosureRecord,
-  manifest,
-  runtimeSources,
-  styles: fullCssBody,
-});
 const supplementalSource = await readFile(resolve(packageRoot, 'src/supplemental/index.mjs'), 'utf8').catch(() => '');
 const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8').catch(() => '');
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
 const generatedSupplementalSource = supplementalSource
   .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'")
   .replaceAll("from '../button.mjs'", "from './button.mjs'");
-const currentMappedRecords = (await Promise.all(r16Crosswalk.supplemental.map(async (entry) => {
+const currentMappedRecords = (await Promise.all(r16Supplemental.components.map(async (entry) => {
   const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
   const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
   const artifact = allCatalogArtifactsBySlug.get(entry.slug);
@@ -940,16 +752,6 @@ const currentMappedRecords = (await Promise.all(r16Crosswalk.supplemental.map(as
       .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'"),
     style,
     subpath: entry.export.module !== '.',
-    ...(migrationMode ? {
-      mapping: entry,
-      donor: {
-        disposition: 'pending-proof',
-        donorInputs: entry.donor.inputs,
-        rules: entry.differenceRecords.map((input) => ({ input, disposition: 'documented-adaptation' })),
-        tokenHooks: [],
-        ownership: 'Mux UI-owned token/style results',
-      },
-    } : {}),
   };
 }))).sort((left, right) => left.slug.localeCompare(right.slug));
 const currentSubpathRecords = currentMappedRecords.filter(({ subpath }) => subpath);
@@ -966,7 +768,6 @@ const currentFamilyRecords = [
       source: source.runtimeSource,
       artifact,
       subpath: false,
-      donor: source.slug === 'button' ? crosswalk.button : crosswalkBySlug.get(source.slug),
     };
   }),
   ...currentMappedRecords.map((source) => ({
@@ -978,8 +779,6 @@ const currentFamilyRecords = [
     source: source.source,
     artifact: source.artifact,
     subpath: source.subpath,
-    ...(source.donor ? { donor: source.donor } : {}),
-    ...(source.mapping ? { mapping: source.mapping } : {}),
   })),
 ];
 const currentBindings = currentFamilyRecords.map((source) => ({
@@ -1034,13 +833,12 @@ const currentReleaseRecord = {
     evidence: releaseRecord.evidence,
   },
 };
-const currentContractRecord = migrationMode ? {
+const currentContractRecord = {
   schema: 'muxui-react-r1-6-contract-v1',
   generatedFrom: 'packages/react/src/generate.mjs',
   package: manifest.name,
   version: manifest.version,
   tranche: 'R1.6',
-  donor: { name: 'Tale UI', repository: r16Crosswalk.donor.repository, commit: r16Crosswalk.donor.commit, tree: r16Crosswalk.donor.tree, styleTree: r16Crosswalk.donor.styleTree, dependency: false },
   historical: { tranche: 'R1.5', source: 'catalog/react-r1-5/closure.json', familyCount: r15Families.length },
   current: {
     familyCount: currentFamilyRecords.length,
@@ -1056,73 +854,39 @@ const currentContractRecord = migrationMode ? {
     tranche: source.tranche,
     binding: `muxui:component:${source.slug}#web.react`,
     module: source.module,
-    ...(source.source ? { source: source.source } : {}),
+    source: source.source,
     lifecycle: source.artifact.lifecycle,
     states: source.artifact.states,
     api: source.artifact.bindings['web.react'].api,
     parts: source.artifact.anatomy,
-    donor: source.donor,
-    fixture: finiteFixtureBySlug.get(source.slug),
   })),
-  evidence: { status: 'pending', ids: r16Crosswalk.proof.assertions },
-} : undefined;
-const currentDonorComparisonRecord = migrationMode ? {
-  schema: 'muxui-react-r1-6-donor-comparison-v1',
-  generatedFrom: 'packages/react/src/generate.mjs',
-  tranche: 'R1.6',
-  donor: currentContractRecord.donor,
-  historical: { source: 'packages/react/generated/r1-5-donor-comparison.json', componentCount: r15Families.length },
-  components: currentFamilyRecords.map((source) => ({
-    component: source.exportName,
-    family: source.family,
-    binding: `muxui:component:${source.slug}#web.react`,
-    disposition: source.donor.disposition,
-    selector: `.muxui-${source.slug}`,
-    donorInputs: source.donor.donorInputs ?? [],
-    tokenHooks: source.donor.tokenHooks ?? [],
-    rules: source.donor.rules ?? [],
-    ownership: source.donor.ownership ?? 'Mux UI-owned token/style results',
-    result: { cssSelector: `.muxui-${source.slug}`, status: source.donor.disposition === 'pending-proof' ? 'pending-proof' : 'adapted-for-r1.6' },
-  })),
-} : undefined;
+  evidence: { status: 'pending', ids: [] },
+};
 const currentIndexBody = `${indexBody}export * from './supplemental.mjs';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.mjs';\n`).join('')}`;
 const currentTypesBody = `${reactTypesBody}\nexport * from './supplemental.js';\n${currentEagerRecords.map(({ slug }) => `export * from './${slug}.js';\n`).join('')}`;
 const currentStylesBody = `${fullCssBody}${supplementalStylesSource ? `\n\n${supplementalStylesSource.trim()}` : ''}${[...currentSubpathRecords, ...currentEagerRecords].map(({ style }) => style ? `\n\n${style.trim()}` : '').join('')}`;
+assertReactR15GeneratedContracts({
+  closure: r15ClosureSource,
+  snapshot: familySnapshot,
+  componentArtifacts,
+  descriptor: currentDescriptorRecord,
+  release: currentReleaseRecord,
+  closureRecord: r15ClosureRecord,
+  currentContract: currentContractRecord,
+  manifest,
+  runtimeSources,
+  styles: currentStylesBody,
+});
 const descriptor = `${canonicalJson(currentDescriptorRecord)}\n`;
 const release = `${canonicalJson(currentReleaseRecord)}\n`;
-const donorComparison = `${canonicalJson(donorComparisonRecord)}\n`;
-const componentDonorComparison = generatedText(
-  'packages/react/src/generate.mjs',
-  `${canonicalJson(componentDonorComparisonRecord)}\n`,
-);
-const r12DonorComparison = generatedText(
-  'packages/react/src/generate.mjs',
-  `${canonicalJson(r12DonorComparisonRecord)}\n`,
-);
-const r13DonorComparison = generatedText(
-  'packages/react/src/generate.mjs',
-  `${canonicalJson(r13DonorComparisonRecord)}\n`,
-);
-const r14DonorComparison = generatedText(
-  'packages/react/src/generate.mjs',
-  `${canonicalJson(r14DonorComparisonRecord)}\n`,
-);
-const r15DonorComparison = generatedText(
-  'packages/react/src/generate.mjs',
-  `${canonicalJson(r15DonorComparisonRecord)}\n`,
-);
 const r15Closure = generatedText(
   'catalog/react-r1-5/closure.json',
   `${canonicalJson(r15ClosureRecord)}\n`,
 );
-const r16Contract = migrationMode ? generatedText(
+const r16Contract = generatedText(
   'packages/react/src/generate.mjs',
   `${canonicalJson(currentContractRecord)}\n`,
-) : undefined;
-const r16DonorComparison = migrationMode ? generatedText(
-  'packages/react/src/generate.mjs',
-  `${canonicalJson(currentDonorComparisonRecord)}\n`,
-) : undefined;
+);
 function provenance(path, bytes) {
   const body = `${canonicalJson({ path: `packages/react/generated/${path}`, sha256: `sha256:${sha256(bytes)}` })}\n`;
   return generatedText('packages/react/src/generate.mjs', body);
@@ -1139,23 +903,13 @@ const outputs = new Map([
   ['descriptor.json.provenance', provenance('descriptor.json', descriptor)],
   ['release.json', release],
   ['release.json.provenance', provenance('release.json', release)],
-  ['button-donor-comparison.json', donorComparison],
-  ['button-donor-comparison.json.provenance', provenance('button-donor-comparison.json', donorComparison)],
-  ['r1-2-donor-comparison.json', r12DonorComparison],
-  ['r1-2-donor-comparison.json.provenance', provenance('r1-2-donor-comparison.json', r12DonorComparison)],
-  ['r1-3-donor-comparison.json', r13DonorComparison],
-  ['r1-3-donor-comparison.json.provenance', provenance('r1-3-donor-comparison.json', r13DonorComparison)],
-  ['r1-4-donor-comparison.json', r14DonorComparison],
-  ['r1-4-donor-comparison.json.provenance', provenance('r1-4-donor-comparison.json', r14DonorComparison)],
-  ['r1-5-donor-comparison.json', r15DonorComparison],
-  ['r1-5-donor-comparison.json.provenance', provenance('r1-5-donor-comparison.json', r15DonorComparison)],
   ['r1-5-closure.json', r15Closure],
   ['r1-5-closure.json.provenance', provenance('r1-5-closure.json', r15Closure)],
   ['supplemental.mjs', generatedText('packages/react/src/supplemental/index.mjs', `${generatedSupplementalSource}`)],
   ['supplemental.d.ts', generatedText('packages/react/src/supplemental/index.d.ts', `${supplementalTypesSource}`)],
   ['supplemental.css', generatedCss('packages/react/src/supplemental/styles.css', supplementalStylesSource)],
-  ['component-donor-comparison.json', componentDonorComparison],
-  ['component-donor-comparison.json.provenance', provenance('component-donor-comparison.json', componentDonorComparison)],
+  ['r1-6-contract.json', r16Contract],
+  ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
   ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],
   ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
@@ -1163,12 +917,6 @@ const outputs = new Map([
   ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
   ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],
 ]);
-if (migrationMode) {
-  outputs.set('r1-6-contract.json', r16Contract);
-  outputs.set('r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract));
-  outputs.set('r1-6-donor-comparison.json', r16DonorComparison);
-  outputs.set('r1-6-donor-comparison.json.provenance', provenance('r1-6-donor-comparison.json', r16DonorComparison));
-}
 for (const source of [...currentSubpathRecords, ...currentEagerRecords]) {
   outputs.set(`${source.slug}.mjs`, generatedText(source.source, source.sourceText));
   const typesPath = source.source.replace(/\.mjs$/u, '.d.ts');
@@ -1192,4 +940,4 @@ if (process.argv.includes('--check')) {
   await writeFile(resolve(packageRoot, 'README.md'), readme);
 }
 
-console.log('[react] generated current R1.6 union projection with historical R1.5 closure records');
+console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');

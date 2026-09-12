@@ -10,9 +10,7 @@
     ".": "./src/index.mjs",
     "./core": "./src/core.mjs",
     "./authoring": "./src/authoring.mjs",
-    "./tailwind": "./src/tailwind.mjs",
-    "./identity-migration": "./src/default-theme-identity-migration.mjs",
-    "./materialization": "./src/tale-token-materialization.mjs"
+    "./tailwind": "./src/tailwind.mjs"
   },
   "dependencies": {
     "@muxui/schema": "workspace:*",
@@ -21,8 +19,6 @@
   "scripts": {
     "check": "node src/generate.mjs --check && node --test test/*.test.mjs",
     "generate": "node src/generate.mjs",
-    "generate:check": "node src/generate.mjs --check",
-    "audit:materialization": "node src/tale-token-materialization.mjs --audit",
-    "audit:identity": "node src/default-theme-identity-migration.mjs --audit"
+    "generate:check": "node src/generate.mjs --check"
   }
 }

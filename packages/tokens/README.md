@@ -2,9 +2,7 @@
 
 `catalog/tokens/default-theme.json` owns the default palettes, type scales,
 font metadata, spacing, effects, modes, and Scale preset inputs. This private
-package validates those sources and produces target-specific output. Tale is
-a one-time source of retained reference evidence; no transform reads a Tale
-checkout or imports a Tale package.
+package validates those sources and produces target-specific output.
 
 ## Compile a theme
 
@@ -20,10 +18,8 @@ Type and spacing dimensions use their static `rem` defaults. Passing
 The default remains static at every viewport, and `rem` dimensions continue
 to respect the consumer's root font size.
 
-The retained `test/fixtures/foundation-reference.json` records independently
-captured donor CSS values. The Scale browser verification replays all 644
-mapped variables across 48 mode and geometry combinations using only Mux
-sources. Palette generation has a separate complete-value donor fixture.
+The Scale browser verification covers the live theme-builder flow and palette
+generation uses the complete canonical source.
 
 ## Author theme instances
 

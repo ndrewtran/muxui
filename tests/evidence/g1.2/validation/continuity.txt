@@ -1,1 +1,0 @@
-{"accepted":true,"affectedScopeIds":12,"decision":{"bytes":52927,"sha256":"sha256:91181e70d5a6239e4eaa48d759a31af2c14422964d475af1917d005783b752af"},"g12Assertions":5,"maintenanceRoot":"tests/evidence/authority-11-g1-2-applicability-v1/index.json","predecessorTargetManifest":"sha256:30b1b7b06212bb59fe2e69ee12d6897997e6a0e6ba9e3e56e0d009fce3047f32","targets":28}

@@ -49,6 +49,7 @@
           "value",
           "defaultValue",
           "disabled",
+          "size",
           "invalid",
           "required",
           "readOnly",
@@ -69,6 +70,7 @@
         "defaults": {
           "defaultValue": "",
           "disabled": false,
+          "size": "md",
           "invalid": false,
           "required": false,
           "readOnly": false
@@ -76,7 +78,8 @@
       },
       "behavior": [
         "Strips non-digits and formats Visa, Mastercard, Amex and Discover groups.",
-        "Formatting and card detection do not validate payment credentials."
+        "Formatting and card detection do not validate payment credentials.",
+        "Interactive control sizes use the shared sm, md, and lg targets; md is the default."
       ],
       "accessibility": [
         "Strips non-digits and formats Visa, Mastercard, Amex and Discover groups.",
@@ -90,13 +93,19 @@
             "requirement": "required"
           },
           {
+            "token": "semantic.control.size-md",
+            "requirement": "required"
+          },
+          {
             "token": "semantic.focus.ring",
             "requirement": "required"
           },
           {
             "token": "semantic.motion.feedback",
             "requirement": "required"
-          }
+          },
+          { "token": "semantic.control.size-sm", "requirement": "required" },
+          { "token": "semantic.control.size-lg", "requirement": "required" }
         ]
       },
       "platformSafety": [

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:7c34dce47a63c1d8c03ee12aa882944d675d80f62368baeaa35fd1104ec07345
+// @generated-content-sha256: sha256:2a38ba965c4313d051ff5ead8a5e8e6f95cbe7637b20ab00aabbaa4dc6b33111
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -58,7 +58,7 @@ const binding = {
 const record = { family: 'TokenField', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/TokenField',
+  title: 'Mux UI React/TokenField',
   id: 'muxui-react-r1-3-token-field',
   component: MuxUI.TokenField,
   tags: ['autodocs'],

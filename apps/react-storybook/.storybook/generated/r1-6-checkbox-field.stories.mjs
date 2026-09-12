@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:131da5e6389430a43575e9b01c3ff41087261adebdd08fcfc69b6edd325eb1e5
+// @generated-content-sha256: sha256:697818da37e759bd432fc4512763bc7909b5761cd2c6c8a82f9b3d0760e53629
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -65,7 +65,7 @@ const binding = {
 const record = { family: 'CheckboxField', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/CheckboxField',
+  title: 'Mux UI React/CheckboxField',
   id: 'muxui-react-r1-6-checkbox-field',
   component: MuxUI.CheckboxField,
   tags: ['autodocs'],

@@ -16,6 +16,78 @@
   color: #fff;
 }
 
+.muxui-foundations-control-sizing {
+  display: grid;
+  gap: 1rem;
+  margin-block: 1.5rem 2rem;
+  padding-block: 1.25rem;
+  border-block: 1px solid var(--foundations-border);
+}
+
+.muxui-foundations-control-sizing-heading p,
+.muxui-foundations-control-sizing-notes {
+  max-inline-size: 70rem;
+  margin: 0.5rem 0 0;
+  color: var(--foundations-muted);
+  line-height: 1.5;
+}
+
+.muxui-foundations-control-sizing-table {
+  display: grid;
+  gap: 0.35rem;
+  max-inline-size: 52rem;
+}
+
+.muxui-foundations-control-sizing-row {
+  display: grid;
+  grid-template-columns: 4rem 10rem 1fr;
+  align-items: center;
+  gap: 1rem;
+  min-block-size: 2.25rem;
+  border-block-end: 1px solid var(--foundations-soft);
+}
+
+.muxui-foundations-control-sizing-row code {
+  color: var(--foundations-accent);
+}
+
+.muxui-foundations-control-sizing-specimens {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.muxui-foundations-control-sizing-specimen {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.muxui-foundations-control-sizing-specimen code {
+  grid-column: 1 / -1;
+  color: var(--foundations-accent);
+}
+
+.muxui-foundations-control-sizing-specimen button,
+.muxui-foundations-control-sizing-specimen input {
+  min-inline-size: 0;
+  border: 0;
+  outline: 1px solid currentColor;
+  outline-offset: -1px;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding-inline: 0.75rem;
+}
+
+.muxui-foundations-control-sizing-specimen button:focus-visible,
+.muxui-foundations-control-sizing-specimen input:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
 .muxui-foundations-gallery *,
 .muxui-foundations-gallery *::before,
 .muxui-foundations-gallery *::after {
@@ -57,10 +129,12 @@
 .muxui-foundations-header h1,
 .muxui-foundations-content h2,
 .muxui-foundations-comparisons h2,
+.muxui-foundations-responsive-heading h2,
 .muxui-foundations-content h3,
 .muxui-foundations-color-group h3,
 .muxui-foundations-typography-group h3 {
   margin: 0;
+  color: inherit;
   letter-spacing: -0.03em;
 }
 

@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:f488aed716d63c841930ba59937ec9df25b5cb49af875b0f746926217a879c35
+// @generated-content-sha256: sha256:ecaafcf05019a60eeeaed21a1b10dde56ad20e6f0e4e77bfe2f2f36d3e05306a
 export const manifest = Object.freeze({
   "schema": "muxui-react-storybook-manifest-v1",
   "generatedFrom": [
@@ -251,6 +251,7 @@ export const manifest = Object.freeze({
         "value",
         "defaultValue",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -260,7 +261,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -398,6 +400,7 @@ export const manifest = Object.freeze({
         "selectedId",
         "defaultSelectedId",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -408,7 +411,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -434,6 +438,7 @@ export const manifest = Object.freeze({
         "maxValue",
         "unavailableDateMatcher",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -443,7 +448,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -470,6 +476,7 @@ export const manifest = Object.freeze({
         "open",
         "defaultOpen",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -480,7 +487,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -508,6 +516,7 @@ export const manifest = Object.freeze({
         "open",
         "defaultOpen",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -519,7 +528,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -808,6 +818,7 @@ export const manifest = Object.freeze({
         "value",
         "defaultValue",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -822,6 +833,7 @@ export const manifest = Object.freeze({
         "invalid": false,
         "readOnly": false,
         "required": false,
+        "size": "md",
         "step": 1
       },
       "states": [
@@ -1005,6 +1017,7 @@ export const manifest = Object.freeze({
         "value",
         "defaultValue",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -1015,7 +1028,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -1042,6 +1056,7 @@ export const manifest = Object.freeze({
         "open",
         "defaultOpen",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -1053,7 +1068,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -1123,6 +1139,7 @@ export const manifest = Object.freeze({
         "selected",
         "defaultSelected",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -1135,7 +1152,8 @@ export const manifest = Object.freeze({
         "invalid": false,
         "readOnly": false,
         "required": false,
-        "selected": false
+        "selected": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -1182,12 +1200,14 @@ export const manifest = Object.freeze({
         "defaultValue",
         "keyboardActivation",
         "disabled",
+        "size",
         "orientation"
       ],
       "defaults": {
         "disabled": false,
         "keyboardActivation": "automatic",
-        "orientation": "horizontal"
+        "orientation": "horizontal",
+        "size": "md"
       },
       "states": [
         "idle",
@@ -1228,6 +1248,7 @@ export const manifest = Object.freeze({
         "value",
         "defaultValue",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -1247,6 +1268,7 @@ export const manifest = Object.freeze({
         "invalid": false,
         "readOnly": false,
         "required": false,
+        "size": "md",
         "type": "text"
       },
       "states": [
@@ -1271,6 +1293,7 @@ export const manifest = Object.freeze({
         "minValue",
         "maxValue",
         "disabled",
+        "size",
         "readOnly",
         "required",
         "invalid",
@@ -1280,7 +1303,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "idle",
@@ -1351,7 +1375,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "disallowEmptySelection": false,
         "orientation": "horizontal",
-        "selectionMode": "single"
+        "selectionMode": "single",
+        "size": "md"
       },
       "states": [
         "idle",
@@ -1850,6 +1875,7 @@ export const manifest = Object.freeze({
         "value",
         "defaultValue",
         "disabled",
+        "size",
         "invalid",
         "required",
         "readOnly",
@@ -1860,7 +1886,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "empty",
@@ -1991,6 +2018,7 @@ export const manifest = Object.freeze({
         "defaultChecked",
         "name",
         "value",
+        "size",
         "disabled",
         "invalid",
         "required",
@@ -2001,7 +2029,8 @@ export const manifest = Object.freeze({
         "disabled": false,
         "invalid": false,
         "readOnly": false,
-        "required": false
+        "required": false,
+        "size": "md"
       },
       "states": [
         "unchecked",

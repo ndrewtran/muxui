@@ -78,7 +78,7 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
   assert.equal(identity.bundle, './catalog.json');
 });
 
-test('TALE-TOKEN-A descriptor v1-to-v2 migration is deterministic and idempotent', async () => {
+test('catalog descriptor v1-to-v2 upgrade is deterministic and idempotent', async () => {
   const current = await readJson('../generated/catalog-package.json');
   const historical = structuredClone(current);
   historical.schema = 'muxui-catalog-package-v1';
@@ -145,7 +145,10 @@ test('E-G1.0-04 catalog exposes resolved requirement sets matching packed descri
   });
   validateFamily('query-envelope', response);
   const set = response.data.value.requirementSets['web.react:web.react'];
-  assert.equal(set.requirements.every(({ token }) => token.startsWith('component.button.')), true);
+  assert.equal(set.requirements.every(({ token }) => (
+    token.startsWith('component.button.')
+    || /^semantic\.control\.size-(?:sm|md|lg)$/u.test(token)
+  )), true);
   assert.equal(
     set.digest,
     identity.tokenRequirementSets['muxui:component:button#web.react:web.react'],

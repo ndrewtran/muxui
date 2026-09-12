@@ -1,3 +1,6 @@
+import { FOUNDATION_TOKENS } from '../lib/foundations.ts';
+import { createTokenPathTransformer } from '../lib/token-path.ts';
+
 type MuxCodeTheme = {
 	name: string;
 	type: 'dark';
@@ -31,3 +34,5 @@ export const muxCodeTheme: MuxCodeTheme = {
 		},
 	],
 };
+
+export const muxTokenPathTransformer = createTokenPathTransformer(FOUNDATION_TOKENS);

@@ -12,8 +12,8 @@ Core UI returns R1 to ordinary React-library delivery.
   complete React `0.1` implementation scope. They do not require another
   tranche-lock decision, digest acceptance, or per-component authorization.
 - Core UI owns every public component contract. React Aria Components `1.20.0`
-  remains an internal replaceable substrate. Tale UI at commit
-  `94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` remains a one-time styling donor,
+  remains an internal replaceable substrate. Mux UI styling remains a one-time
+  implementation baseline,
   never a dependency or live owner.
 - R1 is React-first. Framework-free web, React Native, React Native Web,
   cross-renderer equivalence, RSC/client-boundary support, Scale, stable
@@ -42,7 +42,7 @@ pull-request, protected merge, cleanup, or Project operation:
   status change.
 
 Decision 0010 amendments 01-03 remain authoritative for React-primary
-delivery, Core ownership, the 53-family commitment, React Aria, Tale donor,
+delivery, Core ownership, the 53-family commitment, React Aria, Mux UI styling,
 package graph, platform deferrals, and release boundaries. All earlier
 decisions, acceptance records, pull requests, Project events, and retained
 evidence remain immutable history. They are not current execution gates.
@@ -60,8 +60,8 @@ Each bounded implementation pull request must:
 
 1. change the earliest canonical owners and regenerate their projections;
 2. preserve the Core-owned public boundary and keep React Aria internal;
-3. migrate applicable Tale component styling into Core-owned CSS and token
-   hooks without adding Tale as a dependency;
+3. apply the approved component styling to Core-owned CSS and token hooks
+   without adding an external styling dependency;
 4. expose completed work in the private React playground;
 5. run focused type, unit, render, CSS, accessibility, generation, and packed
    consumer checks proportional to the exported behavior;
@@ -193,7 +193,7 @@ boundaries remain unchanged.
 
 The work stops for Andrew only if it would change a committed family or Core
 ownership, add an unapproved runtime/package/platform/support boundary,
-require a Tale donor exception that changes the approved visual direction,
+require a styling exception that changes the approved visual direction,
 waive required accessibility or integrity proof, require RSC or a secondary
 renderer, mutate production or a consumer project, publish to npm, change a
 dist-tag, or merge the final R1-exit pull request.

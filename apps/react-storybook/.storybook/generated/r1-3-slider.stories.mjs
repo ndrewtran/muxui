@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:329f4c5261ad06cf855e2818c719c121015b4c41de53bcef25e91eb3b61c29a4
+// @generated-content-sha256: sha256:2400c7441d44b18902822aeebe8b19c9b9dd38d197e1af08a6023a0cd8901ef5
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -65,7 +65,7 @@ const binding = {
 const record = { family: 'Slider', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Slider',
+  title: 'Mux UI React/Slider',
   id: 'muxui-react-r1-3-slider',
   component: MuxUI.Slider,
   tags: ['autodocs'],

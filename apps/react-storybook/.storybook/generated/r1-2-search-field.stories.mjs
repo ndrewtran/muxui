@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:9662b6f9911e34a7c904094607564b245ca41c29462b0ec523a301230f1a0d38
+// @generated-content-sha256: sha256:aae09059c2b676ee48cf4d87290dc10862fb39da238524a895b3f39b68ef877a
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,7 +18,8 @@ const binding = {
       "disabled": false,
       "invalid": false,
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change",
@@ -42,6 +43,7 @@ const binding = {
       "value",
       "defaultValue",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -70,7 +72,7 @@ const binding = {
 const record = { family: 'SearchField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/SearchField',
+  title: 'Mux UI React/SearchField',
   id: 'muxui-react-r1-2-search-field',
   component: MuxUI.SearchField,
   tags: ['autodocs'],

@@ -1,20 +1,20 @@
-/* Mux UI-owned field parity source. */
+/* Mux UI field styles. */
 /* MuxUI component source: autocomplete.css */
 .muxui-field-input {
   display: block;
   width: 100%;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 .muxui-field-input:hover {
-  border-color: var(--muxui-semantic-content-faint);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-autocomplete-search {
   display: block;
   width: 100%;
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
 .muxui-autocomplete {
@@ -57,31 +57,58 @@
 .muxui-autocomplete-list {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
   padding: 0;
   overflow: visible;
+  --muxui-control-target-size: var(--muxui-control-size-md);
 }
 
-/* Matches the donor's compact dropdown item axis while keeping the canonical
- * Mux item variables as the single source for shared collection geometry. */
+.muxui-autocomplete-list[data-size='sm'] {
+  --muxui-control-target-size: var(--muxui-control-size-sm);
+}
+
+.muxui-autocomplete-list[data-size='lg'] {
+  --muxui-control-target-size: var(--muxui-control-size-lg);
+}
+
+.muxui-autocomplete-option {
+  display: flex;
+  align-items: center;
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+}
+
+/* Compact dropdown items use the canonical Mux collection geometry variables. */
 .muxui-autocomplete-list--sm {
-  --muxui-item-padding-block: var(--muxui-reference-dimension-space-4xs);
-  --muxui-item-padding-inline: var(--muxui-reference-dimension-space-2xs);
-  --muxui-item-gap: var(--muxui-reference-dimension-space-4xs);
+  --muxui-item-padding-block: var(--muxui-semantic-layout-tight-inset);
+  --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-small);
+  --muxui-item-gap: var(--muxui-semantic-layout-tight-gap);
   --muxui-item-font-size: var(--muxui-semantic-typography-text-s-font-size);
 }
 
 .muxui-autocomplete-list--sm [data-part='header'] {
-  padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs);
+  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
 }
 
 .muxui-autocomplete-list--sm [data-part='separator'] {
   margin: 2px 0;
 }
 
+.muxui-autocomplete-list--lg {
+  --muxui-item-padding-block: var(--muxui-semantic-layout-inset-medium);
+  --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-large);
+  --muxui-item-gap: var(--muxui-semantic-layout-group-gap);
+  --muxui-item-font-size: var(--muxui-semantic-typography-body-size);
+}
+
 .muxui-autocomplete-option[data-selected] {
   color: var(--muxui-semantic-selection-track);
   font-weight: var(--muxui-semantic-typography-control-weight);
+}
+
+.muxui-autocomplete-option:where([data-hovered]:not([data-disabled], [data-selected], [data-focused])) {
+  background-color: var(--muxui-item-focus-bg);
+  color: var(--muxui-item-focus-color);
 }
 
 .muxui-autocomplete-option[data-disabled] {
@@ -91,7 +118,7 @@
 }
 
 .muxui-autocomplete .muxui-autocomplete-search[data-invalid] .muxui-field-input:not(:focus, [data-focused]) {
-  border-color: var(--muxui-field-border-color);
+  outline-color: var(--muxui-field-border-color);
   box-shadow: none;
 }
 /* MuxUI component source: date-field.css */
@@ -124,10 +151,8 @@
 }
 
 .muxui-form > .muxui-button {
-  margin-top: var(--muxui-semantic-control-padding-inline);
+  margin-top: var(--muxui-semantic-layout-control-content-gap);
   margin-bottom: -1px;
-  height: 38px;
-  min-height: 37px;
 }
 /* MuxUI component source: number-field.css */
 .muxui-number-field {
@@ -143,21 +168,24 @@
   align-items: stretch;
   width: var(--muxui-component-number-field-group-width, 100%);
   max-width: 100%;
-  border: 1px solid var(--muxui-semantic-border-strong);
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-border-strong);
+  outline-offset: -1px;
+  border-radius: var(--muxui-semantic-control-radius);
   overflow: hidden;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-number-control:focus-within {
-  border-color: var(--muxui-semantic-focus-ring);
-  box-shadow: 0 0 0 2px var(--muxui-semantic-content-inverse), 0 0 0 4px var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-semantic-focus-ring);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
 .muxui-number-control:hover:not(:focus-within) {
-  border-color: var(--muxui-semantic-content-faint);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-number-control > .muxui-field-input {
@@ -165,12 +193,13 @@
 
   flex: 1 1 3.75rem;
   min-width: 0;
-  min-height: 2.25rem;
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-control-padding-inline);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+  padding-inline: var(--muxui-semantic-control-padding-inline);
   border: none;
   background-color: transparent;
   color: var(--muxui-semantic-content-strong);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   text-align: center;
   outline: none;
@@ -181,13 +210,13 @@
 }
 
 .muxui-number-stepper {
-  width: 2rem;
-  min-height: 2.25rem;
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   border-radius: 0;
   background-color: var(--muxui-semantic-surface-raised);
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
   font-size: var(--muxui-semantic-typography-body-size);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
 }
 
 .muxui-number-stepper > svg {
@@ -199,17 +228,17 @@
 }
 
 .muxui-number-stepper-decrement {
-  border-right: 1px solid var(--muxui-reference-color-neutral-22);
-  border-radius: var(--muxui-reference-dimension-radius-m) 0 0 var(--muxui-reference-dimension-radius-m);
+  border-right: 1px solid var(--muxui-semantic-color-neutral-default-22);
+  border-radius: var(--muxui-semantic-control-radius) 0 0 var(--muxui-semantic-control-radius);
 }
 
 .muxui-number-stepper-increment {
-  border-left: 1px solid var(--muxui-reference-color-neutral-22);
-  border-radius: 0 var(--muxui-reference-dimension-radius-m) var(--muxui-reference-dimension-radius-m) 0;
+  border-left: 1px solid var(--muxui-semantic-color-neutral-default-22);
+  border-radius: 0 var(--muxui-semantic-control-radius) var(--muxui-semantic-control-radius) 0;
 }
 
 .muxui-number-stepper:hover:not(:disabled) {
-  background-color: var(--muxui-semantic-border-subtle);
+  background-color: var(--muxui-semantic-surface-pressed);
   color: var(--muxui-semantic-content-strong);
 }
 
@@ -228,7 +257,7 @@
 }
 
 .muxui-number-field[data-invalid] .muxui-number-control {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-number-field[data-invalid] .muxui-number-control:focus-within {
@@ -246,19 +275,19 @@
 .muxui-field-input {
   display: block;
   width: 100%;
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background-color 0.15s ease;
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-field-input:hover:not(:focus, [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-content-faint);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-field-input[data-invalid]:focus,
@@ -276,7 +305,7 @@
 }
 
 .muxui-search-control .muxui-field-input {
-  padding-inline-end: 2rem;
+  padding-inline-end: var(--muxui-semantic-layout-search-clear-inset);
 }
 
 .muxui-search-clear {
@@ -298,8 +327,8 @@
   cursor: pointer;
   outline: none;
   transition:
-    background-color 0.15s ease,
-    color 0.15s ease;
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   flex-shrink: 0;
   transform: translateX(calc(-1 * var(--muxui-semantic-layout-tight-inset)));
 }
@@ -315,12 +344,12 @@
 }
 
 .muxui-search-clear[data-pressed] {
-  background-color: var(--muxui-semantic-border-subtle);
+  background-color: var(--muxui-semantic-surface-pressed);
 }
 
 .muxui-search-clear[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -334,7 +363,7 @@
   display: none;
 }
 
-/* The clear action shares the input's control grid in the pinned donor. */
+/* The clear action shares the input's control grid. */
 .muxui-search-control {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -344,7 +373,7 @@
 .muxui-search-control .muxui-field-input {
   grid-column: 1 / -1;
   grid-row: 1;
-  padding-inline-end: 2rem;
+  padding-inline-end: var(--muxui-semantic-layout-search-clear-inset);
 }
 
 .muxui-field-description {
@@ -362,10 +391,10 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  min-height: var(--muxui-component-switch-track-height);
-  padding-inline-start: calc(var(--muxui-component-switch-track-width) + var(--muxui-semantic-layout-control-gap));
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-inline-start: calc(var(--muxui-component-switch-track-width) + var(--muxui-semantic-layout-inset-tiny));
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   cursor: pointer;
@@ -385,14 +414,14 @@
   background-color: var(--muxui-semantic-color-neutral-20);
   transform: translateY(-50%);
   transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+    background-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-switch[data-focus-visible]::before {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -428,11 +457,11 @@
   width: var(--muxui-component-switch-thumb-size);
   height: var(--muxui-component-switch-thumb-size);
   border-radius: 50%;
-  background-color: var(--muxui-semantic-content-default);
+  background-color: var(--muxui-semantic-surface-emphasis);
   box-shadow: var(--muxui-semantic-elevation-indicator);
   transition:
-    transform 0.2s ease,
-    background-color 0.2s ease;
+    transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
+    background-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
   transform: translate(0, -50%);
   z-index: 1;
   flex-shrink: 0;
@@ -454,19 +483,19 @@
 .muxui-field-input {
   display: block;
   width: 100%;
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    background-color 0.15s ease;
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-field-input:hover:not(:focus, [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-content-faint);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-field-input[data-invalid]:focus,
@@ -490,16 +519,13 @@
   width: max-content;
 }
 
-/* Date picker labels use the same neutral roles as Tale's picker recipes;
-   keep the override scoped so shared field labels retain their own contract. */
+/* Date picker labels use the neutral roles defined by the picker theme. */
 .muxui-date-picker:not([data-disabled]):not([data-invalid]) .muxui-field-label,
 .muxui-date-range-picker:not([data-disabled]):not([data-invalid]) .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
-/* Tale's dark field recipes use a neutral control surface distinct from the
-   MuxUI canvas. These are ordinary component rules so consumers receive the
-   same field treatment as the migration fixture. */
+/* Dark fields use a neutral control surface distinct from the MuxUI canvas. */
 [data-muxui-color-scheme='dark'] :where(
   .muxui-text-field,
   .muxui-number-field,
@@ -513,62 +539,62 @@
   .muxui-time-field,
   .muxui-color-field
 ) .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-picker:not([data-disabled]):not([data-invalid]) .muxui-field-label,
 [data-muxui-color-scheme='dark'] .muxui-date-range-picker:not([data-disabled]):not([data-invalid]) .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-30);
+  color: var(--muxui-semantic-color-neutral-default-30);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-field-input {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
-  color: var(--muxui-reference-color-neutral-20);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-text-field .muxui-field-input[data-disabled],
 [data-muxui-color-scheme='dark'] .muxui-text-field .muxui-field-input:disabled,
 [data-muxui-color-scheme='dark'] .muxui-search-field .muxui-field-input[data-disabled],
 [data-muxui-color-scheme='dark'] .muxui-search-field .muxui-field-input:disabled {
-  background-color: var(--muxui-reference-color-neutral-96);
+  background-color: var(--muxui-semantic-color-neutral-default-96);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select[data-disabled] > .muxui-select-trigger[data-disabled] {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-autocomplete-popover {
   background-color: var(--muxui-semantic-overlay-background);
-  border-color: var(--muxui-reference-color-neutral-90);
+  border-color: var(--muxui-semantic-color-neutral-default-90);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-autocomplete-option {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-autocomplete .muxui-autocomplete-search .muxui-field-input:is(:focus, [data-focused]) {
-  border-color: var(--muxui-reference-color-neutral-60);
+  outline-color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-autocomplete .muxui-autocomplete-search[data-invalid] .muxui-field-input:not(:focus, [data-focused]) {
-  border-color: var(--muxui-reference-color-neutral-84);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-field-input::placeholder {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] :where(
   .muxui-date-input,
   .muxui-number-control > .muxui-field-input
 ) {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-segment {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-segment[data-readonly] {
@@ -577,20 +603,20 @@
 
 [data-muxui-color-scheme='dark'] .muxui-date-segment[data-type='literal'],
 [data-muxui-color-scheme='dark'] .muxui-date-segment[data-placeholder] {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-control > .muxui-field-input::placeholder {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-control {
-  border-color: var(--muxui-reference-color-neutral-84);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-stepper {
-  background-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-reference-color-neutral-40);
+  background-color: var(--muxui-semantic-color-neutral-default-100);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-control > .muxui-field-input {
@@ -598,63 +624,62 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-stepper-decrement {
-  border-right-color: var(--muxui-reference-color-neutral-88);
+  border-right-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-stepper-increment {
-  border-left-color: var(--muxui-reference-color-neutral-88);
+  border-left-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-picker[data-disabled] .muxui-date-control,
 [data-muxui-color-scheme='dark'] .muxui-date-range-picker[data-disabled] .muxui-date-range-control,
 [data-muxui-color-scheme='dark'] .muxui-combo-control[data-disabled],
 [data-muxui-color-scheme='dark'] .muxui-combo-box[data-disabled] .muxui-combo-control {
-  background-color: var(--muxui-reference-color-neutral-96);
+  background-color: var(--muxui-semantic-color-neutral-default-96);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-field .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-30);
+  color: var(--muxui-semantic-color-neutral-default-30);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-form .muxui-field-input {
-  border-radius: var(--muxui-reference-dimension-radius-s);
+  border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-control {
-  border-color: var(--muxui-reference-color-neutral-84);
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
+  border-radius: var(--muxui-semantic-control-radius);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-control > .muxui-field-input {
-  color: var(--muxui-reference-color-neutral-18);
+  color: var(--muxui-semantic-color-neutral-default-18);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-stepper-decrement {
-  border-right-color: var(--muxui-reference-color-neutral-88);
+  border-right-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-number-stepper-increment {
-  border-left-color: var(--muxui-reference-color-neutral-88);
+  border-left-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme] .muxui-number-field[data-invalid] .muxui-number-control {
-  border-color: var(--muxui-reference-color-red-60);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 [data-muxui-color-scheme] .muxui-number-field :where(.muxui-number-control[data-invalid], [data-invalid] .muxui-number-control) {
-  border-color: var(--muxui-reference-color-red-60);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 [data-muxui-color-scheme] .muxui-number-field[data-invalid] .muxui-number-control:focus-within {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-red-60) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
 }
 
 [data-muxui-color-scheme] .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-reference-color-red-60);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-/* Invalid field labels use the same consumer-facing red as Tale, including
-   fields whose invalid state is carried by the field root. */
+/* Invalid field labels use the consumer-facing feedback color in every mode. */
 [data-muxui-color-scheme] :where(
   .muxui-text-field,
   .muxui-search-field,
@@ -664,7 +689,7 @@
   .muxui-date-range-picker,
   .muxui-time-field
 )[data-invalid] .muxui-field-label {
-  color: var(--muxui-reference-color-red-60);
+  color: var(--muxui-semantic-feedback-invalid-content);
 }
 
 [data-muxui-color-scheme='dark'] :where(
@@ -681,8 +706,8 @@
 
 [data-muxui-color-scheme='dark'] .muxui-date-field > .muxui-date-input,
 [data-muxui-color-scheme='dark'] .muxui-time-field > .muxui-date-input {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
 }
 
 [data-muxui-color-scheme] :where(
@@ -693,11 +718,11 @@
   .muxui-date-field,
   .muxui-time-field
 )[data-invalid] > .muxui-date-input {
-  border-color: var(--muxui-reference-color-red-60);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-number-control {
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  border-radius: var(--muxui-semantic-control-radius);
 }
 
 [data-muxui-color-scheme] .muxui-number-control:focus-within {
@@ -720,17 +745,17 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-invalid]::before {
-  border-color: var(--muxui-reference-color-red-60);
+  border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected]::before {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-semantic-action-selection-background);
+  border-color: var(--muxui-semantic-action-selection-background);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected][data-hovered]:not([data-disabled])::before {
-  background-color: var(--muxui-reference-color-bluegreen-50);
-  border-color: var(--muxui-reference-color-bluegreen-50);
+  background-color: var(--muxui-semantic-action-selection-background-hover);
+  border-color: var(--muxui-semantic-action-selection-background-hover);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
@@ -744,7 +769,7 @@
 
 [data-muxui-color-scheme='dark'] .muxui-switch[data-selected] .muxui-switch-indicator,
 [data-muxui-color-scheme='dark'] .muxui-switch-indicator[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-100);
+  background-color: var(--muxui-semantic-action-selection-foreground);
 }
 
 .muxui-switch[data-focus-visible]::before,
@@ -759,10 +784,10 @@
    height, border, radius, or fill. */
 .muxui-date-control,
 .muxui-date-range-control {
-  min-height: var(--muxui-field-min-height);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   padding: 0;
   padding-inline-end: 0;
-  border-radius: var(--muxui-reference-dimension-radius-s);
+  border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 .muxui-date-picker .muxui-date-control,
@@ -772,67 +797,68 @@
 
 .muxui-date-control > .muxui-date-input,
 .muxui-date-range-control > .muxui-date-input {
-  min-height: 0;
+  min-block-size: 0;
   border: 0;
   border-radius: 0;
   background-color: transparent;
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-control-padding-inline);
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-control-padding-inline);
   padding-inline-end: var(--muxui-semantic-control-padding-inline);
 }
 
 .muxui-date-control .muxui-date-trigger,
 .muxui-date-range-control .muxui-date-trigger {
-  min-height: calc(var(--muxui-field-min-height) + 9px);
-  width: calc(var(--muxui-field-min-height) + 9px);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   border-top: 0;
   border-right: 0;
   border-bottom: 0;
-  border-left: 1px solid var(--muxui-reference-color-neutral-26);
-  border-radius: 0 calc(var(--muxui-reference-dimension-radius-m) - 1px) calc(var(--muxui-reference-dimension-radius-m) - 1px) 0;
-  background-color: var(--muxui-reference-color-neutral-10);
+  border-left: 1px solid var(--muxui-semantic-color-neutral-default-26);
+  border-radius: 0 calc(var(--muxui-semantic-control-radius) - 1px) calc(var(--muxui-semantic-control-radius) - 1px) 0;
+  background-color: var(--muxui-semantic-color-neutral-default-10);
 }
 
 .muxui-date-range-control .muxui-date-trigger {
-  width: calc(var(--muxui-field-min-height) + 9px);
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
 [data-muxui-color-scheme='light'] .muxui-date-control,
 [data-muxui-color-scheme='light'] .muxui-date-range-control {
-  background-color: var(--muxui-reference-color-neutral-5);
-  border-color: var(--muxui-reference-color-neutral-26);
+  background-color: var(--muxui-semantic-color-neutral-default-5);
+  outline-color: var(--muxui-semantic-color-neutral-default-26);
 }
 
 [data-muxui-color-scheme='light'] .muxui-date-control .muxui-date-trigger,
 [data-muxui-color-scheme='light'] .muxui-date-range-control .muxui-date-trigger {
-  border-left-color: var(--muxui-reference-color-neutral-26);
-  background-color: var(--muxui-reference-color-neutral-10);
+  border-left-color: var(--muxui-semantic-color-neutral-default-26);
+  background-color: var(--muxui-semantic-color-neutral-default-10);
 }
 
 [data-muxui-color-scheme='light'] .muxui-date-picker .muxui-date-trigger > svg,
 [data-muxui-color-scheme='light'] .muxui-date-range-picker .muxui-date-trigger > svg {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-control,
 [data-muxui-color-scheme='dark'] .muxui-date-range-control {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-date-control .muxui-date-trigger,
 [data-muxui-color-scheme='dark'] .muxui-date-range-control .muxui-date-trigger {
-  border-left-color: var(--muxui-reference-color-neutral-84);
-  background-color: var(--muxui-reference-color-neutral-100);
+  border-left-color: var(--muxui-semantic-color-neutral-default-84);
+  background-color: var(--muxui-semantic-color-neutral-default-100);
   color: var(--muxui-semantic-color-neutral-80);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-search-clear {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme] .muxui-date-picker[data-invalid] .muxui-date-control,
 [data-muxui-color-scheme] .muxui-date-range-picker[data-invalid] .muxui-date-range-control {
-  border-color: var(--muxui-reference-color-red-60);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 /* Forced colors supplies its own disabled GrayText treatment. Opacity would

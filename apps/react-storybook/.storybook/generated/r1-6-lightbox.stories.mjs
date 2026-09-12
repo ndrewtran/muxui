@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:2b1845b8f44241d147a7a7765ae32ee734b87b37007ac069491d14e3bc05dbd9
+// @generated-content-sha256: sha256:180330b3bd9ed81a2c6607c46b0454e56a058fb6958e48df791e7b5b5a15c0b2
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -61,7 +61,7 @@ const binding = {
 const record = { family: 'Lightbox', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/Lightbox',
+  title: 'Mux UI React/Lightbox',
   id: 'muxui-react-r1-6-lightbox',
   component: MuxUI.Lightbox,
   tags: ['autodocs'],

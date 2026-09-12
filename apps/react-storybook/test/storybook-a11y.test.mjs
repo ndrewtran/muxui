@@ -319,7 +319,7 @@ async function assertButtonMatrix(page, baseUrl, story, scheme) {
   await waitForDocumentAnimations(page);
   await page.addScriptTag({ content: axe.source });
   const buttonCount = await page.locator('.muxui-button-matrix .muxui-button').count();
-  assert.equal(buttonCount, 21, `${scheme} Button Matrix must render 21 donor tuples`);
+  assert.equal(buttonCount, 21, `${scheme} Button Matrix must render 21 supported tuples`);
   const result = await runAxe(page, '.muxui-button-matrix');
   assert.equal(result.violations.length, 0, `${scheme} Button Matrix has axe violations:\n${formatViolations(result.violations)}`);
 

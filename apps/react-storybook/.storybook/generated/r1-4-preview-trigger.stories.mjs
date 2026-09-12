@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:43cf3b90f09436c9d90167baed4769f59f6611cfb1a2c5ddde7382bcdfb8dd13
+// @generated-content-sha256: sha256:f5632a66d5a631fb8a7f7e6ba9c359027dba3f7d9e8147e89ee6d3b87a1e35ab
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -70,7 +70,7 @@ const binding = {
 const record = { family: 'PreviewTrigger', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/PreviewTrigger',
+  title: 'Mux UI React/PreviewTrigger',
   id: 'muxui-react-r1-4-preview-trigger',
   component: MuxUI.PreviewTrigger,
   tags: ['autodocs'],

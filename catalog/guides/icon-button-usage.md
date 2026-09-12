@@ -32,7 +32,7 @@ name and focusability, and blocks activation without changing the button size.
 disabled button behavior. The default `type="button"` does not submit a form;
 set `type="submit"` explicitly for a submit action.
 
-When migrating from Tale, rename `onPress` to `onActivate` and `isDisabled` /
-`isPending` to `disabled` / `pending`. Mux adds Button's existing variant choices,
-uses its own square sizing, and shows a static pending indicator. No Tale CSS
-or package dependency is required.
+When adapting an existing icon-button implementation, use `onActivate` for
+activation and `disabled` / `pending` for state. Mux adds Button's existing
+variant choices, uses its own square sizing, and shows a static pending
+indicator. No additional CSS or package dependency is required.

@@ -1,1 +1,0 @@
-[evidence] verified 46 immutable index, 174 records, 174 artifacts, and 17 recertifications and 195 supersessions

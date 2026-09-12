@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0.0","id":"muxui:guide:foundations","kind":"guide","name":"Foundations","summary":"Visual guidance for the canonical Mux UI token foundations.","lifecycle":"experimental","keywords":["foundations","tokens","themes","colour","typography","spacing","shape","elevation","motion"],"platforms":["web.react"],"source":"catalog/guides/foundations.md"}

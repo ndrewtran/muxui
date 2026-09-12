@@ -13,12 +13,12 @@ Parent decision: `core-ui:decision:0010`
 
 The immutable React Aria Components `1.20.0` snapshot, exactly 53 committed
 Core-owned React families, 45 new plus eight reused Scope IDs, R1.1/R1.2/R1.3/
-R1.4 tranche counts `11/11/24/7`, R1.5 closure-only role, Tale styling donor,
+R1.4 tranche counts `11/11/24/7`, R1.5 closure-only role, Mux UI styling,
 Core public ownership, React `0.1` package boundary, and later-track exclusions
 from amendment 03 remain exact.
 
-React Aria remains an internal replaceable substrate. Tale remains a one-time
-styling donor rather than a dependency or live owner. RSC/client-boundary,
+React Aria remains an internal replaceable substrate. Mux UI styling remains
+Core-owned rather than a dependency or live owner. RSC/client-boundary,
 framework-free web, React Native, React Native Web, cross-renderer equivalence,
 stable, `latest`, public catalog/tooling, Scale, and production work remain
 outside R1.
@@ -72,7 +72,7 @@ name, exports, props, types, defaults, slots, events, state, composition, DOM,
 accessibility obligations, and styling hooks.
 
 The contract must pass independent ownership, ergonomics, compatibility,
-accessibility, Tale-donor, and React-Aria-internal-only review. It may not expose
+accessibility, Mux UI styling, and React-Aria-internal-only review. It may not expose
 a raw React Aria API by default, import another library's ownership model, add a
 family, add a runtime graph node, or claim stable/support behavior. A contract
 outside the committed family or a later breaking revision remains

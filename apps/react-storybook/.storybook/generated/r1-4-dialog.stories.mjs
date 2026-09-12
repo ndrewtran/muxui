@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:0d3724717c829de31bd624d740a5968e07011c04ef6eff9d8c5655d3cefde9b1
+// @generated-content-sha256: sha256:28538cfc0487255c63e554d8a41d38490d41aaaecf6fd8e8a5ea71c8fa531833
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -59,7 +59,7 @@ const binding = {
 const record = { family: 'Dialog', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/Dialog',
+  title: 'Mux UI React/Dialog',
   id: 'muxui-react-r1-4-dialog',
   component: MuxUI.Dialog,
   tags: ['autodocs'],

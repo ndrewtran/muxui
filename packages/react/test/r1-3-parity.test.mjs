@@ -201,15 +201,18 @@ function deleteBeforeInput(node) {
   }));
 }
 
-test('R1.3 collection source preserves donor glyph alignment state selectors', async () => {
+test('R1.3 collection source preserves glyph alignment state selectors', async () => {
   const styles = await readFile(resolve(import.meta.dirname, '../src/styles/collections.css'), 'utf8');
   assert.match(styles, /\.muxui-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) > svg[\s\S]*?opacity: 0\.45;/u);
   assert.match(styles, /\.muxui-range-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) > svg[\s\S]*?opacity: 0\.45;/u);
-  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding: var\(--muxui-semantic-layout-group-gap\) var\(--muxui-reference-dimension-space-m\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform 0\.15s ease;/u);
+  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-block: max\(0px, calc\(\(var\(--muxui-control-target-size/u);
+  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding-inline: var\(--muxui-semantic-layout-inset-xlarge\);/u);
+  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\);/u);
   assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
-  assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
-  assert.match(styles, /\[data-muxui-color-scheme='dark'\] :where\(\.muxui-calendar, \.muxui-range-calendar\) \{\s*background-color: var\(--muxui-reference-color-neutral-20\);\s*border-color: var\(--muxui-reference-color-neutral-10\);/u);
+  assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
+  assert.match(styles, /\.muxui-token\s*\{[\s\S]*?display:\s*inline-flex;[\s\S]*?padding-inline:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?background-color:\s*var\(--muxui-semantic-surface-subtle\);/u, 'TokenField tokens need a visible, separated affordance');
+  const baseStyles = await readFile(resolve(import.meta.dirname, '../src/styles/base.css'), 'utf8');
+  assert.match(baseStyles, /\.muxui-calendar,\s*\.muxui-range-calendar\s*\{[^}]*box-sizing:\s*content-box;[^}]*background: var\(--muxui-semantic-surface-raised\);[^}]*border: 1px solid var\(--muxui-semantic-border-strong\);/u);
 });
 
 test('R1.3 calendars reserve seven token-sized day columns', async () => {
@@ -219,6 +222,7 @@ test('R1.3 calendars reserve seven token-sized day columns', async () => {
   assert.ok(calendarRuleMatch, 'Calendar and RangeCalendar share one root sizing rule');
   const calendarRuleSource = calendarRuleMatch[0];
   assert.match(calendarRuleSource, /inline-size: calc\(var\(--muxui-calendar-cell-size\) \* 7\);/u);
+  assert.match(calendarRuleSource, /box-sizing:\s*content-box;/u);
   assert.doesNotMatch(calendarRuleSource, /width:\s*max-content;/u);
 });
 
@@ -280,9 +284,9 @@ test('R1.3 temporal adapters preserve ISO values and calendar navigation', async
   }
 });
 
-test('embedded RAC button controls inherit the MuxUI/Tale button chrome reset', async () => {
+test('embedded RAC button controls inherit the Mux UI button chrome reset', async () => {
   const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  const resetStart = styles.indexOf('/* Bare RAC buttons need the same chrome reset as Tale\'s Button base.');
+  const resetStart = styles.indexOf('/* Bare RAC buttons need the same chrome reset as the Mux UI Button base.');
   assert.notEqual(resetStart, -1);
   const reset = styles.slice(resetStart, styles.indexOf('\n}\n', resetStart) + 3);
   for (const className of [
@@ -290,7 +294,7 @@ test('embedded RAC button controls inherit the MuxUI/Tale button chrome reset', 
     'muxui-combo-box-trigger', 'muxui-select-trigger', 'muxui-tag-remove',
     'muxui-tree-toggle', 'muxui-disclosure-trigger', 'muxui-search-clear',
   ]) assert.match(reset, new RegExp(`\\.${className}\\b`, 'u'));
-  assert.match(reset, /border:\s*1px solid transparent;/u);
+  assert.match(reset, /border:\s*0;[\s\S]*outline:\s*1px solid transparent;/u);
   assert.match(reset, /appearance:\s*none;/u);
   assert.match(styles, /\.muxui-calendar-previous,\n\.muxui-calendar-next\s*\{[^}]*padding:\s*0;/u);
   assert.match(styles, /\.muxui-combo-box-trigger\s*\{[^}]*border:\s*none;[\s\S]*background:\s*transparent;/u);
@@ -623,10 +627,11 @@ test('R1.3 field collections keep unsupported props out of public DOM surfaces',
   assert.doesNotMatch(tag, /TAG_(?:DESCRIPTION|ERROR|LEAK)/u);
 
   const token = renderToString(React.createElement(TokenField, {
-    label: 'Tags', defaultValue: ['one'],
+    label: 'Tags', defaultValue: ['Design', 'Product research'],
     description: 'TOKEN_DESCRIPTION', errorMessage: 'TOKEN_ERROR', required: true, invalid: true, 'data-leak': 'TOKEN_LEAK',
   }));
   assert.match(token, /muxui-token-field/u);
+  assert.equal((token.match(/class="muxui-token"/gu) ?? []).length, 2, 'TokenField SSR keeps both canonical token affordances');
   assert.doesNotMatch(token, /TOKEN_(?:DESCRIPTION|ERROR|LEAK)/u);
 });
 
@@ -957,7 +962,7 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
     assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
     assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
-    assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
+    assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
     await act(async () => child.click());
     assert.deepEqual(actions, []);
   } finally {

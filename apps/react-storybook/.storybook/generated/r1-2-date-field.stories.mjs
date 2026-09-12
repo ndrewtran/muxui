@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:cfa26198fddac699b4dd75251bdaac0b53ab69c5993e2f0a830dba0e738a48af
+// @generated-content-sha256: sha256:2db2137460a5e0fa56ad5533ad24ec09a637ad4dc7da4acf261201dafda34d79
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,7 +18,8 @@ const binding = {
       "disabled": false,
       "invalid": false,
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -43,6 +44,7 @@ const binding = {
       "maxValue",
       "unavailableDateMatcher",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -68,7 +70,7 @@ const binding = {
 const record = { family: 'DateField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/DateField',
+  title: 'Mux UI React/DateField',
   id: 'muxui-react-r1-2-date-field',
   component: MuxUI.DateField,
   tags: ['autodocs'],

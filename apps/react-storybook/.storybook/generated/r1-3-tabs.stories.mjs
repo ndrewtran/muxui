@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:5815f6dbceb7b9cabcb398a59e212ac4c2a43905ead4149c486628c7738b6bec
+// @generated-content-sha256: sha256:ad31cf89917aaf14682cf44d48c20b0f5d5453c5a23c4161c2d9d2a1e1f18968
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -17,7 +17,8 @@ const binding = {
     "defaults": {
       "disabled": false,
       "keyboardActivation": "automatic",
-      "orientation": "horizontal"
+      "orientation": "horizontal",
+      "size": "md"
     },
     "events": [
       "change"
@@ -37,6 +38,7 @@ const binding = {
       "defaultValue",
       "keyboardActivation",
       "disabled",
+      "size",
       "orientation"
     ]
   },
@@ -58,7 +60,7 @@ const binding = {
 const record = { family: 'Tabs', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Tabs',
+  title: 'Mux UI React/Tabs',
   id: 'muxui-react-r1-3-tabs',
   component: MuxUI.Tabs,
   tags: ['autodocs'],

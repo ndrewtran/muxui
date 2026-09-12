@@ -235,7 +235,7 @@ test('TextEditor scopes link shortcuts to editable instances and preserves callb
   }
 });
 
-test('TextEditor advanced controls expose the donor color dialog and durable image URL action', async () => {
+test('TextEditor advanced controls expose the color dialog and durable image URL action', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   let root;

@@ -90,7 +90,7 @@ ancestry-based acceptance.
 
 Apart from the exact materialization transition above, any change to a bound
 authority, snapshot, family count, family boundary, Scope ID, tranche
-allocation, React Aria identity, Tale donor identity, package graph, ownership
+allocation, React Aria identity, styling baseline identity, package graph, ownership
 boundary, support boundary, or release boundary invalidates this candidate
 before the changed work begins.
 
@@ -127,7 +127,7 @@ Within this envelope:
    accessibility obligations, and styling hooks needed to realize the exact
    committed family. That decision must be frozen in the tranche lock before
    implementation, independently reviewed, and proved against canonical owner,
-   ergonomics, compatibility, accessibility, Tale-donor, and React-Aria-
+   ergonomics, compatibility, accessibility, styling, and React-Aria-
    internal-only rules. It may not expose a raw React Aria API by default,
    import another library's ownership model, add another family, or make a
    stable/support promise. A later breaking change or a contract outside the
@@ -203,7 +203,7 @@ Every automatically admitted lock must contain, or deterministically reference:
 - its exact fixed family names and immutable Scope IDs;
 - Core-owned component/pattern, `web.react` binding, example, package, export,
   CSS, token/style-crosswalk, lifecycle, support, and release owners;
-- React Aria internal-only and Tale donor/adopt/adapt/no-applicable-donor rules;
+- React Aria internal-only and Mux UI styling/exception rules;
 - canonical revisions and a shared-baseline applicability/invalidation result;
 - focused implementation sequence and conflict boundaries;
 - required evidence IDs, commands, negative paths, risk profiles, manual/AT
@@ -466,14 +466,14 @@ The goal must stop and return to Andrew before the affected work begins if it
 would require any of the following:
 
 - changing the 53 families, family boundaries, immutable Scope IDs, tranche
-  membership, React Aria `1.20.0` identity, or Tale donor identity;
+  membership, React Aria `1.20.0` identity, or styling baseline identity;
 - adding a runtime dependency, public package, public command, durable
   relation, schema/ontology owner, platform, renderer, or support claim not
   already admitted by the exact lock;
 - a public contract outside the delegated initial `0.1` family-contract rule,
   a breaking revision to a frozen tranche contract, or a contract that cannot
   pass the required independent ownership/ergonomics/compatibility review;
-- a Tale `defer`/`reject` exception or another decision-bearing visual
+- a decision-bearing styling exception or another decision-bearing visual
   direction;
 - a security, privacy, integrity, accessibility, platform-safety, lifecycle,
   compatibility, stable-promotion, or release-boundary exception;

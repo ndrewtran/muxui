@@ -126,7 +126,7 @@ const binding = ${JSON.stringify(record.binding, null, 2)};
 const record = { family: '${record.family}', tranche: '${record.tranche}', binding };
 
 export default {
-  title: 'Mux UI React/${record.tranche}/${record.family}',
+  title: 'Mux UI React/${record.family}',
   id: '${storyId(record)}',
   component: ${componentExpression},
   tags: ['autodocs'],

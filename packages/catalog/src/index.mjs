@@ -141,7 +141,7 @@ export function validateTokenDetailSummary({ responseArtifact, selectedArtifact 
     throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: token summary requires one selected token artifact');
   }
   const expected = {
-    availableSections: ['tokens', 'source-crosswalk'],
+    availableSections: tokenAvailableSections(selectedArtifact),
     sourceCrosswalkDigest: selectedArtifact.sourceCrosswalkDigest,
     tokenCount: Object.keys(selectedArtifact.record.tokens).length,
     tokenSourceContentRevision: selectedArtifact.contentRevision,
@@ -152,6 +152,12 @@ export function validateTokenDetailSummary({ responseArtifact, selectedArtifact 
     }
   }
   return true;
+}
+
+function tokenAvailableSections(artifact) {
+  return Array.isArray(artifact.record.sourceCrosswalk?.entries)
+    ? ['tokens', 'source-crosswalk']
+    : ['tokens'];
 }
 
 function normalizeRequest(request, operation, bundle) {
@@ -566,7 +572,7 @@ function summary(artifact, detail = 'compact') {
 
 function tokenSectionSummary(artifact) {
   return {
-    availableSections: ['tokens', 'source-crosswalk'],
+    availableSections: tokenAvailableSections(artifact),
     sourceCrosswalkDigest: artifact.sourceCrosswalkDigest,
     tokenCount: Object.keys(artifact.record.tokens).length,
     tokenSourceContentRevision: artifact.contentRevision,

@@ -274,7 +274,7 @@ one exact preview that:
   postmerge-verified R1 continuous-execution/ChangeIntent prerequisite as
   default-branch authority;
 - preserves the existing Decision 0009, Decision 0010, PR #51-#64, historical
-  evidence, React-primary/Tale-donor, and R1/W1/N1 audit locators unless an
+  evidence, React-primary styling, and R1/W1/N1 audit locators unless an
   exact superseding default-branch locator is added alongside rather than
   rewritten;
 - repeats that Project status is mutable execution state and proves no
@@ -317,7 +317,7 @@ until the repository prerequisite itself passes.
 
 ## Non-goals
 
-- No React component, renderer, CSS, Tale donor, React Aria, token, playground,
+- No React component, renderer, CSS, styling baseline, React Aria, token, playground,
   accessibility behavior, package graph, or dependency change.
 - No RSC/client-boundary, framework-free web, React Native, React Native Web,
   parity, stable, `latest`, public catalog/tooling, Scale, or production work.

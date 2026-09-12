@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:00e6d83b3b9343834d17201214b8997a2a133650d1c73660359dfd4ffe922bcd
+// @generated-content-sha256: sha256:c3b6ee874c5b8992406c9a2aeff65ff0cf19aa3c0469414779fdba2b4e20c16f
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -42,7 +42,7 @@ const binding = {
 const record = { family: 'ColorSwatch', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ColorSwatch',
+  title: 'Mux UI React/ColorSwatch',
   id: 'muxui-react-r1-3-color-swatch',
   component: MuxUI.ColorSwatch,
   tags: ['autodocs'],

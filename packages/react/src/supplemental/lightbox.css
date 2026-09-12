@@ -1,30 +1,30 @@
-.muxui-lightbox-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-reference-dimension-space-s); background-color: var(--muxui-modal-backdrop-bg); transition: opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing); }
+.muxui-lightbox-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-semantic-layout-inset-large); background-color: var(--muxui-modal-backdrop-bg); transition: opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing); }
 .muxui-lightbox-backdrop[data-entering], .muxui-lightbox-backdrop[data-exiting] { opacity: 0; }
-.muxui-lightbox-popup { position: fixed; top: 50%; left: 50%; z-index: 101; display: grid; grid-template-rows: minmax(0, 1fr) auto; width: min(94vw, 72rem); height: min(90vh, 52rem); overflow: hidden; color: var(--muxui-semantic-color-neutral-90); background-color: var(--muxui-popup-bg); border: 1px solid var(--muxui-popup-border-color); border-radius: var(--muxui-reference-dimension-radius-xl); box-shadow: var(--muxui-semantic-elevation-modal); outline: none; transform: translate(-50%, -50%) scale(1); transition: opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing), transform var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing); }
+.muxui-lightbox-popup { position: fixed; top: 50%; left: 50%; z-index: 101; display: grid; grid-template-rows: minmax(0, 1fr) auto; width: min(94vw, 72rem); height: min(90vh, 52rem); overflow: hidden; color: var(--muxui-semantic-color-neutral-90); background-color: var(--muxui-popup-bg); border: 1px solid var(--muxui-popup-border-color); border-radius: var(--muxui-semantic-shape-overlay-radius); box-shadow: var(--muxui-semantic-elevation-modal); outline: none; transform: translate(-50%, -50%) scale(1); transition: opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing), transform var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing); }
 .muxui-lightbox-popup[data-entering], .muxui-lightbox-popup[data-exiting] { opacity: 0; transform: translate(-50%, -50%) scale(var(--muxui-popup-enter-scale)); }
-.muxui-lightbox-content { display: grid; min-width: 0; min-height: 0; place-items: center; overflow: auto; padding: var(--muxui-reference-dimension-space-s); overscroll-behavior: contain; }
+.muxui-lightbox-content { display: grid; min-width: 0; min-height: 0; place-items: center; overflow: auto; padding: var(--muxui-semantic-layout-inset-large); overscroll-behavior: contain; }
 .muxui-lightbox-content > img, .muxui-lightbox-content > picture, .muxui-lightbox-content > video, .muxui-lightbox-content > svg { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
-.muxui-lightbox-caption { min-width: 0; margin: 0; padding: var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-2xl); overflow: hidden; color: var(--muxui-modal-description-color); font-family: var(--muxui-reference-typography-text-font-family); font-size: var(--muxui-modal-description-font-size); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
-.muxui-lightbox-previous, .muxui-lightbox-next, .muxui-lightbox-close { position: absolute; z-index: 1; border-radius: var(--muxui-reference-dimension-radius-full); background-color: var(--muxui-semantic-color-neutral-10); box-shadow: var(--muxui-reference-effect-shadow-s); }
+.muxui-lightbox-caption { min-width: 0; margin: 0; padding: var(--muxui-semantic-layout-inset-medium) var(--muxui-semantic-layout-inset-xxlarge); overflow: hidden; color: var(--muxui-modal-description-color); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-modal-description-font-size); text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.muxui-lightbox-previous, .muxui-lightbox-next, .muxui-lightbox-close { position: absolute; z-index: 1; border-radius: var(--muxui-semantic-shape-pill-radius); background-color: var(--muxui-semantic-color-neutral-10); box-shadow: var(--muxui-semantic-elevation-floating); }
 .muxui-lightbox-previous, .muxui-lightbox-next { top: 50%; transform: translateY(-50%); }
-.muxui-lightbox-previous { left: var(--muxui-reference-dimension-space-xs); }
-.muxui-lightbox-next { right: var(--muxui-reference-dimension-space-xs); }
-.muxui-lightbox-close { top: var(--muxui-reference-dimension-space-xs); right: var(--muxui-reference-dimension-space-xs); color: var(--muxui-semantic-content-muted); }
+.muxui-lightbox-previous { left: var(--muxui-semantic-layout-inset-medium); }
+.muxui-lightbox-next { right: var(--muxui-semantic-layout-inset-medium); }
+.muxui-lightbox-close { top: var(--muxui-semantic-layout-inset-medium); right: var(--muxui-semantic-layout-inset-medium); color: var(--muxui-semantic-content-muted); }
 .muxui-lightbox-trigger { cursor: zoom-in; }
 @media (prefers-reduced-motion: reduce) { .muxui-lightbox-backdrop, .muxui-lightbox-popup { transition: none; } }
-/* Tale's Button content wrapper is display: contents. Keep the shared Mux
+/* The Button content wrapper is display: contents. Keep the shared Mux
    Button behavior while preserving the Lightbox icon-control geometry. */
 .muxui-lightbox-previous .muxui-button-content,
 .muxui-lightbox-next .muxui-button-content,
 .muxui-lightbox-close .muxui-button-content { display: contents; }
 
-/* Tale Dialog.Close is an sm IconButton: equal insets and mode-aware neutral 60. */
+/* Dialog.Close is an sm icon control: equal insets and mode-aware neutral 60. */
 .muxui-lightbox-close.muxui-button {
   aspect-ratio: 1;
   min-height: auto;
-  padding: var(--muxui-reference-dimension-space-4xs);
-  gap: var(--muxui-reference-dimension-space-3xs);
-  border-radius: var(--muxui-reference-dimension-radius-s);
+  padding: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-control-gap);
+  border-radius: var(--muxui-semantic-shape-option-radius);
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   color: var(--muxui-semantic-color-neutral-60);
 }

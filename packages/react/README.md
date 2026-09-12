@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:2919638c8135f8329132df15088f3895758cce150320dfdbbc130de1eb3fa4b4 -->
+<!-- @generated-content-sha256: sha256:f6f274ff34ba6fcad0a5aca9152d96481d42cd9f18830f6e9332af3e156892be -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -7,8 +7,7 @@ R1.6 current React union for the standalone Mux UI renderer.
 - The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.
 - React Aria Components 1.20.0 is an internal replaceable substrate.
 - MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.
-- Tale UI is a pinned one-time styling donor; generated styling results are Mux UI-owned and Tale UI is not a dependency.
-- The historical R1.5 closure retains its fixed family membership and evidence separately from this current union.
+- The R1.5 closure retains its fixed family membership separately from this current union.
 
 ## R1 exit publication candidate
 
@@ -42,6 +41,10 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
 
+Component styles consume semantic roles from `catalog/tokens/default-theme.json`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
+
+Structural CSS remains literal where it expresses geometry rather than a theme choice: zero/reset values, percentages and intrinsic sizing, border overlaps, visually hidden accessibility patterns, calendar grids, and text-segment alignment. The styling-token tests cover all authored component stylesheets; the browser check verifies gap/inset override isolation.
+
 Supporting runtime exports: `ToastProvider` and `useToast` are available alongside `Toast` for managed notifications.
 
 | Export | Lifecycle | Module | Selector | Public props |
@@ -57,18 +60,18 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | CheckboxField | experimental | . | .muxui-checkbox-field | checked, defaultChecked, indeterminate, name, value, size, disabled, invalid, required, readOnly, onChange |
 | CheckboxGroup | experimental | . | .muxui-checkbox-group | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, required, invalid, name, orientation, size |
 | ColorArea | experimental | . | .muxui-color-area | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly |
-| ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, required, invalid, name |
+| ColorField | experimental | . | .muxui-color-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name |
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly, children |
 | ColorSlider | experimental | . | .muxui-color-slider | label, aria-label, aria-labelledby, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
 | ColorSwatch | experimental | . | .muxui-color-swatch | color, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | aria-label, aria-labelledby, value, defaultValue, outerRadius, innerRadius, readOnly, disabled |
-| ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, readOnly, required, invalid, name, placeholder |
+| ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
 | CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate |
-| DateField | experimental | . | .muxui-date-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid, name |
-| DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, readOnly, required, invalid, name |
-| DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, readOnly, required, invalid, startName, endName |
+| DateField | experimental | . | .muxui-date-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
+| DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
+| DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
 | Dialog | experimental | . | .muxui-dialog | children, title, open, defaultOpen, dismissable, trigger, onOpenChange, className, aria-label, aria-labelledby |
 | Disclosure | experimental | . | .muxui-disclosure | expanded, defaultExpanded, disabled, id |
 | DisclosureGroup | experimental | . | .muxui-disclosure-group | expandedIds, defaultExpandedIds, multiple, disabled |
@@ -88,8 +91,8 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Menu | experimental | . | .muxui-menu | aria-label, aria-labelledby, items, disabled, shouldCloseOnSelect |
 | Meter | experimental | . | .muxui-meter | value, minValue, maxValue, label, formatOptions |
 | MultiSelect | experimental | . | .muxui-multi-select | items, size, selectedKeys, defaultSelectedKeys, onSelectionChange, label, placeholder, description, errorMessage, supportingText, showSearch, showFooter, emptyStateTitle, emptyStateDescription, onReset, onSelectAll, selectedCountFormatter, disabled, invalid, required |
-| NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
-| PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, invalid, required, readOnly, onChange |
+| NumberField | experimental | . | .muxui-number-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, minValue, maxValue, step, name, formatOptions |
+| PaymentInput | experimental | . | .muxui-payment-input | value, defaultValue, disabled, size, invalid, required, readOnly, onChange |
 | Popover | experimental | . | .muxui-popover | children, trigger, open, defaultOpen, dismissable, placement, offset, crossOffset, shouldFlip, containerPadding, onOpenChange, className, aria-label, aria-labelledby |
 | PreviewTrigger | experimental | . | .muxui-preview-trigger | children, trigger, delay, closeDelay, open, defaultOpen, disabled, placement, offset, crossOffset, shouldFlip, containerPadding, onOpenChange, className, aria-label, aria-labelledby |
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
@@ -98,21 +101,21 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | RadioGroup | experimental | . | .muxui-radio-group | label, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, unavailableDateMatcher, minValue, maxValue, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, disabled, readOnly |
-| SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, required, invalid, name, placeholder |
-| Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, readOnly, required, invalid, name, placeholder |
+| SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder |
+| Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | hideBorder, href, current, external, items, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss |
 | Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation |
-| Switch | experimental | . | .muxui-switch | label, description, errorMessage, aria-label, aria-labelledby, selected, defaultSelected, disabled, readOnly, required, invalid, name, value |
-| SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, disabled, invalid, required, readOnly, onChange |
+| Switch | experimental | . | .muxui-switch | label, description, errorMessage, aria-label, aria-labelledby, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
+| SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
 | Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
-| Tabs | experimental | . | .muxui-tabs | aria-label, aria-labelledby, items, value, defaultValue, keyboardActivation, disabled, orientation |
+| Tabs | experimental | . | .muxui-tabs | aria-label, aria-labelledby, items, value, defaultValue, keyboardActivation, disabled, size, orientation |
 | TagGroup | experimental | . | .muxui-tag-group | label, aria-label, aria-labelledby, items, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, onGenerate, onLinkRequest, onImageRequest, onColorRequest, bubbleMenu |
-| TextField | experimental | . | .muxui-text-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, required, invalid, name, placeholder, type, autoComplete, autoFocus, inputMode, maxLength, minLength, pattern, spellCheck |
-| TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, disabled, readOnly, required, invalid, name |
+| TextField | experimental | . | .muxui-text-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, autoComplete, autoFocus, inputMode, maxLength, minLength, pattern, spellCheck |
+| TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration, onDismiss, className |
 | ToggleButton | experimental | . | .muxui-toggle-button | selected, defaultSelected, disabled, size |
 | ToggleButtonGroup | experimental | . | .muxui-toggle-button-group | aria-label, aria-labelledby, selectedIds, defaultSelectedIds, selectionMode, disabled, orientation, disallowEmptySelection, size |

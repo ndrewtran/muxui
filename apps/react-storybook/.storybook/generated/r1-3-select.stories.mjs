@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6b038591a06e17b57f0397e39f6f1b6134e1609c0dd4e68590cfcb03e9d449d0
+// @generated-content-sha256: sha256:db889e2020535fbd98aa44ee06708af9fb0565299514c0d953c1dfe332135667
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -19,7 +19,8 @@ const binding = {
       "disabled": false,
       "invalid": false,
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change",
@@ -44,6 +45,7 @@ const binding = {
       "open",
       "defaultOpen",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",
@@ -72,7 +74,7 @@ const binding = {
 const record = { family: 'Select', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Select',
+  title: 'Mux UI React/Select',
   id: 'muxui-react-r1-3-select',
   component: MuxUI.Select,
   tags: ['autodocs'],

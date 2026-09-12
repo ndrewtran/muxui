@@ -1,6 +1,6 @@
 {
   "schema": "muxui-catalog-source-manifest-v1",
-  "authorityDecisionPath": "decisions/0003-tale-token-classification-annex.json",
+  "authorityDecisionPath": "decisions/0015-authority-retirement.md",
   "commandRegistryPath": "packages/tooling/command-registry.json",
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",
@@ -41,6 +41,61 @@
       "sourcePath": "catalog/guides/themes.md"
     },
     {
+      "family": "guide",
+      "path": "catalog/guides/foundations.json",
+      "sourcePath": "catalog/guides/foundations.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-colour.json",
+      "sourcePath": "catalog/guides/foundations-colour.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-component-tokens.json",
+      "sourcePath": "catalog/guides/foundations-component-tokens.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-elevation.json",
+      "sourcePath": "catalog/guides/foundations-elevation.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-motion.json",
+      "sourcePath": "catalog/guides/foundations-motion.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-reference-tokens.json",
+      "sourcePath": "catalog/guides/foundations-reference-tokens.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-semantic-tokens.json",
+      "sourcePath": "catalog/guides/foundations-semantic-tokens.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-shape.json",
+      "sourcePath": "catalog/guides/foundations-shape.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-spacing.json",
+      "sourcePath": "catalog/guides/foundations-spacing.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/foundations-typography.json",
+      "sourcePath": "catalog/guides/foundations-typography.md"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/control-sizing-usage.json",
+      "sourcePath": "catalog/guides/control-sizing-usage.md"
+    },
+    {
       "family": "component",
       "path": "catalog/components/button/artifact.json"
     },
@@ -71,8 +126,7 @@
     },
     {
       "family": "token-source",
-      "path": "catalog/tokens/default-theme.json",
-      "baselineOccurrencesPath": "packages/tokens/generated/tale-token-occurrences.json"
+      "path": "catalog/tokens/default-theme.json"
     },
     {
       "family": "component",

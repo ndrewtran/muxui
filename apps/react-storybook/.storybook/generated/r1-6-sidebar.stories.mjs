@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:7228474d3f85ca6eec4e4e1e73e802e39c785736e5f8fe334e3df3d92504bb74
+// @generated-content-sha256: sha256:497cc6c013afbdb5c877bd5f9bd4fc881e09414f0f380750e8939a8d406fe287
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -75,7 +75,7 @@ const binding = {
 const record = { family: 'Sidebar', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/Sidebar',
+  title: 'Mux UI React/Sidebar',
   id: 'muxui-react-r1-6-sidebar',
   component: MuxUI.Sidebar,
   tags: ['autodocs'],

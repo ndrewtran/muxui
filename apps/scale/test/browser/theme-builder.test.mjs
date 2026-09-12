@@ -22,6 +22,84 @@ async function ready(page, url) {
   await page.evaluate(() => document.fonts.ready);
 }
 
+async function verifyPreviewColours(page, url) {
+  const families = ['button', 'toggle-button', 'text-field', 'checkbox', 'switch', 'progress-bar', 'meter', 'search-field', 'number-field', 'radio-group', 'select', 'tabs', 'disclosure', 'tag-group', 'grid-list', 'calendar', 'menu', 'table', 'breadcrumbs', 'separator', 'link'];
+  for (const colorMode of ['light', 'dark']) {
+    const snapshots = [];
+    for (const [namedColor, neutralColor] of [['#9227ad', '#765078'], ['#207c39', '#765078'], ['#207c39', '#4b6852']]) {
+      const settings = { ...DEFAULT_SETTINGS, namedColor, neutralColor, colorMode, background: colorMode };
+      await ready(page, `${url}/?colour-proof=${colorMode}-${namedColor.slice(1)}-${neutralColor.slice(1)}#${encodeURIComponent(JSON.stringify(settings))}`);
+      await page.mouse.move(0, 0);
+      snapshots.push(await page.evaluate((families) => {
+        const canvas = document.querySelector('.preview-canvas');
+        const resolveColour = (token) => {
+          const probe = document.createElement('span');
+          probe.style.color = `var(${token})`;
+          canvas.append(probe);
+          const colour = getComputedStyle(probe).color;
+          probe.remove();
+          return colour;
+        };
+        const checks = [
+          ['.muxui-button[data-variant="primary"]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-checkbox-indicator[data-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-switch[data-selected]', '::before', 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-grid-list-item[data-selected]', null, 'backgroundColor', '--muxui-semantic-selection-track'],
+          ['.muxui-calendar', null, 'backgroundColor', '--muxui-semantic-surface-raised'],
+          ['.muxui-menu', null, 'backgroundColor', '--muxui-semantic-surface-raised'],
+        ].map(([selector, pseudo, property, token]) => {
+          const node = canvas.querySelector(selector);
+          if (!node) throw new Error(`Missing colour proof target: ${selector}`);
+          return { selector, actual: getComputedStyle(node, pseudo)[property], expected: resolveColour(token) };
+        });
+        // Exercise the endpoint/outside-month cascade using the renderer's exact state hooks.
+        for (const endpoint of ['data-selection-start', 'data-selection-end']) {
+          const cell = document.createElement('button');
+          cell.className = 'muxui-range-calendar-cell';
+          for (const attribute of [endpoint, 'data-selected', 'data-outside-month']) cell.setAttribute(attribute, 'true');
+          canvas.append(cell);
+          for (const [property, token] of [['backgroundColor', '--muxui-semantic-selection-track'], ['color', '--muxui-semantic-action-foreground']]) {
+            checks.push({ selector: `RangeCalendar ${endpoint} outside-month ${property}`, actual: getComputedStyle(cell)[property], expected: resolveColour(token) });
+          }
+          cell.remove();
+        }
+        const colours = Object.fromEntries(families.map((family) => {
+          const nodes = [...canvas.querySelectorAll(`.muxui-${family}`)];
+          if (!nodes.length) throw new Error(`Missing preview family: ${family}`);
+          const values = nodes.flatMap((node) => [node, ...node.querySelectorAll('*')]).flatMap((node) => [null, '::before', '::after'].map((pseudo) => {
+            const style = getComputedStyle(node, pseudo);
+            return [style.color, style.backgroundColor, style.borderTopColor, style.outlineColor];
+          }));
+          return [family, JSON.stringify(values)];
+        }));
+        return { checks, colours };
+      }, families));
+      for (const { selector, actual, expected } of snapshots.at(-1).checks) assert.equal(actual, expected, `${colorMode}: ${selector}`);
+      const screenshotDir = process.env.MUXUI_SCALE_SCREENSHOT_DIR;
+      if (screenshotDir) {
+        await mkdir(screenshotDir, { recursive: true });
+        await page.locator('.preview-canvas').screenshot({ path: join(screenshotDir, `components-${colorMode}-${namedColor.slice(1)}.png`) });
+      }
+      await page.locator('.muxui-select-trigger').click();
+      await page.locator('.muxui-select-popover').waitFor();
+      assert.equal(await page.locator('.muxui-select-popover').evaluate((node) => getComputedStyle(node).backgroundColor), await page.locator('.muxui-menu').evaluate((node) => getComputedStyle(node).backgroundColor), `${colorMode}: portal surface follows preview`);
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Hover me', exact: true }).focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      await page.getByRole('tooltip').waitFor();
+      snapshots.at(-1).colours.tooltip = await page.getByRole('tooltip').evaluate((node) => {
+        const style = getComputedStyle(node);
+        return JSON.stringify([style.color, style.backgroundColor, style.borderTopColor]);
+      });
+      await page.mouse.move(0, 0);
+      await page.keyboard.press('Escape');
+    }
+    for (const family of ['button', 'checkbox', 'switch', 'radio-group', 'grid-list', 'link']) assert.notEqual(snapshots[0].colours[family], snapshots[1].colours[family], `${colorMode}: ${family} must respond to named-only changes`);
+    for (const family of [...families, 'tooltip']) assert.notEqual(snapshots[0].colours[family], snapshots[2].colours[family], `${colorMode}: ${family} must respond to palette changes`);
+  }
+}
+
 test('Scale supports live theme editing, lossless import/export and guarded save/load in a browser', { timeout: 90_000 }, async () => {
   const workspaceRoot = await mkdtemp(join(tmpdir(), 'muxui-scale-browser-'));
   let middleware;
@@ -44,11 +122,20 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     const page = await context.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
+    await verifyPreviewColours(page, url);
+    await page.goto('about:blank');
+    await ready(page, `${url}/#${encodeURIComponent(JSON.stringify(DEFAULT_SETTINGS))}`);
     await ready(page, url);
     assert.equal(await page.locator('.theme-card').count(), 15);
     assert.equal(await page.locator('.theme-card').first().evaluate((node) => getComputedStyle(node).flexDirection), 'row');
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontWeight), '600');
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '34px');
+    const radius = page.getByRole('slider', { name: 'Border radius factor', exact: true });
+    assert.equal(await page.locator('.radius-section output').textContent(), '0.50x (default)');
+    await radius.press('End');
+    await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '2.00x');
+    await page.locator('.radius-section').getByRole('button', { name: 'Reset', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '0.50x (default)');
     await page.evaluate(() => { document.documentElement.style.fontSize = '20px'; });
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '42.5px');
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });

@@ -84,7 +84,10 @@
           { "token": "component.button.foreground", "requirement": "required" },
           { "token": "component.button.min-height", "requirement": "required" },
           { "token": "component.button.padding-inline", "requirement": "required" },
-          { "token": "component.button.radius", "requirement": "required" }
+          { "token": "component.button.radius", "requirement": "required" },
+          { "token": "semantic.control.size-sm", "requirement": "required" },
+          { "token": "semantic.control.size-md", "requirement": "required" },
+          { "token": "semantic.control.size-lg", "requirement": "required" }
         ]
       },
     "platformSafety": [

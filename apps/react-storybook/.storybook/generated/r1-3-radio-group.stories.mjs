@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:9b35b37115871a4257d943b55175412904595621633deccb35b347434f9a663d
+// @generated-content-sha256: sha256:624d91957fc331f77a92b9c5d31482b16527d9749b6873ca4fee2667ed803ac4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -66,7 +66,7 @@ const binding = {
 const record = { family: 'RadioGroup', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/RadioGroup',
+  title: 'Mux UI React/RadioGroup',
   id: 'muxui-react-r1-3-radio-group',
   component: MuxUI.RadioGroup,
   tags: ['autodocs'],

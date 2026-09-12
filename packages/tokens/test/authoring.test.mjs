@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { validateFamily } from '@muxui/schema';
-import { compilePureTokenGraph } from '../src/core.mjs';
+import { compilePureTokenGraph, cssValue } from '../src/core.mjs';
 import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
-import { compileTokenGraph, compileWebTheme } from '../src/index.mjs';
+import { compileNativeTheme, compileTokenGraph, compileWebTheme } from '../src/index.mjs';
 import {
   compileThemeAuthoringDocument,
   generateScaleTheme,
@@ -22,6 +22,24 @@ const base = {
 function documentFor(overrides, scale = { mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false, contrastPivot: 'auto', curvature: 1 }) {
   return { ...base, overrides, scale };
 }
+
+test('selection, focus and link interaction roles follow authored palettes in both modes', () => {
+  for (const namedColor of ['#9227ad', '#207c39']) {
+    const scale = { ...documentFor({}).scale, namedColor };
+    const generated = generateScaleTheme({ source, ...scale });
+    const document = documentFor(generated.assignments, scale);
+    for (const colorScheme of ['light', 'dark']) {
+      const { tokens } = compileThemeAuthoringDocument(document, { source, modes: { colorScheme } });
+      for (const [role, palette] of [
+        ['semantic.selection.track', 'semantic.color.color-60'],
+        ['semantic.focus.ring', 'semantic.color.color-60'],
+        ['semantic.content.link-hover', 'semantic.color.color-100'],
+        ['semantic.content.link-pressed', 'semantic.color.color-90'],
+        ['semantic.action.foreground', 'semantic.color.color-60-fg'],
+      ]) assert.equal(tokens[role].value, tokens[palette].value, `${colorScheme}: ${role}`);
+    }
+  }
+});
 
 function effectSource(value, id = 'semantic.test.effect') {
   const candidate = structuredClone(source);
@@ -184,6 +202,52 @@ test('effect color alpha representations preserve transparency through Node and 
   assert.match(authored.css, /--muxui-semantic-test-effect-rgba: 0px 1px 2px 0px #00ff0080;/u);
 });
 
+test('web serializers preserve authored aliases while resolved graph and native values remain unchanged', () => {
+  const graph = compilePureTokenGraph(source);
+  const web = compileWebTheme(source);
+  const compactWeb = compileWebTheme(source, { modes: { density: 'compact' } });
+  const native = compileNativeTheme(source, { profile: 'native.ios' });
+
+  assert.equal(graph.tokens['semantic.control.radius'].value, source.tokens['reference.dimension.radius-m'].value);
+  assert.equal(cssValue(graph.tokens['semantic.control.radius']), '0.5rem');
+  assert.match(web.css, /--muxui-semantic-control-radius: var\(--muxui-reference-dimension-radius-m\);/u);
+  assert.match(web.css, /--muxui-component-button-padding-inline: var\(--muxui-semantic-control-padding-inline\);/u);
+  assert.match(compactWeb.css, /--muxui-semantic-control-padding-inline: var\(--muxui-reference-dimension-space-3xs\);/u);
+  assert.equal(native.theme['semantic.action.background'].value, graph.tokens['semantic.action.background'].value);
+  assert.equal(native.theme['component.button.background'].value, graph.tokens['component.button.background'].value);
+
+  const overridden = compileWebTheme(source, {
+    overrides: { 'semantic.control.radius': { type: 'dimension', unit: 'px', value: 3 } },
+  });
+  assert.match(overridden.css, /--muxui-semantic-control-radius: 3px;/u);
+  assert.doesNotMatch(overridden.css, /--muxui-semantic-control-radius: var\(/u);
+
+  assert.match(web.css, /--muxui-reference-dimension-radius-m: 0\.5rem;/u);
+  assert.match(web.css, /--muxui-semantic-effect-scrim-subtle: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-default-100\) 24%, #00000000\);/u);
+  assert.match(compileWebTheme(source, { responsive: true }).css, /--muxui-reference-dimension-section-space-l: clamp\(/u);
+
+  const effectAliasSource = structuredClone(source);
+  effectAliasSource.tokens['semantic.test.effect-alias'] = {
+    layer: 'semantic',
+    type: 'effect',
+    unit: 'structured',
+    meaning: 'Effect alias serializer test.',
+    overridePolicy: 'theme',
+    alias: 'reference.effect.shadow-xs',
+    equivalence: 'semantic-equivalence',
+  };
+  const effectGraph = compilePureTokenGraph(effectAliasSource);
+  const effectWeb = compileWebTheme(effectAliasSource);
+  const effectNative = compileNativeTheme(effectAliasSource, { profile: 'native.ios' });
+  assert.match(effectWeb.css, /--muxui-semantic-test-effect-alias: var\(--muxui-reference-effect-shadow-xs\);/u);
+  assert.deepEqual(effectNative.theme['semantic.test.effect-alias'], {
+    type: 'effect',
+    unit: 'structured',
+    value: effectGraph.tokens['semantic.test.effect-alias'].value,
+    effect: effectGraph.tokens['semantic.test.effect-alias'].effect,
+  });
+});
+
 test('authoring cannot substitute defaults for absent canonical metadata', () => {
   const document = { ...base, overrides: {} };
   const inputs = { source, mode: 'standard', namedColor: '#025768', neutralColor: '#79716b' };
@@ -236,6 +300,25 @@ test('authoring compile uses canonical scale data and propagates radius and fore
   const curved = generateScaleTheme({ source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', contrastPivot: 'auto', whiteAnchor: false, curvature: 0.5 });
   assert.equal(curved.assignments['reference.dimension.radius-m'].value, 8);
   assert.notEqual(curved.assignments['reference.dimension.radius-m'].value, generated.assignments['reference.dimension.radius-m'].value);
+});
+
+test('authoring defaults curvature from the canonical Scale metadata', () => {
+  const generated = generateScaleTheme({ source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false });
+  assert.equal(source.theme.scale.radius.curvature.default, 1);
+  assert.equal(generated.radius.curvature, 1);
+  for (const [name, sourcePx, sourceRem, generatedPx, generatedRem] of [
+    ['xs', 4, 0.25, 8, 0.5],
+    ['s', 6, 0.375, 12, 0.75],
+    ['m', 8, 0.5, 16, 1],
+    ['l', 12, 0.75, 24, 1.5],
+    ['xl', 16, 1, 32, 2],
+    ['2xl', 24, 1.5, 48, 3],
+  ]) {
+    const id = `reference.dimension.radius-${name}`;
+    assert.deepEqual(source.tokens[id].relative, { value: sourceRem, unit: 'rem' });
+    assert.equal(source.tokens[id].value, sourcePx);
+    assert.deepEqual(generated.assignments[id], { type: 'dimension', unit: 'px', value: generatedPx, relative: { value: generatedRem, unit: 'rem' } });
+  }
 });
 
 test('authoring validation rejects unsafe string overrides', () => {

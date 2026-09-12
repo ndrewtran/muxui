@@ -41,12 +41,9 @@ const expectedCandidatePublishConfig = {
   registry: 'https://registry.npmjs.org',
 };
 const expectedGeneratedEntries = [
-  'package/generated/button-donor-comparison.json',
-  'package/generated/button-donor-comparison.json.provenance',
   'package/generated/button.mjs',
   'package/generated/compatibility.mjs',
-  'package/generated/component-donor-comparison.json',
-  'package/generated/component-donor-comparison.json.provenance',
+  'package/generated/choice-context.mjs',
   'package/generated/components.mjs',
   'package/generated/collections.mjs',
   'package/generated/descriptor.json',
@@ -54,21 +51,27 @@ const expectedGeneratedEntries = [
   'package/generated/fields.mjs',
   'package/generated/index.d.ts',
   'package/generated/index.mjs',
+  'package/generated/lightbox.d.ts',
+  'package/generated/lightbox.mjs',
+  'package/generated/markdown.d.ts',
+  'package/generated/markdown.mjs',
   'package/generated/overlays.mjs',
-  'package/generated/r1-2-donor-comparison.json',
-  'package/generated/r1-2-donor-comparison.json.provenance',
-  'package/generated/r1-3-donor-comparison.json',
-  'package/generated/r1-3-donor-comparison.json.provenance',
-  'package/generated/r1-4-donor-comparison.json',
-  'package/generated/r1-4-donor-comparison.json.provenance',
   'package/generated/r1-5-closure.json',
   'package/generated/r1-5-closure.json.provenance',
-  'package/generated/r1-5-donor-comparison.json',
-  'package/generated/r1-5-donor-comparison.json.provenance',
+  'package/generated/r1-6-contract.json',
+  'package/generated/r1-6-contract.json.provenance',
   'package/generated/release.json',
   'package/generated/release.json.provenance',
+  'package/generated/resizable.d.ts',
+  'package/generated/resizable.mjs',
   'package/generated/styles.css',
+  'package/generated/supplemental.css',
+  'package/generated/supplemental.d.ts',
+  'package/generated/supplemental.mjs',
   'package/generated/testing.mjs',
+  'package/generated/text-editor.d.ts',
+  'package/generated/text-editor.mjs',
+  'package/generated/toggle-button-context.mjs',
 ];
 const expectedPackageEntries = [
   ...expectedGeneratedEntries,
@@ -375,7 +378,7 @@ try {
     fail('R1_EXIT_PACK_MANIFEST_INVALID', 'name, version, privacy, runtime graph, peers, exports, files, lifecycle, or publish config drifted');
   }
   const packedManifestText = JSON.stringify(packedManifest);
-  for (const forbidden of ['workspace:', '@muxui/web', 'tale-ui']) {
+  for (const forbidden of ['workspace:', '@muxui/web']) {
     if (packedManifestText.includes(forbidden)) fail('R1.5_PACK_MANIFEST_INVALID', `forbidden package reference: ${forbidden}`);
   }
 
@@ -390,17 +393,14 @@ try {
   const release = JSON.parse(readArchiveFile(archive, 'package/generated/release.json'));
   const compatibility = readArchiveFile(archive, 'package/generated/compatibility.mjs');
   const closure = parseGeneratedJson(readArchiveFile(archive, 'package/generated/r1-5-closure.json'));
-  const donorComparison = parseGeneratedJson(readArchiveFile(archive, 'package/generated/r1-5-donor-comparison.json'));
   if (!equalEntries(deliveredExports, descriptor.bindings.map(({ export: name }) => name))
     || !equalEntries(deliveredExports, release.componentExports.map(({ name }) => name))
-    || !equalSet(deliveredExports, donorComparison.components.map(({ component }) => component))
     || closure.families?.length !== 53
-    || closure.upstream?.rawDispositionCounts?.['committed-family-root'] !== 53
     || closure.publication?.private !== false
     || closure.publication?.status !== 'prepared'
     || closure.publication?.mutationPerformed !== false
     || closure.families.some(({ packed }) => packed?.private !== false)) {
-    fail('R1.5_PACK_EXPORT_SURFACE_INVALID', 'descriptor, release, donor, closure, and public export surfaces disagree');
+    fail('R1.5_PACK_EXPORT_SURFACE_INVALID', 'descriptor, release, closure, and public export surfaces disagree');
   }
   if (release.packagePrivate !== false
     || release.publication?.status !== 'prepared'
@@ -409,13 +409,12 @@ try {
     || release.publicationPreparation?.authorization !== 'required-external-human-authorization'
     || release.publicationPreparation?.mutationPerformed !== false
     || stableJson(release.runtimeProfiles) !== stableJson(['web.react'])
-    || donorComparison.donor?.commit !== '94bf62a26c02605c8928dfeb24f0ddc4be1c92fd'
     || release.version !== candidateVersion
     || descriptor.version !== candidateVersion
     || closure.version !== candidateVersion
     || !compatibility.includes(`"version":"${candidateVersion}"`)
     || !compatibility.includes('unproved; R1.5 React exports only')) {
-    fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'support, publication, runtime, or donor boundary drifted');
+    fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'support, publication, runtime, or package boundary drifted');
   }
   assertIncludes(
     compatibility,
@@ -454,7 +453,7 @@ try {
   assertIncludes(readme, 'web.react', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, '@muxui/react@0.1.0-rc.1', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'next', 'R1_EXIT_PACK_GUIDANCE_MISSING');
-  assertIncludes(notice, 'Tale UI', 'R1.5_PACK_NOTICE_INVALID');
+  assertIncludes(notice, 'Copyright (c) 2025 Andrew', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Lucide', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Copyright (c) 2013-present Cole Bemis', 'R1.5_PACK_NOTICE_INVALID');
   for (const name of deliveredExports) {

@@ -1,8 +1,8 @@
 // @generated-from: packages/react/src/choice-context.mjs
-// @generated-content-sha256: sha256:ff5d478eb77faec8cf6843b05bc15a245e5ed5ffb41a4f7dac6c972f8495303d
+// @generated-content-sha256: sha256:fa9162a6ca7e1cef1424f1acf794227dc2d0fee5e926ec29a7fb1b0d82309f44
 import React from 'react';
 
-export const CHOICE_CONTROL_SIZES = Object.freeze(['sm', 'md']);
+export const CHOICE_CONTROL_SIZES = Object.freeze(['sm', 'md', 'lg']);
 
 export function normalizeChoiceControlSize(size, componentName) {
   const resolved = size ?? 'md';

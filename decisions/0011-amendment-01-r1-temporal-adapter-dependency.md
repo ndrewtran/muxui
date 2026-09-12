@@ -33,7 +33,7 @@ export, lifecycle, or ownership path may leak through `@core-ui/react`.
 
 This amendment records one narrow internal dependency edge in the accepted R1
 React package graph. It does not change the 53 families, their four tranches,
-their Scope IDs or states, the React Aria or Tale decisions, deferred tracks,
+their Scope IDs or states, the React Aria or styling decisions, deferred tracks,
 support or lifecycle boundaries, Project boundaries, or the npm, dist-tag,
 production, consumer, and final-R1-exit-merge stops. It makes no implementation
 or publication claim.
@@ -84,7 +84,7 @@ preparation, validate a packed consumer, capture evidence, claim support,
 publish a package, change a dist-tag, mutate a consumer or production
 environment, update the Project, or merge the final R1-exit pull request.
 It does not alter the React `0.1` package-only boundary, `next` release
-channel, React Aria substrate, Tale styling donor, committed family inventory,
+channel, React Aria substrate, Mux UI styling, committed family inventory,
 deferred framework/native tracks, or existing support and lifecycle claims.
 
 ## Reversal
