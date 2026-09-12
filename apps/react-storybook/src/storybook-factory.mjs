@@ -1582,7 +1582,6 @@ async function toastBrowserProof({ canvasElement }) {
 
 const BROWSER_PROOF_PLANS = {
   Button: activationPlan('Button', '.muxui-button'),
-  IconButton: activationPlan('IconButton', '.muxui-icon-button'),
   Breadcrumbs: activationPlan('Breadcrumbs', '.muxui-breadcrumbs-link', 'navigate'),
   Checkbox: activationPlan('Checkbox', '.muxui-checkbox input', 'change'),
   Disclosure: activationPlan('Disclosure', '.muxui-disclosure-trigger', 'expandedChange'),
@@ -1827,6 +1826,7 @@ const BROWSER_PROOF_PLANS = {
 };
 
 const HISTORICAL_BROWSER_PROOF_PLAN_NAMES = Object.freeze(Object.keys(BROWSER_PROOF_PLANS));
+BROWSER_PROOF_PLANS.IconButton = activationPlan('IconButton', '.muxui-icon-button');
 const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   AlertDialog: '.muxui-alert-dialog__trigger',
   ButtonGroup: '.muxui-button-group button',
