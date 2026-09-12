@@ -165,9 +165,9 @@ test('current Storybook manifest covers the complete package union', () => {
   assert.deepEqual([...BROWSER_PROOF_FAMILIES].sort(), descriptorSource.bindings.map(({ export: name }) => name).sort());
 });
 
-test('Storybook navigation is alphabetical with Foundations first and stable deep links', async () => {
+test('Storybook navigation is alphabetical with stable deep links', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
-  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical',\s*order: \['Foundations', '\*'\]/u);
+  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical'\s*\}/u);
   for (const record of manifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
