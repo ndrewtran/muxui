@@ -24,6 +24,23 @@ body {
   font: inherit;
 }
 
+::selection {
+  background: var(--muxui-semantic-action-background);
+  color: var(--muxui-semantic-action-foreground);
+}
+
+/* Storybook injects these loading surfaces before the story is ready. */
+.sb-preparing-story,
+.sb-preparing-docs {
+  background-color: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sb-loader {
+  border-color: var(--muxui-semantic-border-subtle);
+  border-top-color: var(--muxui-semantic-action-background);
+}
+
 #storybook-root,
 main.muxui-storybook-surface {
   min-height: 100vh;

@@ -21,6 +21,14 @@ const MANAGER_TOKEN_IDS = Object.freeze({
   statusWarning: 'semantic.status.warning',
 });
 
+const PREVIEW_TOKEN_IDS = Object.freeze({
+  actionBackground: 'semantic.action.background',
+  actionForeground: 'semantic.action.foreground',
+  borderSubtle: 'semantic.border.subtle',
+  contentStrong: 'semantic.content.strong',
+  surfaceCanvas: 'semantic.surface.canvas',
+});
+
 const graphs = Object.freeze(Object.fromEntries(
   COLOR_SCHEMES.map((colorScheme) => [
     colorScheme,
@@ -58,6 +66,8 @@ export function managerThemeCss() {
 #storybook-sidebar-region #storybook-explorer-tree,
 #storybook-panel-region,
 [data-testid='sb-preview-toolbar'] {
+  --listbox-item-muted-color: var(--muxui-storybook-content-muted);
+  --tree-node-background-hover: var(--muxui-storybook-surface-hover);
   background: var(--muxui-storybook-surface-body-background);
   color: var(--muxui-storybook-content-strong);
   border-color: var(--muxui-storybook-border-subtle);
@@ -74,6 +84,35 @@ export function managerThemeCss() {
 
 #storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype] svg[type] {
   color: var(--muxui-storybook-content-link);
+}
+
+#storybook-sidebar-region [data-testid='context-menu'] {
+  background: var(--muxui-storybook-surface-hover);
+  border-color: var(--muxui-storybook-action-background);
+  box-shadow: 0 0 5px 5px var(--muxui-storybook-surface-hover);
+  color: var(--muxui-storybook-action-background);
+}
+
+#storybook-sidebar-region [data-testid='context-menu']:hover,
+#storybook-sidebar-region [data-testid='context-menu']:focus-visible {
+  background: var(--muxui-storybook-surface-hover);
+  color: var(--muxui-storybook-action-background);
+}
+
+#storybook-sidebar-region [data-selected='true'] [data-testid='context-menu'] {
+  background: var(--muxui-storybook-action-background);
+  border-color: var(--muxui-storybook-action-background);
+  box-shadow: 0 0 5px 5px var(--muxui-storybook-action-background);
+  color: var(--muxui-storybook-action-foreground);
+}
+
+#storybook-sidebar-region [aria-label='Open onboarding guide'] svg path {
+  fill: var(--muxui-storybook-content-muted);
+}
+
+#storybook-sidebar-region button[role='switch'][aria-label='Settings']::after {
+  background: var(--muxui-storybook-status-success);
+  border-color: var(--muxui-storybook-border-default);
 }
 
 #storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype][data-selected='true'],
@@ -107,6 +146,20 @@ export function managerThemeCss() {
   border-color: var(--muxui-storybook-border-default);
 }
 
+#storybook-sidebar-region input[type='checkbox'],
+#storybook-sidebar-region input[type='radio'],
+#storybook-sidebar-region input[type='range'],
+#storybook-panel-region input[type='checkbox'],
+#storybook-panel-region input[type='radio'],
+#storybook-panel-region input[type='range'] {
+  accent-color: var(--muxui-storybook-action-background);
+}
+
+#storybook-sidebar-region [role='combobox'] code,
+#storybook-sidebar-region [role='combobox'] code span {
+  color: var(--muxui-storybook-content-muted);
+}
+
 [data-testid='sb-preview-toolbar'] button,
 [data-testid='sb-preview-toolbar'] [role='button'],
 [data-testid='sb-preview-toolbar'] [role='switch'] {
@@ -125,6 +178,19 @@ export function managerThemeCss() {
 [data-testid='sb-preview-toolbar'] [role='switch']:focus-visible {
   outline: 2px solid var(--muxui-storybook-action-background);
   outline-offset: 2px;
+}
+
+[data-testid='sb-preview-toolbar'] [aria-label^='Choose the Mux UI light or dark theme.'],
+[data-testid='sb-preview-toolbar'] [aria-label^='Choose the document writing direction.'] {
+  background: var(--muxui-storybook-surface-hover);
+  color: var(--muxui-storybook-action-background);
+}
+
+#storybook-sidebar-region ::selection,
+#storybook-panel-region ::selection,
+[data-testid='sb-preview-toolbar'] ::selection {
+  background: var(--muxui-storybook-action-background);
+  color: var(--muxui-storybook-action-foreground);
 }
 
 #storybook-sidebar-region [aria-label='Story status: Pass'],
@@ -230,11 +296,93 @@ body > [role='listbox'] [role='option']:focus-visible {
   outline-offset: -2px;
 }
 
+#storybook-panel-region [role='tab'][data-key='addon-controls'] > div > div,
+#storybook-panel-region [role='tab'][data-key='violations'] > div > div {
+  background: var(--muxui-storybook-surface-hover);
+  border: 1px solid var(--muxui-storybook-action-background);
+  box-shadow: none;
+  color: var(--muxui-storybook-action-background);
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] input,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] select,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] textarea {
+  background: var(--muxui-storybook-surface-canvas);
+  border-color: var(--muxui-storybook-border-default);
+  color: var(--muxui-storybook-content-strong);
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] input:hover,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] select:hover,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] textarea:hover {
+  border-color: var(--muxui-storybook-action-background);
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] input:focus-visible,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] select:focus-visible,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] textarea:focus-visible {
+  outline: 2px solid var(--muxui-storybook-action-background);
+  outline-offset: 1px;
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] input:disabled,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] select:disabled,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] textarea:disabled {
+  background: var(--muxui-storybook-surface-body-background);
+  border-color: var(--muxui-storybook-border-subtle);
+  color: var(--muxui-storybook-content-muted);
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] label[aria-disabled='false'] > span[aria-hidden='true'] {
+  color: var(--muxui-storybook-content-strong);
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] label[aria-disabled='true'] > span[aria-hidden='true'] {
+  color: var(--muxui-storybook-content-muted);
+}
+
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] tr > td:nth-child(2) > div:nth-child(2) > div > span,
+#storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] tr > td:nth-child(3) > div > span {
+  background: var(--muxui-storybook-surface-hover);
+  border: 1px solid var(--muxui-storybook-border-subtle);
+  color: var(--muxui-storybook-content-strong);
+}
+
+[data-testid='tooltip'].react-aria-Tooltip,
+[data-testid='tooltip'].react-aria-Tooltip > * {
+  background: var(--muxui-storybook-surface-canvas);
+  border: 1px solid var(--muxui-storybook-border-default);
+  box-shadow: 0 0 0 1px var(--muxui-storybook-border-subtle);
+  color: var(--muxui-storybook-content-strong);
+}
+
 /* The manager owns the docs wrapper; iframe content keeps its own scoped CSS. */
 #storybook-preview-iframe {
   background: var(--muxui-storybook-surface-canvas);
 }
 `;
+}
+
+export function previewThemeCss() {
+  const tokens = COLOR_SCHEMES.map((colorScheme) => {
+    const selector = colorScheme === 'light' ? ':root' : ":root[data-muxui-color-scheme='dark']";
+    const declarations = Object.entries(PREVIEW_TOKEN_IDS)
+      .map(([name, tokenId]) => `  --muxui-semantic-${name.replaceAll(/[A-Z]/gu, (letter) => `-${letter.toLowerCase()}`)}: ${tokenValue(colorScheme, tokenId)};`)
+      .join('\n');
+    return `${selector} {\n${declarations}\n}`;
+  }).join('\n');
+  return `${tokens}
+
+.sb-preparing-story,
+.sb-preparing-docs {
+  background-color: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sb-loader {
+  border-color: var(--muxui-semantic-border-subtle);
+  border-top-color: var(--muxui-semantic-action-background);
+}`;
 }
 
 function paletteFor(colorScheme) {
