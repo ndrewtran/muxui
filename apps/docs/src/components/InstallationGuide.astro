@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import CodeBlock from './CodeBlock.astro';
+import GuideMarkup from './GuideMarkup.astro';
 import { canonicalRepositoryRoot } from '../lib/catalog.ts';
 
 const packageManifest: unknown = JSON.parse(
@@ -30,14 +31,16 @@ if (!shellExample || !tsxExample) {
 }
 ---
 
-<p>Install <code>{packageManifest.name}@{packageManifest.version}</code> from the current local package candidate.</p>
+<GuideMarkup>
+	<p>Install <code>{packageManifest.name}@{packageManifest.version}</code> from the current local package candidate.</p>
 
-<h2 id="local-tarball">Local tarball</h2>
+	<h2 id="local-tarball">Local tarball</h2>
 
-<p>Build or obtain the versioned local candidate, then install it from the package directory.</p>
+	<p>Build or obtain the versioned local candidate, then install it from the package directory.</p>
 
-<CodeBlock id="installation-shell-code" code={shellExample} lang="bash" label="shell" />
+	<CodeBlock id="installation-shell-code" code={shellExample} lang="bash" label="shell" />
 
-<h2 id="usage">Usage</h2>
+	<h2 id="usage">Usage</h2>
 
-<CodeBlock id="installation-usage-code" code={tsxExample} lang="tsx" label="tsx" />
+	<CodeBlock id="installation-usage-code" code={tsxExample} lang="tsx" label="tsx" />
+</GuideMarkup>
