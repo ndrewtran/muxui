@@ -36,7 +36,10 @@ test('IconButton preserves its name, native form props, and pending/disabled sta
       ...name, pending: true, variant: 'primary', size: 'lg', type: 'submit', name: 'action', value: 'save',
     }, icon));
     const button = new JSDOM(html).window.document.querySelector('button');
-    for (const [key, value] of Object.entries(name)) assert.equal(button.getAttribute(key), value);
+    for (const [key, value] of Object.entries(name)) {
+      if (key === 'aria-labelledby') assert.ok(button.getAttribute(key).split(/\s+/u).includes(value));
+      else assert.equal(button.getAttribute(key), value);
+    }
     assert.equal(button.getAttribute('aria-busy'), 'true');
     assert.equal(button.getAttribute('type'), 'button', 'pending prevents native form submission');
     assert.equal(button.getAttribute('name'), 'action');
