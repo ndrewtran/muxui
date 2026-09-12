@@ -1955,17 +1955,34 @@ export function createButtonMatrixStory(record) {
         className: 'muxui-button-matrix',
         role: 'group',
         'aria-label': 'Button variant and size combinations',
-        style: { display: 'grid', gridTemplateColumns: 'repeat(3, max-content)', gap: '1rem' },
+        style: { display: 'grid', gap: '1.5rem' },
       },
-      ...BUTTON_MATRIX_SIZES.flatMap((size) => BUTTON_MATRIX_VARIANTS.map((variant) => {
-        const label = `${variant} / ${size}`;
-        return e(
+      ...BUTTON_MATRIX_SIZES.map((size) => e(
+        'section',
+        {
+          key: size,
+          'aria-label': `${size} button size`,
+          style: { display: 'grid', gap: '0.5rem' },
+        },
+        e('h3', {
+          style: {
+            fontFamily: 'monospace',
+            fontSize: '0.75rem',
+            margin: 0,
+            textTransform: 'uppercase',
+          },
+        }, size),
+        e(
           'div',
-          { key: label, style: { display: 'grid', gap: '0.25rem' } },
-          e('span', { style: { fontFamily: 'monospace', fontSize: '0.75rem' } }, label),
-          e(MuxUI.Button, { ...args, variant, size }, 'Action'),
-        );
-      })),
+          { style: { display: 'flex', flexWrap: 'wrap', gap: '1rem' } },
+          ...BUTTON_MATRIX_VARIANTS.map((variant) => e(
+            'div',
+            { key: variant, style: { display: 'grid', gap: '0.25rem' } },
+            e('span', { style: { fontFamily: 'monospace', fontSize: '0.75rem' } }, variant),
+            e(MuxUI.Button, { ...args, variant, size }, 'Action'),
+          )),
+        ),
+      )),
     ),
   };
 }
