@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:icon-button-basic-react",
+  "kind": "example",
+  "name": "Basic React IconButton",
+  "summary": "Named icon-only actions with square sizing, disabled and pending states.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:icon-button#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/icon-button/examples/react/basic.tsx"
+}

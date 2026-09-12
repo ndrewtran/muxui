@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/generate.mjs
-// @generated-content-sha256: sha256:0a6087a852a850277594e092b5b9de95c59cb11a8f528b76e7cceb0389494841
+// @generated-content-sha256: sha256:659655191684e99cd4c97c821510b173c15f18807a811727ae9fa5c77883f217
 import type * as React from 'react';
 
 export type ButtonPointerType = 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined;
@@ -175,5 +175,6 @@ export type TooltipProps = { content: Exclude<React.ReactNode, null | undefined 
 export declare const Tooltip: React.ForwardRefExoticComponent<TooltipProps & React.RefAttributes<HTMLDivElement>>;
 
 export * from './supplemental.js';
+export * from './icon-button.js';
 export * from './lightbox.js';
 export * from './resizable.js';

@@ -136,6 +136,25 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
+      "family": "IconButton",
+      "slug": "icon-button",
+      "artifact": "catalog/components/icon-button/artifact.json",
+      "binding": "muxui:component:icon-button#web.react",
+      "apiOwner": "catalog/components/icon-button/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/icon-button/artifact.json#/states",
+      "anatomyOwner": "catalog/components/icon-button/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/icon-button/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "IconButton",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/icon-button.mjs",
+      "styleSource": "packages/react/src/supplemental/icon-button.css"
+    },
+    {
       "family": "Input",
       "slug": "input",
       "artifact": "catalog/components/input/artifact.json",

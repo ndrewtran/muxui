@@ -889,6 +889,19 @@ explicitly and cannot be hidden to claim 100% parity.
 exit publication eligibility still requires its existing exact tarball,
 release, registry, rollback, and human authorization conditions.
 
+### Post-R1.6 IconButton addition
+
+Decision 0014 adds IconButton under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and
+explicitly defers Field. Deliver the artifact, Button composition, square styles,
+root export, examples, generated guidance, and focused proof through an ordinary
+protected PR before preparing the next R1-exit candidate. Existing assertions
+`E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07` cover current mapping,
+representative interaction/style behavior, projections, and release boundaries.
+Retain the completed initial R1.6 migration and its 74-family evidence unchanged;
+this follow-up establishes the expanded 75-family source surface independently.
+Field has no implementation deliverable until the custom-control consumer trigger
+in Decision 0014 is met and separately admitted.
+
 ### R1 exit — React prerelease publication
 
 **Entry:** R1.5 complete plus exact tarball, release manifest, provenance,

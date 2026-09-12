@@ -1,0 +1,145 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:icon-button",
+  "kind": "component",
+  "name": "IconButton",
+  "summary": "Perform an icon-only action with an explicit accessible name and square Button sizing.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "A compact action is represented by one icon, such as close, search, or settings."
+    ],
+    "avoidWhen": [
+      "The action needs visible text; use Button.",
+      "Navigating to a destination; use Link."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "icon"
+  ],
+  "states": [
+    "default",
+    "hovered",
+    "pressed",
+    "focus-visible",
+    "disabled",
+    "pending"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Requires a non-empty aria-label or aria-labelledby; referenced labeling elements must exist and contain meaningful text.",
+      "Caller-supplied icon content is decorative; do not place focusable or interactive elements inside it.",
+      "Pending preserves the accessible name and keyboard focusability while suppressing activation.",
+      "Disabled suppresses activation and removes the button from keyboard tab order."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "aria-label",
+          "aria-labelledby",
+          "disabled",
+          "pending",
+          "variant",
+          "tone",
+          "size"
+        ],
+        "events": [
+          "activate"
+        ],
+        "parts": [
+          "root",
+          "icon"
+        ],
+        "defaults": {
+          "disabled": false,
+          "pending": false,
+          "variant": "ghost",
+          "tone": "default",
+          "size": "md"
+        }
+      },
+      "behavior": [
+        "Composes Mux Button; onActivate, refs, form attributes, and finite variants follow Button.",
+        "Renders caller-supplied icon children in a decorative wrapper.",
+        "Square sm, md, and lg sizes follow Mux minimum control heights; pending replaces the icon without changing geometry.",
+        "The pending indicator is static; showTextWhileLoading is not part of this icon-only API."
+      ],
+      "accessibility": [
+        "Requires a non-empty aria-label or aria-labelledby; referenced labeling elements must exist and contain meaningful text.",
+        "Caller-supplied icon content is decorative; do not place focusable or interactive elements inside it.",
+        "Pending preserves the accessible name and keyboard focusability while suppressing activation.",
+        "Disabled suppresses activation and removes the button from keyboard tab order."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "component.button.background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.button.foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "component.button.min-height",
+            "requirement": "required"
+          },
+          {
+            "token": "component.button.padding-inline",
+            "requirement": "required"
+          },
+          {
+            "token": "component.button.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.min-height",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

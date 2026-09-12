@@ -1,5 +1,5 @@
 ---
-scopeVersion: 8.0.0
+scopeVersion: 9.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -1194,3 +1194,30 @@ outside this scope. Tailwind remains a consumer build dependency only, never
 a Mux UI runtime, peer, generated-source, or styling engine. Reversal is
 append-only: disable the private capability while retaining canonical source
 truth.
+
+## Product Scope 9.0.0: IconButton and Field deferral
+
+Product Scope `9.0.0` records the accepted IconButton expansion in Decision
+0014. `IconButton` is a Mux UI-owned, experimental React family under the
+existing `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` commitment. It composes Button,
+requires an explicit accessible name, owns its API, tokens, styles, and
+behavior, and is exported from the root React package. The mapping now contains
+22 supplemental families and 75 total current families: the fixed 53-family
+floor, 73 root exports, and the two existing isolated subpaths.
+
+The 22 supplemental mapping entries are: `alert-dialog`, `button-group`,
+`card`, `checkbox-field`, `color-mode-toggle`, `command-palette`, `header-nav`,
+`icon-button`, `input-tags`, `input`, `multi-select`, `payment-input`,
+`progress-circle`, `radio-field`, `sidebar`, `switch-field`, `tag-select`,
+`text-area`, `text-editor`, `resizable`, `lightbox`, and `markdown`. This list
+is a current Mux UI-owned catalog projection, not a publication or support
+claim.
+
+The standalone `Field` family remains deferred. Existing named fields and
+`Input` parts cover ordinary composition; a generic Field may be reconsidered
+only for a demonstrated custom or multiple-control boundary with deliberate
+label, description, error, and validation association. This scope expansion
+does not add a Field artifact, runtime, export, dependency, stable-support
+claim, package publication, or secondary-renderer activation. Existing Scope
+IDs remain immutable, and the retirement decision's accepted cleanup does not
+rescind this later approved expansion.

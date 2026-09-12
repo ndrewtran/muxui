@@ -238,28 +238,28 @@ export function assertReactR15GeneratedContracts({
     || descriptor.generatedFrom !== 'packages/react/src/generate.mjs'
     || descriptor.package !== manifest.name
     || descriptor.tranche !== 'R1.6'
-    || descriptor.bindings?.length !== 74
-    || descriptor.exports?.length !== 74
+    || descriptor.bindings?.length !== 75
+    || descriptor.exports?.length !== 75
     || descriptor.historical?.tranche !== 'R1.5'
     || descriptor.historical?.familyCount !== 53
     || historicalBindings?.length !== 53
     || historicalExports?.length !== 53
     || release?.schema !== 'muxui-react-release-candidate-v1'
     || release.packagePrivate !== true
-    || release.componentExports?.length !== 74
-    || release.bindings?.length !== 74
+    || release.componentExports?.length !== 75
+    || release.bindings?.length !== 75
     || release.catalog?.status !== 'bound'
-    || release.catalog.components?.length !== 74
+    || release.catalog.components?.length !== 75
     || release.historical?.tranche !== 'R1.5'
     || release.historical?.familyCount !== 53
     || historicalReleaseBindings?.length !== 53
     || historicalReleaseExports?.length !== 53
     || release.publication?.status !== 'disabled'
     || currentContract?.schema !== 'muxui-react-r1-6-contract-v1'
-    || currentContract.current?.familyCount !== 74
+    || currentContract.current?.familyCount !== 75
     || currentContract.current?.fixed53Count !== 53
-    || currentContract.current?.supplementalCount !== 21
-    || currentContract.components?.length !== 74
+    || currentContract.current?.supplementalCount !== 22
+    || currentContract.components?.length !== 75
     || currentContract.components?.filter(({ tranche }) => tranche !== 'R1.6').length !== 53) {
     failR15('PROJECTION_COUNTS_INVALID');
   }

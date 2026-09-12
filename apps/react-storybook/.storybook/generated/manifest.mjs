@@ -1,14 +1,15 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:c73ab5fb745ca340224dd3ac2e2145660dd0b0508e2fd2710612bdeb50146638
+// @generated-content-sha256: sha256:ecaafcf05019a60eeeaed21a1b10dde56ad20e6f0e4e77bfe2f2f36d3e05306a
 export const manifest = Object.freeze({
   "schema": "muxui-react-storybook-manifest-v1",
   "generatedFrom": [
     "packages/react/generated/descriptor.json",
     "catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json",
+    "catalog/components/icon-button/examples/react/basic.tsx",
     "catalog/components/link/examples/react/icon-composition.tsx",
     "catalog/components/number-field/examples/react/sizing.tsx"
   ],
-  "count": 74,
+  "count": 75,
   "foundations": {
     "schema": "muxui-react-storybook-foundations-v1",
     "source": "catalog/tokens/default-theme.json",
@@ -1685,6 +1686,34 @@ export const manifest = Object.freeze({
         "mobile",
         "current",
         "focused"
+      ]
+    },
+    {
+      "family": "IconButton",
+      "tranche": "R1.6",
+      "props": [
+        "aria-label",
+        "aria-labelledby",
+        "disabled",
+        "pending",
+        "variant",
+        "tone",
+        "size"
+      ],
+      "defaults": {
+        "disabled": false,
+        "pending": false,
+        "size": "md",
+        "tone": "default",
+        "variant": "ghost"
+      },
+      "states": [
+        "default",
+        "hovered",
+        "pressed",
+        "focus-visible",
+        "disabled",
+        "pending"
       ]
     },
     {

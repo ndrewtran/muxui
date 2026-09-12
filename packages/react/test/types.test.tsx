@@ -4,6 +4,7 @@ import {
   type AutocompleteSelectionItem,
   Breadcrumbs,
   Button,
+  IconButton,
   Calendar,
   Checkbox,
   CheckboxGroup,
@@ -497,3 +498,22 @@ void childTooltip;
 // @ts-expect-error MuxUI owns `open`, not the upstream `isOpen` prop.
 const upstreamPopoverState = <Popover aria-label="Details" trigger={<button type="button">Details</button>} isOpen>Content</Popover>;
 void upstreamPopoverState;
+
+
+const iconButtonRef = createRef<HTMLButtonElement>();
+const iconButtons = <>
+  <IconButton aria-label="Close" ref={iconButtonRef} size="sm" variant="ghost"
+    type="submit" name="action" value="close" onActivate={(event) => event.target.focus()}><svg /></IconButton>
+  <IconButton aria-labelledby="search-label" pending disabled={false}><svg /></IconButton>
+  <IconButton aria-label="Fallback" aria-labelledby="search-label"><svg /></IconButton>
+</>;
+void iconButtons;
+// @ts-expect-error Icon-only buttons require an explicit accessible name.
+const unnamedIconButton = <IconButton><svg /></IconButton>;
+void unnamedIconButton;
+// @ts-expect-error IconButton shares the finite Button variant contract.
+const invalidIconVariant = <IconButton aria-label="Close" variant="unknown"><svg /></IconButton>;
+void invalidIconVariant;
+// @ts-expect-error Icon-only pending content never displays a text label beside the spinner.
+const textLoadingIcon = <IconButton aria-label="Close" showTextWhileLoading><svg /></IconButton>;
+void textLoadingIcon;

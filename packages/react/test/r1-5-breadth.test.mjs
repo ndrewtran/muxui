@@ -29,12 +29,12 @@ test('R1.5 family closure retains the fixed 53-family floor', async () => {
   }
 });
 
-test('R1.6 contract retains the 53-family floor and 21 supplemental roots', async () => {
+test('R1.6 contract retains the 53-family floor and 22 supplemental roots', async () => {
   const contract = await generatedJson('r1-6-contract.json');
-  assert.equal(contract.current.familyCount, 74);
+  assert.equal(contract.current.familyCount, 75);
   assert.equal(contract.current.fixed53Count, 53);
-  assert.equal(contract.current.supplementalCount, 21);
-  assert.equal(contract.components.length, 74);
+  assert.equal(contract.current.supplementalCount, 22);
+  assert.equal(contract.components.length, 75);
   assert.ok(contract.components.every((component) => !('donor' in component)));
 });
 

@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:6326131fd868344846920c4500eb27feace20ed4504f92ac53dbc4988f59b3ff
+ * @generated-content-sha256: sha256:0f8d40f717cb2eae9f7f47665eea43a839d0b9b8b2c3397f5f2b90fe1ab221ce
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -11470,6 +11470,51 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-text-editor[data-required] .muxui-text-editor__label::after {
   content: ' *';
   color: var(--muxui-semantic-selection-track);
+}
+
+/* Scope square sizing to public IconButton instances, preserving private close controls. */
+.muxui-button.muxui-icon-button[data-muxui-icon-button] {
+  /* Keep the square control on Button's private minimum-height owner for md,
+     while matching Button's explicit sm and lg size tokens below. */
+  --muxui-icon-button-size: var(--muxui-component-button-min-height, var(--muxui-control-size-md));
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: var(--muxui-icon-button-size);
+  height: var(--muxui-icon-button-size);
+  min-height: var(--muxui-icon-button-size);
+  padding: 0;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button][data-size='sm'] {
+  --muxui-icon-button-size: var(--muxui-control-size-sm);
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button][data-size='lg'] {
+  --muxui-icon-button-size: var(--muxui-control-size-lg);
+}
+
+.muxui-icon-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.muxui-icon-button[data-muxui-icon-button][data-size='sm'] .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.muxui-icon-button-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* The existing Button pending state remains visible without continuous animation. */
+.muxui-icon-button[data-muxui-icon-button] .muxui-button-spinner,
+.muxui-icon-button[data-muxui-icon-button] .muxui-button-spinner-arc {
+  animation: none;
 }
 
 .muxui-lightbox-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-semantic-layout-inset-large); background-color: var(--muxui-modal-backdrop-bg); transition: opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing); }

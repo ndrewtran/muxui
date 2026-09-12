@@ -18,6 +18,14 @@ const policy = await loadPolicy(repositoryRoot);
 const generatedSource = 'apps/react-storybook/src/generate-stories.mjs';
 const canonicalStoryDefinitions = [
   {
+    family: 'IconButton',
+    source: 'catalog/components/icon-button/examples/react/basic.tsx',
+    importName: 'BasicIconButtonExample',
+    exportName: 'SizesAndStates',
+    storyName: 'Sizes and states',
+    helperName: 'icon-button-basic.example.mjs',
+  },
+  {
     family: 'Link',
     source: 'catalog/components/link/examples/react/icon-composition.tsx',
     importName: 'LinkIconCompositionExample',

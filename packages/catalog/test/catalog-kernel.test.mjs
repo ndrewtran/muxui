@@ -167,7 +167,7 @@ test('R1.4 guide sources preserve Markdown newlines', async () => {
   const guideSources = manifest.records
     .filter(({ family, sourcePath }) => family === 'guide' && sourcePath?.includes('-usage.md'))
     .map(({ sourcePath }) => sourcePath);
-  assert.equal(guideSources.length, 54);
+  assert.equal(guideSources.length, 55);
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
     assert.doesNotMatch(source, /\\n/u, sourcePath);
@@ -203,7 +203,7 @@ test('R1.5 React curriculum selects one exact generation example for every famil
   const components = baseBundle.artifacts
     .filter(({ kind }) => kind === 'component')
     .sort((left, right) => left.id.localeCompare(right.id));
-  assert.equal(components.length, 53);
+  assert.equal(components.length, 54);
   const selected = components.map((component) => {
     const response = getArtifact({
       id: component.id,
@@ -223,7 +223,7 @@ test('R1.5 React curriculum selects one exact generation example for every famil
     assert.equal(example.record.binding.ref, `${component.id}#web.react`, component.id);
     return example.id;
   });
-  assert.equal(new Set(selected).size, 53);
+  assert.equal(new Set(selected).size, 54);
 });
 
 test('R1.3 catalog closure registers and discovers every canonical family', async () => {
