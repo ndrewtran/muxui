@@ -1178,6 +1178,7 @@ site-search button > kbd {
 	.foundation-component-preview { align-items: start; flex-direction: column; }
 	.foundation-section-heading { display: flex; }
 	.foundation-type-role-heading { display: flex; }
+	.foundation-family-heading > div:first-child { flex: 0 1 auto; min-width: 0; }
 	.foundation-ruler-row { grid-template-columns: 7rem minmax(3rem, 1fr) 4rem; gap: var(--muxui-reference-dimension-space-2xs); }
 	.foundation-family-axis,
 	.foundation-dimension-family .foundation-ruler-row { grid-template-columns: 7rem minmax(3rem, 1fr) 4rem; gap: var(--muxui-reference-dimension-space-2xs); }
@@ -1201,6 +1202,11 @@ site-search button > kbd {
 	.foundation-family-axis { display: none; }
 	.foundation-family-row { grid-template-columns: 1fr; align-items: start; }
 	.foundation-family-row-specimen { justify-items: start; }
+	.foundation-timing-row { grid-template-columns: 7rem minmax(3rem, 1fr) 6rem; gap: var(--muxui-reference-dimension-space-2xs); align-items: center; }
+	.foundation-family:not(.foundation-dimension-family):not(.foundation-timing-group) .foundation-family-row,
+	.foundation-easing-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+	.foundation-family:not(.foundation-dimension-family):not(.foundation-timing-group) .foundation-family-row > :last-child,
+	.foundation-easing-row > :last-child { grid-column: 1 / -1; }
 	.foundation-component-row { grid-template-columns: 1fr; }
 	.foundation-component-row > .foundation-copy { grid-column: auto; }
 }
