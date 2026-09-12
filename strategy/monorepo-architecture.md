@@ -2697,3 +2697,18 @@ support, or release claim. General design-tool interchange remains the later
 G3.5 capability. No package publication, dist-tag mutation, production or
 consumer mutation, stable promotion, or `latest` support claim follows from
 Decision 0013.
+
+
+## Decision 0014: supplemental IconButton
+
+[Decision 0014](../decisions/0014-icon-button-and-field-deferral.md) adds the
+Mux-owned IconButton family after the initial migration. It reuses Button and
+its internal React Aria substrate; caller-supplied decorative icon content adds
+no public icon package or dependency. The current supplemental mapping includes
+22 families. Decision 0013's original 21-family list and evidence remain the
+historical migration baseline. Standalone Field is explicitly deferred.
+
+The existing ordinary React delivery and release boundaries apply. This addition
+requires focused public API, accessible-name, keyboard/focus, state, sizing,
+hydration, generation, and packed-consumer proof. It does not activate a platform,
+change accessibility obligations, or authorize publication or production use.

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:icon-button-usage",
+  "kind": "guide",
+  "name": "IconButton usage",
+  "summary": "Accessible icon-only actions composed from Mux Button.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "icon",
+    "button",
+    "action",
+    "accessible-name"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "source": "catalog/guides/icon-button-usage.md"
+}

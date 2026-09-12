@@ -159,7 +159,7 @@ test('E-G0.2-01 negative: generated bundle matches its canonical source manifest
   assert.equal(baseBundle.catalogDigest, canonicalDigest(preimage(baseBundle)));
 });
 
-test('R1.4 guide sources preserve Markdown newlines', async () => {
+test('registered usage guides preserve Markdown newlines', async () => {
   const manifest = JSON.parse(await readFile(
     join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
     'utf8',
@@ -167,7 +167,8 @@ test('R1.4 guide sources preserve Markdown newlines', async () => {
   const guideSources = manifest.records
     .filter(({ family, sourcePath }) => family === 'guide' && sourcePath?.includes('-usage.md'))
     .map(({ sourcePath }) => sourcePath);
-  assert.equal(guideSources.length, 53);
+  assert.equal(guideSources.length, 54);
+  assert.ok(guideSources.includes('catalog/guides/icon-button-usage.md'));
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
     assert.doesNotMatch(source, /\\n/u, sourcePath);
@@ -191,11 +192,12 @@ test('R1.4 catalog closure registers and discovers every canonical family', asyn
   }
 });
 
-test('R1.5 React curriculum selects one exact generation example for every family', () => {
+test('registered React curriculum selects one exact generation example for every family', () => {
   const components = baseBundle.artifacts
     .filter(({ kind }) => kind === 'component')
     .sort((left, right) => left.id.localeCompare(right.id));
-  assert.equal(components.length, 53);
+  assert.equal(components.length, 54);
+  assert.ok(components.some(({ id }) => id === 'muxui:component:icon-button'));
   const selected = components.map((component) => {
     const response = getArtifact({
       id: component.id,
@@ -215,7 +217,7 @@ test('R1.5 React curriculum selects one exact generation example for every famil
     assert.equal(example.record.binding.ref, `${component.id}#web.react`, component.id);
     return example.id;
   });
-  assert.equal(new Set(selected).size, 53);
+  assert.equal(new Set(selected).size, components.length);
 });
 
 test('R1.3 catalog closure registers and discovers every canonical family', async () => {

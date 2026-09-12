@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:ea9e4b8a3d28e652db5618e7985b83922591adb41c2d1081eb914b534131656d
+ * @generated-content-sha256: sha256:4ab094bb5efb753f9a4f475edd9d8420ceaf97962d066527e27a4c96c344d8ef
  */
 :root {
   --muxui-component-button-background: #025768;
@@ -2405,7 +2405,8 @@
   user-select: none;
 
   padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-control-padding-inline);
-  min-height: calc(var(--muxui-semantic-control-min-height) + 2px);
+  --muxui-button-min-height: calc(var(--muxui-semantic-control-min-height) + 2px);
+  min-height: var(--muxui-button-min-height);
   width: fit-content;
 }
 
@@ -3218,7 +3219,7 @@
 .muxui-button[data-size='sm'] {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
   padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs);
-  min-height: var(--muxui-reference-dimension-space-m);
+  --muxui-button-min-height: var(--muxui-reference-dimension-space-m);
   gap: var(--muxui-reference-dimension-space-4xs);
   border-radius: var(--muxui-reference-dimension-radius-s);
 }
@@ -3226,13 +3227,13 @@
 .muxui-button[data-size='md'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs);
-  min-height: 2.25rem;
+  --muxui-button-min-height: 2.25rem;
 }
 
 .muxui-button[data-size='lg'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-s);
-  min-height: 2.75rem;
+  --muxui-button-min-height: 2.75rem;
   gap: var(--muxui-reference-dimension-space-2xs);
 }
 
@@ -10905,6 +10906,41 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-text-editor[data-required] .muxui-text-editor__label::after {
   content: ' *';
   color: var(--muxui-semantic-selection-track);
+}
+
+/* Scope square sizing to public IconButton instances, preserving private close controls. */
+.muxui-button.muxui-icon-button[data-muxui-icon-button] {
+  --muxui-icon-button-size: var(--muxui-button-min-height);
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  width: var(--muxui-icon-button-size);
+  height: var(--muxui-icon-button-size);
+  min-height: var(--muxui-icon-button-size);
+  padding: 0;
+}
+
+.muxui-icon-button-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.muxui-icon-button[data-muxui-icon-button][data-size='sm'] .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
+.muxui-icon-button-icon > svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* The existing Button pending state remains visible without continuous animation. */
+.muxui-icon-button[data-muxui-icon-button] .muxui-button-spinner,
+.muxui-icon-button[data-muxui-icon-button] .muxui-button-spinner-arc {
+  animation: none;
 }
 
 .muxui-lightbox-backdrop { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: var(--muxui-reference-dimension-space-s); background-color: var(--muxui-modal-backdrop-bg); transition: opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing); }

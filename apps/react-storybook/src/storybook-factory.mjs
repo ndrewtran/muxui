@@ -560,6 +560,7 @@ function fixtureFieldProps(args, family, defaults) {
 }
 
 const ADAPTERS = {
+  IconButton: (args) => e(MuxUI.IconButton, { ...args, 'aria-label': fallback(args['aria-label'], 'Search') }, e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }, e('circle', { cx: 10.5, cy: 10.5, r: 6.5 }), e('path', { d: 'm16 16 4 4' }))),
   Button: (args) => e(MuxUI.Button, args, fixtureCopy(args, 'Save')),
   Breadcrumbs: (args) => e(MuxUI.Breadcrumbs, {
     ...args,
@@ -1214,6 +1215,7 @@ function UncontrolledHarness({ record, args }) {
 
 const CANONICAL_PART_SELECTORS = Object.freeze({
   Button: { label: ['.muxui-button-content'] },
+  IconButton: { icon: ['.muxui-icon-button-icon'] },
   Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
   Link: { label: ['.muxui-link'] },
   Meter: { label: ['.muxui-value-label'] },
@@ -1580,6 +1582,7 @@ async function toastBrowserProof({ canvasElement }) {
 
 const BROWSER_PROOF_PLANS = {
   Button: activationPlan('Button', '.muxui-button'),
+  IconButton: activationPlan('IconButton', '.muxui-icon-button'),
   Breadcrumbs: activationPlan('Breadcrumbs', '.muxui-breadcrumbs-link', 'navigate'),
   Checkbox: activationPlan('Checkbox', '.muxui-checkbox input', 'change'),
   Disclosure: activationPlan('Disclosure', '.muxui-disclosure-trigger', 'expandedChange'),

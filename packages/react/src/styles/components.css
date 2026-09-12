@@ -114,7 +114,8 @@
   user-select: none;
 
   padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-control-padding-inline);
-  min-height: calc(var(--muxui-semantic-control-min-height) + 2px);
+  --muxui-button-min-height: calc(var(--muxui-semantic-control-min-height) + 2px);
+  min-height: var(--muxui-button-min-height);
   width: fit-content;
 }
 
@@ -927,7 +928,7 @@
 .muxui-button[data-size='sm'] {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
   padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs);
-  min-height: var(--muxui-reference-dimension-space-m);
+  --muxui-button-min-height: var(--muxui-reference-dimension-space-m);
   gap: var(--muxui-reference-dimension-space-4xs);
   border-radius: var(--muxui-reference-dimension-radius-s);
 }
@@ -935,13 +936,13 @@
 .muxui-button[data-size='md'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs);
-  min-height: 2.25rem;
+  --muxui-button-min-height: 2.25rem;
 }
 
 .muxui-button[data-size='lg'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-s);
-  min-height: 2.75rem;
+  --muxui-button-min-height: 2.75rem;
   gap: var(--muxui-reference-dimension-space-2xs);
 }
 

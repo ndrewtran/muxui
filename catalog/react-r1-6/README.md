@@ -1,9 +1,9 @@
 # One-time Tale migration reference
 
-`donor-crosswalk.json` owns the 21 supplemental mappings admitted by Decision
-0013 and the current disposition of all 125 pinned donor styles. Component
+`donor-crosswalk.json` owns the 22 supplemental mappings admitted by Decisions
+0013 and 0014 and the current disposition of all 125 pinned donor styles. Component
 artifacts continue to own public API, anatomy, states, and examples. The current
-React union is the historical 53 families plus these 21 mappings: 72 root
+React union is the historical 53 families plus these 22 mappings: 73 root
 exports and the isolated TextEditor and Markdown subpaths.
 
 The recorded Git blobs and content digests were checked against the clean,
@@ -18,7 +18,12 @@ having no corresponding donor fixture. The three Markdown support styles do
 not create public Blockquote, Code, or CodeBlock exports. The 46 exclusions
 remain outside this accepted React Aria scope.
 
-These records describe the initial transfer. They do not require future Mux
+Decision 0014 adds the public IconButton family using the existing Button
+implementation and a one-time donor reference. Standalone Field is deferred;
+its retained stylesheet support does not create an export. The migration report
+and finite fixture captures remain the original 74-family historical proof.
+
+These records describe the initial transfer and explicit later additions. They do not require future Mux
 components or themes to remain equal to Tale. Current component artifacts own
 Mux API, anatomy, states, and examples; normal generation and tests follow
 those Mux contracts.

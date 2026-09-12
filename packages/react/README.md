@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:781d27ebd36793807bdd43a2c6b4a46433f4bc192f101f9b5b33a431442e300e -->
+<!-- @generated-content-sha256: sha256:2919638c8135f8329132df15088f3895758cce150320dfdbbc130de1eb3fa4b4 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -78,6 +78,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
+| IconButton | experimental | . | .muxui-icon-button | aria-label, aria-labelledby, disabled, pending, variant, tone, size |
 | Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
 | Lightbox | experimental | . | .muxui-lightbox | items, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |

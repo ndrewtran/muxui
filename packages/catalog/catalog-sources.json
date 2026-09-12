@@ -816,6 +816,20 @@
       "family": "guide",
       "path": "catalog/guides/tooltip-usage.json",
       "sourcePath": "catalog/guides/tooltip-usage.md"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/icon-button/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/icon-button/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/icon-button/examples/react/basic.tsx"
+    },
+    {
+      "family": "guide",
+      "path": "catalog/guides/icon-button-usage.json",
+      "sourcePath": "catalog/guides/icon-button-usage.md"
     }
   ]
 }

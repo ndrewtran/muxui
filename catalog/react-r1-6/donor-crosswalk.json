@@ -1,9 +1,9 @@
 {
   "schema": "muxui-react-r1-6-donor-crosswalk-v1",
   "authority": {
-    "decision": "decisions/0013-theme-parity-and-private-authoring.md",
-    "acceptance": "decisions/0013-theme-parity-and-private-authoring-acceptance.md",
-    "scopeVersion": "8.0.0",
+    "decision": "decisions/0014-icon-button-and-field-deferral.md",
+    "acceptance": "decisions/0014-icon-button-and-field-deferral-acceptance.md",
+    "scopeVersion": "9.0.0",
     "tranche": "R1.6"
   },
   "donor": {
@@ -21,9 +21,9 @@
     "policy": "Retain historical membership and evidence unchanged; this current mapping does not certify historical or current parity."
   },
   "current": {
-    "familyCount": 74,
-    "supplementalCount": 21,
-    "rootExportCount": 72,
+    "familyCount": 75,
+    "supplementalCount": 22,
+    "rootExportCount": 73,
     "subpathOnlyCount": 2
   },
   "noApplicableDonor": [
@@ -376,6 +376,55 @@
       ],
       "differenceRecords": [
         "mux-owned-api"
+      ],
+      "proofStatus": "required"
+    },
+    {
+      "family": "IconButton",
+      "slug": "icon-button",
+      "artifact": "catalog/components/icon-button/artifact.json",
+      "binding": "muxui:component:icon-button#web.react",
+      "apiOwner": "catalog/components/icon-button/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/icon-button/artifact.json#/states",
+      "anatomyOwner": "catalog/components/icon-button/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/icon-button/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "IconButton",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/icon-button.mjs",
+      "styleSource": "packages/react/src/supplemental/icon-button.css",
+      "donor": {
+        "backing": "react-aria-components",
+        "inputs": [
+          {
+            "path": "packages/react/src/icon-button/IconButton.styled.tsx",
+            "blob": "b673a18a261dd7cd770f239389e4b44b42d3d722",
+            "sha256": "sha256:2908606d8fd4b80b5f3da0c2613b038c83d6fc185428529f1d3098370cc7f948"
+          },
+          {
+            "path": "packages/react/src/icon-button/index.ts",
+            "blob": "b4fc9311d0f8f51b3c60e3ea8a078f1551f193cc",
+            "sha256": "sha256:072d0bab2b77ee77f0a93e0155f9b58662b2a28ad49ebac27244b0ecc2ea91c2"
+          }
+        ],
+        "style": "packages/styles/src/icon-button.css",
+        "privateStyleSupport": [
+          "packages/styles/src/button.css",
+          "packages/styles/src/_primitives.css"
+        ]
+      },
+      "requiredFixtureFamily": "icon-button",
+      "internalDependencyAllowances": [
+        "react-aria-components"
+      ],
+      "differenceRecords": [
+        "mux-owned-api",
+        "button-aligned-square-sizing",
+        "static-pending-indicator"
       ],
       "proofStatus": "required"
     },
@@ -1590,7 +1639,7 @@
       "blob": "e139bb5056340317646fbd1708a8a5b8c5159045",
       "sha256": "sha256:55e3f583143ad6e461eaafd6a4934b453d1a0e4f39d1482f8fdfdeffefc923f0",
       "disposition": "retained-supported",
-      "reason": "Field.Root and Field.Label wrap the CheckboxGroup and RadioGroup donor compositions.",
+      "reason": "Field.Root and Field.Label wrap the CheckboxGroup and RadioGroup donor compositions. The standalone Field family is explicitly deferred by Decision 0014; this style support does not create a public Field export.",
       "retainedConsumers": [
         "CheckboxGroup",
         "RadioGroup"
@@ -1664,7 +1713,7 @@
       "blob": "f3a4c3f6ae6f0a3a072415858bc13d47cca93539",
       "sha256": "sha256:87a679f205200cc70c096357eb787f9291c1f6fb135d84f679155c20a204915e",
       "disposition": "retained-supported",
-      "reason": "Calendar navigation and NumberField stepper affordances render Tale icon-button classes.",
+      "reason": "Calendar navigation and NumberField stepper affordances render Tale icon-button classes. Decision 0014 also admits the dedicated IconButton family using this one-time style reference.",
       "retainedConsumers": [
         "Calendar",
         "DatePicker",
@@ -1674,7 +1723,8 @@
       ],
       "supplementalConsumers": [
         "AlertDialog",
-        "CommandPalette"
+        "CommandPalette",
+        "IconButton"
       ]
     },
     {

@@ -38,7 +38,7 @@ test('R1.4 is packable but direct publication fails closed', () => {
   assert.match(result.stderr, /MUXUI_REACT_R15_PUBLISH_FORBIDDEN/u);
 });
 
-test('R1.1 packed package exposes a clean MuxUI component surface', async () => {
+test('packed package exposes a clean MuxUI component surface including IconButton', async () => {
   const packageRoot = resolve(import.meta.dirname, '..');
   const packRoot = await mkdtemp(join(tmpdir(), 'muxui-react-pack-'));
   const consumerRoot = await mkdtemp(join(tmpdir(), 'muxui-react-consumer-'));
@@ -54,7 +54,7 @@ test('R1.1 packed package exposes a clean MuxUI component surface', async () => 
     const archive = join(packRoot, archiveName);
     const listing = spawnSync('tar', ['-tzf', archive], { encoding: 'utf8' });
     assert.equal(listing.status, 0, listing.stderr);
-    for (const entry of ['package/generated/button.mjs', 'package/generated/components.mjs', 'package/generated/fields.mjs', 'package/generated/collections.mjs', 'package/generated/overlays.mjs', 'package/generated/index.d.ts', 'package/generated/styles.css', 'package/generated/r1-2-donor-comparison.json', 'package/generated/r1-2-donor-comparison.json.provenance', 'package/generated/r1-3-donor-comparison.json', 'package/generated/r1-3-donor-comparison.json.provenance', 'package/generated/r1-4-donor-comparison.json', 'package/generated/r1-4-donor-comparison.json.provenance', 'package/generated/r1-5-closure.json', 'package/generated/r1-5-closure.json.provenance', 'package/generated/r1-5-donor-comparison.json', 'package/generated/r1-5-donor-comparison.json.provenance', 'package/NOTICE']) {
+    for (const entry of ['package/generated/icon-button.mjs', 'package/generated/icon-button.d.ts', 'package/generated/button.mjs', 'package/generated/components.mjs', 'package/generated/fields.mjs', 'package/generated/collections.mjs', 'package/generated/overlays.mjs', 'package/generated/index.d.ts', 'package/generated/styles.css', 'package/generated/r1-2-donor-comparison.json', 'package/generated/r1-2-donor-comparison.json.provenance', 'package/generated/r1-3-donor-comparison.json', 'package/generated/r1-3-donor-comparison.json.provenance', 'package/generated/r1-4-donor-comparison.json', 'package/generated/r1-4-donor-comparison.json.provenance', 'package/generated/r1-5-closure.json', 'package/generated/r1-5-closure.json.provenance', 'package/generated/r1-5-donor-comparison.json', 'package/generated/r1-5-donor-comparison.json.provenance', 'package/NOTICE']) {
       assert.match(listing.stdout, new RegExp(`^${entry.replaceAll('.', '\\.')}$`, 'mu'));
     }
 
@@ -70,7 +70,7 @@ test('R1.1 packed package exposes a clean MuxUI component surface', async () => 
     const imported = spawnSync(process.execPath, [
       '--input-type=module',
       '-e',
-      "import('@muxui/react').then((entry) => { if (entry.reactCompatibility.support !== 'unproved; R1.5 React exports only') throw new Error('compatibility support'); for (const name of ['Button', 'Breadcrumbs', 'Checkbox', 'Disclosure', 'DisclosureGroup', 'Group', 'Link', 'Meter', 'ProgressBar', 'Separator', 'ToggleButton', 'Autocomplete', 'CheckboxGroup', 'DateField', 'DatePicker', 'DateRangePicker', 'Form', 'NumberField', 'SearchField', 'Switch', 'TextField', 'TimeField', 'Calendar', 'ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatch', 'ColorSwatchPicker', 'ColorWheel', 'ComboBox', 'GridList', 'ListBox', 'Menu', 'RadioGroup', 'RangeCalendar', 'Select', 'Slider', 'Table', 'Tabs', 'TagGroup', 'ToggleButtonGroup', 'TokenField', 'Toolbar', 'Tree', 'Virtualizer', 'DropZone', 'FileTrigger', 'Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'ToastProvider', 'useToast', 'Tooltip']) if (!entry[name]) throw new Error(`${name} export missing`); })",
+      "import('@muxui/react').then((entry) => { if (entry.reactCompatibility.support !== 'unproved; R1.5 React exports only') throw new Error('compatibility support'); for (const name of ['Button', 'IconButton', 'Breadcrumbs', 'Checkbox', 'Disclosure', 'DisclosureGroup', 'Group', 'Link', 'Meter', 'ProgressBar', 'Separator', 'ToggleButton', 'Autocomplete', 'CheckboxGroup', 'DateField', 'DatePicker', 'DateRangePicker', 'Form', 'NumberField', 'SearchField', 'Switch', 'TextField', 'TimeField', 'Calendar', 'ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatch', 'ColorSwatchPicker', 'ColorWheel', 'ComboBox', 'GridList', 'ListBox', 'Menu', 'RadioGroup', 'RangeCalendar', 'Select', 'Slider', 'Table', 'Tabs', 'TagGroup', 'ToggleButtonGroup', 'TokenField', 'Toolbar', 'Tree', 'Virtualizer', 'DropZone', 'FileTrigger', 'Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'ToastProvider', 'useToast', 'Tooltip']) if (!entry[name]) throw new Error(`${name} export missing`); })",
     ], { cwd: consumerRoot, encoding: 'utf8' });
     assert.equal(imported.status, 0, imported.stderr);
     const publicTypes = await readFile(join(consumerPackage, 'generated/index.d.ts'), 'utf8');

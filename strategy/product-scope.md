@@ -1,5 +1,5 @@
 ---
-scopeVersion: 8.0.0
+scopeVersion: 9.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -46,6 +46,10 @@ existing R1 lock; R1.6 adds parity and private authoring proof without a
 blanket all-donor-style standalone API requirement. Historical decisions,
 acceptance records, evidence, and URLs retain their original bytes and
 identities.
+
+Decision 0014 adds IconButton to the committed supplemental React family surface
+and explicitly defers standalone Field. Product Scope `9.0.0` governs this
+addition; the earlier amendment records below remain historical.
 
 ## Scope vocabulary
 
@@ -1877,3 +1881,27 @@ scope. Tailwind remains a consumer build dependency only, never a Mux UI
 runtime, peer, generated-source, or styling engine. Reversal is append-only:
 disable the private capability while retaining canonical source truth and
 historical donor/token records.
+
+## Product Scope 9.0.0: IconButton and Field deferral
+
+[Decision 0014](../decisions/0014-icon-button-and-field-deferral.md) records
+Andrew's explicit request to add IconButton and defer Field. This major scope
+increment adds one committed public family under the existing
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`: `muxui:component:icon-button#web.react`.
+The canonical supplemental mapping now contains 22 families, including the 21
+from Decision 0013, for a total of 75. Historical inventories and evidence remain
+unchanged. The addition ships through the existing `@muxui/react` root export;
+no new package, dependency, platform, stable claim, or publication is authorized.
+
+IconButton composes Mux Button and adds an explicit accessible name, decorative
+icon content, and square sizing. Its artifact owns the API and experimental
+lifecycle. Ordinary post-R1.6 proof covers types, interaction, focus, disabled and
+pending states, sizing, hydration, generation, docs, and packed consumption.
+R1-exit work (#81) must prepare a fresh candidate after the protected merge;
+completed #121 is not reopened. No other release outcome is removed or changed.
+
+Standalone Field is deferred until consumer evidence establishes a generic
+custom-control or multi-control field boundary that existing named fields and
+compound Input cannot provide. No Field artifact or export is introduced.
+Reversal of the committed IconButton addition requires another explicit scope
+change; any future Field admission requires its own bounded decision and proof.
