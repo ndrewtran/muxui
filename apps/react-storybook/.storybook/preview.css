@@ -6,14 +6,14 @@
 }
 
 :root[data-muxui-color-scheme='light'] {
-  background: #fff;
-  color: #171717;
+  background: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-semantic-content-strong);
 }
 
 :root[data-muxui-color-scheme='dark'] {
   color-scheme: dark;
-  background: #000;
-  color: #fff;
+  background: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-semantic-content-strong);
 }
 
 body {
@@ -35,4 +35,115 @@ main.muxui-storybook-surface {
 .muxui-storybook-surface {
   box-sizing: border-box;
   padding: 1.5rem;
+}
+
+/* Docs and syntax are Storybook-owned chrome inside the preview iframe. */
+.sbdocs.sbdocs-wrapper,
+.sbdocs.sbdocs-preview {
+  background: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sbdocs-content > h1,
+.sbdocs-content > h2,
+.sbdocs-content > p,
+.sbdocs-content > .sb-anchor > h3,
+.docblock-argstable th,
+.docblock-argstable td {
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sbdocs-content > p a,
+.sbdocs-content > .sb-anchor > h3 a {
+  color: var(--muxui-semantic-content-link);
+}
+
+.sbdocs-content > p a:hover,
+.sbdocs-content > p a:focus-visible,
+.sbdocs-content > .sb-anchor > h3 a:hover,
+.sbdocs-content > .sb-anchor > h3 a:focus-visible {
+  color: var(--muxui-semantic-content-link-hover);
+}
+
+.sbdocs-content > hr,
+.docblock-argstable th,
+.docblock-argstable td,
+.sbdocs-preview {
+  border-color: var(--muxui-semantic-border-subtle);
+}
+
+.sbdocs-content > p code,
+.docblock-argstable code {
+  background: var(--muxui-semantic-surface-hover);
+  border-color: var(--muxui-semantic-border-subtle);
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sbdocs-preview-actions,
+.docblock-code-toggle {
+  color: var(--muxui-semantic-content-muted);
+}
+
+.sbdocs-preview-actions button:hover,
+.sbdocs-preview-actions button:focus-visible,
+.docblock-code-toggle:hover,
+.docblock-code-toggle:focus-visible {
+  color: var(--muxui-semantic-action-background);
+  background: var(--muxui-semantic-surface-hover);
+}
+
+.sbdocs .prismjs {
+  background: var(--muxui-semantic-surface-strong);
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
+}
+
+.sbdocs .prismjs .token {
+  font-family: var(--muxui-semantic-typography-mono-font-family);
+}
+
+.sbdocs .prismjs .token.comment,
+.sbdocs .prismjs .token.prolog,
+.sbdocs .prismjs .token.doctype,
+.sbdocs .prismjs .token.cdata {
+  color: var(--muxui-semantic-content-muted);
+}
+
+.sbdocs .prismjs .token.string,
+.sbdocs .prismjs .token.url,
+.sbdocs .prismjs .token.symbol,
+.sbdocs .prismjs .token.number,
+.sbdocs .prismjs .token.boolean,
+.sbdocs .prismjs .token.variable,
+.sbdocs .prismjs .token.constant,
+.sbdocs .prismjs .token.inserted,
+.sbdocs .prismjs .token.class-name,
+.sbdocs .prismjs .token.property,
+.sbdocs .prismjs .token.attr-name,
+.sbdocs .prismjs .token.regex,
+.sbdocs .prismjs .token.entity {
+  color: var(--muxui-semantic-content-link);
+}
+
+.sbdocs .prismjs .token.tag,
+.sbdocs .prismjs .token.selector,
+.sbdocs .prismjs .token.atrule,
+.sbdocs .prismjs .token.keyword,
+.sbdocs .prismjs .token.attr-value {
+  color: var(--muxui-semantic-action-background);
+}
+
+.sbdocs .prismjs .token.punctuation,
+.sbdocs .prismjs .token.operator,
+.sbdocs .prismjs .token.function {
+  color: var(--muxui-semantic-content-strong);
+}
+
+.sbdocs .prismjs .token.deleted {
+  color: var(--muxui-semantic-action-danger-background);
+}
+
+.sbdocs .prismjs .token.directive.tag .tag {
+  background: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-strong);
 }

@@ -10,7 +10,9 @@ import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
 import { transformWithOxc } from 'vite';
+import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
+import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
   argTypesForBinding,
   adapterNames,
@@ -32,6 +34,8 @@ import {
   stateCoverageForBinding,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
+import { resolveTokenValue } from '../src/foundations-gallery.mjs';
+import { buildTheme } from '../.storybook/theme.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(appRoot, '../..');
@@ -1123,10 +1127,22 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.equal(packageManifest.devDependencies['playwright-core'], '1.62.1');
 
   assert.match(previewCss, /:root\[data-muxui-color-scheme='dark'\]/);
-  assert.match(previewCss, /background: #000/);
-  assert.match(previewCss, /color: #fff/);
+  assert.match(previewCss, /background: var\(--muxui-semantic-surface-canvas\)/);
+  assert.match(previewCss, /color: var\(--muxui-semantic-content-strong\)/);
   assert.match(previewCss, /font-family: ui-sans-serif, system-ui/);
+  assert.doesNotMatch(previewCss, /#(?:fff|000|171717)/iu);
   assert.match(previewCss, /#storybook-root,\s*main\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
   assert.doesNotMatch(previewCss, /(?:^|\n)\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
   assert.doesNotMatch(previewCss, /Inter/i);
+});
+
+test('manager theme derives every hover surface from the canonical Mux UI token', () => {
+  for (const colorScheme of ['light', 'dark']) {
+    const theme = buildTheme(colorScheme);
+    const hover = resolveTokenValue(defaultTheme, 'semantic.surface.hover', { colorScheme });
+    assert.equal(hover.status, 'resolved', `${colorScheme} hover token`);
+    assert.equal(theme.appHoverBg, hover.value, `${colorScheme} public Storybook hover theme`);
+    assert.equal(convert(theme).background.hoverable, hover.value, `${colorScheme} derived manager hover theme`);
+    assert.notEqual(theme.appHoverBg, colorScheme === 'light' ? '#DBECFF' : '#233952', `${colorScheme} Storybook default hover color`);
+  }
 });
