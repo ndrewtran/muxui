@@ -115,55 +115,14 @@ function validateSourceManifest(manifest) {
   };
 }
 
-function countLexemes(value) {
-  return canonicalJson(value).match(/[\p{L}\p{N}_]+/gu)?.length ?? 0;
-}
-
-function currentPageProfileIdentity(profile) {
-  const legacySlugPrefix = `${['core', 'ui'].join('-')}-`;
-  const legacyDiagnosticPrefix = ['CORE', '_'].join('');
-  const replacePrefix = (value, prefix, replacement) => (
-    value.startsWith(prefix) ? `${replacement}${value.slice(prefix.length)}` : value
-  );
-  return {
-    ...profile,
-    schema: 'muxui-token-section-page-budget-profile-v1',
-    id: replacePrefix(profile.id, legacySlugPrefix, 'muxui-'),
-    lexerVersion: replacePrefix(profile.lexerVersion, legacySlugPrefix, 'muxui-'),
-    oversizeCode: replacePrefix(profile.oversizeCode, legacyDiagnosticPrefix, 'MUXUI_'),
-    cursorProfile: replacePrefix(profile.cursorProfile, legacySlugPrefix, 'muxui-'),
-    envelopeOversizeCode: replacePrefix(profile.envelopeOversizeCode, legacyDiagnosticPrefix, 'MUXUI_'),
-  };
-}
-
-export function assertAcceptedQueryProfile({ manifest, pageBudgetProfile, authorityDecision }) {
+export function assertAcceptedQueryProfile({ manifest, pageBudgetProfile }) {
   validateFamily('token-section-page-budget-profile', pageBudgetProfile);
-  const acceptedPageProfile = authorityDecision.pageProfiles?.find(
-    ({ queryApiVersion }) => queryApiVersion === manifest.queryApiVersion,
-  );
-  const expectedPhase = manifest.queryApiVersion === '2.0.0' ? 'B' : 'A';
-  const phase = authorityDecision.queryCompatibility?.phases?.find(
-    ({ phase: phaseId }) => phaseId === expectedPhase,
-  );
-  if (!acceptedPageProfile || !phase) {
-    throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: accepted Phase ${expectedPhase} profile is missing`);
-  }
-  const { normalizedWorstCaseEnvelopePreimage, ...acceptedPageValues } = acceptedPageProfile;
-  const expectedPageBudgetProfile = currentPageProfileIdentity({
-    schema: 'muxui-token-section-page-budget-profile-v1',
-    ...acceptedPageValues,
-  });
   if (
-    canonicalJson(pageBudgetProfile) !== canonicalJson(expectedPageBudgetProfile)
-    || canonicalDigest(normalizedWorstCaseEnvelopePreimage)
-      !== pageBudgetProfile.normalizedWorstCaseEnvelopeSha256
-    || countLexemes(normalizedWorstCaseEnvelopePreimage)
-      !== pageBudgetProfile.measuredWorstCaseEnvelopeTokens
-    || manifest.queryApiVersion !== phase.selectedCatalogQueryApiVersion
+    pageBudgetProfile.queryApiVersion !== manifest.queryApiVersion
     || canonicalJson(manifest.supportedQueryApiVersions)
-      !== canonicalJson(phase.selectedCatalogSupportedQueryApiVersions)
+      !== canonicalJson(QUERY_API_VERSIONS)
   ) {
-    throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: Phase ${expectedPhase} profile differs from accepted authority`);
+    throw new Error('MUXUI_CATALOG_SOURCE_INVALID: query profile differs from the canonical API contract');
   }
   return pageBudgetProfile;
 }
@@ -262,13 +221,12 @@ export async function compileCatalog({
     resolve(repositoryRoot, manifest.authorityDecisionPath),
     'utf8',
   );
-  const authorityDecision = parseJsonStrict(authorityDecisionBytes);
   const pageBudgetProfileBytes = await readFile(
     resolve(repositoryRoot, manifest.pageBudgetProfilePath),
     'utf8',
   );
   const pageBudgetProfile = parseJsonStrict(pageBudgetProfileBytes);
-  assertAcceptedQueryProfile({ manifest, pageBudgetProfile, authorityDecision });
+  assertAcceptedQueryProfile({ manifest, pageBudgetProfile });
   const platformSafetyContractBytes = await readFile(
     resolve(repositoryRoot, manifest.platformSafetyContractPath),
     'utf8',

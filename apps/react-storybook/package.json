@@ -9,10 +9,7 @@
     "generate": "node src/generate-stories.mjs",
     "generate:check": "node src/generate-stories.mjs --check",
     "check": "pnpm generate:check && node --test test/*.test.mjs",
-    "check:migration": "node --test test/current-finite-render-plan.migration.mjs test/original-finite-render-plan.migration.mjs test/finite-capture-integrity.migration.mjs test/r1-6-motion-preference.migration.mjs test/visual-migration.migration.mjs",
-    "check:a11y": "node --test test/storybook-a11y.test.mjs",
-    "check:visual:migration": "node test/run-visual-migration.mjs",
-    "update:visual:migration": "node test/run-visual-migration.mjs --update"
+    "check:a11y": "node --test test/storybook-a11y.test.mjs"
   },
   "dependencies": {
     "@muxui/react": "workspace:*",
@@ -23,9 +20,7 @@
     "@storybook/addon-docs": "10.5.10",
     "@storybook/react-vite": "10.5.10",
     "axe-core": "4.13.0",
-    "pixelmatch": "7.1.0",
     "playwright-core": "1.62.1",
-    "pngjs": "7.0.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "storybook": "10.5.10",

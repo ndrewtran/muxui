@@ -243,7 +243,7 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
         validatePureLiteral(definition.type, definition.unit, branch.value, `tokens/${tokenId}`, fail); value = branch.value; dependencies.set(tokenId, []);
       }
     }
-    // Donor-compatible dimensions keep static defaults; fluid recipes are opt-in.
+    // Static dimensions remain defaults; fluid recipes are opt-in.
     if (decoration.fluid?.default && !responsive) {
       decoration.relative = { ...decoration.fluid.default };
       decoration.fluid = undefined;

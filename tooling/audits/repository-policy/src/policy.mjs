@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 
-const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', '.pnpm-store']);
+const IGNORED_DIRECTORIES = new Set(['.git', 'node_modules', '.pnpm-store', '.migration-archive']);
 const STALE_IDENTITY_PATTERNS = Object.freeze([
   { label: 'legacy machine identity', pattern: /\bcore-ui\b/iu },
   { label: 'legacy display identity', pattern: /\bCore UI\b/iu },
@@ -14,7 +14,6 @@ const STALE_IDENTITY_PATTERNS = Object.freeze([
   { label: 'legacy data hook', pattern: /data-core-[a-z0-9-]+\b/iu },
   { label: 'legacy ownership wording', pattern: /\bCore-owned\b/iu },
   { label: 'legacy renderer wording', pattern: /\bCore React\b/iu },
-  { label: 'legacy visual wording', pattern: /\b(?:Tale-to-Core|Tale\/Core|Core-only|Core baselines?)\b/iu },
   // These are easy to miss in a broad display/package rename because they are
   // executable tokens or data keys rather than prose identity references.
   { label: 'legacy bare CLI command', pattern: /(?:complete\s+-F\s+\S+\s+|(?:cli|command|executable|bin)\s*[:=]\s*[\s'"`"]?)core\b/iu },

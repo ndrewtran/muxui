@@ -305,53 +305,6 @@ test('E-G0.4 pnpm adapter resolves the selected direct package and drives the CL
   assert.equal(selected.meta.catalogDigest, root.package.catalogDigest);
 });
 
-test('TALE-TOKEN-C current adapter rejects historical package identities', async () => {
-  await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
-  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.tale-phase-b-installed-'));
-  const catalogRoot = join(fixtureRoot, 'catalog');
-  const schemaRoot = join(fixtureRoot, 'schema');
-  const tokensRoot = join(fixtureRoot, 'tokens');
-  const fixtureCatalogRoot = join(
-    repositoryRoot,
-    'tests/fixtures/tale-token-phase-b/installed-catalog',
-  );
-  try {
-    await cp(fixtureCatalogRoot, catalogRoot, { recursive: true });
-    await mkdir(schemaRoot, { recursive: true });
-    await mkdir(tokensRoot, { recursive: true });
-    await writeJson(join(fixtureRoot, 'package.json'), {
-      name: 'core-ui-tale-phase-b-installed-fixture',
-      version: '1.0.0',
-      private: true,
-      packageManager: 'pnpm@10.33.0',
-      dependencies: { '@core-ui/catalog': 'workspace:*' },
-    });
-    await writeFile(
-      join(fixtureRoot, 'pnpm-workspace.yaml'),
-      "packages:\n  - catalog\n  - schema\n  - tokens\n",
-    );
-    await writeJson(join(schemaRoot, 'package.json'), {
-      name: '@core-ui/schema', version: '0.2.0', private: true,
-    });
-    await writeJson(join(tokensRoot, 'package.json'), {
-      name: '@core-ui/tokens', version: '0.1.0', private: true,
-    });
-    const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
-      cwd: fixtureRoot,
-      encoding: 'utf8',
-    });
-    assert.equal(install.status, 0, install.stderr);
-
-    const project = relative(process.cwd(), fixtureRoot).split('\\').join('/');
-    const current = resolvePnpmProjectCatalog({ project });
-    assert.equal(current.type, 'error');
-    assert.equal(current.error.code, 'MUXUI_CATALOG_NOT_DECLARED');
-    assert.doesNotMatch(JSON.stringify(current), /(?:CORE_|@core-ui\/catalog|core:)/u);
-  } finally {
-    await rm(fixtureRoot, { recursive: true, force: true });
-  }
-});
-
 test('E-G0.4 CLI requires exact bindings and filters project-wide discovery', () => {
   const detail = runCli([
     'get', 'muxui:component:button', '--platform', 'web.react', '--json',

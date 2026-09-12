@@ -1,9 +1,9 @@
 // @generated-from: packages/react/src/button.mjs
-// @generated-content-sha256: sha256:51b32acd0d0a4dbdc05b34ffd7cc034b53a44de9820f9455ea1414ce959201c9
+// @generated-content-sha256: sha256:38863aecc95b8be5943387a3dc65d08a36a9a905a6b395fa5c92c1c7e1911cab
 import React from 'react';
 import { Button as AriaButton } from 'react-aria-components';
 
-// The seven donor variants are the canonical axis. `secondary` remains a
+// The seven variants are the canonical axis. `secondary` remains a
 // compatibility spelling for the earlier Mux UI surface and maps to neutral
 // styling in CSS; `tone` likewise remains an orthogonal legacy alias.
 const BUTTON_VARIANTS = new Set(['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary']);

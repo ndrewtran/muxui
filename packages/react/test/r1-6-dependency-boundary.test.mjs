@@ -29,19 +29,11 @@ test('accepted dependency pins retain exact lockfile integrity and unchanged lic
   assert.equal(editorVersions.length, 32);
   assert.equal(reference.records.filter((entry) => entry.package.startsWith('@tiptap/')).length + reference.transitiveEditorRecords.length, editorVersions.length);
   assert.deepEqual([...new Set(editorVersions)], ['3.22.3'], 'the entire internal editor closure uses the accepted version');
-  assert.doesNotMatch(lockfile, /(?:@tale-ui\/|@tailwindcss\/|tailwindcss@)/u, 'Tale and Tailwind remain outside the Mux workspace lockfile');
+  assert.doesNotMatch(lockfile, /(?:@tailwindcss\/|tailwindcss@)/u, 'Tailwind remains outside the Mux workspace lockfile');
 });
 
-test('supplemental dependency allowances and isolated exports agree with the accepted boundary', async () => {
-  const mapping = await readJson('catalog/react-r1-6/donor-crosswalk.json');
+test('supplemental dependencies and isolated exports stay within the accepted boundary', async () => {
   const manifest = await readJson('packages/react/package.json');
-  for (const edge of mapping.dependencyBoundary.allowedNewInternalEdges) {
-    assert.equal(manifest.dependencies[edge.package], edge.version, edge.package);
-    assert.ok(reference.records.some((entry) => entry.package === edge.package && entry.version === edge.version));
-    for (const family of edge.families) {
-      assert.ok(mapping.supplemental.find((entry) => entry.family === family)?.internalDependencyAllowances.includes(edge.package), `${edge.package}: ${family}`);
-    }
-  }
   assert.equal(manifest.private, true);
   assert.ok(manifest.files.includes('licenses'));
   assert.equal(manifest.exports['./text-editor'].default, './generated/text-editor.mjs');
@@ -53,7 +45,7 @@ test('supplemental dependency allowances and isolated exports agree with the acc
   for (const path of ['packages/react/package.json', 'packages/tokens/package.json', 'apps/scale/package.json']) {
     const owner = await readJson(path);
     for (const edge of ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies']) {
-      assert.ok(Object.keys(owner[edge] ?? {}).every((name) => !name.startsWith('@tale-ui/') && !name.startsWith('@tailwindcss/') && name !== 'tailwindcss'), `${path}: ${edge}`);
+      assert.ok(Object.keys(owner[edge] ?? {}).every((name) => !name.startsWith('@tailwindcss/') && name !== 'tailwindcss'), `${path}: ${edge}`);
     }
   }
 });

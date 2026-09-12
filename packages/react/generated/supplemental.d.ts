@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/supplemental/index.d.ts
-// @generated-content-sha256: sha256:9b92a8ceb4bd7ffbaf60f397b47dbb8c6d48c9bd2a8d4c1da35373f38cc193c6
+// @generated-content-sha256: sha256:5f772335263434bb4271f0472a56ed241036fe21cc50b5db2289cb707d7c52e9
 import type * as React from 'react';
 
 export type SupplementalActivation = {
@@ -246,7 +246,7 @@ export declare const ProgressCircle: {
   Value: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
 };
 
-export type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size'> & { size?: 'sm' | 'md'; value: string };
+export type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size'> & { size?: 'sm' | 'md' | 'lg'; value: string };
 export type RadioFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & { disabled?: boolean };
 export type RadioFieldIndicatorProps = PartProps<HTMLSpanElement>;
 export type RadioFieldDotProps = PartProps<HTMLSpanElement>;

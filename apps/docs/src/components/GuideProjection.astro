@@ -1,6 +1,7 @@
 ---
 import { getGuide } from '../lib/catalog.ts';
 import { getCanonicalGuideModule } from './canonical-guides.ts';
+import TokenInlineMarkup from './TokenInlineMarkup.astro';
 
 interface Props {
 	id: string;
@@ -20,5 +21,7 @@ const repositorySourceUrl = `https://github.com/ndrewtran/muxui/blob/main/${guid
 		<strong>{guide.name}</strong>
 		<a href={repositorySourceUrl} target="_blank" rel="noreferrer">{guide.source.content}</a>
 	</div>
-	<CanonicalContent />
+	<TokenInlineMarkup>
+		<CanonicalContent />
+	</TokenInlineMarkup>
 </div>

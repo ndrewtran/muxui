@@ -12,13 +12,13 @@
 .muxui-lightbox-close { top: var(--muxui-semantic-layout-inset-medium); right: var(--muxui-semantic-layout-inset-medium); color: var(--muxui-semantic-content-muted); }
 .muxui-lightbox-trigger { cursor: zoom-in; }
 @media (prefers-reduced-motion: reduce) { .muxui-lightbox-backdrop, .muxui-lightbox-popup { transition: none; } }
-/* Tale's Button content wrapper is display: contents. Keep the shared Mux
+/* The Button content wrapper is display: contents. Keep the shared Mux
    Button behavior while preserving the Lightbox icon-control geometry. */
 .muxui-lightbox-previous .muxui-button-content,
 .muxui-lightbox-next .muxui-button-content,
 .muxui-lightbox-close .muxui-button-content { display: contents; }
 
-/* Tale Dialog.Close is an sm IconButton: equal insets and mode-aware neutral 60. */
+/* Dialog.Close is an sm icon control: equal insets and mode-aware neutral 60. */
 .muxui-lightbox-close.muxui-button {
   aspect-ratio: 1;
   min-height: auto;

@@ -341,7 +341,7 @@ function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) 
   const openRef = React.useRef(controlled ? open === true : defaultOpen);
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(controlled || disabled ? false : defaultOpen);
   const pendingRef = React.useRef(false);
-  // Initial disabled state masks the donor without representing a transition.
+  // Initial disabled state masks the trigger without representing a transition.
   const previousDisabledRef = React.useRef(disabled);
   const suppressStaleOpenRef = React.useRef(false);
   disabledRef.current = disabled;

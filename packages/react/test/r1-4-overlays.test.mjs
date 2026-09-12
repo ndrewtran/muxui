@@ -6,7 +6,6 @@ import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
-import { EXPECTED_R14_COMPONENT_SLUGS, EXPECTED_R14_DONOR_CONTRACT } from '../src/r1-4-donor-contract.mjs';
 
 function installDom(markup = '<div id="root"></div>') {
   const dom = new JSDOM(`<!doctype html>${markup}`, { url: 'http://localhost/' });
@@ -112,8 +111,6 @@ test('R1.4 overlay owners use RAC lifecycle primitives and expose MuxUI names on
   assert.doesNotMatch(index, /export .*Modal\b|UNSTABLE_/u);
   assert.doesNotMatch(types, /react-aria-components|react-stately|UNSTABLE_/u);
   for (const name of ['DropZone', 'FileTrigger', 'Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'ToastProvider', 'useToast', 'Tooltip']) assert.match(index, new RegExp(`\\b${name}\\b`));
-  assert.deepEqual(EXPECTED_R14_COMPONENT_SLUGS, ['drop-zone', 'file-trigger', 'dialog', 'popover', 'preview-trigger', 'toast', 'tooltip']);
-  assert.equal(EXPECTED_R14_DONOR_CONTRACT.dependency, false);
 });
 
 test('R1.4 families are SSR and hydration safe and reject missing accessible content', async () => {
@@ -553,7 +550,7 @@ test('title-less useToast notifications have an accessible RAC name', async () =
     assert.equal(dismiss.querySelector('svg')?.getAttribute('aria-hidden'), 'true');
     assert.equal(dismiss.querySelector('svg')?.getAttribute('focusable'), 'false');
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-    assert.match(styles, /:where\([\s\S]*\.muxui-toast-dismiss[\s\S]*border:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
+    assert.match(styles, /:where\([\s\S]*\.muxui-toast-dismiss[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
     assert.match(styles, /\.muxui-toast-dismiss\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-tight-inset\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
     assert.match(styles, /\.muxui-dialog-close\s*\{[^}]*aspect-ratio:\s*1;[\s\S]*min-height:\s*auto;[\s\S]*padding:\s*var\(--muxui-semantic-layout-tight-inset\);[\s\S]*border-radius:\s*var\(--muxui-semantic-shape-option-radius\)/u);
     assert.match(styles, /\.muxui-toast\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) auto/u);

@@ -86,8 +86,8 @@ exports.
 The canonical component or pattern record remains the renderer-neutral owner.
 The `web.react` binding owns the Core React DOM/API/type/accessibility/styling-
 hook contract. `@core-ui/react` owns the React lifecycle, rendering, CSS,
-effects, SSR, and hydration implementation. The pinned Tale UI styling donor
-and its `adopt`/`adapt`/exception rules remain unchanged.
+effects, SSR, and hydration implementation. The accepted Mux UI styling
+contract and its exception rules remain unchanged.
 
 The 53 outcomes are committed outcomes, not optional inventory candidates.
 For these exact outcomes, `defer`, `exclude`, and `not-a-component` are
@@ -99,7 +99,7 @@ Routine family work inside an accepted tranche lock does not require a new
 component-by-component authority decision. Decision-bearing deltas still
 require acceptance before implementation, including a new public contract or
 hook outside the lock, another React dependency, an upstream identity change,
-a Tale donor exception, a support or compatibility expansion, a lifecycle or
+an accepted styling exception, a support or compatibility expansion, a lifecycle or
 release-boundary change, or a change to any family, Scope ID, or tranche in
 this candidate.
 
@@ -194,7 +194,7 @@ the exact previously committed ID is retained.
 
 Each row is `committed`; its package/platform is `@core-ui/react` / `web.react`;
 its activation requires this authority, the exact Stage 1/R1.0 snapshot,
-accepted tranche lock, Core-owned contract, applicable Tale donor disposition,
+accepted tranche lock, Core-owned contract, applicable styling disposition,
 risk-selected deterministic and manual proof, post-proof human evidence
 acceptance, and the unchanged React prerelease release boundary. No row commits
 a React Aria public name, raw helper/type export, secondary renderer,
@@ -234,7 +234,7 @@ The immutable tranche family sets are:
 - R1.4, 7 families: `DropZone`, `FileTrigger`, `Modal`/Core `Dialog`,
   `Popover`, `PreviewTrigger`, `Toast`, `Tooltip`.
 - R1.5 adds no family implementation. It closes the exact all-53 public export
-  manifest, Core contract and lifecycle ledger, styling-donor disposition,
+  manifest, Core contract and lifecycle ledger, styling disposition,
   evidence and support matrix, packed prerelease graph, generated guidance,
   and React `0.1` release candidate.
 
@@ -270,7 +270,7 @@ Architecture must record only these additional durable rules:
    upstream exports, names, parts, helpers, hooks, utilities, and types are not
    public merely because the dependency exports them.
 3. Existing canonical component/pattern, `web.react` binding, React source,
-   example, Tale styling donor, evidence, and release owners do not change.
+   example, styling, evidence, and release owners do not change.
 4. Accepted R1.1-R1.4 locks are independently executable after the common R1.0
    baseline; R1.5 is a breadth/release closure, not a fifth implementation
    inventory.
@@ -289,7 +289,7 @@ explicit current applicability binding.
 Before implementation, rejection or reversal is append-only supersession and
 requires no runtime migration. After implementation begins, changing the
 53-family commitment, family boundary, ID mapping, tranche allocation, React
-Aria identity, public ownership model, package graph, Tale donor rule, support
+Aria identity, public ownership model, package graph, styling rule, support
 boundary, or release boundary requires a new accepted decision, Product Scope
 major amendment when applicable, affected lock reconciliation, and bounded
 reproof. Removal of a committed family is a major scope change.
@@ -315,7 +315,7 @@ tooling product, Scale port, new theme system, or production change.
 
 It does not rewrite historical evidence or reuse historical Scope IDs for new
 outcomes. It does not allow a count-only completion claim. It does not permit
-an upstream or Tale contract to replace a Core-owned public contract.
+an upstream contract to replace a Core-owned public contract.
 
 ## Acceptance effect
 

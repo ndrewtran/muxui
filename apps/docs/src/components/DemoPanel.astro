@@ -1,6 +1,6 @@
 ---
 import { Code } from 'astro:components';
-import { muxCodeTheme } from './code-theme.ts';
+import { muxCodeTheme, muxTokenPathTransformer } from './code-theme.ts';
 
 interface Props {
 	id: string;
@@ -12,14 +12,27 @@ interface Props {
 const { id, source, sourceCode, label = 'React example' } = Astro.props;
 const sourceId = `${id}-source`;
 const codeId = `${id}-code`;
+const componentSlug = source.match(/^catalog\/components\/([^/]+)\//u)?.[1] ?? '';
+const wideFrameComponents = new Set([
+	'calendar', 'color-area', 'color-picker', 'color-slider', 'color-swatch-picker', 'color-wheel',
+	'command-palette', 'dialog', 'lightbox', 'range-calendar', 'resizable', 'sidebar',
+	'table', 'tabs', 'text-editor', 'toolbar', 'tree', 'virtualizer',
+]);
+const collectionFrameComponents = new Set(['grid-list', 'list-box', 'menu']);
+const frameClasses = ['demo-frame'];
+if (source.endsWith('/sizing.tsx') || wideFrameComponents.has(componentSlug)) frameClasses.push('demo-frame--wide');
+if (collectionFrameComponents.has(componentSlug)) frameClasses.push('demo-frame--collection');
+const frameClass = frameClasses.join(' ');
 // Astro's Shiki helper removes one terminal newline, so preserve source text by adding it back at render time.
 const highlightedCode = sourceCode.endsWith('\n') ? `${sourceCode}\n` : sourceCode;
 
 ---
 
 <div class="demo-panel">
-	<div class="demo-live" aria-label={`${label} live demo`}>
-		<slot name="live" />
+	<div class="demo-live not-content" aria-label={`${label} live demo`}>
+		<div class={frameClass}>
+			<slot name="live" />
+		</div>
 	</div>
 	<div class="demo-source" id={sourceId}>
 		<div class="demo-source-header">
@@ -27,7 +40,7 @@ const highlightedCode = sourceCode.endsWith('\n') ? `${sourceCode}\n` : sourceCo
 			<button type="button" data-copy-code={codeId} data-pagefind-ignore>Copy</button>
 		</div>
 		<div class="demo-code" id={codeId}>
-			<Code code={highlightedCode} lang="tsx" theme={muxCodeTheme} wrap={false} />
+			<Code code={highlightedCode} lang="tsx" theme={muxCodeTheme} transformers={[muxTokenPathTransformer]} wrap={false} />
 		</div>
 		<p class="demo-source-path">{source}</p>
 	</div>

@@ -1,13 +1,73 @@
 /* @generated-from: packages/react/src/supplemental/styles.css
- * @generated-content-sha256: sha256:521eacf538364dea91dbe16a58260448c61f2aff0ac542af522270111e2ca0c8
+ * @generated-content-sha256: sha256:3f11c8b0410ab21b4960c4091d9908fde64e419484f02bc1b64854ad50f6c49b
  */
 /* Mux UI supplemental React Aria parity styles. Values are expressed through the Mux token graph. */
+
+/* Compound-field roots carry size to their interactive part. The native
+   Input leaf keeps its HTML `size` attribute independent from this visual
+   control size. */
+:where(
+  .muxui-input__root,
+  .muxui-text-area,
+  .muxui-checkbox-field,
+  .muxui-radio-field,
+  .muxui-switch-field,
+  .muxui-payment-input,
+  .muxui-multi-select,
+  .muxui-tag-select
+) { --muxui-control-target-size: var(--muxui-control-size-md); }
+
+:where(
+  .muxui-input__root[data-size='sm'],
+  .muxui-text-area[data-size='sm'],
+  .muxui-checkbox-field[data-size='sm'],
+  .muxui-radio-field[data-size='sm'],
+  .muxui-switch-field[data-size='sm'],
+  .muxui-payment-input[data-size='sm'],
+  .muxui-multi-select[data-size='sm'],
+  .muxui-tag-select[data-size='sm']
+) { --muxui-control-target-size: var(--muxui-control-size-sm); }
+
+:where(
+  .muxui-input__root[data-size='lg'],
+  .muxui-text-area[data-size='lg'],
+  .muxui-checkbox-field[data-size='lg'],
+  .muxui-radio-field[data-size='lg'],
+  .muxui-switch-field[data-size='lg'],
+  .muxui-payment-input[data-size='lg'],
+  .muxui-multi-select[data-size='lg'],
+  .muxui-tag-select[data-size='lg']
+) { --muxui-control-target-size: var(--muxui-control-size-lg); }
+
+.muxui-input__root .muxui-input,
+.muxui-text-area .muxui-text-area__textarea,
+.muxui-payment-input__input {
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+}
 
 /* alert-dialog */
 .muxui-icon-button.muxui-button {
   aspect-ratio: 1;
-  min-height: auto;
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding: 0;
   font-size: var(--muxui-semantic-typography-label-m-font-size);
+}
+
+.muxui-icon-button.muxui-button:is(.muxui-alert-dialog__close, .muxui-command-palette__close) {
+  inline-size: var(--muxui-control-size-sm);
+  min-block-size: var(--muxui-control-size-sm);
+}
+
+.muxui-icon-button.muxui-button[data-size='sm'] {
+  inline-size: var(--muxui-control-size-sm);
+  min-block-size: var(--muxui-control-size-sm);
+}
+
+.muxui-icon-button.muxui-button[data-size='lg'] {
+  inline-size: var(--muxui-control-size-lg);
+  min-block-size: var(--muxui-control-size-lg);
 }
 
 .muxui-icon-button.muxui-button[data-size='sm'] {
@@ -296,6 +356,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   cursor: pointer;
   outline: none;
   user-select: none;
@@ -407,12 +468,24 @@
   --offset-orthogonal: calc(var(--size) * 0.65);
   --offset-diagonal: calc(var(--size) * 0.45);
 
-  display: inline-block;
-  width: var(--size);
-  height: var(--size);
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
   color: var(--muxui-semantic-color-neutral-90);
   cursor: pointer;
   border-radius: 999px;
+  transition: all var(--muxui-semantic-motion-mode-toggle-duration);
+}
+
+.muxui-color-mode-toggle::before {
+  content: '';
+  position: absolute;
+  inline-size: var(--size);
+  block-size: var(--size);
+  border-radius: inherit;
+  pointer-events: none;
   transform: scale(0.8);
   transition: all var(--muxui-semantic-motion-mode-toggle-duration);
 
@@ -430,7 +503,7 @@
 
 
 
-.muxui-color-mode-toggle[data-selected] {
+.muxui-color-mode-toggle[data-selected]::before {
   box-shadow: inset calc(var(--size) * 0.33) calc(var(--size) * -0.25) 0;
   transform: scale(1);
 }
@@ -456,9 +529,27 @@
 }
 
 .muxui-command-palette__trigger {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-control-padding-inline);
+  border: 0;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+  border-radius: var(--muxui-semantic-control-radius);
+}
+
+.muxui-command-palette__trigger[data-size='sm'],
+.muxui-command-palette__input[data-size='sm'] {
+  --muxui-control-target-size: var(--muxui-control-size-sm);
+}
+
+.muxui-command-palette__trigger[data-size='lg'],
+.muxui-command-palette__input[data-size='lg'] {
+  --muxui-control-target-size: var(--muxui-control-size-lg);
 }
 
 
@@ -651,8 +742,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1rem;
-  height: 1rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
   padding: 0;
   border: none;
   border-radius: var(--muxui-semantic-shape-pill-radius);
@@ -683,6 +776,22 @@
   overflow-y: auto;
 }
 
+.muxui-command-palette__listbox[data-size='sm'],
+.muxui-multi-select__popup[data-size='sm'],
+.muxui-multi-select__listbox[data-size='sm'],
+.muxui-tag-select__popup[data-size='sm'],
+.muxui-tag-select__listbox[data-size='sm'] {
+  --muxui-control-target-size: var(--muxui-control-size-sm);
+}
+
+.muxui-command-palette__listbox[data-size='lg'],
+.muxui-multi-select__popup[data-size='lg'],
+.muxui-multi-select__listbox[data-size='lg'],
+.muxui-tag-select__popup[data-size='lg'],
+.muxui-tag-select__listbox[data-size='lg'] {
+  --muxui-control-target-size: var(--muxui-control-size-lg);
+}
+
 .muxui-command-palette__listbox--lg {
   --muxui-item-padding-block: var(--muxui-semantic-layout-inset-tiny);
   --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-medium);
@@ -700,7 +809,7 @@
 }
 
 .muxui-command-palette__item {
-  min-height: 2.75rem;
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   text-decoration: none;
   margin-block-end: var(--muxui-semantic-layout-tight-gap);
 }
@@ -954,9 +1063,12 @@
 
 
 .muxui-header-nav__nav-btn {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
-  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  min-block-size: var(--muxui-control-size-md);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-label-weight);
@@ -998,8 +1110,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
@@ -1049,8 +1161,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  inline-size: var(--muxui-control-size-sm);
+  block-size: var(--muxui-control-size-sm);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
@@ -1112,32 +1224,35 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  min-height: var(--muxui-field-min-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-field-padding-inline);
-  border: 1px solid var(--muxui-field-border-color);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-field-padding-inline);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background-color: var(--muxui-field-bg);
   box-sizing: border-box;
   cursor: text;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 
 .muxui-input-tags__group:not([data-focus-within], [data-disabled], [data-invalid]):hover {
-  border-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-color-neutral-40);
 }
 
 
 .muxui-input-tags__group[data-focus-within] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 
 .muxui-input-tags__group[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-input-tags__group[data-invalid][data-focus-within] {
@@ -1172,26 +1287,30 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
-  border: 1px solid var(--muxui-semantic-color-neutral-26);
+  min-block-size: 1.5rem;
+  box-sizing: border-box;
+  padding-block: 0;
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-color-neutral-26);
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background-color: var(--muxui-semantic-color-neutral-14);
   color: var(--muxui-semantic-color-neutral-80);
   font-family: var(--muxui-field-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   line-height: 1;
-  outline: none;
   cursor: default;
   user-select: none;
   white-space: nowrap;
   transition:
     background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    outline-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-input-tags__tag[data-hovered]:not([data-disabled]) {
   background-color: var(--muxui-semantic-color-neutral-18);
-  border-color: var(--muxui-semantic-color-neutral-30);
+  outline-color: var(--muxui-semantic-color-neutral-30);
 }
 
 .muxui-input-tags__tag[data-focus-visible] {
@@ -1211,8 +1330,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
   padding: 0;
   border: none;
   border-radius: var(--muxui-semantic-shape-pill-radius);
@@ -1236,7 +1357,10 @@
 .muxui-input-tags__input {
   flex: 1;
   min-width: 5rem;
-  height: 100%;
+  min-block-size: 0;
+  box-sizing: border-box;
+  height: auto;
+  padding: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -1266,14 +1390,15 @@
 
 .muxui-input-tags--below .muxui-input-tags__group {
   flex-wrap: nowrap;
-  min-height: var(--muxui-field-min-height);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
 
 
 .muxui-input-tags--sm .muxui-input-tags__group {
-  min-height: var(--muxui-semantic-layout-content-row-min-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  min-block-size: var(--muxui-control-size-sm);
+  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-input-tags--sm .muxui-input-tags__input {
@@ -1282,12 +1407,18 @@
 
 .muxui-input-tags--sm .muxui-input-tags__tag {
   font-size: var(--muxui-semantic-typography-tiny-size, var(--muxui-semantic-typography-small-size));
-  padding: 0.0625rem var(--muxui-semantic-layout-inset-tiny);
+  padding-block: 0;
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-input-tags--lg .muxui-input-tags__group {
-  min-height: 2.75rem;
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
+  min-block-size: var(--muxui-control-size-lg);
+  font-size: var(--muxui-semantic-typography-text-l-font-size);
+  /* The large text input owns a fractional 1.5lh line box. Keep the group
+     target exact and center that line box rather than accumulating subpixels
+     in vertical padding. It still grows naturally when content wraps. */
+  padding-block: 0;
+  padding-inline: var(--muxui-semantic-layout-inset-medium);
 }
 
 .muxui-input-tags--lg .muxui-input-tags__input {
@@ -1313,7 +1444,7 @@
   width: 100%;
   line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 40%, var(--muxui-semantic-color-neutral-5) 60%);
@@ -1322,20 +1453,20 @@
 
 
 .muxui-input:hover:not(:focus, [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-color-neutral-40);
 }
 
 
 .muxui-input:focus,
 .muxui-input[data-focused] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 
 
 .muxui-input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-input[data-invalid]:focus,
@@ -1355,14 +1486,16 @@
 
 
 .muxui-input--sm {
-  min-height: var(--muxui-semantic-layout-content-row-min-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  min-block-size: var(--muxui-control-size-sm);
+  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1.5em) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
   font-size: var(--muxui-semantic-typography-small-size);
 }
 
 .muxui-input--lg {
-  min-height: 2.75rem;
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
+  min-block-size: var(--muxui-control-size-lg);
+  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1.5em) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-medium);
   font-size: var(--muxui-semantic-typography-text-l-font-size);
 }
 
@@ -1379,34 +1512,35 @@
 .muxui-multi-select__trigger {
   display: block;
   width: 100%;
-  border: 1px solid var(--muxui-field-border-color);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background-color: var(--muxui-field-bg);
   text-align: left;
   cursor: pointer;
   box-sizing: border-box;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
-  outline: none;
 }
 
 .muxui-multi-select__trigger:hover:not([data-disabled]) {
-  border-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-color-neutral-40);
 }
 
 .muxui-multi-select__trigger[data-focus-visible] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 .muxui-multi-select__trigger[data-pressed] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 .muxui-multi-select__trigger--invalid {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-multi-select__trigger--invalid[data-focus-visible],
@@ -1425,20 +1559,23 @@
   display: flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  min-height: var(--muxui-field-min-height);
-  padding: var(--muxui-field-padding-block) var(--muxui-field-padding-inline);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-field-padding-inline);
   box-sizing: border-box;
 }
 
 .muxui-multi-select__trigger-inner--sm {
-  min-height: var(--muxui-semantic-layout-content-row-min-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  min-block-size: var(--muxui-control-size-sm);
+  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
   font-size: var(--muxui-semantic-typography-small-size);
 }
 
 .muxui-multi-select__trigger-inner--lg {
-  min-height: 2.75rem;
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
+  min-block-size: var(--muxui-control-size-lg);
+  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-medium);
   font-size: var(--muxui-semantic-typography-body-size);
 }
 
@@ -1450,7 +1587,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--muxui-field-font-family);
-  font-size: var(--muxui-field-font-size);
+  font-size: inherit;
   line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
@@ -1540,13 +1677,15 @@
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
   padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-medium);
-  border: 1px solid var(--muxui-field-border-color);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background-color: var(--muxui-field-bg);
 }
 
 .muxui-multi-select__search[data-focused] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
@@ -1558,6 +1697,8 @@
 
 .muxui-multi-select__search-input {
   flex: 1;
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
   background: transparent;
   border: none;
   outline: none;
@@ -1666,6 +1807,7 @@
   display: inline-flex;
   align-items: center;
   padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  min-block-size: var(--muxui-control-size-md);
   border: 1px solid var(--muxui-semantic-color-neutral-26);
   border-radius: var(--muxui-item-radius);
   background-color: transparent;
@@ -1777,17 +1919,17 @@
   letter-spacing: 0.08em;
   line-height: var(--muxui-semantic-typography-text-line-height);
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-payment-input__input:hover:not(:focus, [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-color-neutral-40);
 }
 
 .muxui-payment-input__input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-payment-input__input[data-invalid]:focus,
@@ -1947,6 +2089,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   cursor: pointer;
   outline: none;
   user-select: none;
@@ -2083,8 +2226,12 @@
 }
 
 .muxui-sidebar__search-input {
+  box-sizing: border-box;
   width: 100%;
-  padding: var(--muxui-semantic-layout-navigation-inset-block) var(--muxui-semantic-layout-navigation-inset-inline) var(--muxui-semantic-layout-navigation-inset-block) var(--muxui-semantic-layout-navigation-search-inset);
+  min-block-size: var(--muxui-control-size-md);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-navigation-inset-inline);
+  padding-inline-start: var(--muxui-semantic-layout-navigation-search-inset);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-88) inset;
@@ -2138,6 +2285,7 @@
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  min-block-size: var(--muxui-control-size-md);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-label-weight);
@@ -2251,8 +2399,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   color: var(--muxui-semantic-color-neutral-40);
   text-decoration: none;
@@ -2360,8 +2508,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   position: absolute;
   top: 0.5rem;
   right: 0.5rem;
-  width: 1.75rem;
-  height: 1.75rem;
+  box-sizing: border-box;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
+  min-inline-size: var(--muxui-control-size-md);
+  min-block-size: var(--muxui-control-size-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2419,14 +2570,21 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-sidebar__feature-card-dismiss {
   margin-top: var(--muxui-semantic-layout-action-gap);
-  padding: var(--muxui-semantic-layout-utility-inset) var(--muxui-semantic-layout-navigation-inset-inline);
+  box-sizing: border-box;
+  min-block-size: var(--muxui-control-size-md);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-navigation-inset-inline);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
-  border: 1px solid var(--muxui-semantic-color-neutral-88);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-color-neutral-88);
+  outline-offset: -1px;
   background: transparent;
   font-size: var(--muxui-semantic-typography-tiny-size);
   color: var(--muxui-semantic-color-neutral-20);
   cursor: pointer;
-  transition: background var(--muxui-semantic-motion-quick-transition-duration);
+  transition:
+    background var(--muxui-semantic-motion-quick-transition-duration),
+    outline-color var(--muxui-semantic-motion-quick-transition-duration);
 }
 
 .muxui-sidebar__feature-card-dismiss:hover {
@@ -2454,8 +2612,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
@@ -2506,8 +2664,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  inline-size: var(--muxui-control-size-sm);
+  block-size: var(--muxui-control-size-sm);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
@@ -2639,7 +2797,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  min-height: var(--muxui-switch-field-track-height);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   padding-inline-start: calc(var(--muxui-switch-field-track-width) + var(--muxui-semantic-layout-inset-medium));
   color: var(--muxui-semantic-color-neutral-80);
   font-family: var(--muxui-semantic-typography-body-font);
@@ -2760,30 +2918,32 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   align-items: center;
   gap: var(--muxui-semantic-layout-control-gap);
   width: 100%;
-  min-height: var(--muxui-field-min-height);
-  padding: var(--muxui-field-padding-block) var(--muxui-field-padding-inline);
-  border: 1px solid var(--muxui-field-border-color);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-field-padding-inline);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background-color: var(--muxui-field-bg);
   box-sizing: border-box;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   cursor: text;
 }
 
 .muxui-tag-select__group[data-focus-within] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
-  outline: none;
 }
 
 .muxui-tag-select__group--invalid {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-tag-select__group--invalid[data-focus-within] {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
 }
 
@@ -2796,14 +2956,16 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 
 .muxui-tag-select__group--sm {
-  min-height: var(--muxui-semantic-layout-content-row-min-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  min-block-size: var(--muxui-control-size-sm);
+  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
   gap: var(--muxui-semantic-layout-tight-gap);
 }
 
 .muxui-tag-select__group--lg {
-  min-height: 2.75rem;
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-field-padding-inline);
+  min-block-size: var(--muxui-control-size-lg);
+  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1lh) / 2));
+  padding-inline: var(--muxui-field-padding-inline);
 }
 
 
@@ -2811,6 +2973,9 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-tag-select__input {
   flex: 1;
   min-width: 5rem;
+  min-block-size: 0;
+  box-sizing: border-box;
+  padding: 0;
   background: transparent;
   border: none;
   outline: none;
@@ -2844,7 +3009,9 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
   padding: 0 0 0 var(--muxui-semantic-layout-inset-tiny);
-  border: 1px solid var(--muxui-semantic-color-neutral-26);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-color-neutral-26);
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-option-radius);
   background-color: var(--muxui-semantic-color-neutral-14);
   color: var(--muxui-semantic-color-neutral-80);
@@ -2880,6 +3047,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   flex-shrink: 0;
   width: 1.5rem;
   height: 1.5rem;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
   padding: 0;
   border: none;
   border-radius: var(--muxui-semantic-shape-indicator-radius);
@@ -3015,17 +3184,18 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   width: 100%;
   min-height: 5rem;
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-medium);
-  border: 1px solid var(--muxui-semantic-color-neutral-26);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-color-neutral-26);
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-option-radius);
   background-color: transparent;
   color: var(--muxui-semantic-color-neutral-90);
   font-family: var(--muxui-semantic-typography-body-font);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
-  outline: none;
   resize: vertical;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
@@ -3036,16 +3206,16 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-text-area__textarea:focus,
 .muxui-text-area__textarea[data-focused] {
-  border-color: var(--muxui-focus-ring-color);
+  outline-color: var(--muxui-focus-ring-color);
   box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
 }
 
 .muxui-text-area__textarea:hover:not(:focus, [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-color-neutral-40);
 }
 
 .muxui-text-area__textarea[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-text-area__textarea[data-invalid]:focus,

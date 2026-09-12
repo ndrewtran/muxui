@@ -36,19 +36,3 @@ main.muxui-storybook-surface {
   box-sizing: border-box;
   padding: 1.5rem;
 }
-
-/* The migration comparator captures a single case at a time. Remove the
-   Storybook chrome and scrollbar from that private capture host so portal
-   geometry uses the same 1000px viewport as the pinned donor. */
-.muxui-storybook-surface[data-muxui-migration-host='true'] {
-  padding: 0;
-  overflow: hidden;
-}
-
-body[data-muxui-migration-host='true'],
-body[data-muxui-migration-host='true'] #storybook-root,
-body[data-muxui-migration-host='true'] .sb-main-padded,
-body[data-muxui-migration-host='true'] .muxui-storybook-surface {
-  margin: 0 !important;
-  padding: 0 !important;
-}

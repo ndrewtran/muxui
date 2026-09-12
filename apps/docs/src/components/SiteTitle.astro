@@ -6,22 +6,6 @@ const { siteTitleHref } = Astro.locals.starlightRoute;
 	<span class="mux-name">Mux UI</span>
 </a>
 
-<script is:inline>
-	(() => {
-		const syncMuxTheme = () => {
-			document.documentElement.setAttribute(
-				'data-muxui-color-scheme',
-				document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-			);
-		};
-		syncMuxTheme();
-		new MutationObserver(syncMuxTheme).observe(document.documentElement, {
-			attributes: true,
-			attributeFilter: ['data-theme'],
-		});
-	})();
-</script>
-
 <style>
 	.mux-site-title {
 		display: inline-flex;

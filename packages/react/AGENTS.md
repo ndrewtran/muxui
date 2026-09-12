@@ -1,20 +1,20 @@
 # React package navigation
 
 `src/` owns the standalone React lifecycle, host-language refinements, and
-Mux UI-owned CSS implementation. It does not import `@muxui/web` or Tale UI at
-runtime or build time. The pinned Tale styling snapshot is a one-time donor:
-each admitted component uses its accepted donor disposition and donor-to-Mux UI
-token/style crosswalk rather than copying Tale selectors, metadata, or package
-identities. `test/` proves SSR/hydration, effect cleanup, typed host ergonomics,
-CSS and donor-visual conformance, and applicable binding behavior. No
+Mux UI-owned CSS implementation. It does not import `@muxui/web` or external
+design-system packages at runtime or build time. Each admitted component owns
+its Mux UI selectors, metadata, and token/style behavior. `test/` proves
+SSR/hydration, effect cleanup, typed host ergonomics, CSS conformance, and
+applicable binding behavior. No
 component-support claim is permitted before the owning R1 tranche evidence and
 release boundary.
 
-An applicable donor is routinely exportable only as `adopt` or `adapt`.
-`defer`/`reject` remains unexported until its separately accepted exception is
-reconciled; `no-applicable-donor` requires actual donor absence.
+Every component change must retain its Mux UI-owned selectors, metadata,
+SSR/hydration behavior, accessibility, CSS, lifecycle, and release checks.
+Keep unsupported capabilities explicit and covered by the current contract
+tests.
 
-Copied or adapted substantial donor portions must retain the R1.0-owned Tale
+Substantial third-party implementation portions must retain the applicable
 license/notice disposition in the exact package and release artifacts.
 
 Run `pnpm --filter @muxui/react check`, then the root affected checks.

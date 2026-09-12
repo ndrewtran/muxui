@@ -50,7 +50,7 @@ component, or new decorative affordance is authorized.
 This record binds the task approval to the exact dependency tuple, internal
 replaceable boundary, Core-owned accessible labels and decorative semantics,
 and the later manifest/lockfile, SSR/hydration, tree-shaking, packed-consumer,
-Lucide ISC/Feather-derived MIT notices, and visual-migration invalidation proof
+Lucide ISC/Feather-derived MIT notices, and visual-comparison invalidation proof
 described by the decision.
 The affected existing Scope IDs remain committed; no new Scope ID or
 commitment transition is authorized.

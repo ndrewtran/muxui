@@ -22,6 +22,7 @@ try {
 	runNode('Catalog docs contract', [resolve(import.meta.dirname, 'check-docs.mjs')]);
 	runNode('Astro build', [astroCli, 'build', '--outDir', outputDirectory]);
 	runNode('Rendered source contract', [resolve(import.meta.dirname, 'check-rendered-source.mjs'), outputDirectory]);
+	runNode('Token path contract', ['--experimental-strip-types', resolve(import.meta.dirname, 'check-token-path.mjs'), outputDirectory]);
 } catch (error) {
 	console.error(error instanceof Error ? error.message : error);
 	process.exitCode = 1;

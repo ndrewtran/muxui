@@ -58,7 +58,13 @@
   --muxui-focus-ring-inner: var(--muxui-semantic-focus-inner);
   --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
   --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-focus-neutral-glow) 30%, transparent);
-  --muxui-field-min-height: var(--muxui-semantic-control-min-height);
+  --muxui-control-size-sm: var(--muxui-semantic-control-size-sm);
+  /* Keep the historical min-height hook in the md path so existing theme
+     overrides continue to control the default target. The canonical token
+     aliases min-height back to size-md for new themes. */
+  --muxui-control-size-md: var(--muxui-semantic-control-min-height);
+  --muxui-control-size-lg: var(--muxui-semantic-control-size-lg);
+  --muxui-field-min-height: var(--muxui-control-size-md);
   --muxui-field-padding-block: var(--muxui-semantic-layout-inset-tiny);
   --muxui-field-padding-inline: var(--muxui-semantic-layout-inset-small);
   --muxui-field-border-color: var(--muxui-semantic-field-border);
@@ -74,7 +80,7 @@
   --muxui-field-label-font-size: var(--muxui-semantic-typography-label-s-font-size);
   --muxui-field-label-font-weight: var(--muxui-semantic-typography-label-font-weight);
   --muxui-field-description-color: var(--muxui-semantic-field-description);
-  /* The donor red-60 role is mode-aware in the canonical semantic mapping. */
+  /* The red-60 role is mode-aware in the canonical semantic mapping. */
   --muxui-field-error-color: var(--muxui-semantic-feedback-invalid);
   --muxui-popup-bg: var(--muxui-semantic-surface-raised);
   --muxui-popup-border-color: var(--muxui-semantic-border-popup);
@@ -116,7 +122,7 @@
   --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
 }
 
-/* Mux UI's low-specificity foundation defaults mirror the donor typography
+/* Mux UI's low-specificity foundation defaults keep typography aligned with
    roles while remaining easy for a consumer stylesheet to override. */
 :where(html) {
   font-size: 100%;
@@ -292,7 +298,7 @@
   font-family: var(--muxui-semantic-typography-expressive-font-family);
 }
 
-/* Bare RAC buttons need the same chrome reset as Tale's Button base. Component
+/* Bare RAC buttons need the same chrome reset as the Mux UI Button base. Component
    rules below provide their own geometry, fills, and state treatments. */
 :where(
   .muxui-number-stepper,
@@ -315,7 +321,9 @@
   justify-content: center;
   gap: var(--muxui-semantic-layout-control-gap);
   padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
-  border: 1px solid transparent;
+  border: 0;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-control-radius);
   background: transparent;
   color: inherit;
@@ -323,11 +331,10 @@
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
-  outline: none;
   appearance: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   white-space: nowrap;
@@ -342,16 +349,100 @@
 .muxui-payment-input__input,
 .muxui-command-palette__input {
   box-sizing: border-box;
-  min-height: var(--muxui-field-min-height);
-  padding: var(--muxui-field-padding-block) var(--muxui-field-padding-inline);
-  border: 1px solid var(--muxui-field-border-color);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+  padding-inline: var(--muxui-field-padding-inline);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background-color: var(--muxui-field-bg);
   color: var(--muxui-field-color);
   font-family: var(--muxui-field-font-family);
   font-size: var(--muxui-field-font-size);
-  outline: none;
 }
+
+/* Text-bearing controls use a minimum target. Their vertical padding is
+   derived from the active target and line-height so normal text lands exactly
+   on sm/md/lg while larger text can grow without clipping. */
+:where(
+  .muxui-select,
+  .muxui-text-field,
+  .muxui-search-field,
+  .muxui-number-field,
+  .muxui-date-field,
+  .muxui-time-field,
+  .muxui-date-picker,
+  .muxui-date-range-picker,
+  .muxui-autocomplete,
+  .muxui-input-tags,
+  .muxui-multi-select,
+  .muxui-tag-select,
+  .muxui-payment-input,
+  .muxui-color-field,
+  .muxui-combo-box,
+  .muxui-checkbox-group,
+  .muxui-radio-group,
+  .muxui-tabs
+) {
+  --muxui-control-target-size: var(--muxui-control-size-md);
+}
+
+:where(
+  .muxui-select[data-size='sm'],
+  .muxui-text-field[data-size='sm'],
+  .muxui-search-field[data-size='sm'],
+  .muxui-number-field[data-size='sm'],
+  .muxui-date-field[data-size='sm'],
+  .muxui-time-field[data-size='sm'],
+  .muxui-date-picker[data-size='sm'],
+  .muxui-date-range-picker[data-size='sm'],
+  .muxui-autocomplete[data-size='sm'],
+  .muxui-input-tags[data-size='sm'],
+  .muxui-multi-select[data-size='sm'],
+  .muxui-tag-select[data-size='sm'],
+  .muxui-payment-input[data-size='sm'],
+  .muxui-color-field[data-size='sm'],
+  .muxui-combo-box[data-size='sm'],
+  .muxui-checkbox-group[data-size='sm'],
+  .muxui-radio-group[data-size='sm'],
+  .muxui-tabs[data-size='sm']
+) { --muxui-control-target-size: var(--muxui-control-size-sm); }
+
+:where(
+  .muxui-select[data-size='lg'],
+  .muxui-text-field[data-size='lg'],
+  .muxui-search-field[data-size='lg'],
+  .muxui-number-field[data-size='lg'],
+  .muxui-date-field[data-size='lg'],
+  .muxui-time-field[data-size='lg'],
+  .muxui-date-picker[data-size='lg'],
+  .muxui-date-range-picker[data-size='lg'],
+  .muxui-autocomplete[data-size='lg'],
+  .muxui-input-tags[data-size='lg'],
+  .muxui-multi-select[data-size='lg'],
+  .muxui-tag-select[data-size='lg'],
+  .muxui-payment-input[data-size='lg'],
+  .muxui-color-field[data-size='lg'],
+  .muxui-combo-box[data-size='lg'],
+  .muxui-checkbox-group[data-size='lg'],
+  .muxui-radio-group[data-size='lg'],
+  .muxui-tabs[data-size='lg']
+) { --muxui-control-target-size: var(--muxui-control-size-lg); }
+
+:where(
+  .muxui-select-trigger,
+  .muxui-field-input,
+  .muxui-date-input,
+  .muxui-input,
+  .muxui-payment-input__input,
+  .muxui-command-palette__input
+) {
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+}
+
+.muxui-text-area__textarea { min-block-size: 5rem; }
 .muxui-select-trigger[data-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
@@ -367,7 +458,7 @@
 .muxui-field-input[data-open],
 .muxui-date-input[data-focused],
 .muxui-field-input[data-focused] {
-  border-color: var(--muxui-field-focus-border);
+  outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
 .muxui-field-input::placeholder {
@@ -398,8 +489,8 @@
   align-items: center;
   justify-content: center;
   flex: 0 0 auto;
-  width: 2.25rem;
-  min-height: 2.25rem;
+  inline-size: var(--muxui-control-size-md);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   margin-inline-end: var(--muxui-semantic-layout-tight-gap);
   border: none;
   background: transparent;
@@ -438,7 +529,7 @@
 }
 
 /* The supplemental field families use component-specific part names, while
-   sharing the same donor field primitive. Keep the declarations grouped here
+   sharing the same field primitive. Keep the declarations grouped here
    so their typography and states stay aligned with the core fields. */
 :where(
   .muxui-checkbox-field__label,
@@ -561,7 +652,7 @@
   transform: scale(var(--muxui-popup-enter-scale));
 }
 
-/* Shared group headers mirror the donor's list/menu primitive. The
+/* Shared group headers use the list/menu primitive. The
    component-specific header classes remain available for consumer overrides. */
 :where(
   .muxui-select [data-part='header'],
@@ -600,6 +691,7 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-item-font-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   cursor: pointer;
   outline: none;
   transition:
@@ -707,7 +799,7 @@
 
 .muxui-date-input[data-invalid],
 .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-date-input[data-disabled] {
@@ -722,13 +814,15 @@
   display: flex;
   align-items: center;
   width: 100%;
-  min-height: calc(var(--muxui-field-min-height) + var(--muxui-semantic-layout-tight-inset));
-  border: 1px solid var(--muxui-field-border-color);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background-color: var(--muxui-field-bg);
   padding-block: 1.5px;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
@@ -748,13 +842,13 @@
 
 .muxui-date-control:focus-within,
 .muxui-date-range-control:focus-within {
-  border-color: var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-semantic-focus-ring);
   box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
 }
 
 .muxui-date-picker[data-invalid] .muxui-date-control,
 .muxui-date-range-picker[data-invalid] .muxui-date-range-control {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-date-picker[data-disabled] .muxui-date-control,
@@ -770,13 +864,17 @@
   flex: 1 1 auto;
   min-width: 0;
   gap: 0;
-  padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
+  box-sizing: border-box;
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-control-padding-inline);
   background-color: var(--muxui-field-bg);
   color: var(--muxui-semantic-content-strong);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
-  outline: none;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
 }
 
 .muxui-date-field > .muxui-date-input,
@@ -786,7 +884,8 @@
 
 .muxui-date-segment {
   display: inline;
-  padding: 0.0625rem 0.09375rem;
+  padding-block: 0;
+  padding-inline: 0.09375rem;
   border-radius: var(--muxui-semantic-shape-indicator-radius);
   font-variant-numeric: tabular-nums;
   text-align: end;
@@ -818,8 +917,8 @@
 }
 
 .muxui-date-trigger {
-  min-height: 2.25rem;
-  width: 2.25rem;
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   border: 1px solid var(--muxui-semantic-border-strong);
   border-left: none;
   border-radius: 0 var(--muxui-field-radius) var(--muxui-field-radius) 0;
@@ -862,7 +961,8 @@
 
 .muxui-date-control .muxui-date-trigger,
 .muxui-date-range-control .muxui-date-trigger {
-  min-height: calc(2.25rem - 2px);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   border-top: none;
   border-right: none;
   border-bottom: none;
@@ -934,6 +1034,7 @@
 .muxui-range-calendar {
   --muxui-calendar-cell-size: 28px;
   display: inline-flex;
+  box-sizing: content-box;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-content-gap);
   line-height: var(--muxui-semantic-typography-text-line-height);
@@ -1047,7 +1148,7 @@
   width: 0.78125rem;
   height: 0.78125rem;
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  /* Tale's shared color-thumb primitive uses a white keyline in both themes. */
+  /* The shared color-thumb primitive uses a white keyline in both themes. */
   border: 2px solid white;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.3),
@@ -1100,7 +1201,7 @@
 }
 
 /* CommandPalette inherits its dialog text scale. This double-class reset is
-   the donor heading guard and prevents the generic modal title rule from
+   the heading guard and prevents the generic modal title rule from
    turning a command palette heading into a larger bold modal title. */
 .muxui-command-palette__title.muxui-command-palette__title {
   margin: 0;
@@ -1243,21 +1344,23 @@
   position: relative;
   box-sizing: border-box;
   width: 100%;
-  border: 1px solid var(--muxui-field-border-color);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-control-radius);
   background: var(--muxui-field-bg);
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-combo-control:focus-within {
-  border-color: var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-semantic-focus-ring);
   box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
 }
 
 .muxui-combo-control[data-open] {
-  border-color: var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-semantic-focus-ring);
 }
 
 .muxui-combo-control[data-disabled] {

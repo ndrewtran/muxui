@@ -994,7 +994,7 @@ triggers; `Calendar`/`RangeCalendar` previous/next controls;
 `ComboBox`/`Select` and `Tree` chevrons; `SearchField` clear;
 `NumberField` plus/minus; `Checkbox` check/indeterminate; `TagGroup` remove;
 and `Dialog`/`Toast` close. R1.6 also permits the same pinned internal Lucide
-edge for the donor affordances in `AlertDialog`, `CommandPalette`, `HeaderNav`,
+edge for the supplemental affordances in `AlertDialog`, `CommandPalette`, `HeaderNav`,
 `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
 `TextEditor`. Mux UI owns all labels and public contracts. No Lucide export,
 type, name, prop, or import path, and no public Icon API, catalog, or package,
@@ -1002,7 +1002,7 @@ may cross the package boundary. Breadcrumb separators are text and no Search
 icon is added.
 
 R1.6 additionally admits exact, internal, replaceable runtime dependencies
-needed by the applicable donor implementations: `react-aria@3.51.0` only for
+needed by the applicable supplemental implementations: `react-aria@3.51.0` only for
 `Resizable`'s `useMove` behavior. It is the already-resolved React Aria
 closure of the pinned `react-aria-components@1.20.0` baseline, so the direct
 declaration must not introduce a second version. `marked@13.0.3` only for the `Markdown`
@@ -1012,7 +1012,7 @@ lexer behind a Mux UI-owned typed parser/AST boundary; and
 `@tiptap/extension-placeholder@3.22.3`,
 `@tiptap/extension-text-align@3.22.3`, and
 `@tiptap/extension-text-style@3.22.3` only for `TextEditor`. These are direct
-Mux package implementation edges, never Tale packages or runtime/build/dev/
+Mux package implementation edges, never source-package or runtime/build/dev/
 peer/generated-source dependencies. Their package licenses, notices, npm
 integrity, React peer compatibility, and exact lockfile pins are proof
 obligations, not completed evidence. Imports stay isolated to the owning
@@ -1021,57 +1021,34 @@ ordinary Button consumers do not load the editor or Markdown parser. Tiptap
 types and editor objects never enter the Mux UI public API, and Markdown input
 retains typed AST, escaping, source-size bounds, and focused security proof.
 
-#### Tale styling donor boundary
+#### React styling and parity boundary
 
-The initial React visual implementation uses the matching component styling
-from Tale UI commit `94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` as a pinned,
-one-time donor whenever an admitted Mux UI React component has an applicable Tale
-counterpart. The donor snapshot includes `packages/styles/src` tree
-`aea4eadffe226656ef0ab012409ed39070975a76`, the related React source tree
-`d93f7c0a555066d8abbaff75cb8bd216938bcb2f`, and the CSS foundation tree
-`aa2a2d95214918794e9f463e063ceee0df3b4b1e`.
+Mux UI owns the React styling contract, including selectors, token mappings,
+CSS rules, public hooks, package surfaces, compatibility promises, and release
+claims. The fixed 53-family R1 inventory remains the release floor. R1.6 adds
+the applicable supplemental React Aria roots through explicit Mux UI-owned
+binding, CSS, interaction, export, and proof closure. Unrelated upstream
+material remains outside the component scope with an explicit exclusion
+reason.
 
-Tale supplies visual and structural input only. It is not a runtime, build,
-development, generated-source, or synchronization dependency; Tale package
-names, `.tale-*` selectors, custom-property names, component APIs, registry
-records, and story files do not become Mux UI public contracts by copying. The
-fixed 53-family table maps applicable donor CSS and shared primitive rules to
-the Mux UI-owned `web.react` styling-hook contract and token requirements, then
-records `adopt`, `adapt`, or `no-applicable-donor` with a reason for each
-committed family. `defer` and `reject` apply only to documented upstream
-material outside that committed family table. The resulting CSS is owned
-solely by `@muxui/react` source.
+For every admitted family, the binding contract, accessibility obligations,
+platform-safety rules, and responsible fixes take precedence over copying an
+implementation detail. Styling and token choices are validated through
+canonical Mux UI records; there is no compatibility-token layer, ambient
+checkout, second style registry, or ongoing synchronization requirement.
 
-For an applicable donor in the fixed 53 table, delivered/exportable closure is
-limited to `adopt` or `adapt`; `no-applicable-donor` is valid only when the
-pinned snapshot has no applicable counterpart. A `defer` or `reject` outside
-the committed family table remains a fail-closed upstream disposition and
-does not remove or postpone a committed family.
+A private R1 React playground may render generated adapters over canonical Mux
+UI examples for component development, state/theme/mode coverage, automated
+accessibility checks, and parity review. It owns no example, component, token,
+styling-hook, lifecycle, support, or release fact and is not a public
+documentation surface. Public React documentation and explorer delivery
+remain P2.3. The private `apps/scale` capability is a bounded Mux-owned
+theme-authoring projection for R1.6; it may edit and preview canonical Mux UI
+themes, but does not own token/theme facts or publish a package.
 
-Every consumed donor custom property resolves through an exact crosswalk to an
-existing Mux UI token, a separately admitted Mux UI semantic/component token, or a
-reasoned non-token adaptation. A permanent Tale compatibility-token layer,
-ambient donor checkout, or second style registry is forbidden. Visual donor
-comparison proves the intended starting point; the Mux UI binding contract,
-accessibility obligations, platform-safety rules, and responsible fixes take
-precedence when exact copying would violate Mux UI authority.
-
-A private R1 React playground may render generated adapters over canonical
-Mux UI examples for component development, state/theme/mode coverage, automated
-accessibility checks, and visual donor comparison. It owns no example,
-component, token, styling-hook, lifecycle, support, or release fact and is not a
-public documentation surface. Public React documentation and explorer delivery
-remain P2.3. The former deferral of Tale's Scale application is superseded by
-Decision 0013: its bounded Mux-owned port is the private `apps/scale`
-theme-authoring projection for R1.6. It may edit and preview canonical Mux UI
-themes, but it does not own token/theme facts, publish a package, or become a
-Tale dependency.
-
-R1.0 also owns a license and attribution audit for every copied or adapted
-donor input. Any distributed substantial portion must preserve the applicable
-Tale MIT notice, including its stated third-party portions, in the exact
-`@muxui/react` package and release artifacts. Provenance and notice files are
-Mux UI-owned release inputs; they do not create a Tale dependency or live owner.
+R1.0 owns the required license and attribution audit for distributed
+third-party material. Applicable notices remain Mux UI-owned release inputs
+and do not create an external runtime or live-owner dependency.
 
 Exactly one integration owns a mounted component root at runtime. A React
 binding does not attach the lifecycle-bearing vanilla controller to DOM it
@@ -1202,7 +1179,7 @@ import, undeclared file dependency, or `@muxui/web` import.
 
 The same graph includes the exact direct internal runtime dependency
 `lucide-react@1.37.0` for the existing R1 control affordances and the nine
-approved R1.6 donor affordance roots: `AlertDialog`, `CommandPalette`,
+approved R1.6 supplemental affordance roots: `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
 and `TextEditor`. Its npm integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
@@ -1407,7 +1384,7 @@ muxui/
 │   └── tooling/
 ├── apps/
 │   ├── docs/                         # catalog client
-│   ├── react-playground/             # private R1 generated example/donor-comparison host
+│   ├── react-playground/             # private R1 generated example/parity host
 │   ├── scale/                         # private R1.6 Mux theme-authoring projection/editor
 │   ├── explorer-web/                 # later P2.3 React, then W1 HTML examples
 │   └── explorer-native/              # Expo/native example host
@@ -1493,10 +1470,8 @@ package that owns them or to a declarative task graph.
 - `@muxui/react` owns its component CSS implementation, compiled from the
   canonical `web.react` styling-hook contract and token requirements. It does
   not duplicate or become the owner of framework-free or native styles.
-- The pinned Tale styling snapshot is a donor input with an exact per-component
-  disposition and token/style crosswalk; Mux UI selectors, tokens, CSS, and
-  compatibility remain Mux UI-owned outputs with no Tale dependency or live
-  synchronization.
+- Mux UI selectors, tokens, CSS, and compatibility are owned by the canonical
+  binding and token records; no external source or synchronization is required.
 - Native resolves the same semantic recipe to native values at build or
   runtime without parsing CSS.
 - Arbitrary styling is an explicit escape hatch, not the primary component API.
@@ -2044,54 +2019,12 @@ support, accessibility, lifecycle, availability, or parity. Consumer
 customization remains limited to permitted semantic/component roles and
 private reference values under the existing override policy.
 
-The first-party default theme uses Tale UI's non-semantic foundation tokens as
-a pinned migration baseline, not as a live dependency or second owner. The
-baseline is Tale UI commit
-`94bf62a26c02605c8928dfeb24f0ddc4be1c92fd`, source
-`packages/tokens/tokens.json`, SHA-256
-`83b72fc79b34932ae1afa44d21f74460a23fa693407bc319fdfafb3a2bb64a86`.
-It contains 693 declaration occurrences: 692 custom-property occurrences, 644
-unique custom-property names, and one ordinary `html { font-size: 100% }`
-declaration. Those occurrences are candidates, not automatically Mux UI tokens.
-
-The canonical Mux UI token source under `catalog/tokens/` owns the complete
-Tale-to-Mux UI classification. Token-source schema `2.1.0` adds one optional,
-closed `sourceCrosswalk` field; it is mandatory for the corrected default-theme
-source. A source with no migration baseline omits the authored field, while the
-query projection returns a typed derived `absent` status. Each Tale occurrence
-is identified by source file, selector, declaration name, value, and a stable
-source-order ordinal and appears exactly once. Every entry has exactly one
-`adopt`, `adapt`, `defer`, or `reject` disposition and a non-empty reason.
-Repeated names become one logical token or mode only through an explicit group;
-an occurrence belongs to at most one group, every group has at least two
-members, and its mode/member mapping is complete and duplicate-free. `adopt`
-and `adapt` require exactly one resulting Mux UI reference-token ID; `defer` and
-`reject` forbid a Mux UI token ID and make no runtime-token claim. Every admitted
-Mux UI token owns its stable Mux UI ID, type, unit, meaning, mode applicability, and
-override policy. Tale provenance is authored only by `sourceCrosswalk`.
-
-`sourceCrosswalk` is the sole authored Tale provenance and migration metadata.
-Its canonical preimage is the pinned baseline identity, occurrence entries in
-stable occurrence order, and group definitions in stable group-ID order. The
-derived `sourceCrosswalkDigest` is SHA-256 of that canonical JSON preimage; the
-complete field also enters the token source's `contentRevision` but creates no
-independent revision axis. Token-level provenance, catalog projections, and
-package provenance digests derive from this owner and are never authored again.
-The field does not enter token IDs, semantic
-dependency closure, requirement sets, search ranking, default summaries, or
-runtime CSS/native values. Package and catalog metadata may expose the derived
-digest without copying its entries. CSS variable names and
-Tale file groupings are migration inputs, not permanent Mux UI public API, a
-fourth token layer, or an ongoing synchronization promise. Web CSS and native
-theme objects continue to derive only from admitted Mux UI token facts; native
-never parses Tale or Mux UI CSS.
-
-The optional field is a token-source schema minor from `2.0.0` to `2.1.0`.
-Existing sources remain valid, corrected sources migrate through an explicit,
-deterministic, idempotent `2.0.0 -> 2.1.0` source migrator, and readers never
-rewrite a source silently. Removing or changing the field incompatibly requires
-a token-source schema major, migration guidance, affected-closure proof, and
-preserved historical retrieval.
+The canonical Mux UI token source under `catalog/tokens/` owns token IDs,
+types, meanings, modes, aliases, override policies, and the first-party default
+theme. Public descriptions explain the current role and permitted use of each
+token; they do not require a source import, external checkout, or historical
+provenance record. Web CSS and native theme objects derive only from admitted
+Mux UI token facts, and native never parses CSS.
 
 Under current query API v2 behavior, complete token and crosswalk populations
 are retrieved only through the versioned `tokens` and `source-crosswalk`
@@ -2274,13 +2207,13 @@ canonical ownership, focused proof, protected CI, and protected pull requests.
    alternatives.
 3. Add the `web.react` binding spec and canonical executable examples for its
    exact React contract.
-4. Resolve the component's exact pinned Tale styling donor disposition and
-   token/style crosswalk, then implement Mux UI-owned `@muxui/react` CSS without
-   carrying Tale selectors, package dependencies, or a live donor input.
+4. Resolve the component's canonical styling and token requirements, then
+   implement Mux UI-owned `@muxui/react` CSS without importing another
+   package's selectors or implementation.
 5. Implement `@muxui/react` without creating a web or native counterpart
    unless a later track separately admits one.
 6. Add deterministic and risk-proportionate behavior, accessibility, visual
-   donor-comparison, descriptor, generation, and packed-package proof.
+   contract, descriptor, generation, and packed-package proof.
 7. Compile the catalog and generated binding-spec/export/package-guidance
    surfaces and run the tranche closure.
 8. Run focused agent evaluation only as informational evidence.
@@ -2516,9 +2449,8 @@ scope. The accepted 53-family inventory, immutable Stage 1 snapshot, and R1.0
 baseline are the existing lock for R1.1-R1.4. No further tranche-lock decision,
 digest acceptance, or per-component authorization is required.
 
-React Aria Components `1.20.0` remains an internal replaceable substrate and
-Tale UI commit `94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` remains a one-time
-styling donor, never a dependency or live owner. Mux UI owns every public
+React Aria Components `1.20.0` remains an internal replaceable substrate.
+Mux UI owns every public
 component contract and every committed family remains export-ready at R1 exit.
 Button is the first R1.1 component; R1.5 is breadth and release closure, not
 another implementation inventory.
@@ -2540,8 +2472,8 @@ R1-exit pull-request merge remain separate exact human stops.
 ## Historical pre-R1.6 icon affordance dependency boundary
 
 The boundary below records the fixed pre-R1.6 R1 baseline. Decision 0013's
-current allowance for the nine named R1.6 donor affordance roots supersedes
-that historical component and affordance limitation; the internal-only,
+current allowance for the nine named R1.6 supplemental affordance roots
+supersedes that historical component and affordance limitation; the internal-only,
 no-public-Icon, license, and semantic requirements remain binding.
 
 Decision 0011 amendment 02 accepts `lucide-react@1.37.0` as an exact direct
@@ -2572,7 +2504,7 @@ text, and no Search icon is added. Mux UI owns every public contract. No Lucide
 export, type, name, prop, or import path may cross the package boundary, and
 there is no public Icon API, icon catalog, or icon package. That baseline added
 no component and no new decorative affordance; Decision 0013 supersedes that
-limitation for its nine named R1.6 donor affordance roots.
+limitation for its nine named R1.6 supplemental affordance roots.
 
 Accessible names, roles, states, relationships, keyboard behavior, and focus
 remain the Mux UI binding obligations. Icons used in these affordances are
@@ -2589,7 +2521,7 @@ exact packed-consumer resolution. Any distributed package containing the
 dependency must preserve both the Lucide ISC and Feather-derived MIT license
 notices. A Lucide version, icon
 mapping, affordance set, geometry, or accessibility-semantic change invalidates
-the affected visual-migration donor comparison and requires the affected R1
+the affected visual contract comparison and requires the affected R1
 visual, accessibility,
 SSR/hydration, tree-shaking, and packed-consumer proof to be rerun.
 
@@ -2598,95 +2530,68 @@ and changes no support, lifecycle, compatibility, package-publication, or
 release claim. It does not authorize npm publication, a dist-tag mutation, or
 the final R1-exit pull-request merge.
 
-## Decision 0013: Tale parity and private Mux theme-authoring boundary
+## Decision 0013: React parity and private Mux theme-authoring boundary
 
-Decision 0013 records the user-directed expansion of the prepublication React
-baseline. It is an accepted, bounded authority change; implementation and
-milestone completion still require the R1.6 evidence below. The companion
-decision record is issue [#119](https://github.com/ndrewtran/muxui/issues/119),
-and the accepted request is preserved in
-`decisions/0013-theme-parity-and-private-authoring-acceptance.md`.
+Decision 0013 records a bounded expansion of the prepublication React
+baseline. It is accepted authority for the R1.6 parity and private
+theme-authoring work; implementation and milestone completion still require
+the evidence below.
 
-### Donor and parity boundary
+### Parity and supplemental-family boundary
 
-The current Tale styling donor remains the exact pinned commit
-`94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` and its existing source trees. No
-donor refresh, alternate source, or moving Tale checkout is selected by this
-decision. The current donor inventory is 125 styles, including 70 donor-only
-styles without a fixed R1 family root. It is the classification universe, not a
-blanket standalone API/export requirement. R1.6 must identify the complete
-applicable React Aria-backed roots and support styles, map them to Mux UI-owned
-binding identities, and explicitly exclude wholly unrelated marketing/layout
-roots with reasons. Each applicable mapping records the binding, visual and
-interaction surface, state/variant coverage, and every difference with a
-reason. A missing state or fixture is a failed assertion; it cannot be counted
-as parity.
+The fixed 53-family R1 release inventory remains the historical floor. R1.6
+adds applicable React Aria families outside that floor only through
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`, with explicit Mux UI-owned binding,
+CSS, interaction, export, and proof closure. Unrelated material remains
+outside the component scope with an explicit exclusion reason. There is no
+blanket standalone API/export requirement, and the parity claim remains
+unproved until the applicable mappings and matched fixtures pass.
 
-The fixed 53-family R1 release inventory remains the historical floor. Decision
-0013 explicitly admits applicable donor-derived React Aria families outside it
-under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001`; each requires an exact supplemental
-mapping/list and Mux UI-owned API, CSS, interaction, export, and proof closure
-before availability. Wholly unrelated donor roots remain outside the component
-scope with an explicit exclusion reason. No non-Aria component is introduced.
-The parity claim remains unproved until the complete applicable mapping and
-matched fixtures pass; existing Mux UI screenshot regressions alone are
-insufficient.
-
-The current known direct React Aria-backed supplemental roots are `AlertDialog`,
-`ButtonGroup`, `Card`, `CheckboxField`, `ColorModeToggle`, `CommandPalette`,
+The current known supplemental roots are `AlertDialog`, `ButtonGroup`,
+`Card`, `CheckboxField`, `ColorModeToggle`, `CommandPalette`,
 `HeaderNav`, `InputTags`, `Input`, `MultiSelect`, `PaymentInput`,
-`ProgressCircle`, `RadioField`, `Sidebar`, `SwitchField`, `TagSelect`,
-`TextArea`, and `TextEditor`; `Resizable` uses `react-aria/useMove`. The
-indirect React Aria-backed roots `Lightbox` and `Markdown` are also included.
-`Drawer` and `FileUpload` are standalone vanilla controls outside this
-supplemental React Aria scope; `RadioGroup` and `ToggleGroup` are already
-covered by existing mappings. These 21 roots are inventory mapping targets,
-not current exports or availability claims. Any supplemental family requires a
-Mux UI binding map and proof before it becomes available.
+`ProgressCircle`, `RadioField`, `Sidebar`, `SwitchField`,
+`TagSelect`, `TextArea`, `TextEditor`, `Resizable`, `Lightbox`, and
+`Markdown`. `Resizable` uses `react-aria/useMove`; `Lightbox` and
+`Markdown` are indirect React Aria-backed roots. `Drawer` and
+`FileUpload` remain standalone controls outside this supplemental React Aria
+scope, while `RadioGroup` and `ToggleGroup` remain covered by existing
+mappings. These 21 roots are mapping targets, not current exports or
+availability claims. Each requires a Mux UI binding map and proof before it
+becomes available.
 
-Matched light and dark fixtures compare Mux UI-owned CSS, anatomy, interaction,
-variants, and states. The transfer also covers token values, modes, font
-families, and typography names. These facts are transferred into the Mux UI
-namespace and validated through canonical token/theme records; Tale names and
-selectors remain migration provenance, never public Mux UI API. The complete
-parity inventory includes the donor's Inter, Playfair Display, and Roboto Mono
-font families, display/heading/title/label/body/mono/expressive typography
-roles, standard and mono presets, and all donor palette families, including
-neutral, neutral-warm, cool, slate, gray, onyx, and mono families retained only
-in historical deferred classifications. Deterministic
-local font assets may be bundled only with
-their applicable third-party license notices; Mux UI owns the token names,
-values, and role definitions. Historical token classifications remain immutable
-history; this amendment admits the additional Mux-owned facts without rewriting
-them.
+Matched light and dark fixtures cover Mux UI-owned CSS, anatomy, interaction,
+variants, and states. Token values, modes, font families, typography roles,
+and standard/mono presets are canonical Mux UI facts. Mux UI owns their names,
+values, and role definitions; any bundled third-party asset retains its
+applicable license notice. No external source or source identity is part of
+the public API.
 
-### Canonical ownership and the private Scale projection
+### Canonical ownership and private Scale projection
 
 `catalog/tokens/` remains the sole canonical source for token and theme data.
-`@muxui/tokens` owns deterministic web, native, and consumer build transforms.
-`@muxui/react` owns React DOM behavior and CSS. The ported Scale application at
-`apps/scale` is a private maintainer projection/editor over those owners; it
-does not create a token registry, theme database, component inventory, or CSS
-owner. Current Storybook examples consume canonical Mux UI tokens and themes
-and remain the active visual/example surface for R1 work.
+`@muxui/tokens` owns deterministic web, native, and consumer-build
+transforms. `@muxui/react` owns React DOM behavior and CSS. The private
+`apps/scale` capability is a maintainer projection/editor over those owners;
+it does not create a token registry, theme database, component inventory, or
+CSS owner. Current Storybook examples consume canonical Mux UI tokens and
+themes and remain the active visual/example surface for R1 work.
 
 The private Scale capability must load, edit, preview, import, export, persist,
 and round-trip themes under canonical types, modes, aliases, and override
-policy. Import/export is bounded by stable Mux UI identity and explicit loss or
-rejection diagnostics. It does not imply a public hosted Scale deployment,
-general external design-tool interchange, stable support, or a package release.
-Any safety adaptation required by Mux UI accessibility, platform, or runtime
-ownership rules is recorded as an explicit difference rather than hidden as
-successful donor parity.
+policy. Import/export is bounded by stable Mux UI identity and explicit loss
+or rejection diagnostics. It does not imply a public hosted deployment,
+general external design-tool interchange, stable support, or a package
+release. Accessibility, platform, and runtime ownership rules remain binding.
 
 ### Optional Tailwind consumer integration
 
 Tailwind is an optional consumer build integration generated from Mux UI-owned
 token/theme transforms. It remains a consumer build dependency and never enters
 the Mux UI runtime, peer, generated-source, or styling-engine closure. The
-integration is accepted only with an actual clean consumer compilation proof,
-and its absence or failure cannot change React CSS ownership or canonical
-theme/token truth.
+integration is accepted only with clean consumer compilation proof; its
+absence or failure cannot change React CSS ownership or canonical theme/token
+truth.
 
 ### Platform and release boundaries
 

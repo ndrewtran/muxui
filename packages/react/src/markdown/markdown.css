@@ -58,7 +58,7 @@
   border-block-start: 1px solid var(--muxui-semantic-color-neutral-20);
 }
 
-/* Private donor helper compositions used by Markdown output. */
+/* Private helper compositions used by Markdown output. */
 .muxui-markdown-blockquote {
   margin: 0;
   padding-block: var(--muxui-semantic-layout-inset-medium);

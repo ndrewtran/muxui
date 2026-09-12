@@ -96,7 +96,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  border: 1px solid transparent;
+  border: 0;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-control-radius);
   font-family: var(--muxui-semantic-typography-label-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
@@ -104,17 +106,17 @@
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
-  outline: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   white-space: nowrap;
   user-select: none;
 
-  padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
-  min-height: calc(var(--muxui-semantic-control-min-height) + 2px);
+  padding-inline: var(--muxui-component-button-padding-inline, var(--muxui-semantic-control-padding-inline));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1em) / 2));
+  min-block-size: var(--muxui-component-button-min-height, var(--muxui-control-target-size, var(--muxui-control-size-md)));
   width: fit-content;
 }
 
@@ -209,7 +211,7 @@
 .muxui-button {
   background-color: var(--muxui-button-background);
   color: var(--muxui-button-foreground);
-  border-color: var(--muxui-button-border);
+  outline-color: var(--muxui-button-border);
   box-shadow: var(--muxui-button-shadow);
 }
 
@@ -298,10 +300,14 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   cursor: pointer;
   outline: none;
   user-select: none;
 }
+
+.muxui-checkbox[data-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
+.muxui-checkbox[data-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-checkbox-indicator {
   display: inline-flex;
@@ -400,7 +406,9 @@
   justify-content: center;
   align-self: flex-start;
   gap: var(--muxui-semantic-layout-control-gap);
-  border: 1px solid transparent;
+  border: 0;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-control-radius);
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-content-strong);
@@ -410,7 +418,6 @@
   line-height: 1;
   text-decoration: none;
   cursor: pointer;
-  outline: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
@@ -418,8 +425,9 @@
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   white-space: nowrap;
   user-select: none;
-  padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
-  min-height: 2.25rem;
+  padding-inline: var(--muxui-semantic-control-padding-inline);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
+  min-block-size: var(--muxui-control-size-md);
   width: fit-content;
 }
 
@@ -465,7 +473,7 @@
   margin: 0;
 }
 
-/* DisclosureGroup uses the full-width accordion trigger geometry from Tale. */
+/* DisclosureGroup uses full-width accordion trigger geometry. */
 .muxui-disclosure-group .muxui-disclosure-trigger {
   align-self: stretch;
   width: 100%;
@@ -565,7 +573,7 @@
   }
 }
 
-/* Tale's pressed dark button recipe uses the reference blue-green value. */
+/* The pressed dark button recipe uses the reference blue-green value. */
 [data-muxui-color-scheme='dark'] .muxui-button[data-variant='primary'][data-tone='default'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
   background-color: var(--muxui-semantic-action-selection-pressed);
 }
@@ -663,7 +671,9 @@
   align-items: center;
   justify-content: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  border: 1px solid var(--muxui-semantic-color-neutral-22);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-color-neutral-22);
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-control-radius);
   background-color: transparent;
   color: var(--muxui-semantic-color-neutral-70);
@@ -672,16 +682,16 @@
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1;
   cursor: pointer;
-  outline: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   user-select: none;
 
-  padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
-  min-height: 2.375rem;
+  padding-inline: var(--muxui-semantic-control-padding-inline);
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1em) / 2));
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
 .muxui-toggle-button:focus-visible {
@@ -692,19 +702,19 @@
 
 .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
   background-color: var(--muxui-semantic-color-neutral-14);
-  border-color: var(--muxui-semantic-color-neutral-28);
+  outline-color: var(--muxui-semantic-color-neutral-28);
   color: var(--muxui-semantic-color-neutral-90);
 }
 
 .muxui-toggle-button[data-selected] {
   background-color: var(--muxui-semantic-color-neutral-80);
-  border-color: var(--muxui-semantic-color-neutral-80);
+  outline-color: var(--muxui-semantic-color-neutral-80);
   color: var(--muxui-semantic-color-neutral-80-fg);
 }
 
 .muxui-toggle-button[data-selected]:hover:not([data-disabled]) {
   background-color: var(--muxui-semantic-color-neutral-90);
-  border-color: var(--muxui-semantic-color-neutral-90);
+  outline-color: var(--muxui-semantic-color-neutral-90);
   color: var(--muxui-semantic-color-neutral-80-fg);
 }
 
@@ -727,34 +737,37 @@
   border-radius: 0;
   border: none;
   border-right: 1px solid var(--muxui-semantic-color-neutral-22);
-  min-height: 2.25rem;
+  min-block-size: var(--muxui-control-size-md);
 }
 
 .muxui-toggle-button-group .muxui-toggle-button:last-child {
   border-right: none;
 }
 
-/* ToggleButton sizes mirror the donor's finite sm/md/lg API.  The values stay
+/* ToggleButton sizes use the finite sm/md/lg API. The values stay
    on Mux-owned token variables so a theme can change the control without
    rebuilding the component projection. */
 .muxui-toggle-button.muxui-toggle-button--sm {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
-  min-height: var(--muxui-semantic-layout-content-row-min-height);
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1em) / 2));
+  min-block-size: var(--muxui-control-size-sm);
   gap: var(--muxui-semantic-layout-tight-gap);
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 .muxui-toggle-button.muxui-toggle-button--md {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
-  min-height: 2.25rem;
+  padding-inline: var(--muxui-semantic-layout-inset-medium);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
+  min-block-size: var(--muxui-control-size-md);
 }
 
 .muxui-toggle-button.muxui-toggle-button--lg {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-large);
-  min-height: 2.75rem;
+  padding-inline: var(--muxui-semantic-layout-inset-large);
+  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1em) / 2));
+  min-block-size: var(--muxui-control-size-lg);
   gap: var(--muxui-semantic-layout-group-gap);
 }
 
@@ -790,7 +803,7 @@
 .muxui-button,
 .muxui-r1-button {
   background-color: var(--muxui-button-background);
-  border-color: var(--muxui-button-border);
+  outline-color: var(--muxui-button-border);
   color: var(--muxui-button-foreground);
   box-shadow: var(--muxui-button-shadow);
 }
@@ -859,7 +872,7 @@
   --muxui-button-shadow: none;
 }
 
-/* The donor's seven variants are represented directly on the Mux root. */
+/* The seven variants are represented directly on the Mux root. */
 .muxui-button[data-variant='neutral'][data-tone='default'] {
   --muxui-button-background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
@@ -926,22 +939,25 @@
 
 .muxui-button[data-size='sm'] {
   font-size: var(--muxui-semantic-typography-label-s-font-size);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
-  min-height: var(--muxui-semantic-layout-content-row-min-height);
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  padding-block: max(0px, calc((var(--muxui-control-size-sm) - 1em) / 2));
+  min-block-size: var(--muxui-control-size-sm);
   gap: var(--muxui-semantic-layout-tight-gap);
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 .muxui-button[data-size='md'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
-  min-height: 2.25rem;
+  padding-inline: var(--muxui-component-button-padding-inline, var(--muxui-semantic-control-padding-inline));
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1em) / 2));
+  min-block-size: var(--muxui-component-button-min-height, var(--muxui-control-size-md));
 }
 
 .muxui-button[data-size='lg'] {
   font-size: var(--muxui-semantic-typography-label-m-font-size);
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-large);
-  min-height: 2.75rem;
+  padding-inline: var(--muxui-semantic-layout-inset-large);
+  padding-block: max(0px, calc((var(--muxui-control-size-lg) - 1em) / 2));
+  min-block-size: var(--muxui-control-size-lg);
   gap: var(--muxui-semantic-layout-group-gap);
 }
 
@@ -1020,7 +1036,7 @@
   }
 }
 
-/* Ordinary dark link and disclosure recipes use the Tale mode-indexed scale. */
+/* Ordinary dark link and disclosure recipes use the mode-indexed scale. */
 [data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button) {
   color: var(--muxui-semantic-content-link);
 }
@@ -1076,7 +1092,7 @@
   margin-block-end: var(--muxui-semantic-layout-control-gap);
 }
 
-/* Keyboard focus keeps Tale's neutral inner/outer ring. */
+/* Keyboard focus keeps the neutral inner/outer ring. */
 .muxui-toggle-button[data-focus-visible],
 .muxui-toggle-button:focus-visible,
 .muxui-link[data-focus-visible],
@@ -1093,7 +1109,7 @@
   color: var(--muxui-semantic-color-neutral-default-28);
 }
 
-/* Ordinary dark choice-control recipes mirror Tale's mode-indexed tokens. */
+/* Ordinary dark choice-control recipes use mode-indexed tokens. */
 [data-muxui-color-scheme='dark'] .muxui-toggle-button {
   border-color: var(--muxui-semantic-color-neutral-22);
   color: var(--muxui-semantic-color-neutral-70);
@@ -1183,13 +1199,13 @@
 }
 
 /* RAC marks the current breadcrumb link disabled. MuxUI keeps current items
-   as a semantic span, so carry the donor's disabled-link paint to that span
+   as a semantic span, so carry the matching disabled-link paint to that span
    without changing its accessible current-page contract. */
 .muxui-breadcrumbs-current[aria-current='page'] {
   opacity: 0.7;
 }
 
-/* DisclosureGroup keeps RAC's group semantics but follows Tale's compact
+/* DisclosureGroup keeps RAC's group semantics with compact
    collection of independent disclosure controls. */
 .muxui-disclosure-group {
   box-sizing: border-box;
@@ -1264,8 +1280,8 @@
   height: var(--muxui-semantic-layout-icon-size);
 }
 
-/* Tale's disabled affordances dim the complete control paint. Keep this
-   scoped to the families whose donor rules apply at the root, so field and
+/* Disabled affordances dim the complete control paint. Keep this
+   scoped to the families whose shared rules apply at the root, so field and
    collection controls can retain their own contrast adaptations. */
 :is(.muxui-button, .muxui-r1-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
 .muxui-disclosure[data-disabled] .muxui-disclosure-trigger,

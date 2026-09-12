@@ -89,7 +89,10 @@
           {
             "token": "semantic.motion.feedback",
             "requirement": "required"
-          }
+          },
+          { "token": "semantic.control.size-sm", "requirement": "required" },
+          { "token": "semantic.control.size-md", "requirement": "required" },
+          { "token": "semantic.control.size-lg", "requirement": "required" }
         ]
       },
       "platformSafety": [

@@ -1,1 +1,0 @@
-Foundation checks passed; no publishable package or public release candidate exists.

@@ -344,14 +344,10 @@ compile one real component without pre-building the full ontology.
 - Response-envelope versioning and append-only error-code policy.
 - Schema evolution rules for patch, minor, major, deprecation, and explicit
   source migration.
-- Token-source schema `2.1.0` with the optional closed `sourceCrosswalk` field,
-  authored omission plus typed derived absence, occurrence identity/grouping/
-  disposition grammar, disposition-dependent required/forbidden fields,
-  complete authored-field/provenance ownership, and deterministic
-  `2.0.0 -> 2.1.0` migration.
-- Query API v1.2 additive deprecation and v2 removal schemas for bounded
-  `tokens` / `source-crosswalk` sections, versioned cursors, summary metadata,
-  diagnostics, and historical v1.1/v1.2 retrieval.
+- Token-source schema with closed typed layers, modes, aliases, override
+  policies, and canonical ownership of authored and derived fields.
+- Versioned query schemas for bounded token sections, cursors, summary
+  metadata, diagnostics, and deterministic compatibility negotiation.
 - Closed `TokenSectionPageBudgetProfile` grammar for the query/lexer versions,
   canonical cost/order rule, envelope preimage/reserve, limits, progress,
   2,048-token budget, and stable oversize diagnostic.
@@ -408,10 +404,8 @@ query it through a side-effect-free API.
 - Resolution/provenance metadata in every implementation-guidance response.
 - Query response schemas and stable type discriminators.
 - Explicit source pointers and bounded relation traversal.
-- Stable, complete, sectional `tokens` and `source-crosswalk` retrieval with
-  query-version/content-bound cursors and no unbounded current response;
-  explicitly negotiated historical v1.1/v1.2 inline compatibility responses
-  remain outside the v2 sectional page-budget claim.
+- Stable, complete, sectional `tokens` retrieval with query-version/content-
+  bound cursors and no unbounded current response.
 - Catalog-owned `TokenSectionPageBudgetProfile` canonical values and
   budget-aware page selection. The profile's canonical JSON enters catalog
   identity; `limit` is an item ceiling, the catalog reserves the declared
@@ -467,8 +461,7 @@ surface over the query kernel.
 - `muxui manifest --json` as cold-start discovery; bare `muxui --json` recovery.
 - Dense golden snapshots and per-command token budgets.
 - Generated `section`, `limit`, and `cursor` request/response types and help for
-  `tokens` / `source-crosswalk`, including query API v1.2 deprecation guidance
-  and v2 summary/continuation behavior.
+  bounded `tokens` retrieval, including summary/continuation behavior.
 - Human, JSON, and dense rendering of catalog-selected pages without adapter-
   owned entry costing or page-boundary selection.
 
@@ -616,78 +609,19 @@ Gate 0 does not wait for renderer breadth, public MCP, a docs application,
 planning, project mutation, migration, hosted services, or model-evaluation
 stability.
 
-#### Accepted G1.0 token-correction sequence
+#### Retired pre-R1 token-correction sequence
 
-The Tale-to-Mux UI default-theme correction reactivates G0.1 through G0.5 and
-this integration exit in three exact-source generations. A later generation
-expires the applicability of the prior generation without rewriting or
-deleting its immutable historical evidence.
+The pre-R1 token-correction sequence and its phase profiles were migration-only
+delivery records. Their exact bytes are preserved only in the ignored preflight
+archive and are not current roadmap authority. The active token contract is
+defined by the canonical catalog, Product Scope 8.0.0, and the current R1
+milestones; no historical evidence is reinterpreted as a current Mux UI
+outcome.
 
-The accepted authority change records current expiry through closed,
-content-addressed internal `EvidenceApplicabilitySupersession` certificates.
-Each certificate binds the exact historical index, the terminal recertification
-when present, the superseded/current applicability manifests, affected
-assertions, source commit/tree, and the digest-bound designated-owner decision
-identity. It closes the old recertification chain without claiming new proof.
-Phase A, Phase B, and Phase C replacement evidence each starts a new immutable
-index; none extends a superseded chain or treats the certificate as a passing
-assertion.
-
-Before Phase A implementation, a separate human-accepted classification and
-compatibility annex enumerates every planned occurrence disposition, the exact
-Mux UI token additions, final page-profile constants, token-contract/catalog/
-command-registry/package version effects, migration support, and rollback.
-Accepting the architecture direction does not accept that annex by implication.
-
-Each correction generation uses one immutable phase-specific applicability
-profile. A “complete” generation evaluates every listed evidence ID; unchanged
-assertions retain their milestone wording, while the following profile clauses
-define the exact version-dependent meaning of `E-G0.1-05`, `E-G0.2-03`,
-`E-G0.2-04`, and their API/CLI/dense parity dependents. A profile cannot claim
-or waive behavior assigned to a later phase.
-
-| Profile | Required version-dependent assertions |
-| --- | --- |
-| `TALE-TOKEN-A` | Token-source schema `2.0.0`; query API v1.1/v1.2 negotiation; v1.2 inline-token deprecation and notice diagnostics; bounded `tokens` and `source-crosswalk` sections; typed derived crosswalk absence for the pre-crosswalk 2.0 source; v1.2 cursor, page-profile, dense-page, oversize, and parity proof. Explicitly requested v1.1/v1.2 inline compatibility responses remain deterministic and parity-proved but are exempt from sectional page budgets. Schema 2.1 and query v2 are not yet asserted. |
-| `TALE-TOKEN-B` | Everything in Phase A plus token-source schema 2.1 migration/omission/typed-absence behavior, query v2 inline removal, complete v1.1/v1.2/v2 negotiation, v2 cursor/page-budget/oversize proof, and omitted or synthetic crosswalk fixtures only. Historical inline responses remain available solely through explicit v1.1/v1.2 negotiation. |
-| `TALE-TOKEN-C` | The complete Phase B contract repeated at the exact final G1.0 source/catalog identity with the real occurrence-complete crosswalk and admitted Mux UI token inventory; no synthetic crosswalk can satisfy this profile. |
-
-1. **Phase A — query API `1.2.0` notice.** Against the pre-crosswalk token
-   source, retain v1.1 inline `tokens`; add bounded `tokens` and
-   `source-crosswalk` sections, `limit`/`cursor`, generated types/help,
-   `MUXUI_QUERY_INLINE_TOKENS_DEPRECATED`, replacement guidance, historical
-   negotiation, and response/dense-budget/oversize proof. Produce and
-   human-accept a complete fresh `TALE-TOKEN-A` generation of `E-G0.1-01`
-   through `E-G0.1-05`,
-   `E-G0.2-01` through `E-G0.2-05`, `E-G0.3-01` through `E-G0.3-06`,
-   `E-G0.4-01` through `E-G0.4-05`, `E-G0.5-01` through `E-G0.5-04`, and Gate
-   0 integration packet. That accepted release is the mandatory notice
-   boundary.
-2. **Phase B — query API `2.0.0` and schema/query infrastructure.** After
-   Phase A acceptance, remove inline `tokens`, add token-source schema `2.1.0`,
-   retain v1.1/v1.2 negotiation, and prove omitted authored crosswalks with a
-   typed derived absence plus synthetic fixtures only. Do not author the Tale classification
-   or expanded default-theme inventory in Gate 0. Expire and preserve Phase A,
-   then produce and human-accept a second complete G0.1–G0.5 and Gate 0
-   `TALE-TOKEN-B` generation at the exact Phase B source.
-3. **Phase C — final G1.0 source correlation.** After Phase B acceptance, G1.0
-   authors the real Tale classification, crosswalk, accepted Mux UI reference
-   inventory, transforms, and requirement identities. That source/catalog
-   change expires and preserves Phase B. Before G1.0 evidence is captured or
-   accepted, produce and human-accept a third complete G0.1–G0.5 and Gate 0
-   `TALE-TOKEN-C` generation at the exact final G1.0 source.
-
-The previously accepted Gate 0, G1.0, and G1.1 records remain immutable proof
-of their original authority and source only. They do not satisfy the corrected
-contract. After Phase C, G1.0 requires complete fresh acceptance, followed by
-fresh `E-G1.1-01` through `E-G1.1-06` acceptance before G1.2 or G1.3 may treat
-the corrected token contract as an entry dependency.
-
-Under this corrected authority, the classification/compatibility annex is the
-next required decision artifact; Phase A becomes the next executable slice only
-after that annex is accepted. Phase B, corrected G1.0, and G1.1 remain
-`not-ready` until their documentary entry conditions are proved; mutable
-Project workflow status does not change those roadmap states.
+Gate 0 still requires deterministic schema, catalog, query, CLI, and authoring
+proof. Token retrieval is bounded and complete, generated surfaces remain
+projections of canonical records, and any migration capability remains deferred
+to its separately gated milestone.
 
 ## R1 — React-primary component delivery
 
@@ -698,183 +632,143 @@ separate later tracks and cannot block or inherit R1 proof.
 
 ### R1 shared tranche contract
 
-Every R1 tranche uses the exact React Aria Components baseline, standalone
-package graph, reusable proof baseline, canonical component/binding/example
-revisions, deterministic closure, and risk-selected review appropriate to the
-exported behavior. The accepted 53-family inventory, immutable Stage 1
-snapshot, and R1.0 baseline are the common lock for R1.1-R1.4. No further
-tranche-lock decision, digest acceptance, or per-component authorization is
-required. Button is the first visible R1.1 component.
+Every R1 tranche uses the exact React Aria Components 1.20.0 internal
+substrate, standalone package graph, reusable proof baseline, canonical
+component/binding/example revisions, deterministic closure, and risk-selected
+review appropriate to the exported behavior. The accepted immutable 53-family
+inventory, Stage 1 snapshot, and R1.0 baseline are the common lock for R1.1
+through R1.4. No further tranche-lock decision or per-component authorization
+is required for those families. Button is the first visible R1.1 component.
 
-The approved R1 target package graph also includes the single resolved
+The approved R1 package graph includes one resolved
 `@internationalized/date@3.12.3` instance as a direct internal runtime
-dependency of `@muxui/react`, used only for Mux UI value adapters in exactly
-`DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-`RangeCalendar`. Mux UI public values remain ISO dates `YYYY-MM-DD`, local times
-`HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}` ranges; no upstream
-temporal or React Aria public type, value, import path, export, lifecycle, or
-ownership may leak. Decision 0011 amendment 01's manifest/lockfile, adapter,
-derived-guidance, release-prepare, and packed-consumer assertions are later
-implementation work and add no family, Scope ID, tranche, support/lifecycle,
-or release commitment.
+dependency of `@muxui/react`, used only for Mux UI value adapters in
+`DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`,
+and `RangeCalendar`. Public values remain ISO dates `YYYY-MM-DD`, local
+times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}` ranges. No
+upstream temporal or React Aria public type, value, import path, export,
+lifecycle, or ownership crosses the public boundary.
 
-The approved R1 target graph also includes the exact direct internal,
-replaceable runtime dependency `lucide-react@1.37.0` for existing control
-affordances and the nine R1.6 donor affordance roots `AlertDialog`,
-`CommandPalette`, `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`,
-`Sidebar`, `TagSelect`, and `TextEditor`. Its npm integrity is
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
-the package is ISC with its Feather-derived MIT notice and is React
-peer-compatible. The following allowed-use list records the fixed pre-R1.6
-boundary: `DatePicker`/`DateRangePicker` calendar
-triggers; `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and
-`Tree` chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
-check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close. Under
-that baseline, no Lucide export, type, name, prop, import path, public Icon
-API/catalog/package, component, or new decorative affordance was admitted.
-Breadcrumb separators remain text and no Search icon is added; Mux UI-owned
-labels and decorative semantics remain binding. Decision 0013 supersedes that
-historical limitation for the nine R1.6 donor affordance roots named above.
-R1.6 also admits the exact internal, replaceable
-`react-aria@3.51.0` edge for `Resizable`, `marked@13.0.3` for the typed
-Markdown parser boundary, and the eight `@tiptap/*@3.22.3` packages for
-`TextEditor`. Their lockfile, integrity, license/notice, peer-compatibility,
-module-isolation, tree-shaking, SSR/hydration, packed-consumer, and Markdown
-security proof is required; no upstream implementation type or object is
-public.
+The graph also includes the exact internal, replaceable
+`lucide-react@1.37.0` edge for existing control affordances and the nine
+R1.6 roots `AlertDialog`, `CommandPalette`, `HeaderNav`, `Lightbox`,
+`MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
+`TextEditor`. Its integrity, ISC license, Feather-derived MIT notice, React
+peer compatibility, lockfile pin, module isolation, and packed-consumer proof
+are required. Existing control affordances remain bounded to their established
+Mux UI modules; no Lucide export, public Icon API, decorative component, or
+new decorative affordance is admitted.
 
-Each bounded pull request changes the earliest canonical owners, regenerates
-projections, keeps React Aria internal, migrates applicable Tale styling into
-Mux UI-owned CSS and token hooks, and runs focused checks proportional to the
-exported behavior. Protected CI and normal review-bot coverage remain required.
+R1.6 also admits the exact internal, replaceable `react-aria@3.51.0` edge
+for `Resizable`, `marked@13.0.3` for the typed Markdown parser boundary,
+and the eight `@tiptap/*@3.22.3` packages for `TextEditor`. Their
+integrity, license/notice, peer-compatibility, lockfile, module-isolation,
+tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof is
+required. No upstream implementation type or object is public.
 
-The shared baseline also pins Tale UI commit
-`94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` and its component-style,
-React-source, and CSS-foundation trees as one-time donor inputs. Each locked
-component records an exact styling disposition and complete donor-to-Mux UI
-token/style crosswalk. Tale is never a dependency or live source. Components
-without an applicable donor record `no-applicable-donor`; Mux UI contracts and
-responsible accessibility/platform corrections override byte copying.
-
-An applicable donor closes routinely only as `adopt` or `adapt`. `defer` or
-`reject` keeps the component unexported and unreleasable until a separately
-accepted decision-bearing exception supplies an alternate visual direction and
-reconciles the fixed family allocation. `no-applicable-donor` is only an absence
-disposition, not a shortcut around an applicable donor.
-
-The fixed family allocation and common baseline are required before
-implementation. Routine components inside them require no separate authority
-decision or human approval. A contract outside that boundary,
-another ontology decision or runtime graph node, security/privacy boundary,
-support expansion, stable promotion, or exception is a decision-bearing delta
-accepted before implementation.
-
-Missing required proof keeps a binding unexported or explicitly unavailable
-with support unproved. It does not alter lifecycle or strategy and does not
-manufacture an `unsupported` disposition. Every concrete npm publication is a
-separate external mutation with exact version, tarball, integrity, provenance,
-registry, checks, release manifest, rollback, and human authorization.
+Each bounded change updates the earliest canonical owner, regenerates
+projections, keeps React Aria internal, and runs focused checks proportional to
+the exported behavior. Protected CI, ordinary review, accessibility/privacy
+proof, and the publication/final-merge boundaries remain required.
 
 ### R1.0 React package and substrate baseline
 
 **Entry**
 
-- The accepted immutable Stage 1 snapshot, fixed 53-family table, and R1.0
-  package/substrate baseline are already materialized. They remain the
-  fail-closed authority and release inputs; no further lock or evidence
-  acceptance is required for ordinary R1 implementation.
-- Exact reusable G1.0 token/theme facts are selected and rebound; no historical
-  result is accepted by ancestry or name alone.
+- The immutable Stage 1 snapshot, fixed 53-family table, and R1.0
+  package/substrate baseline are materialized and remain fail-closed authority
+  and release inputs.
+- Canonical token/theme facts are selected and bound to current Mux UI owners.
 - `muxui:component:button#web.react` is the named first renderer slice.
 
 **Deliverables**
 
-- standalone `@muxui/react` package graph with React Aria Components `1.20.0`,
-  React/React DOM peer ranges, compiled CSS/assets, generated package guidance,
-  and no Mux UI workspace runtime dependency;
-- exact upstream evaluation snapshot and disposition grammar;
-- exact Tale styling donor snapshot, shared-primitive inventory, per-component
-  disposition grammar, and closed donor-to-Mux UI token/style crosswalk;
-- exact donor license/attribution classification and the package notice
-  required for every copied or adapted substantial portion;
-- shared styling, SSR/hydration, accessibility-test, compatibility,
-  descriptor, release-manifest, and packed-consumer baseline digest;
-- private generated React playground baseline for canonical examples,
-  theme/mode/state coverage, and visual donor comparison; it is not the P2.3
-  public explorer;
-- the first Button implementation fixture and complete React-only proof.
+- Standalone `@muxui/react` package graph with React Aria Components
+  `1.20.0`, React/React DOM peer ranges, compiled CSS/assets, generated
+  package guidance, and no Mux UI workspace runtime dependency.
+- The upstream evaluation snapshot and closed styling/interaction disposition
+  grammar.
+- Shared styling, SSR/hydration, accessibility, compatibility,
+  descriptor, release-manifest, packed-consumer, and baseline proofs.
+- A private generated React playground for canonical examples, theme/mode/state
+  coverage, and visual contract comparison.
+- The first Button implementation fixture and complete React-only proof.
 
-**Evidence:** `E-R1.0-01` package/substrate and pinned donor identity;
-`E-R1.0-02` Mux UI-owned contract/export/donor-crosswalk/license-notice boundary;
-`E-R1.0-03` CSS/SSR/hydration/private-playground baseline plus Button donor
-comparison;
-`E-R1.0-04` accessibility/compatibility baseline; `E-R1.0-05` packed clean-
-consumer and generated-guidance proof, including negative runtime-edge cases.
+**Evidence:** `E-R1.0-01` package/substrate identity;
+`E-R1.0-02` Mux UI-owned contract/export/license-notice boundary;
+`E-R1.0-03` CSS/SSR/hydration/private-playground baseline plus Button visual
+contract comparison; `E-R1.0-04` accessibility/compatibility baseline;
+`E-R1.0-05` packed clean-consumer and generated-guidance proof, including
+negative runtime-edge cases.
 
 **Exit:** the exact reusable baseline is fixed and Button implementation may
 begin. No component publication or support claim follows.
 
 ### R1.1 Foundation and simple controls
 
-**Entry:** the fixed R1.0 baseline and the fixed 53-family R1.1 allocation.
+**Entry:** the fixed R1.0 baseline and fixed 53-family R1.1 allocation.
 
-**Deliverables:** Button first, then the remaining low/medium-risk foundation,
-action, and disclosure components; one tranche implementation sequence,
-exception ledger, exact donor-style dispositions/crosswalks, Mux UI-owned CSS,
-generated package surfaces, and packed proof.
+**Deliverables:** Button first, then the remaining foundation, action, and
+disclosure components; one tranche implementation sequence, exception ledger,
+Mux UI-owned CSS, generated package surfaces, and packed proof.
 
-**Evidence:** `E-R1.1-01` canonical/binding/donor-disposition closure;
-`E-R1.1-02` React behavior, types, Mux UI-owned CSS, donor visual comparison,
+**Evidence:** `E-R1.1-01` canonical/binding closure;
+`E-R1.1-02` React behavior, types, Mux UI-owned CSS, visual contract,
 SSR/hydration, and automated accessibility; `E-R1.1-03` generated
-descriptor/guidance/export parity and packed consumer; `E-R1.1-04` risk-
-selected browser/manual results, advisories, exceptions, and release manifest.
+descriptor/guidance/export parity and packed consumer; `E-R1.1-04`
+risk-selected browser/manual results, advisories, exceptions, and release
+manifest.
 
 **Exit:** every committed family in the fixed R1.1 allocation is export-ready;
 an exact `0.1.0-alpha.N` publication may be proposed.
 
 ### R1.2 Forms and field controls
 
-**Entry:** the fixed R1.0 baseline and the fixed 53-family R1.2 allocation.
+**Entry:** the fixed R1.0 baseline and fixed 53-family R1.2 allocation.
 
-**Deliverables:** TextField, Switch, Form, and other form/field
-components with value, state, label, description, error, validation,
-submission, and composition contracts, including migrated Tale field-family
-primitives under Mux UI-owned hooks and tokens.
+**Deliverables:** TextField, Switch, Form, and other form/field components with
+value, state, label, description, error, validation, submission, and
+composition contracts under Mux UI-owned hooks and tokens.
 
-**Evidence:** `E-R1.2-01` canonical/binding closure; `E-R1.2-02` form/input/
-label/error behavior and types; `E-R1.2-03` browser and required accessibility
-proof; `E-R1.2-04` generated/packed/release correlation.
+**Evidence:** `E-R1.2-01` canonical/binding closure;
+`E-R1.2-02` form/input/label/error behavior and types;
+`E-R1.2-03` browser and required accessibility proof;
+`E-R1.2-04` generated/packed/release correlation.
 
-**Exit:** the fixed R1.2 allocation's exact export and prerelease conditions pass.
+**Exit:** the fixed R1.2 allocation's exact export and prerelease conditions
+pass.
 
 ### R1.3 Collections and composites
 
-**Entry:** the fixed R1.0 baseline and the fixed 53-family R1.3 allocation.
+**Entry:** the fixed R1.0 baseline and fixed 53-family R1.3 allocation.
 
-**Deliverables:** Select, Tabs, and collection/composite components
-with explicit focus, keyboard, selection, composition, and state ownership,
-plus exact donor-style dispositions and visual comparisons.
+**Deliverables:** Select, Tabs, and collection/composite components with explicit
+focus, keyboard, selection, composition, and state ownership, plus visual
+contract comparisons.
 
-**Evidence:** `E-R1.3-01` canonical/binding closure; `E-R1.3-02` keyboard/focus
-behavior; `E-R1.3-03` selection/form/composition behavior; `E-R1.3-04` required
-accessibility evidence; `E-R1.3-05` generated/packed/release correlation.
+**Evidence:** `E-R1.3-01` canonical/binding closure;
+`E-R1.3-02` keyboard/focus behavior; `E-R1.3-03`
+selection/form/composition behavior; `E-R1.3-04` required accessibility
+evidence; `E-R1.3-05` generated/packed/release correlation.
 
-**Exit:** the fixed R1.3 allocation's exact export and prerelease conditions pass.
+**Exit:** the fixed R1.3 allocation's exact export and prerelease conditions
+pass.
 
 ### R1.4 Overlays and temporal interactions
 
-**Entry:** the fixed R1.0 baseline and the fixed 53-family R1.4 allocation.
+**Entry:** the fixed R1.0 baseline and fixed 53-family R1.4 allocation.
 
-**Deliverables:** Dialog, Toast, and overlay/temporal components with
-focus, dismissal, portal/global-effect, ordering, timing, announcement,
-concurrency, and teardown ownership, plus exact donor-style dispositions and
-visual comparisons that never override responsible focus/accessibility fixes.
+**Deliverables:** Dialog, Toast, and overlay/temporal components with focus,
+dismissal, portal/global-effect, ordering, timing, announcement, concurrency,
+and teardown ownership, plus visual contract comparisons that never override
+responsible focus/accessibility fixes.
 
-**Evidence:** `E-R1.4-01` canonical/binding closure; `E-R1.4-02` overlay/focus/
-dismissal behavior; `E-R1.4-03` temporal/announcement/concurrency behavior;
+**Evidence:** `E-R1.4-01` canonical/binding closure;
+`E-R1.4-02` overlay/focus/dismissal behavior;
+`E-R1.4-03` temporal/announcement/concurrency behavior;
 `E-R1.4-04` manual and assistive-technology proof required by the exact risk
-profiles; `E-R1.4-05` teardown/advisory/exception proof; `E-R1.4-06`
-generated/packed/release correlation.
+profiles; `E-R1.4-05` teardown/advisory/exception proof;
+`E-R1.4-06` generated/packed/release correlation.
 
 **Exit:** every family in the fixed R1.4 allocation is export-ready and has
 complete evidence for its exact contract and risk profile. Missing required
@@ -889,116 +783,111 @@ equivalence claim follows.
 release proof; it does not introduce another implementation inventory.
 
 **Deliverables:** an exact `53/53` committed-family reconciliation: every
-documented family in the pinned React Aria snapshot maps to a committed Mux UI
-family root, contract, export, lifecycle ledger, evidence/support record, and
-packed prerelease graph. A `defer`, `exclude`, or `not-a-component` disposition
+documented family in the React Aria snapshot maps to a committed Mux UI family
+root, contract, export, lifecycle ledger, evidence/support record, and packed
+prerelease graph. A `defer`, `exclude`, or `not-a-component` disposition
 outside the fixed 53 families cannot alter an R1.5 family outcome. Every
-committed family maps the pinned Tale style to exportable `adopt`/`adapt` or
-valid absence `no-applicable-donor`, with complete Mux UI token/style ownership;
-all 53 remain export-ready at R1 exit.
+committed family remains export-ready at R1 exit.
 
-**Evidence:** `E-R1.5-01` upstream and donor-style disposition completeness;
-`E-R1.5-02` canonical/binding/export/CSS-crosswalk coverage; `E-R1.5-03`
-risk-profile and visual-donor proof coverage;
-`E-R1.5-04` package/guidance/descriptor parity; `E-R1.5-05` compatibility and
-performance; `E-R1.5-06` informational agent discovery and final exception/
-advisory closure.
+**Evidence:** `E-R1.5-01` upstream disposition completeness;
+`E-R1.5-02` canonical/binding/export/CSS coverage;
+`E-R1.5-03` risk-profile and visual contract proof;
+`E-R1.5-04` package/guidance/descriptor parity; `E-R1.5-05`
+compatibility and performance; `E-R1.5-06` informational agent discovery
+and final exception/advisory closure.
 
 **Exit:** the exact committed-family reconciliation is `53/53`; no defer,
-exclude, or not-a-component completion path remains; and
-R1.6 may begin. The `@muxui/react@0.1.0-rc.1` proposal remains gated by R1.6
-and the exact R1 exit conditions.
+exclude, or not-a-component completion path remains; R1.6 may begin. The
+`@muxui/react@0.1.0-rc.1` proposal remains gated by R1.6 and exact R1 exit
+conditions.
 
-### R1.6 React/Tale parity and private Mux theme authoring
+### R1.6 React parity and private Mux theme authoring
 
-**Objective:** Complete the user-directed Mux-owned token/theme transfer and
-the applicable Tale React Aria visual/interaction parity proof, then make the
-ported Scale application a functioning private authoring surface before React
-publication is eligible.
+**Objective:** Complete the current Mux UI-owned token/theme contract and
+applicable React Aria visual/interaction parity, then make the ported Scale
+application a functioning private authoring surface before React publication
+is eligible.
 
-**Entry:** R1.5's fixed 53-family reconciliation, the exact pinned Tale donor
-baseline, and Decision 0013. R1.6 preserves the React Aria identity while
-admitting applicable donor-derived supplemental families through the exact
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` mapping and proof.
+**Entry:** R1.5's fixed 53-family reconciliation and Decision 0013. R1.6
+preserves the React Aria identity while admitting supplemental families only
+through the exact `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` mapping and proof.
 
 **Primary ownership:** `catalog/tokens/` owns canonical token/theme facts;
-`@muxui/tokens` owns transforms; `@muxui/react` owns React CSS and behavior;
-`apps/scale` owns only the private editor/projection; current Storybook owns
-neither canonical examples nor token/theme data.
+`@muxui/tokens` owns transforms; `@muxui/react` owns React CSS and
+behavior; `apps/scale` owns only the private editor/projection; current
+Storybook owns neither canonical examples nor token/theme data.
 
 **Deliverables**
 
-- A classification-complete 125-style donor inventory, including the 70
-  donor-only styles without a fixed R1 family root, with an explicit list of
-  applicable React Aria-backed roots/support styles and explicit exclusions for
+- A classification-complete inventory of current React Aria-backed styles,
+  explicit applicable roots and support styles, and explicit exclusions for
   unrelated marketing/layout roots. Every applicable mapping receives a Mux
-  UI-owned binding identity, including any exact supplemental family list; no
-  blanket all-125 standalone API/export requirement or non-Aria component is
-  added.
-- The current known direct React Aria-backed supplemental roots are
-  `AlertDialog`, `ButtonGroup`, `Card`, `CheckboxField`, `ColorModeToggle`,
-  `CommandPalette`, `HeaderNav`, `InputTags`, `Input`, `MultiSelect`,
-  `PaymentInput`, `ProgressCircle`, `RadioField`, `Sidebar`, `SwitchField`,
-  `TagSelect`, `TextArea`, and `TextEditor`; `Resizable` uses
-  `react-aria/useMove`. The indirect React Aria-backed roots `Lightbox` and
-  `Markdown` are also included. `Drawer` and `FileUpload` are standalone
-  vanilla controls outside this supplemental React Aria scope;
+  UI-owned binding identity; no blanket standalone API/export requirement or
+  non-Aria component is added.
+- The exact 21 supplemental roots:
+  `AlertDialog`, `ButtonGroup`, `Card`, `CheckboxField`,
+  `ColorModeToggle`, `CommandPalette`, `HeaderNav`, `InputTags`,
+  `Input`, `MultiSelect`, `PaymentInput`, `ProgressCircle`,
+  `RadioField`, `Sidebar`, `SwitchField`, `TagSelect`, `TextArea`,
+  `TextEditor`, `Resizable`, `Lightbox`, and `Markdown`.
+  `Resizable` uses `react-aria/useMove`; `Lightbox` and `Markdown`
+  are indirect React Aria-backed roots. `Drawer` and `FileUpload` are
+  standalone vanilla controls outside this supplemental React Aria scope;
   `RadioGroup` and `ToggleGroup` are already covered by existing mappings.
-  These 21 candidates require Mux UI binding mapping and proof before any
-  export or availability claim.
-- Mux-namespaced token/theme data covering all donor values, modes, all donor
-  palette families (including formerly deferred cool, slate, gray, onyx, and
-  mono families), Inter, Playfair Display, and Roboto Mono font families,
-  display/heading/title/label/body/mono/expressive typography roles, and the
-  standard and mono presets. Historical token classifications remain immutable
-  provenance; no donor name becomes public API. Any bundled local font assets
-  retain their applicable third-party license notices.
-- Matched light/dark fixtures comparing CSS, anatomy, interaction,
-  variants, and states for every applicable mapped component. Missing states or
-  fixtures fail closed; existing Mux screenshot regressions cannot substitute
-  for this proof.
-- Current Storybook examples that render canonical Mux UI tokens and themes.
-- A functioning private `apps/scale` authoring path that loads, edits,
-  previews, imports, exports, persists, and round-trips themes under canonical
-  types, modes, aliases, and override safety, with explicit loss/rejection
+  These 21 candidates require Mux UI binding mapping and proof before export or
+  availability claims.
+- Mux-namespaced token/theme data covering admitted values, modes, palette
+  families, Inter, Playfair Display, and Roboto Mono font families,
+  display/heading/title/label/body/mono/expressive typography roles, and
+  standard and mono presets. Canonical Mux UI names are the public vocabulary;
+  bundled local fonts retain applicable third-party license notices.
+- Matched light/dark fixtures comparing CSS, anatomy, interaction, variants,
+  and states for every applicable mapped component. Missing states or fixtures
+  fail closed; existing Mux screenshot regressions cannot substitute for this
+  proof.
+- Current Storybook examples render canonical Mux UI tokens and themes.
+- A functioning private `apps/scale` authoring path loads, edits, previews,
+  imports, exports, persists, and round-trips themes under canonical types,
+  modes, aliases, and override safety, with explicit loss/rejection
   diagnostics.
-- An optional Tailwind consumer adapter and an actual clean consumer
-  compilation proof. Tailwind remains a consumer build dependency only and is
-  absent from Mux runtime, peer, generated-source, and styling-engine closure.
-- Exact internal, replaceable donor-affordance dependencies are admitted only
-  at the owning Mux modules: the pinned Lucide edge for the nine listed roots,
-  `react-aria@3.51.0` for `Resizable`, `marked@13.0.3` for the typed Markdown
-  parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`.
-  Their license/notice, integrity, peer-compatibility, lockfile, isolation,
-  tree-shaking, SSR/hydration, packed-consumer, and Markdown security proofs
-  are required; no upstream implementation type or object becomes public.
+- An optional Tailwind consumer adapter and clean consumer compilation proof.
+  Tailwind remains a consumer build dependency only and is absent from Mux
+  runtime, peer, generated-source, and styling-engine closure.
+- Exact internal, replaceable dependencies remain at owning Mux modules:
+  Lucide for the nine listed roots, `react-aria@3.51.0` for `Resizable`,
+  `marked@13.0.3` for the typed Markdown parser boundary, and the eight
+  `@tiptap/*@3.22.3` packages for `TextEditor`. Their license/notice,
+  integrity, peer-compatibility, lockfile, isolation, tree-shaking,
+  SSR/hydration, packed-consumer, and Markdown security proofs are required;
+  no upstream implementation type or object becomes public.
 
 **Acceptance evidence**
 
-For R1.6, apply Decision 0013's [one-time migration clarification](../decisions/0013-theme-parity-and-private-authoring.md#one-time-migration-clarification): source comparison, representative visual states, meaningful interactions, and ordinary Mux checks establish the initial transfer. The assertions below do not require exhaustive property-by-property classification, strict screenshot replay, or ongoing Tale equality after migration. The migration report records material adaptations and validation limits.
+Acceptance uses representative visual states, meaningful interactions, and
+ordinary Mux checks. It does not require ongoing equality with an external
+implementation or a continuing external comparison record.
 
 | ID | Required assertion | Retained evidence |
 | --- | --- | --- |
-| `E-R1.6-01` | The 125-style donor inventory is classification-complete, and every applicable React Aria-backed root/support style, including the known supplemental roots, maps to a Mux UI-owned binding identity through an explicit supplemental list where needed; unrelated marketing/layout roots have explicit exclusion reasons; every difference is explicit, and missing state/fixture coverage fails. | Complete donor inventory, supplemental mapping, and negative coverage report. |
-| `E-R1.6-02` | All donor token values, modes, palette families, font families, typography role names, and standard/mono presets transfer into the Mux UI namespace with canonical provenance, applicable third-party font notices, and no Tale runtime/build/dev/peer/generated-source edge. | Token/theme/font/typography transfer and dependency-closure report. |
+| `E-R1.6-01` | The current style inventory is complete, every applicable React Aria-backed root/support style maps to a Mux UI-owned binding identity through the explicit supplemental list where needed, unrelated marketing/layout roots have explicit exclusion reasons, and missing state/fixture coverage fails. | Complete style inventory, supplemental mapping, and negative coverage report. |
+| `E-R1.6-02` | All admitted token values, modes, palette families, font families, typography roles, and standard/mono presets are represented in the Mux UI namespace with canonical ownership, applicable third-party font notices, and no external runtime/build/dev/peer/generated-source edge. | Token/theme/font/typography transfer and dependency-closure report. |
 | `E-R1.6-03` | Matched light/dark fixtures compare CSS, anatomy, interaction, variants, and states; all differences are reported and only explicit Mux UI safety adaptations are permitted. | Visual and interaction parity matrix plus failed-state fixture corpus. |
-| `E-R1.6-04` | Current Storybook examples use canonical Mux UI tokens/themes and remain projections rather than a second owner. | Storybook example provenance and generation report. |
+| `E-R1.6-04` | Current Storybook examples use canonical Mux UI tokens/themes and remain projections rather than a second owner. | Storybook example ownership and generation report. |
 | `E-R1.6-05` | Private Scale loads, edits, previews, imports, exports, persists, and round-trips themes with canonical types, aliases, modes, override safety, and visible loss/rejection diagnostics. | Scale authoring and round-trip fixture matrix. |
 | `E-R1.6-06` | The optional Tailwind adapter compiles a clean consumer while Tailwind remains outside Mux runtime, peer, generated-source, and styling-engine closure. | Consumer compilation and dependency-closure report. |
 | `E-R1.6-07` | Shared token/theme sources remain renderer-neutral; React Native and framework-free web remain deferred; no publication, stable support, hosted Scale, or external design-tool interchange claim is inferred. | Platform, release, and negative-boundary audit. |
 
 **Scope controls:** The historical fixed 53-family R1 inventory remains
-unchanged; applicable donor-derived React Aria supplemental families are
-explicitly admitted only through `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and their
-mapping/list, never through a count shortcut. General external
-design-tool interchange remains G3.5. Scale is private and may be disabled
-without changing canonical truth. Safety, accessibility, runtime ownership,
-and platform differences are recorded explicitly and cannot be hidden to claim
-100% parity.
+unchanged; supplemental React Aria families are admitted only through
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and their mapping/list, never through a
+count shortcut. General external design-tool interchange remains G3.5. Scale
+is private and may be disabled without changing canonical truth. Safety,
+accessibility, runtime ownership, and platform differences are recorded
+explicitly and cannot be hidden to claim 100% parity.
 
-**Exit:** all seven R1.6 assertions pass against the exact pinned donor and
-Mux-owned sources. R1 exit publication eligibility still requires its existing
-exact tarball, release, registry, rollback, and human authorization conditions.
+**Exit:** all seven R1.6 assertions pass against canonical Mux UI sources. R1
+exit publication eligibility still requires its existing exact tarball,
+release, registry, rollback, and human authorization conditions.
 
 ### R1 exit — React prerelease publication
 
@@ -1017,7 +906,7 @@ The R1 exit package graph includes the same exact internal,
 replaceable `lucide-react@1.37.0` edge and its ISC plus Feather-derived MIT
 notices. Exit proof must retain the Mux UI-only public surface and verify exact
 SSR/hydration, tree-shaking, packed-consumer resolution, accessible labels and
-decorative semantics, and visual-migration invalidation. This does not add a
+decorative semantics, and visual contract invalidation. This does not add a
 publication authorization or change the final R1-exit merge stop.
 
 ### Later tracks and Productization
@@ -1046,608 +935,16 @@ publication authorization or change the final R1-exit merge stop.
 
 ## Historical Gate 1 — superseded cross-platform sequence
 
-The following G1 bodies and their retained evidence remain immutable audit
-history. G1.0–G1.2 facts are reusable only through an explicit R1 binding;
-G1.3–G1.9 and the old Gate 1 exit are superseded as current delivery authority.
-
-Gate 1 proves the architecture through a fixed, difficult `0.1` acceptance
-matrix. A later prototype cannot substitute for a missing cell, and an
-`unsupported` disposition can satisfy only a cell that asks for an explicit
-strategy rather than an implementation.
-
-### Gate 1 target matrix
-
-| Slice | `web.html` | `web.react` | iOS | Android | React Native Web |
-| --- | --- | --- | --- | --- | --- |
-| Button | Implemented `direct` | Implemented `direct` | Implemented `direct` or `adapted` | Implemented `direct` or `adapted` | Explicit strategy; evidence if implemented |
-| TextField | Implemented `direct` | Implemented `direct` | Implemented `direct` or `adapted` | Implemented `direct` or `adapted` | Explicit strategy; evidence if implemented |
-| Switch | Implemented `direct` | Implemented `direct` | Implemented `direct` or `adapted` | Implemented `direct` or `adapted` | Explicit strategy; evidence if implemented |
-| Dialog | Implemented `direct` or `adapted` | Implemented `direct` or `adapted` | Proved `adapted` or `native-alternative` | Proved `adapted` or `native-alternative` | Explicit strategy; evidence if implemented |
-| Select | Implemented `direct` or `adapted` | Implemented `direct` or `adapted` | Proved `native-alternative` | Proved `native-alternative` | Explicit strategy; evidence if implemented |
-| Form pattern | Applicable composition and example | Applicable composition and example | Applicable composition and example | Applicable composition and example | Explicit applicability/disposition |
-
-Every implemented cell requires one canonical executable example, schema and
-relation validity, spec-to-code/type/behavior/token conformance, an applicable
-packed-consumer fixture, risk-proportionate accessibility proof, and API/CLI
-retrieval parity at the same record revision.
-
-### G1.0 Tokens, themes, and foundation boundaries
-
-**Objective:** Establish the cross-renderer semantics, token transforms, and
-pure logic required by the fixed slices, with the pinned Tale UI non-semantic
-foundation baseline classified into a Mux UI-owned default-theme reference
-inventory.
-
-**Entry conditions**
-
-- The Phase B Gate 0 generation in the accepted token-correction sequence is
-  complete and human-accepted.
-- Button, TextField, Switch, Dialog, Select, and Form token/semantic needs have
-  been inventoried without implementing a generic UI runtime.
-- Web and native target transforms have concrete consumer fixtures.
-- The Tale baseline is pinned to commit
-  `94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` and source SHA-256
-  `83b72fc79b34932ae1afa44d21f74460a23fa693407bc319fdfafb3a2bb64a86`.
-
-**Primary ownership**
-
-- `@muxui/schema` for the closed platform-safety contract grammar
-- Canonical binding specs for per-binding/runtime-profile safety declarations
-- `@muxui/tokens` for canonical token/theme data, transforms, and validated
-  token-requirement-set compilation
-- `@muxui/catalog` for derived contract/query projection
-- `@muxui/foundation/semantic`
-- `@muxui/foundation/logic`
-- Optional `@muxui/foundation/interaction` only where proved portable
-
-**Deliverables**
-
-- Reference, semantic, and component token layers with typed IDs, units, and
-  acyclic aliasing.
-- A deterministic occurrence-complete `sourceCrosswalk` for all 693 pinned Tale
-  declarations—692 custom-property occurrences, 644 unique custom-property
-  names, and one ordinary declaration—with explicit logical-token/mode
-  grouping and one `adopt`, `adapt`, `defer`, or `reject` disposition and reason
-  per occurrence.
-- The human-accepted `adopt`/`adapt` subset materialized as Mux UI-owned reference
-  tokens with stable Mux UI IDs, types/units, meanings, modes, override policies,
-  web/native dispositions, and pinned Tale provenance. Tale names and file
-  groupings remain migration inputs rather than Mux UI public API.
-- First-party default theme and typed mode axes for color scheme, contrast,
-  motion, density, and direction where applicable.
-- Deterministic web CSS and native theme-object transforms from the same
-  canonical token sources.
-- Token override policy (`fixed`, `theme`, or `instance`) and consumer-theme
-  validation.
-- Binding-owned token recipes compiled to `TokenRequirementSet` records and
-  digests.
-- Explicit required/optional/deprecated requirements and typed fallback value
-  or fallback token semantics.
-- The architecture-defined, closed, versioned `PlatformSafetyContract` derived
-  from `strategy/platform-safety-contract.json`. A binding without nested
-  runtime profiles declares against its binding ID/profile identity; a binding
-  with nested profiles declares only per concrete nested profile. All six IDs
-  receive a `required` or reasoned `not-applicable` disposition; unsupported
-  profiles declare the latter without a behavior or evidence claim.
-- A separate `PlatformSafetyRequirementSet` projection for each binding/profile
-  containing the registry version/digest, binding/profile identity,
-  declaration revision, complete dispositions, and projection digest. Unknown,
-  missing, duplicate, wrong-profile, consumer-weakened, or prematurely
-  fulfilled declarations fail closed. Token sources and `TokenRequirementSet`
-  continue to own only token facts; target renderers own realization and
-  observable behavior.
-- Enforced foundation import boundaries for `semantic`, `logic`, and optional
-  `interaction`.
-- Profile-scoped proof metadata for every portable interaction machine.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.0-01` | Alias cycles, reverse-layer references, incompatible types/units, and unauthorized overrides fail deterministically. | Token schema and graph corpus. |
-| `E-G1.0-02` | Web and native transforms derive from canonical tokens; native never parses CSS and components never consume reference values. | Output provenance and dependency audit. |
-| `E-G1.0-03` | A missing required token fails each profile unless that exact binding/profile declares and proves an allowed fallback; fallback use emits a diagnostic. | Token fallback denial fixture. |
-| `E-G1.0-04` | Requirement-set digests change exactly when semantic dependencies change and match packed renderer descriptors. | Digest-closure fixture. |
-| `E-G1.0-05` | Foundation dependency direction is enforced and a portable machine is available only on profiles with materially distinct retained proof. | Import-boundary and portability matrix. |
-| `E-G1.0-06` | Static theme output works without runtime switching; any runtime switch is separately declared and proved. | Web/native theme smoke fixtures. |
-| `E-G1.0-07` | Closed platform-safety declarations enter binding-spec revisions and compile into separate per-binding/profile `PlatformSafetyRequirementSet` digests plus query/package projections; unknown, missing, duplicate, wrong-profile, consumer-weakened, or prematurely fulfilled requirements fail deterministically. This assertion produces no CSS/native adaptation, support, accessibility, or availability result. | Safety-contract closure and negative corpus. |
-| `E-G1.0-08` | The pinned Tale baseline is occurrence-complete; every occurrence has exactly one reviewed disposition and non-empty reason, grouping/cardinality/mode mapping is valid and unique, adopt/adapt entries require one Mux UI identity while defer/reject entries forbid one and make no runtime claim, all Tale provenance and derived digests trace to the sole crosswalk preimage, CSS-only values have explicit native adaptation or reasoned deferral/rejection, and generated CSS/native output derives only from admitted Mux UI facts. | Crosswalk coverage, classification, provenance, target-disposition, and generated-output corpus. |
-
-**Scope controls**
-
-- Do not create a fourth shared platform-token namespace.
-- Do not put selectors, React hooks, browser globals, native views, or mandatory
-  transitions in foundation.
-- Do not add a component token unless a fixed slice needs a stable
-  customization point.
-- Do not admit every Tale declaration automatically, preserve Tale variable
-  names as Mux UI API, keep Tale as a live owner, or bulk-create speculative
-  semantic/component tokens.
-- Additional themes and design-tool interchange remain Gate 3.
-
-**Exit condition:** The fixed slices have the complete classified Tale-derived
-Mux UI reference baseline plus the smallest sufficient semantic, component,
-logic, and optional portable-interaction substrate, with cross-target
-provenance and fallback denial. Phase C Gate 0 evidence and all eight G1.0
-assertions are human-accepted at the same final source. The platform-safety
-requirement contract is closed, digest-bound, and consumer-non-removable, while
-web and native behavior remain explicitly unproved and unavailable until G1.1
-and G1.2 supply their binding-owned evidence.
-
-### G1.1 Framework-free web and React substrate
-
-**Objective:** Establish the two web bindings without making React the
-canonical inventory or duplicating styles and runtime ownership.
-
-**Entry conditions**
-
-- The Phase C Gate 0 generation and corrected G1.0 are complete and
-  human-accepted.
-- G1.0 exposes the corrected token/theme and foundation inputs needed by the
-  first slice.
-- The `web.html` and `web.react` binding schemas are stable for Gate 1.
-
-**Primary ownership**
-
-- `@muxui/web`
-- `@muxui/react`
-
-**Deliverables**
-
-- Per-component framework-free CSS entry points, stable cascade layers,
-  documented root classes, semantic slots, state attributes, and public custom
-  properties.
-- Semantic HTML with progressive enhancement and optional explicitly imported,
-  idempotent, SSR-safe, destroyable vanilla controllers.
-- React bindings consuming web styles while owning React composition, state,
-  refs, portals, effects, hydration, and cleanup.
-- One-owner runtime protocol for root lifecycle, document listeners, focus
-  restoration, dismissal, portals, inert/background behavior, and scroll-lock
-  leases.
-- Public events and observable DOM hooks derived from binding specs.
-- Host TypeScript refinements validated against generated Mux UI-owned binding
-  types without exporting an upstream primitive library as public API.
-- `@muxui/web`-owned forced-colors and system-high-contrast behavior that
-  consumers cannot disable through theme or instance values. `web.html` proves
-  the behavior directly; `web.react` proves it consumes the same web source and
-  cannot bypass it with a copied React safety implementation.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.1-01` | Web examples retain usable base semantics without JavaScript where progressive enhancement is promised. | Browser fixture with controllers disabled. |
-| `E-G1.1-02` | Public CSS/DOM hooks match the binding specs; internal topology is not advertised or consumed by canonical examples. | CSS/DOM conformance audit. |
-| `E-G1.1-03` | React and vanilla never own the same root or duplicate global effects; mount/unmount and concurrent instances clean up completely. | Ownership, leak, and duplicate-listener tests. |
-| `E-G1.1-04` | SSR and hydration do not access browser globals early, change public semantics, or produce ownership duplication. | SSR/hydration fixture. |
-| `E-G1.1-05` | React preserves applicable web semantics and hooks while allowed React ergonomics remain binding-owned and typed. | Cross-binding conformance report. |
-| `E-G1.1-06` | Test-only conformance fixtures `fixture:platform-safety-web#web.html` and `fixture:platform-safety-web#web.react` each bind their own `PlatformSafetyRequirementSet`. They prove the applicable `system.forced-colors`, `system.high-contrast`, and `layout.direction` substrate policy; React proves source/parity consumption without bypass. Results bind registry/set digests, environment, and evidence identity, make no component-support claim, and leave per-slice fulfillment to G1.3–G1.7. | Forced-colors/high-contrast substrate browser matrix. |
-
-**Scope controls**
-
-- React cannot become the source of component identity, lifecycle, web styles,
-  native parity, or documentation.
-- Exact nesting, utility classes, keyframes, and undocumented attributes remain
-  internal.
-- No document-wide controller scan or import-time global lifecycle.
-
-**Exit condition:** Framework-free web and React have explicit, non-competing
-runtime ownership, a machine-enumerated compatible public surface, and retained
-shared-substrate proof of binding-owned forced-colors/high-contrast safety.
-Component support remains unclaimed until the owning slice evidence passes.
-
-### G1.2 React Native substrate and runtime profiles
-
-**Objective:** Establish a genuinely native renderer that shares meaning and
-tokens without importing web implementation accidents.
-
-**Entry conditions**
-
-- Gate 0 is complete.
-- G1.0 produces native token outputs and only the required foundation inputs.
-- iOS, Android, and React Native Web validation-profile shapes are defined.
-
-**Primary ownership**
-
-- `@muxui/react-native`
-- Native explorer host as test infrastructure, not package runtime
-
-**Deliverables**
-
-- Native primitive composition, roles, states, values, actions,
-  announcements, focus, gestures, and responder behavior.
-- Explicit iOS/Android files where behavior differs.
-- React Native Web as a named runtime profile with explicit strategy,
-  lifecycle when supported, validation profile, and evidence.
-- Native deviations and `native-alternative` references in binding specs.
-- Host applications for Expo/native exploration outside the runtime package.
-- Binding-owned iOS and Android dynamic-color, font-metric, direction, and
-  applicable accessibility mappings that consumer values cannot disable.
-  The shared React Native Web substrate declares its own profile-specific
-  disposition without inheriting web, iOS, or Android behavior; an unsupported
-  disposition carries no behavior claim. Each component slice owns its later
-  binding/profile declaration and fulfillment proof.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.2-01` | The runtime package has no dependency on web, React DOM, CSS parsing, browser globals, Expo, or Storybook hosts. | Package/dependency audit. |
-| `E-G1.2-02` | iOS and Android behavior/accessibility are proved against explicit validation profiles rather than assumed from shared props. | Native profile smoke matrix. |
-| `E-G1.2-03` | React Native Web is never treated as `web.react` parity; unsupported or adapted behavior is surfaced honestly. | Runtime-profile query and evidence fixture. |
-| `E-G1.2-04` | Native token values trace to canonical recipes and target transforms without CSS-derived authority. | Token provenance report. |
-| `E-G1.2-05` | Test-only component fixture `fixture:platform-safety-native` uses binding `native.react-native` and distinct tuples `(profile: ios, validationProfile: native.ios)`, `(profile: android, validationProfile: native.android)`, and `(profile: native.react-native-web, validationProfile: native.react-native-web)`, each with its own `PlatformSafetyRequirementSet`. iOS/Android prove applicable `native.dynamic-color`, `native.font-metrics`, `layout.direction`, and `platform.accessibility-mapping` substrate policy; React Native Web records an explicit substrate disposition. Results bind registry/set digests, environment, and evidence identity, make no component-support claim, and leave per-slice fulfillment to G1.3–G1.7. | Native platform-safety substrate matrix. |
-
-**Scope controls**
-
-- Native navigation, routing, and host-level overlay policy remain
-  application-owned.
-- Do not force identical web/native anatomy or props where platform convention
-  conflicts.
-- Do not split React Native Web into another binding without sustained API or
-  ownership divergence and ontology admission.
-
-**Exit condition:** React Native has independent shared-substrate
-implementation and proof, explicit iOS/Android/React Native Web fixture
-dispositions, no web runtime dependency, and retained substrate
-platform-theme-safety proof. Component support remains unclaimed until the
-owning slice evidence passes.
-
-### Shared slice deliverable contract
-
-Each G1.3–G1.7 component milestone must deliver:
-
-- one concept record with intent, anatomy, states, accessibility obligations,
-  lifecycle, risk class, alternatives, and decision context where useful;
-- exact `web.html`, `web.react`, and `native.react-native` binding specs plus a
-  React Native Web profile disposition;
-- canonical token recipe and compiled requirement-set digest;
-- one complete platform-safety declaration against the architecture-owned
-  `PlatformSafetyContract` plus a derived `PlatformSafetyRequirementSet`
-  digest for every implemented binding/profile;
-- structured pitfall records for known misuse, typed repair guidance, and
-  affected bindings;
-- one normative executable example for every implemented target and an
-  alternative example where `native-alternative` is required;
-- framework-free web, React, and native implementation or an allowed explicit
-  target disposition;
-- package exports and generated packed compatibility descriptors;
-- risk-proportionate behavior, accessibility, visual, and package evidence;
-- per-binding/profile fulfillment of every applicable platform-safety
-  declaration through the slice's named behavior/accessibility evidence, bound
-  to its exact safety-requirement-set digest; unsupported and reasoned
-  `not-applicable` dispositions remain behavior-evidence-free;
-- API/CLI human/JSON/dense retrieval parity; and
-- a semantic diff and change-intent preview for one representative public
-  change to the slice.
-
-No slice may author a prop table, story, docs page, golden implementation, or
-package index independently of these owners.
-
-### G1.3 Button vertical slice
-
-**Objective:** Prove the direct action-component path and the end-to-end
-component addition workflow.
-
-**Entry conditions**
-
-- G1.0, G1.1, and G1.2 are ready with only Button-required capabilities.
-- Button intent distinguishes immediate action from navigation.
-- Pending, disabled, and accessible-name semantics are decided canonically.
-
-**Deliverables**
-
-- All shared slice deliverables for Button.
-- Direct web and React bindings.
-- Direct or adapted native bindings for iOS and Android.
-- Explicit React Native Web strategy.
-- Canonical minimal generation examples plus pending/disabled coverage.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.3-01` | Activation, disabled, pending, focus-visible, and busy semantics match each binding spec. | Browser/native behavior matrix. |
-| `E-G1.3-02` | Required accessible naming and disabled/busy exposure pass on each implemented profile. | Automated and applicable manual accessibility evidence. |
-| `E-G1.3-03` | Web and React expose the same documented CSS/DOM hooks without duplicate runtime ownership. | DOM/CSS/runtime parity fixture. |
-| `E-G1.3-04` | Packed exports, types, styles, examples, descriptor revisions, and token digest resolve in clean consumers. | Packed consumer matrix. |
-| `E-G1.3-05` | An agent discovers and generates the canonical Button without inventing navigation semantics, props, or imports. | Informational cold-start/generation result. |
-
-**Scope controls**
-
-- No polymorphic “button or link” ambiguity in the canonical default.
-- Do not generalize a command/action abstraction beyond evidence from later
-  components.
-- Button cannot pull a broad icon, routing, or async workflow system into Gate
-  1.
-
-**Exit condition:** Button proves the complete direct component path on all
-required targets and the packed/query surfaces agree with its implementation.
-
-### G1.4 TextField vertical slice
-
-**Objective:** Prove naming, value ownership, validation, form relations, and
-controlled/uncontrolled ergonomics.
-
-**Entry conditions**
-
-- G1.3 is complete or its shared infrastructure is stable and independently
-  evidenced.
-- Label, description, error-message, value, and validation ownership are
-  canonical decisions.
-
-**Deliverables**
-
-- All shared slice deliverables for TextField.
-- Direct web/React and direct or adapted native implementations.
-- Explicit controlled/uncontrolled React semantics without duplicate defaults.
-- Label, description, error, required, disabled, and validation relations.
-- Canonical examples for minimal, validation, and form use.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.4-01` | Value/default ownership and change events are deterministic across controlled and uncontrolled paths. | State and type matrix. |
-| `E-G1.4-02` | Label, description, error, required, disabled, and invalid semantics are exposed correctly on each profile. | Accessibility relation matrix. |
-| `E-G1.4-03` | Form submission/reset and native text-input adaptation match declared binding behavior. | Browser/native integration fixture. |
-| `E-G1.4-04` | Example-purpose selection chooses the minimal generation example and the validation example only when prerequisites apply. | Curriculum selection fixture. |
-
-**Scope controls**
-
-- No general form engine, schema validator, masking framework, or rich-text
-  editor.
-- Host input props remain renderer-owned refinements and cannot introduce
-  undocumented Mux UI semantics.
-
-**Exit condition:** TextField proves value, validation, accessible relation,
-and form integration semantics across direct and adapted renderers.
-
-### G1.5 Switch vertical slice
-
-**Objective:** Prove boolean state, group relations, and native-control
-semantics without assuming structural equivalence.
-
-**Entry conditions**
-
-- G1.0–G1.2 are complete for the required Switch capabilities.
-- Switch intent is distinct from Checkbox and immediate-action controls.
-
-**Deliverables**
-
-- All shared slice deliverables for Switch.
-- Direct web/React and direct or adapted native implementations.
-- Controlled/uncontrolled checked state and group/label relations.
-- Explicit React Native Web disposition.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.5-01` | Keyboard, pointer/touch, checked, disabled, focus, and event semantics match each binding. | Cross-input behavior matrix. |
-| `E-G1.5-02` | Role, name, state, and group relationships pass on supported profiles. | Accessibility evidence. |
-| `E-G1.5-03` | Native adaptation preserves intent without copying DOM anatomy or CSS semantics. | Binding-conformance review. |
-| `E-G1.5-04` | A generated example does not substitute Checkbox or Button for Switch. | Agent generation smoke result. |
-
-**Scope controls**
-
-- Do not introduce a universal toggle abstraction or infer that Checkbox and
-  Switch share identical behavior.
-- Group behavior is included only to the extent required by the canonical
-  relations and examples.
-
-**Exit condition:** Switch proves semantic parity with platform-appropriate
-binding conformance and honest native adaptation.
-
-### G1.6 Dialog vertical slice
-
-**Objective:** Prove composite overlay ownership, focus/dismissal behavior, and
-native adaptation under the highest Gate 1 interaction risk.
-
-**Entry conditions**
-
-- G1.1 runtime ownership and G1.2 native profile policies are complete.
-- Overlay, focus restoration, dismissal, background/inert, portal, and host
-  responsibilities are explicitly allocated.
-- Required manual accessibility environments are available.
-
-**Deliverables**
-
-- All shared slice deliverables for Dialog.
-- Direct or adapted web/React implementations with one global-effect owner.
-- Proved adapted or native-alternative iOS and Android strategy.
-- Explicit React Native Web strategy.
-- Canonical examples for modal use, dismissal constraints, and native
-  alternative where applicable.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.6-01` | Focus entry, containment where promised, restoration, Escape/back dismissal, outside interaction, and cleanup match the binding. | Browser/native overlay matrix. |
-| `E-G1.6-02` | Multiple instances do not duplicate document listeners, inert/background state, portal lifecycle, or scroll-lock ownership. | Concurrency and teardown fixture. |
-| `E-G1.6-03` | Screen-reader/manual review passes on every supported binding/profile; missing mandatory evidence cannot be excepted into stable support. | Retained manual accessibility evidence. |
-| `E-G1.6-04` | Native-alternative guidance resolves to a compatible example and never claims web feature equivalence. | Query and curriculum fixture. |
-| `E-G1.6-05` | SSR/hydration and interrupted mount/unmount leave no leaked global effects. | Lifecycle recovery fixture. |
-
-**Scope controls**
-
-- Native navigation and application-level overlay stacks remain host-owned.
-- Do not create a universal cross-platform portal/focus implementation.
-- Dialog cannot be marked stable on a profile lacking mandatory manual proof.
-
-**Exit condition:** Dialog proves composite-risk behavior, one-owner runtime
-effects, native alternatives, and retained accessibility evidence.
-
-### G1.7 Select vertical slice
-
-**Objective:** Prove complex popup/listbox behavior on web and deliberately
-native-alternative selection on mobile.
-
-**Entry conditions**
-
-- G1.1, G1.2, and relevant Dialog/overlay ownership primitives are proved.
-- Selection/value normalization and native-alternative boundaries are decided.
-
-**Deliverables**
-
-- All shared slice deliverables for Select.
-- Direct or adapted web/React listbox/popup implementation.
-- Proved native-alternative picker strategy for iOS and Android.
-- Explicit React Native Web disposition.
-- Canonical examples for basic selection, disabled options, validation, and
-  native alternatives where applicable.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.7-01` | Web keyboard navigation, active option, selection, dismissal, focus return, disabled items, and form value match the binding. | Browser interaction matrix. |
-| `E-G1.7-02` | Native queries and docs return the declared picker alternative, its limits, and compatible example rather than a fictional listbox clone. | Native alternative retrieval fixture. |
-| `E-G1.7-03` | Accessible naming, role/state/value, announcements, and validation relations pass on supported profiles. | Automated/manual accessibility evidence. |
-| `E-G1.7-04` | Example selection is deterministic by purpose/profile and fails on contradictory preference or unmet prerequisite. | Curriculum positive/negative fixture. |
-
-**Scope controls**
-
-- No generalized combobox, autocomplete, virtualized data source, or remote
-  query framework unless separately admitted.
-- Native-alternative conformance does not imply API or feature equivalence.
-
-**Exit condition:** Select proves honest divergence between complex web
-interaction and native-alternative behavior with deterministic guidance.
-
-### G1.8 Form pattern and deterministic example curriculum
-
-**Objective:** Prove bounded multi-component composition and grounded planning
-inputs without enabling the public planner.
-
-**Entry conditions**
-
-- Button and TextField are complete; Switch is available where the pattern uses
-  it.
-- Pattern roles, parameters, invariants, and unsupported cases can be expressed
-  without a general UI tree language.
-- Example metadata and binding-owned preference schemas are stable.
-
-**Primary ownership**
-
-- `PatternRecord` and its canonical examples
-- Example records/source files and binding-to-example relations
-
-**Deliverables**
-
-- Form intent, use/avoid guidance, platform applicability, participant roles,
-  relations, closed parameters, preconditions, alternatives, pitfalls, and
-  accessibility obligations.
-- Optional bounded decision context attached to the pattern owner.
-- Applicable web, React, iOS, Android, and React Native Web examples or honest
-  dispositions.
-- Example purpose, complexity, prerequisites, profile applicability, risk/rule
-  coverage, and binding-owned preference.
-- Internal deterministic planning fixture that selects the pattern and binds
-  only declared parameters; no public `muxui plan` yet.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.8-01` | Pattern references, roles, invariants, parameters, examples, and applicable binding revisions compile as one closed graph. | Pattern relation fixture. |
-| `E-G1.8-02` | Normative example edits change the pattern/binding closure; editorial-only teaching order does not change renderer compatibility. | Normative example closure fixture. |
-| `E-G1.8-03` | Exact profile/purpose filtering chooses one example deterministically; ambiguity, bad preference, missing prerequisite, and model/search override fail. | Curriculum selection matrix. |
-| `E-G1.8-04` | The internal planner returns a known pattern, constraints, alternatives, and missing requirements; it never invents a component or step. | Grounded-plan golden corpus. |
-| `E-G1.8-05` | Structural validation is confined to Mux UI-owned examples and does not claim arbitrary consumer-tree correctness. | Enforcement-boundary test. |
-
-**Scope controls**
-
-- No generic page, flow, journey, template language, runtime abstraction, or
-  consumer-code linter.
-- Decision context is editorial unless its operative fact is also represented
-  in a normative owning field.
-- Public `plan`, consumer scaffolds, and project validation remain Gate 2.
-
-**Exit condition:** The Form pattern and example curriculum provide complete,
-deterministic composition inputs without creating an open-ended generator.
-
-### G1.9 Cross-slice proof, authoring impact, and `0.1`
-
-**Objective:** Prove the fixed matrix as one compatible release view and close
-the Gate 1 cross-cutting architecture fixtures.
-
-**Entry conditions**
-
-- G1.0–G1.8 are complete for every required target cell.
-- Package packing can derive descriptors from actual tarballs.
-- Evidence policy, disclosure classes, and risk-class requirements are
-  versioned.
-
-**Primary ownership**
-
-- Proof graph and release-manifest compiler
-- Maintainer semantic diff and change-intent preview
-- Internal local MCP parity probe
-
-**Deliverables**
-
-- Packed compatibility descriptors derived from tarball exports, binding specs,
-  and token-requirement digests.
-- One `0.1` release manifest correlating catalog, schema, token contract,
-  binding-spec revisions, renderer packages, evidence digests, platform matrix,
-  provenance, and active allowed exceptions.
-- Complete PR/gate evidence for schema, spec, unit/state, browser, native,
-  accessibility, visual, package, surface parity, and generation identity.
-- Read-only change-intent envelopes for representative concept, binding,
-  example, token, and renderer changes.
-- Structured `EvidenceAdvisory` withdrawal/supersession and
-  `OperationalExceptionRecord` enforcement, including disclosure-safe query
-  status and release-manifest projection.
-- `muxui validate` for Mux UI-owned catalog and canonical example sources, with
-  stable diagnostics and no consumer-project claim.
-- Minimal local MCP adapter used only to compare query parity.
-- Informational cold-start and generation evaluations over canonical example
-  IDs.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G1.9-01` | Every required Gate 1 matrix cell is implemented/proved or has only the explicitly permitted disposition. The same release manifest correlates the architecture registry digest, current G1.1/G1.2 substrate evidence, each slice's exact `PlatformSafetyRequirementSet`, and its named behavior/accessibility evidence for every applicable binding/profile, including explicit unsupported/not-applicable dispositions. | Signed target-matrix and platform-safety correlation report. |
-| `E-G1.9-02` | Packed descriptor derivation rejects a source-only, missing, mismatched, or unexported binding. | Packed descriptor fixture. |
-| `E-G1.9-03` | Change-intent closure reports authoritative writes, affected projections, stale proof, version effects, checks, confirmation, and base-drift rejection for every representative source class. | Change-intent golden corpus. |
-| `E-G1.9-04` | Evidence withdrawal marks every affected support/query/release view unproved without exposing restricted payloads. | Advisory propagation fixture. |
-| `E-G1.9-05` | Expired, support-broadening, proof-manufacturing, integrity-bypassing, or projection-patching exceptions fail; allowed restrictions remain visible. | Exception enforcement fixture. |
-| `E-G1.9-06` | API, CLI JSON, human, dense, and internal MCP return the same normalized record revisions and applicability. | Surface parity report. |
-| `E-G1.9-07` | A clean rebuild reproduces catalog and release digests; model evaluation cannot waive deterministic failure. | Dual-build report and gate-policy test. |
-| `E-G1.9-08` | Cold-start/generation metrics are captured with prompt/model/run metadata but remain informational until stable baselines exist. | Agent evaluation baseline report. |
-| `E-G1.9-09` | Catalog/example validation emits source-linked stable rule IDs and declines unsupported consumer-project analysis. | Validator scope and diagnostic corpus. |
-
-**Scope controls**
-
-- The docs site is not a Gate 1 acceptance dependency.
-- Internal MCP is not advertised as a mature product.
-- Gate 1 validation is confined to Mux UI-owned catalog/example sources.
-- Agent evaluation misses inform diagnosis but do not override deterministic
-  results or block `0.1` absent a separately stable threshold.
-- Tabs, Toast, component breadth, hosted services, and public mutation cannot
-  substitute for a missing required slice.
-
-**Exit condition:** One reproducible `0.1` release manifest proves every fixed
-slice and cross-cutting fixture against the same catalog/package/evidence view.
-
-### Gate 1 integration exit
-
-Gate 1 completes when G1.0 through G1.9 pass and:
-
-- all required target cells are honest and evidenced;
-- every canonical example has deterministic purpose/profile selection;
-- web, React, and native packages consume shared meaning without sharing
-  platform accidents;
-- packed consumers prove published shape rather than source-tree assumptions;
-- mandatory accessibility evidence exists for each risk/profile claim;
-- web and native platform-theme safety has binding-owned retained evidence for
-  every supported Gate 1 profile;
-- change impact is explainable before any write capability exists; and
-- later productization or integration work remains unnecessary for renderer
-  correctness.
+The former cross-platform Gate 1 bodies and their migration-era evidence are
+retired from current roadmap authority. Their exact bytes are preserved only in
+the ignored preflight archive. Current work begins with the React-primary R1
+sequence above; framework-free web, native, React Native Web, and cross-platform
+comparison remain separately deferred tracks with independent activation,
+binding, accessibility, privacy, support, and release proof.
+
+No historical Gate 1 status, evidence packet, source identity, or retention
+rule changes the immutable Product Scope 8.0.0 commitments or establishes a
+current support, parity, publication, or platform claim.
 
 ## Historical Gate 2 — superseded productization sequence
 
@@ -2588,13 +1885,13 @@ valid outcomes and do not make the core product incomplete.
 
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
-| R1.0 | React package/substrate and Tale styling-donor baseline | Gate 0; accepted Product Scope 6.0.2, Decision 0010 amendments 01–03, and the accepted Stage 1 snapshot through the immutable committed-source route | R1.1–R1.5 |
+| R1.0 | React package/substrate baseline | Gate 0; accepted Product Scope 6.0.2, Decision 0010 amendments 01–03, and the accepted Stage 1 snapshot through the immutable committed-source route | R1.1–R1.5 |
 | R1.1 | Foundation and simple controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.1 allocation | R1.5, eligible alpha |
 | R1.2 | Forms and field controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.2 allocation | R1.5, eligible alpha |
 | R1.3 | Collections and composites | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.3 allocation | R1.5, eligible alpha |
 | R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
 | R1.5 | React breadth closure | R1.1–R1.4 and the fixed 53-family 53/53 closure | R1.6 |
-| R1.6 | React/Tale parity and private Mux theme authoring | R1.5, Decision 0013, and the pinned Tale donor baseline | R1 exit |
+| R1.6 | React parity and private Mux theme authoring | R1.5 and Decision 0013 | R1 exit |
 | R1 exit | React prerelease publication | R1.5, R1.6, and exact publish authorization | P2.1; optional W1/N1/S1 activation reviews |
 | P2.1 | React packages, catalog, CLI, compatibility | R1 exit and accepted public package graph | P2.2, P2.3, P2 exit |
 | P2.2 | React consumer validation/local authority | P2.1 | P2.3, P2 exit |
@@ -2660,7 +1957,7 @@ reusable-proof binding.
 | Overlay/temporal tranche | R1.4 | `E-R1.4-01` through `E-R1.4-06` |
 | Pinned-upstream disposition and React breadth closure | R1.5 | `E-R1.5-01` through `E-R1.5-06` |
 | React prerelease publication/rollback | R1 exit | `E-R1-EXIT-01` through `E-R1-EXIT-04` |
-| React/Tale donor inventory, visual/interaction parity, and private theme authoring | R1.6 | `E-R1.6-01` through `E-R1.6-07` |
+| React style inventory, visual/interaction parity, and private theme authoring | R1.6 | `E-R1.6-01` through `E-R1.6-07` |
 | Authoring round trip | G0.5 | `E-G0.5-01` through `E-G0.5-04` |
 | Workspace catalog resolution | G0.4 | `E-G0.4-01` through `E-G0.4-05` |
 | Normative example closure | Every R1 component tranche; integrated at R1.5 and R1.6 | Applicable `E-R1.1-*` through `E-R1.6-*` |
@@ -2668,7 +1965,7 @@ reusable-proof binding.
 | Change-intent closure | R1.5, then enabled Productization operations | `E-R1.5-04`; later operation evidence |
 | Packed descriptor derivation | R1.0 baseline, every tranche, R1 exit, then P2.1 | `E-R1.0-05`, tranche packed proof, `E-R1-EXIT-01`, P2.1 release proof |
 | Token fallback denial | Historical G1.0 facts explicitly rebound at R1.0 | `E-G1.0-03` plus `E-R1.0-01` reusable-proof binding |
-| Tale-to-Mux UI token crosswalk | Historical G1.0 fact explicitly rebound at R1.0 | `E-G1.0-08` plus `E-R1.0-01` reusable-proof binding |
+| Token/theme ownership and override safety | R1.0 and R1.6 | `E-R1.0-01` through `E-R1.6-07` |
 | Platform theme safety and accessibility | R1.0 React baseline; each tranche's exact binding/profile risk proof; R1.5 correlation; R1.6 parity/theme closure; later W1/N1 profiles independently | Applicable `E-R1.0-*` through `E-R1.6-*` |
 | Evidence advisory propagation | R1.5 and every publication candidate | `E-R1.5-05`; `E-R1-EXIT-01` |
 | Operational exception enforcement | Every R1 tranche and publication candidate | Tranche exception ledger; `E-R1-EXIT-01` |
@@ -2699,7 +1996,7 @@ remove or weaken these assertions without changing the architecture.
 | Generation hygiene | G0.0 path policy, G0.2 deterministic compiler, every milestone’s no-projection-patch rule. |
 | Proof/evidence/disclosure/advisories | R1 risk-proportionate tranche proof and release manifests, P2 portfolio release manifests, G3.4 eval promotion. |
 | Lifecycle, SemVer, historical retrieval, trust | G0.1 schema rules, R1 experimental prerelease lifecycle/history, P2.1 portfolio version/release, P2.2 installed authority, G3.2 migrations. |
-| Token/theme/fallback/override policy | Three-generation G0.1–G0.5/Gate 0 correction; exact historical G1 token/theme facts rebound at R1.0; R1.6 complete applicable donor/theme parity and private authoring; later W1/N1 profile proof; G3.5 external design-tool interchange. |
+| Token/theme/fallback/override policy | G0.1–G0.5 establish the canonical contract; R1.0 and R1.6 prove React use and private authoring; later W1/N1 profile proof and G3.5 external design-tool interchange remain separately gated. |
 | React-primary product boundaries | Global guardrails, R1 package-only React prereleases, P2 capability/productization enablement, separately activated W1/N1/X1/S1, independent Gate 3 admission. |
 | Design-tool interoperability | G3.5 export/import-proposal and round-trip proof. |
 | Promptable semantics | G3.6 observed-task discovery and bounded activation only. |
@@ -2772,23 +2069,23 @@ tracking, not this long-lived roadmap.
 ## Recommended first execution sequence
 
 1. Use Product Scope `8.0.0`, Decision 0012, Decision 0013, Decision 0010 amendments 01–03,
-   Decision 0011 amendments 01–02, the accepted Stage 1 snapshot, and the React-primary/
-   Tale-donor Architecture/Roadmap
-   authority as the existing R1 baseline. Do not interpret superseded G-series
-   status or historical evidence as current R1 readiness.
-2. Activate R1.0 against exact reusable token/theme facts, the pinned Tale
-   styling donor/crosswalk, and the first Button implementation fixture.
-3. Prove the standalone React Aria/package/CSS/donor-comparison/private-
-   playground/SSR/hydration/accessibility/compatibility/packed baseline before
-   Button implementation begins.
+   Decision 0011 amendments 01–02, the accepted Stage 1 snapshot, and the
+   React-primary Architecture/Roadmap authority as the existing R1 baseline.
+   Do not interpret superseded G-series status or historical evidence as
+   current R1 readiness.
+2. Activate R1.0 against exact current token/theme facts and the first Button
+   implementation fixture.
+3. Prove the standalone React Aria/package/CSS/private-playground/
+   SSR/hydration/accessibility/compatibility/packed baseline before Button
+   implementation begins.
 4. Deliver R1.1–R1.4 in Roadmap order against the common fixed 53-family
    baseline, allowing routine components to run in parallel against the same
    baseline after Button begins.
 5. Close the fixed React family surface in R1.5 through the exact `53/53`
    committed-family reconciliation; defer, exclude, and not-a-component are
-   not completion outcomes. Complete R1.6's applicable donor inventory,
-   parity, token/theme transfer, and private Scale proof, then propose the
-   exact R1 exit package.
+   not completion outcomes. Complete R1.6's applicable style inventory, parity,
+   token/theme contract, and private Scale proof, then propose the exact R1
+   exit package.
 6. Publish no npm artifact without a separate exact external-mutation
    authorization and verified rollback tuple.
 7. Productize catalog/tooling, installed-local guidance, and React docs through
@@ -2858,7 +2155,7 @@ The immutable tranche family sets are:
   `Popover`, `PreviewTrigger`, `Toast`, `Tooltip`.
 - R1.5 adds no family implementation. It closes the exact `53/53` committed
   family reconciliation, public export manifest, Mux UI contract and lifecycle
-  ledger, styling-donor disposition, evidence and support matrix, packed
+  ledger, styling disposition, evidence and support matrix, packed
   prerelease graph, generated guidance, and React `0.1` release candidate.
 
 After the common R1.0 baseline, R1.1 through R1.4 may proceed independently in
@@ -2879,7 +2176,7 @@ the already-authorized React/React DOM peer boundary and exact internal runtime
 dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.3`
 limited to the six named value-adapter families above, and
 `lucide-react@1.37.0` for the approved existing R1 control affordances plus
-the nine R1.6 donor affordance roots `AlertDialog`, `CommandPalette`,
+  the nine R1.6 affordance roots `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
 and `TextEditor`. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
 `useMove`, `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
@@ -2888,8 +2185,8 @@ and `@tiptap/core@3.22.3`, `@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`,
 `@tiptap/extension-placeholder@3.22.3`,
 `@tiptap/extension-text-align@3.22.3`, and
 `@tiptap/extension-text-style@3.22.3` for `TextEditor` only. All are
-internal, replaceable, module-isolated implementation edges; no Tale package,
-upstream public type, Tiptap editor object, or parser object crosses the Mux UI
+internal, replaceable, module-isolated implementation edges; no upstream public
+type, Tiptap editor object, or parser object crosses the Mux UI
 public boundary. The Lucide edge carries npm integrity
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
 ISC license with its Feather-derived MIT notice, and React peer compatibility.
@@ -2910,7 +2207,7 @@ internal runtime edge to the existing R1 React graph:
 ISC license with its Feather-derived MIT notice, and React peer-compatible with
 the existing React/React DOM peer boundary. It is replaceable and, under the
 pre-R1.6 baseline, was limited to existing control affordances. Decision 0013
-supersedes that historical limit for its nine named R1.6 donor affordance
+supersedes that historical limit for its nine named R1.6 affordance
 roots.
 
 The pre-R1.6 allowed affordance boundary followed the fixed tranches: R1.1
@@ -2944,7 +2241,7 @@ notice and Feather-derived MIT notice, React peer compatibility,
 internal-only public-surface exclusion, accessible label/decorative semantics,
 SSR/hydration, tree-shaking, and exact packed-consumer resolution. A
 dependency-version, icon-mapping, geometry, or accessibility change invalidates
-the affected visual-migration comparison and its linked tranche proof. The
+the affected visual comparison and its linked tranche proof. The
 amendment has no React Native, `web.html`, or React Native
 Web implication and does not change support, lifecycle, release, publication,
 or final R1-exit-merge authority.

@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/fields.mjs
-// @generated-content-sha256: sha256:2ad2f7165b0d83a1048846101601c4e6b945bfe494325fd93ea7207526422776
+// @generated-content-sha256: sha256:084185e2c1f29cf50b61de2aecc710b0718569414d4da97a2cb77a84d32e0a1a
 import React from 'react';
 import {
   Autocomplete as AriaAutocomplete,
@@ -84,7 +84,7 @@ function fieldError(errorMessage) {
   return React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage);
 }
 
-// Keep the approved Tale-era calendar geometry Mux UI-owned instead of importing the 1.37 glyph.
+// Keep the calendar geometry Mux UI-owned instead of importing a newer glyph.
 function calendarGlyph() {
   return React.createElement('svg', {
     className: 'muxui-icon muxui-icon--sm',
@@ -300,6 +300,7 @@ export const TextField = React.forwardRef(function TextField({
   readOnly = false,
   required = false,
   invalid = false,
+  size = 'md',
   validationBehavior: _validationBehavior,
   name,
   placeholder,
@@ -317,6 +318,7 @@ export const TextField = React.forwardRef(function TextField({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'TextField');
+  const resolvedSize = normalizeChoiceControlSize(size, 'TextField');
   return React.createElement(AriaTextField, {
     ...props,
     ref,
@@ -326,6 +328,7 @@ export const TextField = React.forwardRef(function TextField({
     onChange,
     name,
     className: classNames('muxui-text-field', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -362,6 +365,7 @@ export const SearchField = React.forwardRef(function SearchField({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   placeholder,
@@ -371,6 +375,7 @@ export const SearchField = React.forwardRef(function SearchField({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'SearchField');
+  const resolvedSize = normalizeChoiceControlSize(size, 'SearchField');
   return React.createElement(AriaSearchField, {
     ...props,
     ref,
@@ -381,6 +386,7 @@ export const SearchField = React.forwardRef(function SearchField({
     onSubmit,
     name,
     className: classNames('muxui-search-field', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -406,6 +412,7 @@ export const NumberField = React.forwardRef(function NumberField({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   minValue,
@@ -418,6 +425,7 @@ export const NumberField = React.forwardRef(function NumberField({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'NumberField');
+  const resolvedSize = normalizeChoiceControlSize(size, 'NumberField');
   return React.createElement(AriaNumberField, {
     ...props,
     ref,
@@ -431,6 +439,7 @@ export const NumberField = React.forwardRef(function NumberField({
     step,
     formatOptions,
     className: classNames('muxui-number-field', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -471,7 +480,7 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
   if (orientation !== 'horizontal' && orientation !== 'vertical') {
     throw new TypeError('CheckboxGroup orientation must be horizontal or vertical');
   }
-  const resolvedSize = size === undefined ? undefined : normalizeChoiceControlSize(size, 'CheckboxGroup');
+  const resolvedSize = normalizeChoiceControlSize(size, 'CheckboxGroup');
   const group = React.createElement(AriaCheckboxGroup, {
     ...props,
     ref,
@@ -491,9 +500,7 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     fieldLabel(label),
     group,
   );
-  return resolvedSize === undefined
-    ? field
-    : React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, field);
+  return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, field);
 });
 
 CheckboxGroup.displayName = 'CheckboxGroup';
@@ -510,6 +517,7 @@ export const Switch = React.forwardRef(function Switch({
   errorMessage,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   value,
@@ -519,6 +527,7 @@ export const Switch = React.forwardRef(function Switch({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Switch');
+  const resolvedSize = normalizeChoiceControlSize(size, 'Switch');
   const visibleLabel = label ?? children;
   return React.createElement(AriaSwitchField, {
     ...props,
@@ -529,6 +538,7 @@ export const Switch = React.forwardRef(function Switch({
     name,
     value,
     className: classNames('muxui-switch-field', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     onChange,
@@ -580,6 +590,7 @@ export const DateField = React.forwardRef(function DateField({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   className,
@@ -588,6 +599,7 @@ export const DateField = React.forwardRef(function DateField({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateField');
+  const resolvedSize = normalizeChoiceControlSize(size, 'DateField');
   const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
@@ -604,6 +616,7 @@ export const DateField = React.forwardRef(function DateField({
     onChange: (next) => onChange?.(serializeDateValue(next)),
     name,
     className: classNames('muxui-date-field', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({ label, description, errorMessage, input: dateInput() }));
@@ -624,6 +637,7 @@ export const TimeField = React.forwardRef(function TimeField({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   className,
@@ -632,6 +646,7 @@ export const TimeField = React.forwardRef(function TimeField({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'TimeField');
+  const resolvedSize = normalizeChoiceControlSize(size, 'TimeField');
   const externalValidation = useMuxFormValidation(name);
   const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
   React.useMemo(() => timeOrUndefined(value), [value]);
@@ -667,6 +682,7 @@ export const TimeField = React.forwardRef(function TimeField({
     // stays stable and cannot duplicate an upstream field input.
     name: undefined,
     className: classNames('muxui-time-field', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -700,6 +716,7 @@ export const DatePicker = React.forwardRef(function DatePicker({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   name,
   className,
@@ -708,6 +725,7 @@ export const DatePicker = React.forwardRef(function DatePicker({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
+  const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
   const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
@@ -727,6 +745,7 @@ export const DatePicker = React.forwardRef(function DatePicker({
     onOpenChange,
     name,
     className: classNames('muxui-date-picker', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -758,6 +777,7 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
   readOnly = false,
   required = false,
   invalid = false,
+  size,
   validationBehavior: _validationBehavior,
   allowsNonContiguousRanges: _allowsNonContiguousRanges,
   closeOnSelect: _closeOnSelect,
@@ -770,6 +790,7 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
+  const resolvedSize = normalizeChoiceControlSize(size, 'DateRangePicker');
   const externalValidation = useMuxFormValidation([startName, endName]);
   const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
   const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
@@ -806,6 +827,7 @@ export const DateRangePicker = React.forwardRef(function DateRangePicker({
     onOpenChange,
     name: undefined,
     className: classNames('muxui-date-range-picker', className),
+    'data-size': resolvedSize,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
   }, fieldChildren({
@@ -854,7 +876,7 @@ function autocompleteItemText(item) {
   return autocompleteNodeText(item.label) || fallback;
 }
 
-const AUTOCOMPLETE_SIZES = new Set(['sm', 'md']);
+const AUTOCOMPLETE_SIZES = new Set(['sm', 'md', 'lg']);
 
 function normalizeAutocompleteSize(size) {
   const resolved = size ?? 'md';

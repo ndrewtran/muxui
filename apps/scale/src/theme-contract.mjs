@@ -101,12 +101,12 @@ export function previewPalette(settings, kind, steps) {
     return { step, value };
   });
 }
-export function previewTheme(settings, { selector = '.muxui-scale-preview' } = {}) {
+export function previewTheme(settings, { selector = '.muxui-scale-preview', modes = { colorScheme: settings.colorMode } } = {}) {
   const compiled = compileThemeAuthoringDocument(createScaleDocument(settings, { slug: 'preview' }), {
     source: defaultThemeSource,
     target: 'web.css',
     selector,
-    modes: { colorScheme: settings.colorMode },
+    modes,
   });
   if (!compiled || typeof compiled.css !== 'string') throw new TypeError('MUXUI_SCALE_CSS_PROJECTION_INVALID');
   return compiled;

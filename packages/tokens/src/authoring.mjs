@@ -85,7 +85,7 @@ function assertSourceMetadata(source) {
   const radius = scale.radius;
   if (!isRecord(radius) || radius.unit !== 'rem' || radius.base !== 0.125
     || !sameValue(radius.multipliers, RADIUS_FACTORS)
-    || !sameValue(radius.curvature, { default: 1, minimum: 0, maximum: 2, step: 0.01 })) invalid('theme.scale.radius');
+    || !sameValue(radius.curvature, { default: 0.5, minimum: 0, maximum: 2, step: 0.01 })) invalid('theme.scale.radius');
   const contrast = scale.contrast;
   if (!isRecord(contrast) || contrast.algorithm !== 'wcag2-endpoint-v1'
     || contrast.defaultPivot !== 'auto' || contrast.foregrounds !== 'per-shade'

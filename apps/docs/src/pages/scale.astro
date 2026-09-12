@@ -1,0 +1,11 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import ScalePage from '../components/ScalePage.jsx';
+---
+
+<StarlightPage
+	frontmatter={{ title: 'Scale', description: 'Build and apply a Mux UI theme in your browser.', tableOfContents: false }}
+	headings={[]}
+>
+	<ScalePage client:only="react" />
+</StarlightPage>

@@ -13,7 +13,7 @@ import {
   validateFamily,
 } from '@muxui/schema';
 import { catalogJson } from '../generated/catalog.mjs';
-import { assertAcceptedQueryProfile, compileCatalog } from '../src/compiler.mjs';
+import { compileCatalog } from '../src/compiler.mjs';
 import {
   createCatalogApi,
   getArtifact,
@@ -82,7 +82,7 @@ function syntheticCrosswalkBundle(entries, { pageBudgetProfile } = {}) {
     .filter((name) => name.startsWith('--'));
   artifact.record.sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui', revision: 'a'.repeat(40), path: 'packages/tokens/tokens.json',
+      repository: 'muxui/reference', revision: 'a'.repeat(40), path: 'packages/tokens/tokens.json',
       sha256: `sha256:${'b'.repeat(64)}`, baseFontSizePx: 16,
       declarationOccurrences: entries.length,
       customPropertyOccurrences: customPropertyNames.length,
@@ -167,12 +167,20 @@ test('R1.4 guide sources preserve Markdown newlines', async () => {
   const guideSources = manifest.records
     .filter(({ family, sourcePath }) => family === 'guide' && sourcePath?.includes('-usage.md'))
     .map(({ sourcePath }) => sourcePath);
-  assert.equal(guideSources.length, 53);
+  assert.equal(guideSources.length, 54);
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
     assert.doesNotMatch(source, /\\n/u, sourcePath);
     assert.ok(source.includes('\n\n'), sourcePath);
   }
+});
+
+test('control sizing guide is discoverable as a web.react canonical guide', () => {
+  const id = 'muxui:guide:control-sizing-usage';
+  const result = getArtifact({ id, platform: 'web.react', detail: 'full' });
+  assert.equal(result.data.artifact.id, id);
+  assert.deepEqual(result.data.artifact.platforms, ['web.react']);
+  assert.equal(searchArtifacts({ query: 'interactive control sizing', limit: 100, detail: 'brief' }).data.items.some((item) => item.id === id), true);
 });
 
 test('R1.4 catalog closure registers and discovers every canonical family', async () => {
@@ -235,7 +243,7 @@ test('R1.3 catalog closure registers and discovers every canonical family', asyn
   }
 });
 
-test('E-G0.2-02: list, search, and get are deterministic with exact provenance', () => {
+test('E-G0.2-02: list, search, and get are deterministic with exact source revision', () => {
   const list = listArtifacts({ limit: 100, detail: 'compact' });
   const search = searchArtifacts({ query: 'button action', detail: 'brief' });
   const detail = getArtifact({
@@ -343,7 +351,7 @@ test('E-G0.2-03: pagination is digest- and request-bound', () => {
   assert.equal(crossDigest.error.code, 'MUXUI_CURSOR_INVALID');
 });
 
-test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.1 and 1.2 meanings', () => {
+test('catalog query 2.0 removes inline tokens while retaining 1.1 and 1.2 meanings', () => {
   const api = createCatalogApi(baseBundle);
   const v11 = api.getArtifact({
     id: 'muxui:token:default-theme',
@@ -377,9 +385,9 @@ test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.
   assert.equal(v20.data.artifact.tokenCount, Object.keys(v11.data.artifact.tokens).length);
   assert.equal(
     v20.data.artifact.sourceCrosswalkDigest,
-    'sha256:5189cd61005c0e8d733465034d7252238bfffbc517aee4d1cdbf072ee400fd8d',
+    null,
   );
-  assert.deepEqual(v20.data.artifact.availableSections, ['tokens', 'source-crosswalk']);
+  assert.deepEqual(v20.data.artifact.availableSections, ['tokens']);
   for (const response of [v11, v12, v20]) {
     assert.equal(Object.hasOwn(response.data.artifact, 'sourceCrosswalk'), false);
     assert.equal(Object.hasOwn(response.data.artifact, 'extensions'), false);
@@ -394,7 +402,7 @@ test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.
     }).error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
   }
   for (const mutate of [
-    (value) => { value.data.artifact.availableSections.reverse(); },
+    (value) => { value.data.artifact.availableSections = ['source-crosswalk', 'tokens']; },
     (value) => { value.data.artifact.tokenCount = -1; },
     (value) => { value.data.artifact.tokenSourceContentRevision = `sha256:${'0'.repeat(64)}`; },
     (value) => { value.data.artifact.tokens = {}; },
@@ -410,7 +418,7 @@ test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.
     (value) => { value.sourceCrosswalkDigest = `sha256:${'0'.repeat(64)}`; },
     (value) => { value.tokenCount += 1; },
     (value) => { value.tokenSourceContentRevision = `sha256:${'0'.repeat(64)}`; },
-    (value) => { value.availableSections.reverse(); },
+    (value) => { value.availableSections = ['source-crosswalk', 'tokens']; },
   ]) {
     const invalid = structuredClone(v20.data.artifact);
     mutate(invalid);
@@ -453,19 +461,18 @@ test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.
     queryApiVersion: '1.2.0',
     section: 'source-crosswalk',
   });
-  assert.equal(currentCrosswalk.entries.status, 'available');
-  assert.equal(currentCrosswalk.entries.items.length, 20);
-  assert.equal(currentCrosswalk.page.position, 0);
-  assert.equal(currentCrosswalk.page.returned, 20);
-  assert.equal(currentCrosswalk.page.remaining, 673);
-  assert.equal(typeof currentCrosswalk.page.nextCursor, 'string');
-  validateFamily('section-page', currentCrosswalk);
+  assert.deepEqual(currentCrosswalk.entries, {
+    status: 'absent',
+    reason: 'token-source-omits-source-crosswalk',
+    tokenSourceSchemaVersion: '2.1.0',
+    items: [],
+  });
 
   const futurePreimage = structuredClone(preimage(baseBundle));
   const futureToken = futurePreimage.artifacts.find(({ kind }) => kind === 'token');
   futureToken.record.sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui',
+      repository: 'muxui/reference',
       revision: 'a'.repeat(40),
       path: 'packages/tokens/tokens.json',
       sha256: `sha256:${'b'.repeat(64)}`,
@@ -529,7 +536,7 @@ test('TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.
   });
 });
 
-test('TALE-TOKEN-B synthetic crosswalk pages preserve normalized groups without changing v1.2 projection', () => {
+test('synthetic crosswalk pages preserve normalized groups without changing v1.2 projection', () => {
   const bundle = structuredClone(preimage(baseBundle));
   const artifact = bundle.artifacts.find(({ kind }) => kind === 'token');
   const occurrences = [
@@ -545,7 +552,7 @@ test('TALE-TOKEN-B synthetic crosswalk pages preserve normalized groups without 
   };
   artifact.record.sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui',
+      repository: 'muxui/reference',
       revision: 'a'.repeat(40),
       path: 'packages/tokens/tokens.json',
       sha256: `sha256:${'b'.repeat(64)}`,
@@ -622,26 +629,20 @@ test('TALE-TOKEN-B synthetic crosswalk pages preserve normalized groups without 
   );
 });
 
-test('current catalog API rejects historical bundle and artifact identities', async () => {
-  const historicalBundle = JSON.parse(await readFile(
-    join(
-      repositoryRoot,
-      'tests/fixtures/tale-token-phase-b/installed-catalog/generated/catalog.json',
-    ),
-    'utf8',
-  ));
+test('current catalog API rejects unsupported bundle and artifact identities', () => {
+  const unsupportedBundle = { schema: 'unsupported-catalog-v1', artifacts: [] };
   assert.throws(
-    () => createCatalogApi(historicalBundle),
+    () => createCatalogApi(unsupportedBundle),
     /MUXUI_(?:SCHEMA|CATALOG_INTEGRITY)_/u,
   );
-  const historicalId = ['core', ':', 'token', ':', 'button-minimum'].join('');
+  const unsupportedId = ['legacy', ':', 'token', ':', 'button-minimum'].join('');
   assert.equal(
-    getArtifact({ id: historicalId }).error.code,
+    getArtifact({ id: unsupportedId }).error.code,
     'MUXUI_QUERY_INVALID',
   );
 });
 
-test('TALE-TOKEN-B section cursors fail closed across tampering, versions, selectors, and catalog identities', () => {
+test('section cursors fail closed across tampering, versions, selectors, and catalog identities', () => {
   const api = createCatalogApi(baseBundle);
   const request = {
     id: 'muxui:token:default-theme',
@@ -681,7 +682,7 @@ test('TALE-TOKEN-B section cursors fail closed across tampering, versions, selec
   assert.equal(api.getArtifact({ ...request, invented: true }).error.code, 'MUXUI_QUERY_INVALID');
 });
 
-test('TALE-TOKEN-B runtime paging proves budget breaks, oversize errors, continuation, and position bounds', () => {
+test('runtime paging proves budget breaks, oversize errors, continuation, and position bounds', () => {
   const boundedEntries = [1, 2, 3].map((ordinal) => rejectEntry(ordinal, {
     reason: 'x '.repeat(250).trim(),
     value: 'y '.repeat(300).trim(),
@@ -749,67 +750,7 @@ test('TALE-TOKEN-B runtime paging proves budget breaks, oversize errors, continu
   assert.equal(terminal.page.nextCursor, null);
 });
 
-test('TALE-TOKEN-B page budget profile binds the exact accepted annex envelope', async () => {
-  const profile = JSON.parse(await readFile(
-    join(repositoryRoot, 'packages/catalog/token-section-page-budget-profile.json'),
-    'utf8',
-  ));
-  const annex = JSON.parse(await readFile(
-    join(repositoryRoot, 'decisions/0003-tale-token-classification-annex.json'),
-    'utf8',
-  ));
-  const accepted = annex.pageProfiles.find(({ queryApiVersion }) => queryApiVersion === '2.0.0');
-  assert.equal(
-    canonicalDigest(accepted.normalizedWorstCaseEnvelopePreimage),
-    profile.normalizedWorstCaseEnvelopeSha256,
-  );
-  assert.equal(countTokens(canonicalJson(accepted.normalizedWorstCaseEnvelopePreimage)), 201);
-  assert.equal(profile.maximumEntryTokens + profile.envelopeReserveTokens, 2048);
-  assert.equal(profile.cursorPositionMaximum, 4294967295);
-  for (const mutate of [
-    (value) => { value.id = 'muxui-token-section-page-budget-1-2-0'; },
-    (value) => { value.queryApiVersion = '1.2.0'; },
-  ]) {
-    const invalidProfile = structuredClone(baseBundle.pageBudgetProfile);
-    mutate(invalidProfile);
-    const invalidPreimage = { ...preimage(baseBundle), pageBudgetProfile: invalidProfile };
-    assert.throws(
-      () => createCatalogApi({ ...invalidPreimage, catalogDigest: canonicalDigest(invalidPreimage) }),
-      /MUXUI_SCHEMA_INVALID/,
-    );
-  }
-  const manifest = JSON.parse(await readFile(
-    join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
-    'utf8',
-  ));
-  assert.equal(assertAcceptedQueryProfile({
-    manifest,
-    pageBudgetProfile: profile,
-    authorityDecision: annex,
-  }), profile);
-  for (const mutate of [
-    (value) => { value.profile.unowned = true; },
-    (value) => { value.profile.cursorMaximumBytes -= 1; },
-    (value) => { value.profile.envelopeOversizeCode = 'MUXUI_QUERY_PAGE_ENTRY_TOO_LARGE'; },
-    (value) => { value.profile.cursorBindings.reverse(); },
-    (value) => { value.profile.normalizedWorstCaseEnvelopeSha256 = `sha256:${'0'.repeat(64)}`; },
-    (value) => { value.manifest.queryApiVersion = '1.1.0'; },
-    (value) => { value.manifest.supportedQueryApiVersions = ['1.2.0']; },
-  ]) {
-    const invalid = { manifest: structuredClone(manifest), profile: structuredClone(profile) };
-    mutate(invalid);
-    assert.throws(
-      () => assertAcceptedQueryProfile({
-        manifest: invalid.manifest,
-        pageBudgetProfile: invalid.profile,
-        authorityDecision: annex,
-      }),
-      /MUXUI_(?:CATALOG_SOURCE|SCHEMA)_INVALID/,
-    );
-  }
-});
-
-test('TALE-TOKEN-A selected catalog descriptor owns query defaults and support', () => {
+test('selected catalog descriptor owns query defaults and support', () => {
   const historicalPreimage = {
     ...preimage(baseBundle),
     apiVersion: '1.1.0',

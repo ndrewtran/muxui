@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:a163f41f5756dc7c65b518c6834b21e96feacdb0e0ea6329122bbc8eefdcb2d6
+// @generated-content-sha256: sha256:04bfa0d86385d7b1e431d80c3c55612fff63bf0e5e25ad50a23533eb9e06e619
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -21,6 +21,7 @@ const binding = {
       "invalid": false,
       "readOnly": false,
       "required": false,
+      "size": "md",
       "step": 1
     },
     "events": [
@@ -44,6 +45,7 @@ const binding = {
       "value",
       "defaultValue",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",

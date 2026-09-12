@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0.0","id":"muxui:guide:foundations-motion","kind":"guide","name":"Motion","summary":"Guidance for Mux UI timing, easing, and reduced motion.","lifecycle":"experimental","keywords":["foundations","motion","duration","easing","accessibility"],"platforms":["web.react"],"source":"catalog/guides/foundations-motion.md"}

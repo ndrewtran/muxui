@@ -28,12 +28,12 @@ This is a pre-first-publication clean identity reset. No compatibility aliases
 or dual names are admitted because no public npm release exists. Historical
 decisions, acceptance records, retained evidence, pinned external inputs, and
 historical URLs remain unchanged. Current source, renderer, package, tooling,
-Storybook, and visual-migration projections adopt the final `muxui` identity;
+Storybook and visual projections adopt the final `muxui` identity;
 the checkout's outer directory is not renamed.
 
 Product Scope advances major from `6.0.4` to `7.0.0`. Existing `SCOPE-*` IDs,
 commitments, the 53-family React inventory, milestone boundaries, platform
-deferrals, React Aria/Tale/Lucide/temporal decisions, and release stops remain
+deferrals, React Aria/styling/Lucide/temporal decisions, and release stops remain
 unchanged. Only their owned current product, package, repository, and public
 name references are updated. Historical provenance is not rewritten.
 

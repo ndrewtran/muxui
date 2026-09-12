@@ -80,12 +80,7 @@ test('R1 contract schema exposes only the current Mux UI identity', async () => 
   ));
   assert.doesNotMatch(JSON.stringify(schema), new RegExp(`${['core', 'ui'].join('-')}-react-`, 'u'));
 
-  for (const file of [
-    'upstream-snapshot.json',
-    'upstream-exports.json',
-    'donor-crosswalk.json',
-    'license.json',
-  ]) {
+  for (const file of ['upstream-snapshot.json', 'upstream-exports.json']) {
     const historical = JSON.parse(await readFile(
       resolve(import.meta.dirname, `../../../catalog/react-r1-0/${file}`),
       'utf8',
@@ -96,6 +91,8 @@ test('R1 contract schema exposes only the current Mux UI identity', async () => 
       file,
     );
   }
+  const retired = { schema: `${['core', 'ui'].join('-')}-react-retired-v1` };
+  assert.throws(() => validateContractDocument('react-r1.schema.json', retired), expectCode('MUXUI_SCHEMA_INVALID'));
 });
 
 test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relations validate', () => {
@@ -725,7 +722,7 @@ test('E-G0.1-04: package/source locations remain derived and generated types ret
   assert.match(generated, /export type ArtifactKind/);
 });
 
-test('TALE-TOKEN-B token-source 2.0 to 2.1 migration is explicit, omission-preserving, and idempotent', () => {
+test('token-source 2.0 to 2.1 migration is explicit, omission-preserving, and idempotent', () => {
   const legacy = tokenSource();
   legacy.schemaVersion = '2.0.0';
   const omitted = migrateTokenSourceV2ToV2_1(legacy);
@@ -742,7 +739,7 @@ test('TALE-TOKEN-B token-source 2.0 to 2.1 migration is explicit, omission-prese
 
   const sourceCrosswalk = {
     baseline: {
-      repository: 'Tale-UI/tale-ui',
+      repository: 'muxui/reference',
       revision: 'a'.repeat(40),
       path: 'packages/tokens/tokens.json',
       sha256: `sha256:${'b'.repeat(64)}`,
@@ -779,7 +776,7 @@ test('TALE-TOKEN-B token-source 2.0 to 2.1 migration is explicit, omission-prese
   );
 });
 
-test('TALE-TOKEN-A section-page grammar is closed, typed, and position-safe', () => {
+test('section-page grammar is closed, typed, and position-safe', () => {
   const page = {
     schemaVersion: '1.2.0',
     responseType: 'artifact.detail.section-page',
@@ -909,7 +906,7 @@ test('TALE-TOKEN-A section-page grammar is closed, typed, and position-safe', ()
 
   const ordinalTie = structuredClone(sourceCrosswalk);
   const tiedEntry = structuredClone(ordinalTie.entries.items[0]);
-  tiedEntry.occurrence.name = '--tale-font-size';
+  tiedEntry.occurrence.name = '--muxui-font-size';
   tiedEntry.occurrence.value = '1rem';
   ordinalTie.entries.items = [ordinalTie.entries.items[0], tiedEntry]
     .sort((left, right) => {
@@ -953,7 +950,7 @@ test('TALE-TOKEN-A section-page grammar is closed, typed, and position-safe', ()
   assert.throws(() => validateFamily('section-page', tamperedCursor), /MUXUI_SCHEMA_INVALID/);
 });
 
-test('TALE-TOKEN-B page budget profile grammar is closed and internally bounded', async () => {
+test('page budget profile grammar is closed and internally bounded', async () => {
   const profile = parseJsonStrict(await readFile(
     resolve(import.meta.dirname, '../../catalog/token-section-page-budget-profile.json'),
     'utf8',

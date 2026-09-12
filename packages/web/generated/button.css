@@ -1,5 +1,5 @@
 /* @generated-from: packages/catalog/catalog-sources.json
- * @generated-content-sha256: sha256:2078d512360c94d432787ae26b160eb76110be75e1177306fd7b2eec6af97a7e
+ * @generated-content-sha256: sha256:640d1855894b75d1d500e7a7d5e7ce4a3dd1956210541d99642bf7e7393f85cb
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -484,14 +484,14 @@
   --muxui-reference-dimension-font-size-xs: 12.3px;
   --muxui-reference-dimension-max-screen-width: 1600px;
   --muxui-reference-dimension-min-screen-width: 480px;
-  --muxui-reference-dimension-radius-2xl: calc(var(--muxui-reference-dimension-scale) * 24);
+  --muxui-reference-dimension-radius-2xl: 1.5rem;
   --muxui-reference-dimension-radius-full: 9999px;
-  --muxui-reference-dimension-radius-l: calc(var(--muxui-reference-dimension-scale) * 12);
-  --muxui-reference-dimension-radius-m: calc(var(--muxui-reference-dimension-scale) * 8);
+  --muxui-reference-dimension-radius-l: 0.75rem;
+  --muxui-reference-dimension-radius-m: 0.5rem;
   --muxui-reference-dimension-radius-none: 0px;
-  --muxui-reference-dimension-radius-s: calc(var(--muxui-reference-dimension-scale) * 6);
-  --muxui-reference-dimension-radius-xl: calc(var(--muxui-reference-dimension-scale) * 16);
-  --muxui-reference-dimension-radius-xs: calc(var(--muxui-reference-dimension-scale) * 4);
+  --muxui-reference-dimension-radius-s: 0.375rem;
+  --muxui-reference-dimension-radius-xl: 1rem;
+  --muxui-reference-dimension-radius-xs: 0.25rem;
   --muxui-reference-dimension-scale: 0.07813rem;
   --muxui-reference-dimension-section-space-l: 9.89375rem;
   --muxui-reference-dimension-section-space-m: 6.99375rem;
@@ -733,10 +733,13 @@
   --muxui-semantic-content-on-strong: var(--muxui-reference-color-neutral-20);
   --muxui-semantic-content-secondary: var(--muxui-semantic-color-neutral-60);
   --muxui-semantic-content-strong: var(--muxui-semantic-color-neutral-90);
-  --muxui-semantic-control-min-height: 36px;
+  --muxui-semantic-control-min-height: var(--muxui-semantic-control-size-md);
   --muxui-semantic-control-padding-block: var(--muxui-reference-dimension-space-3xs);
   --muxui-semantic-control-padding-inline: var(--muxui-reference-dimension-space-xs);
   --muxui-semantic-control-radius: var(--muxui-reference-dimension-radius-m);
+  --muxui-semantic-control-size-lg: 2.5rem;
+  --muxui-semantic-control-size-md: 2.25rem;
+  --muxui-semantic-control-size-sm: 2rem;
   --muxui-semantic-effect-scrim: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 48%, #00000000);
   --muxui-semantic-effect-scrim-strong: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 72%, #00000000);
   --muxui-semantic-effect-scrim-subtle: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 24%, #00000000);
@@ -936,7 +939,7 @@
     align-items: center;
     background: var(--muxui-component-button-background);
     border: 2px solid #025768;
-    border-radius: 10.00064px;
+    border-radius: 8px;
     color: var(--muxui-component-button-foreground);
     display: inline-flex;
     font: inherit;
