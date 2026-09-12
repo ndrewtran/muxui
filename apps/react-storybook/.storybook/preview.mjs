@@ -1,9 +1,12 @@
 import React from 'react';
 import { useGlobals } from 'storybook/preview-api';
+import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events';
+import { DocsContainer } from '@storybook/addon-docs/blocks';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { isMigrationFixtureRequest } from '../src/visual-migration-contract.mjs';
 import { MigrationFixture } from '../src/migration-visual.fixture.mjs';
+import { buildTheme } from './theme.mjs';
 import '@muxui/react/styles.css';
 import './preview.css';
 
@@ -34,6 +37,36 @@ function applyMigrationHost(migration) {
   if (typeof document === 'undefined' || !document.body) return;
   if (migration) document.body.setAttribute('data-muxui-migration-host', 'true');
   else document.body.removeAttribute('data-muxui-migration-host');
+}
+
+function colorSchemeFromQuery() {
+  const globals = new URLSearchParams(window.location.search).get('globals') ?? '';
+  return /(?:^|;)colorScheme:dark(?:;|$)/u.test(globals) ? 'dark' : 'light';
+}
+
+function colorSchemeFromContext(context) {
+  const story = context.componentStories()[0];
+  if (story) return context.getStoryContext(story).globals?.colorScheme === 'dark' ? 'dark' : 'light';
+  const rootScheme = document.documentElement.getAttribute('data-muxui-color-scheme');
+  return rootScheme === 'dark' || colorSchemeFromQuery() === 'dark' ? 'dark' : 'light';
+}
+
+function MuxUIDocsContainer({ context, children }) {
+  const [scheme, setScheme] = React.useState(() => colorSchemeFromContext(context));
+
+  React.useEffect(() => {
+    const updateScheme = ({ globals }) => {
+      setScheme(globals?.colorScheme === 'dark' ? 'dark' : 'light');
+    };
+    context.channel.on(GLOBALS_UPDATED, updateScheme);
+    context.channel.on(SET_GLOBALS, updateScheme);
+    return () => {
+      context.channel.removeListener(GLOBALS_UPDATED, updateScheme);
+      context.channel.removeListener(SET_GLOBALS, updateScheme);
+    };
+  }, [context.channel]);
+
+  return React.createElement(DocsContainer, { context, theme: buildTheme(scheme) }, children);
 }
 
 function StorySurface({ children, scheme, direction, viewMode, migration }) {
@@ -154,6 +187,10 @@ export default {
     },
     a11y: {
       test: 'error',
+    },
+    docs: {
+      theme: buildTheme('light'),
+      container: MuxUIDocsContainer,
     },
   },
 };

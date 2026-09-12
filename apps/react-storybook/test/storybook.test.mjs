@@ -953,7 +953,9 @@ test('lifecycle state coverage drives observable Mux UI transitions', async () =
         const initialOverlayObservation = family === 'Toast' && closing
           ? observeInitialOverlay(marker)
           : undefined;
-        await act(async () => {
+        // Sample the committed lifecycle state before its requestAnimationFrame
+        // transition can mount an entering overlay.
+        act(() => {
           lifecycleSelect.value = state;
           lifecycleSelect.dispatchEvent(new Event('change', { bubbles: true }));
         });
