@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:0b7de414b6b36faa2053f52fddf74602d5c1faa1c0737f6c41a4f90b3cbd1614
+// @generated-content-sha256: sha256:6da07cbbae76a9f39e642b5c8b2970b63d0f56325fd41f323215dcc85d473f16
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -65,7 +65,7 @@ const binding = {
 const record = { family: 'Calendar', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/Calendar',
+  title: 'Mux UI React/Calendar',
   id: 'muxui-react-r1-3-calendar',
   component: MuxUI.Calendar,
   tags: ['autodocs'],

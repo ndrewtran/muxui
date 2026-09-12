@@ -205,11 +205,12 @@ test('R1.3 collection source preserves donor glyph alignment state selectors', a
   const styles = await readFile(resolve(import.meta.dirname, '../src/styles/collections.css'), 'utf8');
   assert.match(styles, /\.muxui-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) > svg[\s\S]*?opacity: 0\.45;/u);
   assert.match(styles, /\.muxui-range-calendar\[data-disabled\] \.muxui-calendar-(?:previous|next) > svg[\s\S]*?opacity: 0\.45;/u);
-  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding: var\(--muxui-semantic-layout-group-gap\) var\(--muxui-reference-dimension-space-m\);/u);
-  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform 0\.15s ease;/u);
+  assert.match(styles, /\.muxui-tab\s*\{[\s\S]*?padding: var\(--muxui-semantic-layout-inset-small\) var\(--muxui-semantic-layout-inset-xlarge\);/u);
+  assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;[\s\S]*?transition:\s*transform var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\);/u);
   assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
-  assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
-  assert.match(styles, /\[data-muxui-color-scheme='dark'\] :where\(\.muxui-calendar, \.muxui-range-calendar\) \{\s*background-color: var\(--muxui-reference-color-neutral-20\);\s*border-color: var\(--muxui-reference-color-neutral-10\);/u);
+  assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
+  const baseStyles = await readFile(resolve(import.meta.dirname, '../src/styles/base.css'), 'utf8');
+  assert.match(baseStyles, /\.muxui-calendar,\s*\.muxui-range-calendar\s*\{[^}]*background: var\(--muxui-semantic-surface-raised\);[^}]*border: 1px solid var\(--muxui-semantic-border-strong\);/u);
 });
 
 test('R1.3 calendars reserve seven token-sized day columns', async () => {
@@ -957,7 +958,7 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
     const styles = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
     assert.match(styles, /\.muxui-tree-item\[data-has-child-items\] \.muxui-tree-item-content::before\s*\{[\s\S]*?content:\s*'\\25B6';[\s\S]*?font-size:\s*0\.6em;/u);
     assert.match(styles, /\.muxui-tree-item\[data-expanded\] \.muxui-tree-item-content::before\s*\{[\s\S]*?transform:\s*rotate\(90deg\);/u);
-    assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-group-gap\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
+    assert.match(styles, /\.muxui-tree-toggle\s*\{[\s\S]*?position:\s*absolute;[\s\S]*?inset-inline-start:\s*var\(--muxui-semantic-layout-inset-small\);[\s\S]*?inset-block-start:\s*0;[\s\S]*?width:\s*0\.75rem;[\s\S]*?height:\s*100%;/u);
     await act(async () => child.click());
     assert.deepEqual(actions, []);
   } finally {

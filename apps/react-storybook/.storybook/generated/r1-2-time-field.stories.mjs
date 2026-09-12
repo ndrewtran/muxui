@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:768d3c405f9abf31d6352ec1122aa9ee0665080a86b39d523966c4e6d453ceaa
+// @generated-content-sha256: sha256:5039f3bb4c968787dacea93a77de47189d0a059430aa724383db9a756cbaafb8
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -67,7 +67,7 @@ const binding = {
 const record = { family: 'TimeField', tranche: 'R1.2', binding };
 
 export default {
-  title: 'Mux UI React/R1.2/TimeField',
+  title: 'Mux UI React/TimeField',
   id: 'muxui-react-r1-2-time-field',
   component: MuxUI.TimeField,
   tags: ['autodocs'],

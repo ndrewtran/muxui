@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:9ad626c15536a1fce2453bf064c02a81e0266249a18d5414a4871bdfd1b2198d
+// @generated-content-sha256: sha256:95199eed01f1ebc17621e09af1e3420140c5dde555ad121f5a57375556183ff4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -66,7 +66,7 @@ const binding = {
 const record = { family: 'Tooltip', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/Tooltip',
+  title: 'Mux UI React/Tooltip',
   id: 'muxui-react-r1-4-tooltip',
   component: MuxUI.Tooltip,
   tags: ['autodocs'],

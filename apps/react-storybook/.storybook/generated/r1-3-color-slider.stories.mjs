@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:d01d12d45b6672caba84f56a0d1e3e51130da4c26ed535d0dcb4be120c8263c5
+// @generated-content-sha256: sha256:270358be867e4c8aa0b886e1f747c267718624986acb75fbf00a7f777b77696f
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -60,7 +60,7 @@ const binding = {
 const record = { family: 'ColorSlider', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ColorSlider',
+  title: 'Mux UI React/ColorSlider',
   id: 'muxui-react-r1-3-color-slider',
   component: MuxUI.ColorSlider,
   tags: ['autodocs'],

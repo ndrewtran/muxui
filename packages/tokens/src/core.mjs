@@ -50,6 +50,16 @@ export function cssValue(token) {
   return String(token.value);
 }
 
+/** Serialize a web custom-property declaration without flattening authored aliases. */
+export function cssDeclaration(token, dependencies = {}) {
+  if (token.source === 'alias') {
+    const targetId = dependencies[token.id]?.[0];
+    if (!targetId) throw new TypeError(`MUXUI_TOKEN_ALIAS_METADATA_INVALID: ${token.id}`);
+    return `  ${cssName(token.id)}: var(${cssName(targetId)});`;
+  }
+  return `  ${cssName(token.id)}: ${cssValue(token)};`;
+}
+
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function defaultFail(code, message) { throw new TypeError(`${code}: ${message}`); }
 function compareText(left, right) { return left < right ? -1 : left > right ? 1 : 0; }

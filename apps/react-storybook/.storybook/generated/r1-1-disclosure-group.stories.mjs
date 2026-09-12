@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ea4f8b7299539a0c5bb1e5966d6145166ea6522cf2f1fefeb5c166e326f3c689
+// @generated-content-sha256: sha256:b21131a5ebf09c57cc9d50bfb99164e5b7e4ed5d6f501e6d3bb346e8d789f3fc
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -51,7 +51,7 @@ const binding = {
 const record = { family: 'DisclosureGroup', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/DisclosureGroup',
+  title: 'Mux UI React/DisclosureGroup',
   id: 'muxui-react-r1-1-disclosure-group',
   component: MuxUI.DisclosureGroup,
   tags: ['autodocs'],

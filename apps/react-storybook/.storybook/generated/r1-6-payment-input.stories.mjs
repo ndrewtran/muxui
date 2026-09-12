@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:13e1b16220ebb462637e2263e228794c14a5ee834fd37ce5e20648f3a4bc6f9a
+// @generated-content-sha256: sha256:98038094d154679f485cf3b9d6cd64505c96734cf990ca5c0ba9a0520fd5bda4
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -65,7 +65,7 @@ const binding = {
 const record = { family: 'PaymentInput', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/PaymentInput',
+  title: 'Mux UI React/PaymentInput',
   id: 'muxui-react-r1-6-payment-input',
   component: MuxUI.PaymentInput,
   tags: ['autodocs'],

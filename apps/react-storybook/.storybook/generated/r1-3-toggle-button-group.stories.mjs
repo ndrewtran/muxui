@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:b628906c36923054749e1f490b005a3b0d247aae7aa5037a44c904000f6dbcf2
+// @generated-content-sha256: sha256:3c62f1bea1f6112b3b57a8723532c49fb3027ab0c3353357b37e1712dc745526
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -57,7 +57,7 @@ const binding = {
 const record = { family: 'ToggleButtonGroup', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ToggleButtonGroup',
+  title: 'Mux UI React/ToggleButtonGroup',
   id: 'muxui-react-r1-3-toggle-button-group',
   component: MuxUI.ToggleButtonGroup,
   tags: ['autodocs'],

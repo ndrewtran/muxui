@@ -5,7 +5,6 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--muxui-semantic-layout-control-gap);
-  padding: 0 var(--muxui-semantic-layout-control-gap);
   margin-bottom: 0;
 }
 .muxui-calendar-grid {
@@ -19,8 +18,8 @@
 
 .muxui-calendar-header-cell {
   text-align: center;
-  padding: var(--muxui-semantic-layout-group-gap) var(--muxui-semantic-layout-control-gap);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-tiny);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   color: var(--muxui-semantic-content-default);
@@ -40,10 +39,10 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-default);
-  transition: background 0.1s ease, color 0.1s ease;
+  transition: background var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-calendar-cell:hover {
@@ -57,7 +56,7 @@
 }
 
 .muxui-calendar-cell[data-selected]:hover {
-  background: var(--muxui-semantic-content-link);
+  background: var(--muxui-semantic-selection-background-strong);
 }
 
 .muxui-calendar-cell[data-today] {
@@ -91,14 +90,14 @@
 }
 
 .muxui-calendar-cell[data-focus-visible] {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-color-neutral-100), 0 0 0 4px var(--muxui-semantic-color-neutral-50);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
 /* MuxUI component source: color-area.css */
 .muxui-color-area {
   width: 7.5rem;
   height: 7.5rem;
-  border-radius: var(--muxui-semantic-layout-tight-inset);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
   flex-shrink: 0;
 }
 
@@ -118,18 +117,18 @@
   display: block;
   width: 100%;
   min-height: 2.25rem;
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-layout-group-gap);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
   background-color: var(--muxui-semantic-surface-canvas);
   border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-field-radius);
   outline: none;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-color-field .muxui-field-input::placeholder {
@@ -138,11 +137,11 @@
 
 .muxui-color-field .muxui-field-input[data-focused] {
   border-color: var(--muxui-semantic-focus-ring);
-  box-shadow: 0 0 0 2px var(--muxui-semantic-content-inverse), 0 0 0 4px var(--muxui-semantic-focus-ring);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
 .muxui-color-field .muxui-field-input:hover:not([data-focused], [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-content-faint);
+  border-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-color-field .muxui-field-input[data-invalid] {
@@ -157,18 +156,18 @@
   border-color: var(--muxui-semantic-border-strong);
   color: var(--muxui-semantic-content-strong);
   cursor: not-allowed;
-  background-color: var(--muxui-reference-color-neutral-14);
+  background-color: var(--muxui-semantic-color-neutral-default-14);
   opacity: 0.45;
 }
 
 .muxui-color-field .muxui-field-description {
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-muted);
 }
 
 .muxui-color-field .muxui-field-error {
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-feedback-invalid);
 }
@@ -178,8 +177,8 @@
 .muxui-color-slider {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: var(--muxui-semantic-control-padding-inline);
-  row-gap: var(--muxui-semantic-control-padding-inline);
+  column-gap: var(--muxui-semantic-layout-control-content-gap);
+  row-gap: var(--muxui-semantic-layout-control-content-gap);
   width: 7.5rem;
 }
 
@@ -193,7 +192,7 @@
   grid-column: 1 / -1;
   grid-row: 2;
   height: 0.9375rem;
-  border-radius: var(--muxui-semantic-layout-tight-inset);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
 }
 
 .muxui-color-slider-thumb {
@@ -208,7 +207,7 @@
 .muxui-color-swatch {
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: var(--muxui-component-color-swatch-radius, var(--muxui-semantic-layout-tight-inset));
+  border-radius: var(--muxui-component-color-swatch-radius, var(--muxui-semantic-shape-micro-radius));
   border: 1px solid var(--muxui-semantic-border-default);
   flex-shrink: 0;
   position: relative;
@@ -224,15 +223,15 @@
 
 .muxui-color-swatch-picker-item {
   position: relative;
-  border-radius: var(--muxui-semantic-layout-tight-inset);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
   outline: none;
   cursor: pointer;
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-color-swatch-picker-item[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -247,7 +246,7 @@
 }
 
 .muxui-color-swatch-picker-item[data-hovered]:not([data-selected]) {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-content-faint);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-border-indicator);
 }
 
 .muxui-color-swatch-picker-item[data-disabled] {
@@ -273,12 +272,12 @@
   display: block;
   width: 100%;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-combo-box .muxui-field-input:hover {
-  border-color: var(--muxui-semantic-content-faint);
+  border-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-combo-box-popover {
@@ -297,7 +296,7 @@
 .muxui-combo-box-list {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
 }
 
 .muxui-combo-box-option[data-selected] {
@@ -311,14 +310,14 @@
   flex-direction: column;
   gap: 1px;
   border: 1px solid var(--muxui-semantic-border-default);
-  border-radius: var(--muxui-semantic-layout-tight-inset);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
   overflow: hidden;
   outline: none;
 }
 
 .muxui-grid-list[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -326,15 +325,15 @@
   display: flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-layout-group-gap);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
   background-color: var(--muxui-semantic-surface-canvas);
   outline: none;
   cursor: default;
-  transition: background-color 0.1s ease;
+  transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-grid-list-item[data-hovered] {
@@ -348,7 +347,7 @@
 
 .muxui-grid-list-item[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -371,19 +370,19 @@
 .muxui-list-box {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
   max-height: 17.5rem;
   padding: var(--muxui-semantic-layout-tight-inset);
   background-color: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-popup-border-color);
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  border-radius: var(--muxui-semantic-control-radius);
   box-shadow: var(--muxui-popup-shadow);
   outline: none;
   overflow: auto;
 }
 
 .muxui-list-box[data-focus-visible] {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-content-inverse), 0 0 0 4px var(--muxui-semantic-focus-ring);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
 /* MuxUI component source: menu.css */
@@ -418,7 +417,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   cursor: pointer;
   outline: none;
   user-select: none;
@@ -433,13 +432,13 @@
   width: 1.125rem;
   height: 1.125rem;
   border-radius: 50%;
-  border: 1.5px solid var(--muxui-semantic-content-faint);
+  border: 1.5px solid var(--muxui-semantic-border-indicator);
   background-color: var(--muxui-semantic-surface-raised);
   outline: none;
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   flex-shrink: 0;
   pointer-events: none;
 }
@@ -449,18 +448,18 @@
   width: var(--muxui-component-radio-dot-size);
   height: var(--muxui-component-radio-dot-size);
   border-radius: 50%;
-  background-color: var(--muxui-semantic-content-link-hover);
+  background-color: var(--muxui-semantic-selection-indicator);
   transition:
-    transform 0.15s ease,
-    opacity 0.15s ease;
+    transform var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    opacity var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   transform: scale(0);
   opacity: 0;
 }
 
 .muxui-radio.muxui-radio--sm .muxui-radio-indicator {
   --muxui-component-radio-dot-size: 0.375rem;
-  width: var(--muxui-reference-dimension-space-xs);
-  height: var(--muxui-reference-dimension-space-xs);
+  width: var(--muxui-semantic-layout-icon-size);
+  height: var(--muxui-semantic-layout-icon-size);
 }
 
 .muxui-radio.muxui-radio--sm .muxui-radio-indicator::after {
@@ -470,7 +469,7 @@
 
 .muxui-radio[data-focus-visible] .muxui-radio-indicator {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -489,7 +488,7 @@
 }
 
 .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
-  border-color: var(--muxui-semantic-content-muted);
+  border-color: var(--muxui-semantic-border-indicator-hover);
   background-color: var(--muxui-semantic-surface-hover);
 }
 
@@ -539,7 +538,7 @@
 }
 
 .muxui-range-calendar-cell[data-focus-visible] {
-  box-shadow: 0 0 0 2px var(--muxui-semantic-color-neutral-100), 0 0 0 4px var(--muxui-semantic-color-neutral-50);
+  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
 .muxui-range-calendar-cell[data-selected] {
@@ -568,30 +567,30 @@
 
 .muxui-range-calendar-cell[data-selection-start]:hover,
 .muxui-range-calendar-cell[data-selection-end]:hover {
-  background: var(--muxui-semantic-content-link);
+  background: var(--muxui-semantic-selection-background-strong);
 }
 
 .muxui-range-calendar-cell[data-selected]:hover {
-  background: var(--muxui-semantic-content-link);
+  background: var(--muxui-semantic-selection-background-strong);
 }
 /* MuxUI component source: select.css */
 .muxui-select-trigger {
   display: inline-flex;
   align-items: center;
   justify-content: space-between;
-  gap: var(--muxui-semantic-control-padding-inline);
+  gap: var(--muxui-semantic-layout-control-content-gap);
   height: var(--muxui-field-min-height);
   min-width: 10rem;
   position: static;
   line-height: inherit;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-select-trigger:hover {
-  border-color: var(--muxui-semantic-content-faint);
+  border-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-select-trigger[data-disabled] {
@@ -639,7 +638,7 @@
 .muxui-slider {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
   width: 100%;
   touch-action: none;
 }
@@ -655,7 +654,7 @@
 .muxui-slider[data-orientation='vertical'] .muxui-slider-header {
   width: max-content;
   justify-content: flex-start;
-  gap: var(--muxui-semantic-control-padding-inline);
+  gap: var(--muxui-semantic-layout-control-content-gap);
 }
 
 .muxui-slider-control {
@@ -691,7 +690,7 @@
   flex: 1;
   height: 0.25rem;
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  background-color: var(--muxui-semantic-border-default);
+  background-color: var(--muxui-semantic-surface-track);
 }
 
 .muxui-slider[data-orientation='vertical'] .muxui-slider-track {
@@ -707,7 +706,7 @@
   height: 100%;
   background-color: var(--muxui-semantic-selection-track);
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  transition: background-color 0.15s ease;
+  transition: background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-slider[data-orientation='vertical'] .muxui-slider-fill {
@@ -718,7 +717,7 @@
 }
 
 .muxui-slider[data-disabled] .muxui-slider-fill {
-  background-color: var(--muxui-semantic-content-faint);
+  background-color: var(--muxui-semantic-surface-disabled);
 }
 
 .muxui-slider-thumb {
@@ -727,14 +726,14 @@
   height: 1.125rem;
   border-radius: 50%;
   background-color: var(--muxui-semantic-surface-canvas);
-  border: 2px solid var(--muxui-semantic-content-faint);
+  border: 2px solid var(--muxui-semantic-border-indicator);
   box-shadow: var(--muxui-semantic-elevation-indicator);
   outline: none;
   transform-origin: center center;
   transition:
-    box-shadow 0.15s ease,
-    border-color 0.15s ease,
-    scale 0.1s ease;
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    scale var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
   cursor: grab;
 }
 
@@ -756,7 +755,7 @@
 
 .muxui-slider-thumb[data-dragging] {
   cursor: grabbing;
-  border: 2px solid var(--muxui-semantic-content-default);
+  border: 2px solid var(--muxui-semantic-border-dragging);
 }
 
 .muxui-slider[data-disabled] {
@@ -764,67 +763,67 @@
 }
 
 .muxui-slider[data-disabled] .muxui-slider-track {
-  background-color: var(--muxui-semantic-border-default);
+  background-color: var(--muxui-semantic-surface-track);
 }
 
 .muxui-slider[data-disabled] .muxui-slider-thumb {
   background-color: var(--muxui-semantic-surface-canvas);
   cursor: not-allowed;
-  border-color: var(--muxui-semantic-content-faint);
+  border-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-slider-output {
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
 }
 
 [data-muxui-color-scheme='light'] .muxui-slider > .muxui-slider-header > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='light'] .muxui-slider > .muxui-slider-header > .muxui-slider-output {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider > .muxui-slider-header > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider > .muxui-slider-header > .muxui-slider-output {
-  color: var(--muxui-reference-color-neutral-50);
+  color: var(--muxui-semantic-color-neutral-default-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider-track {
-  background-color: var(--muxui-reference-color-neutral-88);
+  background-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider-thumb {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider[data-disabled] .muxui-slider-fill {
-  background-color: var(--muxui-reference-color-neutral-70);
+  background-color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider[data-disabled] .muxui-slider-thumb {
-  border-color: var(--muxui-reference-color-neutral-70);
+  border-color: var(--muxui-semantic-color-neutral-default-70);
 }
 /* MuxUI component source: table.css */
 .muxui-table {
   width: 100%;
   border-collapse: collapse;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
   outline: none;
 }
 
 .muxui-table[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -833,7 +832,7 @@
 }
 
 .muxui-table-column {
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-layout-group-gap);
+  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
   text-align: start;
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -844,7 +843,7 @@
 
 .muxui-table-column[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -853,9 +852,9 @@
 }
 
 .muxui-table-row {
-  border-bottom: 1px solid var(--muxui-semantic-surface-hover);
+  border-bottom: 1px solid var(--muxui-semantic-border-faint);
   outline: none;
-  transition: background-color 0.1s ease;
+  transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-table-row[data-hovered] {
@@ -868,7 +867,7 @@
 
 .muxui-table-row[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -878,13 +877,13 @@
 }
 
 .muxui-table-cell {
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-layout-group-gap);
+  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
   outline: none;
 }
 
 .muxui-table-cell[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 /* MuxUI component source: tabs.css */
@@ -925,19 +924,19 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: var(--muxui-semantic-layout-group-gap) var(--muxui-reference-dimension-space-m);
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-xlarge);
   border: none;
   background-color: transparent;
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   font-weight: var(--muxui-semantic-typography-control-weight);
   cursor: pointer;
   outline: none;
   transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
+    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   white-space: nowrap;
   position: relative;
   gap: var(--muxui-semantic-layout-control-gap);
@@ -955,7 +954,7 @@
 
 .muxui-tab:focus-visible {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
   border-radius: var(--muxui-semantic-shape-option-radius);
 }
@@ -971,16 +970,16 @@
 }
 
 .muxui-tab-panel {
-  padding: calc(var(--muxui-semantic-layout-section-gap) * 1.414141) 0;
+  padding: calc(var(--muxui-semantic-layout-inset-large) * 1.414141) 0;
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.6;
+  line-height: var(--muxui-semantic-typography-prose-line-height);
   outline: none;
 }
 
 .muxui-tabs[data-orientation='vertical'] .muxui-tab-panel {
-  padding: 0 calc(var(--muxui-semantic-layout-section-gap) * 1.414141);
+  padding: 0 calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
 }
 
 .muxui-tab-panel[data-hidden] {
@@ -1003,13 +1002,13 @@
 .muxui-tag {
   display: inline-flex;
   align-items: center;
-  gap: var(--muxui-semantic-layout-tight-inset);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-group-gap);
+  gap: var(--muxui-semantic-layout-tight-gap);
+  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
   border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background-color: var(--muxui-semantic-surface-subtle);
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1;
@@ -1017,19 +1016,19 @@
   cursor: default;
   user-select: none;
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tag[data-hovered] {
   background-color: var(--muxui-semantic-surface-hover);
-  border-color: var(--muxui-semantic-content-faint);
+  border-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-tag[data-pressed] {
-  background-color: var(--muxui-semantic-border-subtle);
+  background-color: var(--muxui-semantic-surface-pressed);
 }
 
 .muxui-tag[data-focused] {
@@ -1038,7 +1037,7 @@
 
 .muxui-tag[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -1076,7 +1075,7 @@
   font: inherit;
   line-height: 1;
   cursor: pointer;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tag-remove:hover:not([data-disabled]) {
@@ -1095,18 +1094,18 @@
 
 .muxui-tag-group .muxui-field-label {
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
   cursor: default;
 }
 /* MuxUI component source: toolbar.css */
 .muxui-toolbar {
   display: flex;
   align-items: center;
-  gap: var(--muxui-semantic-layout-tight-inset);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-control-gap);
+  gap: var(--muxui-semantic-layout-tight-gap);
+  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
   background-color: var(--muxui-semantic-surface-subtle);
   border: 1px solid var(--muxui-semantic-border-subtle);
   border-radius: var(--muxui-semantic-shape-container-radius);
@@ -1119,15 +1118,15 @@
   justify-content: center;
   min-width: 1.5rem;
   min-height: 2rem;
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-control-gap);
+  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
   border: 0;
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  border-radius: var(--muxui-semantic-control-radius);
   background: transparent;
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   box-shadow: none;
 }
 
@@ -1151,24 +1150,24 @@
 .muxui-tree {
   display: flex;
   flex-direction: column;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
   outline: none;
 }
 
 .muxui-tree[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
-  border-radius: var(--muxui-semantic-layout-tight-inset);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
 }
 
 .muxui-tree-item {
   outline: none;
   cursor: default;
-  transition: background-color 0.1s ease;
+  transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tree-item[data-hovered] {
@@ -1181,9 +1180,9 @@
 
 .muxui-tree-item[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
-  border-radius: var(--muxui-semantic-layout-tight-inset);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
 }
 
 .muxui-tree-item[data-disabled] {
@@ -1192,32 +1191,32 @@
 }
 
 .muxui-tree-item[aria-level='1'] {
-  padding-inline-start: var(--muxui-semantic-layout-group-gap);
+  padding-inline-start: var(--muxui-semantic-layout-inset-small);
 }
 .muxui-tree-item[aria-level='2'] {
-  padding-inline-start: calc(var(--muxui-semantic-layout-group-gap) + 0.78125rem);
+  padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 0.78125rem);
 }
 .muxui-tree-item[aria-level='3'] {
-  padding-inline-start: calc(var(--muxui-semantic-layout-group-gap) + 1.5625rem);
+  padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 1.5625rem);
 }
 .muxui-tree-item[aria-level='4'] {
-  padding-inline-start: calc(var(--muxui-semantic-layout-group-gap) + 2.34375rem);
+  padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 2.34375rem);
 }
 .muxui-tree-item[aria-level='5'] {
-  padding-inline-start: calc(var(--muxui-semantic-layout-group-gap) + 3.125rem);
+  padding-inline-start: calc(var(--muxui-semantic-layout-inset-small) + 3.125rem);
 }
 
 .muxui-tree-item-content {
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--muxui-semantic-layout-tight-inset);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-group-gap);
+  gap: var(--muxui-semantic-layout-tight-gap);
+  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
 }
 
 .muxui-tree-toggle {
   position: absolute;
-  inset-inline-start: var(--muxui-semantic-layout-group-gap);
+  inset-inline-start: var(--muxui-semantic-layout-inset-small);
   inset-block-start: 0;
   width: 0.75rem;
   height: 100%;
@@ -1235,7 +1234,7 @@
   content: '\25B6';
   display: inline-block;
   font-size: 0.6em;
-  transition: transform 0.15s ease;
+  transition: transform var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tree-item[data-expanded] .muxui-tree-item-content::before {
@@ -1281,7 +1280,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
   min-height: var(--muxui-field-min-height);
   padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-field-padding-inline);
   border: 1px solid var(--muxui-field-border-color);
@@ -1317,7 +1316,7 @@
 
 .muxui-virtualizer:focus-visible {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-content-inverse),
+    0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
@@ -1395,83 +1394,6 @@
   }
 }
 
-/* Ordinary dark collection recipes mirror Tale's neutral collection scale. */
-[data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) {
-  background-color: var(--muxui-reference-color-neutral-90);
-  border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) {
-  background-color: var(--muxui-reference-color-neutral-20);
-  border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-semantic-color-neutral-90);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar, .muxui-range-calendar) > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-header-cell {
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-heading {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-header-cell {
-  color: var(--muxui-reference-color-neutral-50);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-heading {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar-cell, .muxui-range-calendar-cell) {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar-cell, .muxui-range-calendar-cell) {
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] :where(.muxui-calendar-previous, .muxui-calendar-next) {
-  background-color: var(--muxui-reference-color-neutral-80);
-  border-color: var(--muxui-reference-color-neutral-90);
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] :where(.muxui-calendar-previous, .muxui-calendar-next) {
-  background-color: var(--muxui-reference-color-neutral-28);
-  border-color: var(--muxui-reference-color-neutral-18);
-  color: var(--muxui-reference-color-neutral-88);
-}
-
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-30);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-}
-
 /* Calendar cells keep Tale's transparent disabled/outside-month treatment. */
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-disabled],
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-outside-month],
@@ -1480,7 +1402,7 @@
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-unavailable] {
   background-color: transparent;
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-content-default);
   opacity: 0.35;
 }
 
@@ -1491,7 +1413,7 @@
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-unavailable] {
   background-color: transparent;
-  color: var(--muxui-reference-color-neutral-90);
+  color: var(--muxui-semantic-content-default);
   opacity: 0.35;
 }
 
@@ -1503,140 +1425,74 @@
 .muxui-calendar-cell[data-focus-visible],
 .muxui-range-calendar-cell[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-color-neutral-100),
-    0 0 0 4px var(--muxui-semantic-color-neutral-50);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell:hover {
-  background-color: var(--muxui-reference-color-neutral-80);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell:hover {
-  background-color: var(--muxui-reference-color-neutral-30);
-}
-
-[data-muxui-color-scheme='light'] .muxui-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start]:hover,
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end]:hover {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selected]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start]:hover,
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end]:hover {
-  background-color: var(--muxui-reference-color-bluegreen-70);
-  color: var(--muxui-reference-color-bluegreen-5);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu {
-  background-color: var(--muxui-reference-color-neutral-90);
-  border-color: var(--muxui-reference-color-neutral-100);
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu {
-  background-color: var(--muxui-reference-color-neutral-20);
-  border-color: var(--muxui-reference-color-neutral-10);
-  color: var(--muxui-reference-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu-item {
-  color: var(--muxui-reference-color-neutral-20);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu-item {
-  color: var(--muxui-reference-color-neutral-90);
-}
-
-[data-muxui-color-scheme='light'] .muxui-menu-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-80);
-  color: var(--muxui-reference-color-neutral-10);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-menu-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-30);
-  color: var(--muxui-reference-color-neutral-100);
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
 [data-muxui-color-scheme='light'] .muxui-toolbar {
-  background-color: var(--muxui-reference-color-neutral-12);
-  border-color: var(--muxui-reference-color-neutral-20);
+  background-color: var(--muxui-semantic-color-neutral-default-12);
+  border-color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-toolbar {
-  background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-neutral-90);
+  background-color: var(--muxui-semantic-color-neutral-default-98);
+  border-color: var(--muxui-semantic-color-neutral-default-90);
 }
 
 [data-muxui-color-scheme='light'] .muxui-toolbar > .muxui-button {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-toolbar > .muxui-button {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='light'] .muxui-toolbar > .muxui-button:hover:not([data-disabled], [data-pending]),
 [data-muxui-color-scheme='light'] .muxui-toolbar > .muxui-button[data-pressed] {
-  background-color: var(--muxui-reference-color-neutral-18);
+  background-color: var(--muxui-semantic-color-neutral-default-18);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-toolbar > .muxui-button:hover:not([data-disabled], [data-pending]),
 [data-muxui-color-scheme='dark'] .muxui-toolbar > .muxui-button[data-pressed] {
-  background-color: var(--muxui-reference-color-neutral-92);
+  background-color: var(--muxui-semantic-color-neutral-default-92);
 }
 
 [data-muxui-color-scheme='light'] .muxui-toolbar > .muxui-button[data-pressed],
 [data-muxui-color-scheme='dark'] .muxui-toolbar > .muxui-button[data-pressed] {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-toolbar > .muxui-button[data-pressed] {
-  color: var(--muxui-reference-color-neutral-90);
+  color: var(--muxui-semantic-color-neutral-default-90);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
-  color: var(--muxui-reference-color-neutral-20);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  border-color: var(--muxui-semantic-color-neutral-default-84);
+  color: var(--muxui-semantic-color-neutral-default-20);
   color-scheme: light;
 }
 
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input::placeholder {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select-trigger,
 [data-muxui-color-scheme='dark'] .muxui-combo-control,
 [data-muxui-color-scheme='dark'] .muxui-combo-box .muxui-field-input {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  border-color: var(--muxui-reference-color-neutral-84);
-  color: var(--muxui-reference-color-neutral-20);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  border-color: var(--muxui-semantic-color-neutral-default-84);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select-popover,
 [data-muxui-color-scheme='dark'] .muxui-combo-box-popover {
-  background-color: var(--muxui-reference-color-neutral-100);
-  border-color: var(--muxui-reference-color-neutral-90);
+  background-color: var(--muxui-semantic-color-neutral-default-100);
+  border-color: var(--muxui-semantic-color-neutral-default-90);
 }
 
 .muxui-combo-control {
-  border-color: var(--muxui-reference-color-neutral-20);
+  border-color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 .muxui-combo-box[data-disabled] > .muxui-field-label,
@@ -1653,18 +1509,18 @@
   padding: 0;
   gap: normal;
   border-radius: 0;
-  color: var(--muxui-reference-color-neutral-60);
-  transition: transform 0.2s ease;
+  color: var(--muxui-semantic-color-neutral-default-60);
+  transition: transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-combo-box-arrow {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
   width: 1rem;
   height: 1rem;
 }
 
 [data-muxui-color-scheme='light'] .muxui-combo-box > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] :where(
@@ -1677,7 +1533,7 @@
 
 [data-muxui-color-scheme='dark'] .muxui-select-trigger[data-placeholder],
 [data-muxui-color-scheme='dark'] .muxui-select-trigger [data-placeholder] {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] :where(
@@ -1688,12 +1544,12 @@
 }
 
 [data-muxui-color-scheme='dark'] :where(.muxui-select-option, .muxui-combo-box-option) {
-  color: var(--muxui-reference-color-neutral-30);
+  color: var(--muxui-semantic-color-neutral-default-30);
 }
 
 [data-muxui-color-scheme='dark'] :where(.muxui-select-option, .muxui-combo-box-option)[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-96);
-  color: var(--muxui-reference-color-neutral-20);
+  background-color: var(--muxui-semantic-color-neutral-default-96);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='light'] .muxui-select-value[data-placeholder] {
@@ -1715,49 +1571,49 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tab-list {
-  border-color: var(--muxui-reference-color-neutral-92);
+  border-color: var(--muxui-semantic-color-neutral-default-92);
 }
 
 [data-muxui-color-scheme='light'] .muxui-tab-list {
-  border-color: var(--muxui-reference-color-neutral-18);
+  border-color: var(--muxui-semantic-color-neutral-default-18);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tab:not([data-selected], [aria-selected='true']) {
-  color: var(--muxui-reference-color-neutral-50);
+  color: var(--muxui-semantic-color-neutral-default-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tab[aria-selected='true'],
 [data-muxui-color-scheme='dark'] .muxui-tab[data-selected='true'] {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tab-panel {
-  color: var(--muxui-reference-color-neutral-30);
+  color: var(--muxui-semantic-color-neutral-default-30);
 }
 
 [data-muxui-color-scheme='light'] .muxui-tab:not([data-selected], [aria-selected='true']),
 [data-muxui-color-scheme='light'] .muxui-table-column {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table-column {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table-header {
-  border-color: var(--muxui-reference-color-neutral-88);
+  border-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table-row {
-  border-color: var(--muxui-reference-color-neutral-96);
+  border-color: var(--muxui-semantic-color-neutral-default-96);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-grid-list {
-  border-color: var(--muxui-reference-color-neutral-88);
+  border-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-grid-list-item:not(
@@ -1767,8 +1623,8 @@
   [data-dragging],
   [data-drop-target]
 ) {
-  background-color: color-mix(in srgb, var(--muxui-reference-color-neutral-100) 85%, black);
-  color: var(--muxui-reference-color-neutral-20);
+  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] :where(.muxui-list-box, .muxui-virtualizer) {
@@ -1777,18 +1633,18 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-list-box-item {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-color-slider > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] :where(
   .muxui-color-slider > .muxui-slider-output,
   .muxui-color-slider > .muxui-color-slider-output
 ) {
-  color: var(--muxui-reference-color-neutral-60);
+  color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme] .muxui-table[data-focus-visible],
@@ -1811,26 +1667,26 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator {
-  background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-neutral-60);
+  background-color: var(--muxui-semantic-color-neutral-default-98);
+  border-color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator::after {
-  background-color: var(--muxui-reference-color-bluegreen-20);
+  background-color: var(--muxui-semantic-action-selection-indicator);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-selected] .muxui-radio-indicator {
-  background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-semantic-color-neutral-default-98);
+  border-color: var(--muxui-semantic-action-selection-background);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
-  background-color: var(--muxui-reference-color-neutral-94);
-  border-color: var(--muxui-reference-color-neutral-40);
+  background-color: var(--muxui-semantic-color-neutral-default-94);
+  border-color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 /* Keep collection popups on Tale's shared radius/shadow primitives. Mux UI's
@@ -1840,7 +1696,7 @@
 .muxui-combo-box-popover,
 .muxui-menu,
 .muxui-select-popover {
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  border-radius: var(--muxui-semantic-control-radius);
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
     0 13px 13px -10px rgb(0 0 0 / 6%),
@@ -1853,25 +1709,25 @@
 [data-muxui-color-scheme='light']
   .muxui-combo-box-popover
   .muxui-combo-box-option:first-child {
-  background-color: var(--muxui-reference-color-neutral-14);
-  color: var(--muxui-reference-color-neutral-90);
+  background-color: var(--muxui-semantic-color-neutral-default-14);
+  color: var(--muxui-semantic-color-neutral-default-90);
 }
 
 [data-muxui-color-scheme='dark']
   .muxui-combo-box-popover
   .muxui-combo-box-option:first-child {
-  background-color: var(--muxui-reference-color-neutral-96);
+  background-color: var(--muxui-semantic-color-neutral-default-96);
   color: var(--muxui-semantic-content-default);
 }
 
 /* Tale's light focus ring is the neutral-50 keyline; the MuxUI semantic focus
    token is the product action color and is intentionally retained elsewhere. */
 [data-muxui-color-scheme='light'] .muxui-tag[data-focused] {
-  border-color: var(--muxui-reference-color-neutral-50);
+  border-color: var(--muxui-semantic-color-neutral-default-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tree {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='light'] :where(.muxui-list-box, .muxui-virtualizer) {
@@ -1887,12 +1743,12 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
   max-height: none;
   padding: var(--muxui-semantic-layout-tight-inset);
   background-color: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-popup-border-color);
-  border-radius: var(--muxui-reference-dimension-radius-m);
+  border-radius: var(--muxui-semantic-control-radius);
   box-shadow: var(--muxui-popup-shadow);
   outline: none;
   overflow: auto;
@@ -1906,14 +1762,14 @@
   padding: var(--muxui-item-padding-block) var(--muxui-item-padding-inline);
   border-radius: var(--muxui-item-radius);
   color: var(--muxui-item-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-item-font-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   cursor: pointer;
   outline: none;
   transition:
-    background-color 0.1s ease,
-    color 0.1s ease;
+    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
   user-select: none;
 }
 
@@ -1930,12 +1786,12 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-virtualizer-item {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-virtualizer-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-94);
-  color: var(--muxui-reference-color-neutral-18);
+  background-color: var(--muxui-semantic-color-neutral-default-94);
+  color: var(--muxui-semantic-color-neutral-default-18);
 }
 
 [data-muxui-color-scheme='light'] .muxui-list-box {
@@ -1982,43 +1838,43 @@
 }
 
 .muxui-combo-control:focus-within {
-  border-color: var(--muxui-reference-color-neutral-50);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-neutral-60) 30%, transparent);
+  border-color: var(--muxui-semantic-color-neutral-default-50);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-combo-control:focus-within {
-  border-color: var(--muxui-reference-color-neutral-50);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-neutral-60) 30%, transparent);
+  border-color: var(--muxui-semantic-color-neutral-default-50);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select-trigger[data-focus-visible],
 [data-muxui-color-scheme='dark'] .muxui-select-trigger:focus-visible {
-  border-color: var(--muxui-reference-color-neutral-60);
+  border-color: var(--muxui-semantic-color-neutral-default-60);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
 [data-muxui-color-scheme='light'] .muxui-select[data-invalid] > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select[data-invalid] > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='light'] .muxui-radio {
-  color: var(--muxui-reference-color-neutral-90);
+  color: var(--muxui-semantic-color-neutral-default-90);
 }
 
 [data-muxui-color-scheme='light'] :where(.muxui-radio-group, .muxui-radio-group-field) .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='light'] :where(.muxui-radio-group[data-invalid], .muxui-radio-group-field[data-invalid]) .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme] .muxui-radio[data-invalid] .muxui-radio-indicator {
-  border-color: var(--muxui-reference-color-red-60);
+  border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-color-swatch-picker-item[data-focus-visible],
@@ -2041,64 +1897,64 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider > .muxui-slider-header > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-default-40);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider-thumb {
-  border-color: var(--muxui-reference-color-neutral-70);
+  border-color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 /* Tale keeps the disabled slider track on its dark neutral-22 surface. The
    disabled-track rule above otherwise wins over the dark track token. */
 [data-muxui-color-scheme='dark'] .muxui-slider[data-disabled] .muxui-slider-track {
-  background-color: var(--muxui-reference-color-neutral-88);
+  background-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-list-box-item[data-focused] {
-  background-color: var(--muxui-reference-color-neutral-94);
-  color: var(--muxui-reference-color-neutral-18);
+  background-color: var(--muxui-semantic-color-neutral-default-94);
+  color: var(--muxui-semantic-color-neutral-default-18);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-color-swatch {
-  border-color: var(--muxui-reference-color-neutral-88);
+  border-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tabs[data-orientation='vertical'] .muxui-tab-list {
-  border-right-color: var(--muxui-reference-color-neutral-92);
+  border-right-color: var(--muxui-semantic-color-neutral-default-92);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag-group .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-24);
+  color: var(--muxui-semantic-color-neutral-default-24);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag {
-  border-color: var(--muxui-reference-color-neutral-82);
-  background-color: var(--muxui-reference-color-neutral-96);
-  color: var(--muxui-reference-color-neutral-28);
+  border-color: var(--muxui-semantic-color-neutral-default-82);
+  background-color: var(--muxui-semantic-color-neutral-default-96);
+  color: var(--muxui-semantic-color-neutral-default-28);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-hovered] {
-  background-color: var(--muxui-reference-color-neutral-92);
-  border-color: var(--muxui-reference-color-neutral-70);
+  background-color: var(--muxui-semantic-color-neutral-default-92);
+  border-color: var(--muxui-semantic-color-neutral-default-70);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-pressed] {
-  background-color: var(--muxui-reference-color-neutral-88);
+  background-color: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-focused] {
-  border-color: var(--muxui-reference-color-neutral-50);
+  border-color: var(--muxui-semantic-color-neutral-default-50);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-selected] {
-  background-color: var(--muxui-reference-color-bluegreen-40);
-  border-color: var(--muxui-reference-color-bluegreen-40);
-  color: var(--muxui-reference-color-bluegreen-100);
+  background-color: var(--muxui-semantic-action-selection-background);
+  border-color: var(--muxui-semantic-action-selection-background);
+  color: var(--muxui-semantic-action-selection-foreground);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-tag[data-selected][data-hovered] {
-  background-color: var(--muxui-reference-color-bluegreen-50);
-  border-color: var(--muxui-reference-color-bluegreen-50);
+  background-color: var(--muxui-semantic-action-selection-background-hover);
+  border-color: var(--muxui-semantic-action-selection-background-hover);
 }
 
 .muxui-tag[data-focus-visible],
@@ -2118,28 +1974,28 @@
    three-pixel neutral glow instead of the control inner/outer ring. */
 [data-muxui-color-scheme='light'] .muxui-color-field .muxui-field-input[data-focused],
 [data-muxui-color-scheme='light'] .muxui-color-field .muxui-field-input:focus {
-  border-color: var(--muxui-reference-color-neutral-50);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-neutral-60) 30%, transparent);
+  border-color: var(--muxui-semantic-color-neutral-default-50);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input[data-focused],
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input:focus {
-  border-color: var(--muxui-reference-color-neutral-60);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-neutral-50) 30%, transparent);
+  border-color: var(--muxui-semantic-color-neutral-default-60);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-50) 30%, transparent);
 }
 
 [data-muxui-color-scheme] .muxui-color-field .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-reference-color-red-60);
+  border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-color-field .muxui-field-input {
-  border-radius: var(--muxui-reference-dimension-space-4xs);
+  border-radius: var(--muxui-semantic-shape-micro-radius);
   position: relative;
   top: 1px;
 }
 
 [data-muxui-color-scheme='light'] .muxui-color-field > .muxui-field-label {
-  color: var(--muxui-reference-color-neutral-70);
+  color: var(--muxui-semantic-color-neutral-default-70);
   position: relative;
   top: 1px;
 }
@@ -2150,25 +2006,11 @@
 }
 
 [data-muxui-color-scheme] .muxui-color-field[data-invalid] .muxui-field-input {
-  border-color: var(--muxui-reference-color-red-60);
+  border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 [data-muxui-color-scheme] .muxui-color-field[data-invalid] .muxui-field-input[data-focused] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-reference-color-red-60) 20%, transparent);
-}
-
-/* Selection paint must win over the outside-month disabled recipe when a
-   range ends in the following month. */
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='light'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-20);
-  color: var(--muxui-reference-color-bluegreen-100);
-}
-
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-start],
-[data-muxui-color-scheme='dark'] .muxui-range-calendar-cell[data-selection-end] {
-  background-color: var(--muxui-reference-color-bluegreen-80);
-  color: var(--muxui-reference-color-bluegreen-5);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
 }
 
 .muxui-range-calendar-cell[data-selection-start] {
@@ -2184,26 +2026,33 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio {
-  color: var(--muxui-reference-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator {
-  background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-neutral-60);
+  background-color: var(--muxui-semantic-color-neutral-default-98);
+  border-color: var(--muxui-semantic-color-neutral-default-60);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio-indicator::after {
-  background-color: var(--muxui-reference-color-bluegreen-20);
+  background-color: var(--muxui-semantic-action-selection-indicator);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-selected] .muxui-radio-indicator {
-  background-color: var(--muxui-reference-color-neutral-98);
-  border-color: var(--muxui-reference-color-bluegreen-40);
+  background-color: var(--muxui-semantic-color-neutral-default-98);
+  border-color: var(--muxui-semantic-action-selection-background);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
-  background-color: var(--muxui-reference-color-neutral-94);
-  border-color: var(--muxui-reference-color-neutral-40);
+  background-color: var(--muxui-semantic-color-neutral-default-94);
+  border-color: var(--muxui-semantic-color-neutral-default-40);
+}
+
+/* Range endpoints keep selection paint when they fall outside this month. */
+[data-muxui-color-scheme] .muxui-range-calendar-cell[data-selection-start],
+[data-muxui-color-scheme] .muxui-range-calendar-cell[data-selection-end] {
+  background-color: var(--muxui-semantic-selection-track);
+  color: var(--muxui-semantic-action-foreground);
 }
 
 /* Calendar palettes invert foreground/background on state changes, so do not

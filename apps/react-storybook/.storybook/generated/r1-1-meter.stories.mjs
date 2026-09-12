@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:fc56cba7e340b81e4eeb0d10e60f3055b637d563d998e719de855013da6b95ba
+// @generated-content-sha256: sha256:98d4a2a1545d686425cb20b67d28472b3b6b613ffe316152e50750485c349e25
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -49,7 +49,7 @@ const binding = {
 const record = { family: 'Meter', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/Meter',
+  title: 'Mux UI React/Meter',
   id: 'muxui-react-r1-1-meter',
   component: MuxUI.Meter,
   tags: ['autodocs'],

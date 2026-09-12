@@ -2,7 +2,8 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
-import { compileWebTheme } from '@muxui/tokens';
+import { compileTokenGraph, compileWebTheme } from '@muxui/tokens';
+import { cssName } from '@muxui/tokens/core';
 import {
   assertReactR10SourceContracts,
   assertReactR11GeneratedContracts,
@@ -23,7 +24,7 @@ const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'),
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
 const tokenRaw = await readFile(tokenPath);
 const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
-const expectedTokenSha256 = 'c42821d052398b61d393a8cc464924224063e63a5723f3872f838d431199cd75';
+const expectedTokenSha256 = '1735758fc443c9588f91418c4056e8e51519d8a1f6375b0964b0d12f0f1aa0bb';
 if (tokenSha256 !== expectedTokenSha256) throw new Error('MUXUI_REACT_TOKEN_SOURCE_DRIFT');
 const tokenSource = JSON.parse(tokenRaw);
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/upstream-snapshot.json'), 'utf8'));
@@ -330,25 +331,96 @@ function declarations(css) {
   return new Map([...css.matchAll(/^  (--[^:]+): (.+);$/gm)].map((match) => [match[1], match[2]]));
 }
 
-const axes = [['colorScheme', 'dark'], ['contrast', 'more'], ['motion', 'reduced'], ['density', 'compact']];
-const baseTheme = compileWebTheme(tokenSource);
-const baseDeclarations = declarations(baseTheme.css);
-const responsiveTheme = compileWebTheme(tokenSource, { responsive: true });
-const responsiveDeclarations = declarations(responsiveTheme.css);
-const responsiveChanges = [...responsiveDeclarations]
-  .filter(([name, tokenValue]) => baseDeclarations.get(name) !== tokenValue);
-const responsiveBlock = `[data-muxui-responsive] {\n${responsiveChanges.length === 0
-  ? '  /* canonical theme has no responsive token delta */'
-  : responsiveChanges.map(([name, tokenValue]) => `  ${name}: ${tokenValue};`).join('\n')}\n}`;
-const modeBlocks = axes.map(([axis, value]) => {
-  const variant = declarations(compileWebTheme(tokenSource, { modes: { [axis]: value } }).css);
-  const changed = [...variant].filter(([name, tokenValue]) => baseDeclarations.get(name) !== tokenValue);
+function themeBundle(options = {}) {
+  const theme = compileWebTheme(tokenSource, options);
+  const graph = compileTokenGraph(tokenSource, options);
+  const cssDeclarations = declarations(theme.css);
+  const values = new Map(Object.keys(graph.tokens).map((id) => [id, cssDeclarations.get(cssName(id))]));
+  return { theme, graph, values };
+}
+
+function changedTokenIds(base, variant) {
+  return new Set([...variant.values].filter(([id, value]) => base.values.get(id) !== value).map(([id]) => id));
+}
+
+function dependentClosure(seedIds, ...graphs) {
+  const dependents = new Map();
+  for (const graph of graphs) {
+    for (const [id, dependencies] of Object.entries(graph.dependencies)) {
+      for (const dependency of dependencies) {
+        const ids = dependents.get(dependency) ?? [];
+        ids.push(id);
+        dependents.set(dependency, ids);
+      }
+    }
+  }
+  const closure = new Set(seedIds);
+  const pending = [...closure];
+  while (pending.length > 0) {
+    const id = pending.pop();
+    for (const dependent of dependents.get(id) ?? []) {
+      if (closure.has(dependent)) continue;
+      closure.add(dependent);
+      pending.push(dependent);
+    }
+  }
+  return closure;
+}
+
+function serializeDeclarations(bundle, tokenIds) {
+  return [...tokenIds].sort((left, right) => left.localeCompare(right))
+    .map((id) => `  ${cssName(id)}: ${bundle.values.get(id)};`)
+    .join('\n');
+}
+
+function deltaBlock(selector, bundle, tokenIds, emptyComment) {
+  const values = tokenIds.size === 0 ? `  /* ${emptyComment} */` : serializeDeclarations(bundle, tokenIds);
+  return `${selector} {\n${values}\n}`;
+}
+
+const axes = [
+  ['colorScheme', ['light', 'dark']],
+  ['contrast', ['standard', 'more']],
+  ['motion', ['full', 'reduced']],
+  ['density', ['comfortable', 'compact']],
+];
+const baseTheme = themeBundle();
+const responsiveTheme = themeBundle({ responsive: true });
+const responsiveChanges = dependentClosure(
+  changedTokenIds(baseTheme, responsiveTheme),
+  baseTheme.graph,
+  responsiveTheme.graph,
+);
+const responsiveBlock = deltaBlock(
+  '[data-muxui-responsive]',
+  responsiveTheme,
+  responsiveChanges,
+  'canonical theme has no responsive token delta',
+);
+const modeBlocks = axes.flatMap(([axis, values]) => {
+  const variants = values.map((value) => [value, themeBundle({ modes: { [axis]: value } })]);
+  const variantGraphs = variants.map(([, bundle]) => bundle.graph);
+  const axisChanges = new Set();
+  const changesByValue = new Map();
+  for (const [value, bundle] of variants) {
+    const changes = changedTokenIds(baseTheme, bundle);
+    changesByValue.set(value, changes);
+    if (value !== values[0]) for (const id of changes) axisChanges.add(id);
+  }
   const dataAxis = axis.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`);
-  const values = changed.length === 0 ? '  /* canonical mode has no token delta */' : changed.map(([name, tokenValue]) => `  ${name}: ${tokenValue};`).join('\n');
-  return `[data-muxui-${dataAxis}='${value}'] {\n${values}\n}`;
+  return variants.map(([value, bundle]) => {
+    const seedIds = value === values[0] ? axisChanges : changesByValue.get(value);
+    const tokenIds = dependentClosure(seedIds, baseTheme.graph, ...variantGraphs);
+    return deltaBlock(
+      `[data-muxui-${dataAxis}='${value}']`,
+      bundle,
+      tokenIds,
+      'canonical mode has no token delta',
+    );
+  });
 });
 
-const cssBody = `${baseTheme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='rtl'] { direction: rtl; }`;
+const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
 const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 
 const compatibility = {
@@ -593,6 +665,10 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
+
+Component styles consume semantic roles from \`catalog/tokens/default-theme.json\`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
+
+Structural CSS remains literal where it expresses geometry rather than a theme choice: zero/reset values, percentages and intrinsic sizing, border overlaps, visually hidden accessibility patterns, calendar grids, and text-segment alignment. The styling-token tests cover all authored component stylesheets; the browser check verifies gap/inset override isolation.
 
 Supporting runtime exports: \`ToastProvider\` and \`useToast\` are available alongside \`Toast\` for managed notifications.
 

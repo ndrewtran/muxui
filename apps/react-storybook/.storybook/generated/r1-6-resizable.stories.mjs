@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:0a8f308969e62be35e5fef54960754ae75dff49504deb9ca03ca08da266c9dfd
+// @generated-content-sha256: sha256:a81d433b6895a7a2f407eb2fc954847f9db638a075dec1d3787fdb39121340b8
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -55,7 +55,7 @@ const binding = {
 const record = { family: 'Resizable', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/Resizable',
+  title: 'Mux UI React/Resizable',
   id: 'muxui-react-r1-6-resizable',
   component: MuxUI.Resizable,
   tags: ['autodocs'],

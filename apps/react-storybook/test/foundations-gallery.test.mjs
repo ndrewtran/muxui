@@ -23,7 +23,9 @@ const appRoot = resolve(import.meta.dirname, '..');
 test('Foundations binds directly to the canonical token source and covers every supported token', async () => {
   const source = await readFile(resolve(appRoot, 'src/foundations-gallery.mjs'), 'utf8');
   assert.match(source, /catalog\/tokens\/default-theme\.json/u);
-  assert.equal(foundationTokenRows(defaultTheme).length, 813);
+  const tokenCount = Object.keys(defaultTheme.tokens).length;
+  const colorCount = Object.values(defaultTheme.tokens).filter(({ type }) => type === 'color').length;
+  assert.equal(foundationTokenRows(defaultTheme).length, tokenCount);
   assert.equal(Object.keys(defaultTheme.tokens).length - foundationTokenRows(defaultTheme).length, 0);
   assert.deepEqual(
     FOUNDATIONS_CATEGORY_INVENTORY.map(({ id }) => id),
@@ -33,15 +35,15 @@ test('Foundations binds directly to the canonical token source and covers every 
     Object.keys(foundationCategoryCounts(defaultTheme)),
     FOUNDATIONS_CATEGORY_INVENTORY.map(({ id }) => id),
   );
-  assert.equal(foundationCategoryCounts(defaultTheme).colors, 641);
+  assert.equal(foundationCategoryCounts(defaultTheme).colors, colorCount);
   assert.equal(foundationCategoryCounts(defaultTheme).component, 5);
   const rows = foundationTokenRows(defaultTheme);
   const coveredIds = new Set(rows.flatMap(({ id, facets }) => facets.map(() => id)));
-  assert.equal(rows.length, 813);
-  assert.equal(new Set(rows.map(({ id }) => id)).size, 813);
-  assert.equal(new Set(rows.filter(({ facets }) => facets.includes('colors')).map(({ id }) => id)).size, 641);
+  assert.equal(rows.length, tokenCount);
+  assert.equal(new Set(rows.map(({ id }) => id)).size, tokenCount);
+  assert.equal(new Set(rows.filter(({ facets }) => facets.includes('colors')).map(({ id }) => id)).size, colorCount);
   assert.equal(new Set(rows.filter(({ facets }) => facets.includes('component')).map(({ id }) => id)).size, 5);
-  assert.equal(coveredIds.size, 813);
+  assert.equal(coveredIds.size, tokenCount);
   assert.ok(foundationTokenRows(defaultTheme).every(({ cssVariable }) => cssVariable.startsWith('--muxui-')));
 });
 
@@ -56,9 +58,10 @@ test('every category emits a visual specimen kind and every color token gets a s
     component: 'component-schematic',
   };
   for (const row of rows) assert.equal(row.visualKind, expectedKinds[row.category], row.id);
-  assert.equal(rows.filter(({ facets }) => facets.includes('colors')).length, 641);
+  const colorCount = Object.values(defaultTheme.tokens).filter(({ type }) => type === 'color').length;
+  assert.equal(rows.filter(({ facets }) => facets.includes('colors')).length, colorCount);
   const markup = renderToStaticMarkup(React.createElement(FoundationsGallery, { theme: defaultTheme }));
-  assert.equal((markup.match(/data-muxui-foundations-color-swatch=/gu) ?? []).length, 641);
+  assert.equal((markup.match(/data-muxui-foundations-color-swatch=/gu) ?? []).length, colorCount);
   assert.equal(foundationVisualSpecimenKind('semantic.control.radius', defaultTheme.tokens['semantic.control.radius']), 'shape-box');
   assert.equal(foundationVisualSpecimenKind('semantic.control.padding-inline', defaultTheme.tokens['semantic.control.padding-inline']), 'measurement-ruler');
 });

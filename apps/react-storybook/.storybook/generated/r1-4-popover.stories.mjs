@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:0801b87075aff818c37ef50e1efa2aa4ecfb14add2809505d7eeb4461b2d6dba
+// @generated-content-sha256: sha256:e48dcad178c5f85a2ac4e041719f17e13ad0f4a4ede2771c06e31e87416a473a
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -66,7 +66,7 @@ const binding = {
 const record = { family: 'Popover', tranche: 'R1.4', binding };
 
 export default {
-  title: 'Mux UI React/R1.4/Popover',
+  title: 'Mux UI React/Popover',
   id: 'muxui-react-r1-4-popover',
   component: MuxUI.Popover,
   tags: ['autodocs'],

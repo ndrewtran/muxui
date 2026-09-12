@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ad2d31d20826e5c79ccf590d6beaa5b98cfeb4bc0670f7bafb4102f5c0a0126f
+// @generated-content-sha256: sha256:f2b385747e4c59edd7d059099905b2eb966258a2486a0bb3dce1adb07bab5fd7
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -54,7 +54,7 @@ const binding = {
 const record = { family: 'ColorSwatchPicker', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ColorSwatchPicker',
+  title: 'Mux UI React/ColorSwatchPicker',
   id: 'muxui-react-r1-3-color-swatch-picker',
   component: MuxUI.ColorSwatchPicker,
   tags: ['autodocs'],

@@ -54,64 +54,64 @@
 [data-muxui-motion],
 [data-muxui-density],
 [data-muxui-direction] {
-  --muxui-focus-ring-color: var(--muxui-semantic-color-neutral-50);
-  --muxui-focus-ring-inner: var(--muxui-semantic-color-neutral-100);
-  --muxui-focus-ring-outer: var(--muxui-semantic-color-neutral-50);
-  --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-color-neutral-60) 30%, transparent);
+  --muxui-focus-ring-color: var(--muxui-semantic-focus-neutral-ring);
+  --muxui-focus-ring-inner: var(--muxui-semantic-focus-inner);
+  --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
+  --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-focus-neutral-glow) 30%, transparent);
   --muxui-field-min-height: var(--muxui-semantic-control-min-height);
-  --muxui-field-padding-block: var(--muxui-semantic-layout-control-gap);
-  --muxui-field-padding-inline: var(--muxui-semantic-layout-group-gap);
-  --muxui-field-border-color: var(--muxui-semantic-color-neutral-26);
-  --muxui-field-radius: var(--muxui-reference-dimension-radius-s);
-  --muxui-field-bg: var(--muxui-semantic-color-neutral-5);
-  --muxui-field-color: var(--muxui-semantic-color-neutral-90);
-  --muxui-field-font-family: var(--muxui-reference-typography-body-font);
+  --muxui-field-padding-block: var(--muxui-semantic-layout-inset-tiny);
+  --muxui-field-padding-inline: var(--muxui-semantic-layout-inset-small);
+  --muxui-field-border-color: var(--muxui-semantic-field-border);
+  --muxui-field-radius: var(--muxui-semantic-shape-option-radius);
+  --muxui-field-bg: var(--muxui-semantic-field-background);
+  --muxui-field-color: var(--muxui-semantic-field-content);
+  --muxui-field-font-family: var(--muxui-semantic-typography-body-font);
   --muxui-field-font-size: var(--muxui-semantic-typography-body-size);
   --muxui-field-focus-border: var(--muxui-focus-ring-color);
   --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
-  --muxui-field-placeholder-color: var(--muxui-semantic-color-neutral-50);
-  --muxui-field-label-color: var(--muxui-semantic-color-neutral-70);
+  --muxui-field-placeholder-color: var(--muxui-semantic-field-placeholder);
+  --muxui-field-label-color: var(--muxui-semantic-field-label);
   --muxui-field-label-font-size: var(--muxui-semantic-typography-label-s-font-size);
   --muxui-field-label-font-weight: var(--muxui-semantic-typography-label-font-weight);
-  --muxui-field-description-color: var(--muxui-semantic-color-neutral-60);
+  --muxui-field-description-color: var(--muxui-semantic-field-description);
   /* The donor red-60 role is mode-aware in the canonical semantic mapping. */
   --muxui-field-error-color: var(--muxui-semantic-feedback-invalid);
-  --muxui-popup-bg: var(--muxui-semantic-color-neutral-10);
-  --muxui-popup-border-color: var(--muxui-semantic-color-neutral-20);
-  --muxui-popup-radius: var(--muxui-reference-dimension-radius-m);
-  --muxui-popup-shadow: var(--muxui-reference-effect-shadow-m);
-  --muxui-popup-transition-duration: 0.15s;
-  --muxui-popup-transition-easing: ease;
+  --muxui-popup-bg: var(--muxui-semantic-surface-raised);
+  --muxui-popup-border-color: var(--muxui-semantic-border-popup);
+  --muxui-popup-radius: var(--muxui-semantic-control-radius);
+  --muxui-popup-shadow: var(--muxui-semantic-elevation-overlay);
+  --muxui-popup-transition-duration: var(--muxui-semantic-motion-interaction-duration);
+  --muxui-popup-transition-easing: var(--muxui-semantic-motion-interaction-easing);
   --muxui-popup-enter-scale: 0.97;
   --muxui-item-padding-block: var(--muxui-semantic-layout-tight-inset);
-  --muxui-item-padding-inline: var(--muxui-semantic-layout-group-gap);
+  --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-small);
   --muxui-item-gap: var(--muxui-semantic-layout-group-gap);
-  --muxui-item-radius: var(--muxui-reference-dimension-radius-s);
-  --muxui-item-color: var(--muxui-semantic-color-neutral-80);
+  --muxui-item-radius: var(--muxui-semantic-shape-option-radius);
+  --muxui-item-color: var(--muxui-semantic-content-default);
   --muxui-item-font-size: var(--muxui-semantic-typography-text-s-font-size);
-  --muxui-item-focus-bg: var(--muxui-semantic-color-neutral-14);
-  --muxui-item-focus-color: var(--muxui-semantic-color-neutral-90);
-  --muxui-group-label-color: var(--muxui-semantic-color-neutral-50);
+  --muxui-item-focus-bg: var(--muxui-semantic-surface-hover);
+  --muxui-item-focus-color: var(--muxui-semantic-content-strong);
+  --muxui-group-label-color: var(--muxui-semantic-content-muted);
   --muxui-group-label-font-size: var(--muxui-semantic-typography-label-xs-font-size);
   --muxui-modal-title-color: var(--muxui-semantic-color-neutral-94);
   --muxui-modal-title-font-size: var(--muxui-semantic-typography-label-l-font-size);
   --muxui-modal-description-color: var(--muxui-semantic-color-neutral-70);
   --muxui-modal-description-font-size: var(--muxui-semantic-typography-text-m-font-size);
   --muxui-modal-backdrop-bg: var(--muxui-semantic-overlay-scrim);
-  --muxui-modal-actions-gap: var(--muxui-reference-dimension-space-xs);
+  --muxui-modal-actions-gap: var(--muxui-semantic-layout-action-gap);
   --muxui-progress-track-height: 0.5rem;
   --muxui-progress-track-bg: var(--muxui-semantic-color-neutral-24);
-  --muxui-progress-track-radius: var(--muxui-reference-dimension-radius-full);
+  --muxui-progress-track-radius: var(--muxui-semantic-shape-pill-radius);
   --muxui-progress-indicator-bg: var(--muxui-semantic-color-neutral-24-fg);
-  --muxui-progress-label-color: var(--muxui-semantic-color-neutral-80);
-  --muxui-progress-value-color: var(--muxui-semantic-color-neutral-60);
+  --muxui-progress-label-color: var(--muxui-semantic-content-default);
+  --muxui-progress-value-color: var(--muxui-semantic-content-secondary);
 }
 
 [data-muxui-color-scheme='dark'] {
-  --muxui-focus-ring-color: var(--muxui-semantic-color-neutral-50);
-  --muxui-focus-ring-inner: var(--muxui-semantic-color-neutral-100);
-  --muxui-focus-ring-outer: var(--muxui-semantic-color-neutral-50);
-  --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-color-neutral-60) 30%, transparent);
+  --muxui-focus-ring-color: var(--muxui-semantic-focus-neutral-ring);
+  --muxui-focus-ring-inner: var(--muxui-semantic-focus-inner);
+  --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
+  --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-focus-neutral-glow) 30%, transparent);
   --muxui-field-focus-border: var(--muxui-focus-ring-color);
   --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
 }
@@ -125,7 +125,7 @@
 :where(body) {
   min-height: 100vh;
   color: var(--muxui-semantic-typography-text-color, var(--muxui-semantic-content-default));
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-m-font-size, var(--muxui-semantic-typography-body-size));
   font-weight: var(--muxui-semantic-typography-text-font-weight, var(--muxui-semantic-typography-body-weight));
   line-height: var(--muxui-semantic-typography-text-line-height, var(--muxui-semantic-typography-body-line-height));
@@ -156,7 +156,7 @@
 
 :where(h1) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-display-font-family);
+  font-family: var(--muxui-semantic-typography-display-font-family);
   font-size: var(--muxui-semantic-typography-display-m-font-size);
   font-weight: var(--muxui-semantic-typography-display-font-weight);
   line-height: var(--muxui-semantic-typography-display-line-height);
@@ -165,7 +165,7 @@
 
 :where(h2) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-display-font-family);
+  font-family: var(--muxui-semantic-typography-display-font-family);
   font-size: var(--muxui-semantic-typography-display-s-font-size);
   font-weight: var(--muxui-semantic-typography-display-font-weight);
   line-height: var(--muxui-semantic-typography-display-line-height);
@@ -174,7 +174,7 @@
 
 :where(h3) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-heading-font-family);
+  font-family: var(--muxui-semantic-typography-heading-font-family);
   font-size: var(--muxui-semantic-typography-heading-l-font-size);
   font-weight: var(--muxui-semantic-typography-heading-font-weight);
   line-height: var(--muxui-semantic-typography-heading-line-height);
@@ -183,7 +183,7 @@
 
 :where(h4) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-heading-font-family);
+  font-family: var(--muxui-semantic-typography-heading-font-family);
   font-size: var(--muxui-semantic-typography-heading-m-font-size);
   font-weight: var(--muxui-semantic-typography-heading-font-weight);
   line-height: var(--muxui-semantic-typography-heading-line-height);
@@ -192,7 +192,7 @@
 
 :where(h5) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-title-font-family);
+  font-family: var(--muxui-semantic-typography-title-font-family);
   font-size: var(--muxui-semantic-typography-title-l-font-size);
   font-weight: var(--muxui-semantic-typography-title-font-weight);
   line-height: var(--muxui-semantic-typography-title-line-height);
@@ -201,7 +201,7 @@
 
 :where(h6) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-title-font-family);
+  font-family: var(--muxui-semantic-typography-title-font-family);
   font-size: var(--muxui-semantic-typography-title-m-font-size);
   font-weight: var(--muxui-semantic-typography-title-font-weight);
   line-height: var(--muxui-semantic-typography-title-line-height);
@@ -218,7 +218,7 @@
 
 :where(.muxui-text--display-l, .muxui-text--display-m, .muxui-text--display-s) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-display-font-family);
+  font-family: var(--muxui-semantic-typography-display-font-family);
   font-weight: var(--muxui-semantic-typography-display-font-weight);
   line-height: var(--muxui-semantic-typography-display-line-height);
   letter-spacing: var(--muxui-semantic-typography-display-letter-spacing);
@@ -229,7 +229,7 @@
 
 :where(.muxui-text--heading-l, .muxui-text--heading-m, .muxui-text--heading-s) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-heading-font-family);
+  font-family: var(--muxui-semantic-typography-heading-font-family);
   font-weight: var(--muxui-semantic-typography-heading-font-weight);
   line-height: var(--muxui-semantic-typography-heading-line-height);
   letter-spacing: var(--muxui-semantic-typography-heading-letter-spacing);
@@ -240,7 +240,7 @@
 
 :where(.muxui-text--title-l, .muxui-text--title-m, .muxui-text--title-s) {
   color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
-  font-family: var(--muxui-reference-typography-title-font-family);
+  font-family: var(--muxui-semantic-typography-title-font-family);
   font-weight: var(--muxui-semantic-typography-title-font-weight);
   line-height: var(--muxui-semantic-typography-title-line-height);
   letter-spacing: var(--muxui-semantic-typography-title-letter-spacing);
@@ -251,7 +251,7 @@
 
 :where(.muxui-text--label-l, .muxui-text--label-m, .muxui-text--label-s, .muxui-text--label-xs) {
   color: var(--muxui-semantic-typography-text-color, var(--muxui-semantic-content-default));
-  font-family: var(--muxui-reference-typography-label-font-family);
+  font-family: var(--muxui-semantic-typography-label-font-family);
   font-weight: var(--muxui-semantic-typography-label-font-weight);
   line-height: var(--muxui-semantic-typography-label-line-height);
   letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
@@ -266,7 +266,7 @@
 
 :where(.muxui-text--body-l, .muxui-text--body-m, .muxui-text--body-s, .muxui-text--body-xs) {
   color: var(--muxui-semantic-typography-text-color, var(--muxui-semantic-content-default));
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-weight: var(--muxui-semantic-typography-text-font-weight);
   line-height: var(--muxui-semantic-typography-text-line-height);
   letter-spacing: var(--muxui-semantic-typography-text-letter-spacing);
@@ -278,7 +278,7 @@
 
 :where(.muxui-text--mono-l, .muxui-text--mono-m, .muxui-text--mono-s, .muxui-text--mono-xs) {
   color: var(--muxui-semantic-typography-mono-color, var(--muxui-semantic-content-default));
-  font-family: var(--muxui-reference-typography-mono-font-family);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
   font-weight: var(--muxui-semantic-typography-mono-font-weight);
   line-height: var(--muxui-semantic-typography-mono-line-height);
   letter-spacing: var(--muxui-semantic-typography-mono-letter-spacing);
@@ -289,7 +289,7 @@
 :where(.muxui-text--mono-xs) { font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
 
 :where(.muxui-text--expressive) {
-  font-family: var(--muxui-reference-typography-expressive-font-family);
+  font-family: var(--muxui-semantic-typography-expressive-font-family);
 }
 
 /* Bare RAC buttons need the same chrome reset as Tale's Button base. Component
@@ -314,7 +314,7 @@
   align-items: center;
   justify-content: center;
   gap: var(--muxui-semantic-layout-control-gap);
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-control-padding-inline);
+  padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
   border: 1px solid transparent;
   border-radius: var(--muxui-semantic-control-radius);
   background: transparent;
@@ -326,10 +326,10 @@
   outline: none;
   appearance: none;
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   white-space: nowrap;
   user-select: none;
 }
@@ -376,7 +376,7 @@
 
 .muxui-combo-box-arrow,
 .muxui-select-arrow {
-  transition: transform 0.2s ease;
+  transition: transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-combo-box-arrow,
@@ -400,7 +400,7 @@
   flex: 0 0 auto;
   width: 2.25rem;
   min-height: 2.25rem;
-  margin-inline-end: var(--muxui-semantic-layout-tight-inset);
+  margin-inline-end: var(--muxui-semantic-layout-tight-gap);
   border: none;
   background: transparent;
   color: var(--muxui-semantic-content-default);
@@ -430,10 +430,10 @@
 }
 .muxui-field-label {
   color: var(--muxui-field-label-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-field-label-font-size);
   font-weight: var(--muxui-field-label-font-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
   cursor: default;
 }
 
@@ -452,10 +452,10 @@
   .muxui-payment-input__label
 ) {
   color: var(--muxui-field-label-color);
-  font-family: var(--muxui-reference-typography-label-font-family);
+  font-family: var(--muxui-semantic-typography-label-font-family);
   font-size: var(--muxui-field-label-font-size);
   font-weight: var(--muxui-field-label-font-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
   cursor: default;
 }
 :where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-color-area-field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-disabled] .muxui-field-label {
@@ -472,10 +472,10 @@
 .muxui-color-slider > .muxui-field-label {
   display: inline-flex;
   align-items: center;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
   color: var(--muxui-semantic-content-default);
   cursor: default;
   margin-bottom: 0;
@@ -496,7 +496,7 @@
 
 .muxui-slider-output {
   color: var(--muxui-semantic-content-muted);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   text-align: right;
 }
@@ -508,7 +508,7 @@
 
 .muxui-field-label {
   display: block;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   color: var(--muxui-semantic-content-default);
@@ -571,12 +571,12 @@
   .muxui-menu [data-part='header'],
   .muxui-command-palette__section-header
 ) {
-  padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs) 0;
+  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small) 0;
   color: var(--muxui-group-label-color);
-  font-family: var(--muxui-reference-typography-label-font-family);
+  font-family: var(--muxui-semantic-typography-label-font-family);
   font-size: var(--muxui-group-label-font-size);
   font-weight: var(--muxui-semantic-typography-label-font-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   cursor: default;
@@ -597,14 +597,14 @@
   padding: var(--muxui-item-padding-block) var(--muxui-item-padding-inline);
   border-radius: var(--muxui-item-radius);
   color: var(--muxui-item-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-item-font-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   cursor: pointer;
   outline: none;
   transition:
-    background-color 0.1s ease,
-    color 0.1s ease;
+    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
   user-select: none;
 }
 
@@ -636,12 +636,12 @@
 
 .muxui-disclosure-panel {
   color: var(--muxui-semantic-content-default);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.6;
+  line-height: var(--muxui-semantic-typography-prose-line-height);
   transition:
-    height 0.6s ease,
-    opacity 0.2s ease;
+    height var(--muxui-semantic-motion-content-resize-duration) var(--muxui-semantic-motion-interaction-easing),
+    opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-disclosure-panel[data-entering],
@@ -652,9 +652,9 @@
 
 .muxui-field-description {
   color: var(--muxui-field-description-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
 :where(
@@ -669,16 +669,16 @@
   .muxui-payment-input__description
 ) {
   color: var(--muxui-field-description-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-s-font-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
 .muxui-field-error {
   color: var(--muxui-field-error-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
-  line-height: 1.4;
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
 }
 
 :where(
@@ -693,9 +693,9 @@
   .muxui-payment-input__error
 ) {
   color: var(--muxui-field-error-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-s-font-size);
-  line-height: 1.4;
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
 }
 
 .muxui-date-input,
@@ -728,12 +728,12 @@
   background-color: var(--muxui-field-bg);
   padding-block: 1.5px;
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-date-picker .muxui-date-control {
-  padding-inline-end: var(--muxui-semantic-layout-control-gap);
+  padding-inline-end: var(--muxui-semantic-layout-inset-tiny);
 }
 
 .muxui-date-range-separator {
@@ -742,7 +742,7 @@
   overflow: visible;
   color: var(--muxui-semantic-content-strong);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   flex: 0 0 auto;
 }
 
@@ -770,12 +770,12 @@
   flex: 1 1 auto;
   min-width: 0;
   gap: 0;
-  padding: var(--muxui-semantic-layout-control-gap) var(--muxui-semantic-control-padding-inline);
+  padding: var(--muxui-semantic-control-padding-block) var(--muxui-semantic-control-padding-inline);
   background-color: var(--muxui-field-bg);
   color: var(--muxui-semantic-content-strong);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
-  line-height: 1.5;
+  line-height: var(--muxui-semantic-typography-text-line-height);
   outline: none;
 }
 
@@ -813,8 +813,8 @@
 }
 
 .muxui-date-segment[data-focused] {
-  background: var(--muxui-semantic-content-default);
-  color: var(--muxui-semantic-surface-canvas);
+  background: var(--muxui-semantic-surface-emphasis);
+  color: var(--muxui-semantic-content-on-solid);
 }
 
 .muxui-date-trigger {
@@ -878,14 +878,14 @@
 
 .muxui-date-popover {
   background: var(--muxui-popup-bg);
-  border: 1px solid var(--muxui-semantic-surface-hover);
+  border: 1px solid var(--muxui-semantic-border-faint);
   border-radius: var(--muxui-semantic-control-radius);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 10%, transparent);
   outline: none;
 }
 
 .muxui-date-popover[data-entering] {
-  animation: muxui-date-popover-fade-in 0.15s ease;
+  animation: muxui-date-popover-fade-in var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 [data-muxui-color-scheme='dark'] :where(
@@ -899,7 +899,7 @@
 }
 
 .muxui-date-popover[data-exiting] {
-  animation: muxui-date-popover-fade-out 0.1s ease;
+  animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 @keyframes muxui-date-popover-fade-in {
@@ -935,10 +935,10 @@
   --muxui-calendar-cell-size: 28px;
   display: inline-flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-control-padding-inline);
-  line-height: 1.5;
+  gap: var(--muxui-semantic-layout-control-content-gap);
+  line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
-  padding: var(--muxui-semantic-layout-section-gap);
+  padding: var(--muxui-semantic-layout-inset-medium);
   background: var(--muxui-semantic-surface-raised);
   border: 1px solid var(--muxui-semantic-border-strong);
   border-radius: var(--muxui-semantic-control-radius);
@@ -948,8 +948,8 @@
 
 .muxui-calendar-header-cell {
   text-align: center;
-  padding: var(--muxui-semantic-layout-group-gap) var(--muxui-semantic-layout-control-gap);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-tiny);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   color: var(--muxui-semantic-content-muted);
@@ -966,12 +966,12 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-strong);
   transition:
-    background 0.1s ease,
-    color 0.1s ease;
+    background var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-calendar-cell:hover,
@@ -1004,8 +1004,8 @@
 .muxui-calendar-cell[data-focus-visible],
 .muxui-range-calendar-cell[data-focus-visible] {
   box-shadow:
-    0 0 0 2px var(--muxui-semantic-color-neutral-100),
-    0 0 0 4px var(--muxui-semantic-color-neutral-50);
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-neutral-ring);
 }
 
 .muxui-calendar-previous,
@@ -1016,8 +1016,8 @@
   min-height: 0;
   padding: 0;
   border-radius: var(--muxui-semantic-shape-option-radius);
-  border: 1px solid var(--muxui-semantic-content-strong);
-  background: var(--muxui-semantic-content-default);
+  border: 1px solid var(--muxui-semantic-border-emphasis);
+  background: var(--muxui-semantic-surface-emphasis);
   color: var(--muxui-semantic-action-foreground);
 }
 
@@ -1032,7 +1032,7 @@
   margin: 0;
   padding: 0;
   text-align: center;
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: inherit;
@@ -1046,14 +1046,14 @@
 .muxui-color-wheel-thumb {
   width: 0.78125rem;
   height: 0.78125rem;
-  border-radius: var(--muxui-reference-dimension-radius-full);
+  border-radius: var(--muxui-semantic-shape-pill-radius);
   /* Tale's shared color-thumb primitive uses a white keyline in both themes. */
   border: 2px solid white;
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.3),
     inset 0 0 0 1px rgba(0, 0, 0, 0.3);
   outline: none;
-  transition: box-shadow 0.15s ease;
+  transition: box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-color-area-thumb[data-focus-visible],
@@ -1077,12 +1077,12 @@
 }
 .muxui-dialog-title {
   margin: 0;
-  padding-right: calc(var(--muxui-semantic-layout-section-gap) * 1.414141);
+  padding-right: calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
   color: var(--muxui-modal-title-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-modal-title-font-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
 }
 
 :where(
@@ -1091,12 +1091,12 @@
   .muxui-text-editor__dialog-title
 ) {
   margin: 0;
-  padding-right: var(--muxui-reference-dimension-space-m);
+  padding-right: var(--muxui-semantic-layout-inset-xlarge);
   color: var(--muxui-modal-title-color);
-  font-family: var(--muxui-reference-typography-label-font-family);
+  font-family: var(--muxui-semantic-typography-label-font-family);
   font-size: var(--muxui-modal-title-font-size);
   font-weight: var(--muxui-semantic-typography-label-font-weight);
-  line-height: 1.3;
+  line-height: var(--muxui-semantic-typography-compact-line-height);
 }
 
 /* CommandPalette inherits its dialog text scale. This double-class reset is
@@ -1121,9 +1121,9 @@
 ) {
   margin: 0;
   color: var(--muxui-modal-description-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-modal-description-font-size);
-  line-height: 1.6;
+  line-height: var(--muxui-semantic-typography-prose-line-height);
 }
 
 :where(
@@ -1134,7 +1134,7 @@
   inset: 0;
   background-color: var(--muxui-modal-backdrop-bg);
   z-index: 100;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 :where(
@@ -1155,14 +1155,14 @@
   align-items: center;
   justify-content: flex-end;
   gap: var(--muxui-modal-actions-gap);
-  margin-top: var(--muxui-reference-dimension-space-xs);
+  margin-top: var(--muxui-semantic-layout-action-gap);
 }
 .muxui-dialog-backdrop {
   position: fixed;
   inset: 0;
   background-color: var(--muxui-modal-backdrop-bg);
   z-index: 100;
-  transition: opacity 0.2s ease;
+  transition: opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 .muxui-dialog-backdrop[data-entering],
 .muxui-dialog-backdrop[data-exiting] {
@@ -1178,13 +1178,13 @@
 .muxui-progress-bar {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-semantic-layout-tight-inset);
+  gap: var(--muxui-semantic-layout-tight-gap);
   width: 100%;
 }
 
 .muxui-value-label {
   color: var(--muxui-progress-label-color);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
@@ -1204,20 +1204,20 @@
   height: 100%;
   background-color: var(--muxui-progress-indicator-bg);
   border-radius: var(--muxui-progress-track-radius);
-  transition: width 0.3s ease;
+  transition: width var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-checkbox-group-field {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-reference-dimension-space-3xs);
+  gap: var(--muxui-semantic-layout-control-gap);
   width: max-content;
 }
 
 .muxui-radio-group-field {
   display: flex;
   flex-direction: column;
-  gap: var(--muxui-reference-dimension-space-3xs);
+  gap: var(--muxui-semantic-layout-control-gap);
   width: max-content;
 }
 
@@ -1234,7 +1234,7 @@
 .muxui-radio-group[data-orientation='horizontal'] {
   flex-direction: row;
   flex-wrap: wrap;
-  gap: var(--muxui-reference-dimension-space-m);
+  gap: var(--muxui-semantic-layout-content-gap);
 }
 
 .muxui-combo-control {
@@ -1247,8 +1247,8 @@
   border-radius: var(--muxui-semantic-control-radius);
   background: var(--muxui-field-bg);
   transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
+    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-combo-control:focus-within {

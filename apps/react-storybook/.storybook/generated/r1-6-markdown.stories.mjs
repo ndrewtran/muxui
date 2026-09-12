@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:56a200535f4764919563b2ea34e216b9b994e3c773d20b233cbbd21b2eef5d51
+// @generated-content-sha256: sha256:58a83e42cb52a0c7192f743085257e984e2c3ac52dd1667c02f53566bd34e5a3
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -47,7 +47,7 @@ const binding = {
 const record = { family: 'Markdown', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/Markdown',
+  title: 'Mux UI React/Markdown',
   id: 'muxui-react-r1-6-markdown',
   component: MarkdownSubpath,
   tags: ['autodocs'],

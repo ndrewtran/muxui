@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:4bd50deb809aece96e42f1bb361ac7c1434162adec11fecb7aa03bb674652488
+// @generated-content-sha256: sha256:7f5d63cfb9ad8ce37f864e5a67db3b7edbdbd387d2991b51cae69f08a2ea1571
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -64,7 +64,7 @@ const binding = {
 const record = { family: 'ColorField', tranche: 'R1.3', binding };
 
 export default {
-  title: 'Mux UI React/R1.3/ColorField',
+  title: 'Mux UI React/ColorField',
   id: 'muxui-react-r1-3-color-field',
   component: MuxUI.ColorField,
   tags: ['autodocs'],

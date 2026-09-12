@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ff9fdf94321eda129ee3248c0bef7b99a2f4c37fc3d9bd6c3b6f6b9ff72337da
+// @generated-content-sha256: sha256:f980959dad75467bbece587051d24065d74449e18807b95a8f55abe502075dd6
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -52,7 +52,7 @@ const binding = {
 const record = { family: 'Group', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/Group',
+  title: 'Mux UI React/Group',
   id: 'muxui-react-r1-1-group',
   component: MuxUI.Group,
   tags: ['autodocs'],

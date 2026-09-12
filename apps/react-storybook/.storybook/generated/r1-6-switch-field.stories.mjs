@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:af87828766d9383df533f2d54a39b0f928d077b512f626fe25c05aaa9b6f79dc
+// @generated-content-sha256: sha256:d7a033ee0192294872ab1f7a164f687af2c76b40fdf50ba6a9e6d0bdd83199bf
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -61,7 +61,7 @@ const binding = {
 const record = { family: 'SwitchField', tranche: 'R1.6', binding };
 
 export default {
-  title: 'Mux UI React/R1.6/SwitchField',
+  title: 'Mux UI React/SwitchField',
   id: 'muxui-react-r1-6-switch-field',
   component: MuxUI.SwitchField,
   tags: ['autodocs'],

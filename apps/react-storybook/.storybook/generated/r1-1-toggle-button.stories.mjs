@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:4753c87f85b1355bc118e3841c4855b7a51dfd15f52a58bfd559dd006ad4c3ed
+// @generated-content-sha256: sha256:c49377b67da0db5ab558f7963bdd6597288a6da403e92af2e3d25c2eec2bd7e5
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -53,7 +53,7 @@ const binding = {
 const record = { family: 'ToggleButton', tranche: 'R1.1', binding };
 
 export default {
-  title: 'Mux UI React/R1.1/ToggleButton',
+  title: 'Mux UI React/ToggleButton',
   id: 'muxui-react-r1-1-toggle-button',
   component: MuxUI.ToggleButton,
   tags: ['autodocs'],

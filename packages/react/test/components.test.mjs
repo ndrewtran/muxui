@@ -384,9 +384,9 @@ test('Checkbox and Radio focus rings stay on indicators with their donor keyline
   ]);
   const rootFocusOutline = /\.muxui-(?:checkbox|radio)(?::focus-within|\[data-focus-visible\])\s*\{[^}]*outline:/u;
   const focusRules = [
-    ['Checkbox focus-visible indicator', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-content-inverse\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
-    ['Checkbox focus-within indicator', /\.muxui-checkbox:focus-within \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-content-inverse\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
-    ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-content-inverse\),\s*0 0 0 4px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Checkbox focus-visible indicator', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-focus-inner\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Checkbox focus-within indicator', /\.muxui-checkbox:focus-within \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-focus-inner\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
     ['Radio mode-aware focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-focus-ring-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-outer\)[^}]*\}/u],
   ];
   const forcedColorsFocusRules = [
@@ -437,7 +437,7 @@ test('DisclosureGroup uses accordion trigger geometry without changing standalon
   assert.ok(grouped);
   assert.equal(grouped.closest('.muxui-disclosure-group')?.classList.contains('muxui-disclosure-group'), true);
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-disclosure-group \.muxui-disclosure-trigger\s*\{[^}]*width:\s*100%[\s\S]*padding:\s*var\(--muxui-semantic-control-padding-inline\)/u);
+  assert.match(styles, /\.muxui-disclosure-group \.muxui-disclosure-trigger\s*\{[^}]*width:\s*100%[\s\S]*padding:\s*var\(--muxui-semantic-layout-control-inset\)/u);
   assert.match(styles, /\.muxui-disclosure-trigger\s*\{[\s\S]*width:\s*fit-content/u);
   dom.window.close();
 });

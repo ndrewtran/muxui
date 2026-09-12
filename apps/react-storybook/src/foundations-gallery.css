@@ -57,10 +57,12 @@
 .muxui-foundations-header h1,
 .muxui-foundations-content h2,
 .muxui-foundations-comparisons h2,
+.muxui-foundations-responsive-heading h2,
 .muxui-foundations-content h3,
 .muxui-foundations-color-group h3,
 .muxui-foundations-typography-group h3 {
   margin: 0;
+  color: inherit;
   letter-spacing: -0.03em;
 }
 
