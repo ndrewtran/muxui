@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:6e122c9c51037e6e266e65b4d0328271ec81e5ede755dbf72f075c595b7c3cb9
+// @generated-content-sha256: sha256:2db2137460a5e0fa56ad5533ad24ec09a637ad4dc7da4acf261201dafda34d79
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,7 +18,8 @@ const binding = {
       "disabled": false,
       "invalid": false,
       "readOnly": false,
-      "required": false
+      "required": false,
+      "size": "md"
     },
     "events": [
       "change"
@@ -43,6 +44,7 @@ const binding = {
       "maxValue",
       "unavailableDateMatcher",
       "disabled",
+      "size",
       "readOnly",
       "required",
       "invalid",

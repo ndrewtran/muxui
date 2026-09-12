@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:519828452ee3fdc8dc27b55da4b536827f21900b40ad39038e966284923053f5
+// @generated-content-sha256: sha256:ad31cf89917aaf14682cf44d48c20b0f5d5453c5a23c4161c2d9d2a1e1f18968
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -17,7 +17,8 @@ const binding = {
     "defaults": {
       "disabled": false,
       "keyboardActivation": "automatic",
-      "orientation": "horizontal"
+      "orientation": "horizontal",
+      "size": "md"
     },
     "events": [
       "change"
@@ -37,6 +38,7 @@ const binding = {
       "defaultValue",
       "keyboardActivation",
       "disabled",
+      "size",
       "orientation"
     ]
   },

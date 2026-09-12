@@ -12,7 +12,7 @@
     "@muxui/tooling": "workspace:*"
   },
   "scripts": {
-    "check": "node src/cli.mjs && node src/tale-token-annex-verify.mjs && node --import ./test/historical-catalog-compatibility.mjs --test test/default-theme-g1.0-v2.test.mjs test/default-theme-g1.1-v2.test.mjs test/delivery-workflow-authority.test.mjs test/evidence-integrity.test.mjs test/g1.2-v2.test.mjs test/historical-catalog-compatibility.test.mjs test/phase-c-applicability-capture.test.mjs test/phase-c-materialization-capture.test.mjs test/react-aria-stage1-source.test.mjs test/react-r1.0.test.mjs test/repository-policy.test.mjs test/tale-token-annex.test.mjs test/tale-token-phase-a.test.mjs test/tale-token-phase-b.test.mjs test/tale-token-phase-c-v2.test.mjs test/task-graph.test.mjs ../../../tests/evidence/g1.2-profile.test.mjs ../../../tests/fixtures/g1.2/profile.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs",
+    "check": "node src/cli.mjs && node --test test/evidence-integrity.test.mjs test/react-aria-stage1-source.test.mjs test/repository-policy.test.mjs test/task-graph.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
   }

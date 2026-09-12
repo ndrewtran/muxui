@@ -1,5 +1,5 @@
-// Mux-owned one-time port of the pinned Scale palette algorithm.
-// See ../NOTICE for donor attribution; no donor checkout is used at runtime.
+// Mux-owned deterministic Scale palette generation.
+// Keep this module dependency-light so authoring and runtime checks share the algorithm.
 import { converter, formatHex, clampChroma } from 'culori';
 
 const toOklch = converter('oklch');

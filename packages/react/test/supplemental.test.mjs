@@ -78,10 +78,9 @@ test('package-owned browser fixture is self-contained and exposes repeatable ass
   assert.match(html, /data-testid="selected"/u);
   assert.match(html, /data-testid="tag-selected"/u);
   assert.match(html, /data-testid="card-surface"/u);
-  assert.doesNotMatch(html, /tale-/u);
 });
 
-test('supplemental compound parts render with Mux-owned anatomy and no donor selectors', () => {
+test('supplemental compound parts render with Mux-owned anatomy and no external selectors', () => {
   const tree = React.createElement(React.Fragment, null,
     React.createElement(ButtonGroup, { 'aria-label': 'Actions' }, React.createElement('button', null, 'Save')),
     React.createElement(Card.Root, { variant: 'outlined' }, React.createElement(Card.Header, null, 'Title'), React.createElement(Card.Body, null, 'Body')),
@@ -98,7 +97,6 @@ test('supplemental compound parts render with Mux-owned anatomy and no donor sel
   assert.doesNotMatch(html, /muxui-input__input/u);
   assert.match(html, /muxui-text-area__textarea/u);
   assert.match(html, /muxui-progress-circle__indicator/u);
-  assert.doesNotMatch(html, /tale-/u);
 });
 
 test('supplemental field and collection modules preserve accessible state hooks in SSR', () => {
@@ -317,12 +315,12 @@ test('compound overlays render stable Mux-owned parts in closed or static SSR st
   assert.match(html, /muxui-multi-select__trigger/u);
 });
 
-test('supplemental declarations and CSS do not leak donor API names or selectors', async () => {
+test('supplemental declarations and CSS do not leak external API names or selectors', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
   const styles = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8');
   assert.doesNotMatch(declaration, /\b(?:isDisabled|isInvalid|isSelected|isOpen|onPress)\b/u);
-  assert.doesNotMatch(declaration, /react-aria-components|tale-ui|@tale-ui|Tale/u);
-  assert.doesNotMatch(styles, /\.tale-|--(?:neutral|color|red|success|space|radius|shadow)-/u);
+  assert.doesNotMatch(declaration, /react-aria-components/u);
+  assert.doesNotMatch(styles, /--(?:neutral|color|red|success|space|radius|shadow)-/u);
   assert.match(styles, /--muxui-(?:semantic|reference)-/u);
   assert.doesNotMatch(styles, /--muxui-reference-color-neutral-/u);
   assert.match(styles, /--muxui-semantic-elevation-(?:floating|overlay|modal)/u);
@@ -341,7 +339,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   const references = new Set([...styles.matchAll(/var\(--([A-Za-z0-9_-]+)/gu)].map((match) => match[1]));
   const foundations = [...references].filter((name) => /^(?:muxui-semantic|muxui-reference)-/u.test(name));
   const localHooks = [...references].filter((name) => /^muxui-(?:focus-ring|field|item|popup|group-label|switch-field)-/u.test(name));
-  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal)$/u.test(name));
+  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size)$/u.test(name));
   const unknown = [...references].filter((name) => !foundations.includes(name) && !localHooks.includes(name) && !runtimeLocals.includes(name));
   assert.ok(foundations.some((name) => name.startsWith('muxui-semantic-')));
   assert.ok(foundations.every((name) => name.startsWith('muxui-semantic-')));
@@ -396,7 +394,7 @@ test('Input and TextArea roots retain native string field props in their declara
   assert.match(declaration, /CommandPaletteItemProps[\s\S]*?textValue\?: string/u);
 });
 
-test('Input uses the donor-backed root and control anatomy', () => {
+test('Input uses the Mux-owned root and control anatomy', () => {
   const html = renderToStaticMarkup(React.createElement(
     Input.Root,
     { 'aria-label': 'Name', invalid: true },
@@ -778,6 +776,15 @@ test('AlertDialog renders its default-open modal content with accessible trigger
     const description = document.querySelector('#delete-description');
     assert.ok(description);
     assert.equal(content.getAttribute('aria-describedby'), 'delete-description');
+    const textClose = document.querySelector('.muxui-alert-dialog__close');
+    assert.ok(textClose);
+    assert.equal(textClose.textContent, 'Cancel');
+    assert.doesNotMatch(textClose.className, /muxui-icon-button/u);
+    assert.equal(textClose.getAttribute('aria-label'), null);
+
+    const defaultClose = renderToStaticMarkup(React.createElement(AlertDialog.Close));
+    assert.match(defaultClose, /muxui-icon-button/u);
+    assert.match(defaultClose, /aria-label="Close"/u);
   } finally {
     await act(async () => root?.unmount());
     restore();

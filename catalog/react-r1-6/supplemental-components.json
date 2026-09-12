@@ -1,0 +1,405 @@
+{
+  "schema": "muxui-react-r1-6-supplemental-components-v1",
+  "tranche": "R1.6",
+  "components": [
+    {
+      "family": "AlertDialog",
+      "slug": "alert-dialog",
+      "artifact": "catalog/components/alert-dialog/artifact.json",
+      "binding": "muxui:component:alert-dialog#web.react",
+      "apiOwner": "catalog/components/alert-dialog/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/alert-dialog/artifact.json#/states",
+      "anatomyOwner": "catalog/components/alert-dialog/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/alert-dialog/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "AlertDialog",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "ButtonGroup",
+      "slug": "button-group",
+      "artifact": "catalog/components/button-group/artifact.json",
+      "binding": "muxui:component:button-group#web.react",
+      "apiOwner": "catalog/components/button-group/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/button-group/artifact.json#/states",
+      "anatomyOwner": "catalog/components/button-group/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/button-group/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "ButtonGroup",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "Card",
+      "slug": "card",
+      "artifact": "catalog/components/card/artifact.json",
+      "binding": "muxui:component:card#web.react",
+      "apiOwner": "catalog/components/card/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/card/artifact.json#/states",
+      "anatomyOwner": "catalog/components/card/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/card/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Card",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "CheckboxField",
+      "slug": "checkbox-field",
+      "artifact": "catalog/components/checkbox-field/artifact.json",
+      "binding": "muxui:component:checkbox-field#web.react",
+      "apiOwner": "catalog/components/checkbox-field/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/checkbox-field/artifact.json#/states",
+      "anatomyOwner": "catalog/components/checkbox-field/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/checkbox-field/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "CheckboxField",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "ColorModeToggle",
+      "slug": "color-mode-toggle",
+      "artifact": "catalog/components/color-mode-toggle/artifact.json",
+      "binding": "muxui:component:color-mode-toggle#web.react",
+      "apiOwner": "catalog/components/color-mode-toggle/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/color-mode-toggle/artifact.json#/states",
+      "anatomyOwner": "catalog/components/color-mode-toggle/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/color-mode-toggle/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "ColorModeToggle",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "CommandPalette",
+      "slug": "command-palette",
+      "artifact": "catalog/components/command-palette/artifact.json",
+      "binding": "muxui:component:command-palette#web.react",
+      "apiOwner": "catalog/components/command-palette/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/command-palette/artifact.json#/states",
+      "anatomyOwner": "catalog/components/command-palette/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/command-palette/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "CommandPalette",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "HeaderNav",
+      "slug": "header-nav",
+      "artifact": "catalog/components/header-nav/artifact.json",
+      "binding": "muxui:component:header-nav#web.react",
+      "apiOwner": "catalog/components/header-nav/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/header-nav/artifact.json#/states",
+      "anatomyOwner": "catalog/components/header-nav/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/header-nav/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "HeaderNav",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "Input",
+      "slug": "input",
+      "artifact": "catalog/components/input/artifact.json",
+      "binding": "muxui:component:input#web.react",
+      "apiOwner": "catalog/components/input/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/input/artifact.json#/states",
+      "anatomyOwner": "catalog/components/input/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/input/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Input",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "InputTags",
+      "slug": "input-tags",
+      "artifact": "catalog/components/input-tags/artifact.json",
+      "binding": "muxui:component:input-tags#web.react",
+      "apiOwner": "catalog/components/input-tags/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/input-tags/artifact.json#/states",
+      "anatomyOwner": "catalog/components/input-tags/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/input-tags/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "InputTags",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "Lightbox",
+      "slug": "lightbox",
+      "artifact": "catalog/components/lightbox/artifact.json",
+      "binding": "muxui:component:lightbox#web.react",
+      "apiOwner": "catalog/components/lightbox/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/lightbox/artifact.json#/states",
+      "anatomyOwner": "catalog/components/lightbox/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/lightbox/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Lightbox",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/lightbox.mjs",
+      "styleSource": "packages/react/src/supplemental/lightbox.css"
+    },
+    {
+      "family": "Markdown",
+      "slug": "markdown",
+      "artifact": "catalog/components/markdown/artifact.json",
+      "binding": "muxui:component:markdown#web.react",
+      "apiOwner": "catalog/components/markdown/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/markdown/artifact.json#/states",
+      "anatomyOwner": "catalog/components/markdown/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/markdown/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Markdown",
+        "module": "./markdown",
+        "isolation": "subpath-only"
+      },
+      "runtimeSource": "packages/react/src/markdown/index.mjs",
+      "styleSource": "packages/react/src/markdown/markdown.css"
+    },
+    {
+      "family": "MultiSelect",
+      "slug": "multi-select",
+      "artifact": "catalog/components/multi-select/artifact.json",
+      "binding": "muxui:component:multi-select#web.react",
+      "apiOwner": "catalog/components/multi-select/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/multi-select/artifact.json#/states",
+      "anatomyOwner": "catalog/components/multi-select/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/multi-select/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "MultiSelect",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "PaymentInput",
+      "slug": "payment-input",
+      "artifact": "catalog/components/payment-input/artifact.json",
+      "binding": "muxui:component:payment-input#web.react",
+      "apiOwner": "catalog/components/payment-input/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/payment-input/artifact.json#/states",
+      "anatomyOwner": "catalog/components/payment-input/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/payment-input/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "PaymentInput",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "ProgressCircle",
+      "slug": "progress-circle",
+      "artifact": "catalog/components/progress-circle/artifact.json",
+      "binding": "muxui:component:progress-circle#web.react",
+      "apiOwner": "catalog/components/progress-circle/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/progress-circle/artifact.json#/states",
+      "anatomyOwner": "catalog/components/progress-circle/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/progress-circle/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "ProgressCircle",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "RadioField",
+      "slug": "radio-field",
+      "artifact": "catalog/components/radio-field/artifact.json",
+      "binding": "muxui:component:radio-field#web.react",
+      "apiOwner": "catalog/components/radio-field/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/radio-field/artifact.json#/states",
+      "anatomyOwner": "catalog/components/radio-field/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/radio-field/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "RadioField",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "Resizable",
+      "slug": "resizable",
+      "artifact": "catalog/components/resizable/artifact.json",
+      "binding": "muxui:component:resizable#web.react",
+      "apiOwner": "catalog/components/resizable/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/resizable/artifact.json#/states",
+      "anatomyOwner": "catalog/components/resizable/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/resizable/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Resizable",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/resizable.mjs",
+      "styleSource": "packages/react/src/supplemental/resizable.css"
+    },
+    {
+      "family": "Sidebar",
+      "slug": "sidebar",
+      "artifact": "catalog/components/sidebar/artifact.json",
+      "binding": "muxui:component:sidebar#web.react",
+      "apiOwner": "catalog/components/sidebar/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/sidebar/artifact.json#/states",
+      "anatomyOwner": "catalog/components/sidebar/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/sidebar/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Sidebar",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "SwitchField",
+      "slug": "switch-field",
+      "artifact": "catalog/components/switch-field/artifact.json",
+      "binding": "muxui:component:switch-field#web.react",
+      "apiOwner": "catalog/components/switch-field/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/switch-field/artifact.json#/states",
+      "anatomyOwner": "catalog/components/switch-field/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/switch-field/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "SwitchField",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "TagSelect",
+      "slug": "tag-select",
+      "artifact": "catalog/components/tag-select/artifact.json",
+      "binding": "muxui:component:tag-select#web.react",
+      "apiOwner": "catalog/components/tag-select/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/tag-select/artifact.json#/states",
+      "anatomyOwner": "catalog/components/tag-select/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/tag-select/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "TagSelect",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "TextArea",
+      "slug": "text-area",
+      "artifact": "catalog/components/text-area/artifact.json",
+      "binding": "muxui:component:text-area#web.react",
+      "apiOwner": "catalog/components/text-area/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/text-area/artifact.json#/states",
+      "anatomyOwner": "catalog/components/text-area/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/text-area/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "TextArea",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "TextEditor",
+      "slug": "text-editor",
+      "artifact": "catalog/components/text-editor/artifact.json",
+      "binding": "muxui:component:text-editor#web.react",
+      "apiOwner": "catalog/components/text-editor/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/text-editor/artifact.json#/states",
+      "anatomyOwner": "catalog/components/text-editor/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/text-editor/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "TextEditor",
+        "module": "./text-editor",
+        "isolation": "subpath-only"
+      },
+      "runtimeSource": "packages/react/src/text-editor/index.mjs",
+      "styleSource": "packages/react/src/text-editor/text-editor.css"
+    }
+  ]
+}

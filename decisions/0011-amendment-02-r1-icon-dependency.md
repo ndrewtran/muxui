@@ -71,9 +71,9 @@ transition is introduced.
    absence of public-surface leakage, React peer compatibility, and both the
    Lucide ISC and Feather-derived MIT license notices in any distributed
    package containing the dependency.
-5. **Visual migration.** A dependency-version, icon-mapping, geometry, or
-   accessibility-semantic change invalidates the affected visual-migration
-   donor comparison and requires affected R1 visual, accessibility,
+5. **Visual comparison.** A dependency-version, icon-mapping, geometry, or
+   accessibility-semantic change invalidates the affected visual comparison
+   and requires affected R1 visual, accessibility,
    SSR/hydration, tree-shaking, and packed-consumer reproof before export.
 
 ## Non-goals and preserved stops

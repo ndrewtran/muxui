@@ -1,13 +1,12 @@
-Mux UI token authoring includes a one-time port of the Scale palette algorithm
-from Tale UI commit 94bf62a26c02605c8928dfeb24f0ddc4be1c92fd.
-The resulting code is maintained by Mux UI; Tale UI is not a dependency.
+Mux UI token authoring includes the Scale palette algorithm maintained in this
+repository.
 
 Color conversion uses culori 4.0.2 under its MIT license. An unchanged copy
 of that dependency's license is retained in licenses/culori.MIT.txt.
 
 The MIT License (MIT)
 
-Copyright (c) 2025 Tale UI contributors
+Copyright (c) 2025 Andrew
 Portions Copyright (c) 2019 Material-UI SAS
 
 Permission is hereby granted, free of charge, to any person obtaining a copy

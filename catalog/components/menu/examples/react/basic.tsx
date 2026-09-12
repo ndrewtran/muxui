@@ -1,2 +1,11 @@
 import { Menu } from '@muxui/react';
-export function BasicMenuExample() { return <Menu aria-label="Options" items={[{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }]} />; }
+
+const actions = [
+  { id: 'new-document', label: 'New document' },
+  { id: 'duplicate-page', label: 'Duplicate page' },
+  { id: 'export-pdf', label: 'Export as PDF' },
+];
+
+export function BasicMenuExample() {
+  return <Menu aria-label="Document actions" items={actions} />;
+}

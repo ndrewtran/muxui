@@ -1,0 +1,23 @@
+---
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+import FoundationExplorer from '../../components/FoundationExplorer.tsx';
+import GuideProjection from '../../components/GuideProjection.astro';
+import { FOUNDATION_DATA, FOUNDATION_OVERVIEW } from '../../lib/foundations.ts';
+import { getGuide } from '../../lib/catalog.ts';
+import { getCanonicalGuideModule } from '../../components/canonical-guides.ts';
+
+const guide = getGuide('muxui:guide:foundations');
+const headings = guide ? getCanonicalGuideModule(guide).getHeadings().filter((heading) => heading.depth >= 2) : [];
+---
+
+<StarlightPage
+	frontmatter={{ title: FOUNDATION_OVERVIEW.title, description: FOUNDATION_OVERVIEW.description, tableOfContents: headings.length > 0 }}
+	headings={headings}
+>
+	<FoundationExplorer page={FOUNDATION_OVERVIEW} data={FOUNDATION_DATA} client:load />
+	{guide ? (
+		<GuideProjection id={guide.id} />
+	) : (
+		null
+	)}
+</StarlightPage>

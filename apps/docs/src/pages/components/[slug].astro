@@ -6,6 +6,7 @@ import { canonicalRepositoryRoot, componentSummaries, getComponentPage } from '.
 import { assertExampleSource } from '../../lib/example-modules.tsx';
 import DemoPanel from '../../components/DemoPanel.astro';
 import ExampleHost from '../../components/ExampleHost.tsx';
+import TimeFieldExampleHost from '../../components/TimeFieldExampleHost.tsx';
 import GuideProjection from '../../components/GuideProjection.astro';
 
 export const prerender = true;
@@ -26,6 +27,7 @@ export function getStaticPaths() {
 const { page } = Astro.props as Props;
 const { artifact, examples, summary } = page;
 const reactBinding = artifact.bindings['web.react'];
+const componentSlug = summary.id.slice(summary.id.lastIndexOf(':') + 1);
 const basicExample = examples[0];
 if (!basicExample) throw new Error(`Mux UI docs received no basic React example for ${summary.id}.`);
 const basicSource = basicExample.source.content;
@@ -68,7 +70,9 @@ const headings = [
 	<section id="basic" class="docs-section">
 		<h2 class="visually-hidden">Basic</h2>
 		<DemoPanel id={basicDemoId} source={basicSource} sourceCode={sourceText(basicSource)}>
-			<ExampleHost slot="live" source={basicSource} client:load />
+			{componentSlug === 'time-field'
+				? <TimeFieldExampleHost slot="live" source={basicSource} client:only="react" />
+				: <ExampleHost slot="live" source={basicSource} client:load />}
 		</DemoPanel>
 	</section>
 
@@ -99,7 +103,9 @@ const headings = [
 					<h3 id={`example-${index}-${slugify(example.name)}`}>{example.name}</h3>
 					<p>{example.summary}</p>
 					<DemoPanel id={`${summary.id.replaceAll(':', '-')}-example-${index}`} source={source} sourceCode={sourceText(source)}>
-						<ExampleHost slot="live" source={source} client:load />
+						{componentSlug === 'time-field'
+							? <TimeFieldExampleHost slot="live" source={source} client:only="react" />
+							: <ExampleHost slot="live" source={source} client:load />}
 					</DemoPanel>
 				</div>
 			);

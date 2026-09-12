@@ -244,7 +244,7 @@ export declare const ProgressCircle: {
   Value: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
 };
 
-export type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size'> & { size?: 'sm' | 'md'; value: string };
+export type RadioFieldRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & Omit<SupplementalFieldProps, 'size'> & { size?: 'sm' | 'md' | 'lg'; value: string };
 export type RadioFieldButtonProps = React.LabelHTMLAttributes<HTMLLabelElement> & { disabled?: boolean };
 export type RadioFieldIndicatorProps = PartProps<HTMLSpanElement>;
 export type RadioFieldDotProps = PartProps<HTMLSpanElement>;

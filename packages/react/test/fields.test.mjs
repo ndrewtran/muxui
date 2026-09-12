@@ -57,6 +57,19 @@ function contrastRatio(foreground, background) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+test('single-line field families expose the shared sm/md/lg size axis', () => {
+  const controls = [TextField, SearchField, NumberField, Switch, DateField, DatePicker, DateRangePicker, TimeField];
+  for (const size of ['sm', 'md', 'lg']) {
+    for (const Control of controls) {
+      const props = { label: 'Value', size };
+      if (Control === DateRangePicker) props['aria-label'] = 'Range';
+      const markup = renderToString(React.createElement(Control, props));
+      assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
+    }
+  }
+  assert.throws(() => renderToString(React.createElement(TextField, { label: 'Value', size: 'xl' })), /TextField size must be one of/u);
+});
+
 function fields({ onText, onNumber, onSearch, onDate, onTime, onRange, onSwitch, onGroup, onSubmit, onReset } = {}) {
   return React.createElement(React.Fragment, null,
     React.createElement(TextField, { label: 'Name', description: 'Display name', errorMessage: 'Name is required', invalid: true, defaultValue: 'Andrew', onChange: onText }),
@@ -313,7 +326,7 @@ test('ComboBox input transitions stay scoped away from TextField', async () => {
   assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\)/u);
 });
 
-test('NumberField steppers expose stable direction hooks and Tale edge geometry', async () => {
+test('NumberField steppers expose stable direction hooks and edge geometry', async () => {
   const markup = renderToString(React.createElement(NumberField, { label: 'Quantity', defaultValue: 2 }));
   const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
   const decrement = dom.window.document.querySelector('.muxui-number-stepper-decrement');
@@ -323,7 +336,7 @@ test('NumberField steppers expose stable direction hooks and Tale edge geometry'
   assert.equal(decrement.getAttribute('slot'), 'decrement');
   assert.equal(increment.getAttribute('slot'), 'increment');
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
+  assert.match(css, /:where\([\s\S]*\.muxui-number-stepper[\s\S]*border:\s*0;[\s\S]*outline:\s*1px solid transparent;[\s\S]*appearance:\s*none;/u);
   assert.match(css, /\.muxui-number-stepper-decrement\s*\{[^}]*border-right:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*var\(--muxui-semantic-control-radius\) 0 0 var\(--muxui-semantic-control-radius\)/u);
   assert.match(css, /\.muxui-number-stepper-increment\s*\{[^}]*border-left:\s*1px solid var\(--muxui-semantic-color-neutral-default-22\);[^}]*border-radius:\s*0 var\(--muxui-semantic-control-radius\) var\(--muxui-semantic-control-radius\) 0/u);
   assert.match(css, /--muxui-reference-color-neutral-22:\s*#d5d2d1;/u);
@@ -454,7 +467,7 @@ test('DateRangePicker popover uses range calendar cells for contiguous selection
   }
 });
 
-test('date picker calendar triggers retain Tale icon wrapper sizing and scoped popover border tokens', async () => {
+test('date picker calendar triggers retain icon wrapper sizing and scoped popover border tokens', async () => {
   const markup = renderToString(React.createElement(React.Fragment, null,
     React.createElement(DatePicker, { label: 'Due date', defaultValue: '2026-08-26' }),
     React.createElement(DateRangePicker, { label: 'Trip', defaultValue: { start: '2026-08-26', end: '2026-09-01' } }),
@@ -1036,7 +1049,7 @@ test('R1.2 autocomplete placeholder stays aligned across artifact, types, and ru
   assert.match(server, /placeholder="Search city"/u);
 });
 
-test('Autocomplete preserves the donor compact size axis and part hooks', async () => {
+test('Autocomplete preserves the compact size axis and part hooks', async () => {
   const server = renderToString(React.createElement(Autocomplete, {
     label: 'City',
     size: 'sm',
@@ -1045,8 +1058,8 @@ test('Autocomplete preserves the donor compact size axis and part hooks', async 
   assert.match(server, /data-size="sm"/u);
   assert.match(server, /data-part="root"/u);
   assert.throws(
-    () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'lg' })),
-    /Autocomplete size must be one of: sm, md/u,
+    () => renderToString(React.createElement(Autocomplete, { label: 'City', size: 'xl' })),
+    /Autocomplete size must be one of: sm, md, lg/u,
   );
 
   const dom = new JSDOM('<!doctype html><div id="root"></div>');

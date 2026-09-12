@@ -130,6 +130,12 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     assert.equal(await page.locator('.theme-card').first().evaluate((node) => getComputedStyle(node).flexDirection), 'row');
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontWeight), '600');
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '34px');
+    const radius = page.getByRole('slider', { name: 'Border radius factor', exact: true });
+    assert.equal(await page.locator('.radius-section output').textContent(), '1.00x (default)');
+    await radius.press('End');
+    await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '2.00x');
+    await page.locator('.radius-section').getByRole('button', { name: 'Reset', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '1.00x (default)');
     await page.evaluate(() => { document.documentElement.style.fontSize = '20px'; });
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '42.5px');
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });

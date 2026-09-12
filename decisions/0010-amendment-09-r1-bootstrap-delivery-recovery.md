@@ -129,8 +129,8 @@ admitted.
 Product Scope remains exactly `6.0.1`. The Stage 1 inventory remains exactly
 53 Core-owned React family outcomes with unchanged R1.1-R1.4 tranche
 membership and R1.5 `53/53` closure. React Aria Components `1.20.0` remains
-an internal replaceable substrate, and the pinned Tale UI commit
-`94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` remains a one-time styling donor,
+an internal replaceable substrate, and Mux UI styling remains a one-time
+implementation baseline,
 never a dependency or live owner.
 
 This recovery authorizes no component implementation beyond the accepted
@@ -144,7 +144,7 @@ Stop and return to Andrew if the accepted base or any candidate/materialization
 identity changes; the authority materialization exceeds nine pre-acceptance or
 ten final paths; Product Scope, the 53-family boundary, tranche, package,
 dependency, operation kind, schema grammar, reviewer ownership, React Aria,
-Tale donor, publication, or final-merge boundary changes; PR #92 exceeds its
+styling, publication, or final-merge boundary changes; PR #92 exceeds its
 exact ten paths or introduces a public surface; a deterministic check or
 mandatory independent review fails; Project reconciliation exceeds its bounded
 README locator update; or npm publication or the final R1-exit PR merge is

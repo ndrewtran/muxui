@@ -1,5 +1,5 @@
 // @generated-from: packages/react/src/overlays.mjs
-// @generated-content-sha256: sha256:eee777aa87b06519c1e0f5a465c38c8c374d7079eb3cb1ec6b83301ca9857105
+// @generated-content-sha256: sha256:7a9c495541b51b8bf3c75a24501c8408161650f019c04c1031e5645f2612053b
 import React from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { Button as MuxUIButton } from './button.mjs';
@@ -343,7 +343,7 @@ function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) 
   const openRef = React.useRef(controlled ? open === true : defaultOpen);
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(controlled || disabled ? false : defaultOpen);
   const pendingRef = React.useRef(false);
-  // Initial disabled state masks the donor without representing a transition.
+  // Initial disabled state masks the trigger without representing a transition.
   const previousDisabledRef = React.useRef(disabled);
   const suppressStaleOpenRef = React.useRef(false);
   disabledRef.current = disabled;

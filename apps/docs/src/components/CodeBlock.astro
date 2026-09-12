@@ -1,6 +1,6 @@
 ---
 import { Code } from 'astro:components';
-import { muxCodeTheme } from './code-theme.ts';
+import { muxCodeTheme, muxTokenPathTransformer } from './code-theme.ts';
 
 interface Props {
 	id: string;
@@ -19,7 +19,7 @@ const highlightedCode = code.endsWith('\n') ? `${code}\n` : code;
 		<button type="button" data-copy-code={id}>Copy</button>
 	</div>
 	<div class="code-block-content" id={id}>
-		<Code code={highlightedCode} lang={lang} theme={muxCodeTheme} wrap={false} />
+		<Code code={highlightedCode} lang={lang} theme={muxCodeTheme} transformers={[muxTokenPathTransformer]} wrap={false} />
 	</div>
 </div>
 

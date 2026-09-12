@@ -47,6 +47,6 @@ packed-consumer, protected delivery, and Project reconciliation sequence.
 This record claims no implementation, dependency installation, generated
 guidance, evidence, support, package release, npm publication, dist-tag
 mutation, Project or consumer/production mutation, or final R1-exit merge. It
-does not change the 53-family/tranche/Scope-ID boundary, React Aria or Tale
+does not change the 53-family/tranche/Scope-ID boundary, React Aria or styling
 authority, deferred tracks, support/lifecycle rules, or existing release
 stops.

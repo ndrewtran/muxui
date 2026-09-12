@@ -1,1 +1,7 @@
-{"authorAssociation":"OWNER","bodySha256":"sha256:3f8cd91a9bc2233d3736d6abecb53a138f0e10d794f0d74585f0b38a99da0abf","commentId":5259468261,"commentNodeId":"IC_kwDOTtLjcM8AAAABOX0d5Q","createdAt":"2026-08-11T22:15:23Z","decisionId":"core-ui:decision:0007","issueNumber":54,"outcome":"accepted","owner":"ndrewtran","ownerNodeId":"MDQ6VXNlcjc0MzE0OTg0","provider":"github","repository":"ndrewtran/core-ui","schema":"core-ui-authority-decision-v1","updatedAt":"2026-08-11T22:15:23Z","url":"https://github.com/ndrewtran/core-ui/issues/54#issuecomment-5259468261"}
+{
+  "decisionId": "0007-acceptance",
+  "status": "retired",
+  "supersededBy": "decisions/0015-authority-retirement.md",
+  "reason": "Historical acceptance receipt retired with its authority record.",
+  "recoveryArchive": ".migration-archive/20260912-preflight/authority-originals/decisions/0007-delivery-workflow-authority-acceptance.json"
+}

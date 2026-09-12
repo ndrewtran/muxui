@@ -59,6 +59,7 @@
   transform: translate(-50%, -50%);
   z-index: 101;
   width: min(90vw, 30rem);
+  max-inline-size: calc(100vw - (2 * var(--muxui-semantic-layout-viewport-inset)) - (2 * var(--muxui-semantic-layout-inset-large)) - 2px);
   max-height: min(90vh, 40rem);
   overflow-y: auto;
   background-color: var(--muxui-semantic-surface-raised);
@@ -105,7 +106,7 @@
   line-height: var(--muxui-semantic-typography-prose-line-height);
 }
 
-/* Match the retained Tale modal recipe while keeping Mux UI's RAC dialog
+/* Match the modal recipe while keeping Mux UI's RAC dialog
  * structure, focus scope, and close-button semantics intact. */
 .muxui-dialog {
   box-shadow:
@@ -137,13 +138,14 @@
   border-color: var(--muxui-semantic-border-contrast);
   color: var(--muxui-semantic-content-on-strong);
   font-family: var(--muxui-semantic-typography-text-font-family);
+  line-height: var(--muxui-semantic-typography-text-line-height);
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
     0 13px 13px -10px rgb(0 0 0 / 6%),
     0 40px 60px -10px rgb(0 0 0 / 8%);
 }
 
-/* RAC positions bottom popovers one pixel lower than Tale's popup recipe. */
+/* RAC positions bottom popovers one pixel lower than the base popup recipe. */
 .muxui-popover-positioner[data-placement='bottom'] .muxui-popover {
   margin-block-start: -1px;
 }
@@ -419,14 +421,14 @@
 }
 
 /* FileTrigger delegates its visible paint to the caller's trigger. Mirror
-   Tale's root-disabled dimming for both MuxUI and native trigger elements. */
+   root-disabled dimming for both MuxUI and native trigger elements. */
 .muxui-file-trigger[data-disabled],
 .muxui-file-trigger[disabled],
 .muxui-drop-zone[data-disabled] {
   opacity: 0.45;
 }
 
-/* Overlay surfaces follow Tale's neutral recipes in dark mode. */
+/* Overlay surfaces follow neutral recipes in dark mode. */
 [data-muxui-color-scheme='dark'] .muxui-dialog,
 [data-muxui-color-scheme='dark'] .muxui-preview-trigger,
 [data-muxui-color-scheme='dark'] .muxui-toast {
@@ -520,7 +522,7 @@
   transition-duration: 0s !important;
 }
 
-/* Match Tale's reduced-motion contract: animations are settled immediately
+/* Match the reduced-motion contract: animations are settled immediately
    while retaining its measurable 1ms duration and transition reset. */
 :where([data-reduced-motion], [data-muxui-motion='reduced']) * {
   animation-delay: -1ms !important;

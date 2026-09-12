@@ -129,7 +129,7 @@ test('R1.1 RAC-backed component slice preserves SSR, hydration, semantics, and i
   }
 });
 
-test('ToggleButton exposes donor size variants and groups can keep an active selection', async () => {
+test('ToggleButton exposes size variants and groups can keep an active selection', async () => {
   for (const size of ['sm', 'md', 'lg']) {
     const markup = renderToString(React.createElement(ToggleButton, { size }, 'Bold'));
     assert.match(markup, new RegExp(`muxui-toggle-button--${size}`, 'u'));
@@ -165,11 +165,13 @@ test('ToggleButton exposes donor size variants and groups can keep an active sel
   }
 });
 
-test('choice controls expose donor compact size variants through direct and group APIs', () => {
+test('choice controls expose compact size variants through direct and group APIs', () => {
   const checkbox = renderToString(React.createElement(Checkbox, { size: 'sm' }, 'Compact'));
   assert.match(checkbox, /muxui-checkbox--sm/u);
   assert.match(checkbox, /data-size="sm"/u);
-  assert.throws(() => renderToString(React.createElement(Checkbox, { size: 'lg' }, 'Invalid')), /Checkbox size must be one of/u);
+  const largeCheckbox = renderToString(React.createElement(Checkbox, { size: 'lg' }, 'Large'));
+  assert.match(largeCheckbox, /muxui-checkbox--lg/u);
+  assert.throws(() => renderToString(React.createElement(Checkbox, { size: 'xl' }, 'Invalid')), /Checkbox size must be one of/u);
 
   const checkboxGroup = renderToString(React.createElement(CheckboxGroup, {
     'aria-label': 'Choices',
@@ -185,7 +187,9 @@ test('choice controls expose donor compact size variants through direct and grou
     options: [{ value: 'one', label: 'One' }],
   }));
   assert.match(radioGroup, /muxui-radio--sm/u);
-  assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Choice', size: 'lg' })), /RadioGroup size must be one of/u);
+  const largeRadioGroup = renderToString(React.createElement(RadioGroup, { 'aria-label': 'Choice', size: 'lg', options: [{ value: 'one', label: 'One' }] }));
+  assert.match(largeRadioGroup, /data-size="lg"/u);
+  assert.throws(() => renderToString(React.createElement(RadioGroup, { 'aria-label': 'Choice', size: 'xl' })), /RadioGroup size must be one of/u);
 
   const radioField = renderToString(React.createElement(RadioGroup, { label: 'Plan' },
     React.createElement(RadioField.Root, { value: 'monthly' },
@@ -376,7 +380,7 @@ test('R1.1 Breadcrumbs disabled items and ProgressBar completion stay within the
   }
 });
 
-test('Checkbox and Radio focus rings stay on indicators with their donor keyline geometry', async () => {
+test('Checkbox and Radio focus rings stay on indicators with shared keyline geometry', async () => {
   const [components, collections, generated] = await Promise.all([
     readFile(new URL('../src/styles/components.css', import.meta.url), 'utf8'),
     readFile(new URL('../src/styles/collections.css', import.meta.url), 'utf8'),

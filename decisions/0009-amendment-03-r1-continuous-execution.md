@@ -80,7 +80,7 @@ green, mergeable, independently reviewed, and ready for Andrew's later
 decision. The exact npm mutation and final R1-exit merge remain separate.
 
 The goal also stops before work affected by a changed family, Scope ID,
-tranche, React Aria or Tale identity, runtime graph node, public outcome,
+tranche, React Aria identity, runtime graph node, public outcome,
 platform, renderer, support or lifecycle promise, release boundary, exception,
 proof waiver, inaccessible required environment, or external permission
 failure.

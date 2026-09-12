@@ -116,18 +116,20 @@
   box-sizing: border-box;
   display: block;
   width: 100%;
-  min-height: 2.25rem;
-  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-small);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
   color: var(--muxui-semantic-content-strong);
   background-color: var(--muxui-semantic-surface-canvas);
-  border: 1px solid var(--muxui-semantic-border-strong);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-border-strong);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
-  outline: none;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
@@ -136,16 +138,16 @@
 }
 
 .muxui-color-field .muxui-field-input[data-focused] {
-  border-color: var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-semantic-focus-ring);
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
 .muxui-color-field .muxui-field-input:hover:not([data-focused], [data-disabled], [data-invalid]) {
-  border-color: var(--muxui-semantic-border-indicator);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-color-field .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-color-field .muxui-field-input[data-invalid][data-focused] {
@@ -153,7 +155,7 @@
 }
 
 .muxui-color-field .muxui-field-input[data-disabled] {
-  border-color: var(--muxui-semantic-border-strong);
+  outline-color: var(--muxui-semantic-border-strong);
   color: var(--muxui-semantic-content-strong);
   cursor: not-allowed;
   background-color: var(--muxui-semantic-color-neutral-default-14);
@@ -272,12 +274,12 @@
   display: block;
   width: 100%;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-combo-box .muxui-field-input:hover {
-  border-color: var(--muxui-semantic-border-indicator);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-combo-box-popover {
@@ -292,6 +294,20 @@
     0 40px 60px -10px rgb(0 0 0 / 8%);
   overflow-y: auto;
 }
+
+:where(
+  .muxui-combo-box-popover[data-size='sm'],
+  .muxui-combo-box-list[data-size='sm'],
+  .muxui-select-popover[data-size='sm'],
+  .muxui-select-list[data-size='sm']
+) { --muxui-control-target-size: var(--muxui-control-size-sm); }
+
+:where(
+  .muxui-combo-box-popover[data-size='lg'],
+  .muxui-combo-box-list[data-size='lg'],
+  .muxui-select-popover[data-size='lg'],
+  .muxui-select-list[data-size='lg']
+) { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-combo-box-list {
   display: flex;
@@ -326,6 +342,7 @@
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  min-block-size: var(--muxui-control-size-md);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
@@ -417,11 +434,15 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-group-gap);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   line-height: var(--muxui-semantic-typography-text-line-height);
   cursor: pointer;
   outline: none;
   user-select: none;
 }
+
+.muxui-radio.muxui-radio--sm { --muxui-control-target-size: var(--muxui-control-size-sm); }
+.muxui-radio.muxui-radio--lg { --muxui-control-target-size: var(--muxui-control-size-lg); }
 
 .muxui-radio-indicator {
   --muxui-component-radio-dot-size: 0.5rem;
@@ -579,23 +600,23 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--muxui-semantic-layout-control-content-gap);
-  height: var(--muxui-field-min-height);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   min-width: 10rem;
   position: static;
   line-height: inherit;
   cursor: pointer;
   transition:
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-select-trigger:hover {
-  border-color: var(--muxui-semantic-border-indicator);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-select-trigger[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
-  border-color: var(--muxui-semantic-border-strong);
+  outline-color: var(--muxui-semantic-border-strong);
   color: var(--muxui-semantic-content-strong);
   cursor: not-allowed;
   pointer-events: none;
@@ -828,7 +849,9 @@
 }
 
 .muxui-table-header {
-  border-bottom: 2px solid var(--muxui-semantic-border-default);
+  --muxui-table-header-separator: var(--muxui-semantic-border-default);
+  border-bottom: 0;
+  box-shadow: inset 0 -2px var(--muxui-table-header-separator);
 }
 
 .muxui-table-column {
@@ -852,7 +875,9 @@
 }
 
 .muxui-table-row {
-  border-bottom: 1px solid var(--muxui-semantic-border-faint);
+  --muxui-table-row-separator: var(--muxui-semantic-border-faint);
+  border-bottom: 0;
+  box-shadow: inset 0 -1px var(--muxui-table-row-separator);
   outline: none;
   transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
 }
@@ -867,6 +892,7 @@
 
 .muxui-table-row[data-focus-visible] {
   box-shadow:
+    inset 0 -1px var(--muxui-table-row-separator, transparent),
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
@@ -877,7 +903,10 @@
 }
 
 .muxui-table-cell {
-  padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small);
+  box-sizing: border-box;
+  min-block-size: var(--muxui-control-size-md);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-small);
   outline: none;
 }
 
@@ -922,9 +951,11 @@
 
 .muxui-tab {
   display: inline-flex;
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-xlarge);
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-xlarge);
   border: none;
   background-color: transparent;
   color: var(--muxui-semantic-content-default);
@@ -940,6 +971,7 @@
   white-space: nowrap;
   position: relative;
   gap: var(--muxui-semantic-layout-control-gap);
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
 
 .muxui-tabs[data-orientation='vertical'] .muxui-tab {
@@ -1003,8 +1035,13 @@
   display: inline-flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
-  border: 1px solid var(--muxui-semantic-border-strong);
+  min-block-size: 1.5rem;
+  box-sizing: border-box;
+  padding-block: 0;
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  border: 0;
+  outline: 1px solid var(--muxui-semantic-border-strong);
+  outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background-color: var(--muxui-semantic-surface-subtle);
   color: var(--muxui-semantic-content-default);
@@ -1017,14 +1054,14 @@
   user-select: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tag[data-hovered] {
   background-color: var(--muxui-semantic-surface-hover);
-  border-color: var(--muxui-semantic-border-indicator);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-tag[data-pressed] {
@@ -1032,7 +1069,7 @@
 }
 
 .muxui-tag[data-focused] {
-  border-color: var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-semantic-focus-ring);
 }
 
 .muxui-tag[data-focus-visible] {
@@ -1043,18 +1080,18 @@
 
 .muxui-tag[data-selected] {
   background-color: var(--muxui-semantic-selection-track);
-  border-color: var(--muxui-semantic-selection-track);
+  outline-color: var(--muxui-semantic-selection-track);
   color: var(--muxui-semantic-action-foreground);
 }
 
 .muxui-tag[data-selected][data-hovered] {
   background-color: var(--muxui-semantic-action-background-hover);
-  border-color: var(--muxui-semantic-action-background-hover);
+  outline-color: var(--muxui-semantic-action-background-hover);
 }
 
 .muxui-tag[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
-  border-color: var(--muxui-semantic-border-strong);
+  outline-color: var(--muxui-semantic-border-strong);
   color: var(--muxui-semantic-content-default);
   cursor: not-allowed;
   pointer-events: none;
@@ -1064,8 +1101,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  inline-size: 1rem;
-  block-size: 1rem;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  min-inline-size: 1.5rem;
+  min-block-size: 1.5rem;
   flex: 0 0 auto;
   padding: 0;
   border: 0;
@@ -1113,12 +1152,14 @@
 
 /* Direct button children use the compact neutral toolbar intent. */
 .muxui-toolbar > .muxui-button {
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-width: 1.5rem;
-  min-height: 2rem;
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  min-block-size: var(--muxui-control-size-md);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-tiny);
   border: 0;
   border-radius: var(--muxui-semantic-control-radius);
   background: transparent;
@@ -1209,9 +1250,12 @@
 .muxui-tree-item-content {
   position: relative;
   display: flex;
+  box-sizing: border-box;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
+  padding-block: max(0px, calc((var(--muxui-control-size-md) - 1lh) / 2));
+  padding-inline: var(--muxui-semantic-layout-inset-small);
+  min-block-size: var(--muxui-control-size-md);
 }
 
 .muxui-tree-toggle {
@@ -1228,7 +1272,7 @@
   outline: none;
 }
 
-/* Keep the actual RAC chevron button over the visible donor-style indicator
+/* Keep the actual RAC chevron button over the visible indicator
    so pointer and keyboard expansion use the same control. */
 .muxui-tree-item[data-has-child-items] .muxui-tree-item-content::before {
   content: '\25B6';
@@ -1277,16 +1321,38 @@
 }
 
 .muxui-token-field {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
-  min-height: var(--muxui-field-min-height);
+  min-block-size: var(--muxui-control-size-md);
   padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-field-padding-inline);
-  border: 1px solid var(--muxui-field-border-color);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   background: var(--muxui-field-bg);
-  color: var(--muxui-field-color);
+	color: var(--muxui-field-color);
+}
+
+.muxui-token {
+	display: inline-flex;
+	align-items: center;
+	box-sizing: border-box;
+	min-block-size: 1.5rem;
+	margin-inline-end: var(--muxui-semantic-layout-tight-gap);
+	padding-inline: var(--muxui-semantic-layout-inset-small);
+	border: 0;
+	outline: 1px solid var(--muxui-semantic-border-strong);
+	outline-offset: -1px;
+	border-radius: var(--muxui-semantic-shape-pill-radius);
+	background-color: var(--muxui-semantic-surface-subtle);
+	color: var(--muxui-semantic-content-default);
+	font-family: var(--muxui-semantic-typography-text-font-family);
+	font-size: var(--muxui-semantic-typography-small-size);
+	font-weight: var(--muxui-semantic-typography-control-weight);
+	line-height: 1;
+	vertical-align: middle;
 }
 
 .muxui-token-field[data-disabled],
@@ -1394,7 +1460,7 @@
   }
 }
 
-/* Calendar cells keep Tale's transparent disabled/outside-month treatment. */
+/* Calendar cells keep the transparent disabled/outside-month treatment. */
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-disabled],
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-outside-month],
 [data-muxui-color-scheme='light'] .muxui-calendar-cell[data-unavailable],
@@ -1468,7 +1534,7 @@
 
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
-  border-color: var(--muxui-semantic-color-neutral-default-84);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
   color: var(--muxui-semantic-color-neutral-default-20);
   color-scheme: light;
 }
@@ -1481,7 +1547,7 @@
 [data-muxui-color-scheme='dark'] .muxui-combo-control,
 [data-muxui-color-scheme='dark'] .muxui-combo-box .muxui-field-input {
   background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
-  border-color: var(--muxui-semantic-color-neutral-default-84);
+  outline-color: var(--muxui-semantic-color-neutral-default-84);
   color: var(--muxui-semantic-color-neutral-default-20);
 }
 
@@ -1492,7 +1558,7 @@
 }
 
 .muxui-combo-control {
-  border-color: var(--muxui-semantic-color-neutral-default-20);
+  outline-color: var(--muxui-semantic-color-neutral-default-20);
 }
 
 .muxui-combo-box[data-disabled] > .muxui-field-label,
@@ -1502,9 +1568,9 @@
 
 .muxui-combo-box-trigger {
   position: static;
-  width: 1.125rem;
-  height: 1.125rem;
-  min-height: 0;
+  inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   margin-inline-end: var(--muxui-semantic-layout-control-gap);
   padding: 0;
   gap: normal;
@@ -1561,7 +1627,7 @@
 }
 
 /* Enabled placeholder text needs the local neutral-60 contrast correction;
-   disabled controls retain Tale's neutral-50 plus disabled treatment. */
+   disabled controls retain neutral-50 plus disabled treatment. */
 .muxui-select:not([data-disabled], [aria-disabled='true']) .muxui-select-value[data-placeholder] {
   color: var(--muxui-semantic-color-neutral-60);
 }
@@ -1605,11 +1671,11 @@
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table-header {
-  border-color: var(--muxui-semantic-color-neutral-default-88);
+  --muxui-table-header-separator: var(--muxui-semantic-color-neutral-default-88);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table-row {
-  border-color: var(--muxui-semantic-color-neutral-default-96);
+  --muxui-table-row-separator: var(--muxui-semantic-color-neutral-default-96);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-grid-list {
@@ -1656,6 +1722,7 @@
 [data-muxui-color-scheme] .muxui-grid-list[data-focus-visible],
 [data-muxui-color-scheme] .muxui-list-box[data-focus-visible] {
   box-shadow:
+    inset 0 -1px var(--muxui-table-row-separator, transparent),
     0 0 0 2px var(--muxui-focus-ring-inner),
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
@@ -1689,8 +1756,8 @@
   border-color: var(--muxui-semantic-color-neutral-default-40);
 }
 
-/* Keep collection popups on Tale's shared radius/shadow primitives. Mux UI's
-   overlay elevation is intentionally stronger, while the donor popup uses
+/* Keep collection popups on shared radius/shadow primitives. Mux UI's
+   overlay elevation is intentionally stronger, while the base popup uses
    the low-alpha long-tail shadow and the 10px radius token. */
 .muxui-autocomplete-popover,
 .muxui-combo-box-popover,
@@ -1703,7 +1770,7 @@
     0 40px 60px -10px rgb(0 0 0 / 8%);
 }
 
-/* Opening a combobox places focus on its first option in Tale's fixture. RAC
+/* Opening a combobox places focus on its first option in the local fixture. RAC
    keeps focus on the input, so mirror that visual state on the first rendered
    option without changing the input's focus semantics. */
 [data-muxui-color-scheme='light']
@@ -1720,7 +1787,7 @@
   color: var(--muxui-semantic-content-default);
 }
 
-/* Tale's light focus ring is the neutral-50 keyline; the MuxUI semantic focus
+/* The light focus ring is the neutral-50 keyline; the MuxUI semantic focus
    token is the product action color and is intentionally retained elsewhere. */
 [data-muxui-color-scheme='light'] .muxui-tag[data-focused] {
   border-color: var(--muxui-semantic-color-neutral-default-50);
@@ -1818,8 +1885,8 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-/* Tale's light menu uses the low-alpha, long-tail popup shadow. Keep this
-   scoped to Menu because ListBox and other popups already match their donor. */
+/* The light menu uses the low-alpha, long-tail popup shadow. Keep this
+   scoped to Menu because ListBox and other popups already match their peers. */
 [data-muxui-color-scheme='light'] .muxui-menu {
   box-shadow:
     0 4px 4px -10px rgb(0 0 0 / 4%),
@@ -1838,18 +1905,18 @@
 }
 
 .muxui-combo-control:focus-within {
-  border-color: var(--muxui-semantic-color-neutral-default-50);
+  outline-color: var(--muxui-semantic-color-neutral-default-50);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-combo-control:focus-within {
-  border-color: var(--muxui-semantic-color-neutral-default-50);
+  outline-color: var(--muxui-semantic-color-neutral-default-50);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-select-trigger[data-focus-visible],
 [data-muxui-color-scheme='dark'] .muxui-select-trigger:focus-visible {
-  border-color: var(--muxui-semantic-color-neutral-default-60);
+  outline-color: var(--muxui-semantic-color-neutral-default-60);
   box-shadow: var(--muxui-field-focus-glow);
 }
 
@@ -1904,7 +1971,7 @@
   border-color: var(--muxui-semantic-color-neutral-default-70);
 }
 
-/* Tale keeps the disabled slider track on its dark neutral-22 surface. The
+/* The disabled slider track uses the dark neutral-22 surface. The
    disabled-track rule above otherwise wins over the dark track token. */
 [data-muxui-color-scheme='dark'] .muxui-slider[data-disabled] .muxui-slider-track {
   background-color: var(--muxui-semantic-color-neutral-default-88);
@@ -1970,22 +2037,22 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-/* ColorField is the Tale field exception: its focused state uses the
+/* ColorField uses a focused state with the
    three-pixel neutral glow instead of the control inner/outer ring. */
 [data-muxui-color-scheme='light'] .muxui-color-field .muxui-field-input[data-focused],
 [data-muxui-color-scheme='light'] .muxui-color-field .muxui-field-input:focus {
-  border-color: var(--muxui-semantic-color-neutral-default-50);
+  outline-color: var(--muxui-semantic-color-neutral-default-50);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input[data-focused],
 [data-muxui-color-scheme='dark'] .muxui-color-field .muxui-field-input:focus {
-  border-color: var(--muxui-semantic-color-neutral-default-60);
+  outline-color: var(--muxui-semantic-color-neutral-default-60);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-50) 30%, transparent);
 }
 
 [data-muxui-color-scheme] .muxui-color-field .muxui-field-input[data-invalid] {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-color-field .muxui-field-input {
@@ -2006,7 +2073,7 @@
 }
 
 [data-muxui-color-scheme] .muxui-color-field[data-invalid] .muxui-field-input {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 [data-muxui-color-scheme] .muxui-color-field[data-invalid] .muxui-field-input[data-focused] {

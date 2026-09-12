@@ -168,9 +168,8 @@ Product Scope remains exactly `6.0.1` and every immutable Scope ID remains
 unchanged. The accepted Stage 1 inventory remains exactly 53 React Aria
 Components `1.20.0` families with unchanged R1.1–R1.4 membership and R1.5
 `53/53` closure. Core UI owns every public contract. React Aria remains an
-internal replaceable React substrate. Tale UI commit
-`94bf62a26c02605c8928dfeb24f0ddc4be1c92fd` remains a pinned one-time styling
-donor, never a dependency or live owner.
+internal replaceable React substrate. Mux UI styling remains a one-time
+implementation baseline, never a dependency or live owner.
 
 This decision authorizes no component, catalog, binding, renderer, CSS, token,
 example, dependency, package, lockfile, generated projection, evidence,
@@ -184,7 +183,7 @@ format, proof cache, general CI bypass, public command, apply engine, new Scope
 ID, secondary renderer, RSC boundary, support claim, or release authority.
 
 Any authority, Product Scope, 53-family, tranche, implementation path,
-operation kind, confirmation, reviewer-ownership, React Aria/Tale, publication,
+operation kind, confirmation, reviewer-ownership, React Aria/styling, publication,
 or final-merge boundary change expires this decision and returns to Andrew.
 Reversal is append-only: disable the private entrypoint first, remove only the
 exact implementation paths where no later accepted owner depends on them, and

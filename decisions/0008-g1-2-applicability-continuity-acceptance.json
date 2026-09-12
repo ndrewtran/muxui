@@ -1,1 +1,7 @@
-{"authorAssociation":"OWNER","bodySha256":"sha256:ee6ddd2c28a5495e1bcbdf2c56b2524c5badec8a228c1957cbb032e1b234c084","commentId":5263020048,"commentNodeId":"IC_kwDOTtLjcM8AAAABObNQEA","createdAt":"2026-08-12T06:08:37Z","decisionId":"core-ui:decision:0008","issueNumber":11,"outcome":"accepted","owner":"ndrewtran","ownerNodeId":"MDQ6VXNlcjc0MzE0OTg0","provider":"github","repository":"ndrewtran/core-ui","schema":"core-ui-authority-decision-v1","updatedAt":"2026-08-12T06:08:37Z","url":"https://github.com/ndrewtran/core-ui/issues/11#issuecomment-5263020048"}
+{
+  "decisionId": "0008-acceptance",
+  "status": "retired",
+  "supersededBy": "decisions/0015-authority-retirement.md",
+  "reason": "Historical acceptance receipt retired with its authority record.",
+  "recoveryArchive": ".migration-archive/20260912-preflight/authority-originals/decisions/0008-g1-2-applicability-continuity-acceptance.json"
+}

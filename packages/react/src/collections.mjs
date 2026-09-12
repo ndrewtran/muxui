@@ -308,15 +308,16 @@ export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, disabl
 });
 ColorSwatch.displayName = 'ColorSwatch';
 
-export const ColorField = React.forwardRef(function ColorField({ label, description, errorMessage, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const ColorField = React.forwardRef(function ColorField({ label, description, errorMessage, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, size, name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorField');
+  const resolvedSize = normalizeChoiceControlSize(size, 'ColorField');
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
   return React.createElement(AriaColorField, {
     ...props, ref, name, value: colorValue(value, 'ColorField'), defaultValue: colorValue(defaultValue, 'ColorField'),
     onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next?.toString()); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
-    isInvalid: invalid || errorMessage !== undefined, className: classNames('muxui-color-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
+    isInvalid: invalid || errorMessage !== undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(AriaInput, { className: 'muxui-field-input' }),
   description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
@@ -543,11 +544,12 @@ export const Menu = React.forwardRef(function Menu({ items = [], onAction, onSel
 });
 Menu.displayName = 'Menu';
 
-export const ComboBox = React.forwardRef(function ComboBox({ label, description, errorMessage, items = [], value, defaultValue, selectedId, defaultSelectedId, onChange, onSelect, disabled = false, readOnly = false, required = false, invalid = false, placeholder, name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const ComboBox = React.forwardRef(function ComboBox({ label, description, errorMessage, items = [], value, defaultValue, selectedId, defaultSelectedId, onChange, onSelect, disabled = false, readOnly = false, required = false, invalid = false, placeholder, size, name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ComboBox');
+  const resolvedSize = normalizeChoiceControlSize(size, 'ComboBox');
   const normalized = normalizeItems(items);
   const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !disabled && !readOnly) onSelect?.(item); };
-  return React.createElement(AriaComboBox, { ...props, ref, items: normalized, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-combo-box', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+  return React.createElement(AriaComboBox, { ...props, ref, items: normalized, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
     label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
     React.createElement(AriaGroup, { className: 'muxui-combo-control' },
       React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
@@ -555,13 +557,14 @@ export const ComboBox = React.forwardRef(function ComboBox({ label, description,
         React.createElement(ChevronDownIcon, { className: 'muxui-combo-box-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
     description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
     errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-    React.createElement(AriaPopover, { className: 'muxui-combo-box-popover' }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-combo-box-list' }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, className: 'muxui-combo-box-option' }, item.label))),
+    React.createElement(AriaPopover, { className: 'muxui-combo-box-popover', 'data-size': resolvedSize }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-combo-box-list', 'data-size': resolvedSize }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, className: 'muxui-combo-box-option' }, item.label))),
   );
 });
 ComboBox.displayName = 'ComboBox';
 
-export const Select = React.forwardRef(function Select({ label, description, errorMessage, items = [], value, defaultValue, open, defaultOpen = false, onOpenChange, onChange, disabled = false, readOnly = false, required = false, invalid = false, placeholder = 'Select an option', name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const Select = React.forwardRef(function Select({ label, description, errorMessage, items = [], value, defaultValue, open, defaultOpen = false, onOpenChange, onChange, disabled = false, readOnly = false, required = false, invalid = false, placeholder = 'Select an option', size, name, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'Select');
+  const resolvedSize = normalizeChoiceControlSize(size, 'Select');
   const normalized = normalizeItems(items);
   const [internalSelectedKey, setInternalSelectedKey] = React.useState(() => value !== undefined ? value : (defaultValue ?? null));
   const handleSelection = (key) => {
@@ -571,17 +574,17 @@ export const Select = React.forwardRef(function Select({ label, description, err
     onChange?.(next === null ? undefined : next);
   };
   const selectedKey = value !== undefined ? value : internalSelectedKey;
-  return React.createElement(AriaSelect, { ...props, ref, selectedKey, isOpen: open, defaultOpen, onOpenChange, onSelectionChange: handleSelection, isDisabled: disabled, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, 'data-readonly': readOnly || undefined, className: classNames('muxui-select', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+  return React.createElement(AriaSelect, { ...props, ref, selectedKey, isOpen: open, defaultOpen, onOpenChange, onSelectionChange: handleSelection, isDisabled: disabled, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, 'data-readonly': readOnly || undefined, className: classNames('muxui-select', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
     label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
     React.createElement(AriaButton, { className: 'muxui-select-trigger', 'data-disabled': disabled || undefined, 'aria-disabled': disabled || undefined }, React.createElement(AriaSelectValue, { className: 'muxui-select-value', children: ({ selectedText }) => selectedText || placeholder }), React.createElement(ChevronDownIcon, { className: 'muxui-select-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 })),
     description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
     errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-    React.createElement(AriaPopover, { className: 'muxui-select-popover' }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-select-list' }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, className: 'muxui-select-option' }, item.label))),
+    React.createElement(AriaPopover, { className: 'muxui-select-popover', 'data-size': resolvedSize }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-select-list', 'data-size': resolvedSize }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, className: 'muxui-select-option' }, item.label))),
   );
 });
 Select.displayName = 'Select';
 
-export const RadioGroup = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+export const RadioGroup = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
   const labelId = React.useId();
   const primitiveLabel = typeof label === 'string' || typeof label === 'number' || typeof label === 'bigint'
@@ -596,9 +599,9 @@ export const RadioGroup = React.forwardRef(function RadioGroup({ label, options 
   if (options.length > 0 && children !== undefined && children !== null) {
     throw new TypeError('RadioGroup options and children are mutually exclusive');
   }
-  const resolvedSize = size === undefined ? undefined : normalizeChoiceControlSize(size, 'RadioGroup');
+  const resolvedSize = normalizeChoiceControlSize(size, 'RadioGroup');
   const radioContent = options.length > 0
-    ? options.map((option) => React.createElement(AriaRadio, { key: String(option.id ?? option.value), value: String(option.value ?? option.id), isDisabled: disabled || option.disabled, className: classNames('muxui-radio', resolvedSize === 'sm' ? 'muxui-radio--sm' : undefined) }, React.createElement('span', { 'aria-hidden': 'true', className: 'muxui-radio-indicator' }), option.label ?? option.value))
+    ? options.map((option) => React.createElement(AriaRadio, { key: String(option.id ?? option.value), value: String(option.value ?? option.id), isDisabled: disabled || option.disabled, className: classNames('muxui-radio', resolvedSize === undefined || resolvedSize === 'md' ? undefined : `muxui-radio--${resolvedSize}`) }, React.createElement('span', { 'aria-hidden': 'true', className: 'muxui-radio-indicator' }), option.label ?? option.value))
     : children;
   const group = React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel ?? (ariaLabelledby === undefined ? primitiveLabel : undefined), 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
   const content = label === undefined
@@ -606,9 +609,7 @@ export const RadioGroup = React.forwardRef(function RadioGroup({ label, options 
     : React.createElement('div', { className: 'muxui-radio-group-field', 'data-disabled': disabled || undefined, 'data-invalid': invalid || undefined },
       React.createElement('span', { id: generatedLabelledby, className: 'muxui-field-label' }, label),
       group);
-  return resolvedSize === undefined
-    ? content
-    : React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, content);
+  return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, content);
 });
 RadioGroup.displayName = 'RadioGroup';
 
@@ -690,10 +691,11 @@ export const Table = React.forwardRef(function Table({ columns = [], rows = [], 
 });
 Table.displayName = 'Table';
 
-export const Tabs = React.forwardRef(function Tabs({ items = [], value, defaultValue, onChange, keyboardActivation = 'automatic', orientation = 'horizontal', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+export const Tabs = React.forwardRef(function Tabs({ items = [], value, defaultValue, onChange, keyboardActivation = 'automatic', orientation = 'horizontal', disabled = false, size, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const normalized = normalizeItems(items);
   accessibleName({ ariaLabel, ariaLabelledby }, 'Tabs');
-  return React.createElement(AriaTabs, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue ?? normalized[0]?.id, onSelectionChange: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); }, orientation, keyboardActivation, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tabs', className) },
+  const resolvedSize = normalizeChoiceControlSize(size, 'Tabs');
+  return React.createElement(AriaTabs, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue ?? normalized[0]?.id, onSelectionChange: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); }, orientation, keyboardActivation, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tabs', className), 'data-size': resolvedSize },
     React.createElement(AriaTabList, { items: normalized, className: 'muxui-tab-list' }, (item) => React.createElement(AriaTab, { id: item.id, isDisabled: disabled || item.disabled, 'data-disabled': disabled || item.disabled || undefined, 'aria-disabled': disabled || item.disabled || undefined, className: 'muxui-tab' }, item.label)),
     React.createElement(AriaTabPanels, { items: normalized, className: 'muxui-tab-panels' }, (item) => React.createElement(AriaTabPanel, { id: item.id, className: 'muxui-tab-panel' }, item.panel)),
   );
@@ -707,11 +709,11 @@ export const TagGroup = React.forwardRef(function TagGroup({ label, items = [], 
 });
 TagGroup.displayName = 'TagGroup';
 
-export const ToggleButtonGroup = React.forwardRef(function ToggleButtonGroup({ selectedIds, defaultSelectedIds, onSelectionChange, selectionMode = 'single', orientation = 'horizontal', disabled = false, disallowEmptySelection = false, size, children, className, ...props }, ref) {
+export const ToggleButtonGroup = React.forwardRef(function ToggleButtonGroup({ selectedIds, defaultSelectedIds, onSelectionChange, selectionMode = 'single', orientation = 'horizontal', disabled = false, disallowEmptySelection = false, size = 'md', children, className, ...props }, ref) {
   accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'ToggleButtonGroup');
   const selectedKeys = readonlyKeySet(selectedIds, 'selectedIds', selectionMode);
   const defaultSelectedKeys = readonlyKeySet(defaultSelectedIds, 'defaultSelectedIds', selectionMode);
-  const resolvedSize = size === undefined ? undefined : normalizeToggleButtonSize(size, 'ToggleButtonGroup');
+  const resolvedSize = normalizeToggleButtonSize(size, 'ToggleButtonGroup');
   const group = React.createElement(AriaToggleButtonGroup, {
     ...props,
     ref,
@@ -731,9 +733,7 @@ export const ToggleButtonGroup = React.forwardRef(function ToggleButtonGroup({ s
     'data-size': resolvedSize,
     className: classNames('muxui-toggle-button-group', className),
   }, children);
-  return resolvedSize === undefined
-    ? group
-    : React.createElement(ToggleButtonSizeContext.Provider, { value: resolvedSize }, group);
+  return React.createElement(ToggleButtonSizeContext.Provider, { value: resolvedSize }, group);
 });
 ToggleButtonGroup.displayName = 'ToggleButtonGroup';
 

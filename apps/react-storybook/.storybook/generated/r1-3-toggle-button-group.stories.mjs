@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:3c62f1bea1f6112b3b57a8723532c49fb3027ab0c3353357b37e1712dc745526
+// @generated-content-sha256: sha256:294b6a9b83c24c1bb11d7975eb0d8865f631faf4b12c37173c5fe2ecbae8336c
 import * as MuxUI from '@muxui/react';
 import {
   argTypesForBinding,
@@ -18,7 +18,8 @@ const binding = {
       "disabled": false,
       "disallowEmptySelection": false,
       "orientation": "horizontal",
-      "selectionMode": "single"
+      "selectionMode": "single",
+      "size": "md"
     },
     "events": [
       "selectionChange"

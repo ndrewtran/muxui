@@ -1,1 +1,7 @@
-{"candidate":{"byteLength":70773,"path":"decisions/0009-delivery-review-readiness.json","sha256":"sha256:bab49f8c9fde54ccbbab9e1db6196d2e1972b8b7085d053c0efe684d654a1419"},"decisionId":"core-ui:decision:0009","issueNumber":58,"manifest":{"entryCount":41,"profile":"core-ui-proposed-source-artifact-manifest-v1","sha256":"sha256:e9c591ad220d4b20c7ed09d27fdeec6d49138e3c8059a71d18e5b9c0c3fe4bbe"},"outcome":"accepted","owner":"ndrewtran","plan":{"path":"/tmp/core-ui-review-readiness-proposal-v1.final.md","sha256":"sha256:43a7b1724b4e107e253703952ac4839f7c99880f4b96e56b8e73e56de1aded7d"},"provider":"codex-task","repository":"ndrewtran/core-ui","schema":"core-ui-task-provenance-authority-acceptance-v1","taskProvenance":{"approvalInstruction":"exact-plan-approved-for-bounded-execution","approvalTimestamp":null,"githubCommentClaimed":false,"taskId":"019ff5d8-5a4b-7252-958d-bab8b0087c34"}}
+{
+  "decisionId": "0009-acceptance",
+  "status": "retired",
+  "supersededBy": "decisions/0015-authority-retirement.md",
+  "reason": "Historical acceptance receipt retired with its authority record.",
+  "recoveryArchive": ".migration-archive/20260912-preflight/authority-originals/decisions/0009-delivery-review-readiness-acceptance.json"
+}

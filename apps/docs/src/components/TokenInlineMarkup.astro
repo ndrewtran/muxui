@@ -1,0 +1,81 @@
+---
+import { parseFragment, serialize, type DefaultTreeAdapterTypes } from 'parse5';
+import { FOUNDATION_TOKENS } from '../lib/foundations.ts';
+import { tokenPathMatches, type TokenPathSegment } from '../lib/token-path.ts';
+
+type Node = DefaultTreeAdapterTypes.Node;
+type Element = DefaultTreeAdapterTypes.Element;
+type TextNode = DefaultTreeAdapterTypes.TextNode;
+
+const rendered = await Astro.slots.render('default');
+const tree = parseFragment(rendered);
+
+function isElement(node: Node): node is Element {
+	return 'tagName' in node;
+}
+
+function isTextNode(node: Node): node is TextNode {
+	return node.nodeName === '#text';
+}
+
+function hasClass(node: Element, className: string): boolean {
+	return node.attrs.some((attribute) => attribute.name === 'class' && attribute.value.split(/\s+/u).includes(className));
+}
+
+function containsTokenPath(node: Element): boolean {
+	if (hasClass(node, 'mux-token-path') || node.attrs.some((attribute) => attribute.name === 'data-token-path-kind')) return true;
+	return node.childNodes.some((child) => isElement(child) && containsTokenPath(child));
+}
+
+function textNode(value: string): TextNode {
+	return { nodeName: '#text', value, parentNode: null };
+}
+
+function segmentNode(segment: TokenPathSegment): Element {
+	return {
+		nodeName: 'span',
+		tagName: 'span',
+		attrs: [
+			{ name: 'class', value: segment.className },
+			{ name: 'data-token-path-kind', value: segment.kind },
+		],
+		namespaceURI: 'http://www.w3.org/1999/xhtml' as Element['namespaceURI'],
+		parentNode: null,
+		childNodes: [textNode(segment.text)],
+	};
+}
+
+function decorateTextNode(node: TextNode): DefaultTreeAdapterTypes.ChildNode[] {
+	const matches = tokenPathMatches(node.value, FOUNDATION_TOKENS);
+	if (matches.length === 0) return [node];
+	const children: DefaultTreeAdapterTypes.ChildNode[] = [];
+	let cursor = 0;
+	for (const match of matches) {
+		if (match.start > cursor) children.push(textNode(node.value.slice(cursor, match.start)));
+		for (const segment of match.segments) children.push(segmentNode(segment));
+		cursor = match.end;
+	}
+	if (cursor < node.value.length) children.push(textNode(node.value.slice(cursor)));
+	return children;
+}
+
+function decorateInlineCode(node: Element): void {
+	if (containsTokenPath(node)) return;
+	node.childNodes = node.childNodes.flatMap((child) => isTextNode(child) ? decorateTextNode(child) : [child]);
+}
+
+function visit(node: Node, insidePre = false): void {
+	if (!isElement(node)) {
+		if ('childNodes' in node) node.childNodes.forEach((child) => visit(child, insidePre));
+		return;
+	}
+	const nextInsidePre = insidePre || node.tagName === 'pre';
+	if (node.tagName === 'code' && !insidePre) decorateInlineCode(node);
+	node.childNodes.forEach((child) => visit(child, nextInsidePre));
+}
+
+visit(tree);
+const output = serialize(tree);
+---
+
+<Fragment set:html={output} />

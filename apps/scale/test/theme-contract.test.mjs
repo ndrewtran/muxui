@@ -23,6 +23,20 @@ test('Scale source round-trips through the strict typed document boundary', () =
   assert.equal(restored.id, 'muxui:theme:round-trip');
 });
 
+test('Scale starts at the canonical radius default and preserves explicit curvature', () => {
+  assert.equal(DEFAULT_SETTINGS.curvature, 1);
+  const fresh = createScaleDocument(DEFAULT_SETTINGS, { slug: 'fresh-default' });
+  assert.equal(fresh.scale.curvature, 1);
+  for (const [name, px] of [['xs', 8], ['s', 12], ['m', 16], ['l', 24], ['xl', 32], ['2xl', 48]]) {
+    assert.equal(fresh.overrides[`reference.dimension.radius-${name}`].value, px);
+  }
+
+  const saved = createScaleDocument({ ...DEFAULT_SETTINGS, curvature: 1.25 }, { slug: 'saved-custom' });
+  const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(saved)));
+  assert.equal(restored.curvature, 1.25);
+  assert.equal(createScaleDocument(restored, { slug: 'saved-custom' }).scale.curvature, 1.25);
+});
+
 test('Scale source rejects unknown fields and unsafe slugs', () => {
   const document = createScaleDocument(DEFAULT_SETTINGS, { slug: 'safe-theme' });
   assert.throws(() => validateScaleDocument({ ...document, extra: true }), /UNKNOWN_FIELD/u);

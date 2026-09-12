@@ -1,6 +1,6 @@
 import React from 'react';
 
-export const CHOICE_CONTROL_SIZES = Object.freeze(['sm', 'md']);
+export const CHOICE_CONTROL_SIZES = Object.freeze(['sm', 'md', 'lg']);
 
 export function normalizeChoiceControlSize(size, componentName) {
   const resolved = size ?? 'md';

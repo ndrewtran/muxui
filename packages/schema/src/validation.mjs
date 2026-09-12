@@ -443,7 +443,10 @@ function semanticIssues(family, value, ownership) {
         if (Object.hasOwn(artifact, 'tokens')) {
           issues.push({ path: '$/data/artifact/tokens', message: 'query API 2.0 requires sectional token retrieval' });
         }
-        if (canonicalJson(artifact.availableSections) !== canonicalJson(['tokens', 'source-crosswalk'])) {
+        const expectedSections = artifact.sourceCrosswalkDigest === null
+          ? ['tokens']
+          : ['tokens', 'source-crosswalk'];
+        if (canonicalJson(artifact.availableSections) !== canonicalJson(expectedSections)) {
           issues.push({ path: '$/data/artifact/availableSections', message: 'must use the canonical section order' });
         }
         if (

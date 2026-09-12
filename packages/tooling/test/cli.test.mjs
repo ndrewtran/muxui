@@ -121,7 +121,7 @@ test('E-G0.3-02 human, JSON, and dense projections preserve one response object'
   assert.equal(response.meta.resolution.catalogSource, 'package');
 });
 
-test('TALE-TOKEN-B muxui get negotiates 1.1/1.2/2.0 and preserves page parity', () => {
+test('muxui get negotiates 1.1/1.2/2.0 and preserves page compatibility', () => {
   const parsed = parseCliArguments([
     'get', 'muxui:token:default-theme', '--query-api-version', '1.2.0',
     '--section', 'tokens', '--limit', '1', '--json',
@@ -143,9 +143,12 @@ test('TALE-TOKEN-B muxui get negotiates 1.1/1.2/2.0 and preserves page parity', 
     'get', 'muxui:token:default-theme', '--query-api-version', '1.2.0',
     '--section', 'source-crosswalk',
   ]);
-  assert.equal(sourceCrosswalk.entries.status, 'available');
-  assert.equal(sourceCrosswalk.entries.items.length, 20);
-  assert.equal(sourceCrosswalk.page.remaining, 673);
+  assert.deepEqual(sourceCrosswalk.entries, {
+    status: 'absent',
+    reason: 'token-source-omits-source-crosswalk',
+    tokenSourceSchemaVersion: '2.1.0',
+    items: [],
+  });
 
   const historical = jsonResult([
     'get', 'muxui:token:default-theme', '--query-api-version', '1.1.0', '--detail', 'full',
@@ -173,7 +176,7 @@ test('TALE-TOKEN-B muxui get negotiates 1.1/1.2/2.0 and preserves page parity', 
   const currentResponse = JSON.parse(current.stdout);
   assert.equal(currentResponse.apiVersion, '2.0.0');
   assert.equal(Object.hasOwn(currentResponse.data.artifact, 'tokens'), false);
-  assert.deepEqual(currentResponse.data.artifact.availableSections, ['tokens', 'source-crosswalk']);
+  assert.deepEqual(currentResponse.data.artifact.availableSections, ['tokens']);
   const removedCurrentIdentity = runCli([
     'get', 'muxui:token:button-minimum', '--query-api-version', '2.0.0', '--json',
   ]);
