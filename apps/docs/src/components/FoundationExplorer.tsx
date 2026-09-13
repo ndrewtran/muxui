@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { FoundationPage, FoundationToken, TypographyRole } from '../lib/foundations.ts';
+import { normalizeAppliedNumericValue } from '../lib/foundation-values.ts';
 import { TokenExpression, TokenPath } from '../lib/token-path.ts';
 
 type FoundationData = {
@@ -384,11 +385,122 @@ function TypographyPage({ data }: { data: FoundationData }) {
 	return <div className="foundation-page"><SectionIntro title="Typography specimens">Typography roles connect a family, colour, size, weight, leading, and tracking. Read the sample at its real scale, then inspect the token graph below.</SectionIntro><section className="foundation-section"><div className="foundation-type-specimens">{data.typographyRoles.map((role) => <div className="foundation-type-role" key={role.name}><div className="foundation-type-role-heading"><h2>{role.name}</h2><code><TokenName id={role.fontFamily} tokens={data.tokens} /></code></div>{role.variants.map((variant) => <div className="foundation-type-sample" key={variant.name}><div className="foundation-type-meta"><span>{variant.name}</span><code><TokenName id={variant.fontSize} tokens={data.tokens} /></code></div><p style={styleWithVariables({ fontFamily: cssReference(role.fontFamily), color: cssReference(role.color), fontSize: cssReference(variant.fontSize), fontWeight: cssReference(variant.fontWeight), lineHeight: cssReference(variant.lineHeight), letterSpacing: cssReference(variant.letterSpacing) })}>Design systems become useful when their decisions can be felt in the interface.</p></div>)}</div>)}</div></section><section className="foundation-section"><h2>Reference type scale</h2><p className="foundation-section-note">These canonical font-size references are rendered at their actual size; the inventory below also includes weight, leading, tracking, and text aliases.</p><div className="foundation-reference-type-scale">{referenceSizes.map((token) => <div className="foundation-reference-type-row" key={token.id}><code><TokenPath value={token.id} token={token} /></code><span style={{ fontSize: cssReference(token) }}>Aa</span><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><TokenInventory tokens={typographyTokens} allTokens={data.tokens} title="Typography token inventory" description="Search the complete set of canonical type family, size, weight, leading, tracking, and reference scale tokens." /></div>;
 }
 
+type FoundationFamilyDefinition = {
+	id: string;
+	title: string;
+	description: string;
+	select: (token: FoundationToken) => boolean;
+	sort?: (left: FoundationToken, right: FoundationToken) => number;
+	isScale: boolean;
+};
+
+type FoundationFamily = Omit<FoundationFamilyDefinition, 'select' | 'sort'> & {
+	tokens: readonly FoundationToken[];
+};
+
+function resolveFoundationFamily(tokens: readonly FoundationToken[], definition: FoundationFamilyDefinition): FoundationFamily {
+	const resolved = tokens.filter(definition.select);
+	if (resolved.length === 0) throw new Error(`Missing canonical token in foundation family ${definition.id}.`);
+	const ordered = definition.sort ? [...resolved].sort(definition.sort) : resolved;
+	return { id: definition.id, title: definition.title, description: definition.description, isScale: definition.isScale, tokens: ordered };
+}
+
+function numericTokenValue(token: FoundationToken): number {
+	const value = typeof token.defaultValue === 'number' ? token.defaultValue : Number.parseFloat(String(token.defaultValue));
+	if (!Number.isFinite(value)) throw new Error(`Expected a numeric foundation token value for ${token.id}.`);
+	return value;
+}
+
+type AppliedNumericValues = ReadonlyMap<string, number>;
+
+function useAppliedNumericValues(tokens: readonly FoundationToken[]): AppliedNumericValues {
+	const [values, setValues] = useState<AppliedNumericValues>(() => new Map(tokens.map((token) => [token.id, numericTokenValue(token)])));
+	useEffect(() => {
+		const update = () => {
+			const rootStyle = getComputedStyle(document.documentElement);
+			const rootFontSize = Number.parseFloat(rootStyle.fontSize);
+			const next = new Map(tokens.map((token) => {
+				const parsed = normalizeAppliedNumericValue(rootStyle.getPropertyValue(token.cssName), token.unit, Number.isFinite(rootFontSize) ? rootFontSize : 16);
+				return [token.id, parsed ?? numericTokenValue(token)] as const;
+			}));
+			setValues(next);
+		};
+		update();
+		window.addEventListener('muxui:theme-status', update);
+		const observer = new MutationObserver(update);
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme', 'data-muxui-color-scheme', 'data-muxui-density', 'data-muxui-motion'] });
+		return () => {
+			window.removeEventListener('muxui:theme-status', update);
+			observer.disconnect();
+		};
+	}, [tokens]);
+	return values;
+}
+
+function familyMaximum(tokens: readonly FoundationToken[], values?: AppliedNumericValues): number {
+	return Math.max(...tokens.map((token) => values?.get(token.id) ?? numericTokenValue(token)), 0);
+}
+
+function familyBarWidth(token: FoundationToken, tokens: readonly FoundationToken[], values?: AppliedNumericValues): string {
+	const maximum = familyMaximum(tokens, values);
+	if (maximum === 0) return '0%';
+	const value = values?.get(token.id) ?? numericTokenValue(token);
+	return `${Math.max(0, Math.min(100, value / maximum * 100))}%`;
+}
+
+function tokenIds(ids: readonly string[]): (token: FoundationToken) => boolean {
+	const expected = new Set(ids);
+	return (token) => expected.has(token.id);
+}
+
+function orderedTokenIds(ids: readonly string[]): (left: FoundationToken, right: FoundationToken) => number {
+	const order = new Map(ids.map((id, index) => [id, index]));
+	return (left, right) => (order.get(left.id) ?? Number.MAX_SAFE_INTEGER) - (order.get(right.id) ?? Number.MAX_SAFE_INTEGER);
+}
+
+function numericTokenOrder(left: FoundationToken, right: FoundationToken): number {
+	return numericTokenValue(left) - numericTokenValue(right) || left.id.localeCompare(right.id);
+}
+
+function FoundationFamilyHeading({ family, action }: { family: FoundationFamily; action?: React.ReactNode }) {
+	return <div className="foundation-family-heading">
+		<div><h3 id={`foundation-family-${family.id}`}>{family.title}</h3><p>{family.description}</p></div>
+		<div className="foundation-family-meta"><span>{family.tokens.length} {family.isScale ? 'levels' : 'roles'}</span>{action}</div>
+	</div>;
+}
+
+function FoundationDimensionFamily({ family, appliedValues }: { family: FoundationFamily; appliedValues: AppliedNumericValues }) {
+	const maximum = familyMaximum(family.tokens, appliedValues);
+	return <section className="foundation-family foundation-dimension-family" data-foundation-family={family.id} aria-labelledby={`foundation-family-${family.id}`}>
+		<FoundationFamilyHeading family={family} />
+		<div className="foundation-family-axis" aria-hidden="true"><span /><div><span>0</span><span>{specimenValue(maximum)} {family.tokens[0]?.unit}</span></div><span /></div>
+		<div className="foundation-ruler foundation-family-ruler">
+			{family.tokens.map((token) => <div className="foundation-ruler-row" data-foundation-token={token.id} key={token.id}>
+				<code><TokenPath value={token.id} token={token} /></code>
+				<div className="foundation-ruler-track"><span data-foundation-scale-width={familyBarWidth(token, family.tokens, appliedValues)} className={(appliedValues.get(token.id) ?? numericTokenValue(token)) === 0 ? 'is-zero' : undefined} style={{ width: familyBarWidth(token, family.tokens, appliedValues) }} /></div>
+				<small>{specimenValue(appliedValues.get(token.id) ?? token.defaultValue)} {token.unit}</small>
+			</div>)}
+		</div>
+	</section>;
+}
+
+const SPACING_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
+	{ id: 'reference-space', title: 'Reference space scale', description: 'Raw spacing levels share one zero so their relative rhythm is visible.', select: (token) => token.id.startsWith('reference.dimension.space-'), sort: numericTokenOrder, isScale: true },
+	{ id: 'reference-section-space', title: 'Reference section space scale', description: 'Section spacing uses its own range and remains comparable within that range.', select: (token) => token.id.startsWith('reference.dimension.section-space-'), sort: numericTokenOrder, isScale: true },
+	{ id: 'semantic-layout-insets', title: 'Layout inset scale', description: 'Named inset levels preserve the semantic scale from tiny through xxlarge.', select: tokenIds(['semantic.layout.inset-tiny', 'semantic.layout.inset-small', 'semantic.layout.inset-medium', 'semantic.layout.inset-large', 'semantic.layout.inset-xlarge', 'semantic.layout.inset-xxlarge']), sort: numericTokenOrder, isScale: true },
+	{ id: 'semantic-layout-gaps', title: 'Layout gap roles', description: 'These are usage roles. The bars compare their numeric values without turning role names into levels.', select: tokenIds(['semantic.layout.micro-gap', 'semantic.layout.dense-gap', 'semantic.layout.shortcut-gap', 'semantic.layout.description-gap', 'semantic.layout.swatch-gap', 'semantic.layout.control-gap', 'semantic.layout.tight-gap', 'semantic.layout.group-gap', 'semantic.layout.action-gap', 'semantic.layout.control-content-gap', 'semantic.layout.section-gap', 'semantic.layout.content-gap']), isScale: false },
+	{ id: 'semantic-control-sizes', title: 'Control sizes', description: 'Small, medium, and large controls share one scale.', select: tokenIds(['semantic.control.size-sm', 'semantic.control.size-md', 'semantic.control.size-lg']), sort: numericTokenOrder, isScale: true },
+	{ id: 'semantic-navigation-insets', title: 'Navigation block and inline insets', description: 'Block and inline insets are separate axes for navigation surfaces.', select: tokenIds(['semantic.layout.navigation-inset-block', 'semantic.layout.navigation-inset-inline']), isScale: false },
+	{ id: 'semantic-control-padding', title: 'Control padding axes', description: 'Block and inline padding are independent geometry roles.', select: tokenIds(['semantic.control.padding-block', 'semantic.control.padding-inline']), isScale: false },
+	{ id: 'semantic-usage-insets', title: 'Usage-specific insets', description: 'These insets support named affordances and surfaces rather than an ordinal scale.', select: tokenIds(['semantic.layout.control-inset', 'semantic.layout.tight-inset', 'semantic.layout.utility-inset', 'semantic.layout.navigation-search-inset', 'semantic.layout.search-clear-inset', 'semantic.layout.payment-icon-inset', 'semantic.layout.overlay-title-inset', 'semantic.layout.viewport-inset']), isScale: false },
+	{ id: 'semantic-layout-geometry', title: 'Other layout geometry', description: 'Explicit size, margin, indent, and row roles stay grouped by usage.', select: tokenIds(['semantic.layout.resize-handle-size', 'semantic.layout.icon-size', 'semantic.layout.content-row-min-height', 'semantic.layout.content-margin', 'semantic.layout.content-indent']), isScale: false },
+	{ id: 'semantic-control-geometry', title: 'Control geometry roles', description: 'Minimum height and radius are component geometry roles, not additional size levels.', select: tokenIds(['semantic.control.min-height', 'semantic.control.radius']), isScale: false },
+];
+
 function SpacingPage({ data }: { data: FoundationData }) {
-	const dimensions = data.tokens.filter((token) => token.type === 'dimension');
-	const rulerTokens = dimensions
-		.filter((token) => /(?:reference\.dimension\.(?:space|section-space)-|semantic\.(?:layout|control)\.)/u.test(token.id))
-		.sort((left, right) => Number(left.defaultValue) - Number(right.defaultValue));
+	const dimensions = useMemo(() => data.tokens.filter((token) => token.type === 'dimension'), [data.tokens]);
+	const families = SPACING_FAMILY_DEFINITIONS.map((definition) => resolveFoundationFamily(dimensions, definition));
+	const appliedValues = useAppliedNumericValues(dimensions);
 	const sizing = ['semantic.control.size-sm', 'semantic.control.size-md', 'semantic.control.size-lg']
 		.map((id) => tokenById(dimensions, id))
 		.filter((token): token is FoundationToken => token !== undefined);
@@ -402,25 +514,46 @@ function SpacingPage({ data }: { data: FoundationData }) {
 		{ id: 'component.button.padding-inline', label: 'Button inline padding', property: 'paddingInline' },
 	] as const;
 	const metricList = (title: string, tokens: readonly FoundationToken[]) => <div className="foundation-metric-group"><h3>{title}</h3><div className="foundation-metric-list">{tokens.map((token) => <div className="foundation-metric" key={token.id}><div className="foundation-metric-copy"><code><TokenPath value={token.id} token={token} /></code><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-gap-preview" data-metric-token={token.id} style={{ gap: cssReference(token) }}><span /><span /></div></div>)}</div></div>;
-	return <div className="foundation-page"><SectionIntro title="Spacing and dimensions">The ruler uses canonical variables for its visual width, so the specimen responds to active Scale values. The inventory remains complete, including dimensions that are not suited to a ruler.</SectionIntro><section className="foundation-section"><h2>Ruler</h2><div className="foundation-ruler">{rulerTokens.map((token) => <div className="foundation-ruler-row" key={token.id}><code>{token.id.replace(/^.*\./u, '')}</code><div className="foundation-ruler-track"><span style={{ width: `min(100%, ${cssReference(token)})` }} /></div><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><section className="foundation-section"><div className="foundation-section-heading"><div><h2>Control sizing</h2><p>These are the canonical 32 / 36 / 40 px control heights. Padding and gap roles are shown separately below.</p></div></div><div className="foundation-size-grid">{sizing.map((token) => <div className="foundation-size-specimen" key={token.id}><div className="foundation-size-control" style={{ minHeight: cssReference(token), paddingInline: cssReference('semantic.control.padding-inline') }}><span>Control</span></div><code><TokenPath value={token.id} token={token} /></code><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><section className="foundation-section"><h2>Padding and inset examples</h2><p className="foundation-section-note">Each preview applies the named property directly. Other canonical dimensions and insets remain available in the ruler and inventory.</p><div className="foundation-padding-example-list">{paddingExamples.map(({ id, label, property }) => { const token = tokenById(dimensions, id); if (!token) return null; const style = { [property]: cssReference(token) }; return <div className="foundation-padding-example" key={id}><div className="foundation-metric-copy"><strong>{label}</strong><code><TokenPath value={id} token={token} /></code><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-padding-preview" data-metric-token={id} data-padding-property={property} style={style}><span aria-hidden="true" /></div></div>; })}</div></section><section className="foundation-section">{metricList('Gap examples', gaps)}</section><TokenInventory tokens={dimensions} allTokens={data.tokens} title="Dimension inventory" description="Search every canonical dimension, including spacing, insets, type sizes, radii, and control metrics." /></div>;
+	return <div className="foundation-page"><SectionIntro title="Spacing and dimensions">Each family has its own ruler. Ordered levels share a zero and scale relative to their peers; named roles keep their meaning visible without flattening unrelated values together.</SectionIntro><section className="foundation-section"><h2>Family rulers</h2><p className="foundation-section-note">Bars and labels use active dimension custom properties; canonical defaults are the server-rendered fallback. The complete dimension inventory remains below, including dimensions that are not suited to a spacing ruler.</p><div className="foundation-family-list">{families.map((family) => <FoundationDimensionFamily family={family} appliedValues={appliedValues} key={family.id} />)}</div></section><section className="foundation-section"><div className="foundation-section-heading"><div><h2>Control sizing specimens</h2><p>These controls retain their real applied height while the family ruler above compares the numeric levels.</p></div></div><div className="foundation-size-grid">{sizing.map((token) => <div className="foundation-size-specimen" key={token.id}><div className="foundation-size-control" style={{ minHeight: cssReference(token), paddingInline: cssReference('semantic.control.padding-inline') }}><span>Control</span></div><code><TokenPath value={token.id} token={token} /></code><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><section className="foundation-section"><h2>Padding and inset examples</h2><p className="foundation-section-note">Each preview applies the named property directly. The family rulers above keep their source roles separate.</p><div className="foundation-padding-example-list">{paddingExamples.map(({ id, label, property }) => { const token = tokenById(dimensions, id); if (!token) return null; const style = { [property]: cssReference(token) }; return <div className="foundation-padding-example" key={id}><div className="foundation-metric-copy"><strong>{label}</strong><code><TokenPath value={id} token={token} /></code><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-padding-preview" data-metric-token={id} data-padding-property={property} style={style}><span aria-hidden="true" /></div></div>; })}</div></section><section className="foundation-section">{metricList('Gap examples', gaps)}</section><TokenInventory tokens={dimensions} allTokens={data.tokens} title="Dimension inventory" description="Search every canonical dimension, including spacing, insets, type sizes, radii, and control metrics." /></div>;
+}
+
+const SHAPE_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
+	{ id: 'reference-radii', title: 'Reference radius scale', description: 'Raw corner radii share one equal-size specimen and one zero-based scale.', select: (token) => token.id.startsWith('reference.dimension.radius-'), sort: numericTokenOrder, isScale: true },
+	{ id: 'semantic-shape-roles', title: 'Semantic shape roles', description: 'Named corner roles stay together without implying a universal semantic order.', select: (token) => token.id.startsWith('semantic.shape.') || token.id === 'semantic.control.radius', isScale: false },
+];
+
+function FoundationShapeFamily({ family }: { family: FoundationFamily }) {
+	return <section className="foundation-family" data-foundation-family={family.id} aria-labelledby={`foundation-family-${family.id}`}>
+		<FoundationFamilyHeading family={family} />
+		<div className="foundation-family-rows">{family.tokens.map((token) => <div className="foundation-family-row" data-foundation-token={token.id} key={token.id}><code><TokenPath value={token.id} token={token} /></code><div className="foundation-family-row-specimen"><div className="foundation-shape-box" style={{ borderRadius: cssReference(token) }}><span>Ag</span></div></div><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div>
+	</section>;
 }
 
 function ShapePage({ data }: { data: FoundationData }) {
-	const shapes = data.tokens.filter((token) => token.id.startsWith('reference.dimension.radius-') || token.id.startsWith('semantic.shape.')).sort((left, right) => Number(left.defaultValue) - Number(right.defaultValue));
-	return <div className="foundation-page"><SectionIntro title="Corner hierarchy">Each specimen has the same 5rem square footprint. Only its radius changes, making the intended hierarchy visible without confounding size.</SectionIntro><section className="foundation-section"><div className="foundation-shape-grid">{shapes.map((token) => <div className="foundation-shape-specimen" key={token.id}><div className="foundation-shape-box" style={{ borderRadius: cssReference(token) }}><span>Ag</span></div><code><TokenPath value={token.id} token={token} /></code><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><TokenInventory tokens={shapes} allTokens={data.tokens} title="Shape token inventory" description="Search all canonical reference radii and semantic shape roles." /></div>;
+	const shapes = SHAPE_FAMILY_DEFINITIONS.map((definition) => resolveFoundationFamily(data.tokens, definition));
+	const shapeTokens = shapes.flatMap((family) => family.tokens);
+	return <div className="foundation-page"><SectionIntro title="Corner hierarchy">Each family keeps equal-size specimens so the reference scale and semantic roles can be compared without flattening their meanings.</SectionIntro><section className="foundation-section"><h2>Radius families</h2><p className="foundation-section-note">Reference radii form an ordered scale. Semantic and control radii are named roles shown in their own family.</p><div className="foundation-family-list">{shapes.map((family) => <FoundationShapeFamily family={family} key={family.id} />)}</div></section><TokenInventory tokens={shapeTokens} allTokens={data.tokens} title="Shape token inventory" description="Search all canonical reference radii and semantic shape roles." /></div>;
+}
+
+const ELEVATION_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
+	{ id: 'reference-shadows', title: 'Reference shadow specimens', description: 'Typed shadow primitives are shown as equal-size surfaces for depth comparison.', select: (token) => token.id.startsWith('reference.effect.shadow-'), sort: orderedTokenIds(['reference.effect.shadow-xs', 'reference.effect.shadow-s', 'reference.effect.shadow-m', 'reference.effect.shadow-l', 'reference.effect.shadow-xl']), isScale: false },
+	{ id: 'semantic-elevation-roles', title: 'Semantic elevation roles', description: 'Named surface roles retain their resolved shadow meaning; they are not scalar z-index levels.', select: (token) => token.id.startsWith('semantic.elevation.'), isScale: false },
+];
+
+function FoundationElevationFamily({ family, allTokens }: { family: FoundationFamily; allTokens: readonly FoundationToken[] }) {
+	return <section className="foundation-family" data-foundation-family={family.id} aria-labelledby={`foundation-family-${family.id}`}>
+		<FoundationFamilyHeading family={family} />
+		<div className="foundation-family-rows">{family.tokens.map((token) => <div className="foundation-family-row" data-foundation-token={token.id} key={token.id}><code><TokenPath value={token.id} token={token} /></code><div className="foundation-family-row-specimen"><div className="foundation-surface" style={{ boxShadow: cssReference(token) }}><span>{token.id.split('.').at(-1)}</span></div></div><small><TokenExpression value={token.defaultCssValue} tokens={allTokens} /></small></div>)}</div>
+	</section>;
 }
 
 function ElevationPage({ data }: { data: FoundationData }) {
-	const effects = data.tokens.filter((token) => token.type === 'effect');
-	return <div className="foundation-page"><SectionIntro title="Depth as a role">Effects are typed shadow values, not anonymous decoration. These equal-size surfaces show how the reference shadow primitives resolve into semantic elevation roles.</SectionIntro><section className="foundation-section"><div className="foundation-elevation-grid">{effects.map((token) => <div className="foundation-elevation-specimen" key={token.id}><div className="foundation-surface" style={{ boxShadow: cssReference(token) }}><span>{token.id.split('.').at(-1)}</span></div><code><TokenPath value={token.id} token={token} /></code><small><TokenExpression value={token.defaultCssValue} tokens={data.tokens} /></small></div>)}</div></section><TokenInventory tokens={effects} allTokens={data.tokens} title="Effect inventory" description="Search every canonical typed effect, including reference shadows and semantic elevation roles." /></div>;
+	const families = ELEVATION_FAMILY_DEFINITIONS.map((definition) => resolveFoundationFamily(data.tokens, definition));
+	const effects = families.flatMap((family) => family.tokens);
+	return <div className="foundation-page"><SectionIntro title="Depth as a role">Effects are typed shadow values, not anonymous decoration. Reference primitives and semantic surface roles remain separate while their equal-size specimens show resolved depth.</SectionIntro><section className="foundation-section"><h2>Elevation families</h2><p className="foundation-section-note">Shadow names describe depth roles and resolved effects. They do not form a numeric z-index scale.</p><div className="foundation-family-list">{families.map((family) => <FoundationElevationFamily family={family} allTokens={data.tokens} key={family.id} />)}</div></section><TokenInventory tokens={effects} allTokens={data.tokens} title="Effect inventory" description="Search every canonical typed effect, including reference shadows and semantic elevation roles." /></div>;
 }
 
-type MotionTimingGroup = {
-	id: string;
-	title: string;
-	description: string;
-	tokens: readonly FoundationToken[];
-};
+type MotionTimingGroup = FoundationFamily;
 
 function titleCaseMotionLabel(value: string): string {
 	return value.split('-').map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(' ');
@@ -430,6 +563,22 @@ function motionTimingLabel(token: FoundationToken): string {
 	const leaf = token.id.split('.').at(-1) ?? token.id;
 	const withoutDuration = leaf.replace(/^duration-/u, '').replace(/-duration$/u, '');
 	return withoutDuration === 'feedback' ? 'Feedback role' : titleCaseMotionLabel(withoutDuration);
+}
+
+function motionCurvePath(value: unknown): string | undefined {
+	const presets: Record<string, readonly [number, number, number, number]> = {
+		linear: [0, 0, 1, 1],
+		ease: [0.25, 0.1, 0.25, 1],
+		'ease-in': [0.42, 0, 1, 1],
+		'ease-out': [0, 0, 0.58, 1],
+		'ease-in-out': [0.42, 0, 0.58, 1],
+	};
+	const raw = String(value);
+	const match = raw.match(/^cubic-bezier\(([^)]+)\)$/u);
+	const points = match ? match[1].split(',').map(Number) : presets[raw];
+	if (!points || points.length !== 4 || !points.every(Number.isFinite)) return undefined;
+	const [x1, y1, x2, y2] = points;
+	return `M16 82 C${16 + 112 * x1} ${82 - 74 * y1},${16 + 112 * x2} ${82 - 74 * y2},128 8`;
 }
 
 function motionTimingScope(token: FoundationToken): string {
@@ -452,58 +601,77 @@ function motionTimingGroups(durations: readonly FoundationToken[]): readonly Mot
 	const entryPattern = /^semantic\.motion\.(?:selection-enter|panel-enter|reveal|content-resize|enter|exit|content)-duration$/u;
 	return [
 		{
-			id: 'reference',
+			id: 'reference-durations',
 			title: 'Reference speed scale',
-			description: 'Base speeds, from instant to deliberate.',
-			tokens: durations.filter((token) => token.layer === 'reference'),
+			description: 'Base speeds, from instant to deliberate. Reference motion duration aliases remain in the inventory without duplicating this ruler.',
+			tokens: durations.filter((token) => token.id.startsWith('reference.duration.')),
+			isScale: true,
 		},
 		{
-			id: 'feedback',
+			id: 'semantic-feedback-durations',
 			title: 'Feedback and control changes',
 			description: 'Short feedback, control state changes, and mode switches.',
 			tokens: durations.filter((token) => token.layer !== 'reference' && !token.id.startsWith('semantic.motion.progress-') && !entryPattern.test(token.id)),
+			isScale: false,
 		},
 		{
-			id: 'entry',
+			id: 'semantic-entry-durations',
 			title: 'Entry and content transitions',
 			description: 'Entering, leaving, revealing, and resizing content.',
 			tokens: durations.filter((token) => entryPattern.test(token.id)),
+			isScale: false,
 		},
 		{
-			id: 'progress',
+			id: 'semantic-progress-durations',
 			title: 'Progress timings',
 			description: 'Value updates and longer progress cycles. Each replay runs once.',
 			tokens: durations.filter((token) => token.id.startsWith('semantic.motion.progress-')),
+			isScale: false,
 		},
 	].map((group) => ({ ...group, tokens: sortMotionTimings(group.tokens) }));
 }
 
-function MotionTimingEntry({ token, replay, allTokens }: { token: FoundationToken; replay: number; allTokens: readonly FoundationToken[] }) {
-	return <div className="foundation-timing">
+function MotionTimingEntry({ token, replay, allTokens, family, appliedValues }: { token: FoundationToken; replay: number; allTokens: readonly FoundationToken[]; family: MotionTimingGroup; appliedValues: AppliedNumericValues }) {
+	const width = familyBarWidth(token, family.tokens, appliedValues);
+	return <div className="foundation-family-row foundation-timing-row" data-foundation-token={token.id}>
 		<div className="foundation-timing-meta"><strong>{motionTimingLabel(token)}</strong><small>{motionTimingScope(token)}</small></div>
-		<span className="foundation-timing-sample" key={`${token.id}-${replay}`} style={{ animationName: replay ? 'foundation-timing-replay' : 'none', animationDuration: cssReference(token) }}>Aa</span>
-		<code><TokenPath value={token.id} token={token} /></code>
-		{token.authoredAlias ? <small className="foundation-timing-alias">Alias to <a href={`/foundations/${foundationRouteForToken(token.authoredAlias)}/#${tokenIdForAnchor(token.authoredAlias)}`}><TokenName id={token.authoredAlias} tokens={allTokens} /></a></small> : null}
-		<code className="foundation-timing-value">{displayValue(token.defaultValue)} {token.unit}</code>
+		<div className="foundation-timing-track" aria-hidden="true"><span className="foundation-timing-bar" data-foundation-scale-width={width} style={{ width }} /><span className="foundation-timing-sample" key={`${token.id}-${replay}`} style={{ animationName: replay ? 'foundation-timing-replay' : 'none', animationDuration: cssReference(token) }}>Aa</span></div>
+		<div className="foundation-timing-value"><code><TokenPath value={token.id} token={token} /></code>{token.authoredAlias ? <small className="foundation-timing-alias">Alias to <a href={`/foundations/${foundationRouteForToken(token.authoredAlias)}/#${tokenIdForAnchor(token.authoredAlias)}`}><TokenName id={token.authoredAlias} tokens={allTokens} /></a></small> : null}<code>{specimenValue(appliedValues.get(token.id) ?? token.defaultValue)} {token.unit}</code></div>
 	</div>;
 }
 
-function MotionTimingGroup({ group, replay, allTokens, onReplay }: { group: MotionTimingGroup; replay: number; allTokens: readonly FoundationToken[]; onReplay: () => void }) {
-	const headingId = `foundation-timing-group-${group.id}`;
-	return <section className="foundation-timing-group" aria-labelledby={headingId}>
-		<div className="foundation-section-heading foundation-timing-group-heading">
-			<div><h3 id={headingId}>{group.title}</h3><p>{group.description}</p></div>
-			<button type="button" className="foundation-action" onClick={onReplay}>Replay motion</button>
-		</div>
-		<div className="foundation-timing-grid">{group.tokens.map((token) => <MotionTimingEntry key={token.id} token={token} replay={replay} allTokens={allTokens} />)}</div>
+function MotionTimingGroup({ group, replay, allTokens, onReplay, appliedValues }: { group: MotionTimingGroup; replay: number; allTokens: readonly FoundationToken[]; onReplay: () => void; appliedValues: AppliedNumericValues }) {
+	return <section className="foundation-timing-group foundation-family" data-foundation-family={group.id} aria-labelledby={`foundation-family-${group.id}`}>
+		<FoundationFamilyHeading family={group} action={<button type="button" className="foundation-action" onClick={onReplay}>Replay motion</button>} />
+		<div className="foundation-family-axis foundation-timing-axis" aria-hidden="true"><span /><div><span>0</span><span>{specimenValue(familyMaximum(group.tokens, appliedValues))} {group.tokens[0]?.unit}</span></div><span /></div>
+		<div className="foundation-family-rows">{group.tokens.map((token) => <MotionTimingEntry key={token.id} token={token} replay={replay} allTokens={allTokens} family={group} appliedValues={appliedValues} />)}</div>
+	</section>;
+}
+
+function motionEasingGroups(easings: readonly FoundationToken[]): readonly FoundationFamily[] {
+	return [
+		{ id: 'reference-easings', title: 'Reference easing roles', description: 'Canonical curves used as the motion vocabulary.', tokens: easings.filter((token) => token.id.startsWith('reference.motion.')), isScale: false },
+		{ id: 'semantic-easings', title: 'Semantic easing roles', description: 'Named curves assigned to interaction and content phases.', tokens: easings.filter((token) => token.id.startsWith('semantic.motion.')), isScale: false },
+	];
+}
+
+function MotionEasingFamily({ family, replay }: { family: FoundationFamily; replay: number }) {
+	return <section className="foundation-timing-group foundation-family" data-foundation-family={family.id} aria-labelledby={`foundation-family-${family.id}`}>
+		<FoundationFamilyHeading family={family} />
+		<div className="foundation-family-rows">{family.tokens.map((easing) => {
+			const path = motionCurvePath(easing.defaultValue);
+			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><code><TokenPath value={easing.id} token={easing} /></code><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.duration.fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
+		})}</div>
 	</section>;
 }
 
 function MotionPage({ data }: { data: FoundationData }) {
-	const durations = data.tokens.filter((token) => token.type === 'duration');
-	const easings = data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'string');
+	const durations = useMemo(() => data.tokens.filter((token) => token.type === 'duration'), [data.tokens]);
+	const easings = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'string'), [data.tokens]);
 	const [replay, setReplay] = useState(0);
 	const groups = motionTimingGroups(durations);
+	const easingGroups = motionEasingGroups(easings);
+	const appliedValues = useAppliedNumericValues(durations);
 	const replayMotion = () => setReplay((value) => value + 1);
 	return <div className="foundation-page">
 		<SectionIntro title="Finite and intentional">Motion specimens replay only after a user action. The same custom properties drive duration and easing, while the reduced-motion mode collapses the animation to an instant state.</SectionIntro>
@@ -512,18 +680,14 @@ function MotionPage({ data }: { data: FoundationData }) {
 				<div><h2>Easing plot</h2><p>Replay a single transition to compare the canonical easing roles.</p></div>
 				<button type="button" className="foundation-action" onClick={replayMotion}>Replay motion</button>
 			</div>
-			<div className="foundation-motion-plot">{easings.map((easing) => {
-				const durationId = easing.id.replace(/-easing$/u, '-duration');
-				const duration = durations.find((token) => token.id === durationId) ?? durations.find((token) => token.id.includes('duration-fast'));
-				return <div className="foundation-motion-row" key={easing.id}><code><TokenName id={easing.id} tokens={data.tokens} /></code><div className="foundation-motion-track"><span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference(duration ?? 'reference.duration.fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
-			})}</div>
+			<div className="foundation-timing-groups">{easingGroups.map((group) => <MotionEasingFamily family={group} replay={replay} key={group.id} />)}</div>
 		</section>
 		<section className="foundation-section foundation-timing-section" aria-labelledby="foundation-timing-roles-title">
 			<div className="foundation-section-heading">
 				<div><h2 id="foundation-timing-roles-title">Timing roles</h2><p>Replay the same finite motion to see each duration at its canonical scale.</p></div>
 				<button type="button" className="foundation-action" onClick={replayMotion}>Replay motion</button>
 			</div>
-			<div className="foundation-timing-groups">{groups.map((group) => <MotionTimingGroup key={group.id} group={group} replay={replay} allTokens={data.tokens} onReplay={replayMotion} />)}</div>
+			<div className="foundation-timing-groups">{groups.map((group) => <MotionTimingGroup key={group.id} group={group} replay={replay} allTokens={data.tokens} onReplay={replayMotion} appliedValues={appliedValues} />)}</div>
 		</section>
 		<TokenInventory tokens={[...durations, ...easings]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration and easing tokens, including mode-aware semantic roles." />
 	</div>;

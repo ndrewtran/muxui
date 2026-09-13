@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parse } from 'parse5';
 import { FOUNDATION_TOKENS } from '../src/lib/foundations.ts';
+import { normalizeAppliedNumericValue } from '../src/lib/foundation-values.ts';
 import {
 	createTokenPathTransformer,
 	tokenPathMatches,
@@ -50,6 +51,19 @@ function walk(node, ancestors, callback) {
 	for (const child of node.childNodes ?? []) walk(child, [...ancestors, node], callback);
 }
 
+function descendants(node) {
+	const result = [];
+	for (const child of node.childNodes ?? []) {
+		if (child.tagName === undefined) continue;
+		result.push(child, ...descendants(child));
+	}
+	return result;
+}
+
+function attributeValue(node, name) {
+	return node.attrs?.find((attribute) => attribute.name === name)?.value;
+}
+
 const semanticAction = FOUNDATION_TOKENS.find(({ id }) => id === 'semantic.action.background');
 assert(semanticAction !== undefined, 'The canonical semantic.action.background token is missing.');
 const semanticSegments = tokenPathSegments(semanticAction.id, semanticAction);
@@ -66,6 +80,9 @@ assert(cssSegments.filter(({ kind }) => kind === 'separator').length === semanti
 assert(tokenPathSegments('semantic.action.not-canonical', semanticAction).length === 0, 'A mismatched dotted value was decorated.');
 assert(tokenPathSegments(semanticAction.id, { ...semanticAction, id: 'semantic.action.other' }).length === 0, 'A token path was decorated with mismatched metadata.');
 assert(tokenPathMatches(`unknown ${semanticAction.id}x`, FOUNDATION_TOKENS).length === 0, 'A token embedded in a larger identifier was decorated.');
+assert(normalizeAppliedNumericValue('2rem', 'px', 16) === 32, 'Active rem dimensions were not normalized to canonical pixels.');
+assert(normalizeAppliedNumericValue('0.12s', 'ms', 16) === 120, 'Active second durations were not normalized to canonical milliseconds.');
+assert(normalizeAppliedNumericValue('calc(2 * 1rem)', 'px', 16) === undefined, 'Unsupported active numeric expressions should use canonical fallback values.');
 
 const fontSize = FOUNDATION_TOKENS.find(({ id }) => id.endsWith('.text-m-font-size'));
 assert(fontSize !== undefined, 'The canonical hyphenated font-size token is missing.');
@@ -118,5 +135,88 @@ for (const [relativePath, expectedValues] of expectedInlineGuides) {
 	const actualValues = inlineGuideMatches.get(relativePath) ?? new Set();
 	for (const value of expectedValues) assert(actualValues.has(value), `Inline guide token was not decorated or its text changed: ${relativePath} ${value}`);
 	}
+
+const expectedFoundationFamilies = new Map([
+	['foundations/spacing/index.html', new Map([
+		['reference-space', ['reference.dimension.space-4xs', 'reference.dimension.space-4xl']],
+		['semantic-control-sizes', ['semantic.control.size-sm', 'semantic.control.size-lg']],
+		['semantic-navigation-insets', ['semantic.layout.navigation-inset-block', 'semantic.layout.navigation-inset-inline']],
+		['semantic-control-padding', ['semantic.control.padding-block', 'semantic.control.padding-inline']],
+	])],
+	['foundations/shape/index.html', new Map([
+		['reference-radii', ['reference.dimension.radius-none', 'reference.dimension.radius-full']],
+		['semantic-shape-roles', ['semantic.shape.container-radius', 'semantic.control.radius']],
+	])],
+	['foundations/elevation/index.html', new Map([
+		['reference-shadows', ['reference.effect.shadow-xs', 'reference.effect.shadow-xl']],
+		['semantic-elevation-roles', ['semantic.elevation.flat', 'semantic.elevation.toast']],
+	])],
+	['foundations/motion/index.html', new Map([
+		['reference-durations', ['reference.duration.instant', 'reference.duration.deliberate']],
+		['semantic-progress-durations', ['semantic.motion.progress-update-duration', 'semantic.motion.progress-travel-duration']],
+		['reference-easings', ['reference.motion.easing-linear', 'reference.motion.easing-emphasized']],
+		['semantic-easings', ['semantic.motion.constant-easing', 'semantic.motion.state-easing']],
+	])],
+]);
+
+for (const [relativePath, expectedGroups] of expectedFoundationFamilies) {
+	const filePath = resolve(docsDist, relativePath);
+	const tree = parse(readFileSync(filePath, 'utf8'));
+	const actualGroups = new Map();
+	walk(tree, [], (node) => {
+		const familyId = attributeValue(node, 'data-foundation-family');
+		if (familyId === undefined) return;
+		const tokens = new Set();
+		const widths = new Map();
+		const orderedTokens = [];
+		for (const descendant of descendants(node)) {
+			const tokenId = attributeValue(descendant, 'data-foundation-token');
+			if (tokenId === undefined) continue;
+			if (!tokens.has(tokenId)) orderedTokens.push(tokenId);
+			tokens.add(tokenId);
+			for (const nested of descendants(descendant)) {
+				const scaleWidth = attributeValue(nested, 'data-foundation-scale-width');
+				if (scaleWidth !== undefined) widths.set(tokenId, scaleWidth);
+			}
+		}
+		actualGroups.set(familyId, { tokens, widths, orderedTokens });
+	});
+	for (const [familyId, expectedTokens] of expectedGroups) {
+		const actual = actualGroups.get(familyId);
+		assert(actual !== undefined, `Foundation family is missing from ${relativePath}: ${familyId}`);
+		for (const tokenId of expectedTokens) assert(actual.tokens.has(tokenId), `Foundation family ${familyId} does not contain ${tokenId} in ${relativePath}`);
+	}
+	const coveredTokenIds = [...actualGroups.values()].flatMap(({ tokens }) => [...tokens]);
+	const coverageCounts = new Map();
+	for (const tokenId of coveredTokenIds) coverageCounts.set(tokenId, (coverageCounts.get(tokenId) ?? 0) + 1);
+	const expectedCoverage = relativePath === 'foundations/spacing/index.html'
+		? FOUNDATION_TOKENS.filter(({ id, type }) => type === 'dimension' && (/^reference\.dimension\.(?:space|section-space)-/u.test(id) || id.startsWith('semantic.layout.') || id.startsWith('semantic.control.')))
+		: relativePath === 'foundations/shape/index.html'
+			? FOUNDATION_TOKENS.filter(({ id }) => id.startsWith('reference.dimension.radius-') || id.startsWith('semantic.shape.') || id === 'semantic.control.radius')
+			: relativePath === 'foundations/elevation/index.html'
+				? FOUNDATION_TOKENS.filter(({ id, type }) => type === 'effect' || id.startsWith('semantic.elevation.'))
+				: FOUNDATION_TOKENS.filter(({ id, type }) => type === 'duration' && !id.startsWith('reference.motion.duration-'));
+	for (const { id } of expectedCoverage) assert(coverageCounts.get(id) === 1, `Canonical token is missing or appears in multiple families in ${relativePath}: ${id}`);
+	if (relativePath === 'foundations/spacing/index.html') {
+		const controlWidths = actualGroups.get('semantic-control-sizes')?.widths;
+		const controlSizes = FOUNDATION_TOKENS.filter(({ id }) => id.startsWith('semantic.control.size-'));
+		const maximum = Math.max(...controlSizes.map(({ defaultValue }) => Number(defaultValue)));
+		for (const token of controlSizes) {
+			const expectedWidth = `${Math.max(0, Math.min(100, Number(token.defaultValue) / maximum * 100))}%`;
+			assert(controlWidths?.get(token.id) === expectedWidth, `Control ruler width is not relative to its family maximum: ${token.id}`);
+		}
+		for (const [familyId, prefix] of [['semantic-layout-insets', 'semantic.layout.inset-'], ['semantic-control-sizes', 'semantic.control.size-']]) {
+			const expectedOrder = FOUNDATION_TOKENS.filter(({ id }) => id.startsWith(prefix)).sort((left, right) => Number(left.defaultValue) - Number(right.defaultValue)).map(({ id }) => id);
+			assert(JSON.stringify(actualGroups.get(familyId)?.orderedTokens) === JSON.stringify(expectedOrder), `Foundation family order is not numeric for ${familyId}.`);
+		}
+	}
+	if (relativePath === 'foundations/motion/index.html') {
+		const easingMarkers = [];
+		walk(tree, [], (node) => {
+			if (classNames(node).has('foundation-motion-marker')) easingMarkers.push(attributeValue(node, 'style') ?? '');
+		});
+		assert(easingMarkers.length > 0 && easingMarkers.every((style) => style.includes('animation-duration:var(--muxui-reference-duration-fast)')), 'Easing replays must use one shared reference duration for curve comparison.');
+	}
+}
 
 console.log(`Token path contract passed: ${decoratedCanonicalCodes} canonical code values preserve exact text and syntax decorations; dotted, CSS, mismatch, unknown, hyphenated, and inline guide cases covered.`);

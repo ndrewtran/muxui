@@ -50,6 +50,15 @@ const descriptor = descriptorSource.historical?.bindings
     }
   : descriptorSource;
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+const colorGraphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
+  colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
+]));
+
+function canonicalColorValue(colorScheme, tokenId) {
+  const token = colorGraphs[colorScheme][tokenId];
+  assert.ok(token, `${colorScheme} canonical token ${tokenId}`);
+  return token.value;
+}
 
 function generatedBody(source, fileName) {
   const match = source.match(
@@ -202,7 +211,7 @@ test('uses standard generation scripts and checks drift in an isolated projectio
   assert.equal(packageManifest.scripts['generate:check'], 'node src/generate-stories.mjs --check');
   assert.equal(packageManifest.scripts.storybook, 'pnpm generate && pnpm exec storybook dev -p 6006');
   assert.equal(packageManifest.scripts.build, 'pnpm generate && storybook build --output-dir dist');
-  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test test/*.test.mjs');
+  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs');
 
   const sourceRoot = resolve(appRoot, '.storybook/generated');
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-storybook-generation-check-'));
@@ -1130,7 +1139,7 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.match(previewCss, /background: var\(--muxui-semantic-surface-canvas\)/);
   assert.match(previewCss, /color: var\(--muxui-semantic-content-strong\)/);
   assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]\s*\{[^}]*background: var\(--muxui-semantic-surface-canvas\);[^}]*color: var\(--muxui-semantic-content-strong\);/u);
-  assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]:focus-visible\s*\{[^}]*var\(--muxui-semantic-action-background\)/u);
+  assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]:focus-visible\s*\{[^}]*var\(--muxui-semantic-focus-ring\)/u);
   assert.match(previewCss, /font-family: ui-sans-serif, system-ui/);
   assert.doesNotMatch(previewCss, /#(?:fff|000|171717)/iu);
   assert.match(previewCss, /#storybook-root,\s*main\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
@@ -1141,10 +1150,9 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
 test('manager theme derives every hover surface from the canonical Mux UI token', () => {
   for (const colorScheme of ['light', 'dark']) {
     const theme = buildTheme(colorScheme);
-    const hover = compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens['semantic.surface.hover'];
-    assert.ok(hover, `${colorScheme} hover token`);
-    assert.equal(theme.appHoverBg, hover.value, `${colorScheme} public Storybook hover theme`);
-    assert.equal(convert(theme).background.hoverable, hover.value, `${colorScheme} derived manager hover theme`);
+    const hover = canonicalColorValue(colorScheme, 'semantic.surface.hover');
+    assert.equal(theme.appHoverBg, hover, `${colorScheme} public Storybook hover theme`);
+    assert.equal(convert(theme).background.hoverable, hover, `${colorScheme} derived manager hover theme`);
     assert.notEqual(theme.appHoverBg, colorScheme === 'light' ? '#DBECFF' : '#233952', `${colorScheme} Storybook default hover color`);
   }
 });
@@ -1159,13 +1167,10 @@ test('manager projection covers internal chrome and keeps docs syntax scoped', a
   assert.match(managerCss, /\[aria-label='Story status: Fail'\]/u);
   assert.match(managerCss, /\[aria-label='Story status: Runs'\]/u);
   for (const colorScheme of ['light', 'dark']) {
-    const graph = compilePureTokenGraph(defaultTheme, { modes: { colorScheme } });
-    const hover = graph.tokens['semantic.surface.hover'];
-    const success = graph.tokens['semantic.status.success'];
-    assert.ok(hover, `${colorScheme} hover projection token`);
-    assert.ok(success, `${colorScheme} success projection token`);
-    assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover.value}`, 'u'));
-    assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success.value}`, 'u'));
+    const hover = canonicalColorValue(colorScheme, 'semantic.surface.hover');
+    const success = canonicalColorValue(colorScheme, 'semantic.status.success');
+    assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover}`, 'u'));
+    assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success}`, 'u'));
   }
   assert.match(previewCss, /\.sbdocs\.sbdocs-preview \.prismjs/u);
   assert.doesNotMatch(previewCss, /\.sbdocs-content\s+a\s*\{/u);

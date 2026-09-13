@@ -1,5 +1,5 @@
 /* @generated-from: packages/catalog/catalog-sources.json
- * @generated-content-sha256: sha256:640d1855894b75d1d500e7a7d5e7ce4a3dd1956210541d99642bf7e7393f85cb
+ * @generated-content-sha256: sha256:5fba01e762678c57d8ac48290245750e848c52f16dfd67bd43c05a3503314867
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -771,7 +771,7 @@
   --muxui-semantic-layout-content-margin: var(--muxui-reference-dimension-space-s);
   --muxui-semantic-layout-content-row-min-height: var(--muxui-reference-dimension-space-m);
   --muxui-semantic-layout-control-content-gap: var(--muxui-reference-dimension-space-xs);
-  --muxui-semantic-layout-control-gap: var(--muxui-reference-dimension-space-3xs);
+  --muxui-semantic-layout-control-gap: var(--muxui-reference-dimension-space-4xs);
   --muxui-semantic-layout-control-inset: var(--muxui-reference-dimension-space-xs);
   --muxui-semantic-layout-dense-gap: 0.125rem;
   --muxui-semantic-layout-description-gap: 0.25rem;
