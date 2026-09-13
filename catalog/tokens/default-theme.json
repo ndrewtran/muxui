@@ -1570,7 +1570,7 @@
       "unit": "px",
       "meaning": "Compact gap between content inside interactive controls.",
       "overridePolicy": "theme",
-      "alias": "reference.dimension.space-3xs"
+      "alias": "reference.dimension.space-4xs"
     },
     "semantic.layout.group-gap": {
       "layer": "semantic",

@@ -9,6 +9,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
+import { compilePureTokenGraph } from '@muxui/tokens/core';
 import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
@@ -34,7 +35,6 @@ import {
   stateCoverageForBinding,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
-import { resolveTokenValue } from '../src/foundations-gallery.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
@@ -169,9 +169,9 @@ test('current Storybook manifest covers the complete package union', () => {
   assert.deepEqual([...BROWSER_PROOF_FAMILIES].sort(), descriptorSource.bindings.map(({ export: name }) => name).sort());
 });
 
-test('Storybook navigation is alphabetical with Foundations first and stable deep links', async () => {
+test('Storybook navigation is alphabetical with stable deep links', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
-  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical',\s*order: \['Foundations', '\*'\]/u);
+  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical'\s*\}/u);
   for (const record of manifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
@@ -1141,8 +1141,8 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
 test('manager theme derives every hover surface from the canonical Mux UI token', () => {
   for (const colorScheme of ['light', 'dark']) {
     const theme = buildTheme(colorScheme);
-    const hover = resolveTokenValue(defaultTheme, 'semantic.surface.hover', { colorScheme });
-    assert.equal(hover.status, 'resolved', `${colorScheme} hover token`);
+    const hover = compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens['semantic.surface.hover'];
+    assert.ok(hover, `${colorScheme} hover token`);
     assert.equal(theme.appHoverBg, hover.value, `${colorScheme} public Storybook hover theme`);
     assert.equal(convert(theme).background.hoverable, hover.value, `${colorScheme} derived manager hover theme`);
     assert.notEqual(theme.appHoverBg, colorScheme === 'light' ? '#DBECFF' : '#233952', `${colorScheme} Storybook default hover color`);
@@ -1159,10 +1159,11 @@ test('manager projection covers internal chrome and keeps docs syntax scoped', a
   assert.match(managerCss, /\[aria-label='Story status: Fail'\]/u);
   assert.match(managerCss, /\[aria-label='Story status: Runs'\]/u);
   for (const colorScheme of ['light', 'dark']) {
-    const hover = resolveTokenValue(defaultTheme, 'semantic.surface.hover', { colorScheme });
-    const success = resolveTokenValue(defaultTheme, 'semantic.status.success', { colorScheme });
-    assert.equal(hover.status, 'resolved', `${colorScheme} hover projection token`);
-    assert.equal(success.status, 'resolved', `${colorScheme} success projection token`);
+    const graph = compilePureTokenGraph(defaultTheme, { modes: { colorScheme } });
+    const hover = graph.tokens['semantic.surface.hover'];
+    const success = graph.tokens['semantic.status.success'];
+    assert.ok(hover, `${colorScheme} hover projection token`);
+    assert.ok(success, `${colorScheme} success projection token`);
     assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover.value}`, 'u'));
     assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success.value}`, 'u'));
   }

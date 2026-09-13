@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:0f8d40f717cb2eae9f7f47665eea43a839d0b9b8b2c3397f5f2b90fe1ab221ce
+ * @generated-content-sha256: sha256:6685389a88384cb48f3efb791ea9db4a0ca438259e0c41a62f399064dbc52ca7
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -771,7 +771,7 @@
   --muxui-semantic-layout-content-margin: var(--muxui-reference-dimension-space-s);
   --muxui-semantic-layout-content-row-min-height: var(--muxui-reference-dimension-space-m);
   --muxui-semantic-layout-control-content-gap: var(--muxui-reference-dimension-space-xs);
-  --muxui-semantic-layout-control-gap: var(--muxui-reference-dimension-space-3xs);
+  --muxui-semantic-layout-control-gap: var(--muxui-reference-dimension-space-4xs);
   --muxui-semantic-layout-control-inset: var(--muxui-reference-dimension-space-xs);
   --muxui-semantic-layout-dense-gap: 0.125rem;
   --muxui-semantic-layout-description-gap: 0.25rem;
@@ -968,7 +968,7 @@
   --muxui-semantic-layout-content-margin: var(--muxui-reference-dimension-space-s);
   --muxui-semantic-layout-content-row-min-height: var(--muxui-reference-dimension-space-m);
   --muxui-semantic-layout-control-content-gap: var(--muxui-reference-dimension-space-xs);
-  --muxui-semantic-layout-control-gap: var(--muxui-reference-dimension-space-3xs);
+  --muxui-semantic-layout-control-gap: var(--muxui-reference-dimension-space-4xs);
   --muxui-semantic-layout-control-inset: var(--muxui-reference-dimension-space-xs);
   --muxui-semantic-layout-group-gap: var(--muxui-reference-dimension-space-2xs);
   --muxui-semantic-layout-icon-size: var(--muxui-reference-dimension-space-xs);
@@ -3048,6 +3048,7 @@
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   flex-shrink: 0;
   pointer-events: none;
+  outline-offset: 0px;
 }
 
 .muxui-checkbox[data-focus-visible] .muxui-checkbox-indicator {
@@ -3510,9 +3511,10 @@
 
 .muxui-checkbox[data-focus-visible] .muxui-checkbox-indicator,
 .muxui-checkbox:focus-within .muxui-checkbox-indicator {
-  box-shadow:
-    0 0 0 1px var(--muxui-semantic-focus-inner),
-    0 0 0 3px var(--muxui-semantic-focus-ring);
+  box-shadow: none;
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
+  transition: outline-offset 0.3s;
 }
 
 @media (forced-colors: active) {

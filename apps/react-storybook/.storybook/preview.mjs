@@ -137,7 +137,7 @@ export default {
     },
   ],
   parameters: {
-    options: { storySort: { method: 'alphabetical', order: ['Foundations', '*'] } },
+    options: { storySort: { method: 'alphabetical' } },
     controls: { expanded: true },
     a11y: { test: 'error' },
     docs: {
