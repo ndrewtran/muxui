@@ -389,7 +389,7 @@ test('Checkbox and Radio focus rings stay on indicators with shared keyline geom
   const rootFocusOutline = /\.muxui-(?:checkbox|radio)(?::focus-within|\[data-focus-visible\])\s*\{[^}]*outline:/u;
   const focusRules = [
     ['Checkbox focus-visible indicator', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-focus-inner\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
-    ['Checkbox focus-within indicator', /\.muxui-checkbox:focus-within \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-focus-inner\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
+    ['Checkbox focus-within indicator', /\.muxui-checkbox:focus-within \.muxui-checkbox-indicator\s*\{[^}]*box-shadow:\s*none;[^}]*outline:\s*2px solid var\(--muxui-semantic-focus-ring\);[^}]*outline-offset:\s*2px;/u],
     ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
     ['Radio mode-aware focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-focus-ring-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-outer\)[^}]*\}/u],
   ];
