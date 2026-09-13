@@ -541,7 +541,7 @@ pre code {
 	border-inline-start: 1px solid var(--muxui-semantic-border-subtle);
 }
 
-.guide-projection > h1:first-of-type {
+.guide-content > h1:first-of-type {
 	display: none;
 }
 

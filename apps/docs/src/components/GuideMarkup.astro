@@ -1,0 +1,51 @@
+---
+import { parseFragment, serialize, type DefaultTreeAdapterTypes } from 'parse5';
+
+type Node = DefaultTreeAdapterTypes.Node;
+type Element = DefaultTreeAdapterTypes.Element;
+
+const rendered = await Astro.slots.render('default');
+const tree = parseFragment(rendered);
+
+function isElement(node: Node): node is Element {
+	return 'tagName' in node;
+}
+
+function attributeValue(node: Element, name: string): string | undefined {
+	return node.attrs.find((attribute) => attribute.name === name)?.value;
+}
+
+function elementNode(tagName: string, attrs: Element['attrs'] = []): Element {
+	return {
+		nodeName: tagName,
+		tagName,
+		attrs,
+		namespaceURI: 'http://www.w3.org/1999/xhtml' as Element['namespaceURI'],
+		parentNode: null,
+		childNodes: [],
+	};
+}
+
+// Apply the foundation layout without rewriting canonical text or heading anchors.
+const page = elementNode('div', [{ name: 'class', value: 'foundation-page guide-content' }]);
+let section = page;
+let hasSectionHeading = false;
+
+for (const node of tree.childNodes) {
+	if (isElement(node) && node.tagName === 'h2') {
+		const headingId = attributeValue(node, 'id');
+		section = elementNode(hasSectionHeading ? 'section' : 'div', [
+			{ name: 'class', value: hasSectionHeading ? 'foundation-section' : 'foundation-section-intro' },
+			...(hasSectionHeading && headingId ? [{ name: 'aria-labelledby', value: headingId }] : []),
+		]);
+		page.childNodes.push(section);
+		hasSectionHeading = true;
+	}
+	section.childNodes.push(node);
+}
+
+tree.childNodes = [page];
+const output = serialize(tree);
+---
+
+<Fragment set:html={output} />
