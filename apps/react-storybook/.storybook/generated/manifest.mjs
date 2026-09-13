@@ -1,5 +1,5 @@
 // @generated-from: apps/react-storybook/src/generate-stories.mjs
-// @generated-content-sha256: sha256:ecaafcf05019a60eeeaed21a1b10dde56ad20e6f0e4e77bfe2f2f36d3e05306a
+// @generated-content-sha256: sha256:9f62b9eef17f1735abe67e89730dd6b0973e0aceefa2dc53ce5972602e8e10fc
 export const manifest = Object.freeze({
   "schema": "muxui-react-storybook-manifest-v1",
   "generatedFrom": [
@@ -10,36 +10,6 @@ export const manifest = Object.freeze({
     "catalog/components/number-field/examples/react/sizing.tsx"
   ],
   "count": 75,
-  "foundations": {
-    "schema": "muxui-react-storybook-foundations-v1",
-    "source": "catalog/tokens/default-theme.json",
-    "categories": [
-      {
-        "id": "colors",
-        "label": "Colors and semantic roles"
-      },
-      {
-        "id": "typography",
-        "label": "Typography"
-      },
-      {
-        "id": "spacing",
-        "label": "Spacing and dimensions"
-      },
-      {
-        "id": "radii-shadows",
-        "label": "Radii and shadows"
-      },
-      {
-        "id": "motion",
-        "label": "Motion"
-      },
-      {
-        "id": "component",
-        "label": "Component tokens"
-      }
-    ]
-  },
   "families": [
     {
       "family": "Autocomplete",
