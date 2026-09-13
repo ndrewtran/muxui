@@ -12,6 +12,7 @@ import test from 'node:test';
 import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
+import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
   argTypesForBinding,
@@ -34,7 +35,6 @@ import {
   stateCoverageForBinding,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
-import { resolveTokenValue } from '../src/foundations-gallery.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
@@ -50,6 +50,15 @@ const descriptor = descriptorSource.historical?.bindings
     }
   : descriptorSource;
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+const colorGraphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
+  colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
+]));
+
+function canonicalColorValue(colorScheme, tokenId) {
+  const token = colorGraphs[colorScheme][tokenId];
+  assert.ok(token, `${colorScheme} canonical token ${tokenId}`);
+  return token.value;
+}
 
 function generatedBody(source, fileName) {
   const match = source.match(
@@ -1141,10 +1150,9 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
 test('manager theme derives every hover surface from the canonical Mux UI token', () => {
   for (const colorScheme of ['light', 'dark']) {
     const theme = buildTheme(colorScheme);
-    const hover = resolveTokenValue(defaultTheme, 'semantic.surface.hover', { colorScheme });
-    assert.equal(hover.status, 'resolved', `${colorScheme} hover token`);
-    assert.equal(theme.appHoverBg, hover.value, `${colorScheme} public Storybook hover theme`);
-    assert.equal(convert(theme).background.hoverable, hover.value, `${colorScheme} derived manager hover theme`);
+    const hover = canonicalColorValue(colorScheme, 'semantic.surface.hover');
+    assert.equal(theme.appHoverBg, hover, `${colorScheme} public Storybook hover theme`);
+    assert.equal(convert(theme).background.hoverable, hover, `${colorScheme} derived manager hover theme`);
     assert.notEqual(theme.appHoverBg, colorScheme === 'light' ? '#DBECFF' : '#233952', `${colorScheme} Storybook default hover color`);
   }
 });
@@ -1159,12 +1167,10 @@ test('manager projection covers internal chrome and keeps docs syntax scoped', a
   assert.match(managerCss, /\[aria-label='Story status: Fail'\]/u);
   assert.match(managerCss, /\[aria-label='Story status: Runs'\]/u);
   for (const colorScheme of ['light', 'dark']) {
-    const hover = resolveTokenValue(defaultTheme, 'semantic.surface.hover', { colorScheme });
-    const success = resolveTokenValue(defaultTheme, 'semantic.status.success', { colorScheme });
-    assert.equal(hover.status, 'resolved', `${colorScheme} hover projection token`);
-    assert.equal(success.status, 'resolved', `${colorScheme} success projection token`);
-    assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover.value}`, 'u'));
-    assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success.value}`, 'u'));
+    const hover = canonicalColorValue(colorScheme, 'semantic.surface.hover');
+    const success = canonicalColorValue(colorScheme, 'semantic.status.success');
+    assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover}`, 'u'));
+    assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success}`, 'u'));
   }
   assert.match(previewCss, /\.sbdocs\.sbdocs-preview \.prismjs/u);
   assert.doesNotMatch(previewCss, /\.sbdocs-content\s+a\s*\{/u);
