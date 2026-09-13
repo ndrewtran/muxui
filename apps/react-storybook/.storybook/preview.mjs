@@ -4,7 +4,7 @@ import { GLOBALS_UPDATED, SET_GLOBALS } from 'storybook/internal/core-events';
 import { DocsContainer } from '@storybook/addon-docs/blocks';
 import { StorybookThemeContext } from '../src/storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
-import { buildTheme } from './theme.mjs';
+import { backgroundOptions, buildTheme } from './theme.mjs';
 import '@muxui/react/styles.css';
 import './preview.css';
 
@@ -137,8 +137,9 @@ export default {
     },
   ],
   parameters: {
-    options: { storySort: { method: 'alphabetical', order: ['Foundations', '*'] } },
+    options: { storySort: { method: 'alphabetical' } },
     controls: { expanded: true },
+    backgrounds: { options: backgroundOptions() },
     a11y: { test: 'error' },
     docs: {
       theme: buildTheme('light'),

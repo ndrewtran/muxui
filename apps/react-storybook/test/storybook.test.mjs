@@ -10,7 +10,10 @@ import { createRoot } from 'react-dom/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
 import { transformWithOxc } from 'vite';
+import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
+import { compilePureTokenGraph } from '@muxui/tokens/core';
+import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
   argTypesForBinding,
   adapterNames,
@@ -32,6 +35,7 @@ import {
   stateCoverageForBinding,
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
+import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(appRoot, '../..');
@@ -46,6 +50,15 @@ const descriptor = descriptorSource.historical?.bindings
     }
   : descriptorSource;
 const snapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+const colorGraphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
+  colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
+]));
+
+function canonicalColorValue(colorScheme, tokenId) {
+  const token = colorGraphs[colorScheme][tokenId];
+  assert.ok(token, `${colorScheme} canonical token ${tokenId}`);
+  return token.value;
+}
 
 function generatedBody(source, fileName) {
   const match = source.match(
@@ -165,9 +178,9 @@ test('current Storybook manifest covers the complete package union', () => {
   assert.deepEqual([...BROWSER_PROOF_FAMILIES].sort(), descriptorSource.bindings.map(({ export: name }) => name).sort());
 });
 
-test('Storybook navigation is alphabetical with Foundations first and stable deep links', async () => {
+test('Storybook navigation is alphabetical with stable deep links', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
-  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical',\s*order: \['Foundations', '\*'\]/u);
+  assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical'\s*\}/u);
   for (const record of manifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
@@ -198,7 +211,7 @@ test('uses standard generation scripts and checks drift in an isolated projectio
   assert.equal(packageManifest.scripts['generate:check'], 'node src/generate-stories.mjs --check');
   assert.equal(packageManifest.scripts.storybook, 'pnpm generate && pnpm exec storybook dev -p 6006');
   assert.equal(packageManifest.scripts.build, 'pnpm generate && storybook build --output-dir dist');
-  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test test/*.test.mjs');
+  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs');
 
   const sourceRoot = resolve(appRoot, '.storybook/generated');
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-storybook-generation-check-'));
@@ -1123,10 +1136,42 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.equal(packageManifest.devDependencies['playwright-core'], '1.62.1');
 
   assert.match(previewCss, /:root\[data-muxui-color-scheme='dark'\]/);
-  assert.match(previewCss, /background: #000/);
-  assert.match(previewCss, /color: #fff/);
+  assert.match(previewCss, /background: var\(--muxui-semantic-surface-canvas\)/);
+  assert.match(previewCss, /color: var\(--muxui-semantic-content-strong\)/);
+  assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]\s*\{[^}]*background: var\(--muxui-semantic-surface-canvas\);[^}]*color: var\(--muxui-semantic-content-strong\);/u);
+  assert.match(previewCss, /\[data-muxui-storybook-lifecycle-select\]:focus-visible\s*\{[^}]*var\(--muxui-semantic-focus-ring\)/u);
   assert.match(previewCss, /font-family: ui-sans-serif, system-ui/);
+  assert.doesNotMatch(previewCss, /#(?:fff|000|171717)/iu);
   assert.match(previewCss, /#storybook-root,\s*main\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
   assert.doesNotMatch(previewCss, /(?:^|\n)\.muxui-storybook-surface\s*\{[^}]*min-height: 100vh;/u);
   assert.doesNotMatch(previewCss, /Inter/i);
+});
+
+test('manager theme derives every hover surface from the canonical Mux UI token', () => {
+  for (const colorScheme of ['light', 'dark']) {
+    const theme = buildTheme(colorScheme);
+    const hover = canonicalColorValue(colorScheme, 'semantic.surface.hover');
+    assert.equal(theme.appHoverBg, hover, `${colorScheme} public Storybook hover theme`);
+    assert.equal(convert(theme).background.hoverable, hover, `${colorScheme} derived manager hover theme`);
+    assert.notEqual(theme.appHoverBg, colorScheme === 'light' ? '#DBECFF' : '#233952', `${colorScheme} Storybook default hover color`);
+  }
+});
+
+test('manager projection covers internal chrome and keeps docs syntax scoped', async () => {
+  const managerCss = managerThemeCss();
+  const previewCss = await readFile(resolve(appRoot, '.storybook/preview.css'), 'utf8');
+
+  assert.match(managerCss, /\.sidebar-item\[data-ref-id='storybook_internal'\]\[data-nodetype\]/u);
+  assert.match(managerCss, /\.react-aria-Popover\[role='dialog'\]/u);
+  assert.match(managerCss, /\[aria-label='Story status: Pass'\]/u);
+  assert.match(managerCss, /\[aria-label='Story status: Fail'\]/u);
+  assert.match(managerCss, /\[aria-label='Story status: Runs'\]/u);
+  for (const colorScheme of ['light', 'dark']) {
+    const hover = canonicalColorValue(colorScheme, 'semantic.surface.hover');
+    const success = canonicalColorValue(colorScheme, 'semantic.status.success');
+    assert.match(managerCss, new RegExp(`--muxui-storybook-surface-hover: ${hover}`, 'u'));
+    assert.match(managerCss, new RegExp(`--muxui-storybook-status-success: ${success}`, 'u'));
+  }
+  assert.match(previewCss, /\.sbdocs\.sbdocs-preview \.prismjs/u);
+  assert.doesNotMatch(previewCss, /\.sbdocs-content\s+a\s*\{/u);
 });
