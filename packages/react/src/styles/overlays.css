@@ -387,8 +387,8 @@
   box-shadow: 0 1.5px 3px rgb(0 0 0 / 15%);
   margin-block-start: 0;
   transition:
-    opacity var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    transform var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    opacity var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing),
+    transform var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing);
   pointer-events: none;
 }
 

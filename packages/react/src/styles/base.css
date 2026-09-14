@@ -695,8 +695,8 @@
   cursor: pointer;
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
   user-select: none;
 }
 
@@ -999,7 +999,7 @@
 }
 
 .muxui-date-popover[data-exiting] {
-  animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+  animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 @keyframes muxui-date-popover-fade-in {
@@ -1071,8 +1071,8 @@
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-strong);
   transition:
-    background var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-calendar-cell:hover,
