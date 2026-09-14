@@ -1,5 +1,5 @@
 /* @generated-from: packages/react/src/generate.mjs
- * @generated-content-sha256: sha256:6685389a88384cb48f3efb791ea9db4a0ca438259e0c41a62f399064dbc52ca7
+ * @generated-content-sha256: sha256:99de0cbf5ded2ad66cd4be8788d0ce409a7f3bf0a350b429f7cc4c36c2614075
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -525,7 +525,6 @@
   --muxui-reference-duration-fast: 120ms;
   --muxui-reference-duration-instant: 0ms;
   --muxui-reference-duration-moderate: 180ms;
-  --muxui-reference-duration-quick: 80ms;
   --muxui-reference-duration-slow: 300ms;
   --muxui-reference-effect-shadow-l: 0px 2.7px 3.6px -5px rgba(0, 0, 0, 0.04), 0px 7.5px 10px -5px rgba(0, 0, 0, 0.06), 0px 18px 24.1px -5px rgba(0, 0, 0, 0.08), 0px 60px 80px -5px rgba(0, 0, 0, 0.1);
   --muxui-reference-effect-shadow-m: 0px 4px 4px -10px rgba(0, 0, 0, 0.04), 0px 13px 13px -10px rgba(0, 0, 0, 0.06), 0px 40px 60px -10px rgba(0, 0, 0, 0.08);
@@ -536,7 +535,6 @@
   --muxui-reference-motion-duration-fast: 120ms;
   --muxui-reference-motion-duration-instant: 0ms;
   --muxui-reference-motion-duration-moderate: 180ms;
-  --muxui-reference-motion-duration-quick: 80ms;
   --muxui-reference-motion-duration-slow: 300ms;
   --muxui-reference-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1.4);
   --muxui-reference-motion-easing-enter: cubic-bezier(0, 0, 0, 1);
@@ -808,7 +806,7 @@
   --muxui-semantic-motion-exit-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-exit-easing: var(--muxui-reference-motion-easing-exit);
   --muxui-semantic-motion-feedback: var(--muxui-reference-duration-fast);
-  --muxui-semantic-motion-feedback-duration: var(--muxui-reference-motion-duration-quick);
+  --muxui-semantic-motion-feedback-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-feedback-easing: var(--muxui-reference-motion-easing-standard);
   --muxui-semantic-motion-interaction-duration: 150ms;
   --muxui-semantic-motion-interaction-easing: ease;
@@ -819,8 +817,6 @@
   --muxui-semantic-motion-progress-sweep-duration: 1200ms;
   --muxui-semantic-motion-progress-travel-duration: 1500ms;
   --muxui-semantic-motion-progress-update-duration: 300ms;
-  --muxui-semantic-motion-quick-feedback-duration: 80ms;
-  --muxui-semantic-motion-quick-transition-duration: 100ms;
   --muxui-semantic-motion-reveal-duration: 200ms;
   --muxui-semantic-motion-reveal-easing: ease-out;
   --muxui-semantic-motion-selection-enter-duration: 120ms;
@@ -1298,7 +1294,7 @@
   --muxui-semantic-motion-exit-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-exit-easing: var(--muxui-reference-motion-easing-exit);
   --muxui-semantic-motion-feedback: var(--muxui-reference-duration-fast);
-  --muxui-semantic-motion-feedback-duration: var(--muxui-reference-motion-duration-quick);
+  --muxui-semantic-motion-feedback-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-feedback-easing: var(--muxui-reference-motion-easing-standard);
   --muxui-semantic-motion-state-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-state-easing: var(--muxui-reference-motion-easing-standard);
@@ -2033,8 +2029,8 @@
   cursor: pointer;
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
   user-select: none;
 }
 
@@ -2337,7 +2333,7 @@
 }
 
 .muxui-date-popover[data-exiting] {
-  animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+  animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 @keyframes muxui-date-popover-fade-in {
@@ -2409,8 +2405,8 @@
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-strong);
   transition:
-    background var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-calendar-cell:hover,
@@ -4963,7 +4959,7 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   color: var(--muxui-semantic-content-default);
-  transition: background var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: background var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-calendar-cell:hover {
@@ -5271,7 +5267,7 @@
   background-color: var(--muxui-semantic-surface-canvas);
   outline: none;
   cursor: default;
-  transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-grid-list-item[data-hovered] {
@@ -5675,7 +5671,7 @@
   transition:
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    scale var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    scale var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
   cursor: grab;
 }
 
@@ -5800,7 +5796,7 @@
   border-bottom: 0;
   box-shadow: inset 0 -1px var(--muxui-table-row-separator);
   outline: none;
-  transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-table-row[data-hovered] {
@@ -6129,7 +6125,7 @@
 .muxui-tree-item {
   outline: none;
   cursor: default;
-  transition: background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tree-item[data-hovered] {
@@ -6756,8 +6752,8 @@
   cursor: pointer;
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
   user-select: none;
 }
 
@@ -7439,8 +7435,8 @@
   box-shadow: 0 1.5px 3px rgb(0 0 0 / 15%);
   margin-block-start: 0;
   transition:
-    opacity var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    transform var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    opacity var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing),
+    transform var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing);
   pointer-events: none;
 }
 
@@ -8659,8 +8655,8 @@
   color: var(--muxui-semantic-color-neutral-20);
   text-decoration: none;
   transition:
-    background var(--muxui-semantic-motion-quick-transition-duration),
-    color var(--muxui-semantic-motion-quick-transition-duration);
+    background var(--muxui-semantic-motion-state-duration),
+    color var(--muxui-semantic-motion-state-duration);
   cursor: pointer;
 }
 
@@ -8888,8 +8884,8 @@
   user-select: none;
   white-space: nowrap;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    outline-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    outline-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-input-tags__tag[data-hovered]:not([data-disabled]) {
@@ -9218,7 +9214,7 @@
 }
 
 .muxui-multi-select__popup[data-exiting] {
-  animation: multi-select-out var(--muxui-semantic-motion-quick-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
+  animation: multi-select-out var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
 }
 
 @keyframes multi-select-in {
@@ -9359,8 +9355,8 @@
   background-color: transparent;
   color: var(--muxui-semantic-color-color-60-fg);
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-multi-select__item[data-selected] .muxui-multi-select__item-check {
@@ -9403,9 +9399,9 @@
   cursor: pointer;
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    border-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-multi-select__footer-btn:hover {
@@ -9876,8 +9872,8 @@
   color: var(--muxui-semantic-color-neutral-20);
   text-decoration: none;
   transition:
-    background var(--muxui-semantic-motion-quick-transition-duration),
-    color var(--muxui-semantic-motion-quick-transition-duration);
+    background var(--muxui-semantic-motion-state-duration),
+    color var(--muxui-semantic-motion-state-duration);
   cursor: pointer;
   user-select: none;
   list-style: none;
@@ -9952,7 +9948,7 @@
   width: 1rem;
   height: 1rem;
   color: var(--muxui-semantic-color-neutral-40);
-  transition: transform var(--muxui-semantic-motion-quick-transition-duration);
+  transition: transform var(--muxui-semantic-motion-state-duration);
   flex-shrink: 0;
   margin-left: auto;
 }
@@ -9989,8 +9985,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   color: var(--muxui-semantic-color-neutral-40);
   text-decoration: none;
   transition:
-    background var(--muxui-semantic-motion-quick-transition-duration),
-    color var(--muxui-semantic-motion-quick-transition-duration);
+    background var(--muxui-semantic-motion-state-duration),
+    color var(--muxui-semantic-motion-state-duration);
   cursor: pointer;
 }
 
@@ -10167,8 +10163,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   color: var(--muxui-semantic-color-neutral-20);
   cursor: pointer;
   transition:
-    background var(--muxui-semantic-motion-quick-transition-duration),
-    outline-color var(--muxui-semantic-motion-quick-transition-duration);
+    background var(--muxui-semantic-motion-state-duration),
+    outline-color var(--muxui-semantic-motion-state-duration);
 }
 
 .muxui-sidebar__feature-card-dismiss:hover {
@@ -10641,8 +10637,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   cursor: pointer;
   outline: none;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-tag-select__tag-remove:hover:not(:disabled) {
@@ -10676,7 +10672,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 }
 
 .muxui-tag-select__popup[data-exiting] {
-  animation: tag-select-out var(--muxui-semantic-motion-quick-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
+  animation: tag-select-out var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
 }
 
 @keyframes tag-select-in {
@@ -11216,8 +11212,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   cursor: pointer;
   flex-shrink: 0;
   transition:
-    background-color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing),
-    color var(--muxui-semantic-motion-quick-transition-duration) var(--muxui-semantic-motion-interaction-easing);
+    background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
+    color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
   padding: 0;
 }
 
@@ -11283,7 +11279,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   border: none;
   padding: 0;
   box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.12);
-  transition: transform var(--muxui-semantic-motion-quick-feedback-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: transform var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-text-editor__color-swatch:hover {

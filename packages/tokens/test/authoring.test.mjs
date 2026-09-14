@@ -15,7 +15,7 @@ const base = {
   schema: 'muxui-theme-authoring-v1',
   id: 'muxui:theme:authoring-test',
   source: 'muxui:token:default-theme',
-  tokenContractVersion: '2.1.0',
+  tokenContractVersion: '3.0.0',
   modes: { colorScheme: ['light', 'dark'], contrast: ['standard'], motion: ['full'], density: ['comfortable'], direction: ['ltr'] },
 };
 

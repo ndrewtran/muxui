@@ -1,5 +1,5 @@
 /* @generated-from: packages/catalog/catalog-sources.json
- * @generated-content-sha256: sha256:5fba01e762678c57d8ac48290245750e848c52f16dfd67bd43c05a3503314867
+ * @generated-content-sha256: sha256:84e47245725c1109d32fc623d91e42bca10da53a86185d7cb4bd43e5ecef75a4
  */
 :root {
   --muxui-component-button-background: var(--muxui-semantic-action-background);
@@ -525,7 +525,6 @@
   --muxui-reference-duration-fast: 120ms;
   --muxui-reference-duration-instant: 0ms;
   --muxui-reference-duration-moderate: 180ms;
-  --muxui-reference-duration-quick: 80ms;
   --muxui-reference-duration-slow: 300ms;
   --muxui-reference-effect-shadow-l: 0px 2.7px 3.6px -5px rgba(0, 0, 0, 0.04), 0px 7.5px 10px -5px rgba(0, 0, 0, 0.06), 0px 18px 24.1px -5px rgba(0, 0, 0, 0.08), 0px 60px 80px -5px rgba(0, 0, 0, 0.1);
   --muxui-reference-effect-shadow-m: 0px 4px 4px -10px rgba(0, 0, 0, 0.04), 0px 13px 13px -10px rgba(0, 0, 0, 0.06), 0px 40px 60px -10px rgba(0, 0, 0, 0.08);
@@ -536,7 +535,6 @@
   --muxui-reference-motion-duration-fast: 120ms;
   --muxui-reference-motion-duration-instant: 0ms;
   --muxui-reference-motion-duration-moderate: 180ms;
-  --muxui-reference-motion-duration-quick: 80ms;
   --muxui-reference-motion-duration-slow: 300ms;
   --muxui-reference-motion-easing-emphasized: cubic-bezier(0.2, 0, 0, 1.4);
   --muxui-reference-motion-easing-enter: cubic-bezier(0, 0, 0, 1);
@@ -808,7 +806,7 @@
   --muxui-semantic-motion-exit-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-exit-easing: var(--muxui-reference-motion-easing-exit);
   --muxui-semantic-motion-feedback: var(--muxui-reference-duration-fast);
-  --muxui-semantic-motion-feedback-duration: var(--muxui-reference-motion-duration-quick);
+  --muxui-semantic-motion-feedback-duration: var(--muxui-reference-motion-duration-fast);
   --muxui-semantic-motion-feedback-easing: var(--muxui-reference-motion-easing-standard);
   --muxui-semantic-motion-interaction-duration: 150ms;
   --muxui-semantic-motion-interaction-easing: ease;
@@ -819,8 +817,6 @@
   --muxui-semantic-motion-progress-sweep-duration: 1200ms;
   --muxui-semantic-motion-progress-travel-duration: 1500ms;
   --muxui-semantic-motion-progress-update-duration: 300ms;
-  --muxui-semantic-motion-quick-feedback-duration: 80ms;
-  --muxui-semantic-motion-quick-transition-duration: 100ms;
   --muxui-semantic-motion-reveal-duration: 200ms;
   --muxui-semantic-motion-reveal-easing: ease-out;
   --muxui-semantic-motion-selection-enter-duration: 120ms;
