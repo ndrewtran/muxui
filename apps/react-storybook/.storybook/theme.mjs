@@ -575,7 +575,7 @@ body > div:empty:has(+ [role='dialog'][aria-label='Add a new story']) {
 }
 
 [role='dialog'][aria-label='Add a new story'] * {
-  transition-property: transform, opacity !important;
+  transition-property: transform, opacity, height !important;
 }
 
 /* React Aria portals context menus outside the sidebar and panel regions. */
