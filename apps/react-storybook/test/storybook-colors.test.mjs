@@ -340,11 +340,11 @@ test('Storybook search status icons use canonical action and option-state colour
   } finally { await browser.close(); }
 });
 
-test('Storybook onboarding completion particles use the canonical action fill', { timeout: 120000 }, async () => {
+test('Storybook completed and skipped onboarding states paint only Mux colours', { timeout: 120000 }, async () => {
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   try {
-    for (const scheme of ['light', 'dark']) {
+    for (const { scheme, status } of ['light', 'dark'].flatMap((scheme) => ['accepted', 'skipped'].map((status) => ({ scheme, status })))) {
       const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
       await page.goto(`${server.url}/?path=/story/muxui-react-r1-1-button--default&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
       await page.locator('#storybook-sidebar-region').waitFor();
@@ -360,20 +360,35 @@ test('Storybook onboarding completion particles use the canonical action fill', 
       });
       const action = page.locator('#storybook-checklist-widget button[data-target-id="whatsNewStorybook10"]');
       await action.waitFor({ state: 'attached' });
+      const disclosure = page.locator('#checklist-module-collapse-toggle');
+      await disclosure.waitFor();
+      if (await disclosure.getAttribute('aria-label') === 'Expand onboarding guide') await disclosure.click();
+      await action.locator('..').hover();
       // Storybook initializes for 1s, debounces readiness for 500ms, then enables
       // completion animation after another 1s. Cross those documented timers.
       await page.waitForTimeout(3000);
-      await page.addStyleTag({ content: '#root svg[style*="--fade-duration"] { animation-play-state: paused !important; }' });
-      await page.evaluate(() => {
+      const checkSelector = "#storybook-checklist-widget [aria-label^='Open onboarding guide'] div:not([class]) > svg";
+      await page.addStyleTag({ content: `#root svg[style*="--fade-duration"], ${checkSelector} { animation: none !important; opacity: 1 !important; }` });
+      await page.evaluate((status) => {
         const store = globalThis.__STORYBOOK_API__.internal_universalChecklistStore;
         const state = store.getState();
-        store.setState({ ...state, items: { ...state.items, whatsNewStorybook10: { status: 'accepted' } } });
-      });
+        store.setState({ ...state, items: { ...state.items, whatsNewStorybook10: { status } } });
+      }, status);
+      if (status === 'skipped') {
+        await page.waitForFunction(() => [...document.querySelectorAll('#storybook-checklist-widget span')]
+          .some((span) => getComputedStyle(span, '::after').content === '""'));
+      } else {
+        await page.locator(checkSelector).waitFor({ state: 'visible' });
+      }
+      const widgetAudit = await page.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'manager' });
+      assert.deepEqual(widgetAudit.problems, [], `${scheme}/${status}: completion state has no audit problems`);
+      assert.deepEqual(widgetAudit.nonToken, [], `${scheme}/${status}: the entire completion state uses Mux paints`);
+      if (status === 'skipped') { await page.close(); continue; }
       const particleSelector = '#root svg[style*="--fade-duration"]';
       await page.locator(particleSelector).first().waitFor({ state: 'visible' });
       // Read both projections in one browser task: Storybook removes the
       // completed checklist item after 2s, independently of its CSS animation.
-      const result = await page.evaluate(({ selector, expectedValue, canonicalValues }) => {
+      const result = await page.evaluate(({ selector, checkSelector, expectedValue, expectedSurface, expectedForeground, canonicalValues }) => {
         const particles = [...document.querySelectorAll(selector)];
         const paths = particles.flatMap((particle) => [...particle.querySelectorAll('path')]);
         const probe = document.createElement('span');
@@ -383,6 +398,9 @@ test('Storybook onboarding completion particles use the canonical action fill', 
           return getComputedStyle(probe).color;
         };
         const expected = normalize(expectedValue);
+        const check = document.querySelector(checkSelector);
+        const completed = { background: getComputedStyle(check).backgroundColor, foreground: getComputedStyle(check.querySelector('path')).fill,
+          expectedBackground: normalize(expectedSurface), expectedForeground: normalize(expectedForeground) };
         const canonical = new Set(canonicalValues.map(normalize));
         const projected = paths.map((path) => getComputedStyle(path).fill);
         const rules = [...document.querySelector('#muxui-storybook-theme').sheet.cssRules];
@@ -397,10 +415,13 @@ test('Storybook onboarding completion particles use the canonical action fill', 
           rule.style.cssText = original;
           probe.remove();
         }
-        return { particles: particles.length, paths: paths.length, expected, projected, stock,
+        return { completed, particles: particles.length, paths: paths.length, expected, projected, stock,
           stockNonToken: stock.filter((color) => !canonical.has(color)) };
-      }, { selector: particleSelector, expectedValue: graphs[scheme]['semantic.action.background'].value,
+      }, { selector: particleSelector, checkSelector, expectedValue: graphs[scheme]['semantic.action.background'].value,
+        expectedSurface: graphs[scheme]['semantic.status.success'].value, expectedForeground: graphs[scheme]['reference.color.neutral-100'].value,
         canonicalValues: Object.values(graphs[scheme]).filter((token) => token.type === 'color').map((token) => token.value) });
+      assert.equal(result.completed.background, result.completed.expectedBackground, `${scheme}: completion checkmark has the success surface`);
+      assert.equal(result.completed.foreground, result.completed.expectedForeground, `${scheme}: completion checkmark has a legible token foreground`);
       assert.equal(result.particles, 7, `${scheme}: all seven upstream particles are present`);
       assert.equal(result.paths, 7, `${scheme}: every particle has a painted path`);
       assert.deepEqual([...new Set(result.projected)], [result.expected], `${scheme}: particle fills use semantic.action.background`);
@@ -695,6 +716,11 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
         store.setState({ ...state, items: Object.fromEntries(Object.keys(state.items).map((id) =>
           [id, { status: id === 'whatsNewStorybook10' ? 'open' : 'accepted' }])) });
       });
+      // Completed rows remain mounted during Storybook's exit animation.
+      // Wait for the single open row before hovering its moving action.
+      await page.waitForFunction(() => document.querySelectorAll(
+        '#storybook-checklist-widget [aria-label^="Open onboarding guide for "]',
+      ).length === 1);
       const onboardingAction = onboarding.locator('button[data-target-id="whatsNewStorybook10"]');
       await onboardingAction.waitFor({ state: 'attached' });
       const disclosure = onboarding.locator('#checklist-module-collapse-toggle');

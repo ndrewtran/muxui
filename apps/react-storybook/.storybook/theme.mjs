@@ -21,6 +21,8 @@ const MANAGER_TOKEN_IDS = Object.freeze({
   surfaceHover: 'semantic.surface.hover',
   statusDanger: 'semantic.action.danger-background',
   statusSuccess: 'semantic.status.success',
+  // The success surface is the same green in both modes, so its glyph stays dark.
+  successForeground: 'reference.color.neutral-100',
   statusWarning: 'semantic.status.warning',
   visionRed: 'reference.color.error-60',
   visionOrange: 'reference.color.orange-60',
@@ -169,6 +171,20 @@ body,
 
 #storybook-sidebar-region [aria-label^='Open onboarding guide'] svg path {
   fill: var(--muxui-storybook-content-muted);
+}
+
+/* The completion particle component wraps its checkmark in an unstyled div. */
+#storybook-checklist-widget [aria-label^='Open onboarding guide'] div:not([class]) > svg {
+  background: var(--muxui-storybook-status-success) !important;
+  color: var(--muxui-storybook-success-foreground) !important;
+}
+
+#storybook-checklist-widget [aria-label^='Open onboarding guide'] div:not([class]) > svg path {
+  fill: var(--muxui-storybook-success-foreground) !important;
+}
+
+#storybook-checklist-widget [aria-label^='Open onboarding guide'] span::after {
+  background: var(--muxui-storybook-content-muted) !important;
 }
 
 #storybook-checklist-widget [aria-label^='Open onboarding guide'] span {
