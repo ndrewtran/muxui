@@ -207,11 +207,16 @@ test('R1.4 React component browser and axe matrix', async () => {
           await waitForFiniteDocumentAnimations(page);
           const keyboardState = await readChoiceFocusStyles(second);
           if (!keyboardState.active || !keyboardState.focusVisible) throw new Error(`${label} ${keyboardAction} must expose keyboard focus on the next choice`);
-          const expectedRing = label === 'Radio'
-            ? /0(?:px)? 0(?:px)? 0(?:px)? 2px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 4px/u
-            : /0(?:px)? 0(?:px)? 0(?:px)? 1px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 3px/u;
-          if (!expectedRing.test(keyboardState.indicatorBoxShadow ?? '')) {
-            throw new Error(`${label} ${keyboardAction} focus must retain its indicator ring: ${JSON.stringify(keyboardState)}`);
+          if (label === 'Radio') {
+            const expectedRing = /0(?:px)? 0(?:px)? 0(?:px)? 2px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 4px/u;
+            if (!expectedRing.test(keyboardState.indicatorBoxShadow ?? '')) {
+              throw new Error(`${label} ${keyboardAction} focus must retain its indicator ring: ${JSON.stringify(keyboardState)}`);
+            }
+          } else if (keyboardState.indicatorOutlineStyle !== 'solid'
+            || keyboardState.indicatorOutlineWidth !== '2px'
+            || keyboardState.indicatorOutlineOffset !== '2px'
+            || ['transparent', 'rgba(0, 0, 0, 0)'].includes(keyboardState.indicatorOutlineColor)) {
+            throw new Error(`${label} ${keyboardAction} focus must retain its indicator outline: ${JSON.stringify(keyboardState)}`);
           }
 
           await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
@@ -220,7 +225,7 @@ test('R1.4 React component browser and axe matrix', async () => {
           if (forcedState.indicatorOutlineStyle !== 'solid'
             || forcedState.indicatorOutlineWidth !== '2px'
             || forcedState.indicatorOutlineOffset !== '1px'
-            || forcedState.indicatorOutlineColor === 'transparent') {
+            || ['transparent', 'rgba(0, 0, 0, 0)'].includes(forcedState.indicatorOutlineColor)) {
             throw new Error(`${label} forced-colors focus must use a visible 2px system-color outline with a 1px gap: ${JSON.stringify(forcedState)}`);
           }
           if (forcedState.rootOutlineStyle !== 'none' || forcedState.inputOutlineStyle !== 'none') {
