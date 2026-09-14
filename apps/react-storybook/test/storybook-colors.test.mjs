@@ -696,6 +696,10 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
           [id, { status: id === 'whatsNewStorybook10' ? 'open' : 'accepted' }])) });
       });
       const onboardingAction = onboarding.locator('button[data-target-id="whatsNewStorybook10"]');
+      await onboardingAction.waitFor({ state: 'attached' });
+      const disclosure = onboarding.locator('#checklist-module-collapse-toggle');
+      await disclosure.waitFor();
+      if (await disclosure.getAttribute('aria-label') === 'Expand onboarding guide') await disclosure.click();
       await onboardingAction.locator('..').hover();
       await hoverAndFocus(scheme, 'onboarding/action', onboardingAction);
       await onboardingAction.hover();
