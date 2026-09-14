@@ -197,24 +197,40 @@ main.muxui-storybook-surface {
 }
 
 .sbdocs-content .docblock-argstable,
-.sbdocs-content .docblock-argstableBlock,
 .sbdocs-content .docblock-argstable th,
-.sbdocs-content .docblock-argstable td,
-.sbdocs-content .docblock-argstableBlock th,
-.sbdocs-content .docblock-argstableBlock td {
+.sbdocs-content .docblock-argstable td {
   background: var(--muxui-semantic-surface-canvas) !important;
   color: var(--muxui-semantic-content-strong) !important;
   border-color: var(--muxui-semantic-border-subtle) !important;
   box-shadow: none !important;
 }
 
-.sbdocs-content .docblock-argstable th span,
-.sbdocs-content .docblock-argstable td span,
-.sbdocs-content .docblock-argstableBlock th span,
-.sbdocs-content .docblock-argstableBlock td span {
+.sbdocs-content .docblock-argstable th > span,
+.sbdocs-content .docblock-argstable td > span,
+.sbdocs-content .docblock-argstable td > div > span,
+.sbdocs-content .docblock-argstable td > label > span {
+  background: transparent !important;
+  border-color: transparent !important;
+  color: var(--muxui-semantic-content-strong) !important;
+}
+
+/* Storybook renders type and default-value badges as spans, not code elements. */
+.sbdocs-content .docblock-argstable td:nth-child(2) > div > div > span,
+.sbdocs-content .docblock-argstable td:nth-child(3) > div > span {
   background: var(--muxui-semantic-surface-hover) !important;
   border-color: var(--muxui-semantic-border-subtle) !important;
-  color: var(--muxui-semantic-content-muted) !important;
+  color: var(--muxui-semantic-content-strong) !important;
+}
+
+.sbdocs-content .docblock-argstable td > label > span {
+  transition-property: transform, opacity !important;
+  box-shadow: none !important;
+}
+
+.sbdocs-content .docblock-argstable input:checked ~ span:last-of-type,
+.sbdocs-content .docblock-argstable input:not(:checked) ~ span:first-of-type {
+  background: var(--muxui-semantic-selection-track) !important;
+  color: var(--muxui-semantic-action-foreground) !important;
 }
 
 .sbdocs-preview-actions,
