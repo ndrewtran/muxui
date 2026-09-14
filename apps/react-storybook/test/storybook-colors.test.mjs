@@ -248,8 +248,9 @@ test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in 
         };
         const expected = {
           strong: computedToken(tokenValues.strong),
+          selectionTrack: computedToken(tokenValues.selectionTrack, 'background-color', 'backgroundColor'),
+          selectionForeground: computedToken(tokenValues.selectionForeground),
           hover: computedToken(tokenValues.hover, 'background-color', 'backgroundColor'),
-          canvas: computedToken(tokenValues.canvas, 'background-color', 'backgroundColor'),
         };
         const parseColor = (value) => {
           if (!/^rgba?\([\d., ]+\)$/u.test(value)) throw new Error(`Unsupported table colour: ${value}`);
@@ -298,15 +299,27 @@ test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in 
         const booleanLabels = [...element.querySelectorAll('tbody td:nth-child(4) label')]
           .filter((node) => node.querySelector('input[type="checkbox"]'));
         const booleanControls = inspect(booleanLabels);
-        const booleanValues = booleanLabels.flatMap((label) => inspect(label.querySelectorAll('span[aria-hidden="true"]'))
-          .map((entry, index) => ({ ...entry, selected: label.querySelector('input').checked === (index === 1) })));
+        const booleanGroups = booleanLabels.map((label) => {
+          const values = inspect(label.querySelectorAll('span[aria-hidden="true"]'))
+            .map((entry, index) => ({ ...entry, selected: label.querySelector('input').checked === (index === 1) }));
+          const selected = values.find((entry) => entry.selected);
+          const unselected = values.find((entry) => !entry.selected);
+          return {
+            values,
+            surfaceContrast: selected && unselected
+              ? contrast(parseColor(selected.ancestorBackground), parseColor(unselected.ancestorBackground))
+              : null,
+          };
+        });
+        const booleanValues = booleanGroups.flatMap((group) => group.values);
         const typeBadges = inspect(element.querySelectorAll('tbody td:nth-child(2) > div > div > span'));
         probe.remove();
-        return { expected, headings, labels, descriptions, emptyDefaults, defaultBadges, booleanControls, booleanValues, typeBadges };
+        return { expected, headings, labels, descriptions, emptyDefaults, defaultBadges, booleanControls, booleanGroups, booleanValues, typeBadges };
       }, {
         strong: graphs[scheme]['semantic.content.strong'].value,
+        selectionTrack: graphs[scheme]['semantic.selection.track'].value,
+        selectionForeground: graphs[scheme]['semantic.action.foreground'].value,
         hover: graphs[scheme]['semantic.surface.hover'].value,
-        canvas: graphs[scheme]['semantic.surface.canvas'].value,
       });
       for (const [name, entries] of Object.entries({
         headings: result.headings,
@@ -324,14 +337,21 @@ test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in 
       }
       assert.ok(result.booleanControls.length > 0, `${scheme}: ArgsTable must expose Boolean control labels`);
       assert.ok(result.booleanValues.length >= result.booleanControls.length * 2, `${scheme}: ArgsTable must expose checked and unchecked labels`);
-      for (const entry of [...result.booleanControls, ...result.booleanValues]) {
+      for (const entry of result.booleanControls) {
         assert.equal(entry.color, result.expected.strong, `${scheme}/boolean control: readable Mux foreground`);
         assert.equal(entry.opaque, true, `${scheme}/boolean control: resolved foreground/background must be opaque`);
         assert.ok(entry.contrast >= 4.5, `${scheme}/boolean control: contrast ${entry.contrast.toFixed(2)}:1`);
       }
       for (const entry of result.booleanValues) {
-        assert.equal(entry.background, entry.selected ? result.expected.canvas : 'rgba(0, 0, 0, 0)', `${scheme}/Boolean value: selected option remains distinct`);
-        assert.equal(entry.ancestorBackground, entry.selected ? result.expected.canvas : result.expected.hover, `${scheme}/Boolean value: selected and unselected options paint different surfaces`);
+        const foreground = entry.selected ? result.expected.selectionForeground : result.expected.strong;
+        assert.equal(entry.color, foreground, `${scheme}/Boolean value: selected and unselected text use their Mux foreground`);
+        assert.equal(entry.background, entry.selected ? result.expected.selectionTrack : 'rgba(0, 0, 0, 0)', `${scheme}/Boolean value: selected option uses the selection track`);
+        assert.equal(entry.ancestorBackground, entry.selected ? result.expected.selectionTrack : result.expected.hover, `${scheme}/Boolean value: selected and unselected options paint different surfaces`);
+        assert.equal(entry.opaque, true, `${scheme}/Boolean value: resolved foreground/background must be opaque`);
+        assert.ok(entry.contrast >= 4.5, `${scheme}/Boolean value: contrast ${entry.contrast.toFixed(2)}:1`);
+      }
+      for (const group of result.booleanGroups) {
+        assert.ok(group.surfaceContrast >= 3, `${scheme}/Boolean value: selected surface contrast ${group.surfaceContrast?.toFixed(2)}:1`);
       }
       assert.ok(result.typeBadges.length > 0, `${scheme}: ArgsTable must retain type badges`);
       assert.ok(result.defaultBadges.length > 0, `${scheme}: ArgsTable must retain default-value badges`);

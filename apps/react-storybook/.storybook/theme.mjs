@@ -41,6 +41,7 @@ const PREVIEW_TOKEN_IDS = Object.freeze({
   contentMuted: 'semantic.content.muted',
   contentStrong: 'semantic.content.strong',
   focusRing: 'semantic.focus.ring',
+  selectionTrack: 'semantic.selection.track',
   surfaceBodyBackground: 'semantic.surface.body-background',
   surfaceCanvas: 'semantic.surface.canvas',
   surfaceHover: 'semantic.surface.hover',

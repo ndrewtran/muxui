@@ -229,8 +229,8 @@ main.muxui-storybook-surface {
 
 .sbdocs-content .docblock-argstable input:checked ~ span:last-of-type,
 .sbdocs-content .docblock-argstable input:not(:checked) ~ span:first-of-type {
-  background: var(--muxui-semantic-surface-canvas) !important;
-  box-shadow: 0 0 0 1px var(--muxui-semantic-border-subtle) !important;
+  background: var(--muxui-semantic-selection-track) !important;
+  color: var(--muxui-semantic-action-foreground) !important;
 }
 
 .sbdocs-preview-actions,
