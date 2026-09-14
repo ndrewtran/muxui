@@ -1013,6 +1013,9 @@ site-search button > kbd {
 .foundation-token-row-name { display: grid; min-width: 0; gap: var(--muxui-reference-dimension-space-4xs); }
 .foundation-token-row-name code { overflow-wrap: anywhere; color: var(--muxui-semantic-content-strong); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
 .foundation-token-row-name small { overflow: hidden; color: var(--muxui-semantic-content-muted); font-size: var(--muxui-semantic-typography-text-xs-font-size); text-overflow: ellipsis; white-space: nowrap; }
+.foundation-token-label { display: grid; min-width: 0; gap: var(--muxui-reference-dimension-space-4xs); }
+.foundation-token-label code { overflow-wrap: anywhere; color: var(--muxui-semantic-content-strong); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
+.foundation-token-label small { overflow-wrap: anywhere; color: var(--muxui-semantic-content-default); font-size: var(--muxui-semantic-typography-text-s-font-size); line-height: var(--muxui-semantic-typography-text-line-height); }
 .foundation-token-row-value { overflow-wrap: anywhere; color: var(--muxui-semantic-content-default); font-family: var(--muxui-reference-typography-mono-font); font-size: var(--muxui-semantic-typography-mono-xs-font-size); text-align: end; }
 .foundation-empty { padding: var(--muxui-reference-dimension-space-s); color: var(--muxui-semantic-content-muted); }
 
@@ -1068,10 +1071,10 @@ site-search button > kbd {
 .foundation-swatch small { overflow: visible; font-family: var(--muxui-reference-typography-mono-font); font-size: var(--muxui-semantic-typography-mono-xs-font-size); text-overflow: clip; white-space: nowrap; }
 .foundation-swatch[data-contrast='light'] { color: var(--muxui-semantic-content-inverse); }
 .foundation-swatch[data-contrast='dark'] { color: var(--muxui-semantic-content-strong); }
-.foundation-role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: var(--muxui-reference-dimension-space-xs); margin-block-start: var(--muxui-reference-dimension-space-s); }
-.foundation-role { display: grid; gap: var(--muxui-reference-dimension-space-2xs); min-height: 6rem; padding: var(--muxui-reference-dimension-space-s); border-radius: var(--muxui-semantic-shape-container-radius); }
-.foundation-role span { overflow-wrap: anywhere; font-family: var(--muxui-reference-typography-mono-font); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
-.foundation-role code { margin-block-start: auto; font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
+.foundation-role-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--muxui-reference-dimension-space-xs); margin-block-start: var(--muxui-reference-dimension-space-s); }
+.foundation-role { display: grid; gap: var(--muxui-reference-dimension-space-2xs); min-width: 0; }
+.foundation-role-swatch { display: grid; align-content: end; min-height: 4.5rem; padding: var(--muxui-reference-dimension-space-s); border-radius: var(--muxui-semantic-shape-container-radius); }
+.foundation-role-swatch code { font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
 
 .foundation-type-specimens { display: grid; gap: var(--muxui-reference-dimension-space-l); }
 .foundation-type-role { padding-block-end: var(--muxui-reference-dimension-space-s); border-block-end: 1px solid var(--muxui-semantic-border-subtle); }
@@ -1226,9 +1229,9 @@ site-search button > kbd {
 .foundation-ruler-row small,
 .foundation-size-specimen small { color: var(--muxui-semantic-content-default); }
 .foundation-swatch[data-contrast='light'],
-.foundation-role[data-contrast='light'] { color: var(--muxui-reference-color-neutral-5); }
+.foundation-role-swatch[data-contrast='light'] { color: var(--muxui-reference-color-neutral-5); }
 .foundation-swatch[data-contrast='dark'],
-.foundation-role[data-contrast='dark'] { color: var(--muxui-reference-color-neutral-100); }
+.foundation-role-swatch[data-contrast='dark'] { color: var(--muxui-reference-color-neutral-100); }
 
 .foundation-metric-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--muxui-reference-dimension-space-l); margin-block-start: var(--muxui-reference-dimension-space-l); }
 .foundation-metric-group h3 { margin: 0 0 var(--muxui-reference-dimension-space-xs); color: var(--muxui-semantic-content-strong); font-size: var(--muxui-semantic-typography-title-s-font-size); }
