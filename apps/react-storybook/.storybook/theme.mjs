@@ -16,6 +16,7 @@ const MANAGER_TOKEN_IDS = Object.freeze({
   contentOnSolid: 'semantic.content.on-solid',
   contentStrong: 'semantic.content.strong',
   focusRing: 'semantic.focus.ring',
+  overlayScrim: 'semantic.overlay.scrim',
   surfaceBodyBackground: 'semantic.surface.body-background',
   surfaceCanvas: 'semantic.surface.canvas',
   surfaceHover: 'semantic.surface.hover',
@@ -100,6 +101,17 @@ body,
 #storybook-panel-region,
 #main-content-wrapper {
   scrollbar-color: var(--muxui-storybook-content-muted) var(--muxui-storybook-surface-body-background);
+}
+
+/* Storybook's manager preview loader is generated before the preview is ready.
+   Keep its ring on canonical tokens and remove the stock blending effect. */
+#preview-loader[aria-label='Content is loading...'] {
+  border-top-color: var(--muxui-storybook-action-background) !important;
+  border-right-color: var(--muxui-storybook-border-subtle) !important;
+  border-bottom-color: var(--muxui-storybook-border-subtle) !important;
+  border-left-color: var(--muxui-storybook-border-subtle) !important;
+  mix-blend-mode: normal !important;
+  transition-property: transform, opacity !important;
 }
 
 #storybook-sidebar-region .sidebar-item[data-ref-id='storybook_internal'][data-nodetype] {
@@ -511,6 +523,59 @@ body,
 #storybook-panel-region [role='option']:focus-visible {
   outline: 2px solid var(--muxui-storybook-focus-ring);
   outline-offset: -2px;
+}
+
+/* The file-search modal and its preceding scrim are separate body portals. */
+body > div:empty:has(+ [role='dialog'][aria-label='Add a new story']) {
+  background: var(--muxui-storybook-overlay-scrim) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] > div[tabindex='-1'] > div > div {
+  box-shadow: 0 0 0 1px var(--muxui-storybook-border-subtle) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] input {
+  color: var(--muxui-storybook-content-strong) !important;
+  caret-color: var(--muxui-storybook-content-strong) !important;
+  box-shadow: none !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] input:focus {
+  box-shadow: 0 0 0 1px var(--muxui-storybook-focus-ring) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] input::placeholder {
+  color: var(--muxui-storybook-content-muted) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] div:empty {
+  background: var(--muxui-storybook-surface-hover) !important;
+  animation: none !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] p {
+  color: var(--muxui-storybook-content-strong) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] p + p {
+  color: var(--muxui-storybook-content-muted) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] .file-list-item > div:last-child > div:first-child,
+[role='dialog'][aria-label='Add a new story'] [id^='file-list-export-'] span {
+  color: var(--muxui-storybook-content-strong) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] .file-list-item:hover,
+[role='dialog'][aria-label='Add a new story'] li:focus-visible > div > .file-list-item,
+[role='dialog'][aria-label='Add a new story'] [aria-expanded='true'] > .file-list-item,
+[role='dialog'][aria-label='Add a new story'] [id^='file-list-export-'] li:is(:hover, :focus-visible),
+[role='dialog'][aria-label='Add a new story'] [id^='file-list-export-'] span + span {
+  background: var(--muxui-storybook-surface-hover) !important;
+}
+
+[role='dialog'][aria-label='Add a new story'] * {
+  transition-property: transform, opacity !important;
 }
 
 /* React Aria portals context menus outside the sidebar and panel regions. */

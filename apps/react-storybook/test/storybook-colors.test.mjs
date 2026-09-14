@@ -8,6 +8,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
 import { convert, create as createStorybookTheme } from 'storybook/theming';
+import { FILE_COMPONENT_SEARCH_REQUEST, FILE_COMPONENT_SEARCH_RESPONSE } from 'storybook/internal/core-events';
 import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { collectStorybookPaints } from './helpers/color-audit.mjs';
@@ -340,6 +341,86 @@ test('Storybook search status icons use canonical action and option-state colour
   } finally { await browser.close(); }
 });
 
+test('Storybook create-story dialog paints only Mux colours', { timeout: 90000 }, async () => {
+  const server = await startStorybook();
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    for (const scheme of ['light', 'dark']) {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+      await page.goto(`${server.url}/?path=/story/muxui-react-r1-1-button--default&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
+      await page.frameLocator('#storybook-preview-iframe').locator('.muxui-storybook-surface').waitFor();
+      await page.getByRole('button', { name: 'Create a new story' }).click();
+      // The role wrapper uses display: contents; wait for its visible input.
+      const dialog = page.locator('[role="dialog"][aria-label="Add a new story"]');
+      const input = dialog.locator('input');
+      await input.waitFor();
+      const assertPaints = async (state) => {
+        const audit = await page.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'manager' });
+        assert.deepEqual(audit.problems, [], `${scheme}/${state}: modal paints have no audit problems`);
+        assert.deepEqual(audit.nonToken, [], `${scheme}/${state}: modal, scrim, and input use Mux paints`);
+      };
+      for (const state of ['focus', 'hover', 'blur']) {
+        if (state === 'hover') await input.hover();
+        if (state === 'blur') await dialog.locator('h2').click();
+        await assertPaints(state);
+      }
+      // Hold the real search lifecycle and supply read-only results. No story
+      // creation action is invoked or sent to the development server.
+      await page.evaluate((request) => {
+        const channel = globalThis.__STORYBOOK_ADDONS_MANAGER.getChannel();
+        const emit = channel.emit;
+        channel.emit = function (type, ...args) {
+          if (type === request) { globalThis.__muxuiFileSearchQuery = args[0].id; return; }
+          return emit.call(this, type, ...args);
+        };
+      }, FILE_COMPONENT_SEARCH_REQUEST);
+      await input.fill('muxui-colour-audit');
+      await dialog.locator('div[style*="width: 90px"]').first().waitFor();
+      await assertPaints('loading');
+      await page.evaluate((response) => {
+        globalThis.__STORYBOOK_ADDONS_MANAGER.getChannel().emit(response, {
+          id: globalThis.__muxuiFileSearchQuery, success: true, payload: { files: [] },
+        });
+      }, FILE_COMPONENT_SEARCH_RESPONSE);
+      await dialog.getByText('We could not find any file with that name', { exact: true }).waitFor();
+      await assertPaints('empty');
+      await input.fill('muxui-colour-audit-results');
+      await page.waitForFunction(() => globalThis.__muxuiFileSearchQuery === 'muxui-colour-audit-results');
+      await page.evaluate((response) => {
+        globalThis.__STORYBOOK_ADDONS_MANAGER.getChannel().emit(response, {
+          id: globalThis.__muxuiFileSearchQuery, success: true, payload: { files: [{
+            filepath: 'components/MuxAudit.tsx', storyFileExists: false,
+            exportedComponents: [{ name: 'First', default: true }, { name: 'Second', default: false }],
+          }] },
+        });
+      }, FILE_COMPONENT_SEARCH_RESPONSE);
+      const row = dialog.locator('li[data-index="0"]');
+      await row.waitFor();
+      await assertPaints('results');
+      await row.hover();
+      await assertPaints('result-hover');
+      await page.mouse.move(1400, 950);
+      await page.keyboard.press('Tab');
+      await row.focus();
+      await assertPaints('result-focus');
+      // Two exports expand the row. Selecting an export would create a file.
+      await row.locator('.file-list-item').click();
+      await row.getByText('Second', { exact: true }).waitFor();
+      await assertPaints('result-expanded');
+      const exportOption = row.locator('[id^="file-list-export-"] li').last();
+      await exportOption.hover();
+      await assertPaints('export-hover');
+      await page.mouse.move(1400, 950);
+      await page.keyboard.press('Tab');
+      await exportOption.focus();
+      await assertPaints('export-focus');
+      await page.keyboard.press('Escape');
+      await input.waitFor({ state: 'hidden' });
+      await page.close();
+    }
+  } finally { await browser.close(); server.stop(); }
+});
+
 test('Storybook completed and skipped onboarding states paint only Mux colours', { timeout: 120000 }, async () => {
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
@@ -670,6 +751,63 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       assert.equal(result.actual, result.expected, `${scheme}: ${property} must use ${tokenId}`);
     }
     for (const scheme of ['light', 'dark']) {
+      // Keep the manager's real loading overlay mounted by holding its index
+      // request. This exercises the generated #preview-loader before the
+      // manager can remove it after the preview is ready.
+      const managerLoading = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+      let releaseIndex;
+      const heldIndex = new Promise((done) => { releaseIndex = done; });
+      await managerLoading.route(/\/index\.json(?:\?|$)/u, async (route) => {
+        await heldIndex;
+        await route.continue();
+      });
+      try {
+        await managerLoading.goto(`${server.url}/?path=/story/muxui-react-r1-1-button--default&globals=colorScheme:${scheme}`, { waitUntil: 'commit' });
+        const loader = managerLoading.locator('#preview-loader[aria-label="Content is loading..."]');
+        await loader.waitFor({ state: 'visible' });
+        await snapshot(scheme, 'loading/manager', managerLoading);
+        const loaderState = await loader.evaluate((element) => {
+          const style = getComputedStyle(element);
+          return { mixBlendMode: style.mixBlendMode, transitionProperty: style.transitionProperty };
+        });
+        assert.equal(loaderState.mixBlendMode, 'normal', `${scheme}: manager loading overlay must not blend paints`);
+        assert.equal(loaderState.transitionProperty, 'transform, opacity', `${scheme}: manager loading overlay transition must not animate paints`);
+        for (const property of ['borderTopColor', 'borderRightColor', 'borderBottomColor', 'borderLeftColor']) {
+          await tokenPaint(scheme, loader, property, property === 'borderTopColor'
+            ? 'semantic.action.background' : 'semantic.border.subtle');
+        }
+
+        const projection = await managerLoading.evaluate(() => {
+          const style = document.querySelector('#muxui-storybook-theme');
+          const rule = [...style.sheet.cssRules].find((candidate) =>
+            candidate.selectorText === '#preview-loader[aria-label="Content is loading..."]');
+          if (!rule) throw new Error('Storybook manager loading projection changed');
+          const declarations = [...rule.style].map((property) => [
+            property, rule.style.getPropertyValue(property), rule.style.getPropertyPriority(property),
+          ]);
+          for (const [property] of declarations) rule.style.removeProperty(property);
+          return declarations;
+        });
+        try {
+          const negative = await managerLoading.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'manager' });
+          assert.ok(negative.problems.some(({ element, property }) =>
+            element.includes('#preview-loader') && property === 'mix-blend-mode'),
+          `${scheme}: audit must catch the stock manager loader blend when its projection is removed`);
+          assert.ok(negative.nonToken.some(({ examples, property }) =>
+            examples.some((example) => example.includes('#preview-loader')) && property === 'border-top-color'),
+          `${scheme}: audit must catch the stock manager loader paint when its projection is removed`);
+        } finally {
+          await managerLoading.evaluate((declarations) => {
+            const style = document.querySelector('#muxui-storybook-theme');
+            const rule = [...style.sheet.cssRules].find((candidate) =>
+              candidate.selectorText === '#preview-loader[aria-label="Content is loading..."]');
+            for (const [property, value, priority] of declarations) rule.style.setProperty(property, value, priority);
+          }, projection);
+        }
+      } finally {
+        releaseIndex();
+        await managerLoading.close();
+      }
       for (const viewMode of ['story', 'docs']) {
         const loading = await browser.newPage();
         let releaseImport;
