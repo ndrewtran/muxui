@@ -226,6 +226,134 @@ test('Storybook canvas palette adapter rejects upstream drift and removes genera
   assert.throws(() => projectMeasurePalette(source.replaceAll('`${colors[type5]}dd`', 'colors[type5]')), /label alpha changed/u);
 });
 
+test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in light and dark', { timeout: 120000 }, async (t) => {
+  const server = await startStorybook();
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+    for (const { scheme, readOnly } of ['light', 'dark'].flatMap((scheme) => [false, true].map((readOnly) => ({ scheme, readOnly })))) {
+      await page.goto(`${server.url}/?path=/docs/muxui-react-r1-3-color-slider--docs&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
+      const docs = page.frameLocator('#storybook-preview-iframe');
+      await docs.locator('.sbdocs-wrapper').waitFor();
+      const table = docs.locator('.docblock-argstable').first();
+      await table.waitFor();
+      if (readOnly) await table.locator('label[aria-label="readOnly"]').click();
+      assert.equal(await table.getByRole('switch', { name: 'readOnly', exact: true }).isChecked(), readOnly);
+      const result = await table.evaluate((element, tokenValues) => {
+        const probe = document.createElement('span');
+        document.body.append(probe);
+        const computedToken = (value, cssProperty = 'color', styleProperty = cssProperty) => {
+          probe.style.setProperty(cssProperty, value);
+          return getComputedStyle(probe)[styleProperty];
+        };
+        const expected = {
+          strong: computedToken(tokenValues.strong),
+          hover: computedToken(tokenValues.hover, 'background-color', 'backgroundColor'),
+          canvas: computedToken(tokenValues.canvas, 'background-color', 'backgroundColor'),
+        };
+        const parseColor = (value) => {
+          if (!/^rgba?\([\d., ]+\)$/u.test(value)) throw new Error(`Unsupported table colour: ${value}`);
+          const channels = value.match(/[\d.]+/gu)?.map(Number) ?? [];
+          if (channels.length < 3) return null;
+          return { red: channels[0], green: channels[1], blue: channels[2], alpha: channels[3] ?? 1 };
+        };
+        const contrast = (foreground, background) => {
+          if (!foreground || !background || foreground.alpha !== 1 || background.alpha !== 1) return null;
+          const luminance = ({ red, green, blue }) => [red, green, blue].map((channel) => channel / 255)
+            .map((channel) => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4)
+            .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+          const light = luminance(foreground);
+          const dark = luminance(background);
+          return (Math.max(light, dark) + 0.05) / (Math.min(light, dark) + 0.05);
+        };
+        const backgroundFor = (node) => {
+          for (let current = node; current; current = current.parentElement) {
+            const background = getComputedStyle(current).backgroundColor;
+            const parsed = parseColor(background);
+            if (parsed?.alpha > 0) return { value: background, parsed };
+          }
+          return null;
+        };
+        const inspect = (nodes) => [...nodes].map((node) => {
+          const style = getComputedStyle(node);
+          for (let current = node; current; current = current.parentElement) {
+            const ancestor = getComputedStyle(current);
+            if (ancestor.opacity !== '1' || ancestor.filter !== 'none' || ancestor.backgroundImage !== 'none') {
+              throw new Error('Table contrast fixture requires opaque text without filters or background images');
+            }
+          }
+          const background = backgroundFor(node);
+          const foreground = parseColor(style.color);
+          return {
+            text: node.textContent.trim(), color: style.color, background: style.backgroundColor,
+            ancestorBackground: background?.value ?? null, opaque: Boolean(foreground?.alpha === 1 && background?.parsed.alpha === 1),
+            contrast: contrast(foreground, background?.parsed),
+          };
+        });
+        const headings = inspect(element.querySelectorAll('th > span'));
+        const labels = inspect(element.querySelectorAll('tbody td:first-child > span'));
+        const descriptions = inspect(element.querySelectorAll('tbody td:nth-child(2) > div:first-child > span'));
+        const emptyDefaults = inspect(element.querySelectorAll('tbody td:nth-child(3) > span'));
+        const defaultBadges = inspect(element.querySelectorAll('tbody td:nth-child(3) > div > span'));
+        const booleanLabels = [...element.querySelectorAll('tbody td:nth-child(4) label')]
+          .filter((node) => node.querySelector('input[type="checkbox"]'));
+        const booleanControls = inspect(booleanLabels);
+        const booleanValues = booleanLabels.flatMap((label) => inspect(label.querySelectorAll('span[aria-hidden="true"]'))
+          .map((entry, index) => ({ ...entry, selected: label.querySelector('input').checked === (index === 1) })));
+        const typeBadges = inspect(element.querySelectorAll('tbody td:nth-child(2) > div > div > span'));
+        probe.remove();
+        return { expected, headings, labels, descriptions, emptyDefaults, defaultBadges, booleanControls, booleanValues, typeBadges };
+      }, {
+        strong: graphs[scheme]['semantic.content.strong'].value,
+        hover: graphs[scheme]['semantic.surface.hover'].value,
+        canvas: graphs[scheme]['semantic.surface.canvas'].value,
+      });
+      for (const [name, entries] of Object.entries({
+        headings: result.headings,
+        labels: result.labels,
+        descriptions: result.descriptions,
+        emptyDefaults: result.emptyDefaults,
+      })) {
+        assert.ok(entries.length > 0, `${scheme}: ArgsTable must expose ${name}`);
+        for (const entry of entries) {
+          assert.equal(entry.color, result.expected.strong, `${scheme}/${name}: readable Mux foreground`);
+          assert.equal(entry.background, 'rgba(0, 0, 0, 0)', `${scheme}/${name}: prose span has no inline surface`);
+          assert.equal(entry.opaque, true, `${scheme}/${name}: resolved foreground/background must be opaque`);
+          assert.ok(entry.contrast >= 4.5, `${scheme}/${name}: contrast ${entry.contrast.toFixed(2)}:1`);
+        }
+      }
+      assert.ok(result.booleanControls.length > 0, `${scheme}: ArgsTable must expose Boolean control labels`);
+      assert.ok(result.booleanValues.length >= result.booleanControls.length * 2, `${scheme}: ArgsTable must expose checked and unchecked labels`);
+      for (const entry of [...result.booleanControls, ...result.booleanValues]) {
+        assert.equal(entry.color, result.expected.strong, `${scheme}/boolean control: readable Mux foreground`);
+        assert.equal(entry.opaque, true, `${scheme}/boolean control: resolved foreground/background must be opaque`);
+        assert.ok(entry.contrast >= 4.5, `${scheme}/boolean control: contrast ${entry.contrast.toFixed(2)}:1`);
+      }
+      for (const entry of result.booleanValues) {
+        assert.equal(entry.background, entry.selected ? result.expected.canvas : 'rgba(0, 0, 0, 0)', `${scheme}/Boolean value: selected option remains distinct`);
+        assert.equal(entry.ancestorBackground, entry.selected ? result.expected.canvas : result.expected.hover, `${scheme}/Boolean value: selected and unselected options paint different surfaces`);
+      }
+      assert.ok(result.typeBadges.length > 0, `${scheme}: ArgsTable must retain type badges`);
+      assert.ok(result.defaultBadges.length > 0, `${scheme}: ArgsTable must retain default-value badges`);
+      for (const entry of [...result.typeBadges, ...result.defaultBadges]) {
+        assert.equal(entry.color, result.expected.strong, `${scheme}/badge: readable Mux foreground`);
+        assert.equal(entry.background, result.expected.hover, `${scheme}/badge: Mux hover surface`);
+        assert.equal(entry.opaque, true, `${scheme}/badge: resolved foreground/background must be opaque`);
+        assert.ok(entry.contrast >= 4.5, `${scheme}/badge: contrast ${entry.contrast.toFixed(2)}:1`);
+      }
+      const screenshotDirectory = process.env.MUXUI_STORYBOOK_ARGS_TABLE_ARTIFACT_DIR;
+      if (screenshotDirectory) {
+        await mkdir(screenshotDirectory, { recursive: true });
+        await table.screenshot({ path: resolve(screenshotDirectory, `argstable-${scheme}-${readOnly}.png`) });
+      }
+      t.diagnostic(`${scheme}: ${result.labels.length} labels, ${result.descriptions.length} descriptions, ${result.emptyDefaults.length} empty defaults, ${result.booleanValues.length} Boolean values, ${result.typeBadges.length} type badges, ${result.defaultBadges.length} default badges`);
+    }
+  } finally {
+    await browser.close();
+    server.stop();
+  }
+});
+
 test('Storybook manager and docs paint only canonical Mux colours in light and dark', { timeout: 420000 }, async (t) => {
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
