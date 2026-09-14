@@ -117,6 +117,32 @@ body,
   color: var(--muxui-storybook-content-link) !important;
 }
 
+/* Storybook's change badges use untyped SVGs in search results. Keep the three
+   change-detection symbols token-owned while preserving the distinct review
+   status colour. */
+.search-result-item svg:has(use[*|href='#icon--new']),
+.search-result-item svg:has(use[*|href='#icon--modified']),
+.search-result-item svg:has(use[*|href='#icon--affected']) {
+  color: var(--muxui-storybook-action-background) !important;
+}
+
+.search-result-item svg:has(use[*|href='#icon--reviewing']) {
+  color: var(--muxui-storybook-vision-purple) !important;
+}
+
+.search-result-item svg:has(use[*|href='#icon--new']) use,
+.search-result-item svg:has(use[*|href='#icon--modified']) use,
+.search-result-item svg:has(use[*|href='#icon--affected']) use,
+.search-result-item svg:has(use[*|href='#icon--reviewing']) use {
+  fill: currentColor !important;
+}
+
+/* Storybook portals completion particles directly under #root. Keep their
+   decorative shapes on the action surface while preserving their animation. */
+#root svg[style*='--fade-duration'] {
+  fill: var(--muxui-storybook-action-background) !important;
+}
+
 #storybook-sidebar-region [data-testid='context-menu'] {
   background: var(--muxui-storybook-surface-hover);
   border-color: var(--muxui-storybook-action-background);

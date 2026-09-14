@@ -7,6 +7,7 @@ import { dirname, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { convert, create as createStorybookTheme } from 'storybook/theming';
 import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { collectStorybookPaints } from './helpers/color-audit.mjs';
@@ -224,6 +225,193 @@ test('Storybook canvas palette adapter rejects upstream drift and removes genera
   assert.ok(!projected.includes('`${colors[type5]}dd`'));
   assert.throws(() => projectMeasurePalette(source.replace('#f6b26b', '#123456')), /palette changed/u);
   assert.throws(() => projectMeasurePalette(source.replaceAll('`${colors[type5]}dd`', 'colors[type5]')), /label alpha changed/u);
+});
+
+test('Storybook search status icons use canonical action and option-state colours', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    const symbols = `
+      <symbol id="icon--new">
+        <rect x="6" y="3.5" width="2" height="7" rx="1" fill="currentColor"></rect>
+        <rect x="3.5" y="6" width="7" height="2" rx="1" fill="currentColor"></rect>
+      </symbol>
+      <symbol id="icon--modified"><circle cx="7" cy="7" r="3" fill="currentColor"></circle></symbol>
+      <symbol id="icon--affected"><circle cx="7" cy="7" r="3" fill="currentColor"></circle></symbol>
+      <symbol id="icon--reviewing"><path d="M7 3a4 4 0 100 8A4 4 0 007 3z" fill="currentColor"></path></symbol>
+      <symbol id="icon--success"><path d="M10.854 4.146a.5.5 0 010 .708l-5 5a.5.5 0 01-.708 0l-2-2a.5.5 0 11.708-.708L5.5 8.793l4.646-4.647a.5.5 0 01.708 0z" fill="currentColor"></path></symbol>
+      <symbol id="icon--warning"><path d="M7 3l4 7H3l4-7z" fill="currentColor"></path></symbol>
+      <symbol id="icon--error"><path d="M7 3a4 4 0 100 8A4 4 0 007 3z" fill="currentColor"></path></symbol>`;
+    const fixture = (css, colors) => `<style>
+        ${css}
+        body { margin: 0; background: var(--muxui-storybook-surface-body-background, white); color: var(--muxui-storybook-content-strong, black); }
+        #status-fixture { display: flex; gap: 1rem; }
+        [role='option'] { display: flex; align-items: center; width: 10rem; height: 2rem; color: var(--muxui-storybook-content-strong, black); }
+        [role='option'] svg { width: 14px; height: 14px; }
+        [role='option'] svg + span { margin-inline-start: 0.5rem; }
+        ul { margin: 0; padding: 0; list-style: none; }
+      </style>
+      <svg aria-hidden="true" width="0" height="0" xmlns:xlink="http://www.w3.org/1999/xlink"><defs>${symbols}</defs></svg>
+      <ul id="status-fixture" role="listbox">
+        <li class="search-result-item" role="option" data-status="pending"><svg style="color: ${colors.pending}"><path d="M7 3a4 4 0 100 8A4 4 0 007 3z" fill="currentColor"></path></svg><span>Pending</span></li>
+        <li class="search-result-item" role="option" data-status="success"><svg style="color: ${colors.success}"><use xlink:href="#icon--success"></use></svg><span>Success</span></li>
+        <li class="search-result-item" role="option" data-status="warning"><svg style="color: ${colors.warning}"><use xlink:href="#icon--warning"></use></svg><span>Warning</span></li>
+        <li class="search-result-item" role="option" data-status="error"><svg style="color: ${colors.error}"><use xlink:href="#icon--error"></use></svg><span>Error</span></li>
+        <li class="search-result-item" role="option" data-status="modified"><svg style="color: ${colors.change}"><use xlink:href="#icon--modified"></use></svg><span>Modified</span></li>
+        <li class="search-result-item" role="option" data-status="new"><svg style="color: ${colors.change}"><use xlink:href="#icon--new"></use></svg><span>New</span></li>
+        <li class="search-result-item" role="option" data-status="affected"><svg style="color: ${colors.change}"><use xlink:href="#icon--affected"></use></svg><span>Affected</span></li>
+        <li class="search-result-item" role="option" data-status="hovered" data-hovered="true"><svg style="color: ${colors.change}"><use xlink:href="#icon--modified"></use></svg><span>Hovered</span></li>
+        <li class="search-result-item" role="option" data-status="selected" aria-selected="true"><svg style="color: ${colors.change}"><use xlink:href="#icon--modified"></use></svg><span>Selected</span></li>
+        <li class="search-result-item" role="option" data-status="reviewing"><svg style="color: ${colors.reviewing}"><use xlink:href="#icon--reviewing"></use></svg><span>Reviewing</span></li>
+        <li class="search-result-item" role="option" data-status="unknown"><span>Unknown</span></li>
+      </ul>`;
+    for (const scheme of ['light', 'dark']) {
+      const stockTheme = convert(createStorybookTheme({ base: scheme }));
+      const stockColors = {
+        change: stockTheme.fgColor.accent,
+        pending: `color-mix(in srgb, ${stockTheme.color.defaultText} ${scheme === 'light' ? 70 : 40}%, transparent)`,
+        success: stockTheme.color.positive,
+        warning: stockTheme.color.warning,
+        error: stockTheme.color.negative,
+        reviewing: stockTheme.fgColor.agentic,
+      };
+      await page.setContent(fixture('', stockColors));
+      await page.evaluate((colorScheme) => document.documentElement.setAttribute('data-muxui-color-scheme', colorScheme), scheme);
+      const computedRgba = (value) => page.evaluate((color) => {
+        const probe = document.createElement('span');
+        probe.style.color = color;
+        document.body.append(probe);
+        const channels = getComputedStyle(probe).color.match(/[\d.]+/gu)?.map(Number) ?? [];
+        probe.remove();
+        return channels.length === 4 ? channels.join(',') : channels.concat(1).join(',');
+      }, value);
+      const stockResult = await page.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'manager' });
+      for (const status of ['change', 'success', 'warning', 'error', 'reviewing']) {
+        const value = stockColors[status];
+        const rgba = await computedRgba(value);
+        assert.ok(stockResult.nonToken.some((paint) => paint.rgba === rgba), `${scheme}/${status}: upstream status colour is an audit-visible leak without the manager projection`);
+      }
+
+      await page.setContent(fixture(managerThemeCss(), stockColors));
+      await page.evaluate((colorScheme) => document.documentElement.setAttribute('data-muxui-color-scheme', colorScheme), scheme);
+      const expected = await page.evaluate((values) => {
+        const probe = document.createElement('span');
+        document.body.append(probe);
+        const computed = Object.fromEntries(Object.entries(values).map(([name, value]) => {
+          probe.style.color = value;
+          return [name, getComputedStyle(probe).color];
+        }));
+        probe.remove();
+        return computed;
+      }, {
+        idle: graphs[scheme]['semantic.action.background'].value,
+        hovered: graphs[scheme]['semantic.content.strong'].value,
+        selected: graphs[scheme]['semantic.action.foreground'].value,
+        reviewing: graphs[scheme]['reference.color.purple-60'].value,
+        pending: graphs[scheme]['semantic.content.muted'].value,
+        success: graphs[scheme]['semantic.status.success'].value,
+        warning: graphs[scheme]['semantic.status.warning'].value,
+        error: graphs[scheme]['semantic.action.danger-background'].value,
+      });
+      const paints = await page.locator('[role="option"]').evaluateAll((elements) => Object.fromEntries(
+        elements.map((element) => {
+          const paint = element.querySelector('use,path');
+          return [element.dataset.status, paint && { color: getComputedStyle(paint).color, fill: getComputedStyle(paint).fill }];
+        }),
+      ));
+      assert.equal(paints.pending.fill, expected.pending, `${scheme}/pending: listbox path fill uses content muted`);
+      for (const status of ['success', 'warning', 'error']) {
+        assert.equal(paints[status].color, expected[status], `${scheme}/${status}: status colour`);
+      }
+      for (const status of ['modified', 'new', 'affected']) {
+        assert.equal(paints[status].color, expected.idle, `${scheme}/${status}: idle status colour`);
+        assert.equal(paints[status].fill, expected.idle, `${scheme}/${status}: idle status fill`);
+      }
+      assert.equal(paints.hovered.color, expected.hovered, `${scheme}/hovered: row foreground wins`);
+      assert.equal(paints.hovered.fill, expected.hovered, `${scheme}/hovered: row fill follows foreground`);
+      assert.equal(paints.selected.color, expected.selected, `${scheme}/selected: selected foreground wins`);
+      assert.equal(paints.selected.fill, expected.selected, `${scheme}/selected: selected fill follows foreground`);
+      assert.equal(paints.reviewing.color, expected.reviewing, `${scheme}/reviewing: distinct status colour uses the vision purple token`);
+      assert.equal(paints.unknown, null, `${scheme}/unknown: Storybook renders no icon`);
+      const result = await page.evaluate(collectStorybookPaints, { tokens: graphs[scheme], scope: 'manager' });
+      assert.deepEqual(result.problems, [], `${scheme}: status fixture has no audit problems`);
+      assert.deepEqual(result.nonToken, [], `${scheme}: status fixture uses canonical paints`);
+    }
+  } finally { await browser.close(); }
+});
+
+test('Storybook onboarding completion particles use the canonical action fill', { timeout: 120000 }, async () => {
+  const server = await startStorybook();
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    for (const scheme of ['light', 'dark']) {
+      const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+      await page.goto(`${server.url}/?path=/story/muxui-react-r1-1-button--default&globals=colorScheme:${scheme}`, { waitUntil: 'domcontentloaded' });
+      await page.locator('#storybook-sidebar-region').waitFor();
+      await page.evaluate(() => {
+        const store = globalThis.__STORYBOOK_API__?.internal_universalChecklistStore;
+        const state = store?.getState?.();
+        if (!store?.setState || !state?.items || !('whatsNewStorybook10' in state.items)) throw new Error('Storybook onboarding action changed');
+        store.setState({ ...state, loaded: true, aiOptIn: false, widget: {},
+          items: Object.fromEntries(Object.keys(state.items).map((id) => [id, {
+            status: id === 'whatsNewStorybook10' ? 'open' : 'accepted',
+          }])),
+        });
+      });
+      const action = page.locator('#storybook-checklist-widget button[data-target-id="whatsNewStorybook10"]');
+      await action.waitFor({ state: 'attached' });
+      // Storybook initializes for 1s, debounces readiness for 500ms, then enables
+      // completion animation after another 1s. Cross those documented timers.
+      await page.waitForTimeout(3000);
+      await page.addStyleTag({ content: '#root svg[style*="--fade-duration"] { animation-play-state: paused !important; }' });
+      await page.evaluate(() => {
+        const store = globalThis.__STORYBOOK_API__.internal_universalChecklistStore;
+        const state = store.getState();
+        store.setState({ ...state, items: { ...state.items, whatsNewStorybook10: { status: 'accepted' } } });
+      });
+      const particleSelector = '#root svg[style*="--fade-duration"]';
+      await page.locator(particleSelector).first().waitFor({ state: 'visible' });
+      // Read both projections in one browser task: Storybook removes the
+      // completed checklist item after 2s, independently of its CSS animation.
+      const result = await page.evaluate(({ selector, expectedValue, canonicalValues }) => {
+        const particles = [...document.querySelectorAll(selector)];
+        const paths = particles.flatMap((particle) => [...particle.querySelectorAll('path')]);
+        const probe = document.createElement('span');
+        document.body.append(probe);
+        const normalize = (color) => {
+          probe.style.color = color;
+          return getComputedStyle(probe).color;
+        };
+        const expected = normalize(expectedValue);
+        const canonical = new Set(canonicalValues.map(normalize));
+        const projected = paths.map((path) => getComputedStyle(path).fill);
+        const rules = [...document.querySelector('#muxui-storybook-theme').sheet.cssRules];
+        const rule = rules.find((candidate) => candidate.selectorText === selector);
+        if (!rule?.style.fill) throw new Error('Storybook completion-particle projection changed');
+        const original = rule.style.cssText;
+        let stock;
+        try {
+          rule.style.removeProperty('fill');
+          stock = paths.map((path) => getComputedStyle(path).fill);
+        } finally {
+          rule.style.cssText = original;
+          probe.remove();
+        }
+        return { particles: particles.length, paths: paths.length, expected, projected, stock,
+          stockNonToken: stock.filter((color) => !canonical.has(color)) };
+      }, { selector: particleSelector, expectedValue: graphs[scheme]['semantic.action.background'].value,
+        canonicalValues: Object.values(graphs[scheme]).filter((token) => token.type === 'color').map((token) => token.value) });
+      assert.equal(result.particles, 7, `${scheme}: all seven upstream particles are present`);
+      assert.equal(result.paths, 7, `${scheme}: every particle has a painted path`);
+      assert.deepEqual([...new Set(result.projected)], [result.expected], `${scheme}: particle fills use semantic.action.background`);
+      assert.equal(new Set(result.stock).size, 7, `${scheme}: removing the override recovers the seven stock fills`);
+      assert.equal(result.stockNonToken.length, 7, `${scheme}: every stock fill is outside the canonical graph`);
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+    server.stop();
+  }
 });
 
 test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in light and dark', { timeout: 120000 }, async (t) => {
