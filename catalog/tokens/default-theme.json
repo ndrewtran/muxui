@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "2.1.0",
+  "tokenContractVersion": "3.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -879,14 +879,6 @@
       "overridePolicy": "theme",
       "value": 2
     },
-    "semantic.motion.quick-transition-duration": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Duration of short control transitions and dismissals.",
-      "overridePolicy": "theme",
-      "value": 100
-    },
     "semantic.layout.swatch-gap": {
       "layer": "semantic",
       "type": "dimension",
@@ -898,14 +890,6 @@
         "value": 0.25,
         "unit": "rem"
       }
-    },
-    "semantic.motion.quick-feedback-duration": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Duration of immediate small-control feedback.",
-      "overridePolicy": "theme",
-      "value": 80
     },
     "semantic.motion.reveal-duration": {
       "layer": "semantic",
@@ -4730,14 +4714,6 @@
       "overridePolicy": "fixed",
       "value": 180
     },
-    "reference.duration.quick": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "quick motion duration reference value.",
-      "overridePolicy": "fixed",
-      "value": 80
-    },
     "reference.duration.slow": {
       "layer": "reference",
       "type": "duration",
@@ -8174,14 +8150,6 @@
       "overridePolicy": "fixed",
       "value": 0
     },
-    "reference.motion.duration-quick": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Mux-owned token for --motion-duration-quick.",
-      "overridePolicy": "fixed",
-      "value": 80
-    },
     "reference.motion.duration-fast": {
       "layer": "reference",
       "type": "duration",
@@ -8260,7 +8228,7 @@
       "unit": "ms",
       "meaning": "Mux-owned token for --motion-feedback-duration.",
       "overridePolicy": "theme",
-      "alias": "reference.motion.duration-quick",
+      "alias": "reference.motion.duration-fast",
       "equivalence": "semantic-equivalence",
       "modes": {
         "motion.reduced": {

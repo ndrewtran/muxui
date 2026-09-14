@@ -342,6 +342,33 @@ test('default theme link and invalid semantic colors meet contrast in both color
   }
 });
 
+test('default theme motion scale removes Quick and preserves Fast (120ms) semantic roles', () => {
+  assert.equal(source.tokenContractVersion, '3.0.0');
+  const durationScale = new Map([
+    ['instant', 0], ['fast', 120], ['moderate', 180], ['slow', 300], ['deliberate', 500],
+  ]);
+  for (const prefix of ['reference.duration.', 'reference.motion.duration-']) {
+    const names = Object.keys(source.tokens)
+      .filter((id) => id.startsWith(prefix))
+      .map((id) => id.slice(prefix.length))
+      .sort();
+    assert.deepEqual(names, [...durationScale.keys()].sort());
+    for (const [name, value] of durationScale) assert.equal(source.tokens[`${prefix}${name}`].value, value);
+  }
+
+  const full = compileTokenGraph(source);
+  const reduced = compileTokenGraph(source, { modes: { motion: 'reduced' } });
+  for (const semantic of [
+    'semantic.motion.feedback-duration',
+    'semantic.motion.state-duration',
+    'semantic.motion.exit-duration',
+  ]) {
+    assert.equal(source.tokens[semantic].alias, 'reference.motion.duration-fast');
+    assert.equal(full.tokens[semantic].value, 120);
+    assert.equal(reduced.tokens[semantic].value, 0);
+  }
+});
+
 test('default theme color modes preserve canonical shade positions', () => {
   const dark = compileTokenGraph(source, { modes: { colorScheme: 'dark' } });
   const namedShades = [5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100];

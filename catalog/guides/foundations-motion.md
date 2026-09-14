@@ -8,6 +8,8 @@ Motion tokens pair finite durations with easing strings for interaction, reveal,
 
 Use a purpose-specific duration and easing. Replay the explorer specimens with the button to see one finite movement; no motion starts automatically.
 
+Token contract 3.0.0 removes the Quick duration primitives and legacy Quick semantic roles. Theme authoring documents must use `tokenContractVersion: "3.0.0"`. Migrate `reference.duration.quick` to `reference.duration.fast` and `reference.motion.duration-quick` to `reference.motion.duration-fast` (Fast, 120ms). Replace `semantic.motion.quick-transition-duration` and `--muxui-semantic-motion-quick-transition-duration` with `semantic.motion.state-duration` and `--muxui-semantic-motion-state-duration`; replace `semantic.motion.quick-feedback-duration` and `--muxui-semantic-motion-quick-feedback-duration` with `semantic.motion.feedback-duration` and `--muxui-semantic-motion-feedback-duration`. The feedback, state, and exit roles use Fast (120ms) and reduce to Instant (0ms) under reduced motion.
+
 ```css
 .popover {
   transition:
