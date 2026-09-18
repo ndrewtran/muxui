@@ -198,3 +198,59 @@ test('E-G0.0-04 negative: an untracked non-projection output fails clean generat
     },
   );
 });
+
+test('E-G0.0-04: independent clean runs allow initially absent projections', () => {
+  const source = new Map([['catalog/source.json', 'source-digest']]);
+  const projection = new Map([
+    ['catalog/source.json', 'source-digest'],
+    ['packages/catalog/generated/catalog.json', 'projection-digest'],
+  ]);
+
+  assert.doesNotThrow(() => verifyGenerationState({
+    firstBeforeFiles: source,
+    firstFiles: projection,
+    secondBeforeFiles: source,
+    secondFiles: projection,
+    projectionPaths: ['packages/catalog/generated/catalog.json'],
+    firstStatus: '',
+    secondStatus: '',
+  }));
+});
+
+test('E-G0.0-04 negative: source mutation fails independent clean generation', () => {
+  assert.throws(
+    () => verifyGenerationState({
+      firstBeforeFiles: new Map([['catalog/source.json', 'source-digest']]),
+      firstFiles: new Map([['catalog/source.json', 'changed-source-digest']]),
+      secondBeforeFiles: new Map([['catalog/source.json', 'source-digest']]),
+      secondFiles: new Map([['catalog/source.json', 'source-digest']]),
+      projectionPaths: [],
+      firstStatus: '',
+      secondStatus: '',
+    }),
+    (error) => error instanceof GenerationProofError && error.code === 'GENERATION_DRIFT',
+  );
+});
+
+test('E-G0.0-04 negative: independent projection output drift is nondeterministic', () => {
+  const source = new Map([['catalog/source.json', 'source-digest']]);
+  assert.throws(
+    () => verifyGenerationState({
+      firstBeforeFiles: source,
+      firstFiles: new Map([
+        ['catalog/source.json', 'source-digest'],
+        ['packages/catalog/generated/catalog.json', 'first-projection'],
+      ]),
+      secondBeforeFiles: source,
+      secondFiles: new Map([
+        ['catalog/source.json', 'source-digest'],
+        ['packages/catalog/generated/catalog.json', 'second-projection'],
+      ]),
+      projectionPaths: ['packages/catalog/generated/catalog.json'],
+      firstStatus: '',
+      secondStatus: '',
+    }),
+    (error) => error instanceof GenerationProofError
+      && error.code === 'GENERATION_NONDETERMINISTIC',
+  );
+});

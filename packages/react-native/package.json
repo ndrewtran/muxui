@@ -29,6 +29,7 @@
     }
   },
   "scripts": {
+    "prepack": "pnpm --filter @muxui/catalog... generate && pnpm generate",
     "check": "node src/generate.mjs --check && node --test ../../tests/fixtures/g1.2/profile.test.mjs test/contract.test.mjs && jest --config test/jest.config.cjs --runInBand --verbose && tsc --noEmit -p test/tsconfig.json",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"

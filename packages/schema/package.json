@@ -12,6 +12,7 @@
     "./types": "./generated/types.d.ts"
   },
   "scripts": {
+    "prepack": "pnpm generate",
     "check": "node src/generate.mjs --check && node --test test/*.test.mjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"

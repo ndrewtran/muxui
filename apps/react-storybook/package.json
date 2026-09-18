@@ -6,9 +6,9 @@
   "scripts": {
     "storybook": "pnpm generate && pnpm exec storybook dev -p 6006",
     "build": "pnpm generate && storybook build --output-dir dist",
-    "generate": "node src/generate-stories.mjs",
+    "generate": "pnpm --filter @muxui/react... generate && node src/generate-stories.mjs",
     "generate:check": "node src/generate-stories.mjs --check",
-    "check": "pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs",
+    "check": "pnpm generate && pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs",
     "check:a11y": "node --test test/storybook-a11y.test.mjs"
   },
   "dependencies": {

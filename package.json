@@ -9,8 +9,8 @@
   },
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "check": "node tooling/audits/repository-policy/src/run-workspace-task.mjs check --affected",
-    "check:all": "node tooling/audits/repository-policy/src/run-workspace-task.mjs check",
+    "check": "pnpm generate && node tooling/audits/repository-policy/src/run-workspace-task.mjs check --affected",
+    "check:all": "pnpm generate && node tooling/audits/repository-policy/src/run-workspace-task.mjs check",
     "docs": "pnpm --filter @muxui/docs run dev",
     "generate": "node tooling/audits/repository-policy/src/run-workspace-task.mjs generate",
     "scale": "pnpm --filter @muxui/scale run dev",

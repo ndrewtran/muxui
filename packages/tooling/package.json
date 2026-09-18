@@ -16,6 +16,7 @@
     "./types": "./generated/response-types.d.ts"
   },
   "scripts": {
+    "prepack": "pnpm --filter @muxui/tooling... generate",
     "check": "node src/generate.mjs --check && node --test test/*.test.mjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
