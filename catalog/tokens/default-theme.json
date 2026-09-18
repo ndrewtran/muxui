@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "2.1.0",
+  "schemaVersion": "2.2.0",
   "id": "muxui:token:default-theme",
   "kind": "token",
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "3.0.0",
+  "tokenContractVersion": "3.1.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -115,7 +115,7 @@
     "typography": {
       "roles": {
         "display": {
-          "fontFamily": "reference.typography.display-font",
+          "fontFamily": "semantic.typography.display-font-family",
           "color": "semantic.typography.display-color",
           "variants": {
             "l": {
@@ -139,7 +139,7 @@
           }
         },
         "heading": {
-          "fontFamily": "reference.typography.display-font",
+          "fontFamily": "semantic.typography.heading-font-family",
           "color": "semantic.typography.display-color",
           "variants": {
             "l": {
@@ -163,7 +163,7 @@
           }
         },
         "title": {
-          "fontFamily": "reference.typography.display-font",
+          "fontFamily": "semantic.typography.title-font-family",
           "color": "semantic.typography.display-color",
           "variants": {
             "l": {
@@ -187,7 +187,7 @@
           }
         },
         "label": {
-          "fontFamily": "reference.typography.body-font",
+          "fontFamily": "semantic.typography.label-font-family",
           "color": "semantic.typography.text-color",
           "variants": {
             "l": {
@@ -217,7 +217,7 @@
           }
         },
         "body": {
-          "fontFamily": "reference.typography.body-font",
+          "fontFamily": "semantic.typography.text-font-family",
           "color": "semantic.typography.text-color",
           "variants": {
             "l": {
@@ -247,7 +247,7 @@
           }
         },
         "mono": {
-          "fontFamily": "reference.typography.mono-font",
+          "fontFamily": "semantic.typography.mono-font-family",
           "color": "semantic.typography.mono-color",
           "variants": {
             "l": {
@@ -277,7 +277,7 @@
           }
         },
         "expressive": {
-          "fontFamily": "reference.typography.expressive-font",
+          "fontFamily": "semantic.typography.expressive-font-family",
           "color": "semantic.typography.text-color",
           "variants": {
             "l": {
@@ -503,11 +503,17 @@
       "unit": "ms",
       "meaning": "Default short feedback duration.",
       "overridePolicy": "fixed",
-      "value": 120,
       "modes": {
         "motion.reduced": {
           "value": 0
         }
+      },
+      "alias": "reference.motion.duration-fast",
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.motion.duration-fast"
       }
     },
     "semantic.action.background": {
@@ -905,7 +911,7 @@
       "unit": "ms",
       "meaning": "Duration of the color-mode toggle transition.",
       "overridePolicy": "theme",
-      "value": 500
+      "alias": "reference.motion.duration-deliberate"
     },
     "semantic.motion.panel-enter-duration": {
       "layer": "semantic",
@@ -913,7 +919,7 @@
       "unit": "ms",
       "meaning": "Duration of auxiliary panels entering.",
       "overridePolicy": "theme",
-      "value": 180
+      "alias": "reference.motion.duration-moderate"
     },
     "semantic.layout.micro-gap": {
       "layer": "semantic",
@@ -965,7 +971,7 @@
       "unit": "ms",
       "meaning": "Duration of compact selection popovers entering.",
       "overridePolicy": "theme",
-      "value": 120
+      "alias": "reference.motion.duration-fast"
     },
     "semantic.motion.reveal-easing": {
       "layer": "semantic",
@@ -1001,7 +1007,7 @@
       "unit": "ms",
       "meaning": "Duration of progress value interpolation.",
       "overridePolicy": "theme",
-      "value": 300
+      "alias": "reference.motion.duration-slow"
     },
     "semantic.motion.progress-spin-duration": {
       "layer": "semantic",
@@ -1017,7 +1023,7 @@
       "unit": "string",
       "meaning": "Linear curve for continuous progress motion such as spinner rotation.",
       "overridePolicy": "theme",
-      "value": "linear"
+      "alias": "reference.motion.easing-linear"
     },
     "semantic.motion.progress-sweep-duration": {
       "layer": "semantic",
@@ -1045,6 +1051,11 @@
       "relative": {
         "value": 0.375,
         "unit": "rem"
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Unconsumed geometry role; choose the component-owned inset required by the layout."
       }
     },
     "semantic.layout.navigation-inset-inline": {
@@ -1329,7 +1340,12 @@
       "unit": "ms",
       "meaning": "Optional short visual feedback duration.",
       "overridePolicy": "theme",
-      "alias": "reference.duration.fast"
+      "alias": "reference.duration.fast",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "semantic.motion.feedback-duration"
+      }
     },
     "semantic.overlay.background": {
       "layer": "semantic",
@@ -1732,7 +1748,12 @@
       "unit": "px",
       "meaning": "Minimum height for compact content rows.",
       "overridePolicy": "theme",
-      "alias": "reference.dimension.space-m"
+      "alias": "reference.dimension.space-m",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Unconsumed geometry role; choose the component-owned row metric required by the layout."
+      }
     },
     "semantic.shape.indicator-radius": {
       "layer": "semantic",
@@ -1788,7 +1809,12 @@
       "unit": "px",
       "meaning": "Small corner radius for color and range thumbs.",
       "overridePolicy": "theme",
-      "value": 2
+      "value": 2,
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Unconsumed geometry role; choose the component-owned thumb shape required by the control."
+      }
     },
     "semantic.shape.wheel-radius": {
       "layer": "semantic",
@@ -1796,7 +1822,12 @@
       "unit": "px",
       "meaning": "Corner radius for wheel and large color controls.",
       "overridePolicy": "theme",
-      "alias": "reference.dimension.radius-2xl"
+      "alias": "reference.dimension.radius-2xl",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Unconsumed geometry role; choose the component-owned wheel shape required by the control."
+      }
     },
     "semantic.shape.pill-radius": {
       "layer": "semantic",
@@ -1868,7 +1899,12 @@
       "unit": "string",
       "meaning": "Font family for display, heading, and title content.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.display-font"
+      "alias": "reference.typography.display-font",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "semantic.typography.display-font-family"
+      }
     },
     "semantic.typography.body-font": {
       "layer": "semantic",
@@ -1876,7 +1912,12 @@
       "unit": "string",
       "meaning": "Font family for body and control content.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.body-font"
+      "alias": "reference.typography.body-font",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "semantic.typography.text-font-family"
+      }
     },
     "semantic.typography.expressive-font": {
       "layer": "semantic",
@@ -1884,7 +1925,12 @@
       "unit": "string",
       "meaning": "Expressive font family for decorative content.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.expressive-font"
+      "alias": "reference.typography.expressive-font",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "semantic.typography.expressive-font-family"
+      }
     },
     "semantic.typography.expressive-font-family": {
       "layer": "semantic",
@@ -1892,7 +1938,7 @@
       "unit": "string",
       "meaning": "Expressive font family alias.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.expressive-font-family"
+      "alias": "reference.typography.expressive-font"
     },
     "semantic.typography.mono-font": {
       "layer": "semantic",
@@ -1900,7 +1946,12 @@
       "unit": "string",
       "meaning": "Monospace font family for code and technical content.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.mono-font"
+      "alias": "reference.typography.mono-font",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "semantic.typography.mono-font-family"
+      }
     },
     "semantic.typography.display-font-family": {
       "layer": "semantic",
@@ -1908,7 +1959,7 @@
       "unit": "string",
       "meaning": "Display family alias for heading and title roles.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.display-font-family"
+      "alias": "reference.typography.display-font"
     },
     "semantic.typography.heading-font-family": {
       "layer": "semantic",
@@ -1916,7 +1967,7 @@
       "unit": "string",
       "meaning": "Heading font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.heading-font-family"
+      "alias": "reference.typography.display-font"
     },
     "semantic.typography.title-font-family": {
       "layer": "semantic",
@@ -1924,7 +1975,7 @@
       "unit": "string",
       "meaning": "Title font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.title-font-family"
+      "alias": "reference.typography.display-font"
     },
     "semantic.typography.label-font-family": {
       "layer": "semantic",
@@ -1932,7 +1983,7 @@
       "unit": "string",
       "meaning": "Label font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.label-font-family"
+      "alias": "reference.typography.body-font"
     },
     "semantic.typography.text-font-family": {
       "layer": "semantic",
@@ -1940,7 +1991,7 @@
       "unit": "string",
       "meaning": "Text font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.text-font-family"
+      "alias": "reference.typography.body-font"
     },
     "semantic.typography.mono-font-family": {
       "layer": "semantic",
@@ -1948,7 +1999,7 @@
       "unit": "string",
       "meaning": "Monospace font family alias.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.mono-font-family"
+      "alias": "reference.typography.mono-font"
     },
     "semantic.typography.heading-weight": {
       "layer": "semantic",
@@ -4696,7 +4747,13 @@
       "unit": "ms",
       "meaning": "deliberate motion duration reference value.",
       "overridePolicy": "fixed",
-      "value": 500
+      "alias": "reference.motion.duration-deliberate",
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.motion.duration-deliberate"
+      }
     },
     "reference.duration.instant": {
       "layer": "reference",
@@ -4704,7 +4761,13 @@
       "unit": "ms",
       "meaning": "instant motion duration reference value.",
       "overridePolicy": "fixed",
-      "value": 0
+      "alias": "reference.motion.duration-instant",
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.motion.duration-instant"
+      }
     },
     "reference.duration.moderate": {
       "layer": "reference",
@@ -4712,7 +4775,13 @@
       "unit": "ms",
       "meaning": "moderate motion duration reference value.",
       "overridePolicy": "fixed",
-      "value": 180
+      "alias": "reference.motion.duration-moderate",
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.motion.duration-moderate"
+      }
     },
     "reference.duration.slow": {
       "layer": "reference",
@@ -4720,7 +4789,13 @@
       "unit": "ms",
       "meaning": "slow motion duration reference value.",
       "overridePolicy": "fixed",
-      "value": 300
+      "alias": "reference.motion.duration-slow",
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.motion.duration-slow"
+      }
     },
     "reference.number.font-weight-medium": {
       "layer": "reference",
@@ -5100,7 +5175,12 @@
       "meaning": "Mux-owned token for --display-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.display-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.display-font"
+      }
     },
     "reference.typography.heading-font-family": {
       "layer": "reference",
@@ -5109,7 +5189,12 @@
       "meaning": "Mux-owned token for --heading-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.display-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.display-font"
+      }
     },
     "reference.typography.title-font-family": {
       "layer": "reference",
@@ -5118,7 +5203,12 @@
       "meaning": "Mux-owned token for --title-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.display-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.display-font"
+      }
     },
     "reference.typography.label-font-family": {
       "layer": "reference",
@@ -5127,7 +5217,12 @@
       "meaning": "Mux-owned token for --label-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.body-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.body-font"
+      }
     },
     "reference.typography.text-font-family": {
       "layer": "reference",
@@ -5136,7 +5231,12 @@
       "meaning": "Mux-owned token for --text-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.body-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.body-font"
+      }
     },
     "reference.typography.mono-font-family": {
       "layer": "reference",
@@ -5145,7 +5245,12 @@
       "meaning": "Mux-owned token for --mono-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.mono-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.mono-font"
+      }
     },
     "reference.typography.expressive-font-family": {
       "layer": "reference",
@@ -5154,7 +5259,12 @@
       "meaning": "Mux-owned token for --expressive-font-family.",
       "overridePolicy": "fixed",
       "alias": "reference.typography.expressive-font",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "deprecation-bridge",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "reference.typography.expressive-font"
+      }
     },
     "semantic.typography.display-l-font-size": {
       "layer": "semantic",
@@ -5359,7 +5469,7 @@
       "unit": "unitless",
       "meaning": "Weight for prominent display, heading, and title text.",
       "overridePolicy": "theme",
-      "value": 600
+      "alias": "reference.number.font-weight-semibold"
     },
     "semantic.typography.heading-font-weight": {
       "layer": "semantic",
@@ -5367,7 +5477,7 @@
       "unit": "unitless",
       "meaning": "Weight for section headings.",
       "overridePolicy": "theme",
-      "value": 600
+      "alias": "reference.number.font-weight-semibold"
     },
     "semantic.typography.title-font-weight": {
       "layer": "semantic",
@@ -5375,7 +5485,7 @@
       "unit": "unitless",
       "meaning": "Weight for titles.",
       "overridePolicy": "theme",
-      "value": 600
+      "alias": "reference.number.font-weight-semibold"
     },
     "semantic.typography.label-font-weight": {
       "layer": "semantic",
@@ -5383,7 +5493,7 @@
       "unit": "unitless",
       "meaning": "Weight for labels and interactive controls.",
       "overridePolicy": "theme",
-      "value": 500
+      "alias": "reference.number.font-weight-medium"
     },
     "semantic.typography.text-font-weight": {
       "layer": "semantic",
@@ -5391,7 +5501,7 @@
       "unit": "unitless",
       "meaning": "Weight for body and supporting text.",
       "overridePolicy": "theme",
-      "value": 400
+      "alias": "reference.number.font-weight-regular"
     },
     "semantic.typography.mono-font-weight": {
       "layer": "semantic",
@@ -5399,7 +5509,7 @@
       "unit": "unitless",
       "meaning": "Weight for code and technical text.",
       "overridePolicy": "theme",
-      "value": 400
+      "alias": "reference.number.font-weight-regular"
     },
     "semantic.typography.display-line-height": {
       "layer": "semantic",
@@ -5407,7 +5517,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for prominent display, heading, and title text.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.heading-line-height": {
       "layer": "semantic",
@@ -5415,7 +5525,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for section headings.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.title-line-height": {
       "layer": "semantic",
@@ -5423,7 +5533,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for titles.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.label-line-height": {
       "layer": "semantic",
@@ -5431,7 +5541,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for labels and controls.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.text-line-height": {
       "layer": "semantic",
@@ -5439,7 +5549,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for body and supporting text.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.mono-line-height": {
       "layer": "semantic",
@@ -5447,7 +5557,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for code and technical text.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.display-letter-spacing": {
       "layer": "semantic",
@@ -7474,7 +7584,12 @@
       "meaning": "Default color for display, heading, and title text.",
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "The legacy light-mode value is retained; use semantic.typography.display-color for adaptive text color."
+      }
     },
     "semantic.typography.text-default-color": {
       "layer": "semantic",
@@ -7483,7 +7598,12 @@
       "meaning": "Default color for body, label, and supporting text.",
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "The legacy light-mode value is retained; use semantic.typography.text-color for adaptive text color."
+      }
     },
     "semantic.typography.mono-default-color": {
       "layer": "semantic",
@@ -7492,7 +7612,12 @@
       "meaning": "Default color for code and technical text.",
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "The legacy light-mode value is retained; use semantic.typography.mono-color for adaptive text color."
+      }
     },
     "semantic.surface.body-background": {
       "layer": "semantic",
@@ -7501,7 +7626,12 @@
       "meaning": "Body surface for the primary content area.",
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-12",
-      "equivalence": "semantic-equivalence"
+      "equivalence": "semantic-equivalence",
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "replacement": "semantic.surface.subtle"
+      }
     },
     "semantic.color.color-5-fg": {
       "layer": "semantic",
@@ -8248,6 +8378,11 @@
         "motion.reduced": {
           "alias": "reference.motion.easing-linear"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic feedback easing is unconsumed; select a component-specific easing role."
       }
     },
     "semantic.motion.state-duration": {
@@ -8276,6 +8411,11 @@
         "motion.reduced": {
           "alias": "reference.motion.easing-linear"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic state easing is unconsumed; select a component-specific easing role."
       }
     },
     "semantic.motion.enter-duration": {
@@ -8290,6 +8430,11 @@
         "motion.reduced": {
           "alias": "reference.motion.duration-instant"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic enter duration is unconsumed; select the entering component role."
       }
     },
     "semantic.motion.enter-easing": {
@@ -8304,6 +8449,11 @@
         "motion.reduced": {
           "alias": "reference.motion.easing-linear"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic enter easing is unconsumed; select the entering component role."
       }
     },
     "semantic.motion.exit-duration": {
@@ -8332,6 +8482,11 @@
         "motion.reduced": {
           "alias": "reference.motion.easing-linear"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic exit easing is unconsumed; select the exiting component role."
       }
     },
     "semantic.motion.content-duration": {
@@ -8346,6 +8501,11 @@
         "motion.reduced": {
           "alias": "reference.motion.duration-instant"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic content duration is unconsumed; select a content component role."
       }
     },
     "semantic.motion.content-easing": {
@@ -8360,6 +8520,11 @@
         "motion.reduced": {
           "alias": "reference.motion.easing-linear"
         }
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "Generic content easing is unconsumed; select a content component role."
       }
     },
     "reference.dimension.scale": {
@@ -9353,6 +9518,11 @@
         "token": "semantic.color.neutral-default-100",
         "color": "#00000000",
         "weight": 0.24
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "The legacy scrim strength is retained; choose semantic.effect.scrim for the supported modal scrim role."
       }
     },
     "semantic.effect.scrim": {
@@ -9381,6 +9551,11 @@
         "token": "semantic.color.neutral-default-100",
         "color": "#00000000",
         "weight": 0.72
+      },
+      "deprecation": {
+        "since": "3.1.0",
+        "removeIn": "4.0.0",
+        "noReplacementReason": "The legacy scrim strength is retained; choose semantic.effect.scrim for the supported modal scrim role."
       }
     },
     "reference.color.scrim-subtle": {

@@ -2,7 +2,9 @@
 
 `catalog/tokens/default-theme.json` owns the default palettes, type scales,
 font metadata, spacing, effects, modes, and Scale preset inputs. This private
-package validates those sources and produces target-specific output.
+package validates those sources and produces target-specific output. Token
+meaning and deprecation metadata live in that canonical source; guide pages
+explain migration rationale and are not a second token registry.
 
 ## Compile a theme
 
@@ -20,6 +22,32 @@ to respect the consumer's root font size.
 
 The Scale browser verification covers the live theme-builder flow and palette
 generation uses the complete canonical source.
+
+## Token contract notice
+
+The default source uses token schema `2.2.0` and token contract `3.1.0`.
+Deprecated IDs remain exported during the notice and are scheduled for removal
+in `4.0.0`. Each deprecated token declares `since`, `removeIn`, and either a
+preferred `replacement` or a `noReplacementReason` on the canonical source.
+`compileTokenGraph` and requirement compilation expose deprecation diagnostics
+when a consumer override or requirement uses one of those IDs.
+
+Preferred authoring names include the semantic typography family roles
+`display-font-family`, `text-font-family`, `label-font-family`,
+`mono-font-family`, and `expressive-font-family`, plus the canonical motion
+references under `reference.motion.duration-*`. Existing semantic names remain
+available through the notice so scoped CSS and theme customizations can be
+migrated deliberately. Deprecation metadata is guidance; the compiler does
+not rewrite arbitrary CSS, run a generic migration engine, or automatically
+move a legacy override to a replacement role.
+
+The active typography colour roles have dark branches; the deprecated
+`*-default-color` roles preserve their legacy light-mode values. Motion roles
+retain their purpose-specific reduced behavior, including progress behavior.
+When moving a theme override, verify its value and mode branches instead of
+assuming that equal current values imply interchangeable contracts. See the
+[token contract migration guide](../../catalog/guides/token-migration.md) for the complete
+family-by-family rationale.
 
 ## Author theme instances
 
@@ -39,10 +67,18 @@ canonical source through `{ source }`:
 
 Theme instances use `muxui-theme-authoring-v1` and contain `id`, `source`,
 `tokenContractVersion`, `modes`, typed `overrides`, and optional Scale inputs.
-Scale-generated assignments must agree with their inputs. Other allowed
-semantic and component overrides are preserved. Unknown tokens or fields,
-wrong types, unsafe string values, and edits to fixed foundations are rejected.
-The private Scale app provides a local editor and validated file persistence.
+For the current default source, newly generated authoring documents declare
+`tokenContractVersion: "3.1.0"`. Saved `muxui-theme-authoring-v1` documents
+with contract `3.0.0` are accepted during this notice and normalized to a
+3.1.0 copy for validation, compilation, and serialization. Their overrides,
+modes, and Scale inputs are preserved, and the input object is not mutated.
+Future or otherwise incompatible contract versions are rejected. Scale-
+generated assignments must agree with their inputs. Other allowed semantic
+and component overrides are preserved. Unknown tokens or fields, wrong types,
+unsafe string values, and edits to fixed foundations are rejected. Deprecated
+overrides are reported for explicit migration, while their existing values
+remain part of the notice-window compatibility surface. The private Scale app
+provides a local editor and validated file persistence.
 
 ## Optional Tailwind integration
 

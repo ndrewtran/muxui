@@ -131,7 +131,7 @@
       "properties": {
         "status": { "const": "absent" },
         "reason": { "const": "token-source-omits-source-crosswalk" },
-        "tokenSourceSchemaVersion": { "const": "2.1.0" },
+        "tokenSourceSchemaVersion": { "enum": ["2.1.0", "2.2.0"] },
         "items": { "type": "array", "maxItems": 0 }
       }
     }

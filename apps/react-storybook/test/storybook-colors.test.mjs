@@ -245,7 +245,7 @@ test('Storybook search status icons use canonical action and option-state colour
       <symbol id="icon--error"><path d="M7 3a4 4 0 100 8A4 4 0 007 3z" fill="currentColor"></path></symbol>`;
     const fixture = (css, colors) => `<style>
         ${css}
-        body { margin: 0; background: var(--muxui-storybook-surface-body-background, white); color: var(--muxui-storybook-content-strong, black); }
+        body { margin: 0; background: var(--muxui-storybook-surface-subtle, white); color: var(--muxui-storybook-content-strong, black); }
         #status-fixture { display: flex; gap: 1rem; }
         [role='option'] { display: flex; align-items: center; width: 10rem; height: 2rem; color: var(--muxui-storybook-content-strong, black); }
         [role='option'] svg { width: 14px; height: 14px; }

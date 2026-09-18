@@ -10,6 +10,7 @@ const guideIds: Record<string, string> = {
 	discovery: 'muxui:guide:discovery',
 	lifecycle: 'muxui:guide:lifecycle',
 	themes: 'muxui:guide:themes',
+	'token-migration': 'muxui:guide:token-migration',
 };
 const guideSlug = pathname.replace(/^\//u, '').replace(/\/$/u, '');
 const sourcePath = componentSlug
@@ -123,7 +124,7 @@ const pageTitleId = '_top';
 		justify-content: end;
 		gap: var(--muxui-reference-dimension-space-xs);
 		padding-block-start: var(--muxui-reference-dimension-space-3xs);
-		font-family: var(--muxui-reference-typography-mono-font);
+		font-family: var(--muxui-semantic-typography-mono-font-family);
 		font-size: var(--muxui-semantic-typography-mono-xs-font-size);
 		white-space: nowrap;
 	}

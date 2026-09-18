@@ -149,6 +149,7 @@ function TokenDetail({ token, tokens }: { token: FoundationToken | undefined; to
 			<div><dt>CSS variable</dt><dd><code><TokenPath value={token.cssName} token={token} /></code></dd></div>
 			<div><dt>Type</dt><dd>{token.type} · {token.unit}</dd></div>
 			<div><dt>Override</dt><dd>{token.overridePolicy}</dd></div>
+			{token.deprecation ? <div><dt>Deprecated</dt><dd>Since {token.deprecation.since}; removal in {token.deprecation.removeIn}. {token.deprecation.replacement ? `Use ${token.deprecation.replacement}.` : token.deprecation.noReplacementReason}</dd></div> : null}
 			<div><dt>Resolution</dt><dd>{token.sourceKind}</dd></div>
 			<div><dt>Canonical alias chain</dt><dd className="foundation-chain">
 				{token.aliasChain.map((id, index) => <React.Fragment key={id}>
@@ -608,7 +609,7 @@ function motionCurvePath(value: unknown): string | undefined {
 }
 
 function motionTimingScope(token: FoundationToken): string {
-	if (token.id.startsWith('reference.duration.')) return 'Reference scale';
+	if (token.id.startsWith('reference.motion.duration-')) return 'Reference scale';
 	if (token.id.startsWith('reference.motion.')) return 'Motion reference';
 	return 'Semantic role';
 }
@@ -629,8 +630,8 @@ function motionTimingGroups(durations: readonly FoundationToken[]): readonly Mot
 		{
 			id: 'reference-durations',
 			title: 'Reference speed scale',
-			description: 'Base speeds, from instant to deliberate. Reference motion duration aliases remain in the inventory without duplicating this ruler.',
-			tokens: durations.filter((token) => token.id.startsWith('reference.duration.')),
+			description: 'Base speeds, from instant to deliberate. Legacy reference.duration.* aliases remain in the inventory without duplicating this ruler.',
+			tokens: durations.filter((token) => token.id.startsWith('reference.motion.duration-')),
 			isScale: true,
 		},
 		{
@@ -686,7 +687,7 @@ function MotionEasingFamily({ family, replay }: { family: FoundationFamily; repl
 		<FoundationFamilyHeading family={family} />
 		<div className="foundation-family-rows">{family.tokens.map((easing) => {
 			const path = motionCurvePath(easing.defaultValue);
-			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><FoundationTokenLabel token={easing} /><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.duration.fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
+			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><FoundationTokenLabel token={easing} /><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.motion.duration-fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
 		})}</div>
 	</section>;
 }

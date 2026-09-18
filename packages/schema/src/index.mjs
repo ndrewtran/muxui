@@ -54,6 +54,7 @@ export {
   migrateComponentBindingsV1ToV2,
   migrateTokenSourceV1ToV2,
   migrateTokenSourceV2ToV2_1,
+  migrateTokenSourceV2_1ToV2_2,
 } from './migrations.mjs';
 export {
   authoringMetadata,

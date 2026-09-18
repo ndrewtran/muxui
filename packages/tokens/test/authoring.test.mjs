@@ -15,7 +15,7 @@ const base = {
   schema: 'muxui-theme-authoring-v1',
   id: 'muxui:theme:authoring-test',
   source: 'muxui:token:default-theme',
-  tokenContractVersion: '3.0.0',
+  tokenContractVersion: '3.1.0',
   modes: { colorScheme: ['light', 'dark'], contrast: ['standard'], motion: ['full'], density: ['comfortable'], direction: ['ltr'] },
 };
 
@@ -348,6 +348,42 @@ test('authoring requires canonical source, declared modes, exact scale assignmen
   const darkOnly = { ...base, modes: { colorScheme: ['dark'], contrast: ['standard'], motion: ['full'], density: ['comfortable'], direction: ['ltr'] }, overrides: {} };
   assert.equal(compileThemeAuthoringDocument(darkOnly, { source }).modes.colorScheme, 'dark');
   assert.throws(() => compileThemeAuthoringDocument(darkOnly, { source, modes: { colorScheme: 'light' } }), /MUXUI_THEME_MODE_UNKNOWN/u);
+});
+
+test('authoring upgrades the retained 3.0 contract without mutating the input document', () => {
+  const generated = generateScaleTheme({ source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', contrastPivot: 'auto', whiteAnchor: false, curvature: 1 });
+  const legacy = { ...documentFor(generated.assignments), tokenContractVersion: '3.0.0' };
+  const normalized = validateThemeAuthoringDocument(legacy, { source });
+  assert.equal(legacy.tokenContractVersion, '3.0.0');
+  assert.equal(normalized.tokenContractVersion, source.tokenContractVersion);
+  assert.equal(compileThemeAuthoringDocument(legacy, { source }).modes.colorScheme, 'light');
+  assert.equal(JSON.parse(serializeThemeAuthoringDocument(legacy, { source })).tokenContractVersion, source.tokenContractVersion);
+  for (const tokenContractVersion of ['3.2.0', '4.0.0']) {
+    assert.throws(
+      () => validateThemeAuthoringDocument({ ...legacy, tokenContractVersion }, { source }),
+      /MUXUI_THEME_CONTRACT_INVALID/u,
+    );
+  }
+});
+
+test('authoring reports explicit deprecated overrides without rewriting them', () => {
+  const override = { type: 'string', unit: 'string', value: 'Arial' };
+  const document = { ...base, overrides: { 'semantic.typography.body-font': override } };
+  const web = compileThemeAuthoringDocument(document, { source });
+  assert.deepEqual(web.diagnostics, [{
+    code: 'MUXUI_TOKEN_DEPRECATED',
+    token: 'semantic.typography.body-font',
+    since: '3.1.0',
+    removeIn: '4.0.0',
+    replacement: 'semantic.typography.text-font-family',
+    use: 'override',
+  }]);
+  assert.match(web.css, /--muxui-semantic-typography-body-font: Arial;/u);
+  assert.match(web.css, /--muxui-semantic-typography-text-font-family: var\(--muxui-reference-typography-body-font\);/u);
+  const native = compileThemeAuthoringDocument(document, { source, target: 'native.ios', rootFontSizePx: 16 });
+  assert.equal(native.diagnostics.filter(({ code }) => code === 'MUXUI_TOKEN_DEPRECATED').length, 1);
+  assert.equal(native.diagnostics.find(({ code }) => code === 'MUXUI_TOKEN_DEPRECATED').token, 'semantic.typography.body-font');
+  assert.equal(compileThemeAuthoringDocument({ ...base, overrides: {} }, { source }).diagnostics.filter(({ code }) => code === 'MUXUI_TOKEN_DEPRECATED').length, 0);
 });
 
 test('formula and relative overrides resolve through aliases while native output defers unsupported recipes', () => {

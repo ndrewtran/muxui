@@ -56,8 +56,7 @@ async function readTheme(file) {
     if (!info.isFile()) throw new TypeError('MUXUI_SCALE_PATH_INVALID');
     if (info.size > MAX_BODY_BYTES) throw Object.assign(new Error('theme source exceeds 256 KiB'), { status: 413 });
     const bytes = await handle.readFile();
-    const document = JSON.parse(bytes.toString('utf8'));
-    validateScaleDocument(document);
+    const document = validateScaleDocument(JSON.parse(bytes.toString('utf8')));
     return { document, bytes, revision: revision(bytes) };
   } catch (error) {
     if (error.code === 'ELOOP') throw new TypeError('MUXUI_SCALE_PATH_INVALID');

@@ -88,6 +88,33 @@ test('import, edit and export preserve additional typed overrides and constraine
   assert.match(previewCss(edited, { selector: ':root' }), /^:root \{/u);
 });
 
+test('Scale wrapper normalizes legacy 3.0 imports before storing or exporting them', () => {
+  const current = createScaleDocument({
+    ...DEFAULT_SETTINGS,
+    colorMode: 'dark',
+    background: 'dark',
+    themeModes: { colorScheme: ['dark'], contrast: ['more'], motion: ['reduced'], density: ['compact'], direction: ['rtl'] },
+  }, { slug: 'legacy-wrapper' });
+  current.overrides['semantic.action.background'] = {
+    type: 'color', unit: 'hex', value: '#123456',
+    mix: { space: 'srgb', token: 'reference.color.brand-60', weight: 0.5, color: '#00000000' },
+  };
+  const legacy = { ...current, tokenContractVersion: '3.0.0', modes: structuredClone(current.modes), overrides: structuredClone(current.overrides) };
+  const original = structuredClone(legacy);
+
+  const normalized = validateScaleDocument(legacy);
+  assert.equal(normalized.tokenContractVersion, '3.1.0');
+  assert.notStrictEqual(normalized, legacy);
+  assert.deepEqual(legacy, original);
+  assert.deepEqual(normalized.modes, original.modes);
+  assert.deepEqual(normalized.overrides['semantic.action.background'], original.overrides['semantic.action.background']);
+
+  const settings = settingsFromDocument(legacy);
+  assert.deepEqual(settings.themeModes, original.modes);
+  assert.deepEqual(settings.additionalOverrides['semantic.action.background'], original.overrides['semantic.action.background']);
+  assert.equal(JSON.parse(serializeScaleDocument(legacy)).tokenContractVersion, '3.1.0');
+});
+
 test('swatches use compiled backgrounds and foregrounds for both color modes', () => {
   for (const colorMode of ['light', 'dark']) {
     const compiled = previewTheme({ ...DEFAULT_SETTINGS, colorMode, background: colorMode });

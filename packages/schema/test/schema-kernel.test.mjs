@@ -14,6 +14,7 @@ import {
   classifySchemaChange,
   contentRevision,
   migrateTokenSourceV2ToV2_1,
+  migrateTokenSourceV2_1ToV2_2,
   negotiateSchemaVersion,
   parseArtifactRef,
   parseJsonStrict,
@@ -774,6 +775,34 @@ test('token-source 2.0 to 2.1 migration is explicit, omission-preserving, and id
     () => migrateTokenSourceV2ToV2_1(legacy, { dryRun: 'true' }),
     expectCode('MUXUI_SCHEMA_MIGRATION_REQUIRED'),
   );
+});
+
+test('token-source 2.1 to 2.2 migration is additive and idempotent', () => {
+  const legacy = tokenSource();
+  legacy.schemaVersion = '2.1.0';
+  const migrated = migrateTokenSourceV2_1ToV2_2(legacy);
+  assert.equal(migrated.schemaVersion, '2.2.0');
+  assert.deepEqual(migrateTokenSourceV2_1ToV2_2(migrated), migrated);
+  assert.deepEqual(migrateTokenSourceV2_1ToV2_2(legacy, { dryRun: true }), {
+    from: '2.1.0',
+    to: '2.2.0',
+    changed: true,
+    readRewrite: false,
+  });
+
+  const deprecatedField = structuredClone(legacy);
+  deprecatedField.tokens['semantic.action.background'].deprecation = {
+    since: '3.1.0',
+    removeIn: '4.0.0',
+    noReplacementReason: 'The legacy role has no safe replacement.',
+  };
+  assert.throws(
+    () => validateFamily('token-source', deprecatedField),
+    expectCode('MUXUI_SCHEMA_INVALID'),
+  );
+  const current = migrateTokenSourceV2_1ToV2_2(legacy);
+  current.tokens['semantic.action.background'].deprecation = deprecatedField.tokens['semantic.action.background'].deprecation;
+  assert.doesNotThrow(() => validateFamily('token-source', current));
 });
 
 test('section-page grammar is closed, typed, and position-safe', () => {

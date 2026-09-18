@@ -333,7 +333,7 @@ function sectionPage(bundle, artifact, request) {
   }
   const tokenSourceContentRevision = (
     request.queryApiVersion === '1.2.0'
-    && artifact.record.schemaVersion === '2.1.0'
+    && ['2.1.0', '2.2.0'].includes(artifact.record.schemaVersion)
     && artifact.record.sourceCrosswalk === undefined
   ) ? canonicalDigest({
       ...artifact.record,

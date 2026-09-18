@@ -20,7 +20,7 @@ body:has(.scale-app) { margin: 0; }
   padding: var(--muxui-reference-dimension-space-xl) var(--muxui-reference-dimension-space-3xl);
   background: var(--muxui-semantic-color-neutral-5);
   color: var(--muxui-semantic-color-neutral-90);
-  font-family: var(--muxui-reference-typography-text-font-family);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-text-m-font-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
 }
@@ -138,17 +138,17 @@ body:has(.scale-app) { margin: 0; }
 .radius-section { margin-bottom: var(--muxui-reference-dimension-space-xl); }
 .radius-header { display: flex; align-items: center; flex-wrap: wrap; gap: var(--muxui-reference-dimension-space-m); margin-bottom: var(--muxui-reference-dimension-space-m); font-size: var(--muxui-semantic-typography-label-s-font-size); font-weight: var(--muxui-semantic-typography-label-font-weight); }
 .radius-header input { flex: 1; max-width: 520px; }
-.radius-header output { min-width: 80px; color: var(--muxui-semantic-color-neutral-60); font: var(--muxui-semantic-typography-mono-s-font-size) var(--muxui-reference-typography-mono-font-family); }
+.radius-header output { min-width: 80px; color: var(--muxui-semantic-color-neutral-60); font: var(--muxui-semantic-typography-mono-s-font-size) var(--muxui-semantic-typography-mono-font-family); }
 .radius-row { display: flex; flex-wrap: wrap; gap: var(--muxui-reference-dimension-space-m); }
 .radius-item { display: flex; flex-direction: column; align-items: center; gap: var(--muxui-reference-dimension-space-3xs); }
 .radius-box { display: block; width: 48px; height: 48px; border: 1px solid var(--muxui-semantic-color-neutral-26); background: var(--muxui-semantic-color-color-60); }
-.radius-item b, .radius-item small { font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-reference-typography-mono-font-family); color: var(--muxui-semantic-color-neutral-60); }
+.radius-item b, .radius-item small { font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-semantic-typography-mono-font-family); color: var(--muxui-semantic-color-neutral-60); }
 .radius-item small { color: var(--muxui-semantic-color-neutral-40); }
 .output-row { display: flex; gap: var(--muxui-reference-dimension-space-xl); margin-top: var(--muxui-reference-dimension-space-xl); align-items: stretch; }
 .css-column { width: 440px; flex-shrink: 0; display: flex; flex-direction: column; }
 .output-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--muxui-reference-dimension-space-xs); margin-bottom: var(--muxui-reference-dimension-space-xs); }
 .output-heading h2 { margin: 0; font-size: var(--muxui-semantic-typography-title-s-font-size); font-weight: var(--muxui-semantic-typography-title-font-weight); }
-.css-output { flex: 1; min-height: 240px; max-height: 480px; overflow: auto; margin: 0; padding: var(--muxui-reference-dimension-space-s); border: 1px solid var(--muxui-semantic-color-neutral-22); border-radius: var(--muxui-reference-dimension-radius-s); background: var(--muxui-semantic-color-neutral-10); color: var(--muxui-semantic-color-neutral-90); font: var(--muxui-semantic-typography-mono-xs-font-size)/1.65 var(--muxui-reference-typography-mono-font-family); white-space: pre-wrap; }
+.css-output { flex: 1; min-height: 240px; max-height: 480px; overflow: auto; margin: 0; padding: var(--muxui-reference-dimension-space-s); border: 1px solid var(--muxui-semantic-color-neutral-22); border-radius: var(--muxui-reference-dimension-radius-s); background: var(--muxui-semantic-color-neutral-10); color: var(--muxui-semantic-color-neutral-90); font: var(--muxui-semantic-typography-mono-xs-font-size)/1.65 var(--muxui-semantic-typography-mono-font-family); white-space: pre-wrap; }
 .source-controls { display: flex; align-items: end; flex-wrap: wrap; gap: var(--muxui-reference-dimension-space-xs); margin-top: var(--muxui-reference-dimension-space-xs); }
 .source-controls label:not(.file-action) { display: grid; gap: var(--muxui-reference-dimension-space-4xs); font-size: var(--muxui-semantic-typography-label-s-font-size); }
 .source-controls input:not([type=file]) { height: 2rem; width: 180px; padding: 0 var(--muxui-reference-dimension-space-3xs); border: 1px solid var(--muxui-semantic-color-neutral-24); border-radius: var(--muxui-reference-dimension-radius-s); background: var(--muxui-semantic-color-neutral-5); color: inherit; }

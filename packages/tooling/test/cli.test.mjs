@@ -146,7 +146,7 @@ test('muxui get negotiates 1.1/1.2/2.0 and preserves page compatibility', () => 
   assert.deepEqual(sourceCrosswalk.entries, {
     status: 'absent',
     reason: 'token-source-omits-source-crosswalk',
-    tokenSourceSchemaVersion: '2.1.0',
+    tokenSourceSchemaVersion: '2.2.0',
     items: [],
   });
 

@@ -280,6 +280,75 @@ test('E-G1.0-01 rejects cycles, reverse layers, incompatible units, and override
   }));
 });
 
+test('token deprecations validate notice metadata, detect replacement cycles, and diagnose explicit use', () => {
+  assert.equal(Object.values(source.tokens).filter((token) => token.deprecation).length, 34);
+  assert.equal(compileTokenGraph(source).diagnostics.length, 0);
+
+  const overridden = compileTokenGraph(source, {
+    overrides: {
+      'semantic.motion.feedback': { type: 'duration', unit: 'ms', value: 240 },
+    },
+  });
+  assert.equal(overridden.tokens['semantic.motion.feedback'].value, 240);
+  assert.equal(overridden.tokens['semantic.motion.feedback-duration'].value, 120);
+  assert.deepEqual(overridden.diagnostics.map(({ code, token, use }) => ({ code, token, use })), [{
+    code: 'MUXUI_TOKEN_DEPRECATED',
+    token: 'semantic.motion.feedback',
+    use: 'override',
+  }]);
+
+  const preferredOverride = compileTokenGraph(source, {
+    overrides: {
+      'semantic.motion.feedback-duration': { type: 'duration', unit: 'ms', value: 240 },
+    },
+  });
+  assert.equal(preferredOverride.tokens['semantic.motion.feedback-duration'].value, 240);
+  assert.equal(preferredOverride.tokens['semantic.motion.feedback'].value, 120);
+  const preferredReducedOverride = compileTokenGraph(source, {
+    modes: { motion: 'reduced' },
+    overrides: {
+      'semantic.motion.feedback-duration': { type: 'duration', unit: 'ms', value: 240 },
+    },
+  });
+  assert.equal(preferredReducedOverride.tokens['semantic.motion.feedback'].value, 0);
+
+  const deprecatedRecipe = {
+    source: source.id,
+    requirements: [{ token: 'semantic.motion.feedback', requirement: 'required' }],
+  };
+  const set = compileTokenRequirementSet({
+    source,
+    recipe: deprecatedRecipe,
+    bindingId: 'deprecated-test',
+    profile: 'web.react',
+  });
+  assert.deepEqual(set.diagnostics.map(({ code, token, use }) => ({ code, token, use })), [{
+    code: 'MUXUI_TOKEN_DEPRECATED',
+    token: 'semantic.motion.feedback',
+    use: 'requirement',
+  }]);
+  assert.equal(Object.keys(set).includes('diagnostics'), false);
+  assert.equal(validateThemeForRequirementSet({
+    requirementSet: set,
+    values: { 'semantic.motion.feedback': 120 },
+  }).diagnostics[0].code, 'MUXUI_TOKEN_DEPRECATED');
+
+  const cycle = structuredClone(source);
+  cycle.tokens['semantic.test.deprecation-a'] = {
+    layer: 'semantic', type: 'string', unit: 'string', meaning: 'Deprecation A.', overridePolicy: 'theme', value: 'a',
+    deprecation: { since: '3.1.0', removeIn: '4.0.0', replacement: 'semantic.test.deprecation-b' },
+  };
+  cycle.tokens['semantic.test.deprecation-b'] = {
+    layer: 'semantic', type: 'string', unit: 'string', meaning: 'Deprecation B.', overridePolicy: 'theme', value: 'b',
+    deprecation: { since: '3.1.0', removeIn: '4.0.0', replacement: 'semantic.test.deprecation-a' },
+  };
+  expectCode('MUXUI_TOKEN_DEPRECATION_CYCLE', () => compileTokenGraph(cycle));
+
+  const invalidVersion = structuredClone(source);
+  invalidVersion.tokens['semantic.typography.display-font'].deprecation.since = '3.2.0';
+  expectCode('MUXUI_TOKEN_DEPRECATION_VERSION_INVALID', () => compileTokenGraph(invalidVersion));
+});
+
 test('E-G1.0-02 web and native transforms retain canonical provenance without cross-target authority', () => {
   const web = compileWebTheme(source);
   const react = compileWebTheme(source);
@@ -343,7 +412,7 @@ test('default theme link and invalid semantic colors meet contrast in both color
 });
 
 test('default theme motion scale removes Quick and preserves Fast (120ms) semantic roles', () => {
-  assert.equal(source.tokenContractVersion, '3.0.0');
+  assert.equal(source.tokenContractVersion, '3.1.0');
   const durationScale = new Map([
     ['instant', 0], ['fast', 120], ['moderate', 180], ['slow', 300], ['deliberate', 500],
   ]);
@@ -353,8 +422,12 @@ test('default theme motion scale removes Quick and preserves Fast (120ms) semant
       .map((id) => id.slice(prefix.length))
       .sort();
     assert.deepEqual(names, [...durationScale.keys()].sort());
-    for (const [name, value] of durationScale) assert.equal(source.tokens[`${prefix}${name}`].value, value);
+    for (const [name, value] of durationScale) {
+      const token = source.tokens[`${prefix}${name}`];
+      assert.equal(token.alias ?? token.value, token.alias === undefined ? value : `reference.motion.duration-${name}`);
+    }
   }
+  assert.equal(source.tokens['reference.duration.fast'].modes['motion.reduced'].value, 0);
 
   const full = compileTokenGraph(source);
   const reduced = compileTokenGraph(source, { modes: { motion: 'reduced' } });
