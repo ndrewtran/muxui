@@ -6,12 +6,6 @@ export class GenerationProofError extends Error {
   }
 }
 
-function entries(snapshot) {
-  if (snapshot instanceof Map) return snapshot;
-  if (Array.isArray(snapshot)) return new Map(snapshot);
-  throw new TypeError('generation snapshots must be Maps or entry arrays');
-}
-
 function sameEntries(left, right) {
   if (left.size !== right.size) return false;
   for (const [path, digest] of left) {
@@ -22,7 +16,7 @@ function sameEntries(left, right) {
 
 function selectEntries(snapshot, projectionPaths, includeProjections) {
   const selected = new Map();
-  for (const [path, digest] of entries(snapshot)) {
+  for (const [path, digest] of snapshot) {
     const isProjection = projectionPaths.has(path);
     if (isProjection === includeProjections) selected.set(path, digest);
   }
@@ -30,9 +24,6 @@ function selectEntries(snapshot, projectionPaths, includeProjections) {
 }
 
 export function verifyGenerationState({
-  beforeDigest,
-  firstDigest,
-  secondDigest,
   firstBeforeFiles,
   firstFiles,
   secondBeforeFiles,
@@ -54,47 +45,31 @@ export function verifyGenerationState({
     );
   }
 
-  if (firstBeforeFiles && firstFiles && secondBeforeFiles && secondFiles) {
-    const projections = new Set(projectionPaths);
-    const firstBeforeSources = selectEntries(firstBeforeFiles, projections, false);
-    const secondBeforeSources = selectEntries(secondBeforeFiles, projections, false);
-    const firstSources = selectEntries(firstFiles, projections, false);
-    const secondSources = selectEntries(secondFiles, projections, false);
-    const firstProjections = selectEntries(firstFiles, projections, true);
-    const secondProjections = selectEntries(secondFiles, projections, true);
+  const projections = new Set(projectionPaths);
+  const firstBeforeSources = selectEntries(firstBeforeFiles, projections, false);
+  const secondBeforeSources = selectEntries(secondBeforeFiles, projections, false);
+  const firstSources = selectEntries(firstFiles, projections, false);
+  const secondSources = selectEntries(secondFiles, projections, false);
+  const firstProjections = selectEntries(firstFiles, projections, true);
+  const secondProjections = selectEntries(secondFiles, projections, true);
 
-    if (!sameEntries(firstBeforeSources, secondBeforeSources)) {
-      throw new GenerationProofError(
-        'GENERATION_BASELINE_DRIFT',
-        'independent clean checkouts did not start from identical source content',
-      );
-    }
-    if (!sameEntries(firstBeforeSources, firstSources)
-      || !sameEntries(secondBeforeSources, secondSources)) {
-      throw new GenerationProofError(
-        'GENERATION_DRIFT',
-        'generation changed clean-checkout source content; repair the earliest source',
-      );
-    }
-    if (!sameEntries(firstProjections, secondProjections)) {
-      throw new GenerationProofError(
-        'GENERATION_NONDETERMINISTIC',
-        'independent clean generation runs produced different projection output',
-      );
-    }
-    return;
-  }
-
-  if (beforeDigest !== firstDigest) {
+  if (!sameEntries(firstBeforeSources, secondBeforeSources)) {
     throw new GenerationProofError(
-      'GENERATION_DRIFT',
-      'generation changed clean-checkout content; repair the earliest source and commit its projection',
+      'GENERATION_BASELINE_DRIFT',
+      'independent clean checkouts did not start from identical source content',
     );
   }
-  if (firstDigest !== secondDigest) {
+  if (!sameEntries(firstBeforeSources, firstSources)
+    || !sameEntries(secondBeforeSources, secondSources)) {
+    throw new GenerationProofError(
+      'GENERATION_DRIFT',
+      'generation changed clean-checkout source content; repair the earliest source',
+    );
+  }
+  if (!sameEntries(firstProjections, secondProjections)) {
     throw new GenerationProofError(
       'GENERATION_NONDETERMINISTIC',
-      'repeated generation produced a different clean-checkout digest',
+      'independent clean generation runs produced different projection output',
     );
   }
 }

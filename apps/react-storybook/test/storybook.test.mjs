@@ -207,11 +207,11 @@ test('current Storybook default stories render through their published package r
 
 test('uses standard generation scripts and checks drift in an isolated projection', async () => {
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
-  assert.equal(packageManifest.scripts.generate, 'node src/generate-stories.mjs');
+  assert.equal(packageManifest.scripts.generate, 'pnpm --filter @muxui/react... generate && node src/generate-stories.mjs');
   assert.equal(packageManifest.scripts['generate:check'], 'node src/generate-stories.mjs --check');
   assert.equal(packageManifest.scripts.storybook, 'pnpm generate && pnpm exec storybook dev -p 6006');
   assert.equal(packageManifest.scripts.build, 'pnpm generate && storybook build --output-dir dist');
-  assert.equal(packageManifest.scripts.check, 'pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs');
+  assert.equal(packageManifest.scripts.check, 'pnpm generate && pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs');
 
   const sourceRoot = resolve(appRoot, '.storybook/generated');
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-storybook-generation-check-'));

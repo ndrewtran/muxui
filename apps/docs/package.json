@@ -4,14 +4,14 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "astro dev",
-    "start": "astro dev",
-    "build": "astro build",
-    "check:docs": "node scripts/check-docs.mjs",
+    "dev": "pnpm --filter @muxui/docs^... generate && astro dev",
+    "start": "pnpm dev",
+    "build": "pnpm --filter @muxui/docs^... generate && astro build",
+    "check:docs": "pnpm --filter @muxui/docs^... generate && node scripts/check-docs.mjs",
     "check:docs:rendered": "node scripts/check-rendered-source.mjs",
     "preview": "astro preview",
-    "astro": "astro",
-    "check": "node scripts/check.mjs"
+    "astro": "pnpm --filter @muxui/docs^... generate && astro",
+    "check": "pnpm --filter @muxui/docs^... generate && node scripts/check.mjs"
   },
   "dependencies": {
     "@astrojs/react": "5.0.7",

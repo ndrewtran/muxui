@@ -184,9 +184,10 @@ test('E-G0.1-04: ArtifactRef grammar is derived from the schema owner', async ()
 test('E-G0.0-04 negative: an untracked non-projection output fails clean generation', () => {
   assert.throws(
     () => verifyGenerationState({
-      beforeDigest: 'same',
-      firstDigest: 'different',
-      secondDigest: 'different',
+      firstBeforeFiles: new Map(),
+      firstFiles: new Map([['unexpected-output.txt', 'unexpected-digest']]),
+      secondBeforeFiles: new Map(),
+      secondFiles: new Map([['unexpected-output.txt', 'unexpected-digest']]),
       firstStatus: '?? unexpected-output.txt\n',
       secondStatus: '?? unexpected-output.txt\n',
     }),
