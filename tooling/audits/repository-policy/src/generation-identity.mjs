@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { walkFiles } from './policy.mjs';
+import { auditRepository, classifyPath, loadPolicy, walkFiles } from './policy.mjs';
 import { verifyGenerationState } from './generation-proof.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -12,14 +12,11 @@ async function snapshot(cleanRoot) {
   const files = (await walkFiles(cleanRoot))
     .filter((path) => path !== '.git' && !path.startsWith('.git/'))
     .sort();
-  const digest = createHash('sha256');
+  const snapshotFiles = new Map();
   for (const path of files) {
-    digest.update(path);
-    digest.update('\0');
-    digest.update(await readFile(resolve(cleanRoot, path)));
-    digest.update('\0');
+    snapshotFiles.set(path, createHash('sha256').update(await readFile(resolve(cleanRoot, path))).digest('hex'));
   }
-  return digest.digest('hex');
+  return snapshotFiles;
 }
 
 function run(command, args, cwd, stdio = 'inherit') {
@@ -58,43 +55,69 @@ function status(cleanRoot) {
 }
 
 const sourceRevision = run('git', ['rev-parse', 'HEAD'], repositoryRoot, 'pipe').trim();
+const policy = await loadPolicy(repositoryRoot);
 const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-generation-proof-'));
-const cleanRoot = join(temporaryRoot, 'checkout');
+const cleanRoots = ['first', 'second'].map((name) => join(temporaryRoot, name));
+const runs = [];
 
 try {
-  run('git', ['worktree', 'add', '--quiet', '--detach', cleanRoot, sourceRevision], repositoryRoot);
-  run(
-    'pnpm',
-    ['install', '--offline', '--frozen-lockfile', '--ignore-scripts'],
-    cleanRoot,
-  );
-  const beforeDigest = await snapshot(cleanRoot);
-  generate(cleanRoot);
-  const firstDigest = await snapshot(cleanRoot);
-  const firstStatus = status(cleanRoot);
-  generate(cleanRoot);
-  const secondDigest = await snapshot(cleanRoot);
-  const secondStatus = status(cleanRoot);
+  for (const cleanRoot of cleanRoots) {
+    run('git', ['worktree', 'add', '--quiet', '--detach', cleanRoot, sourceRevision], repositoryRoot);
+    run(
+      'pnpm',
+      ['install', '--offline', '--frozen-lockfile', '--ignore-scripts'],
+      cleanRoot,
+    );
+    const beforeFiles = await snapshot(cleanRoot);
+    generate(cleanRoot);
+    const audit = await auditRepository(cleanRoot);
+    if (audit.generatedFiles === 0) {
+      throw new Error('GENERATION_NO_PROJECTIONS: clean generation produced no audited projections');
+    }
+    runs.push({
+      beforeFiles,
+      files: await snapshot(cleanRoot),
+      status: status(cleanRoot),
+    });
+  }
 
+  const projectionPaths = new Set();
+  for (const runResult of runs) {
+    for (const path of runResult.files.keys()) {
+      if (classifyPath(path, policy) === 'projection') projectionPaths.add(path);
+    }
+  }
   verifyGenerationState({
-    beforeDigest,
-    firstDigest,
-    secondDigest,
-    firstStatus,
-    secondStatus,
+    firstBeforeFiles: runs[0].beforeFiles,
+    firstFiles: runs[0].files,
+    secondBeforeFiles: runs[1].beforeFiles,
+    secondFiles: runs[1].files,
+    projectionPaths,
+    firstStatus: runs[0].status,
+    secondStatus: runs[1].status,
   });
 
+  const digest = createHash('sha256');
+  for (const [path, fileDigest] of [...runs[0].files].sort(([left], [right]) => left.localeCompare(right))) {
+    digest.update(path);
+    digest.update('\0');
+    digest.update(fileDigest);
+    digest.update('\0');
+  }
+
   console.log(
-    `[E-G0.0-04] isolated clean checkout ${sourceRevision} remained clean after two `
-      + `generation runs (sha256:${secondDigest})`,
+    `[E-G0.0-04] independent clean checkouts ${sourceRevision} generated identical `
+      + `projections with clean worktrees (sha256:${digest.digest('hex')})`,
   );
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;
 } finally {
-  spawnSync('git', ['worktree', 'remove', '--force', cleanRoot], {
-    cwd: repositoryRoot,
-    stdio: 'ignore',
-  });
+  for (const cleanRoot of cleanRoots) {
+    spawnSync('git', ['worktree', 'remove', '--force', cleanRoot], {
+      cwd: repositoryRoot,
+      stdio: 'ignore',
+    });
+  }
   await rm(temporaryRoot, { recursive: true, force: true });
 }

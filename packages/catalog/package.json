@@ -18,6 +18,7 @@
     "catalogPackage": "./generated/catalog-package.json"
   },
   "scripts": {
+    "prepack": "pnpm --filter @muxui/catalog... generate",
     "check": "node src/generate.mjs --check && node --test test/*.test.mjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"

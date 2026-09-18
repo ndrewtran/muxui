@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "check": "node src/check.mjs",
-    "check:browser": "node --test test/browser/theme-builder.test.mjs",
-    "check:browser:docs": "node --test test/browser/docs-theme.test.mjs"
+    "dev": "pnpm --filter @muxui/react... generate && vite",
+    "build": "pnpm --filter @muxui/react... generate && vite build",
+    "check": "pnpm --filter @muxui/react... generate && node src/check.mjs",
+    "check:browser": "pnpm --filter @muxui/react... generate && node --test test/browser/theme-builder.test.mjs",
+    "check:browser:docs": "pnpm --filter @muxui/docs^... generate && node --test test/browser/docs-theme.test.mjs"
   },
   "dependencies": {
     "@muxui/react": "workspace:*",

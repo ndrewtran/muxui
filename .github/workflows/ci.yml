@@ -27,6 +27,9 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
+      - name: Bootstrap generated projections
+        run: pnpm generate
+
       - name: Run affected deterministic checks
         env:
           MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: ${{ runner.temp }}/storybook-colour-audit

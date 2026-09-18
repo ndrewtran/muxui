@@ -33,7 +33,7 @@
     }
   },
   "scripts": {
-    "prepack": "node src/generate.mjs",
+    "prepack": "pnpm --filter @muxui/catalog... generate && node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
     "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test --test-concurrency=1 test/*.test.mjs && tsc --noEmit -p test/tsconfig.json",
     "check:browser": "node --test --test-concurrency=1 test/browser/*.test.mjs",
