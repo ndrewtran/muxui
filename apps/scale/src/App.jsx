@@ -62,15 +62,6 @@ function safeStorageGet(key) {
   try { return window.localStorage.getItem(key); } catch { return null; }
 }
 
-function migrateSettings(value) {
-  const merged = { ...DEFAULT_SETTINGS, ...(value && typeof value === 'object' ? value : {}) };
-  // v1 stored pixel radii (8px). Scale uses a 0..2 factor, where 0.5 is default.
-  if (!Number.isFinite(Number(merged.curvature)) || Number(merged.curvature) > RADIUS_SETTINGS.maximum) merged.curvature = RADIUS_SETTINGS.default;
-  merged.curvature = Math.max(RADIUS_SETTINGS.minimum, Math.min(RADIUS_SETTINGS.maximum, Number(merged.curvature)));
-  if (typeof merged.contrastPivot === 'string' && /^\d+$/u.test(merged.contrastPivot)) merged.contrastPivot = Number(merged.contrastPivot);
-  return merged;
-}
-
 function withEmbeddedSiteMode(settings, embedded) {
   if (!embedded) return settings;
   const colorMode = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
@@ -91,11 +82,11 @@ function readInitialSettings(embedded = false) {
     if (!encoded) continue;
     try {
       const value = JSON.parse(hash === encoded ? decodeURIComponent(encoded) : encoded);
-      return { settings: settingsForScope(migrateSettings({ ...preferences, ...value }), embedded), error };
+      return { settings: settingsForScope({ ...DEFAULT_SETTINGS, ...preferences, ...value }, embedded), error };
     } catch (cause) { error = `Saved settings rejected: ${cause.message}`; }
   }
   try {
-    const settings = migrateSettings(preferences);
+    const settings = { ...DEFAULT_SETTINGS, ...preferences };
     settings.colorMode = settings.background === 'light' ? 'light' : 'dark';
     return { settings: settingsForScope(settings, embedded), error };
   } catch (cause) { return { settings: settingsForScope({ ...DEFAULT_SETTINGS }, embedded), error: `Saved preferences rejected: ${cause.message}` }; }
@@ -497,7 +488,7 @@ function ComponentPreview({ settings }) {
     <div className="preview-canvas">
       <div className="preview-group preview-actions">
         <Button variant="primary" size="sm" onActivate={() => {}}>Primary</Button>
-        <Button variant="secondary" size="sm" onActivate={() => {}}>Secondary</Button>
+        <Button variant="neutral" size="sm" onActivate={() => {}}>Neutral</Button>
         <Button variant="ghost" size="sm" onActivate={() => {}}>Ghost</Button>
         <ToggleButton size="sm" defaultSelected>Toggle</ToggleButton>
         <ToggleButtonGroup aria-label="Preview alignment" defaultSelectedIds={['center']} selectionMode="single">
@@ -518,7 +509,7 @@ function ComponentPreview({ settings }) {
         <div className="preview-block"><span className="preview-label">Tabs and disclosure</span><Tabs aria-label="Preview sections" defaultValue="overview" items={[{ id: 'overview', label: 'Overview' }, { id: 'details', label: 'Details' }, { id: 'settings', label: 'Settings' }]} /><Disclosure title="Show details" defaultExpanded>Additional details revealed on expand.</Disclosure></div>
         <div className="preview-block"><span className="preview-label">Tags and grid list</span><TagGroup aria-label="Preview tags" items={['Design', 'Development', 'Docs']} /><GridList aria-label="Preview items" items={['Design tokens', 'Components', 'Documentation']} defaultSelectedIds={['Components']} selectionMode="multiple" /></div>
         <div className="preview-block"><span className="preview-label">Calendar</span><Calendar aria-label="Preview calendar" /></div>
-        <div className="preview-block"><span className="preview-label">Menu and tooltip</span><Menu aria-label="Preview menu" items={['Edit', 'Duplicate', 'Delete']} /><Tooltip content="Tooltip content" trigger={<Button variant="secondary" size="sm">Hover me</Button>} /></div>
+        <div className="preview-block"><span className="preview-label">Menu and tooltip</span><Menu aria-label="Preview menu" items={['Edit', 'Duplicate', 'Delete']} /><Tooltip content="Tooltip content" trigger={<Button variant="neutral" size="sm">Hover me</Button>} /></div>
       </div>
       <Table aria-label="Preview people" columns={[{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'role', label: 'Role' }, { id: 'status', label: 'Status' }]} rows={[{ id: 'r1', values: { name: 'Alice', role: 'Engineer', status: 'Active' } }, { id: 'r2', values: { name: 'Bob', role: 'Designer', status: 'Active' } }]} />
       <div className="preview-footer"><Breadcrumbs aria-label="Preview breadcrumbs" items={[{ id: 'home', label: 'Home', href: '#' }, { id: 'library', label: 'Library', href: '#' }, { id: 'current', label: 'Current' }]} /><Separator /><Link href="#" onActivate={() => {}}>Learn more</Link></div>

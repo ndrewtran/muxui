@@ -13,6 +13,16 @@ schema namespace `muxui:`, CLI `muxui`, and public styling hooks rooted in
 because no public npm release exists. Historical records retain their original
 predecessor identities and bytes.
 
+Decision 0016 applies a current-only compatibility policy during Mux UI's
+pre-release state. No consuming projects depend on the superseded Mux-owned
+APIs, tokens, source schemas, or query versions. Remove obsolete names and
+formats outright and update internal callers, generated surfaces, and docs;
+do not retain compatibility aliases, coercions, notice releases, or migrators
+solely for those superseded values. Current validation, package integrity,
+accessibility, and platform support checks still apply. Historical evidence
+remains immutable. Compatibility windows below apply when a supported public
+release establishes a consumer contract, not to obsolete pre-release shapes.
+
 Mux UI is built as:
 
 > Mux UI is a versioned design-system knowledge graph whose primary component
@@ -938,8 +948,8 @@ class such as `.muxui-button`; named descendants use stable slots such as
 Raw palette values are not consumed directly by component CSS: components use
 semantic or component tokens that can be compiled for both web and native.
 
-That promise is deliberately narrow and machine-enumerated in each web binding
-spec:
+For supported published contracts, that promise is deliberately narrow and
+machine-enumerated in each web binding spec:
 
 | CSS/DOM surface | Compatibility policy |
 | --- | --- |
@@ -1830,7 +1840,7 @@ binding has a lifecycle and a strategy. An unsupported declaration has a
 strategy, reason, and optional alternative but no lifecycle; it is honest data,
 not a missing record or a maturity value.
 
-Stable artifact IDs are never recycled. Deprecation requires:
+Stable artifact IDs are never recycled. For supported published contracts, deprecation requires:
 
 - a replacement or an explicit no-replacement reason;
 - a migration artifact;
@@ -1893,7 +1903,11 @@ explicit target tuple or are labelled advisory. They must not emit
 implementation imports, props, or examples as applicable to a project when the
 target package range is unknown or incompatible.
 
-Breaking-change scope is classified before release:
+Breaking-change scope is classified before release. The following version and
+migration rules describe changes to supported published contracts. During the
+current pre-release state, internal callers move directly to the current
+contract; no old-format reader, notice window, or migration utility is required
+without an actual supported consumer need:
 
 | Change | Required version effect | Required evidence and migration |
 | --- | --- | --- |
@@ -1919,11 +1933,14 @@ evidence rerun or timestamp from manufacturing a catalog release.
 Canonical source schemas are closed by default. Unknown top-level fields fail
 compilation rather than being ignored, because an ignored spelling error or
 unsupported semantic field would make generated guidance untrustworthy.
-Public response envelopes are version-negotiated and append-only within a
-major; consumers must ignore unknown optional response members but never infer
-meaning from them.
+Supported published response envelopes are version-negotiated and append-only
+within a major; consumers must ignore unknown optional response members but
+never infer meaning from them. The current pre-release implementation accepts
+only its declared current version and rejects superseded versions.
 
-`schemaVersion` follows these compatibility rules:
+`schemaVersion` follows these compatibility rules for supported published
+contracts. Their migration and notice obligations do not require old-format
+utilities during the current pre-release state:
 
 | Schema change | Version effect | Migration rule |
 | --- | --- | --- |
@@ -1941,33 +1958,25 @@ only on experimental artifacts or bindings and is listed in the manifest; a
 stable artifact cannot depend on it.
 
 Promotion requires an accepted ADR, a stable schema field, compiler/query
-support, fixtures, and a source migration that moves data out of the
-experimental namespace. Canonical-source migrations are explicit,
+support and fixtures. Update pre-release canonical input directly when no
+supported consumer needs a migration; otherwise provide a source migration
+out of the experimental namespace. Canonical-source migrations are explicit,
 version-to-version, deterministic, idempotent, and reviewable with `--dry-run`;
 tools never rewrite source records silently while reading or querying them.
 Deprecated fields remain readable for their declared compatibility window and
 cannot be repurposed with new meaning.
 
-Query-response deprecation follows the same rule. `@muxui/schema` owns each
-versioned request/response grammar. `@muxui/catalog` owns response-version
-negotiation and historical query semantics; adapters cannot reinterpret them.
-Query API `1.2.0` is the
-required additive notice release for moving large token-source payloads out of
-the `artifact.detail` full-response `tokens` member. It retains the complete
-query API `1.1.0` inline member, adds the bounded `tokens` and
-`source-crosswalk` sections, and emits
-`MUXUI_QUERY_INLINE_TOKENS_DEPRECATED` with replacement guidance. Only after
-that exact release has complete retained Gate 0 evidence and human acceptance
-may query API `2.0.0` remove inline `tokens`. The catalog retains and negotiates
-historical v1.1, v1.2, and v2 behavior. Tooling selects a compatible installed
-catalog, forwards explicit version intent, renders the returned response, and
-rejects unsupported tuples without silently translating response or cursor
-meaning. The v1.2 `source-crosswalk` section returns a typed derived `absent`
-status for a token-source `2.0.0` record and for a `2.1.0` record that omits the
-authored field; clients never infer absence from a missing response member.
-Explicitly negotiated v1.1/v1.2 inline responses are retained compatibility
-artifacts: they are exempt from the v2 sectional page budget, are never the
-current/default response, and do not satisfy proof of the v2 bounded path.
+The current pre-release query surface supports only query API `2.0.0`.
+`@muxui/schema` owns its request/response grammar; `@muxui/catalog` owns
+current response semantics and bounded page selection. Token summaries expose
+counts, digests, provenance, and available sections; complete entries are
+retrieved through `tokens` and `source-crosswalk` sections. An omitted authored
+crosswalk returns typed `absent`, never an inferred missing member. Tooling
+forwards explicit version intent and rejects unsupported versions without
+translating response or cursor meaning. Superseded v1.1/v1.2 responses and their
+notice-release machinery are not active compatibility surfaces. Retained
+historical evidence records their original behavior without requiring current
+runtime support.
 
 Extension bytes are canonical input, so changing them updates the owning
 record's `contentRevision` and, when published, requires at least a catalog
@@ -2003,7 +2012,7 @@ Semantic tokens assign product-independent roles; component tokens narrow those
 roles only when a component needs a stable customization point. The alias graph
 is acyclic and may point from component to semantic to reference, never in the
 opposite direction. A same-layer alias is allowed only for documented semantic
-equivalence or a deprecation bridge; it cannot conceal a role change.
+equivalence; it cannot conceal a role change or retain a superseded spelling.
 Components consume semantic or component tokens only.
 
 A closed default-theme exception permits the fixed reference families
@@ -2028,10 +2037,8 @@ Mux UI token facts, and native never parses CSS.
 
 Under current query API v2 behavior, complete token and crosswalk populations
 are retrieved only through the versioned `tokens` and `source-crosswalk`
-sections of `getArtifact` / `muxui get`. Explicit version negotiation may still
-retrieve the retained v1.1/v1.2 inline compatibility members described above;
-those historical responses cannot become the default or be represented as
-section-budget proof. `@muxui/schema` owns the closed
+sections of `getArtifact` / `muxui get`. Superseded inline query versions are
+unsupported during the current pre-release state. `@muxui/schema` owns the closed
 `TokenSectionPageBudgetProfile` grammar;
 the catalog owns the canonical profile values and page selection. The profile
 contains the query API version, Mux UI lexer version, canonical entry-order/cost
@@ -2150,10 +2157,12 @@ behavior: a consumer value cannot disable required system adaptation. The
 catalog reports override policy, types, modes, platform restrictions, and
 fallbacks so agents do not infer customization rights.
 
-Token deprecation names a replacement or an explicit no-replacement reason.
-Replacement aliases are cycle-checked, emit diagnostics throughout the notice
-window, and disappear only in a token-contract major. Renaming a token or
-changing its semantic role is not hidden inside a platform transform.
+During the current pre-release state, remove superseded tokens and migrate
+internal callers directly. Document a replacement or an explicit no-replacement
+reason without exporting the old spelling. A supported published token contract
+must instead define its notice and migration obligations before changing or
+removing public roles. Renaming a token or changing its semantic role is never
+hidden inside a platform transform.
 
 ### V1 product boundaries
 

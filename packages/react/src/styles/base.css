@@ -59,10 +59,7 @@
   --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
   --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-focus-neutral-glow) 30%, transparent);
   --muxui-control-size-sm: var(--muxui-semantic-control-size-sm);
-  /* Keep the historical min-height hook in the md path so existing theme
-     overrides continue to control the default target. The canonical token
-     aliases min-height back to size-md for new themes. */
-  --muxui-control-size-md: var(--muxui-semantic-control-min-height);
+  --muxui-control-size-md: var(--muxui-semantic-control-size-md);
   --muxui-control-size-lg: var(--muxui-semantic-control-size-lg);
   --muxui-field-min-height: var(--muxui-control-size-md);
   --muxui-field-padding-block: var(--muxui-semantic-layout-inset-tiny);

@@ -511,7 +511,7 @@
   }
 
   /* Opacity would hide the system disabled/GrayText contrast treatment. */
-  :is(.muxui-button, .muxui-r1-button, .muxui-toggle-button, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
+  :is(.muxui-button, .muxui-toggle-button, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
   .muxui-disclosure[data-disabled] .muxui-disclosure-trigger,
   .muxui-disclosure-trigger[data-disabled],
   .muxui-file-trigger[data-disabled],

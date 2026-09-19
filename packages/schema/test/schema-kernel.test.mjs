@@ -13,7 +13,6 @@ import {
   canonicalJson,
   classifySchemaChange,
   contentRevision,
-  migrateTokenSourceV2ToV2_1,
   negotiateSchemaVersion,
   parseArtifactRef,
   parseJsonStrict,
@@ -202,7 +201,7 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
   const bindingContent = bindingContentRevision(component().bindings['web.react']);
   assert.match(bindingContent, /^sha256:[a-f0-9]{64}$/);
   validateFamily('query-envelope', {
-    apiVersion: '1.1.0',
+    apiVersion: '2.0.0',
     type: 'artifact.detail',
     data: {
       artifact: {
@@ -212,7 +211,7 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
       },
     },
     meta: {
-      schemaVersion: '1.1.0',
+      schemaVersion: '2.0.0',
       authority: 'advisory',
       revisions: {
         conceptContent: `sha256:${'1'.repeat(64)}`,
@@ -722,66 +721,12 @@ test('E-G0.1-04: package/source locations remain derived and generated types ret
   assert.match(generated, /export type ArtifactKind/);
 });
 
-test('token-source 2.0 to 2.1 migration is explicit, omission-preserving, and idempotent', () => {
-  const legacy = tokenSource();
-  legacy.schemaVersion = '2.0.0';
-  const omitted = migrateTokenSourceV2ToV2_1(legacy);
-  assert.equal(omitted.schemaVersion, '2.1.0');
-  assert.equal(Object.hasOwn(omitted, 'sourceCrosswalk'), false);
-  assert.deepEqual(migrateTokenSourceV2ToV2_1(omitted), omitted);
-  assert.deepEqual(migrateTokenSourceV2ToV2_1(legacy, { dryRun: true }), {
-    from: '2.0.0',
-    to: '2.1.0',
-    changed: true,
-    readRewrite: false,
-    sourceCrosswalk: 'omitted',
-  });
-
-  const sourceCrosswalk = {
-    baseline: {
-      repository: 'muxui/reference',
-      revision: 'a'.repeat(40),
-      path: 'packages/tokens/tokens.json',
-      sha256: `sha256:${'b'.repeat(64)}`,
-      baseFontSizePx: 16,
-      declarationOccurrences: 1,
-      customPropertyOccurrences: 0,
-      uniqueCustomPropertyNames: 0,
-      nonCustomPropertyOccurrences: 1,
-    },
-    entries: [{
-      occurrence: { ordinal: 1, file: '_base.css', selector: 'html', name: 'font-size', value: '100%' },
-      disposition: 'reject',
-      reason: 'An HTML root style is not a portable token declaration.',
-      targets: {
-        'web.html': 'rejected',
-        'web.react': 'rejected',
-        'native.ios': 'rejected',
-        'native.android': 'rejected',
-        'native.react-native-web': 'rejected',
-      },
-    }],
-    groups: [],
-  };
-  const migrated = migrateTokenSourceV2ToV2_1(legacy, { sourceCrosswalk });
-  assert.deepEqual(migrated.sourceCrosswalk, sourceCrosswalk);
-  assert.deepEqual(migrateTokenSourceV2ToV2_1(migrated, { sourceCrosswalk }), migrated);
-  assert.throws(
-    () => migrateTokenSourceV2ToV2_1(migrated, { sourceCrosswalk: { ...sourceCrosswalk, extra: true } }),
-    expectCode('MUXUI_SCHEMA_MIGRATION_REQUIRED'),
-  );
-  assert.throws(
-    () => migrateTokenSourceV2ToV2_1(legacy, { dryRun: 'true' }),
-    expectCode('MUXUI_SCHEMA_MIGRATION_REQUIRED'),
-  );
-});
-
 test('section-page grammar is closed, typed, and position-safe', () => {
   const page = {
-    schemaVersion: '1.2.0',
+    schemaVersion: '2.0.0',
     responseType: 'artifact.detail.section-page',
     meta: {
-      queryApiVersion: '1.2.0',
+      queryApiVersion: '2.0.0',
       catalogVersion: '0.1.0',
       catalogDigest: `sha256:${'a'.repeat(64)}`,
       tokenSourceContentRevision: `sha256:${'b'.repeat(64)}`,
@@ -862,8 +807,8 @@ test('section-page grammar is closed, typed, and position-safe', () => {
   absent.meta.section = 'source-crosswalk';
   absent.entries = {
     status: 'absent',
-    reason: 'token-source-schema-does-not-declare-source-crosswalk',
-    tokenSourceSchemaVersion: '2.0.0',
+    reason: 'token-source-omits-source-crosswalk',
+    tokenSourceSchemaVersion: '2.1.0',
     items: [],
   };
   absent.page = {
@@ -875,11 +820,6 @@ test('section-page grammar is closed, typed, and position-safe', () => {
     densePageBudget: 2048,
   };
   assert.doesNotThrow(() => validateFamily('section-page', absent));
-
-  const omitted = structuredClone(absent);
-  omitted.entries.reason = 'token-source-omits-source-crosswalk';
-  omitted.entries.tokenSourceSchemaVersion = '2.1.0';
-  assert.doesNotThrow(() => validateFamily('section-page', omitted));
 
   const sourceCrosswalk = structuredClone(page);
   sourceCrosswalk.meta.section = 'source-crosswalk';
@@ -962,8 +902,8 @@ test('page budget profile grammar is closed and internally bounded', async () =>
     (value) => { value.maximumEntryTokens -= 1; },
     (value) => { value.defaultItemLimit = value.maximumItemLimit + 1; },
     (value) => { value.normalizedWorstCaseEnvelopeSha256 = 'not-a-digest'; },
-    (value) => { value.id = 'muxui-token-section-page-budget-1-2-0'; },
-    (value) => { value.queryApiVersion = '1.2.0'; },
+    (value) => { value.id = 'muxui-token-section-page-budget-99-0-0'; },
+    (value) => { value.queryApiVersion = '99.0.0'; },
   ]) {
     const invalid = structuredClone(profile);
     mutate(invalid);

@@ -106,8 +106,7 @@ const button = (
     aria-label="Save"
     disabled={false}
     pending
-    variant="secondary"
-    tone="destructive"
+    variant="danger-neutral"
     size="lg"
     onActivate={(event) => {
       const activationType: 'activate' = event.type;
@@ -126,9 +125,6 @@ void button;
 // @ts-expect-error Button variants do not expose arbitrary strings.
 const invalidButtonVariant = <Button variant="experimental">Save</Button>;
 void invalidButtonVariant;
-// @ts-expect-error Button tones do not expose arbitrary strings.
-const invalidButtonTone = <Button tone="danger">Delete</Button>;
-void invalidButtonTone;
 // @ts-expect-error Button sizes do not expose arbitrary strings.
 const invalidButtonSize = <Button size="medium">Save</Button>;
 void invalidButtonSize;

@@ -121,12 +121,12 @@ test('E-G0.3-02 human, JSON, and dense projections preserve one response object'
   assert.equal(response.meta.resolution.catalogSource, 'package');
 });
 
-test('muxui get negotiates 1.1/1.2/2.0 and preserves page compatibility', () => {
+test('muxui get uses the current API and round-trips bounded pages', () => {
   const parsed = parseCliArguments([
-    'get', 'muxui:token:default-theme', '--query-api-version', '1.2.0',
+    'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0',
     '--section', 'tokens', '--limit', '1', '--json',
   ]);
-  assert.equal(parsed.request.queryApiVersion, '1.2.0');
+  assert.equal(parsed.request.queryApiVersion, '2.0.0');
   assert.equal(parsed.request.limit, 1);
   assert.equal(parsed.request.section, 'tokens');
 
@@ -140,7 +140,7 @@ test('muxui get negotiates 1.1/1.2/2.0 and preserves page compatibility', () => 
   assert.ok(countTokens(renderDense(page)) <= 2048);
 
   const sourceCrosswalk = jsonResult([
-    'get', 'muxui:token:default-theme', '--query-api-version', '1.2.0',
+    'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0',
     '--section', 'source-crosswalk',
   ]);
   assert.deepEqual(sourceCrosswalk.entries, {
@@ -150,23 +150,16 @@ test('muxui get negotiates 1.1/1.2/2.0 and preserves page compatibility', () => 
     items: [],
   });
 
-  const historical = jsonResult([
-    'get', 'muxui:token:default-theme', '--query-api-version', '1.1.0', '--detail', 'full',
-  ]);
-  assert.equal(historical.apiVersion, '1.1.0');
-  assert.deepEqual(historical.warnings, []);
-  assert.ok(Object.hasOwn(historical.data.artifact, 'tokens'));
-
   for (const args of [
-    ['get', 'muxui:component:missing', '--query-api-version', '1.1.0', '--json'],
+    ['get', 'muxui:component:missing', '--query-api-version', '2.0.0', '--json'],
     [
-      'get', 'muxui:token:default-theme', '--query-api-version', '1.1.0',
+      'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0',
       '--cursor', 'not-a-cursor', '--json',
     ],
   ]) {
     const error = JSON.parse(runCli(args).stdout);
     assert.equal(error.type, 'error');
-    assert.equal(error.apiVersion, '1.1.0');
+    assert.equal(error.apiVersion, '2.0.0');
   }
 
   const current = runCli([
@@ -355,7 +348,7 @@ test('E-G0.3-05 structured errors have stable codes, safe actions, and meaningfu
     assert.equal(response.error.nextCommand.requiresConfirmation, false);
   }
   assert.throws(() => assertSafeDiagnostics({
-    apiVersion: '1.1.0',
+    apiVersion: '2.0.0',
     type: 'error',
     error: {
       code: 'MUXUI_QUERY_INVALID',

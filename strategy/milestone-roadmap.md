@@ -32,6 +32,14 @@ The governing delivery rule is:
 > broader tooling or a secondary renderer only when an observed workflow and
 > the applicable R1/P2/W1/N1 entry authority justify it.
 
+Decision 0016 removes legacy compatibility implementation from the current
+pre-release product. No consumer requires superseded Mux-owned aliases, query
+versions, source migrations, or notice releases. Current checks prove current
+contracts and reject unsupported input; historical evidence is retained as
+history. This changes no completed milestone state or evidence identity.
+Historical negotiation and migration deliverables below apply only when a
+supported published contract establishes an actual consumer need.
+
 ## How to use this roadmap
 
 ### Status vocabulary
@@ -342,8 +350,8 @@ compile one real component without pre-building the full ontology.
 - Guidance-impact classification and the rule that implementation-relevant
   examples are normative regardless of an authored editorial label.
 - Response-envelope versioning and append-only error-code policy.
-- Schema evolution rules for patch, minor, major, deprecation, and explicit
-  source migration.
+- Schema evolution rules for patch, minor, major, and supported published
+  deprecation/migration; pre-release sources use the current contract directly.
 - Token-source schema with closed typed layers, modes, aliases, override
   policies, and canonical ownership of authored and derived fields.
 - Versioned query schemas for bounded token sections, cursors, summary
@@ -360,7 +368,7 @@ compile one real component without pre-building the full ontology.
 | `E-G0.1-02` | Whitespace/key-order changes preserve revisions while a meaningful authored change updates the correct revision. | Canonicalization fixture and digest comparison. |
 | `E-G0.1-03` | Editorial-only input changes content identity but not renderer compatibility; normative binding input changes `specRevision`. | Revision-closure fixture. |
 | `E-G0.1-04` | Renderer/package/source locations are derived and cannot be authored as duplicate inventory. | Field-ownership audit. |
-| `E-G0.1-05` | Schema compatibility fixtures enforce the declared patch/minor/major rules and every source/query version, migration, absence, page-profile, negotiation, and notice-boundary clause required by the active accepted correction profile. | Source/query version-negotiation matrix bound to the accepted correction-profile ID. |
+| `E-G0.1-05` | Schema fixtures enforce current source/query versions, typed absence, page profiles, and unsupported-version rejection. Published compatibility rules require migration/notice proof only when a supported consumer contract exists. | Current source/query validation and negative version matrix; retained prior evidence remains historical. |
 
 **Scope controls**
 
@@ -418,8 +426,8 @@ query it through a side-effect-free API.
 | --- | --- | --- |
 | `E-G0.2-01` | Two clean builds from the same sources produce byte-identical catalogs, indices, ordering, and digests. | Dual-build digest report. |
 | `E-G0.2-02` | Programmatic list/search/get requests are deterministic and include exact match reasons, provenance, authority, and compatibility context. | Golden API corpus. |
-| `E-G0.2-03` | Pagination is stable under the same query API, catalog digest, token-source revision, section, and selector state and rejects invalid, cross-version, or cross-digest cursors. | Cursor integrity and historical-version fixture. |
-| `E-G0.2-04` | Search returns bounded summaries; under the current sectional contract, retrieval returns selected complete records without copying the whole graph and continuation enumerates every token/crosswalk entry within response and dense-page budgets. A single oversize entry fails closed without truncation. Explicitly negotiated historical inline compatibility responses remain deterministic and parity-proved but are not represented as sectional-budget proof. | Response-size, completeness, oversize, historical-compatibility, and relation-boundary test bound to the accepted correction-profile ID. |
+| `E-G0.2-03` | Pagination is stable under the same query API, catalog digest, token-source revision, section, and selector state and rejects invalid, cross-version, or cross-digest cursors. | Cursor integrity and unsupported-version fixture. |
+| `E-G0.2-04` | Search returns bounded summaries; under the current sectional contract, retrieval returns selected complete records without copying the whole graph and continuation enumerates every token/crosswalk entry within response and dense-page budgets. A single oversize entry fails closed without truncation. Superseded inline response versions are rejected; historical evidence does not require active compatibility responses. | Response-size, completeness, oversize, unsupported-version, and relation-boundary tests. |
 | `E-G0.2-05` | Query operations perform no writes, network requests, code execution, or environment-dependent ranking. | Hermeticity and side-effect audit. |
 
 **Scope controls**
@@ -516,9 +524,9 @@ data.
 - Resolver error precedence and all seven architecture-defined error codes.
 - Relative-path diagnostics and privacy-safe exact next commands.
 - Package/query compatibility metadata. The catalog owns deterministic
-  negotiation for retained query API v1.1, v1.2 notice, and v2 sectional
-  behavior; tooling selects a compatible installed catalog, forwards explicit
-  version intent, and rejects unsupported tuples without reinterpretation.
+  current query API v2 sectional behavior and unsupported-version rejection;
+  tooling selects a compatible installed catalog, forwards explicit version
+  intent, and rejects unsupported tuples without reinterpretation.
 
 **Acceptance evidence**
 
@@ -527,7 +535,7 @@ data.
 | `E-G0.4-01` | Hoisted, sibling, ancestor, and newer cached catalogs never replace the selected workspace’s direct declaration. | Multi-workspace resolver matrix. |
 | `E-G0.4-02` | Every reachable resolver code, precedence path, secondary detail, and safe next command is exercised. | Resolver taxonomy fixture. |
 | `E-G0.4-03` | Integrity, declaration drift, ambiguous resolution, incompatible binding/token tuples, and unsupported query/cursor versions fail without network fallback or silent response reinterpretation. | Negative package-graph and query-version corpus. |
-| `E-G0.4-04` | Installed-local authority and exact package/catalog/query/schema tuple appear in every applicable response, including historical v1.1/v1.2 retrieval. | Query metadata assertion. |
+| `E-G0.4-04` | Installed-local authority and exact package/catalog/query/schema tuple appear in every applicable response, with unsupported query versions rejected. | Query metadata assertion. |
 | `E-G0.4-05` | JSON exposes no absolute root, credentials, secret, access-bearing URL, or unrestricted storage locator. | Privacy scan. |
 
 **Scope controls**
@@ -924,7 +932,7 @@ publication authorization or change the final R1-exit merge stop.
 
 ### Later tracks and Productization
 
-- `P2.1` publishes compatible catalog/tooling packages, historical negotiation,
+- `P2.1` publishes compatible catalog/tooling packages, supported-contract negotiation,
   public release descriptors, and CLI-as-documentation for the React tuple
   after R1 exit. Evidence: `E-P2.1-01…06`.
 - `P2.2` proves packed React installation, offline installed-local authority,
@@ -1041,7 +1049,8 @@ catalog, renderer, schema, token, export, and evidence tuple they install.
   active exception digests/restrictions/expiries.
 - SemVer classification for shared intent, binding API, runtime profile, token,
   implementation-only, and editorial changes.
-- Historical catalog retrieval and compatibility negotiation.
+- Historical catalog retrieval and compatibility negotiation only for supported
+  published contracts with an actual consumer need.
 - Release preparation that rejects inconsistent binding ranges, missing
   exports, digest drift, or version effects.
 
@@ -1053,7 +1062,7 @@ catalog, renderer, schema, token, export, and evidence tuple they install.
 | `E-G2.1-02` | Descriptor bindings match actual tarball exports and exact binding/token revisions; source-tree-only success fails. | Pack-time descriptor audit. |
 | `E-G2.1-03` | The release manifest verifies every package/catalog/evidence/exception digest and rejects repacked bytes under the same version. | Manifest integrity fixture. |
 | `E-G2.1-04` | Representative compatible, incompatible, editorial, implementation-only, token, and schema changes produce the required version effects. | SemVer classification corpus. |
-| `E-G2.1-05` | Historical compatible catalogs answer for installed tuples while hosted/latest data remains advisory. | Multi-version query matrix. |
+| `E-G2.1-05` | Supported published catalogs answer for their supported installed tuples while hosted/latest data remains advisory; obsolete pre-release formats do not require active readers. | Multi-version query matrix. |
 
 **Scope controls**
 

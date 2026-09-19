@@ -40,7 +40,11 @@ async function corpus() {
     new URL('../../../tests/fixtures/g0.4/corpus.json', import.meta.url),
     'utf8',
   ));
-  return projectCurrentIdentity(historicalCorpus);
+  const current = projectCurrentIdentity(historicalCorpus);
+  // Reuse the retained resolver scenarios against the current query contract.
+  for (const catalog of current.catalogs) catalog.supportedQueryApiVersions = [catalog.queryApiVersion];
+  current.graphs = current.graphs.filter(({ id }) => id !== 'query-api-version-unsupported');
+  return current;
 }
 
 function resolve(value, graph) {
@@ -247,6 +251,9 @@ test('G0.4 production resolver input rejects duplicate or undeclared normalized 
   const unknown = structuredClone(value.graphs[0]);
   unknown.undocumented = true;
   assert.throws(() => resolve(value, unknown), /MUXUI_RESOLVER_INPUT_INVALID/);
+  const unsupportedQuery = structuredClone(value.graphs[0]);
+  unsupportedQuery.request.queryApiVersion = '99.0.0';
+  assert.throws(() => resolve(value, unsupportedQuery), /MUXUI_RESOLVER_INPUT_INVALID/);
 
   const tilde = structuredClone(value.graphs.find(({ id }) => id === 'selected-direct-compatible'));
   tilde.workspaces.find(({ path }) => path === tilde.selectedWorkspace).catalogRange = '~1.0.0';
@@ -506,7 +513,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
       catalogVersion: '2.0.0',
       catalogDigest: bundle.catalogDigest,
       queryApiVersion: bundle.apiVersion,
-      supportedQueryApiVersions: ['1.1.0', '1.2.0', '2.0.0'],
+      supportedQueryApiVersions: ['2.0.0'],
       schemaRange: '^2.0.0',
       sourceRevision: bundle.sourceRevision,
       provenance: { kind: 'source-revision', value: bundle.sourceRevision },

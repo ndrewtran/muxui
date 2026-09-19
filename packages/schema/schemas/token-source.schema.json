@@ -268,7 +268,7 @@
         "overridePolicy": { "enum": ["fixed", "theme", "instance"] },
         "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "object" }] },
         "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" },
-        "equivalence": { "enum": ["semantic-equivalence", "deprecation-bridge"] },
+        "equivalence": { "enum": ["semantic-equivalence"] },
         "fluid": { "$ref": "#/$defs/fluidRecipe" },
         "formula": { "$ref": "#/$defs/dimensionFormula" },
         "relative": { "$ref": "#/$defs/relativeDimension" },

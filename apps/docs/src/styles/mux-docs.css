@@ -363,7 +363,7 @@ main > .content-panel:nth-child(2) {
 
 .demo-source-header button,
 .mux-page-title-actions button {
-	min-height: var(--muxui-semantic-control-min-height);
+	min-height: var(--muxui-semantic-control-size-md);
 	padding-inline: var(--muxui-semantic-control-padding-inline);
 	border: 1px solid var(--muxui-semantic-border-default);
 	border-radius: var(--muxui-semantic-control-radius);
@@ -584,7 +584,7 @@ pre code {
 }
 
 .code-block-header button {
-	min-height: var(--muxui-semantic-control-min-height);
+	min-height: var(--muxui-semantic-control-size-md);
 	padding-inline: var(--muxui-semantic-control-padding-inline);
 	border: 1px solid var(--muxui-semantic-border-default);
 	border-radius: var(--muxui-semantic-control-radius);
@@ -959,7 +959,7 @@ site-search button > kbd {
 .foundation-filters label { display: grid; gap: var(--muxui-reference-dimension-space-4xs); color: var(--muxui-semantic-content-muted); font-family: var(--muxui-semantic-typography-mono-font-family); font-size: var(--muxui-semantic-typography-mono-xs-font-size); }
 .foundation-filters input,
 .foundation-filters select {
-	min-height: var(--muxui-semantic-control-min-height);
+	min-height: var(--muxui-semantic-control-size-md);
 	max-width: 15rem;
 	padding-inline: var(--muxui-semantic-control-padding-inline);
 	border: 1px solid var(--muxui-semantic-border-default);
@@ -1019,7 +1019,7 @@ site-search button > kbd {
 .foundation-detail > p { margin-block: var(--muxui-reference-dimension-space-s); font-size: var(--muxui-semantic-typography-text-s-font-size); line-height: var(--muxui-semantic-typography-text-line-height); }
 .foundation-copy,
 .foundation-action {
-	min-height: var(--muxui-semantic-control-min-height);
+	min-height: var(--muxui-semantic-control-size-md);
 	padding-inline: var(--muxui-semantic-control-padding-inline);
 	border: 1px solid var(--muxui-semantic-border-default);
 	border-radius: var(--muxui-semantic-control-radius);
@@ -1247,7 +1247,7 @@ site-search button > kbd {
 .foundation-layer-example-step a { overflow-wrap: anywhere; color: var(--muxui-semantic-content-link); }
 .foundation-layer-example-swatch { inline-size: 100%; block-size: 3rem; background: var(--muxui-reference-color-brand-60); }
 .foundation-layer-example-role { display: grid; place-items: center; inline-size: 100%; block-size: 3rem; background: var(--muxui-semantic-action-background); color: var(--muxui-semantic-action-foreground); font-size: var(--muxui-semantic-typography-label-s-font-size); }
-.foundation-layer-example-button { display: inline-grid; place-items: center; justify-self: start; min-height: var(--muxui-semantic-control-min-height); padding-inline: var(--muxui-semantic-control-padding-inline); border-radius: var(--muxui-semantic-control-radius); font: inherit; }
+.foundation-layer-example-button { display: inline-grid; place-items: center; justify-self: start; min-height: var(--muxui-semantic-control-size-md); padding-inline: var(--muxui-semantic-control-padding-inline); border-radius: var(--muxui-semantic-control-radius); font: inherit; }
 
 .foundation-timing-sample { display: block; width: max-content; animation-fill-mode: both; animation-timing-function: var(--muxui-semantic-motion-interaction-easing); }
 @keyframes foundation-timing-replay { from { opacity: .35; transform: translateX(0); } to { opacity: 1; transform: translateX(2rem); } }

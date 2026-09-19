@@ -62,23 +62,20 @@ const checkboxBinding = checkboxArtifact.bindings['web.react'];
 const checkboxGroupBinding = checkboxGroupArtifact.bindings['web.react'];
 const radioGroupBinding = radioGroupArtifact.bindings['web.react'];
 const autocompleteBinding = autocompleteArtifact.bindings['web.react'];
-const expectedButtonProps = ['disabled', 'pending', 'showTextWhileLoading', 'variant', 'tone', 'size'];
+const expectedButtonProps = ['disabled', 'pending', 'showTextWhileLoading', 'variant', 'size'];
 const expectedButtonDefaults = {
   disabled: false,
   pending: false,
   showTextWhileLoading: false,
   variant: 'primary',
-  tone: 'default',
   size: 'md',
 };
 const expectedButtonFiniteApi = {
-  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary'],
-  tone: ['default', 'destructive'],
+  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'],
   size: ['sm', 'md', 'lg'],
 };
 const expectedButtonFiniteDeclarations = [
   ['BUTTON_VARIANTS', expectedButtonFiniteApi.variant],
-  ['BUTTON_TONES', expectedButtonFiniteApi.tone],
   ['BUTTON_SIZES', expectedButtonFiniteApi.size],
 ].map(([name, values]) => `const ${name} = new Set([${values.map((value) => `'${value}'`).join(', ')}]);`);
 if (!buttonBinding
@@ -386,8 +383,7 @@ export interface ButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonE
   disabled?: boolean;
   pending?: boolean;
   showTextWhileLoading?: boolean;
-  variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse' | 'secondary';
-  tone?: 'default' | 'destructive';
+  variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse';
   size?: 'sm' | 'md' | 'lg';
   style?: React.CSSProperties;
   onActivate?: (event: ButtonActivationEvent) => void;

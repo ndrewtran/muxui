@@ -71,7 +71,7 @@ body:has(.scale-app) { margin: 0; }
 .draft-state { color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-label-s-font-size); }
 .draft-state-unapplied { color: var(--muxui-semantic-status-warning); }
 .apply-action {
-  min-height: var(--muxui-semantic-control-min-height);
+  min-height: var(--muxui-semantic-control-size-md);
   padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-xs);
   border: 1px solid var(--muxui-semantic-color-color-60);
   border-radius: var(--muxui-semantic-control-radius);

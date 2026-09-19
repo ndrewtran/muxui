@@ -113,17 +113,6 @@
         }
       }
     },
-    "undeclaredSourceCrosswalk": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "reason", "tokenSourceSchemaVersion", "items"],
-      "properties": {
-        "status": { "const": "absent" },
-        "reason": { "const": "token-source-schema-does-not-declare-source-crosswalk" },
-        "tokenSourceSchemaVersion": { "const": "2.0.0" },
-        "items": { "type": "array", "maxItems": 0 }
-      }
-    },
     "omittedSourceCrosswalk": {
       "type": "object",
       "additionalProperties": false,
@@ -137,14 +126,14 @@
     }
   },
   "properties": {
-    "schemaVersion": { "enum": ["1.2.0", "2.0.0"] },
+    "schemaVersion": { "enum": ["2.0.0"] },
     "responseType": { "const": "artifact.detail.section-page" },
     "meta": {
       "type": "object",
       "additionalProperties": false,
       "required": ["queryApiVersion", "catalogVersion", "catalogDigest", "tokenSourceContentRevision", "artifactId", "section", "selectorDigest"],
       "properties": {
-        "queryApiVersion": { "enum": ["1.2.0", "2.0.0"] },
+        "queryApiVersion": { "enum": ["2.0.0"] },
         "catalogVersion": { "type": "string", "minLength": 5, "maxLength": 64 },
         "catalogDigest": { "$ref": "#/$defs/digest" },
         "tokenSourceContentRevision": { "$ref": "#/$defs/digest" },
@@ -156,7 +145,6 @@
     "entries": {
       "oneOf": [
         { "$ref": "#/$defs/availableEntries" },
-        { "$ref": "#/$defs/undeclaredSourceCrosswalk" },
         { "$ref": "#/$defs/omittedSourceCrosswalk" }
       ]
     },

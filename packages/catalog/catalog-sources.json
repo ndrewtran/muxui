@@ -1,13 +1,11 @@
 {
   "schema": "muxui-catalog-source-manifest-v1",
-  "authorityDecisionPath": "decisions/0015-authority-retirement.md",
+  "authorityDecisionPath": "decisions/0016-pre-release-compatibility.md",
   "commandRegistryPath": "packages/tooling/command-registry.json",
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",
   "queryApiVersion": "2.0.0",
   "supportedQueryApiVersions": [
-    "1.1.0",
-    "1.2.0",
     "2.0.0"
   ],
   "records": [

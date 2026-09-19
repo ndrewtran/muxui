@@ -79,7 +79,7 @@
         "source": "muxui:token:default-theme",
         "requirements": [
           {
-            "token": "semantic.control.min-height",
+            "token": "semantic.control.size-md",
             "requirement": "required"
           },
           {
@@ -176,7 +176,7 @@
         "source": "muxui:token:default-theme",
         "requirements": [
           {
-            "token": "semantic.control.min-height",
+            "token": "semantic.control.size-md",
             "requirement": "required"
           },
           {

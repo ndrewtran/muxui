@@ -298,16 +298,6 @@ function decodeSectionCursor(value, profile) {
 
 function sectionPage(bundle, artifact, request) {
   const profile = bundle.pageBudgetProfile;
-  if (!['1.2.0', '2.0.0'].includes(request.queryApiVersion)) {
-    return { error: queryError(
-      'MUXUI_QUERY_INVALID',
-      'query.section.version',
-      'Sectional token retrieval requires query API 1.2.0 or 2.0.0.',
-      { queryApiVersion: request.queryApiVersion, section: request.section },
-      false,
-      request.queryApiVersion,
-    ) };
-  }
   if (artifact.kind !== 'token') {
     return { error: queryError(
       'MUXUI_QUERY_INVALID',
@@ -331,14 +321,7 @@ function sectionPage(bundle, artifact, request) {
       request.queryApiVersion,
     ) };
   }
-  const tokenSourceContentRevision = (
-    request.queryApiVersion === '1.2.0'
-    && artifact.record.schemaVersion === '2.1.0'
-    && artifact.record.sourceCrosswalk === undefined
-  ) ? canonicalDigest({
-      ...artifact.record,
-      schemaVersion: '2.0.0',
-    }) : artifact.contentRevision;
+  const tokenSourceContentRevision = artifact.contentRevision;
   const selectorDigest = canonicalDigest({
     artifactId: artifact.id,
     platform: request.platform,
@@ -359,7 +342,7 @@ function sectionPage(bundle, artifact, request) {
       .sort((left, right) => compareText(left.id, right.id))
     : available
       ? sourceCrosswalk.entries.map((entry) => {
-        if (request.queryApiVersion !== '2.0.0' || entry.groupId === undefined) return entry;
+        if (entry.groupId === undefined) return entry;
         const match = groupByOrdinal.get(entry.occurrence.ordinal);
         if (!match || match.group.id !== entry.groupId) {
           throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: validated crosswalk group projection is incomplete');
@@ -485,9 +468,7 @@ function sectionPage(bundle, artifact, request) {
       ? { status: 'available', items }
       : {
         status: 'absent',
-        reason: artifact.record.schemaVersion === '2.0.0'
-          ? 'token-source-schema-does-not-declare-source-crosswalk'
-          : 'token-source-omits-source-crosswalk',
+        reason: 'token-source-omits-source-crosswalk',
         tokenSourceSchemaVersion: artifact.record.schemaVersion,
         items: [],
       },
@@ -1054,9 +1035,7 @@ export function createCatalogApi(inputBundle, options = {}) {
         ...tokenRecordSummary
       } = artifact.record;
       const selectedRecord = artifact.kind === 'token'
-        ? normalized.queryApiVersion === '2.0.0'
-          ? { ...tokenRecordSummary, ...tokenSectionSummary(artifact) }
-          : { ...tokenRecordSummary, tokens: artifact.record.tokens }
+        ? { ...tokenRecordSummary, ...tokenSectionSummary(artifact) }
         : artifact.record;
       data = {
         artifact: {
@@ -1087,31 +1066,15 @@ export function createCatalogApi(inputBundle, options = {}) {
         ? (artifact.bindingSpecRevisions[selectedBinding.bindingId] ?? null)
         : null,
     };
-    const warnings = normalized.queryApiVersion === '1.2.0'
-      && normalized.section === null
-      && normalized.detail === 'full'
-      && artifact.kind === 'token'
-      ? [{
-        code: 'MUXUI_QUERY_INLINE_TOKENS_DEPRECATED',
-        ruleId: 'query.inline-tokens.deprecated',
-        message: 'Inline token retrieval is deprecated and is removed in query API 2.0.0.',
-        retryable: false,
-        details: {
-          replacement: 'section=tokens',
-          noticeBoundary: 'complete separately human-accepted Phase A release',
-        },
-      }]
-      : [];
     const meta = baseMeta(bundle, resolutionContext, normalized, revisions);
     const response = success(
       'artifact.detail',
       data,
       meta,
-      { apiVersion: normalized.queryApiVersion, warnings },
+      { apiVersion: normalized.queryApiVersion },
     );
     if (
-      normalized.queryApiVersion === '2.0.0'
-      && normalized.section === null
+      normalized.section === null
       && normalized.detail !== 'brief'
       && artifact.kind === 'token'
     ) {
@@ -1129,24 +1092,3 @@ export const getManifest = defaultApi.getManifest;
 export const listArtifacts = defaultApi.listArtifacts;
 export const searchArtifacts = defaultApi.searchArtifacts;
 export const getArtifact = defaultApi.getArtifact;
-
-export function migrateCatalogPackageV1ToV2(input) {
-  if (input === null || typeof input !== 'object' || Array.isArray(input)) {
-    throw new Error('MUXUI_CATALOG_PACKAGE_INVALID: descriptor must be an object');
-  }
-  if (input.schema === 'muxui-catalog-package-v2') {
-    if (
-      !Array.isArray(input.supportedQueryApiVersions)
-      || !input.supportedQueryApiVersions.includes(input.queryApiVersion)
-    ) throw new Error('MUXUI_CATALOG_PACKAGE_INVALID: v2 query versions are inconsistent');
-    return deepFreeze(structuredClone(input));
-  }
-  if (input.schema !== 'muxui-catalog-package-v1' || typeof input.queryApiVersion !== 'string') {
-    throw new Error('MUXUI_CATALOG_PACKAGE_INVALID: expected a v1 or v2 descriptor');
-  }
-  return deepFreeze({
-    ...structuredClone(input),
-    schema: 'muxui-catalog-package-v2',
-    supportedQueryApiVersions: [input.queryApiVersion],
-  });
-}

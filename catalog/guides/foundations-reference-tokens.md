@@ -22,6 +22,8 @@ Token contract `4.0.0` keeps four base typography reference stacks. The removed 
 
 Motion reference durations use the canonical `reference.motion.duration-instant`, `-fast`, `-moderate`, `-slow`, and `-deliberate` names. The older `reference.duration.*` aliases were removed. `reference.motion.duration-fast` is fixed at 120ms; use a semantic role when reduced-motion behavior is part of the contract. Reference primitives provide values; semantic roles provide interface intent and mode behavior.
 
+Palette primitives use numbered names such as `reference.color.red-60` and `reference.color.error-60`. Unnumbered hue and status aliases are not exported. Scrims use theme-aware `semantic.effect.scrim` or `semantic.overlay.scrim` roles.
+
 The explorer shows each alias chain and its compiler-resolved value. A reference dimension may also carry a fluid recipe; static output is the default, and responsive output is opt-in through the documented responsive attribute.
 
 Common mistake: using a reference palette step because its current hex looks right or exposing a raw reference family alias in component CSS. A semantic role preserves intent across light, dark, contrast, density, motion, and future theme changes.

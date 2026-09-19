@@ -2712,34 +2712,6 @@
       "name": "status",
       "owner": "query-envelope-contract",
       "schema": "section-page.schema.json",
-      "schemaPointer": "#/$defs/undeclaredSourceCrosswalk/properties/status"
-    },
-    {
-      "class": "derived",
-      "name": "reason",
-      "owner": "query-envelope-contract",
-      "schema": "section-page.schema.json",
-      "schemaPointer": "#/$defs/undeclaredSourceCrosswalk/properties/reason"
-    },
-    {
-      "class": "derived",
-      "name": "tokenSourceSchemaVersion",
-      "owner": "query-envelope-contract",
-      "schema": "section-page.schema.json",
-      "schemaPointer": "#/$defs/undeclaredSourceCrosswalk/properties/tokenSourceSchemaVersion"
-    },
-    {
-      "class": "derived",
-      "name": "items",
-      "owner": "query-envelope-contract",
-      "schema": "section-page.schema.json",
-      "schemaPointer": "#/$defs/undeclaredSourceCrosswalk/properties/items"
-    },
-    {
-      "class": "derived",
-      "name": "status",
-      "owner": "query-envelope-contract",
-      "schema": "section-page.schema.json",
       "schemaPointer": "#/$defs/omittedSourceCrosswalk/properties/status"
     },
     {

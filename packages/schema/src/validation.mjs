@@ -47,7 +47,7 @@ function decodeSectionCursor(value) {
   if (
     !isObject(payload)
     || canonicalJson(Object.keys(payload).sort()) !== canonicalJson(keys)
-    || !['1.2.0', '2.0.0'].includes(payload.queryApiVersion)
+    || payload.queryApiVersion !== '2.0.0'
     || !/^sha256:[a-f0-9]{64}$/u.test(payload.catalogDigest)
     || !/^sha256:[a-f0-9]{64}$/u.test(payload.tokenSourceContentRevision)
     || !['tokens', 'source-crosswalk'].includes(payload.section)
@@ -459,12 +459,6 @@ function semanticIssues(family, value, ownership) {
         if (artifact.tokenSourceContentRevision !== value.meta?.revisions?.conceptContent) {
           issues.push({ path: '$/data/artifact/tokenSourceContentRevision', message: 'must bind the selected token source revision' });
         }
-      } else if (
-        ['1.1.0', '1.2.0'].includes(value.apiVersion)
-        && value.meta?.detail === 'full'
-        && !Object.hasOwn(artifact, 'tokens')
-      ) {
-        issues.push({ path: '$/data/artifact/tokens', message: 'historical full token response requires inline tokens' });
       }
     }
   }
@@ -519,9 +513,6 @@ function semanticIssues(family, value, ownership) {
         }
         for (const [index, item] of items.entries()) {
           const path = `$/entries/items/${index}`;
-          if (meta.queryApiVersion === '1.2.0' && Object.hasOwn(item, 'group')) {
-            issues.push({ path: `${path}/group`, message: 'v1.2 retains only the historical groupId projection' });
-          }
           if (meta.queryApiVersion === '2.0.0') {
             if ((item.groupId === undefined) !== (item.group === undefined)) {
               issues.push({ path, message: 'v2 group detail must be present exactly when groupId is present' });
@@ -609,7 +600,6 @@ function semanticIssues(family, value, ownership) {
   }
   if (family === 'token-section-page-budget-profile') {
     const expectedProfileId = {
-      '1.2.0': 'muxui-token-section-page-budget-1-2-0',
       '2.0.0': 'muxui-token-section-page-budget-2-0-0',
     }[value.queryApiVersion];
     if (expectedProfileId !== value.id) {

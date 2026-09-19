@@ -32,6 +32,10 @@ current contract.
 | `semantic.shape.thumb-radius`, `wheel-radius` | Move the explicit value to component-owned geometry after identifying the consuming control. No token replacement is provided. |
 | `semantic.effect.scrim-subtle`, `scrim-strong` | Choose supported `semantic.effect.scrim` or `semantic.overlay.scrim` by modal layering intent. No strength alias is provided. |
 
+| `semantic.control.min-height` | Use `semantic.control.size-md` for the shared default target. `component.button.min-height` remains the Button-specific role. |
+| Unnumbered `reference.color` hue and error/warning/success aliases | Use the explicit numbered `-60` primitive when defining semantic roles. Consumer CSS should use the relevant semantic color role. |
+| `reference.color.scrim-subtle`, `scrim-default`, `scrim-strong` | Choose `semantic.effect.scrim` or `semantic.overlay.scrim` by modal layering intent. No fixed scrim compatibility references remain. |
+
 ## Preserve behavior while changing names
 
 The raw `reference.motion.duration-fast` primitive is fixed at 120ms. Semantic
@@ -52,7 +56,9 @@ and `mono-color` roles have dark branches.
 Authoring documents must declare `tokenContractVersion: "4.0.0"` and reference
 only current token IDs. The compiler validates an exact contract match; it does
 not normalize older same-major documents or rewrite overrides. Scale imports
-follow the same rule. Regenerate or migrate a document by choosing current
+follow the same rule. Saved Scale settings accept numeric curvature factors and
+numeric contrast pivots (or `auto`); invalid values are rejected without conversion.
+Regenerate or update a document by choosing current
 roles and preserving each explicit override and mode branch deliberately.
 
 Scale's private Typography role matrix remains a projection over the canonical

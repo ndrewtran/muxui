@@ -39,8 +39,8 @@
   },
   "properties": {
     "schema": { "const": "muxui-token-section-page-budget-profile-v1" },
-    "id": { "type": "string", "pattern": "^muxui-token-section-page-budget-(?:1-2-0|2-0-0)$" },
-    "queryApiVersion": { "enum": ["1.2.0", "2.0.0"] },
+    "id": { "type": "string", "pattern": "^muxui-token-section-page-budget-2-0-0$" },
+    "queryApiVersion": { "enum": ["2.0.0"] },
     "lexerVersion": { "const": "muxui-lexeme-v1" },
     "canonicalEntryOrder": { "const": "tokens by Core token ID; source-crosswalk by source ordinal; bytewise ascending UTF-8 for ties" },
     "entryCostRule": { "const": "Core lexer lexeme count over canonical compact JSON for each complete entry" },

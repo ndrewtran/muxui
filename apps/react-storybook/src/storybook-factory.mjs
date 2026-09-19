@@ -94,8 +94,7 @@ const SELECT_PROPS = Object.freeze({
 });
 
 const BUTTON_SELECT_PROPS = Object.freeze({
-  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary'],
-  tone: ['default', 'destructive'],
+  variant: ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'],
   size: ['sm', 'md', 'lg'],
 });
 
@@ -1250,6 +1249,9 @@ const CANONICAL_PART_SELECTORS = Object.freeze({
   IconButton: { icon: ['.muxui-icon-button-icon'] },
   Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
   Link: { label: ['.muxui-link'] },
+  ListBox: { header: ['.muxui-list-box-section-header'] },
+  Menu: { header: ['.muxui-menu-section-header'] },
+  Select: { popup: ['.muxui-select-popover'] },
   Meter: { label: ['.muxui-value-label'] },
   ProgressBar: { label: ['.muxui-value-label'] },
   ToggleButton: { label: ['.muxui-toggle-button'] },
@@ -1325,6 +1327,12 @@ function anatomyArgsForBinding(record, sourceArgs) {
   if (props.has('description')) args.description = 'Additional context';
   if (props.has('errorMessage')) args.errorMessage = 'A value is required';
   if (record.family === 'ColorSwatchPicker') args.defaultValue = '#ff0000';
+  if (record.family === 'ListBox') {
+    args.children = e(MuxUI.ListBox.Section, { title: 'Options' },
+      e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
+      e(MuxUI.ListBox.Item, { id: 'two' }, 'Two'));
+  }
+  if (record.family === 'Dialog') args.actions = e(MuxUI.Button, null, 'Confirm');
   return args;
 }
 
@@ -1355,13 +1363,20 @@ function AnatomyHarness({ record, args }) {
     return () => observer?.disconnect();
   }, [record]);
   const anatomyArgs = anatomyArgsForBinding(record, args);
-  // ColorPicker's API is compositional: its public child primitives are
-  // mounted here so the declared field/area/slider/swatch hooks are live.
+  // Compound-only parts need live specimens alongside the flat state matrix.
   const anatomySupport = record.family === 'ColorPicker'
     ? e(MuxUI.ColorPicker, { defaultValue: '#ff0000' },
       e(MuxUI.ColorSlider, { label: 'Red', channel: 'red', defaultValue: '#ff0000' }),
       e(MuxUI.ColorSwatch, { color: '#ff0000' }))
-    : null;
+    : record.family === 'Menu'
+      ? e(MuxUI.Menu.Root, { defaultOpen: true },
+        e(MuxUI.Menu.Trigger, null, 'Actions'),
+        e(MuxUI.Menu.Popup, null,
+          e(MuxUI.Menu.List, { 'aria-label': 'Actions' },
+            e(MuxUI.Menu.Section, { title: 'Editing' }, e(MuxUI.Menu.Item, { id: 'save' }, 'Save')),
+            e(MuxUI.Menu.Separator),
+            e(MuxUI.Menu.Item, { id: 'delete' }, 'Delete'))))
+      : null;
   const anatomyStatus = e('div', { className: 'muxui-storybook-anatomy-status' },
     e('p', null, 'The state matrix renders the live component parts. Each row resolves its real DOM hook after mount.'),
     e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => e('li', {

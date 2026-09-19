@@ -12,7 +12,7 @@ import { R1ButtonFixture } from '../src/button-fixture.mjs';
 
 test('Button owns MuxUI selectors and required token bindings', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  assert.match(css, /\.muxui-r1-button/);
+  assert.match(css, /\.muxui-button/);
   for (const token of ['muxui-component-button-background', 'muxui-component-button-foreground', 'muxui-component-button-radius', 'muxui-component-button-padding-inline', 'muxui-component-button-min-height']) assert.match(css, new RegExp(token));
   assert.doesNotMatch(css, /--color-60/);
 });
@@ -128,13 +128,11 @@ test('R1.1 MuxUI Button proves SSR, hydration, disabled and pending state', asyn
   }
 });
 
-test('Button exposes variants and compatibility tone aliases with stable root hooks', async () => {
+test('Button exposes seven variants with stable root hooks', async () => {
   const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
-  const tones = ['default', 'destructive'];
   const sizes = ['sm', 'md', 'lg'];
   const defaults = renderToString(React.createElement(Button, null, 'Save'));
   assert.match(defaults, /data-variant="primary"/u);
-  assert.match(defaults, /data-tone="default"/u);
   assert.match(defaults, /data-size="md"/u);
 
   for (const variant of variants) {
@@ -147,7 +145,6 @@ test('Button exposes variants and compatibility tone aliases with stable root ho
         'data-consumer-hook': 'preserved',
       }, 'Action'));
       assert.match(markup, new RegExp(`data-variant="${variant}"`, 'u'));
-      assert.match(markup, /data-tone="default"/u);
       assert.match(markup, new RegExp(`data-size="${size}"`, 'u'));
       assert.match(markup, /class="muxui-button consumer-button"/u);
       assert.match(markup, /style="min-width:5rem"/u);
@@ -155,17 +152,9 @@ test('Button exposes variants and compatibility tone aliases with stable root ho
     }
   }
 
-  const legacyMarkup = renderToString(React.createElement(Button, { variant: 'secondary', tone: 'destructive' }, 'Delete'));
-  assert.match(legacyMarkup, /data-variant="secondary"/u);
-  assert.match(legacyMarkup, /data-tone="destructive"/u);
-
   assert.throws(
     () => renderToString(React.createElement(Button, { variant: 'experimental' }, 'Save')),
     /Button variant must be one of/u,
-  );
-  assert.throws(
-    () => renderToString(React.createElement(Button, { tone: 'danger' }, 'Delete')),
-    /Button tone must be one of/u,
   );
   assert.throws(
     () => renderToString(React.createElement(Button, { size: 'medium' }, 'Save')),
@@ -173,17 +162,14 @@ test('Button exposes variants and compatibility tone aliases with stable root ho
   );
 
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
-  for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]\\[data-tone='default'\\]`, 'u'));
-  for (const tone of tones) for (const variant of ['primary', 'secondary', 'ghost']) {
-    assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]\\[data-tone='${tone}'\\]`, 'u'));
-  }
+  for (const variant of variants) assert.match(css, new RegExp(`\\.muxui-button\\[data-variant='${variant}'\\]`, 'u'));
   for (const size of sizes) assert.match(css, new RegExp(`\\.muxui-button\\[data-size='${size}'\\]`, 'u'));
-  assert.match(css, /\.muxui-r1-button\s*\{[^}]*--muxui-button-background:/u);
-  const destructivePrimaryRule = css.match(/\.muxui-button\[data-variant='danger'\]\[data-tone='default'\]\s*\{[^}]*\}/u)?.[0] ?? '';
+  assert.match(css, /\.muxui-button\s*\{[^}]*--muxui-button-background:/u);
+  const destructivePrimaryRule = css.match(/\.muxui-button\[data-variant='danger'\]\s*\{[^}]*\}/u)?.[0] ?? '';
   assert.ok(destructivePrimaryRule);
   assert.doesNotMatch(destructivePrimaryRule, /\bblack\b/u);
   assert.match(destructivePrimaryRule, /--muxui-button-foreground:\s*var\(--muxui-semantic-color-error-60-fg\)/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-button\[data-variant='primary'\]\[data-tone='default'\]\[data-pressed\]/u);
+  assert.match(css, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-button\[data-variant='primary'\]\[data-pressed\]/u);
   assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
 
   const pendingWithText = renderToString(React.createElement(Button, { pending: true, showTextWhileLoading: true }, 'Saving'));
@@ -194,9 +180,9 @@ test('Button exposes variants and compatibility tone aliases with stable root ho
 
 test('Button generator guard binds the canonical finite API contract', async () => {
   const source = await readFile(resolve(import.meta.dirname, '../src/generate.mjs'), 'utf8');
-  assert.match(source, /const expectedButtonProps = \['disabled', 'pending', 'showTextWhileLoading', 'variant', 'tone', 'size'\];/u);
-  assert.match(source, /const expectedButtonDefaults = \{[\s\S]*showTextWhileLoading: false,[\s\S]*variant: 'primary',[\s\S]*tone: 'default',[\s\S]*size: 'md',[\s\S]*\};/u);
-  assert.match(source, /const expectedButtonFiniteApi = \{[\s\S]*variant: \['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary'\],[\s\S]*tone: \['default', 'destructive'\],[\s\S]*size: \['sm', 'md', 'lg'\],[\s\S]*\};/u);
+  assert.match(source, /const expectedButtonProps = \['disabled', 'pending', 'showTextWhileLoading', 'variant', 'size'\];/u);
+  assert.match(source, /const expectedButtonDefaults = \{[\s\S]*showTextWhileLoading: false,[\s\S]*variant: 'primary',[\s\S]*size: 'md',[\s\S]*\};/u);
+  assert.match(source, /const expectedButtonFiniteApi = \{[\s\S]*variant: \['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'\],[\s\S]*size: \['sm', 'md', 'lg'\],[\s\S]*\};/u);
   const result = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
     cwd: resolve(import.meta.dirname, '..'),
     encoding: 'utf8',
@@ -244,7 +230,7 @@ test('MuxUI styles bind states and public theme hooks', async () => {
 
   assert.match(css, /--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
   assert.match(css, /--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);
-  assert.match(css, /--muxui-component-button-min-height: var\(--muxui-semantic-control-min-height\);/u);
+  assert.match(css, /--muxui-component-button-min-height: var\(--muxui-semantic-control-size-md\);/u);
   assert.match(css, /--muxui-component-button-radius: var\(--muxui-semantic-control-radius\);/u);
   assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-background: var\(--muxui-semantic-action-background\);/u);
   assert.match(css, /\[data-muxui-color-scheme='dark'\][\s\S]*--muxui-component-button-foreground: var\(--muxui-semantic-action-foreground\);/u);

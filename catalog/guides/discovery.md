@@ -30,3 +30,8 @@ to its declared binding.
 The catalog query baseline is experimental and read-only. Composition planning,
 consumer-project mutation, and hosted latest guidance are outside the current
 product boundary.
+
+The current query API is `2.0.0`. Unsupported versions are rejected; historical
+inline-token responses are unavailable. Retrieve token entries with
+`muxui get muxui:token:default-theme --section tokens --json` and follow the
+returned cursor for additional pages.

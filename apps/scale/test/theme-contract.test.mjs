@@ -133,6 +133,12 @@ test('active-palette randomization preserves the other anchor and mono uses one 
 
 test('stored UI settings reject invalid palettes, modes and hidden override conflicts', () => {
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, family: 'unknown' }));
+  for (const curvature of ['0.5', -1, 3, null]) {
+    assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, curvature }), /curvature/u);
+  }
+  for (const contrastPivot of ['60', 6, null]) {
+    assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, contrastPivot }), /contrastPivot/u);
+  }
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, whiteAnchor: 'false' }));
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, background: 'dark', colorMode: 'light' }));
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, themeModes: { ...DEFAULT_SETTINGS.themeModes, extra: ['value'] } }));

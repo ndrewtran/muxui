@@ -622,7 +622,6 @@ test('unsupported state coverage is explicit while supported state args remain o
     ['Form', 'invalid'],
     ['Slider', 'selected'],
     ['TokenField', 'invalid'],
-    ['Menu', 'open'],
   ];
   for (const [family, state] of unsupportedStates) {
     const binding = byFamily.get(family);

@@ -1114,15 +1114,6 @@
         "unit": "rem"
       }
     },
-    "semantic.control.min-height": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Default minimum interactive control height (the md target).",
-      "overridePolicy": "theme",
-      "equivalence": "semantic-equivalence",
-      "alias": "semantic.control.size-md"
-    },
     "semantic.control.size-sm": {
       "layer": "semantic",
       "type": "dimension",
@@ -2103,7 +2094,7 @@
       "unit": "px",
       "meaning": "Public Button minimum-height customization point.",
       "overridePolicy": "theme",
-      "alias": "semantic.control.min-height"
+      "alias": "semantic.control.size-md"
     },
     "component.button.padding-inline": {
       "layer": "component",
@@ -5320,177 +5311,6 @@
       "meaning": "Primary brand accent for immediate actions and selected states.",
       "overridePolicy": "theme",
       "alias": "semantic.color.color-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.red": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --red.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.red-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.orange": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --orange.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.orange-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.amber": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --amber.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.amber-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.yellow": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --yellow.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.yellow-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.lime": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --lime.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.lime-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.green": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --green.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.green-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.emerald": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --emerald.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.emerald-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.teal": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --teal.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.teal-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.cyan": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --cyan.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.cyan-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.sky": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --sky.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.sky-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.indigo": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --indigo.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.indigo-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.violet": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --violet.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.violet-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.purple": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --purple.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.purple-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.fuchsia": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --fuchsia.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.fuchsia-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.pink": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --pink.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.pink-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.rose": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --rose.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.rose-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.error": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --error.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.error-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.warning": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --warning.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.warning-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.success": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --success.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.success-60",
       "equivalence": "semantic-equivalence"
     },
     "reference.color.brand-5": {
@@ -9036,33 +8856,6 @@
         "color": "#00000000",
         "weight": 0.48
       }
-    },
-    "reference.color.scrim-subtle": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim for theme-aware overlays.",
-      "overridePolicy": "fixed",
-      "value": "#11100f3d",
-      "equivalence": "deprecation-bridge"
-    },
-    "reference.color.scrim-default": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim for theme-aware overlays.",
-      "overridePolicy": "fixed",
-      "value": "#11100f7a",
-      "equivalence": "deprecation-bridge"
-    },
-    "reference.color.scrim-strong": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim for theme-aware overlays.",
-      "overridePolicy": "fixed",
-      "value": "#11100fb8",
-      "equivalence": "deprecation-bridge"
     }
   }
 }

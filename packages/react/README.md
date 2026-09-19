@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:9efb0ca66ddce33eab65bdc4e540391a526c914bb66cf762837563aefa94e94f -->
+<!-- @generated-content-sha256: sha256:08c3be12e2f9fb9635ad46dbfe1f98f2d66395691b5db649e66e9b7599371622 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -52,7 +52,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items, aria-label |
-| Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, tone, size |
+| Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
 | Calendar | experimental | . | .muxui-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, disabled, readOnly, required, invalid |
 | Card | experimental | . | .muxui-card | variant, padding, selected, pending, disabled, onActivate |
@@ -81,7 +81,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
-| IconButton | experimental | . | .muxui-icon-button | aria-label, aria-labelledby, disabled, pending, variant, tone, size |
+| IconButton | experimental | . | .muxui-icon-button | aria-label, aria-labelledby, disabled, pending, variant, size |
 | Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
 | Lightbox | experimental | . | .muxui-lightbox | items, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
@@ -248,7 +248,7 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `content`, `title`, `descr
 
 - Activation requests one immediate action
 - Pending suppresses activation while retaining focusability
-- Variant, tone, and size select finite orthogonal visual recipes
+- Variant and size select finite visual recipes
 - showTextWhileLoading keeps the pending label visible beside its spinner
 - The ref resolves to the native HTMLButtonElement; native pointer, pointer capture, auxiliary click, and context-menu handlers run on that host. Consumers may capture and release pointers without replacing onActivate.
 

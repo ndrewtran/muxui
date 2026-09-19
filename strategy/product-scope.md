@@ -1,5 +1,5 @@
 ---
-scopeVersion: 9.0.0
+scopeVersion: 10.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -44,6 +44,14 @@ private authoring capability, and optional consumer integration. The accepted
 53-family table, immutable Stage 1 snapshot, and R1.0 baseline remain the
 existing R1 lock; R1.6 adds parity and private authoring proof without a
 blanket all-style standalone API requirement.
+
+Product Scope `10.0.0` applies Decision 0016: the current pre-release product
+supports current Mux-owned contracts only, with no consumers requiring legacy
+aliases or historical query/schema migration surfaces. This major removes the
+previously committed active v1.1/v1.2 query support and notice-release requirement;
+Scope IDs and component/platform commitments remain unchanged. Compatibility
+windows attach to supported published contracts. Historical evidence stays
+immutable and is not an active implementation obligation.
 
 ## Scope vocabulary
 
@@ -349,7 +357,7 @@ behavior, or implementation across platforms. No parity claim exists at R1.
 | `SCOPE-API-ESCAPE-HATCH` | `committed` | Every styling, validation, suppression, or composition escape hatch is named, typed, bounded, documented, and excluded from canonical defaults. |
 | `SCOPE-API-RUNTIME-OWNERSHIP` | `committed` | Controllers, adapters, providers, focus restoration, dismissal, portals, global listeners, inert/background state, and scroll locks have one explicit lifecycle owner. |
 | `SCOPE-API-A11Y` | `committed` | Accessible naming, roles, states, values, relationships, keyboard/input behavior, announcements, and platform deviations are binding obligations with risk-proportionate proof. |
-| `SCOPE-API-DEPRECATION` | `committed` | Deprecation names a replacement or explicit no-replacement reason, notice window, version effect, retained retrieval, diagnostic, and migration path. Query API v1.2 retains inline token responses for one complete accepted notice release before v2 removal. |
+| `SCOPE-API-DEPRECATION` | `committed` | Supported published contracts name a replacement or explicit no-replacement reason, notice window, version effect, retained retrieval, diagnostic, and migration path. Current pre-release contracts remove superseded names and formats directly; no historical query version or notice release is required. |
 
 Generated Mux UI-owned types may represent serializable binding fields. Renderer
 source remains responsible for host-language inference, generic constraints,
@@ -406,7 +414,7 @@ the site.
 | `SCOPE-PKG-WEB` | `deferred` | `@muxui/web` | Later W1 HTML/CSS/controller implementation for `web.html` binding specs. | React or native implementation; a React prerequisite, shared React runtime, or shared React CSS owner. |
 | `SCOPE-PKG-REACT` | `committed` | `@muxui/react` | Standalone React rendering, Mux UI-owned CSS, required third-party license/notice material, SSR/hydration, effects, exports, descriptors, and generated package guidance for `web.react` contracts. | Canonical component metadata, React Aria public API, another workspace runtime/build dependency, or a second style registry. |
 | `SCOPE-PKG-REACT-NATIVE` | `deferred` | `@muxui/react-native` | Later N1 native primitive/runtime implementation and explicit platform files. | React/React Aria authority, CSS parsing, DOM, Expo, or explorer hosts. |
-| `SCOPE-PKG-CATALOG` | `committed` | `@muxui/catalog` | Immutable compiled catalog, search index, pure discovery/query/planning API, canonical page-budget profiles/page selection, response-version negotiation/historical semantics, bounded token/crosswalk sections, and package-level catalog identity. | CLI parsing, MCP transport, renderer runtime, or project mutation. |
+| `SCOPE-PKG-CATALOG` | `committed` | `@muxui/catalog` | Immutable compiled catalog, search index, pure discovery/query/planning API, canonical page-budget profiles/page selection, current-version validation, bounded token/crosswalk sections, and package-level catalog identity. | CLI parsing, MCP transport, renderer runtime, or project mutation. |
 | `SCOPE-PKG-TOOLING` | `committed` | `@muxui/tooling` | CLI, adapters, installed catalog/version selection, explicit query-version forwarding, response rendering, local validation, maintainer authoring, change-intent previews, and enabled safe operations. | A second artifact index, product/query-response decisions, page-boundary selection, or renderer implementation. |
 
 At R1, only `@muxui/react` is publishable; schema, tokens, foundation,
@@ -420,7 +428,7 @@ packages do not depend on the catalog at runtime.
 
 | Scope ID | Commitment | Surface | Earliest boundary | Product contract |
 | --- | --- | --- | --- | --- |
-| `SCOPE-SURFACE-API` | `committed` | Programmatic catalog API | Foundation | Pure manifest/list/search/get with bounded versioned sections and historical response negotiation; planning only when enabled. |
+| `SCOPE-SURFACE-API` | `committed` | Programmatic catalog API | Foundation | Pure manifest/list/search/get with bounded current-version sections and explicit rejection of unsupported versions; historical negotiation is added only for supported published contracts that need it. Planning is available only when enabled. |
 | `SCOPE-SURFACE-CLI` | `committed` | CLI human/JSON/dense | Foundation | Primary documentation interface over the same bounded, versioned response object. |
 | `SCOPE-SURFACE-SITE` | `committed` | Documentation site | Productization | Catalog client rendering canonical records and guide sources. |
 | `SCOPE-SURFACE-EXPLORER-WEB` | `committed` | Web/React explorer | Productization | Generated adapters over canonical executable examples. |
@@ -449,23 +457,17 @@ example-purpose, limit, and cursor selectors. JSON writes one value to stdout;
 diagnostics and progress use stderr. Dense output is deterministic,
 section-selectable, token-budgeted, and round-trippable to the response object.
 
-Token-source retrieval follows a staged compatibility contract. Query API
-`1.2.0` retains v1.1's complete inline `tokens`, adds bounded `tokens` and
-`source-crosswalk` sections, and emits
-`MUXUI_QUERY_INLINE_TOKENS_DEPRECATED` with replacement guidance. After one
-complete retained and human-accepted v1.2 notice release, query API `2.0.0` may
-replace inline tokens with counts, digests, provenance, and available-section
-metadata. `@muxui/schema` owns each versioned request/response and
-`TokenSectionPageBudgetProfile` grammar. `@muxui/catalog` owns historical
-response negotiation, the canonical profile values, and page selection;
-tooling only selects a compatible installed catalog, forwards explicit version
-intent, renders the returned page, and rejects unsupported tuples without
-reinterpretation. Historical v1.1/v1.2 behavior remains explicitly
-negotiable. Those inline responses are retained compatibility artifacts,
-exempt from the v2 sectional page budget, never current/default behavior, and
-cannot satisfy proof of the v2 bounded path. The v1.2 `source-crosswalk`
-section returns typed `absent` for a token-source 2.0 record and for a 2.1
-record that omits the authored field. The profile fixes the query API and lexer versions, canonical
+Token-source retrieval currently supports query API `2.0.0` only. Full and
+compact token summaries expose counts, digests, provenance, and available-section
+metadata; complete populations use bounded `tokens` and `source-crosswalk`
+sections. `@muxui/schema` owns the current request/response and
+`TokenSectionPageBudgetProfile` grammar. `@muxui/catalog` owns current response
+semantics, canonical profile values, and page selection. Tooling selects a
+compatible installed catalog, forwards explicit version intent, renders its
+response, and rejects unsupported versions without reinterpretation. An omitted
+authored crosswalk returns typed `absent`. Historical v1.1/v1.2 inline responses,
+notice diagnostics, and old-format migrators are not pre-release product
+requirements. The profile fixes the query API and lexer versions, canonical
 entry-cost/order rule, normalized worst-case envelope preimage/reserve,
 default/max limits, minimum progress, 2,048-token dense-page budget, and
 `MUXUI_QUERY_PAGE_ENTRY_TOO_LARGE`. Its canonical JSON enters the catalog
@@ -588,7 +590,7 @@ roadmap evidence ownership before the affected milestone becomes `ready`.
 | `SCOPE-TRUST-ADVISORY` | `committed` | Signed append-only evidence advisories for supersession or withdrawal without rewriting historical evidence. |
 | `SCOPE-TRUST-EXCEPTION` | `committed` | Scoped, approved, expiring operational exceptions that only narrow claims or defer explicitly waivable obligations. |
 | `SCOPE-TRUST-RELEASE` | `committed` | Immutable release manifest correlating package, catalog, schema, token, query, binding, evidence, provenance, profile, and active-exception identity. |
-| `SCOPE-TRUST-HISTORY` | `committed` | Historical compatible catalogs, binding specs, migrations, evidence, advisories, and release identities remain retrievable for supported windows. |
+| `SCOPE-TRUST-HISTORY` | `committed` | Supported published catalogs, binding specs, migrations, evidence, advisories, and release identities remain retrievable for their supported windows. Pre-release evidence remains immutable without requiring active readers for superseded product formats. |
 
 No exception may patch a projection, broaden support, bypass integrity, create
 proof, suppress mandatory accessibility/safety evidence, or authorize an
@@ -833,7 +835,7 @@ tracker decision and does not require this document to change.
 The pre-8.0 scope-amendment records were migration and delivery-history
 artifacts. Their exact bytes are preserved only in the ignored preflight archive;
 they are not current product authority. Current commitments, immutable Scope IDs,
-release boundaries, and non-goals are defined by the 8.0.0 baseline above and
+release boundaries, and non-goals are defined by the current baseline above and
 the active roadmap. No historical record is rewritten or reinterpreted as a
 current product outcome.
 

@@ -148,7 +148,7 @@ const AlertDialog = {
   }),
   Close: React.forwardRef(function AlertDialogClose({ disabled = false, onActivate, className, children, ...props }, ref) {
     const usesDefaultIcon = children === null || children === undefined;
-    return h(AriaButton, { ...props, ref, slot: 'close', isDisabled: disabled, onPress: pressHandler(onActivate), 'aria-label': props['aria-label'] ?? (usesDefaultIcon ? 'Close' : undefined), 'data-variant': 'ghost', 'data-tone': 'default', 'data-size': 'sm', className: cx('muxui-button', usesDefaultIcon && 'muxui-icon-button', 'muxui-alert-dialog__close', className) }, usesDefaultIcon ? h(XIcon, { size: 16, 'aria-hidden': true }) : children);
+    return h(AriaButton, { ...props, ref, slot: 'close', isDisabled: disabled, onPress: pressHandler(onActivate), 'aria-label': props['aria-label'] ?? (usesDefaultIcon ? 'Close' : undefined), 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', usesDefaultIcon && 'muxui-icon-button', 'muxui-alert-dialog__close', className) }, usesDefaultIcon ? h(XIcon, { size: 16, 'aria-hidden': true }) : children);
   }),
 };
 
@@ -692,7 +692,7 @@ const CommandPalette = {
   Popup: React.forwardRef(function CommandPalettePopup({ className, children, ...props }, ref) { return h(AriaModal, { className: 'muxui-command-palette__popup' }, h(AriaDialog, { ...props, ref, className: cx('muxui-command-palette__dialog', className) }, children)); }),
   Title: React.forwardRef(function CommandPaletteTitle({ className, ...props }, ref) { return h(AriaHeading, { ...props, ref, slot: 'title', className: cx('muxui-command-palette__title', className) }); }),
   Description: React.forwardRef(function CommandPaletteDescription(props, ref) { return nativePart('p', 'muxui-command-palette__description', props, ref); }),
-  Close: React.forwardRef(function CommandPaletteClose({ disabled = false, onActivate, className, children, ...props }, ref) { const { setOpen } = useCommandPart('Close'); return h(AriaButton, { ...props, ref, 'aria-label': props['aria-label'] ?? (children ? undefined : 'Close'), isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(false); }, 'data-variant': 'ghost', 'data-tone': 'default', 'data-size': 'sm', className: cx('muxui-button', 'muxui-icon-button', 'muxui-command-palette__close', className) }, children ?? h(XIcon, { size: 16, 'aria-hidden': true })); }),
+  Close: React.forwardRef(function CommandPaletteClose({ disabled = false, onActivate, className, children, ...props }, ref) { const { setOpen } = useCommandPart('Close'); return h(AriaButton, { ...props, ref, 'aria-label': props['aria-label'] ?? (children ? undefined : 'Close'), isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(false); }, 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', 'muxui-icon-button', 'muxui-command-palette__close', className) }, children ?? h(XIcon, { size: 16, 'aria-hidden': true })); }),
   Content: React.forwardRef(function CommandPaletteContent({ className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-command-palette__content', className) }, h(AriaAutocomplete, null, h(CommandPaletteInputProvider, null, children))); }),
   SearchField: React.forwardRef(function CommandPaletteSearchField({ variant = 'inline', className, ...props }, ref) { return h(AriaSearchField, { ...props, ref, 'aria-label': props['aria-label'] ?? 'Search commands', className: cx('muxui-command-palette__search-field', `muxui-command-palette__search-field--${variant}`, className) }); }),
   Input: React.forwardRef(function CommandPaletteInput({ disabled, className, onKeyDown, ...props }, ref) {
@@ -707,7 +707,7 @@ const CommandPalette = {
       },
     }));
   }),
-  ClearButton: React.forwardRef(function CommandPaletteClearButton({ disabled = false, className, children, ...props }, ref) { return h(AriaButton, { ...props, ref, isDisabled: disabled, 'data-variant': 'ghost', 'data-tone': 'default', 'data-size': 'sm', className: cx('muxui-button', 'muxui-command-palette__clear', className) }, children ?? 'Clear'); }),
+  ClearButton: React.forwardRef(function CommandPaletteClearButton({ disabled = false, className, children, ...props }, ref) { return h(AriaButton, { ...props, ref, isDisabled: disabled, 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', 'muxui-command-palette__clear', className) }, children ?? 'Clear'); }),
   ListBox: React.forwardRef(function CommandPaletteListBox({ className, ...props }, ref) { const { size } = useCommandPart('ListBox'); return h(AriaListBox, { ...props, ref, 'aria-label': props['aria-label'] ?? 'Command results', 'data-size': size, className: cx('muxui-command-palette__listbox', size !== 'md' && `muxui-command-palette__listbox--${size}`, className) }); }),
   Section: React.forwardRef(function CommandPaletteSection({ className, ...props }, ref) { return h(AriaListBoxSection, { ...props, ref, className: cx('muxui-command-palette__section', className) }); }),
   SectionHeader: React.forwardRef(function CommandPaletteSectionHeader(props, ref) { return h(AriaHeader, { ...props, ref, className: cx('muxui-command-palette__section-header', props.className) }); }),

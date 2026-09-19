@@ -47,7 +47,6 @@
           "disabled",
           "pending",
           "variant",
-          "tone",
           "size"
         ],
         "events": [
@@ -61,7 +60,6 @@
           "disabled": false,
           "pending": false,
           "variant": "ghost",
-          "tone": "default",
           "size": "md"
         }
       },
@@ -102,7 +100,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.control.min-height",
+            "token": "semantic.control.size-md",
             "requirement": "required"
           }
         ]

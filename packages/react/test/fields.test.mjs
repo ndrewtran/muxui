@@ -713,8 +713,8 @@ test('read-only date segments retain accessible semantic contrast', async () => 
   assert.match(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /--muxui-reference-color-neutral-60:\s*#79716b;/u);
   assert.match(styles, /--muxui-reference-color-neutral-50:\s*#918b86;/u);
-  assert.match(styles, /--muxui-semantic-content-default:\s*var\(--muxui-semantic-color-neutral-80\);/u);
-  assert.match(styles, /--muxui-semantic-surface-canvas:\s*var\(--muxui-semantic-color-neutral-5\);/u);
+  assert.match(styles, /--muxui-semantic-content-default:\s*var\(--muxui-semantic-color-neutral-90\);/u);
+  assert.match(styles, /--muxui-semantic-surface-canvas:\s*var\(--muxui-semantic-color-neutral-10\);/u);
   const rootBody = styles.match(/:root \{([\s\S]*?)\n\}/u)?.[1] ?? '';
   const rootDeclarations = new Map([...rootBody.matchAll(/^\s+(--[^:]+):\s*(.+);$/gmu)].map(([, name, value]) => [name, value]));
   const resolveRoot = (name, seen = new Set()) => {

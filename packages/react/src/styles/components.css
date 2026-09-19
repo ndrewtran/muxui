@@ -27,7 +27,7 @@
 .muxui-disclosure-group { overflow: hidden; border: 1px solid var(--muxui-semantic-border-subtle); border-radius: var(--muxui-semantic-shape-container-radius); }
 .muxui-disclosure { border-block-end: 1px solid var(--muxui-semantic-border-subtle); }
 .muxui-disclosure:last-child { border-block-end: 0; }
-.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-min-height); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-size-md); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
 .muxui-disclosure-trigger:hover:not([data-disabled]), .muxui-disclosure-trigger[data-pressed] { background: var(--muxui-semantic-surface-hover); color: var(--muxui-semantic-content-strong); }
 .muxui-disclosure-trigger:focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: -2px; }
 .muxui-disclosure-panel { margin-block-start: var(--muxui-semantic-layout-control-gap); padding: 0 var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small); }
@@ -75,15 +75,6 @@
 /* MuxUI parity declarations take precedence over generic component defaults. */
 
 /* MuxUI component source: button.css */
-.muxui-r1-button {
-  --muxui-button-background: var(--muxui-semantic-selection-track);
-  --muxui-button-background-hover: var(--muxui-semantic-action-background-hover);
-  --muxui-button-background-pressed: var(--muxui-semantic-action-background-pressed);
-  --muxui-button-foreground: var(--muxui-semantic-action-foreground);
-  --muxui-button-border: transparent;
-  --muxui-button-shadow: var(--muxui-semantic-elevation-control);
-}
-
 .muxui-button {
   --muxui-button-background: var(--muxui-semantic-selection-track);
   --muxui-button-background-hover: var(--muxui-semantic-action-background-hover);
@@ -127,11 +118,6 @@
 }
 
 .muxui-button[data-disabled] {
-  pointer-events: none;
-  cursor: not-allowed;
-}
-
-.muxui-r1-button[data-disabled] {
   pointer-events: none;
   cursor: not-allowed;
 }
@@ -575,11 +561,11 @@
 }
 
 /* The pressed dark button recipe uses the reference blue-green value. */
-[data-muxui-color-scheme='dark'] .muxui-button[data-variant='primary'][data-tone='default'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
+[data-muxui-color-scheme='dark'] .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
   background-color: var(--muxui-semantic-action-selection-pressed);
 }
 
-[data-muxui-color-scheme='dark'] .muxui-button[data-variant='danger-ghost'][data-tone='default'] {
+[data-muxui-color-scheme='dark'] .muxui-button[data-variant='danger-ghost'] {
   --muxui-button-foreground: var(--muxui-semantic-feedback-invalid);
 }
 
@@ -801,26 +787,23 @@
   }
 }
 
-/* MuxUI Button visual axes are orthogonal: variant and tone choose the recipe. */
-.muxui-button,
-.muxui-r1-button {
+/* Button variants select the visual recipe. */
+.muxui-button {
   background-color: var(--muxui-button-background);
   outline-color: var(--muxui-button-border);
   color: var(--muxui-button-foreground);
   box-shadow: var(--muxui-button-shadow);
 }
 
-.muxui-button:hover:not([data-disabled], [data-pending]),
-.muxui-r1-button:hover:not([data-disabled], [data-pending]) {
+.muxui-button:hover:not([data-disabled], [data-pending]) {
   background-color: var(--muxui-button-background-hover);
 }
 
-.muxui-button:active:not([data-disabled], [data-pending]),
-.muxui-r1-button:active:not([data-disabled], [data-pending]) {
+.muxui-button:active:not([data-disabled], [data-pending]) {
   background-color: var(--muxui-button-background-pressed);
 }
 
-.muxui-button[data-variant='primary'][data-tone='default'] {
+.muxui-button[data-variant='primary'] {
   --muxui-button-background: var(--muxui-semantic-selection-track);
   --muxui-button-background-hover: var(--muxui-semantic-action-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-background-pressed);
@@ -829,53 +812,8 @@
   --muxui-button-shadow: var(--muxui-semantic-elevation-control);
 }
 
-.muxui-button[data-variant='secondary'][data-tone='default'] {
-  --muxui-button-background: var(--muxui-semantic-surface-raised);
-  --muxui-button-background-hover: var(--muxui-semantic-surface-hover);
-  --muxui-button-background-pressed: var(--muxui-semantic-surface-pressed);
-  --muxui-button-foreground: var(--muxui-semantic-content-strong);
-  --muxui-button-border: var(--muxui-semantic-border-default);
-  --muxui-button-shadow: none;
-}
-
-.muxui-button[data-variant='ghost'][data-tone='default'] {
-  --muxui-button-background: transparent;
-  --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-selection-track) 12%, transparent);
-  --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-selection-track) 18%, transparent);
-  --muxui-button-foreground: var(--muxui-semantic-content-link);
-  --muxui-button-border: transparent;
-  --muxui-button-shadow: none;
-}
-
-.muxui-button[data-variant='primary'][data-tone='destructive'] {
-  --muxui-button-background: var(--muxui-semantic-feedback-invalid);
-  --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 90%, var(--muxui-semantic-surface-strong));
-  --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 80%, var(--muxui-semantic-surface-strong));
-  --muxui-button-foreground: var(--muxui-semantic-content-on-solid);
-  --muxui-button-border: transparent;
-  --muxui-button-shadow: var(--muxui-semantic-elevation-control);
-}
-
-.muxui-button[data-variant='secondary'][data-tone='destructive'] {
-  --muxui-button-background: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 10%, transparent);
-  --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 16%, transparent);
-  --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 22%, transparent);
-  --muxui-button-foreground: var(--muxui-semantic-content-strong);
-  --muxui-button-border: var(--muxui-semantic-feedback-invalid);
-  --muxui-button-shadow: none;
-}
-
-.muxui-button[data-variant='ghost'][data-tone='destructive'] {
-  --muxui-button-background: transparent;
-  --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 10%, transparent);
-  --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 16%, transparent);
-  --muxui-button-foreground: var(--muxui-semantic-content-strong);
-  --muxui-button-border: transparent;
-  --muxui-button-shadow: none;
-}
-
 /* The seven variants are represented directly on the Mux root. */
-.muxui-button[data-variant='neutral'][data-tone='default'] {
+.muxui-button[data-variant='neutral'] {
   --muxui-button-background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
   --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
@@ -884,7 +822,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='ghost'][data-tone='default'] {
+.muxui-button[data-variant='ghost'] {
   --muxui-button-background: transparent;
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-surface-contrast) 10%, transparent);
   --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-surface-contrast) 5%, transparent);
@@ -893,7 +831,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='danger'][data-tone='default'] {
+.muxui-button[data-variant='danger'] {
   --muxui-button-background: var(--muxui-semantic-action-danger-background);
   --muxui-button-background-hover: var(--muxui-semantic-action-danger-background-hover);
   --muxui-button-background-pressed: var(--muxui-semantic-action-danger-background-pressed);
@@ -902,7 +840,7 @@
   --muxui-button-shadow: var(--muxui-semantic-elevation-control);
 }
 
-.muxui-button[data-variant='danger-neutral'][data-tone='default'] {
+.muxui-button[data-variant='danger-neutral'] {
   --muxui-button-background: var(--muxui-semantic-action-danger-background-subtle);
   --muxui-button-background-hover: var(--muxui-semantic-action-danger-background-muted);
   --muxui-button-background-pressed: var(--muxui-semantic-action-danger-background-muted);
@@ -911,7 +849,7 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='danger-ghost'][data-tone='default'] {
+.muxui-button[data-variant='danger-ghost'] {
   --muxui-button-background: transparent;
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-action-danger-background) 10%, transparent);
   --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-action-danger-background) 5%, transparent);
@@ -920,21 +858,11 @@
   --muxui-button-shadow: none;
 }
 
-.muxui-button[data-variant='inverse'][data-tone='default'] {
+.muxui-button[data-variant='inverse'] {
   --muxui-button-background: var(--muxui-semantic-surface-strong);
   --muxui-button-background-hover: var(--muxui-semantic-surface-emphasis);
   --muxui-button-background-pressed: var(--muxui-semantic-surface-muted);
   --muxui-button-foreground: var(--muxui-semantic-content-on-solid);
-  --muxui-button-border: transparent;
-  --muxui-button-shadow: none;
-}
-
-.muxui-button[data-variant='secondary'][data-tone='default'] {
-  /* Compatibility alias for the pre-R1.6 Mux name. */
-  --muxui-button-background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
-  --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
-  --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
-  --muxui-button-foreground: var(--muxui-semantic-content-strong);
   --muxui-button-border: transparent;
   --muxui-button-shadow: none;
 }
@@ -1005,7 +933,7 @@
 }
 
 @media (forced-colors: active) {
-  :where(.muxui-button, .muxui-r1-button, .muxui-toggle-button) {
+  :where(.muxui-button, .muxui-toggle-button) {
     forced-color-adjust: none;
     border-color: ButtonText;
     background: ButtonFace;
@@ -1013,7 +941,7 @@
     box-shadow: none;
   }
 
-  :is(.muxui-button, .muxui-r1-button) {
+  .muxui-button {
     --muxui-button-background: ButtonFace !important;
     --muxui-button-background-hover: ButtonFace !important;
     --muxui-button-background-pressed: ButtonFace !important;
@@ -1022,17 +950,17 @@
     --muxui-button-shadow: none !important;
   }
 
-  :where(.muxui-button, .muxui-r1-button, .muxui-toggle-button)[data-disabled] {
+  :where(.muxui-button, .muxui-toggle-button)[data-disabled] {
     border-color: GrayText;
     color: GrayText;
   }
 
-  :is(.muxui-button, .muxui-r1-button)[data-disabled] {
+  .muxui-button[data-disabled] {
     --muxui-button-foreground: GrayText !important;
     --muxui-button-border: GrayText !important;
   }
 
-  :where(.muxui-button, .muxui-r1-button, .muxui-toggle-button):focus-visible {
+  :where(.muxui-button, .muxui-toggle-button):focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 2px;
   }
@@ -1285,7 +1213,7 @@
 /* Disabled affordances dim the complete control paint. Keep this
    scoped to the families whose shared rules apply at the root, so field and
    collection controls can retain their own contrast adaptations. */
-:is(.muxui-button, .muxui-r1-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
+:is(.muxui-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
 .muxui-disclosure[data-disabled] .muxui-disclosure-trigger,
 .muxui-disclosure-trigger[data-disabled] {
   opacity: 0.45;
@@ -1293,7 +1221,7 @@
 
 @media (forced-colors: active) {
   /* System colors provide the disabled affordance in high contrast mode. */
-  :is(.muxui-button, .muxui-r1-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
+  :is(.muxui-button, .muxui-toggle-button, .muxui-link, .muxui-checkbox, .muxui-radio, .muxui-switch)[data-disabled],
   .muxui-disclosure[data-disabled] .muxui-disclosure-trigger,
   .muxui-disclosure-trigger[data-disabled] {
     opacity: 1;
