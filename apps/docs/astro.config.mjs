@@ -118,6 +118,16 @@ export default defineConfig({
 			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 6 },
 			expressiveCode: {
 				shiki: { transformers: [muxTokenPathTransformer] },
+				plugins: [{
+					name: 'muxui-dark-code-blocks',
+					hooks: {
+						postprocessRenderedBlockGroup({ renderData }) {
+							// Keep syntax highlighting and Mux tokens in the same local dark scope.
+							renderData.groupAst.properties['data-theme'] = 'dark';
+							renderData.groupAst.properties['data-muxui-color-scheme'] = 'dark';
+						},
+					},
+				}],
 			},
 			customCss: ['./src/styles/mux-docs.css'],
 			sidebar: [
