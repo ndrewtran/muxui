@@ -13,6 +13,24 @@ type FoundationData = {
 	defaultModes: Readonly<Record<string, string>>;
 };
 
+function headingSlug(value: string): string {
+	return value
+		.trim()
+		.toLowerCase()
+		.normalize('NFKD')
+		.replace(/[\u0300-\u036f]/gu, '')
+		.replace(/[^a-z0-9]+/gu, '-')
+		.replace(/^-|-$/gu, '');
+}
+
+function foundationHeadingId(text: string, prefix = 'foundation'): string {
+	return `${prefix}-${headingSlug(text)}`;
+}
+
+function tokenInventoryHeadingId(title: string): string {
+	return `${title.replaceAll(' ', '-').toLowerCase()}-title`;
+}
+
 interface Props {
 	page: FoundationPage;
 	data: FoundationData;
@@ -140,7 +158,7 @@ function TokenDetail({ token, tokens }: { token: FoundationToken | undefined; to
 		<div className="foundation-detail-heading">
 			<div>
 				<p className="foundation-eyebrow">Selected token</p>
-				<h3 id="foundation-detail-title"><TokenPath value={token.id} token={token} /></h3>
+				<h3 id="foundation-detail-title" data-toc-ignore><TokenPath value={token.id} token={token} /></h3>
 			</div>
 			<CopyVariableButton token={token} />
 		</div>
@@ -195,6 +213,7 @@ function TokenInventory({
 			&& (!normalized || `${token.id} ${token.cssName} ${token.meaning}`.toLowerCase().includes(normalized)));
 	}, [query, tokens, type]);
 	const selected = tokenById(tokens, selectedId ?? '') ?? filtered[0] ?? tokens[0];
+	const headingId = tokenInventoryHeadingId(title);
 	const tokenFromHash = () => {
 		const hash = window.location.hash.slice(1);
 		const token = tokens.find((item) => tokenIdForAnchor(item.id) === hash);
@@ -207,10 +226,10 @@ function TokenInventory({
 		window.addEventListener('hashchange', tokenFromHash);
 		return () => window.removeEventListener('hashchange', tokenFromHash);
 	}, [tokens]);
-	return <section className="foundation-section foundation-inventory" aria-labelledby={`${title.replaceAll(' ', '-').toLowerCase()}-title`}>
+	return <section className="foundation-section foundation-inventory" aria-labelledby={headingId}>
 		<div className="foundation-section-heading">
 			<div>
-				<h2 id={`${title.replaceAll(' ', '-').toLowerCase()}-title`}>{title}</h2>
+				<h2 id={headingId}>{title}</h2>
 				<p>{description} <span className="foundation-count">{tokens.length} tokens</span></p>
 			</div>
 			<div className="foundation-filters">
@@ -241,7 +260,7 @@ function TokenInventory({
 }
 
 function SectionIntro({ title, children }: { title: string; children: React.ReactNode }) {
-	return <div className="foundation-section-intro"><h2>{title}</h2><p>{children}</p></div>;
+	return <div className="foundation-section-intro"><h2 id={foundationHeadingId(title)}>{title}</h2><p>{children}</p></div>;
 }
 
 function TokenLegend() {
@@ -385,7 +404,7 @@ function ColorPage({ data }: { data: FoundationData }) {
 		return [...groups.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([family, entries]) => [family, entries.sort((left, right) => Number(left.id.match(/(\d+)$/u)?.[1]) - Number(right.id.match(/(\d+)$/u)?.[1]))] as const);
 	}, [colors]);
 	const roles = ['semantic.surface.canvas', 'semantic.surface.background', 'semantic.content.default', 'semantic.content.link', 'semantic.action.background', 'semantic.status.success', 'semantic.feedback.invalid'].map((id) => tokenById(colors, id)).filter((token): token is FoundationToken => token !== undefined);
-	return <div className="foundation-page"><SectionIntro title="Palette ramps">Every ramp below is derived from the canonical source, including its actual number of stops. Use a reference colour to build a role; use a semantic role when you need interface meaning.</SectionIntro><section className="foundation-section"><div className="foundation-section-heading"><div><h2>Reference ramps</h2><p>{ramps.reduce((sum, [, entries]) => sum + entries.length, 0)} ramp entries across {ramps.length} families.</p></div><span className="foundation-legend">Swatches follow the active theme. Hex labels show canonical defaults.</span></div><div className="foundation-ramps">{ramps.map(([family, entries]) => <ColorRamp key={family} family={family} tokens={entries} />)}</div></section><section className="foundation-section foundation-role-strip"><h2>Interface roles</h2><div className="foundation-role-grid">{roles.map((token) => <div className="foundation-role" key={token.id}><FoundationTokenLabel token={token} /><div className="foundation-role-swatch" data-role-id={token.id} style={styleWithVariables({ backgroundColor: cssReference(token) })}><code>{token.defaultValue as string}</code></div></div>)}</div></section><TokenInventory tokens={colors} allTokens={data.tokens} title="Colour token inventory" description="Search all canonical colour tokens, including ramps, semantic roles, and component aliases." /></div>;
+	return <div className="foundation-page"><SectionIntro title="Palette ramps">Every ramp below is derived from the canonical source, including its actual number of stops. Use a reference colour to build a role; use a semantic role when you need interface meaning.</SectionIntro><section className="foundation-section"><div className="foundation-section-heading"><div><h2 id={foundationHeadingId('Reference ramps')}>Reference ramps</h2><p>{ramps.reduce((sum, [, entries]) => sum + entries.length, 0)} ramp entries across {ramps.length} families.</p></div><span className="foundation-legend">Swatches follow the active theme. Hex labels show canonical defaults.</span></div><div className="foundation-ramps">{ramps.map(([family, entries]) => <ColorRamp key={family} family={family} tokens={entries} />)}</div></section><section className="foundation-section foundation-role-strip"><h2 id={foundationHeadingId('Interface roles')}>Interface roles</h2><div className="foundation-role-grid">{roles.map((token) => <div className="foundation-role" key={token.id}><FoundationTokenLabel token={token} /><div className="foundation-role-swatch" data-role-id={token.id} style={styleWithVariables({ backgroundColor: cssReference(token) })}><code>{token.defaultValue as string}</code></div></div>)}</div></section><TokenInventory tokens={colors} allTokens={data.tokens} title="Colour token inventory" description="Search all canonical colour tokens, including ramps, semantic roles, and component aliases." /></div>;
 }
 
 const HEADING_CONTEXT_EXAMPLES = [
@@ -408,7 +427,7 @@ function HeadingContext({ data }: { data: FoundationData }) {
 function TypographyPage({ data }: { data: FoundationData }) {
 	const typographyTokens = data.tokens.filter((token) => token.id.includes('.typography.') || token.id.startsWith('reference.number.font-weight') || token.id.startsWith('reference.dimension.font-size-') || token.id.startsWith('reference.dimension.text-') || token.id.startsWith('reference.number.line-height-'));
 	const referenceSizes = typographyTokens.filter((token) => token.id.startsWith('reference.dimension.font-size-') || token.id.startsWith('reference.dimension.text-')).sort((left, right) => Number(left.defaultValue) - Number(right.defaultValue));
-	return <div className="foundation-page"><SectionIntro title="Typography specimens">Typography roles connect a family, colour, size, weight, leading, and tracking. Read the sample at its real scale, then inspect the token graph below.</SectionIntro><HeadingContext data={data} /><section className="foundation-section"><div className="foundation-type-specimens">{data.typographyRoles.map((role) => <div className="foundation-type-role" key={role.name}><div className="foundation-type-role-heading"><h2>{role.name}</h2><FoundationTokenLabelById id={role.fontFamily} tokens={data.tokens} /></div>{role.variants.map((variant) => <div className="foundation-type-sample" key={variant.name}><div className="foundation-type-meta"><span>{variant.name}</span><FoundationTokenLabelById id={variant.fontSize} tokens={data.tokens} /></div><p style={styleWithVariables({ fontFamily: cssReference(role.fontFamily), color: cssReference(role.color), fontSize: cssReference(variant.fontSize), fontWeight: cssReference(variant.fontWeight), lineHeight: cssReference(variant.lineHeight), letterSpacing: cssReference(variant.letterSpacing) })}>Design systems become useful when their decisions can be felt in the interface.</p></div>)}</div>)}</div></section><section className="foundation-section"><h2>Reference type scale</h2><p className="foundation-section-note">These canonical font-size references are rendered at their actual size; the inventory below also includes weight, leading, tracking, and text aliases.</p><div className="foundation-reference-type-scale">{referenceSizes.map((token) => <div className="foundation-reference-type-row" key={token.id}><FoundationTokenLabel token={token} /><span style={{ fontSize: cssReference(token) }}>Aa</span><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><TokenInventory tokens={typographyTokens} allTokens={data.tokens} title="Typography token inventory" description="Search the complete set of canonical type family, size, weight, leading, tracking, and reference scale tokens." /></div>;
+	return <div className="foundation-page"><SectionIntro title="Typography specimens">Typography roles connect a family, colour, size, weight, leading, and tracking. Read the sample at its real scale, then inspect the token graph below.</SectionIntro><HeadingContext data={data} /><section className="foundation-section"><div className="foundation-type-specimens">{data.typographyRoles.map((role) => <div className="foundation-type-role" key={role.name}><div className="foundation-type-role-heading"><h2 id={foundationHeadingId(role.name, 'foundation-typography-role')}>{role.name}</h2><FoundationTokenLabelById id={role.fontFamily} tokens={data.tokens} /></div>{role.variants.map((variant) => <div className="foundation-type-sample" key={variant.name}><div className="foundation-type-meta"><span>{variant.name}</span><FoundationTokenLabelById id={variant.fontSize} tokens={data.tokens} /></div><p style={styleWithVariables({ fontFamily: cssReference(role.fontFamily), color: cssReference(role.color), fontSize: cssReference(variant.fontSize), fontWeight: cssReference(variant.fontWeight), lineHeight: cssReference(variant.lineHeight), letterSpacing: cssReference(variant.letterSpacing) })}>Design systems become useful when their decisions can be felt in the interface.</p></div>)}</div>)}</div></section><section className="foundation-section"><h2 id={foundationHeadingId('Reference type scale')}>Reference type scale</h2><p className="foundation-section-note">These canonical font-size references are rendered at their actual size; the inventory below also includes weight, leading, tracking, and text aliases.</p><div className="foundation-reference-type-scale">{referenceSizes.map((token) => <div className="foundation-reference-type-row" key={token.id}><FoundationTokenLabel token={token} /><span style={{ fontSize: cssReference(token) }}>Aa</span><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><TokenInventory tokens={typographyTokens} allTokens={data.tokens} title="Typography token inventory" description="Search the complete set of canonical type family, size, weight, leading, tracking, and reference scale tokens." /></div>;
 }
 
 type FoundationFamilyDefinition = {
@@ -539,8 +558,8 @@ function SpacingPage({ data }: { data: FoundationData }) {
 		{ id: 'semantic.layout.search-clear-inset', label: 'Clear end inset', property: 'paddingInlineEnd' },
 		{ id: 'component.button.padding-inline', label: 'Button inline padding', property: 'paddingInline' },
 	] as const;
-	const metricList = (title: string, tokens: readonly FoundationToken[]) => <div className="foundation-metric-group"><h3>{title}</h3><div className="foundation-metric-list">{tokens.map((token) => <div className="foundation-metric" key={token.id}><div className="foundation-metric-copy"><FoundationTokenLabel token={token} /><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-gap-preview" data-metric-token={token.id} style={{ gap: cssReference(token) }}><span /><span /></div></div>)}</div></div>;
-	return <div className="foundation-page"><SectionIntro title="Spacing and dimensions">Each family has its own ruler. Ordered levels share a zero and scale relative to their peers; named roles keep their meaning visible without flattening unrelated values together.</SectionIntro><section className="foundation-section"><h2>Family rulers</h2><p className="foundation-section-note">Bars and labels use active dimension custom properties; canonical defaults are the server-rendered fallback. The complete dimension inventory remains below, including dimensions that are not suited to a spacing ruler.</p><div className="foundation-family-list">{families.map((family) => <FoundationDimensionFamily family={family} appliedValues={appliedValues} key={family.id} />)}</div></section><section className="foundation-section"><div className="foundation-section-heading"><div><h2>Control sizing specimens</h2><p>These controls retain their real applied height while the family ruler above compares the numeric levels.</p></div></div><div className="foundation-size-grid">{sizing.map((token) => <div className="foundation-size-specimen" key={token.id}><div className="foundation-size-control" style={{ minHeight: cssReference(token), paddingInline: cssReference('semantic.control.padding-inline') }}><span>Control</span></div><FoundationTokenLabel token={token} /><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><section className="foundation-section"><h2>Padding and inset examples</h2><p className="foundation-section-note">Each preview applies the named property directly. The family rulers above keep their source roles separate.</p><div className="foundation-padding-example-list">{paddingExamples.map(({ id, label, property }) => { const token = tokenById(dimensions, id); if (!token) return null; const style = { [property]: cssReference(token) }; return <div className="foundation-padding-example" key={id}><div className="foundation-metric-copy"><strong>{label}</strong><FoundationTokenLabel token={token} /><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-padding-preview" data-metric-token={id} data-padding-property={property} style={style}><span aria-hidden="true" /></div></div>; })}</div></section><section className="foundation-section">{metricList('Gap examples', gaps)}</section><TokenInventory tokens={dimensions} allTokens={data.tokens} title="Dimension inventory" description="Search every canonical dimension, including spacing, insets, type sizes, radii, and control metrics." /></div>;
+	const metricList = (title: string, tokens: readonly FoundationToken[]) => <div className="foundation-metric-group"><h3 id={foundationHeadingId(title, 'foundation-spacing-metric')}>{title}</h3><div className="foundation-metric-list">{tokens.map((token) => <div className="foundation-metric" key={token.id}><div className="foundation-metric-copy"><FoundationTokenLabel token={token} /><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-gap-preview" data-metric-token={token.id} style={{ gap: cssReference(token) }}><span /><span /></div></div>)}</div></div>;
+	return <div className="foundation-page"><SectionIntro title="Spacing and dimensions">Each family has its own ruler. Ordered levels share a zero and scale relative to their peers; named roles keep their meaning visible without flattening unrelated values together.</SectionIntro><section className="foundation-section"><h2 id={foundationHeadingId('Family rulers')}>Family rulers</h2><p className="foundation-section-note">Bars and labels use active dimension custom properties; canonical defaults are the server-rendered fallback. The complete dimension inventory remains below, including dimensions that are not suited to a spacing ruler.</p><div className="foundation-family-list">{families.map((family) => <FoundationDimensionFamily family={family} appliedValues={appliedValues} key={family.id} />)}</div></section><section className="foundation-section"><div className="foundation-section-heading"><div><h2 id={foundationHeadingId('Control sizing specimens')}>Control sizing specimens</h2><p>These controls retain their real applied height while the family ruler above compares the numeric levels.</p></div></div><div className="foundation-size-grid">{sizing.map((token) => <div className="foundation-size-specimen" key={token.id}><div className="foundation-size-control" style={{ minHeight: cssReference(token), paddingInline: cssReference('semantic.control.padding-inline') }}><span>Control</span></div><FoundationTokenLabel token={token} /><small>{specimenValue(token.defaultValue)} {token.unit}</small></div>)}</div></section><section className="foundation-section"><h2 id={foundationHeadingId('Padding and inset examples')}>Padding and inset examples</h2><p className="foundation-section-note">Each preview applies the named property directly. The family rulers above keep their source roles separate.</p><div className="foundation-padding-example-list">{paddingExamples.map(({ id, label, property }) => { const token = tokenById(dimensions, id); if (!token) return null; const style = { [property]: cssReference(token) }; return <div className="foundation-padding-example" key={id}><div className="foundation-metric-copy"><strong>{label}</strong><FoundationTokenLabel token={token} /><span>{specimenValue(token.defaultValue)} {token.unit}</span></div><div className="foundation-padding-preview" data-metric-token={id} data-padding-property={property} style={style}><span aria-hidden="true" /></div></div>; })}</div></section><section className="foundation-section">{metricList('Gap examples', gaps)}</section><TokenInventory tokens={dimensions} allTokens={data.tokens} title="Dimension inventory" description="Search every canonical dimension, including spacing, insets, type sizes, radii, and control metrics." /></div>;
 }
 
 const SHAPE_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
@@ -558,7 +577,7 @@ function FoundationShapeFamily({ family }: { family: FoundationFamily }) {
 function ShapePage({ data }: { data: FoundationData }) {
 	const shapes = SHAPE_FAMILY_DEFINITIONS.map((definition) => resolveFoundationFamily(data.tokens, definition));
 	const shapeTokens = shapes.flatMap((family) => family.tokens);
-	return <div className="foundation-page"><SectionIntro title="Corner hierarchy">Each family keeps equal-size specimens so the reference scale and semantic roles can be compared without flattening their meanings.</SectionIntro><section className="foundation-section"><h2>Radius families</h2><p className="foundation-section-note">Reference radii form an ordered scale. Semantic and control radii are named roles shown in their own family.</p><div className="foundation-family-list">{shapes.map((family) => <FoundationShapeFamily family={family} key={family.id} />)}</div></section><TokenInventory tokens={shapeTokens} allTokens={data.tokens} title="Shape token inventory" description="Search all canonical reference radii and semantic shape roles." /></div>;
+	return <div className="foundation-page"><SectionIntro title="Corner hierarchy">Each family keeps equal-size specimens so the reference scale and semantic roles can be compared without flattening their meanings.</SectionIntro><section className="foundation-section"><h2 id={foundationHeadingId('Radius families')}>Radius families</h2><p className="foundation-section-note">Reference radii form an ordered scale. Semantic and control radii are named roles shown in their own family.</p><div className="foundation-family-list">{shapes.map((family) => <FoundationShapeFamily family={family} key={family.id} />)}</div></section><TokenInventory tokens={shapeTokens} allTokens={data.tokens} title="Shape token inventory" description="Search all canonical reference radii and semantic shape roles." /></div>;
 }
 
 const ELEVATION_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
@@ -576,7 +595,7 @@ function FoundationElevationFamily({ family, allTokens }: { family: FoundationFa
 function ElevationPage({ data }: { data: FoundationData }) {
 	const families = ELEVATION_FAMILY_DEFINITIONS.map((definition) => resolveFoundationFamily(data.tokens, definition));
 	const effects = families.flatMap((family) => family.tokens);
-	return <div className="foundation-page"><SectionIntro title="Depth as a role">Effects are typed shadow values, not anonymous decoration. Reference primitives and semantic surface roles remain separate while their equal-size specimens show resolved depth.</SectionIntro><section className="foundation-section"><h2>Elevation families</h2><p className="foundation-section-note">Shadow names describe depth roles and resolved effects. They do not form a numeric z-index scale.</p><div className="foundation-family-list">{families.map((family) => <FoundationElevationFamily family={family} allTokens={data.tokens} key={family.id} />)}</div></section><TokenInventory tokens={effects} allTokens={data.tokens} title="Effect inventory" description="Search every canonical typed effect, including reference shadows and semantic elevation roles." /></div>;
+	return <div className="foundation-page"><SectionIntro title="Depth as a role">Effects are typed shadow values, not anonymous decoration. Reference primitives and semantic surface roles remain separate while their equal-size specimens show resolved depth.</SectionIntro><section className="foundation-section"><h2 id={foundationHeadingId('Elevation families')}>Elevation families</h2><p className="foundation-section-note">Shadow names describe depth roles and resolved effects. They do not form a numeric z-index scale.</p><div className="foundation-family-list">{families.map((family) => <FoundationElevationFamily family={family} allTokens={data.tokens} key={family.id} />)}</div></section><TokenInventory tokens={effects} allTokens={data.tokens} title="Effect inventory" description="Search every canonical typed effect, including reference shadows and semantic elevation roles." /></div>;
 }
 
 type MotionTimingGroup = FoundationFamily;
@@ -703,7 +722,7 @@ function MotionPage({ data }: { data: FoundationData }) {
 		<SectionIntro title="Finite and intentional">Motion specimens replay only after a user action. The same custom properties drive duration and easing, while the reduced-motion mode collapses the animation to an instant state.</SectionIntro>
 		<section className="foundation-section foundation-motion-section">
 			<div className="foundation-section-heading">
-				<div><h2>Easing plot</h2><p>Replay a single transition to compare the canonical easing roles.</p></div>
+				<div><h2 id={foundationHeadingId('Easing plot')}>Easing plot</h2><p>Replay a single transition to compare the canonical easing roles.</p></div>
 				<button type="button" className="foundation-action" onClick={replayMotion}>Replay motion</button>
 			</div>
 			<div className="foundation-timing-groups">{easingGroups.map((group) => <MotionEasingFamily family={group} replay={replay} key={group.id} />)}</div>

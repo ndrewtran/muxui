@@ -174,22 +174,6 @@ a:hover { color: var(--muxui-semantic-content-link-hover); }
 		min-width: 0;
 	}
 
-	.mux-two-column:has([data-home-title]) {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.mux-two-column:has([data-home-title]) > .right-sidebar-container {
-		display: none;
-	}
-
-	.mux-two-column:has(.scale-app) {
-		grid-template-columns: minmax(0, 1fr);
-	}
-
-	.mux-two-column:has(.scale-app) > .right-sidebar-container {
-		display: none;
-	}
-
 	.mux-two-column > main {
 		display: contents;
 	}
@@ -209,6 +193,7 @@ a:hover { color: var(--muxui-semantic-content-link-hover); }
 		grid-column: 2;
 		grid-row: 2;
 		min-width: 0;
+		align-self: stretch;
 	}
 
 	.mux-two-column > .right-sidebar-container .right-sidebar {
@@ -339,7 +324,7 @@ main > .content-panel:nth-child(2) {
 	min-width: 0;
 	min-height: 10rem;
 	padding: var(--muxui-reference-dimension-space-l);
-	background: var(--muxui-semantic-surface-canvas);
+	background: var(--muxui-semantic-surface-background);
 }
 
 /* Keep canonical examples out of Starlight's prose rhythm while giving

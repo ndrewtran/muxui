@@ -115,6 +115,7 @@ export default defineConfig({
 		react(),
 		starlight({
 			title: 'Mux UI',
+			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 6 },
 			expressiveCode: {
 				shiki: { transformers: [muxTokenPathTransformer] },
 			},

@@ -1,11 +1,41 @@
 ---
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import ScalePage from '../components/ScalePage.jsx';
+
+const headings = [
+	{ depth: 2, text: 'Theme Playground', slug: 'theme-playground-title' },
+	{ depth: 2, text: 'Standard themes', slug: 'standard-themes-title' },
+	{ depth: 2, text: 'Monochrome themes', slug: 'mono-themes-title' },
+	{ depth: 2, text: 'CSS tokens', slug: 'css-tokens-title' },
+	{ depth: 2, text: 'Component Preview', slug: 'component-preview-title' },
+];
 ---
 
 <StarlightPage
-	frontmatter={{ title: 'Scale', description: 'Build and apply a Mux UI theme in your browser.', tableOfContents: false }}
-	headings={[]}
+	frontmatter={{ title: 'Scale', description: 'Build and apply a Mux UI theme in your browser.', tableOfContents: true }}
+	headings={headings}
 >
 	<ScalePage client:only="react" />
 </StarlightPage>
+
+<script>
+	const scaleIsland = document.querySelector('astro-island[component-url*="ScalePage"]');
+	if (scaleIsland) {
+		const activateScaleTableOfContents = () => {
+			const template = document.querySelector<HTMLTemplateElement>('[data-scale-toc-template]');
+			const host = document.querySelector<HTMLElement>('[data-scale-toc-host]');
+			if (!template || !host) return;
+			// Native TOC observers must start after the client-only playground mounts.
+			host.append(template.content);
+			template.remove();
+			try {
+				const target = document.getElementById(decodeURIComponent(window.location.hash.slice(1)));
+				target?.scrollIntoView();
+			} catch {
+				// An invalid URL fragment must not prevent the table of contents from loading.
+			}
+		};
+		scaleIsland.addEventListener('astro:hydrate', activateScaleTableOfContents, { once: true });
+		if (document.querySelector('#theme-playground-title')) activateScaleTableOfContents();
+	}
+</script>

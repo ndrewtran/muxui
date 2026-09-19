@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parseFragment } from 'parse5';
+import { FOUNDATION_PAGES } from '../src/lib/foundations.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsDist = process.argv[2] === undefined
@@ -54,6 +55,10 @@ function textContent(node) {
 	}).join('');
 }
 
+function attributeValue(node, name) {
+	return node.attrs?.find(({ name: attributeName }) => attributeName === name)?.value;
+}
+
 function renderedSourceBlocks(html) {
 	const root = parseFragment(html);
 	return elements(root)
@@ -100,3 +105,38 @@ for (const component of listComponents()) {
 }
 
 console.log(`Rendered source contract passed: ${checked} canonical React examples preserve exact pre.textContent.`);
+
+const foundationsDirectory = resolve(docsDist, 'foundations');
+const foundationRoutes = [
+	'foundations',
+	...FOUNDATION_PAGES.map(({ slug }) => `foundations/${slug}`),
+];
+
+for (const route of foundationRoutes) {
+	const routePath = route === 'foundations' ? resolve(foundationsDirectory, 'index.html') : resolve(docsDist, route, 'index.html');
+	assert(existsSync(routePath), `Built foundation route is missing: ${route}.`);
+	const root = parseFragment(readFileSync(routePath, 'utf8'));
+	const toc = elements(root).find((node) => node.tagName === 'starlight-toc');
+	assert(toc !== undefined, `Built foundation route has no native table of contents: ${route}.`);
+	const tocLinks = elements(toc).filter((node) => node.tagName === 'a');
+	assert(tocLinks.length > 1, `Built foundation route has no section links: ${route}.`);
+	const main = elements(root).find((node) => node.tagName === 'main');
+	assert(main !== undefined, `Built foundation route has no main element: ${route}.`);
+	const mainElements = elements(main);
+	const headingElements = mainElements.filter((node) => /^h[1-6]$/u.test(node.tagName));
+	for (const link of tocLinks) {
+		const href = attributeValue(link, 'href');
+		assert(typeof href === 'string' && href.startsWith('#'), `Foundation TOC link is missing an anchor target: ${route}.`);
+		const targetId = decodeURIComponent(href.slice(1));
+		const matches = headingElements.filter((heading) => attributeValue(heading, 'id') === targetId);
+		assert(matches.length === 1, `Foundation TOC link target does not resolve uniquely in the rendered page: ${route}#${href.slice(1)}.`);
+	}
+	const tocTargetIds = new Set(tocLinks.map((link) => attributeValue(link, 'href')?.slice(1)).filter((id) => id));
+	const presentationIds = mainElements
+		.filter((node) => /^h[1-6]$/u.test(node.tagName) && attributeValue(node, 'role') === 'presentation')
+		.map((node) => attributeValue(node, 'id'))
+		.filter((id) => id !== undefined);
+	assert(presentationIds.every((id) => !tocTargetIds.has(id)), `Foundation TOC includes a presentation heading: ${route}.`);
+}
+
+console.log(`Foundation TOC contract passed: ${foundationRoutes.length} routes expose only existing, non-presentation heading targets.`);
