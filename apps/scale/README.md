@@ -28,6 +28,15 @@ palette edits, saves, and exports. The theme slug is its saved identity. Use
 window has since changed that file. **Reset to defaults** resets the draft;
 it does not delete saved themes.
 
+The Typography role matrix derives seven roles, six metric groups, and all 25
+size variants from the canonical default theme. Select one or more roles to
+edit Weight, Leading, or Tracking together. Each commit writes an explicit
+typed semantic override, so a role keeps its default or custom state through
+imports, exports, saves, and reloads. Expressive text keeps its own font
+family while reading the body/text size, weight, leading, and tracking tokens;
+the matrix shows those linked values as read-only. Live specimens use the
+compiled values, and Reset role removes that role's metric overrides.
+
 Draft settings and share URLs stay in the browser until saved. Export JSON
 works without the development endpoint; saving to the monorepo requires the
 local development server. The app is private and is not a production service.

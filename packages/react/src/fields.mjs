@@ -20,6 +20,7 @@ import {
   Form as AriaForm,
   Group as AriaGroup,
   Input as AriaInput,
+  InputContext as AriaInputContext,
   Label as AriaLabel,
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
@@ -63,6 +64,64 @@ function autocompletePortalContainer(input) {
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
 }
+
+// TextField and SearchField own the field semantics and their serialized value.
+// Keep those props on the RAC field context while allowing native behavior on
+// the inner input through the bounded inputProps escape hatch.
+const FIELD_INPUT_PROTECTED_PROPS = new Set([
+  'ref',
+  'children',
+  'dangerouslySetInnerHTML',
+  'slot',
+  'type',
+  'id',
+  'name',
+  'value',
+  'defaultValue',
+  'checked',
+  'defaultChecked',
+  'disabled',
+  'readOnly',
+  'required',
+  'onChange',
+  'onInput',
+  'aria-label',
+  'aria-labelledby',
+  'aria-describedby',
+  'aria-errormessage',
+  'aria-invalid',
+  'aria-required',
+  'aria-disabled',
+  'aria-readonly',
+]);
+
+function fieldInputProps(inputProps, ownedProps) {
+  const nativeProps = inputProps && typeof inputProps === 'object' ? { ...inputProps } : {};
+  for (const prop of FIELD_INPUT_PROTECTED_PROPS) delete nativeProps[prop];
+  const { className, ...rest } = nativeProps;
+  return {
+    ...rest,
+    ...ownedProps,
+    className: classNames('muxui-field-input', className),
+  };
+}
+
+function optionalInputProps(entries) {
+  return Object.fromEntries(Object.entries(entries).filter(([, value]) => value !== undefined));
+}
+
+const FieldInput = React.forwardRef(function FieldInput({ onKeyDown, ...props }, ref) {
+  const { onKeyDown: handleFieldKeyDown, ...inputContext } = React.useContext(AriaInputContext);
+  // Let native input handlers cancel field shortcuts before they submit or clear.
+  return React.createElement(AriaInputContext.Provider, { value: inputContext }, React.createElement(AriaInput, {
+    ...props,
+    ref,
+    onKeyDown(event) {
+      onKeyDown?.(event);
+      if (!event.defaultPrevented) handleFieldKeyDown?.(event);
+    },
+  }));
+});
 
 function fieldLabel(label) {
   return label === undefined || label === null ? null : React.createElement(AriaLabel, { className: 'muxui-field-label' }, label);
@@ -313,6 +372,8 @@ export const TextField = React.forwardRef(function TextField({
   minLength,
   pattern,
   spellCheck,
+  inputRef,
+  inputProps,
   ...props
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'TextField');
@@ -333,17 +394,12 @@ export const TextField = React.forwardRef(function TextField({
     label,
     description,
     errorMessage,
-    input: React.createElement(AriaInput, {
-      className: 'muxui-field-input',
-      type,
-      placeholder,
-      autoComplete,
-      autoFocus,
-      inputMode,
-      maxLength,
-      minLength,
-      pattern,
-      spellCheck,
+    input: React.createElement(FieldInput, {
+      ...fieldInputProps(inputProps, {
+        ...optionalInputProps({ placeholder, autoComplete, autoFocus, inputMode, maxLength, minLength, pattern, spellCheck }),
+        type,
+        ref: inputRef,
+      }),
     }),
   }));
 });
@@ -367,6 +423,8 @@ export const SearchField = React.forwardRef(function SearchField({
   validationBehavior: _validationBehavior,
   name,
   placeholder,
+  inputRef,
+  inputProps,
   className,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledby,
@@ -392,7 +450,12 @@ export const SearchField = React.forwardRef(function SearchField({
     description,
     errorMessage,
     input: React.createElement('div', { className: 'muxui-search-control' },
-      React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
+      React.createElement(FieldInput, {
+        ...fieldInputProps(inputProps, {
+          ...optionalInputProps({ placeholder }),
+          ref: inputRef,
+        }),
+      }),
       React.createElement(AriaButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search', onPress: onClear }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
   }));
 });

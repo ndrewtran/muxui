@@ -128,14 +128,62 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await ready(page, url);
     assert.equal(await page.locator('.theme-card').count(), 15);
     assert.equal(await page.locator('.theme-card').first().evaluate((node) => getComputedStyle(node).flexDirection), 'row');
-    assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontWeight), '600');
+    assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontWeight), '500');
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '34px');
+    assert.equal(await page.locator('.typography-selection-row').count(), 7);
+    assert.equal(await page.locator('.typography-matrix-row').count(), 8);
+    const untouchedLabelWeight = page.getByRole('spinbutton', { name: 'label weight', exact: true });
+    await untouchedLabelWeight.focus();
+    await untouchedLabelWeight.blur();
+    assert.equal(Object.hasOwn((await settingsIn(page)).additionalOverrides, 'semantic.typography.label-font-weight'), false);
+    const bulkWeight = page.getByRole('spinbutton', { name: 'Bulk weight', exact: true });
+    const bulkLeading = page.getByRole('spinbutton', { name: 'Bulk leading', exact: true });
+    const bulkTracking = page.getByRole('textbox', { name: 'Bulk tracking', exact: true });
+    assert.equal(await page.locator('.typography-bulk-control .typography-control-label span').count(), 0);
+    await bulkWeight.fill('700');
+    await bulkWeight.press('Enter');
+    await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('Weight updated'));
+    await bulkLeading.fill('1.4');
+    await bulkLeading.press('Enter');
+    await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('Leading updated'));
+    await bulkTracking.fill('0.02em');
+    await bulkTracking.press('Enter');
+    await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('Tracking updated'));
+    for (const role of ['display', 'heading', 'title']) {
+      assert.equal(await page.getByRole('spinbutton', { name: `${role} weight`, exact: true }).inputValue(), '700');
+      assert.equal(await page.getByRole('spinbutton', { name: `${role} leading`, exact: true }).inputValue(), '1.4');
+      assert.equal(await page.getByRole('textbox', { name: `${role} tracking`, exact: true }).inputValue(), '0.02em');
+    }
+    assert.equal(await page.locator('.typography-specimen[data-role="display"] p').evaluate((node) => getComputedStyle(node).fontWeight), '700');
+    const bodyWeight = page.getByRole('spinbutton', { name: 'body weight', exact: true });
+    await bodyWeight.fill('450');
+    await bodyWeight.press('Enter');
+    await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('Weight updated'));
+    assert.equal(await page.locator('.typography-matrix-row[data-role="expressive"] .typography-linked-value').first().textContent(), '450');
+    await page.locator('.typography-matrix-row[data-role="body"]').getByRole('button', { name: 'Reset role', exact: true }).click();
+    await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('body restored'));
+    assert.equal(await bodyWeight.inputValue(), '400');
+    assert.equal(await page.locator('.typography-matrix-row[data-role="expressive"] .typography-linked-value').first().textContent(), '400');
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    assert.equal(await bulkWeight.isDisabled(), true);
+    for (const role of ['display', 'heading', 'title']) await page.getByRole('checkbox', { name: `Select ${role} role`, exact: true }).check();
+    await page.getByRole('checkbox', { name: 'Select body role', exact: true }).check();
+    assert.equal(await page.locator('.typography-bulk-control').first().getByText('Body + expressive share text metrics', { exact: true }).count(), 1);
+    assert.equal(await bulkWeight.getAttribute('placeholder'), 'Mixed');
+    await page.waitForFunction(() => document.querySelector('#typography-bulk-fontWeight').value === '');
+    assert.equal(await bulkWeight.inputValue(), '');
+    await page.getByRole('checkbox', { name: 'Select body role', exact: true }).uncheck();
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Select expressive role', exact: true }).check();
+    assert.equal(await page.locator('.typography-bulk-control').first().getByText('Body + expressive share text metrics', { exact: true }).count(), 1);
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    for (const role of ['display', 'heading', 'title']) await page.getByRole('checkbox', { name: `Select ${role} role`, exact: true }).check();
     const radius = page.getByRole('slider', { name: 'Border radius factor', exact: true });
-    assert.equal(await page.locator('.radius-section output').textContent(), '1.00x (default)');
+    assert.equal(await page.locator('.radius-section output').textContent(), '0.50x (default)');
     await radius.press('End');
     await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '2.00x');
     await page.locator('.radius-section').getByRole('button', { name: 'Reset', exact: true }).click();
-    await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '1.00x (default)');
+    await page.waitForFunction(() => document.querySelector('.radius-section output').textContent === '0.50x (default)');
     await page.evaluate(() => { document.documentElement.style.fontSize = '20px'; });
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '42.5px');
     await page.evaluate(() => { document.documentElement.style.fontSize = ''; });
@@ -160,16 +208,27 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     assert.equal(await page.locator('.muxui-select-popover').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-color-neutral-5').trim()), await page.locator('.scale-app').evaluate((node) => getComputedStyle(node).getPropertyValue('--muxui-semantic-color-neutral-5').trim()));
     await page.keyboard.press('Escape');
     const screenshotDir = process.env.MUXUI_SCALE_SCREENSHOT_DIR;
-    if (screenshotDir) { await mkdir(screenshotDir, { recursive: true }); await page.screenshot({ path: join(screenshotDir, 'scale-dark.png') }); }
+    if (screenshotDir) {
+      await mkdir(screenshotDir, { recursive: true });
+      await page.screenshot({ path: join(screenshotDir, 'scale-dark.png') });
+      await page.locator('.typography-editor').screenshot({ path: join(screenshotDir, 'matrix-dark.png') });
+    }
 
     const document = createScaleDocument({ ...DEFAULT_SETTINGS, namedColor: '#663399' }, { slug: 'browser-theme' });
     document.modes = { colorScheme: ['dark'], contrast: ['more'], motion: ['reduced'], density: ['compact'], direction: ['rtl'] };
     document.overrides['component.button.min-height'] = { type: 'dimension', unit: 'px', value: 48 };
+    document.overrides['semantic.typography.text-font-weight'] = { type: 'number', unit: 'unitless', value: 450 };
+    document.overrides['semantic.typography.heading-line-height'] = { type: 'number', unit: 'unitless', value: 1.25 };
+    document.overrides['semantic.typography.heading-letter-spacing'] = { type: 'string', unit: 'string', value: '0.01em' };
     const serialized = JSON.stringify(document);
     await page.locator('input[type=file]').setInputFiles({ name: 'browser-theme.json', mimeType: 'application/json', buffer: Buffer.from(serialized) });
     await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('Imported and validated'));
     assert.equal(await page.getByRole('textbox', { name: 'Theme slug', exact: true }).inputValue(), 'browser-theme');
     assert.equal(await page.getByRole('button', { name: 'Light background', exact: true }).isDisabled(), true);
+    assert.equal(await bodyWeight.inputValue(), '450');
+    assert.equal(await page.locator('.typography-matrix-row[data-role="expressive"] .typography-linked-value').first().textContent(), '450');
+    assert.equal(await page.getByRole('spinbutton', { name: 'heading leading', exact: true }).inputValue(), '1.25');
+    assert.equal(await page.getByRole('textbox', { name: 'heading tracking', exact: true }).inputValue(), '0.01em');
     await page.getByRole('button', { name: 'Save', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('[role=status]').textContent === 'Saved browser-theme.');
     const savedPath = join(workspaceRoot, 'catalog/tokens/themes/browser-theme.json');
@@ -187,6 +246,8 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await second.getByRole('textbox', { name: 'Theme slug', exact: true }).fill('browser-theme');
     await second.getByRole('button', { name: 'Load', exact: true }).click();
     await second.waitForFunction(() => document.querySelector('[role=status]').textContent === 'Loaded browser-theme.');
+    assert.equal(await second.getByRole('spinbutton', { name: 'body weight', exact: true }).inputValue(), '450');
+    assert.equal(await second.locator('.typography-matrix-row[data-role="expressive"] .typography-linked-value').first().textContent(), '450');
     await second.getByRole('button', { name: 'Lagoon', exact: true }).click();
     const savedAgain = second.waitForResponse((response) => response.url().endsWith('/__muxui/scale/themes/browser-theme') && response.request().method() === 'PUT');
     await second.getByRole('button', { name: 'Save', exact: true }).click();
@@ -206,9 +267,16 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await page.getByRole('button', { name: 'Reset to defaults', exact: true }).click();
     await page.getByRole('button', { name: 'Light background', exact: true }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
-    if (screenshotDir) await page.screenshot({ path: join(screenshotDir, 'scale-light.png') });
+    if (screenshotDir) {
+      await page.screenshot({ path: join(screenshotDir, 'scale-light.png') });
+      await page.locator('.typography-editor').screenshot({ path: join(screenshotDir, 'matrix-light.png') });
+    }
     await page.setViewportSize({ width: 390, height: 844 });
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    if (screenshotDir) {
+      await page.screenshot({ path: join(screenshotDir, 'scale-narrow.png'), fullPage: false });
+      await page.locator('.typography-editor').screenshot({ path: join(screenshotDir, 'matrix-narrow.png') });
+    }
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();

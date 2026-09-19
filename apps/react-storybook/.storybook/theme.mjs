@@ -17,7 +17,7 @@ const MANAGER_TOKEN_IDS = Object.freeze({
   contentStrong: 'semantic.content.strong',
   focusRing: 'semantic.focus.ring',
   overlayScrim: 'semantic.overlay.scrim',
-  surfaceBodyBackground: 'semantic.surface.body-background',
+  surfaceSubtle: 'semantic.surface.subtle',
   surfaceCanvas: 'semantic.surface.canvas',
   surfaceHover: 'semantic.surface.hover',
   statusDanger: 'semantic.action.danger-background',
@@ -45,7 +45,7 @@ const PREVIEW_TOKEN_IDS = Object.freeze({
   contentStrong: 'semantic.content.strong',
   focusRing: 'semantic.focus.ring',
   selectionTrack: 'semantic.selection.track',
-  surfaceBodyBackground: 'semantic.surface.body-background',
+  surfaceSubtle: 'semantic.surface.subtle',
   surfaceCanvas: 'semantic.surface.canvas',
   surfaceHover: 'semantic.surface.hover',
   surfaceStrong: 'semantic.surface.strong',
@@ -90,7 +90,7 @@ export function managerThemeCss() {
 [data-testid='sb-preview-toolbar'] {
   --listbox-item-muted-color: var(--muxui-storybook-content-muted);
   --tree-node-background-hover: var(--muxui-storybook-surface-hover);
-  background: var(--muxui-storybook-surface-body-background);
+  background: var(--muxui-storybook-surface-subtle);
   color: var(--muxui-storybook-content-strong);
   border-color: var(--muxui-storybook-border-subtle);
 }
@@ -100,7 +100,7 @@ body,
 #storybook-sidebar-region,
 #storybook-panel-region,
 #main-content-wrapper {
-  scrollbar-color: var(--muxui-storybook-content-muted) var(--muxui-storybook-surface-body-background);
+  scrollbar-color: var(--muxui-storybook-content-muted) var(--muxui-storybook-surface-subtle);
 }
 
 /* Storybook's manager preview loader is generated before the preview is ready.
@@ -239,7 +239,7 @@ body,
 }
 
 #storybook-sidebar-region button[role='switch'][aria-label='Settings'] {
-  background: var(--muxui-storybook-surface-body-background) !important;
+  background: var(--muxui-storybook-surface-subtle) !important;
   color: var(--muxui-storybook-content-muted) !important;
   box-shadow: none !important;
 }
@@ -461,7 +461,7 @@ body,
 }
 
 #storybook-testing-module {
-  background: var(--muxui-storybook-surface-body-background) !important;
+  background: var(--muxui-storybook-surface-subtle) !important;
   border-color: var(--muxui-storybook-border-subtle) !important;
   box-shadow: none !important;
   color: var(--muxui-storybook-content-strong) !important;
@@ -856,7 +856,7 @@ body > div:has(> [role='listbox']) {
 #storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] input:disabled,
 #storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] select:disabled,
 #storybook-panel-region [role='tabpanel'][id$='tabpanel-addon-controls'] textarea:disabled {
-  background: var(--muxui-storybook-surface-body-background);
+  background: var(--muxui-storybook-surface-subtle);
   border-color: var(--muxui-storybook-border-subtle);
   color: var(--muxui-storybook-content-muted);
 }
@@ -864,7 +864,7 @@ body > div:has(> [role='listbox']) {
 /* Storybook's settings pages render in the manager main region. Their stock
    palette is separate from the sidebar and addon panel theme variables. */
 #main-content-wrapper [role='tablist'] {
-  background: var(--muxui-storybook-surface-body-background) !important;
+  background: var(--muxui-storybook-surface-subtle) !important;
   border-color: var(--muxui-storybook-border-subtle) !important;
   transition-property: transform, opacity !important;
 }
@@ -1456,20 +1456,20 @@ html:has(style[id^='addon-backgrounds']) .docs-story {
 
 function paletteFor(colorScheme) {
   return Object.freeze({
-    appBg: tokenValue(colorScheme, 'semantic.surface.body-background'),
+    appBg: tokenValue(colorScheme, 'semantic.surface.subtle'),
     appContentBg: tokenValue(colorScheme, 'semantic.surface.canvas'),
     appHoverBg: tokenValue(colorScheme, 'semantic.surface.hover'),
     appPreviewBg: tokenValue(colorScheme, 'semantic.surface.canvas'),
     appBorderColor: tokenValue(colorScheme, 'semantic.border.subtle'),
     appBorderRadius: tokenValue(colorScheme, 'semantic.shape.container-radius'),
-    barBg: tokenValue(colorScheme, 'semantic.surface.body-background'),
+    barBg: tokenValue(colorScheme, 'semantic.surface.subtle'),
     barTextColor: tokenValue(colorScheme, 'semantic.content.muted'),
     barHoverColor: tokenValue(colorScheme, 'semantic.action.background'),
     barSelectedColor: tokenValue(colorScheme, 'semantic.action.background'),
     textColor: tokenValue(colorScheme, 'semantic.content.strong'),
     textInverseColor: tokenValue(colorScheme, 'semantic.content.inverse'),
     textMutedColor: tokenValue(colorScheme, 'semantic.content.muted'),
-    buttonBg: tokenValue(colorScheme, 'semantic.surface.body-background'),
+    buttonBg: tokenValue(colorScheme, 'semantic.surface.subtle'),
     buttonBorder: tokenValue(colorScheme, 'semantic.border.default'),
     booleanBg: tokenValue(colorScheme, 'semantic.surface.hover'),
     booleanSelectedBg: tokenValue(colorScheme, 'semantic.surface.canvas'),
@@ -1479,8 +1479,8 @@ function paletteFor(colorScheme) {
     inputBorderRadius: tokenValue(colorScheme, 'semantic.shape.option-radius'),
     colorPrimary: tokenValue(colorScheme, 'semantic.action.background'),
     colorSecondary: tokenValue(colorScheme, 'semantic.action.background'),
-    fontBase: tokenValue(colorScheme, 'reference.typography.text-font-family'),
-    fontCode: tokenValue(colorScheme, 'reference.typography.mono-font-family'),
+    fontBase: tokenValue(colorScheme, 'semantic.typography.text-font-family'),
+    fontCode: tokenValue(colorScheme, 'semantic.typography.mono-font-family'),
   });
 }
 

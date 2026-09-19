@@ -1,11 +1,7 @@
 import React from 'react';
 import { Button as AriaButton } from 'react-aria-components';
 
-// The seven variants are the canonical axis. `secondary` remains a
-// compatibility spelling for the earlier Mux UI surface and maps to neutral
-// styling in CSS; `tone` likewise remains an orthogonal legacy alias.
-const BUTTON_VARIANTS = new Set(['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse', 'secondary']);
-const BUTTON_TONES = new Set(['default', 'destructive']);
+const BUTTON_VARIANTS = new Set(['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse']);
 const BUTTON_SIZES = new Set(['sm', 'md', 'lg']);
 
 function assertButtonOption(name, value, allowed) {
@@ -26,7 +22,6 @@ export const Button = React.forwardRef(function Button({
   pending = false,
   showTextWhileLoading = false,
   variant = 'primary',
-  tone = 'default',
   size = 'md',
   onActivate,
   type = 'button',
@@ -34,7 +29,6 @@ export const Button = React.forwardRef(function Button({
   ...props
 }, ref) {
   assertButtonOption('variant', variant, BUTTON_VARIANTS);
-  assertButtonOption('tone', tone, BUTTON_TONES);
   assertButtonOption('size', size, BUTTON_SIZES);
 
   const handlePress = (event) => {
@@ -78,7 +72,6 @@ export const Button = React.forwardRef(function Button({
         ? { 'aria-labelledby': pendingContentLabelId }
         : {}),
       'data-variant': variant,
-      'data-tone': tone,
       'data-size': size,
       'aria-busy': pending || ariaBusy || undefined,
     }),

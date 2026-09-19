@@ -109,7 +109,7 @@
       "flag": "--query-api-version",
       "requestKey": "queryApiVersion",
       "type": "string",
-      "choices": ["1.1.0", "1.2.0", "2.0.0"],
+      "choices": ["2.0.0"],
       "default": null
     }
   ],
@@ -156,7 +156,7 @@
         { "name": "id-or-alias", "requestKey": "id", "required": true, "type": "string" }
       ],
       "options": ["platform", "detail", "section", "purpose", "limit", "cursor", "query-api-version", "json", "dense", "help", "project", "catalog-version", "catalog-digest"],
-      "examples": ["muxui get muxui:component:button --platform web.react --json", "muxui get muxui:token:default-theme --query-api-version 1.2.0 --section tokens --limit 20 --dense"],
+      "examples": ["muxui get muxui:component:button --platform web.react --json", "muxui get muxui:token:default-theme --query-api-version 2.0.0 --section tokens --limit 20 --dense"],
       "budgetFixture": { "id-or-alias": "muxui:component:button" },
       "tokenBudgets": { "brief": 384, "compact": 1024, "full": 2048 }
     }

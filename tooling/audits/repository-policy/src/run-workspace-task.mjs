@@ -72,6 +72,18 @@ args.push('run', task);
 console.log(
   `[workspace-task] ${task}: ${mode === 'all' ? 'full graph' : 'changed packages plus dependents'}`,
 );
-const result = spawnSync('pnpm', args, { cwd: repositoryRoot, stdio: 'inherit' });
+// check:all (and release:prepare through check:all) invokes this runner without
+// --affected. An affected run can still need the full workspace graph while
+// retaining the PR selector's skip-heavy decision for the selected packages.
+const childEnvironment = task === 'check' && !affected
+  ? {
+      ...process.env,
+      MUXUI_STORYBOOK_AUDIT_MODE: 'full',
+      MUXUI_STORYBOOK_AUDIT_EVENT: 'check:all',
+      MUXUI_STORYBOOK_AUDIT_FORCE: '1',
+      MUXUI_STORYBOOK_AUDIT_REASON: 'check:all requires full Storybook coverage',
+    }
+  : process.env;
+const result = spawnSync('pnpm', args, { cwd: repositoryRoot, stdio: 'inherit', env: childEnvironment });
 if (result.error) throw result.error;
 process.exit(result.status ?? 1);

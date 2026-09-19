@@ -1,9 +1,12 @@
 import React from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
+import { FocusScope } from 'react-aria/FocusScope';
 import { Button as MuxUIButton } from './button.mjs';
+import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
   Button as AriaButton,
   Dialog as AriaDialog,
+  DialogContext as AriaDialogContext,
   DialogTrigger as AriaDialogTrigger,
   DropZone as AriaDropZone,
   FileTrigger as AriaFileTrigger,
@@ -30,42 +33,6 @@ function normalizeMaxVisible(value) {
   if (value !== undefined && !Number.isFinite(value)) throw new TypeError('Toast maxVisible must be finite');
   const normalized = value === undefined ? 5 : Math.floor(value);
   return normalized > 0 ? normalized : 5;
-}
-
-const OVERLAY_PLACEMENTS = new Set(['top', 'bottom', 'start', 'end']);
-
-function normalizePlacement(value, fallback, name) {
-  const normalized = value === undefined ? fallback : value;
-  if (!OVERLAY_PLACEMENTS.has(normalized)) throw new TypeError(`${name} must be one of top, bottom, start, or end`);
-  return normalized;
-}
-
-function normalizeFinite(value, fallback, name) {
-  if (value === undefined) return fallback;
-  if (!Number.isFinite(value)) throw new TypeError(`${name} must be finite`);
-  return value;
-}
-
-function normalizeNonNegativeFinite(value, fallback, name) {
-  const normalized = normalizeFinite(value, fallback, name);
-  if (normalized < 0) throw new TypeError(`${name} must be nonnegative`);
-  return normalized;
-}
-
-function normalizeBoolean(value, fallback, name) {
-  if (value === undefined) return fallback;
-  if (typeof value !== 'boolean') throw new TypeError(`${name} must be a boolean`);
-  return value;
-}
-
-function overlayGeometry({ placement, offset, crossOffset, shouldFlip, containerPadding }, defaults, name) {
-  return {
-    placement: normalizePlacement(placement, defaults.placement, name),
-    offset: normalizeFinite(offset, defaults.offset, `${name} offset`),
-    crossOffset: normalizeFinite(crossOffset, defaults.crossOffset, `${name} crossOffset`),
-    shouldFlip: normalizeBoolean(shouldFlip, defaults.shouldFlip, `${name} shouldFlip`),
-    containerPadding: normalizeNonNegativeFinite(containerPadding, defaults.containerPadding, `${name} containerPadding`),
-  };
 }
 
 function hasRenderableLabel(value) {
@@ -213,19 +180,23 @@ export const FileTrigger = React.forwardRef(function FileTrigger({
 
 FileTrigger.displayName = 'FileTrigger';
 
-function DialogContent({ title, children, ariaLabel, dismissable, className, contentRef, ...props }) {
-  return React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames('muxui-dialog', className), 'aria-label': ariaLabel, 'aria-modal': 'true' },
-    hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: 'muxui-dialog-title' }, title) : null,
-    React.createElement('div', { className: 'muxui-dialog-content' }, children),
-    dismissable ? React.createElement(AriaButton, { slot: 'close', className: 'muxui-dialog-close', 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
+function DialogContent({ title, description, actions, children, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }) {
+  const descriptionId = React.useId();
+  const describedby = [ariaDescribedby, description !== undefined && description !== null ? descriptionId : undefined].filter(Boolean).join(' ') || undefined;
+  return React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
+    hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: classNames('muxui-dialog-title', titleClassName) }, title) : null,
+    description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog-description', descriptionClassName) }, description) : null,
+    React.createElement('div', { className: classNames('muxui-dialog-content', contentClassName) }, children),
+    actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog-actions', actionsClassName) }, actions) : null,
+    dismissable ? React.createElement(AriaButton, { slot: 'close', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
 }
 
-function DialogOverlay({ dismissable, children, ...props }) {
+function DialogOverlay({ dismissable, backdropClassName, children, ...props }) {
   return React.createElement(AriaModalOverlay, {
     ...props,
     isDismissable: dismissable,
     isKeyboardDismissDisabled: !dismissable,
-    className: 'muxui-dialog-backdrop',
+    className: classNames('muxui-dialog-backdrop', backdropClassName),
   }, React.createElement(AriaModal, { className: 'muxui-dialog-modal' }, children));
 }
 
@@ -250,6 +221,15 @@ export const Dialog = React.forwardRef(function Dialog({
   open,
   defaultOpen = false,
   dismissable = true,
+  description,
+  actions,
+  backdropClassName,
+  panelClassName,
+  titleClassName,
+  descriptionClassName,
+  contentClassName,
+  actionsClassName,
+  closeClassName,
   trigger,
   onOpenChange,
   className,
@@ -259,8 +239,8 @@ export const Dialog = React.forwardRef(function Dialog({
   const hasTitle = hasRenderableLabel(title);
   if (!hasTitle && !hasAccessibleName(ariaLabel) && !hasAccessibleName(props['aria-labelledby'])) throw new Error('Dialog requires a title or accessible name');
   const triggerState = useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange });
-  const content = React.createElement(DialogOverlay, { dismissable },
-    React.createElement(DialogContent, { ...props, contentRef: ref, title, ariaLabel, dismissable, className }, children));
+  const content = React.createElement(DialogOverlay, { dismissable, backdropClassName },
+    React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
   if (React.isValidElement(trigger)) {
     return React.createElement(AriaDialogTrigger, triggerState, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
   }
@@ -270,32 +250,52 @@ export const Dialog = React.forwardRef(function Dialog({
     onOpenChange,
     isDismissable: dismissable,
     isKeyboardDismissDisabled: !dismissable,
-    className: 'muxui-dialog-backdrop',
-  }, React.createElement(AriaModal, { className: 'muxui-dialog-modal' }, React.createElement(DialogContent, { ...props, contentRef: ref, title, ariaLabel, dismissable, className }, children)));
+    className: classNames('muxui-dialog-backdrop', backdropClassName),
+  }, React.createElement(AriaModal, { className: 'muxui-dialog-modal' }, React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children)));
 });
 
 Dialog.displayName = 'Dialog';
 
-const PopupContent = React.forwardRef(function PopupContent({ children, className, geometry, dismissable, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+function PopoverSurface({ modal, children, ...props }) {
+  const surfaceRef = React.useRef(null);
+  React.useEffect(() => {
+    const surface = surfaceRef.current;
+    if (modal && surface && !surface.contains(surface.ownerDocument.activeElement)) {
+      surface.focus({ preventScroll: true });
+    }
+  }, [modal]);
+  // A stable scope releases containment without resetting consumer content.
+  // The enclosing RAC Popover remains the focus-restoration owner.
+  return React.createElement(FocusScope, { contain: modal },
+    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1 }, children));
+}
+
+const PopupContent = React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+  const dialogContext = React.useContext(AriaDialogContext);
   return React.createElement(AriaPopover, {
     ...props,
     ref,
+    triggerRef: anchorRef,
     placement: geometry.placement,
     offset: geometry.offset,
     crossOffset: geometry.crossOffset,
     shouldFlip: geometry.shouldFlip,
     containerPadding: geometry.containerPadding,
+    isNonModal: !modal,
+    'data-modal': modal,
     className: 'muxui-popover-positioner',
     isKeyboardDismissDisabled: !dismissable,
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
-  }, React.createElement(AriaDialog, {
+  }, React.createElement(PopoverSurface, {
+    modal,
+    id: dialogContext?.id,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     className: classNames('muxui-popover', className),
   }, children));
 });
 
-/** RAC Popover owns positioning, outside interaction, topmost dismissal, and modal focus behavior. */
+/** RAC Popover owns positioning and dismissal; FocusScope controls optional focus containment. */
 export const Popover = React.forwardRef(function Popover({
   children,
   trigger,
@@ -307,6 +307,8 @@ export const Popover = React.forwardRef(function Popover({
   crossOffset,
   shouldFlip,
   containerPadding,
+  anchorRef,
+  modal = true,
   onOpenChange,
   className,
   ...props
@@ -320,7 +322,8 @@ export const Popover = React.forwardRef(function Popover({
     shouldFlip: true,
     containerPadding: 12,
   }, 'Popover');
-  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable }, children);
+  const normalizedModal = normalizeBoolean(modal, true, 'Popover modal');
+  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal }, children);
   return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-overlay-pop-trigger'), content);
 });
 
@@ -481,6 +484,7 @@ export const Tooltip = React.forwardRef(function Tooltip({
   crossOffset,
   shouldFlip,
   containerPadding,
+  anchorRef,
   open,
   defaultOpen = false,
   disabled = false,
@@ -509,6 +513,7 @@ export const Tooltip = React.forwardRef(function Tooltip({
   }, pressableTrigger(normalizedTrigger), React.createElement(AriaTooltip, {
     ...props,
     ref,
+    triggerRef: anchorRef,
     placement: geometry.placement,
     offset: geometry.offset,
     crossOffset: geometry.crossOffset,

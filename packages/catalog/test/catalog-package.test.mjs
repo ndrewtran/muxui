@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { canonicalDigest, parseJsonStrict, validateFamily } from '@muxui/schema';
-import { createCatalogApi, migrateCatalogPackageV1ToV2 } from '../src/index.mjs';
+import { createCatalogApi } from '../src/index.mjs';
 import {
   assertPackedCompatibilityFixture,
   createPackedCompatibilityFixture,
@@ -39,7 +39,7 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
   assert.equal(identity.catalogDigest, canonicalDigest(preimage));
   assert.equal(identity.catalogDigest, bundle.catalogDigest);
   assert.equal(identity.queryApiVersion, bundle.apiVersion);
-  assert.deepEqual(identity.supportedQueryApiVersions, ['1.1.0', '1.2.0', '2.0.0']);
+  assert.deepEqual(identity.supportedQueryApiVersions, ['2.0.0']);
   assert.deepEqual(identity.supportedQueryApiVersions, bundle.supportedQueryApiVersions);
   assert.equal(identity.releaseManifest.queryApiVersion, identity.queryApiVersion);
   assert.equal(identity.schemaRange, '^2.0.0');
@@ -76,21 +76,6 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
     );
   }
   assert.equal(identity.bundle, './catalog.json');
-});
-
-test('catalog descriptor v1-to-v2 upgrade is deterministic and idempotent', async () => {
-  const current = await readJson('../generated/catalog-package.json');
-  const historical = structuredClone(current);
-  historical.schema = 'muxui-catalog-package-v1';
-  delete historical.supportedQueryApiVersions;
-  const migrated = migrateCatalogPackageV1ToV2(historical);
-  assert.equal(migrated.schema, 'muxui-catalog-package-v2');
-  assert.deepEqual(migrated.supportedQueryApiVersions, [historical.queryApiVersion]);
-  assert.deepEqual(migrateCatalogPackageV1ToV2(migrated), migrated);
-  assert.throws(
-    () => migrateCatalogPackageV1ToV2({ schema: 'muxui-catalog-package-v2' }),
-    /MUXUI_CATALOG_PACKAGE_INVALID/,
-  );
 });
 
 test('E-G0.4 installed-local resolution context is catalog-owned response metadata', async () => {

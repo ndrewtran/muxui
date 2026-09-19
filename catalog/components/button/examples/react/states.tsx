@@ -9,7 +9,7 @@ export function ButtonStatesExample() {
       <Button pending={pending} showTextWhileLoading onActivate={() => setPending(true)}>
         {pending ? 'Saving…' : 'Save changes'}
       </Button>
-      <Button disabled variant="secondary" onActivate={() => undefined}>Disabled</Button>
+      <Button disabled variant="neutral" onActivate={() => undefined}>Disabled</Button>
       {pending ? <Button variant="ghost" onActivate={() => setPending(false)}>Reset pending</Button> : null}
     </div>
   );

@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "3.0.0",
+  "tokenContractVersion": "4.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -115,7 +115,7 @@
     "typography": {
       "roles": {
         "display": {
-          "fontFamily": "reference.typography.display-font",
+          "fontFamily": "semantic.typography.display-font-family",
           "color": "semantic.typography.display-color",
           "variants": {
             "l": {
@@ -139,7 +139,7 @@
           }
         },
         "heading": {
-          "fontFamily": "reference.typography.display-font",
+          "fontFamily": "semantic.typography.heading-font-family",
           "color": "semantic.typography.display-color",
           "variants": {
             "l": {
@@ -163,7 +163,7 @@
           }
         },
         "title": {
-          "fontFamily": "reference.typography.display-font",
+          "fontFamily": "semantic.typography.title-font-family",
           "color": "semantic.typography.display-color",
           "variants": {
             "l": {
@@ -187,7 +187,7 @@
           }
         },
         "label": {
-          "fontFamily": "reference.typography.body-font",
+          "fontFamily": "semantic.typography.label-font-family",
           "color": "semantic.typography.text-color",
           "variants": {
             "l": {
@@ -217,7 +217,7 @@
           }
         },
         "body": {
-          "fontFamily": "reference.typography.body-font",
+          "fontFamily": "semantic.typography.text-font-family",
           "color": "semantic.typography.text-color",
           "variants": {
             "l": {
@@ -247,7 +247,7 @@
           }
         },
         "mono": {
-          "fontFamily": "reference.typography.mono-font",
+          "fontFamily": "semantic.typography.mono-font-family",
           "color": "semantic.typography.mono-color",
           "variants": {
             "l": {
@@ -277,7 +277,7 @@
           }
         },
         "expressive": {
-          "fontFamily": "reference.typography.expressive-font",
+          "fontFamily": "semantic.typography.expressive-font-family",
           "color": "semantic.typography.text-color",
           "variants": {
             "l": {
@@ -462,7 +462,7 @@
         "unit": "rem",
         "base": 0.125,
         "curvature": {
-          "default": 1,
+          "default": 0.5,
           "minimum": 0,
           "maximum": 2,
           "step": 0.01
@@ -497,19 +497,6 @@
     }
   },
   "tokens": {
-    "reference.duration.fast": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Default short feedback duration.",
-      "overridePolicy": "fixed",
-      "value": 120,
-      "modes": {
-        "motion.reduced": {
-          "value": 0
-        }
-      }
-    },
     "semantic.action.background": {
       "layer": "semantic",
       "type": "color",
@@ -905,7 +892,7 @@
       "unit": "ms",
       "meaning": "Duration of the color-mode toggle transition.",
       "overridePolicy": "theme",
-      "value": 500
+      "alias": "reference.motion.duration-deliberate"
     },
     "semantic.motion.panel-enter-duration": {
       "layer": "semantic",
@@ -913,7 +900,7 @@
       "unit": "ms",
       "meaning": "Duration of auxiliary panels entering.",
       "overridePolicy": "theme",
-      "value": 180
+      "alias": "reference.motion.duration-moderate"
     },
     "semantic.layout.micro-gap": {
       "layer": "semantic",
@@ -965,7 +952,7 @@
       "unit": "ms",
       "meaning": "Duration of compact selection popovers entering.",
       "overridePolicy": "theme",
-      "value": 120
+      "alias": "reference.motion.duration-fast"
     },
     "semantic.motion.reveal-easing": {
       "layer": "semantic",
@@ -1001,7 +988,7 @@
       "unit": "ms",
       "meaning": "Duration of progress value interpolation.",
       "overridePolicy": "theme",
-      "value": 300
+      "alias": "reference.motion.duration-slow"
     },
     "semantic.motion.progress-spin-duration": {
       "layer": "semantic",
@@ -1017,7 +1004,7 @@
       "unit": "string",
       "meaning": "Linear curve for continuous progress motion such as spinner rotation.",
       "overridePolicy": "theme",
-      "value": "linear"
+      "alias": "reference.motion.easing-linear"
     },
     "semantic.motion.progress-sweep-duration": {
       "layer": "semantic",
@@ -1034,18 +1021,6 @@
       "meaning": "Ease-in-out curve for progress indicator movement.",
       "overridePolicy": "theme",
       "value": "ease-in-out"
-    },
-    "semantic.layout.navigation-inset-block": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Block inset within navigation search fields.",
-      "overridePolicy": "theme",
-      "value": 6,
-      "relative": {
-        "value": 0.375,
-        "unit": "rem"
-      }
     },
     "semantic.layout.navigation-inset-inline": {
       "layer": "semantic",
@@ -1138,15 +1113,6 @@
         "value": 1,
         "unit": "rem"
       }
-    },
-    "semantic.control.min-height": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Default minimum interactive control height (the md target).",
-      "overridePolicy": "theme",
-      "equivalence": "semantic-equivalence",
-      "alias": "semantic.control.size-md"
     },
     "semantic.control.size-sm": {
       "layer": "semantic",
@@ -1264,7 +1230,7 @@
       "unit": "hex",
       "meaning": "Description content for editable fields.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-60",
+      "alias": "semantic.content.muted",
       "equivalence": "semantic-equivalence"
     },
     "semantic.feedback.invalid": {
@@ -1323,14 +1289,6 @@
       "alias": "semantic.color.neutral-60",
       "equivalence": "semantic-equivalence"
     },
-    "semantic.motion.feedback": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Optional short visual feedback duration.",
-      "overridePolicy": "theme",
-      "alias": "reference.duration.fast"
-    },
     "semantic.overlay.background": {
       "layer": "semantic",
       "type": "color",
@@ -1355,7 +1313,7 @@
       "unit": "hex",
       "meaning": "Default canvas surface behind page content.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-5",
+      "alias": "semantic.color.neutral-10",
       "equivalence": "semantic-equivalence"
     },
     "semantic.surface.raised": {
@@ -1391,7 +1349,7 @@
       "unit": "hex",
       "meaning": "Faint content used for dividers and low-emphasis indicators.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-40",
+      "alias": "semantic.color.neutral-60",
       "equivalence": "semantic-equivalence"
     },
     "semantic.content.muted": {
@@ -1400,7 +1358,7 @@
       "unit": "hex",
       "meaning": "Muted content for descriptions, placeholders, and secondary values.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-50",
+      "alias": "semantic.color.neutral-70",
       "equivalence": "semantic-equivalence"
     },
     "semantic.content.secondary": {
@@ -1418,7 +1376,7 @@
       "unit": "hex",
       "meaning": "Default color for control labels and readable content.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-80",
+      "alias": "semantic.color.neutral-90",
       "equivalence": "semantic-equivalence"
     },
     "semantic.content.strong": {
@@ -1726,14 +1684,6 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.space-xs"
     },
-    "semantic.layout.content-row-min-height": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Minimum height for compact content rows.",
-      "overridePolicy": "theme",
-      "alias": "reference.dimension.space-m"
-    },
     "semantic.shape.indicator-radius": {
       "layer": "semantic",
       "type": "dimension",
@@ -1781,22 +1731,6 @@
       "meaning": "Corner radius for selectable options and rows.",
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-s"
-    },
-    "semantic.shape.thumb-radius": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Small corner radius for color and range thumbs.",
-      "overridePolicy": "theme",
-      "value": 2
-    },
-    "semantic.shape.wheel-radius": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Corner radius for wheel and large color controls.",
-      "overridePolicy": "theme",
-      "alias": "reference.dimension.radius-2xl"
     },
     "semantic.shape.pill-radius": {
       "layer": "semantic",
@@ -1862,45 +1796,13 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.font-size-xs"
     },
-    "semantic.typography.display-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Font family for display, heading, and title content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.display-font"
-    },
-    "semantic.typography.body-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Font family for body and control content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.body-font"
-    },
-    "semantic.typography.expressive-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Expressive font family for decorative content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.expressive-font"
-    },
     "semantic.typography.expressive-font-family": {
       "layer": "semantic",
       "type": "string",
       "unit": "string",
       "meaning": "Expressive font family alias.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.expressive-font-family"
-    },
-    "semantic.typography.mono-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Monospace font family for code and technical content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.mono-font"
+      "alias": "reference.typography.expressive-font"
     },
     "semantic.typography.display-font-family": {
       "layer": "semantic",
@@ -1908,7 +1810,7 @@
       "unit": "string",
       "meaning": "Display family alias for heading and title roles.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.display-font-family"
+      "alias": "reference.typography.display-font"
     },
     "semantic.typography.heading-font-family": {
       "layer": "semantic",
@@ -1916,7 +1818,7 @@
       "unit": "string",
       "meaning": "Heading font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.heading-font-family"
+      "alias": "reference.typography.display-font"
     },
     "semantic.typography.title-font-family": {
       "layer": "semantic",
@@ -1924,7 +1826,7 @@
       "unit": "string",
       "meaning": "Title font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.title-font-family"
+      "alias": "reference.typography.display-font"
     },
     "semantic.typography.label-font-family": {
       "layer": "semantic",
@@ -1932,7 +1834,7 @@
       "unit": "string",
       "meaning": "Label font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.label-font-family"
+      "alias": "reference.typography.body-font"
     },
     "semantic.typography.text-font-family": {
       "layer": "semantic",
@@ -1940,7 +1842,7 @@
       "unit": "string",
       "meaning": "Text font family.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.text-font-family"
+      "alias": "reference.typography.body-font"
     },
     "semantic.typography.mono-font-family": {
       "layer": "semantic",
@@ -1948,7 +1850,7 @@
       "unit": "string",
       "meaning": "Monospace font family alias.",
       "overridePolicy": "theme",
-      "alias": "reference.typography.mono-font-family"
+      "alias": "reference.typography.mono-font"
     },
     "semantic.typography.heading-weight": {
       "layer": "semantic",
@@ -2192,7 +2094,7 @@
       "unit": "px",
       "meaning": "Public Button minimum-height customization point.",
       "overridePolicy": "theme",
-      "alias": "semantic.control.min-height"
+      "alias": "semantic.control.size-md"
     },
     "component.button.padding-inline": {
       "layer": "component",
@@ -4690,38 +4592,6 @@
         }
       }
     },
-    "reference.duration.deliberate": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "deliberate motion duration reference value.",
-      "overridePolicy": "fixed",
-      "value": 500
-    },
-    "reference.duration.instant": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "instant motion duration reference value.",
-      "overridePolicy": "fixed",
-      "value": 0
-    },
-    "reference.duration.moderate": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "moderate motion duration reference value.",
-      "overridePolicy": "fixed",
-      "value": 180
-    },
-    "reference.duration.slow": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "slow motion duration reference value.",
-      "overridePolicy": "fixed",
-      "value": 300
-    },
     "reference.number.font-weight-medium": {
       "layer": "reference",
       "type": "number",
@@ -5093,69 +4963,6 @@
       "overridePolicy": "fixed",
       "value": "\"Roboto Mono\", monospace"
     },
-    "reference.typography.display-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --display-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.display-font",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.typography.heading-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --heading-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.display-font",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.typography.title-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --title-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.display-font",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.typography.label-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --label-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.body-font",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.typography.text-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --text-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.body-font",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.typography.mono-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --mono-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.mono-font",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.typography.expressive-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --expressive-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.expressive-font",
-      "equivalence": "semantic-equivalence"
-    },
     "semantic.typography.display-l-font-size": {
       "layer": "semantic",
       "type": "dimension",
@@ -5359,7 +5166,7 @@
       "unit": "unitless",
       "meaning": "Weight for prominent display, heading, and title text.",
       "overridePolicy": "theme",
-      "value": 600
+      "value": 500
     },
     "semantic.typography.heading-font-weight": {
       "layer": "semantic",
@@ -5367,7 +5174,7 @@
       "unit": "unitless",
       "meaning": "Weight for section headings.",
       "overridePolicy": "theme",
-      "value": 600
+      "value": 500
     },
     "semantic.typography.title-font-weight": {
       "layer": "semantic",
@@ -5375,7 +5182,7 @@
       "unit": "unitless",
       "meaning": "Weight for titles.",
       "overridePolicy": "theme",
-      "value": 600
+      "value": 500
     },
     "semantic.typography.label-font-weight": {
       "layer": "semantic",
@@ -5383,7 +5190,7 @@
       "unit": "unitless",
       "meaning": "Weight for labels and interactive controls.",
       "overridePolicy": "theme",
-      "value": 500
+      "alias": "reference.number.font-weight-medium"
     },
     "semantic.typography.text-font-weight": {
       "layer": "semantic",
@@ -5391,7 +5198,7 @@
       "unit": "unitless",
       "meaning": "Weight for body and supporting text.",
       "overridePolicy": "theme",
-      "value": 400
+      "alias": "reference.number.font-weight-regular"
     },
     "semantic.typography.mono-font-weight": {
       "layer": "semantic",
@@ -5399,7 +5206,7 @@
       "unit": "unitless",
       "meaning": "Weight for code and technical text.",
       "overridePolicy": "theme",
-      "value": 400
+      "alias": "reference.number.font-weight-regular"
     },
     "semantic.typography.display-line-height": {
       "layer": "semantic",
@@ -5407,7 +5214,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for prominent display, heading, and title text.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.heading-line-height": {
       "layer": "semantic",
@@ -5415,7 +5222,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for section headings.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.title-line-height": {
       "layer": "semantic",
@@ -5423,7 +5230,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for titles.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.label-line-height": {
       "layer": "semantic",
@@ -5431,7 +5238,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for labels and controls.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.text-line-height": {
       "layer": "semantic",
@@ -5439,7 +5246,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for body and supporting text.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.mono-line-height": {
       "layer": "semantic",
@@ -5447,7 +5254,7 @@
       "unit": "unitless",
       "meaning": "Line spacing for code and technical text.",
       "overridePolicy": "theme",
-      "value": 1.5
+      "alias": "reference.number.line-height-relaxed"
     },
     "semantic.typography.display-letter-spacing": {
       "layer": "semantic",
@@ -5504,177 +5311,6 @@
       "meaning": "Primary brand accent for immediate actions and selected states.",
       "overridePolicy": "theme",
       "alias": "semantic.color.color-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.red": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --red.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.red-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.orange": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --orange.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.orange-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.amber": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --amber.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.amber-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.yellow": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --yellow.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.yellow-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.lime": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --lime.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.lime-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.green": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --green.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.green-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.emerald": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --emerald.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.emerald-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.teal": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --teal.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.teal-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.cyan": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --cyan.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.cyan-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.sky": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --sky.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.sky-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.indigo": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --indigo.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.indigo-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.violet": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --violet.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.violet-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.purple": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --purple.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.purple-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.fuchsia": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --fuchsia.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.fuchsia-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.pink": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --pink.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.pink-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.rose": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --rose.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.rose-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.error": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --error.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.error-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.warning": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --warning.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.warning-60",
-      "equivalence": "semantic-equivalence"
-    },
-    "reference.color.success": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Mux-owned token for --success.",
-      "overridePolicy": "fixed",
-      "alias": "reference.color.success-60",
       "equivalence": "semantic-equivalence"
     },
     "reference.color.brand-5": {
@@ -7467,42 +7103,6 @@
       "alias": "reference.color.neutral-100",
       "equivalence": "semantic-equivalence"
     },
-    "semantic.typography.display-default-color": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Default color for display, heading, and title text.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence"
-    },
-    "semantic.typography.text-default-color": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Default color for body, label, and supporting text.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence"
-    },
-    "semantic.typography.mono-default-color": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Default color for code and technical text.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence"
-    },
-    "semantic.surface.body-background": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Body surface for the primary content area.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-12",
-      "equivalence": "semantic-equivalence"
-    },
     "semantic.color.color-5-fg": {
       "layer": "semantic",
       "type": "color",
@@ -8236,20 +7836,6 @@
         }
       }
     },
-    "semantic.motion.feedback-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for immediate feedback transitions.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-standard",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      }
-    },
     "semantic.motion.state-duration": {
       "layer": "semantic",
       "type": "duration",
@@ -8264,48 +7850,6 @@
         }
       }
     },
-    "semantic.motion.state-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for control state changes.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-standard",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      }
-    },
-    "semantic.motion.enter-duration": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Duration for content entering the interface.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.duration-moderate",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.duration-instant"
-        }
-      }
-    },
-    "semantic.motion.enter-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for content entering the interface.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-enter",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      }
-    },
     "semantic.motion.exit-duration": {
       "layer": "semantic",
       "type": "duration",
@@ -8317,48 +7861,6 @@
       "modes": {
         "motion.reduced": {
           "alias": "reference.motion.duration-instant"
-        }
-      }
-    },
-    "semantic.motion.exit-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for content leaving the interface.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-exit",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      }
-    },
-    "semantic.motion.content-duration": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Duration for content transitions.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.duration-slow",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.duration-instant"
-        }
-      }
-    },
-    "semantic.motion.content-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for content transitions.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-standard",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
         }
       }
     },
@@ -9341,20 +8843,6 @@
         }
       }
     },
-    "semantic.effect.scrim-subtle": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Subtle modal scrim color.",
-      "overridePolicy": "theme",
-      "equivalence": "semantic-equivalence",
-      "mix": {
-        "space": "srgb",
-        "token": "semantic.color.neutral-default-100",
-        "color": "#00000000",
-        "weight": 0.24
-      }
-    },
     "semantic.effect.scrim": {
       "layer": "semantic",
       "type": "color",
@@ -9368,47 +8856,6 @@
         "color": "#00000000",
         "weight": 0.48
       }
-    },
-    "semantic.effect.scrim-strong": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Strong modal scrim color.",
-      "overridePolicy": "theme",
-      "equivalence": "semantic-equivalence",
-      "mix": {
-        "space": "srgb",
-        "token": "semantic.color.neutral-default-100",
-        "color": "#00000000",
-        "weight": 0.72
-      }
-    },
-    "reference.color.scrim-subtle": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim-subtle for theme-aware overlays.",
-      "overridePolicy": "fixed",
-      "value": "#11100f3d",
-      "equivalence": "deprecation-bridge"
-    },
-    "reference.color.scrim-default": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim for theme-aware overlays.",
-      "overridePolicy": "fixed",
-      "value": "#11100f7a",
-      "equivalence": "deprecation-bridge"
-    },
-    "reference.color.scrim-strong": {
-      "layer": "reference",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim-strong for theme-aware overlays.",
-      "overridePolicy": "fixed",
-      "value": "#11100fb8",
-      "equivalence": "deprecation-bridge"
     }
   }
 }

@@ -838,7 +838,6 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
     const baselineHeights = await readControlHeights();
     for (const [property, value] of [
       ['--muxui-semantic-control-size-md', '48px'],
-      ['--muxui-semantic-control-min-height', '52px'],
     ]) {
       await page.evaluate(([name, nextValue]) => document.documentElement.style.setProperty(name, nextValue), [property, value]);
       const overriddenHeights = await readControlHeights();

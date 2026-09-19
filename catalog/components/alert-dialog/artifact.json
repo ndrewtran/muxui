@@ -72,11 +72,14 @@
       },
       "behavior": [
         "Escape and backdrop dismissal follow React Aria modal semantics.",
-        "Close returns focus to the trigger."
+        "Close returns focus to the trigger.",
+        "Keep muxui-alert-dialog__backdrop, __popup, __content, __title, __description, __actions, and __close selectors when consumer className values customize the corresponding parts."
       ],
       "accessibility": [
         "Escape and backdrop dismissal follow React Aria modal semantics.",
-        "Close returns focus to the trigger."
+        "Close returns focus to the trigger.",
+        "Associate Title and Description automatically when they are composed inside Content, retaining explicit IDs.",
+        "Merge Content aria-describedby references with the composed Description relationship."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
@@ -90,7 +93,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback",
+            "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           }
         ]

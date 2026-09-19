@@ -104,7 +104,6 @@ export function foundationPage(slug: string): FoundationPage | undefined {
 
 type TokenType = 'color' | 'dimension' | 'duration' | 'number' | 'string' | 'effect';
 type TokenLayer = 'reference' | 'semantic' | 'component';
-
 type TokenDefinition = {
 	layer: TokenLayer;
 	type: TokenType;

@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:popover-anchored-react",
+  "kind": "example",
+  "name": "Anchored non-modal Popover",
+  "summary": "Position a non-modal Popover against an existing DOM anchor while retaining a separate trigger.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:popover#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["generation", "explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/popover/examples/react/anchored.tsx"
+}

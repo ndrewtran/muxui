@@ -15,7 +15,7 @@ const base = {
   schema: 'muxui-theme-authoring-v1',
   id: 'muxui:theme:authoring-test',
   source: 'muxui:token:default-theme',
-  tokenContractVersion: '3.0.0',
+  tokenContractVersion: '4.0.0',
   modes: { colorScheme: ['light', 'dark'], contrast: ['standard'], motion: ['full'], density: ['comfortable'], direction: ['ltr'] },
 };
 
@@ -223,7 +223,7 @@ test('web serializers preserve authored aliases while resolved graph and native 
   assert.doesNotMatch(overridden.css, /--muxui-semantic-control-radius: var\(/u);
 
   assert.match(web.css, /--muxui-reference-dimension-radius-m: 0\.5rem;/u);
-  assert.match(web.css, /--muxui-semantic-effect-scrim-subtle: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-default-100\) 24%, #00000000\);/u);
+  assert.match(web.css, /--muxui-semantic-effect-scrim: color-mix\(in srgb, var\(--muxui-semantic-color-neutral-default-100\) 48%, #00000000\);/u);
   assert.match(compileWebTheme(source, { responsive: true }).css, /--muxui-reference-dimension-section-space-l: clamp\(/u);
 
   const effectAliasSource = structuredClone(source);
@@ -304,15 +304,15 @@ test('authoring compile uses canonical scale data and propagates radius and fore
 
 test('authoring defaults curvature from the canonical Scale metadata', () => {
   const generated = generateScaleTheme({ source, mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false });
-  assert.equal(source.theme.scale.radius.curvature.default, 1);
-  assert.equal(generated.radius.curvature, 1);
+  assert.equal(source.theme.scale.radius.curvature.default, 0.5);
+  assert.equal(generated.radius.curvature, 0.5);
   for (const [name, sourcePx, sourceRem, generatedPx, generatedRem] of [
-    ['xs', 4, 0.25, 8, 0.5],
-    ['s', 6, 0.375, 12, 0.75],
-    ['m', 8, 0.5, 16, 1],
-    ['l', 12, 0.75, 24, 1.5],
-    ['xl', 16, 1, 32, 2],
-    ['2xl', 24, 1.5, 48, 3],
+    ['xs', 4, 0.25, 4, 0.25],
+    ['s', 6, 0.375, 6, 0.375],
+    ['m', 8, 0.5, 8, 0.5],
+    ['l', 12, 0.75, 12, 0.75],
+    ['xl', 16, 1, 16, 1],
+    ['2xl', 24, 1.5, 24, 1.5],
   ]) {
     const id = `reference.dimension.radius-${name}`;
     assert.deepEqual(source.tokens[id].relative, { value: sourceRem, unit: 'rem' });

@@ -76,7 +76,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback",
+            "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           }
         ]
@@ -159,7 +159,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.motion.feedback",
+            "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           }
         ]

@@ -59,6 +59,6 @@ actions, and text-editor toolbar buttons are targets; their panels, grids, and
 content remain content-driven. The small-target exceptions above are explicit
 per-action exceptions and are not combined to claim target-size compliance.
 
-`semantic.control.min-height` remains the compatibility hook for the default
-`md` target. New themes may override either that hook or
-`semantic.control.size-md`; `sm` and `lg` remain independent shared roles.
+`semantic.control.size-md` owns the default `md` target; `size-sm` and
+`size-lg` remain independent shared roles. `component.button.min-height`
+defaults to `size-md` and remains the Button-specific customization point.

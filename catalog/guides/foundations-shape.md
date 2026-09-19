@@ -18,6 +18,8 @@ Use a role that matches the surface: `semantic.control-radius` for controls, `se
 }
 ```
 
-Scale derives the radius family from its curvature input. The shape explorer keeps specimens the same size so radius differences are comparable and shows the alias path back to its reference value.
+Contract 4.0.0 removes the unused `semantic.shape.thumb-radius` and `semantic.shape.wheel-radius` roles. They have no equivalent replacement. Move an explicit value to component-owned geometry only after identifying the actual thumb or wheel contract.
 
-Common mistake: using a full radius on every control or copying a pixel radius into a component. Curvature and semantic role should decide the shape, and the role must remain available in every supported mode.
+Scale derives the radius family from its curvature input. The shape explorer keeps specimens the same size so radius differences are comparable and shows the alias path back to its reference value. Other geometry, density, and fluid recipes remain available; micro and compact radius roles continue to borrow the spacing scale in this pass.
+
+Common mistake: using a full radius on every control, copying a pixel radius into a component, or replacing a retired role with a nearby value. Curvature and semantic role should decide the shape, and the role must remain available in every supported mode.

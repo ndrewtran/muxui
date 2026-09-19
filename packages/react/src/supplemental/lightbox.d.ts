@@ -17,7 +17,7 @@ export interface LightboxProps extends React.HTMLAttributes<HTMLDivElement> {
   swipeNavigation?: boolean;
 }
 export declare function Lightbox(props: LightboxProps): React.ReactElement;
-export type LightboxTriggerProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'onClick'> & { itemKey: LightboxKey; disabled?: boolean; pending?: boolean; showTextWhileLoading?: boolean; variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse' | 'secondary'; tone?: 'default' | 'destructive'; size?: 'sm' | 'md' | 'lg'; onActivate?: (event: { readonly type: 'activate'; readonly pointerType: 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined; readonly target: HTMLButtonElement }) => void };
+export type LightboxTriggerProps = Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, 'disabled' | 'onClick'> & { itemKey: LightboxKey; disabled?: boolean; pending?: boolean; showTextWhileLoading?: boolean; variant?: 'primary' | 'neutral' | 'ghost' | 'danger' | 'danger-neutral' | 'danger-ghost' | 'inverse'; size?: 'sm' | 'md' | 'lg'; onActivate?: (event: { readonly type: 'activate'; readonly pointerType: 'mouse' | 'pen' | 'touch' | 'keyboard' | 'virtual' | undefined; readonly target: HTMLButtonElement }) => void };
 export declare const LightboxTrigger: React.ForwardRefExoticComponent<LightboxTriggerProps & React.RefAttributes<HTMLButtonElement>>;
 export declare function LightboxBackdrop(props: React.HTMLAttributes<HTMLDivElement> & { dismissable?: boolean }): React.ReactElement | null;
 export declare function LightboxPopup(props: React.HTMLAttributes<HTMLDivElement>): React.ReactElement | null;

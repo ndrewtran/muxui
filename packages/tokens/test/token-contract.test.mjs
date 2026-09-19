@@ -213,7 +213,7 @@ test('source-crosswalk validation is optional and binds coverage when supplied',
   for (const mutate of [
     (value) => { value.candidate.sourceCrosswalk.groups[0].members[1].role = 'default'; value.candidate.sourceCrosswalk.groups[0].members[1].mode = 'motion.full'; },
     (value) => { value.candidate.sourceCrosswalk.groups[0].members.pop(); value.candidate.sourceCrosswalk.entries.pop(); value.occurrences.pop(); value.candidate.sourceCrosswalk.baseline.declarationOccurrences = 2; value.candidate.sourceCrosswalk.baseline.customPropertyOccurrences = 2; },
-    (value) => { value.candidate.sourceCrosswalk.groups[0].muxuiTokenId = 'reference.duration.fast'; },
+    (value) => { value.candidate.sourceCrosswalk.groups[0].muxuiTokenId = 'reference.motion.not-a-token'; },
     (value) => {
       value.candidate.sourceCrosswalk.entries[1].disposition = 'reject';
       for (const target of Object.keys(value.candidate.sourceCrosswalk.entries[1].targets)) {
@@ -343,17 +343,20 @@ test('default theme link and invalid semantic colors meet contrast in both color
 });
 
 test('default theme motion scale removes Quick and preserves Fast (120ms) semantic roles', () => {
-  assert.equal(source.tokenContractVersion, '3.0.0');
+  assert.equal(source.tokenContractVersion, '4.0.0');
+  assert.equal(Object.keys(source.tokens).length, 865);
+  assert.equal(Object.values(source.tokens).some((token) => Object.hasOwn(token, 'deprecation')), false);
   const durationScale = new Map([
     ['instant', 0], ['fast', 120], ['moderate', 180], ['slow', 300], ['deliberate', 500],
   ]);
-  for (const prefix of ['reference.duration.', 'reference.motion.duration-']) {
-    const names = Object.keys(source.tokens)
-      .filter((id) => id.startsWith(prefix))
-      .map((id) => id.slice(prefix.length))
-      .sort();
-    assert.deepEqual(names, [...durationScale.keys()].sort());
-    for (const [name, value] of durationScale) assert.equal(source.tokens[`${prefix}${name}`].value, value);
+  const prefix = 'reference.motion.duration-';
+  const names = Object.keys(source.tokens)
+    .filter((id) => id.startsWith(prefix))
+    .map((id) => id.slice(prefix.length))
+    .sort();
+  assert.deepEqual(names, [...durationScale.keys()].sort());
+  for (const [name, value] of durationScale) {
+    assert.equal(source.tokens[`${prefix}${name}`].value, value);
   }
 
   const full = compileTokenGraph(source);
@@ -514,6 +517,6 @@ test('E-G1.0-06 static mode output works while runtime switching remains unavail
   assert.notEqual(light.css, dark.css);
   assert.equal(light.runtimeSwitching, false);
   assert.equal(reduced.runtimeSwitching, false);
-  assert.equal(reduced.theme['semantic.motion.feedback'].value, 0);
+  assert.equal(reduced.theme['semantic.motion.feedback-duration'].value, 0);
   assert.equal(source.theme.runtimeSwitching, 'unavailable');
 });

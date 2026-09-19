@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:search-field-native-input-react",
+  "kind": "example",
+  "name": "SearchField native input access",
+  "summary": "Focus and select the native input through inputRef and inputProps while the root owns the query and search semantics.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:search-field#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/search-field/examples/react/native-input.tsx"
+}

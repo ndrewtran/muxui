@@ -19,6 +19,8 @@ button {
 }
 ```
 
+Contract 4.0.0 removes the unused `semantic.layout.navigation-inset-block` (6px) and `semantic.layout.content-row-min-height` (28px) roles. They have no equivalent replacement. Choose component-owned geometry only after identifying the layout contract that actually consumes it. `semantic.layout.navigation-inset-inline` and the other active geometry, density, and fluid roles remain independent.
+
 The explorer uses rulers and actual control specimens, rather than presenting dimensions as an undifferentiated table. Text-bearing controls may grow with larger text. Textareas, cards, tables, calendars, and other content-driven surfaces do not inherit the control target.
 
-Common mistake: imposing 36px on every rectangle. A control target applies to an actionable part, not its surrounding panel, grid, table, or calendar container.
+Common mistake: imposing 36px on every rectangle, or replacing a retired geometry role with a similar-looking spacing value. A control target applies to an actionable part, not its surrounding panel, grid, table, or calendar container.

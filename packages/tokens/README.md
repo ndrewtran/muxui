@@ -2,7 +2,8 @@
 
 `catalog/tokens/default-theme.json` owns the default palettes, type scales,
 font metadata, spacing, effects, modes, and Scale preset inputs. This private
-package validates those sources and produces target-specific output.
+package validates those sources and produces target-specific output. Guide
+pages explain migration rationale and are not a second token registry.
 
 ## Compile a theme
 
@@ -20,6 +21,19 @@ to respect the consumer's root font size.
 
 The Scale browser verification covers the live theme-builder flow and palette
 generation uses the complete canonical source.
+
+## Token contract 4.0
+
+The default source uses token schema `2.1.0` and token contract `4.0.0`.
+Contract 4.0 removes 34 provisional IDs that had no Mux UI consumer. Removed
+IDs are absent from the graph and generated CSS, and authoring and component
+recipes must use current token IDs. The [token contract migration guide](../../catalog/guides/token-migration.md)
+contains the direct change map.
+
+The active typography family roles point to four base reference stacks, and
+motion roles retain purpose-specific reduced behavior. When changing an
+override, verify its value and mode branches instead of assuming equal current
+values imply interchangeable contracts.
 
 ## Author theme instances
 
@@ -39,10 +53,13 @@ canonical source through `{ source }`:
 
 Theme instances use `muxui-theme-authoring-v1` and contain `id`, `source`,
 `tokenContractVersion`, `modes`, typed `overrides`, and optional Scale inputs.
-Scale-generated assignments must agree with their inputs. Other allowed
-semantic and component overrides are preserved. Unknown tokens or fields,
-wrong types, unsafe string values, and edits to fixed foundations are rejected.
-The private Scale app provides a local editor and validated file persistence.
+Authoring documents must declare `tokenContractVersion: "4.0.0"` and match the
+canonical source exactly. Older contract versions are rejected; the compiler
+does not normalize documents or rewrite overrides. Scale-generated assignments
+must agree with their inputs. Other allowed semantic and component overrides
+are preserved. Unknown tokens or fields, wrong types, unsafe string values, and
+edits to fixed foundations are rejected. The private Scale app provides a
+local editor and validated file persistence.
 
 ## Optional Tailwind integration
 

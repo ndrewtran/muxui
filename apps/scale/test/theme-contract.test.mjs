@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   DEFAULT_SETTINGS,
+  TYPOGRAPHY_METRIC_GROUPS,
+  TYPOGRAPHY_ROLES,
   createScaleDocument,
   previewCss,
   previewPalette,
@@ -24,10 +26,10 @@ test('Scale source round-trips through the strict typed document boundary', () =
 });
 
 test('Scale starts at the canonical radius default and preserves explicit curvature', () => {
-  assert.equal(DEFAULT_SETTINGS.curvature, 1);
+  assert.equal(DEFAULT_SETTINGS.curvature, 0.5);
   const fresh = createScaleDocument(DEFAULT_SETTINGS, { slug: 'fresh-default' });
-  assert.equal(fresh.scale.curvature, 1);
-  for (const [name, px] of [['xs', 8], ['s', 12], ['m', 16], ['l', 24], ['xl', 32], ['2xl', 48]]) {
+  assert.equal(fresh.scale.curvature, 0.5);
+  for (const [name, px] of [['xs', 4], ['s', 6], ['m', 8], ['l', 12], ['xl', 16], ['2xl', 24]]) {
     assert.equal(fresh.overrides[`reference.dimension.radius-${name}`].value, px);
   }
 
@@ -131,8 +133,45 @@ test('active-palette randomization preserves the other anchor and mono uses one 
 
 test('stored UI settings reject invalid palettes, modes and hidden override conflicts', () => {
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, family: 'unknown' }));
+  for (const curvature of ['0.5', -1, 3, null]) {
+    assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, curvature }), /curvature/u);
+  }
+  for (const contrastPivot of ['60', 6, null]) {
+    assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, contrastPivot }), /contrastPivot/u);
+  }
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, whiteAnchor: 'false' }));
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, background: 'dark', colorMode: 'light' }));
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, themeModes: { ...DEFAULT_SETTINGS.themeModes, extra: ['value'] } }));
   assert.throws(() => validateScaleSettings({ ...DEFAULT_SETTINGS, additionalOverrides: { 'reference.color.brand-60': { type: 'color', value: '#123456' } } }));
+});
+
+test('typography matrix metadata follows canonical roles and round-trips linked metric overrides', () => {
+  assert.deepEqual(TYPOGRAPHY_ROLES.map(({ id }) => id), ['display', 'heading', 'title', 'label', 'body', 'mono', 'expressive']);
+  assert.equal(TYPOGRAPHY_ROLES.reduce((count, role) => count + role.variants.length, 0), 25);
+  assert.equal(TYPOGRAPHY_METRIC_GROUPS.length, 6);
+  const body = TYPOGRAPHY_ROLES.find(({ id }) => id === 'body');
+  const expressive = TYPOGRAPHY_ROLES.find(({ id }) => id === 'expressive');
+  assert.notEqual(body.family, expressive.family);
+  assert.deepEqual(expressive.metrics, body.metrics);
+
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    additionalOverrides: {
+      [body.metrics.fontWeight]: { type: 'number', unit: 'unitless', value: 450 },
+      [body.metrics.lineHeight]: { type: 'number', unit: 'unitless', value: 1.4 },
+      [body.metrics.letterSpacing]: { type: 'string', unit: 'string', value: '0.02em' },
+      ['semantic.typography.display-font-weight']: { type: 'number', unit: 'unitless', value: 700 },
+    },
+  };
+  const document = createScaleDocument(settings, { slug: 'typography-matrix' });
+  assert.equal(document.overrides[expressive.metrics.fontWeight].value, 450);
+  const compiled = previewTheme(settings);
+  assert.equal(compiled.tokens[body.metrics.fontWeight].value, 450);
+  assert.equal(compiled.tokens[expressive.metrics.fontWeight].value, 450);
+  assert.equal(compiled.tokens[body.metrics.lineHeight].value, 1.4);
+  assert.equal(compiled.tokens[body.metrics.letterSpacing].value, '0.02em');
+
+  const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
+  assert.deepEqual(restored.additionalOverrides[body.metrics.fontWeight], settings.additionalOverrides[body.metrics.fontWeight]);
+  assert.deepEqual(createScaleDocument(restored, { slug: 'typography-matrix' }), document);
 });

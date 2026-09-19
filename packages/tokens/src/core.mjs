@@ -76,7 +76,6 @@ function sameStructuredValue(left, right) {
 
 const TOKEN_ID = /^(reference|semantic|component)\.[a-z][a-z0-9]*(?:\.[a-z][a-z0-9-]*)+$/u;
 const SAFE_OVERRIDE_STRING = /^[a-zA-Z0-9 .,+#%()/_-]+$/u;
-
 function mixColor(left, right, weight) {
   const rgba = (hex) => [1, 3, 5, 7].map((index, channel) => channel === 3 ? Number.parseInt(hex.slice(index, index + 2) || 'ff', 16) / 255 : Number.parseInt(hex.slice(index, index + 2), 16));
   const [leftRed, leftGreen, leftBlue, leftAlpha] = rgba(left);
@@ -216,7 +215,7 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
       const targetId = branch.alias; const target = source.tokens[targetId];
       if (!target) fail('MUXUI_TOKEN_ALIAS_MISSING', `${tokenId} aliases missing ${targetId}`, { tokenId, targetId });
       if (LAYER_RANK[target.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} cannot alias forward to ${targetId}`, { tokenId, targetId });
-      if (target.layer === definition.layer && definition.equivalence !== 'semantic-equivalence' && definition.equivalence !== 'deprecation-bridge') fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} same-layer alias requires an explicit equivalence`, { tokenId, targetId });
+      if (target.layer === definition.layer && definition.equivalence !== 'semantic-equivalence') fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} same-layer alias requires an explicit equivalence`, { tokenId, targetId });
       if (target.type !== definition.type || target.unit !== definition.unit) fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} and ${targetId} have incompatible type or unit`, { tokenId, targetId });
       const resolvedTarget = resolveToken(targetId); value = resolvedTarget.value; decoration = { ...decoration, fluid: resolvedTarget.fluid, formula: resolvedTarget.formula, relative: resolvedTarget.relative, mix: resolvedTarget.mix, effect: resolvedTarget.effect }; dependencies.set(tokenId, [targetId]); sourceKind = 'alias';
     } else {

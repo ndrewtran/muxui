@@ -10,6 +10,7 @@ export function getStaticPaths() {
 		{ slug: 'installation', id: 'installation' },
 		{ slug: 'lifecycle', id: 'muxui:guide:lifecycle' },
 		{ slug: 'themes', id: 'muxui:guide:themes' },
+		{ slug: 'token-migration', id: 'muxui:guide:token-migration' },
 	].map((route) => ({ params: { guide: route.slug }, props: { id: route.id } }));
 }
 

@@ -154,6 +154,167 @@ main.muxui-storybook-surface {
   color: var(--muxui-semantic-content-strong);
 }
 
+/* Keep Storybook harness chrome subordinate to the live component sample. */
+.muxui-storybook-proof {
+  min-inline-size: 0;
+}
+
+.muxui-storybook-status {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-action-gap);
+  margin-block-start: var(--muxui-semantic-layout-content-gap);
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
+  border-block-start: 1px solid var(--muxui-semantic-border-subtle);
+  background: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
+}
+
+.muxui-storybook-status-label {
+  flex: 0 0 auto;
+  min-inline-size: 4rem;
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  line-height: var(--muxui-semantic-typography-label-line-height);
+  letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
+}
+
+.muxui-storybook-status output,
+.muxui-storybook-status ol {
+  flex: 0 1 auto;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  margin: 0;
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
+  font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+  line-height: var(--muxui-semantic-typography-mono-line-height);
+  overflow-wrap: anywhere;
+}
+
+.muxui-storybook-status ol {
+  padding: 0;
+  list-style: none;
+}
+
+.muxui-storybook-status [data-muxui-storybook-event-status='waiting'] {
+  color: var(--muxui-semantic-content-muted);
+}
+
+.muxui-storybook-status-note {
+  flex: 0 1 24rem;
+  min-inline-size: 0;
+  color: var(--muxui-semantic-content-muted);
+}
+
+.muxui-storybook-anatomy-status {
+  margin-block-start: var(--muxui-semantic-layout-content-gap);
+  padding-block-start: var(--muxui-semantic-layout-inset-small);
+  border-block-start: 1px solid var(--muxui-semantic-border-subtle);
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
+}
+
+.muxui-storybook-anatomy-status > p {
+  margin: 0 0 var(--muxui-semantic-layout-tight-gap);
+}
+
+.muxui-storybook-anatomy-status > ul {
+  display: grid;
+  gap: var(--muxui-semantic-layout-tight-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.muxui-storybook-anatomy-status > ul > li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-action-gap);
+}
+
+.muxui-storybook-anatomy-status code {
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
+  font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+  overflow-wrap: anywhere;
+}
+
+.muxui-storybook-state > h3,
+.sbdocs-content > h2,
+.sbdocs-content > .sb-anchor > h3 {
+  font-family: var(--muxui-semantic-typography-heading-font-family);
+  font-size: var(--muxui-semantic-typography-text-m-font-size);
+  font-weight: var(--muxui-semantic-typography-heading-font-weight);
+  line-height: var(--muxui-semantic-typography-text-line-height);
+  letter-spacing: var(--muxui-semantic-typography-heading-letter-spacing);
+}
+
+.muxui-storybook-state > h3 {
+  margin: 0 0 var(--muxui-semantic-layout-tight-gap);
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  line-height: var(--muxui-semantic-typography-label-line-height);
+  letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
+}
+
+.muxui-storybook-states > .muxui-storybook-state + .muxui-storybook-state {
+  margin-block-start: var(--muxui-semantic-layout-action-gap);
+}
+
+.muxui-storybook-state-unavailable,
+.muxui-storybook-lifecycle-inactive {
+  margin: 0;
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium);
+  border: 1px dashed var(--muxui-semantic-border-subtle);
+  background: var(--muxui-semantic-surface-hover);
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-xs-font-size);
+  line-height: var(--muxui-semantic-typography-supporting-line-height);
+}
+
+.muxui-storybook-transition-status {
+  margin-block-start: var(--muxui-semantic-layout-tight-gap);
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  line-height: var(--muxui-semantic-typography-label-line-height);
+  letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
+}
+
+.muxui-storybook-lifecycle-showcase {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--muxui-semantic-layout-tight-gap) var(--muxui-semantic-layout-action-gap);
+}
+
+.muxui-storybook-lifecycle-showcase > label {
+  color: var(--muxui-semantic-content-muted);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-xs-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  line-height: var(--muxui-semantic-typography-label-line-height);
+  letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
+}
+
+.muxui-storybook-lifecycle-showcase > .muxui-storybook-states {
+  flex: 1 1 100%;
+  min-inline-size: 0;
+}
+
 /* Docs and syntax are Storybook-owned chrome inside the preview iframe. */
 .sbdocs.sbdocs-wrapper,
 .sbdocs.sbdocs-preview {

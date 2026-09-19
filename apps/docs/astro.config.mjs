@@ -115,6 +115,7 @@ export default defineConfig({
 		react(),
 		starlight({
 			title: 'Mux UI',
+			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 6 },
 			expressiveCode: {
 				shiki: { transformers: [muxTokenPathTransformer] },
 			},
@@ -123,6 +124,7 @@ export default defineConfig({
 				{ label: 'Home', slug: 'index' },
 				{ label: 'Installation', link: '/installation/' },
 				{ label: 'Themes & tokens', link: '/themes/' },
+				{ label: 'Token migration', link: '/token-migration/' },
 				{ label: 'Foundations', items: foundationSidebar },
 				{ label: 'Scale', link: '/scale/' },
 				{ label: 'Accessibility', link: '/accessibility/' },

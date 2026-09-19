@@ -402,7 +402,52 @@
   box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
+.muxui-list-box[data-layout='stack'][data-orientation='horizontal'] {
+  flex-direction: row;
+}
+
+.muxui-list-box[data-layout='grid'] {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(4rem, 1fr));
+}
+
+.muxui-list-box[data-layout='grid'][data-orientation='horizontal'] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(4rem, 1fr);
+  grid-template-columns: none;
+}
+
+.muxui-list-box[data-layout='grid'] > .muxui-list-box-section {
+  display: contents;
+}
+
+.muxui-list-box[data-layout='grid'] .muxui-list-box-section-header {
+  grid-column: 1 / -1;
+}
+
 /* MuxUI component source: menu.css */
+.muxui-menu-root {
+  display: inline-block;
+}
+
+.muxui-menu-popup {
+  outline: none;
+  max-block-size: var(--available-height);
+  overflow: auto;
+}
+
+.muxui-menu-section-header,
+.muxui-list-box-section-header {
+  padding: var(--muxui-semantic-layout-tight-inset);
+  font-weight: var(--muxui-semantic-typography-control-weight);
+}
+
+.muxui-menu-separator {
+  border: 0;
+  border-block-start: 1px solid var(--muxui-semantic-border-strong);
+  margin-block: var(--muxui-semantic-layout-tight-gap);
+}
+
 .muxui-menu {
   padding: var(--muxui-semantic-layout-tight-inset);
   min-width: 10rem;
@@ -805,7 +850,7 @@
 }
 
 [data-muxui-color-scheme='light'] .muxui-slider > .muxui-slider-header > .muxui-slider-output {
-  color: var(--muxui-semantic-color-neutral-default-60);
+  color: var(--muxui-semantic-content-muted);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider > .muxui-slider-header > .muxui-field-label {
@@ -1659,7 +1704,7 @@
 
 [data-muxui-color-scheme='light'] .muxui-tab:not([data-selected], [aria-selected='true']),
 [data-muxui-color-scheme='light'] .muxui-table-column {
-  color: var(--muxui-semantic-color-neutral-default-60);
+  color: var(--muxui-semantic-content-muted);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table {

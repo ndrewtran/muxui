@@ -1,0 +1,58 @@
+---
+import { parseFragment, type DefaultTreeAdapterTypes } from 'parse5';
+import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
+
+type Node = DefaultTreeAdapterTypes.Node;
+type Element = DefaultTreeAdapterTypes.Element;
+
+interface Props {
+	title: string;
+	description: string;
+}
+
+const { title, description } = Astro.props as Props;
+const rendered = await Astro.slots.render('default');
+const tree = parseFragment(rendered);
+
+function isElement(node: Node): node is Element {
+	return 'tagName' in node;
+}
+
+function childNodes(node: Node): Node[] {
+	return 'childNodes' in node ? node.childNodes : [];
+}
+
+function attributeValue(node: Element, name: string): string | undefined {
+	return node.attrs.find((attribute) => attribute.name === name)?.value;
+}
+
+function elements(node: Node): Element[] {
+	return childNodes(node).flatMap((child) => isElement(child) ? [child, ...elements(child)] : []);
+}
+
+function textContent(node: Node): string {
+	return childNodes(node).map((child) => {
+		if (child.nodeName === '#text' && 'value' in child && typeof child.value === 'string') return child.value;
+		return textContent(child);
+	}).join('').replace(/\s+/gu, ' ').trim();
+}
+
+const headings = elements(tree)
+	.filter((node) => /^h[2-6]$/u.test(node.tagName))
+	.filter((node) => attributeValue(node, 'id'))
+	.filter((node) => !['presentation', 'none'].includes(attributeValue(node, 'role') ?? ''))
+	.filter((node) => attributeValue(node, 'aria-hidden') !== 'true')
+	.filter((node) => attributeValue(node, 'data-toc-ignore') === undefined)
+	.map((node) => ({
+		depth: Number(node.tagName.slice(1)),
+		text: textContent(node),
+		slug: attributeValue(node, 'id') as string,
+	}));
+---
+
+<StarlightPage
+	frontmatter={{ title, description }}
+	headings={headings}
+>
+	<Fragment set:html={rendered} />
+</StarlightPage>

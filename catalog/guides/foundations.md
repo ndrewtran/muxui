@@ -16,6 +16,6 @@ Use the [colour](/foundations/colour/), [typography](/foundations/typography/), 
 }
 ```
 
-Do not copy a resolved colour or dimension into application CSS. Use the role that describes the intended use, and let the generated theme supply its value in each supported mode. The [Themes & tokens guide](/themes/) explains the generated stylesheet and mode contract; [Scale](/scale/) is the browser editor for creating a theme.
+Do not copy a resolved colour or dimension into application CSS. Use the role that describes the intended use, and let the generated theme supply its value in each supported mode. The [Themes & tokens guide](/themes/) explains the generated stylesheet and mode contract, and the [token contract migration guide](/token-migration/) describes the 4.0 removal map. [Scale](/scale/) is the browser editor for creating a theme.
 
 Common mistake: treating reference values as a complete component API. Reference tokens establish scales, while semantic and component tokens communicate intent and remain the supported customization boundary.

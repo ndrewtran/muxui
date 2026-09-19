@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -87,4 +87,91 @@ test('E-G0.0-02: affected selection runs a changed package before every dependen
     (await readFile(logPath, 'utf8')).trim().split('\n'),
     ['leaf', 'middle', 'app'],
   );
+});
+
+test('full check boundary overrides inherited Storybook skip selection', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-task-full-'));
+  await mkdir(join(root, 'packages/app'), { recursive: true });
+  await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
+  await mkdir(join(root, 'bin'), { recursive: true });
+
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  await writeFile(
+    join(root, 'tooling/audits/repository-policy/repository-policy.json'),
+    JSON.stringify({ globalTaskInputs: ['shared/'] }),
+  );
+  await writeFile(
+    join(root, 'packages/app/package.json'),
+    JSON.stringify({ name: '@fixture/app', version: '0.0.0', private: true, scripts: { check: 'true' } }),
+  );
+  await writeFile(
+    join(root, 'bin/pnpm'),
+    [
+      '#!/usr/bin/env node',
+      "import { writeFileSync } from 'node:fs';",
+      "writeFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), mode: process.env.MUXUI_STORYBOOK_AUDIT_MODE, event: process.env.MUXUI_STORYBOOK_AUDIT_EVENT, force: process.env.MUXUI_STORYBOOK_AUDIT_FORCE }));",
+      '',
+    ].join('\n'),
+  );
+  await chmod(join(root, 'bin/pnpm'), 0o755);
+
+  run('git', ['init', '--quiet'], { cwd: root });
+  run('git', ['config', 'user.name', 'Mux UI fixture'], { cwd: root });
+  run('git', ['config', 'user.email', 'fixture@example.invalid'], { cwd: root });
+  run('git', ['add', '.'], { cwd: root });
+  run('git', ['commit', '--quiet', '-m', 'fixture base'], { cwd: root });
+
+  const logPath = join(root, 'runner-environment.json');
+  const result = run(
+    process.execPath,
+    [affectedTaskRunner, 'check'],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        PATH: `${join(root, 'bin')}:${process.env.PATH}`,
+        MUXUI_TASK_LOG: logPath,
+        MUXUI_TASK_REPOSITORY_ROOT: root,
+        MUXUI_STORYBOOK_AUDIT_MODE: 'skip-heavy',
+        MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
+        MUXUI_STORYBOOK_AUDIT_FORCE: '0',
+      },
+    },
+  );
+
+  assert.match(result.stdout, /\[workspace-task\] check: full graph/);
+  assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
+    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'check'],
+    mode: 'full',
+    event: 'check:all',
+    force: '1',
+  });
+
+  await mkdir(join(root, 'shared'), { recursive: true });
+  await writeFile(join(root, 'shared/change.txt'), 'changed\n');
+  const affectedResult = run(
+    process.execPath,
+    [affectedTaskRunner, 'check', '--affected'],
+    {
+      cwd: root,
+      env: {
+        ...process.env,
+        PATH: `${join(root, 'bin')}:${process.env.PATH}`,
+        MUXUI_BASE_REF: 'HEAD',
+        MUXUI_TASK_LOG: logPath,
+        MUXUI_TASK_REPOSITORY_ROOT: root,
+        MUXUI_STORYBOOK_AUDIT_MODE: 'skip-heavy',
+        MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
+        MUXUI_STORYBOOK_AUDIT_FORCE: '0',
+      },
+    },
+  );
+
+  assert.match(affectedResult.stdout, /\[workspace-task\] check: full graph/);
+  assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
+    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'check'],
+    mode: 'skip-heavy',
+    event: 'pull_request',
+    force: '0',
+  });
 });

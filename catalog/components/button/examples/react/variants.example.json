@@ -3,7 +3,7 @@
   "id": "muxui:example:button-variants-react",
   "kind": "example",
   "name": "Button variants and sizes",
-  "summary": "Compare the supported Button variant, tone, and size axes.",
+  "summary": "Compare the supported Button variant and size axes.",
   "lifecycle": "experimental",
   "binding": {
     "ref": "muxui:component:button#web.react",

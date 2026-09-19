@@ -20,6 +20,12 @@ Choose the role that matches the job: `content-default` for ordinary text, `cont
 }
 ```
 
+`surface.background` remains the page body background contract. Its default may match `surface.canvas`, but the roles stay independent: canvas is the page backdrop, background is the body surface, and raised is content above the canvas. Preserve those distinctions when customizing a theme.
+
+`surface.body-background` was removed in contract 4.0.0. Use `surface.subtle` only when that surface role is the intended contract; canvas, background, and raised remain independent roles.
+
+Read the [token contract migration guide](/token-migration/) for the complete removal map and for roles that intentionally have no replacement.
+
 Modes are declared by the source: light and dark, standard and more contrast, comfortable and compact density, full and reduced motion, and ltr or rtl direction. The compiler validates a requested combination before emitting CSS.
 
-Common mistake: using `content-muted` for normal-sized input text or focus indicators. Muted and faint roles are intentionally lower emphasis; use the stronger role required by the reading and interaction state.
+Common mistake: using `content-muted` for normal-sized input text or treating canvas and raised as interchangeable. Choose a current semantic role by intent.

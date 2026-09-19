@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:guide:token-migration",
+  "kind": "guide",
+  "name": "Token contract migration",
+  "summary": "Apply the Mux UI token contract 4.0 removal and update explicit CSS and theme authoring references.",
+  "lifecycle": "experimental",
+  "keywords": ["tokens", "migration", "contract", "typography", "motion"],
+  "platforms": ["web.react"],
+  "source": "catalog/guides/token-migration.md"
+}

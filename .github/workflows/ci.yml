@@ -3,6 +3,8 @@ name: Deterministic workspace checks
 on:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: '0 3 * * 0'
 
 permissions:
   contents: read
@@ -27,13 +29,39 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
+      - name: Select Storybook browser audit coverage
+        id: storybook-audit
+        env:
+          MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
+        run: |
+          node tooling/audits/repository-policy/src/storybook-audit-selection.mjs --github-output \
+            | tee "$RUNNER_TEMP/storybook-audit-selection.txt" >> "$GITHUB_OUTPUT"
+          cat "$RUNNER_TEMP/storybook-audit-selection.txt"
+
       - name: Bootstrap generated projections
         run: pnpm generate
 
-      - name: Run affected deterministic checks
+      - name: Run affected deterministic checks (pull request)
+        if: github.event_name == 'pull_request'
         env:
+          MUXUI_STORYBOOK_AUDIT_MODE: ${{ steps.storybook-audit.outputs.mode }}
+          MUXUI_STORYBOOK_AUDIT_REASON: ${{ steps.storybook-audit.outputs.reason }}
+          MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
+          MUXUI_STORYBOOK_A11Y_WORKERS: '1'
+          MUXUI_STORYBOOK_COLORS_WORKERS: '2'
           MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: ${{ runner.temp }}/storybook-colour-audit
         run: pnpm check
+
+      - name: Run full deterministic checks (manual and schedule)
+        if: github.event_name != 'pull_request'
+        env:
+          MUXUI_STORYBOOK_AUDIT_MODE: ${{ steps.storybook-audit.outputs.mode }}
+          MUXUI_STORYBOOK_AUDIT_REASON: ${{ steps.storybook-audit.outputs.reason }}
+          MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
+          MUXUI_STORYBOOK_A11Y_WORKERS: '1'
+          MUXUI_STORYBOOK_COLORS_WORKERS: '2'
+          MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: ${{ runner.temp }}/storybook-colour-audit
+        run: pnpm check:all
 
       - name: Upload Storybook colour diagnostics
         if: always()

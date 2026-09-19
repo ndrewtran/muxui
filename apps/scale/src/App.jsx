@@ -37,6 +37,9 @@ import {
   RADIUS_SETTINGS,
   RADIUS_TOKENS,
   STANDARD_PRESETS,
+  TYPOGRAPHY_METRIC_GROUPS,
+  TYPOGRAPHY_ROLES,
+  TYPOGRAPHY_TOKEN_DEFAULTS,
   createScaleDocument,
   previewCss,
   previewTheme,
@@ -59,15 +62,6 @@ function safeStorageGet(key) {
   try { return window.localStorage.getItem(key); } catch { return null; }
 }
 
-function migrateSettings(value) {
-  const merged = { ...DEFAULT_SETTINGS, ...(value && typeof value === 'object' ? value : {}) };
-  // v1 stored pixel radii (8px). Scale uses a 0..2 factor, where 1 is default.
-  if (!Number.isFinite(Number(merged.curvature)) || Number(merged.curvature) > RADIUS_SETTINGS.maximum) merged.curvature = RADIUS_SETTINGS.default;
-  merged.curvature = Math.max(RADIUS_SETTINGS.minimum, Math.min(RADIUS_SETTINGS.maximum, Number(merged.curvature)));
-  if (typeof merged.contrastPivot === 'string' && /^\d+$/u.test(merged.contrastPivot)) merged.contrastPivot = Number(merged.contrastPivot);
-  return merged;
-}
-
 function withEmbeddedSiteMode(settings, embedded) {
   if (!embedded) return settings;
   const colorMode = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
@@ -88,11 +82,11 @@ function readInitialSettings(embedded = false) {
     if (!encoded) continue;
     try {
       const value = JSON.parse(hash === encoded ? decodeURIComponent(encoded) : encoded);
-      return { settings: settingsForScope(migrateSettings({ ...preferences, ...value }), embedded), error };
+      return { settings: settingsForScope({ ...DEFAULT_SETTINGS, ...preferences, ...value }, embedded), error };
     } catch (cause) { error = `Saved settings rejected: ${cause.message}`; }
   }
   try {
-    const settings = migrateSettings(preferences);
+    const settings = { ...DEFAULT_SETTINGS, ...preferences };
     settings.colorMode = settings.background === 'light' ? 'light' : 'dark';
     return { settings: settingsForScope(settings, embedded), error };
   } catch (cause) { return { settings: settingsForScope({ ...DEFAULT_SETTINGS }, embedded), error: `Saved preferences rejected: ${cause.message}` }; }
@@ -254,6 +248,239 @@ function PivotSelector({ value, onChange }) {
   </div>;
 }
 
+const TYPOGRAPHY_METRIC_FIELDS = Object.freeze([
+  { key: 'fontWeight', label: 'Weight', min: 100, max: 900, step: 1, inputMode: 'numeric' },
+  { key: 'lineHeight', label: 'Leading', min: 0.75, max: 3, step: 0.05, inputMode: 'decimal' },
+  { key: 'letterSpacing', label: 'Tracking', inputMode: 'decimal' },
+]);
+const TYPOGRAPHY_METRIC_BY_KEY = Object.freeze(Object.fromEntries(TYPOGRAPHY_METRIC_FIELDS.map((field) => [field.key, field])));
+const TRACKING_VALUE = /^(?:normal|[+-]?(?:(?:\d+(?:\.\d+)?)|(?:\.\d+))(?:em|rem|px))$/u;
+
+function cssVariableName(tokenId) {
+  return `--muxui-${tokenId.replaceAll('.', '-')}`;
+}
+
+function typographyTokenValue(settings, tokenId) {
+  return settings.additionalOverrides?.[tokenId]?.value ?? TYPOGRAPHY_TOKEN_DEFAULTS[tokenId].value;
+}
+
+function typographyTokenIsOverridden(settings, tokenId) {
+  return Object.hasOwn(settings.additionalOverrides ?? {}, tokenId);
+}
+
+function typographyMetricTokenId(role, key) {
+  return role.metrics[key];
+}
+
+function typographyMetricValue(settings, role, key) {
+  return typographyTokenValue(settings, typographyMetricTokenId(role, key));
+}
+
+function formatTypographyValue(tokenId, value) {
+  const token = TYPOGRAPHY_TOKEN_DEFAULTS[tokenId];
+  if (token.type === 'dimension') return `${value}${token.unit}`;
+  return String(value);
+}
+
+function parseTypographyMetric(key, raw) {
+  const field = TYPOGRAPHY_METRIC_BY_KEY[key];
+  const candidate = String(raw).trim();
+  if (!candidate) throw new TypeError(`${field.label} must have a value.`);
+  if (key === 'letterSpacing') {
+    if (!TRACKING_VALUE.test(candidate)) throw new TypeError('Tracking must be normal or a finite CSS length such as 0.02em.');
+    if (candidate !== 'normal') {
+      const match = candidate.match(/^([+-]?(?:(?:\d+(?:\.\d+)?)|(?:\.\d+)))(em|rem|px)$/u);
+      const value = Number(match?.[1]);
+      const unit = match?.[2];
+      const maximum = unit === 'px' ? 32 : 2;
+      if (!Number.isFinite(value) || Math.abs(value) > maximum) throw new TypeError(`Tracking must stay between -${maximum}${unit} and ${maximum}${unit}.`);
+    }
+    return candidate;
+  }
+  const value = Number(candidate);
+  if (!Number.isFinite(value) || value < field.min || value > field.max) throw new TypeError(`${field.label} must be between ${field.min} and ${field.max}.`);
+  if (key === 'fontWeight' && !Number.isInteger(value)) throw new TypeError('Weight must be a whole number between 100 and 900.');
+  return key === 'fontWeight' ? value : Number(value.toFixed(2));
+}
+
+function typographyOverride(tokenId, value) {
+  const token = TYPOGRAPHY_TOKEN_DEFAULTS[tokenId];
+  return { type: token.type, unit: token.unit, value };
+}
+
+function TypographyMetricInput({ field, value, mixed = false, disabled = false, ariaLabel, id, onCommit }) {
+  const [draft, setDraft] = React.useState(value === null || value === undefined ? '' : String(value));
+  const [dirty, setDirty] = React.useState(false);
+  React.useEffect(() => {
+    setDraft(mixed ? '' : value === null || value === undefined ? '' : String(value));
+    setDirty(false);
+  }, [mixed, value]);
+  const commit = () => { if (dirty) onCommit(draft); };
+  return <input
+    className="typography-metric-input"
+    type={field.key === 'letterSpacing' ? 'text' : 'number'}
+    inputMode={field.inputMode}
+    id={id}
+    min={field.min}
+    max={field.max}
+    step={field.step}
+    aria-label={ariaLabel}
+    value={draft}
+    placeholder={mixed ? 'Mixed' : undefined}
+    disabled={disabled}
+    onChange={(event) => { setDraft(event.target.value); setDirty(true); }}
+    onBlur={commit}
+    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+  />;
+}
+
+function TypographySpecimens({ settings, previewAvailable = true }) {
+  if (!previewAvailable) return <section className="typography-specimens typography-specimens-unavailable" aria-labelledby="typography-specimens-title">
+    <div className="typography-panel-heading">
+      <div>
+        <h3 id="typography-specimens-title">Live specimens unavailable</h3>
+        <p>The draft preview does not support the site&apos;s requested modes.</p>
+      </div>
+    </div>
+  </section>;
+  return <section className="typography-specimens" aria-labelledby="typography-specimens-title">
+    <div className="typography-panel-heading">
+      <div>
+        <h3 id="typography-specimens-title">Live specimens</h3>
+        <p>Each sample reads from the same compiled role metrics as the preview.</p>
+      </div>
+      <span className="typography-panel-note">m variants · canonical sizes</span>
+    </div>
+    <div className="typography-specimen-grid">
+      {TYPOGRAPHY_ROLES.map((role) => {
+        const variant = role.variants.find(({ name }) => name === role.representativeVariant) ?? role.variants[0];
+        const style = {
+          color: `var(${cssVariableName(role.color)})`,
+          fontFamily: `var(${cssVariableName(role.family)})`,
+          fontSize: `var(${cssVariableName(variant.fontSize)})`,
+          fontWeight: `var(${cssVariableName(variant.fontWeight)})`,
+          lineHeight: `var(${cssVariableName(variant.lineHeight)})`,
+          letterSpacing: `var(${cssVariableName(variant.letterSpacing)})`,
+        };
+        const linked = role.id === 'expressive';
+        return <article className="typography-specimen" key={role.id} data-role={role.id}>
+          <div className="typography-specimen-heading"><strong>{role.id}</strong><span>{role.representativeVariant} · {role.metricGroup}{linked ? ' · linked' : ''}</span></div>
+          <p style={style}>Design decisions should be felt in the interface.</p>
+        </article>;
+      })}
+    </div>
+  </section>;
+}
+
+function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailable = true }) {
+  const [selectedIds, setSelectedIds] = React.useState(() => TYPOGRAPHY_ROLES.slice(0, 3).map(({ id }) => id));
+  const selectedRoles = TYPOGRAPHY_ROLES.filter(({ id }) => selectedIds.includes(id));
+  const selectedGroupIds = [...new Set(selectedRoles.map(({ metricGroup }) => metricGroup))];
+  const sharedTextMetricsSelected = selectedRoles.some(({ id, metricGroup }) => id === 'expressive' || metricGroup === 'text');
+
+  const bulkValue = (key) => {
+    const tokenIds = [...new Set(selectedRoles.map((role) => typographyMetricTokenId(role, key)))];
+    if (!tokenIds.length) return null;
+    const values = tokenIds.map((tokenId) => typographyTokenValue(settings, tokenId));
+    return values.every((value) => Object.is(value, values[0])) ? values[0] : null;
+  };
+
+  const commitMetric = (roles, key, raw) => {
+    try {
+      const tokenIds = [...new Set(roles.map((role) => typographyMetricTokenId(role, key)))];
+      const value = parseTypographyMetric(key, raw);
+      const nextOverrides = { ...(settings.additionalOverrides ?? {}) };
+      tokenIds.forEach((tokenId) => { nextOverrides[tokenId] = typographyOverride(tokenId, value); });
+      onOverridesChange(nextOverrides, `${TYPOGRAPHY_METRIC_BY_KEY[key].label} updated for ${roles.length} selected role${roles.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      onError(error.message);
+    }
+  };
+
+  const resetRole = (role) => {
+    if (role.id === 'expressive') return;
+    const nextOverrides = { ...(settings.additionalOverrides ?? {}) };
+    Object.values(role.metrics).forEach((tokenId) => delete nextOverrides[tokenId]);
+    onOverridesChange(nextOverrides, `${role.id} restored to canonical defaults.`);
+  };
+
+  const roleState = (role) => {
+    if (role.id === 'expressive') return 'linked';
+    return Object.values(role.metrics).some((tokenId) => typographyTokenIsOverridden(settings, tokenId)) ? 'custom' : 'default';
+  };
+
+  return <section className="typography-editor" aria-labelledby="typography-editor-title">
+    <div className="typography-editor-heading">
+      <div>
+        <span className="section-kicker">Typography</span>
+        <h2 id="typography-editor-title">Role matrix</h2>
+        <p>Select roles, edit shared metrics, and check the result in the live specimens.</p>
+      </div>
+      <div className="typography-editor-meta" aria-label="Typography source summary">
+        <span><strong>{TYPOGRAPHY_ROLES.length}</strong> roles</span>
+        <span><strong>{TYPOGRAPHY_METRIC_GROUPS.length}</strong> metric groups</span>
+        <span><strong>{TYPOGRAPHY_ROLES.reduce((count, role) => count + role.variants.length, 0)}</strong> size variants</span>
+      </div>
+    </div>
+    <div className="typography-matrix-layout">
+      <aside className="typography-selection" aria-label="Typography role selection">
+        <div className="typography-selection-heading"><h3>Selection</h3><button type="button" className="quiet-button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>Clear</button></div>
+        <p className="typography-selection-note">Bulk edits write explicit values to the selected metric tokens.</p>
+        <div className="typography-selection-list">
+          {TYPOGRAPHY_ROLES.map((role) => <label className={`typography-selection-row${selectedIds.includes(role.id) ? ' is-selected' : ''}`} key={role.id}>
+            <input type="checkbox" checked={selectedIds.includes(role.id)} aria-label={`Select ${role.id} role`} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, role.id] : current.filter((id) => id !== role.id))} />
+            <span className="typography-selection-name">{role.id}</span>
+            <span className="typography-selection-group">{role.metricGroup}</span>
+          </label>)}
+        </div>
+      </aside>
+      <div className="typography-workspace">
+        <div className="typography-bulk-panel">
+          <div className="typography-bulk-heading"><strong>Bulk edit</strong><span>{selectedRoles.length ? `${selectedRoles.length} role${selectedRoles.length === 1 ? '' : 's'} selected · ${selectedGroupIds.length} metric group${selectedGroupIds.length === 1 ? '' : 's'}` : 'Select at least one role'}</span></div>
+          <div className="typography-bulk-controls">
+            {TYPOGRAPHY_METRIC_FIELDS.map((field) => {
+              const value = bulkValue(field.key);
+              return <div className="typography-bulk-control" key={field.key}>
+                <label className="typography-control-label" htmlFor={`typography-bulk-${field.key}`}>{field.label}{sharedTextMetricsSelected ? <span>Body + expressive share text metrics</span> : null}</label>
+                <TypographyMetricInput id={`typography-bulk-${field.key}`} field={field} value={value} mixed={selectedRoles.length > 0 && value === null} disabled={!selectedRoles.length} ariaLabel={`Bulk ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric(selectedRoles, field.key, raw)} />
+              </div>;
+            })}
+          </div>
+        </div>
+        <div className="typography-table-scroll">
+          <div className="typography-matrix-table" role="table" aria-label="Typography role matrix">
+            <div className="typography-matrix-row typography-matrix-head" role="row">
+              <span role="columnheader">Role</span><span role="columnheader">Size</span>{TYPOGRAPHY_METRIC_FIELDS.map((field) => <span role="columnheader" key={field.key}>{field.label}</span>)}<span role="columnheader">State</span>
+            </div>
+            {TYPOGRAPHY_ROLES.map((role) => {
+              const linked = role.id === 'expressive';
+              const state = roleState(role);
+              const variant = role.variants.find(({ name }) => name === role.representativeVariant) ?? role.variants[0];
+              return <div className={`typography-matrix-row${selectedIds.includes(role.id) ? ' is-selected' : ''}`} data-role={role.id} role="row" key={role.id}>
+                <div className="typography-role-cell" role="rowheader"><strong>{role.id}</strong><span>{role.metricGroup}{linked ? ' · body metrics' : ''}</span></div>
+                <span className="typography-size-cell" role="cell"><strong>{formatTypographyValue(variant.fontSize, typographyTokenValue(settings, variant.fontSize))}</strong><small>{role.representativeVariant}</small></span>
+                {TYPOGRAPHY_METRIC_FIELDS.map((field) => {
+                  const tokenId = typographyMetricTokenId(role, field.key);
+                  const value = typographyMetricValue(settings, role, field.key);
+                  return <span className={`typography-metric-cell${linked ? ' is-linked' : ''}`} role="cell" key={field.key}>
+                    {linked ? <span className="typography-linked-value" aria-label={`${role.id} ${field.label.toLowerCase()} linked to body`}>{formatTypographyValue(tokenId, value)}</span> : <TypographyMetricInput field={field} value={value} ariaLabel={`${role.id} ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric([role], field.key, raw)} />}
+                  </span>;
+                })}
+                <span className={`typography-state typography-state-${state}`} role="cell">
+                  <span>{state}</span>
+                  {linked ? <small>text group</small> : <button type="button" className="quiet-button" onClick={() => resetRole(role)} disabled={state === 'default'}>{state === 'default' ? 'Reset' : 'Reset role'}</button>}
+                </span>
+              </div>;
+            })}
+          </div>
+        </div>
+        <p className="typography-matrix-note"><strong>Linked metrics</strong> Expressive keeps its own family and reads the body/text size, weight, leading, and tracking tokens.</p>
+      </div>
+    </div>
+    <TypographySpecimens settings={settings} previewAvailable={previewAvailable} />
+  </section>;
+}
+
 function ComponentPreview({ settings }) {
   const previewMode = settings.background === 'light' ? 'light' : 'dark';
   return <section className="component-preview" aria-labelledby="component-preview-title">
@@ -261,7 +488,7 @@ function ComponentPreview({ settings }) {
     <div className="preview-canvas">
       <div className="preview-group preview-actions">
         <Button variant="primary" size="sm" onActivate={() => {}}>Primary</Button>
-        <Button variant="secondary" size="sm" onActivate={() => {}}>Secondary</Button>
+        <Button variant="neutral" size="sm" onActivate={() => {}}>Neutral</Button>
         <Button variant="ghost" size="sm" onActivate={() => {}}>Ghost</Button>
         <ToggleButton size="sm" defaultSelected>Toggle</ToggleButton>
         <ToggleButtonGroup aria-label="Preview alignment" defaultSelectedIds={['center']} selectionMode="single">
@@ -282,7 +509,7 @@ function ComponentPreview({ settings }) {
         <div className="preview-block"><span className="preview-label">Tabs and disclosure</span><Tabs aria-label="Preview sections" defaultValue="overview" items={[{ id: 'overview', label: 'Overview' }, { id: 'details', label: 'Details' }, { id: 'settings', label: 'Settings' }]} /><Disclosure title="Show details" defaultExpanded>Additional details revealed on expand.</Disclosure></div>
         <div className="preview-block"><span className="preview-label">Tags and grid list</span><TagGroup aria-label="Preview tags" items={['Design', 'Development', 'Docs']} /><GridList aria-label="Preview items" items={['Design tokens', 'Components', 'Documentation']} defaultSelectedIds={['Components']} selectionMode="multiple" /></div>
         <div className="preview-block"><span className="preview-label">Calendar</span><Calendar aria-label="Preview calendar" /></div>
-        <div className="preview-block"><span className="preview-label">Menu and tooltip</span><Menu aria-label="Preview menu" items={['Edit', 'Duplicate', 'Delete']} /><Tooltip content="Tooltip content" trigger={<Button variant="secondary" size="sm">Hover me</Button>} /></div>
+        <div className="preview-block"><span className="preview-label">Menu and tooltip</span><Menu aria-label="Preview menu" items={['Edit', 'Duplicate', 'Delete']} /><Tooltip content="Tooltip content" trigger={<Button variant="neutral" size="sm">Hover me</Button>} /></div>
       </div>
       <Table aria-label="Preview people" columns={[{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'role', label: 'Role' }, { id: 'status', label: 'Status' }]} rows={[{ id: 'r1', values: { name: 'Alice', role: 'Engineer', status: 'Active' } }, { id: 'r2', values: { name: 'Bob', role: 'Designer', status: 'Active' } }]} />
       <div className="preview-footer"><Breadcrumbs aria-label="Preview breadcrumbs" items={[{ id: 'home', label: 'Home', href: '#' }, { id: 'library', label: 'Library', href: '#' }, { id: 'current', label: 'Current' }]} /><Separator /><Link href="#" onActivate={() => {}}>Learn more</Link></div>
@@ -356,6 +583,14 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
   const update = React.useCallback((patch) => {
     try { setSettings(validateScaleSettings({ ...settings, ...patch })); }
     catch (error) { setStatus({ tone: 'error', text: error.message }); }
+  }, [settings]);
+  const updateTypographyOverrides = React.useCallback((additionalOverrides, message) => {
+    try {
+      setSettings(validateScaleSettings({ ...settings, additionalOverrides }));
+      setStatus({ tone: 'success', text: message });
+    } catch (error) {
+      setStatus({ tone: 'error', text: error.message });
+    }
   }, [settings]);
   const applyPreset = (family, id) => update(presetSettings(family, id));
   const randomize = (both) => {
@@ -478,7 +713,7 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
   const previewUnavailable = embedded && previewState.unsupported.length > 0;
   return <div className={`scale-app muxui-scale-preview${embedded ? ' is-embedded' : ''}`} data-preview-background={settings.background} {...(previewUnavailable ? {} : { 'data-muxui-color-scheme': compiled.modes.colorScheme, 'data-muxui-contrast': compiled.modes.contrast, 'data-muxui-motion': compiled.modes.motion, 'data-muxui-density': compiled.modes.density, 'data-muxui-direction': compiled.modes.direction })}>
     {previewUnavailable ? null : <style data-muxui-scale-theme>{compiled.css}</style>}
-    <header className="scale-header"><div className="header-copy">{embedded ? <h2>Theme Playground</h2> : <h1>Theme Playground</h1>}<p>Generate named and neutral colour scales from a base colour. Preview how they look across components, copy the CSS tokens, and fine-tune contrast pivot points.</p></div><div className="header-tools">{embedded ? <><span className="site-mode">Site follows {siteColorMode}</span><ModePreferences values={modePreferences} modes={settings.themeModes} onChange={updateModePreference} /></> : <HeaderBackgrounds modes={settings.themeModes.colorScheme} value={settings.background} onChange={(background) => update({ background, colorMode: background === 'light' ? 'light' : 'dark' })} />}<div className="header-actions"><span className={`status status-${status.tone}`} role="status">{status.text}</span>{embedded ? <><span className={`draft-state${hasUnappliedChanges ? ' draft-state-unapplied' : ''}`}>{hasUnappliedChanges ? 'Draft only' : 'Applied'}</span><button className="apply-action" type="button" onClick={apply} disabled={!hasUnappliedChanges}>Apply to site</button><button className="text-action" type="button" onClick={resetApplied}>Reset applied</button></> : <><button className="text-action" type="button" onClick={() => copy(window.location.href)}>Share URL</button><button className="text-action" type="button" onClick={load}>Load</button><button className="text-action" type="button" onClick={save}>Save</button></>}</div></div></header>
+    <header className="scale-header"><div className="header-copy">{embedded ? <h2 id="theme-playground-title">Theme Playground</h2> : <h1 id="theme-playground-title">Theme Playground</h1>}<p>Generate named and neutral colour scales from a base colour. Preview how they look across components, copy the CSS tokens, and fine-tune contrast pivot points.</p></div><div className="header-tools">{embedded ? <><span className="site-mode">Site follows {siteColorMode}</span><ModePreferences values={modePreferences} modes={settings.themeModes} onChange={updateModePreference} /></> : <HeaderBackgrounds modes={settings.themeModes.colorScheme} value={settings.background} onChange={(background) => update({ background, colorMode: background === 'light' ? 'light' : 'dark' })} />}<div className="header-actions"><span className={`status status-${status.tone}`} role="status">{status.text}</span>{embedded ? <><span className={`draft-state${hasUnappliedChanges ? ' draft-state-unapplied' : ''}`}>{hasUnappliedChanges ? 'Draft only' : 'Applied'}</span><button className="apply-action" type="button" onClick={apply} disabled={!hasUnappliedChanges}>Apply to site</button><button className="text-action" type="button" onClick={resetApplied}>Reset applied</button></> : <><button className="text-action" type="button" onClick={() => copy(window.location.href)}>Share URL</button><button className="text-action" type="button" onClick={load}>Load</button><button className="text-action" type="button" onClick={save}>Save</button></>}</div></div></header>
     <div className="main-wrapper">
       <section className="theme-section" aria-labelledby="standard-themes-title"><div className="theme-section-heading"><h2 id="standard-themes-title">Standard themes</h2><span>Distinct brand + neutral scales from paired anchors</span></div><div className="theme-grid">{STANDARD_PRESETS.map(([id, name, namedColor, neutralColor]) => <ThemeCard key={id} name={name} namedColor={namedColor} neutralColor={neutralColor} selected={settings.family === 'standard' && settings.presetId === id} onClick={() => applyPreset('standard', id)} />)}</div></section>
       <section className="theme-section" aria-labelledby="mono-themes-title"><div className="theme-section-heading"><h2 id="mono-themes-title">Monochrome themes</h2><span>Shared brand + neutral scales from one colour anchor</span></div><div className="theme-grid">{MONO_PRESETS.map(([id, name, color]) => <ThemeCard key={id} name={name} namedColor={color} neutralColor={color} selected={settings.family === 'mono' && settings.presetId === id} onClick={() => applyPreset('mono', id)} />)}</div></section>
@@ -495,10 +730,11 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
           <ToggleButton size="sm" selected={settings.family === 'mono'} onChange={(monochrome) => update({ family: monochrome ? 'mono' : 'standard', presetId: 'custom', ...(monochrome ? { neutralColor: settings.namedColor } : {}) })}>Monochrome theme</ToggleButton>
         </> : null}
       </section>
+      <TypographyMatrix settings={settings} previewAvailable={!previewUnavailable} onOverridesChange={updateTypographyOverrides} onError={(message) => setStatus({ tone: 'error', text: message })} />
       {embedded && appliedError ? <p className="status status-error embedded-theme-error" role="alert">{appliedError}</p> : null}
       <section className="scale-editor" aria-label="Theme scale editor"><div className="editor-controls"><MainColorSelector label="BASE colour (–60)" value={activeColor} onChange={updateColor} />{mode === 'named' && settings.family !== 'mono' ? <HexColorInput label="Neutral anchor" value={settings.neutralColor} onChange={(neutralColor) => update({ neutralColor, presetId: 'custom' })} /> : null}</div><PivotSelector value={settings.contrastPivot} onChange={(contrastPivot) => update({ contrastPivot })} /><PaletteRow title={mode === 'named' ? 'Named' : 'Neutral'} compiled={compiled} kind={mode} steps={mode === 'named' ? NAMED_STEPS : NEUTRAL_STEPS} onCopy={copy} />
         <div className="radius-section"><div className="radius-header"><span>Border radius</span><input aria-label="Border radius factor" type="range" min={RADIUS_SETTINGS.minimum} max={RADIUS_SETTINGS.maximum} step={RADIUS_SETTINGS.step} value={settings.curvature} onChange={(event) => update({ curvature: Number(event.target.value) })} /><output>{settings.curvature.toFixed(2)}x{settings.curvature === RADIUS_SETTINGS.default ? ' (default)' : ''}</output><button type="button" className="quiet-button" onClick={() => update({ curvature: RADIUS_SETTINGS.default })}>Reset</button></div><div className="radius-row">{RADIUS_TOKENS.map(([name, multiplier]) => <div className="radius-item" key={name}><span className="radius-box" style={{ borderRadius: radiusValue(multiplier, settings.curvature) }} /><b>{name}</b><small>{radiusValue(multiplier, settings.curvature)}</small></div>)}</div></div>
-        <div className="output-row"><section className="css-column"><div className="output-heading"><h2>CSS tokens</h2><button type="button" className="quiet-button" onClick={() => copy(css)}>Copy CSS</button></div><pre className="css-output" aria-label="Generated CSS"><code>{css}</code></pre><div className="source-controls"><label>Theme slug<input value={slug} onChange={(event) => setSlug(event.target.value)} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><button type="button" className="secondary-button" onClick={exportJson}>Export JSON</button><label className="secondary-button file-action">Import JSON<input key={importInputKey} type="file" accept="application/json" onChange={importJson} /></label></div></section>{previewUnavailable ? <section className="component-preview preview-unavailable" aria-label="Component Preview"><div className="output-heading"><h2>Component Preview unavailable</h2></div><p>This draft does not provide the site’s requested {previewState.unsupported.join(', ')} mode. Apply will be rejected until the draft supports it.</p></section> : <ComponentPreview settings={settings} />}</div>
+        <div className="output-row"><section className="css-column"><div className="output-heading"><h2 id="css-tokens-title">CSS tokens</h2><button type="button" className="quiet-button" onClick={() => copy(css)}>Copy CSS</button></div><pre className="css-output" aria-label="Generated CSS"><code>{css}</code></pre><div className="source-controls"><label>Theme slug<input value={slug} onChange={(event) => setSlug(event.target.value)} pattern="[a-z0-9]+(?:-[a-z0-9]+)*" /></label><button type="button" className="secondary-button" onClick={exportJson}>Export JSON</button><label className="secondary-button file-action">Import JSON<input key={importInputKey} type="file" accept="application/json" onChange={importJson} /></label></div></section>{previewUnavailable ? <section className="component-preview preview-unavailable" aria-label="Component Preview"><div className="output-heading"><h2 id="component-preview-title">Component Preview unavailable</h2></div><p>This draft does not provide the site’s requested {previewState.unsupported.join(', ')} mode. Apply will be rejected until the draft supports it.</p></section> : <ComponentPreview settings={settings} />}</div>
       </section>
     </div>
   </div>;
