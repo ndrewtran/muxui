@@ -64,7 +64,7 @@ function safeStorageGet(key) {
 
 function migrateSettings(value) {
   const merged = { ...DEFAULT_SETTINGS, ...(value && typeof value === 'object' ? value : {}) };
-  // v1 stored pixel radii (8px). Scale uses a 0..2 factor, where 1 is default.
+  // v1 stored pixel radii (8px). Scale uses a 0..2 factor, where 0.5 is default.
   if (!Number.isFinite(Number(merged.curvature)) || Number(merged.curvature) > RADIUS_SETTINGS.maximum) merged.curvature = RADIUS_SETTINGS.default;
   merged.curvature = Math.max(RADIUS_SETTINGS.minimum, Math.min(RADIUS_SETTINGS.maximum, Number(merged.curvature)));
   if (typeof merged.contrastPivot === 'string' && /^\d+$/u.test(merged.contrastPivot)) merged.contrastPivot = Number(merged.contrastPivot);

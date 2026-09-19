@@ -546,7 +546,7 @@
       "properties": {
         "unit": { "const": "rem" },
         "base": { "const": 0.125 },
-        "curvature": { "type": "object", "additionalProperties": false, "required": ["default", "minimum", "maximum", "step"], "properties": { "default": { "const": 1 }, "minimum": { "const": 0 }, "maximum": { "const": 2 }, "step": { "const": 0.01 } } },
+        "curvature": { "type": "object", "additionalProperties": false, "required": ["default", "minimum", "maximum", "step"], "properties": { "default": { "const": 0.5 }, "minimum": { "const": 0 }, "maximum": { "const": 2 }, "step": { "const": 0.01 } } },
         "multipliers": { "type": "object", "additionalProperties": false, "required": ["xs", "s", "m", "l", "xl", "2xl"], "properties": { "xs": { "const": 4 }, "s": { "const": 6 }, "m": { "const": 8 }, "l": { "const": 12 }, "xl": { "const": 16 }, "2xl": { "const": 24 } } }
       }
     },
