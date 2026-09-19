@@ -1032,12 +1032,12 @@ function LifecycleTransition({ family, state, args }) {
     rendered = renderFamily(family, transitionArgs);
   }
   return e(React.Fragment, null,
+    rendered,
     e('div', {
       className: 'muxui-storybook-transition-status',
       'data-muxui-storybook-transition': phase,
       'aria-hidden': 'true',
     }, `${state}: ${phase}`),
-    rendered,
   );
 }
 
@@ -1141,6 +1141,17 @@ function eventMessage(channel, payload) {
   return `${channel}: ${payload.map(serializableEventValue).join(', ')}`;
 }
 
+function HarnessStatus({ label, note, children }) {
+  return e('div', {
+    className: 'muxui-storybook-status',
+    role: 'group',
+    'aria-label': `${label} status`,
+  },
+  e('span', { className: 'muxui-storybook-status-label' }, label),
+  children,
+  e('span', { className: 'muxui-storybook-status-note' }, note));
+}
+
 function EventHarness({ record, args, heading = 'Live event log', children }) {
   const [messages, setMessages] = React.useState([]);
   const eventArgs = { ...args };
@@ -1152,14 +1163,21 @@ function EventHarness({ record, args, heading = 'Live event log', children }) {
     };
   }
   const channels = eventBindingsForBinding(record.binding).map(({ channel }) => channel);
-  return e('div', { className: 'muxui-storybook-proof', 'data-muxui-storybook-proof': 'events' },
-    e('h2', null, heading),
-    e('p', null, channels.length === 0 ? 'This family has no canonical event channels.' : 'Interact with the live component to record canonical events.'),
-    e('ol', { 'aria-live': 'polite', 'data-muxui-storybook-event-log': record.family },
-      messages.length === 0
-        ? e('li', { 'data-muxui-storybook-event-status': 'waiting' }, channels.length ? `Waiting for: ${channels.join(', ')}` : 'No events')
-        : messages.map((message, index) => e('li', { key: `${message}-${index}` }, message))),
+  return e('div', {
+    className: 'muxui-storybook-proof',
+    role: 'group',
+    'aria-label': heading,
+    'data-muxui-storybook-proof': 'events',
+  },
     children(eventArgs),
+    e(HarnessStatus, {
+      label: 'Event log',
+      note: channels.length === 0 ? 'No canonical event channels for this family.' : 'Interact with the live component to record events.',
+      children: e('ol', { 'aria-live': 'polite', 'data-muxui-storybook-event-log': record.family },
+        messages.length === 0
+          ? e('li', { 'data-muxui-storybook-event-status': 'waiting' }, channels.length ? `Waiting for: ${channels.join(', ')}` : 'No events')
+          : messages.map((message, index) => e('li', { key: `${message}-${index}` }, message))),
+    }),
   );
 }
 
@@ -1194,22 +1212,36 @@ function ControlledHarness({ record, args }) {
     };
   }
   const valuesToShow = Object.fromEntries(controlledPairs.map(({ controlled }) => [controlled, values[controlled]]));
-  return e('div', { className: 'muxui-storybook-proof', 'data-muxui-storybook-proof': 'controlled' },
-    e('h2', null, 'Controlled mode'),
-    e('p', null, controlledPairs.length ? 'The harness owns the controlled value and updates it from the component callback.' : 'This family has no controlled/default pair.'),
-    e('output', { 'aria-label': `${record.family} controlled values`, 'data-muxui-controlled-values': record.family }, JSON.stringify(valuesToShow)),
+  return e('div', {
+    className: 'muxui-storybook-proof',
+    role: 'group',
+    'aria-label': 'Controlled mode',
+    'data-muxui-storybook-proof': 'controlled',
+  },
     renderFamily(record.family, eventArgs),
+    e(HarnessStatus, {
+      label: 'Value',
+      note: controlledPairs.length ? 'Updated from the component callback.' : 'This family has no controlled/default pair.',
+      children: e('output', { 'aria-label': `${record.family} controlled values`, 'data-muxui-controlled-values': record.family }, JSON.stringify(valuesToShow)),
+    }),
   );
 }
 
 function UncontrolledHarness({ record, args }) {
   const uncontrolledPairs = controlledDefaultPairsForBinding(record.binding);
   const valuesToShow = Object.fromEntries(uncontrolledPairs.map(({ controlled, uncontrolled }) => [uncontrolled, args[uncontrolled]]));
-  return e('div', { className: 'muxui-storybook-proof', 'data-muxui-storybook-proof': 'uncontrolled' },
-    e('h2', null, 'Uncontrolled mode'),
-    e('p', null, uncontrolledPairs.length ? 'The component owns its default value; interact to observe its internal state change.' : 'This family has no controlled/default pair.'),
-    e('output', { 'aria-label': `${record.family} uncontrolled defaults`, 'data-muxui-uncontrolled-values': record.family }, JSON.stringify(valuesToShow)),
+  return e('div', {
+    className: 'muxui-storybook-proof',
+    role: 'group',
+    'aria-label': 'Uncontrolled mode',
+    'data-muxui-storybook-proof': 'uncontrolled',
+  },
     renderFamily(record.family, args),
+    e(HarnessStatus, {
+      label: 'Default',
+      note: uncontrolledPairs.length ? 'Initial default. The component manages subsequent changes.' : 'This family has no controlled/default pair.',
+      children: e('output', { 'aria-label': `${record.family} uncontrolled defaults`, 'data-muxui-uncontrolled-values': record.family }, JSON.stringify(valuesToShow)),
+    }),
   );
 }
 
@@ -1330,17 +1362,25 @@ function AnatomyHarness({ record, args }) {
       e(MuxUI.ColorSlider, { label: 'Red', channel: 'red', defaultValue: '#ff0000' }),
       e(MuxUI.ColorSwatch, { color: '#ff0000' }))
     : null;
-  const content = e('div', { ref: hostRef, className: 'muxui-storybook-proof', 'data-muxui-storybook-proof': 'anatomy' },
-    e('h2', null, 'Anatomy and composition'),
-    e('p', null, 'The state matrix below renders the live component parts. Each row resolves its real DOM hook after mount.'),
+  const anatomyStatus = e('div', { className: 'muxui-storybook-anatomy-status' },
+    e('p', null, 'The state matrix renders the live component parts. Each row resolves its real DOM hook after mount.'),
     e('ul', { 'data-muxui-storybook-api-parts': record.family }, record.binding.api.parts.map((part) => e('li', {
       key: part,
       'data-muxui-storybook-api-part-status': matches[part] > 0 ? 'found' : executableAnatomyPart(record.family, part) ? 'executable' : 'unresolved',
       'data-muxui-storybook-api-part-proof': executableAnatomyPart(record.family, part) ? 'browser' : undefined,
       'data-muxui-storybook-api-part-route': partSelectors(record.binding, part).join(' | '),
     }, e('code', null, `${partSelectors(record.binding, part)[0]} (${part})`), `: ${matches[part] > 0 ? `${matches[part]} live node(s)` : executableAnatomyPart(record.family, part) ? 'executable Browser Proof route' : 'unresolved route'}`))),
+  );
+  const content = e('div', {
+    ref: hostRef,
+    className: 'muxui-storybook-proof',
+    role: 'group',
+    'aria-label': 'Anatomy and composition',
+    'data-muxui-storybook-proof': 'anatomy',
+  },
     renderStateCoverage(record, anatomyArgs),
     anatomySupport,
+    anatomyStatus,
   );
   return record.family === 'Toast' ? e(MuxUI.ToastProvider, null, content) : content;
 }
