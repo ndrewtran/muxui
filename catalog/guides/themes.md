@@ -26,6 +26,13 @@ The current theme does not provide runtime switching through the package. If a c
 
 Use the generated Mux UI roles for content, surfaces, borders, actions, focus, typography, and motion. Component styles consume the roles exposed by the generated stylesheet. Consumers should not copy resolved color values into application CSS. Prefer semantic typography family roles such as `semantic.typography.text-font-family` and `semantic.typography.label-font-family`; raw reference family aliases are implementation details.
 
+Scale's private Typography role matrix is an authoring projection over these
+semantic roles. It derives the seven roles and six metric groups from the
+canonical source, and stores Weight, Leading, and Tracking changes as explicit
+typed overrides. Expressive content keeps its own family but shares the body/
+text metric tokens, so its linked values update with the text group and do not
+create expressive metric token IDs.
+
 ## Responsive dimensions
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `@muxui/react/styles.css` to activate viewport-based values. The default root values remain static.

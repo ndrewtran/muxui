@@ -40,6 +40,6 @@ Static `body-size`, `small-size`, and `tiny-size` are utility metrics. They rema
 
 Use `display-color`, `text-color`, and `mono-color` for adaptive typography. These active colour roles have dark branches. The deprecated `display-default-color`, `text-default-color`, and `mono-default-color` preserve their legacy light-mode values and have no silent dark-mode alias.
 
-The explorer renders actual sample text at the canonical metrics and shows the site value after Scale is applied. Size, weight, leading, and tracking remain separate roles, so theme overrides can change one dimension without silently changing the others.
+The explorer renders actual sample text at the canonical metrics and shows the site value after Scale is applied. Size, weight, leading, and tracking remain separate roles, so theme overrides can change one dimension without silently changing the others. Scale's Typography role matrix derives the same seven roles, six metric groups, and 25 size variants from the source. Its bulk Weight, Leading, and Tracking edits write explicit typed semantic overrides; expressive keeps its own family while its size, weight, leading, and tracking cells stay linked to the body/text group.
 
 Common mistake: assigning a display size to long body copy, using the mono family for ordinary labels, or treating a reference alias as an application contract. Typography roles carry both hierarchy and reading purpose.

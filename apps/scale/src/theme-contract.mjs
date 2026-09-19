@@ -20,6 +20,43 @@ export const NAMED_STEPS = Object.freeze([...scaleMetadata.namedShades]);
 export const NEUTRAL_STEPS = Object.freeze([...scaleMetadata.neutralShades]);
 export const RADIUS_TOKENS = Object.freeze(Object.entries(scaleMetadata.radius.multipliers));
 export const RADIUS_SETTINGS = Object.freeze({ ...scaleMetadata.radius.curvature });
+const typographyMetadata = defaultThemeSource.theme.typography.roles;
+const typographyRoleEntries = Object.entries(typographyMetadata).map(([id, definition]) => {
+  const variants = Object.entries(definition.variants).map(([name, variant]) => Object.freeze({
+    name,
+    fontSize: variant.fontSize,
+    fontWeight: variant.fontWeight,
+    lineHeight: variant.lineHeight,
+    letterSpacing: variant.letterSpacing,
+  }));
+  const representative = variants.find(({ name }) => name === 'm') ?? variants[0];
+  return Object.freeze({
+    id,
+    family: definition.fontFamily,
+    color: definition.color,
+    metricGroup: representative.fontWeight.replace(/^semantic\.typography\./u, '').replace(/-font-weight$/u, ''),
+    representativeVariant: representative.name,
+    metrics: Object.freeze({
+      fontWeight: representative.fontWeight,
+      lineHeight: representative.lineHeight,
+      letterSpacing: representative.letterSpacing,
+    }),
+    variants: Object.freeze(variants),
+  });
+});
+export const TYPOGRAPHY_ROLES = Object.freeze(typographyRoleEntries);
+const typographyMetricGroups = [...new Map(
+  typographyRoleEntries.map((role) => [role.metricGroup, Object.freeze({
+    id: role.metricGroup,
+    metrics: role.metrics,
+  })]),
+).values()];
+export const TYPOGRAPHY_METRIC_GROUPS = Object.freeze(typographyMetricGroups);
+const typographyTokenIds = [...new Set(typographyRoleEntries.flatMap(({ variants }) => variants.flatMap(({ fontSize, fontWeight, lineHeight, letterSpacing }) => [fontSize, fontWeight, lineHeight, letterSpacing])))];
+export const TYPOGRAPHY_TOKEN_DEFAULTS = Object.freeze(Object.fromEntries(typographyTokenIds.map((id) => {
+  const token = sourceTokens[id];
+  return [id, Object.freeze({ type: token.type, unit: token.unit, value: token.value })];
+})));
 const defaultPreset = STANDARD_PRESETS.find(([id]) => id === scaleMetadata.defaults.standard);
 export const DEFAULT_SETTINGS = Object.freeze({ presetId: defaultPreset[0], family: 'standard', namedColor: defaultPreset[2], neutralColor: defaultPreset[3], contrastPivot: scaleMetadata.contrast.defaultPivot, whiteAnchor: false, curvature: RADIUS_SETTINGS.default, background: 'light', colorMode: 'light', additionalOverrides: {}, themeModes: structuredClone(defaultThemeSource.theme.modeAxes) });
 export const BACKGROUNDS = Object.freeze([['light', 'Light'], ['dark', 'Dark'], ['accent', 'Accent']]);

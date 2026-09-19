@@ -167,6 +167,62 @@ body:has(.scale-app) { margin: 0; }
 .preview-label { color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-label-s-font-size); }
 .preview-footer, .preview-canvas .muxui-table { margin-top: var(--muxui-reference-dimension-space-m); }
 .preview-canvas .muxui-table { width: 100%; }
+.typography-editor { margin: 0 0 var(--muxui-reference-dimension-space-xl); padding-top: var(--muxui-reference-dimension-space-l); border-top: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-editor-heading, .typography-panel-heading, .typography-selection-heading, .typography-bulk-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--muxui-reference-dimension-space-s); }
+.typography-editor-heading { align-items: flex-end; margin-bottom: var(--muxui-reference-dimension-space-l); }
+.typography-editor-heading h2, .typography-panel-heading h3 { margin: 0; font-size: var(--muxui-semantic-typography-title-s-font-size); font-weight: var(--muxui-semantic-typography-title-font-weight); line-height: var(--muxui-semantic-typography-title-line-height); }
+.typography-editor-heading p, .typography-panel-heading p { margin: var(--muxui-reference-dimension-space-3xs) 0 0; color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+.section-kicker { display: block; margin-bottom: var(--muxui-reference-dimension-space-3xs); color: var(--muxui-semantic-color-color-60); font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-semantic-typography-mono-font-family); letter-spacing: .04em; text-transform: uppercase; }
+.typography-editor-meta { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-m); color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-label-xs-font-size); }
+.typography-editor-meta strong { color: var(--muxui-semantic-color-neutral-90); font-weight: var(--muxui-semantic-typography-label-font-weight); }
+.typography-matrix-layout { display: grid; grid-template-columns: minmax(180px, 220px) minmax(0, 1fr); gap: var(--muxui-reference-dimension-space-xl); align-items: start; }
+.typography-selection { min-width: 0; padding-right: var(--muxui-reference-dimension-space-l); border-right: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-selection-heading h3, .typography-bulk-heading strong { margin: 0; font-size: var(--muxui-semantic-typography-label-s-font-size); font-weight: var(--muxui-semantic-typography-label-font-weight); }
+.typography-selection-note { margin: var(--muxui-reference-dimension-space-xs) 0 var(--muxui-reference-dimension-space-s); color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+.typography-selection-list { display: grid; border-top: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-selection-row { display: grid; grid-template-columns: 1.1rem minmax(0, 1fr) auto; align-items: center; gap: var(--muxui-reference-dimension-space-xs); min-height: 2.5rem; padding: 0 var(--muxui-reference-dimension-space-xs); border-bottom: 1px solid var(--muxui-semantic-color-neutral-24); color: var(--muxui-semantic-color-neutral-70); font-size: var(--muxui-semantic-typography-label-s-font-size); cursor: pointer; }
+.typography-selection-row.is-selected { border-left: 2px solid var(--muxui-semantic-color-color-60); padding-left: calc(var(--muxui-reference-dimension-space-xs) - 2px); background: var(--muxui-semantic-color-neutral-10); color: var(--muxui-semantic-color-neutral-90); }
+.typography-selection-row input { appearance: auto; inline-size: 1rem; block-size: 1rem; margin: 0; accent-color: var(--muxui-semantic-color-color-60); }
+.typography-selection-name { overflow: hidden; text-overflow: ellipsis; }
+.typography-selection-group, .typography-panel-note, .typography-bulk-heading span, .typography-role-cell span, .typography-size-cell small, .typography-state small, .typography-matrix-note { color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+.typography-selection-group, .typography-role-cell span, .typography-specimen-heading span { font-family: var(--muxui-semantic-typography-mono-font-family); font-size: var(--muxui-semantic-typography-mono-xs-font-size); text-transform: uppercase; }
+.typography-workspace { min-width: 0; }
+.typography-bulk-panel { border-top: 1px solid var(--muxui-semantic-color-neutral-40); border-bottom: 1px solid var(--muxui-semantic-color-neutral-24); background: var(--muxui-semantic-color-neutral-10); }
+.typography-bulk-heading { padding: var(--muxui-reference-dimension-space-s) var(--muxui-reference-dimension-space-m); }
+.typography-bulk-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--muxui-reference-dimension-space-xs); padding: 0 var(--muxui-reference-dimension-space-m) var(--muxui-reference-dimension-space-s); }
+.typography-bulk-control { display: grid; gap: var(--muxui-reference-dimension-space-3xs); min-width: 0; }
+.typography-control-label { display: flex; align-items: baseline; justify-content: space-between; gap: var(--muxui-reference-dimension-space-xs); color: var(--muxui-semantic-color-neutral-80); font-size: var(--muxui-semantic-typography-label-s-font-size); }
+.typography-control-label span { overflow: hidden; color: var(--muxui-semantic-color-neutral-60); font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-semantic-typography-mono-font-family); text-overflow: ellipsis; white-space: nowrap; }
+.typography-metric-input { width: 100%; min-width: 0; min-height: 2rem; padding: 0 var(--muxui-reference-dimension-space-xs); border: 1px solid var(--muxui-semantic-color-neutral-24); border-radius: var(--muxui-reference-dimension-radius-s); background: var(--muxui-semantic-color-neutral-5); color: var(--muxui-semantic-color-neutral-90); font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-semantic-typography-mono-font-family); }
+.typography-metric-input::placeholder { color: var(--muxui-semantic-color-neutral-50); }
+.typography-metric-input:disabled { opacity: .55; }
+.typography-table-scroll { overflow-x: auto; border-bottom: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-matrix-table { display: grid; min-width: 760px; }
+.typography-matrix-row { display: grid; grid-template-columns: minmax(140px, 1.3fr) minmax(74px, .7fr) repeat(3, minmax(102px, 1fr)) minmax(108px, .85fr); align-items: center; min-height: 3.4rem; border-bottom: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-matrix-row:last-child { border-bottom: 0; }
+.typography-matrix-row > * { min-width: 0; padding: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-xs); }
+.typography-matrix-row.is-selected { background: var(--muxui-semantic-color-neutral-10); }
+.typography-matrix-head { min-height: 2.2rem; background: var(--muxui-semantic-color-neutral-12); }
+.typography-matrix-head > * { color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-label-xs-font-size); }
+.typography-role-cell { display: grid; gap: 2px; }
+.typography-role-cell strong { overflow: hidden; text-overflow: ellipsis; font-size: var(--muxui-semantic-typography-label-s-font-size); font-weight: var(--muxui-semantic-typography-label-font-weight); }
+.typography-size-cell { display: grid; gap: 2px; }
+.typography-size-cell strong { font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-semantic-typography-mono-font-family); }
+.typography-size-cell small, .typography-state small { display: block; }
+.typography-metric-cell.is-linked { color: var(--muxui-semantic-color-neutral-60); font: var(--muxui-semantic-typography-mono-xs-font-size) var(--muxui-semantic-typography-mono-font-family); }
+.typography-linked-value { display: inline-flex; align-items: center; min-height: 2rem; }
+.typography-state { display: grid; align-content: center; justify-items: start; gap: 2px; color: var(--muxui-semantic-color-neutral-60); font-size: var(--muxui-semantic-typography-label-xs-font-size); text-transform: capitalize; }
+.typography-state-custom { color: var(--muxui-semantic-color-color-60); }
+.typography-state-linked { color: var(--muxui-semantic-color-neutral-70); }
+.typography-state .quiet-button { font-size: var(--muxui-semantic-typography-label-xs-font-size); }
+.typography-matrix-note { margin: var(--muxui-reference-dimension-space-s) 0 0; }
+.typography-matrix-note strong { color: var(--muxui-semantic-color-neutral-90); font-weight: var(--muxui-semantic-typography-label-font-weight); }
+.typography-specimens { margin-top: var(--muxui-reference-dimension-space-xl); padding-top: var(--muxui-reference-dimension-space-l); border-top: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-specimen-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--muxui-reference-dimension-space-l) var(--muxui-reference-dimension-space-xl); margin-top: var(--muxui-reference-dimension-space-m); }
+.typography-specimen { min-width: 0; padding-top: var(--muxui-reference-dimension-space-xs); border-top: 1px solid var(--muxui-semantic-color-neutral-24); }
+.typography-specimen-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--muxui-reference-dimension-space-xs); }
+.typography-specimen-heading strong { color: var(--muxui-semantic-color-neutral-80); font-size: var(--muxui-semantic-typography-label-s-font-size); font-weight: var(--muxui-semantic-typography-label-font-weight); }
+.typography-specimen p { margin: var(--muxui-reference-dimension-space-s) 0 0; overflow-wrap: anywhere; }
 @media (max-width: 1560px) {
   .output-row { flex-direction: column; gap: var(--muxui-reference-dimension-space-l); }
   .css-column { width: 100%; }
@@ -179,6 +235,12 @@ body:has(.scale-app) { margin: 0; }
   .toolbar-row { gap: var(--muxui-reference-dimension-space-s); }
   .editor-controls { gap: var(--muxui-reference-dimension-space-l); }
   .palette-row { grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); }
+  .typography-editor-heading { align-items: flex-start; flex-direction: column; }
+  .typography-editor-meta { justify-content: flex-start; }
+  .typography-matrix-layout { grid-template-columns: 1fr; gap: var(--muxui-reference-dimension-space-l); }
+  .typography-selection { padding: 0 0 var(--muxui-reference-dimension-space-l); border-right: 0; border-bottom: 1px solid var(--muxui-semantic-color-neutral-24); }
+  .typography-selection-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .typography-specimen-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 480px) {
   :scope { padding: var(--muxui-reference-dimension-space-s); }
@@ -191,6 +253,8 @@ body:has(.scale-app) { margin: 0; }
   .swatch-ratio, .swatch-badge { display: none; }
   .swatch-ag { font-size: var(--muxui-semantic-typography-title-s-font-size); }
   .output-row { margin-top: var(--muxui-reference-dimension-space-l); }
+  .typography-selection-list, .typography-bulk-controls, .typography-specimen-grid { grid-template-columns: 1fr; }
+  .typography-bulk-heading { align-items: flex-start; flex-direction: column; }
 }
 
 }

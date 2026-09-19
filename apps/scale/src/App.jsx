@@ -37,6 +37,9 @@ import {
   RADIUS_SETTINGS,
   RADIUS_TOKENS,
   STANDARD_PRESETS,
+  TYPOGRAPHY_METRIC_GROUPS,
+  TYPOGRAPHY_ROLES,
+  TYPOGRAPHY_TOKEN_DEFAULTS,
   createScaleDocument,
   previewCss,
   previewTheme,
@@ -254,6 +257,235 @@ function PivotSelector({ value, onChange }) {
   </div>;
 }
 
+const TYPOGRAPHY_METRIC_FIELDS = Object.freeze([
+  { key: 'fontWeight', label: 'Weight', min: 100, max: 900, step: 1, inputMode: 'numeric' },
+  { key: 'lineHeight', label: 'Leading', min: 0.75, max: 3, step: 0.05, inputMode: 'decimal' },
+  { key: 'letterSpacing', label: 'Tracking', inputMode: 'decimal' },
+]);
+const TYPOGRAPHY_METRIC_BY_KEY = Object.freeze(Object.fromEntries(TYPOGRAPHY_METRIC_FIELDS.map((field) => [field.key, field])));
+const TRACKING_VALUE = /^(?:normal|[+-]?(?:(?:\d+(?:\.\d+)?)|(?:\.\d+))(?:em|rem|px))$/u;
+
+function cssVariableName(tokenId) {
+  return `--muxui-${tokenId.replaceAll('.', '-')}`;
+}
+
+function typographyTokenValue(settings, tokenId) {
+  return settings.additionalOverrides?.[tokenId]?.value ?? TYPOGRAPHY_TOKEN_DEFAULTS[tokenId].value;
+}
+
+function typographyTokenIsOverridden(settings, tokenId) {
+  return Object.hasOwn(settings.additionalOverrides ?? {}, tokenId);
+}
+
+function typographyMetricTokenId(role, key) {
+  return role.metrics[key];
+}
+
+function typographyMetricValue(settings, role, key) {
+  return typographyTokenValue(settings, typographyMetricTokenId(role, key));
+}
+
+function typographyMetricLabel(tokenId) {
+  return tokenId.replace(/^semantic\.typography\./u, '');
+}
+
+function formatTypographyValue(tokenId, value) {
+  const token = TYPOGRAPHY_TOKEN_DEFAULTS[tokenId];
+  if (token.type === 'dimension') return `${value}${token.unit}`;
+  return String(value);
+}
+
+function parseTypographyMetric(key, raw) {
+  const field = TYPOGRAPHY_METRIC_BY_KEY[key];
+  const candidate = String(raw).trim();
+  if (!candidate) throw new TypeError(`${field.label} must have a value.`);
+  if (key === 'letterSpacing') {
+    if (!TRACKING_VALUE.test(candidate)) throw new TypeError('Tracking must be normal or a finite CSS length such as 0.02em.');
+    if (candidate !== 'normal') {
+      const match = candidate.match(/^([+-]?(?:(?:\d+(?:\.\d+)?)|(?:\.\d+)))(em|rem|px)$/u);
+      const value = Number(match?.[1]);
+      const unit = match?.[2];
+      const maximum = unit === 'px' ? 32 : 2;
+      if (!Number.isFinite(value) || Math.abs(value) > maximum) throw new TypeError(`Tracking must stay between -${maximum}${unit} and ${maximum}${unit}.`);
+    }
+    return candidate;
+  }
+  const value = Number(candidate);
+  if (!Number.isFinite(value) || value < field.min || value > field.max) throw new TypeError(`${field.label} must be between ${field.min} and ${field.max}.`);
+  if (key === 'fontWeight' && !Number.isInteger(value)) throw new TypeError('Weight must be a whole number between 100 and 900.');
+  return key === 'fontWeight' ? value : Number(value.toFixed(2));
+}
+
+function typographyOverride(tokenId, value) {
+  const token = TYPOGRAPHY_TOKEN_DEFAULTS[tokenId];
+  return { type: token.type, unit: token.unit, value };
+}
+
+function TypographyMetricInput({ field, value, mixed = false, disabled = false, ariaLabel, id, onCommit }) {
+  const [draft, setDraft] = React.useState(value === null || value === undefined ? '' : String(value));
+  const [dirty, setDirty] = React.useState(false);
+  React.useEffect(() => {
+    setDraft(mixed ? '' : value === null || value === undefined ? '' : String(value));
+    setDirty(false);
+  }, [mixed, value]);
+  const commit = () => { if (dirty) onCommit(draft); };
+  return <input
+    className="typography-metric-input"
+    type={field.key === 'letterSpacing' ? 'text' : 'number'}
+    inputMode={field.inputMode}
+    id={id}
+    min={field.min}
+    max={field.max}
+    step={field.step}
+    aria-label={ariaLabel}
+    value={draft}
+    placeholder={mixed ? 'Mixed' : undefined}
+    disabled={disabled}
+    onChange={(event) => { setDraft(event.target.value); setDirty(true); }}
+    onBlur={commit}
+    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+  />;
+}
+
+function TypographySpecimens({ settings }) {
+  return <section className="typography-specimens" aria-labelledby="typography-specimens-title">
+    <div className="typography-panel-heading">
+      <div>
+        <h3 id="typography-specimens-title">Live specimens</h3>
+        <p>Each sample reads from the same compiled role metrics as the preview.</p>
+      </div>
+      <span className="typography-panel-note">m variants · canonical sizes</span>
+    </div>
+    <div className="typography-specimen-grid">
+      {TYPOGRAPHY_ROLES.map((role) => {
+        const variant = role.variants.find(({ name }) => name === role.representativeVariant) ?? role.variants[0];
+        const style = {
+          color: `var(${cssVariableName(role.color)})`,
+          fontFamily: `var(${cssVariableName(role.family)})`,
+          fontSize: `var(${cssVariableName(variant.fontSize)})`,
+          fontWeight: `var(${cssVariableName(variant.fontWeight)})`,
+          lineHeight: `var(${cssVariableName(variant.lineHeight)})`,
+          letterSpacing: `var(${cssVariableName(variant.letterSpacing)})`,
+        };
+        const linked = role.id === 'expressive';
+        return <article className="typography-specimen" key={role.id} data-role={role.id}>
+          <div className="typography-specimen-heading"><strong>{role.id}</strong><span>{role.representativeVariant} · {role.metricGroup}{linked ? ' · linked' : ''}</span></div>
+          <p style={style}>Design decisions should be felt in the interface.</p>
+        </article>;
+      })}
+    </div>
+  </section>;
+}
+
+function TypographyMatrix({ settings, onOverridesChange, onError }) {
+  const [selectedIds, setSelectedIds] = React.useState(() => TYPOGRAPHY_ROLES.slice(0, 3).map(({ id }) => id));
+  const selectedRoles = TYPOGRAPHY_ROLES.filter(({ id }) => selectedIds.includes(id));
+  const selectedGroupIds = [...new Set(selectedRoles.map(({ metricGroup }) => metricGroup))];
+
+  const bulkValue = (key) => {
+    const tokenIds = [...new Set(selectedRoles.map((role) => typographyMetricTokenId(role, key)))];
+    if (!tokenIds.length) return null;
+    const values = tokenIds.map((tokenId) => typographyTokenValue(settings, tokenId));
+    return values.every((value) => Object.is(value, values[0])) ? values[0] : null;
+  };
+
+  const commitMetric = (roles, key, raw) => {
+    try {
+      const tokenIds = [...new Set(roles.map((role) => typographyMetricTokenId(role, key)))];
+      const value = parseTypographyMetric(key, raw);
+      const nextOverrides = { ...(settings.additionalOverrides ?? {}) };
+      tokenIds.forEach((tokenId) => { nextOverrides[tokenId] = typographyOverride(tokenId, value); });
+      onOverridesChange(nextOverrides, `${TYPOGRAPHY_METRIC_BY_KEY[key].label} updated for ${roles.length} selected role${roles.length === 1 ? '' : 's'}.`);
+    } catch (error) {
+      onError(error.message);
+    }
+  };
+
+  const resetRole = (role) => {
+    if (role.id === 'expressive') return;
+    const nextOverrides = { ...(settings.additionalOverrides ?? {}) };
+    Object.values(role.metrics).forEach((tokenId) => delete nextOverrides[tokenId]);
+    onOverridesChange(nextOverrides, `${role.id} restored to canonical defaults.`);
+  };
+
+  const roleState = (role) => {
+    if (role.id === 'expressive') return 'linked';
+    return Object.values(role.metrics).some((tokenId) => typographyTokenIsOverridden(settings, tokenId)) ? 'custom' : 'default';
+  };
+
+  return <section className="typography-editor" aria-labelledby="typography-editor-title">
+    <div className="typography-editor-heading">
+      <div>
+        <span className="section-kicker">Typography</span>
+        <h2 id="typography-editor-title">Role matrix</h2>
+        <p>Select roles, edit shared metrics, and check the result in the live specimens.</p>
+      </div>
+      <div className="typography-editor-meta" aria-label="Typography source summary">
+        <span><strong>{TYPOGRAPHY_ROLES.length}</strong> roles</span>
+        <span><strong>{TYPOGRAPHY_METRIC_GROUPS.length}</strong> metric groups</span>
+        <span><strong>{TYPOGRAPHY_ROLES.reduce((count, role) => count + role.variants.length, 0)}</strong> size variants</span>
+      </div>
+    </div>
+    <div className="typography-matrix-layout">
+      <aside className="typography-selection" aria-label="Typography role selection">
+        <div className="typography-selection-heading"><h3>Selection</h3><button type="button" className="quiet-button" onClick={() => setSelectedIds([])} disabled={!selectedIds.length}>Clear</button></div>
+        <p className="typography-selection-note">Bulk edits write explicit values to the selected metric tokens.</p>
+        <div className="typography-selection-list">
+          {TYPOGRAPHY_ROLES.map((role) => <label className={`typography-selection-row${selectedIds.includes(role.id) ? ' is-selected' : ''}`} key={role.id}>
+            <input type="checkbox" checked={selectedIds.includes(role.id)} aria-label={`Select ${role.id} role`} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, role.id] : current.filter((id) => id !== role.id))} />
+            <span className="typography-selection-name">{role.id}</span>
+            <span className="typography-selection-group">{role.metricGroup}</span>
+          </label>)}
+        </div>
+      </aside>
+      <div className="typography-workspace">
+        <div className="typography-bulk-panel">
+          <div className="typography-bulk-heading"><strong>Bulk edit</strong><span>{selectedRoles.length ? `${selectedRoles.length} role${selectedRoles.length === 1 ? '' : 's'} selected · ${selectedGroupIds.length} metric group${selectedGroupIds.length === 1 ? '' : 's'}` : 'Select at least one role'}</span></div>
+          <div className="typography-bulk-controls">
+            {TYPOGRAPHY_METRIC_FIELDS.map((field) => {
+              const value = bulkValue(field.key);
+              const tokenId = selectedRoles[0] ? typographyMetricTokenId(selectedRoles[0], field.key) : TYPOGRAPHY_METRIC_GROUPS[0].metrics[field.key];
+              return <div className="typography-bulk-control" key={field.key}>
+                <label className="typography-control-label" htmlFor={`typography-bulk-${field.key}`}>{field.label}<span>{typographyMetricLabel(tokenId)}</span></label>
+                <TypographyMetricInput id={`typography-bulk-${field.key}`} field={field} value={value} mixed={selectedRoles.length > 0 && value === null} disabled={!selectedRoles.length} ariaLabel={`Bulk ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric(selectedRoles, field.key, raw)} />
+              </div>;
+            })}
+          </div>
+        </div>
+        <div className="typography-table-scroll">
+          <div className="typography-matrix-table" role="table" aria-label="Typography role matrix">
+            <div className="typography-matrix-row typography-matrix-head" role="row">
+              <span role="columnheader">Role</span><span role="columnheader">Size</span>{TYPOGRAPHY_METRIC_FIELDS.map((field) => <span role="columnheader" key={field.key}>{field.label}</span>)}<span role="columnheader">State</span>
+            </div>
+            {TYPOGRAPHY_ROLES.map((role) => {
+              const linked = role.id === 'expressive';
+              const state = roleState(role);
+              const variant = role.variants.find(({ name }) => name === role.representativeVariant) ?? role.variants[0];
+              return <div className={`typography-matrix-row${selectedIds.includes(role.id) ? ' is-selected' : ''}`} data-role={role.id} role="row" key={role.id}>
+                <div className="typography-role-cell" role="rowheader"><strong>{role.id}</strong><span>{role.metricGroup}{linked ? ' · body metrics' : ''}</span></div>
+                <span className="typography-size-cell" role="cell"><strong>{formatTypographyValue(variant.fontSize, typographyTokenValue(settings, variant.fontSize))}</strong><small>{role.representativeVariant}</small></span>
+                {TYPOGRAPHY_METRIC_FIELDS.map((field) => {
+                  const tokenId = typographyMetricTokenId(role, field.key);
+                  const value = typographyMetricValue(settings, role, field.key);
+                  return <span className={`typography-metric-cell${linked ? ' is-linked' : ''}`} role="cell" key={field.key}>
+                    {linked ? <span className="typography-linked-value" aria-label={`${role.id} ${field.label.toLowerCase()} linked to body`}>{formatTypographyValue(tokenId, value)}</span> : <TypographyMetricInput field={field} value={value} ariaLabel={`${role.id} ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric([role], field.key, raw)} />}
+                  </span>;
+                })}
+                <span className={`typography-state typography-state-${state}`} role="cell">
+                  <span>{state}</span>
+                  {linked ? <small>text group</small> : <button type="button" className="quiet-button" onClick={() => resetRole(role)} disabled={state === 'default'}>{state === 'default' ? 'Reset' : 'Reset role'}</button>}
+                </span>
+              </div>;
+            })}
+          </div>
+        </div>
+        <p className="typography-matrix-note"><strong>Linked metrics</strong> Expressive keeps its own family and reads the body/text size, weight, leading, and tracking tokens.</p>
+      </div>
+    </div>
+    <TypographySpecimens settings={settings} />
+  </section>;
+}
+
 function ComponentPreview({ settings }) {
   const previewMode = settings.background === 'light' ? 'light' : 'dark';
   return <section className="component-preview" aria-labelledby="component-preview-title">
@@ -356,6 +588,14 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
   const update = React.useCallback((patch) => {
     try { setSettings(validateScaleSettings({ ...settings, ...patch })); }
     catch (error) { setStatus({ tone: 'error', text: error.message }); }
+  }, [settings]);
+  const updateTypographyOverrides = React.useCallback((additionalOverrides, message) => {
+    try {
+      setSettings(validateScaleSettings({ ...settings, additionalOverrides }));
+      setStatus({ tone: 'success', text: message });
+    } catch (error) {
+      setStatus({ tone: 'error', text: error.message });
+    }
   }, [settings]);
   const applyPreset = (family, id) => update(presetSettings(family, id));
   const randomize = (both) => {
@@ -495,6 +735,7 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
           <ToggleButton size="sm" selected={settings.family === 'mono'} onChange={(monochrome) => update({ family: monochrome ? 'mono' : 'standard', presetId: 'custom', ...(monochrome ? { neutralColor: settings.namedColor } : {}) })}>Monochrome theme</ToggleButton>
         </> : null}
       </section>
+      <TypographyMatrix settings={settings} onOverridesChange={updateTypographyOverrides} onError={(message) => setStatus({ tone: 'error', text: message })} />
       {embedded && appliedError ? <p className="status status-error embedded-theme-error" role="alert">{appliedError}</p> : null}
       <section className="scale-editor" aria-label="Theme scale editor"><div className="editor-controls"><MainColorSelector label="BASE colour (–60)" value={activeColor} onChange={updateColor} />{mode === 'named' && settings.family !== 'mono' ? <HexColorInput label="Neutral anchor" value={settings.neutralColor} onChange={(neutralColor) => update({ neutralColor, presetId: 'custom' })} /> : null}</div><PivotSelector value={settings.contrastPivot} onChange={(contrastPivot) => update({ contrastPivot })} /><PaletteRow title={mode === 'named' ? 'Named' : 'Neutral'} compiled={compiled} kind={mode} steps={mode === 'named' ? NAMED_STEPS : NEUTRAL_STEPS} onCopy={copy} />
         <div className="radius-section"><div className="radius-header"><span>Border radius</span><input aria-label="Border radius factor" type="range" min={RADIUS_SETTINGS.minimum} max={RADIUS_SETTINGS.maximum} step={RADIUS_SETTINGS.step} value={settings.curvature} onChange={(event) => update({ curvature: Number(event.target.value) })} /><output>{settings.curvature.toFixed(2)}x{settings.curvature === RADIUS_SETTINGS.default ? ' (default)' : ''}</output><button type="button" className="quiet-button" onClick={() => update({ curvature: RADIUS_SETTINGS.default })}>Reset</button></div><div className="radius-row">{RADIUS_TOKENS.map(([name, multiplier]) => <div className="radius-item" key={name}><span className="radius-box" style={{ borderRadius: radiusValue(multiplier, settings.curvature) }} /><b>{name}</b><small>{radiusValue(multiplier, settings.curvature)}</small></div>)}</div></div>

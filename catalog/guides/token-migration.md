@@ -65,6 +65,6 @@ They have no equivalent replacements. Do not point them at a nearby inset, spaci
 
 ## Scale authoring
 
-Typography edits should be treated as grouped decisions: a role's family and its size, weight, line-height, and tracking metrics need to be reviewed together.
+Typography edits should be treated as grouped decisions: a role's family and its size, weight, line-height, and tracking metrics need to be reviewed together. Scale's private role matrix derives seven roles, six metric groups, and 25 size variants from `catalog/tokens/default-theme.json`. Bulk Weight, Leading, and Tracking edits are stored as explicit typed semantic overrides; they do not introduce runtime inheritance. Expressive keeps its own family and reads the body/text size, weight, line-height, and tracking tokens, so editing that group updates both roles while the expressive metric cells remain read-only.
 
 For the complete source metadata, inspect `catalog/tokens/default-theme.json`. Do not build a second migration registry from this page or from guide records.
