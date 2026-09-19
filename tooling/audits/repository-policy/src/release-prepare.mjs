@@ -55,6 +55,7 @@ const expectedGeneratedEntries = [
   'package/generated/lightbox.mjs',
   'package/generated/markdown.d.ts',
   'package/generated/markdown.mjs',
+  'package/generated/overlay-positioning.mjs',
   'package/generated/overlays.mjs',
   'package/generated/r1-5-closure.json',
   'package/generated/r1-5-closure.json.provenance',

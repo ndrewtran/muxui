@@ -8,5 +8,5 @@
     "skipLibCheck": false,
     "types": ["react", "react-dom"]
   },
-  "include": ["./types.test.tsx"]
+  "include": ["./types.test.tsx", "./*.types.test.tsx"]
 }

@@ -122,7 +122,10 @@
       },
       "behavior": [
         "Search and collection navigation preserve React Aria keyboard semantics.",
-        "Escape closes the modal and closeOnSelect controls item activation dismissal."
+        "Escape closes the modal and closeOnSelect controls item activation dismissal.",
+        "Input owns native value, defaultValue, onChange, keyboard, paste, composition, and selection handlers; its ref resolves to HTMLInputElement for focus and cursor restoration.",
+        "Applications control the query on Input and supply filtered or asynchronous Item results to ListBox; Content does not own a search engine or an inputValue prop.",
+        "Applications may compose loading content, Empty, Footer, and custom Item content. Enter during IME composition or cancelled by Input onKeyDown does not activate a command; Input defaults autoFocus to true when the palette opens."
       ],
       "accessibility": [
         "Search and collection navigation preserve React Aria keyboard semantics.",

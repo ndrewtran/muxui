@@ -69,7 +69,8 @@
         "Composes Mux Button; onActivate, refs, form attributes, and finite variants follow Button.",
         "Renders caller-supplied icon children in a decorative wrapper.",
         "Square sm, md, and lg sizes follow Mux minimum control heights; pending replaces the icon without changing geometry.",
-        "The pending indicator is static; showTextWhileLoading is not part of this icon-only API."
+        "The pending indicator is static; showTextWhileLoading is not part of this icon-only API.",
+        "The ref resolves to the native HTMLButtonElement; native pointer, pointer capture, auxiliary click, and context-menu handlers run on that host. Consumers may capture and release pointers without replacing onActivate."
       ],
       "accessibility": [
         "Requires a non-empty aria-label or aria-labelledby; referenced labeling elements must exist and contain meaningful text.",

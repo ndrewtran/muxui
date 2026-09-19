@@ -7,8 +7,14 @@ export function ControlledDialogExample() {
   return (
     <>
       <Button onActivate={() => setOpen(true)}>Open controlled dialog</Button>
-      <Dialog title="Review changes" open={open} onOpenChange={setOpen}>
-        Check the changes before continuing.
+      <Dialog
+        title="Review changes"
+        description="Check the changes before continuing."
+        open={open}
+        onOpenChange={setOpen}
+        actions={<Button onActivate={() => setOpen(false)}>Done</Button>}
+      >
+        The updated settings will apply to this workspace.
       </Dialog>
     </>
   );

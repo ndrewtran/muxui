@@ -74,7 +74,8 @@
         "Activation requests one immediate action",
         "Pending suppresses activation while retaining focusability",
         "Variant, tone, and size select finite orthogonal visual recipes",
-        "showTextWhileLoading keeps the pending label visible beside its spinner"
+        "showTextWhileLoading keeps the pending label visible beside its spinner",
+        "The ref resolves to the native HTMLButtonElement; native pointer, pointer capture, auxiliary click, and context-menu handlers run on that host. Consumers may capture and release pointers without replacing onActivate."
       ],
       "accessibility": ["Expose accessible name, disabled state, and busy state"],
       "tokenRecipe": {

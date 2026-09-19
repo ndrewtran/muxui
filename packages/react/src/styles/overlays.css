@@ -91,6 +91,7 @@
   right: var(--muxui-semantic-layout-control-inset);
 }
 
+.muxui-dialog-description,
 .muxui-dialog-content {
   color: var(--muxui-semantic-content-default);
   font-family: var(--muxui-semantic-typography-text-font-family);
@@ -99,11 +100,18 @@
   line-height: var(--muxui-semantic-typography-prose-line-height);
 }
 
+.muxui-dialog-description,
 .muxui-dialog-content > p {
   margin: 0;
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-prose-line-height);
+}
+
+.muxui-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--muxui-semantic-layout-action-gap);
 }
 
 /* Match the modal recipe while keeping Mux UI's RAC dialog
@@ -120,6 +128,7 @@
   color: var(--muxui-semantic-color-neutral-default-94);
 }
 
+.muxui-dialog-description,
 .muxui-dialog-content,
 .muxui-dialog-content > p {
   color: var(--muxui-semantic-color-neutral-default-70);
@@ -473,6 +482,7 @@
   color: var(--muxui-semantic-color-neutral-default-16);
 }
 
+[data-muxui-color-scheme='dark'] .muxui-dialog-description,
 [data-muxui-color-scheme='dark'] .muxui-dialog-content,
 [data-muxui-color-scheme='dark'] .muxui-dialog-content > p {
   color: var(--muxui-semantic-color-neutral-default-40);

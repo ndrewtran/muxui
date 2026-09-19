@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:command-palette-controlled-query-react",
+  "kind": "example",
+  "name": "CommandPalette controlled query",
+  "summary": "Control the native Input query and ref while the application supplies filtered results, empty content, and activation behavior.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:command-palette#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/command-palette/examples/react/controlled-query.tsx"
+}
