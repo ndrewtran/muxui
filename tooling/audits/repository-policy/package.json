@@ -12,7 +12,7 @@
     "@muxui/tooling": "workspace:*"
   },
   "scripts": {
-    "check": "node src/cli.mjs && node --test test/evidence-integrity.test.mjs test/react-aria-stage1-source.test.mjs test/repository-policy.test.mjs test/storybook-audit-selection.test.mjs test/task-graph.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs",
+    "check": "node src/cli.mjs && node --test test/evidence-integrity.test.mjs test/react-aria-stage1-source.test.mjs test/release-prepare.test.mjs test/repository-policy.test.mjs test/storybook-audit-selection.test.mjs test/task-graph.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
   }

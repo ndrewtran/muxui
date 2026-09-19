@@ -133,6 +133,7 @@ test('E-G1.0-04 catalog exposes resolved requirement sets matching packed descri
   assert.equal(set.requirements.every(({ token }) => (
     token.startsWith('component.button.')
     || /^semantic\.control\.size-(?:sm|md|lg)$/u.test(token)
+    || /^semantic\.action\.neutral-background(?:-hover|-pressed)?$/u.test(token)
   )), true);
   assert.equal(
     set.digest,

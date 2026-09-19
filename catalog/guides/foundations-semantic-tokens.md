@@ -28,4 +28,12 @@ Read the [token contract migration guide](/token-migration/) for the complete re
 
 Modes are declared by the source: light and dark, standard and more contrast, comfortable and compact density, full and reduced motion, and ltr or rtl direction. The compiler validates a requested combination before emitting CSS.
 
+## Tonal action and selection fills
+
+`semantic.action.neutral-background`, `semantic.action.neutral-background-hover`, and `semantic.action.neutral-background-pressed` name the shared neutral action fills used by buttons and disclosure triggers. Their defaults mix `semantic.surface.strong` with transparency at 8%, 12%, and 16%, respectively. Pair these fills with `semantic.content.strong`.
+
+`semantic.selection.background` provides the subtle selected-content fill used by table rows and tree items. Its default mixes `semantic.selection.track` with transparency at 12% and retains ordinary content colours. `semantic.selection.background-strong` remains the separate strong selected-content role.
+
+These are theme-overridable colour tokens. The web transform retains their `color-mix()` expressions, so changing the source colour updates the derived fill. Override the shared role when its treatment should change across consumers. Component-specific mixes remain owned by the component. Transparency blends with the underlying surface, so compare these fills over the surfaces where they will be used.
+
 Common mistake: using `content-muted` for normal-sized input text or treating canvas and raised as interchangeable. Choose a current semantic role by intent.

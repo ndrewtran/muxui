@@ -3,7 +3,16 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import {
+  assertExactArchiveEntries,
+  assertExactDependencyGraph,
+  assertExactExportList,
+  assertPackedFileBoundary,
+  assertStylesheetAssetUrls,
+  deriveCurrentExportSurface,
+} from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -14,23 +23,7 @@ const candidateArchiveName = `muxui-react-${candidateVersion}.tgz`;
 const candidateManifestName = `muxui-react-${candidateVersion}.release-manifest.json`;
 const preparationToolPath = 'tooling/audits/repository-policy/src/release-prepare.mjs';
 const r15Closure = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
-const deliveredExports = [
-  'Button', 'Breadcrumbs', 'Checkbox', 'Disclosure', 'DisclosureGroup', 'Group',
-  'Link', 'Meter', 'ProgressBar', 'Separator', 'ToggleButton',
-  'Autocomplete', 'CheckboxGroup', 'DateField', 'DatePicker', 'DateRangePicker',
-  'Form', 'NumberField', 'SearchField', 'Switch', 'TextField', 'TimeField',
-  'Calendar', 'ColorArea', 'ColorField', 'ColorPicker', 'ColorSlider', 'ColorSwatch',
-  'ColorSwatchPicker', 'ColorWheel', 'ComboBox', 'GridList', 'ListBox', 'Menu',
-  'RadioGroup', 'RangeCalendar', 'Select', 'Slider', 'Table', 'Tabs', 'TagGroup',
-  'ToggleButtonGroup', 'TokenField', 'Toolbar', 'Tree', 'Virtualizer',
-  'DropZone', 'FileTrigger', 'Dialog', 'Popover', 'PreviewTrigger', 'Toast', 'Tooltip',
-];
-const supportingExports = ['ToastProvider', 'useToast'];
-const expectedRuntimeDependencies = {
-  '@internationalized/date': '3.12.3',
-  'lucide-react': '1.37.0',
-  'react-aria-components': '1.20.0',
-};
+const documentedSupportingExports = ['ToastProvider', 'useToast'];
 const expectedPeerDependencies = {
   react: '>=19.2.0 <20',
   'react-dom': '>=19.2.0 <20',
@@ -40,7 +33,7 @@ const expectedCandidatePublishConfig = {
   tag: 'next',
   registry: 'https://registry.npmjs.org',
 };
-const expectedGeneratedEntries = [
+const expectedGeneratedEntries = Object.freeze([
   'package/generated/button.mjs',
   'package/generated/compatibility.mjs',
   'package/generated/choice-context.mjs',
@@ -49,6 +42,8 @@ const expectedGeneratedEntries = [
   'package/generated/descriptor.json',
   'package/generated/descriptor.json.provenance',
   'package/generated/fields.mjs',
+  'package/generated/icon-button.d.ts',
+  'package/generated/icon-button.mjs',
   'package/generated/index.d.ts',
   'package/generated/index.mjs',
   'package/generated/lightbox.d.ts',
@@ -73,14 +68,13 @@ const expectedGeneratedEntries = [
   'package/generated/text-editor.d.ts',
   'package/generated/text-editor.mjs',
   'package/generated/toggle-button-context.mjs',
-];
-const expectedPackageEntries = [
-  ...expectedGeneratedEntries,
+]);
+const fixedPackageEntries = Object.freeze([
   'package/LICENSE',
   'package/NOTICE',
   'package/README.md',
   'package/package.json',
-];
+]);
 
 function fail(code, detail) {
   throw new Error(`${code}: ${detail}`);
@@ -114,19 +108,18 @@ function sortedJsonValue(value) {
   return value;
 }
 
-function readArchiveFile(archive, path) {
-  const result = spawnSync('tar', ['-xOzf', archive, path], { encoding: 'utf8' });
+function readArchiveBytes(archive, path) {
+  const result = spawnSync('tar', ['-xOzf', archive, path]);
   if (result.status !== 0) fail('R1.5_PACK_CONTENT_MISSING', path);
   return result.stdout;
 }
 
-function parseGeneratedJson(source) {
-  return JSON.parse(source.replace(/^\/\/ @generated-from:.*\n\/\/ @generated-content-sha256:.*\n/u, ''));
+function readArchiveFile(archive, path) {
+  return readArchiveBytes(archive, path).toString('utf8');
 }
 
-function equalEntries(actual, expected) {
-  return actual.length === expected.length
-    && actual.every((entry, index) => entry === expected[index]);
+function parseGeneratedJson(source) {
+  return JSON.parse(source.replace(/^\/\/ @generated-from:.*\n\/\/ @generated-content-sha256:.*\n/u, ''));
 }
 
 function equalSet(actual, expected) {
@@ -229,6 +222,69 @@ function deterministicArchive(packageRoot) {
   return gzipSync(Buffer.concat(chunks), { level: 9, mtime: 0 });
 }
 
+function trackedPackageEntries(sourceRevision, sourcePath) {
+  const result = spawnSync('git', ['ls-tree', '-r', '--name-only', sourceRevision, '--', sourcePath], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  });
+  if (result.status !== 0) fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', result.stderr || sourcePath);
+  const sourcePrefix = 'packages/react/';
+  const entries = result.stdout.trim().split('\n').filter(Boolean).map((entry) => {
+    if (!entry.startsWith(sourcePrefix)) fail('R1_EXIT_SOURCE_IDENTITY_INVALID', entry);
+    return `package/${entry.slice(sourcePrefix.length)}`;
+  });
+  if (entries.length === 0) fail('R1_EXIT_SOURCE_IDENTITY_INVALID', `no tracked files under ${sourcePath}`);
+  return entries.sort();
+}
+
+function readSourceIdentity() {
+  const revisionResult = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  });
+  const statusResult = spawnSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+  });
+  if (revisionResult.status !== 0 || statusResult.status !== 0) {
+    fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', revisionResult.stderr || statusResult.stderr);
+  }
+  return { revision: revisionResult.stdout.trim(), status: statusResult.stdout.trim() };
+}
+
+function assertSourceIdentity(expectedRevision, stage) {
+  const identity = readSourceIdentity();
+  if (identity.revision !== expectedRevision) {
+    fail('R1_EXIT_SOURCE_IDENTITY_CHANGED', `${stage}: expected ${expectedRevision}, received ${identity.revision}`);
+  }
+  if (identity.status !== '') {
+    fail('R1_EXIT_DIRTY_WORKTREE', `${stage}: source changed while preparing the exact release artifact`);
+  }
+}
+
+const sourceDescriptor = parseGeneratedJson(readFileSync(resolve(repositoryRoot, 'packages/react/generated/descriptor.json'), 'utf8'));
+const sourceCurrentContract = parseGeneratedJson(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8'));
+const currentFamilySnapshot = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
+const supplementalComponents = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-6/supplemental-components.json'), 'utf8')).components;
+const historicalExports = sourceDescriptor.historical.bindings.map(({ export: exportName }) => exportName);
+const {
+  canonicalHistoricalExports,
+  currentComponentExports,
+  currentRootExports,
+  isolatedExportModules,
+} = deriveCurrentExportSurface({
+  historicalFamilies: currentFamilySnapshot.families,
+  supplementalComponents,
+});
+assertExactExportList(sourceCurrentContract.current.rootExports, currentRootExports, 'R1.6_PACK_EXPORT_SURFACE_INVALID');
+assertExactExportList(
+  sourceCurrentContract.current.subpaths.map(({ export: name, module }) => `${name}:${module}`),
+  isolatedExportModules,
+  'R1.6_PACK_EXPORT_SURFACE_INVALID',
+);
+const sourcePublicModule = await import(pathToFileURL(resolve(repositoryRoot, 'packages/react/generated/index.mjs')).href);
+const currentPublicExports = Object.keys(sourcePublicModule).sort();
+
 const reactCandidate = packages.filter(({ name, manifest }) => (
   name === '@muxui/react' && reactVersionPattern.test(manifest.version)
 ));
@@ -249,6 +305,7 @@ if (reactCandidate.length !== 1) {
 const reactPackage = reactCandidate[0];
 const reactPackageRoot = resolve(repositoryRoot, 'packages/react');
 const manifest = reactPackage.manifest;
+const expectedRuntimeDependencies = { ...manifest.dependencies };
 if (manifest.private !== true || manifest.scripts?.prepublishOnly !== 'node src/publish-guard.mjs') {
   console.error('R1_EXIT_PUBLICATION_GUARD_INVALID: the source candidate must remain private with its fail-closed prepublish guard');
   process.exit(1);
@@ -262,21 +319,20 @@ if (publicationGuard.status === 0 || !publicationGuard.stderr.includes('MUXUI_RE
   fail('R1_EXIT_PUBLICATION_GUARD_INVALID', 'direct publication must remain fail-closed');
 }
 
-const sourceRevisionResult = spawnSync('git', ['rev-parse', 'HEAD'], {
-  cwd: repositoryRoot,
-  encoding: 'utf8',
-});
-const sourceStatusResult = spawnSync('git', ['status', '--porcelain=v1', '--untracked-files=all'], {
-  cwd: repositoryRoot,
-  encoding: 'utf8',
-});
-if (sourceRevisionResult.status !== 0 || sourceStatusResult.status !== 0) {
-  fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', sourceRevisionResult.stderr || sourceStatusResult.stderr);
-}
-if (sourceStatusResult.stdout.trim() !== '') {
+const sourceIdentity = readSourceIdentity();
+if (sourceIdentity.status !== '') {
   fail('R1_EXIT_DIRTY_WORKTREE', 'commit the complete candidate before creating its exact release artifact');
 }
-const sourceRevision = sourceRevisionResult.stdout.trim();
+const sourceRevision = sourceIdentity.revision;
+const trackedAssetEntries = trackedPackageEntries(sourceRevision, 'packages/react/assets');
+const trackedLicenseEntries = trackedPackageEntries(sourceRevision, 'packages/react/licenses');
+const requiredAssetAndLicenseEntries = [...trackedAssetEntries, ...trackedLicenseEntries];
+const expectedPackageEntries = [
+  ...expectedGeneratedEntries,
+  ...fixedPackageEntries,
+  ...trackedAssetEntries,
+  ...trackedLicenseEntries,
+].sort();
 
 const temp = mkdtempSync(join(tmpdir(), 'muxui-r1-5-release-'));
 try {
@@ -290,6 +346,20 @@ try {
   const sourceArchive = join(temp, `muxui-react-${manifest.version}.tgz`);
   const sourceListing = spawnSync('tar', ['-tzf', sourceArchive], { encoding: 'utf8' });
   if (sourceListing.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', sourceListing.stderr);
+  const sourceEntries = sourceListing.stdout.trim().split('\n').filter((entry) => entry && !entry.endsWith('/')).sort();
+  assertSourceIdentity(sourceRevision, 'after prepack');
+  const rendererCheck = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
+    cwd: reactPackageRoot,
+    encoding: 'utf8',
+  });
+  if (rendererCheck.status !== 0) fail('R1_EXIT_GENERATION_IDENTITY_INVALID', rendererCheck.stderr || rendererCheck.stdout);
+  assertSourceIdentity(sourceRevision, 'after renderer generation check');
+  assertExactArchiveEntries(sourceEntries, expectedPackageEntries);
+  assertPackedFileBoundary({
+    entries: sourceEntries,
+    manifestFiles: manifest.files,
+    requiredEntries: requiredAssetAndLicenseEntries,
+  });
   const candidateRoot = join(temp, 'candidate');
   mkdirSync(candidateRoot);
   const extracted = spawnSync('tar', ['-xzf', sourceArchive, '-C', candidateRoot], { encoding: 'utf8' });
@@ -357,19 +427,21 @@ try {
   const listing = spawnSync('tar', ['-tzf', archive], { encoding: 'utf8' });
   if (listing.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', listing.stderr);
   const entries = listing.stdout.trim().split('\n').filter((entry) => !entry.endsWith('/')).sort();
-  const expectedEntries = [...expectedPackageEntries].sort();
-  if (!equalEntries(entries, expectedEntries)) {
-    fail('R1.5_PACK_CONTENT_INVALID', `expected ${expectedEntries.join(', ')}, received ${entries.join(', ')}`);
-  }
+  assertExactArchiveEntries(entries, expectedPackageEntries);
+  assertPackedFileBoundary({
+    entries,
+    manifestFiles: manifest.files,
+    requiredEntries: requiredAssetAndLicenseEntries,
+  });
   if (entries.some((entry) => entry.startsWith('package/src/') || entry.startsWith('package/test/'))) {
     fail('R1.5_PACK_PRIVATE_SOURCE_LEAK', 'private source or tests entered the archive');
   }
 
   const packedManifest = JSON.parse(readArchiveFile(archive, 'package/package.json'));
+  assertExactDependencyGraph(packedManifest.dependencies, expectedRuntimeDependencies);
   if (packedManifest.name !== '@muxui/react'
     || packedManifest.version !== candidateVersion
     || packedManifest.private !== false
-    || stableJson(packedManifest.dependencies) !== stableJson(expectedRuntimeDependencies)
     || stableJson(packedManifest.peerDependencies) !== stableJson(expectedPeerDependencies)
     || stableJson(packedManifest.exports) !== stableJson(manifest.exports)
     || stableJson(packedManifest.files) !== stableJson(manifest.files)
@@ -394,9 +466,31 @@ try {
   const release = JSON.parse(readArchiveFile(archive, 'package/generated/release.json'));
   const compatibility = readArchiveFile(archive, 'package/generated/compatibility.mjs');
   const closure = parseGeneratedJson(readArchiveFile(archive, 'package/generated/r1-5-closure.json'));
-  if (!equalEntries(deliveredExports, descriptor.bindings.map(({ export: name }) => name))
-    || !equalEntries(deliveredExports, release.componentExports.map(({ name }) => name))
-    || closure.families?.length !== 53
+  assertExactExportList(descriptor.bindings.map(({ export: name }) => name), currentComponentExports, 'R1.6_PACK_EXPORT_SURFACE_INVALID');
+  assertExactExportList(release.componentExports.map(({ name }) => name), currentComponentExports, 'R1.6_PACK_EXPORT_SURFACE_INVALID');
+  assertExactExportList(
+    descriptor.bindings.filter(({ module }) => module === '.').map(({ export: name }) => name),
+    currentRootExports,
+    'R1.6_PACK_EXPORT_SURFACE_INVALID',
+  );
+  assertExactExportList(
+    descriptor.bindings.filter(({ module }) => module !== '.').map(({ export: name, module }) => `${name}:${module}`),
+    isolatedExportModules,
+    'R1.6_PACK_EXPORT_SURFACE_INVALID',
+  );
+  assertExactExportList(
+    release.componentExports.filter(({ module }) => module === '.').map(({ name }) => name),
+    currentRootExports,
+    'R1.6_PACK_EXPORT_SURFACE_INVALID',
+  );
+  assertExactExportList(
+    release.componentExports.filter(({ module }) => module !== '.').map(({ name, module }) => `${name}:${module}`),
+    isolatedExportModules,
+    'R1.6_PACK_EXPORT_SURFACE_INVALID',
+  );
+  assertExactExportList(descriptor.historical?.bindings?.map(({ export: name }) => name) ?? [], historicalExports, 'R1.5_PACK_EXPORT_SURFACE_INVALID');
+  assertExactExportList(closure.families?.map(({ export: { name } }) => name) ?? [], canonicalHistoricalExports, 'R1.5_PACK_EXPORT_SURFACE_INVALID');
+  if (closure.families?.length !== 53
     || closure.publication?.private !== false
     || closure.publication?.status !== 'prepared'
     || closure.publication?.mutationPerformed !== false
@@ -450,14 +544,24 @@ try {
   const readme = readArchiveFile(archive, 'package/README.md');
   const notice = readArchiveFile(archive, 'package/NOTICE');
   const styles = readArchiveFile(archive, 'package/generated/styles.css');
-  for (const name of [...deliveredExports, ...supportingExports]) assertIncludes(readme, name, 'R1.5_PACK_GUIDANCE_MISSING');
+  const archiveEntrySizes = new Map(requiredAssetAndLicenseEntries.map((entry) => [
+    entry,
+    readArchiveBytes(archive, entry).length,
+  ]));
+  assertStylesheetAssetUrls({
+    stylesheet: styles,
+    stylesheetEntry: 'package/generated/styles.css',
+    entries,
+    entrySizes: archiveEntrySizes,
+  });
+  for (const name of [...currentComponentExports, ...documentedSupportingExports]) assertIncludes(readme, name, 'R1.5_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'web.react', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, '@muxui/react@0.1.0-rc.1', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'next', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(notice, 'Copyright (c) 2025 Andrew', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Lucide', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Copyright (c) 2013-present Cole Bemis', 'R1.5_PACK_NOTICE_INVALID');
-  for (const name of deliveredExports) {
+  for (const name of currentComponentExports) {
     const slug = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     assertIncludes(styles, `.muxui-${slug}`, 'R1.5_PACK_STYLE_MISSING');
   }
@@ -478,6 +582,8 @@ try {
 
   const consumerScript = `
     import { performance } from 'node:perf_hooks';
+    import { access } from 'node:fs/promises';
+    import { fileURLToPath } from 'node:url';
     import React from 'react';
     import {renderToString} from 'react-dom/server';
     const importStarted = performance.now();
@@ -485,7 +591,7 @@ try {
     const packedImportMilliseconds = performance.now() - importStarted;
     const compatibility = await import('@muxui/react/compatibility');
     const testing = await import('@muxui/react/testing');
-    const expected = ${JSON.stringify(['reactCompatibility', ...deliveredExports, ...supportingExports])};
+    const expected = ${JSON.stringify(currentPublicExports)};
     if (JSON.stringify(Object.keys(entry).sort()) !== JSON.stringify([...expected].sort())) throw new Error('exact public export surface');
     if (compatibility.reactCompatibility.version !== '${candidateVersion}') throw new Error('compatibility version');
     if (compatibility.reactCompatibility.support !== 'unproved; R1.5 React exports only') throw new Error('compatibility support');
@@ -493,6 +599,12 @@ try {
     const packageEntry = await import.meta.resolve('@muxui/react');
     await import(new URL('./fields.mjs', packageEntry));
     if (!import.meta.resolve('@muxui/react/styles.css').endsWith('/generated/styles.css')) throw new Error('styles resolution');
+    const isolated = await Promise.all(['markdown', 'text-editor'].map((subpath) => import('@muxui/react/' + subpath)));
+    if (typeof isolated[0].Markdown !== 'object' && typeof isolated[0].Markdown !== 'function') throw new Error('markdown subpath resolution');
+    if (typeof isolated[1].TextEditor !== 'object' && typeof isolated[1].TextEditor !== 'function') throw new Error('text-editor subpath resolution');
+    for (const relative of ${JSON.stringify(requiredAssetAndLicenseEntries.map((entry) => entry.slice('package/'.length)))}) {
+      await access(fileURLToPath(new URL('../' + relative, packageEntry)));
+    }
     const {
       Autocomplete, Breadcrumbs, Button, Calendar, Checkbox, CheckboxGroup, DateField, DatePicker,
       DateRangePicker, Disclosure, DisclosureGroup, Form, Group, Link, Meter, NumberField,
@@ -581,9 +693,9 @@ try {
       exports: packedManifest.exports,
       files: packedManifest.files,
       publishConfig: packedManifest.publishConfig,
-      componentExports: deliveredExports,
-      supportingExports,
-      publicExports: ['reactCompatibility', ...deliveredExports, ...supportingExports],
+      componentExports: currentComponentExports,
+      supportingExports: documentedSupportingExports,
+      publicExports: currentPublicExports,
     },
     source: {
       path: 'packages/react',

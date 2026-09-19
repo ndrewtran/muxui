@@ -932,7 +932,7 @@
 }
 
 .muxui-table-row[data-selected] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-selection-track) 12%, transparent);
+  background-color: var(--muxui-semantic-selection-background);
 }
 
 .muxui-table-row[data-focus-visible] {
@@ -1261,7 +1261,7 @@
 }
 
 .muxui-tree-item[data-selected] {
-  background-color: color-mix(in srgb, var(--muxui-semantic-selection-track) 12%, transparent);
+  background-color: var(--muxui-semantic-selection-background);
 }
 
 .muxui-tree-item[data-focus-visible] {

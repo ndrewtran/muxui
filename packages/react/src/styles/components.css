@@ -397,7 +397,7 @@
   outline: 1px solid transparent;
   outline-offset: -1px;
   border-radius: var(--muxui-semantic-control-radius);
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+  background-color: var(--muxui-semantic-action-neutral-background);
   color: var(--muxui-semantic-content-strong);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
@@ -424,12 +424,12 @@
 
 .muxui-disclosure:not([data-disabled])
   .muxui-disclosure-trigger:hover:not([data-disabled], [data-pending]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
+  background-color: var(--muxui-semantic-action-neutral-background-hover);
 }
 
 .muxui-disclosure:not([data-disabled])
   .muxui-disclosure-trigger:active:not([data-disabled], [data-pending]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
+  background-color: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
 .muxui-disclosure-trigger:focus-visible {
@@ -814,9 +814,9 @@
 
 /* The seven variants are represented directly on the Mux root. */
 .muxui-button[data-variant='neutral'] {
-  --muxui-button-background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
-  --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
-  --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-surface-strong) 16%, transparent);
+  --muxui-button-background: var(--muxui-semantic-action-neutral-background);
+  --muxui-button-background-hover: var(--muxui-semantic-action-neutral-background-hover);
+  --muxui-button-background-pressed: var(--muxui-semantic-action-neutral-background-pressed);
   --muxui-button-foreground: var(--muxui-semantic-content-strong);
   --muxui-button-border: transparent;
   --muxui-button-shadow: none;

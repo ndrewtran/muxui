@@ -161,6 +161,18 @@
           {
             "token": "semantic.focus.ring",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background-hover",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background-pressed",
+            "requirement": "required"
           }
         ]
       },

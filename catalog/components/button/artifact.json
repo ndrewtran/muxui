@@ -87,7 +87,10 @@
           { "token": "component.button.radius", "requirement": "required" },
           { "token": "semantic.control.size-sm", "requirement": "required" },
           { "token": "semantic.control.size-md", "requirement": "required" },
-          { "token": "semantic.control.size-lg", "requirement": "required" }
+          { "token": "semantic.control.size-lg", "requirement": "required" },
+          { "token": "semantic.action.neutral-background", "requirement": "required" },
+          { "token": "semantic.action.neutral-background-hover", "requirement": "required" },
+          { "token": "semantic.action.neutral-background-pressed", "requirement": "required" }
         ]
       },
     "platformSafety": [

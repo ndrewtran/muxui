@@ -524,6 +524,45 @@
       "alias": "semantic.color.color-40",
       "equivalence": "semantic-equivalence"
     },
+    "semantic.action.neutral-background": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Subtle translucent fill for neutral actions at rest; pair with content.strong.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.surface.strong",
+        "color": "#00000000",
+        "weight": 0.08
+      }
+    },
+    "semantic.action.neutral-background-hover": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent fill for neutral actions while hovered; pair with content.strong.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.surface.strong",
+        "color": "#00000000",
+        "weight": 0.12
+      }
+    },
+    "semantic.action.neutral-background-pressed": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent fill for neutral actions while pressed; pair with content.strong.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.surface.strong",
+        "color": "#00000000",
+        "weight": 0.16
+      }
+    },
     "semantic.action.foreground": {
       "layer": "semantic",
       "type": "color",
@@ -686,6 +725,19 @@
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-90",
       "equivalence": "semantic-equivalence"
+    },
+    "semantic.selection.background": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Subtle translucent accent fill behind selected collection content; pair with ordinary content roles.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.selection.track",
+        "color": "#00000000",
+        "weight": 0.12
+      }
     },
     "semantic.selection.background-strong": {
       "layer": "semantic",

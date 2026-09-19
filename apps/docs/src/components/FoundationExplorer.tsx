@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import type { FoundationPage, FoundationToken, TypographyRole } from '../lib/foundations.ts';
 import { normalizeAppliedNumericValue } from '../lib/foundation-values.ts';
 import { TokenExpression, TokenPath } from '../lib/token-path.ts';
+import '../styles/semantic-tokens.css';
 
 type FoundationData = {
 	sourceId: string;
@@ -762,6 +763,219 @@ function LayerExample({ data }: { data: FoundationData }) {
 	return <section className="foundation-section foundation-layer-example" aria-labelledby="foundation-layer-example-title"><div className="foundation-section-heading"><div><h2 id="foundation-layer-example-title">One decision across the layers</h2><p>Reference values become semantic roles, then component-owned properties. These previews inherit the active site variables.</p></div></div><div className="foundation-layer-example-grid">{entries.map(({ label, token, preview }) => <div className="foundation-layer-example-step" key={label}><span className="foundation-eyebrow">{label}</span>{preview}<a href={`/foundations/${foundationRouteForToken(token?.id ?? '')}/#${tokenIdForAnchor(token?.id ?? '')}`}>{token ? <FoundationTokenLabel token={token} /> : null}</a></div>)}</div></section>;
 }
 
+// Ordering is presentation only; family membership comes from the canonical token paths.
+const SEMANTIC_FAMILY_ORDER = ['content', 'surface', 'border', 'action', 'feedback', 'focus', 'selection', 'field', 'overlay', 'status', 'elevation', 'typography', 'layout', 'shape', 'control', 'motion', 'color', 'effect'];
+
+function semanticFamily(token: FoundationToken): string {
+	return token.id.split('.')[1];
+}
+
+function semanticColorGroup(token: FoundationToken): string {
+	if (token.id.endsWith('-fg')) return /^semantic\.color\.(error|warning|success)-/u.test(token.id) ? 'Status foreground pairs' : 'Foreground pairs';
+	if (token.id.includes('neutral-default')) return 'Neutral default ramp';
+	if (/^semantic\.color\.neutral-\d+$/u.test(token.id)) return 'Neutral ramp';
+	if (/^semantic\.color\.(color-\d+|primary)$/u.test(token.id)) return 'Accent ramp';
+	return 'Named colour roles';
+}
+
+function useAppliedSemanticValues(tokens: readonly FoundationToken[]): ReadonlyMap<string, string> {
+	const [values, setValues] = useState<ReadonlyMap<string, string>>(() => new Map());
+	useEffect(() => {
+		const update = () => {
+			const style = getComputedStyle(document.documentElement);
+			setValues(new Map(tokens.map((token) => [token.id, style.getPropertyValue(token.cssName).trim()])));
+		};
+		update();
+		window.addEventListener('muxui:theme-status', update);
+		const observer = new MutationObserver(update);
+		observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'style', 'data-theme', 'data-muxui-color-scheme', 'data-muxui-density', 'data-muxui-motion', 'data-muxui-contrast'] });
+		return () => { observer.disconnect(); window.removeEventListener('muxui:theme-status', update); };
+	}, [tokens]);
+	return values;
+}
+
+function SemanticTokenPreview({ token, value }: { token: FoundationToken; value: string }) {
+	const family = semanticFamily(token);
+	const leaf = token.id.split('.').at(-1) ?? '';
+	const variable = cssReference(token);
+	const ref = (name: string) => cssReference(`semantic.${name}`);
+	let sample: React.ReactNode;
+	let kind = token.type as string;
+	if (token.type === 'color') {
+		if (family === 'content' || family === 'typography') {
+			const fill = leaf === 'on-solid' ? ref('color.neutral-100') : leaf === 'inverse' ? ref('color.neutral-5') : leaf === 'on-strong' ? ref('color.neutral-90') : undefined;
+			kind = 'text';
+			sample = <span className={`semantic-sample-text${fill ? ' semantic-sample-on-fill' : ''}`} style={{ color: variable, backgroundColor: fill }}>Sample text</span>;
+		} else if (family === 'action') {
+			const action = leaf.startsWith('danger-') ? 'danger-' : leaf.startsWith('selection-') ? 'selection-' : '';
+			kind = 'action';
+			sample = <span className="semantic-sample-button" style={{
+				backgroundColor: leaf.includes('foreground') || leaf.includes('border') || leaf.includes('indicator') ? ref(`action.${action}background`) : variable,
+				color: leaf.includes('foreground') ? variable : leaf.startsWith('neutral-') ? ref('content.strong') : ref(`action.${action}foreground`),
+				borderColor: leaf.includes('border') ? variable : 'transparent',
+			}}>{leaf.includes('indicator') ? <span className="semantic-sample-dot" style={{ backgroundColor: variable }} /> : null}Action</span>;
+		} else if (family === 'field') {
+			kind = 'field';
+			sample = <span className="semantic-sample-field">
+				<span style={{ color: leaf === 'label' ? variable : ref('field.label') }}>Field label</span>
+				<span className="semantic-sample-input" style={{ backgroundColor: leaf === 'background' ? variable : ref('field.background'), borderColor: leaf === 'border' ? variable : ref('field.border'), color: ['content', 'placeholder'].includes(leaf) ? variable : ref('field.content') }}>{leaf === 'placeholder' ? 'Placeholder' : 'Input value'}</span>
+				{leaf === 'description' ? <span style={{ color: variable }}>Field description</span> : null}
+			</span>;
+		} else if (family === 'focus') {
+			kind = 'focus';
+			sample = <span className="semantic-sample-button" style={{ outline: `2px solid ${leaf === 'inner' ? ref('focus.ring') : variable}`, outlineOffset: '3px', boxShadow: leaf === 'inner' ? `0 0 0 3px ${variable}` : leaf === 'neutral-glow' ? `0 0 0 5px ${variable}` : undefined }}>Focus</span>;
+		} else if (family === 'selection') {
+			kind = 'selection';
+			sample = leaf === 'track'
+				? <span className="semantic-sample-switch" style={{ backgroundColor: variable }}><span /></span>
+				: leaf === 'indicator' ? <span className="semantic-sample-checkbox"><span style={{ color: variable }}>✓</span></span>
+					: <span className="semantic-sample-button" style={{ backgroundColor: variable, color: ref(leaf === 'background' ? 'content.default' : 'content.on-solid') }}>Selected item</span>;
+		} else if (family === 'overlay' || family === 'effect') {
+			kind = 'overlay';
+			sample = <span className="semantic-sample-overlay" style={{ backgroundColor: leaf === 'background' ? ref('overlay.scrim') : variable }}><span style={{ backgroundColor: leaf === 'background' ? variable : ref('overlay.background') }} /></span>;
+		} else if (family === 'feedback' || family === 'status') {
+			kind = 'feedback';
+			sample = leaf.endsWith('border') ? <span className="semantic-sample-input" style={{ borderColor: variable }}>Invalid input</span>
+				: leaf.endsWith('content') ? <span style={{ color: variable }}>Check this value</span>
+					: <span className="semantic-sample-status"><span className="semantic-sample-dot" style={{ backgroundColor: variable }} />{leaf === 'success' ? 'Success' : leaf === 'warning' ? 'Warning' : 'Invalid'}</span>;
+		} else if (family === 'border') {
+			kind = 'border';
+			sample = <span className="semantic-sample-surface" style={{ borderColor: variable, borderWidth: '2px' }} />;
+		} else if (leaf.endsWith('-fg')) {
+			kind = 'foreground-pair';
+			sample = <span className="semantic-sample-on-fill" style={{ color: variable, backgroundColor: cssReference(token.id.slice(0, -3)) }}>Aa</span>;
+		} else {
+			kind = family === 'surface' ? 'surface' : 'swatch';
+			sample = <span className="semantic-sample-surface" style={{ backgroundColor: variable }} />;
+		}
+	} else if (family === 'typography') {
+		kind = 'typography';
+		const role = leaf.split('-')[0];
+		const fontFamily = ['display', 'heading', 'title', 'label', 'text', 'mono'].includes(role) ? ref(`typography.${role}-font-family`) : undefined;
+		const style: CSSProperties = { fontFamily };
+		if (leaf.endsWith('font-family')) style.fontFamily = variable;
+		else if (leaf.endsWith('size')) style.fontSize = variable;
+		else if (leaf.endsWith('weight')) style.fontWeight = variable;
+		else if (leaf.endsWith('line-height')) style.lineHeight = variable;
+		else if (leaf.endsWith('letter-spacing')) style.letterSpacing = variable;
+		const multiline = leaf.endsWith('line-height');
+		sample = <span className={`semantic-sample-type${multiline ? ' semantic-sample-lines' : ''}`} style={style}>{multiline ? <>Readable<br />text</> : leaf.endsWith('size') ? 'Aa' : 'Aa 123'}</span>;
+	} else if (family === 'shape' || leaf.includes('radius')) {
+		kind = 'radius';
+		sample = <span className="semantic-sample-shape" style={{ borderRadius: variable }} />;
+	} else if (token.type === 'effect' || family === 'elevation') {
+		kind = 'shadow';
+		sample = <span className="semantic-sample-surface" style={{ boxShadow: variable }}>Aa</span>;
+	} else if (token.type === 'duration') {
+		kind = 'duration';
+		const duration = normalizeAppliedNumericValue(value, 'ms', 16) ?? Number(token.defaultValue);
+		sample = <span className="semantic-sample-timing"><span className="semantic-sample-timing-axis"><span style={{ width: `${Math.min(100, Math.max(0, duration) / 2000 * 100)}%` }} /></span><small>0–2,000 ms</small></span>;
+	} else if (family === 'motion') {
+		kind = 'easing';
+		const path = motionCurvePath(value);
+		sample = path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : <code>{value}</code>;
+	} else if (family === 'control' && leaf.startsWith('size-')) {
+		kind = 'control-size';
+		sample = <span className="semantic-sample-button" style={{ minHeight: variable }}>Control</span>;
+	} else if (leaf.includes('gap')) {
+		kind = 'gap';
+		sample = <span className="semantic-sample-gap" style={{ gap: variable }}><span /><span /></span>;
+	} else if (leaf.includes('inset') || leaf.includes('padding')) {
+		kind = 'padding';
+		const property = leaf.endsWith('inline') ? 'paddingInline' : leaf.endsWith('block') ? 'paddingBlock' : 'padding';
+		sample = <span className="semantic-sample-padding" style={{ [property]: variable }}><span /></span>;
+	} else {
+		kind = 'dimension';
+		sample = <span className="semantic-sample-measure"><span style={{ width: variable }} /></span>;
+	}
+	return <div className="semantic-token-preview" data-semantic-preview={kind} aria-hidden="true">{sample}</div>;
+}
+
+function SemanticTokenRow({ token, tokens, appliedValue }: { token: FoundationToken; tokens: readonly FoundationToken[]; appliedValue: string | undefined }) {
+	return <article className="semantic-token-row" id={tokenIdForAnchor(token.id)} data-token-id={token.id} tabIndex={-1} aria-labelledby={`${tokenIdForAnchor(token.id)}-name`}>
+		<div className="semantic-token-identity">
+			<h3 id={`${tokenIdForAnchor(token.id)}-name`} data-toc-ignore><code><TokenPath value={token.id} token={token} /></code></h3>
+			<p>{token.meaning}</p><small>{token.type} · {token.unit}</small>
+		</div>
+		<SemanticTokenPreview token={token} value={appliedValue || token.defaultCssValue} />
+		<div className="semantic-token-resolution">
+			<span className="semantic-value-label">{appliedValue ? 'Applied CSS' : 'Default CSS'}</span>
+			<code className="semantic-token-value" data-semantic-value>{appliedValue || token.defaultCssValue}</code>
+			<CopyVariableButton token={token} />
+			<details className="semantic-token-details">
+				<summary>Token details</summary>
+				<dl>
+					<div><dt>CSS variable</dt><dd><code><TokenPath value={token.cssName} token={token} /></code></dd></div>
+					<div><dt>Canonical default alias chain</dt><dd className="foundation-chain">{token.aliasChain.map((id, index) => <React.Fragment key={id}>{index > 0 ? <span aria-hidden="true">→</span> : null}<a href={`/foundations/${foundationRouteForToken(id)}/#${tokenIdForAnchor(id)}`}><TokenPath value={id} token={tokenById(tokens, id)} /></a></React.Fragment>)}</dd></div>
+					{token.dependencies.length > 0 && token.sourceKind !== 'alias' ? <div><dt>Computed dependencies</dt><dd>{token.dependencies.map((id) => <a className="semantic-token-dependency" key={id} href={`/foundations/${foundationRouteForToken(id)}/#${tokenIdForAnchor(id)}`}><TokenPath value={id} token={tokenById(tokens, id)} /></a>)}</dd></div> : null}
+					<div><dt>Default CSS</dt><dd><code><TokenExpression value={token.defaultCssValue} tokens={tokens} /></code></dd></div>
+					<div><dt>Default resolved</dt><dd><code>{displayValue(token.defaultValue)}</code></dd></div>
+					<div><dt>Resolution / override</dt><dd>{token.sourceKind} / {token.overridePolicy}</dd></div>
+				</dl>
+			</details>
+		</div>
+	</article>;
+}
+
+function SemanticTokensPage({ data }: { data: FoundationData }) {
+	const tokens = useMemo(() => data.tokens.filter((token) => token.layer === 'semantic'), [data.tokens]);
+	const families = useMemo(() => [...new Set(tokens.map(semanticFamily))].sort((a, b) => {
+		const order = (id: string) => { const index = SEMANTIC_FAMILY_ORDER.indexOf(id); return index < 0 ? SEMANTIC_FAMILY_ORDER.length : index; };
+		return order(a) - order(b) || a.localeCompare(b);
+	}), [tokens]);
+	const types = useMemo(() => [...new Set(tokens.map((token) => token.type))].sort(), [tokens]);
+	const [query, setQuery] = useState('');
+	const [type, setType] = useState('all');
+	const normalized = query.trim().toLowerCase();
+	const filtered = tokens.filter((token) => (type === 'all' || token.type === type) && (!normalized || `${token.id} ${token.cssName} ${token.meaning} ${token.type} ${token.unit}`.toLowerCase().includes(normalized)));
+	const appliedValues = useAppliedSemanticValues(tokens);
+	useEffect(() => {
+		const reveal = (hash: string) => {
+			const id = hash.slice(1);
+			if (!id.startsWith('token-semantic-') && !id.startsWith('semantic-family-') && !id.startsWith('semantic-color-')) return;
+			setQuery(''); setType('all');
+			window.requestAnimationFrame(() => {
+				const target = document.getElementById(id);
+				target?.scrollIntoView({ block: 'start' });
+				if (target instanceof HTMLElement && target.matches('.semantic-token-row')) target.focus({ preventScroll: true });
+			});
+		};
+		const onHash = () => reveal(window.location.hash);
+		const onLink = (event: MouseEvent) => {
+			if (!(event.target instanceof Element)) return;
+			const link = event.target.closest('a');
+			if (!(link instanceof HTMLAnchorElement) || link.origin !== window.location.origin || link.pathname !== window.location.pathname) return;
+			reveal(link.hash);
+		};
+		onHash();
+		window.addEventListener('hashchange', onHash);
+		document.addEventListener('click', onLink);
+		return () => { window.removeEventListener('hashchange', onHash); document.removeEventListener('click', onLink); };
+	}, []);
+	return <div className="foundation-page semantic-token-reference">
+		<div className="semantic-inventory-tools">
+			<p>Explore each role in context. Previews and applied values follow the active theme.</p>
+			<div className="foundation-filters">
+				<label><span>Find a token</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, variable, type, or purpose" /></label>
+				<label><span>Type</span><select value={type} onChange={(event) => setType(event.target.value)}><option value="all">All types</option>{types.map((item) => <option key={item}>{item}</option>)}</select></label>
+			</div>
+			<p className="semantic-search-status" role="status">{filtered.length} of {tokens.length} tokens · {families.length} families</p>
+		</div>
+		{filtered.length === 0 ? <p className="foundation-empty">No tokens match this filter.</p> : null}
+		{families.map((family) => {
+			const familyTokens = filtered.filter((token) => semanticFamily(token) === family);
+			const groups = family === 'color' ? [...new Set(familyTokens.map(semanticColorGroup))] : [''];
+			return <section className="semantic-token-family" key={family} data-semantic-family={family} hidden={familyTokens.length === 0} aria-labelledby={`semantic-family-${family}`}>
+				<header className="semantic-family-heading"><h2 id={`semantic-family-${family}`}>{family === 'color' ? 'Colour' : titleCaseMotionLabel(family)}</h2><span>{familyTokens.length} {familyTokens.length === 1 ? 'token' : 'tokens'}</span></header>
+				{groups.map((group) => <React.Fragment key={group}>
+					{group ? <h3 className="semantic-color-heading" id={`semantic-color-${headingSlug(group)}`}>{group}</h3> : null}
+					{familyTokens.filter((token) => !group || semanticColorGroup(token) === group).map((token) => <SemanticTokenRow key={token.id} token={token} tokens={data.tokens} appliedValue={appliedValues.get(token.id)} />)}
+				</React.Fragment>)}
+			</section>;
+		})}
+	</div>;
+}
+
 function LayerPage({ page, data }: { page: FoundationPage; data: FoundationData }) {
 	const tokens = data.tokens.filter((token) => token.layer === page.layer);
 	const first = tokens[0];
@@ -778,6 +992,7 @@ export default function FoundationExplorer({ page, data }: Props) {
 	else if (page.category === 'elevation') content = <ElevationPage data={data} />;
 	else if (page.category === 'motion') content = <MotionPage data={data} />;
 	else if (page.layer === 'component') content = <ComponentTokensPage data={data} />;
+	else if (page.layer === 'semantic') content = <SemanticTokensPage data={data} />;
 	else content = <LayerPage page={page} data={data} />;
 	return <div className="not-content foundation-explorer"><TokenLegend />{content}</div>;
 }
