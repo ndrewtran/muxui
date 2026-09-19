@@ -608,7 +608,7 @@
 }
 
 [data-muxui-color-scheme='light'] .muxui-value-output {
-  color: var(--muxui-semantic-color-neutral-default-60);
+  color: var(--muxui-semantic-content-muted);
 }
 
 [data-muxui-color-scheme='dark'] :where(.muxui-meter-track, .muxui-progress-bar-track) {
@@ -1097,7 +1097,7 @@
 }
 
 [data-muxui-color-scheme='light'] .muxui-breadcrumbs-link {
-  color: var(--muxui-semantic-color-neutral-default-60);
+  color: var(--muxui-semantic-content-muted);
 }
 
 [data-muxui-color-scheme='light'] .muxui-breadcrumbs-item[data-current] .muxui-breadcrumbs-link,

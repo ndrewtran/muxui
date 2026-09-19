@@ -850,7 +850,7 @@
 }
 
 [data-muxui-color-scheme='light'] .muxui-slider > .muxui-slider-header > .muxui-slider-output {
-  color: var(--muxui-semantic-color-neutral-default-60);
+  color: var(--muxui-semantic-content-muted);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-slider > .muxui-slider-header > .muxui-field-label {
@@ -1704,7 +1704,7 @@
 
 [data-muxui-color-scheme='light'] .muxui-tab:not([data-selected], [aria-selected='true']),
 [data-muxui-color-scheme='light'] .muxui-table-column {
-  color: var(--muxui-semantic-color-neutral-default-60);
+  color: var(--muxui-semantic-content-muted);
 }
 
 [data-muxui-color-scheme='dark'] .muxui-table {

@@ -1230,7 +1230,7 @@
       "unit": "hex",
       "meaning": "Description content for editable fields.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-60",
+      "alias": "semantic.content.muted",
       "equivalence": "semantic-equivalence"
     },
     "semantic.feedback.invalid": {
