@@ -125,6 +125,39 @@
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml"
   ],
+  "storybookAuditSelection": {
+    "schemaVersion": 1,
+    "package": "@muxui/react-storybook",
+    "fullInputPrefixes": [
+      ".agents/",
+      ".github/",
+      "catalog/components/",
+      "catalog/react-r1-0/",
+      "catalog/react-r1-5/",
+      "catalog/react-r1-6/",
+      "catalog/tokens/",
+      "tooling/audits/repository-policy/"
+    ],
+    "fullInputPaths": [
+      ".node-version",
+      ".npmrc",
+      "AGENTS.md",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml"
+    ],
+    "safeUnrelatedPrefixes": [
+      "apps/docs/",
+      "apps/react-playground/",
+      "apps/scale/"
+    ],
+    "forceFullEvents": [
+      "schedule",
+      "workflow_dispatch",
+      "check:all",
+      "release"
+    ]
+  },
   "dependencyPreparation": {
     "argvTemplate": [
       "pnpm",

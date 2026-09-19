@@ -17,3 +17,13 @@ pnpm --filter @muxui/react-storybook storybook
 pnpm --filter @muxui/react-storybook check
 pnpm --filter @muxui/react-storybook build
 ```
+
+Direct package checks run the complete browser audits. CI may set
+`MUXUI_STORYBOOK_AUDIT_MODE=skip-heavy` for a pull request whose changed paths
+are outside the Storybook dependency closure; the canonical selector fails
+closed to full coverage for unknown or shared inputs. The colour audit uses
+two isolated browser contexts by default. The a11y audit defaults to one worker
+while its full two-worker run is being hardened; set
+`MUXUI_STORYBOOK_A11Y_WORKERS=2` for an explicit comparison. Set
+`MUXUI_STORYBOOK_COLORS_WORKERS=1` to run the colour audit serially when
+comparing timings.

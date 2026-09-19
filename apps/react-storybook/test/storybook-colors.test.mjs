@@ -12,6 +12,7 @@ import { FILE_COMPONENT_SEARCH_REQUEST, FILE_COMPONENT_SEARCH_RESPONSE } from 's
 import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { collectStorybookPaints } from './helpers/color-audit.mjs';
+import { colourStateSignatures } from './storybook-colors-report.mjs';
 import { backgroundOptions, buildTheme, managerThemeCss, previewThemeCss } from '../.storybook/theme.mjs';
 import { projectMeasurePalette } from '../.storybook/measure-palette.mjs';
 
@@ -19,6 +20,22 @@ const appRoot = resolve(import.meta.dirname, '..');
 const graphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
   colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
 ]));
+
+function heavyAuditSkip(name) {
+  const isPullRequestSelection = process.env.MUXUI_STORYBOOK_AUDIT_EVENT === 'pull_request';
+  const forceFull = process.env.MUXUI_STORYBOOK_AUDIT_FORCE === '1';
+  return process.env.MUXUI_STORYBOOK_AUDIT_MODE === 'skip-heavy'
+    && isPullRequestSelection
+    && !forceFull
+    ? `CI selection marked ${name} unrelated to the changed inputs`
+    : false;
+}
+
+function workerCount(variable) {
+  const value = process.env[variable] ?? '2';
+  assert.ok(value === '1' || value === '2', `${variable} must be 1 or 2, got ${value}`);
+  return Number(value);
+}
 
 async function browserPath() {
   for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, process.env.CHROME_PATH,
@@ -56,10 +73,21 @@ function colourAuditArtifactDirectory() {
   return process.env.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR ?? process.env.RUNNER_TEMP ?? tmpdir();
 }
 
-async function captureToolState(page, previewFrame, { label, stylePrefix, expected, stage }) {
+function serializeError(error, seen = new Set()) {
+  if (!(error instanceof Error)) return { name: 'Error', message: String(error) };
+  if (seen.has(error)) return { name: error.name, message: '[circular error]' };
+  seen.add(error);
+  const serialized = { name: error.name, message: error.message, stack: error.stack };
+  if (error.cause !== undefined) serialized.cause = serializeError(error.cause, seen);
+  if (error instanceof AggregateError) serialized.errors = error.errors.map((entry) => serializeError(entry, seen));
+  if (error.cleanupErrors) serialized.cleanupErrors = error.cleanupErrors;
+  return serialized;
+}
+
+async function captureToolState(page, previewFrame, { label, stylePrefix, expected, stage, workerId = 'single' }) {
   const directory = colourAuditArtifactDirectory();
   await mkdir(directory, { recursive: true });
-  const stem = `storybook-colours-${process.pid}-${Date.now()}`;
+  const stem = `storybook-colours-${process.pid}-${workerId}-${Date.now()}`;
   const state = {
     stage,
     label,
@@ -84,7 +112,7 @@ async function captureToolState(page, previewFrame, { label, stylePrefix, expect
   return { statePath, screenshotPath, state };
 }
 
-async function waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, enabled, stage }) {
+async function waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, enabled, stage, workerId = 'single' }) {
   const expected = String(enabled);
   try {
     await page.waitForFunction(({ label: expectedLabel, expectedState }) => [...document.querySelectorAll('[role="switch"]')]
@@ -92,7 +120,7 @@ async function waitForToolStyle(page, previewFrame, tool, { label, stylePrefix, 
         && element.getAttribute('aria-checked') === expectedState), { label, expectedState: expected });
     await previewFrame.locator(`style[id^="${stylePrefix}"]`).first().waitFor({ state: enabled ? 'attached' : 'detached' });
   } catch (error) {
-    const diagnostics = await captureToolState(page, previewFrame, { label, stylePrefix, expected, stage });
+    const diagnostics = await captureToolState(page, previewFrame, { label, stylePrefix, expected, stage, workerId });
     throw new Error(`${stage}: Storybook did not reach ${label}=${expected}; diagnostics: ${diagnostics.statePath}, ${diagnostics.screenshotPath}`, { cause: error });
   }
   assert.equal(await tool.getAttribute('aria-checked'), expected, `${stage}: ${label} state`);
@@ -664,15 +692,17 @@ test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in 
   }
 });
 
-test('Storybook manager and docs paint only canonical Mux colours in light and dark', { timeout: 420000 }, async (t) => {
-  const server = await startStorybook();
-  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+async function runColourWorker({ browser, schemes, workerId }) {
   const report = { storybookVersion: '10.5.10', tokenSource: 'catalog/tokens/default-theme.json', states: [] };
-  const reportPath = process.env.MUXUI_STORYBOOK_COLORS_REPORT
-    ?? resolve(colourAuditArtifactDirectory(), `muxui-storybook-colors-${process.pid}.json`);
-  await mkdir(dirname(reportPath), { recursive: true });
+  let server;
+  let context;
+  let page;
+  let failure;
+  const cleanupErrors = [];
   try {
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    server = await startStorybook();
+    context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    page = await context.newPage();
     await page.addInitScript(() => {
       globalThis.__muxuiCanvasPaints = [];
       const clear = CanvasRenderingContext2D.prototype.clearRect;
@@ -750,7 +780,7 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       }, { property, value: graphs[scheme][tokenId].value });
       assert.equal(result.actual, result.expected, `${scheme}: ${property} must use ${tokenId}`);
     }
-    for (const scheme of ['light', 'dark']) {
+    for (const scheme of schemes) {
       // Keep the manager's real loading overlay mounted by holding its index
       // request. This exercises the generated #preview-loader before the
       // manager can remove it after the preview is ready.
@@ -1212,13 +1242,13 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
         const tool = page.getByRole('switch', { name: label, exact: true });
         await openDocs(`;${global}:!true`);
         await waitForToolStyle(page, docs, tool, {
-          label, stylePrefix, enabled: true, stage: `docs/${label}/enabled`,
+          label, stylePrefix, enabled: true, stage: `docs/${label}/enabled`, workerId,
         });
         await snapshot(scheme, `docs/${label}/active`, await exactPreviewFrame(page), 'docs');
         if (label === 'Outline tool') await tokenPaint(scheme, docs.locator('.muxui-breadcrumbs a').first(), 'outlineColor', 'semantic.focus.ring');
         await openDocs();
         await waitForToolStyle(page, docs, tool, {
-          label, stylePrefix, enabled: false, stage: `docs/${label}/disabled`,
+          label, stylePrefix, enabled: false, stage: `docs/${label}/disabled`, workerId,
         });
       }
       for (const selected of ['light', 'dark']) {
@@ -1271,16 +1301,94 @@ test('Storybook manager and docs paint only canonical Mux colours in light and d
       report.states.push({ scheme, state: 'docs/embedded-component', ...link, hoverColor: docsLinkHoverColor });
     }
     const failures = report.states.filter((state) => state.nonToken?.length || state.problems?.length);
-    await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
-    t.diagnostic(`Audited ${report.states.length} light/dark states; report: ${reportPath}`);
+    const unique = new Map();
+    for (const { scheme, state, nonToken, problems } of failures) {
+      for (const paint of [...nonToken, ...problems]) unique.set(`${scheme}/${paint.property}/${paint.rgba ?? paint.value}`,
+        { scheme, state, ...paint });
+    }
+    assert.equal(unique.size, 0, `Storybook painted colours outside canonical Mux tokens: ${JSON.stringify([...unique.values()].slice(0, 12))}`);
+  } catch (error) {
+    failure = error;
+  } finally {
+    try {
+      await context?.close();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+    try {
+      await server?.stop();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  if (failure) {
+    const diagnosticError = failure instanceof Error ? failure : new Error(String(failure));
+    diagnosticError.report = report;
+    if (cleanupErrors.length > 0) diagnosticError.cleanupErrors = cleanupErrors.map(serializeError);
+    throw diagnosticError;
+  }
+  if (cleanupErrors.length > 0) {
+    const diagnosticError = new Error('Storybook colour worker cleanup failed', { cause: cleanupErrors[0] });
+    diagnosticError.report = report;
+    throw diagnosticError;
+  }
+  return report;
+}
+
+test('Storybook manager and docs paint only canonical Mux colours in light and dark', {
+  timeout: 420000,
+  skip: heavyAuditSkip('manager-colours'),
+}, async (t) => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  const report = { storybookVersion: '10.5.10', tokenSource: 'catalog/tokens/default-theme.json', states: [] };
+  const reportPath = process.env.MUXUI_STORYBOOK_COLORS_REPORT
+    ?? resolve(colourAuditArtifactDirectory(), `muxui-storybook-colors-${process.pid}.json`);
+  await mkdir(dirname(reportPath), { recursive: true });
+  try {
+    const workerTotal = workerCount('MUXUI_STORYBOOK_COLORS_WORKERS');
+    const workerSchemes = workerTotal === 1 ? [['light', 'dark']] : [['light'], ['dark']];
+    const workerResults = await Promise.allSettled(workerSchemes.map((schemes, workerId) => runColourWorker({
+      browser,
+      schemes,
+      workerId,
+    })));
+    report.states = workerResults.flatMap((result) => result.status === 'fulfilled'
+      ? result.value.states
+      : result.reason?.report?.states ?? [])
+      .sort((left, right) => `${left.scheme}/${left.state}/${left.scope}`.localeCompare(`${right.scheme}/${right.state}/${right.scope}`));
+    const workerErrors = workerResults
+      .map((result, workerId) => result.status === 'rejected'
+        ? { workerId, ...serializeError(result.reason) }
+        : null)
+      .filter(Boolean);
+    if (workerErrors.length > 0) {
+      report.workerErrors = workerErrors;
+      throw new AggregateError(
+        workerResults.filter(({ status }) => status === 'rejected').map(({ reason }) => reason),
+        `${workerErrors.length} Storybook colour worker(s) failed`,
+      );
+    }
+    const expectedSchemes = [...new Set(workerSchemes.flat())].sort();
+    assert.deepEqual(
+      [...new Set(report.states.map(({ scheme }) => scheme))].sort(),
+      expectedSchemes,
+      'colour worker coverage must include every expected canonical scheme',
+    );
+    assert.deepEqual(
+      colourStateSignatures(report.states, 'light'),
+      colourStateSignatures(report.states, 'dark'),
+      'colour worker coverage must preserve the same state and scope signatures in light and dark',
+    );
+    const failures = report.states.filter((state) => state.nonToken?.length || state.problems?.length);
     const unique = new Map();
     for (const { scheme, state, nonToken, problems } of failures) {
       for (const paint of [...nonToken, ...problems]) unique.set(`${scheme}/${paint.property}/${paint.rgba ?? paint.value}`,
         { scheme, state, ...paint });
     }
     assert.equal(unique.size, 0, `Storybook painted colours outside canonical Mux tokens: ${JSON.stringify([...unique.values()].slice(0, 12))}; full report: ${reportPath}`);
+    t.diagnostic(`Audited ${report.states.length} deterministic light/dark states across ${workerTotal} worker(s); report: ${reportPath}`);
   } finally {
     await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
-    await browser.close(); server.stop();
+    await browser.close();
   }
 });
