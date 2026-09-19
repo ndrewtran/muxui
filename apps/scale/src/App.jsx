@@ -285,10 +285,6 @@ function typographyMetricValue(settings, role, key) {
   return typographyTokenValue(settings, typographyMetricTokenId(role, key));
 }
 
-function typographyMetricLabel(tokenId) {
-  return tokenId.replace(/^semantic\.typography\./u, '');
-}
-
 function formatTypographyValue(tokenId, value) {
   const token = TYPOGRAPHY_TOKEN_DEFAULTS[tokenId];
   if (token.type === 'dimension') return `${value}${token.unit}`;
@@ -347,7 +343,15 @@ function TypographyMetricInput({ field, value, mixed = false, disabled = false, 
   />;
 }
 
-function TypographySpecimens({ settings }) {
+function TypographySpecimens({ settings, previewAvailable = true }) {
+  if (!previewAvailable) return <section className="typography-specimens typography-specimens-unavailable" aria-labelledby="typography-specimens-title">
+    <div className="typography-panel-heading">
+      <div>
+        <h3 id="typography-specimens-title">Live specimens unavailable</h3>
+        <p>The draft preview does not support the site&apos;s requested modes.</p>
+      </div>
+    </div>
+  </section>;
   return <section className="typography-specimens" aria-labelledby="typography-specimens-title">
     <div className="typography-panel-heading">
       <div>
@@ -377,10 +381,11 @@ function TypographySpecimens({ settings }) {
   </section>;
 }
 
-function TypographyMatrix({ settings, onOverridesChange, onError }) {
+function TypographyMatrix({ settings, onOverridesChange, onError, previewAvailable = true }) {
   const [selectedIds, setSelectedIds] = React.useState(() => TYPOGRAPHY_ROLES.slice(0, 3).map(({ id }) => id));
   const selectedRoles = TYPOGRAPHY_ROLES.filter(({ id }) => selectedIds.includes(id));
   const selectedGroupIds = [...new Set(selectedRoles.map(({ metricGroup }) => metricGroup))];
+  const sharedTextMetricsSelected = selectedRoles.some(({ id, metricGroup }) => id === 'expressive' || metricGroup === 'text');
 
   const bulkValue = (key) => {
     const tokenIds = [...new Set(selectedRoles.map((role) => typographyMetricTokenId(role, key)))];
@@ -444,9 +449,8 @@ function TypographyMatrix({ settings, onOverridesChange, onError }) {
           <div className="typography-bulk-controls">
             {TYPOGRAPHY_METRIC_FIELDS.map((field) => {
               const value = bulkValue(field.key);
-              const tokenId = selectedRoles[0] ? typographyMetricTokenId(selectedRoles[0], field.key) : TYPOGRAPHY_METRIC_GROUPS[0].metrics[field.key];
               return <div className="typography-bulk-control" key={field.key}>
-                <label className="typography-control-label" htmlFor={`typography-bulk-${field.key}`}>{field.label}<span>{typographyMetricLabel(tokenId)}</span></label>
+                <label className="typography-control-label" htmlFor={`typography-bulk-${field.key}`}>{field.label}{sharedTextMetricsSelected ? <span>Body + expressive share text metrics</span> : null}</label>
                 <TypographyMetricInput id={`typography-bulk-${field.key}`} field={field} value={value} mixed={selectedRoles.length > 0 && value === null} disabled={!selectedRoles.length} ariaLabel={`Bulk ${field.label.toLowerCase()}`} onCommit={(raw) => commitMetric(selectedRoles, field.key, raw)} />
               </div>;
             })}
@@ -482,7 +486,7 @@ function TypographyMatrix({ settings, onOverridesChange, onError }) {
         <p className="typography-matrix-note"><strong>Linked metrics</strong> Expressive keeps its own family and reads the body/text size, weight, leading, and tracking tokens.</p>
       </div>
     </div>
-    <TypographySpecimens settings={settings} />
+    <TypographySpecimens settings={settings} previewAvailable={previewAvailable} />
   </section>;
 }
 
@@ -735,7 +739,7 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
           <ToggleButton size="sm" selected={settings.family === 'mono'} onChange={(monochrome) => update({ family: monochrome ? 'mono' : 'standard', presetId: 'custom', ...(monochrome ? { neutralColor: settings.namedColor } : {}) })}>Monochrome theme</ToggleButton>
         </> : null}
       </section>
-      <TypographyMatrix settings={settings} onOverridesChange={updateTypographyOverrides} onError={(message) => setStatus({ tone: 'error', text: message })} />
+      <TypographyMatrix settings={settings} previewAvailable={!previewUnavailable} onOverridesChange={updateTypographyOverrides} onError={(message) => setStatus({ tone: 'error', text: message })} />
       {embedded && appliedError ? <p className="status status-error embedded-theme-error" role="alert">{appliedError}</p> : null}
       <section className="scale-editor" aria-label="Theme scale editor"><div className="editor-controls"><MainColorSelector label="BASE colour (–60)" value={activeColor} onChange={updateColor} />{mode === 'named' && settings.family !== 'mono' ? <HexColorInput label="Neutral anchor" value={settings.neutralColor} onChange={(neutralColor) => update({ neutralColor, presetId: 'custom' })} /> : null}</div><PivotSelector value={settings.contrastPivot} onChange={(contrastPivot) => update({ contrastPivot })} /><PaletteRow title={mode === 'named' ? 'Named' : 'Neutral'} compiled={compiled} kind={mode} steps={mode === 'named' ? NAMED_STEPS : NEUTRAL_STEPS} onCopy={copy} />
         <div className="radius-section"><div className="radius-header"><span>Border radius</span><input aria-label="Border radius factor" type="range" min={RADIUS_SETTINGS.minimum} max={RADIUS_SETTINGS.maximum} step={RADIUS_SETTINGS.step} value={settings.curvature} onChange={(event) => update({ curvature: Number(event.target.value) })} /><output>{settings.curvature.toFixed(2)}x{settings.curvature === RADIUS_SETTINGS.default ? ' (default)' : ''}</output><button type="button" className="quiet-button" onClick={() => update({ curvature: RADIUS_SETTINGS.default })}>Reset</button></div><div className="radius-row">{RADIUS_TOKENS.map(([name, multiplier]) => <div className="radius-item" key={name}><span className="radius-box" style={{ borderRadius: radiusValue(multiplier, settings.curvature) }} /><b>{name}</b><small>{radiusValue(multiplier, settings.curvature)}</small></div>)}</div></div>

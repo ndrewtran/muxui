@@ -462,6 +462,8 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     assert.equal(await restrictedPage.locator('[data-muxui-scale-theme]').count(), 0);
     assert.equal(await restrictedPage.locator('.scale-app').getAttribute('data-muxui-motion'), null);
     assert.equal(await restrictedPage.locator('.preview-canvas').count(), 0);
+    assert.equal(await restrictedPage.getByRole('heading', { name: 'Live specimens unavailable', exact: true }).count(), 1);
+    assert.equal(await restrictedPage.locator('.typography-specimen').count(), 0);
     await restrictedContext.close();
 
     const unavailableContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });

@@ -139,6 +139,7 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     const bulkWeight = page.getByRole('spinbutton', { name: 'Bulk weight', exact: true });
     const bulkLeading = page.getByRole('spinbutton', { name: 'Bulk leading', exact: true });
     const bulkTracking = page.getByRole('textbox', { name: 'Bulk tracking', exact: true });
+    assert.equal(await page.locator('.typography-bulk-control .typography-control-label span').count(), 0);
     await bulkWeight.fill('700');
     await bulkWeight.press('Enter');
     await page.waitForFunction(() => document.querySelector('[role=status]').textContent.includes('Weight updated'));
@@ -167,10 +168,16 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     assert.equal(await bulkWeight.isDisabled(), true);
     for (const role of ['display', 'heading', 'title']) await page.getByRole('checkbox', { name: `Select ${role} role`, exact: true }).check();
     await page.getByRole('checkbox', { name: 'Select body role', exact: true }).check();
+    assert.equal(await page.locator('.typography-bulk-control').first().getByText('Body + expressive share text metrics', { exact: true }).count(), 1);
     assert.equal(await bulkWeight.getAttribute('placeholder'), 'Mixed');
     await page.waitForFunction(() => document.querySelector('#typography-bulk-fontWeight').value === '');
     assert.equal(await bulkWeight.inputValue(), '');
     await page.getByRole('checkbox', { name: 'Select body role', exact: true }).uncheck();
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    await page.getByRole('checkbox', { name: 'Select expressive role', exact: true }).check();
+    assert.equal(await page.locator('.typography-bulk-control').first().getByText('Body + expressive share text metrics', { exact: true }).count(), 1);
+    await page.getByRole('button', { name: 'Clear', exact: true }).click();
+    for (const role of ['display', 'heading', 'title']) await page.getByRole('checkbox', { name: `Select ${role} role`, exact: true }).check();
     const radius = page.getByRole('slider', { name: 'Border radius factor', exact: true });
     assert.equal(await page.locator('.radius-section output').textContent(), '1.00x (default)');
     await radius.press('End');
