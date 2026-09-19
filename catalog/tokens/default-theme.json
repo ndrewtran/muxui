@@ -1322,7 +1322,7 @@
       "unit": "hex",
       "meaning": "Default canvas surface behind page content.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-5",
+      "alias": "semantic.color.neutral-10",
       "equivalence": "semantic-equivalence"
     },
     "semantic.surface.raised": {
@@ -1358,7 +1358,7 @@
       "unit": "hex",
       "meaning": "Faint content used for dividers and low-emphasis indicators.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-40",
+      "alias": "semantic.color.neutral-60",
       "equivalence": "semantic-equivalence"
     },
     "semantic.content.muted": {
@@ -1367,7 +1367,7 @@
       "unit": "hex",
       "meaning": "Muted content for descriptions, placeholders, and secondary values.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-50",
+      "alias": "semantic.color.neutral-70",
       "equivalence": "semantic-equivalence"
     },
     "semantic.content.secondary": {
@@ -1385,7 +1385,7 @@
       "unit": "hex",
       "meaning": "Default color for control labels and readable content.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-80",
+      "alias": "semantic.color.neutral-90",
       "equivalence": "semantic-equivalence"
     },
     "semantic.content.strong": {
@@ -5175,7 +5175,7 @@
       "unit": "unitless",
       "meaning": "Weight for prominent display, heading, and title text.",
       "overridePolicy": "theme",
-      "alias": "reference.number.font-weight-semibold"
+      "value": 500
     },
     "semantic.typography.heading-font-weight": {
       "layer": "semantic",
@@ -5183,7 +5183,7 @@
       "unit": "unitless",
       "meaning": "Weight for section headings.",
       "overridePolicy": "theme",
-      "alias": "reference.number.font-weight-semibold"
+      "value": 500
     },
     "semantic.typography.title-font-weight": {
       "layer": "semantic",
@@ -5191,7 +5191,7 @@
       "unit": "unitless",
       "meaning": "Weight for titles.",
       "overridePolicy": "theme",
-      "alias": "reference.number.font-weight-semibold"
+      "value": 500
     },
     "semantic.typography.label-font-weight": {
       "layer": "semantic",

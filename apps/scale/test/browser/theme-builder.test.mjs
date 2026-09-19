@@ -128,7 +128,7 @@ test('Scale supports live theme editing, lossless import/export and guarded save
     await ready(page, url);
     assert.equal(await page.locator('.theme-card').count(), 15);
     assert.equal(await page.locator('.theme-card').first().evaluate((node) => getComputedStyle(node).flexDirection), 'row');
-    assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontWeight), '600');
+    assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontWeight), '500');
     assert.equal(await page.locator('h1').evaluate((node) => getComputedStyle(node).fontSize), '34px');
     assert.equal(await page.locator('.typography-selection-row').count(), 7);
     assert.equal(await page.locator('.typography-matrix-row').count(), 8);
