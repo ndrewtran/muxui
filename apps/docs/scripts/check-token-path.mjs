@@ -140,7 +140,7 @@ const expectedFoundationFamilies = new Map([
 	['foundations/spacing/index.html', new Map([
 		['reference-space', ['reference.dimension.space-4xs', 'reference.dimension.space-4xl']],
 		['semantic-control-sizes', ['semantic.control.size-sm', 'semantic.control.size-lg']],
-		['semantic-navigation-insets', ['semantic.layout.navigation-inset-block', 'semantic.layout.navigation-inset-inline']],
+		['semantic-navigation-insets', ['semantic.layout.navigation-inset-inline']],
 		['semantic-control-padding', ['semantic.control.padding-block', 'semantic.control.padding-inline']],
 	])],
 	['foundations/shape/index.html', new Map([
@@ -155,7 +155,7 @@ const expectedFoundationFamilies = new Map([
 		['reference-durations', ['reference.motion.duration-instant', 'reference.motion.duration-deliberate']],
 		['semantic-progress-durations', ['semantic.motion.progress-update-duration', 'semantic.motion.progress-travel-duration']],
 		['reference-easings', ['reference.motion.easing-linear', 'reference.motion.easing-emphasized']],
-		['semantic-easings', ['semantic.motion.constant-easing', 'semantic.motion.state-easing']],
+		['semantic-easings', ['semantic.motion.constant-easing', 'semantic.motion.interaction-easing']],
 	])],
 ]);
 
@@ -195,7 +195,7 @@ for (const [relativePath, expectedGroups] of expectedFoundationFamilies) {
 			? FOUNDATION_TOKENS.filter(({ id }) => id.startsWith('reference.dimension.radius-') || id.startsWith('semantic.shape.') || id === 'semantic.control.radius')
 			: relativePath === 'foundations/elevation/index.html'
 				? FOUNDATION_TOKENS.filter(({ id, type }) => type === 'effect' || id.startsWith('semantic.elevation.'))
-			: FOUNDATION_TOKENS.filter(({ id, type }) => type === 'duration' && !id.startsWith('reference.duration.'));
+			: FOUNDATION_TOKENS.filter(({ id, type }) => type === 'duration' && !id.startsWith('reference.motion.duration-'));
 	for (const { id } of expectedCoverage) assert(coverageCounts.get(id) === 1, `Canonical token is missing or appears in multiple families in ${relativePath}: ${id}`);
 	if (relativePath === 'foundations/spacing/index.html') {
 		const controlWidths = actualGroups.get('semantic-control-sizes')?.widths;

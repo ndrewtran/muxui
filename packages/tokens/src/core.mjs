@@ -76,92 +76,6 @@ function sameStructuredValue(left, right) {
 
 const TOKEN_ID = /^(reference|semantic|component)\.[a-z][a-z0-9]*(?:\.[a-z][a-z0-9-]*)+$/u;
 const SAFE_OVERRIDE_STRING = /^[a-zA-Z0-9 .,+#%()/_-]+$/u;
-const SEMVER = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u;
-
-function compareVersions(left, right) {
-  const a = left.match(SEMVER)?.slice(1).map(Number);
-  const b = right.match(SEMVER)?.slice(1).map(Number);
-  if (!a || !b) return null;
-  return a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
-}
-
-function validateDeprecationMetadata(source, tokenId, definition, fail) {
-  const metadata = definition.deprecation;
-  if (metadata === undefined) return;
-  if (!isRecord(metadata) || Object.keys(metadata).some((key) => !['since', 'removeIn', 'replacement', 'noReplacementReason'].includes(key))) {
-    fail('MUXUI_TOKEN_DEPRECATION_INVALID', `${tokenId} deprecation metadata is not a closed object`, { tokenId });
-  }
-  const hasReplacement = typeof metadata.replacement === 'string';
-  const hasReason = typeof metadata.noReplacementReason === 'string' && metadata.noReplacementReason.length > 0;
-  if (hasReplacement === hasReason || !SEMVER.test(metadata.since) || !SEMVER.test(metadata.removeIn)) {
-    fail('MUXUI_TOKEN_DEPRECATION_INVALID', `${tokenId} deprecation metadata must declare valid versions and exactly one replacement disposition`, { tokenId });
-  }
-  const currentVersionOrder = compareVersions(metadata.since, source.tokenContractVersion);
-  const removalParts = metadata.removeIn.match(SEMVER).slice(1).map(Number);
-  const currentParts = source.tokenContractVersion.match(SEMVER)?.slice(1).map(Number);
-  const removalVersionOrder = compareVersions(metadata.removeIn, source.tokenContractVersion);
-  if (!currentParts || currentVersionOrder === null || currentVersionOrder > 0 || removalVersionOrder === null || removalVersionOrder <= 0
-    || removalParts[0] <= currentParts[0] || removalParts[1] !== 0 || removalParts[2] !== 0) {
-    fail('MUXUI_TOKEN_DEPRECATION_VERSION_INVALID', `${tokenId} deprecation must start no later than the current contract and end at a later major boundary`, {
-      tokenId,
-      since: metadata.since,
-      removeIn: metadata.removeIn,
-      tokenContractVersion: source.tokenContractVersion,
-    });
-  }
-  if (hasReplacement) {
-    const replacement = source.tokens[metadata.replacement];
-    if (!replacement) {
-      fail('MUXUI_TOKEN_DEPRECATION_REPLACEMENT_MISSING', `${tokenId} deprecation replacement does not exist`, {
-        tokenId,
-        replacement: metadata.replacement,
-      });
-    }
-    if (metadata.replacement === tokenId || replacement.layer !== definition.layer) {
-      fail('MUXUI_TOKEN_DEPRECATION_REPLACEMENT_INVALID', `${tokenId} deprecation replacement must remain in the same token layer`, {
-        tokenId,
-        replacement: metadata.replacement,
-      });
-    }
-    if (replacement.type !== definition.type || replacement.unit !== definition.unit) {
-      fail('MUXUI_TOKEN_DEPRECATION_REPLACEMENT_INVALID', `${tokenId} deprecation replacement changes type or unit`, {
-        tokenId,
-        replacement: metadata.replacement,
-      });
-    }
-  }
-}
-
-function validateDeprecationChains(source, fail) {
-  const states = new Map();
-  const visit = (tokenId, path = []) => {
-    const state = states.get(tokenId);
-    if (state === 'visiting') {
-      const cycleStart = path.indexOf(tokenId);
-      fail('MUXUI_TOKEN_DEPRECATION_CYCLE', `token deprecation replacement cycle: ${[...path.slice(cycleStart), tokenId].join(' -> ')}`, {
-        cycle: [...path.slice(cycleStart), tokenId],
-      });
-    }
-    if (state === 'visited') return;
-    states.set(tokenId, 'visiting');
-    const replacement = source.tokens[tokenId]?.deprecation?.replacement;
-    if (replacement) visit(replacement, [...path, tokenId]);
-    states.set(tokenId, 'visited');
-  };
-  for (const tokenId of Object.keys(source.tokens).sort(compareText)) visit(tokenId);
-}
-
-export function tokenDeprecationDiagnostic(tokenId, metadata, context = {}) {
-  return Object.freeze({
-    code: 'MUXUI_TOKEN_DEPRECATED',
-    token: tokenId,
-    since: metadata.since,
-    removeIn: metadata.removeIn,
-    ...(metadata.replacement === undefined ? { noReplacementReason: metadata.noReplacementReason } : { replacement: metadata.replacement }),
-    ...context,
-  });
-}
-
 function mixColor(left, right, weight) {
   const rgba = (hex) => [1, 3, 5, 7].map((index, channel) => channel === 3 ? Number.parseInt(hex.slice(index, index + 2) || 'ff', 16) / 255 : Number.parseInt(hex.slice(index, index + 2), 16));
   const [leftRed, leftGreen, leftBlue, leftAlpha] = rgba(left);
@@ -255,8 +169,7 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
   const selectedModes = assertModes(source, modes, fail);
   for (const [id, definition] of Object.entries(source.tokens)) {
     if (!TOKEN_ID.test(id) || !isRecord(definition) || !Object.hasOwn(LAYER_RANK, definition.layer) || !id.startsWith(`${definition.layer}.`)) fail('MUXUI_TOKEN_SOURCE_INVALID', `${id} must have a valid token identity and layer`, { tokenId: id });
-    if (Object.keys(definition).some((key) => !['layer', 'type', 'unit', 'meaning', 'overridePolicy', 'value', 'alias', 'equivalence', 'deprecation', 'fluid', 'formula', 'relative', 'mix', 'modes', 'platformRestrictions'].includes(key))) fail('MUXUI_TOKEN_SOURCE_INVALID', `${id} contains an unsupported field`, { tokenId: id });
-    validateDeprecationMetadata(source, id, definition, fail);
+    if (Object.keys(definition).some((key) => !['layer', 'type', 'unit', 'meaning', 'overridePolicy', 'value', 'alias', 'equivalence', 'fluid', 'formula', 'relative', 'mix', 'modes', 'platformRestrictions'].includes(key))) fail('MUXUI_TOKEN_SOURCE_INVALID', `${id} contains an unsupported field`, { tokenId: id });
     validateDecoration(definition, definition.type, `tokens/${id}`, fail);
     if (Object.hasOwn(definition, 'alias') && ['value', 'fluid', 'formula', 'relative', 'mix'].some((key) => Object.hasOwn(definition, key))) fail('MUXUI_TOKEN_DECORATION_INVALID', `${id} combines an alias with another value`, { tokenId: id });
     if (definition.modes !== undefined && !isRecord(definition.modes)) fail('MUXUI_TOKEN_MODE_INVALID', `${id} modes must be an object`, { tokenId: id });
@@ -268,7 +181,6 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
       if (Object.hasOwn(branch, 'alias') && Object.keys(branch).length !== 1) fail('MUXUI_TOKEN_DECORATION_INVALID', `${id} mode ${mode} combines an alias with another value`, { tokenId: id });
     }
   }
-  validateDeprecationChains(source, fail);
   if (!isRecord(overrides)) fail('MUXUI_TOKEN_OVERRIDE_UNAUTHORIZED', 'consumer overrides must be an object');
   const normalizedOverrides = {};
   for (const tokenId of Object.keys(overrides).sort(compareText)) {

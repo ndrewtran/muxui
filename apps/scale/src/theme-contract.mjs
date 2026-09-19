@@ -93,7 +93,8 @@ export function validateScaleDocument(document) {
   if (typeof document.id !== 'string' || !document.id.startsWith('muxui:theme:')) throw new TypeError('MUXUI_SCALE_SOURCE_ID_INVALID');
   assertSlug(document.id.slice('muxui:theme:'.length));
   if (!isRecord(document.scale)) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID');
-  return validateThemeAuthoringDocument(document, { source: defaultThemeSource });
+  validateThemeAuthoringDocument(document, { source: defaultThemeSource });
+  return document;
 }
 
 export function createScaleDocument(settings, { slug = 'draft' } = {}) {
@@ -112,10 +113,10 @@ function assertRecordOverrides(overrides, assignments) {
 }
 
 export function settingsFromDocument(document) {
-  const normalized = validateScaleDocument(document);
-  const generated = generateScaleTheme({ source: defaultThemeSource, ...normalized.scale });
-  const colorMode = normalized.modes.colorScheme.includes(defaultThemeSource.theme.defaultModes.colorScheme) ? defaultThemeSource.theme.defaultModes.colorScheme : normalized.modes.colorScheme[0];
-  return { ...DEFAULT_SETTINGS, family: normalized.scale.mode, presetId: normalized.scale.presetId, namedColor: normalized.scale.namedColor, neutralColor: normalized.scale.neutralColor, whiteAnchor: normalized.scale.whiteAnchor, contrastPivot: normalized.scale.contrastPivot, curvature: normalized.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(normalized.modes), additionalOverrides: Object.fromEntries(Object.entries(normalized.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
+  validateScaleDocument(document);
+  const generated = generateScaleTheme({ source: defaultThemeSource, ...document.scale });
+  const colorMode = document.modes.colorScheme.includes(defaultThemeSource.theme.defaultModes.colorScheme) ? defaultThemeSource.theme.defaultModes.colorScheme : document.modes.colorScheme[0];
+  return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: document.scale.contrastPivot, curvature: document.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(document.modes), additionalOverrides: Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
 }
 export function serializeScaleDocument(document) { return serializeThemeAuthoringDocument(validateScaleDocument(document), { source: defaultThemeSource }); }
 export function presetSettings(family, presetId) {

@@ -4,7 +4,7 @@
 .muxui-breadcrumbs-list { display: flex; flex-wrap: wrap; align-items: center; gap: 0; margin: 0; padding: 0; list-style: none; }
 .muxui-breadcrumbs-item { display: inline-flex; align-items: center; gap: 0; }
 .muxui-breadcrumbs-item:not(:last-child)::after { color: var(--muxui-semantic-content-muted); content: '/'; }
-.muxui-breadcrumbs-link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-feedback) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-breadcrumbs-link, .muxui-link { color: var(--muxui-semantic-content-link); text-underline-offset: 0.15em; transition: color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
 .muxui-breadcrumbs-link:hover, .muxui-link:hover { color: var(--muxui-semantic-content-link-hover); }
 .muxui-breadcrumbs-link[data-hovered], .muxui-link[data-hovered] { color: var(--muxui-semantic-content-link-hover); }
 .muxui-breadcrumbs-link[data-pressed], .muxui-link[data-pressed] { color: var(--muxui-semantic-content-link-pressed); }
@@ -27,7 +27,7 @@
 .muxui-disclosure-group { overflow: hidden; border: 1px solid var(--muxui-semantic-border-subtle); border-radius: var(--muxui-semantic-shape-container-radius); }
 .muxui-disclosure { border-block-end: 1px solid var(--muxui-semantic-border-subtle); }
 .muxui-disclosure:last-child { border-block-end: 0; }
-.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-min-height); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-feedback) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-feedback) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-disclosure-trigger { display: flex; align-items: center; justify-content: space-between; inline-size: 100%; min-block-size: var(--muxui-semantic-control-min-height); padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-small); border: 0; border-radius: var(--muxui-semantic-control-radius); background: transparent; color: var(--muxui-semantic-content-default); font: inherit; font-weight: var(--muxui-semantic-typography-label-weight); text-align: start; cursor: pointer; transition: background-color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing), color var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
 .muxui-disclosure-trigger:hover:not([data-disabled]), .muxui-disclosure-trigger[data-pressed] { background: var(--muxui-semantic-surface-hover); color: var(--muxui-semantic-content-strong); }
 .muxui-disclosure-trigger:focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: -2px; }
 .muxui-disclosure-panel { margin-block-start: var(--muxui-semantic-layout-control-gap); padding: 0 var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small); }
@@ -46,7 +46,7 @@
 .muxui-value-label { color: var(--muxui-progress-label-color); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
 .muxui-switch-label { color: var(--muxui-semantic-content-default); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
 .muxui-meter-track, .muxui-progress-bar-track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
-.muxui-meter-fill, .muxui-progress-bar-fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-feedback) var(--muxui-semantic-motion-interaction-easing); }
+.muxui-meter-fill, .muxui-progress-bar-fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
 .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill {
   inline-size: 40%;
   margin-inline-start: 30%;

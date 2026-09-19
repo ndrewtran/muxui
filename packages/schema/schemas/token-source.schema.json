@@ -5,29 +5,8 @@
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "kind", "name", "summary", "lifecycle", "tokenContractVersion", "theme", "tokens"],
-  "allOf": [
-    {
-      "oneOf": [
-        {
-          "properties": {
-            "schemaVersion": { "const": "2.1.0" },
-            "tokens": {
-              "additionalProperties": {
-                "not": { "required": ["deprecation"] }
-              }
-            }
-          }
-        },
-        {
-          "properties": {
-            "schemaVersion": { "const": "2.2.0" }
-          }
-        }
-      ]
-    }
-  ],
   "properties": {
-    "schemaVersion": { "enum": ["2.1.0", "2.2.0"] },
+    "schemaVersion": { "const": "2.1.0" },
     "id": { "type": "string", "pattern": "^muxui:token:[a-z0-9]+(?:-[a-z0-9]+)*$" },
     "kind": { "const": "token" },
     "name": { "type": "string", "minLength": 1 },
@@ -290,7 +269,6 @@
         "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "object" }] },
         "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" },
         "equivalence": { "enum": ["semantic-equivalence", "deprecation-bridge"] },
-        "deprecation": { "$ref": "#/$defs/tokenDeprecation" },
         "fluid": { "$ref": "#/$defs/fluidRecipe" },
         "formula": { "$ref": "#/$defs/dimensionFormula" },
         "relative": { "$ref": "#/$defs/relativeDimension" },
@@ -313,21 +291,6 @@
     "tokenReference": {
       "type": "string",
       "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$"
-    },
-    "tokenDeprecation": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["since", "removeIn"],
-      "properties": {
-        "since": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
-        "removeIn": { "type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$" },
-        "replacement": { "$ref": "#/$defs/tokenReference" },
-        "noReplacementReason": { "type": "string", "minLength": 1, "maxLength": 512 }
-      },
-      "oneOf": [
-        { "required": ["replacement"], "not": { "required": ["noReplacementReason"] } },
-        { "required": ["noReplacementReason"], "not": { "required": ["replacement"] } }
-      ]
     },
     "fluidRecipe": {
       "type": "object",

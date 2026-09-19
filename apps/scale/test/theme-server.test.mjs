@@ -48,17 +48,6 @@ test('Scale endpoint validates, atomically persists, and rejects stale writes', 
     const requestHeaders = { 'content-type': 'application/json', origin: `http://127.0.0.1:${activePort}` };
     const themesRoot = join(workspaceRoot, 'catalog/tokens/themes');
     await mkdir(themesRoot, { recursive: true });
-    const legacy = { ...source, id: 'muxui:theme:legacy-theme', tokenContractVersion: '3.0.0' };
-    await writeFile(join(themesRoot, 'legacy-theme.json'), JSON.stringify(legacy));
-    const legacyLoaded = await httpRequest(activePort, 'GET', '/__muxui/scale/themes/legacy-theme');
-    assert.equal(legacyLoaded.status, 200);
-    assert.equal(legacyLoaded.body.theme.tokenContractVersion, '3.1.0');
-    assert.equal(legacyLoaded.body.theme.id, 'muxui:theme:legacy-theme');
-    assert.match(legacyLoaded.body.revision, /^sha256:/u);
-    const legacySaved = await httpRequest(activePort, 'PUT', '/__muxui/scale/themes/legacy-theme', JSON.stringify(legacyLoaded.body.theme), { ...requestHeaders, 'if-match': legacyLoaded.body.revision });
-    assert.equal(legacySaved.status, 200);
-    assert.equal(legacySaved.body.theme.tokenContractVersion, '3.1.0');
-    assert.equal(JSON.parse(await readFile(join(themesRoot, 'legacy-theme.json'), 'utf8')).tokenContractVersion, '3.1.0');
     const outsideFile = join(outsideRoot, 'outside.json');
     await writeFile(outsideFile, JSON.stringify(source));
     await symlink(outsideFile, join(themesRoot, 'leak.json'));

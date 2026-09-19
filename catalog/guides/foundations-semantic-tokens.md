@@ -22,10 +22,10 @@ Choose the role that matches the job: `content-default` for ordinary text, `cont
 
 `surface.background` remains the page body background contract. Its default may match `surface.canvas`, but the roles stay independent: canvas is the page backdrop, background is the body surface, and raised is content above the canvas. Preserve those distinctions when customizing a theme.
 
-`surface.body-background` is deprecated in the 3.1 notice and scheduled for removal in 4.0.0. Its preferred authoring replacement is `surface.subtle`, but migrate a Storybook or consumer theme only after preserving any existing override attached to the old role. The replacement metadata does not automatically move that override.
+`surface.body-background` was removed in contract 4.0.0. Use `surface.subtle` only when that surface role is the intended contract; canvas, background, and raised remain independent roles.
 
-The same notice keeps deprecated semantic names exported so existing CSS can continue to resolve while explicit migrations are prepared. Read the [token contract migration guide](/token-migration/) for the complete mapping and for roles that intentionally have no replacement.
+Read the [token contract migration guide](/token-migration/) for the complete removal map and for roles that intentionally have no replacement.
 
 Modes are declared by the source: light and dark, standard and more contrast, comfortable and compact density, full and reduced motion, and ltr or rtl direction. The compiler validates a requested combination before emitting CSS.
 
-Common mistake: using `content-muted` for normal-sized input text, treating canvas and raised as interchangeable, or replacing a deprecated role with the nearest value without checking its theme override and mode behavior.
+Common mistake: using `content-muted` for normal-sized input text or treating canvas and raised as interchangeable. Choose a current semantic role by intent.

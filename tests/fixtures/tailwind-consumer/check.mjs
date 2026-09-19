@@ -19,7 +19,7 @@ const run = (command, args, options) => new Promise((resolvePromise, reject) => 
 const tempRoot = await mkdtemp(join(fixtureRoot, '.tmp-'));
 const inputPath = join(tempRoot, 'input.css');
 const outputPath = join(tempRoot, 'output.css');
-const input = `@layer theme, base, muxui, components, utilities;\n@import "tailwindcss";\n${compileTailwindConsumer(source, { muxuiCss: '@import "../../../../packages/react/generated/styles.css" layer(muxui);' })}\n@layer components { .consumer-button { --muxui-component-button-background: #7c3aed; @apply bg-muxui-component-button-background text-muxui-component-button-foreground rounded-muxui-component-button-radius font-muxui-reference-typography-body-font leading-muxui-semantic-typography-body-line-height ease-muxui-reference-motion-easing-linear duration-muxui-reference-duration-fast text-muxui-semantic-typography-body-size tracking-muxui-semantic-typography-display-letter-spacing font-muxui-semantic-typography-body-weight shadow-muxui-reference-effect-shadow-m; } }\n`;
+const input = `@layer theme, base, muxui, components, utilities;\n@import "tailwindcss";\n${compileTailwindConsumer(source, { muxuiCss: '@import "../../../../packages/react/generated/styles.css" layer(muxui);' })}\n@layer components { .consumer-button { --muxui-component-button-background: #7c3aed; @apply bg-muxui-component-button-background text-muxui-component-button-foreground rounded-muxui-component-button-radius font-muxui-reference-typography-body-font leading-muxui-semantic-typography-body-line-height ease-muxui-reference-motion-easing-linear duration-muxui-reference-motion-duration-fast text-muxui-semantic-typography-body-size tracking-muxui-semantic-typography-display-letter-spacing font-muxui-semantic-typography-body-weight shadow-muxui-reference-effect-shadow-m; } }\n`;
 await writeFile(inputPath, input);
 await run('pnpm', ['exec', 'tailwindcss', '-i', inputPath, '-o', outputPath, '--minify'], { cwd: fixtureRoot });
 const output = await readFile(outputPath, 'utf8');
@@ -29,7 +29,7 @@ assert.match(output, /color:var\(--muxui-component-button-foreground\)/u);
 assert.match(output, /border-radius:var\(--muxui-component-button-radius\)/u);
 assert.match(output, /font-family:var\(--muxui-reference-typography-body-font\)/u);
 assert.match(output, /transition-timing-function:var\(--muxui-reference-motion-easing-linear\)/u);
-assert.match(output, /transition-duration:var\(--muxui-reference-duration-fast\)/u);
+assert.match(output, /transition-duration:var\(--muxui-reference-motion-duration-fast\)/u);
 assert.match(output, /font-size:var\(--muxui-semantic-typography-body-size\)/u);
 assert.match(output, /font-weight:var\(--muxui-semantic-typography-body-weight\)/u);
 assert.match(output, /letter-spacing:var\(--muxui-semantic-typography-display-letter-spacing\)/u);

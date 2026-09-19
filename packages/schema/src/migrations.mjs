@@ -120,24 +120,6 @@ export function migrateTokenSourceV2ToV2_1(source, {
   return dryRun ? plan : migrated;
 }
 
-export function migrateTokenSourceV2_1ToV2_2(source, { dryRun = false } = {}) {
-  assertPlainObject(source, '$');
-  if (typeof dryRun !== 'boolean') migrationError('$migration/dryRun', 'must be a boolean');
-  if (source.schemaVersion === '2.2.0') {
-    validateFamily('token-source', source);
-    const plan = { from: '2.2.0', to: '2.2.0', changed: false, readRewrite: false };
-    return dryRun ? plan : structuredClone(source);
-  }
-  if (source.schemaVersion !== '2.1.0') {
-    migrationError('$/schemaVersion', `${source.schemaVersion} is not migratable`);
-  }
-  validateFamily('token-source', source);
-  const migrated = { ...structuredClone(source), schemaVersion: '2.2.0' };
-  validateFamily('token-source', migrated);
-  const plan = { from: '2.1.0', to: '2.2.0', changed: true, readRewrite: false };
-  return dryRun ? plan : migrated;
-}
-
 export function migrateBindingV1ToV2(binding, { tokenRecipe, platformSafety } = {}) {
   assertPlainObject(binding, '$');
   if (binding.schemaVersion === '2.0.0') {

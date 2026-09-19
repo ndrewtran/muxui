@@ -1,4 +1,4 @@
-import { compilePureTokenGraph, cssDeclaration, tokenDeprecationDiagnostic } from './core.mjs';
+import { compilePureTokenGraph, cssDeclaration } from './core.mjs';
 import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getContrastRatio as contrastRatio } from './scale-palette.mjs';
 export { NAMED_SHADES, NEUTRAL_SHADES, randomScaleBaseColor } from './scale-palette.mjs';
 export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
@@ -18,7 +18,6 @@ const OPAQUE_HEX = /^#[0-9a-f]{6}$/iu;
 const SCALE_OVERRIDE_ID = /^(?:reference\.color\.(?:brand|neutral)-\d+|reference\.dimension\.radius-(?:xs|s|m|l|xl|2xl)|semantic\.color\.(?:color|neutral)-\d+-fg)$/u;
 const RADIUS_FACTORS = Object.freeze({ xs: 4, s: 6, m: 8, l: 12, xl: 16, '2xl': 24 });
 const CONTRAST_PIVOTS = Object.freeze([5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
-const TOKEN_CONTRACT_VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/u;
 
 function isRecord(value) { return value !== null && typeof value === 'object' && !Array.isArray(value); }
 function assertRecord(value, path) { if (!isRecord(value)) throw new TypeError(`MUXUI_THEME_OBJECT_INVALID: ${path}`); }
@@ -71,33 +70,6 @@ function assertSource(source, document) {
   if (source.id !== document.source) throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
   if (source.tokenContractVersion !== document.tokenContractVersion) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
   assertSourceMetadata(source);
-}
-
-function parseContractVersion(version) {
-  const match = typeof version === 'string' ? version.match(TOKEN_CONTRACT_VERSION) : null;
-  return match?.slice(1).map(Number) ?? null;
-}
-
-function isEarlierSameMajorVersion(candidate, current) {
-  const candidateParts = parseContractVersion(candidate);
-  const currentParts = parseContractVersion(current);
-  if (!candidateParts || !currentParts || candidateParts[0] !== currentParts[0]) return false;
-  return candidateParts[1] < currentParts[1]
-    || (candidateParts[1] === currentParts[1] && candidateParts[2] < currentParts[2]);
-}
-
-function normalizeThemeAuthoringDocument(document, source) {
-  const currentVersion = source?.tokenContractVersion;
-  if (typeof currentVersion !== 'string') throw new TypeError('MUXUI_THEME_SOURCE_REQUIRED');
-  if (!parseContractVersion(currentVersion)) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
-  if (document.tokenContractVersion === currentVersion) return document;
-  // A notice-window importer can normalize an earlier contract within the
-  // current major. The canonical source still owns the output version; a
-  // major change remains an explicit migration boundary.
-  if (isEarlierSameMajorVersion(document.tokenContractVersion, currentVersion)) {
-    return { ...document, tokenContractVersion: currentVersion };
-  }
-  throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
 }
 
 // The browser receives the same source as Node. Missing source-owned metadata
@@ -182,23 +154,16 @@ function scaleAssignments(document, source) {
   return generateScaleTheme({ source, ...document.scale }).assignments;
 }
 
-function deprecatedOverrideDiagnostics(document, source) {
-  return Object.keys(document.overrides)
-    .filter((tokenId) => source.tokens[tokenId]?.deprecation !== undefined)
-    .sort()
-    .map((tokenId) => tokenDeprecationDiagnostic(tokenId, source.tokens[tokenId].deprecation, { use: 'override' }));
-}
-
 function sameValue(left, right) {
   return JSON.stringify(canonicalize(left)) === JSON.stringify(canonicalize(right));
 }
 
 export function validateThemeAuthoringDocument(document, { source } = {}) {
   assertKeys(document, DOCUMENT_KEYS, 'document');
-  document = normalizeThemeAuthoringDocument(document, source);
   if (document.schema !== 'muxui-theme-authoring-v1') throw new TypeError('MUXUI_THEME_SCHEMA_INVALID');
   if (typeof document.id !== 'string' || !/^muxui:theme:[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(document.id)) throw new TypeError('MUXUI_THEME_ID_INVALID');
   if (document.source !== 'muxui:token:default-theme') throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
+  if (document.tokenContractVersion !== '4.0.0') throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
   assertSource(source, document);
   assertKeys(document.modes, MODE_AXES, 'document.modes');
   for (const axis of MODE_AXES) {
@@ -279,7 +244,7 @@ export function generateScaleTheme(inputs) {
   if (!['standard', 'named', 'mono', 'monochrome'].includes(inputs.mode)) throw new TypeError('MUXUI_THEME_SCALE_MODE_INVALID');
   if (inputs.whiteAnchor !== undefined && typeof inputs.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_THEME_SCALE_WHITE_ANCHOR_INVALID');
   const source = inputs.source;
-  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: source?.tokenContractVersion });
+  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: '4.0.0' });
   const sourceScale = source.theme.scale;
   const namedShades = sourceScale.namedShades;
   const neutralShades = sourceScale.neutralShades;
@@ -371,16 +336,13 @@ function nativeTheme(tokens, target, rootFontSizePx) {
 }
 
 export function compileThemeAuthoringDocument(document, { source, target = 'web.css', selector = ':root', modes, responsive = false, rootFontSizePx } = {}) {
-  document = validateThemeAuthoringDocument(document, { source });
+  validateThemeAuthoringDocument(document, { source });
   if (!['web.css', 'native.ios', 'native.android'].includes(target)) throw new TypeError(`MUXUI_THEME_TARGET_UNSUPPORTED: ${target}`);
   if (typeof selector !== 'string' || !/^:root$|^(?:\.[a-z][a-z0-9_-]*)+$/u.test(selector)) throw new TypeError('MUXUI_THEME_SELECTOR_INVALID');
   if (!isRecord(source) || !isRecord(source.tokens)) throw new TypeError('MUXUI_THEME_SOURCE_REQUIRED');
   const generated = document.scale === undefined ? null : generateScaleTheme({ source, ...document.scale });
   const selectedModes = selectModes(document, source, modes);
-  const diagnostics = [
-    ...deprecatedOverrideDiagnostics(document, source),
-    ...(generated?.diagnostics.filter(({ colorScheme = 'light' }) => colorScheme === selectedModes.colorScheme) ?? []),
-  ];
+  const diagnostics = generated?.diagnostics.filter(({ colorScheme = 'light' }) => colorScheme === selectedModes.colorScheme) ?? [];
   const scaleOverrides = generated?.assignmentsByMode?.[selectedModes.colorScheme] ?? generated?.assignments ?? {};
   const overrides = generated === null ? document.overrides : {
     ...document.overrides,

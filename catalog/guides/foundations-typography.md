@@ -6,7 +6,7 @@ id: muxui:guide:foundations-typography
 
 The default theme declares Inter for display and body text, Playfair Display for expressive content, and Roboto Mono for technical content. Typography roles bind a family, colour, size, weight, line height, and letter spacing so a specimen shows the complete role rather than an isolated number.
 
-Use semantic family roles in application and component CSS. Display, heading, and title content use their corresponding display family role; labels use the label family role; body copy and controls use the text family role; code uses the mono family role; and expressive content uses the expressive family role.
+Use semantic family roles in application and component CSS. Display, heading, and title content use their corresponding display family role; body text uses the text family role; labels use the label family role; code uses the mono family role; and expressive content uses the expressive family role.
 
 ```css
 .page-title {
@@ -21,9 +21,9 @@ Use semantic family roles in application and component CSS. Display, heading, an
 }
 ```
 
-The 3.1 notice retains the legacy semantic family names through 4.0.0: `semantic.typography.display-font`, `body-font`, `mono-font`, and `expressive-font` are deprecated in the canonical source but remain exported for existing CSS and theme customizations. Move explicit authoring and CSS references to the `*-font-family` roles when you can. Deprecation metadata gives the preferred name; it does not rewrite a scoped CSS declaration or automatically migrate a theme override.
+Contract 4.0.0 removes the legacy semantic family names `semantic.typography.display-font`, `body-font`, `mono-font`, and `expressive-font`. Use the corresponding `*-font-family` roles in authoring and CSS.
 
-The seven reference family aliases are also scheduled for removal. Preferred semantic roles now point directly to the four base reference stacks:
+The removed reference family aliases were implementation details. Preferred semantic roles point directly to the four base reference stacks:
 
 | Semantic role | Base reference stack |
 | --- | --- |
@@ -32,13 +32,13 @@ The seven reference family aliases are also scheduled for removal. Preferred sem
 | `mono-font-family` | `reference.typography.mono-font` |
 | `expressive-font-family` | `reference.typography.expressive-font` |
 
-Keep those reference aliases as implementation details. Application and component guidance should use the semantic family role that describes the content.
+Application and component guidance should use the semantic family role that describes the content.
 
 The source keeps seven typography roles and 25 size variants in six metric groups. Display, heading, and title use weight 600; label uses 500; text and mono use 400. Expressive uses its own family, but shares the text role's size, weight, line-height, and tracking metrics, so expressive text remains regular 400. The six 1.5 line-height defaults use the shared relaxed line-height reference, and shared weight references keep equivalent roles aligned.
 
 Static `body-size`, `small-size`, and `tiny-size` are utility metrics. They remain distinct from the fluid role variants. Likewise, `label-weight` remains a semibold 600 utility role while `label-font-weight` is the label role's 500 default; do not merge them when migrating overrides.
 
-Use `display-color`, `text-color`, and `mono-color` for adaptive typography. These active colour roles have dark branches. The deprecated `display-default-color`, `text-default-color`, and `mono-default-color` preserve their legacy light-mode values and have no silent dark-mode alias.
+Use `display-color`, `text-color`, and `mono-color` for adaptive typography. These active colour roles have dark branches. The removed `display-default-color`, `text-default-color`, and `mono-default-color` were fixed light-mode roles; choose an active color role deliberately when migrating.
 
 The explorer renders actual sample text at the canonical metrics and shows the site value after Scale is applied. Size, weight, leading, and tracking remain separate roles, so theme overrides can change one dimension without silently changing the others. Scale's Typography role matrix derives the same seven roles, six metric groups, and 25 size variants from the source. Its bulk Weight, Leading, and Tracking edits write explicit typed semantic overrides; expressive keeps its own family while its size, weight, leading, and tracking cells stay linked to the body/text group.
 

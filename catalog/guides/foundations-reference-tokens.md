@@ -18,9 +18,9 @@ Use a reference token when defining a new semantic role or when a low-level reci
 }
 ```
 
-The 3.1 notice shortens typography alias chains to four base family stacks. The seven reference `*-font-family` aliases remain exported with deprecation metadata through 4.0.0, but they are implementation details. Use semantic family roles such as `semantic.typography.text-font-family` and `semantic.typography.mono-font-family` in consumer code.
+Token contract `4.0.0` keeps four base typography reference stacks. The removed reference `*-font-family` aliases were implementation details; use semantic family roles such as `semantic.typography.text-font-family` and `semantic.typography.mono-font-family` in consumer code.
 
-Motion reference durations use the canonical `reference.motion.duration-instant`, `-fast`, `-moderate`, `-slow`, and `-deliberate` names. The older `reference.duration.*` aliases remain only during the notice window. `reference.duration.fast` retains a reduced-motion branch of 0ms, while preferred raw `reference.motion.duration-fast` is fixed at 120ms; use a semantic role when migrating behavior that needs the reduced branch. Reference primitives provide values; semantic roles provide interface intent and mode behavior.
+Motion reference durations use the canonical `reference.motion.duration-instant`, `-fast`, `-moderate`, `-slow`, and `-deliberate` names. The older `reference.duration.*` aliases were removed. `reference.motion.duration-fast` is fixed at 120ms; use a semantic role when reduced-motion behavior is part of the contract. Reference primitives provide values; semantic roles provide interface intent and mode behavior.
 
 The explorer shows each alias chain and its compiler-resolved value. A reference dimension may also carry a fluid recipe; static output is the default, and responsive output is opt-in through the documented responsive attribute.
 

@@ -1479,8 +1479,8 @@ function paletteFor(colorScheme) {
     inputBorderRadius: tokenValue(colorScheme, 'semantic.shape.option-radius'),
     colorPrimary: tokenValue(colorScheme, 'semantic.action.background'),
     colorSecondary: tokenValue(colorScheme, 'semantic.action.background'),
-    fontBase: tokenValue(colorScheme, 'reference.typography.text-font-family'),
-    fontCode: tokenValue(colorScheme, 'reference.typography.mono-font-family'),
+    fontBase: tokenValue(colorScheme, 'semantic.typography.text-font-family'),
+    fontCode: tokenValue(colorScheme, 'semantic.typography.mono-font-family'),
   });
 }
 

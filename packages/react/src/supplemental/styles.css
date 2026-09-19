@@ -190,7 +190,7 @@
   display: flex;
   flex-direction: column;
   border-radius: var(--muxui-semantic-shape-container-radius);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   overflow: hidden;
 }
 
@@ -729,7 +729,7 @@
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background-color: var(--muxui-semantic-color-neutral-14);
   color: var(--muxui-semantic-color-neutral-80);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
@@ -901,7 +901,7 @@
   min-width: 0;
   overflow: hidden;
   color: inherit;
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1.35;
@@ -913,7 +913,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
   text-overflow: ellipsis;
@@ -935,7 +935,7 @@
 .muxui-command-palette__item-meta {
   margin-left: auto;
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-mono-font);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
   font-size: var(--muxui-semantic-typography-mono-xs-font-size);
   white-space: nowrap;
 }
@@ -946,7 +946,7 @@
   gap: var(--muxui-semantic-layout-shortcut-gap);
   margin-left: auto;
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-mono-font);
+  font-family: var(--muxui-semantic-typography-mono-font-family);
   font-size: var(--muxui-semantic-typography-mono-xs-font-size);
 }
 
@@ -1005,7 +1005,7 @@
 .muxui-command-palette__load-more-item {
   padding: var(--muxui-semantic-layout-inset-large);
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   text-align: center;
 }
@@ -1018,7 +1018,7 @@
   padding: var(--muxui-semantic-layout-inset-medium) var(--muxui-semantic-layout-inset-large);
   border-top: 1px solid var(--muxui-semantic-color-neutral-18);
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
 }
 
@@ -1809,7 +1809,7 @@
   border-radius: var(--muxui-item-radius);
   background-color: transparent;
   color: var(--muxui-semantic-color-neutral-70);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1;
@@ -1847,7 +1847,7 @@
 .muxui-multi-select__empty-title {
   margin: 0;
   color: var(--muxui-semantic-color-neutral-80);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
@@ -1855,7 +1855,7 @@
 .muxui-multi-select__empty-description {
   margin: 0;
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
 }
 
@@ -1863,7 +1863,7 @@
   border: none;
   background: none;
   color: var(--muxui-semantic-color-color-60);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   cursor: pointer;
@@ -2051,14 +2051,14 @@
 
 .muxui-progress-circle__label {
   color: var(--muxui-semantic-color-neutral-80);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
 .muxui-progress-circle__value {
   color: var(--muxui-semantic-color-neutral-60);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
 }
 
@@ -2797,7 +2797,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   padding-inline-start: calc(var(--muxui-switch-field-track-width) + var(--muxui-semantic-layout-inset-medium));
   color: var(--muxui-semantic-color-neutral-80);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   cursor: pointer;
@@ -3012,7 +3012,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   border-radius: var(--muxui-semantic-shape-option-radius);
   background-color: var(--muxui-semantic-color-neutral-14);
   color: var(--muxui-semantic-color-neutral-80);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   white-space: nowrap;
@@ -3187,7 +3187,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   border-radius: var(--muxui-semantic-shape-option-radius);
   background-color: transparent;
   color: var(--muxui-semantic-color-neutral-90);
-  font-family: var(--muxui-semantic-typography-body-font);
+  font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
   resize: vertical;

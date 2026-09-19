@@ -327,7 +327,7 @@ test('supplemental declarations and CSS do not leak external API names or select
   assert.doesNotMatch(styles, /--muxui-reference-effect-shadow-/u);
   assert.doesNotMatch(styles, /var\(--(?:text-line-height|mono-font-family|mono-xs-font-size|text-font-weight|transparent)\b/u);
   assert.match(styles, /--muxui-semantic-typography-body-line-height/u);
-  assert.match(styles, /--muxui-semantic-typography-mono-font/u);
+  assert.match(styles, /--muxui-semantic-typography-mono-font-family/u);
   assert.match(styles, /--muxui-semantic-typography-mono-xs-font-size/u);
   assert.match(styles, /--muxui-semantic-typography-text-font-weight/u);
   assert.match(styles, /\.muxui-multi-select__value--placeholder\s*\{\s*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);

@@ -1,11 +1,11 @@
 {
-  "schemaVersion": "2.2.0",
+  "schemaVersion": "2.1.0",
   "id": "muxui:token:default-theme",
   "kind": "token",
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "3.1.0",
+  "tokenContractVersion": "4.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -497,25 +497,6 @@
     }
   },
   "tokens": {
-    "reference.duration.fast": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Default short feedback duration.",
-      "overridePolicy": "fixed",
-      "modes": {
-        "motion.reduced": {
-          "value": 0
-        }
-      },
-      "alias": "reference.motion.duration-fast",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.motion.duration-fast"
-      }
-    },
     "semantic.action.background": {
       "layer": "semantic",
       "type": "color",
@@ -1041,23 +1022,6 @@
       "overridePolicy": "theme",
       "value": "ease-in-out"
     },
-    "semantic.layout.navigation-inset-block": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Block inset within navigation search fields.",
-      "overridePolicy": "theme",
-      "value": 6,
-      "relative": {
-        "value": 0.375,
-        "unit": "rem"
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Unconsumed geometry role; choose the component-owned inset required by the layout."
-      }
-    },
     "semantic.layout.navigation-inset-inline": {
       "layer": "semantic",
       "type": "dimension",
@@ -1333,19 +1297,6 @@
       "overridePolicy": "theme",
       "alias": "semantic.color.neutral-60",
       "equivalence": "semantic-equivalence"
-    },
-    "semantic.motion.feedback": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Optional short visual feedback duration.",
-      "overridePolicy": "theme",
-      "alias": "reference.duration.fast",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "semantic.motion.feedback-duration"
-      }
     },
     "semantic.overlay.background": {
       "layer": "semantic",
@@ -1742,19 +1693,6 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.space-xs"
     },
-    "semantic.layout.content-row-min-height": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Minimum height for compact content rows.",
-      "overridePolicy": "theme",
-      "alias": "reference.dimension.space-m",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Unconsumed geometry role; choose the component-owned row metric required by the layout."
-      }
-    },
     "semantic.shape.indicator-radius": {
       "layer": "semantic",
       "type": "dimension",
@@ -1802,32 +1740,6 @@
       "meaning": "Corner radius for selectable options and rows.",
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-s"
-    },
-    "semantic.shape.thumb-radius": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Small corner radius for color and range thumbs.",
-      "overridePolicy": "theme",
-      "value": 2,
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Unconsumed geometry role; choose the component-owned thumb shape required by the control."
-      }
-    },
-    "semantic.shape.wheel-radius": {
-      "layer": "semantic",
-      "type": "dimension",
-      "unit": "px",
-      "meaning": "Corner radius for wheel and large color controls.",
-      "overridePolicy": "theme",
-      "alias": "reference.dimension.radius-2xl",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Unconsumed geometry role; choose the component-owned wheel shape required by the control."
-      }
     },
     "semantic.shape.pill-radius": {
       "layer": "semantic",
@@ -1893,45 +1805,6 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.font-size-xs"
     },
-    "semantic.typography.display-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Font family for display, heading, and title content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.display-font",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "semantic.typography.display-font-family"
-      }
-    },
-    "semantic.typography.body-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Font family for body and control content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.body-font",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "semantic.typography.text-font-family"
-      }
-    },
-    "semantic.typography.expressive-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Expressive font family for decorative content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.expressive-font",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "semantic.typography.expressive-font-family"
-      }
-    },
     "semantic.typography.expressive-font-family": {
       "layer": "semantic",
       "type": "string",
@@ -1939,19 +1812,6 @@
       "meaning": "Expressive font family alias.",
       "overridePolicy": "theme",
       "alias": "reference.typography.expressive-font"
-    },
-    "semantic.typography.mono-font": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Monospace font family for code and technical content.",
-      "overridePolicy": "theme",
-      "alias": "reference.typography.mono-font",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "semantic.typography.mono-font-family"
-      }
     },
     "semantic.typography.display-font-family": {
       "layer": "semantic",
@@ -4741,62 +4601,6 @@
         }
       }
     },
-    "reference.duration.deliberate": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "deliberate motion duration reference value.",
-      "overridePolicy": "fixed",
-      "alias": "reference.motion.duration-deliberate",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.motion.duration-deliberate"
-      }
-    },
-    "reference.duration.instant": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "instant motion duration reference value.",
-      "overridePolicy": "fixed",
-      "alias": "reference.motion.duration-instant",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.motion.duration-instant"
-      }
-    },
-    "reference.duration.moderate": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "moderate motion duration reference value.",
-      "overridePolicy": "fixed",
-      "alias": "reference.motion.duration-moderate",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.motion.duration-moderate"
-      }
-    },
-    "reference.duration.slow": {
-      "layer": "reference",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "slow motion duration reference value.",
-      "overridePolicy": "fixed",
-      "alias": "reference.motion.duration-slow",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.motion.duration-slow"
-      }
-    },
     "reference.number.font-weight-medium": {
       "layer": "reference",
       "type": "number",
@@ -5167,104 +4971,6 @@
       "meaning": "Mux-owned token for --mono-font.",
       "overridePolicy": "fixed",
       "value": "\"Roboto Mono\", monospace"
-    },
-    "reference.typography.display-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --display-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.display-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.display-font"
-      }
-    },
-    "reference.typography.heading-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --heading-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.display-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.display-font"
-      }
-    },
-    "reference.typography.title-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --title-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.display-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.display-font"
-      }
-    },
-    "reference.typography.label-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --label-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.body-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.body-font"
-      }
-    },
-    "reference.typography.text-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --text-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.body-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.body-font"
-      }
-    },
-    "reference.typography.mono-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --mono-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.mono-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.mono-font"
-      }
-    },
-    "reference.typography.expressive-font-family": {
-      "layer": "reference",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Mux-owned token for --expressive-font-family.",
-      "overridePolicy": "fixed",
-      "alias": "reference.typography.expressive-font",
-      "equivalence": "deprecation-bridge",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "reference.typography.expressive-font"
-      }
     },
     "semantic.typography.display-l-font-size": {
       "layer": "semantic",
@@ -7577,62 +7283,6 @@
       "alias": "reference.color.neutral-100",
       "equivalence": "semantic-equivalence"
     },
-    "semantic.typography.display-default-color": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Default color for display, heading, and title text.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "The legacy light-mode value is retained; use semantic.typography.display-color for adaptive text color."
-      }
-    },
-    "semantic.typography.text-default-color": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Default color for body, label, and supporting text.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "The legacy light-mode value is retained; use semantic.typography.text-color for adaptive text color."
-      }
-    },
-    "semantic.typography.mono-default-color": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Default color for code and technical text.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-default-90",
-      "equivalence": "semantic-equivalence",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "The legacy light-mode value is retained; use semantic.typography.mono-color for adaptive text color."
-      }
-    },
-    "semantic.surface.body-background": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Body surface for the primary content area.",
-      "overridePolicy": "theme",
-      "alias": "semantic.color.neutral-12",
-      "equivalence": "semantic-equivalence",
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "replacement": "semantic.surface.subtle"
-      }
-    },
     "semantic.color.color-5-fg": {
       "layer": "semantic",
       "type": "color",
@@ -8366,25 +8016,6 @@
         }
       }
     },
-    "semantic.motion.feedback-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for immediate feedback transitions.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-standard",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic feedback easing is unconsumed; select a component-specific easing role."
-      }
-    },
     "semantic.motion.state-duration": {
       "layer": "semantic",
       "type": "duration",
@@ -8399,63 +8030,6 @@
         }
       }
     },
-    "semantic.motion.state-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for control state changes.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-standard",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic state easing is unconsumed; select a component-specific easing role."
-      }
-    },
-    "semantic.motion.enter-duration": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Duration for content entering the interface.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.duration-moderate",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.duration-instant"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic enter duration is unconsumed; select the entering component role."
-      }
-    },
-    "semantic.motion.enter-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for content entering the interface.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-enter",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic enter easing is unconsumed; select the entering component role."
-      }
-    },
     "semantic.motion.exit-duration": {
       "layer": "semantic",
       "type": "duration",
@@ -8468,63 +8042,6 @@
         "motion.reduced": {
           "alias": "reference.motion.duration-instant"
         }
-      }
-    },
-    "semantic.motion.exit-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for content leaving the interface.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-exit",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic exit easing is unconsumed; select the exiting component role."
-      }
-    },
-    "semantic.motion.content-duration": {
-      "layer": "semantic",
-      "type": "duration",
-      "unit": "ms",
-      "meaning": "Duration for content transitions.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.duration-slow",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.duration-instant"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic content duration is unconsumed; select a content component role."
-      }
-    },
-    "semantic.motion.content-easing": {
-      "layer": "semantic",
-      "type": "string",
-      "unit": "string",
-      "meaning": "Easing curve for content transitions.",
-      "overridePolicy": "theme",
-      "alias": "reference.motion.easing-standard",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "motion.reduced": {
-          "alias": "reference.motion.easing-linear"
-        }
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "Generic content easing is unconsumed; select a content component role."
       }
     },
     "reference.dimension.scale": {
@@ -9506,25 +9023,6 @@
         }
       }
     },
-    "semantic.effect.scrim-subtle": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Subtle modal scrim color.",
-      "overridePolicy": "theme",
-      "equivalence": "semantic-equivalence",
-      "mix": {
-        "space": "srgb",
-        "token": "semantic.color.neutral-default-100",
-        "color": "#00000000",
-        "weight": 0.24
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "The legacy scrim strength is retained; choose semantic.effect.scrim for the supported modal scrim role."
-      }
-    },
     "semantic.effect.scrim": {
       "layer": "semantic",
       "type": "color",
@@ -9539,30 +9037,11 @@
         "weight": 0.48
       }
     },
-    "semantic.effect.scrim-strong": {
-      "layer": "semantic",
-      "type": "color",
-      "unit": "hex",
-      "meaning": "Strong modal scrim color.",
-      "overridePolicy": "theme",
-      "equivalence": "semantic-equivalence",
-      "mix": {
-        "space": "srgb",
-        "token": "semantic.color.neutral-default-100",
-        "color": "#00000000",
-        "weight": 0.72
-      },
-      "deprecation": {
-        "since": "3.1.0",
-        "removeIn": "4.0.0",
-        "noReplacementReason": "The legacy scrim strength is retained; choose semantic.effect.scrim for the supported modal scrim role."
-      }
-    },
     "reference.color.scrim-subtle": {
       "layer": "reference",
       "type": "color",
       "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim-subtle for theme-aware overlays.",
+      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim for theme-aware overlays.",
       "overridePolicy": "fixed",
       "value": "#11100f3d",
       "equivalence": "deprecation-bridge"
@@ -9580,7 +9059,7 @@
       "layer": "reference",
       "type": "color",
       "unit": "hex",
-      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim-strong for theme-aware overlays.",
+      "meaning": "Fixed compatibility scrim reference; prefer semantic.effect.scrim for theme-aware overlays.",
       "overridePolicy": "fixed",
       "value": "#11100fb8",
       "equivalence": "deprecation-bridge"

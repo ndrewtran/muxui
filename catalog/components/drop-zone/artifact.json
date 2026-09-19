@@ -27,7 +27,7 @@
         { "token": "semantic.control.padding-inline", "requirement": "required" },
         { "token": "semantic.focus.ring", "requirement": "required" },
         { "token": "semantic.selection.track", "requirement": "required" },
-        { "token": "semantic.motion.feedback", "requirement": "required" }
+        { "token": "semantic.motion.feedback-duration", "requirement": "required" }
       ] },
       "platformSafety": [{ "profile": "web.react", "requirements": [
         { "id": "system.forced-colors", "disposition": "required" },

@@ -149,7 +149,6 @@ function TokenDetail({ token, tokens }: { token: FoundationToken | undefined; to
 			<div><dt>CSS variable</dt><dd><code><TokenPath value={token.cssName} token={token} /></code></dd></div>
 			<div><dt>Type</dt><dd>{token.type} · {token.unit}</dd></div>
 			<div><dt>Override</dt><dd>{token.overridePolicy}</dd></div>
-			{token.deprecation ? <div><dt>Deprecated</dt><dd>Since {token.deprecation.since}; removal in {token.deprecation.removeIn}. {token.deprecation.replacement ? `Use ${token.deprecation.replacement}.` : token.deprecation.noReplacementReason}</dd></div> : null}
 			<div><dt>Resolution</dt><dd>{token.sourceKind}</dd></div>
 			<div><dt>Canonical alias chain</dt><dd className="foundation-chain">
 				{token.aliasChain.map((id, index) => <React.Fragment key={id}>
@@ -517,10 +516,10 @@ const SPACING_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
 	{ id: 'semantic-layout-insets', title: 'Layout inset scale', description: 'Named inset levels preserve the semantic scale from tiny through xxlarge.', select: tokenIds(['semantic.layout.inset-tiny', 'semantic.layout.inset-small', 'semantic.layout.inset-medium', 'semantic.layout.inset-large', 'semantic.layout.inset-xlarge', 'semantic.layout.inset-xxlarge']), sort: numericTokenOrder, isScale: true },
 	{ id: 'semantic-layout-gaps', title: 'Layout gap roles', description: 'These are usage roles. The bars compare their numeric values without turning role names into levels.', select: tokenIds(['semantic.layout.micro-gap', 'semantic.layout.dense-gap', 'semantic.layout.shortcut-gap', 'semantic.layout.description-gap', 'semantic.layout.swatch-gap', 'semantic.layout.control-gap', 'semantic.layout.tight-gap', 'semantic.layout.group-gap', 'semantic.layout.action-gap', 'semantic.layout.control-content-gap', 'semantic.layout.section-gap', 'semantic.layout.content-gap']), isScale: false },
 	{ id: 'semantic-control-sizes', title: 'Control sizes', description: 'Small, medium, and large controls share one scale.', select: tokenIds(['semantic.control.size-sm', 'semantic.control.size-md', 'semantic.control.size-lg']), sort: numericTokenOrder, isScale: true },
-	{ id: 'semantic-navigation-insets', title: 'Navigation block and inline insets', description: 'Block and inline insets are separate axes for navigation surfaces.', select: tokenIds(['semantic.layout.navigation-inset-block', 'semantic.layout.navigation-inset-inline']), isScale: false },
+	{ id: 'semantic-navigation-insets', title: 'Navigation inline inset', description: 'The active navigation inset applies to the inline axis.', select: tokenIds(['semantic.layout.navigation-inset-inline']), isScale: false },
 	{ id: 'semantic-control-padding', title: 'Control padding axes', description: 'Block and inline padding are independent geometry roles.', select: tokenIds(['semantic.control.padding-block', 'semantic.control.padding-inline']), isScale: false },
 	{ id: 'semantic-usage-insets', title: 'Usage-specific insets', description: 'These insets support named affordances and surfaces rather than an ordinal scale.', select: tokenIds(['semantic.layout.control-inset', 'semantic.layout.tight-inset', 'semantic.layout.utility-inset', 'semantic.layout.navigation-search-inset', 'semantic.layout.search-clear-inset', 'semantic.layout.payment-icon-inset', 'semantic.layout.overlay-title-inset', 'semantic.layout.viewport-inset']), isScale: false },
-	{ id: 'semantic-layout-geometry', title: 'Other layout geometry', description: 'Explicit size, margin, indent, and row roles stay grouped by usage.', select: tokenIds(['semantic.layout.resize-handle-size', 'semantic.layout.icon-size', 'semantic.layout.content-row-min-height', 'semantic.layout.content-margin', 'semantic.layout.content-indent']), isScale: false },
+	{ id: 'semantic-layout-geometry', title: 'Other layout geometry', description: 'Explicit size, margin, indent, and usage roles stay grouped by usage.', select: tokenIds(['semantic.layout.resize-handle-size', 'semantic.layout.icon-size', 'semantic.layout.content-margin', 'semantic.layout.content-indent']), isScale: false },
 	{ id: 'semantic-control-geometry', title: 'Control geometry roles', description: 'Minimum height and radius are component geometry roles, not additional size levels.', select: tokenIds(['semantic.control.min-height', 'semantic.control.radius']), isScale: false },
 ];
 
@@ -630,7 +629,7 @@ function motionTimingGroups(durations: readonly FoundationToken[]): readonly Mot
 		{
 			id: 'reference-durations',
 			title: 'Reference speed scale',
-			description: 'Base speeds, from instant to deliberate. Legacy reference.duration.* aliases remain in the inventory without duplicating this ruler.',
+			description: 'Base speeds, from instant to deliberate.',
 			tokens: durations.filter((token) => token.id.startsWith('reference.motion.duration-')),
 			isScale: true,
 		},

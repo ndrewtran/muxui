@@ -464,7 +464,7 @@ test('catalog query 2.0 removes inline tokens while retaining 1.1 and 1.2 meanin
   assert.deepEqual(currentCrosswalk.entries, {
     status: 'absent',
     reason: 'token-source-omits-source-crosswalk',
-    tokenSourceSchemaVersion: '2.2.0',
+    tokenSourceSchemaVersion: '2.1.0',
     items: [],
   });
 
@@ -531,7 +531,7 @@ test('catalog query 2.0 removes inline tokens while retaining 1.1 and 1.2 meanin
   }).entries, {
     status: 'absent',
     reason: 'token-source-omits-source-crosswalk',
-    tokenSourceSchemaVersion: '2.2.0',
+    tokenSourceSchemaVersion: '2.1.0',
     items: [],
   });
 });

@@ -3409,34 +3409,6 @@
     },
     {
       "class": "authored",
-      "name": "deprecation",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/token/properties/deprecation"
-    },
-    {
-      "class": "authored",
-      "name": "schemaVersion",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/allOf/0/oneOf/0/properties/schemaVersion"
-    },
-    {
-      "class": "authored",
-      "name": "tokens",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/allOf/0/oneOf/0/properties/tokens"
-    },
-    {
-      "class": "authored",
-      "name": "schemaVersion",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/allOf/0/oneOf/1/properties/schemaVersion"
-    },
-    {
-      "class": "authored",
       "name": "modes",
       "owner": "token-source-contract",
       "schema": "token-source.schema.json",
@@ -3847,34 +3819,6 @@
       "name": "mix",
       "schema": "token-source.schema.json",
       "schemaPointer": "#/$defs/token/properties/mix"
-    },
-    {
-      "class": "authored",
-      "name": "since",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/tokenDeprecation/properties/since"
-    },
-    {
-      "class": "authored",
-      "name": "removeIn",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/tokenDeprecation/properties/removeIn"
-    },
-    {
-      "class": "authored",
-      "name": "replacement",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/tokenDeprecation/properties/replacement"
-    },
-    {
-      "class": "authored",
-      "name": "noReplacementReason",
-      "owner": "token-source-contract",
-      "schema": "token-source.schema.json",
-      "schemaPointer": "#/$defs/tokenDeprecation/properties/noReplacementReason"
     },
     {
       "class": "authored",

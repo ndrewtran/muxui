@@ -1,5 +1,5 @@
 import { canonicalDigest, canonicalJson, validateFamily } from '@muxui/schema';
-import { compilePureTokenGraph, cssDeclaration, tokenDeprecationDiagnostic } from './core.mjs';
+import { compilePureTokenGraph, cssDeclaration } from './core.mjs';
 
 const UNIT_BY_TYPE = Object.freeze({
   color: new Set(['hex']),
@@ -344,10 +344,6 @@ export function compileTokenGraph(source, options = {}) {
     overrides: options.overrides,
     fail,
   });
-  const diagnostics = Object.keys(options.overrides ?? {})
-    .filter((tokenId) => source.tokens[tokenId]?.deprecation !== undefined)
-    .sort(compareText)
-    .map((tokenId) => tokenDeprecationDiagnostic(tokenId, source.tokens[tokenId].deprecation, { use: 'override' }));
   return Object.freeze({
     sourceId: source.id,
     sourceRevision: canonicalDigest(source),
@@ -356,7 +352,6 @@ export function compileTokenGraph(source, options = {}) {
     modes: graph.modes,
     tokens: graph.tokens,
     dependencies: graph.dependencies,
-    diagnostics: Object.freeze(diagnostics),
   });
 }
 
@@ -460,28 +455,15 @@ export function compileTokenRequirementSet({ source, recipe, bindingId, profile,
     requirements,
     closure,
   };
-  const result = {
+  return Object.freeze({
     ...digestPreimage,
     sourceRevision: graph.sourceRevision,
     digest: canonicalDigest(digestPreimage),
-  };
-  // Keep notices available to runtime consumers without changing the
-  // requirement-set wire shape or its digest preimage.
-  Object.defineProperty(result, 'diagnostics', {
-    value: Object.freeze(requirements
-      .filter(({ token }) => source.tokens[token].deprecation !== undefined)
-      .map(({ token }) => tokenDeprecationDiagnostic(token, source.tokens[token].deprecation, {
-        use: 'requirement',
-        bindingId,
-        profile,
-      }))),
-    enumerable: false,
   });
-  return Object.freeze(result);
 }
 
 export function validateThemeForRequirementSet({ requirementSet, values }) {
-  const diagnostics = [...(requirementSet.diagnostics ?? [])];
+  const diagnostics = [];
   const resolved = {};
   for (const requirement of requirementSet.requirements) {
     if (Object.hasOwn(values, requirement.token)) {
@@ -558,7 +540,6 @@ export function compileWebTheme(source, options = {}) {
     runtimeSwitching: false,
     provenance: Object.freeze({ source: 'canonical-token-source', digest: graph.sourceRevision }),
     css: `:root {\n${declarations}\n}\n`,
-    diagnostics: graph.diagnostics,
   });
 }
 
@@ -570,7 +551,7 @@ export function compileNativeTheme(source, { profile, rootFontSizePx, ...options
     fail('MUXUI_TOKEN_ROOT_METRIC_INVALID', 'rootFontSizePx must be a positive finite number', { rootFontSizePx });
   }
   const graph = compileTokenGraph(source, options);
-  const diagnostics = [...graph.diagnostics];
+  const diagnostics = [];
   const theme = {};
   for (const token of publicTokenEntries(graph)) {
     const code = token.fluid ? 'MUXUI_TOKEN_FLUID_RECIPE_DEFERRED'

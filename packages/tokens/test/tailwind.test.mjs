@@ -18,7 +18,7 @@ test('Tailwind adapter aliases Mux-owned token namespaces without importing Tail
   assert.match(css, /--font-muxui-reference-typography-body-font: var\(--muxui-reference-typography-body-font\);/u);
   assert.match(css, /--ease-muxui-reference-motion-easing-linear: var\(--muxui-reference-motion-easing-linear\);/u);
   assert.doesNotMatch(css, /--font-muxui-reference-motion-easing/u);
-  assert.match(css, /--transition-duration-muxui-reference-duration-fast: var\(--muxui-reference-duration-fast\);/u);
+  assert.match(css, /--transition-duration-muxui-reference-motion-duration-fast: var\(--muxui-reference-motion-duration-fast\);/u);
 
   const consumer = compileTailwindConsumer(source, { muxuiCss: ':root { --muxui-component-button-background: #025768; }' });
   assert.ok(consumer.indexOf(':root {') < consumer.indexOf('@theme inline'));

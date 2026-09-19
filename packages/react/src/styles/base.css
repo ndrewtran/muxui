@@ -71,7 +71,7 @@
   --muxui-field-radius: var(--muxui-semantic-shape-option-radius);
   --muxui-field-bg: var(--muxui-semantic-field-background);
   --muxui-field-color: var(--muxui-semantic-field-content);
-  --muxui-field-font-family: var(--muxui-semantic-typography-body-font);
+  --muxui-field-font-family: var(--muxui-semantic-typography-text-font-family);
   --muxui-field-font-size: var(--muxui-semantic-typography-body-size);
   --muxui-field-focus-border: var(--muxui-focus-ring-color);
   --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);

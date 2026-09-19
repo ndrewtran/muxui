@@ -3,9 +3,9 @@
   "id": "muxui:guide:token-migration",
   "kind": "guide",
   "name": "Token contract migration",
-  "summary": "Migrate explicit CSS and theme authoring to the Mux UI token contract 3.1 notice.",
+  "summary": "Apply the Mux UI token contract 4.0 removal and update explicit CSS and theme authoring references.",
   "lifecycle": "experimental",
-  "keywords": ["tokens", "migration", "contract", "deprecation", "typography", "motion"],
+  "keywords": ["tokens", "migration", "contract", "typography", "motion"],
   "platforms": ["web.react"],
   "source": "catalog/guides/token-migration.md"
 }

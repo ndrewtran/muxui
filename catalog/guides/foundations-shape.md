@@ -18,7 +18,7 @@ Use a role that matches the surface: `semantic.control-radius` for controls, `se
 }
 ```
 
-The 3.1 notice retains `semantic.shape.thumb-radius` and `semantic.shape.wheel-radius` for existing consumers, but both roles are scheduled for removal in 4.0.0 and have no equivalent replacement. Do not substitute a nearest radius with a different value. Move an explicit override to the component-owned geometry only when you have identified the actual thumb or wheel contract.
+Contract 4.0.0 removes the unused `semantic.shape.thumb-radius` and `semantic.shape.wheel-radius` roles. They have no equivalent replacement. Move an explicit value to component-owned geometry only after identifying the actual thumb or wheel contract.
 
 Scale derives the radius family from its curvature input. The shape explorer keeps specimens the same size so radius differences are comparable and shows the alias path back to its reference value. Other geometry, density, and fluid recipes remain available; micro and compact radius roles continue to borrow the spacing scale in this pass.
 

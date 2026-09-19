@@ -104,20 +104,12 @@ export function foundationPage(slug: string): FoundationPage | undefined {
 
 type TokenType = 'color' | 'dimension' | 'duration' | 'number' | 'string' | 'effect';
 type TokenLayer = 'reference' | 'semantic' | 'component';
-type TokenDeprecation = {
-	since: string;
-	removeIn: string;
-	replacement?: string;
-	noReplacementReason?: string;
-};
-
 type TokenDefinition = {
 	layer: TokenLayer;
 	type: TokenType;
 	unit: string;
 	meaning: string;
 	overridePolicy: string;
-	deprecation?: TokenDeprecation;
 	value?: unknown;
 	alias?: string;
 	modes?: Record<string, { value?: unknown; alias?: string }>;
@@ -130,7 +122,6 @@ type CompiledToken = {
 	unit: string;
 	value: unknown;
 	overridePolicy: string;
-	deprecation?: TokenDeprecation;
 	source: string;
 	effect?: unknown;
 	fluid?: unknown;
@@ -170,7 +161,6 @@ export type FoundationToken = {
 	unit: string;
 	meaning: string;
 	overridePolicy: string;
-	deprecation?: TokenDeprecation;
 	sourceKind: string;
 	authoredValue: unknown;
 	authoredAlias?: string;
@@ -212,7 +202,6 @@ export const FOUNDATION_TOKENS: readonly FoundationToken[] = Object.freeze(token
 		unit: definition.unit,
 		meaning: definition.meaning,
 		overridePolicy: definition.overridePolicy,
-		deprecation: definition.deprecation,
 		sourceKind: compiled.source,
 		authoredValue: definition.value,
 		authoredAlias: authoredAlias(definition),

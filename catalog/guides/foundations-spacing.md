@@ -19,7 +19,7 @@ button {
 }
 ```
 
-The 3.1 notice retains `semantic.layout.navigation-inset-block` (6px) and `semantic.layout.content-row-min-height` (28px) for existing consumers, but both unused geometry roles are scheduled for removal in 4.0.0 and have no equivalent replacement. Do not point them at the nearest spacing role with a different value. Choose a component-owned inset or row metric only after identifying the layout contract that actually consumes it. `semantic.layout.navigation-inset-inline` and the other active geometry, density, and fluid roles remain independent.
+Contract 4.0.0 removes the unused `semantic.layout.navigation-inset-block` (6px) and `semantic.layout.content-row-min-height` (28px) roles. They have no equivalent replacement. Choose component-owned geometry only after identifying the layout contract that actually consumes it. `semantic.layout.navigation-inset-inline` and the other active geometry, density, and fluid roles remain independent.
 
 The explorer uses rulers and actual control specimens, rather than presenting dimensions as an undifferentiated table. Text-bearing controls may grow with larger text. Textareas, cards, tables, calendars, and other content-driven surfaces do not inherit the control target.
 

@@ -6,13 +6,18 @@ id: muxui:guide:themes
 
 Mux UI styles are generated from the canonical default theme. Consumers use semantic roles through the generated stylesheet; component pages do not need a second palette or a parallel styling system.
 
-## Token contract notice
+## Token contract 4.0
 
-The current source uses token schema `2.2.0` and token contract `3.1.0`. Token deprecations are authored on the token source with a `since` version, a `removeIn` version, and either an explicit replacement or a reason that no equivalent exists. The source is the authority for this metadata; guide pages explain the rationale and migration steps but are not a second token registry.
+The current source uses token schema `2.1.0` and token contract `4.0.0`. The
+contract removes provisional token IDs that had no Mux UI consumer. Removed
+names are absent from the generated stylesheet and rejected by authoring,
+Scale, and component recipes. See the [token contract migration guide](/token-migration/)
+for the direct change map.
 
-The 3.1 notice keeps deprecated names exported through `4.0.0` so existing CSS and scoped theme customizations have time to migrate. Update explicit authoring and stylesheet references when safe, and verify the affected light, dark, density, and reduced-motion modes. Replacement metadata does not rewrite consumer CSS or automatically move an override from a legacy name to a preferred name.
-
-Saved `muxui-theme-authoring-v1` documents with `tokenContractVersion: "3.0.0"` remain importable against the 3.1 source during this notice. Validation, compilation, and serialization normalize a copy to 3.1.0 while preserving overrides, modes, and Scale inputs without mutating the input document. Newly generated documents use 3.1.0; future or incompatible contract versions are rejected.
+Authoring documents must declare `tokenContractVersion: "4.0.0"`. Validation
+requires an exact source contract match and does not normalize older documents
+or rewrite overrides. Preserve explicit values and mode branches while moving
+to current semantic roles.
 
 See the [token contract migration guide](/token-migration/) for preferred typography and motion names, active colour roles, surface and geometry retirement guidance, and the roles that have no direct replacement.
 
