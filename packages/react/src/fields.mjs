@@ -41,6 +41,7 @@ import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
+import { DatePopoverMotion } from './date-popover-motion.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
@@ -285,11 +286,11 @@ function calendarHeader() {
 }
 
 function datePopover() {
-  return React.createElement(AriaPopover, { className: 'muxui-date-popover' }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
+  return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
 }
 
 function rangeDatePopover() {
-  return React.createElement(AriaPopover, { className: 'muxui-date-popover' }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
+  return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
 }
 
 function dateInput() {
@@ -759,156 +760,161 @@ export const TimeField = React.forwardRef(function TimeField({
 
 TimeField.displayName = 'TimeField';
 
-export const DatePicker = React.forwardRef(function DatePicker({
-  label,
-  description,
-  errorMessage,
-  value,
-  defaultValue,
-  minValue,
-  maxValue,
-  unavailableDateMatcher,
-  isDateUnavailable: _upstreamDateUnavailable,
-  onChange,
-  onOpenChange,
-  open,
-  defaultOpen,
-  disabled = false,
-  readOnly = false,
-  required = false,
-  invalid = false,
-  size,
-  validationBehavior: _validationBehavior,
-  name,
-  className,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  ...props
-}, ref) {
-  assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
-  const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
-  const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
-  const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
-  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-  return React.createElement(AriaDatePicker, {
-    ...props,
-    ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
-    value: parsedValue,
-    defaultValue: parsedDefaultValue,
-    minValue: parsedMinValue,
-    maxValue: parsedMaxValue,
-    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
-    placeholderValue: DATE_PLACEHOLDER,
-    onChange: (next) => onChange?.(serializeDateValue(next)),
-    isOpen: open,
-    defaultOpen,
-    onOpenChange,
-    name,
-    className: classNames('muxui-date-picker', className),
-    'data-size': resolvedSize,
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+// Pure wrappers let unused date-picker imports omit motion code.
+export const DatePicker = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function DatePicker({
     label,
     description,
     errorMessage,
-    input: React.createElement(AriaGroup, { className: 'muxui-date-control' }, dateInput(), React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
-    children: datePopover(),
-  }));
-});
-
-DatePicker.displayName = 'DatePicker';
-
-export const DateRangePicker = React.forwardRef(function DateRangePicker({
-  label,
-  description,
-  errorMessage,
-  value,
-  defaultValue,
-  minValue,
-  maxValue,
-  unavailableDateMatcher,
-  isDateUnavailable: _upstreamDateUnavailable,
-  onChange,
-  onOpenChange,
-  open,
-  defaultOpen,
-  disabled = false,
-  readOnly = false,
-  required = false,
-  invalid = false,
-  size,
-  validationBehavior: _validationBehavior,
-  allowsNonContiguousRanges: _allowsNonContiguousRanges,
-  closeOnSelect: _closeOnSelect,
-  shouldCloseOnSelect: _shouldCloseOnSelect,
-  startName,
-  endName,
-  className,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  ...props
-}, ref) {
-  assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
-  const resolvedSize = normalizeChoiceControlSize(size, 'DateRangePicker');
-  const externalValidation = useMuxFormValidation([startName, endName]);
-  const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-  const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
-  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-  const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
-  const resettingRef = React.useRef(false);
-  React.useEffect(() => {
-    if (value !== undefined) setFormValue(value);
-  }, [value]);
-  const handleChange = (next) => {
-    if (resettingRef.current) return;
-    const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined;
-    setFormValue(nextValue);
-    onChange?.(nextValue);
-  };
-  const handleReset = () => {
-    if (value === undefined) setFormValue(defaultValue);
-  };
-  const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-  const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
-  const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
-  return React.createElement(AriaDateRangePicker, {
-    ...props,
-    ref,
-    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
-    value: effectiveValueObject,
-    minValue: parsedMinValue,
-    maxValue: parsedMaxValue,
-    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher, true),
-    placeholderValue: DATE_PLACEHOLDER,
-    onChange: handleChange,
-    isOpen: open,
-    defaultOpen,
+    value,
+    defaultValue,
+    minValue,
+    maxValue,
+    unavailableDateMatcher,
+    isDateUnavailable: _upstreamDateUnavailable,
+    onChange,
     onOpenChange,
-    name: undefined,
-    className: classNames('muxui-date-range-picker', className),
-    'data-size': resolvedSize,
+    open,
+    defaultOpen,
+    disabled = false,
+    readOnly = false,
+    required = false,
+    invalid = false,
+    size,
+    validationBehavior: _validationBehavior,
+    name,
+    className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+    ...props
+  }, ref) {
+    assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
+    const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
+    const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
+    const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
+    const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
+    return React.createElement(AriaDatePicker, {
+      ...props,
+      ref,
+      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      value: parsedValue,
+      defaultValue: parsedDefaultValue,
+      minValue: parsedMinValue,
+      maxValue: parsedMaxValue,
+      isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
+      placeholderValue: DATE_PLACEHOLDER,
+      onChange: (next) => onChange?.(serializeDateValue(next)),
+      isOpen: open,
+      defaultOpen,
+      onOpenChange,
+      name,
+      className: classNames('muxui-date-picker', className),
+      'data-size': resolvedSize,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+    }, fieldChildren({
+      label,
+      description,
+      errorMessage,
+      input: React.createElement(AriaGroup, { className: 'muxui-date-control' }, dateInput(), React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+      children: datePopover(),
+    }));
+  });
+  component.displayName = 'DatePicker';
+  return component;
+})();
+
+export const DateRangePicker = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function DateRangePicker({
     label,
     description,
-    errorMessage: effectiveErrorMessage,
-    input: React.createElement(AriaGroup, { className: 'muxui-date-range-control' },
-      React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
-      React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
-      React.createElement(AriaDateInput, { slot: 'end', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
-      React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
-    children: React.createElement(React.Fragment, null,
-      rangeDatePopover(),
-      formResetAnchor(resetInputRef),
-      startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
-      endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
-  }));
-});
-
-DateRangePicker.displayName = 'DateRangePicker';
+    errorMessage,
+    value,
+    defaultValue,
+    minValue,
+    maxValue,
+    unavailableDateMatcher,
+    isDateUnavailable: _upstreamDateUnavailable,
+    onChange,
+    onOpenChange,
+    open,
+    defaultOpen,
+    disabled = false,
+    readOnly = false,
+    required = false,
+    invalid = false,
+    size,
+    validationBehavior: _validationBehavior,
+    allowsNonContiguousRanges: _allowsNonContiguousRanges,
+    closeOnSelect: _closeOnSelect,
+    shouldCloseOnSelect: _shouldCloseOnSelect,
+    startName,
+    endName,
+    className,
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledby,
+    ...props
+  }, ref) {
+    assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
+    const resolvedSize = normalizeChoiceControlSize(size, 'DateRangePicker');
+    const externalValidation = useMuxFormValidation([startName, endName]);
+    const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
+    const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
+    const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
+    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
+    const resettingRef = React.useRef(false);
+    React.useEffect(() => {
+      if (value !== undefined) setFormValue(value);
+    }, [value]);
+    const handleChange = (next) => {
+      if (resettingRef.current) return;
+      const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined;
+      setFormValue(nextValue);
+      onChange?.(nextValue);
+    };
+    const handleReset = () => {
+      if (value === undefined) setFormValue(defaultValue);
+    };
+    const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
+    const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
+    const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
+    return React.createElement(AriaDateRangePicker, {
+      ...props,
+      ref,
+      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
+      value: effectiveValueObject,
+      minValue: parsedMinValue,
+      maxValue: parsedMaxValue,
+      isDateUnavailable: unavailableDateCallback(unavailableDateMatcher, true),
+      placeholderValue: DATE_PLACEHOLDER,
+      onChange: handleChange,
+      isOpen: open,
+      defaultOpen,
+      onOpenChange,
+      name: undefined,
+      className: classNames('muxui-date-range-picker', className),
+      'data-size': resolvedSize,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+    }, fieldChildren({
+      label,
+      description,
+      errorMessage: effectiveErrorMessage,
+      input: React.createElement(AriaGroup, { className: 'muxui-date-range-control' },
+        React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
+        React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
+        React.createElement(AriaDateInput, { slot: 'end', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
+        React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+      children: React.createElement(React.Fragment, null,
+        rangeDatePopover(),
+        formResetAnchor(resetInputRef),
+        startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+        endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+    }));
+  });
+  component.displayName = 'DateRangePicker';
+  return component;
+})();
 
 function normalizeAutocompleteItems(items) {
   const usedIds = new Set();

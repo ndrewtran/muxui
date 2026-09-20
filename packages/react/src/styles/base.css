@@ -1006,10 +1006,6 @@
   outline: none;
 }
 
-.muxui-date-popover[data-entering] {
-  animation: muxui-date-popover-fade-in var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
     .muxui-date-trigger,
@@ -1026,16 +1022,8 @@
   animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
-@keyframes muxui-date-popover-fade-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.muxui-date-popover[data-muxui-date-popover-reduced][data-exiting] {
+  animation: none !important;
 }
 
 @keyframes muxui-date-popover-fade-out {
@@ -1141,16 +1129,30 @@
   min-height: 0;
   padding: 0;
   border-radius: var(--muxui-semantic-shape-option-radius);
-  border: 1px solid var(--muxui-semantic-border-emphasis);
-  background: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
-  color: var(--muxui-semantic-action-foreground);
+  border: 0;
+  outline: none;
+  background-color: var(--muxui-semantic-action-neutral-background);
+  color: var(--muxui-semantic-content-strong);
 }
 
 .muxui-calendar-previous:hover:not([data-disabled]),
-.muxui-calendar-next:hover:not([data-disabled]) {
-  background: var(--muxui-semantic-action-background-hover);
-  border-color: var(--muxui-semantic-action-background-hover);
-  color: var(--muxui-semantic-action-foreground);
+.muxui-calendar-next:hover:not([data-disabled]),
+.muxui-calendar-previous[data-hovered]:not([data-disabled]),
+.muxui-calendar-next[data-hovered]:not([data-disabled]) {
+  background-color: var(--muxui-semantic-action-neutral-background-hover);
+}
+
+.muxui-calendar-previous:active:not([data-disabled]),
+.muxui-calendar-next:active:not([data-disabled]),
+.muxui-calendar-previous[data-pressed]:not([data-disabled]),
+.muxui-calendar-next[data-pressed]:not([data-disabled]) {
+  background-color: var(--muxui-semantic-action-neutral-background-pressed);
+}
+
+.muxui-calendar-previous > svg,
+.muxui-calendar-next > svg {
+  color: currentColor;
+  stroke: currentColor;
 }
 
 .muxui-calendar-heading {

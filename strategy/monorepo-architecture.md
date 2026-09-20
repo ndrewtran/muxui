@@ -1033,6 +1033,20 @@ ordinary Button consumers do not load the editor or Markdown parser. Tiptap
 types and editor objects never enter the Mux UI public API, and Markdown input
 retains typed AST, escaping, source-size bounds, and focused security proof.
 
+Decision 0019 accepts `motion@13.4.0` as an exact, internal, replaceable
+runtime dependency for bounded Mux-owned component motion in already admitted
+`web.react` families. Owning renderer modules may import only the private
+`motion/react` and `motion/react-m` entries. The retained registry metadata is
+MIT with React peer metadata overlapping the package's declared React peers;
+this is authority input, not installed-graph or runtime proof. Mux UI owns
+public APIs and types, canonical motion tokens and modes, CSS, refs,
+accessibility, SSR, hydration, and lifecycle. CSS remains valid, and motion
+code may not expose dependency animation props, types, providers, exports, or
+import paths through the Mux UI API, or duplicate focus, dismissal, portal,
+inert/background, or scroll-lock ownership. Integrations preserve both system
+preference and explicit Mux reduced-mode paths. No React Native, `web.html`, or
+cross-renderer contract follows from this edge.
+
 #### React styling and parity boundary
 
 Mux UI owns the React styling contract, including selectors, token mappings,
@@ -1154,6 +1168,7 @@ flowchart TD
   aria["react-aria-components@1.20.0\nexact internal runtime dependency"]
   temporal["@internationalized/date@3.12.3\napproved internal temporal adapter dependency"]
   lucide["lucide-react@1.37.0\nR1 + R1.6 internal affordances"]
+  motion["motion@13.4.0\ninternal component motion"]
   resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
   markdown["marked@13.0.3\nMarkdown lexer only"]
   editor["Tiptap 3.22.3 packages\nTextEditor only"]
@@ -1165,6 +1180,7 @@ flowchart TD
   aria --> react
   temporal --> react
   lucide --> react
+  motion --> react
   resizable --> react
   markdown --> react
   editor --> react
@@ -1172,6 +1188,11 @@ flowchart TD
   canonical -. later activation .-> web
   canonical -. later activation .-> native
 ```
+
+Decision 0019's `motion@13.4.0` edge is limited to component-local Mux UI
+motion in existing admitted React bindings. Its package integrity, notice,
+lockfile, import isolation, tree-shaking, SSR/hydration, and packed-consumer
+results remain implementation proof; the graph does not claim those results.
 
 The React-primary prerelease publishes exactly `@muxui/react`. It has no
 runtime dependency on another Mux UI workspace package or `@muxui/web`.

@@ -891,6 +891,7 @@
   border: 0;
   border-radius: 0;
   background-color: transparent;
+  outline: none;
   padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1lh) / 2));
   padding-inline: var(--muxui-semantic-control-padding-inline);
   padding-inline-end: var(--muxui-semantic-control-padding-inline);
@@ -900,12 +901,13 @@
 .muxui-date-range-control .muxui-date-trigger {
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
-  border-top: 0;
-  border-right: 0;
-  border-bottom: 0;
+  border-top: 1px solid transparent;
+  border-right: 1px solid transparent;
+  border-bottom: 1px solid transparent;
   border-left: 1px solid var(--muxui-semantic-color-neutral-default-26);
   border-radius: 0 calc(var(--muxui-semantic-control-radius) - 1px) calc(var(--muxui-semantic-control-radius) - 1px) 0;
   background-color: var(--muxui-semantic-color-neutral-default-10);
+  background-clip: padding-box;
 }
 
 .muxui-date-range-control .muxui-date-trigger {

@@ -675,6 +675,18 @@ integrity, license/notice, peer-compatibility, lockfile, module-isolation,
 tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof is
 required. No upstream implementation type or object is public.
 
+Decision 0019 adds the exact internal, replaceable `motion@13.4.0` edge for
+bounded Mux-owned component motion in existing admitted `web.react` families.
+Private `motion/react` and `motion/react-m` imports remain component-local;
+Mux-owned tokens, modes, CSS, accessibility, SSR/hydration, and lifecycle stay
+authoritative. Its registry metadata is not installed-graph evidence. Exact
+integrity, MIT license/notice, peer compatibility, lockfile, tree-shaking,
+SSR/hydration, and packed-consumer proof remain required, with no new milestone
+or delivery-status change. For each affected admitted binding, behavior proof
+covers refs, interruption, cleanup, focus/dismissal ownership, SSR/hydration,
+and system plus explicit reduced-mode paths as applicable; CSS remains a valid
+implementation. Routine integration requires no per-component adoption decision.
+
 Each bounded change updates the earliest canonical owner, regenerates
 projections, keeps React Aria internal, and runs focused checks proportional to
 the exported behavior. Protected CI, ordinary review, accessibility/privacy
@@ -863,7 +875,8 @@ Storybook owns neither canonical examples nor token/theme data.
   Tailwind remains a consumer build dependency only and is absent from Mux
   runtime, peer, generated-source, and styling-engine closure.
 - Exact internal, replaceable dependencies remain at owning Mux modules:
-  Lucide for the nine listed roots, `react-aria@3.51.0` for `Resizable`,
+  Lucide for the nine listed roots, `motion@13.4.0` for bounded component
+  motion in existing admitted bindings, `react-aria@3.51.0` for `Resizable`,
   `marked@13.0.3` for the typed Markdown parser boundary, and the eight
   `@tiptap/*@3.22.3` packages for `TextEditor`. Their license/notice,
   integrity, peer-compatibility, lockfile, isolation, tree-shaking,
@@ -2233,6 +2246,8 @@ R1 exit remains an exact prerelease of only `@muxui/react` under `next`, with
 the already-authorized React/React DOM peer boundary and exact internal runtime
 dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.3`
 limited to the six named value-adapter families above, and
+`motion@13.4.0` for bounded Mux-owned component motion in existing admitted
+React bindings, and
 `lucide-react@1.37.0` for the approved existing R1 control affordances plus
   the nine R1.6 affordance roots `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,

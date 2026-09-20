@@ -1,22 +1,24 @@
 # Decision 0019: Mux-owned React component motion
 
-- Status: proposed; awaiting Andrew's acceptance
+- Status: accepted user direction; repository adoption through a protected pull request
 - Decision owner: Andrew / `ndrewtran`
-- Proposed decision: `muxui:decision:0019`
+- Decision: `muxui:decision:0019`
 - Authority: accepted [Architecture](../strategy/monorepo-architecture.md),
   [Roadmap](../strategy/milestone-roadmap.md), and
   [Product Scope](../strategy/product-scope.md)
 
-This document is a draft. The request to prepare it is not acceptance of the
-dependency or authorization to implement it. Adoption requires Andrew's
-acceptance and the existing protected pull-request process.
+- Accepted request: [acceptance record](./0019-react-component-motion-acceptance.md)
+
+Andrew's acceptance records the bounded authority direction below. Repository
+adoption remains subject to the existing protected pull-request process; this
+record does not claim implementation, proof completion, or package release.
 
 ## Decision
 
 Adopt one exact, internal, replaceable runtime dependency for Mux-owned
 component motion in `@muxui/react`: `motion@13.4.0`. Its `motion/react` and
 `motion/react-m` entry points stay inside private renderer implementation
-modules. The dependency is proposed for already-admitted `web.react` families
+modules. The dependency is accepted for already-admitted `web.react` families
 whose existing contracts benefit from finite, purpose-specific movement; it
 does not blanket-wrap the package or create a new component family.
 
@@ -30,17 +32,17 @@ may support the admitted components without creating a new public animation
 API, motion registry, or cross-package runtime.
 
 The [registry metadata](https://registry.npmjs.org/motion/13.4.0) for the
-proposed exact version is:
+accepted exact version is:
 
-| Field | Proposed value |
+| Field | Registry metadata |
 | --- | --- |
 | Package | `motion@13.4.0` |
 | License | MIT |
 | React peers | `react`, `react-dom`: `^18.0.0 || ^19.0.0` |
 
-These values are proposed dependency evidence only. They do not claim that the
-package is installed, locked, packed, tree-shaken, or released. Acceptance
-must precede manifest and lockfile changes; implementation must verify the
+These values are registry metadata only. They do not claim that the package is
+installed, locked, packed, tree-shaken, or released. Manifest and lockfile
+changes remain downstream implementation work; implementation must verify the
 exact bytes, license/notice closure, peer isolation, and packed-consumer
 resolution.
 
@@ -76,15 +78,16 @@ lifecycle claim, or compatibility promise. Existing R1/R1.6 milestone entry,
 exit, evidence, prerelease, publication, and final-merge boundaries remain in
 force. React Native, `web.html`, cross-renderer equivalence, stable support,
 and `latest` remain separately admitted work. Existing Scope IDs retain their
-states and no commitment transition is proposed, including
+states and no commitment transition is introduced, including
 `SCOPE-PKG-REACT`, `SCOPE-API-REACT-ERGONOMICS`, `SCOPE-TOKEN-MODES`,
 `SCOPE-PROOF-BEHAVIOR`, `SCOPE-PROOF-PACKAGE`, `SCOPE-PROOF-VISUAL`, and
 `SCOPE-QUALITY-COMPAT-PROFILE`.
 
-## Required materialization after acceptance
+## Repository adoption after acceptance
 
-Acceptance would require coordinated canonical updates before implementation;
-accepted historical decisions and completed evidence retain their meaning:
+Repository adoption requires coordinated canonical updates before
+implementation; accepted historical decisions and completed evidence retain
+their meaning:
 
 1. Add the exact private dependency edge and Mux-owned lifecycle, reduced-mode,
    and public-boundary rules to the `@muxui/react` Architecture section and
@@ -126,7 +129,7 @@ ongoing comparison requirement.
 
 ## Non-goals and preserved stops
 
-This proposal does not install the dependency, edit a manifest or lockfile,
+This accepted direction does not install the dependency, edit a manifest or lockfile,
 implement component motion, add a public provider or motion API, create a
 second token or component registry, accept evidence, mark a milestone ready or
 complete, change a release or support boundary, update the Project, publish a

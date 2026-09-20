@@ -35,6 +35,11 @@ upstream package notices. Unchanged copies of their license texts are also
 included in licenses/. Tiptap and marked are isolated behind the TextEditor
 and Markdown package subpaths. Public Mux interfaces remain Mux-owned.
 
+The internal motion dependency retains notices for its exact package IDs:
+motion@13.4.0, framer-motion@13.4.0, motion-dom@13.3.0, and
+motion-utils@13.3.0 are MIT; tslib@2.8.1 is 0BSD. Unchanged copies of these
+license texts are included in licenses/.
+
 Lucide ISC License
 
 Copyright (c) 2026 Lucide Icons and Contributors

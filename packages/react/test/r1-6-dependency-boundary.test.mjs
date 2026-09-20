@@ -8,18 +8,39 @@ import reference from './fixtures/r1-6-dependency-reference.json' with { type: '
 const root = resolve(import.meta.dirname, '../../..');
 const read = (path) => readFile(resolve(root, path), 'utf8');
 const readJson = async (path) => JSON.parse(await read(path));
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
+
+function lockRecordBlock(section, entry) {
+  const prefix = `  ${entry.package}@${entry.version}`;
+  return section.split('\n\n').find((candidate) => {
+    const firstLine = candidate.split('\n', 1)[0];
+    const prefixes = [prefix, `  '${entry.package}@${entry.version}`, `  "${entry.package}@${entry.version}`];
+    return prefixes.some((candidatePrefix) => {
+      if (!firstLine.startsWith(candidatePrefix)) return false;
+      return [':', '(', "'", '"'].includes(firstLine[candidatePrefix.length]);
+    });
+  });
+}
+
+function assertDependencyLine(block, name, version, label) {
+  assert.match(
+    block,
+    new RegExp(`\\n      ${escapeRegExp(name)}: ${escapeRegExp(version)}(?:\\(|\\n|$)`, 'u'),
+    label,
+  );
+}
 
 test('accepted dependency pins retain exact lockfile integrity and unchanged licenses', async () => {
   const lockfile = await read(reference.lockfile);
   const packageEntries = lockfile.split('\npackages:\n')[1]?.split('\nsnapshots:\n')[0];
   assert.ok(packageEntries, 'pnpm lockfile declares its resolved package records');
-  for (const entry of [...reference.records, ...reference.transitiveEditorRecords]) {
+  for (const entry of [...reference.records, ...reference.transitiveEditorRecords, ...reference.motionClosureRecords]) {
     if (entry.owner) {
       const manifest = await readJson(entry.owner);
       assert.equal(manifest.dependencies[entry.package], entry.version, entry.package);
     }
     const header = `${entry.package}@${entry.version}`;
-    const block = packageEntries.split('\n\n').find((candidate) => candidate.split('\n').some((line) => line === `  '${header}':` || line === `  ${header}:`));
+    const block = lockRecordBlock(packageEntries, entry);
     assert.ok(block, `${header} has an exact package record`);
     assert.ok(block.includes(`integrity: ${entry.integrity}`), `${header} retains its integrity`);
     const license = await read(entry.licenseFile);
@@ -30,6 +51,43 @@ test('accepted dependency pins retain exact lockfile integrity and unchanged lic
   assert.equal(reference.records.filter((entry) => entry.package.startsWith('@tiptap/')).length + reference.transitiveEditorRecords.length, editorVersions.length);
   assert.deepEqual([...new Set(editorVersions)], ['3.22.3'], 'the entire internal editor closure uses the accepted version');
   assert.doesNotMatch(lockfile, /(?:@tailwindcss\/|tailwindcss@)/u, 'Tailwind remains outside the Mux workspace lockfile');
+});
+
+test('motion closure retains exact snapshots, license identity, and React peer resolution', async () => {
+  const lockfile = await read(reference.lockfile);
+  const packageEntries = lockfile.split('\npackages:\n')[1]?.split('\nsnapshots:\n')[0];
+  const snapshotEntries = lockfile.split('\nsnapshots:\n')[1];
+  assert.ok(packageEntries, 'pnpm lockfile declares its resolved package records');
+  assert.ok(snapshotEntries, 'pnpm lockfile declares its dependency snapshots');
+  const manifest = await readJson('packages/react/package.json');
+  const notice = await read('packages/react/NOTICE');
+  assert.deepEqual(
+    reference.motionClosureRecords.map((entry) => entry.package),
+    ['motion', 'framer-motion', 'motion-dom', 'motion-utils', 'tslib'],
+  );
+  assert.equal(manifest.devDependencies.react, reference.motionPeerResolution.react);
+  assert.equal(manifest.devDependencies['react-dom'], reference.motionPeerResolution['react-dom']);
+  assert.equal(manifest.peerDependencies.react, '>=19.2.0 <20');
+  assert.equal(manifest.peerDependencies['react-dom'], '>=19.2.0 <20');
+
+  for (const entry of reference.motionClosureRecords) {
+    assert.match(notice, new RegExp(`${escapeRegExp(entry.package)}@${escapeRegExp(entry.version)}`, 'u'), `${entry.package} is disclosed in NOTICE`);
+    const packageBlock = lockRecordBlock(packageEntries, entry);
+    const snapshotBlock = lockRecordBlock(snapshotEntries, entry);
+    assert.ok(packageBlock, `${entry.package}@${entry.version} has an exact package record`);
+    assert.ok(snapshotBlock, `${entry.package}@${entry.version} has an exact snapshot`);
+    for (const [name, version] of Object.entries(entry.peerDependencies ?? {})) {
+      assertDependencyLine(packageBlock, name, version, `${entry.package} retains its peer range for ${name}`);
+    }
+    for (const [name, version] of Object.entries(entry.dependencies ?? {})) {
+      assertDependencyLine(snapshotBlock, name, version, `${entry.package} retains its locked dependency ${name}`);
+    }
+  }
+
+  const motionSnapshot = lockRecordBlock(snapshotEntries, reference.motionClosureRecords[0]);
+  for (const [name, version] of Object.entries(reference.motionPeerResolution)) {
+    assertDependencyLine(motionSnapshot, name, version, `motion resolves ${name} to the existing peer`);
+  }
 });
 
 test('supplemental dependencies and isolated exports stay within the accepted boundary', async () => {

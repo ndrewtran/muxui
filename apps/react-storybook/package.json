@@ -8,6 +8,7 @@
     "build": "pnpm generate && storybook build --output-dir dist",
     "generate": "pnpm --filter @muxui/react... generate && node src/generate-stories.mjs",
     "generate:check": "node src/generate-stories.mjs --check",
+    "check:component": "node --test --test-concurrency=1 --test-name-pattern='all Mux UI React Storybook families' test/storybook-a11y.test.mjs",
     "check": "pnpm generate && pnpm generate:check && node --test --test-concurrency=1 test/*.test.mjs",
     "check:a11y": "node --test test/storybook-a11y.test.mjs"
   },
