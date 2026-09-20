@@ -330,6 +330,9 @@ function stateIsSupported(binding, state, family) {
         || props.has('selectedIds')
         || props.has('selectedId')
         || ['CheckboxGroup', 'RadioGroup', 'Tabs', 'Select', 'Calendar', 'RangeCalendar', 'ColorSwatchPicker'].includes(family) && props.has('value');
+    case 'checked':
+    case 'unchecked':
+      return props.has('checked');
     case 'indeterminate':
       return props.has('indeterminate') || family === 'ProgressBar';
     case 'expanded':
@@ -410,6 +413,12 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
       break;
     case 'selected':
       setSelectedState(args, props, family, fixtureInput, preserveExplicit);
+      break;
+    case 'checked':
+      if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) setControlledArg(args, props, 'checked', true);
+      break;
+    case 'unchecked':
+      if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) setControlledArg(args, props, 'checked', false);
       break;
     case 'indeterminate':
       if (props.has('indeterminate')) args.indeterminate = true;

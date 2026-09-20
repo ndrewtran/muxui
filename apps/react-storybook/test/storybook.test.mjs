@@ -598,6 +598,10 @@ test('state coverage metadata exposes isolated supported states with canonical a
   assert.equal(stateArgsForBinding(binding('Checkbox'), 'disabled', 'Checkbox').invalid, false);
   assert.equal(stateArgsForBinding(binding('Checkbox'), 'invalid', 'Checkbox').invalid, true);
   assert.equal(stateArgsForBinding(binding('Checkbox'), 'indeterminate', 'Checkbox').indeterminate, true);
+  const checkboxFieldBinding = descriptorSource.bindings.find(({ export: family }) => family === 'CheckboxField');
+  assert.ok(checkboxFieldBinding);
+  assert.equal(stateArgsForBinding(checkboxFieldBinding, 'checked', 'CheckboxField').checked, true);
+  assert.equal(stateArgsForBinding(checkboxFieldBinding, 'unchecked', 'CheckboxField').checked, false);
   assert.equal(stateArgsForBinding(binding('TextField'), 'read-only', 'TextField').readOnly, true);
   assert.equal(stateArgsForBinding(binding('Disclosure'), 'expanded', 'Disclosure').expanded, true);
   assert.equal(stateArgsForBinding(binding('Dialog'), 'open', 'Dialog').open, true);
@@ -611,6 +615,31 @@ test('state coverage metadata exposes isolated supported states with canonical a
   assert.equal(rendered.type, 'div');
   assert.equal(rendered.props.className, 'muxui-storybook-states');
   assert.equal(rendered.props.children.length, binding('Button').states.length);
+});
+
+test('CheckboxField checked and unchecked coverage renders available icon states', () => {
+  const checkboxFieldBinding = descriptorSource.bindings.find(({ export: family }) => family === 'CheckboxField');
+  assert.ok(checkboxFieldBinding);
+  const markup = renderToStaticMarkup(renderStateCoverage({
+    family: 'CheckboxField',
+    tranche: 'R1.6',
+    binding: checkboxFieldBinding,
+  }));
+  const dom = new JSDOM(`<!doctype html>${markup}`);
+  try {
+    const section = (state) => [...dom.window.document.querySelectorAll('.muxui-storybook-state')]
+      .find((candidate) => candidate.querySelector('h3')?.textContent === state);
+    const checked = section('checked');
+    const unchecked = section('unchecked');
+    assert.ok(checked);
+    assert.ok(unchecked);
+    assert.equal(checked.querySelector('[data-muxui-storybook-state="unavailable"]'), null);
+    assert.equal(unchecked.querySelector('[data-muxui-storybook-state="unavailable"]'), null);
+    assert.equal(checked.querySelector('.lucide-check') !== null, true);
+    assert.equal(unchecked.querySelector('.muxui-checkbox-field__indicator svg'), null);
+  } finally {
+    dom.window.close();
+  }
 });
 
 test('unsupported state coverage is explicit while supported state args remain observable', () => {

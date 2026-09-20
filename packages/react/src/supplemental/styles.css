@@ -414,88 +414,13 @@
 
 
 
-.muxui-checkbox-field__indicator {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.125rem;
-  height: 1.125rem;
-  border-radius: var(--muxui-semantic-shape-indicator-radius);
-  border: 1.5px solid var(--muxui-semantic-color-neutral-40);
-  background-color: var(--muxui-semantic-color-neutral-10);
-  outline: none;
-  transition:
-    background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
-    box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
-  flex-shrink: 0;
-  pointer-events: none;
-}
-
-.muxui-checkbox-field__button[data-focus-visible] .muxui-checkbox-field__indicator {
-  box-shadow:
-    0 0 0 2px var(--muxui-semantic-focus-inner),
-    0 0 0 4px var(--muxui-focus-ring-color);
-}
-
-
-
-.muxui-checkbox-field__button[data-selected] .muxui-checkbox-field__indicator {
-  background-color: var(--muxui-semantic-color-color-60);
-  border-color: var(--muxui-semantic-color-color-60);
-}
-
-.muxui-checkbox-field__button[data-selected][data-hovered]:not([data-disabled])
-  .muxui-checkbox-field__indicator {
-  background-color: var(--muxui-semantic-color-color-50);
-  border-color: var(--muxui-semantic-color-color-50);
-}
-
-
-
-.muxui-checkbox-field__button[data-indeterminate] .muxui-checkbox-field__indicator {
-  background-color: var(--muxui-semantic-color-color-60);
-  border-color: var(--muxui-semantic-color-color-60);
-}
-
-
-
-.muxui-checkbox-field__button[data-hovered]:not(
-    [data-disabled],
-    [data-selected],
-    [data-indeterminate]
-  )
-  .muxui-checkbox-field__indicator {
-  border-color: var(--muxui-semantic-color-neutral-60);
-  background-color: var(--muxui-semantic-color-neutral-14);
-}
-
-
-
-.muxui-checkbox-field[data-invalid] .muxui-checkbox-field__indicator {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
-}
-
-
-
 .muxui-checkbox-field[data-disabled] .muxui-checkbox-field__button {
-  opacity: 0.45;
   cursor: not-allowed;
 }
 
 
 
-.muxui-checkbox-field__indicator svg {
-  width: 0.75rem;
-  height: 0.75rem;
-  color: var(--muxui-semantic-color-color-60-fg);
-  stroke-width: 4;
-  display: block;
-}
-
-.muxui-checkbox-field__button:not([data-selected], [data-indeterminate])
-  .muxui-checkbox-field__indicator
-  svg {
+.muxui-checkbox-field__button:not([data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator svg {
   visibility: hidden;
 }
 
