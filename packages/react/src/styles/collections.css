@@ -216,6 +216,14 @@
   overflow: hidden;
 }
 
+.muxui-color-swatch[data-shape='circle'] {
+  border-radius: 50%;
+}
+
+.muxui-color-swatch[data-two-tone] {
+  background-image: linear-gradient(135deg, var(--muxui-color-swatch-primary) 50%, var(--muxui-color-swatch-secondary) 50%);
+}
+
 /* MuxUI component source: color-swatch-picker.css */
 .muxui-color-swatch-picker {
   display: flex;

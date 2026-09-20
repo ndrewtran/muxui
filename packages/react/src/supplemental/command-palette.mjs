@@ -1,1 +1,1 @@
-export { CommandPalette } from './index.mjs';
+export { CommandPalette, useCommandPalette } from './index.mjs';

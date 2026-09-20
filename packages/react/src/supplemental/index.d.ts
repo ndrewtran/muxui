@@ -91,7 +91,49 @@ export type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> &
 export declare const ColorModeToggle: React.ForwardRefExoticComponent<ColorModeToggleProps & React.RefAttributes<HTMLLabelElement>>;
 
 export type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; size?: 'sm' | 'md' | 'lg'; closeOnSelect?: boolean };
-export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
+export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; target?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
+export interface CommandPaletteCommand {
+  id: string;
+  title: string;
+  subtitle?: string;
+  keywords?: readonly string[];
+  group?: string;
+  icon?: React.ReactNode;
+  shortcut?: readonly string[];
+  disabled?: boolean;
+  href?: string;
+  target?: string;
+  action?: () => void | Promise<void>;
+  closeOnSelect?: boolean;
+}
+export interface CommandPaletteGroup<T extends CommandPaletteCommand = CommandPaletteCommand> {
+  id: string;
+  title: string;
+  commands: readonly T[];
+}
+export interface UseCommandPaletteOptions<T extends CommandPaletteCommand> {
+  commands: readonly T[];
+  query?: string;
+  defaultQuery?: string;
+  onQueryChange?: (query: string) => void;
+  filter?: false | ((command: T, query: string) => boolean);
+  sort?: false | ((a: T, b: T, query: string) => number);
+  groupBy?: (command: T) => string | null | undefined;
+  getGroupTitle?: (groupId: string) => string;
+  onAction?: (command: T) => void | Promise<void>;
+  onError?: (error: unknown, command: T) => void;
+  close?: () => void;
+  closeOnSelect?: boolean;
+}
+export interface UseCommandPaletteReturn<T extends CommandPaletteCommand> {
+  query: string;
+  setQuery: (query: string) => void;
+  filteredCommands: readonly T[];
+  groupedCommands: readonly CommandPaletteGroup<T>[];
+  runCommand: (commandOrId: T | string) => Promise<void>;
+  getItemProps: (command: T) => CommandPaletteItemProps;
+}
+export declare function useCommandPalette<T extends CommandPaletteCommand>(options: UseCommandPaletteOptions<T>): UseCommandPaletteReturn<T>;
 export type CommandPaletteTriggerProps = ButtonPartProps;
 export type CommandPaletteBackdropProps = PartProps<HTMLDivElement> & { dismissable?: boolean };
 export type CommandPalettePopupProps = PartProps<HTMLElement>;

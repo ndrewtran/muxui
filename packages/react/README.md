@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:208d0bd4722e9a607b24b3666a9f60f567af5186b89bd207547de8adb20b823e -->
+<!-- @generated-content-sha256: sha256:22317be831d1cd082da54e48f58996a1af671a41178d98972a4a6cd5d1739bfd -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -46,6 +46,7 @@ Component styles consume semantic roles from `catalog/tokens/default-theme.json`
 Structural CSS remains literal where it expresses geometry rather than a theme choice: zero/reset values, percentages and intrinsic sizing, border overlaps, visually hidden accessibility patterns, calendar grids, and text-segment alignment. The styling-token tests cover all authored component stylesheets; the browser check verifies gap/inset override isolation.
 
 Supporting runtime exports: `ToastProvider` and `useToast` are available alongside `Toast` for managed notifications.
+`useCommandPalette` is available alongside `CommandPalette` for command query, grouping, and execution.
 
 | Export | Lifecycle | Module | Selector | Public props |
 | --- | --- | --- | --- | --- |
@@ -65,11 +66,11 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly, children |
 | ColorSlider | experimental | . | .muxui-color-slider | label, aria-label, aria-labelledby, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
-| ColorSwatch | experimental | . | .muxui-color-swatch | color, disabled |
+| ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | aria-label, aria-labelledby, value, defaultValue, outerRadius, innerRadius, readOnly, disabled |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
-| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate |
+| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
@@ -201,8 +202,14 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Search and collection navigation preserve React Aria keyboard semantics.
 - Escape closes the modal and closeOnSelect controls item activation dismissal.
 - Input owns native value, defaultValue, onChange, keyboard, paste, composition, and selection handlers; its ref resolves to HTMLInputElement for focus and cursor restoration.
-- Applications control the query on Input and supply filtered or asynchronous Item results to ListBox; Content does not own a search engine or an inputValue prop.
+- Applications control the query on Input and supply Item results to ListBox. Content preserves application filtering and ordering and has no inputValue prop; the optional useCommandPalette hook owns reusable command data management.
 - Applications may compose loading content, Empty, Footer, and custom Item content. Enter during IME composition or cancelled by Input onKeyDown does not activate a command; Input defaults autoFocus to true when the palette opens.
+- useCommandPalette accepts commands with string IDs and preserves extended application metadata. It returns query, setQuery, filteredCommands, groupedCommands, runCommand, and getItemProps.
+- The hook supports query/onQueryChange or defaultQuery. Default matching trims the query and uses locale-aware case- and accent-insensitive substring matching across title, subtitle, group, and keywords. Default ranking prefers exact titles, title prefixes, title substrings, then secondary fields, preserving input order for ties.
+- Hook filter and sort callbacks override matching and ranking; filter:false and sort:false preserve externally supplied results and order. sort:()=>0 also preserves order. groupBy and getGroupTitle customize grouping; groups otherwise use command.group in first-seen order, with an empty title for ungrouped commands.
+- runCommand accepts a command or its string ID, ignores disabled or missing commands, awaits command.action then hook onAction, and calls close only after success when command.closeOnSelect ?? closeOnSelect is true. Rejections propagate to the caller without closing. The hook does not navigate hrefs or implement browser commands.
+- getItemProps adapts a command to Mux Item id, title, description, textValue, href, target, disabled, and onActivate. It sets Item closeOnSelect:false so only the hook close callback dismisses after actions; provide close when automatic dismissal is wanted. Connect Input value and native onChange to the hook query and setQuery.
+- Item activation through getItemProps catches action failures and calls the optional hook onError(error, command); without onError it reports to the global error reporter or console. Failures keep the palette open. Direct runCommand callers handle its rejected promise themselves.
 
 Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `close`, `content`, `search-field`, `input`, `clear-button`, `listbox`, `section`, `section-header`, `item`, `separator`, `item-icon`, `item-content`, `item-title`, `item-description`, `item-meta`, `shortcut`, `load-more-item`, `empty`, `footer`, `chips`, `chip`, `chip-remove`.
 

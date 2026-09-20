@@ -122,7 +122,22 @@ test('packed @muxui/react declarations typecheck every current catalog example',
         encoding: 'utf8',
       });
     };
-    const rootProbe = await runImportProbe('root-runtime', "import * as MuxUI from '@muxui/react'; if (!MuxUI.Button) throw new Error('root runtime did not load Button');");
+    const rootProbe = await runImportProbe('root-runtime', `import assert from 'node:assert/strict';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import * as MuxUI from '@muxui/react';
+assert.ok(MuxUI.Button, 'root runtime loads Button');
+function PackedCommands() {
+  const palette = MuxUI.useCommandPalette({ commands: [{ id: 'cafe', title: 'Café' }], defaultQuery: 'cafe' });
+  assert.equal(palette.filteredCommands[0]?.id, 'cafe');
+  assert.equal(palette.getItemProps(palette.filteredCommands[0]).closeOnSelect, false);
+  return React.createElement(MuxUI.ColorSwatch, { color: '#ff0000', secondaryColor: '#0000ff', shape: 'circle' });
+}
+const markup = renderToStaticMarkup(React.createElement(PackedCommands));
+assert.match(markup, /data-shape="circle"/);
+assert.match(markup, /data-two-tone/);
+assert.match(markup, /--muxui-color-swatch-secondary/);
+`);
     assert.equal(rootProbe.status, 0, `${rootProbe.stdout}\n${rootProbe.stderr}`);
     assert.doesNotMatch(rootProbe.stderr, /FORBIDDEN_EDGE:/u, 'root import must not evaluate editor or Markdown dependencies');
 
