@@ -86,6 +86,14 @@ test('packed @muxui/react declarations typecheck every current catalog example',
       await mkdirSync(dirname(destination), { recursive: true });
       await cp(sourcePath, destination);
     }
+    const themeTypeExample = join(consumer, 'examples', 'themes', 'preset.tsx');
+    await mkdir(dirname(themeTypeExample), { recursive: true });
+    await writeFile(themeTypeExample, `import { MUXUI_THEME_PRESETS } from '@muxui/react/themes';
+import type { MuxUIThemeId } from '@muxui/react/themes';
+
+export const selectedTheme: MuxUIThemeId = MUXUI_THEME_PRESETS[0].id;
+export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
+`);
     const tsconfig = join(consumer, 'tsconfig.json');
     await writeFile(tsconfig, `${JSON.stringify({
       compilerOptions: {
@@ -123,10 +131,18 @@ test('packed @muxui/react declarations typecheck every current catalog example',
       });
     };
     const rootProbe = await runImportProbe('root-runtime', `import assert from 'node:assert/strict';
+import { access } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import * as MuxUI from '@muxui/react';
+import * as themes from '@muxui/react/themes';
 assert.ok(MuxUI.Button, 'root runtime loads Button');
+assert.equal(themes.MUXUI_THEME_PRESETS.length, 15, 'packed theme metadata loads');
+const packageEntry = await import.meta.resolve('@muxui/react');
+if (!import.meta.resolve('@muxui/react/themes.css').endsWith('/generated/themes.css')) throw new Error('themes stylesheet resolution');
+await access(fileURLToPath(new URL('../generated/themes.css', packageEntry)));
+await access(fileURLToPath(new URL('../generated/themes.mjs', packageEntry)));
 function PackedCommands() {
   const palette = MuxUI.useCommandPalette({ commands: [{ id: 'cafe', title: 'Café' }], defaultQuery: 'cafe' });
   assert.equal(palette.filteredCommands[0]?.id, 'cafe');

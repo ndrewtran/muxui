@@ -710,7 +710,7 @@ test('temporal picker open ownership is independent and honors disabled/read-onl
 test('read-only date segments retain accessible semantic contrast', async () => {
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   assert.match(styles, /\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
-  assert.match(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
+  assert.match(styles, /@scope \(\[data-muxui-color-scheme='dark'\]\) to \(\[data-muxui-color-scheme\]\) \{\s*:scope \.muxui-date-segment\[data-readonly\]\s*\{[^}]*color:\s*var\(--muxui-semantic-color-neutral-60\);/u);
   assert.match(styles, /--muxui-reference-color-neutral-60:\s*#79716b;/u);
   assert.match(styles, /--muxui-reference-color-neutral-50:\s*#918b86;/u);
   assert.match(styles, /--muxui-semantic-content-default:\s*var\(--muxui-semantic-color-neutral-90\);/u);

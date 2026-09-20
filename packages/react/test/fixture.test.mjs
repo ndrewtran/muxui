@@ -169,7 +169,7 @@ test('Button exposes seven variants with stable root hooks', async () => {
   assert.ok(destructivePrimaryRule);
   assert.doesNotMatch(destructivePrimaryRule, /\bblack\b/u);
   assert.match(destructivePrimaryRule, /--muxui-button-foreground:\s*var\(--muxui-semantic-color-error-60-fg\)/u);
-  assert.match(css, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-button\[data-variant='primary'\]\[data-pressed\]/u);
+  assert.match(css, /@scope \(\[data-muxui-color-scheme='dark'\]\) to \(\[data-muxui-color-scheme\]\) \{\s*:scope \.muxui-button\[data-variant='primary'\]\[data-pressed\]/u);
   assert.match(css, /\.muxui-button\[data-size='lg'\][\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)[\s\S]*padding-inline:\s*var\(--muxui-semantic-layout-inset-large\)/u);
 
   const pendingWithText = renderToString(React.createElement(Button, { pending: true, showTextWhileLoading: true }, 'Saving'));

@@ -110,13 +110,15 @@
   --muxui-progress-value-color: var(--muxui-semantic-content-secondary);
 }
 
-[data-muxui-color-scheme='dark'] {
-  --muxui-focus-ring-color: var(--muxui-semantic-focus-neutral-ring);
-  --muxui-focus-ring-inner: var(--muxui-semantic-focus-inner);
-  --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
-  --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-focus-neutral-glow) 30%, transparent);
-  --muxui-field-focus-border: var(--muxui-focus-ring-color);
-  --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope {
+    --muxui-focus-ring-color: var(--muxui-semantic-focus-neutral-ring);
+    --muxui-focus-ring-inner: var(--muxui-semantic-focus-inner);
+    --muxui-focus-ring-outer: var(--muxui-semantic-focus-neutral-ring);
+    --muxui-focus-ring-glow: color-mix(in srgb, var(--muxui-semantic-focus-neutral-glow) 30%, transparent);
+    --muxui-field-focus-border: var(--muxui-focus-ring-color);
+    --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
+  }
 }
 
 /* Mux UI's low-specificity foundation defaults keep typography aligned with
@@ -1008,14 +1010,16 @@
   animation: muxui-date-popover-fade-in var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
-[data-muxui-color-scheme='dark'] :where(
-  .muxui-date-trigger,
-  .muxui-date-control .muxui-date-trigger,
-  .muxui-date-range-control .muxui-date-trigger
-) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 85%, black);
-  border-color: var(--muxui-semantic-color-neutral-84);
-  color: var(--muxui-semantic-color-neutral-80);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(
+    .muxui-date-trigger,
+    .muxui-date-control .muxui-date-trigger,
+    .muxui-date-range-control .muxui-date-trigger
+  ) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 85%, black);
+    border-color: var(--muxui-semantic-color-neutral-84);
+    color: var(--muxui-semantic-color-neutral-80);
+  }
 }
 
 .muxui-date-popover[data-exiting] {

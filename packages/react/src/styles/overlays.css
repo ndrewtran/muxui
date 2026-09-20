@@ -39,15 +39,19 @@
   pointer-events: none;
 }
 
-[data-muxui-color-scheme='dark'] .muxui-drop-zone {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
-  border-color: var(--muxui-semantic-color-neutral-26);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-drop-zone {
+    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
+    border-color: var(--muxui-semantic-color-neutral-26);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-drop-zone[data-drop-target] {
-  border-color: var(--muxui-semantic-action-selection-background);
-  background-color: color-mix(in srgb, var(--muxui-semantic-action-selection-background) 8%, transparent);
-  color: var(--muxui-semantic-action-selection-background);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-drop-zone[data-drop-target] {
+    border-color: var(--muxui-semantic-action-selection-background);
+    background-color: color-mix(in srgb, var(--muxui-semantic-action-selection-background) 8%, transparent);
+    color: var(--muxui-semantic-action-selection-background);
+  }
 }
 /* MuxUI component source: file-trigger.css */
 
@@ -176,21 +180,29 @@
   line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
-[data-muxui-color-scheme='dark'] .muxui-popover {
-  background-color: var(--muxui-semantic-color-neutral-default-18);
-  border-color: var(--muxui-semantic-color-neutral-default-5);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-popover {
+    background-color: var(--muxui-semantic-color-neutral-default-18);
+    border-color: var(--muxui-semantic-color-neutral-default-5);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-popover-title {
-  color: var(--muxui-semantic-color-neutral-default-90);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-popover-title {
+    color: var(--muxui-semantic-color-neutral-default-90);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-popover-description {
-  color: var(--muxui-semantic-color-neutral-default-70);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-popover-description {
+    color: var(--muxui-semantic-color-neutral-default-70);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-preview-content {
-  color: var(--muxui-semantic-color-neutral-default-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-preview-content {
+    color: var(--muxui-semantic-color-neutral-default-20);
+  }
 }
 
 /* MuxUI component source: preview-card.css */
@@ -432,64 +444,90 @@
 }
 
 /* Overlay surfaces follow neutral recipes in dark mode. */
-[data-muxui-color-scheme='dark'] .muxui-dialog,
-[data-muxui-color-scheme='dark'] .muxui-preview-trigger,
-[data-muxui-color-scheme='dark'] .muxui-toast {
-  background-color: var(--muxui-semantic-color-neutral-default-100);
-  border-color: var(--muxui-semantic-color-neutral-default-90);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-dialog,
+  :scope .muxui-preview-trigger,
+  :scope .muxui-toast {
+    background-color: var(--muxui-semantic-color-neutral-default-100);
+    border-color: var(--muxui-semantic-color-neutral-default-90);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast {
-  color: var(--muxui-semantic-color-neutral-default-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast {
+    color: var(--muxui-semantic-color-neutral-default-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='neutral'] {
-  border-inline-start-color: var(--muxui-semantic-color-neutral-60);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast[data-variant='neutral'] {
+    border-inline-start-color: var(--muxui-semantic-color-neutral-60);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='success'] {
-  border-inline-start-color: var(--muxui-semantic-status-success);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast[data-variant='success'] {
+    border-inline-start-color: var(--muxui-semantic-status-success);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='warning'] {
-  border-inline-start-color: var(--muxui-semantic-status-warning);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast[data-variant='warning'] {
+    border-inline-start-color: var(--muxui-semantic-status-warning);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast[data-variant='danger'] {
-  border-inline-start-color: var(--muxui-semantic-feedback-invalid);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast[data-variant='danger'] {
+    border-inline-start-color: var(--muxui-semantic-feedback-invalid);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast-title {
-  color: var(--muxui-semantic-color-neutral-default-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast-title {
+    color: var(--muxui-semantic-color-neutral-default-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toast-message {
-  color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toast-message {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-popover {
-  background-color: var(--muxui-semantic-color-neutral-default-20);
-  border-color: var(--muxui-semantic-color-neutral-default-10);
-  color: var(--muxui-semantic-color-neutral-default-90);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-popover {
+    background-color: var(--muxui-semantic-color-neutral-default-20);
+    border-color: var(--muxui-semantic-color-neutral-default-10);
+    color: var(--muxui-semantic-color-neutral-default-90);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-tooltip {
-  background-color: var(--muxui-semantic-color-neutral-default-30);
-  color: var(--muxui-semantic-color-neutral-default-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-tooltip {
+    background-color: var(--muxui-semantic-color-neutral-default-30);
+    color: var(--muxui-semantic-color-neutral-default-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-dialog-title {
-  color: var(--muxui-semantic-color-neutral-default-16);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-dialog-title {
+    color: var(--muxui-semantic-color-neutral-default-16);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-dialog-description,
-[data-muxui-color-scheme='dark'] .muxui-dialog-content,
-[data-muxui-color-scheme='dark'] .muxui-dialog-content > p {
-  color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-dialog-description,
+  :scope .muxui-dialog-content,
+  :scope .muxui-dialog-content > p {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-dialog-close {
-  color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-dialog-close {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
 @media (forced-colors: active) {

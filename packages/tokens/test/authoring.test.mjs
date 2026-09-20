@@ -6,6 +6,7 @@ import source from '../../../catalog/tokens/default-theme.json' with { type: 'js
 import { compileNativeTheme, compileTokenGraph, compileWebTheme } from '../src/index.mjs';
 import {
   compileThemeAuthoringDocument,
+  compileScalePresetTheme,
   generateScaleTheme,
   serializeThemeAuthoringDocument,
   validateThemeAuthoringDocument,
@@ -22,6 +23,35 @@ const base = {
 function documentFor(overrides, scale = { mode: 'standard', presetId: 'harbour', namedColor: '#025768', neutralColor: '#79716b', whiteAnchor: false, contrastPivot: 'auto', curvature: 1 }) {
   return { ...base, overrides, scale };
 }
+
+test('canonical Scale presets compile through the shared authoring path in both color schemes', () => {
+  const presetInputs = [
+    ['standard', source.theme.scale.standardPresets],
+    ['monochrome', source.theme.scale.monochromePresets],
+  ];
+  const ids = [];
+  for (const [collection, presets] of presetInputs) {
+    for (const { id, name, description } of presets) {
+      const compiled = compileScalePresetTheme({ source, collection, presetId: id, modes: { colorScheme: 'light' } });
+      const dark = compileScalePresetTheme({ source, collection, presetId: id, modes: { colorScheme: 'dark', contrast: 'standard' } });
+      const darkMore = compileScalePresetTheme({ source, collection, presetId: id, modes: { colorScheme: 'dark', contrast: 'more' } });
+      ids.push(compiled.preset.id);
+      assert.equal(compiled.preset.name, name);
+      assert.equal(compiled.preset.description, description);
+      assert.match(compiled.preset.swatch.primary, /^#[0-9a-f]{6}$/u);
+      assert.match(compiled.preset.swatch.secondary, /^#[0-9a-f]{6}$/u);
+      assert.equal(compiled.compiled.tokens['semantic.color.color-60'].value, compiled.preset.swatch.primary);
+      assert.equal(compiled.compiled.tokens['semantic.color.neutral-20'].value, compiled.preset.swatch.secondary);
+      assert.equal(dark.compiled.modes.colorScheme, 'dark');
+      assert.equal(darkMore.compiled.modes.contrast, 'more');
+      assert.notEqual(compiled.compiled.tokens['component.button.background'].value, dark.compiled.tokens['component.button.background'].value);
+      assert.deepEqual(JSON.parse(serializeThemeAuthoringDocument(compiled.document, { source })), compiled.document);
+    }
+  }
+  assert.equal(new Set(ids).size, 15);
+  assert.throws(() => compileScalePresetTheme({ source, collection: 'other', presetId: 'harbour' }), /COLLECTION_INVALID/u);
+  assert.throws(() => compileScalePresetTheme({ source, collection: 'standard', presetId: 'missing' }), /PRESET_INVALID/u);
+});
 
 test('selection, focus and link interaction roles follow authored palettes in both modes', () => {
   for (const namedColor of ['#9227ad', '#207c39']) {

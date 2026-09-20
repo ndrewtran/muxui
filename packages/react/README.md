@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:22317be831d1cd082da54e48f58996a1af671a41178d98972a4a6cd5d1739bfd -->
+<!-- @generated-content-sha256: sha256:46444ae308adcda2af05b3863bb3745e3af10786074042f3010ff9588ec0a524 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -40,6 +40,29 @@ export function Example() {
 The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle, and public prop names. React Aria Components is an internal implementation substrate; this package does not transfer its APIs or styling boundary.
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
+
+## Optional preset themes
+
+The optional `@muxui/react/themes` entry exports the 15 canonical Scale
+preset records. Import `@muxui/react/themes.css` after `styles.css` when a
+consumer needs a selectable preset palette:
+
+```tsx
+import '@muxui/react/styles.css';
+import '@muxui/react/themes.css';
+import { MUXUI_THEME_PRESETS } from '@muxui/react/themes';
+
+export function ThemeScope({ children }: { children: React.ReactNode }) {
+  return <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="light">{children}</div>;
+}
+```
+
+Theme and mode attributes belong on the same scope element. The preset CSS
+recomputes the color dependency closure for light/dark and standard/more
+contrast combinations while leaving spacing, typography, motion, and density
+values in the base theme. An unknown ID matches no preset declarations; normal
+base and inherited styles apply on that scope. Forced-colors component rules
+retain their system-color priority.
 
 Component styles consume semantic roles from `catalog/tokens/default-theme.json`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
 
