@@ -3278,7 +3278,6 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   resize: none;
 }
 
-@media (forced-colors: active) { .muxui-checkbox-field__indicator, .muxui-radio-field__indicator, .muxui-card, .muxui-input, .muxui-text-area__textarea { border-color: ButtonText; background: Canvas; color: CanvasText; } }
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
     .muxui-input[data-disabled],
@@ -3355,4 +3354,15 @@ details[open] > summary .muxui-sidebar__nav-chevron {
     color: GrayText !important;
   }
 
+  .muxui-checkbox-field__indicator,
+  .muxui-radio-field__indicator,
+  .muxui-card {
+    border-color: ButtonText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .muxui-checkbox-field[data-disabled] .muxui-checkbox-field__button {
+    opacity: 1;
+  }
 }

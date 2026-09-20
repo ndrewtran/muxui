@@ -1,7 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
 import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-components';
-import { observeReducedMotion, resolvedMotionTransition } from './date-popover-motion.mjs';
+import { observeReducedMotion, resolvedMotionTransition } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -40,7 +40,7 @@ export function CalendarHeightMotion({ children }) {
       const from = controls ? body.getBoundingClientRect().height : targetHeight;
       targetHeight = nextHeight;
       settle();
-      const transition = resolvedMotionTransition(body, triggerRef?.current, 'content-resize');
+      const transition = resolvedMotionTransition(body, triggerRef?.current, 'interaction');
       if (!transition || from <= 0 || nextHeight <= 0) return;
       body.style.height = `${from}px`;
       calendar.style.overflow = 'clip';

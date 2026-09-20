@@ -1381,11 +1381,15 @@
   inset: 0;
   background-color: var(--muxui-modal-backdrop-bg);
   z-index: 100;
-  transition: opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing);
 }
-.muxui-dialog-backdrop[data-entering],
+.muxui-dialog-backdrop[data-entering] {
+  opacity: 0;
+}
 .muxui-dialog-backdrop[data-exiting] {
   opacity: 0;
+  transition-duration: var(--muxui-semantic-motion-exit-duration);
+  transition-timing-function: var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-dialog-close {
@@ -1473,22 +1477,37 @@
 }
 
 .muxui-combo-control:focus-within {
-  outline-color: var(--muxui-semantic-focus-ring);
-  box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
 }
 
 .muxui-combo-control[data-open] {
-  outline-color: var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
+}
+
+.muxui-combo-control:hover:not(:focus-within, [data-disabled], [data-invalid]) {
+  outline-color: var(--muxui-semantic-border-indicator);
+}
+
+.muxui-combo-box[data-invalid] .muxui-combo-control,
+.muxui-combo-control[data-invalid] {
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-combo-box[data-invalid] .muxui-combo-control:focus-within,
+.muxui-combo-control[data-invalid]:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-combo-control[data-disabled] {
-  background: var(--muxui-semantic-color-neutral-14);
+  background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }
 
 .muxui-combo-box[data-disabled] .muxui-combo-control {
-  background: var(--muxui-semantic-color-neutral-14);
+  background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }

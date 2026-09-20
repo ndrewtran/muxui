@@ -33,6 +33,8 @@ const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-cont
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
+const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
+const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
 const collectionsSource = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
 const overlaysSource = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
 const overlayPositioningSource = await readFile(resolve(packageRoot, 'src/overlay-positioning.mjs'), 'utf8');
@@ -1057,6 +1059,8 @@ const outputs = new Map([
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
   ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
+  ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
+  ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
   ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
   ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],
   ['overlay-positioning.mjs', generatedText('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],

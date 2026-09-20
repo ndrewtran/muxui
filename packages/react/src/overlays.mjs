@@ -11,7 +11,6 @@ import {
   DropZone as AriaDropZone,
   FileTrigger as AriaFileTrigger,
   Heading as AriaHeading,
-  Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
   Popover as AriaPopover,
   Pressable as AriaPressable,
@@ -24,6 +23,7 @@ import {
   UNSTABLE_ToastQueue,
   UNSTABLE_ToastRegion,
 } from 'react-aria-components';
+import { DialogMotion } from './dialog-motion.mjs';
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -191,13 +191,39 @@ function DialogContent({ title, description, actions, children, ariaLabel, dismi
     dismissable ? React.createElement(AriaButton, { slot: 'close', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
 }
 
-function DialogOverlay({ dismissable, backdropClassName, children, ...props }) {
-  return React.createElement(AriaModalOverlay, {
-    ...props,
+function DialogOverlay({ dismissable, backdropClassName, children, state, insideTrigger, originRef }) {
+  const isOpen = Boolean(state.isOpen);
+  const [phase, setPhase] = React.useState({ open: isOpen, exiting: false });
+  if (phase.open !== isOpen) setPhase({ open: isOpen, exiting: !isOpen });
+  const backdropRef = React.useRef(null);
+
+  const releaseExit = React.useCallback(() => {
+    setPhase((current) => current.open || !current.exiting ? current : { ...current, exiting: false });
+  }, []);
+  const markReduced = React.useCallback((reduced) => {
+    const backdrop = backdropRef.current;
+    if (!backdrop) return;
+    backdrop.toggleAttribute('data-muxui-dialog-reduced', reduced);
+    if (!reduced || typeof backdrop.getAnimations !== 'function') return;
+    const CSSTransition = backdrop.ownerDocument.defaultView?.CSSTransition;
+    if (!CSSTransition) return;
+    for (const animation of backdrop.getAnimations()) {
+      if (animation instanceof CSSTransition && animation.transitionProperty === 'opacity') animation.cancel();
+    }
+  }, []);
+  const overlayProps = {
+    ref: backdropRef,
     isDismissable: dismissable,
     isKeyboardDismissDisabled: !dismissable,
     className: classNames('muxui-dialog-backdrop', backdropClassName),
-  }, React.createElement(AriaModal, { className: 'muxui-dialog-modal' }, children));
+    isExiting: !isOpen && phase.exiting,
+  };
+  if (!insideTrigger) {
+    overlayProps.isOpen = isOpen;
+    overlayProps.onOpenChange = state.onOpenChange;
+  }
+  return React.createElement(AriaModalOverlay, overlayProps,
+    React.createElement(DialogMotion, { originRef, onExitComplete: releaseExit, onReducedChange: markReduced }, children));
 }
 
 function useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange }) {
@@ -215,7 +241,8 @@ function useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange })
 }
 
 /** RAC Modal/ModalOverlay provide topmost overlay arbitration, inertness, focus scope, and portal lifecycle. */
-export const Dialog = React.forwardRef(function Dialog({
+export const Dialog = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function Dialog({
   children,
   title,
   open,
@@ -239,22 +266,20 @@ export const Dialog = React.forwardRef(function Dialog({
   const hasTitle = hasRenderableLabel(title);
   if (!hasTitle && !hasAccessibleName(ariaLabel) && !hasAccessibleName(props['aria-labelledby'])) throw new Error('Dialog requires a title or accessible name');
   const triggerState = useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange });
-  const content = React.createElement(DialogOverlay, { dismissable, backdropClassName },
+  const hasTrigger = React.isValidElement(trigger);
+  const motionOriginRef = React.useRef(null);
+  const content = React.createElement(DialogOverlay, { dismissable, backdropClassName, state: triggerState, insideTrigger: hasTrigger, originRef: motionOriginRef },
     React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
-  if (React.isValidElement(trigger)) {
+  if (hasTrigger) {
     return React.createElement(AriaDialogTrigger, triggerState, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
   }
-  return React.createElement(AriaModalOverlay, {
-    isOpen: open,
-    defaultOpen,
-    onOpenChange,
-    isDismissable: dismissable,
-    isKeyboardDismissDisabled: !dismissable,
-    className: classNames('muxui-dialog-backdrop', backdropClassName),
-  }, React.createElement(AriaModal, { className: 'muxui-dialog-modal' }, React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children)));
-});
-
-Dialog.displayName = 'Dialog';
+  return React.createElement(React.Fragment, null,
+    React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
+    content);
+  });
+  component.displayName = 'Dialog';
+  return component;
+})();
 
 function PopoverSurface({ modal, children, ...props }) {
   const surfaceRef = React.useRef(null);

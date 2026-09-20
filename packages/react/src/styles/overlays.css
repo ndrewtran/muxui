@@ -75,15 +75,6 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-content-gap);
   outline: none;
-  transition:
-    opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
-    transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-dialog[data-entering],
-.muxui-dialog[data-exiting] {
-  opacity: 0;
-  transform: translate(-50%, calc(-50% - 0.5rem));
 }
 
 .muxui-dialog-close {
@@ -93,6 +84,10 @@
   border-radius: var(--muxui-semantic-shape-option-radius);
   top: var(--muxui-semantic-layout-inset-small);
   right: var(--muxui-semantic-layout-control-inset);
+}
+
+.muxui-dialog-backdrop[data-muxui-dialog-reduced] {
+  transition-duration: 0s !important;
 }
 
 .muxui-dialog-description,
@@ -383,6 +378,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .muxui-dialog-backdrop {
+    transition-duration: 0s !important;
+  }
+
   .muxui-toast {
     transition: none;
   }

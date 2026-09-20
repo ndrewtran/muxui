@@ -1,6 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
 import { OverlayTriggerStateContext, Popover as AriaPopover, PopoverContext } from 'react-aria-components';
+import { observeReducedMotion, resolvedMotionTransition } from './motion.mjs';
 
 const DATE_POPOVER_ENTER = Object.freeze({
   opacity: [0, 1],
@@ -8,87 +9,7 @@ const DATE_POPOVER_ENTER = Object.freeze({
 });
 const DATE_POPOVER_INITIAL_STYLE = Object.freeze({ opacity: 0, transform: 'translateY(-4px)' });
 const DATE_POPOVER_REDUCED_ATTRIBUTE = 'data-muxui-date-popover-reduced';
-const MOTION_SCOPE_ATTRIBUTES = Object.freeze(['data-reduced-motion', 'data-muxui-motion']);
-const CSS_EASINGS = Object.freeze({
-  ease: [0.25, 0.1, 0.25, 1],
-  'ease-in': [0.42, 0, 1, 1],
-  'ease-out': [0, 0, 0.58, 1],
-  'ease-in-out': [0.42, 0, 0.58, 1],
-  linear: [0, 0, 1, 1],
-});
-
-function parseTime(value) {
-  const match = /^(-?(?:\d+\.?\d*|\.\d+))(ms|s)$/u.exec(String(value ?? '').trim());
-  if (!match) return null;
-  const seconds = Number(match[1]);
-  if (!Number.isFinite(seconds)) return null;
-  return match[2] === 'ms' ? seconds / 1000 : seconds;
-}
-
-function parseEasing(value) {
-  const normalized = String(value ?? '').trim().toLowerCase();
-  if (normalized in CSS_EASINGS) return CSS_EASINGS[normalized];
-  const match = /^cubic-bezier\(([^)]+)\)$/u.exec(normalized);
-  if (!match) return null;
-  const values = match[1].split(',').map((part) => Number(part.trim()));
-  return values.length === 4 && values.every(Number.isFinite) ? values : null;
-}
-
-function collectAncestors(...elements) {
-  const ancestors = new Set();
-  for (const element of elements) {
-    let current = element;
-    while (current) {
-      ancestors.add(current);
-      current = current.parentElement;
-    }
-  }
-  return [...ancestors];
-}
-
-function hasReducedScope(node) {
-  let current = node;
-  while (current) {
-    if (current.hasAttribute('data-reduced-motion') || current.getAttribute('data-muxui-motion') === 'reduced') return true;
-    current = current.parentElement;
-  }
-  return false;
-}
-
-function isReducedMotion(node, triggerNode) {
-  const systemReduced = typeof window !== 'undefined'
-    && typeof window.matchMedia === 'function'
-    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  return systemReduced || hasReducedScope(node) || hasReducedScope(triggerNode);
-}
-
-export function resolvedMotionTransition(node, triggerNode, durationRole = 'interaction') {
-  if (typeof window === 'undefined' || !node || isReducedMotion(node, triggerNode)) return null;
-  const style = window.getComputedStyle(node);
-  const duration = parseTime(style.getPropertyValue(`--muxui-semantic-motion-${durationRole}-duration`));
-  const easing = parseEasing(style.getPropertyValue('--muxui-semantic-motion-interaction-easing'));
-  if (duration === null || duration <= 0 || !easing) return null;
-  return { duration, ease: easing };
-}
-
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-
-export function observeReducedMotion(node, triggerNode, onChange) {
-  const update = () => onChange(isReducedMotion(node, triggerNode));
-  update();
-  const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(update);
-  collectAncestors(node, triggerNode).forEach((ancestor) => {
-    observer?.observe(ancestor, { attributes: true, attributeFilter: MOTION_SCOPE_ATTRIBUTES });
-  });
-  const media = node.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)');
-  media?.addEventListener?.('change', update);
-  if (!media?.addEventListener) media?.addListener?.(update);
-  return () => {
-    observer?.disconnect();
-    media?.removeEventListener?.('change', update);
-    if (!media?.removeEventListener) media?.removeListener?.(update);
-  };
-}
 
 /**
  * React Aria owns the popup lifecycle. Motion only animates its mounted entry.
