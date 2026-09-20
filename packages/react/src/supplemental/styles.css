@@ -1230,7 +1230,7 @@
 
 
 .muxui-input-tags__group:not([data-focus-within], [data-disabled], [data-invalid]):hover {
-  outline-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 
@@ -1245,13 +1245,14 @@
 }
 
 .muxui-input-tags__group[data-invalid][data-focus-within] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 
 .muxui-input-tags__group[data-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
+  background-color: var(--muxui-semantic-surface-hover);
 }
 
 
@@ -1436,13 +1437,13 @@
     outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 40%, var(--muxui-semantic-color-neutral-5) 60%);
+  background-color: var(--muxui-field-bg);
 }
 
 
 
 .muxui-input:hover:not(:focus, [data-disabled], [data-invalid]) {
-  outline-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 
@@ -1460,7 +1461,7 @@
 
 .muxui-input[data-invalid]:focus,
 .muxui-input[data-invalid][data-focused] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 
@@ -1469,7 +1470,7 @@
 .muxui-input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-color: var(--muxui-semantic-surface-hover);
 }
 
 
@@ -1514,8 +1515,8 @@
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
-.muxui-multi-select__trigger:hover:not([data-disabled]) {
-  outline-color: var(--muxui-semantic-color-neutral-40);
+.muxui-multi-select__trigger:hover:not(:focus, :focus-visible, [data-disabled], [data-focus-visible], [data-pressed], .muxui-multi-select__trigger--invalid) {
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-multi-select__trigger[data-focus-visible] {
@@ -1528,18 +1529,21 @@
   box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-multi-select__trigger--invalid {
+.muxui-multi-select__trigger--invalid,
+.muxui-multi-select__trigger--invalid[data-focus-visible],
+.muxui-multi-select__trigger--invalid[data-pressed] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-multi-select__trigger--invalid[data-focus-visible],
 .muxui-multi-select__trigger--invalid[data-pressed] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-multi-select__trigger[data-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
+  background-color: var(--muxui-semantic-surface-hover);
 }
 
 
@@ -1914,7 +1918,7 @@
 }
 
 .muxui-payment-input__input:hover:not(:focus, [data-disabled], [data-invalid]) {
-  outline-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-payment-input__input[data-invalid] {
@@ -1923,14 +1927,14 @@
 
 .muxui-payment-input__input[data-invalid]:focus,
 .muxui-payment-input__input[data-invalid][data-focused] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-payment-input__input[data-disabled],
 .muxui-payment-input__input:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-color: var(--muxui-semantic-surface-hover);
 }
 
 
@@ -2971,6 +2975,10 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   cursor: text;
 }
 
+.muxui-tag-select__group:not(:focus-within, [data-focus-within], [data-disabled], .muxui-tag-select__group--invalid):hover {
+  outline-color: var(--muxui-semantic-border-indicator);
+}
+
 .muxui-tag-select__group[data-focus-within] {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
@@ -2982,13 +2990,14 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-tag-select__group--invalid[data-focus-within] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-tag-select__group[data-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
   pointer-events: none;
+  background-color: var(--muxui-semantic-surface-hover);
 }
 
 
@@ -3223,11 +3232,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   min-height: 5rem;
   padding: var(--muxui-semantic-layout-inset-tiny) var(--muxui-semantic-layout-inset-medium);
   border: 0;
-  outline: 1px solid var(--muxui-semantic-color-neutral-26);
+  outline: 1px solid var(--muxui-field-border-color);
   outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-option-radius);
-  background-color: transparent;
-  color: var(--muxui-semantic-color-neutral-90);
+  background-color: var(--muxui-field-bg);
+  color: var(--muxui-field-color);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
@@ -3244,12 +3253,12 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-text-area__textarea:focus,
 .muxui-text-area__textarea[data-focused] {
-  outline-color: var(--muxui-focus-ring-color);
-  box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
 }
 
 .muxui-text-area__textarea:hover:not(:focus, [data-disabled], [data-invalid]) {
-  outline-color: var(--muxui-semantic-color-neutral-40);
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-text-area__textarea[data-invalid] {
@@ -3258,15 +3267,92 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-text-area__textarea[data-invalid]:focus,
 .muxui-text-area__textarea[data-invalid][data-focused] {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-text-area__textarea[data-disabled],
 .muxui-text-area__textarea:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-color: var(--muxui-semantic-surface-hover);
   resize: none;
 }
 
 @media (forced-colors: active) { .muxui-checkbox-field__indicator, .muxui-radio-field__indicator, .muxui-card, .muxui-input, .muxui-text-area__textarea { border-color: ButtonText; background: Canvas; color: CanvasText; } }
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(
+    .muxui-input[data-disabled],
+    .muxui-input:disabled,
+    .muxui-text-area__textarea[data-disabled],
+    .muxui-text-area__textarea:disabled,
+    .muxui-input-tags__group[data-disabled],
+    .muxui-multi-select__trigger[data-disabled],
+    .muxui-payment-input__input[data-disabled],
+    .muxui-payment-input__input:disabled,
+    .muxui-tag-select__group[data-disabled]
+  ) {
+    background-color: var(--muxui-semantic-color-neutral-default-96);
+  }
+}
+
+@media (forced-colors: active) {
+  .muxui-input,
+  .muxui-text-area__textarea,
+  .muxui-input-tags__group,
+  .muxui-multi-select__trigger,
+  .muxui-payment-input__input,
+  .muxui-tag-select__group {
+    border-color: ButtonText !important;
+    outline-color: ButtonText !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+  }
+
+  .muxui-input:focus,
+  .muxui-text-area__textarea:focus,
+  .muxui-input-tags__group:focus-within,
+  .muxui-input-tags__group[data-focus-within],
+  .muxui-multi-select__trigger:focus-visible,
+  .muxui-multi-select__trigger[data-focus-visible],
+  .muxui-payment-input__input:focus,
+  .muxui-tag-select__group:focus-within,
+  .muxui-tag-select__group[data-focus-within] {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
+
+  .muxui-input[data-disabled],
+  .muxui-input:disabled,
+  .muxui-text-area__textarea[data-disabled],
+  .muxui-text-area__textarea:disabled,
+  .muxui-input-tags__group[data-disabled],
+  .muxui-multi-select__trigger[data-disabled],
+  .muxui-payment-input__input[data-disabled],
+  .muxui-payment-input__input:disabled,
+  .muxui-tag-select__group[data-disabled] {
+    opacity: 1 !important;
+  }
+
+  .muxui-input__root[data-disabled] .muxui-input__label,
+  .muxui-text-area[data-disabled] .muxui-text-area__label,
+  .muxui-input-tags[data-disabled] .muxui-input-tags__label,
+  .muxui-multi-select[data-disabled] .muxui-multi-select__label,
+  .muxui-tag-select[data-disabled] .muxui-tag-select__label,
+  .muxui-payment-input[data-disabled] .muxui-payment-input__label {
+    opacity: 1 !important;
+  }
+
+  .muxui-input[data-disabled],
+  .muxui-input:disabled,
+  .muxui-text-area__textarea[data-disabled],
+  .muxui-text-area__textarea:disabled,
+  .muxui-input-tags__group[data-disabled],
+  .muxui-multi-select__trigger[data-disabled],
+  .muxui-payment-input__input[data-disabled],
+  .muxui-payment-input__input:disabled,
+  .muxui-tag-select__group[data-disabled] {
+    color: GrayText !important;
+  }
+
+}

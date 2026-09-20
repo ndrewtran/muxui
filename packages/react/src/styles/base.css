@@ -471,7 +471,7 @@
   pointer-events: none;
 }
 .muxui-select[data-disabled] > .muxui-select-trigger[data-disabled] {
-  background-color: var(--muxui-field-bg);
+  background-color: var(--muxui-semantic-surface-hover);
 }
 .muxui-select-trigger[data-focus-visible],
 .muxui-select-trigger:focus-visible,
@@ -479,7 +479,15 @@
 .muxui-field-input:focus,
 .muxui-field-input[data-open],
 .muxui-date-input[data-focused],
-.muxui-field-input[data-focused] {
+.muxui-field-input[data-focused],
+.muxui-input:focus,
+.muxui-input[data-focused],
+.muxui-text-area__textarea:focus,
+.muxui-text-area__textarea[data-focused],
+.muxui-payment-input__input:focus,
+.muxui-payment-input__input[data-focused],
+.muxui-date-field > .muxui-date-input:focus-within,
+.muxui-time-field > .muxui-date-input:focus-within {
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
@@ -571,14 +579,80 @@
   line-height: var(--muxui-semantic-typography-compact-line-height);
   cursor: default;
 }
-:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-color-area-field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-disabled] .muxui-field-label {
+:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-token-field, .muxui-color-area-field, .muxui-color-slider, .muxui-color-wheel, .muxui-radio-group)[data-disabled] .muxui-field-label {
   color: var(--muxui-semantic-content-default);
 }
-:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select)[data-disabled] .muxui-field-label {
+:where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-color-field, .muxui-token-field)[data-disabled] .muxui-field-label {
+  opacity: 0.45;
+}
+
+.muxui-autocomplete-search[data-disabled] > .muxui-field-label {
+  color: var(--muxui-semantic-content-default);
   opacity: 0.45;
 }
 :where(.muxui-text-field, .muxui-search-field, .muxui-number-field, .muxui-date-field, .muxui-date-picker, .muxui-date-range-picker, .muxui-time-field, .muxui-combo-box, .muxui-select, .muxui-autocomplete, .muxui-color-field, .muxui-slider, .muxui-radio-group)[data-invalid] .muxui-field-label {
   color: var(--muxui-semantic-feedback-invalid);
+}
+
+.muxui-autocomplete-search[data-invalid] > .muxui-field-label {
+  color: var(--muxui-semantic-feedback-invalid-content);
+}
+
+:where(
+  .muxui-input__root,
+  .muxui-text-area,
+  .muxui-input-tags,
+  .muxui-multi-select,
+  .muxui-tag-select,
+  .muxui-payment-input
+)[data-disabled] :where(
+  .muxui-input__label,
+  .muxui-text-area__label,
+  .muxui-input-tags__label,
+  .muxui-multi-select__label,
+  .muxui-tag-select__label,
+  .muxui-payment-input__label
+) {
+  color: var(--muxui-semantic-content-default);
+  opacity: 0.45;
+}
+
+:where(
+  .muxui-input__root,
+  .muxui-text-area,
+  .muxui-input-tags,
+  .muxui-multi-select,
+  .muxui-tag-select,
+  .muxui-payment-input
+)[data-invalid] :where(
+  .muxui-input__label,
+  .muxui-text-area__label,
+  .muxui-input-tags__label,
+  .muxui-multi-select__label,
+  .muxui-tag-select__label,
+  .muxui-payment-input__label
+) {
+  color: var(--muxui-semantic-feedback-invalid-content);
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(
+    .muxui-input__root,
+    .muxui-text-area,
+    .muxui-input-tags,
+    .muxui-multi-select,
+    .muxui-tag-select,
+    .muxui-payment-input
+  )[data-invalid] :where(
+    .muxui-input__label,
+    .muxui-text-area__label,
+    .muxui-input-tags__label,
+    .muxui-multi-select__label,
+    .muxui-tag-select__label,
+    .muxui-payment-input__label
+  ) {
+    color: var(--muxui-semantic-feedback-invalid);
+  }
 }
 
 .muxui-slider > .muxui-field-label,
@@ -819,13 +893,21 @@
   gap: 0;
 }
 
-.muxui-date-input[data-invalid],
+.muxui-date-input[data-invalid] {
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
 .muxui-field-input[data-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid);
 }
 
+.muxui-date-field[data-invalid] > .muxui-date-input:focus-within,
+.muxui-time-field[data-invalid] > .muxui-date-input:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
+}
+
 .muxui-date-input[data-disabled] {
-  background-color: var(--muxui-field-bg);
+  background-color: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }
@@ -864,18 +946,28 @@
 
 .muxui-date-control:focus-within,
 .muxui-date-range-control:focus-within {
-  outline-color: var(--muxui-semantic-focus-ring);
-  box-shadow: 0 0 0 3px var(--muxui-focus-ring-glow);
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
+}
+
+.muxui-date-control:hover:not(:focus-within, [data-disabled], [data-invalid]),
+.muxui-date-range-control:hover:not(:focus-within, [data-disabled], [data-invalid]) {
+  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-date-picker[data-invalid] .muxui-date-control,
 .muxui-date-range-picker[data-invalid] .muxui-date-range-control {
-  outline-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-date-picker[data-invalid] .muxui-date-control:focus-within,
+.muxui-date-range-picker[data-invalid] .muxui-date-range-control:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-date-picker[data-disabled] .muxui-date-control,
 .muxui-date-range-picker[data-disabled] .muxui-date-range-control {
-  background: var(--muxui-semantic-color-neutral-14);
+  background: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
   pointer-events: none;
 }
@@ -1404,6 +1496,7 @@
 .muxui-combo-control > .muxui-field-input {
   border: none;
   background: transparent;
+  outline: none;
   box-shadow: none;
   flex: 1;
   min-width: 0;

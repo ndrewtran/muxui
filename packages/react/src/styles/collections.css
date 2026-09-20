@@ -122,10 +122,10 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-text-line-height);
-  color: var(--muxui-semantic-content-strong);
-  background-color: var(--muxui-semantic-surface-canvas);
+  color: var(--muxui-field-color);
+  background-color: var(--muxui-field-bg);
   border: 0;
-  outline: 1px solid var(--muxui-semantic-border-strong);
+  outline: 1px solid var(--muxui-field-border-color);
   outline-offset: -1px;
   border-radius: var(--muxui-field-radius);
   transition:
@@ -138,27 +138,26 @@
 }
 
 .muxui-color-field .muxui-field-input[data-focused] {
-  outline-color: var(--muxui-semantic-focus-ring);
-  box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
 }
 
-.muxui-color-field .muxui-field-input:hover:not([data-focused], [data-disabled], [data-invalid]) {
+.muxui-color-field .muxui-field-input:hover:not(:focus, [data-focused], [data-disabled], [data-invalid]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-color-field .muxui-field-input[data-invalid] {
-  outline-color: var(--muxui-semantic-feedback-invalid);
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
-.muxui-color-field .muxui-field-input[data-invalid][data-focused] {
+.muxui-color-field .muxui-field-input[data-invalid]:is(:focus, [data-focused]) {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-color-field .muxui-field-input[data-disabled] {
-  outline-color: var(--muxui-semantic-border-strong);
-  color: var(--muxui-semantic-content-strong);
+  color: var(--muxui-field-color);
   cursor: not-allowed;
-  background-color: var(--muxui-semantic-color-neutral-default-14);
+  background-color: var(--muxui-semantic-surface-hover);
   opacity: 0.45;
 }
 
@@ -284,10 +283,6 @@
   transition:
     outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-combo-box .muxui-field-input:hover {
-  outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-combo-box-popover {
@@ -663,16 +658,29 @@
     box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
-.muxui-select-trigger:hover {
+:where(
+  .muxui-select:not([data-invalid]) > .muxui-select-trigger,
+  .muxui-select-trigger:not([data-invalid])
+):hover:not(:focus, :focus-visible, [data-focus-visible], [data-open], [data-disabled]) {
   outline-color: var(--muxui-semantic-border-indicator);
 }
 
 .muxui-select-trigger[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
-  outline-color: var(--muxui-semantic-border-strong);
-  color: var(--muxui-semantic-content-strong);
+  outline-color: var(--muxui-field-border-color);
+  color: var(--muxui-field-color);
   cursor: not-allowed;
   pointer-events: none;
+}
+
+.muxui-select[data-invalid] > .muxui-select-trigger,
+.muxui-select-trigger[data-invalid] {
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-select[data-invalid] > .muxui-select-trigger:is(:focus-visible, [data-focus-visible], [data-open]),
+.muxui-select-trigger[data-invalid]:is(:focus-visible, [data-focus-visible], [data-open]) {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
 }
 
 .muxui-select-value {
@@ -1375,8 +1383,8 @@
 
 .muxui-select-trigger[aria-disabled='true'] {
   background-color: var(--muxui-semantic-surface-hover);
-  border-color: var(--muxui-semantic-border-strong);
-  color: var(--muxui-semantic-content-strong);
+  outline-color: var(--muxui-field-border-color);
+  color: var(--muxui-field-color);
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -1402,6 +1410,19 @@
   border-radius: var(--muxui-field-radius);
   background: var(--muxui-field-bg);
 	color: var(--muxui-field-color);
+	transition:
+	  outline-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+	  box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
+	  background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
+}
+
+.muxui-token-field:hover:not(:focus-within, [data-disabled], [aria-disabled='true']) {
+  outline-color: var(--muxui-semantic-border-indicator);
+}
+
+.muxui-token-field:focus-within {
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
 }
 
 .muxui-token {
@@ -1427,8 +1448,13 @@
 .muxui-token-field[data-disabled],
 .muxui-token-field[aria-disabled='true'] {
   cursor: not-allowed;
-  border-color: var(--muxui-semantic-border-strong);
+  outline-color: var(--muxui-field-border-color);
   background: var(--muxui-semantic-surface-hover);
+  opacity: 0.45;
+}
+
+.muxui-token-input {
+  outline: none;
 }
 
 .muxui-token-field[data-disabled] .muxui-token-input,
@@ -1626,10 +1652,10 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
-    outline-color: var(--muxui-semantic-color-neutral-default-84);
-    color: var(--muxui-semantic-color-neutral-default-20);
+  :scope .muxui-color-field .muxui-field-input:not(:hover, :focus, [data-focused], [data-disabled], [data-invalid]) {
+    background-color: var(--muxui-field-bg);
+    outline-color: var(--muxui-field-border-color);
+    color: var(--muxui-field-color);
     color-scheme: light;
   }
 }
@@ -1641,12 +1667,24 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-trigger,
-  :scope .muxui-combo-control,
-  :scope .muxui-combo-box .muxui-field-input {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-100) 85%, black);
-    outline-color: var(--muxui-semantic-color-neutral-default-84);
-    color: var(--muxui-semantic-color-neutral-default-20);
+  :scope .muxui-select:not([data-disabled], [data-invalid]) > .muxui-select-trigger:not(:hover, :focus, :focus-visible, [data-focus-visible], [data-open], [data-disabled], [data-invalid]),
+  :scope .muxui-combo-box:not([data-disabled], [data-invalid]) .muxui-combo-control:not(:hover, :focus-within, [data-disabled], [data-invalid]),
+  :scope .muxui-combo-control:not(:hover, :focus-within, [data-disabled], [data-invalid]),
+  :scope .muxui-combo-box .muxui-field-input:not(:hover, :focus, [data-focused], [data-disabled], [data-invalid]) {
+    background-color: var(--muxui-field-bg);
+    outline-color: var(--muxui-field-border-color);
+    color: var(--muxui-field-color);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-color-field .muxui-field-input[data-disabled],
+  :scope .muxui-select-trigger[data-disabled],
+  :scope .muxui-combo-control[data-disabled],
+  :scope .muxui-combo-box[data-disabled] .muxui-combo-control,
+  :scope .muxui-token-field[data-disabled],
+  :scope .muxui-token-field[aria-disabled='true'] {
+    background-color: var(--muxui-semantic-color-neutral-default-96);
   }
 }
 
@@ -1659,12 +1697,7 @@
 }
 
 .muxui-combo-control {
-  outline-color: var(--muxui-semantic-color-neutral-default-20);
-}
-
-.muxui-combo-box[data-disabled] > .muxui-field-label,
-.muxui-select[data-disabled] > .muxui-field-label {
-  opacity: 1;
+  outline-color: var(--muxui-field-border-color);
 }
 
 .muxui-combo-box-trigger {
@@ -1689,6 +1722,20 @@
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
   :scope .muxui-combo-box > .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-70);
+  }
+
+  :scope .muxui-combo-box[data-disabled] > .muxui-field-label,
+  :scope .muxui-select[data-disabled] > .muxui-field-label {
+    color: var(--muxui-semantic-content-default);
+    opacity: 0.45;
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-combo-box[data-disabled] > .muxui-field-label,
+  :scope .muxui-select[data-disabled] > .muxui-field-label {
+    color: var(--muxui-semantic-color-neutral-default-40);
+    opacity: 0.45;
   }
 }
 
@@ -1875,14 +1922,6 @@
   :scope .muxui-list-box[data-focus-visible] {
     box-shadow:
       inset 0 -1px var(--muxui-table-row-separator, transparent),
-      0 0 0 2px var(--muxui-focus-ring-inner),
-      0 0 0 4px var(--muxui-focus-ring-outer);
-  }
-}
-
-@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input[data-focused] {
-    box-shadow:
       0 0 0 2px var(--muxui-focus-ring-inner),
       0 0 0 4px var(--muxui-focus-ring-outer);
   }
@@ -2089,35 +2128,27 @@
   outline: none;
 }
 
-.muxui-combo-control:focus-within {
-  outline-color: var(--muxui-semantic-color-neutral-default-50);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-combo-control:focus-within {
-    outline-color: var(--muxui-semantic-color-neutral-default-50);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-select[data-invalid] > .muxui-field-label {
+    color: var(--muxui-semantic-feedback-invalid-content);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-trigger[data-focus-visible],
-  :scope .muxui-select-trigger:focus-visible {
-    outline-color: var(--muxui-semantic-color-neutral-default-60);
-    box-shadow: var(--muxui-field-focus-glow);
+  :scope .muxui-select[data-invalid] > .muxui-field-label {
+    color: var(--muxui-semantic-feedback-invalid);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select[data-invalid] > .muxui-field-label {
-    color: var(--muxui-semantic-color-neutral-default-70);
+  :scope .muxui-combo-box[data-invalid] > .muxui-field-label {
+    color: var(--muxui-semantic-feedback-invalid-content);
   }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select[data-invalid] > .muxui-field-label {
-    color: var(--muxui-semantic-color-neutral-default-40);
+  :scope .muxui-combo-box[data-invalid] > .muxui-field-label {
+    color: var(--muxui-semantic-feedback-invalid);
   }
 }
 
@@ -2264,30 +2295,6 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-/* ColorField uses a focused state with the
-   three-pixel neutral glow instead of the control inner/outer ring. */
-@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input[data-focused],
-  :scope .muxui-color-field .muxui-field-input:focus {
-    outline-color: var(--muxui-semantic-color-neutral-default-50);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-60) 30%, transparent);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input[data-focused],
-  :scope .muxui-color-field .muxui-field-input:focus {
-    outline-color: var(--muxui-semantic-color-neutral-default-60);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-color-neutral-default-50) 30%, transparent);
-  }
-}
-
-@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field .muxui-field-input[data-invalid] {
-    outline-color: var(--muxui-semantic-feedback-invalid-border);
-  }
-}
-
 .muxui-color-field .muxui-field-input {
   border-radius: var(--muxui-semantic-shape-micro-radius);
   position: relative;
@@ -2300,6 +2307,11 @@
     position: relative;
     top: 1px;
   }
+
+  :scope .muxui-color-field[data-disabled] > .muxui-field-label {
+    color: var(--muxui-semantic-content-default);
+    opacity: 0.45;
+  }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
@@ -2307,17 +2319,22 @@
     position: relative;
     top: 1px;
   }
-}
 
-@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field[data-invalid] .muxui-field-input {
-    outline-color: var(--muxui-semantic-feedback-invalid-border);
+  :scope .muxui-color-field[data-disabled] > .muxui-field-label {
+    color: var(--muxui-semantic-color-neutral-default-40);
+    opacity: 0.45;
   }
 }
 
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-color-field[data-invalid] .muxui-field-input[data-focused] {
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid-border) 20%, transparent);
+  :scope .muxui-color-field[data-invalid] > .muxui-field-label {
+    color: var(--muxui-semantic-feedback-invalid-content);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-color-field[data-invalid] > .muxui-field-label {
+    color: var(--muxui-semantic-feedback-invalid);
   }
 }
 

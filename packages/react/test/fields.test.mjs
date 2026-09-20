@@ -310,7 +310,7 @@ test('Switch exposes required and invalid states alongside its description and e
   dom.window.close();
 });
 
-test('ComboBox input transitions stay scoped away from TextField', async () => {
+test('ComboBox keeps its inner input neutral while the shell owns field states', async () => {
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   const comboStart = css.indexOf('/* MuxUI component source: combobox.css */');
   const comboEnd = css.indexOf('/* MuxUI component source: grid-list.css */', comboStart);
@@ -321,8 +321,9 @@ test('ComboBox input transitions stay scoped away from TextField', async () => {
   const comboCss = css.slice(comboStart, comboEnd);
   const textCss = css.slice(textStart, textEnd);
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input\s*\{[\s\S]*transition:/u);
-  assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
+  assert.doesNotMatch(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
   assert.doesNotMatch(comboCss, /^\.muxui-field-input\s*\{/mu);
+  assert.match(css, /\.muxui-combo-control:focus-within\s*\{[\s\S]*var\(--muxui-field-focus-glow\)/u);
   assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\)/u);
 });
 
