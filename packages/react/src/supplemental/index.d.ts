@@ -91,7 +91,49 @@ export type ColorModeToggleProps = React.LabelHTMLAttributes<HTMLLabelElement> &
 export declare const ColorModeToggle: React.ForwardRefExoticComponent<ColorModeToggleProps & React.RefAttributes<HTMLLabelElement>>;
 
 export type CommandPaletteRootProps = React.HTMLAttributes<HTMLDivElement> & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; size?: 'sm' | 'md' | 'lg'; closeOnSelect?: boolean };
-export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
+export type CommandPaletteItemProps = React.HTMLAttributes<HTMLDivElement> & { id?: string; title?: string; description?: string; textValue?: string; href?: string; target?: string; disabled?: boolean; closeOnSelect?: boolean; onActivate?: (event: { id?: string }) => void };
+export interface CommandPaletteCommand {
+  id: string;
+  title: string;
+  subtitle?: string;
+  keywords?: readonly string[];
+  group?: string;
+  icon?: React.ReactNode;
+  shortcut?: readonly string[];
+  disabled?: boolean;
+  href?: string;
+  target?: string;
+  action?: () => void | Promise<void>;
+  closeOnSelect?: boolean;
+}
+export interface CommandPaletteGroup<T extends CommandPaletteCommand = CommandPaletteCommand> {
+  id: string;
+  title: string;
+  commands: readonly T[];
+}
+export interface UseCommandPaletteOptions<T extends CommandPaletteCommand> {
+  commands: readonly T[];
+  query?: string;
+  defaultQuery?: string;
+  onQueryChange?: (query: string) => void;
+  filter?: false | ((command: T, query: string) => boolean);
+  sort?: false | ((a: T, b: T, query: string) => number);
+  groupBy?: (command: T) => string | null | undefined;
+  getGroupTitle?: (groupId: string) => string;
+  onAction?: (command: T) => void | Promise<void>;
+  onError?: (error: unknown, command: T) => void;
+  close?: () => void;
+  closeOnSelect?: boolean;
+}
+export interface UseCommandPaletteReturn<T extends CommandPaletteCommand> {
+  query: string;
+  setQuery: (query: string) => void;
+  filteredCommands: readonly T[];
+  groupedCommands: readonly CommandPaletteGroup<T>[];
+  runCommand: (commandOrId: T | string) => Promise<void>;
+  getItemProps: (command: T) => CommandPaletteItemProps;
+}
+export declare function useCommandPalette<T extends CommandPaletteCommand>(options: UseCommandPaletteOptions<T>): UseCommandPaletteReturn<T>;
 export type CommandPaletteTriggerProps = ButtonPartProps;
 export type CommandPaletteBackdropProps = PartProps<HTMLDivElement> & { dismissable?: boolean };
 export type CommandPalettePopupProps = PartProps<HTMLElement>;
@@ -232,7 +274,7 @@ export declare const PaymentInput: {
   CardIcon: React.ForwardRefExoticComponent<PartProps<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
 };
 
-export type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & { value?: number | null; minValue?: number; maxValue?: number; size?: 'sm' | 'md' | 'lg'; label?: string };
+export type ProgressCircleProps = React.HTMLAttributes<HTMLDivElement> & { value?: number | null; minValue?: number; maxValue?: number; size?: 'sm' | 'md' | 'lg'; /** Accessible name shorthand; explicit aria-label or aria-labelledby takes precedence. */ label?: string };
 export type ProgressCircleRootProps = ProgressCircleProps;
 export type ProgressCircleTrackProps = React.SVGAttributes<SVGSVGElement>;
 export type ProgressCircleLabelProps = PartProps<HTMLSpanElement>;
@@ -299,6 +341,25 @@ export declare const TagSelect: {
   Item: React.ForwardRefExoticComponent<TagSelectItemProps & React.RefAttributes<HTMLDivElement>>;
 };
 
+export type TextVariant = 'display' | 'heading' | 'title' | 'label' | 'body' | 'expressive' | 'mono';
+export type TextSize = 'xs' | 's' | 'm' | 'l';
+export type TextColor = 'default' | 'muted';
+export type TextElement = 'p' | 'span' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'div' | 'label';
+type TextVisualProps =
+  | { variant?: 'body'; size?: TextSize }
+  | { variant: 'display' | 'heading' | 'title'; size?: Exclude<TextSize, 'xs'> }
+  | { variant: 'label' | 'expressive' | 'mono'; size?: TextSize };
+export type TextProps<T extends TextElement = 'span'> = Omit<React.ComponentPropsWithoutRef<T>, 'as' | 'className' | 'color' | 'size' | 'variant'> & TextVisualProps & {
+  as?: T;
+  color?: TextColor;
+  truncate?: boolean;
+  className?: string;
+};
+export interface TextComponent {
+  <T extends TextElement = 'span'>(props: TextProps<T> & React.RefAttributes<HTMLElementTagNameMap[T]>): React.ReactElement | null;
+}
+export declare const Text: TextComponent;
+
 export type TextAreaRootProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & {
   value?: string;
   defaultValue?: string;
@@ -317,5 +378,5 @@ export declare const TextArea: {
 };
 
 export declare const supplementalFamilies: readonly [
-  'AlertDialog', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea'
+  'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text'
 ];

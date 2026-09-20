@@ -119,6 +119,59 @@
   outline: none;
 }
 
+/* image */
+.muxui-image {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.muxui-image--fit-cover { object-fit: cover; }
+.muxui-image--fit-contain { object-fit: contain; }
+.muxui-image--fit-fill { object-fit: fill; }
+.muxui-image--fit-none { object-fit: none; }
+.muxui-image-radius-sm { border-radius: var(--muxui-semantic-shape-compact-radius); }
+.muxui-image-radius-md { border-radius: var(--muxui-semantic-shape-option-radius); }
+.muxui-image-radius-lg { border-radius: var(--muxui-semantic-shape-container-radius); }
+.muxui-image-radius-full { border-radius: var(--muxui-semantic-shape-pill-radius); }
+
+/* avatar */
+.muxui-avatar {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+  background: var(--muxui-semantic-surface-subtle);
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-s-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  line-height: 1;
+}
+
+.muxui-avatar--sm { inline-size: var(--muxui-control-size-sm); block-size: var(--muxui-control-size-sm); }
+.muxui-avatar--lg { inline-size: var(--muxui-control-size-lg); block-size: var(--muxui-control-size-lg); }
+
+.muxui-avatar__image,
+.muxui-avatar__fallback {
+  grid-area: 1 / 1;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.muxui-avatar__image { object-fit: cover; }
+.muxui-avatar__fallback {
+  display: grid;
+  place-items: center;
+  padding: var(--muxui-semantic-layout-tight-inset);
+  text-align: center;
+  overflow: hidden;
+}
+
 /* button-group */
 .muxui-button-group {
   display: inline-flex;
@@ -1174,36 +1227,50 @@
 
 
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav {
-  background: var(--muxui-semantic-color-neutral-14);
-  border-color: var(--muxui-semantic-color-neutral-22);
-  color: var(--muxui-semantic-color-neutral-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav {
+    background: var(--muxui-semantic-color-neutral-14);
+    border-color: var(--muxui-semantic-color-neutral-22);
+    color: var(--muxui-semantic-color-neutral-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn {
-  color: var(--muxui-semantic-color-neutral-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__nav-btn {
+    color: var(--muxui-semantic-color-neutral-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn:hover {
-  background: var(--muxui-semantic-color-neutral-20);
-  color: var(--muxui-semantic-color-neutral-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__nav-btn:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+    color: var(--muxui-semantic-color-neutral-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav__nav-btn--current {
-  background: var(--muxui-semantic-color-neutral-22);
-  color: var(--muxui-semantic-color-neutral-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__nav-btn--current {
+    background: var(--muxui-semantic-color-neutral-22);
+    color: var(--muxui-semantic-color-neutral-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav__mobile-trigger:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__mobile-trigger:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav__mobile-drawer {
-  background: var(--muxui-semantic-color-neutral-14);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__mobile-drawer {
+    background: var(--muxui-semantic-color-neutral-14);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-header-nav__mobile-close-btn:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__mobile-close-btn:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
 /* input-tags */
@@ -2018,6 +2085,19 @@
   transition: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate] {
+    stroke-dasharray: 70, 100;
+    stroke-dashoffset: -25;
+  }
+}
+
+:where([data-reduced-motion], [data-muxui-motion='reduced'])
+  :where(.muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate]) {
+  stroke-dasharray: 70, 100;
+  stroke-dashoffset: -25;
+}
+
 @keyframes muxui-progress-circle-rotate {
   100% {
     transform: rotate(360deg);
@@ -2677,96 +2757,132 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar {
-  background: var(--muxui-semantic-color-neutral-14);
-  border-color: var(--muxui-semantic-color-neutral-22);
-  color: var(--muxui-semantic-color-neutral-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar {
+    background: var(--muxui-semantic-color-neutral-14);
+    border-color: var(--muxui-semantic-color-neutral-22);
+    color: var(--muxui-semantic-color-neutral-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] :is(
-  .muxui-sidebar__nav-link,
-  .muxui-sidebar__nav-link:hover,
-  .muxui-sidebar__nav-link--current,
-  .muxui-sidebar__nav-btn,
-  .muxui-sidebar__nav-btn:hover,
-  .muxui-sidebar__nav-btn--current,
-  .muxui-sidebar__account-name,
-  .muxui-sidebar__feature-card-title
-) {
-  color: var(--muxui-semantic-color-neutral-100);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :is(
+    .muxui-sidebar__nav-link,
+    .muxui-sidebar__nav-link:hover,
+    .muxui-sidebar__nav-link--current,
+    .muxui-sidebar__nav-btn,
+    .muxui-sidebar__nav-btn:hover,
+    .muxui-sidebar__nav-btn--current,
+    .muxui-sidebar__account-name,
+    .muxui-sidebar__feature-card-title
+  ) {
+    color: var(--muxui-semantic-color-neutral-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] :is(
-  .muxui-sidebar__account-email,
-  .muxui-sidebar__feature-card-description
-) {
-  color: var(--muxui-semantic-color-neutral-60);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :is(
+    .muxui-sidebar__account-email,
+    .muxui-sidebar__feature-card-description
+  ) {
+    color: var(--muxui-semantic-color-neutral-60);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__search-input {
-  background: var(--muxui-semantic-color-neutral-16);
-  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
-  color: var(--muxui-semantic-color-neutral-96);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__search-input {
+    background: var(--muxui-semantic-color-neutral-16);
+    box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
+    color: var(--muxui-semantic-color-neutral-96);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__nav-link:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__nav-link:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__nav-link--current {
-  background: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__nav-link--current {
+    background: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__nav-btn:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__nav-btn:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__nav-btn--current {
-  background: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__nav-btn--current {
+    background: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__account-card {
-  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__account-card {
+    box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__account-avatar--placeholder {
-  background: var(--muxui-semantic-color-color-20);
-  color: var(--muxui-semantic-color-color-20-fg);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__account-avatar--placeholder {
+    background: var(--muxui-semantic-color-color-20);
+    color: var(--muxui-semantic-color-color-20-fg);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__account-trigger:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__account-trigger:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__account-menu {
-  background: var(--muxui-semantic-color-neutral-16);
-  border-color: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__account-menu {
+    background: var(--muxui-semantic-color-neutral-16);
+    border-color: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__feature-card {
-  background: var(--muxui-semantic-color-neutral-16);
-  border-color: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__feature-card {
+    background: var(--muxui-semantic-color-neutral-16);
+    border-color: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__feature-card-dismiss:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__feature-card-dismiss:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__mobile-header {
-  background: var(--muxui-semantic-color-neutral-14);
-  border-color: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__mobile-header {
+    background: var(--muxui-semantic-color-neutral-14);
+    border-color: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__mobile-drawer {
-  background: var(--muxui-semantic-color-neutral-14);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__mobile-drawer {
+    background: var(--muxui-semantic-color-neutral-14);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__mobile-menu-btn:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__mobile-menu-btn:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-sidebar__mobile-close-btn:hover {
-  background: var(--muxui-semantic-color-neutral-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__mobile-close-btn:hover {
+    background: var(--muxui-semantic-color-neutral-20);
+  }
 }
 
 /* switch-field */

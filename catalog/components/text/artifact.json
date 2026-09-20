@@ -1,0 +1,138 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:text",
+  "kind": "component",
+  "name": "Text",
+  "summary": "Apply an existing Mux typography role to semantic text while preserving native and slot behavior.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Applying Mux display, heading, title, label, body, expressive, or mono typography to text content."
+    ],
+    "avoidWhen": [
+      "Creating a layout wrapper, interactive control, or new typography treatment."
+    ]
+  },
+  "anatomy": [
+    "root"
+  ],
+  "states": [
+    "default",
+    "truncated"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+      "obligations": [
+        "The as prop selects the native semantic host; caller-supplied role, aria, data, event, and slot props remain on that host.",
+        "Text participates in React Aria description slots inside fields and label and description slots inside collection items; a field's label association remains owned by the field component, while as=label with htmlFor provides native labeling.",
+        "Truncation is visual; the complete text remains in the DOM and consumers provide an accessible name when a clipped label needs additional context."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "variant",
+          "size",
+          "color",
+          "as",
+          "truncate"
+        ],
+        "events": [],
+        "parts": [
+          "root"
+        ],
+        "defaults": {
+          "variant": "body",
+          "size": "m",
+          "color": "default",
+          "as": "span",
+          "truncate": false
+        }
+      },
+      "behavior": [
+        "Composes the existing Mux typography role and size tokens; display, heading, and title use s, m, and l while label, body, expressive, and mono also support xs.",
+        "The as prop selects p, span, h1 through h6, div, or label without changing caller-supplied role, aria, data, event, or slot props.",
+        "The color prop keeps default role color, or applies the existing muted content role.",
+        "truncate applies single-line overflow clipping and ellipsis; the containing width remains consumer-owned."
+      ],
+      "accessibility": [
+        "The selected native element supplies its normal semantic meaning and caller-supplied role and ARIA attributes are preserved.",
+        "Text participates in React Aria description slots inside fields and label and description slots inside collection items; field labels retain the field component's association, and as=label with htmlFor remains native labeling.",
+        "Truncation does not remove the complete text from the DOM."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          { "token": "semantic.typography.display-font-family", "requirement": "required" },
+          { "token": "semantic.typography.display-font-weight", "requirement": "required" },
+          { "token": "semantic.typography.display-line-height", "requirement": "required" },
+          { "token": "semantic.typography.display-letter-spacing", "requirement": "required" },
+          { "token": "semantic.typography.display-color", "requirement": "required" },
+          { "token": "semantic.typography.display-l-font-size", "requirement": "required" },
+          { "token": "semantic.typography.display-m-font-size", "requirement": "required" },
+          { "token": "semantic.typography.display-s-font-size", "requirement": "required" },
+          { "token": "semantic.typography.heading-font-family", "requirement": "required" },
+          { "token": "semantic.typography.heading-font-weight", "requirement": "required" },
+          { "token": "semantic.typography.heading-line-height", "requirement": "required" },
+          { "token": "semantic.typography.heading-letter-spacing", "requirement": "required" },
+          { "token": "semantic.typography.heading-l-font-size", "requirement": "required" },
+          { "token": "semantic.typography.heading-m-font-size", "requirement": "required" },
+          { "token": "semantic.typography.heading-s-font-size", "requirement": "required" },
+          { "token": "semantic.typography.title-font-family", "requirement": "required" },
+          { "token": "semantic.typography.title-font-weight", "requirement": "required" },
+          { "token": "semantic.typography.title-line-height", "requirement": "required" },
+          { "token": "semantic.typography.title-letter-spacing", "requirement": "required" },
+          { "token": "semantic.typography.title-l-font-size", "requirement": "required" },
+          { "token": "semantic.typography.title-m-font-size", "requirement": "required" },
+          { "token": "semantic.typography.title-s-font-size", "requirement": "required" },
+          { "token": "semantic.typography.label-font-family", "requirement": "required" },
+          { "token": "semantic.typography.label-font-weight", "requirement": "required" },
+          { "token": "semantic.typography.label-line-height", "requirement": "required" },
+          { "token": "semantic.typography.label-letter-spacing", "requirement": "required" },
+          { "token": "semantic.typography.label-l-font-size", "requirement": "required" },
+          { "token": "semantic.typography.label-m-font-size", "requirement": "required" },
+          { "token": "semantic.typography.label-s-font-size", "requirement": "required" },
+          { "token": "semantic.typography.label-xs-font-size", "requirement": "required" },
+          { "token": "semantic.typography.text-font-family", "requirement": "required" },
+          { "token": "semantic.typography.text-font-weight", "requirement": "required" },
+          { "token": "semantic.typography.text-line-height", "requirement": "required" },
+          { "token": "semantic.typography.text-letter-spacing", "requirement": "required" },
+          { "token": "semantic.typography.text-l-font-size", "requirement": "required" },
+          { "token": "semantic.typography.text-m-font-size", "requirement": "required" },
+          { "token": "semantic.typography.text-s-font-size", "requirement": "required" },
+          { "token": "semantic.typography.text-xs-font-size", "requirement": "required" },
+          { "token": "semantic.typography.mono-font-family", "requirement": "required" },
+          { "token": "semantic.typography.mono-font-weight", "requirement": "required" },
+          { "token": "semantic.typography.mono-line-height", "requirement": "required" },
+          { "token": "semantic.typography.mono-letter-spacing", "requirement": "required" },
+          { "token": "semantic.typography.mono-l-font-size", "requirement": "required" },
+          { "token": "semantic.typography.mono-m-font-size", "requirement": "required" },
+          { "token": "semantic.typography.mono-s-font-size", "requirement": "required" },
+          { "token": "semantic.typography.mono-xs-font-size", "requirement": "required" },
+          { "token": "semantic.typography.expressive-font-family", "requirement": "required" },
+          { "token": "semantic.content.muted", "requirement": "required" },
+          { "token": "semantic.typography.text-color", "requirement": "required" },
+          { "token": "semantic.typography.mono-color", "requirement": "required" }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            { "id": "system.forced-colors", "disposition": "required" },
+            { "id": "system.high-contrast", "disposition": "required" },
+            { "id": "native.dynamic-color", "disposition": "not-applicable", "reason": "Native dynamic colors do not apply to the React web binding." },
+            { "id": "native.font-metrics", "disposition": "not-applicable", "reason": "Native font metrics do not apply to the React web binding." },
+            { "id": "layout.direction", "disposition": "required" },
+            { "id": "platform.accessibility-mapping", "disposition": "required" }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

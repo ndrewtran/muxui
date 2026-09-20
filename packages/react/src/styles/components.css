@@ -561,30 +561,40 @@
 }
 
 /* The pressed dark button recipe uses the reference blue-green value. */
-[data-muxui-color-scheme='dark'] .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
-  background-color: var(--muxui-semantic-action-selection-pressed);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
+    background-color: var(--muxui-semantic-action-selection-pressed);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-button[data-variant='danger-ghost'] {
-  --muxui-button-foreground: var(--muxui-semantic-feedback-invalid);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-button[data-variant='danger-ghost'] {
+    --muxui-button-foreground: var(--muxui-semantic-feedback-invalid);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-checkbox {
-  color: var(--muxui-semantic-color-neutral-default-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox {
+    color: var(--muxui-semantic-color-neutral-default-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-checkbox:not(
-  [data-selected],
-  [data-indeterminate],
-  [data-disabled],
-  [data-invalid]
-) .muxui-checkbox-indicator {
-  background-color: var(--muxui-semantic-color-neutral-default-98);
-  border-color: var(--muxui-semantic-color-neutral-default-60);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox:not(
+    [data-selected],
+    [data-indeterminate],
+    [data-disabled],
+    [data-invalid]
+  ) .muxui-checkbox-indicator {
+    background-color: var(--muxui-semantic-color-neutral-default-98);
+    border-color: var(--muxui-semantic-color-neutral-default-60);
+  }
 }
 
-[data-muxui-color-scheme] .muxui-checkbox[data-invalid] .muxui-checkbox-indicator {
-  border-color: var(--muxui-semantic-feedback-invalid-border);
+@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox[data-invalid] .muxui-checkbox-indicator {
+    border-color: var(--muxui-semantic-feedback-invalid-border);
+  }
 }
 
 .muxui-progress-bar-fill { transition: width var(--muxui-semantic-motion-progress-update-duration) var(--muxui-semantic-motion-interaction-easing); }
@@ -595,36 +605,52 @@
   animation: muxui-progress-bar-indeterminate var(--muxui-semantic-motion-progress-travel-duration) var(--muxui-semantic-motion-progress-easing) infinite;
 }
 
-[data-muxui-color-scheme='light'] :where(.muxui-meter-track, .muxui-progress-bar-track) {
-  background-color: var(--muxui-semantic-color-neutral-default-24);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope :where(.muxui-meter-track, .muxui-progress-bar-track) {
+    background-color: var(--muxui-semantic-color-neutral-default-24);
+  }
 }
 
-[data-muxui-color-scheme='light'] :where(.muxui-meter-fill, .muxui-progress-bar-fill) {
-  background-color: var(--muxui-semantic-color-neutral-default-100);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope :where(.muxui-meter-fill, .muxui-progress-bar-fill) {
+    background-color: var(--muxui-semantic-color-neutral-default-100);
+  }
 }
 
-[data-muxui-color-scheme='light'] .muxui-value-label {
-  color: var(--muxui-semantic-color-neutral-default-80);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-value-label {
+    color: var(--muxui-semantic-color-neutral-default-80);
+  }
 }
 
-[data-muxui-color-scheme='light'] .muxui-value-output {
-  color: var(--muxui-semantic-content-muted);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-value-output {
+    color: var(--muxui-semantic-content-muted);
+  }
 }
 
-[data-muxui-color-scheme='dark'] :where(.muxui-meter-track, .muxui-progress-bar-track) {
-  background-color: var(--muxui-semantic-color-neutral-default-84);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(.muxui-meter-track, .muxui-progress-bar-track) {
+    background-color: var(--muxui-semantic-color-neutral-default-84);
+  }
 }
 
-[data-muxui-color-scheme='dark'] :where(.muxui-meter-fill, .muxui-progress-bar-fill) {
-  background-color: var(--muxui-semantic-color-neutral-default-5);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(.muxui-meter-fill, .muxui-progress-bar-fill) {
+    background-color: var(--muxui-semantic-color-neutral-default-5);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-value-label {
-  color: var(--muxui-semantic-color-neutral-default-28);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-value-label {
+    color: var(--muxui-semantic-color-neutral-default-28);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-value-output {
-  color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-value-output {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
 /* MuxUI component source: separator.css */
@@ -892,7 +918,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-toggle-button) {
+  :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
     animation: none !important;
     transition-duration: 0s !important;
   }
@@ -902,7 +928,7 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-toggle-button) {
+:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
   animation: none !important;
   transition-duration: 0s !important;
 }
@@ -967,39 +993,55 @@
 }
 
 /* Ordinary dark link and disclosure recipes use the mode-indexed scale. */
-[data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button) {
-  color: var(--muxui-semantic-content-link);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-link:not(.muxui-button) {
+    color: var(--muxui-semantic-content-link);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button)[data-hovered] {
-  color: var(--muxui-semantic-content-link-hover);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-link:not(.muxui-button)[data-hovered] {
+    color: var(--muxui-semantic-content-link-hover);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button)[data-pressed] {
-  color: var(--muxui-semantic-content-link-pressed);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-link:not(.muxui-button)[data-pressed] {
+    color: var(--muxui-semantic-content-link-pressed);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-link:not(.muxui-button):is([aria-current='page'], [data-current]) {
-  color: var(--muxui-semantic-color-neutral-default-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-link:not(.muxui-button):is([aria-current='page'], [data-current]) {
+    color: var(--muxui-semantic-color-neutral-default-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-disclosure-trigger {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 8%, transparent);
-  color: var(--muxui-semantic-color-neutral-default-18);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-disclosure-trigger {
+    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 8%, transparent);
+    color: var(--muxui-semantic-color-neutral-default-18);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-disclosure:not([data-disabled])
-  .muxui-disclosure-trigger:hover:not([data-disabled], [data-pending]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 12%, transparent);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-disclosure:not([data-disabled])
+    .muxui-disclosure-trigger:hover:not([data-disabled], [data-pending]) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 12%, transparent);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-disclosure:not([data-disabled])
-  .muxui-disclosure-trigger:active:not([data-disabled], [data-pending]) {
-  background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 16%, transparent);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-disclosure:not([data-disabled])
+    .muxui-disclosure-trigger:active:not([data-disabled], [data-pending]) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 16%, transparent);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-disclosure-panel {
-  color: var(--muxui-semantic-color-neutral-default-28);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-disclosure-panel {
+    color: var(--muxui-semantic-color-neutral-default-28);
+  }
 }
 
 .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill,
@@ -1008,14 +1050,18 @@
   animation: muxui-progress-bar-indeterminate var(--muxui-semantic-motion-progress-travel-duration) var(--muxui-semantic-motion-progress-easing) infinite;
 }
 
-[data-muxui-color-scheme='light'] .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill,
-[data-muxui-color-scheme='light'] .muxui-progress-bar-fill[data-indeterminate] {
-  background-color: var(--muxui-semantic-color-neutral-default-100);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill,
+  :scope .muxui-progress-bar-fill[data-indeterminate] {
+    background-color: var(--muxui-semantic-color-neutral-default-100);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill,
-[data-muxui-color-scheme='dark'] .muxui-progress-bar-fill[data-indeterminate] {
-  background-color: var(--muxui-semantic-color-neutral-default-5);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill,
+  :scope .muxui-progress-bar-fill[data-indeterminate] {
+    background-color: var(--muxui-semantic-color-neutral-default-5);
+  }
 }
 
 .muxui-progress-bar-header {
@@ -1034,92 +1080,128 @@
     0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
-[data-muxui-color-scheme='dark'] :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label,
-[data-muxui-color-scheme='dark'] .muxui-switch-label {
-  color: var(--muxui-semantic-color-neutral-default-28);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label,
+  :scope .muxui-switch-label {
+    color: var(--muxui-semantic-color-neutral-default-28);
+  }
 }
 
 /* Ordinary dark choice-control recipes use mode-indexed tokens. */
-[data-muxui-color-scheme='dark'] .muxui-toggle-button {
-  border-color: var(--muxui-semantic-color-neutral-22);
-  color: var(--muxui-semantic-color-neutral-70);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button {
+    border-color: var(--muxui-semantic-color-neutral-22);
+    color: var(--muxui-semantic-color-neutral-70);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
-  background-color: var(--muxui-semantic-color-neutral-14);
-  border-color: var(--muxui-semantic-color-neutral-28);
-  color: var(--muxui-semantic-color-neutral-90);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
+    background-color: var(--muxui-semantic-color-neutral-14);
+    border-color: var(--muxui-semantic-color-neutral-28);
+    color: var(--muxui-semantic-color-neutral-90);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toggle-button[data-selected] {
-  background-color: var(--muxui-semantic-color-neutral-80);
-  border-color: var(--muxui-semantic-color-neutral-80);
-  color: var(--muxui-semantic-color-neutral-80-fg);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button[data-selected] {
+    background-color: var(--muxui-semantic-color-neutral-80);
+    border-color: var(--muxui-semantic-color-neutral-80);
+    color: var(--muxui-semantic-color-neutral-80-fg);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toggle-button[data-selected]:hover:not([data-disabled]) {
-  background-color: var(--muxui-semantic-color-neutral-90);
-  border-color: var(--muxui-semantic-color-neutral-90);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button[data-selected]:hover:not([data-disabled]) {
+    background-color: var(--muxui-semantic-color-neutral-90);
+    border-color: var(--muxui-semantic-color-neutral-90);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toggle-button-group {
-  border-color: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button-group {
+    border-color: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-toggle-button-group .muxui-toggle-button {
-  border-color: var(--muxui-semantic-color-neutral-22);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-toggle-button-group .muxui-toggle-button {
+    border-color: var(--muxui-semantic-color-neutral-22);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-checkbox-indicator {
-  background-color: var(--muxui-semantic-color-neutral-default-98);
-  border-color: var(--muxui-semantic-color-neutral-default-60);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox-indicator {
+    background-color: var(--muxui-semantic-color-neutral-default-98);
+    border-color: var(--muxui-semantic-color-neutral-default-60);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-checkbox[data-selected] .muxui-checkbox-indicator,
-[data-muxui-color-scheme='dark'] .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator {
-  background-color: var(--muxui-semantic-action-selection-background);
-  border-color: var(--muxui-semantic-action-selection-background);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox[data-selected] .muxui-checkbox-indicator,
+  :scope .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator {
+    background-color: var(--muxui-semantic-action-selection-background);
+    border-color: var(--muxui-semantic-action-selection-background);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-checkbox-indicator svg {
-  color: var(--muxui-semantic-action-selection-foreground);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox-indicator svg {
+    color: var(--muxui-semantic-action-selection-foreground);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
-  .muxui-checkbox-indicator {
-  background-color: var(--muxui-semantic-color-neutral-default-94);
-  border-color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
+    .muxui-checkbox-indicator {
+    background-color: var(--muxui-semantic-color-neutral-default-94);
+    border-color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
-[data-muxui-color-scheme='dark'] :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label,
-[data-muxui-color-scheme='dark'] .muxui-switch-label {
-  color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label,
+  :scope .muxui-switch-label {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
-[data-muxui-color-scheme='light'] .muxui-breadcrumbs-link {
-  color: var(--muxui-semantic-content-muted);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-breadcrumbs-link {
+    color: var(--muxui-semantic-content-muted);
+  }
 }
 
-[data-muxui-color-scheme='light'] .muxui-breadcrumbs-item[data-current] .muxui-breadcrumbs-link,
-[data-muxui-color-scheme='light'] .muxui-breadcrumbs-current {
-  color: var(--muxui-semantic-color-neutral-90);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-breadcrumbs-item[data-current] .muxui-breadcrumbs-link,
+  :scope .muxui-breadcrumbs-current {
+    color: var(--muxui-semantic-color-neutral-90);
+  }
 }
 
-[data-muxui-color-scheme='light'] .muxui-breadcrumbs-item:not(:last-child)::after {
-  color: var(--muxui-semantic-color-neutral-default-40);
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-breadcrumbs-item:not(:last-child)::after {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-breadcrumbs-link {
-  color: var(--muxui-semantic-color-neutral-default-50);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-breadcrumbs-link {
+    color: var(--muxui-semantic-color-neutral-default-50);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-breadcrumbs-item[data-current] .muxui-breadcrumbs-link,
-[data-muxui-color-scheme='dark'] .muxui-breadcrumbs-current {
-  color: var(--muxui-semantic-color-neutral-default-20);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-breadcrumbs-item[data-current] .muxui-breadcrumbs-link,
+  :scope .muxui-breadcrumbs-current {
+    color: var(--muxui-semantic-color-neutral-default-20);
+  }
 }
 
-[data-muxui-color-scheme='dark'] .muxui-breadcrumbs-item:not(:last-child)::after {
-  color: var(--muxui-semantic-color-neutral-default-70);
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-breadcrumbs-item:not(:last-child)::after {
+    color: var(--muxui-semantic-color-neutral-default-70);
+  }
 }
 
 .muxui-breadcrumbs-link[data-disabled] {

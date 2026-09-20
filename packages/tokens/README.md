@@ -43,6 +43,10 @@ canonical source through `{ source }`:
 - `generateScaleTheme({ source, mode, presetId, namedColor, neutralColor,
   whiteAnchor, contrastPivot, curvature })` returns typed assignments and
   light/dark palette projections.
+- `compileScalePresetTheme({ source, collection, presetId, modes })` resolves a
+  canonical standard or monochrome preset through the same authoring document
+  and compiler path used by Scale. Consumers should derive preset metadata and
+  CSS from this API rather than copying the canonical seed definitions.
 - `validateThemeAuthoringDocument(document, { source })` checks identity,
   contract version, declared modes, token types, override policy, and Scale
   assignment consistency.

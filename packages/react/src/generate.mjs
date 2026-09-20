@@ -3,7 +3,8 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
 import { compileTokenGraph, compileWebTheme } from '@muxui/tokens';
-import { cssName } from '@muxui/tokens/core';
+import { compileScalePresetTheme } from '@muxui/tokens/authoring';
+import { cssName, cssValue } from '@muxui/tokens/core';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts } from './r1-contracts.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -342,6 +343,67 @@ const modeBlocks = axes.flatMap(([axis, values]) => {
   });
 });
 
+const scalePresetCompilations = [
+  ['standard', tokenSource.theme.scale.standardPresets],
+  ['monochrome', tokenSource.theme.scale.monochromePresets],
+].flatMap(([collection, presets]) => presets.map(({ id }) => {
+  const compile = (colorScheme, contrast) => compileScalePresetTheme({
+    source: tokenSource,
+    collection,
+    presetId: id,
+    modes: { colorScheme, contrast },
+  });
+  const variants = {
+    lightStandard: compile('light', 'standard'),
+    lightMore: compile('light', 'more'),
+    darkStandard: compile('dark', 'standard'),
+    darkMore: compile('dark', 'more'),
+  };
+  return { preset: variants.lightStandard.preset, variants };
+}));
+const themeColorSeedIds = new Set(scalePresetCompilations.flatMap(({ variants }) => Object.values(variants).flatMap(({ generated }) => Object.keys(generated.assignments))
+  .filter((id) => tokenSource.tokens[id]?.type === 'color')));
+const themeTokenIds = [...dependentClosure(themeColorSeedIds, baseTheme.graph)]
+  .sort((left, right) => left.localeCompare(right));
+const unsupportedThemeTokenIds = themeTokenIds.filter((id) => !['color', 'effect'].includes(tokenSource.tokens[id]?.type));
+if (unsupportedThemeTokenIds.length > 0) {
+  throw new Error(`MUXUI_REACT_THEME_DEPENDENCY_POLICY_INVALID: ${unsupportedThemeTokenIds.join(',')}`);
+}
+function themeDeclarations(compiled) {
+  return themeTokenIds.map((id) => {
+    const token = compiled.compiled.tokens[id];
+    if (!token || !['color', 'effect'].includes(token.type)) throw new Error(`MUXUI_REACT_THEME_TOKEN_MISSING: ${id}`);
+    return `  ${cssName(id)}: ${cssValue(token)};`;
+  }).join('\n');
+}
+function themeBlock(selector, compiled) {
+  return `${selector} {\n${themeDeclarations(compiled)}\n}`;
+}
+const themeCssBody = scalePresetCompilations.flatMap(({ preset, variants }) => [
+  themeBlock(`[data-muxui-theme='${preset.id}']:not([data-muxui-color-scheme='dark']):not([data-muxui-contrast='more'])`, variants.lightStandard),
+  themeBlock(`[data-muxui-theme='${preset.id}']:not([data-muxui-color-scheme='dark'])[data-muxui-contrast='more']`, variants.lightMore),
+  themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark']:not([data-muxui-contrast='more'])`, variants.darkStandard),
+  themeBlock(`[data-muxui-theme='${preset.id}'][data-muxui-color-scheme='dark'][data-muxui-contrast='more']`, variants.darkMore),
+]).join('\n\n');
+const themeMetadata = scalePresetCompilations.map(({ preset }) => preset);
+const themeIds = themeMetadata.map(({ id }) => id);
+const themeCollection = themeMetadata.map(({ collection }) => collection);
+const expectedThemePresetCount = tokenSource.theme.scale.standardPresets.length + tokenSource.theme.scale.monochromePresets.length;
+if (new Set(themeIds).size !== themeIds.length || new Set(themeCollection).size !== 2 || themeMetadata.length !== expectedThemePresetCount) {
+  throw new Error('MUXUI_REACT_THEME_PRESET_INVENTORY_INVALID');
+}
+const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = deepFreeze(Object.fromEntries(MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
+const themeTypesBody = `export type MuxUIThemeCollection = 'standard' | 'monochrome';
+export type MuxUIStandardThemeId = ${tokenSource.theme.scale.standardPresets.map(({ id }) => `'standard-${id}'`).join(' | ')};
+export type MuxUIMonochromeThemeId = ${tokenSource.theme.scale.monochromePresets.map(({ id }) => `'monochrome-${id}'`).join(' | ')};
+export type MuxUIThemeId = MuxUIStandardThemeId | MuxUIMonochromeThemeId;
+export interface MuxUIThemeSwatch { readonly primary: string; readonly secondary: string; }
+export interface MuxUIThemePreset { readonly id: MuxUIThemeId; readonly presetId: string; readonly name: string; readonly description: string; readonly collection: MuxUIThemeCollection; readonly swatch: MuxUIThemeSwatch; }
+export declare const MUXUI_THEME_PRESETS: readonly MuxUIThemePreset[];
+export declare const MUXUI_THEME_PRESETS_BY_ID: Readonly<Record<MuxUIThemeId, MuxUIThemePreset>>;
+export declare const MUXUI_DEFAULT_THEME_PRESET_ID: MuxUIThemeId;
+`;
+
 const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
 const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 
@@ -473,7 +535,7 @@ export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUICo
 export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: string; colorSpace?: string; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSlider: React.ForwardRefExoticComponent<ColorSliderProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSwatchProps = { color: MuxUIColorValue; disabled?: boolean; className?: string; };
+export type ColorSwatchProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'color'> & { color: MuxUIColorValue; secondaryColor?: MuxUIColorValue; shape?: 'square' | 'circle'; colorName?: string; disabled?: boolean; };
 export declare const ColorSwatch: React.ForwardRefExoticComponent<ColorSwatchProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
@@ -635,11 +697,35 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add \`data-muxui-responsive\` to a theme scope after importing \`styles.css\` to activate the canonical viewport-based values for that scope; the default \`:root\` values remain static.
 
+## Optional preset themes
+
+The optional \`@muxui/react/themes\` entry exports the 15 canonical Scale
+preset records. Import \`@muxui/react/themes.css\` after \`styles.css\` when a
+consumer needs a selectable preset palette:
+
+\`\`\`tsx
+import '@muxui/react/styles.css';
+import '@muxui/react/themes.css';
+import { MUXUI_THEME_PRESETS } from '@muxui/react/themes';
+
+export function ThemeScope({ children }: { children: React.ReactNode }) {
+  return <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="light">{children}</div>;
+}
+\`\`\`
+
+Theme and mode attributes belong on the same scope element. The preset CSS
+recomputes the color dependency closure for light/dark and standard/more
+contrast combinations while leaving spacing, typography, motion, and density
+values in the base theme. An unknown ID matches no preset declarations; normal
+base and inherited styles apply on that scope. Forced-colors component rules
+retain their system-color priority.
+
 Component styles consume semantic roles from \`catalog/tokens/default-theme.json\`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
 
 Structural CSS remains literal where it expresses geometry rather than a theme choice: zero/reset values, percentages and intrinsic sizing, border overlaps, visually hidden accessibility patterns, calendar grids, and text-segment alignment. The styling-token tests cover all authored component stylesheets; the browser check verifies gap/inset override isolation.
 
 Supporting runtime exports: \`ToastProvider\` and \`useToast\` are available alongside \`Toast\` for managed notifications.
+\`useCommandPalette\` is available alongside \`CommandPalette\` for command query, grouping, and execution.
 
 | Export | Lifecycle | Module | Selector | Public props |
 | --- | --- | --- | --- | --- |
@@ -949,6 +1035,9 @@ const outputs = new Map([
   ['button.mjs', generatedText('packages/react/src/button.mjs', buttonSource)],
   ['testing.mjs', generatedText('packages/react/src/generate.mjs', testingBody)],
   ['styles.css', generatedCss('packages/react/src/generate.mjs', currentStylesBody)],
+  ['themes.mjs', generatedText('packages/react/src/generate.mjs', themeRuntimeBody)],
+  ['themes.d.ts', generatedText('packages/react/src/generate.mjs', themeTypesBody)],
+  ['themes.css', generatedCss('packages/react/src/generate.mjs', themeCssBody)],
   ['descriptor.json', descriptor],
   ['descriptor.json.provenance', provenance('descriptor.json', descriptor)],
   ['release.json', release],

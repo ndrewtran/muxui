@@ -1,7 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { compileScalePresetTheme } from '@muxui/tokens/authoring';
+import source from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import {
   DEFAULT_SETTINGS,
+  MONO_PRESETS,
+  STANDARD_PRESETS,
   TYPOGRAPHY_METRIC_GROUPS,
   TYPOGRAPHY_ROLES,
   createScaleDocument,
@@ -16,6 +20,33 @@ import {
   serializeScaleDocument,
   validateScaleDocument,
 } from '../src/theme-contract.mjs';
+
+test('every canonical preset round-trips through Scale and matches the shared compiler', () => {
+  const collections = [
+    ['standard', 'standard', STANDARD_PRESETS],
+    ['monochrome', 'mono', MONO_PRESETS],
+  ];
+  let presetCount = 0;
+  for (const [collection, family, presets] of collections) {
+    for (const [presetId] of presets) {
+      const settings = { ...DEFAULT_SETTINGS, ...presetSettings(family, presetId) };
+      const document = createScaleDocument(settings, { slug: `round-trip-${collection}-${presetId}` });
+      const restoredDocument = JSON.parse(serializeScaleDocument(document));
+      assert.deepEqual(restoredDocument, document, `${collection}-${presetId}: serialized document is stable`);
+      const restoredSettings = settingsFromDocument(restoredDocument);
+      assert.deepEqual(createScaleDocument(restoredSettings, { slug: document.id.slice('muxui:theme:'.length) }), document, `${collection}-${presetId}: settings reload preserves document`);
+      for (const colorScheme of ['light', 'dark']) {
+        const compiled = previewTheme({ ...restoredSettings, colorMode: colorScheme, background: colorScheme });
+        const shared = compileScalePresetTheme({ source, collection, presetId, modes: { colorScheme, contrast: 'standard' } });
+        for (const role of ['semantic.color.color-60', 'semantic.color.neutral-20', 'component.button.background', 'component.button.foreground']) {
+          assert.equal(compiled.tokens[role].value, shared.compiled.tokens[role].value, `${collection}-${presetId} ${colorScheme}: ${role}`);
+        }
+      }
+      presetCount += 1;
+    }
+  }
+  assert.equal(presetCount, 15);
+});
 
 test('Scale source round-trips through the strict typed document boundary', () => {
   const document = createScaleDocument(DEFAULT_SETTINGS, { slug: 'round-trip' });

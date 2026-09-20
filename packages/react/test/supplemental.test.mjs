@@ -61,12 +61,12 @@ function setInputValue(input, value) {
   input.dispatchEvent(new input.ownerDocument.defaultView.Event('change', { bubbles: true }));
 }
 
-test('supplemental index exposes the exact admitted 17-family surface', () => {
+test('supplemental index exposes the exact admitted 21-family surface', () => {
   assert.deepEqual([...supplementalFamilies], [
-    'AlertDialog', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle',
-    'CommandPalette', 'HeaderNav', 'InputTags', 'Input', 'MultiSelect',
-    'PaymentInput', 'ProgressCircle', 'RadioField', 'Sidebar', 'SwitchField',
-    'TagSelect', 'TextArea',
+    'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle',
+    'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect',
+    'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar',
+    'SwitchField', 'TagSelect', 'TextArea', 'Text',
   ]);
 });
 
@@ -348,7 +348,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   assert.deepEqual(unknown, []);
 });
 
-test('supplemental family declarations expose only their matching value and types', async () => {
+test('supplemental family declarations expose only their owned values and types', async () => {
   const families = {
     'alert-dialog': 'AlertDialog',
     'button-group': 'ButtonGroup',
@@ -368,14 +368,12 @@ test('supplemental family declarations expose only their matching value and type
     'tag-select': 'TagSelect',
     'text-area': 'TextArea',
   };
-  const familyNames = Object.values(families);
   for (const [slug, family] of Object.entries(families)) {
     const declaration = await readFile(resolve(packageRoot, `src/supplemental/${slug}.d.ts`), 'utf8');
     assert.doesNotMatch(declaration, /export \* from/u, `${slug} must not re-export the whole supplemental index`);
-    assert.match(declaration, new RegExp(`export \\{ ${family} \\} from`), `${slug} must export ${family}`);
-    for (const otherFamily of familyNames.filter((name) => name !== family)) {
-      assert.doesNotMatch(declaration, new RegExp(`export \\{ ${otherFamily} \\} from`), `${slug} must not export ${otherFamily}`);
-    }
+    const values = [...declaration.matchAll(/export \{ ([^}]+) \} from/gu)]
+      .flatMap((match) => match[1].split(',').map((value) => value.trim()));
+    assert.deepEqual(values, slug === 'command-palette' ? [family, 'useCommandPalette'] : [family], `${slug} must expose only its own values`);
   }
 });
 
@@ -488,7 +486,7 @@ test('PaymentInput propagates field naming and keeps the card icon decorative', 
 test('ProgressCircle delegates accessible range semantics to React Aria', () => {
   const render = (value, minValue = 0, maxValue = 100) => renderToStaticMarkup(React.createElement(
     ProgressCircle.Root,
-    { value, minValue, maxValue, label: 'Upload progress' },
+    { value, minValue, maxValue },
     React.createElement(ProgressCircle.Label, null, 'Upload progress'),
     React.createElement(ProgressCircle.Track),
   ));

@@ -79,7 +79,11 @@ test('current generated descriptor and release metadata use the canonical full e
   assert.deepEqual(contract.current.subpaths.map(({ export: name, module }) => `${name}:${module}`), surface.isolatedExportModules);
   assert.deepEqual(descriptor.bindings.map(({ export: name }) => name), surface.currentComponentExports);
   assert.deepEqual(release.componentExports.map(({ name }) => name), surface.currentComponentExports);
-  assert.equal(surface.currentComponentExports[64], 'Markdown');
+  assert.deepEqual(
+    surface.currentComponentExports.filter((name) => ['Lightbox', 'Markdown', 'MultiSelect'].includes(name)),
+    ['Lightbox', 'Markdown', 'MultiSelect'],
+    'isolated exports retain their canonical position among supplemental families',
+  );
 });
 
 test('release proof resolves every local stylesheet URL to a nonempty archive asset', () => {

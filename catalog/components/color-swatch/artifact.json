@@ -1,1 +1,115 @@
-{"schemaVersion":"1.0.0","id":"muxui:component:color-swatch","kind":"component","name":"ColorSwatch","summary":"Displays a color preview.","lifecycle":"experimental","intent":{"useWhen":["Showing a color preview"],"avoidWhen":["Editing a color"]},"anatomy":["root"],"states":["idle","disabled"],"accessibility":{"nameRequired":false,"obligations":["Render the supplied Core color string without exposing upstream color types."]},"bindings":{"web.react":{"schemaVersion":"2.0.0","lifecycle":"experimental","strategy":"direct","api":{"props":["color","disabled"],"events":[],"parts":["root"],"defaults":{"disabled":false}},"behavior":["Valid Core color strings are converted internally for rendering."],"accessibility":["Render the supplied Core color string without exposing upstream color types."],"tokenRecipe":{"source":"muxui:token:default-theme","requirements":[{"token":"semantic.control.radius","requirement":"required"},{"token":"semantic.focus.ring","requirement":"required"},{"token":"semantic.selection.track","requirement":"required"}]},"platformSafety":[{"profile":"web.react","requirements":[{"id":"system.forced-colors","disposition":"required"},{"id":"system.high-contrast","disposition":"required"},{"id":"native.dynamic-color","disposition":"not-applicable","reason":"Native dynamic colors do not apply to the React web binding."},{"id":"native.font-metrics","disposition":"not-applicable","reason":"Native font metrics do not apply to the React web binding."},{"id":"layout.direction","disposition":"required"},{"id":"platform.accessibility-mapping","disposition":"required"}]}],"runtimeProfiles":{}}}}
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:color-swatch",
+  "kind": "component",
+  "name": "ColorSwatch",
+  "summary": "Displays a single-colour or two-tone colour preview.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Showing a color preview"
+    ],
+    "avoidWhen": [
+      "Editing a color"
+    ]
+  },
+  "anatomy": [
+    "root"
+  ],
+  "states": [
+    "idle",
+    "disabled"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Render the supplied Core color string without exposing upstream color types.",
+      "Two-tone previews describe both colours, with an optional localized colorName override."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "color",
+          "secondaryColor",
+          "shape",
+          "colorName",
+          "disabled"
+        ],
+        "events": [],
+        "parts": [
+          "root"
+        ],
+        "defaults": {
+          "disabled": false,
+          "shape": "square"
+        }
+      },
+      "behavior": [
+        "Valid Core color strings are converted internally for rendering.",
+        "secondaryColor adds a diagonal two-tone preview; both colours retain their alpha without painting one over the other.",
+        "shape defaults to square with the existing token radius; circle uses a circular outline.",
+        "colorName optionally names the preview in the application locale; otherwise two-tone previews combine localized descriptions of both colours. Native DOM and ARIA props and the div ref are preserved."
+      ],
+      "accessibility": [
+        "Render the supplied Core color string without exposing upstream color types.",
+        "Two-tone previews describe both colours, with an optional localized colorName override."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.control.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.selection.track",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

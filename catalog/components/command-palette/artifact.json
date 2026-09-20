@@ -76,11 +76,25 @@
           "title",
           "description",
           "href",
-          "onActivate"
+          "onActivate",
+          "commands",
+          "query",
+          "defaultQuery",
+          "onQueryChange",
+          "filter",
+          "sort",
+          "groupBy",
+          "getGroupTitle",
+          "onAction",
+          "close",
+          "target",
+          "onError"
         ],
         "events": [
           "openChange",
-          "activate"
+          "activate",
+          "queryChange",
+          "action"
         ],
         "parts": [
           "root",
@@ -124,8 +138,14 @@
         "Search and collection navigation preserve React Aria keyboard semantics.",
         "Escape closes the modal and closeOnSelect controls item activation dismissal.",
         "Input owns native value, defaultValue, onChange, keyboard, paste, composition, and selection handlers; its ref resolves to HTMLInputElement for focus and cursor restoration.",
-        "Applications control the query on Input and supply filtered or asynchronous Item results to ListBox; Content does not own a search engine or an inputValue prop.",
-        "Applications may compose loading content, Empty, Footer, and custom Item content. Enter during IME composition or cancelled by Input onKeyDown does not activate a command; Input defaults autoFocus to true when the palette opens."
+        "Applications control the query on Input and supply Item results to ListBox. Content preserves application filtering and ordering and has no inputValue prop; the optional useCommandPalette hook owns reusable command data management.",
+        "Applications may compose loading content, Empty, Footer, and custom Item content. Enter during IME composition or cancelled by Input onKeyDown does not activate a command; Input defaults autoFocus to true when the palette opens.",
+        "useCommandPalette accepts commands with string IDs and preserves extended application metadata. It returns query, setQuery, filteredCommands, groupedCommands, runCommand, and getItemProps.",
+        "The hook supports query/onQueryChange or defaultQuery. Default matching trims the query and uses locale-aware case- and accent-insensitive substring matching across title, subtitle, group, and keywords. Default ranking prefers exact titles, title prefixes, title substrings, then secondary fields, preserving input order for ties.",
+        "Hook filter and sort callbacks override matching and ranking; filter:false and sort:false preserve externally supplied results and order. sort:()=>0 also preserves order. groupBy and getGroupTitle customize grouping; groups otherwise use command.group in first-seen order, with an empty title for ungrouped commands.",
+        "runCommand accepts a command or its string ID, ignores disabled or missing commands, awaits command.action then hook onAction, and calls close only after success when command.closeOnSelect ?? closeOnSelect is true. Rejections propagate to the caller without closing. The hook does not navigate hrefs or implement browser commands.",
+        "getItemProps adapts a command to Mux Item id, title, description, textValue, href, target, disabled, and onActivate. It sets Item closeOnSelect:false so only the hook close callback dismisses after actions; provide close when automatic dismissal is wanted. Connect Input value and native onChange to the hook query and setQuery.",
+        "Item activation through getItemProps catches action failures and calls the optional hook onError(error, command); without onError it reports to the global error reporter or console. Failures keep the palette open. Direct runCommand callers handle its rejected promise themselves."
       ],
       "accessibility": [
         "Search and collection navigation preserve React Aria keyboard semantics.",
@@ -146,9 +166,18 @@
             "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           },
-          { "token": "semantic.control.size-sm", "requirement": "required" },
-          { "token": "semantic.control.size-md", "requirement": "required" },
-          { "token": "semantic.control.size-lg", "requirement": "required" }
+          {
+            "token": "semantic.control.size-sm",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-md",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-lg",
+            "requirement": "required"
+          }
         ]
       },
       "platformSafety": [

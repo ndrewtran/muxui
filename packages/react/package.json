@@ -22,6 +22,11 @@
     },
     "./compatibility": "./generated/compatibility.mjs",
     "./styles.css": "./generated/styles.css",
+    "./themes": {
+      "types": "./generated/themes.d.ts",
+      "default": "./generated/themes.mjs"
+    },
+    "./themes.css": "./generated/themes.css",
     "./testing": "./generated/testing.mjs",
     "./text-editor": {
       "types": "./generated/text-editor.d.ts",

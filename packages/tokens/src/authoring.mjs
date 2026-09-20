@@ -360,3 +360,63 @@ export function compileThemeAuthoringDocument(document, { source, target = 'web.
   const native = nativeTheme(tokens, target, rootFontSizePx);
   return { tokens: native.tokens, modes: graph.modes, diagnostics: [...diagnostics, ...native.diagnostics] };
 }
+
+/**
+ * Compile one of the canonical Scale presets through the same authoring path
+ * used by Scale. The preset definitions and seed token references stay in the
+ * canonical source; this helper only resolves them into a validated document
+ * and target-specific compilation result.
+ */
+export function compileScalePresetTheme({ source, collection = 'standard', presetId, target = 'web.css', selector = ':root', modes, whiteAnchor = false, contrastPivot, curvature } = {}) {
+  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: '4.0.0' });
+  if (!['standard', 'monochrome'].includes(collection)) throw new TypeError('MUXUI_THEME_SCALE_COLLECTION_INVALID');
+  if (typeof presetId !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(presetId)) throw new TypeError('MUXUI_THEME_SCALE_PRESET_INVALID');
+  const scale = source.theme.scale;
+  const presets = collection === 'standard' ? scale.standardPresets : scale.monochromePresets;
+  const preset = presets.find(({ id }) => id === presetId);
+  if (!preset) throw new TypeError('MUXUI_THEME_SCALE_PRESET_INVALID');
+  const sourceTokens = compilePureTokenGraph(source).tokens;
+  const namedColorToken = preset.namedColor ?? preset.color;
+  const neutralColorToken = preset.neutralColor ?? preset.color;
+  const namedColor = sourceTokens[namedColorToken]?.value;
+  const neutralColor = sourceTokens[neutralColorToken]?.value;
+  if (typeof namedColor !== 'string' || typeof neutralColor !== 'string') throw new TypeError('MUXUI_THEME_SCALE_PRESET_INVALID');
+  const inputs = {
+    mode: collection === 'monochrome' ? 'mono' : 'standard',
+    presetId,
+    namedColor,
+    neutralColor,
+    whiteAnchor,
+    contrastPivot: contrastPivot ?? scale.contrast.defaultPivot,
+    curvature: curvature ?? scale.radius.curvature.default,
+  };
+  const generated = generateScaleTheme({ source, ...inputs });
+  const document = {
+    schema: 'muxui-theme-authoring-v1',
+    id: `muxui:theme:${collection}-${presetId}`,
+    source: source.id,
+    tokenContractVersion: source.tokenContractVersion,
+    modes: structuredClone(source.theme.modeAxes),
+    overrides: generated.assignments,
+    scale: inputs,
+  };
+  const compiled = compileThemeAuthoringDocument(document, { source, target, selector, modes });
+  const primary = generated.palettes.named.find(({ shade }) => shade === 60)?.hex;
+  const secondary = generated.palettes.neutral.find(({ shade }) => shade === 20)?.hex;
+  if (!primary || !secondary) throw new TypeError('MUXUI_THEME_SCALE_PRESET_INVALID');
+  return Object.freeze({
+    collection,
+    preset: Object.freeze({
+      id: `${collection}-${preset.id}`,
+      presetId: preset.id,
+      name: preset.name,
+      description: preset.description,
+      collection,
+      swatch: Object.freeze({ primary, secondary }),
+    }),
+    inputs: Object.freeze(inputs),
+    document: Object.freeze(document),
+    generated,
+    compiled,
+  });
+}

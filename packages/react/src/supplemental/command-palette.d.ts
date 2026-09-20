@@ -1,5 +1,9 @@
-export { CommandPalette } from './index.d.ts';
+export { CommandPalette, useCommandPalette } from './index.d.ts';
 export type {
+  CommandPaletteCommand,
+  CommandPaletteGroup,
+  UseCommandPaletteOptions,
+  UseCommandPaletteReturn,
   CommandPaletteBackdropProps,
   CommandPaletteChipsProps,
   CommandPaletteChipProps,

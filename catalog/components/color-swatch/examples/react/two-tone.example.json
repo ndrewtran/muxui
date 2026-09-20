@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:color-swatch-two-tone-react",
+  "kind": "example",
+  "name": "Two-tone React ColorSwatch",
+  "summary": "Preview a pair of theme colours in a circular swatch with an application-localized name.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:color-swatch#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["generation", "explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/color-swatch/examples/react/two-tone.tsx"
+}

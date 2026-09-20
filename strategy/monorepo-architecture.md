@@ -1012,8 +1012,10 @@ may cross the package boundary. Breadcrumb separators are text and no Search
 icon is added.
 
 R1.6 additionally admits exact, internal, replaceable runtime dependencies
-needed by the applicable supplemental implementations: `react-aria@3.51.0` only for
-`Resizable`'s `useMove` behavior. It is the already-resolved React Aria
+needed by the applicable supplemental implementations: `react-aria@3.51.0` for
+`Resizable`'s `useMove` behavior. Decision 0018 extends this same pinned edge
+to `SelectNative`'s `useField` associations. These are the two admitted direct
+hook uses. It is the already-resolved React Aria
 closure of the pinned `react-aria-components@1.20.0` baseline, so the direct
 declaration must not introduce a second version. `marked@13.0.3` only for the `Markdown`
 lexer behind a Mux UI-owned typed parser/AST boundary; and
@@ -1152,7 +1154,7 @@ flowchart TD
   aria["react-aria-components@1.20.0\nexact internal runtime dependency"]
   temporal["@internationalized/date@3.12.3\napproved internal temporal adapter dependency"]
   lucide["lucide-react@1.37.0\nR1 + R1.6 internal affordances"]
-  resizable["react-aria@3.51.0\nResizable useMove only"]
+  resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
   markdown["marked@13.0.3\nMarkdown lexer only"]
   editor["Tiptap 3.22.3 packages\nTextEditor only"]
   peers["react + react-dom\n>=19.2.0 <20 peers"]
@@ -1196,7 +1198,8 @@ and `TextEditor`. Its npm integrity is
 the package is ISC with the Feather-derived MIT notice, and React
 peer-compatible. No Lucide export, type, name, prop, import path, or public
 Icon API/catalog/package is part of the Mux UI surface. R1.6 also admits
-`react-aria@3.51.0` for `Resizable`/`useMove`, `marked@13.0.3` for the typed
+`react-aria@3.51.0` for `Resizable`/`useMove`, extended by Decision 0018 to
+`SelectNative`/`useField`; `marked@13.0.3` for the typed
 `Markdown` parser boundary, and the exact eight `@tiptap/*@3.22.3` packages
 for `TextEditor`. These module-local edges remain internal and replaceable; no
 upstream runtime types or editor/parser objects are public.
@@ -2626,3 +2629,47 @@ The existing ordinary React delivery and release boundaries apply. This addition
 requires focused public API, accessible-name, keyboard/focus, state, sizing,
 hydration, generation, and packed-consumer proof. It does not activate a platform,
 change accessibility obligations, or authorize publication or production use.
+
+## Decision 0017: supplemental Text
+
+Decision 0017 adds the Mux-owned `Text` family after the IconButton addition.
+Text applies existing typography roles and sizes to a selected native host and
+preserves caller DOM, ARIA, event, data, and React Aria TextContext slot props.
+The current supplemental mapping contains 23 families, and the current React
+union contains 76 families with 74 root exports and the two existing isolated
+subpaths. The fixed 53-family floor and completed R1.6 evidence remain
+historical and unchanged.
+
+Text's field and collection slots have bounded meaning: description slots are
+proved inside fields, and label and description slots are proved inside
+collection items. Field label association remains owned by the field
+component; `as="label"` with `htmlFor` is the native labeling path. No new
+token values, platform binding, support claim, publication, or release
+authorization follows from this addition. Its ordinary React proof covers
+native refs/types, SSR/hydration, token-derived styles, truncation, and exact
+generated and packed-consumer surfaces.
+
+## Decision 0018: native image and select families
+
+[Decision 0018](../decisions/0018-image-avatar-select-native-admission.md)
+explicitly extends the post-R1.6 supplemental boundary with Image, Avatar,
+and SelectNative. The current supplemental mapping under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` remains their single inventory owner.
+This named expansion admits native-backed Image and Avatar without implying
+that they are React Aria primitives or rewriting the historical Aria-only
+R1.6 migration. SelectNative composes internal React Aria `useField` with a
+visible native select; it does not use a hidden form bridge as its UI. This
+extends the existing pinned `react-aria@3.51.0` direct dependency allowance
+from Resizable's `useMove` to also include SelectNative's `useField`, retaining
+the same version, internal ownership, module isolation, and package proof.
+
+Mux owns the three public APIs, selectors, token-based styling, native host
+semantics, and accessibility obligations. Native loading/error recovery,
+fallback-only composition, native form/reset behavior, SSR/hydration, and
+generated/packed-consumer identity receive focused proof and independent
+review. No dependency or token values are added; generic Field stays deferred.
+
+Following Text's admission, the current mapping contains 26 supplemental
+families and the React union contains 79 families, with 77 root exports and
+the two existing isolated subpaths. Historical inventories, completed
+evidence, renderer activation, support, and release boundaries remain intact.

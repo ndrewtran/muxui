@@ -11,7 +11,8 @@ import { chromium } from 'playwright-core';
 import { TextField, SearchField } from '../../src/fields.mjs';
 import { Button } from '../../src/button.mjs';
 import { IconButton } from '../../src/supplemental/icon-button.mjs';
-import { CommandPalette } from '../../src/supplemental/command-palette.mjs';
+import { CommandPalette, useCommandPalette } from '../../src/supplemental/command-palette.mjs';
+import { ColorSwatch } from '../../src/collections.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
 
@@ -21,6 +22,21 @@ function InputControlsFixture() {
   const [text, setText] = React.useState('alpha beta');
   const [search, setSearch] = React.useState('alpha beta');
   const [query, setQuery] = React.useState('');
+  const [managedQuery, setManagedQuery] = React.useState('');
+  const [managedOpen, setManagedOpen] = React.useState(false);
+  const swatchRef = React.useRef(null);
+  const managed = useCommandPalette({
+    commands: [
+      { id: 'saved', title: 'Bookmarks', subtitle: 'Saved café pages', group: 'Library' },
+      { id: 'cafe', title: 'Café', group: 'Navigate', action: () => new Promise((resolve) => { window.finishCommand = resolve; window.commandActions.push('started'); }) },
+      { id: 'disabled', title: 'Café disabled', group: 'Navigate', disabled: true },
+      { id: 'failure', title: 'Failure', group: 'Library', action: async () => { throw new Error('Command failed'); } },
+    ],
+    query: managedQuery, onQueryChange: setManagedQuery,
+    onAction: ({ id }) => { window.commandActions.push(id); },
+    onError: (_error, { id }) => { window.commandActions.push(`failed:${id}`); },
+    close: () => { window.commandActions.push('closed'); setManagedOpen(false); },
+  });
   const [wrapped, setWrapped] = React.useState(false);
   const [cancelFieldKeys, setCancelFieldKeys] = React.useState(true);
   const [activated, setActivated] = React.useState('');
@@ -54,6 +70,8 @@ function InputControlsFixture() {
   React.useEffect(() => {
     window.inputEvents = [];
     window.fieldActions = [];
+    window.commandActions = [];
+    window.swatch = swatchRef.current;
     window.hostRefs = { text: textRef.current, textRoot: textRootRef.current, search: searchRef.current, searchRoot: searchRootRef.current, button: buttonRef.current, icon: iconRef.current };
     document.documentElement.dataset.ready = 'true';
   }, []);
@@ -116,6 +134,17 @@ function InputControlsFixture() {
     h(Button, { ...pointerProps, id: 'pointer-button', ref: buttonRef, onActivate: () => setActivated('button') }, 'Drag action'),
     h(IconButton, { ...pointerProps, id: 'pointer-icon', ref: iconRef, 'aria-label': 'Drag icon', onActivate: () => setActivated('icon') }, 'X'),
     h('output', { id: 'activation' }, activated),
+    h(ColorSwatch, { id: 'two-tone', ref: swatchRef, color: '#ff000080', secondaryColor: '#0000ff80', shape: 'circle', 'aria-label': 'Workspace' }),
+    h(CommandPalette.Root, { open: managedOpen, onOpenChange: setManagedOpen },
+      h(CommandPalette.Trigger, { id: 'managed-trigger' }, 'Managed commands'),
+      h(CommandPalette.Backdrop, null,
+        h(CommandPalette.Popup, { 'aria-label': 'Managed commands' },
+          h(CommandPalette.Content, null,
+            h(CommandPalette.Input, { id: 'managed-input', 'aria-label': 'Search managed commands', value: managed.query, onChange: (event) => managed.setQuery(event.currentTarget.value) }),
+            h(CommandPalette.ListBox, null, managed.groupedCommands.map((group) => h(CommandPalette.Section, { key: group.id },
+              h(CommandPalette.SectionHeader, null, group.title),
+              group.commands.map((command) => h(CommandPalette.Item, { key: command.id, ...managed.getItemProps(command) }))))),
+            managed.filteredCommands.length === 0 && h(CommandPalette.Empty, null, 'No managed commands'))))),
     h('button', { id: 'wrap-palette', onClick: () => setWrapped(true) }, 'Use search field'),
     h(CommandPalette.Root, null,
       h(CommandPalette.Trigger, { id: 'palette-trigger' }, 'Commands'),
@@ -153,7 +182,8 @@ import { hydrateRoot } from 'react-dom/client';
 import { TextField, SearchField } from '/src/fields.mjs';
 import { Button } from '/src/button.mjs';
 import { IconButton } from '/src/supplemental/icon-button.mjs';
-import { CommandPalette } from '/src/supplemental/command-palette.mjs';
+import { CommandPalette, useCommandPalette } from '/src/supplemental/command-palette.mjs';
+import { ColorSwatch } from '/src/collections.mjs';
 import '/generated/styles.css';
 ${InputControlsFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFixture));`;
@@ -278,6 +308,63 @@ hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFi
           await button.press('Enter');
           assert.equal(await page.locator('#activation').textContent(), id === 'pointer-button' ? 'button' : 'icon');
         }
+        assert.deepEqual(errors, []);
+      } finally { await page.close(); }
+    });
+    await t.test('two-tone swatch hydrates with its ref, circular styling and transparent colour layers', async () => {
+      const { page, errors } = await newPage();
+      try {
+        const swatch = page.locator('#two-tone');
+        const style = await swatch.evaluate((node) => {
+          const css = getComputedStyle(node);
+          return { ref: node === window.swatch, radius: css.borderRadius, image: css.backgroundImage, background: css.backgroundColor, forced: css.forcedColorAdjust };
+        });
+        assert.equal(style.ref, true);
+        assert.equal(style.radius, '50%');
+        assert.match(style.image, /linear-gradient\(135deg, rgba\(255, 0, 0, 0\.5/);
+        assert.match(style.image, /rgba\(0, 0, 255, 0\.5/);
+        assert.equal(style.background, 'rgba(0, 0, 0, 0)');
+        assert.equal(style.forced, 'none');
+        assert.match(await swatch.getAttribute('aria-label'), /red.*blue.*Workspace/i);
+        assert.deepEqual(errors, []);
+      } finally { await page.close(); }
+    });
+    await t.test('managed commands filter and group controlled input, then await keyboard action before closing once', async () => {
+      const { page, errors } = await newPage();
+      try {
+        await page.locator('#managed-trigger').click();
+        const input = page.locator('#managed-input');
+        await input.fill('unmatched');
+        assert.equal(await page.getByRole('option').count(), 0);
+        assert.equal(await page.locator('.muxui-command-palette__empty').textContent(), 'No managed commands');
+        await input.fill('saved');
+        assert.equal(await page.getByRole('option').count(), 1);
+        assert.equal(await page.locator('.muxui-command-palette__section-header').textContent(), 'Library');
+        await input.fill('');
+        assert.equal(await page.getByRole('option').count(), 4);
+        await input.fill('failure');
+        await page.waitForFunction(() => {
+          const activeId = document.querySelector('#managed-input')?.getAttribute('aria-activedescendant');
+          return activeId && document.getElementById(activeId)?.textContent === 'Failure';
+        });
+        await input.press('Enter');
+        await page.waitForFunction(() => window.commandActions.includes('failed:failure'));
+        assert.equal(await input.count(), 1);
+        await page.evaluate(() => { window.commandActions = []; });
+        await input.fill('cafe');
+        assert.deepEqual(await page.locator('.muxui-command-palette__item-title').allTextContents(), ['Café', 'Café disabled', 'Bookmarks']);
+        assert.equal(await page.getByRole('option', { name: 'Café disabled', exact: true }).getAttribute('aria-disabled'), 'true');
+        await page.waitForFunction(() => {
+          const activeId = document.querySelector('#managed-input')?.getAttribute('aria-activedescendant');
+          return activeId && document.getElementById(activeId)?.textContent === 'Café';
+        });
+        await input.press('Enter');
+        await page.waitForFunction(() => window.commandActions.includes('started'));
+        assert.deepEqual(await page.evaluate(() => window.commandActions), ['started']);
+        assert.equal(await input.count(), 1);
+        await page.evaluate(() => window.finishCommand());
+        await input.waitFor({ state: 'detached' });
+        assert.deepEqual(await page.evaluate(() => window.commandActions), ['started', 'cafe', 'closed']);
         assert.deepEqual(errors, []);
       } finally { await page.close(); }
     });

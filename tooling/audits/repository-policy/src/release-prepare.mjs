@@ -23,7 +23,7 @@ const candidateArchiveName = `muxui-react-${candidateVersion}.tgz`;
 const candidateManifestName = `muxui-react-${candidateVersion}.release-manifest.json`;
 const preparationToolPath = 'tooling/audits/repository-policy/src/release-prepare.mjs';
 const r15Closure = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
-const documentedSupportingExports = ['ToastProvider', 'useToast'];
+const documentedSupportingExports = ['ToastProvider', 'useToast', 'useCommandPalette'];
 const expectedPeerDependencies = {
   react: '>=19.2.0 <20',
   'react-dom': '>=19.2.0 <20',
@@ -67,6 +67,9 @@ const expectedGeneratedEntries = Object.freeze([
   'package/generated/testing.mjs',
   'package/generated/text-editor.d.ts',
   'package/generated/text-editor.mjs',
+  'package/generated/themes.css',
+  'package/generated/themes.d.ts',
+  'package/generated/themes.mjs',
   'package/generated/toggle-button-context.mjs',
 ]);
 const fixedPackageEntries = Object.freeze([
@@ -590,6 +593,7 @@ try {
     const entry = await import('@muxui/react');
     const packedImportMilliseconds = performance.now() - importStarted;
     const compatibility = await import('@muxui/react/compatibility');
+    const themes = await import('@muxui/react/themes');
     const testing = await import('@muxui/react/testing');
     const expected = ${JSON.stringify(currentPublicExports)};
     if (JSON.stringify(Object.keys(entry).sort()) !== JSON.stringify([...expected].sort())) throw new Error('exact public export surface');
@@ -599,10 +603,16 @@ try {
     const packageEntry = await import.meta.resolve('@muxui/react');
     await import(new URL('./fields.mjs', packageEntry));
     if (!import.meta.resolve('@muxui/react/styles.css').endsWith('/generated/styles.css')) throw new Error('styles resolution');
+    if (!import.meta.resolve('@muxui/react/themes.css').endsWith('/generated/themes.css')) throw new Error('themes stylesheet resolution');
+    if (!Array.isArray(themes.MUXUI_THEME_PRESETS) || themes.MUXUI_THEME_PRESETS.length !== 15) throw new Error('themes metadata');
+    if (themes.MUXUI_DEFAULT_THEME_PRESET_ID !== 'standard-harbour') throw new Error('themes default preset');
     const isolated = await Promise.all(['markdown', 'text-editor'].map((subpath) => import('@muxui/react/' + subpath)));
     if (typeof isolated[0].Markdown !== 'object' && typeof isolated[0].Markdown !== 'function') throw new Error('markdown subpath resolution');
     if (typeof isolated[1].TextEditor !== 'object' && typeof isolated[1].TextEditor !== 'function') throw new Error('text-editor subpath resolution');
     for (const relative of ${JSON.stringify(requiredAssetAndLicenseEntries.map((entry) => entry.slice('package/'.length)))}) {
+      await access(fileURLToPath(new URL('../' + relative, packageEntry)));
+    }
+    for (const relative of ['generated/themes.css', 'generated/themes.d.ts', 'generated/themes.mjs']) {
       await access(fileURLToPath(new URL('../' + relative, packageEntry)));
     }
     const {

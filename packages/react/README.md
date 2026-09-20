@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:08c3be12e2f9fb9635ad46dbfe1f98f2d66395691b5db649e66e9b7599371622 -->
+<!-- @generated-content-sha256: sha256:46444ae308adcda2af05b3863bb3745e3af10786074042f3010ff9588ec0a524 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -41,16 +41,41 @@ The renderer owns the MuxUI selectors, tokens, accessibility behavior, lifecycle
 
 Responsive dimension recipes are opt-in. Add `data-muxui-responsive` to a theme scope after importing `styles.css` to activate the canonical viewport-based values for that scope; the default `:root` values remain static.
 
+## Optional preset themes
+
+The optional `@muxui/react/themes` entry exports the 15 canonical Scale
+preset records. Import `@muxui/react/themes.css` after `styles.css` when a
+consumer needs a selectable preset palette:
+
+```tsx
+import '@muxui/react/styles.css';
+import '@muxui/react/themes.css';
+import { MUXUI_THEME_PRESETS } from '@muxui/react/themes';
+
+export function ThemeScope({ children }: { children: React.ReactNode }) {
+  return <div data-muxui-theme="standard-harbour" data-muxui-color-scheme="light">{children}</div>;
+}
+```
+
+Theme and mode attributes belong on the same scope element. The preset CSS
+recomputes the color dependency closure for light/dark and standard/more
+contrast combinations while leaving spacing, typography, motion, and density
+values in the base theme. An unknown ID matches no preset declarations; normal
+base and inherited styles apply on that scope. Forced-colors component rules
+retain their system-color priority.
+
 Component styles consume semantic roles from `catalog/tokens/default-theme.json`: gaps, content insets, outer spacing, viewport clearance, surfaces, borders, typography, shapes, and motion are independently themeable. Explicit per-mode palette painting uses non-inverting semantic palette aliases so dark styles are not inverted twice. Choose tokens by their documented meaning, not because their default values happen to match.
 
 Structural CSS remains literal where it expresses geometry rather than a theme choice: zero/reset values, percentages and intrinsic sizing, border overlaps, visually hidden accessibility patterns, calendar grids, and text-segment alignment. The styling-token tests cover all authored component stylesheets; the browser check verifies gap/inset override isolation.
 
 Supporting runtime exports: `ToastProvider` and `useToast` are available alongside `Toast` for managed notifications.
+`useCommandPalette` is available alongside `CommandPalette` for command query, grouping, and execution.
 
 | Export | Lifecycle | Module | Selector | Public props |
 | --- | --- | --- | --- | --- |
 | AlertDialog | experimental | . | .muxui-alert-dialog | open, defaultOpen, onOpenChange, disabled, onActivate |
 | Autocomplete | experimental | . | .muxui-autocomplete | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, items, placeholder |
+| Avatar | experimental | . | .muxui-avatar | size, src, srcSet, alt, children |
 | Breadcrumbs | experimental | . | .muxui-breadcrumbs | items, aria-label |
 | Button | experimental | . | .muxui-button | disabled, pending, showTextWhileLoading, variant, size |
 | ButtonGroup | experimental | . | .muxui-button-group | orientation, attached, disabled, aria-label, aria-labelledby |
@@ -64,11 +89,11 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ColorModeToggle | experimental | . | .muxui-color-mode-toggle | mode, defaultMode, storageKey, disabled, onModeChange |
 | ColorPicker | experimental | . | .muxui-color-picker | value, defaultValue, disabled, readOnly, children |
 | ColorSlider | experimental | . | .muxui-color-slider | label, aria-label, aria-labelledby, value, defaultValue, channel, colorSpace, disabled, readOnly, orientation |
-| ColorSwatch | experimental | . | .muxui-color-swatch | color, disabled |
+| ColorSwatch | experimental | . | .muxui-color-swatch | color, secondaryColor, shape, colorName, disabled |
 | ColorSwatchPicker | experimental | . | .muxui-color-swatch-picker | aria-label, aria-labelledby, items, value, defaultValue, disabled, readOnly |
 | ColorWheel | experimental | . | .muxui-color-wheel | aria-label, aria-labelledby, value, defaultValue, outerRadius, innerRadius, readOnly, disabled |
 | ComboBox | experimental | . | .muxui-combo-box | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, selectedId, defaultSelectedId, disabled, size, readOnly, required, invalid, name, placeholder |
-| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate |
+| CommandPalette | experimental | . | .muxui-command-palette | open, defaultOpen, onOpenChange, size, closeOnSelect, dismissable, disabled, id, title, description, href, onActivate, commands, query, defaultQuery, onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, close, target, onError |
 | DateField | experimental | . | .muxui-date-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, disabled, size, readOnly, required, invalid, name |
 | DatePicker | experimental | . | .muxui-date-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, name |
 | DateRangePicker | experimental | . | .muxui-date-range-picker | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, unavailableDateMatcher, open, defaultOpen, disabled, size, readOnly, required, invalid, startName, endName |
@@ -82,6 +107,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | aria-label, aria-labelledby, disabled, pending, variant, size |
+| Image | experimental | . | .muxui-image | src, srcSet, sizes, alt, width, height, loading, decoding, fallbackSrc, fallbackSrcSet, radius, fit |
 | Input | experimental | . | .muxui-input | value, defaultValue, onChange, type, placeholder, disabled, invalid, required, readOnly, size |
 | InputTags | experimental | . | .muxui-input-tags | tagPlacement, size, placeholder, value, defaultValue, label, description, errorMessage, allowDuplicates, maxTags, validate, disabled, invalid, required, onChange, onTagAdded, onTagRemoved |
 | Lightbox | experimental | . | .muxui-lightbox | items, selectedKey, defaultSelectedKey, open, defaultOpen, loop, swipeNavigation |
@@ -103,6 +129,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, id, inputRef, inputProps |
 | Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal |
+| SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, aria-label, aria-labelledby, aria-describedby, id, value, defaultValue, onChange, name, form, autoComplete, disabled, required, invalid, multiple, size, children |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | hideBorder, href, current, external, items, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss |
 | Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation |
@@ -112,6 +139,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Tabs | experimental | . | .muxui-tabs | aria-label, aria-labelledby, items, value, defaultValue, keyboardActivation, disabled, size, orientation |
 | TagGroup | experimental | . | .muxui-tag-group | label, aria-label, aria-labelledby, items, disabled |
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
+| Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |
 | TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, onGenerate, onLinkRequest, onImageRequest, onColorRequest, bubbleMenu |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, autoComplete, autoFocus, inputMode, maxLength, minLength, pattern, spellCheck, id, inputRef, inputProps |
@@ -197,8 +225,14 @@ Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 - Search and collection navigation preserve React Aria keyboard semantics.
 - Escape closes the modal and closeOnSelect controls item activation dismissal.
 - Input owns native value, defaultValue, onChange, keyboard, paste, composition, and selection handlers; its ref resolves to HTMLInputElement for focus and cursor restoration.
-- Applications control the query on Input and supply filtered or asynchronous Item results to ListBox; Content does not own a search engine or an inputValue prop.
+- Applications control the query on Input and supply Item results to ListBox. Content preserves application filtering and ordering and has no inputValue prop; the optional useCommandPalette hook owns reusable command data management.
 - Applications may compose loading content, Empty, Footer, and custom Item content. Enter during IME composition or cancelled by Input onKeyDown does not activate a command; Input defaults autoFocus to true when the palette opens.
+- useCommandPalette accepts commands with string IDs and preserves extended application metadata. It returns query, setQuery, filteredCommands, groupedCommands, runCommand, and getItemProps.
+- The hook supports query/onQueryChange or defaultQuery. Default matching trims the query and uses locale-aware case- and accent-insensitive substring matching across title, subtitle, group, and keywords. Default ranking prefers exact titles, title prefixes, title substrings, then secondary fields, preserving input order for ties.
+- Hook filter and sort callbacks override matching and ranking; filter:false and sort:false preserve externally supplied results and order. sort:()=>0 also preserves order. groupBy and getGroupTitle customize grouping; groups otherwise use command.group in first-seen order, with an empty title for ungrouped commands.
+- runCommand accepts a command or its string ID, ignores disabled or missing commands, awaits command.action then hook onAction, and calls close only after success when command.closeOnSelect ?? closeOnSelect is true. Rejections propagate to the caller without closing. The hook does not navigate hrefs or implement browser commands.
+- getItemProps adapts a command to Mux Item id, title, description, textValue, href, target, disabled, and onActivate. It sets Item closeOnSelect:false so only the hook close callback dismisses after actions; provide close when automatic dismissal is wanted. Connect Input value and native onChange to the hook query and setQuery.
+- Item activation through getItemProps catches action failures and calls the optional hook onError(error, command); without onError it reports to the global error reporter or console. Failures keep the palette open. Direct runCommand callers handle its rejected promise themselves.
 
 Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `close`, `content`, `search-field`, `input`, `clear-button`, `listbox`, `section`, `section-header`, `item`, `separator`, `item-icon`, `item-content`, `item-title`, `item-description`, `item-meta`, `shortcut`, `load-more-item`, `empty`, `footer`, `chips`, `chip`, `chip-remove`.
 
