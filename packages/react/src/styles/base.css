@@ -260,7 +260,6 @@
   letter-spacing: var(--muxui-semantic-typography-label-letter-spacing);
 }
 :where(.muxui-text--label-l) {
-  color: var(--muxui-semantic-typography-display-color, var(--muxui-semantic-content-strong));
   font-size: var(--muxui-semantic-typography-label-l-font-size);
 }
 :where(.muxui-text--label-m) { font-size: var(--muxui-semantic-typography-label-m-font-size); }
@@ -293,6 +292,30 @@
 
 :where(.muxui-text--expressive) {
   font-family: var(--muxui-semantic-typography-expressive-font-family);
+}
+
+:where(.muxui-text--expressive-l, .muxui-text--expressive-m, .muxui-text--expressive-s, .muxui-text--expressive-xs) {
+  color: var(--muxui-semantic-typography-text-color, var(--muxui-semantic-content-default));
+  font-family: var(--muxui-semantic-typography-expressive-font-family);
+  font-weight: var(--muxui-semantic-typography-text-font-weight);
+  line-height: var(--muxui-semantic-typography-text-line-height);
+  letter-spacing: var(--muxui-semantic-typography-text-letter-spacing);
+}
+:where(.muxui-text--expressive-l) { font-size: var(--muxui-semantic-typography-text-l-font-size); }
+:where(.muxui-text--expressive-m) { font-size: var(--muxui-semantic-typography-text-m-font-size); }
+:where(.muxui-text--expressive-s) { font-size: var(--muxui-semantic-typography-text-s-font-size); }
+:where(.muxui-text--expressive-xs) { font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+
+:where(.muxui-text--truncate) {
+  display: inline-block;
+  max-inline-size: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:where(.muxui-text--muted) {
+  color: var(--muxui-semantic-content-muted);
 }
 
 /* Bare RAC buttons need the same chrome reset as the Mux UI Button base. Component

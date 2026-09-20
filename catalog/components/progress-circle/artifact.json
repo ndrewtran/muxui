@@ -10,7 +10,8 @@
       "Showing completion for a task with a known or unknown progress value."
     ],
     "avoidWhen": [
-      "For long-running activity without a meaningful completion measure or for linear comparisons."
+      "For long-running activity without a meaningful completion measure or for linear comparisons.",
+      "When the loading transition itself must be announced without a separate status or live region."
     ]
   },
   "anatomy": [
@@ -31,8 +32,10 @@
   "accessibility": {
     "nameRequired": true,
     "obligations": [
+      "Provide an accessible name with a Label part, label shorthand, or aria-label/aria-labelledby.",
       "Clamps determinate values to the min/max range and exposes accessible progress values.",
-      "Indeterminate progress omits aria-valuenow and uses the Mux motion recipe."
+      "Indeterminate progress omits aria-valuenow and aria-valuetext.",
+      "A progressbar does not announce loading transitions by itself; pair it with a separate status or live region when an announcement is required."
     ]
   },
   "bindings": {
@@ -63,12 +66,17 @@
         }
       },
       "behavior": [
+        "Root forwards refs to the native HTMLDivElement progressbar and Track renders an aria-hidden SVG.",
+        "label is a plain aria-label shorthand when no explicit aria-label or aria-labelledby is supplied; explicit names take precedence, and supplying label with Label chooses the shorthand.",
         "Clamps determinate values to the min/max range and exposes accessible progress values.",
-        "Indeterminate progress omits aria-valuenow and uses the Mux motion recipe."
+        "Indeterminate progress treats null, undefined, and non-finite values as unknown and omits aria-valuenow and aria-valuetext.",
+        "size selects 32px, 48px, or 64px Track dimensions; use Track className for a local compact size and motion policy because there is no built-in 16px size.",
+        "Indeterminate progress uses the Mux rotate and dash motion recipe; prefers-reduced-motion and a data-reduced-motion or data-muxui-motion=\"reduced\" ancestor settle both animations."
       ],
       "accessibility": [
-        "Clamps determinate values to the min/max range and exposes accessible progress values.",
-        "Indeterminate progress omits aria-valuenow and uses the Mux motion recipe."
+        "Expose a named progressbar through Label, label, aria-label, or aria-labelledby; when label is supplied with Label, the shorthand aria-label is used. A Track-only composition is decorative and does not provide progress semantics.",
+        "Expose determinate aria-valuenow and aria-valuetext while leaving those attributes absent for indeterminate progress.",
+        "Progressbar semantics convey state and value but do not replace a status or live announcement for loading transitions."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",

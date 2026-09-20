@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:image-basic-react",
+  "kind": "example",
+  "name": "Basic React Image",
+  "summary": "Native image dimensions, Mux radius and fit hooks, and one bounded fallback source.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:image#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["generation", "explanation", "validation"],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/image/examples/react/basic.tsx"
+}

@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:text-basic-react",
+  "kind": "example",
+  "name": "Basic React Text",
+  "summary": "Existing Mux typography roles on semantic hosts with muted, mono, and truncation examples.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:text#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/text/examples/react/basic.tsx"
+}

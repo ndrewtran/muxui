@@ -74,6 +74,55 @@ function fieldText(slot, className, props, ref) {
   return h(AriaText, { ...props, ref, slot, className: cx(className, props?.className) });
 }
 
+const TEXT_VARIANTS = new Set(['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono']);
+const TEXT_SIZES = Object.freeze({
+  display: new Set(['s', 'm', 'l']),
+  heading: new Set(['s', 'm', 'l']),
+  title: new Set(['s', 'm', 'l']),
+  label: new Set(['xs', 's', 'm', 'l']),
+  body: new Set(['xs', 's', 'm', 'l']),
+  expressive: new Set(['xs', 's', 'm', 'l']),
+  mono: new Set(['xs', 's', 'm', 'l']),
+});
+const TEXT_COLORS = new Set(['default', 'muted']);
+const TEXT_ELEMENTS = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label']);
+
+function normalizeTextOption(value, allowed, option) {
+  if (!allowed.has(value)) throw new TypeError(`Text ${option} must be one of: ${[...allowed].join(', ')}.`);
+  return value;
+}
+
+/** Apply a canonical Mux typography role while keeping the native host and RAC slot contract. */
+export const Text = React.forwardRef(function Text({
+  variant = 'body',
+  size = 'm',
+  color = 'default',
+  as = 'span',
+  truncate = false,
+  className,
+  elementType: _elementType,
+  ...props
+}, ref) {
+  const resolvedVariant = normalizeTextOption(variant, TEXT_VARIANTS, 'variant');
+  const resolvedSize = normalizeTextOption(size, TEXT_SIZES[resolvedVariant], 'size');
+  const resolvedColor = normalizeTextOption(color, TEXT_COLORS, 'color');
+  const resolvedElement = normalizeTextOption(as, TEXT_ELEMENTS, 'as');
+  return h(AriaText, {
+    ...props,
+    ref,
+    elementType: resolvedElement,
+    className: cx(
+      'muxui-text',
+      `muxui-text--${resolvedVariant}-${resolvedSize}`,
+      resolvedColor !== 'default' && `muxui-text--${resolvedColor}`,
+      truncate && 'muxui-text--truncate',
+      className,
+    ),
+  });
+});
+
+Text.displayName = 'Text';
+
 function mappedFieldProps({ disabled, invalid, required, readOnly, ...props }) {
   return {
     ...props,
@@ -409,7 +458,9 @@ const ProgressCircle = {
   Root: React.forwardRef(function ProgressCircleRoot({ value = null, minValue = 0, maxValue = 100, size = 'md', className, children, label, ...props }, ref) {
     const normalizedValue = value == null || !Number.isFinite(value) ? null : value;
     const percentage = normalizedValue == null ? null : Math.max(0, Math.min(100, ((normalizedValue - minValue) / (maxValue - minValue || 1)) * 100));
-    return h(ProgressCircleContext.Provider, { value: { percentage, size } }, h(AriaProgressBar, { ...props, ref, value: normalizedValue == null ? undefined : normalizedValue, isIndeterminate: normalizedValue == null, minValue, maxValue, label, 'data-indeterminate': percentage == null ? '' : undefined, 'data-complete': percentage === 100 ? '' : undefined, className: cx('muxui-progress-circle', size !== 'md' && `muxui-progress-circle--${size}`, className) }, children));
+    const hasExplicitName = props['aria-label'] != null || props['aria-labelledby'] != null;
+    const nameFallback = !hasExplicitName && label != null ? { 'aria-label': label } : {};
+    return h(ProgressCircleContext.Provider, { value: { percentage, size } }, h(AriaProgressBar, { ...props, ...nameFallback, ref, value: normalizedValue == null ? undefined : normalizedValue, isIndeterminate: normalizedValue == null, minValue, maxValue, label, 'data-indeterminate': percentage == null ? '' : undefined, 'data-complete': percentage === 100 ? '' : undefined, className: cx('muxui-progress-circle', size !== 'md' && `muxui-progress-circle--${size}`, className) }, children));
   }),
   Track: React.forwardRef(function ProgressCircleTrack({ className, ...props }, ref) {
     const { percentage, size } = React.useContext(ProgressCircleContext);
@@ -756,5 +807,5 @@ const Sidebar = {
 export { AlertDialog, Card, Input, TextArea, ProgressCircle, CommandPalette, HeaderNav, Sidebar };
 
 export const supplementalFamilies = Object.freeze([
-  'AlertDialog', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea',
+  'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle', 'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect', 'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar', 'SwitchField', 'TagSelect', 'TextArea', 'Text',
 ]);

@@ -61,12 +61,12 @@ function setInputValue(input, value) {
   input.dispatchEvent(new input.ownerDocument.defaultView.Event('change', { bubbles: true }));
 }
 
-test('supplemental index exposes the exact admitted 17-family surface', () => {
+test('supplemental index exposes the exact admitted 21-family surface', () => {
   assert.deepEqual([...supplementalFamilies], [
-    'AlertDialog', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle',
-    'CommandPalette', 'HeaderNav', 'InputTags', 'Input', 'MultiSelect',
-    'PaymentInput', 'ProgressCircle', 'RadioField', 'Sidebar', 'SwitchField',
-    'TagSelect', 'TextArea',
+    'AlertDialog', 'Avatar', 'ButtonGroup', 'Card', 'CheckboxField', 'ColorModeToggle',
+    'CommandPalette', 'HeaderNav', 'Image', 'InputTags', 'Input', 'MultiSelect',
+    'PaymentInput', 'ProgressCircle', 'RadioField', 'SelectNative', 'Sidebar',
+    'SwitchField', 'TagSelect', 'TextArea', 'Text',
   ]);
 });
 
@@ -488,7 +488,7 @@ test('PaymentInput propagates field naming and keeps the card icon decorative', 
 test('ProgressCircle delegates accessible range semantics to React Aria', () => {
   const render = (value, minValue = 0, maxValue = 100) => renderToStaticMarkup(React.createElement(
     ProgressCircle.Root,
-    { value, minValue, maxValue, label: 'Upload progress' },
+    { value, minValue, maxValue },
     React.createElement(ProgressCircle.Label, null, 'Upload progress'),
     React.createElement(ProgressCircle.Track),
   ));

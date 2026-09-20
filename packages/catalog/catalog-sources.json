@@ -1,6 +1,6 @@
 {
   "schema": "muxui-catalog-source-manifest-v1",
-  "authorityDecisionPath": "decisions/0016-pre-release-compatibility.md",
+  "authorityDecisionPath": "decisions/0017-text-family-admission.md",
   "commandRegistryPath": "packages/tooling/command-registry.json",
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",
@@ -887,6 +887,42 @@
       "family": "guide",
       "path": "catalog/guides/icon-button-usage.json",
       "sourcePath": "catalog/guides/icon-button-usage.md"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/text/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/text/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/avatar/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/avatar/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/avatar/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/image/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/image/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/image/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/select-native/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/select-native/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/select-native/examples/react/basic.tsx"
     }
   ]
 }

@@ -1,0 +1,84 @@
+/* Mux UI-owned styling for the visible native SelectNative control. */
+.muxui-select-native-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--muxui-semantic-layout-control-gap);
+  inline-size: 100%;
+}
+
+.muxui-select-native__label {
+  color: var(--muxui-field-label-color);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-field-label-font-size);
+  font-weight: var(--muxui-field-label-font-weight);
+  line-height: var(--muxui-semantic-typography-compact-line-height);
+}
+
+.muxui-select-native-field[data-required] > .muxui-select-native__label::after {
+  content: ' *';
+  color: var(--muxui-semantic-selection-track);
+}
+
+.muxui-select-native {
+  box-sizing: border-box;
+  display: block;
+  inline-size: 100%;
+  min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1.5em) / 2));
+  padding-inline: var(--muxui-field-padding-inline);
+  border: 0;
+  outline: 1px solid var(--muxui-field-border-color);
+  outline-offset: -1px;
+  border-radius: var(--muxui-field-radius);
+  background-color: var(--muxui-field-bg);
+  color: var(--muxui-field-color);
+  font-family: var(--muxui-field-font-family);
+  font-size: var(--muxui-field-font-size);
+  /* The foundation resets select appearance; retain the native affordance. */
+  appearance: auto;
+}
+
+.muxui-select-native-field[data-size='sm'],
+.muxui-select-native[data-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
+.muxui-select-native-field[data-size='lg'],
+.muxui-select-native[data-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
+
+.muxui-select-native:focus-visible {
+  outline-color: var(--muxui-field-focus-border);
+  box-shadow: var(--muxui-field-focus-glow);
+}
+
+.muxui-select-native[data-invalid] {
+  outline-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-select-native:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.muxui-select-native__description,
+.muxui-select-native__error {
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+  line-height: var(--muxui-semantic-typography-text-line-height);
+}
+
+.muxui-select-native__description { color: var(--muxui-field-description-color); }
+.muxui-select-native__error { color: var(--muxui-field-error-color); }
+.muxui-select-native-field[data-disabled] > .muxui-select-native__label { opacity: 0.45; }
+.muxui-select-native-field[data-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
+
+@media (forced-colors: active) {
+  .muxui-select-native {
+    border: 1px solid ButtonText;
+    outline: none;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .muxui-select-native:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}

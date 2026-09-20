@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:progress-circle-indeterminate-react",
+  "kind": "example",
+  "name": "Indeterminate React ProgressCircle",
+  "summary": "An accessible indeterminate loading indicator with no invented percentage.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:progress-circle#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/progress-circle/examples/react/indeterminate.tsx"
+}

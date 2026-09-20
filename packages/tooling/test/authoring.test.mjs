@@ -577,7 +577,7 @@ test('E-R1.5-02: every React family and example source passes canonical diagnosi
   const examples = context.catalogBundle.artifacts.filter(({ kind, record }) => (
     kind === 'example' && record.binding?.ref?.endsWith('#web.react')
   ));
-  assert.equal(components.length, 54);
+  assert.equal(components.length, 58);
   assert.ok(components.some(({ id }) => id === 'muxui:component:icon-button'));
   assert.ok(examples.length >= components.length);
   assert.deepEqual(

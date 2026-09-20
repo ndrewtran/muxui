@@ -668,7 +668,8 @@ Mux UI modules; no Lucide export, public Icon API, decorative component, or
 new decorative affordance is admitted.
 
 R1.6 also admits the exact internal, replaceable `react-aria@3.51.0` edge
-for `Resizable`, `marked@13.0.3` for the typed Markdown parser boundary,
+for `Resizable`, extended by Decision 0018 to `SelectNative`'s `useField`;
+`marked@13.0.3` for the typed Markdown parser boundary,
 and the eight `@tiptap/*@3.22.3` packages for `TextEditor`. Their
 integrity, license/notice, peer-compatibility, lockfile, module-isolation,
 tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof is
@@ -909,6 +910,41 @@ Retain the completed initial R1.6 migration and its 74-family evidence unchanged
 this follow-up establishes the expanded 75-family source surface independently.
 Field has no implementation deliverable until the custom-control consumer trigger
 in Decision 0014 is met and separately admitted.
+
+### Post-R1.6 Text addition
+
+Decision 0017 adds Text under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and
+preserves the fixed 53-family inventory and completed R1.6 evidence. The
+current mapping now contains 23 supplemental families and 76 total current
+families, with 74 root exports and the two existing isolated subpaths. Text
+requires focused native-host ref/type, field and collection TextContext slot,
+token/style, truncation, SSR/hydration, generation, and packed-consumer proof.
+The addition remains experimental and does not establish readiness, support,
+publication, platform activation, or final R1-exit merge authorization.
+
+### Post-R1.6 Image, Avatar, and SelectNative addition
+
+Decision 0018 explicitly extends `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` with
+Image, Avatar, and SelectNative, including the named native-backed image
+families. This expansion follows the Text addition and preserves historical
+R1.6 evidence. The current mapping contains 26 supplemental families and 79
+total families, with 77 root exports and two existing isolated subpaths.
+SelectNative's `useField` uses the existing pinned internal
+`react-aria@3.51.0` edge alongside Resizable's `useMove`; version identity,
+module isolation, and dependency/package proof remain required.
+
+Deliver native image load/error/recovery and fallback-only composition;
+visible native select options, events, form/reset, keyboard/focus, and field
+associations; native ref/types; SSR/hydration; token-based light/dark styles;
+canonical examples; generation identity; and clean packed-consumer proof.
+Independent review covers public API and accessibility boundaries. Reuse
+`E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07` for current mapping,
+styles/behavior, projections, and platform/release boundaries without changing
+the completed initial migration record. Generic Field remains deferred.
+
+These deliverables establish implementation readiness for the three families,
+not milestone completion, publication, support, consumer mutation, or a
+final R1-exit merge authorization.
 
 ### R1 exit — React prerelease publication
 
@@ -2201,7 +2237,8 @@ limited to the six named value-adapter families above, and
   the nine R1.6 affordance roots `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
 and `TextEditor`. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
-`useMove`, `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
+`useMove`, with Decision 0018 extending the same edge to SelectNative's
+`useField`; `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
 and `@tiptap/core@3.22.3`, `@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`,
 `@tiptap/starter-kit@3.22.3`, `@tiptap/extension-image@3.22.3`,
 `@tiptap/extension-placeholder@3.22.3`,

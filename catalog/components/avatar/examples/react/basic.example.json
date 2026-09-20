@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:avatar-basic-react",
+  "kind": "example",
+  "name": "Basic React Avatar",
+  "summary": "Native-backed avatar image and fallback-only workspace indicator.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:avatar#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["generation", "explanation", "validation"],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/avatar/examples/react/basic.tsx"
+}

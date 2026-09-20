@@ -22,6 +22,25 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
+      "family": "Avatar",
+      "slug": "avatar",
+      "artifact": "catalog/components/avatar/artifact.json",
+      "binding": "muxui:component:avatar#web.react",
+      "apiOwner": "catalog/components/avatar/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/avatar/artifact.json#/states",
+      "anatomyOwner": "catalog/components/avatar/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/avatar/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Avatar",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/avatar.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
       "family": "ButtonGroup",
       "slug": "button-group",
       "artifact": "catalog/components/button-group/artifact.json",
@@ -133,6 +152,25 @@
         "isolation": "root"
       },
       "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "Image",
+      "slug": "image",
+      "artifact": "catalog/components/image/artifact.json",
+      "binding": "muxui:component:image#web.react",
+      "apiOwner": "catalog/components/image/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/image/artifact.json#/states",
+      "anatomyOwner": "catalog/components/image/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/image/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Image",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/image.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -277,7 +315,8 @@
       "stateOwner": "catalog/components/progress-circle/artifact.json#/states",
       "anatomyOwner": "catalog/components/progress-circle/artifact.json#/anatomy",
       "examples": [
-        "catalog/components/progress-circle/examples/react/basic.tsx"
+        "catalog/components/progress-circle/examples/react/basic.tsx",
+        "catalog/components/progress-circle/examples/react/indeterminate.tsx"
       ],
       "export": {
         "name": "ProgressCircle",
@@ -324,6 +363,25 @@
       },
       "runtimeSource": "packages/react/src/supplemental/resizable.mjs",
       "styleSource": "packages/react/src/supplemental/resizable.css"
+    },
+    {
+      "family": "SelectNative",
+      "slug": "select-native",
+      "artifact": "catalog/components/select-native/artifact.json",
+      "binding": "muxui:component:select-native#web.react",
+      "apiOwner": "catalog/components/select-native/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/select-native/artifact.json#/states",
+      "anatomyOwner": "catalog/components/select-native/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/select-native/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "SelectNative",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/select-native.mjs",
+      "styleSource": "packages/react/src/supplemental/select-native.css"
     },
     {
       "family": "Sidebar",
@@ -395,6 +453,25 @@
       ],
       "export": {
         "name": "TextArea",
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/index.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "Text",
+      "slug": "text",
+      "artifact": "catalog/components/text/artifact.json",
+      "binding": "muxui:component:text#web.react",
+      "apiOwner": "catalog/components/text/artifact.json#/bindings/web.react/api",
+      "stateOwner": "catalog/components/text/artifact.json#/states",
+      "anatomyOwner": "catalog/components/text/artifact.json#/anatomy",
+      "examples": [
+        "catalog/components/text/examples/react/basic.tsx"
+      ],
+      "export": {
+        "name": "Text",
         "module": ".",
         "isolation": "root"
       },

@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:image",
+  "kind": "component",
+  "name": "Image",
+  "summary": "Present a native image with Mux styling and bounded source recovery.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Presenting an image while preserving native image dimensions, loading, and events."
+    ],
+    "avoidWhen": [
+      "Cropping, editing, or processing image content."
+    ]
+  },
+  "anatomy": [
+    "root"
+  ],
+  "states": [
+    "default",
+    "fallback",
+    "error",
+    "radius-sm",
+    "radius-md",
+    "radius-lg",
+    "radius-full"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Supply a meaningful alt string for informative images; use alt=\"\" for decorative images.",
+      "Preserve native image dimensions, source-set selection, refs, and load/error events.",
+      "When a fallback source is supplied, retry it once after the primary source fails and reset recovery when src or srcSet changes."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "src",
+          "srcSet",
+          "sizes",
+          "alt",
+          "width",
+          "height",
+          "loading",
+          "decoding",
+          "fallbackSrc",
+          "fallbackSrcSet",
+          "radius",
+          "fit"
+        ],
+        "events": [
+          "load",
+          "error"
+        ],
+        "parts": [
+          "root"
+        ],
+        "defaults": {
+          "radius": "none",
+          "fit": "cover"
+        }
+      },
+      "behavior": [
+        "Renders a native HTMLImageElement and forwards native attributes, dimensions, refs, and callbacks.",
+        "fallbackSrc and fallbackSrcSet provide one bounded recovery attempt; changing the primary source or source set clears stale recovery state.",
+        "radius and fit select Mux styling hooks without changing intrinsic image dimensions."
+      ],
+      "accessibility": [
+        "alt is required by the public type and runtime contract; an empty alt keeps decorative images out of the accessibility tree.",
+        "The native image remains the accessible host and no loading animation is introduced."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          { "token": "semantic.shape.compact-radius", "requirement": "required" },
+          { "token": "semantic.shape.option-radius", "requirement": "required" },
+          { "token": "semantic.shape.container-radius", "requirement": "required" },
+          { "token": "semantic.shape.pill-radius", "requirement": "required" }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            { "id": "system.forced-colors", "disposition": "required" },
+            { "id": "system.high-contrast", "disposition": "required" },
+            { "id": "native.dynamic-color", "disposition": "not-applicable", "reason": "Native dynamic colors do not apply to the React web binding." },
+            { "id": "native.font-metrics", "disposition": "not-applicable", "reason": "Native font metrics do not apply to the React web binding." },
+            { "id": "layout.direction", "disposition": "required" },
+            { "id": "platform.accessibility-mapping", "disposition": "required" }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

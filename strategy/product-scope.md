@@ -1,5 +1,5 @@
 ---
-scopeVersion: 10.0.0
+scopeVersion: 12.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -52,6 +52,21 @@ previously committed active v1.1/v1.2 query support and notice-release requireme
 Scope IDs and component/platform commitments remain unchanged. Compatibility
 windows attach to supported published contracts. Historical evidence stays
 immutable and is not an active implementation obligation.
+
+Product Scope `11.0.0` applies Decision 0017: the current pre-release React
+surface admits the Mux-owned experimental `Text` family under the existing
+supplemental scope. The historical 53-family inventory and completed R1.6
+evidence remain unchanged; that admission grew the supplemental mapping to 23
+families and the React union to 76 families, with 74 root exports and two
+isolated subpaths.
+
+Product Scope `12.0.0` applies Decision 0018: the post-R1.6 supplemental
+boundary also admits Mux-owned Image, Avatar, and SelectNative. Image and
+Avatar use native image/fallback behavior; SelectNative uses a native select
+with internal React Aria field associations. The current mapping contains 26
+supplemental families and 79 total families, with 77 root exports and the two
+existing isolated subpaths. This explicit expansion does not recast the
+original Aria-only R1.6 inventory or its evidence.
 
 ## Scope vocabulary
 
@@ -216,7 +231,7 @@ boundary.
 | `SCOPE-OUTCOME-REACT-PRIMARY` | `committed` | Installable React prerelease using Mux UI-owned experimental bindings and generated package guidance. | R1.0–R1 exit |
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, Mux UI-owned styling and tranche delivery. | R1.0–R1.5 |
 | `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
-| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports for applicable supplemental React Aria families outside the historical fixed 53-family table, admitted only through the exact R1.6 inventory and proof. | R1.6 and R1 exit |
+| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports outside the historical fixed 53-family table: the exact R1.6 React Aria inventory plus explicitly named post-R1.6 admissions in Decisions 0014, 0017, and 0018, including native-backed Image and Avatar. Each admission requires its declared proof and the single current supplemental mapping. | R1.6, named post-R1.6 additions, and R1 exit |
 | `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
 
@@ -735,7 +750,7 @@ accessibility, package, compatibility, integrity, or generation failures.
   `@internationalized/date@3.12.3` dependency limited to Mux UI value adapters
   in `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
   `RangeCalendar`, plus the R1.6 internal, replaceable supplemental-affordance edges
-  `react-aria@3.51.0` for `Resizable`, `marked@13.0.3` for the typed Markdown
+  `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
   parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`;
   no Mux UI workspace runtime edge or upstream public API/type
   leak is permitted;
@@ -1223,3 +1238,59 @@ does not add a Field artifact, runtime, export, dependency, stable-support
 claim, package publication, or secondary-renderer activation. Existing Scope
 IDs remain immutable, and the retirement decision's accepted cleanup does not
 rescind this later approved expansion.
+
+## Product Scope 11.0.0: Text family admission
+
+Product Scope `11.0.0` records the accepted Text expansion in Decision 0017.
+`Text` is a Mux UI-owned, experimental React family under the existing
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` commitment. It applies existing display,
+heading, title, label, body, expressive, and mono typography roles to a
+selected native text host, preserves caller DOM and accessibility props, and
+is exported from the root React package.
+
+The current mapping contains 23 supplemental families and 76 total current
+families: the fixed 53-family floor, 74 root exports, and the two existing
+isolated subpaths. The current supplemental mapping entries are:
+`alert-dialog`, `button-group`, `card`, `checkbox-field`, `color-mode-toggle`,
+`command-palette`, `header-nav`, `icon-button`, `input`, `input-tags`,
+`lightbox`, `markdown`, `multi-select`, `payment-input`, `progress-circle`,
+`radio-field`, `resizable`, `sidebar`, `switch-field`, `tag-select`,
+`text-area`, `text`, and `text-editor`.
+
+Text supports React Aria description slots inside fields and label and
+description slots inside collection items. Field label association remains
+owned by the field component; `as="label"` with `htmlFor` remains native
+labeling. `truncate` is visual and keeps the complete text in the DOM. This
+addition changes no token values, platform activation, stable-support claim,
+package publication, or release readiness claim. Existing Scope IDs remain
+immutable and the historical IconButton and Field-deferral record remains
+unchanged.
+
+## Product Scope 12.0.0: Image, Avatar, and SelectNative admission
+
+[Decision 0018](../decisions/0018-image-avatar-select-native-admission.md)
+extends `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` with three experimental Mux-owned
+React families. This is an explicit post-R1.6 expansion to include the named
+native-backed helpers; it does not add a blanket native-component admission
+or alter the historical fixed inventory and completed evidence.
+
+Image owns native image presentation and bounded loading/fallback behavior.
+Avatar owns image/fallback composition, including fallback-only indicators.
+SelectNative owns a visible native select with optional label, description,
+and error associations through internal React Aria `useField`. Native image
+and form semantics, caller refs/events, Mux tokens, and accessibility remain
+part of their public contracts. Generic Field remains deferred.
+
+The current 26-family supplemental mapping comprises `alert-dialog`, `avatar`,
+`button-group`, `card`, `checkbox-field`, `color-mode-toggle`,
+`command-palette`, `header-nav`, `icon-button`, `image`, `input`, `input-tags`,
+`lightbox`, `markdown`, `multi-select`, `payment-input`, `progress-circle`,
+`radio-field`, `resizable`, `select-native`, `sidebar`, `switch-field`,
+`tag-select`, `text`, `text-area`, and `text-editor`. Together with the fixed
+53-family floor, this yields 79 current families, 77 root exports, and two
+isolated subpaths.
+
+No token values, dependencies, package versions, platform activation, stable
+support, publication, or consumer mutation follow from this admission.
+Implementation proof and protected repository adoption remain separate from
+the accepted direction and from package release.

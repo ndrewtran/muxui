@@ -892,7 +892,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-toggle-button) {
+  :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
     animation: none !important;
     transition-duration: 0s !important;
   }
@@ -902,7 +902,7 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-toggle-button) {
+:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
   animation: none !important;
   transition-duration: 0s !important;
 }

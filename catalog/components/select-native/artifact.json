@@ -1,0 +1,125 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:select-native",
+  "kind": "component",
+  "name": "SelectNative",
+  "summary": "Style a visible native select while retaining native form and option behavior.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Using native option, optgroup, keyboard, form, and reset behavior with Mux field styling."
+    ],
+    "avoidWhen": [
+      "Requiring a custom popup listbox or collection-driven selection model; use Select."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "select",
+    "label",
+    "description",
+    "error"
+  ],
+  "states": [
+    "empty",
+    "filled",
+    "disabled",
+    "required",
+    "invalid",
+    "focused",
+    "sm",
+    "md",
+    "lg"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Provide label, aria-label, or aria-labelledby; optional description and error content is associated through internal React Aria useField.",
+      "Keep the visible control a native HTMLSelectElement and preserve option, optgroup, multiple, keyboard, ref, change, form, and reset behavior.",
+      "Use string size for Mux visual sizing; a numeric size remains the native list size and does not get discarded."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "label",
+          "description",
+          "errorMessage",
+          "aria-label",
+          "aria-labelledby",
+          "aria-describedby",
+          "id",
+          "value",
+          "defaultValue",
+          "onChange",
+          "name",
+          "form",
+          "autoComplete",
+          "disabled",
+          "required",
+          "invalid",
+          "multiple",
+          "size",
+          "children"
+        ],
+        "events": [
+          "change"
+        ],
+        "parts": [
+          "root",
+          "select",
+          "label",
+          "description",
+          "error"
+        ],
+        "defaults": {
+          "size": "md",
+          "disabled": false,
+          "required": false,
+          "invalid": false
+        }
+      },
+      "behavior": [
+        "Renders a genuine visible native select with caller options and optgroups unchanged.",
+        "Internal useField supplies deterministic label, description, and error associations while native value/defaultValue/onChange, name, disabled, required, multiple, ref, form submit, and reset remain native.",
+        "String sm, md, and lg values select Mux visual targets; a positive integer numeric size is forwarded as the native list size with md visual styling."
+      ],
+      "accessibility": [
+        "The native select receives the generated or caller-supplied label and description IDs.",
+        "Invalid and required states remain exposed through native and ARIA attributes; focus remains on the native select."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          { "token": "semantic.field.background", "requirement": "required" },
+          { "token": "semantic.field.border", "requirement": "required" },
+          { "token": "semantic.field.content", "requirement": "required" },
+          { "token": "semantic.control.radius", "requirement": "required" },
+          { "token": "semantic.focus.ring", "requirement": "required" },
+          { "token": "semantic.feedback.invalid", "requirement": "required" },
+          { "token": "semantic.control.size-sm", "requirement": "required" },
+          { "token": "semantic.control.size-md", "requirement": "required" },
+          { "token": "semantic.control.size-lg", "requirement": "required" }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            { "id": "system.forced-colors", "disposition": "required" },
+            { "id": "system.high-contrast", "disposition": "required" },
+            { "id": "native.dynamic-color", "disposition": "not-applicable", "reason": "Native dynamic colors do not apply to the React web binding." },
+            { "id": "native.font-metrics", "disposition": "not-applicable", "reason": "Native font metrics do not apply to the React web binding." },
+            { "id": "layout.direction", "disposition": "required" },
+            { "id": "platform.accessibility-mapping", "disposition": "required" }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

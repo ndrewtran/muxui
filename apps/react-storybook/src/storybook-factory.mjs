@@ -39,13 +39,13 @@ const ARRAY_PROPS = new Set([
 const STRING_PROPS = new Set([
   'action', 'aria-label', 'aria-labelledby', 'children', 'className', 'color', 'content',
   'description', 'endName', 'errorMessage', 'href', 'label', 'message', 'name',
-  'placeholder', 'rel', 'startName', 'target', 'title',
+  'placeholder', 'rel', 'src', 'srcSet', 'alt', 'fallbackSrc', 'fallbackSrcSet', 'fit', 'radius', 'startName', 'target', 'title',
 ]);
 
 const TEXT_VALUE_CONTEXT_PROPS = new Set(['placeholder', 'type']);
 const NUMBER_PROPS = new Set([
   'closeDelay', 'delay', 'duration', 'height', 'itemHeight', 'maxLength', 'maxValue',
-  'minLength', 'minValue', 'overscan', 'step',
+  'minLength', 'minValue', 'overscan', 'step', 'width',
 ]);
 
 const NUMBER_VALUE_CONTEXT_PROPS = new Set(['max', 'min', 'step']);
@@ -88,6 +88,9 @@ const SELECT_PROPS = Object.freeze({
   placement: ['top', 'bottom', 'start', 'end'],
   role: ['group', 'region', 'presentation'],
   selectionMode: ['none', 'single', 'multiple'],
+  fit: ['cover', 'contain', 'fill', 'none'],
+  radius: ['none', 'sm', 'md', 'lg', 'full'],
+  size: ['sm', 'md', 'lg'],
   type: ['text', 'email', 'password', 'url', 'tel'],
   validationBehavior: ['aria', 'native'],
   variant: ['neutral', 'success', 'warning', 'danger'],
@@ -739,6 +742,10 @@ Object.assign(ADAPTERS, {
       ),
     ),
   ),
+  Avatar: (args) => e(MuxUI.Avatar.Root, { ...args, 'aria-label': args['aria-label'] ?? 'Workspace avatar' },
+    e(MuxUI.Avatar.Image, { src: args.src ?? 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=', alt: 'Workspace avatar' }),
+    e(MuxUI.Avatar.Fallback, null, 'WS'),
+  ),
   ButtonGroup: (args) => e(MuxUI.ButtonGroup, { ...args },
     e(MuxUI.Button, { disabled: args.disabled }, 'Primary'),
     e(MuxUI.Button, { disabled: args.disabled, variant: 'neutral' }, 'Secondary'),
@@ -776,6 +783,13 @@ Object.assign(ADAPTERS, {
     e(MuxUI.HeaderNav.Actions, null, e(MuxUI.Button, { disabled: args.disabled }, 'Sign in')),
     e(MuxUI.HeaderNav.MobileTrigger, null, 'Menu'),
   ),
+  Image: (args) => e(MuxUI.Image, {
+    ...args,
+    src: args.src ?? 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=',
+    alt: args.alt ?? 'Workspace preview',
+    width: args.width ?? 160,
+    height: args.height ?? 96,
+  }),
   InputTags: (args) => e(MuxUI.InputTags.Root, { ...args, defaultValue: ['Mux', 'UI'], label: 'Tags', 'aria-label': 'Tags', placeholder: 'Add a tag' }),
   Input: (args) => e(MuxUI.Input.Root, { ...args },
     e(MuxUI.Input.Label, null, 'Name'),
@@ -852,11 +866,21 @@ Object.assign(ADAPTERS, {
     e(MuxUI.TextArea.Description, null, 'Optional'),
     e(MuxUI.TextArea.Error, null, args.invalid ? 'Invalid notes' : null),
   ),
+  Text: (args) => e(MuxUI.Text, { ...args }, fixtureCopy(args, 'Manage your profile details.')),
   Resizable: (args) => e(MuxUI.Resizable, { ...args, defaultSizes: args.defaultSizes ?? { main: 60, side: 40 } },
     e(MuxUI.ResizablePanel, { id: 'main' }, 'Main'),
     e(MuxUI.ResizableHandle, { id: 'main-side', before: 'main', after: 'side', 'aria-label': 'Resize panels' }),
     e(MuxUI.ResizablePanel, { id: 'side' }, 'Side'),
   ),
+  SelectNative: (args) => e(MuxUI.SelectNative, {
+    ...args,
+    label: args.label ?? 'Choose a saved panel',
+    defaultValue: args.value === undefined ? (args.defaultValue ?? '') : undefined,
+    errorMessage: args.invalid ? (args.errorMessage ?? 'Choose a panel') : args.errorMessage,
+  },
+  e('option', { value: '' }, 'Choose a panel'),
+  e('option', { value: 'inbox' }, 'Inbox'),
+  e('option', { value: 'research' }, 'Research')),
   Lightbox: (args) => e(MuxUI.Lightbox, { ...args, items: args.items ?? [{ key: 'one', label: 'One' }, { key: 'two', label: 'Two' }] },
     e(MuxUI.LightboxTrigger, { itemKey: 'one', disabled: args.disabled }, 'Open gallery'),
     e(MuxUI.LightboxBackdrop, null,
@@ -1245,13 +1269,16 @@ function UncontrolledHarness({ record, args }) {
 }
 
 const CANONICAL_PART_SELECTORS = Object.freeze({
+  Avatar: { image: ['.muxui-avatar__image'], fallback: ['.muxui-avatar__fallback'] },
   Button: { label: ['.muxui-button-content'] },
   IconButton: { icon: ['.muxui-icon-button-icon'] },
   Group: { label: ['.muxui-group[aria-label]'], content: ['.muxui-group > button', '.muxui-group > [role="button"]'] },
   Link: { label: ['.muxui-link'] },
   ListBox: { header: ['.muxui-list-box-section-header'] },
   Menu: { header: ['.muxui-menu-section-header'] },
+  Image: { root: ['.muxui-image'] },
   Select: { popup: ['.muxui-select-popover'] },
+  SelectNative: { select: ['.muxui-select-native'], label: ['.muxui-select-native__label'], description: ['.muxui-select-native__description'], error: ['.muxui-select-native__error'] },
   Meter: { label: ['.muxui-value-label'] },
   ProgressBar: { label: ['.muxui-value-label'] },
   ToggleButton: { label: ['.muxui-toggle-button'] },
@@ -1438,6 +1465,18 @@ function waitForBrowserFocus(element, timeout = 2_000) {
   });
 }
 
+function waitForBrowserFocusWithin(element, timeout = 2_000) {
+  const deadline = Date.now() + timeout;
+  return new Promise((resolvePromise, reject) => {
+    const check = () => {
+      if (document.activeElement === element || element.contains(document.activeElement)) return resolvePromise();
+      if (Date.now() >= deadline) return reject(new Error('Browser proof did not move focus into the expected element'));
+      return setTimeout(check, 20);
+    };
+    check();
+  });
+}
+
 function browserProofElement(canvasElement, selectors, family) {
   const candidates = Array.isArray(selectors) ? selectors : [selectors];
   for (const selector of candidates) {
@@ -1596,7 +1635,7 @@ async function dialogBrowserProof({ canvasElement }) {
   await waitForBrowserEvent(canvasElement, 'openChange', family);
   const dialog = await waitForBrowserElement('.muxui-dialog', document, 2_000);
   assertBrowser(browserElementVisible(dialog), 'dialog portal is visible after activation');
-  if (document.activeElement !== dialog && !dialog.contains(document.activeElement)) throw new Error('Dialog Browser Proof did not move focus into its portal');
+  await waitForBrowserFocusWithin(dialog);
   const close = dialog.querySelector('.muxui-dialog-close');
   assertBrowser(close, 'dialog close control is missing');
   close.click();
@@ -1884,12 +1923,14 @@ const HISTORICAL_BROWSER_PROOF_PLAN_NAMES = Object.freeze(Object.keys(BROWSER_PR
 BROWSER_PROOF_PLANS.IconButton = activationPlan('IconButton', '.muxui-icon-button');
 const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   AlertDialog: '.muxui-alert-dialog__trigger',
+  Avatar: '.muxui-avatar',
   ButtonGroup: '.muxui-button-group button',
   Card: '.muxui-card',
   CheckboxField: '.muxui-checkbox-field__button',
   ColorModeToggle: '.muxui-color-mode-toggle',
   CommandPalette: '.muxui-command-palette__trigger',
   HeaderNav: '.muxui-header-nav__mobile-trigger',
+  Image: '.muxui-image',
   InputTags: '.muxui-input-tags input',
   Input: '.muxui-input',
   Lightbox: '.muxui-lightbox-trigger',
@@ -1899,9 +1940,11 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   ProgressCircle: '.muxui-progress-circle',
   RadioField: '.muxui-radio-field .muxui-radio',
   Resizable: '.muxui-resizable-handle',
+  SelectNative: '.muxui-select-native',
   Sidebar: '.muxui-sidebar__mobile-menu-btn',
   SwitchField: '.muxui-switch-field__button',
   TagSelect: '.muxui-tag-select__input',
+  Text: '.muxui-text',
   TextArea: '.muxui-text-area__textarea',
   TextEditor: '.muxui-text-editor__btn',
 });

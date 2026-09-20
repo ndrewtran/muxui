@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:select-native-basic-react",
+  "kind": "example",
+  "name": "Basic React SelectNative",
+  "summary": "Visible native options and optgroups with Mux field associations.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:select-native#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["generation", "explanation", "validation"],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/select-native/examples/react/basic.tsx"
+}

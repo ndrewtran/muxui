@@ -119,6 +119,59 @@
   outline: none;
 }
 
+/* image */
+.muxui-image {
+  display: block;
+  max-inline-size: 100%;
+  block-size: auto;
+}
+
+.muxui-image--fit-cover { object-fit: cover; }
+.muxui-image--fit-contain { object-fit: contain; }
+.muxui-image--fit-fill { object-fit: fill; }
+.muxui-image--fit-none { object-fit: none; }
+.muxui-image-radius-sm { border-radius: var(--muxui-semantic-shape-compact-radius); }
+.muxui-image-radius-md { border-radius: var(--muxui-semantic-shape-option-radius); }
+.muxui-image-radius-lg { border-radius: var(--muxui-semantic-shape-container-radius); }
+.muxui-image-radius-full { border-radius: var(--muxui-semantic-shape-pill-radius); }
+
+/* avatar */
+.muxui-avatar {
+  position: relative;
+  display: inline-grid;
+  flex: 0 0 auto;
+  place-items: center;
+  overflow: hidden;
+  inline-size: var(--muxui-control-size-md);
+  block-size: var(--muxui-control-size-md);
+  border-radius: var(--muxui-semantic-shape-pill-radius);
+  background: var(--muxui-semantic-surface-subtle);
+  color: var(--muxui-semantic-content-strong);
+  font-family: var(--muxui-semantic-typography-label-font-family);
+  font-size: var(--muxui-semantic-typography-label-s-font-size);
+  font-weight: var(--muxui-semantic-typography-label-font-weight);
+  line-height: 1;
+}
+
+.muxui-avatar--sm { inline-size: var(--muxui-control-size-sm); block-size: var(--muxui-control-size-sm); }
+.muxui-avatar--lg { inline-size: var(--muxui-control-size-lg); block-size: var(--muxui-control-size-lg); }
+
+.muxui-avatar__image,
+.muxui-avatar__fallback {
+  grid-area: 1 / 1;
+  inline-size: 100%;
+  block-size: 100%;
+}
+
+.muxui-avatar__image { object-fit: cover; }
+.muxui-avatar__fallback {
+  display: grid;
+  place-items: center;
+  padding: var(--muxui-semantic-layout-tight-inset);
+  text-align: center;
+  overflow: hidden;
+}
+
 /* button-group */
 .muxui-button-group {
   display: inline-flex;
@@ -2016,6 +2069,19 @@
 .muxui-progress-circle__indicator[data-indeterminate] {
   animation: muxui-progress-circle-dash var(--muxui-semantic-motion-progress-sweep-duration) var(--muxui-semantic-motion-progress-easing) infinite;
   transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate] {
+    stroke-dasharray: 70, 100;
+    stroke-dashoffset: -25;
+  }
+}
+
+:where([data-reduced-motion], [data-muxui-motion='reduced'])
+  :where(.muxui-progress-circle .muxui-progress-circle__indicator[data-indeterminate]) {
+  stroke-dasharray: 70, 100;
+  stroke-dashoffset: -25;
 }
 
 @keyframes muxui-progress-circle-rotate {

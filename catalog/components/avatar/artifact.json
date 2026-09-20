@@ -1,0 +1,102 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:avatar",
+  "kind": "component",
+  "name": "Avatar",
+  "summary": "Compose a native-backed avatar image with an arbitrary fallback indicator.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Showing a compact person or workspace image with fallback content."
+    ],
+    "avoidWhen": [
+      "Managing identity data, image processing, or stacked avatar collections."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "image",
+    "fallback"
+  ],
+  "states": [
+    "loading",
+    "loaded",
+    "fallback",
+    "error",
+    "sm",
+    "md",
+    "lg"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Avatar.Image accepts an optional alt string; use a meaningful value for informative media and omit it or use alt=\"\" for decorative media.",
+      "Avatar.Fallback accepts arbitrary children and is visible when no image is supplied or when the image fails.",
+      "When an informative image fails, retain its alt text as the fallback name without exposing image and fallback names simultaneously."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "size",
+          "src",
+          "srcSet",
+          "alt",
+          "children"
+        ],
+        "events": [
+          "load",
+          "error"
+        ],
+        "parts": [
+          "root",
+          "image",
+          "fallback"
+        ],
+        "defaults": {
+          "size": "md"
+        }
+      },
+      "behavior": [
+        "Root, Image, and Fallback are Mux-owned compound parts backed by native span and img hosts; they are not React Aria primitives.",
+        "Place Image and Fallback directly under Root or inside a React.Fragment; opaque wrapper components are rejected so image and fallback state cannot diverge.",
+        "A failed image is hidden while arbitrary fallback children become visible; a source or source-set change clears stale failure state.",
+        "Fallback-only composition has no loading animation; unavailable sources use the fallback path, cached native success is reported as loaded, and hydration reconciles native state without replaying callbacks."
+      ],
+      "accessibility": [
+        "Informative image alt text names the native image while it loads and names the avatar root when its source is unavailable or fails.",
+        "Decorative alt=\"\" images and their fallback remain out of the accessibility tree unless the caller supplies an explicit root name.",
+        "Caller-supplied refs, ARIA attributes, data attributes, and native image callbacks are preserved."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          { "token": "semantic.control.size-sm", "requirement": "required" },
+          { "token": "semantic.control.size-md", "requirement": "required" },
+          { "token": "semantic.control.size-lg", "requirement": "required" },
+          { "token": "semantic.shape.pill-radius", "requirement": "required" },
+          { "token": "semantic.surface.subtle", "requirement": "required" },
+          { "token": "semantic.typography.label-font-family", "requirement": "required" }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            { "id": "system.forced-colors", "disposition": "required" },
+            { "id": "system.high-contrast", "disposition": "required" },
+            { "id": "native.dynamic-color", "disposition": "not-applicable", "reason": "Native dynamic colors do not apply to the React web binding." },
+            { "id": "native.font-metrics", "disposition": "not-applicable", "reason": "Native font metrics do not apply to the React web binding." },
+            { "id": "layout.direction", "disposition": "required" },
+            { "id": "platform.accessibility-mapping", "disposition": "required" }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}
