@@ -62,16 +62,33 @@ function isReducedMotion(node, triggerNode) {
   return systemReduced || hasReducedScope(node) || hasReducedScope(triggerNode);
 }
 
-function resolvedMotionTransition(node, triggerNode) {
+export function resolvedMotionTransition(node, triggerNode, durationRole = 'interaction') {
   if (typeof window === 'undefined' || !node || isReducedMotion(node, triggerNode)) return null;
   const style = window.getComputedStyle(node);
-  const duration = parseTime(style.getPropertyValue('--muxui-semantic-motion-interaction-duration'));
+  const duration = parseTime(style.getPropertyValue(`--muxui-semantic-motion-${durationRole}-duration`));
   const easing = parseEasing(style.getPropertyValue('--muxui-semantic-motion-interaction-easing'));
   if (duration === null || duration <= 0 || !easing) return null;
   return { duration, ease: easing };
 }
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+export function observeReducedMotion(node, triggerNode, onChange) {
+  const update = () => onChange(isReducedMotion(node, triggerNode));
+  update();
+  const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(update);
+  collectAncestors(node, triggerNode).forEach((ancestor) => {
+    observer?.observe(ancestor, { attributes: true, attributeFilter: MOTION_SCOPE_ATTRIBUTES });
+  });
+  const media = node.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)');
+  media?.addEventListener?.('change', update);
+  if (!media?.addEventListener) media?.addListener?.(update);
+  return () => {
+    observer?.disconnect();
+    media?.removeEventListener?.('change', update);
+    if (!media?.removeEventListener) media?.removeListener?.(update);
+  };
+}
 
 /**
  * React Aria owns the popup lifecycle. Motion only animates its mounted entry.
@@ -95,25 +112,12 @@ export function DatePopoverMotion({ children }) {
   useIsomorphicLayoutEffect(() => {
     if (!node || node.nodeType !== 1) return undefined;
     const triggerNode = triggerRef?.current;
-    const updateMode = () => {
-      const reduced = isReducedMotion(node, triggerNode);
+    const disconnect = observeReducedMotion(node, triggerNode, (reduced) => {
       node.toggleAttribute(DATE_POPOVER_REDUCED_ATTRIBUTE, reduced);
       if (reduced) settle(undefined, true);
-    };
-    updateMode();
-    const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(updateMode);
-    collectAncestors(node, triggerNode).forEach((ancestor) => {
-      observer?.observe(ancestor, { attributes: true, attributeFilter: MOTION_SCOPE_ATTRIBUTES });
     });
-    const media = typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-      ? window.matchMedia('(prefers-reduced-motion: reduce)')
-      : null;
-    media?.addEventListener?.('change', updateMode);
-    if (!media?.addEventListener) media?.addListener?.(updateMode);
     return () => {
-      observer?.disconnect();
-      media?.removeEventListener?.('change', updateMode);
-      if (!media?.removeEventListener) media?.removeListener?.(updateMode);
+      disconnect();
       node.removeAttribute(DATE_POPOVER_REDUCED_ATTRIBUTE);
     };
   }, [node, settle, triggerRef]);

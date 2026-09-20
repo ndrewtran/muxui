@@ -31,6 +31,7 @@ const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
+const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
 const collectionsSource = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
 const overlaysSource = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
@@ -1054,6 +1055,7 @@ const outputs = new Map([
   ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
+  ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
   ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
   ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],

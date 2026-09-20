@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import ChevronLeftIcon from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
@@ -229,12 +230,12 @@ function useReadOnlyTargets(forwardedRef, readOnly, selector) {
 }
 
 function calendarGrid(cellClass = 'muxui-calendar-cell') {
-  return React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
+  return React.createElement(CalendarHeightMotion, null, React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
       (date) => React.createElement(AriaCalendarCell, { date, className: cellClass })),
-  );
+  ));
 }
 
 function calendarHeader() {
@@ -267,47 +268,53 @@ function calendarProps(props, name, labelId) {
   };
 }
 
-export const Calendar = React.forwardRef(function Calendar(props, ref) {
-  const { label, description: _description, errorMessage: _errorMessage, ...rest } = props;
-  const labelId = React.useId();
-  return React.createElement(AriaCalendar, { ...calendarProps({ ...rest, label }, 'Calendar', labelId), ref },
+export const Calendar = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function Calendar(props, ref) {
+    const { label, description: _description, errorMessage: _errorMessage, ...rest } = props;
+    const labelId = React.useId();
+    return React.createElement(AriaCalendar, { ...calendarProps({ ...rest, label }, 'Calendar', labelId), ref },
+      label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
+      calendarHeader(),
+      calendarGrid());
+  });
+  component.displayName = 'Calendar';
+  return component;
+})();
+
+export const RangeCalendar = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function RangeCalendar(props, ref) {
+    const { label, description: _description, errorMessage: _errorMessage, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, isDateUnavailable: _upstreamDateUnavailable, onChange, onFocusChange,
+      disabled = false, readOnly = false, required = false, invalid = false, className,
+      'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...rest } = props;
+    accessibleName({ label, ariaLabel, ariaLabelledby }, 'RangeCalendar');
+    const labelId = React.useId();
+    const mapRange = (range) => range ? { start: dateValue(range.start, 'RangeCalendar'), end: dateValue(range.end, 'RangeCalendar') } : undefined;
+    return React.createElement(AriaRangeCalendar, {
+      ...rest,
+      ref,
+      value: mapRange(value),
+      defaultValue: mapRange(defaultValue),
+      focusedValue: dateValue(focusedValue, 'RangeCalendar'),
+      minValue: dateValue(minValue, 'RangeCalendar'),
+      maxValue: dateValue(maxValue, 'RangeCalendar'),
+      isDateUnavailable: dateUnavailableCallback(unavailableDateMatcher, 'RangeCalendar'),
+      isDisabled: disabled,
+      isReadOnly: readOnly,
+      isRequired: required,
+      isInvalid: invalid,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
+      className: classNames('muxui-range-calendar', className),
+      onChange: (next) => { if (!disabled && !readOnly) onChange?.(next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined); },
+      onFocusChange: (next) => { if (!disabled) onFocusChange?.(serializeDateValue(next)); },
+    },
     label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
     calendarHeader(),
-    calendarGrid());
-});
-Calendar.displayName = 'Calendar';
-
-export const RangeCalendar = React.forwardRef(function RangeCalendar(props, ref) {
-  const { label, description: _description, errorMessage: _errorMessage, value, defaultValue, focusedValue, minValue, maxValue, unavailableDateMatcher, isDateUnavailable: _upstreamDateUnavailable, onChange, onFocusChange,
-    disabled = false, readOnly = false, required = false, invalid = false, className,
-    'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...rest } = props;
-  accessibleName({ label, ariaLabel, ariaLabelledby }, 'RangeCalendar');
-  const labelId = React.useId();
-  const mapRange = (range) => range ? { start: dateValue(range.start, 'RangeCalendar'), end: dateValue(range.end, 'RangeCalendar') } : undefined;
-  return React.createElement(AriaRangeCalendar, {
-    ...rest,
-    ref,
-    value: mapRange(value),
-    defaultValue: mapRange(defaultValue),
-    focusedValue: dateValue(focusedValue, 'RangeCalendar'),
-    minValue: dateValue(minValue, 'RangeCalendar'),
-    maxValue: dateValue(maxValue, 'RangeCalendar'),
-    isDateUnavailable: dateUnavailableCallback(unavailableDateMatcher, 'RangeCalendar'),
-    isDisabled: disabled,
-    isReadOnly: readOnly,
-    isRequired: required,
-    isInvalid: invalid,
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
-    className: classNames('muxui-range-calendar', className),
-    onChange: (next) => { if (!disabled && !readOnly) onChange?.(next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined); },
-    onFocusChange: (next) => { if (!disabled) onFocusChange?.(serializeDateValue(next)); },
-  },
-  label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
-  calendarHeader(),
-  calendarGrid('muxui-range-calendar-cell'));
-});
-RangeCalendar.displayName = 'RangeCalendar';
+    calendarGrid('muxui-range-calendar-cell'));
+  });
+  component.displayName = 'RangeCalendar';
+  return component;
+})();
 
 export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, secondaryColor, shape = 'square', colorName, disabled = false, className, style, ...props }, ref) {
   const pickerState = React.useContext(ColorPickerContext);

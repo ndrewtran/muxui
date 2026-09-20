@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import {
   Autocomplete as AriaAutocomplete,
   Button as AriaButton,
@@ -270,12 +271,12 @@ function serializeDateValue(value) {
 }
 
 function calendarChildren(cellClass = 'muxui-calendar-cell') {
-  return React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
+  return React.createElement(CalendarHeightMotion, null, React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
       (date) => React.createElement(AriaCalendarCell, { date, className: cellClass })),
-  );
+  ));
 }
 
 function calendarHeader() {
