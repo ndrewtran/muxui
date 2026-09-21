@@ -1,0 +1,11 @@
+[
+  {
+    "iteration": 1,
+    "task": "Audit and minimally correct `/tmp/muxui-overlay-motion-preview/src/main.tsx`",
+    "note": "Done: Implemented Tasks 1–3, rebuilt dist, and proved core browser interactions.\nNot done: Plan Task #4 remains unchecked for final QA evidence.\nBlocked by: nothing.\nWatch out: Bundle with esbuild `--jsx=automatic`; classic JSX emitted `React is not defined`.\nNext: Complete Task #4 at http://127.0.0.1:3344/ and update its plan marker only after final evidence.",
+    "gate": "unavailable",
+    "reverted": [],
+    "blocked": [],
+    "at": 1789968405717
+  }
+]

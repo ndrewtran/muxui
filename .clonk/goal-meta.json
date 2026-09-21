@@ -1,0 +1,11 @@
+{
+  "projectCwd": "/Users/admin/Projects/muxui",
+  "goal": "You are the sole implementation worker for muxui. Continue from the existing isolated target /tmp/muxui-overlay-motion-preview. The project goal is to make the best app ever. Finish the static motion preview with: A exact BeUI values, B -4/.985 travel, C stiffness420 softer spring, plus dark/light modes and CommandPalette, Dialog, and AlertDialog states. Correct the harmless malformed apply_patch attempt, bundle the preview, serve it on a fresh localhost port, then polish and QA it using concret",
+  "branch": "clonk/wt-goal-muasar7j-kkfr51",
+  "baseSha": "676f24d7c1a1452fec9155b8ec34571725603fe7",
+  "parentSha": "9a5026f5abd140d8ce04f13abe77b515b7e63cb6",
+  "baseBranch": "codex/accept-react-motion",
+  "snapshotDirty": true,
+  "devPort": 3344,
+  "createdAt": 1789967273315
+}
