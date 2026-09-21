@@ -24,6 +24,8 @@ import {
   UNSTABLE_ToastRegion,
 } from 'react-aria-components';
 import { DialogMotion } from './dialog-motion.mjs';
+import { PopoverMotion } from './popover-motion.mjs';
+import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -295,9 +297,9 @@ function PopoverSurface({ modal, children, ...props }) {
     React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1 }, children));
 }
 
-const PopupContent = React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const dialogContext = React.useContext(AriaDialogContext);
-  return React.createElement(AriaPopover, {
+  return React.createElement(PopoverMotion, {
     ...props,
     ref,
     triggerRef: anchorRef,
@@ -321,7 +323,7 @@ const PopupContent = React.forwardRef(function PopupContent({ children, classNam
 });
 
 /** RAC Popover owns positioning and dismissal; FocusScope controls optional focus containment. */
-export const Popover = React.forwardRef(function Popover({
+export const Popover = /*#__PURE__*/ React.forwardRef(function Popover({
   children,
   trigger,
   open,
@@ -351,8 +353,6 @@ export const Popover = React.forwardRef(function Popover({
   const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal }, children);
   return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-overlay-pop-trigger'), content);
 });
-
-Popover.displayName = 'Popover';
 
 const PreviewContent = React.forwardRef(function PreviewContent({ children, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   return React.createElement(AriaDialog, {
@@ -554,10 +554,124 @@ const ToastContext = React.createContext(null);
 const TOAST_FALLBACK_TITLE = 'Notification';
 const TOAST_PLACEMENTS = new Set(['top-start', 'top-end', 'bottom-start', 'bottom-end']);
 
-function ToastView({ toast }) {
+function createAnimatedToastQueue(queue, closingKeys) {
+  let baseSnapshot = [...queue.visibleToasts];
+  let snapshot = baseSnapshot;
+  const retained = new Map();
+  const skipRetention = new Set();
+  const listeners = new Set();
+  let suppressRetention = false;
+  const sameRecords = (first, second) => first.length === second.length && first.every((record, index) => record === second[index]);
+  const rebuild = () => {
+    const nextSnapshot = [...baseSnapshot];
+    [...retained.values()]
+      .sort((first, second) => first.index - second.index || first.sequence - second.sequence)
+      .forEach(({ record, index }) => {
+        nextSnapshot.splice(Math.min(index, nextSnapshot.length), 0, record);
+      });
+    if (sameRecords(snapshot, nextSnapshot)) return;
+    snapshot = nextSnapshot;
+    listeners.forEach((listener) => listener());
+  };
+  const onQueueChange = () => {
+    const nextBase = [...queue.visibleToasts];
+    const nextKeys = new Set(nextBase.map((toast) => toast.key));
+    for (const [index, record] of baseSnapshot.entries()) {
+      if (nextKeys.has(record.key)) continue;
+      // A visible record can leave the base snapshot because a newer toast
+      // displaced it into RAC's private queue. Retain only records whose
+      // queue-owned onClose callback marked an actual dismissal.
+      if (suppressRetention || skipRetention.delete(record.key) || !closingKeys.delete(record.key)) continue;
+      retained.set(record.key, { record: { ...record, isExiting: true }, index, sequence: retained.size });
+    }
+    for (const key of nextKeys) retained.delete(key);
+    baseSnapshot = nextBase;
+    rebuild();
+  };
+  queue.subscribe(onQueueChange);
+  const animatedQueue = {
+    get visibleToasts() {
+      return snapshot;
+    },
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    add(content, options) {
+      return queue.add(content, options);
+    },
+    close(key) {
+      if (retained.has(key)) return;
+      const wasVisible = baseSnapshot.some((record) => record.key === key);
+      queue.visibleToasts.find((toast) => toast.key === key)?.timer?.pause();
+      queue.close(key);
+      if (!wasVisible) closingKeys.delete(key);
+    },
+    commitClose(key) {
+      if (!retained.delete(key)) return;
+      rebuild();
+    },
+    dispose(key, settle = true) {
+      if (settle) return animatedQueue.close(key);
+      skipRetention.add(key);
+      retained.delete(key);
+      const wasVisible = baseSnapshot.some((record) => record.key === key);
+      queue.close(key);
+      skipRetention.delete(key);
+      if (!wasVisible) closingKeys.delete(key);
+      rebuild();
+    },
+    pauseAll: () => queue.pauseAll(),
+    resumeAll: () => queue.resumeAll(),
+    clear() {
+      suppressRetention = true;
+      retained.clear();
+      closingKeys.clear();
+      queue.clear();
+      suppressRetention = false;
+      rebuild();
+    },
+  };
+  return animatedQueue;
+}
+
+function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef }) {
   const value = toast.content;
   const hasTitle = hasRenderableLabel(value.title);
-  return React.createElement(AriaToast, { toast, className: classNames('muxui-toast', value.className), 'data-variant': value.variant },
+  const nodeRef = React.useRef(null);
+  const entryFinishedRef = React.useRef(false);
+  const timerPausedRef = React.useRef(false);
+  const resumeTimer = React.useCallback(() => {
+    entryFinishedRef.current = true;
+    if (timerPausedRef.current) {
+      toast.timer?.resume();
+      timerPausedRef.current = false;
+    }
+  }, [toast.timer]);
+  const lifecycleRef = useMotionLifecycle({
+    isOpen: !toast.isExiting,
+    placement: placement.startsWith('bottom') ? 'bottom' : 'top',
+    triggerRef: originRef,
+    property: 'transform',
+    onEntryComplete: resumeTimer,
+    onExitComplete: () => onExitComplete(toast.key),
+  });
+  React.useEffect(() => {
+    if (toast.isExiting || !toast.timer || entryFinishedRef.current) return undefined;
+    toast.timer.pause();
+    timerPausedRef.current = true;
+    return () => {
+      if (!timerPausedRef.current) return;
+      toast.timer?.resume();
+      timerPausedRef.current = false;
+    };
+  }, [toast.isExiting, toast.timer]);
+  useMotionLayout(nodeRef, layoutVersion, originRef);
+  const setRef = React.useCallback((node) => {
+    nodeRef.current = node;
+    lifecycleRef(node);
+  }, [lifecycleRef]);
+  return React.createElement(AriaToast, { ref: setRef, toast, className: classNames('muxui-toast', value.className), 'data-variant': value.variant, 'data-muxui-toast-exiting': toast.isExiting || undefined, 'aria-hidden': toast.isExiting || undefined, inert: toast.isExiting || undefined },
     React.createElement(AriaToastContent, { className: 'muxui-toast-content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast-title', !hasTitle && 'muxui-toast-title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast-message' }, value.message)),
@@ -570,6 +684,14 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
   const queueRef = React.useRef(null);
   if (!queueRef.current) queueRef.current = new UNSTABLE_ToastQueue({ maxVisibleToasts: normalizeMaxVisible(maxVisible) });
   const queue = queueRef.current;
+  const closingKeysRef = React.useRef(null);
+  if (!closingKeysRef.current) closingKeysRef.current = new Set();
+  const animatedQueueRef = React.useRef(null);
+  if (!animatedQueueRef.current) animatedQueueRef.current = createAnimatedToastQueue(queue, closingKeysRef.current);
+  const animatedQueue = animatedQueueRef.current;
+  const motionOriginRef = React.useRef(null);
+  const [layoutVersion, setLayoutVersion] = React.useState(0);
+  React.useEffect(() => animatedQueue.subscribe(() => setLayoutVersion((version) => version + 1)), [animatedQueue]);
   const callbacksRef = React.useRef(new Map());
   const activeRef = React.useRef(true);
   const teardownRequestedRef = React.useRef(false);
@@ -585,23 +707,26 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     if (!activeRef.current || (teardownRequestedRef.current && !allowDuringTeardown)) return '';
     const { duration, onDismiss, ...content } = options;
     let key;
-    key = queue.add({ ...content, message }, {
+    key = animatedQueue.add({ ...content, message }, {
       timeout: duration ?? 5000,
-      onClose: () => notifyDismissed(key),
+      onClose: () => {
+        closingKeysRef.current.add(key);
+        notifyDismissed(key);
+      },
     });
     callbacksRef.current.set(key, onDismiss);
     return key;
-  }, [notifyDismissed, queue]);
+  }, [animatedQueue, notifyDismissed]);
   const remove = React.useCallback((id) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
-    queue.close(id);
-  }, [queue]);
+    animatedQueue.close(id);
+  }, [animatedQueue]);
   const dispose = React.useCallback((id, settle = true) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
-    queue.visibleToasts.find((toast) => toast.key === id)?.timer?.pause();
+    animatedQueue.visibleToasts.find((toast) => toast.key === id)?.timer?.pause();
     if (!settle) callbacksRef.current.delete(id);
-    queue.close(id);
-  }, [queue]);
+    animatedQueue.dispose(id, settle);
+  }, [animatedQueue]);
   const addDeclarative = React.useCallback((message, options = {}) => add(message, options, true), [add]);
   const lifecycleRef = React.useRef(0);
   React.useEffect(() => {
@@ -613,8 +738,8 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
       queueMicrotask(() => {
       if (lifecycleRef.current !== generation) return;
       activeRef.current = false;
-      queue.pauseAll();
-      queue.clear();
+      animatedQueue.pauseAll();
+      animatedQueue.clear();
       callbacksRef.current.clear();
       });
     };
@@ -622,11 +747,10 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
   const manager = React.useMemo(() => ({ add, remove }), [add, remove]);
   const value = React.useMemo(() => ({ manager, addDeclarative, dispose }), [addDeclarative, dispose, manager]);
   return React.createElement(ToastContext.Provider, { value }, children,
-    React.createElement(UNSTABLE_ToastRegion, { queue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
-      ({ toast }) => React.createElement(ToastView, { toast })));
+    React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
+    React.createElement(UNSTABLE_ToastRegion, { queue: animatedQueue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
+      ({ toast }) => React.createElement(ToastView, { toast, placement, layoutVersion, originRef: motionOriginRef, onExitComplete: animatedQueue.commitClose })));
 };
-
-ToastProvider.displayName = 'ToastProvider';
 
 export function useToast() {
   const context = React.useContext(ToastContext);
@@ -665,5 +789,3 @@ export const Toast = function Toast({
   }, [add, dispose, message, title, variant, duration, onDismiss, className]);
   return null;
 };
-
-Toast.displayName = 'Toast';

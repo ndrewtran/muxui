@@ -227,10 +227,11 @@ export function changedPackageSelection({ changedPaths, packages, policy }) {
   };
 }
 
-export function familyRecordsFromContract(contract) {
+export function familyRecordsFromContract(contract, bindings = []) {
+  const exportsByBinding = new Map(bindings.map((record) => [record.binding, record.export]));
   return (contract.components ?? contract.bindings ?? []).map((record) => ({
     family: record.family ?? record.export,
-    export: record.export,
+    export: record.export ?? exportsByBinding.get(record.binding),
     name: record.name,
     slug: record.slug ?? String(record.family ?? record.export).replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
     source: record.source,
@@ -239,11 +240,14 @@ export function familyRecordsFromContract(contract) {
 
 export async function loadReactFamilyRecords(repositoryRoot) {
   const paths = ['packages/react/generated/r1-6-contract.json', 'packages/react/generated/descriptor.json'];
-  for (const path of paths) {
+  const contracts = await Promise.all(paths.map(async (path) => {
     const content = await readFile(`${repositoryRoot}/${path}`, 'utf8').catch(() => null);
-    if (!content) continue;
-    const contract = JSON.parse(content.split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
-    const records = familyRecordsFromContract(contract);
+    return content ? JSON.parse(content.split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n')) : null;
+  }));
+  for (const contract of contracts) {
+    if (!contract) continue;
+    // The family contract retains substrate names; the descriptor projects public exports.
+    const records = familyRecordsFromContract(contract, contracts[1]?.bindings);
     if (records.length > 0) return records;
   }
   throw new Error('MUXUI_COMPONENT_METADATA_MISSING: generate @muxui/react before selecting a component');
@@ -268,6 +272,7 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
   let reason = `${options.task} requested full workspace coverage`;
   let directPackages = packages;
   let familySelection = [];
+  let storybookFamilySelection = [];
   let focusedComponent = false;
 
   if (options.full) {
@@ -276,6 +281,7 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
   } else if (options.components.length > 0) {
     const records = expandRelatedFamilies(familyRecords, resolveComponents(options.components, familyRecords));
     familySelection = records.map(({ family }) => family);
+    storybookFamilySelection = records.map((record) => record.export ?? record.family);
     directPackages = packages.filter(({ name }) => ['@muxui/react', '@muxui/react-storybook'].includes(name));
     if (directPackages.length === 0) throw new Error('MUXUI_COMPONENT_PACKAGES_MISSING: React and Storybook packages are required');
     scope = 'component';
@@ -327,6 +333,7 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
     focusedComponent,
     reason,
     familySelection: [...new Set(familySelection)].sort(),
+    storybookFamilySelection: [...new Set(storybookFamilySelection)].sort(),
     directPackages,
     checkPackages,
     generationPackages,

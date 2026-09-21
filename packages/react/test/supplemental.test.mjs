@@ -369,7 +369,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   const references = new Set([...styles.matchAll(/var\(--([A-Za-z0-9_-]+)/gu)].map((match) => match[1]));
   const foundations = [...references].filter((name) => /^(?:muxui-semantic|muxui-reference)-/u.test(name));
   const localHooks = [...references].filter((name) => /^muxui-(?:focus-ring|field|item|popup|group-label|switch-field)-/u.test(name));
-  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size)$/u.test(name));
+  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size|muxui-modal-(?:y|scale))$/u.test(name));
   const unknown = [...references].filter((name) => !foundations.includes(name) && !localHooks.includes(name) && !runtimeLocals.includes(name));
   assert.ok(foundations.some((name) => name.startsWith('muxui-semantic-')));
   assert.ok(foundations.every((name) => name.startsWith('muxui-semantic-')));

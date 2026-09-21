@@ -85,7 +85,6 @@
   --muxui-popup-shadow: var(--muxui-semantic-elevation-overlay);
   --muxui-popup-transition-duration: var(--muxui-semantic-motion-interaction-duration);
   --muxui-popup-transition-easing: var(--muxui-semantic-motion-interaction-easing);
-  --muxui-popup-enter-scale: 0.97;
   --muxui-item-padding-block: var(--muxui-semantic-layout-tight-inset);
   --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-small);
   --muxui-item-gap: var(--muxui-semantic-layout-group-gap);
@@ -734,18 +733,20 @@
     transform var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing);
 }
 
-.muxui-select-popover[data-entering],
-.muxui-select-popover[data-exiting],
-.muxui-combo-box-popover[data-entering],
-.muxui-combo-box-popover[data-exiting],
-.muxui-autocomplete-list[data-entering],
-.muxui-autocomplete-list[data-exiting],
-.muxui-menu[data-entering],
-.muxui-menu[data-exiting],
-.muxui-popover[data-entering],
-.muxui-popover[data-exiting] {
-  opacity: 0;
-  transform: scale(var(--muxui-popup-enter-scale));
+/* PopoverMotion owns the finite shell cycle. Keep RAC's placement transform
+   and avoid a second CSS transition on the same surface. */
+.muxui-select-popover,
+.muxui-combo-box-popover,
+.muxui-autocomplete-popover,
+.muxui-autocomplete-list,
+.muxui-menu,
+.muxui-menu-popup,
+.muxui-popover,
+.muxui-alert-dialog__popup,
+.muxui-command-palette__popup,
+.muxui-multi-select__popup,
+.muxui-tag-select__popup {
+  transition: none;
 }
 
 /* Shared group headers use the list/menu primitive. The
@@ -827,15 +828,6 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-prose-line-height);
-  transition:
-    height var(--muxui-semantic-motion-content-resize-duration) var(--muxui-semantic-motion-interaction-easing),
-    opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-disclosure-panel[data-entering],
-.muxui-disclosure-panel[data-exiting] {
-  height: 0;
-  opacity: 0;
 }
 
 .muxui-field-description {
@@ -1110,26 +1102,6 @@
   }
 }
 
-.muxui-date-popover[data-exiting] {
-  animation: muxui-date-popover-fade-out var(--muxui-semantic-motion-exit-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-date-popover[data-muxui-date-popover-reduced][data-exiting] {
-  animation: none !important;
-}
-
-@keyframes muxui-date-popover-fade-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
 .muxui-date-dialog {
   outline: none;
 }
@@ -1353,7 +1325,7 @@
   inset: 0;
   background-color: var(--muxui-modal-backdrop-bg);
   z-index: 100;
-  transition: opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
+  transition: opacity var(--muxui-semantic-motion-modal-enter-duration) var(--muxui-semantic-motion-modal-easing);
 }
 
 :where(
@@ -1363,6 +1335,21 @@
   .muxui-command-palette__backdrop[data-exiting]
 ) {
   opacity: 0;
+}
+
+:where(
+  .muxui-alert-dialog__backdrop[data-exiting],
+  .muxui-command-palette__backdrop[data-exiting]
+) {
+  transition-duration: var(--muxui-semantic-motion-exit-duration);
+}
+
+:where(
+  .muxui-alert-dialog__backdrop[data-muxui-dialog-reduced],
+  .muxui-command-palette__backdrop[data-muxui-dialog-reduced]
+) {
+  opacity: 1 !important;
+  transition: none !important;
 }
 
 :where(
@@ -1381,7 +1368,7 @@
   inset: 0;
   background-color: var(--muxui-modal-backdrop-bg);
   z-index: 100;
-  transition: opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing);
+  transition: opacity var(--muxui-semantic-motion-modal-enter-duration) var(--muxui-semantic-motion-modal-easing);
 }
 .muxui-dialog-backdrop[data-entering] {
   opacity: 0;
@@ -1389,7 +1376,7 @@
 .muxui-dialog-backdrop[data-exiting] {
   opacity: 0;
   transition-duration: var(--muxui-semantic-motion-exit-duration);
-  transition-timing-function: var(--muxui-semantic-motion-interaction-easing);
+  transition-timing-function: var(--muxui-semantic-motion-modal-easing);
 }
 
 .muxui-dialog-close {

@@ -87,7 +87,7 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) translateY(var(--muxui-modal-y, 0px)) scale(var(--muxui-modal-scale, 1));
   z-index: 101;
   width: min(90vw, 27.5rem);
   background-color: var(--muxui-semantic-color-neutral-10);
@@ -99,15 +99,6 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-action-gap);
   outline: none;
-  transition:
-    opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
-    transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-alert-dialog__popup[data-entering],
-.muxui-alert-dialog__popup[data-exiting] {
-  opacity: 0;
-  transform: translate(-50%, calc(-50% - 0.5rem));
 }
 
 
@@ -557,10 +548,7 @@
   background-color: var(--muxui-semantic-color-neutral-10);
   box-shadow: var(--muxui-semantic-elevation-modal);
   outline: none;
-  transform: translateX(-50%);
-  transition:
-    opacity var(--muxui-semantic-motion-panel-enter-duration) var(--muxui-semantic-motion-interaction-easing),
-    transform var(--muxui-semantic-motion-panel-enter-duration) var(--muxui-semantic-motion-interaction-easing);
+  transform: translateX(-50%) translateY(var(--muxui-modal-y, 0px)) scale(var(--muxui-modal-scale, 1));
 }
 
 .muxui-command-palette--sm .muxui-command-palette__popup {
@@ -569,12 +557,6 @@
 
 .muxui-command-palette--lg .muxui-command-palette__popup {
   width: min(94vw, 50rem);
-}
-
-.muxui-command-palette__popup[data-entering],
-.muxui-command-palette__popup[data-exiting] {
-  opacity: 0;
-  transform: translate(-50%, -0.5rem);
 }
 
 .muxui-command-palette__backdrop--transparent {

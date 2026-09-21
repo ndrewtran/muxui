@@ -954,6 +954,19 @@
       "overridePolicy": "theme",
       "alias": "reference.motion.duration-moderate"
     },
+    "semantic.motion.modal-enter-duration": {
+      "layer": "semantic",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of modal panels entering.",
+      "overridePolicy": "theme",
+      "alias": "reference.motion.duration-moderate",
+      "modes": {
+        "motion.reduced": {
+          "alias": "reference.motion.duration-instant"
+        }
+      }
+    },
     "semantic.layout.micro-gap": {
       "layer": "semantic",
       "type": "dimension",
@@ -1021,6 +1034,14 @@
       "meaning": "Ease-in curve for content and overlay dismissal transitions.",
       "overridePolicy": "theme",
       "value": "ease-in"
+    },
+    "semantic.motion.modal-easing": {
+      "layer": "semantic",
+      "type": "string",
+      "unit": "string",
+      "meaning": "Easing curve for modal panel and backdrop transitions.",
+      "overridePolicy": "theme",
+      "value": "cubic-bezier(0.16, 1, 0.3, 1)"
     },
     "semantic.layout.payment-icon-inset": {
       "layer": "semantic",

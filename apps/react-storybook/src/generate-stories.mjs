@@ -40,6 +40,14 @@ const canonicalStoryDefinitions = [
     storyName: 'Sizing',
     helperName: 'number-field-sizing.example.mjs',
   },
+  {
+    family: 'Tabs',
+    source: 'catalog/components/tabs/examples/react/variants.tsx',
+    importName: 'TabsVariantsExample',
+    exportName: 'Variants',
+    storyName: 'Tabs variants',
+    helperName: 'tabs-variants.example.mjs',
+  },
 ];
 const canonicalStoryExamples = new Map(await Promise.all(
   canonicalStoryDefinitions.map(async (definition) => {

@@ -61,6 +61,23 @@ export function resolvedMotionTransition(node, triggerNode, durationRole = 'inte
   return { duration, ease: easing };
 }
 
+/**
+ * Resolve a restrained duration-based spring for physical values while keeping
+ * opacity on the semantic easing curve. `visualDuration` coordinates the bulk
+ * of the spring with token-timed siblings; bounce zero keeps utility surfaces
+ * from overshooting.
+ */
+export function resolvedMotionSpring(node, triggerNode, durationRole = 'interaction', easingRole = 'interaction') {
+  const transition = resolvedMotionTransition(node, triggerNode, durationRole, easingRole);
+  if (!transition) return null;
+  return {
+    type: 'spring',
+    visualDuration: transition.duration,
+    bounce: 0,
+    opacity: { type: 'tween', duration: transition.duration, ease: transition.ease },
+  };
+}
+
 export function observeReducedMotion(node, triggerNode, onChange) {
   const update = () => onChange(isReducedMotion(node, triggerNode));
   update();

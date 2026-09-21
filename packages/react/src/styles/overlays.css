@@ -60,7 +60,7 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) translateY(var(--muxui-modal-y, 0px)) scale(var(--muxui-modal-scale, 1));
   z-index: 101;
   width: min(90vw, 30rem);
   max-inline-size: calc(100vw - (2 * var(--muxui-semantic-layout-viewport-inset)) - (2 * var(--muxui-semantic-layout-inset-large)) - 2px);
@@ -301,9 +301,7 @@
   border-radius: var(--muxui-semantic-control-radius);
   box-shadow: var(--muxui-semantic-elevation-toast);
   outline: none;
-  transition:
-    opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing),
-    transform var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing);
+  transition: none;
 }
 
 .muxui-toast[data-variant='neutral'] {
@@ -322,10 +320,8 @@
   border-inline-start-color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-toast[data-entering],
-.muxui-toast[data-exiting] {
-  opacity: 0;
-  transform: translateY(var(--muxui-semantic-layout-group-gap));
+.muxui-toast[data-muxui-toast-exiting] {
+  pointer-events: none;
 }
 
 .muxui-toast-content {

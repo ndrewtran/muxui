@@ -683,6 +683,11 @@
       "sourcePath": "catalog/components/tabs/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/tabs/examples/react/variants.example.json",
+      "sourcePath": "catalog/components/tabs/examples/react/variants.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/tabs-usage.json",
       "sourcePath": "catalog/guides/tabs-usage.md"
@@ -923,6 +928,25 @@
       "family": "example",
       "path": "catalog/components/select-native/examples/react/basic.example.json",
       "sourcePath": "catalog/components/select-native/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/command-palette/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/command-palette/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/command-palette/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/command-palette/examples/react/controlled-query.example.json",
+      "sourcePath": "catalog/components/command-palette/examples/react/controlled-query.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/command-palette/examples/react/managed-commands.example.json",
+      "sourcePath": "catalog/components/command-palette/examples/react/managed-commands.tsx"
     }
   ]
 }

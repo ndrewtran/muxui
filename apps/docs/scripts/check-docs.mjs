@@ -56,6 +56,9 @@ const guides = listGuides();
 const slugs = components.map(({ id }) => id.slice(id.lastIndexOf(':') + 1));
 assert(new Set(slugs).size === slugs.length, 'The canonical component inventory contains duplicate route slugs.');
 assert(slugs.every((slug) => slug.length > 0 && !slug.includes(':')), 'The canonical component inventory contains an invalid route slug.');
+const commandPalette = components.find(({ id }) => id === 'muxui:component:command-palette');
+assert(commandPalette?.name === 'CommandPalette', 'The admitted CommandPalette component is missing from the docs inventory.');
+assert(slugs.includes('command-palette'), 'The admitted CommandPalette docs route is missing from the component inventory.');
 
 for (const component of components) {
 	const response = canonicalCatalog.getArtifact({

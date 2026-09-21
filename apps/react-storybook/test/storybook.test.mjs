@@ -399,6 +399,36 @@ test('generated event and mode harnesses are behaviorally live', async () => {
   }
 });
 
+test('CommandPalette Events story opens from its trigger and closes from its popup', async () => {
+  const env = installRuntimeDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  try {
+    const story = await import('../.storybook/generated/r1-6-command-palette.stories.mjs');
+    await act(async () => root.render(story.Events.render(story.Events.args)));
+    const palette = host.querySelector('.muxui-command-palette');
+    const trigger = host.querySelector('.muxui-command-palette__trigger');
+    assert.ok(palette, 'CommandPalette root');
+    assert.ok(trigger, 'CommandPalette trigger');
+    assert.equal(palette.hasAttribute('data-open'), false);
+
+    await act(async () => trigger.click());
+    assert.equal(palette.hasAttribute('data-open'), true);
+    assert.ok(document.body.querySelector('.muxui-command-palette__popup'), 'CommandPalette popup after trigger activation');
+    assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /openChange: true/u);
+
+    const close = document.body.querySelector('.muxui-command-palette__close');
+    assert.ok(close, 'CommandPalette close control');
+    await act(async () => close.click());
+    assert.equal(palette.hasAttribute('data-open'), false);
+    assert.match(host.querySelector('[data-muxui-storybook-event-log]').textContent, /openChange: false/u);
+  } finally {
+    await act(async () => root.unmount());
+    env.resolveAnimations();
+    env.restore();
+  }
+});
+
 test('anatomy proof resolves every canonical part to a live DOM or executable route', async () => {
   const unresolved = [];
   for (const record of historicalManifest.families) {
@@ -454,6 +484,10 @@ test('control inference and composition adapters preserve canonical values', () 
   assert.deepEqual(
     argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Toast')).variant.options,
     ['neutral', 'success', 'warning', 'danger'],
+  );
+  assert.deepEqual(
+    argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Tabs')).variant.options,
+    ['underline', 'pill', 'overflow', 'segment'],
   );
   assert.equal(argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Popover')).placement.options.includes('left'), false);
   assert.equal(argTypesForBinding(descriptor.bindings.find(({ export: name }) => name === 'Popover')).placement.options.includes('right'), false);

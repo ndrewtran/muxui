@@ -40,13 +40,16 @@ export function CalendarHeightMotion({ children }) {
       const from = controls ? body.getBoundingClientRect().height : targetHeight;
       targetHeight = nextHeight;
       settle();
-      const transition = resolvedMotionTransition(body, triggerRef?.current, 'interaction');
+      const transition = resolvedMotionTransition(body, triggerRef?.current, 'content-resize');
       if (!transition || from <= 0 || nextHeight <= 0) return;
       body.style.height = `${from}px`;
       calendar.style.overflow = 'clip';
       // Animate a number so cleanup owns every height write, including interruption.
       controls = animate(from, nextHeight, {
-        ...transition,
+        // The content-resize token bounds the whole interpolation, including settle.
+        type: 'spring',
+        duration: transition.duration,
+        bounce: 0,
         onUpdate: (height) => { body.style.height = `${height}px`; },
         onComplete: () => {
           controls = null;

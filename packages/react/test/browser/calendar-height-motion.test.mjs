@@ -34,8 +34,20 @@ function geometry(page) {
   });
 }
 
-async function settled(page) {
+async function settled(page, previous) {
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  if (previous) {
+    const samples = await page.locator('.muxui-calendar-grid').evaluate(async (grid) => {
+      const samples = [];
+      while (grid.parentElement.style.height) {
+        samples.push(grid.parentElement.getBoundingClientRect().height);
+        await new Promise(requestAnimationFrame);
+      }
+      return samples;
+    });
+    const target = (await geometry(page)).grid;
+    assert.ok(samples.every((height) => height >= Math.min(previous.body, target) - 0.5 && height <= Math.max(previous.body, target) + 0.5), 'spring settles without height overshoot');
+  }
   await page.waitForFunction(() => !document.querySelector('.muxui-calendar-grid').parentElement.style.height);
   const result = await geometry(page);
   assert.ok(Math.abs(result.body - result.grid) < 1, `body returns to natural grid height: ${JSON.stringify(result)}`);
@@ -93,14 +105,14 @@ test('calendar month height interpolates without changing semantics or reduced m
       if (kind.includes('picker')) {
         await page.locator('.muxui-date-trigger').click();
         await page.locator('.muxui-calendar-grid').waitFor();
-        await page.waitForTimeout(180);
+        await page.waitForFunction(() => document.querySelector('.muxui-date-popover').getAnimations().every((animation) => animation.playState === 'finished'));
         assert.match(await page.locator('.muxui-date-popover').getAttribute('data-placement'), kind === 'range-picker' ? /top/u : /bottom/u);
       }
       const initial = await settled(page);
       assert.equal(initial.rows, 4, `${kind}: February has four rows and no initial height animation`);
       await navigate(page, 'next');
       await inFlight(page, initial, true);
-      const march = await settled(page);
+      const march = await settled(page, initial);
       assert.equal(march.rows, 5);
       assert.ok(march.calendar > initial.calendar);
       await navigate(page, 'next');
@@ -108,11 +120,11 @@ test('calendar month height interpolates without changing semantics or reduced m
       const april = await settled(page);
       await navigate(page, 'next');
       await inFlight(page, april, true);
-      const may = await settled(page);
+      const may = await settled(page, april);
       assert.equal(may.rows, 6);
       await navigate(page, 'previous');
       await inFlight(page, may, false);
-      await settled(page);
+      await settled(page, may);
 
       // Redirect an active growth back toward the smaller month.
       await navigate(page, 'next');

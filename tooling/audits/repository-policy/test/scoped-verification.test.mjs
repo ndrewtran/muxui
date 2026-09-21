@@ -29,6 +29,7 @@ const records = [
   { family: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.mjs' },
   { family: 'RangeCalendar', slug: 'range-calendar', source: 'packages/react/src/collections.mjs' },
   { family: 'Button', slug: 'button', source: 'packages/react/src/button.mjs' },
+  { family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.mjs' },
 ];
 
 test('task arguments accept repeatable selectors and reject empty or mixed scopes', () => {
@@ -84,8 +85,20 @@ test('component scope expands the canonical date family group and keeps generati
   });
   assert.equal(plan.scope, 'component');
   assert.deepEqual(plan.familySelection, ['Calendar', 'DateField', 'DatePicker', 'DateRangePicker', 'RangeCalendar']);
+  assert.deepEqual(plan.storybookFamilySelection, plan.familySelection);
   assert.deepEqual(plan.checkPackages.map(({ name }) => name).sort(), ['@muxui/react', '@muxui/react-storybook']);
   assert.deepEqual(plan.generationPackages.map(({ name }) => name), ['@muxui/schema', '@muxui/react', '@muxui/react-storybook']);
+});
+
+test('component aliases retain substrate families while Storybook selects public exports', () => {
+  const plan = planScopedTask({
+    options: parseTaskArguments(['check', '--component', 'dialog,Dialog,Modal,muxui:component:dialog#web.react,button']),
+    packages,
+    policy,
+    familyRecords: records,
+  });
+  assert.deepEqual(plan.familySelection, ['Button', 'Modal']);
+  assert.deepEqual(plan.storybookFamilySelection, ['Button', 'Dialog']);
 });
 
 test('package and file scopes include dependents while generation includes their prerequisite closure', () => {

@@ -8,7 +8,7 @@
   "binding": {
     "ref": "muxui:component:command-palette#web.react",
     "guidanceImpact": "normative",
-    "purposes": ["generation", "explanation", "validation"],
+    "purposes": ["explanation", "validation"],
     "preference": 2
   },
   "complexity": "minimal",

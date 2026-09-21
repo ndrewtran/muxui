@@ -57,7 +57,7 @@
 .muxui-separator-vertical { block-size: auto; inline-size: 1px; min-block-size: auto; }
 
 @media (prefers-reduced-motion: reduce) {
-  .muxui-breadcrumbs-link, .muxui-link, .muxui-disclosure-trigger, .muxui-meter-fill, .muxui-progress-bar-fill { animation: none; transition: none; }
+  .muxui-breadcrumbs-link, .muxui-link, .muxui-disclosure-trigger, .muxui-disclosure-trigger-icon, .muxui-meter-fill, .muxui-progress-bar-fill { animation: none; transition: none; }
 }
 
 @media (forced-colors: active) {
@@ -456,10 +456,13 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
-  height: var(--disclosure-panel-height, auto);
   margin-top: var(--muxui-semantic-layout-control-gap);
   padding: 0;
+}
+
+.muxui-disclosure-motion-panel {
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .muxui-disclosure-header {
@@ -947,7 +950,7 @@
   }
 }
 
-:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
+:where([data-reduced-motion], [data-muxui-motion='reduced']) :where(.muxui-button, .muxui-checkbox, .muxui-link, .muxui-disclosure, .muxui-disclosure-trigger-icon, .muxui-meter, .muxui-progress-bar, .muxui-progress-circle__track, .muxui-progress-circle__indicator, .muxui-toggle-button) {
   animation: none !important;
   transition-duration: 0s !important;
 }
@@ -1292,6 +1295,7 @@
   flex: 0 0 auto;
   color: var(--muxui-semantic-color-neutral-default-50);
   transform: rotate(0deg);
+  transition: transform var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-disclosure-group .muxui-disclosure[data-expanded] .muxui-disclosure-trigger-icon {
@@ -1302,8 +1306,6 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
-  height: var(--disclosure-panel-height, auto);
   margin-top: 0;
   padding-inline: var(--muxui-semantic-layout-inset-medium);
 }

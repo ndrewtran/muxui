@@ -87,7 +87,7 @@ function environmentFor(plan, options) {
   } else if (plan.focusedComponent) {
     const families = plan.familySelection.join(',');
     environment.MUXUI_COMPONENT_FAMILIES = families;
-    environment.MUXUI_STORYBOOK_FAMILIES = families;
+    environment.MUXUI_STORYBOOK_FAMILIES = plan.storybookFamilySelection.join(',');
     environment.MUXUI_STORYBOOK_AUDIT_MODE = 'focused';
     environment.MUXUI_STORYBOOK_AUDIT_EVENT = 'component';
     environment.MUXUI_STORYBOOK_AUDIT_FORCE = '0';
@@ -150,7 +150,7 @@ const planLabel = plan.full
 console.log(`[workspace-task] ${options.task}: ${planLabel}`);
 console.log(`[workspace-task] reason: ${plan.reason}`);
 if (changedPaths.length > 0) console.log(`[workspace-task] changed paths: ${changedPaths.join(', ')}`);
-if (plan.familySelection.length > 0) console.log(`[workspace-task] Storybook families: ${plan.familySelection.join(', ')}`);
+if (plan.storybookFamilySelection.length > 0) console.log(`[workspace-task] Storybook families: ${plan.storybookFamilySelection.join(', ')}`);
 console.log(`[workspace-task] generation packages: ${packageNames(plan.generationPackages)}`);
 console.log(`[workspace-task] check packages: ${packageNames(plan.checkPackages)}`);
 

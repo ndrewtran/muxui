@@ -9,7 +9,6 @@
     "ref": "muxui:component:command-palette#web.react",
     "guidanceImpact": "normative",
     "purposes": [
-      "generation",
       "explanation",
       "validation"
     ],

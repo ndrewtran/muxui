@@ -80,12 +80,14 @@ async function readMotion(page) {
   return page.locator('.muxui-dialog').evaluate((node) => {
     const style = getComputedStyle(node);
     const rect = node.getBoundingClientRect();
-    const matrix = style.transform === 'none' ? null : new DOMMatrixReadOnly(style.transform);
-    const y = matrix && Number.isFinite(matrix.m42) ? matrix.m42 + (rect.height / 2) : 0;
+    const y = Number.parseFloat(style.getPropertyValue('--muxui-modal-y')) || 0;
+    const scale = Number.parseFloat(style.getPropertyValue('--muxui-modal-scale')) || 1;
     return {
       opacity: Number(style.opacity),
       y,
+      scale,
       transform: style.transform,
+      translate: style.getPropertyValue('--muxui-modal-y'),
       centeredX: rect.left + rect.width / 2,
       centeredY: rect.top + rect.height / 2,
       viewportX: window.innerWidth / 2,
@@ -96,7 +98,7 @@ async function readMotion(page) {
         easing: animation.effect?.getComputedTiming().easing,
         playState: animation.playState,
       })),
-      keyframes: node.getAnimations().flatMap((animation) => animation.effect?.getKeyframes().map(({ opacity, transform }) => ({ opacity, transform })) ?? []),
+      keyframes: node.getAnimations().flatMap((animation) => animation.effect?.getKeyframes().map(({ opacity, translate, scale }) => ({ opacity, translate, scale })) ?? []),
     };
   });
 }
@@ -109,6 +111,33 @@ async function openTriggered(page) {
 async function closeAndWait(page, timeout = 500) {
   await page.keyboard.press('Escape');
   await page.locator('.muxui-dialog').waitFor({ state: 'detached', timeout });
+}
+
+async function settleEntry(page) {
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.muxui-dialog');
+    if (!panel || panel.getAnimations().some((animation) => animation.playState !== 'finished')) return false;
+    const style = getComputedStyle(panel);
+    return Math.abs(Number(style.opacity) - 1) < 0.0001
+      && Math.abs(Number.parseFloat(style.getPropertyValue('--muxui-modal-y')) || 0) < 0.01
+      && Math.abs((Number.parseFloat(style.getPropertyValue('--muxui-modal-scale')) || 1) - 1) < 0.0001;
+  });
+}
+
+async function waitForPanelEntry(page) {
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.muxui-dialog');
+    if (!panel) return false;
+    const y = Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y'));
+    return Number.isFinite(y) && y < 0;
+  });
+}
+
+async function waitForPanelExit(page) {
+  await page.waitForFunction(() => {
+    const panel = document.querySelector('.muxui-dialog');
+    return panel && Number(getComputedStyle(panel).opacity) < 1;
+  });
 }
 
 test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, focus, and reduced cleanup', { timeout: 120_000 }, async () => {
@@ -126,60 +155,64 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     assert.equal(await page.locator('.muxui-dialog').count(), 0, 'SSR and hydration begin closed');
 
     await openTriggered(page);
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
+    await waitForPanelEntry(page);
     await page.waitForTimeout(45);
     const entry = await readMotion(page);
     assert.ok(entry.opacity > 0 && entry.opacity < 1, `entry fades in: ${JSON.stringify(entry)}`);
-    assert.ok(entry.y > 0 && entry.y < 120, `entry translates up toward center: ${JSON.stringify(entry)}`);
-    assert.equal(entry.animations.some(({ duration }) => Number(duration) === 200), true, 'entry uses reveal duration');
-    assert.equal(entry.animations.some(({ easing }) => String(easing).includes('0.58')), true, 'entry uses reveal easing');
-    assert.equal(entry.keyframes.some(({ transform }) => String(transform).includes('translateY(120px)')), true, 'entry starts exactly 120px below center');
-    assert.equal(entry.keyframes.some(({ transform }) => String(transform).includes('translateY(0px)')), true, 'entry ends at the centered transform');
-    await page.waitForTimeout(180);
+    assert.ok(entry.y < 0 && entry.y > -8, `entry translates toward center: ${JSON.stringify(entry)}`);
+    assert.ok(entry.scale > 0.97 && entry.scale < 1, `entry scales toward the settled panel: ${JSON.stringify(entry)}`);
+    assert.equal(await page.locator('.muxui-dialog-backdrop').evaluate((node) => getComputedStyle(node).transitionDuration), '0.18s', 'backdrop uses modal entry duration');
+    await settleEntry(page);
     const settledEntry = await readMotion(page);
     assert.equal(settledEntry.opacity, 1);
     assert.ok(Math.abs(settledEntry.y) < 1, `entry settles at y=0: ${JSON.stringify(settledEntry)}`);
+    assert.ok(Math.abs(settledEntry.scale - 1) < 0.001, `entry settles at scale=1: ${JSON.stringify(settledEntry)}`);
     assert.ok(Math.abs(settledEntry.centeredX - settledEntry.viewportX) < 1, 'settled dialog remains horizontally centered');
     assert.ok(Math.abs(settledEntry.centeredY - settledEntry.viewportY) < 1, 'settled dialog remains vertically centered');
     await page.screenshot({ path: '/tmp/muxui-dialog-motion-full-light.png' });
     assert.equal(await page.locator('.muxui-dialog').evaluate((node) => node.contains(document.activeElement)), true, 'opening moves focus into the dialog');
 
     await page.keyboard.press('Escape');
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 120));
+    await waitForPanelExit(page);
     await page.waitForTimeout(35);
     const exit = await readMotion(page);
     assert.ok(exit.opacity < 1, `exit fades out: ${JSON.stringify(exit)}`);
-    assert.ok(exit.y < 0 && exit.y > -120, `exit translates upward: ${JSON.stringify(exit)}`);
-    assert.equal(exit.animations.some(({ duration }) => Number(duration) === 120), true, 'exit uses duration token');
-    assert.equal(exit.keyframes.some(({ transform }) => {
-      const match = /translateY\(([-+\d.e]+)px\)/u.exec(String(transform));
-      return match && Math.abs(Number(match[1])) < 0.1;
-    }), true, `exit starts at the centered transform: ${JSON.stringify(exit.keyframes)}`);
-    assert.equal(exit.keyframes.some(({ transform }) => String(transform).includes('translateY(-120px)')), true, `exit ends exactly 120px above center: ${JSON.stringify(exit.keyframes)}`);
+    assert.ok(exit.y < 0 && exit.y > -8, `exit translates upward: ${JSON.stringify(exit)}`);
+    assert.ok(exit.scale < 1 && exit.scale > 0.97, `exit scales down: ${JSON.stringify(exit)}`);
+    const exitBackdrop = await page.locator('.muxui-dialog-backdrop').evaluate((node) => {
+      const style = getComputedStyle(node);
+      return { duration: style.transitionDuration, easing: style.transitionTimingFunction };
+    });
+    assert.equal(exitBackdrop.duration, '0.12s', 'backdrop uses modal exit duration');
+    assert.equal(exitBackdrop.easing, 'cubic-bezier(0.16, 1, 0.3, 1)', 'backdrop uses modal easing');
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.activeElement?.classList.contains('muxui-dialog-trigger'));
     assert.equal(await page.locator('.muxui-dialog-trigger').evaluate((node) => document.activeElement === node), true, 'Escape restores trigger focus');
 
     await page.evaluate(() => window.__muxuiDialogSetModeOpen('rejected'));
     await page.locator('.muxui-dialog').waitFor();
-    await page.waitForTimeout(220);
+    await settleEntry(page);
     await page.locator('.muxui-dialog-close').click();
     await page.waitForTimeout(35);
     assert.equal(await page.locator('.muxui-dialog').count(), 1, 'a rejected controlled close leaves the dialog open');
     assert.equal(await page.locator('.muxui-dialog-backdrop').getAttribute('data-exiting'), null, 'a rejected close does not enter exit state');
-    assert.equal((await readMotion(page)).animations.some(({ duration }) => Number(duration) === 120), false, 'a rejected close does not start exit motion');
+    const rejectedMotion = await readMotion(page);
+    assert.equal(rejectedMotion.opacity, 1, 'a rejected close leaves panel opacity settled');
+    assert.ok(Math.abs(rejectedMotion.y) < 1 && Math.abs(rejectedMotion.scale - 1) < 0.001, 'a rejected close leaves panel geometry settled');
     assert.equal((await page.evaluate(() => window.__muxuiDialogChanges)).at(-1), false, 'the rejected close still reports the dismissal request');
     await page.evaluate(() => window.__muxuiDialogSetMode('trigger'));
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
 
     await page.evaluate(() => {
-      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-enter-duration', '800ms');
       document.documentElement.setAttribute('data-muxui-motion', 'full');
-      document.getElementById('dialog-scope').setAttribute('data-muxui-motion', 'full');
+      const scope = document.getElementById('dialog-scope');
+      scope.setAttribute('data-muxui-motion', 'full');
     });
     await page.evaluate(() => window.__muxuiDialogSetMode('no-trigger'));
     await page.evaluate(() => window.__muxuiDialogSetOpen(true));
     await page.locator('.muxui-dialog').waitFor();
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 800));
+    await waitForPanelEntry(page);
     await page.waitForTimeout(50);
     await page.locator('#dialog-scope').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
@@ -187,8 +220,9 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
       const backdrop = document.querySelector('.muxui-dialog-backdrop');
       return panel?.hasAttribute('data-muxui-dialog-reduced')
         && backdrop?.hasAttribute('data-muxui-dialog-reduced')
-        && panel.getAnimations().every((animation) => Number(animation.effect?.getComputedTiming().duration) <= 1)
-        && getComputedStyle(panel).opacity === '1';
+        && getComputedStyle(panel).opacity === '1'
+        && Math.abs(Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-y')) || 0) < 0.01
+        && Math.abs((Number.parseFloat(getComputedStyle(panel).getPropertyValue('--muxui-modal-scale')) || 1) - 1) < 0.0001;
     }, undefined, { timeout: 250 });
     const nestedReduced = await readMotion(page);
     assert.equal(nestedReduced.reduced, true, 'nested explicit reduction marks the portaled panel');
@@ -201,18 +235,19 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
       document.documentElement.setAttribute('data-muxui-motion', 'full');
-      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '200ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-modal-enter-duration', '180ms');
       document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
-      document.getElementById('dialog-scope').setAttribute('data-muxui-motion', 'full');
+      const scope = document.getElementById('dialog-scope');
+      scope.setAttribute('data-muxui-motion', 'full');
       window.__muxuiDialogSetMode('no-trigger');
     });
     await page.evaluate(() => window.__muxuiDialogSetOpen(true));
     await page.locator('.muxui-dialog').waitFor();
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
-    await page.waitForTimeout(220);
+    await waitForPanelEntry(page);
+    await settleEntry(page);
     await page.screenshot({ path: '/tmp/muxui-dialog-motion-full-dark.png' });
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 800));
+    await waitForPanelExit(page);
     await page.waitForTimeout(40);
     const slowedExitReductionStarted = Date.now();
     await page.locator('#dialog-scope').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
@@ -257,17 +292,18 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
 
     await page.evaluate(() => {
-      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-modal-enter-duration');
       window.__muxuiDialogSetMode('trigger');
     });
     await openTriggered(page);
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
+    await waitForPanelEntry(page);
     await page.evaluate(() => {
       window.__muxuiDialogSetOpen(false);
       window.setTimeout(() => window.__muxuiDialogSetOpen(true), 24);
     });
     await page.locator('.muxui-dialog').waitFor();
-    await page.waitForTimeout(240);
+    await page.waitForFunction(() => !document.querySelector('.muxui-dialog-backdrop')?.hasAttribute('data-exiting'));
+    await settleEntry(page);
     const reopened = await readMotion(page);
     assert.equal(reopened.opacity, 1, 'rapid close/reopen settles open');
     assert.ok(Math.abs(reopened.y) < 1, 'rapid close/reopen settles centered');
@@ -275,7 +311,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
     await openTriggered(page);
-    await page.waitForFunction(() => document.querySelector('.muxui-dialog')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
+    await waitForPanelEntry(page);
     await page.waitForTimeout(40);
     const capturedStyle = await page.evaluate(() => {
       window.__muxuiDialogCaptured = document.querySelector('.muxui-dialog');

@@ -103,8 +103,16 @@ async function openCalendar(page) {
 
 async function closeCalendarWithEscape(page) {
   await page.keyboard.press('Escape');
-  await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting') === true);
-  assert.equal(await page.locator('.muxui-date-popover').evaluate((node) => getComputedStyle(node).animationName), 'muxui-date-popover-fade-out');
+  await page.waitForFunction(() => {
+    const node = document.querySelector('.muxui-date-popover');
+    return node?.hasAttribute('data-exiting') && node.getAnimations().length === 2;
+  });
+  const exit = await readEntryMotion(page);
+  assert.equal(exit.animationName, 'none', 'Motion owns exit without a CSS keyframe');
+  assert.deepEqual(exit.animations.map(({ duration, easing }) => ({ duration, easing })), [
+    { duration: 120, easing: 'cubic-bezier(0.42, 0, 1, 1)' },
+    { duration: 120, easing: 'cubic-bezier(0.42, 0, 1, 1)' },
+  ], 'both exit channels use the exit duration and dismiss easing');
   await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
   assert.equal(await page.evaluate(() => document.activeElement?.matches('.muxui-date-trigger')), true, 'Escape restores trigger focus');
 }
@@ -129,14 +137,29 @@ async function readEntryMotion(page) {
         duration: animation.effect?.getComputedTiming().duration,
         easing: animation.effect?.getComputedTiming().easing,
         playState: animation.playState,
+        keyframes: animation.effect?.getKeyframes(),
       })),
     };
   });
 }
 
 async function settleEntry(page) {
-  await page.waitForTimeout(220);
+  await page.waitForFunction(() => {
+    const node = document.querySelector('.muxui-date-popover');
+    if (!node) return false;
+    const style = getComputedStyle(node);
+    return style.opacity === '1' && new DOMMatrixReadOnly(style.transform).m42 === 0
+      && node.getAnimations().every((animation) => animation.playState === 'finished');
+  });
   return readEntryMotion(page);
+}
+
+function assertEntryMotion(entry) {
+  const fade = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.opacity !== undefined));
+  const travel = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.transform !== undefined));
+  assert.equal(fade?.duration, 200, 'opacity uses the reveal duration');
+  assert.equal(fade?.easing, 'cubic-bezier(0, 0, 0.58, 1)', 'opacity uses reveal easing');
+  assert.match(travel?.easing ?? '', /^linear\(/u, 'travel uses the sampled Motion spring');
 }
 
 async function capturePopup(page, path) {
@@ -145,7 +168,7 @@ async function capturePopup(page, path) {
   await page.screenshot({ path, clip: box });
 }
 
-test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismissal, and cleanup', { timeout: 120_000 }, async () => {
+test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup', { timeout: 120_000 }, async () => {
   const { server, url } = await startServer();
   let browser;
   try {
@@ -168,10 +191,7 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) > 0));
     const fullEntry = await readEntryMotion(page);
     assert.equal(fullEntry.animationName, 'none', 'entry is owned by Motion, not a second CSS animation');
-    assert.deepEqual(fullEntry.animations.map(({ duration, easing }) => ({ duration, easing })), [
-      { duration: 150, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)' },
-      { duration: 150, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)' },
-    ], `full mode uses the exact resolved interaction token: ${JSON.stringify(fullEntry)}`);
+    assertEntryMotion(fullEntry);
     const fullSettled = await settleEntry(page);
     assert.equal(fullSettled.opacity, '1');
     assert.equal(fullSettled.transformY, 0);
@@ -179,9 +199,40 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     await closeCalendarWithEscape(page);
 
     await openCalendar(page);
+    const secondEntry = await readEntryMotion(page);
+    assertEntryMotion(secondEntry);
+    assert.ok(Number(secondEntry.opacity) < 1 && secondEntry.transformY < 0, 'a fresh node replays entry after a completed close');
     await page.mouse.click(8, 8);
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => document.activeElement?.matches('.muxui-date-trigger')), true, 'outside dismissal restores trigger focus');
+
+    await openCalendar(page);
+    await settleEntry(page);
+    await page.evaluate(() => {
+      document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
+      window.__muxuiDatePopoverSetOpen(false);
+    });
+    await page.waitForFunction(() => {
+      const node = document.querySelector('.muxui-date-popover');
+      return node?.hasAttribute('data-exiting') && node.getAnimations().length === 2;
+    });
+    await page.evaluate(async () => {
+      const node = document.querySelector('.muxui-date-popover');
+      window.__muxuiRetainedDatePopover = node;
+      const animations = node.getAnimations();
+      animations.forEach((animation) => animation.pause());
+      animations[0].finish();
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    });
+    assert.equal(await page.locator('.muxui-date-popover[data-exiting]').count(), 1, 'one completed channel cannot release the retained popup');
+    await page.evaluate(() => {
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
+      window.__muxuiDatePopoverSetOpen(true);
+    });
+    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting'));
+    await settleEntry(page);
+    assert.equal(await page.evaluate(() => document.querySelector('.muxui-date-popover') === window.__muxuiRetainedDatePopover), true, 'cancelled exit callbacks cannot remove or replace the reopened node');
+    await closeCalendarWithEscape(page);
 
     await openCalendar(page);
     await page.evaluate(() => {
@@ -189,12 +240,9 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
       window.setTimeout(() => window.__muxuiDatePopoverSetOpen(true), 24);
     });
     await page.locator('.muxui-date-popover').waitFor();
-    await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 150));
+    await page.waitForFunction(() => !document.querySelector('.muxui-date-popover')?.hasAttribute('data-exiting') && document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
     const rapidStarted = await readEntryMotion(page);
-    assert.deepEqual(rapidStarted.animations.map(({ duration, easing }) => ({ duration, easing })), [
-      { duration: 150, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)' },
-      { duration: 150, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)' },
-    ], 'rapid reopen starts a fresh token-resolved entry');
+    assertEntryMotion(rapidStarted);
     const rapidSettled = await settleEntry(page);
     assert.equal(rapidSettled.opacity, '1', 'rapid close/reopen settles at the open target');
     assert.equal(await page.locator('.muxui-date-popover').count(), 1);
@@ -220,7 +268,7 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     await waitForHydration(page);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => {
-      document.documentElement.style.setProperty('--muxui-semantic-motion-interaction-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
     });
     await openCalendar(page);
     await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 800));
@@ -250,7 +298,7 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     assert.equal(systemRestoredWhileOpen.animations.some(({ duration }) => Number(duration) > 1), false, 'restoring system motion does not replay an open entry');
     assert.equal(systemRestoredWhileOpen.opacity, '1', `restoring system motion keeps the popup settled: ${JSON.stringify(systemRestoredWhileOpen)}`);
     await page.evaluate(() => {
-      document.documentElement.style.removeProperty('--muxui-semantic-motion-interaction-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
       window.__muxuiDatePopoverSetOpen(false);
     });
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
@@ -258,7 +306,7 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     await page.evaluate(() => {
       document.documentElement.setAttribute('data-muxui-motion', 'full');
       document.getElementById('root').removeAttribute('data-muxui-motion');
-      document.documentElement.style.setProperty('--muxui-semantic-motion-interaction-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
     });
     await openCalendar(page);
     await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 800));
@@ -288,9 +336,35 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     assert.equal(nestedRestoredWhileOpen.animations.some(({ duration }) => Number(duration) > 1), false, 'restoring nested motion does not replay an open entry');
     assert.equal(nestedRestoredWhileOpen.opacity, '1', `restoring nested motion keeps the popup settled: ${JSON.stringify(nestedRestoredWhileOpen)}`);
     await page.evaluate(() => {
-      document.documentElement.style.removeProperty('--muxui-semantic-motion-interaction-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
     });
     await closeCalendarWithEscape(page);
+
+    // A slowed exit must remain mounted until both Motion channels complete,
+    // and either reduction source must release that retained node immediately.
+    for (const reduction of ['system', 'nested']) {
+      await openCalendar(page);
+      await settleEntry(page);
+      await page.evaluate(() => {
+        document.documentElement.style.setProperty('--muxui-semantic-motion-exit-duration', '800ms');
+        window.__muxuiDatePopoverSetOpen(false);
+      });
+      await page.waitForFunction(() => {
+        const node = document.querySelector('.muxui-date-popover');
+        return node?.hasAttribute('data-exiting') && Number(getComputedStyle(node).opacity) < 0.99;
+      });
+      const exiting = await readEntryMotion(page);
+      assert.equal(exiting.animations.length, 2, 'both Motion exit channels remain attached');
+      assert.ok(exiting.animations.every(({ duration }) => duration === 800));
+      if (reduction === 'system') await page.emulateMedia({ reducedMotion: 'reduce' });
+      else await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
+      await page.locator('.muxui-date-popover').waitFor({ state: 'detached', timeout: 250 });
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+      await page.evaluate(() => {
+        document.getElementById('root').removeAttribute('data-muxui-motion');
+        document.documentElement.style.removeProperty('--muxui-semantic-motion-exit-duration');
+      });
+    }
 
     await page.reload({ waitUntil: 'networkidle' });
     await waitForHydration(page);
@@ -370,16 +444,12 @@ test('DatePicker popup entry uses Mux tokens while RAC owns exit, focus, dismiss
     await rangePage.waitForFunction(() => document.documentElement.dataset.muxuiDateRangePopoverHydrated === 'true');
     await rangePage.locator('.muxui-date-range-control .muxui-date-trigger').click();
     await rangePage.locator('.muxui-date-popover').waitFor();
-    await rangePage.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 150));
+    await rangePage.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
     const rangeEntry = await readEntryMotion(rangePage);
-    assert.deepEqual(rangeEntry.animations.map(({ duration, easing }) => ({ duration, easing })), [
-      { duration: 150, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)' },
-      { duration: 150, easing: 'cubic-bezier(0.25, 0.1, 0.25, 1)' },
-    ], 'DateRangePicker shares the token-resolved entry');
+    assertEntryMotion(rangeEntry);
     await rangePage.keyboard.press('ArrowRight');
     assert.equal(await rangePage.locator('.muxui-date-popover').count(), 1, 'keyboard calendar navigation keeps the range popup open');
-    await rangePage.keyboard.press('Escape');
-    await rangePage.locator('.muxui-date-popover').waitFor({ state: 'detached' });
+    await closeCalendarWithEscape(rangePage);
     const rangeActive = await rangePage.evaluate(() => ({
       className: document.activeElement?.getAttribute('class'),
       tagName: document.activeElement?.tagName,
