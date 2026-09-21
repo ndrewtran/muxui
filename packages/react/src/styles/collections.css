@@ -97,7 +97,7 @@
 .muxui-color-area {
   width: 7.5rem;
   height: 7.5rem;
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
   flex-shrink: 0;
 }
 
@@ -193,7 +193,7 @@
   grid-column: 1 / -1;
   grid-row: 2;
   height: 0.9375rem;
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
 .muxui-color-slider-thumb {
@@ -208,7 +208,7 @@
 .muxui-color-swatch {
   width: 1.25rem;
   height: 1.25rem;
-  border-radius: var(--muxui-component-color-swatch-radius, var(--muxui-semantic-shape-micro-radius));
+  border-radius: var(--muxui-component-color-swatch-radius, var(--muxui-semantic-shape-radius-xs));
   border: 1px solid var(--muxui-semantic-border-default);
   flex-shrink: 0;
   position: relative;
@@ -232,7 +232,7 @@
 
 .muxui-color-swatch-picker-item {
   position: relative;
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
   outline: none;
   cursor: pointer;
   transition: box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
@@ -286,7 +286,7 @@
 }
 
 .muxui-combo-box-popover {
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   min-width: var(--anchor-width);
   max-height: 17.5rem;
   margin-inline-start: 1px;
@@ -329,7 +329,7 @@
   flex-direction: column;
   gap: 1px;
   border: 1px solid var(--muxui-semantic-border-default);
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
   overflow: hidden;
   outline: none;
 }
@@ -392,7 +392,7 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-gap);
   max-height: 17.5rem;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   background-color: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-popup-border-color);
   border-radius: var(--muxui-semantic-control-radius);
@@ -441,7 +441,7 @@
 
 .muxui-menu-section-header,
 .muxui-list-box-section-header {
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   font-weight: var(--muxui-semantic-typography-control-weight);
 }
 
@@ -452,7 +452,7 @@
 }
 
 .muxui-menu {
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   min-width: 10rem;
   max-width: 20rem;
   width: max-content;
@@ -716,7 +716,7 @@
   box-sizing: border-box;
   width: 0;
   height: 0;
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
   background-color: var(--muxui-semantic-selection-track);
   opacity: 0;
   overflow: hidden;
@@ -750,7 +750,7 @@
 .muxui-tabs-motion[data-muxui-tabs-variant='pill'],
 .muxui-tabs-motion[data-muxui-tabs-variant='segment'],
 .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] {
-  background: var(--muxui-semantic-surface-subtle);
+  background: var(--muxui-semantic-action-neutral-background);
   border-radius: var(--muxui-semantic-shape-pill-radius);
 }
 
@@ -809,12 +809,37 @@
   background: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is(:focus-visible, [data-focus-visible]),
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is(:focus-visible, [data-focus-visible]),
-.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is(:focus-visible, [data-focus-visible]) {
+/* Selected tabs start clear so hover and RAC keyboard focus can compose with
+   the moving shape without inheriting a native focus shadow. */
+.muxui-tabs-motion .muxui-tab:is([data-selected], [aria-selected='true']) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* Selected hover feedback stays in the background so the moving fill and
+   inverse foreground remain intact; active and pressed keep their own fill. */
+.muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]),
+.muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]),
+.muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-hover) 12%, transparent);
+}
+
+.muxui-tabs-motion[data-muxui-tabs-variant='underline'] .muxui-tab:is([data-selected], [aria-selected='true']):is(:hover, [data-hovered]):not(:active, [data-disabled], [aria-disabled='true'], [data-pressed]) {
+  background-color: var(--muxui-semantic-action-neutral-background-hover);
+}
+
+.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='pill'] .muxui-tab:is(:focus-visible, [data-focus-visible]):not([data-selected], [aria-selected='true']),
+.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='segment'] .muxui-tab:is(:focus-visible, [data-focus-visible]):not([data-selected], [aria-selected='true']),
+.muxui-tabs .muxui-tabs-motion[data-muxui-tabs-variant='overflow'] .muxui-tab:is(:focus-visible, [data-focus-visible]):not([data-selected], [aria-selected='true']) {
   outline: 2px solid var(--muxui-semantic-focus-ring);
   outline-offset: -2px;
   box-shadow: none;
+}
+
+/* The selected tab's accent ring is reserved for keyboard-visible focus. */
+.muxui-tabs-motion .muxui-tab:is([data-selected], [aria-selected='true'])[data-focus-visible]:not([data-disabled], [aria-disabled='true']) {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
 }
 
 /* The selected state is also visible before hydration measures the shape. */
@@ -898,7 +923,7 @@
   display: grid;
   place-items: center;
   border: 0;
-  background: var(--muxui-semantic-surface-subtle);
+  background-color: transparent;
   color: var(--muxui-semantic-content-default);
   cursor: pointer;
   outline: none;
@@ -911,14 +936,14 @@
 
 .muxui-tabs-motion-edge:hover:not(:disabled),
 .muxui-tabs-motion-edge[data-hovered]:not(:disabled) {
-  background-color: var(--muxui-semantic-surface-subtle);
+  background-color: transparent;
   background-image: linear-gradient(var(--muxui-semantic-action-neutral-background-hover), var(--muxui-semantic-action-neutral-background-hover));
   color: var(--muxui-semantic-content-strong);
 }
 
 .muxui-tabs-motion-edge:active:not(:disabled),
 .muxui-tabs-motion-edge[data-pressed]:not(:disabled) {
-  background-color: var(--muxui-semantic-surface-subtle);
+  background-color: transparent;
   background-image: linear-gradient(var(--muxui-semantic-action-neutral-background-pressed), var(--muxui-semantic-action-neutral-background-pressed));
   color: var(--muxui-semantic-content-strong);
 }
@@ -965,7 +990,7 @@
 }
 
 .muxui-tabs-motion-edge:disabled {
-  background: var(--muxui-semantic-surface-subtle);
+  background-color: transparent;
   background-image: none;
   color: var(--muxui-semantic-content-faint);
   opacity: 1;
@@ -976,6 +1001,11 @@
   opacity: 0.45;
 }
 
+/* Keep scrolling tabs out from under the transparent arrow controls. */
+.muxui-tabs-motion[data-muxui-tabs-overflow] .muxui-tabs-motion-overflow-viewport {
+  clip-path: inset(0 var(--muxui-semantic-control-size-md));
+}
+
 .muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion-overflow-viewport {
   block-size: 100%;
   max-block-size: 100%;
@@ -984,6 +1014,10 @@
   scroll-padding-block: var(--muxui-semantic-control-size-md);
   padding-block: var(--muxui-semantic-control-size-md);
   padding-inline: 0;
+}
+
+.muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion[data-muxui-tabs-overflow] .muxui-tabs-motion-overflow-viewport {
+  clip-path: inset(var(--muxui-semantic-control-size-md) 0);
 }
 
 .muxui-tabs[data-orientation='vertical'] .muxui-tabs-motion-overflow-content {
@@ -1064,7 +1098,7 @@
 }
 
 .muxui-select-popover {
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   min-width: var(--anchor-width, 10rem);
   max-height: 17.5rem;
   overflow-y: auto;
@@ -1428,7 +1462,7 @@
   background-color: var(--muxui-semantic-surface-subtle);
 }
 
-.muxui-tab:focus-visible {
+.muxui-tab:focus-visible:not([data-selected], [aria-selected='true']) {
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
@@ -1588,7 +1622,7 @@
   display: flex;
   align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-tiny);
   background-color: var(--muxui-semantic-surface-subtle);
   border: 1px solid var(--muxui-semantic-border-subtle);
   border-radius: var(--muxui-semantic-shape-container-radius);
@@ -1646,7 +1680,7 @@
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
 .muxui-tree-item {
@@ -1667,7 +1701,7 @@
   box-shadow:
     0 0 0 2px var(--muxui-semantic-focus-inner),
     0 0 0 4px var(--muxui-semantic-focus-ring);
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
 }
 
 .muxui-tree-item[data-disabled] {
@@ -1770,7 +1804,7 @@
 	align-items: center;
   gap: var(--muxui-semantic-layout-tight-gap);
   min-block-size: var(--muxui-control-size-md);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-field-padding-inline);
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-field-padding-inline);
   border: 0;
   outline: 1px solid var(--muxui-field-border-color);
   outline-offset: -1px;
@@ -2283,8 +2317,8 @@
   :scope .muxui-table-column[data-focus-visible],
   :scope .muxui-table-row[data-focus-visible],
   :scope .muxui-table-cell[data-focus-visible],
-  :scope .muxui-tabs .muxui-tab:focus-visible,
-  :scope .muxui-tabs .muxui-tab[data-focus-visible],
+  :scope .muxui-tabs .muxui-tab:focus-visible:not([data-selected], [aria-selected='true']),
+  :scope .muxui-tabs .muxui-tab[data-focus-visible]:not([data-selected], [aria-selected='true']),
   :scope .muxui-grid-list[data-focus-visible],
   :scope .muxui-list-box[data-focus-visible] {
     box-shadow:
@@ -2393,7 +2427,7 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-tight-gap);
   max-height: none;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   background-color: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-popup-border-color);
   border-radius: var(--muxui-semantic-control-radius);
@@ -2663,7 +2697,7 @@
 }
 
 .muxui-color-field .muxui-field-input {
-  border-radius: var(--muxui-semantic-shape-micro-radius);
+  border-radius: var(--muxui-semantic-shape-radius-xs);
   position: relative;
   top: 1px;
 }

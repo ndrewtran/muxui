@@ -11,7 +11,7 @@
   color: var(--muxui-semantic-color-neutral-50);
   background-color: var(--muxui-semantic-surface-canvas);
   border: 2px dashed var(--muxui-semantic-color-neutral-26);
-  border-radius: var(--muxui-semantic-shape-compact-radius);
+  border-radius: var(--muxui-semantic-shape-radius-s);
   outline: none;
   transition:
     border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
@@ -80,7 +80,7 @@
 .muxui-dialog-close {
   aspect-ratio: 1;
   min-height: auto;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   border-radius: var(--muxui-semantic-shape-option-radius);
   top: var(--muxui-semantic-layout-inset-small);
   right: var(--muxui-semantic-layout-control-inset);
@@ -357,7 +357,7 @@
 .muxui-toast-dismiss {
   aspect-ratio: 1;
   min-height: auto;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   border-radius: var(--muxui-semantic-shape-option-radius);
   flex: none;
   color: var(--muxui-semantic-color-neutral-80);
@@ -390,7 +390,7 @@
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-tiny);
   border-radius: var(--muxui-semantic-control-radius);
   max-width: 15rem;
   overflow-wrap: anywhere;

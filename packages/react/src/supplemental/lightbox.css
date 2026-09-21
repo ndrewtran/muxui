@@ -25,7 +25,7 @@
 .muxui-lightbox-close.muxui-button {
   aspect-ratio: 1;
   min-height: auto;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   gap: var(--muxui-semantic-layout-control-gap);
   border-radius: var(--muxui-semantic-shape-option-radius);
   font-size: var(--muxui-semantic-typography-label-m-font-size);

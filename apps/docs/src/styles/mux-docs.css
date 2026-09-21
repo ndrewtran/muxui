@@ -708,7 +708,7 @@ site-search dialog::backdrop {
 }
 
 site-search button > kbd {
-	border-radius: var(--muxui-semantic-shape-compact-radius);
+	border-radius: var(--muxui-semantic-shape-radius-s);
 	background: var(--muxui-semantic-surface-raised);
 	color: var(--muxui-semantic-content-default);
 	font-family: var(--muxui-semantic-typography-mono-font-family);

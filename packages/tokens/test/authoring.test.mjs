@@ -351,6 +351,17 @@ test('authoring defaults curvature from the canonical Scale metadata', () => {
   }
 });
 
+test('semantic radius aliases track nondefault Scale curvature', () => {
+  const scale = { ...documentFor({}).scale, curvature: 1.25 };
+  const generated = generateScaleTheme({ source, ...scale });
+  const document = documentFor(generated.assignments, scale);
+  const { tokens } = compileThemeAuthoringDocument(document, { source });
+  assert.equal(tokens['semantic.shape.radius-xs'].value, 10);
+  assert.equal(tokens['semantic.shape.radius-s'].value, 15);
+  assert.equal(tokens['semantic.shape.radius-xs'].value, tokens['reference.dimension.radius-xs'].value);
+  assert.equal(tokens['semantic.shape.radius-s'].value, tokens['reference.dimension.radius-s'].value);
+});
+
 test('authoring validation rejects unsafe string overrides', () => {
   const document = documentFor({ 'semantic.typography.display-letter-spacing': { type: 'string', unit: 'string', value: '0;}</style><style>' } });
   assert.throws(() => validateThemeAuthoringDocument(document, { source }), /MUXUI_THEME_STRING_INVALID/u);

@@ -85,7 +85,7 @@
   --muxui-popup-shadow: var(--muxui-semantic-elevation-overlay);
   --muxui-popup-transition-duration: var(--muxui-semantic-motion-interaction-duration);
   --muxui-popup-transition-easing: var(--muxui-semantic-motion-interaction-easing);
-  --muxui-item-padding-block: var(--muxui-semantic-layout-tight-inset);
+  --muxui-item-padding-block: var(--muxui-semantic-layout-inset-tight);
   --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-small);
   --muxui-item-gap: var(--muxui-semantic-layout-group-gap);
   --muxui-item-radius: var(--muxui-semantic-shape-option-radius);
@@ -759,7 +759,7 @@
   .muxui-menu [data-part='header'],
   .muxui-command-palette__section-header
 ) {
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small) 0;
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small) 0;
   color: var(--muxui-group-label-color);
   font-family: var(--muxui-semantic-typography-label-font-family);
   font-size: var(--muxui-group-label-font-size);

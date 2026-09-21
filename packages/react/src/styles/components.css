@@ -574,7 +574,7 @@
 /* The pressed dark button recipe uses the reference blue-green value. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
-    background-color: var(--muxui-semantic-action-selection-pressed);
+    background-color: var(--muxui-semantic-action-selection-background-pressed);
   }
 }
 

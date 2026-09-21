@@ -124,7 +124,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       // their selected shape and inverse-contrast layer move underneath.
       for (const variant of ['pill', 'overflow', 'segment']) {
         const variantRoot = `${canvas} #${scheme}-${variant}-tabs`;
-        const tab = page.locator(`${variantRoot} [role="tab"]`).nth(variant === 'segment' ? 0 : 1);
+        const tab = page.locator(`${variantRoot} [role="tab"]`).nth(variant === 'overflow' ? 1 : 0);
         const states = await tab.evaluate((node) => {
           const read = () => {
             const style = getComputedStyle(node);
@@ -155,10 +155,56 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
         assert.notEqual(states.hovered.background, states.base.background, `${scheme} ${variant} hover state is visible`);
         assert.notEqual(states.pressed.background, states.base.background, `${scheme} ${variant} pressed state is visible`);
         assert.equal(states.focused.outline, '2px', `${scheme} ${variant} focus outline is visible`);
-        assert.equal(states.focused.outlineOffset, '-2px', `${scheme} ${variant} focus outline stays inside the shape`);
+        assert.equal(states.focused.outlineOffset, '-2px', `${scheme} ${variant} unselected focus outline stays inside the shape`);
         assert.equal(states.focused.boxShadow, 'none', `${scheme} ${variant} focus state avoids a clipped shadow`);
         assert.equal(states.disabled.opacity, '0.45', `${scheme} ${variant} disabled state is visible`);
         assert.equal(states.disabled.pointerEvents, 'none', `${scheme} ${variant} disabled state blocks interaction`);
+      }
+
+      // Selected tabs preserve their moving identity while the selected-only
+      // hover background and keyboard-visible focus ring remain independently visible.
+      for (const variant of ['underline', 'pill', 'overflow', 'segment']) {
+        const variantRoot = `${canvas} #${scheme}-${variant}-tabs`;
+        const selectedTab = page.locator(`${variantRoot} [role="tab"][aria-selected="true"]`);
+        const states = await selectedTab.evaluate((node) => {
+          const read = () => {
+            const style = getComputedStyle(node);
+            return {
+              background: style.backgroundColor,
+              boxShadow: style.boxShadow,
+              outline: style.outlineWidth,
+              outlineOffset: style.outlineOffset,
+              outlineColor: style.outlineColor,
+              pointerEvents: style.pointerEvents,
+              opacity: style.opacity,
+            };
+          };
+          const base = read();
+          node.setAttribute('data-hovered', '');
+          const hovered = read();
+          node.setAttribute('data-focus-visible', '');
+          const focusHovered = read();
+          node.removeAttribute('data-hovered');
+          const focused = read();
+          node.removeAttribute('data-focus-visible');
+          node.setAttribute('data-disabled', '');
+          const disabled = read();
+          node.removeAttribute('data-disabled');
+          return { base, hovered, focused, focusHovered, disabled };
+        });
+        assert.equal(states.base.boxShadow, 'none', `${scheme} ${variant} selected tab starts without a focus or hover shadow`);
+        assert.notEqual(states.hovered.background, states.base.background, `${scheme} ${variant} selected hover background is visible`);
+        assert.equal(states.hovered.boxShadow, 'none', `${scheme} ${variant} selected hover does not add a shadow`);
+        assert.equal(states.focused.outline, '2px', `${scheme} ${variant} selected keyboard focus ring is visible`);
+        assert.equal(states.focused.outlineOffset, '2px', `${scheme} ${variant} selected focus ring keeps its separation`);
+        assert.notEqual(states.focused.outlineColor, 'rgba(0, 0, 0, 0)', `${scheme} ${variant} selected focus ring has a semantic color`);
+        assert.equal(states.focused.boxShadow, 'none', `${scheme} ${variant} selected focus ring does not mask its moving layer`);
+        assert.notEqual(states.focusHovered.background, states.base.background, `${scheme} ${variant} selected hover plus focus changes the background`);
+        assert.equal(states.focusHovered.boxShadow, 'none', `${scheme} ${variant} selected hover plus focus does not add a shadow`);
+        assert.equal(states.disabled.background, states.base.background, `${scheme} ${variant} disabled selected tab has no hover background`);
+        assert.equal(states.disabled.boxShadow, states.base.boxShadow, `${scheme} ${variant} disabled selected tab has no hover shadow`);
+        assert.equal(states.disabled.opacity, '0.45', `${scheme} ${variant} disabled selected tab keeps disabled opacity`);
+        assert.equal(states.disabled.pointerEvents, 'none', `${scheme} ${variant} disabled selected tab blocks interaction`);
       }
 
       await page.locator(`${canvas} #${scheme}-pill-tabs [role="tab"]`).nth(0).click();
@@ -224,14 +270,19 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.notEqual(edgeStates.hovered.image, 'none', 'overflow next hover state is visible');
     assert.notEqual(edgeStates.pressed.image, 'none', 'overflow next pressed state is visible');
     assert.ok(parseFloat(edgeStates.focused.outline) >= 2, 'overflow next focus state is visible');
-    const disabledEdge = await overflowMotion.locator('button[aria-label="Scroll tabs left"]').evaluate((node) => ({
-      opacity: getComputedStyle(node).opacity,
-      iconOpacity: getComputedStyle(node.querySelector('svg')).opacity,
-      background: getComputedStyle(node).backgroundColor,
-    }));
-    assert.equal(disabledEdge.opacity, '1', 'disabled overflow edge keeps its opaque mask');
+    const disabledEdge = await overflowMotion.locator('button[aria-label="Scroll tabs left"]').evaluate((node) => {
+      const viewport = node.parentElement?.querySelector('.muxui-tabs-motion-overflow-viewport');
+      return {
+        opacity: getComputedStyle(node).opacity,
+        iconOpacity: getComputedStyle(node.querySelector('svg')).opacity,
+        background: getComputedStyle(node).backgroundColor,
+        viewportClip: viewport ? getComputedStyle(viewport).clipPath : '',
+      };
+    });
+    assert.equal(disabledEdge.opacity, '1', 'disabled overflow edge keeps its opacity');
     assert.equal(disabledEdge.iconOpacity, '0.45', 'disabled overflow edge communicates through its icon');
-    assert.notEqual(disabledEdge.background, 'rgba(0, 0, 0, 0)', 'disabled overflow edge keeps a base surface');
+    assert.equal(disabledEdge.background, 'rgba(0, 0, 0, 0)', 'disabled overflow edge keeps the rail visible through its transparent background');
+    assert.match(disabledEdge.viewportClip, /^inset\(0px [\d.]+px\)$/u, 'overflow viewport clips content behind its horizontal edges');
 
     // The shape and inverse-contrast layer must share one geometry timeline.
     // This catches the screenshot regression at intermediate selection frames,
@@ -349,8 +400,8 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const overflowFocus = await overflowMotion.locator('[role="tab"][aria-selected="true"]').evaluate((tab) => ({
       shadow: getComputedStyle(tab).boxShadow, offset: getComputedStyle(tab).outlineOffset,
     }));
-    assert.equal(overflowFocus.shadow, 'none', 'overflow uses an inset focus outline rather than a clipped outer shadow');
-    assert.equal(overflowFocus.offset, '-2px');
+    assert.equal(overflowFocus.shadow, 'none', 'overflow uses an outline rather than a clipped focus shadow');
+    assert.equal(overflowFocus.offset, '2px');
 
     const verticalRoot = '#tabs-preview-dark #dark-vertical-overflow-tabs';
     await page.waitForFunction((selector) => document.querySelector(`${selector} .muxui-tabs-motion`)?.hasAttribute('data-muxui-tabs-overflow'), verticalRoot);
@@ -360,6 +411,7 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.equal(await verticalMotion.locator('button:enabled').count(), 0, 'disabling Tabs also disables its scroll controls');
     const verticalScroll = await verticalMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => node.scrollTop);
     assert.ok(verticalScroll > 0, 'vertical overflow reveals the default selected tab');
+    assert.match(await verticalMotion.locator('.muxui-tabs-motion-overflow-viewport').evaluate((node) => getComputedStyle(node).clipPath), /^inset\([\d.]+px 0px\)$/u, 'overflow viewport clips content behind its vertical edges');
 
     await page.locator('#tabs-preview-dark #dark-overflow-tabs').evaluate((root) => { root.dir = 'rtl'; });
     await page.waitForFunction(() => document.querySelector('#tabs-preview-dark #dark-overflow-tabs .muxui-tabs-motion')?.dataset.muxuiTabsDirection === 'rtl');
@@ -380,10 +432,51 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await pillTabs.first().focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.locator(`${motionPill} [role="tab"][aria-selected="true"]`).textContent(), 'Overview', 'manual activation keeps selection while focus moves');
+    const selectedAfterFocusMove = await pillTabs.first().evaluate((tab) => ({
+      outline: getComputedStyle(tab).outlineWidth,
+      outlineStyle: getComputedStyle(tab).outlineStyle,
+      active: document.activeElement === tab,
+      focusVisible: tab.hasAttribute('data-focus-visible'),
+      selected: tab.getAttribute('aria-selected'),
+    }));
+    assert.equal(selectedAfterFocusMove.selected, 'true', 'moving keyboard focus keeps the selected tab selected');
+    assert.equal(selectedAfterFocusMove.focusVisible, false, 'moving keyboard focus clears the selected tab focus-visible state');
+    assert.equal(selectedAfterFocusMove.outlineStyle, 'none', 'moving keyboard focus clears the selected tab accent ring');
+    await page.keyboard.press('ArrowLeft');
+    const selectedKeyboardFocus = await pillTabs.first().evaluate((tab) => ({
+      background: getComputedStyle(tab).backgroundColor,
+      outline: getComputedStyle(tab).outlineWidth,
+      offset: getComputedStyle(tab).outlineOffset,
+      boxShadow: getComputedStyle(tab).boxShadow,
+      focusVisible: tab.hasAttribute('data-focus-visible'),
+    }));
+    assert.equal(selectedKeyboardFocus.focusVisible, true, 'keyboard navigation exposes focus-visible on the selected tab');
+    assert.equal(selectedKeyboardFocus.outline, '2px', 'selected keyboard focus uses the accent ring');
+    assert.equal(selectedKeyboardFocus.offset, '2px', 'selected keyboard focus keeps the ring separated');
+    assert.equal(selectedKeyboardFocus.boxShadow, 'none', 'keyboard focus does not add a second selected shadow');
+    await pillTabs.first().hover();
+    const selectedFocusHover = await pillTabs.first().evaluate((tab) => ({
+      background: getComputedStyle(tab).backgroundColor,
+      outline: getComputedStyle(tab).outlineWidth,
+      boxShadow: getComputedStyle(tab).boxShadow,
+    }));
+    assert.equal(selectedFocusHover.outline, '2px', 'selected hover plus keyboard focus keeps the accent ring');
+    assert.notEqual(selectedFocusHover.background, selectedKeyboardFocus.background, 'selected hover plus keyboard focus changes the background');
+    assert.equal(selectedFocusHover.boxShadow, 'none', 'selected hover plus keyboard focus does not add a shadow');
+    await page.keyboard.press('ArrowRight');
     await page.keyboard.press('Enter');
     assert.equal(await page.locator(`${motionPill} [role="tab"][aria-selected="true"]`).textContent(), 'Activity');
     await page.keyboard.press('End');
     assert.equal(await page.evaluate(() => document.activeElement.textContent), 'Settings', 'keyboard navigation skips disabled tabs');
+    const selectedAfterSecondFocusMove = await pillTabs.nth(1).evaluate((tab) => ({
+      outline: getComputedStyle(tab).outlineWidth,
+      outlineStyle: getComputedStyle(tab).outlineStyle,
+      focusVisible: tab.hasAttribute('data-focus-visible'),
+      selected: tab.getAttribute('aria-selected'),
+    }));
+    assert.equal(selectedAfterSecondFocusMove.selected, 'true', 'manual activation keeps the previous selection while focus moves again');
+    assert.equal(selectedAfterSecondFocusMove.focusVisible, false, 'moving focus away clears the selected tab focus-visible state');
+    assert.equal(selectedAfterSecondFocusMove.outlineStyle, 'none', 'moving focus away clears the selected tab accent ring');
     await page.keyboard.press('Enter');
     await page.waitForFunction(() => {
       const root = document.querySelector('#light-pill-tabs');
@@ -391,6 +484,36 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
       const selected = root.querySelector('[role="tab"][aria-selected="true"]').getBoundingClientRect();
       return Math.abs(shape.left - selected.left) < 1 && Math.abs(shape.width - selected.width) < 1;
     });
+    const selectedSettings = pillTabs.filter({ hasText: 'Settings' });
+    assert.equal(await selectedSettings.count(), 1);
+    await selectedSettings.click();
+    const clickedSelected = await selectedSettings.evaluate((tab) => ({
+      active: document.activeElement === tab,
+      selected: tab.getAttribute('aria-selected'),
+      focusVisible: tab.hasAttribute('data-focus-visible'),
+      outline: getComputedStyle(tab).outlineWidth,
+      boxShadow: getComputedStyle(tab).boxShadow,
+      background: getComputedStyle(tab).backgroundColor,
+      outlineStyle: getComputedStyle(tab).outlineStyle,
+    }));
+    assert.equal(clickedSelected.active, true, 'pointer click leaves DOM focus on the selected tab');
+    assert.equal(clickedSelected.selected, 'true', 'pointer click keeps the selected tab selected');
+    assert.equal(clickedSelected.focusVisible, false, 'pointer click clears the selected tab focus-visible state');
+    assert.equal(clickedSelected.outlineStyle, 'none', 'pointer click does not leave the accent ring behind');
+    assert.equal(clickedSelected.boxShadow, 'none', 'pointer click does not leave a selected hover shadow behind');
+    assert.notEqual(clickedSelected.background, selectedKeyboardFocus.background, 'pointer click keeps selected hover background visible');
+    await page.evaluate(() => document.activeElement?.blur());
+    const blurredSelected = await selectedSettings.evaluate((tab) => ({
+      active: document.activeElement === tab,
+      selected: tab.getAttribute('aria-selected'),
+      focusVisible: tab.hasAttribute('data-focus-visible'),
+      outline: getComputedStyle(tab).outlineWidth,
+      outlineStyle: getComputedStyle(tab).outlineStyle,
+    }));
+    assert.equal(blurredSelected.active, false, 'blur removes DOM focus from the selected tab');
+    assert.equal(blurredSelected.selected, 'true', 'blur does not change selection');
+    assert.equal(blurredSelected.focusVisible, false, 'blur clears the selected tab focus-visible state');
+    assert.equal(blurredSelected.outlineStyle, 'none', 'blur clears the selected tab accent ring');
     const foreground = await page.locator(`${motionPill} .muxui-tabs-motion-foreground`).evaluate((node) => ({
       hidden: node.getAttribute('aria-hidden'), inert: node.inert, clip: getComputedStyle(node).clipPath,
       labels: node.children.length, duplicateIds: node.querySelectorAll('[id]').length,

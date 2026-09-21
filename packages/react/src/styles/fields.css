@@ -58,7 +58,7 @@
 }
 
 .muxui-autocomplete-popover > .muxui-autocomplete-list {
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   border: 0;
   border-radius: 0;
   box-shadow: none;
@@ -98,14 +98,14 @@
 
 /* Compact dropdown items use the canonical Mux collection geometry variables. */
 .muxui-autocomplete-list--sm {
-  --muxui-item-padding-block: var(--muxui-semantic-layout-tight-inset);
+  --muxui-item-padding-block: var(--muxui-semantic-layout-inset-tight);
   --muxui-item-padding-inline: var(--muxui-semantic-layout-inset-small);
   --muxui-item-gap: var(--muxui-semantic-layout-tight-gap);
   --muxui-item-font-size: var(--muxui-semantic-typography-text-s-font-size);
 }
 
 .muxui-autocomplete-list--sm [data-part='header'] {
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-small);
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-small);
 }
 
 .muxui-autocomplete-list--sm [data-part='separator'] {
@@ -354,7 +354,7 @@
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
     color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
   flex-shrink: 0;
-  transform: translateX(calc(-1 * var(--muxui-semantic-layout-tight-inset)));
+  transform: translateX(calc(-1 * var(--muxui-semantic-layout-inset-tight)));
 }
 
 .muxui-search-clear > svg {
