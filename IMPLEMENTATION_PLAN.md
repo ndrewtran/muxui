@@ -10,20 +10,20 @@ reduced-motion behavior from a fresh localhost URL.
 
 ### Acceptance Criteria
 
-- [ ] AC1: The preview shows the locked motion values: A uses `y: -8`,
+- [x] AC1: The preview shows the locked motion values: A uses `y: -8`,
   `scale: 0.97`, `stiffness: 560`, `damping: 40`, `mass: 0.5`; B uses
   `y: -4` and `scale: 0.985` with A's spring/timings; C keeps A's geometry
   with `stiffness: 420`; backdrop and exit timings match `REFERENCE.md`.
-- [ ] AC2: The page visibly supports dark/light switching and renders all
+- [x] AC2: The page visibly supports dark/light switching and renders all
   three content states, with each state available through every motion option
   and with readable, responsive layout in both themes.
-- [ ] AC3: Opening an overlay focuses its search/form control, and Escape,
+- [x] AC3: Opening an overlay focuses its search/form control, and Escape,
   backdrop, close, and action controls dismiss it while restoring the launch
   control; command filtering and arrow-key selection remain usable.
-- [ ] AC4: Replay runs A → B → C once and completes cleanly; reduced-motion
+- [x] AC4: Replay runs A → B → C once and completes cleanly; reduced-motion
   mode removes transform travel and uses the documented `0.10s` fade while
   normal motion remains limited to transform and opacity.
-- [ ] AC5: `index.html` loads fresh `dist/main.js` and `dist/main.css` with no
+- [x] AC5: `index.html` loads fresh `dist/main.js` and `dist/main.css` with no
   missing-asset or console errors, and browser/local checks are completed from
   a newly chosen localhost port whose exact URL is reported.
 
@@ -54,9 +54,13 @@ reduced-motion behavior from a fresh localhost URL.
   `dist/main.css` from the isolated source with the existing workspace
   bundler, then verify the output contains the corrected source contract and
   has no unresolved imports or stale asset references. [needs:src/main.tsx + styles.css + index.html]
-- [ ] Serve the isolated directory on a fresh unused localhost port and run
+- [x] Serve the isolated directory on a fresh unused localhost port and run
   browser/local QA for both themes, A/B/C, all three overlay states, focus and
   dismissal paths, filtering/arrow keys, replay completion, reduced motion,
   responsive layout, asset requests, and console cleanliness. Record the exact
   URL plus any genuine remaining caveat without touching the tracked repo.
   [needs:dist/main.js + dist/main.css]
+
+  Evidence: `http://127.0.0.1:3344/`; connected Chrome verified the live
+  interaction matrix, replay sequence, reduced-motion harness, and clean-tab
+  console; curl returned 200 for `/`, `/dist/main.js`, and `/dist/main.css`.

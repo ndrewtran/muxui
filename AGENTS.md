@@ -49,3 +49,11 @@ dependents. Reuse unchanged evidence and expand only for relevant failures.
 Focused reports are partial proof, never full release proof; use the full graph
 for shared workspace configuration or dependency changes, release work, or an
 explicit all request.
+
+## Patterns Discovered / Gotchas
+
+- Isolated `/tmp` static previews can use Python's server on `127.0.0.1:3344`;
+  validate the HTML and bundled assets with `curl` plus the connected Chrome
+  tab. On this macOS runner, shell-launched headless Chrome aborts before page
+  creation with a sandbox-extension error, so a clean connected-tab pass is the
+  browser evidence when that environment failure occurs.
