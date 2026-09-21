@@ -7,5 +7,14 @@
     "reverted": [],
     "blocked": [],
     "at": 1789968405717
+  },
+  {
+    "iteration": 2,
+    "task": "Serve the isolated directory on a fresh unused localhost port and run",
+    "note": "Done: Completed final QA and committed plan/AGENTS evidence locally.\nNot done: nothing for this task.\nBlocked by: nothing.\nWatch out: Headless Chrome and linked-worktree Git locks are sandbox-limited.\nNext: Review http://127.0.0.1:3344/",
+    "gate": "unavailable",
+    "reverted": [],
+    "blocked": [],
+    "at": 1789969266099
   }
 ]
