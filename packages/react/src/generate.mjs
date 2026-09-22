@@ -32,6 +32,7 @@ const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggl
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
+const colorSliderMotionSource = await readFile(resolve(packageRoot, 'src/color-slider-motion.mjs'), 'utf8');
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
@@ -1113,6 +1114,7 @@ const outputs = new Map([
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
   ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
+  ['color-slider-motion.mjs', generatedText('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
   ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],

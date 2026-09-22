@@ -93,7 +93,8 @@ test('R1.1 RAC-backed component slice preserves SSR, hydration, semantics, and i
     assert.equal(root.querySelector('input[type="checkbox"]').checked, true);
     assert.equal(root.querySelector('.muxui-checkbox-indicator[data-selected]') !== null, true);
     assert.equal(root.querySelector('.muxui-disclosure > button').getAttribute('aria-expanded'), 'true');
-    assert.equal(root.querySelector('.muxui-disclosure-panel[role="region"]') !== null, true);
+    assert.equal(root.querySelector('.muxui-disclosure-panel-host[role="region"]') !== null, true);
+    assert.equal(root.querySelector('.muxui-disclosure-panel-host .muxui-disclosure-panel') !== null, true);
     assert.equal(root.querySelector('.muxui-group').getAttribute('aria-disabled'), 'true');
     assert.equal(root.querySelector('.muxui-link[href="/next"]') !== null, true);
     assert.equal(root.querySelector('[role~="meter"]') !== null, true);

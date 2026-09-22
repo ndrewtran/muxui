@@ -1,5 +1,6 @@
 import React from 'react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
+import { ColorSliderMotionTrack } from './color-slider-motion.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import ChevronLeftIcon from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
@@ -412,41 +413,43 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
 });
 ColorArea.displayName = 'ColorArea';
 
-export const ColorSlider = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
-  accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
-  const pickerState = React.useContext(ColorPickerContext);
-  const effectiveDisabled = disabled || pickerState.disabled;
-  const effectiveReadOnly = readOnly || pickerState.readOnly;
-  const preventReadOnlyInteraction = (event) => {
-    if (effectiveReadOnly) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-  const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-  return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
-    React.createElement(AriaColorSlider, {
-      ...props,
-      ref: assignSliderRef,
-      channel,
-      colorSpace,
-      value: colorValue(value, 'ColorSlider'),
-      defaultValue: colorValue(defaultValue, 'ColorSlider'),
-      onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
-      isDisabled: effectiveDisabled,
-      orientation,
-      'data-readonly': effectiveReadOnly || undefined,
-      className: classNames('muxui-color-slider', className),
-      'aria-label': ariaLabel,
-      'aria-labelledby': ariaLabelledby,
-    },
-    label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
-    React.createElement(AriaSliderTrack, { className: 'muxui-color-slider-track' },
-      React.createElement(AriaSliderFill, { className: 'muxui-color-slider-fill' }),
-      React.createElement(AriaColorThumb, { className: 'muxui-color-slider-thumb', 'data-readonly': effectiveReadOnly || undefined }))),
-  );
-});
-ColorSlider.displayName = 'ColorSlider';
+// Include displayName in the pure initialization so unused sliders shed their motion dependency.
+export const ColorSlider = /* @__PURE__ */ (() => {
+  const component = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+    accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
+    const pickerState = React.useContext(ColorPickerContext);
+    const effectiveDisabled = disabled || pickerState.disabled;
+    const effectiveReadOnly = readOnly || pickerState.readOnly;
+    const preventReadOnlyInteraction = (event) => {
+      if (effectiveReadOnly) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
+    return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+      React.createElement(AriaColorSlider, {
+        ...props,
+        ref: assignSliderRef,
+        channel,
+        colorSpace,
+        value: colorValue(value, 'ColorSlider'),
+        defaultValue: colorValue(defaultValue, 'ColorSlider'),
+        onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
+        isDisabled: effectiveDisabled,
+        orientation,
+        'data-readonly': effectiveReadOnly || undefined,
+        className: classNames('muxui-color-slider', className),
+        'aria-label': ariaLabel,
+        'aria-labelledby': ariaLabelledby,
+      },
+      label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
+      React.createElement(ColorSliderMotionTrack, { readOnly: effectiveReadOnly })),
+    );
+  });
+  component.displayName = 'ColorSlider';
+  return component;
+})();
 
 function assertColorWheelGeometry(outerRadius, innerRadius) {
   if (typeof outerRadius !== 'number' || !Number.isFinite(outerRadius) || outerRadius < 0) throw new TypeError('ColorWheel outerRadius must be a finite nonnegative number');

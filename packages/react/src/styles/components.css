@@ -452,17 +452,36 @@
   cursor: not-allowed;
 }
 
+.muxui-disclosure-panel-host {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
 .muxui-disclosure-panel {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  margin-top: var(--muxui-semantic-layout-control-gap);
+  margin: 0;
   padding: 0;
 }
 
 .muxui-disclosure-motion-panel {
   box-sizing: border-box;
   width: 100%;
+}
+
+/* Keep panel spacing inside the measured height, including child margins. */
+.muxui-disclosure-motion-content {
+  display: flow-root;
+}
+
+.muxui-disclosure-motion-content::before {
+  content: '';
+  display: block;
+  margin-block-end: var(--muxui-semantic-layout-control-gap);
 }
 
 .muxui-disclosure-header {
@@ -1295,7 +1314,6 @@
   flex: 0 0 auto;
   color: var(--muxui-semantic-color-neutral-default-50);
   transform: rotate(0deg);
-  transition: transform var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }
 
 .muxui-disclosure-group .muxui-disclosure[data-expanded] .muxui-disclosure-trigger-icon {
@@ -1306,11 +1324,15 @@
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  margin-top: 0;
+  margin: 0;
   padding-inline: var(--muxui-semantic-layout-inset-medium);
 }
 
-.muxui-disclosure-group .muxui-disclosure-panel::after {
+.muxui-disclosure-group .muxui-disclosure-motion-content::before {
+  display: none;
+}
+
+.muxui-disclosure-group .muxui-disclosure-motion-content::after {
   content: '';
   display: block;
   height: var(--muxui-semantic-layout-icon-size);

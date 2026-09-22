@@ -292,8 +292,8 @@ function datePopover() {
   return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
 }
 
-function rangeDatePopover() {
-  return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
+function rangeDatePopover(triggerRef) {
+  return React.createElement(DatePopoverMotion, { placement: 'bottom end', triggerRef }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
 }
 
 function dateInput() {
@@ -860,6 +860,7 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
   }, ref) {
     assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
     const resolvedSize = normalizeChoiceControlSize(size, 'DateRangePicker');
+    const triggerRef = React.useRef(null);
     const externalValidation = useMuxFormValidation([startName, endName]);
     const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
     const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
@@ -907,9 +908,9 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
         React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
         React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
         React.createElement(AriaDateInput, { slot: 'end', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
-        React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+        React.createElement(AriaButton, { ref: triggerRef, slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
       children: React.createElement(React.Fragment, null,
-        rangeDatePopover(),
+        rangeDatePopover(triggerRef),
         formResetAnchor(resetInputRef),
         startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
         endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),

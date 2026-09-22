@@ -93,6 +93,29 @@ async function readMetrics(page, selector) {
   });
 }
 
+async function readDisclosureLayout(page, selector) {
+  return page.locator(selector).evaluate((panel) => {
+    const host = panel.parentElement;
+    const content = panel.firstElementChild;
+    if (!host || !content) throw new Error('Disclosure motion wrapper is incomplete.');
+    const hostStyle = getComputedStyle(host);
+    const contentStyle = getComputedStyle(content);
+    const number = (value) => Number.parseFloat(value) || 0;
+    return {
+      panelHeight: panel.getBoundingClientRect().height,
+      hostHeight: host.getBoundingClientRect().height,
+      contentHeight: content.getBoundingClientRect().height,
+      hostPaddingTop: number(hostStyle.paddingTop),
+      hostPaddingBottom: number(hostStyle.paddingBottom),
+      contentPaddingTop: number(contentStyle.paddingTop),
+      contentPaddingBottom: number(contentStyle.paddingBottom),
+      contentPaddingLeft: number(contentStyle.paddingLeft),
+      contentPaddingRight: number(contentStyle.paddingRight),
+      styleHeight: panel.style.height,
+    };
+  });
+}
+
 async function waitForDisclosureIntermediate(page, selector) {
   await page.waitForFunction((value) => {
     const node = document.querySelector(value);
@@ -565,6 +588,153 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
     assert.equal(grown.ariaHidden, null, 'grown disclosure remains visible to accessibility APIs');
     assert.equal(grown.inert, false, 'grown disclosure remains interactive');
     assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await browser?.close();
+    await server.close();
+  }
+});
+
+test('Disclosure soft reveal preserves initial paint, focus, resizing and reduced semantics', { timeout: 120_000 }, async () => {
+  const { server, url } = await startServer();
+  let browser;
+  try {
+    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    const page = await browser.newPage({ viewport: { width: 960, height: 900 } });
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    await page.goto(`${url}/interaction-motion.html`, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => typeof window.__interactionSetDisclosure === 'function');
+
+    const controlledPanel = disclosurePanel('controlled-disclosure');
+    const controlledTrigger = page.locator('[data-motion-id="controlled-disclosure"] .muxui-disclosure-trigger');
+    const contentSelector = `${controlledPanel} > .muxui-disclosure-motion-content`;
+    const initial = await readMetrics(page, contentSelector);
+    assert.equal(initial.opacity, 1, 'initial expanded content is fully readable after hydration');
+    assert.equal(initial.transform, 'none', 'initial expanded content has no entrance transform');
+    assert.equal((await readMetrics(page, controlledPanel)).styleHeight, '', 'initial expanded height stays intrinsic');
+
+    await page.locator('#disclosure-content-action').focus();
+    await page.evaluate(() => window.__interactionSetDisclosure(false));
+    await waitForDisclosureIntermediate(page, controlledPanel);
+    assert.equal(await controlledTrigger.getAttribute('aria-expanded'), 'false');
+    assert.equal(await controlledTrigger.evaluate((node) => node === document.activeElement), true, 'controlled collapse returns focus before content is hidden');
+    const closing = await readMetrics(page, controlledPanel);
+    assert.equal(closing.inert, true, 'collapsing content immediately leaves keyboard navigation');
+    assert.equal(closing.ariaHidden, 'true', 'collapsing content immediately leaves the accessibility tree');
+    const standaloneGeometry = await page.locator(controlledPanel).evaluate((node) => ({
+      panel: node.getBoundingClientRect().height,
+      host: node.parentElement.getBoundingClientRect().height,
+    }));
+    assert.ok(Math.abs(standaloneGeometry.host - standaloneGeometry.panel) < 1, `standalone gap collapses inside the measured panel: ${JSON.stringify(standaloneGeometry)}`);
+    await waitForDisclosureClosed(page, controlledPanel);
+
+    await controlledTrigger.press('Enter');
+    await page.waitForFunction((selector) => {
+      const content = document.querySelector(selector);
+      const style = getComputedStyle(content);
+      return Number(style.opacity) > 0.82 && Number(style.opacity) < 1 && style.transform !== 'none';
+    }, contentSelector);
+    await waitForDisclosureOpen(page, controlledPanel);
+    await waitForSettledVisual(page, contentSelector);
+    await controlledTrigger.press('Space');
+    await waitForDisclosureClosed(page, controlledPanel);
+
+    const primaryPanel = disclosurePanel('primary-disclosure');
+    await page.locator('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger').click();
+    await waitForDisclosureOpen(page, primaryPanel);
+    const beforeResize = (await readMetrics(page, primaryPanel)).height;
+    await page.evaluate(() => window.__interactionGrowDisclosure());
+    await waitForDisclosureIntermediate(page, primaryPanel);
+    assert.ok((await readMetrics(page, primaryPanel)).height >= beforeResize - 1, 'settled content growth starts from its previous natural height');
+    await waitForDisclosureOpen(page, primaryPanel);
+    assert.ok((await readMetrics(page, primaryPanel)).height > beforeResize);
+    await page.setViewportSize({ width: 390, height: 900 });
+    await waitForDisclosureOpen(page, primaryPanel);
+    const afterWidthChange = await readMetrics(page, primaryPanel);
+    assert.equal(afterWidthChange.styleOverflow, '', 'narrow content is unclipped after resizing');
+    assert.ok(afterWidthChange.height > beforeResize, 'copy reflows at narrow widths');
+
+    await page.evaluate(() => {
+      document.documentElement.dataset.muxuiColorScheme = 'dark';
+      window.__interactionSetMultiple(true);
+    });
+    const first = page.locator('[data-motion-id="group-first"] .muxui-disclosure-trigger');
+    const second = page.locator('[data-motion-id="group-second"] .muxui-disclosure-trigger');
+    await first.click();
+    await second.click();
+    assert.equal(await first.getAttribute('aria-expanded'), 'true');
+    assert.equal(await second.getAttribute('aria-expanded'), 'true');
+    assert.equal(await page.getByRole('button', { name: 'Disabled disclosure', exact: true }).isDisabled(), true);
+    assert.equal(await page.getByRole('button', { name: 'Disabled grouped disclosure', exact: true }).isDisabled(), true);
+
+    const firstPanel = disclosurePanel('group-first');
+    const firstContent = `${firstPanel} > .muxui-disclosure-panel`;
+    await page.addStyleTag({ content: '[data-motion-id="group-first"] .muxui-disclosure-panel { padding: 14px; }' });
+    await waitForDisclosureOpen(page, firstPanel);
+    const allSidePadding = await readDisclosureLayout(page, firstPanel);
+    assert.equal(allSidePadding.hostPaddingTop, 0, 'the RAC region host owns no top padding');
+    assert.equal(allSidePadding.hostPaddingBottom, 0, 'the RAC region host owns no bottom padding');
+    assert.equal(allSidePadding.contentPaddingTop, 14, 'all-side user padding stays on measured content');
+    assert.equal(allSidePadding.contentPaddingBottom, 14, 'all-side user padding stays on measured content');
+    assert.ok(Math.abs(allSidePadding.panelHeight - allSidePadding.contentHeight) < 1, 'expanded panel height includes content padding');
+
+    await page.locator(firstContent).evaluate((node) => { node.style.padding = '9px 14px 23px'; });
+    await page.waitForFunction((selector) => {
+      const node = document.querySelector(selector);
+      return Boolean(node?.style.height) && Number.parseFloat(node.style.height) > 0;
+    }, firstPanel);
+    await waitForDisclosureOpen(page, firstPanel);
+    const asymmetricPadding = await readDisclosureLayout(page, firstPanel);
+    assert.equal(asymmetricPadding.contentPaddingTop, 9, 'asymmetric top padding is retained');
+    assert.equal(asymmetricPadding.contentPaddingBottom, 23, 'asymmetric bottom padding is retained');
+    assert.ok(Math.abs(asymmetricPadding.panelHeight - asymmetricPadding.contentHeight) < 1, 'open retarget settles at the padded content height');
+
+    await first.click();
+    await waitForDisclosureIntermediate(page, firstPanel);
+    const closingLayout = await readDisclosureLayout(page, firstPanel);
+    assert.ok(Math.abs(closingLayout.hostHeight - closingLayout.panelHeight) < 1, 'group spacing collapses with the panel instead of snapping away at the end');
+    await waitForDisclosureClosed(page, firstPanel);
+    const closedLayout = await readDisclosureLayout(page, firstPanel);
+    assert.ok(closedLayout.hostHeight <= 0.5, `closed group host has no residual padding: ${JSON.stringify(closedLayout)}`);
+    assert.equal(closedLayout.hostPaddingTop, 0, 'closed group host has no top padding');
+    assert.equal(closedLayout.hostPaddingBottom, 0, 'closed group host has no bottom padding');
+
+    await page.locator(firstContent).evaluate((node) => { node.style.padding = '0.5em 1em 1.25em'; });
+    await first.click();
+    await waitForDisclosureIntermediate(page, firstPanel);
+    const openingBeforePaddingChange = await readDisclosureLayout(page, firstPanel);
+    assert.ok(openingBeforePaddingChange.panelHeight > 0.5, 'relative padding opening starts above zero');
+    await page.locator(firstContent).evaluate((node) => { node.style.padding = '0.75em 1em 1.5em'; });
+    await page.waitForFunction((selector) => {
+      const node = document.querySelector(selector);
+      return Boolean(node?.style.height) && Number.parseFloat(node.style.height) > 0;
+    }, firstPanel);
+    const openingAfterPaddingChange = await readDisclosureLayout(page, firstPanel);
+    assert.ok(openingAfterPaddingChange.panelHeight >= openingBeforePaddingChange.panelHeight - 2, 'opening padding retarget does not restart from zero');
+    await waitForDisclosureOpen(page, firstPanel);
+    const relativePadding = await readDisclosureLayout(page, firstPanel);
+    assert.ok(relativePadding.contentPaddingBottom > relativePadding.contentPaddingTop, 'font-relative padding keeps its unequal block sizes');
+
+    await first.click();
+    await waitForDisclosureIntermediate(page, firstPanel);
+    await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
+    await waitForDisclosureClosed(page, firstPanel);
+    await first.click();
+    await waitForDisclosureOpen(page, firstPanel);
+    const reducedContent = await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`);
+    assert.equal(reducedContent.opacity, 1);
+    assert.equal(reducedContent.transform, 'none');
+    assert.equal(await first.locator('.muxui-disclosure-trigger-icon').evaluate((node) => node.style.transform), 'rotate(180deg)', 'reduced chevron immediately matches expansion');
+
+    await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await first.click();
+    await waitForDisclosureClosed(page, firstPanel);
+    await first.click();
+    await waitForDisclosureOpen(page, firstPanel);
+    assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`)).transform, 'none');
+    assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
     await server.close();
