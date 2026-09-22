@@ -20,6 +20,8 @@ const policy = {
   affectedPathOwners: {
     strategy: ['@muxui/repository-policy'],
     'decisions/': ['@muxui/repository-policy'],
+    'packages/': ['@muxui/repository-policy'],
+    'tooling/': ['@muxui/repository-policy'],
   },
 };
 const records = [
@@ -133,6 +135,9 @@ test('affected selection maps owner roots, keeps package changes proportional, a
   const selection = changedPackageSelection({ changedPaths: ['packages/react/src/fields.mjs', 'strategy/milestone-roadmap.md'], packages, policy });
   assert.equal(selection.mode, 'affected');
   assert.deepEqual(selection.directPackages.map(({ name }) => name).sort(), ['@muxui/react', '@muxui/repository-policy']);
+  const navigationSelection = changedPackageSelection({ changedPaths: ['packages/AGENTS.md', 'tooling/AGENTS.md'], packages, policy });
+  assert.equal(navigationSelection.mode, 'affected');
+  assert.deepEqual(navigationSelection.directPackages.map(({ name }) => name), ['@muxui/repository-policy']);
   assert.throws(() => changedPackageSelection({ changedPaths: ['unknown/file.txt'], packages, policy }), /MUXUI_AFFECTED_PATH_UNMAPPED/u);
   assert.throws(() => changedPackageSelection({ changedPaths: [], packages, policy }), /MUXUI_AFFECTED_PATHS_EMPTY/u);
   assert.throws(() => changedPackageSelection({ changedPaths: ['package.json', 'unknown/file.txt'], packages, policy }), /MUXUI_AFFECTED_PATH_UNMAPPED/u);

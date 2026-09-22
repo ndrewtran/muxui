@@ -122,8 +122,10 @@
   "affectedPathOwners": {
     "catalog/": ["@muxui/catalog"],
     "decisions/": ["@muxui/repository-policy"],
+    "packages/": ["@muxui/repository-policy"],
     "strategy/": ["@muxui/repository-policy"],
-    "tests/": ["@muxui/repository-policy"]
+    "tests/": ["@muxui/repository-policy"],
+    "tooling/": ["@muxui/repository-policy"]
   },
   "storybookAuditSelection": {
     "schemaVersion": 1,
