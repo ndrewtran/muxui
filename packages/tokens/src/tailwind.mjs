@@ -18,7 +18,7 @@ function namespaceFor(id, token) {
     if (/font-weight|(?:^|-)weight$/u.test(lowerId)) return 'font-weight';
     if (/line-height/u.test(lowerId)) return 'leading';
   }
-  if (token.type === 'string') {
+  if (token.type === 'string' || token.type === 'easing') {
     if (/font-family|(?:^|-)font$/u.test(lowerId)) return 'font';
     if (/easing/u.test(lowerId)) return 'ease';
     if (/letter-spacing/u.test(lowerId)) return 'tracking';

@@ -176,7 +176,7 @@
         ]
       },
       "anyOf": [
-        { "required": ["value"], "properties": { "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "$ref": "#/$defs/effectValue" }] } } },
+        { "required": ["value"], "properties": { "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "$ref": "#/$defs/effectValue" }, { "$ref": "#/$defs/easingValue" }, { "$ref": "#/$defs/transitionValue" }] } } },
         { "required": ["alias"], "properties": { "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" } } },
         { "required": ["mix"], "properties": { "mix": { "$ref": "#/$defs/colorMix" } } }
       ]
@@ -202,7 +202,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "value": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+        "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "$ref": "#/$defs/easingValue" }, { "$ref": "#/$defs/transitionValue" }] },
         "alias": { "type": "string", "pattern": "^(reference|semantic|component)\\.[a-z][a-z0-9]*(?:\\.[a-z][a-z0-9-]*)+$" },
         "mix": { "$ref": "#/$defs/colorMix" }
       },
@@ -252,8 +252,8 @@
             {
               "required": ["type"],
               "properties": {
-                "type": { "enum": ["color", "dimension", "duration", "number", "string"] },
-                "value": { "anyOf": [{ "type": "string" }, { "type": "number" }] },
+                "type": { "enum": ["color", "dimension", "duration", "number", "string", "easing", "transition"] },
+                "value": { "anyOf": [{ "type": "string" }, { "type": "number" }, { "$ref": "#/$defs/easingValue" }, { "$ref": "#/$defs/transitionValue" }] },
                 "modes": { "$ref": "#/$defs/nonEffectModes" }
               }
             }
@@ -262,7 +262,7 @@
       ],
       "properties": {
         "layer": { "enum": ["reference", "semantic", "component"] },
-        "type": { "enum": ["color", "dimension", "duration", "number", "string", "effect"] },
+        "type": { "enum": ["color", "dimension", "duration", "number", "string", "effect", "easing", "transition"] },
         "unit": { "enum": ["hex", "px", "ms", "unitless", "string", "structured"] },
         "meaning": { "type": "string", "minLength": 1 },
         "overridePolicy": { "enum": ["fixed", "theme", "instance"] },
@@ -397,6 +397,61 @@
       "properties": {
         "kind": { "const": "shadow" },
         "layers": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/effectShadowLayer" } }
+      }
+    },
+    "easingValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "value"],
+          "properties": {
+            "kind": { "const": "keyword" },
+            "value": { "enum": ["linear", "ease", "ease-in", "ease-out", "ease-in-out", "step-start", "step-end"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "x1", "y1", "x2", "y2"],
+          "properties": {
+            "kind": { "const": "cubic-bezier" },
+            "x1": { "type": "number", "minimum": 0, "maximum": 1 },
+            "y1": { "type": "number", "minimum": -100, "maximum": 100 },
+            "x2": { "type": "number", "minimum": 0, "maximum": 1 },
+            "y2": { "type": "number", "minimum": -100, "maximum": 100 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "points"],
+          "properties": {
+            "kind": { "const": "linear" },
+            "points": { "type": "array", "minItems": 2, "maxItems": 1000, "items": { "type": "number", "minimum": -100, "maximum": 100 } }
+          }
+        }
+      ]
+    },
+    "springValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "visualDuration", "bounce"],
+      "properties": {
+        "kind": { "const": "time" },
+        "visualDuration": { "$ref": "#/$defs/tokenReference" },
+        "bounce": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "transitionValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "duration", "easing"],
+      "properties": {
+        "kind": { "const": "transition" },
+        "duration": { "$ref": "#/$defs/tokenReference" },
+        "easing": { "$ref": "#/$defs/tokenReference" },
+        "spring": { "$ref": "#/$defs/springValue" }
       }
     },
     "themeFontAsset": {

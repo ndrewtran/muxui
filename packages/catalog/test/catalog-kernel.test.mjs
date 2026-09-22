@@ -203,7 +203,7 @@ test('R1.5 React curriculum selects one exact generation example for every famil
   const components = baseBundle.artifacts
     .filter(({ kind }) => kind === 'component')
     .sort((left, right) => left.id.localeCompare(right.id));
-  assert.equal(components.length, 58);
+  assert.equal(components.length, 59);
   const selected = components.map((component) => {
     const response = getArtifact({
       id: component.id,
@@ -223,7 +223,7 @@ test('R1.5 React curriculum selects one exact generation example for every famil
     assert.equal(example.record.binding.ref, `${component.id}#web.react`, component.id);
     return example.id;
   });
-  assert.equal(new Set(selected).size, 58);
+  assert.equal(new Set(selected).size, 59);
 });
 
 test('R1.3 catalog closure registers and discovers every canonical family', async () => {

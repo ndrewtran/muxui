@@ -1,5 +1,5 @@
 ---
-scopeVersion: 12.0.0
+scopeVersion: 12.0.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -67,6 +67,14 @@ with internal React Aria field associations. The current mapping contains 26
 supplemental families and 79 total families, with 77 root exports and the two
 existing isolated subpaths. This explicit expansion does not recast the
 original Aria-only R1.6 inventory or its evidence.
+
+Product Scope `12.0.1` applies accepted Decision 0019 as a patch clarification:
+`@muxui/react` may adopt the exact internal, replaceable `motion@13.4.0` edge
+for bounded Mux-owned component motion in existing admitted `web.react`
+families. Private `motion/react` and `motion/react-m` imports remain local to
+the owning renderer modules; Mux UI owns public APIs, tokens, modes, CSS,
+accessibility, SSR/hydration, and lifecycle. Registry metadata is not install,
+lockfile, package, or proof evidence.
 
 ## Scope vocabulary
 
@@ -752,7 +760,8 @@ accessibility, package, compatibility, integrity, or generation failures.
   `RangeCalendar`, plus the R1.6 internal, replaceable supplemental-affordance edges
   `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
   parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`;
-  no Mux UI workspace runtime edge or upstream public API/type
+  `motion@13.4.0` for bounded component motion in existing admitted React
+  bindings; no Mux UI workspace runtime edge or dependency public API/type
   leak is permitted;
 - the first-party default token/theme system satisfies every applicable React
   requirement and accessibility adaptation;
@@ -1294,3 +1303,23 @@ No token values, dependencies, package versions, platform activation, stable
 support, publication, or consumer mutation follow from this admission.
 Implementation proof and protected repository adoption remain separate from
 the accepted direction and from package release.
+
+## Product Scope 12.0.1: Mux-owned React component motion
+
+Decision 0019 records one direct internal runtime edge of `@muxui/react`:
+`motion@13.4.0` for bounded Mux-owned component motion in existing admitted
+`web.react` families. The package is replaceable, and its registry MIT and
+React peer metadata remain dependency inputs only until exact manifest,
+lockfile, integrity, license/notice, isolation, tree-shaking, SSR/hydration,
+and packed-consumer proof passes.
+
+This patch changes no component or family, token value, public API, package or
+platform commitment, support/lifecycle claim, release boundary, or milestone
+state. Existing Scope IDs retain their states, including
+`SCOPE-PKG-REACT`, `SCOPE-API-REACT-ERGONOMICS`, `SCOPE-TOKEN-MODES`,
+`SCOPE-PROOF-BEHAVIOR`, `SCOPE-PROOF-PACKAGE`, `SCOPE-PROOF-VISUAL`, and
+`SCOPE-QUALITY-COMPAT-PROFILE`; no new Scope ID or commitment transition is
+created. Mux UI owns the public contract, reduced modes, CSS, accessibility,
+SSR/hydration, refs, and lifecycle. React Native, `web.html`, cross-renderer
+equivalence, stable support, publication, consumer mutation, and final R1-exit
+merge remain outside this clarification.

@@ -16,7 +16,7 @@ const base = {
   schema: 'muxui-theme-authoring-v1',
   id: 'muxui:theme:authoring-test',
   source: 'muxui:token:default-theme',
-  tokenContractVersion: '4.0.0',
+  tokenContractVersion: '5.0.0',
   modes: { colorScheme: ['light', 'dark'], contrast: ['standard'], motion: ['full'], density: ['comfortable'], direction: ['ltr'] },
 };
 
@@ -349,6 +349,17 @@ test('authoring defaults curvature from the canonical Scale metadata', () => {
     assert.equal(source.tokens[id].value, sourcePx);
     assert.deepEqual(generated.assignments[id], { type: 'dimension', unit: 'px', value: generatedPx, relative: { value: generatedRem, unit: 'rem' } });
   }
+});
+
+test('semantic radius aliases track nondefault Scale curvature', () => {
+  const scale = { ...documentFor({}).scale, curvature: 1.25 };
+  const generated = generateScaleTheme({ source, ...scale });
+  const document = documentFor(generated.assignments, scale);
+  const { tokens } = compileThemeAuthoringDocument(document, { source });
+  assert.equal(tokens['semantic.shape.radius-xs'].value, 10);
+  assert.equal(tokens['semantic.shape.radius-s'].value, 15);
+  assert.equal(tokens['semantic.shape.radius-xs'].value, tokens['reference.dimension.radius-xs'].value);
+  assert.equal(tokens['semantic.shape.radius-s'].value, tokens['reference.dimension.radius-s'].value);
 });
 
 test('authoring validation rejects unsafe string overrides', () => {

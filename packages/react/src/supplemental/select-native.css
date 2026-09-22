@@ -48,13 +48,23 @@
   box-shadow: var(--muxui-field-focus-glow);
 }
 
+.muxui-select-native:hover:not(:focus, :focus-visible, [data-disabled], [data-invalid], :disabled) {
+  outline-color: var(--muxui-semantic-border-indicator);
+}
+
 .muxui-select-native[data-invalid] {
   outline-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
+.muxui-select-native[data-invalid]:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
+}
+
+.muxui-select-native[data-disabled],
 .muxui-select-native:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  background-color: var(--muxui-semantic-surface-hover);
 }
 
 .muxui-select-native__description,
@@ -65,13 +75,32 @@
 
 .muxui-select-native__description { color: var(--muxui-field-description-color); }
 .muxui-select-native__error { color: var(--muxui-field-error-color); }
-.muxui-select-native-field[data-disabled] > .muxui-select-native__label { opacity: 0.45; }
-.muxui-select-native-field[data-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
+.muxui-select-native-field[data-disabled] > .muxui-select-native__label {
+  color: var(--muxui-semantic-content-default);
+  opacity: 0.45;
+}
+.muxui-select-native-field[data-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid-content); }
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-select-native[data-disabled],
+  :scope .muxui-select-native:disabled {
+    background-color: var(--muxui-semantic-color-neutral-default-96);
+  }
+
+  :scope .muxui-select-native-field[data-disabled] > .muxui-select-native__label {
+    color: var(--muxui-semantic-color-neutral-default-40);
+  }
+
+  :scope .muxui-select-native-field[data-invalid] > .muxui-select-native__label {
+    color: var(--muxui-semantic-feedback-invalid);
+  }
+}
 
 @media (forced-colors: active) {
   .muxui-select-native {
-    border: 1px solid ButtonText;
-    outline: none;
+    border: 0;
+    outline: 1px solid ButtonText;
+    outline-offset: -1px;
     background: Canvas;
     color: CanvasText;
   }
@@ -80,5 +109,15 @@
     outline: 2px solid Highlight;
     outline-offset: 2px;
     box-shadow: none;
+  }
+
+  .muxui-select-native[data-disabled],
+  .muxui-select-native:disabled {
+    opacity: 1 !important;
+    color: GrayText !important;
+  }
+
+  .muxui-select-native-field[data-disabled] > .muxui-select-native__label {
+    opacity: 1 !important;
   }
 }

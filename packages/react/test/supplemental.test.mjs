@@ -211,6 +211,17 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
     assert.equal(checkboxInputs[1].indeterminate, true);
     assert.equal(checkboxInputs[2].checked, true);
     assert.equal(checkboxInputs[3].disabled, true);
+    const checkboxIndicators = [...document.querySelectorAll('.muxui-checkbox-field__indicator')];
+    assert.equal(checkboxIndicators.length, 4);
+    assert.equal(checkboxIndicators[0].querySelector('svg'), null);
+    assert.equal(checkboxIndicators[1].querySelector('svg')?.classList.contains('lucide-minus'), true);
+    assert.equal(checkboxIndicators[2].querySelector('svg')?.classList.contains('lucide-check'), true);
+    assert.equal(checkboxIndicators[3].querySelector('svg')?.classList.contains('lucide-check'), true);
+    for (const index of [1, 2, 3]) {
+      const icon = checkboxIndicators[index].querySelector('svg');
+      assert.equal(icon?.getAttribute('aria-hidden'), 'true');
+      assert.equal(icon?.getAttribute('focusable'), 'false');
+    }
     assert.equal(switchInputs[0].checked, false);
     assert.equal(switchInputs[1].checked, true);
     assert.equal(switchInputs[2].disabled, true);
@@ -222,6 +233,7 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
     await act(async () => switchInputs[2].click());
     assert.deepEqual(changes, [['checkbox', true], ['switch', true]]);
     assert.equal(checkboxInputs[0].checked, true);
+    assert.equal(checkboxIndicators[0].querySelector('svg')?.classList.contains('lucide-check'), true);
     assert.equal(switchInputs[0].checked, true);
     assert.equal(checkboxInputs[2].checked, true);
     assert.equal(switchInputs[1].checked, true);
@@ -229,11 +241,29 @@ test('CheckboxField and SwitchField own controlled, default, disabled, and read-
       ['checkbox', 'controlled'], ['indeterminate', 'mixed'], ['read-only-checkbox', 'locked'],
       ['switch', 'controlled'], ['read-only-switch', 'locked'],
     ]);
+    await act(async () => checkboxInputs[0].click());
+    assert.equal(checkboxInputs[0].checked, false);
+    assert.equal(checkboxIndicators[0].querySelector('svg'), null);
   } finally {
     await act(async () => root?.unmount());
     restore();
     dom.window.close();
   }
+});
+
+test('CheckboxField Indicator preserves explicit custom children', () => {
+  const html = renderToStaticMarkup(React.createElement(
+    CheckboxField.Root,
+    { checked: true },
+    React.createElement(
+      CheckboxField.Button,
+      null,
+      React.createElement(CheckboxField.Indicator, null, React.createElement('span', { className: 'custom-indicator' }, 'Custom')),
+      'Accept',
+    ),
+  ));
+  assert.match(html, /class="custom-indicator"/u);
+  assert.doesNotMatch(html, /lucide-check|lucide-minus/u);
 });
 
 test('InputTags gives its editable input the label while preserving consumer overrides', () => {
@@ -339,7 +369,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   const references = new Set([...styles.matchAll(/var\(--([A-Za-z0-9_-]+)/gu)].map((match) => match[1]));
   const foundations = [...references].filter((name) => /^(?:muxui-semantic|muxui-reference)-/u.test(name));
   const localHooks = [...references].filter((name) => /^muxui-(?:focus-ring|field|item|popup|group-label|switch-field)-/u.test(name));
-  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size)$/u.test(name));
+  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size|muxui-modal-(?:y|scale))$/u.test(name));
   const unknown = [...references].filter((name) => !foundations.includes(name) && !localHooks.includes(name) && !runtimeLocals.includes(name));
   assert.ok(foundations.some((name) => name.startsWith('muxui-semantic-')));
   assert.ok(foundations.every((name) => name.startsWith('muxui-semantic-')));

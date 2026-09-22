@@ -388,16 +388,17 @@ test('Checkbox and Radio focus rings stay on indicators with shared keyline geom
   ]);
   const rootFocusOutline = /\.muxui-(?:checkbox|radio)(?::focus-within|\[data-focus-visible\])\s*\{[^}]*outline:/u;
   const focusRules = [
-    ['Checkbox focus-visible indicator', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*0 0 0 1px var\(--muxui-semantic-focus-inner\),\s*0 0 0 3px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
-    ['Checkbox focus-within indicator', /\.muxui-checkbox:focus-within \.muxui-checkbox-indicator\s*\{[^}]*box-shadow:\s*none;[^}]*outline:\s*2px solid var\(--muxui-semantic-focus-ring\);[^}]*outline-offset:\s*2px;/u],
+    ['Checkbox and CheckboxField focus-visible indicators', /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator,\s*\.muxui-checkbox-field__button\[data-focus-visible\] \.muxui-checkbox-field__indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-color\)[^}]*\}/u],
     ['Radio semantic focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-semantic-focus-inner\),\s*0 0 0 4px var\(--muxui-semantic-focus-ring\)[^}]*\}/u],
     ['Radio mode-aware focus-visible indicator', /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*0 0 0 2px var\(--muxui-focus-ring-inner\),\s*0 0 0 4px var\(--muxui-focus-ring-outer\)[^}]*\}/u],
   ];
   const forcedColorsFocusRules = [
-    ['Checkbox forced-colors indicator', components, /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
+    ['Checkbox and CheckboxField forced-colors indicators', components, /\.muxui-checkbox\[data-focus-visible\] \.muxui-checkbox-indicator,\s*\.muxui-checkbox-field__button\[data-focus-visible\] \.muxui-checkbox-field__indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
     ['Radio forced-colors indicator', collections, /\.muxui-radio\[data-focus-visible\] \.muxui-radio-indicator\s*\{[^}]*outline:\s*2px solid Highlight;[^}]*outline-offset:\s*1px;/u],
   ];
 
+  assert.doesNotMatch(components, /\.muxui-checkbox:focus-within/u);
+  assert.doesNotMatch(generated, /\.muxui-checkbox:focus-within/u);
   assert.doesNotMatch(components, rootFocusOutline);
   assert.doesNotMatch(generated, rootFocusOutline);
   for (const [label, rule] of focusRules) {

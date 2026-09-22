@@ -310,7 +310,7 @@ test('Switch exposes required and invalid states alongside its description and e
   dom.window.close();
 });
 
-test('ComboBox input transitions stay scoped away from TextField', async () => {
+test('ComboBox keeps its inner input neutral while the shell owns field states', async () => {
   const css = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
   const comboStart = css.indexOf('/* MuxUI component source: combobox.css */');
   const comboEnd = css.indexOf('/* MuxUI component source: grid-list.css */', comboStart);
@@ -321,8 +321,9 @@ test('ComboBox input transitions stay scoped away from TextField', async () => {
   const comboCss = css.slice(comboStart, comboEnd);
   const textCss = css.slice(textStart, textEnd);
   assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input\s*\{[\s\S]*transition:/u);
-  assert.match(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
+  assert.doesNotMatch(comboCss, /\.muxui-combo-box \.muxui-field-input:hover\s*\{/u);
   assert.doesNotMatch(comboCss, /^\.muxui-field-input\s*\{/mu);
+  assert.match(css, /\.muxui-combo-control:focus-within\s*\{[\s\S]*var\(--muxui-field-focus-glow\)/u);
   assert.match(textCss, /\.muxui-field-input\s*\{[\s\S]*background-color var\(--muxui-semantic-motion-interaction-duration\) var\(--muxui-semantic-motion-interaction-easing\)/u);
 });
 
@@ -910,6 +911,60 @@ test('R1.2 autocomplete is closed on SSR, filters while focused, and selects Mux
     assert.deepEqual(selectedItems, [{ id: 'Melbourne', label: 'Melbourne', value: 'Melbourne' }]);
     await act(async () => root.unmount());
   } finally {
+    restore();
+    dom.window.close();
+  }
+});
+
+test('Autocomplete keeps outside dismissal closed through trigger focus restoration', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div><button id="outside">Outside</button><div id="nonfocusable">Other content</div>');
+  const restore = installDom(dom);
+  let root;
+  const assertClosed = () => {
+    assert.equal(document.querySelector('.muxui-autocomplete-popover:not([data-exiting="true"])'), null);
+  };
+  try {
+    const host = document.querySelector('#root');
+    const outside = document.querySelector('#outside');
+    const nonfocusable = document.querySelector('#nonfocusable');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] })));
+    const input = host.querySelector('.muxui-autocomplete input');
+
+    await act(async () => input.focus());
+    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+
+    await act(async () => {
+      nonfocusable.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      input.blur();
+      input.focus();
+    });
+    assertClosed();
+    assert.equal(document.activeElement, input);
+
+    await act(async () => input.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })));
+    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+
+    await act(async () => {
+      nonfocusable.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      input.blur();
+      outside.focus();
+    });
+    assertClosed();
+    await act(async () => input.focus());
+    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    assertClosed();
+    await act(async () => {
+      nonfocusable.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+      input.blur();
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      input.focus();
+    });
+    assert.ok(document.querySelector('.muxui-autocomplete-popover'));
+  } finally {
+    await act(async () => root?.unmount());
     restore();
     dom.window.close();
   }

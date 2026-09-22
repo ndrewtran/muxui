@@ -112,13 +112,6 @@
   "globalTaskInputs": [
     ".agents/",
     ".github/",
-    "catalog/",
-    "decisions/",
-    "packages/",
-    "strategy/",
-    "apps/",
-    "tooling/",
-    "tests/",
     ".node-version",
     ".npmrc",
     "AGENTS.md",
@@ -126,6 +119,14 @@
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml"
   ],
+  "affectedPathOwners": {
+    "catalog/": ["@muxui/catalog"],
+    "decisions/": ["@muxui/repository-policy"],
+    "packages/": ["@muxui/repository-policy"],
+    "strategy/": ["@muxui/repository-policy"],
+    "tests/": ["@muxui/repository-policy"],
+    "tooling/": ["@muxui/repository-policy"]
+  },
   "storybookAuditSelection": {
     "schemaVersion": 1,
     "package": "@muxui/react-storybook",

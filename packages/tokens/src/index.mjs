@@ -1,14 +1,6 @@
 import { canonicalDigest, canonicalJson, validateFamily } from '@muxui/schema';
-import { compilePureTokenGraph, cssDeclaration } from './core.mjs';
+import { compilePureTokenGraph, cssDeclaration, validatePureLiteral } from './core.mjs';
 
-const UNIT_BY_TYPE = Object.freeze({
-  color: new Set(['hex']),
-  dimension: new Set(['px']),
-  duration: new Set(['ms']),
-  number: new Set(['unitless']),
-  string: new Set(['string']),
-  effect: new Set(['structured']),
-});
 const MODE_AXES = Object.freeze(['colorScheme', 'contrast', 'motion', 'density', 'direction']);
 const PROFILE_IDS = new Set([
   'web.html',
@@ -275,41 +267,7 @@ export function validateSourceCrosswalk(source, { baselineOccurrences } = {}) {
 }
 
 function validateLiteral(type, unit, value, path) {
-  const expected = ['dimension', 'duration', 'number'].includes(type) ? 'number'
-    : type === 'effect' ? 'object' : 'string';
-  if (typeof value !== expected || (typeof value === 'number' && !Number.isFinite(value))) {
-    fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a ${expected}`, { path, type, unit });
-  }
-  if (!UNIT_BY_TYPE[type]?.has(unit)) {
-    fail('MUXUI_TOKEN_UNIT_MISMATCH', `${path} has incompatible unit ${unit}`, { path, type, unit });
-  }
-  if (type === 'color' && !/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(value)) {
-    fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a six- or eight-digit hex color`, { path });
-  }
-  if (type === 'effect') validateEffect(value, path);
-}
-
-function validateEffect(value, path) {
-  if (!isObject(value) || value.kind !== 'shadow' || !Array.isArray(value.layers) || value.layers.length < 1) {
-    fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a typed shadow effect`, { path });
-  }
-  for (const [index, layer] of value.layers.entries()) {
-    const layerPath = `${path}/layers/${index}`;
-    if (!isObject(layer) || !isObject(layer.offsetX) || !isObject(layer.offsetY)
-      || !isObject(layer.blur) || !isObject(layer.spread) || !isObject(layer.color)) {
-      fail('MUXUI_TOKEN_TYPE_MISMATCH', `${layerPath} must declare typed shadow geometry`, { path: layerPath });
-    }
-    for (const key of ['offsetX', 'offsetY', 'blur', 'spread']) {
-      const length = layer[key];
-      if (!Number.isFinite(length.value) || !['px', 'rem'].includes(length.unit)) {
-        fail('MUXUI_TOKEN_TYPE_MISMATCH', `${layerPath}/${key} must be a finite px/rem length`, { path: `${layerPath}/${key}` });
-      }
-    }
-    if (typeof layer.color.value !== 'string' || !/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(layer.color.value)
-      || (layer.color.alpha !== undefined && (!Number.isFinite(layer.color.alpha) || layer.color.alpha < 0 || layer.color.alpha > 1))) {
-      fail('MUXUI_TOKEN_TYPE_MISMATCH', `${layerPath}/color must be a hex color with optional alpha`, { path: `${layerPath}/color` });
-    }
-  }
+  validatePureLiteral(type, unit, value, path, fail);
 }
 
 function assertThemeContract(source) {
@@ -443,7 +401,10 @@ export function compileTokenRequirementSet({ source, recipe, bindingId, profile,
       meaning: definition.meaning,
       overridePolicy: definition.overridePolicy,
       resolved: graph.tokens[tokenId].value,
-      dependencies: graph.dependencies[tokenId],
+      // A transition keeps positional dependency metadata internally so the
+      // CSS projection can distinguish duration, easing, and spring duration.
+      // Requirement-set consumers only need the unique closure dependencies.
+      dependencies: [...new Set(graph.dependencies[tokenId] ?? [])],
     };
   });
   const digestPreimage = {
@@ -554,7 +515,9 @@ export function compileNativeTheme(source, { profile, rootFontSizePx, ...options
   const diagnostics = [];
   const theme = {};
   for (const token of publicTokenEntries(graph)) {
-    const code = token.fluid ? 'MUXUI_TOKEN_FLUID_RECIPE_DEFERRED'
+    const code = token.type === 'transition' ? 'MUXUI_TOKEN_TRANSITION_NATIVE_DEFERRED'
+      : token.type === 'easing' ? 'MUXUI_TOKEN_EASING_NATIVE_DEFERRED'
+        : token.fluid ? 'MUXUI_TOKEN_FLUID_RECIPE_DEFERRED'
       : token.formula ? 'MUXUI_TOKEN_FORMULA_DEFERRED'
         : token.relative && rootFontSizePx === undefined ? 'MUXUI_TOKEN_RELATIVE_ROOT_METRIC_REQUIRED' : null;
     if (code) {

@@ -4,7 +4,37 @@ id: muxui:guide:token-migration
 
 # Token contract migration
 
-Token contract `4.0.0` removes redundant or unused token IDs before consumer
+Token contract `5.0.0` adds typed easing and transition compositions while
+retaining the `4.0.0` removals. The canonical source remains schema `2.1.0`;
+removed names are not exported, emitted as CSS variables, accepted by authoring
+documents, or available to component recipes. This guide is a direct change map
+for the current contract.
+
+Easing overrides now use a typed value. Replace a string override such as
+`{ "type": "string", "unit": "string", "value": "cubic-bezier(0.2, 0, 0, 1)" }`
+with `{ "type": "easing", "unit": "structured", "value": { "kind":
+"cubic-bezier", "x1": 0.2, "y1": 0, "x2": 0, "y2": 1 } }`. Transition
+overrides keep their canonical references and may adjust approved spring
+settings:
+
+```json
+{
+  "type": "transition",
+  "unit": "structured",
+  "value": {
+    "kind": "transition",
+    "duration": "semantic.motion.interaction-duration",
+    "easing": "semantic.motion.interaction-easing",
+    "spring": {
+      "kind": "time",
+      "visualDuration": "semantic.motion.interaction-duration",
+      "bounce": 0.2
+    }
+  }
+}
+```
+
+Token contract `4.0.0` removed redundant or unused token IDs before consumer
 adoption. The canonical source remains schema `2.1.0`; removed names are not
 exported, emitted as CSS variables, accepted by authoring documents, or
 available to component recipes. This guide is a direct change map for the
@@ -16,6 +46,7 @@ current contract.
 | --- | --- |
 | `reference.duration.fast` | Use `reference.motion.duration-fast` for the fixed 120ms primitive. Use a semantic motion role when reduced motion must resolve to 0ms. |
 | `reference.duration.instant`, `reference.duration.moderate`, `reference.duration.slow`, `reference.duration.deliberate` | Use the corresponding `reference.motion.duration-*` primitive. |
+| `reference.dimension.scale` | No replacement is provided; remove the unused scale token reference. |
 | `reference.typography.display-font-family`, `heading-font-family`, `title-font-family` | Use the corresponding semantic family role, which resolves to `reference.typography.display-font`. |
 | `reference.typography.label-font-family`, `text-font-family` | Use `semantic.typography.label-font-family` or `semantic.typography.text-font-family`. |
 | `reference.typography.mono-font-family`, `expressive-font-family` | Use `semantic.typography.mono-font-family` or `semantic.typography.expressive-font-family`. |
@@ -29,9 +60,12 @@ current contract.
 | `semantic.motion.feedback-easing`, `state-easing`, `enter-easing`, `exit-easing`, `content-easing` | Choose the easing role owned by the actual component or transition. No generic replacement is provided. |
 | `semantic.motion.enter-duration`, `content-duration` | Choose the duration role owned by the entering or content component. No generic replacement is provided. |
 | `semantic.layout.navigation-inset-block`, `content-row-min-height` | Move the explicit value to component-owned geometry after identifying the consuming layout. No token replacement is provided. |
+| `semantic.layout.tight-inset` | Use `semantic.layout.inset-tight` for the compact options and transient-control inset. The resolved 4xs spacing value and theme override policy are unchanged. |
+| `semantic.action.selection-pressed` | Use `semantic.action.selection-background-pressed` for the dark-scheme pressed primary-action background. The resolved brand-60 value and theme override policy are unchanged. |
+| `semantic.shape.micro-radius` | Use `semantic.shape.radius-xs`. The semantic role now resolves to the 4px `reference.dimension.radius-xs` value instead of the former 5.2px spacing alias. |
+| `semantic.shape.compact-radius` | Use `semantic.shape.radius-s`. The semantic role now resolves to the 6px `reference.dimension.radius-s` value instead of the former 7px spacing alias. |
 | `semantic.shape.thumb-radius`, `wheel-radius` | Move the explicit value to component-owned geometry after identifying the consuming control. No token replacement is provided. |
 | `semantic.effect.scrim-subtle`, `scrim-strong` | Choose supported `semantic.effect.scrim` or `semantic.overlay.scrim` by modal layering intent. No strength alias is provided. |
-
 | `semantic.control.min-height` | Use `semantic.control.size-md` for the shared default target. `component.button.min-height` remains the Button-specific role. |
 | Unnumbered `reference.color` hue and error/warning/success aliases | Use the explicit numbered `-60` primitive when defining semantic roles. Consumer CSS should use the relevant semantic color role. |
 | `reference.color.scrim-subtle`, `scrim-default`, `scrim-strong` | Choose `semantic.effect.scrim` or `semantic.overlay.scrim` by modal layering intent. No fixed scrim compatibility references remain. |
@@ -53,7 +87,7 @@ and `mono-color` roles have dark branches.
 
 ## Authoring and Scale
 
-Authoring documents must declare `tokenContractVersion: "4.0.0"` and reference
+Authoring documents must declare `tokenContractVersion: "5.0.0"` and reference
 only current token IDs. The compiler validates an exact contract match; it does
 not normalize older same-major documents or rewrite overrides. Scale imports
 follow the same rule. Saved Scale settings accept numeric curvature factors and

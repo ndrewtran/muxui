@@ -533,12 +533,12 @@ function FoundationDimensionFamily({ family, appliedValues }: { family: Foundati
 const SPACING_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
 	{ id: 'reference-space', title: 'Reference space scale', description: 'Raw spacing levels share one zero so their relative rhythm is visible.', select: (token) => token.id.startsWith('reference.dimension.space-'), sort: numericTokenOrder, isScale: true },
 	{ id: 'reference-section-space', title: 'Reference section space scale', description: 'Section spacing uses its own range and remains comparable within that range.', select: (token) => token.id.startsWith('reference.dimension.section-space-'), sort: numericTokenOrder, isScale: true },
-	{ id: 'semantic-layout-insets', title: 'Layout inset scale', description: 'Named inset levels preserve the semantic scale from tiny through xxlarge.', select: tokenIds(['semantic.layout.inset-tiny', 'semantic.layout.inset-small', 'semantic.layout.inset-medium', 'semantic.layout.inset-large', 'semantic.layout.inset-xlarge', 'semantic.layout.inset-xxlarge']), sort: numericTokenOrder, isScale: true },
+	{ id: 'semantic-layout-insets', title: 'Layout inset scale', description: 'Named inset levels preserve the semantic scale from tight through xxlarge.', select: tokenIds(['semantic.layout.inset-tight', 'semantic.layout.inset-tiny', 'semantic.layout.inset-small', 'semantic.layout.inset-medium', 'semantic.layout.inset-large', 'semantic.layout.inset-xlarge', 'semantic.layout.inset-xxlarge']), sort: numericTokenOrder, isScale: true },
 	{ id: 'semantic-layout-gaps', title: 'Layout gap roles', description: 'These are usage roles. The bars compare their numeric values without turning role names into levels.', select: tokenIds(['semantic.layout.micro-gap', 'semantic.layout.dense-gap', 'semantic.layout.shortcut-gap', 'semantic.layout.description-gap', 'semantic.layout.swatch-gap', 'semantic.layout.control-gap', 'semantic.layout.tight-gap', 'semantic.layout.group-gap', 'semantic.layout.action-gap', 'semantic.layout.control-content-gap', 'semantic.layout.section-gap', 'semantic.layout.content-gap']), isScale: false },
 	{ id: 'semantic-control-sizes', title: 'Control sizes', description: 'Small, medium, and large controls share one scale.', select: tokenIds(['semantic.control.size-sm', 'semantic.control.size-md', 'semantic.control.size-lg']), sort: numericTokenOrder, isScale: true },
 	{ id: 'semantic-navigation-insets', title: 'Navigation inline inset', description: 'The active navigation inset applies to the inline axis.', select: tokenIds(['semantic.layout.navigation-inset-inline']), isScale: false },
 	{ id: 'semantic-control-padding', title: 'Control padding axes', description: 'Block and inline padding are independent geometry roles.', select: tokenIds(['semantic.control.padding-block', 'semantic.control.padding-inline']), isScale: false },
-	{ id: 'semantic-usage-insets', title: 'Usage-specific insets', description: 'These insets support named affordances and surfaces rather than an ordinal scale.', select: tokenIds(['semantic.layout.control-inset', 'semantic.layout.tight-inset', 'semantic.layout.utility-inset', 'semantic.layout.navigation-search-inset', 'semantic.layout.search-clear-inset', 'semantic.layout.payment-icon-inset', 'semantic.layout.overlay-title-inset', 'semantic.layout.viewport-inset']), isScale: false },
+	{ id: 'semantic-usage-insets', title: 'Usage-specific insets', description: 'These insets support named affordances and surfaces rather than an ordinal scale.', select: tokenIds(['semantic.layout.control-inset', 'semantic.layout.utility-inset', 'semantic.layout.navigation-search-inset', 'semantic.layout.search-clear-inset', 'semantic.layout.payment-icon-inset', 'semantic.layout.overlay-title-inset', 'semantic.layout.viewport-inset']), isScale: false },
 	{ id: 'semantic-layout-geometry', title: 'Other layout geometry', description: 'Explicit size, margin, indent, and usage roles stay grouped by usage.', select: tokenIds(['semantic.layout.resize-handle-size', 'semantic.layout.icon-size', 'semantic.layout.content-margin', 'semantic.layout.content-indent']), isScale: false },
 	{ id: 'semantic-control-geometry', title: 'Control geometry roles', description: 'The control radius is a shape role, not an additional size level.', select: tokenIds(['semantic.control.radius']), isScale: false },
 ];
@@ -565,7 +565,8 @@ function SpacingPage({ data }: { data: FoundationData }) {
 
 const SHAPE_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
 	{ id: 'reference-radii', title: 'Reference radius scale', description: 'Raw corner radii share one equal-size specimen and one zero-based scale.', select: (token) => token.id.startsWith('reference.dimension.radius-'), sort: numericTokenOrder, isScale: true },
-	{ id: 'semantic-shape-roles', title: 'Semantic shape roles', description: 'Named corner roles stay together without implying a universal semantic order.', select: (token) => token.id.startsWith('semantic.shape.') || token.id === 'semantic.control.radius', isScale: false },
+	{ id: 'semantic-radii', title: 'Semantic radius scale', description: 'Generic semantic radius levels follow the reference xs and s scale while remaining theme-overridable roles.', select: tokenIds(['semantic.shape.radius-xs', 'semantic.shape.radius-s']), sort: numericTokenOrder, isScale: true },
+	{ id: 'semantic-shape-roles', title: 'Semantic shape roles', description: 'Purpose-specific corner roles stay independent without implying a universal semantic order.', select: (token) => (token.id.startsWith('semantic.shape.') && !['semantic.shape.radius-xs', 'semantic.shape.radius-s'].includes(token.id)) || token.id === 'semantic.control.radius', isScale: false },
 ];
 
 function FoundationShapeFamily({ family }: { family: FoundationFamily }) {
@@ -578,7 +579,7 @@ function FoundationShapeFamily({ family }: { family: FoundationFamily }) {
 function ShapePage({ data }: { data: FoundationData }) {
 	const shapes = SHAPE_FAMILY_DEFINITIONS.map((definition) => resolveFoundationFamily(data.tokens, definition));
 	const shapeTokens = shapes.flatMap((family) => family.tokens);
-	return <div className="foundation-page"><SectionIntro title="Corner hierarchy">Each family keeps equal-size specimens so the reference scale and semantic roles can be compared without flattening their meanings.</SectionIntro><section className="foundation-section"><h2 id={foundationHeadingId('Radius families')}>Radius families</h2><p className="foundation-section-note">Reference radii form an ordered scale. Semantic and control radii are named roles shown in their own family.</p><div className="foundation-family-list">{shapes.map((family) => <FoundationShapeFamily family={family} key={family.id} />)}</div></section><TokenInventory tokens={shapeTokens} allTokens={data.tokens} title="Shape token inventory" description="Search all canonical reference radii and semantic shape roles." /></div>;
+	return <div className="foundation-page"><SectionIntro title="Corner hierarchy">Each family keeps equal-size specimens so reference and generic semantic scales can be compared while purpose-specific roles retain their meanings.</SectionIntro><section className="foundation-section"><h2 id={foundationHeadingId('Radius families')}>Radius families</h2><p className="foundation-section-note">Reference and generic semantic radii form ordered scales. Purpose-specific semantic and control radii remain named roles in their own family.</p><div className="foundation-family-list">{shapes.map((family) => <FoundationShapeFamily family={family} key={family.id} />)}</div></section><TokenInventory tokens={shapeTokens} allTokens={data.tokens} title="Shape token inventory" description="Search all canonical reference radii, generic semantic levels, and purpose-specific shape roles." /></div>;
 }
 
 const ELEVATION_FAMILY_DEFINITIONS: readonly FoundationFamilyDefinition[] = [
@@ -619,7 +620,18 @@ function motionCurvePath(value: unknown): string | undefined {
 		'ease-out': [0, 0, 0.58, 1],
 		'ease-in-out': [0.42, 0, 0.58, 1],
 	};
-	const raw = String(value);
+	const candidate = value && typeof value === 'object' ? value as Record<string, unknown> : undefined;
+	if (candidate?.kind === 'linear' && Array.isArray(candidate.points) && candidate.points.length >= 2) {
+		const points = candidate.points.filter((point): point is number => typeof point === 'number' && Number.isFinite(point));
+		if (points.length === candidate.points.length) {
+			return points.map((point, index) => `${index === 0 ? 'M' : 'L'}${16 + 112 * index / (points.length - 1)} ${82 - 74 * point}`).join(' ');
+		}
+	}
+	const raw = candidate?.kind === 'keyword' && typeof candidate.value === 'string'
+		? candidate.value
+		: candidate?.kind === 'cubic-bezier' && ['x1', 'y1', 'x2', 'y2'].every((key) => typeof candidate[key] === 'number')
+			? `cubic-bezier(${candidate.x1}, ${candidate.y1}, ${candidate.x2}, ${candidate.y2})`
+			: String(value);
 	const match = raw.match(/^cubic-bezier\(([^)]+)\)$/u);
 	const points = match ? match[1].split(',').map(Number) : presets[raw];
 	if (!points || points.length !== 4 || !points.every(Number.isFinite)) return undefined;
@@ -706,14 +718,15 @@ function MotionEasingFamily({ family, replay }: { family: FoundationFamily; repl
 		<FoundationFamilyHeading family={family} />
 		<div className="foundation-family-rows">{family.tokens.map((easing) => {
 			const path = motionCurvePath(easing.defaultValue);
-			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><FoundationTokenLabel token={easing} /><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.motion.duration-fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
+			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><FoundationTokenLabel token={easing} /><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.motion.duration-fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{easing.defaultCssValue}</small></div>;
 		})}</div>
 	</section>;
 }
 
 function MotionPage({ data }: { data: FoundationData }) {
 	const durations = useMemo(() => data.tokens.filter((token) => token.type === 'duration'), [data.tokens]);
-	const easings = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'string'), [data.tokens]);
+	const easings = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'easing'), [data.tokens]);
+	const transitions = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'transition'), [data.tokens]);
 	const [replay, setReplay] = useState(0);
 	const groups = motionTimingGroups(durations);
 	const easingGroups = motionEasingGroups(easings);
@@ -735,7 +748,7 @@ function MotionPage({ data }: { data: FoundationData }) {
 			</div>
 			<div className="foundation-timing-groups">{groups.map((group) => <MotionTimingGroup key={group.id} group={group} replay={replay} allTokens={data.tokens} onReplay={replayMotion} appliedValues={appliedValues} />)}</div>
 		</section>
-		<TokenInventory tokens={[...durations, ...easings]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration and easing tokens, including mode-aware semantic roles." />
+		<TokenInventory tokens={[...durations, ...easings, ...transitions]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration, easing, and transition tokens, including mode-aware semantic roles." />
 	</div>;
 }
 
@@ -870,6 +883,9 @@ function SemanticTokenPreview({ token, value }: { token: FoundationToken; value:
 		kind = 'duration';
 		const duration = normalizeAppliedNumericValue(value, 'ms', 16) ?? Number(token.defaultValue);
 		sample = <span className="semantic-sample-timing"><span className="semantic-sample-timing-axis"><span style={{ width: `${Math.min(100, Math.max(0, duration) / 2000 * 100)}%` }} /></span><small>0–2,000 ms</small></span>;
+	} else if (token.type === 'transition') {
+		kind = 'transition';
+		sample = <code>{token.defaultCssValue}</code>;
 	} else if (family === 'motion') {
 		kind = 'easing';
 		const path = motionCurvePath(value);

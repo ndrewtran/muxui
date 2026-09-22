@@ -31,6 +31,14 @@ const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
+const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
+const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
+const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
+const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
+const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-components.mjs'), 'utf8');
+const popoverMotionSource = await readFile(resolve(packageRoot, 'src/popover-motion.mjs'), 'utf8');
+const tabsMotionSource = await readFile(resolve(packageRoot, 'src/tabs-motion.mjs'), 'utf8');
+const rangeSelectionMotionSource = await readFile(resolve(packageRoot, 'src/range-selection-motion.mjs'), 'utf8');
 const collectionsSource = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
 const overlaysSource = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
 const overlayPositioningSource = await readFile(resolve(packageRoot, 'src/overlay-positioning.mjs'), 'utf8');
@@ -56,6 +64,7 @@ const checkboxArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'cata
 const checkboxGroupArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/checkbox-group/artifact.json'), 'utf8'));
 const radioGroupArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/radio-group/artifact.json'), 'utf8'));
 const autocompleteArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/autocomplete/artifact.json'), 'utf8'));
+const tabsArtifact = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/components/tabs/artifact.json'), 'utf8'));
 const buttonBinding = buttonArtifact.bindings['web.react'];
 const toggleButtonBinding = toggleButtonArtifact.bindings['web.react'];
 const toggleButtonGroupBinding = toggleButtonGroupArtifact.bindings['web.react'];
@@ -63,6 +72,7 @@ const checkboxBinding = checkboxArtifact.bindings['web.react'];
 const checkboxGroupBinding = checkboxGroupArtifact.bindings['web.react'];
 const radioGroupBinding = radioGroupArtifact.bindings['web.react'];
 const autocompleteBinding = autocompleteArtifact.bindings['web.react'];
+const tabsBinding = tabsArtifact.bindings['web.react'];
 const expectedButtonProps = ['disabled', 'pending', 'showTextWhileLoading', 'variant', 'size'];
 const expectedButtonDefaults = {
   disabled: false,
@@ -177,6 +187,21 @@ if (!autocompleteBinding
   || !fieldsSource.includes('normalizeAutocompleteSize')) {
   throw new Error('MUXUI_REACT_AUTOCOMPLETE_CANONICAL_API_DRIFT');
 }
+const expectedTabsProps = ['aria-label', 'aria-labelledby', 'items', 'value', 'defaultValue', 'keyboardActivation', 'disabled', 'size', 'orientation', 'variant'];
+const expectedTabsDefaults = {
+  disabled: false,
+  orientation: 'horizontal',
+  keyboardActivation: 'automatic',
+  size: 'md',
+  variant: 'underline',
+};
+if (!tabsBinding
+  || JSON.stringify(tabsBinding.api.props) !== JSON.stringify(expectedTabsProps)
+  || JSON.stringify(tabsBinding.api.defaults) !== JSON.stringify(expectedTabsDefaults)
+  || !collectionsSource.includes("const TABS_VARIANTS = new Set(['underline', 'pill', 'overflow', 'segment']);")
+  || !collectionsSource.includes('normalizeTabsVariant')) {
+  throw new Error('MUXUI_REACT_TABS_CANONICAL_API_DRIFT');
+}
 const componentArtifacts = [
   buttonArtifact,
   ...await Promise.all([
@@ -259,11 +284,25 @@ function themeBundle(options = {}) {
   const graph = compileTokenGraph(tokenSource, options);
   const cssDeclarations = declarations(theme.css);
   const values = new Map(Object.keys(graph.tokens).map((id) => [id, cssDeclarations.get(cssName(id))]));
-  return { theme, graph, values };
+  return { theme, graph, declarations: cssDeclarations, values };
 }
 
 function changedTokenIds(base, variant) {
-  return new Set([...variant.values].filter(([id, value]) => base.values.get(id) !== value).map(([id]) => id));
+  const changed = new Set();
+  for (const [id, token] of Object.entries(variant.graph.tokens)) {
+    const prefix = cssName(id);
+    const names = [`${prefix}`, `${prefix}-duration`, `${prefix}-easing`];
+    if (token.type === 'transition' && token.value.spring) {
+      names.push(
+        `${prefix}-spring-visual-duration`,
+        `${prefix}-spring-duration`,
+        `${prefix}-spring-easing`,
+        `${prefix}-spring-bounce`,
+      );
+    }
+    if (names.some((name) => base.declarations.get(name) !== variant.declarations.get(name))) changed.add(id);
+  }
+  return changed;
 }
 
 function dependentClosure(seedIds, ...graphs) {
@@ -291,9 +330,22 @@ function dependentClosure(seedIds, ...graphs) {
 }
 
 function serializeDeclarations(bundle, tokenIds) {
-  return [...tokenIds].sort((left, right) => left.localeCompare(right))
-    .map((id) => `  ${cssName(id)}: ${bundle.values.get(id)};`)
-    .join('\n');
+  return [...tokenIds].sort((left, right) => left.localeCompare(right)).flatMap((id) => {
+    const token = bundle.graph.tokens[id];
+    const prefix = cssName(id);
+    const names = [`${prefix}`, `${prefix}-duration`, `${prefix}-easing`];
+    if (token?.type === 'transition' && token.value.spring) {
+      names.push(
+        `${prefix}-spring-visual-duration`,
+        `${prefix}-spring-duration`,
+        `${prefix}-spring-easing`,
+        `${prefix}-spring-bounce`,
+      );
+    }
+    return names
+      .filter((name) => bundle.declarations.has(name))
+      .map((name) => `  ${name}: ${bundle.declarations.get(name)};`);
+  }).join('\n');
 }
 
 function deltaBlock(selector, bundle, tokenIds, emptyComment) {
@@ -601,7 +653,7 @@ export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<str
 export type MuxUITableSortDescriptor = { column: string; direction: 'ascending' | 'descending'; };
 export type TableProps = MuxUIAriaLabel & { columns?: MuxUITableColumn[]; rows?: MuxUITableRow[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; sortDescriptor?: MuxUITableSortDescriptor; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onRowAction?: (row?: MuxUITableRow) => void; onSortChange?: (next: MuxUITableSortDescriptor) => void; className?: string; };
 export declare const Table: React.ForwardRefExoticComponent<TableProps & React.RefAttributes<HTMLTableElement>>;
-export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: string; defaultValue?: string; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; keyboardActivation?: 'automatic' | 'manual'; size?: ControlSize; onChange?: (value: string) => void; className?: string; };
+export type TabsProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: string; defaultValue?: string; disabled?: boolean; orientation?: 'horizontal' | 'vertical'; keyboardActivation?: 'automatic' | 'manual'; size?: ControlSize; variant?: 'underline' | 'pill' | 'overflow' | 'segment'; onChange?: (value: string) => void; className?: string; };
 export declare const Tabs: React.ForwardRefExoticComponent<TabsProps & React.RefAttributes<HTMLDivElement>>;
 export type TagGroupProps = MuxUIAccessibleName & { items?: MuxUIItems; disabled?: boolean; onRemove?: (items: MuxUICollectionItem[]) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
 export declare const TagGroup: React.ForwardRefExoticComponent<TagGroupProps & React.RefAttributes<HTMLDivElement>>;
@@ -870,6 +922,10 @@ const supplementalTypesSource = await readFile(resolve(packageRoot, 'src/supplem
 const supplementalStylesSource = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8').catch(() => '');
 const generatedSupplementalSource = supplementalSource
   .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'")
+  .replaceAll("from '../dialog-motion.mjs'", "from './dialog-motion.mjs'")
+  .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
+  .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
+  .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
   .replaceAll("from '../button.mjs'", "from './button.mjs'");
 const currentMappedRecords = (await Promise.all(r16Supplemental.components.map(async (entry) => {
   const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
@@ -885,6 +941,9 @@ const currentMappedRecords = (await Promise.all(r16Supplemental.components.map(a
     artifact,
     sourceText: sourceText
       .replaceAll("from '../button.mjs'", "from './button.mjs'")
+      .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
+      .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
+      .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
       .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'"),
     style,
     subpath: entry.export.module !== '.',
@@ -1053,6 +1112,14 @@ const outputs = new Map([
   ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
+  ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
+  ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
+  ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
+  ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
+  ['motion-components.mjs', generatedText('packages/react/src/motion-components.mjs', motionComponentsSource)],
+  ['popover-motion.mjs', generatedText('packages/react/src/popover-motion.mjs', popoverMotionSource)],
+  ['tabs-motion.mjs', generatedText('packages/react/src/tabs-motion.mjs', tabsMotionSource)],
+  ['range-selection-motion.mjs', generatedText('packages/react/src/range-selection-motion.mjs', rangeSelectionMotionSource)],
   ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
   ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],
   ['overlay-positioning.mjs', generatedText('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],

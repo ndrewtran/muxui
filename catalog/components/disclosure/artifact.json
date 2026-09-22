@@ -173,6 +173,10 @@
           {
             "token": "semantic.action.neutral-background-pressed",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.content-resize-transition",
+            "requirement": "required"
           }
         ]
       },

@@ -102,7 +102,7 @@ export function foundationPage(slug: string): FoundationPage | undefined {
 		: FOUNDATION_PAGES.find((page) => page.slug === slug);
 }
 
-type TokenType = 'color' | 'dimension' | 'duration' | 'number' | 'string' | 'effect';
+type TokenType = 'color' | 'dimension' | 'duration' | 'number' | 'string' | 'effect' | 'easing' | 'transition';
 type TokenLayer = 'reference' | 'semantic' | 'component';
 type TokenDefinition = {
 	layer: TokenLayer;

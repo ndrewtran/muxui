@@ -1,0 +1,46 @@
+<!doctype html>
+<html data-muxui-theme="standard-harbour" data-muxui-color-scheme="dark" data-muxui-motion="full">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="/generated/styles.css">
+    <link rel="stylesheet" href="/generated/themes.css">
+    <link rel="stylesheet" href="/src/styles/collections.css">
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #000; color: #fff; font-family: var(--muxui-semantic-typography-text-font-family, system-ui, sans-serif); }
+      .tabs-preview-page { min-block-size: 100vh; padding: 32px; }
+      .tabs-preview-title { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-block-end: 24px; }
+      .tabs-preview-title h1 { margin: 0; font-size: 30px; line-height: 1.1; letter-spacing: -0.02em; }
+      .tabs-preview-title p, .tabs-preview-note { margin: 0; color: #aaa; font-size: 13px; }
+      .tabs-preview-canvases { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+      .tabs-preview-canvas { min-inline-size: 0; padding: 24px; border-radius: 12px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
+      .tabs-preview-canvas[data-muxui-color-scheme='dark'] { color-scheme: dark; }
+      .tabs-preview-canvas[data-muxui-color-scheme='light'] { color-scheme: light; }
+      .tabs-preview-header { display: flex; align-items: baseline; gap: 10px; margin-block-end: 22px; }
+      .tabs-preview-kicker { margin: 0; color: var(--muxui-semantic-content-muted); font-size: 12px; text-transform: capitalize; }
+      .tabs-preview-header h2 { margin: 0; color: var(--muxui-semantic-content-strong); font-size: 16px; line-height: 1.2; }
+      .tabs-preview-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+      .tabs-preview-example { min-inline-size: 0; }
+      .tabs-preview-example .muxui-tab-panels, .tabs-preview-vertical .muxui-tab-panels { display: none; }
+      .tabs-preview-example h3, .tabs-preview-vertical h3 { margin: 0 0 8px; color: var(--muxui-semantic-content-strong); font-size: 13px; font-weight: var(--muxui-semantic-typography-control-weight); }
+      .tabs-preview-example:nth-child(3) .muxui-tabs { max-inline-size: 19rem; }
+      .tabs-preview-vertical { max-inline-size: 25rem; margin-block-start: 26px; }
+      .tabs-preview-vertical .muxui-tabs { block-size: 12rem; }
+      .tabs-preview-note { margin-block-start: 18px; }
+      @media (max-width: 760px) {
+        .tabs-preview-page { padding: 20px 16px; }
+        .tabs-preview-title { display: block; }
+        .tabs-preview-title p { margin-block-start: 8px; }
+        .tabs-preview-canvases, .tabs-preview-grid { grid-template-columns: 1fr; }
+        .tabs-preview-canvas { padding: 20px 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"><div style="padding:32px;color:#aaa">Loading tabs preview…</div></div>
+    <script type="module" src="/test/fixtures/tabs-variant-preview-browser-entry.mjs"></script>
+  </body>
+</html>

@@ -109,6 +109,9 @@ function inferControl(name, defaults, props, family) {
   if (family === 'Button' && BUTTON_SELECT_PROPS[name]) {
     return { control: { type: 'select' }, options: BUTTON_SELECT_PROPS[name] };
   }
+  if (family === 'Tabs' && name === 'variant') {
+    return { control: { type: 'select' }, options: ['underline', 'pill', 'overflow', 'segment'] };
+  }
   if (SELECT_PROPS[name]) return { control: { type: 'select' }, options: SELECT_PROPS[name] };
   if (BOOLEAN_PROPS.has(name) || typeof defaults[name] === 'boolean') return { control: 'boolean' };
   if ((name === 'value' || name === 'defaultValue')
@@ -330,6 +333,9 @@ function stateIsSupported(binding, state, family) {
         || props.has('selectedIds')
         || props.has('selectedId')
         || ['CheckboxGroup', 'RadioGroup', 'Tabs', 'Select', 'Calendar', 'RangeCalendar', 'ColorSwatchPicker'].includes(family) && props.has('value');
+    case 'checked':
+    case 'unchecked':
+      return props.has('checked');
     case 'indeterminate':
       return props.has('indeterminate') || family === 'ProgressBar';
     case 'expanded':
@@ -410,6 +416,12 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
       break;
     case 'selected':
       setSelectedState(args, props, family, fixtureInput, preserveExplicit);
+      break;
+    case 'checked':
+      if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) setControlledArg(args, props, 'checked', true);
+      break;
+    case 'unchecked':
+      if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) setControlledArg(args, props, 'checked', false);
       break;
     case 'indeterminate':
       if (props.has('indeterminate')) args.indeterminate = true;
@@ -761,21 +773,29 @@ Object.assign(ADAPTERS, {
     e(MuxUI.CheckboxField.Error, null, args.invalid ? 'Invalid value' : null),
   ),
   ColorModeToggle: (args) => e(ColorModeTogglePreview, args),
-  CommandPalette: (args) => e(MuxUI.CommandPalette.Root, { ...args, open: args.open ?? false },
-    e(MuxUI.CommandPalette.Trigger, { disabled: args.disabled }, 'Open command palette'),
-    e(MuxUI.CommandPalette.Backdrop),
-    e(MuxUI.CommandPalette.Popup, null,
-      e(MuxUI.CommandPalette.Title, null, 'Commands'),
-      e(MuxUI.CommandPalette.Description, null, 'Choose an action'),
-      e(MuxUI.CommandPalette.Content, null,
-        e(MuxUI.CommandPalette.SearchField, null, e(MuxUI.CommandPalette.Input, { placeholder: 'Search commands' })),
-        e(MuxUI.CommandPalette.ListBox, null,
-          e(MuxUI.CommandPalette.Item, { id: 'save', title: 'Save' }, 'Save'),
+  CommandPalette: (args) => {
+    const rootProps = { ...args };
+    if (args.open === undefined) {
+      delete rootProps.open;
+      rootProps.defaultOpen = args.defaultOpen ?? false;
+    }
+    return e(MuxUI.CommandPalette.Root, rootProps,
+      e(MuxUI.CommandPalette.Trigger, { disabled: args.disabled }, 'Open command palette'),
+      e(MuxUI.CommandPalette.Backdrop, null,
+        e(MuxUI.CommandPalette.Popup, null,
+          e(MuxUI.CommandPalette.Title, null, 'Commands'),
+          e(MuxUI.CommandPalette.Description, null, 'Choose an action'),
+          e(MuxUI.CommandPalette.Content, null,
+            e(MuxUI.CommandPalette.SearchField, null, e(MuxUI.CommandPalette.Input, { placeholder: 'Search commands' })),
+            e(MuxUI.CommandPalette.ListBox, null,
+              e(MuxUI.CommandPalette.Item, { id: 'save', title: 'Save' }, 'Save'),
+            ),
+          ),
+          e(MuxUI.CommandPalette.Close, null, 'Close'),
         ),
       ),
-      e(MuxUI.CommandPalette.Close, null, 'Close'),
-    ),
-  ),
+    );
+  },
   HeaderNav: (args) => e(MuxUI.HeaderNav.Root, { ...args },
     e(MuxUI.HeaderNav.Logo, null, 'Mux UI'),
     e(MuxUI.HeaderNav.Secondary, { 'aria-label': `${args['aria-label'] ?? 'Header navigation'} secondary` }, 'Docs'),

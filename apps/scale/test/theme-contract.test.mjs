@@ -121,6 +121,39 @@ test('import, edit and export preserve additional typed overrides and constraine
   assert.match(previewCss(edited, { selector: ':root' }), /^:root \{/u);
 });
 
+test('motion easing and transition overrides round-trip through Scale authoring', () => {
+  const settings = {
+    ...DEFAULT_SETTINGS,
+    additionalOverrides: {
+      'semantic.motion.interaction-easing': {
+        type: 'easing', unit: 'structured',
+        value: { kind: 'cubic-bezier', x1: 0.2, y1: 0, x2: 0, y2: 1 },
+      },
+      'semantic.motion.interaction-transition': {
+        type: 'transition', unit: 'structured',
+        value: {
+          kind: 'transition',
+          duration: 'semantic.motion.interaction-duration',
+          easing: 'semantic.motion.interaction-easing',
+          spring: {
+            kind: 'time',
+            visualDuration: 'semantic.motion.interaction-duration',
+            bounce: 0.25,
+          },
+        },
+      },
+    },
+  };
+  const document = createScaleDocument(settings, { slug: 'motion-roundtrip' });
+  const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
+  assert.deepEqual(restored.additionalOverrides, settings.additionalOverrides);
+  assert.deepEqual(createScaleDocument(restored, { slug: 'motion-roundtrip' }), document);
+  const compiled = previewTheme(settings);
+  assert.deepEqual(compiled.tokens['semantic.motion.interaction-transition'].value.spring, {
+    kind: 'time', visualDuration: 150, bounce: 0.25,
+  });
+});
+
 test('swatches use compiled backgrounds and foregrounds for both color modes', () => {
   for (const colorMode of ['light', 'dark']) {
     const compiled = previewTheme({ ...DEFAULT_SETTINGS, colorMode, background: colorMode });

@@ -77,7 +77,7 @@
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
         "requirements": [
-          { "token": "semantic.shape.compact-radius", "requirement": "required" },
+          { "token": "semantic.shape.radius-s", "requirement": "required" },
           { "token": "semantic.shape.option-radius", "requirement": "required" },
           { "token": "semantic.shape.container-radius", "requirement": "required" },
           { "token": "semantic.shape.pill-radius", "requirement": "required" }

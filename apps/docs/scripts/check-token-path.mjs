@@ -145,6 +145,7 @@ const expectedFoundationFamilies = new Map([
 	])],
 	['foundations/shape/index.html', new Map([
 		['reference-radii', ['reference.dimension.radius-none', 'reference.dimension.radius-full']],
+		['semantic-radii', ['semantic.shape.radius-xs', 'semantic.shape.radius-s']],
 		['semantic-shape-roles', ['semantic.shape.container-radius', 'semantic.control.radius']],
 	])],
 	['foundations/elevation/index.html', new Map([
@@ -211,6 +212,14 @@ for (const [relativePath, expectedGroups] of expectedFoundationFamilies) {
 		}
 	}
 	if (relativePath === 'foundations/motion/index.html') {
+		const motionInventoryIds = new Set();
+		walk(tree, [], (node) => {
+			const tokenId = attributeValue(node, 'data-token-id');
+			if (tokenId !== undefined) motionInventoryIds.add(tokenId);
+		});
+		for (const tokenId of ['semantic.motion.interaction-transition', 'semantic.motion.reveal-transition', 'semantic.motion.dismiss-transition']) {
+			assert(motionInventoryIds.has(tokenId), `Motion inventory is missing the canonical transition token: ${tokenId}`);
+		}
 		const easingMarkers = [];
 		walk(tree, [], (node) => {
 			if (classNames(node).has('foundation-motion-marker')) easingMarkers.push(attributeValue(node, 'style') ?? '');

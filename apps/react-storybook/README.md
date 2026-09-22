@@ -18,6 +18,13 @@ pnpm --filter @muxui/react-storybook check
 pnpm --filter @muxui/react-storybook build
 ```
 
+For bounded verification, use `pnpm check --component <family-or-slug>` for
+selected React and Storybook family audits, `pnpm check --package
+@muxui/react-storybook` for the package scope, or `pnpm check --files
+apps/react-storybook/<path[,path]>` for exact task files. Explicit scopes ignore
+unrelated dirty paths. Focused audits are partial proof; use `pnpm check:all`
+when full workspace coverage is required.
+
 Direct package checks run the complete browser audits. CI may set
 `MUXUI_STORYBOOK_AUDIT_MODE=skip-heavy` for a pull request whose changed paths
 are outside the Storybook dependency closure; the canonical selector fails

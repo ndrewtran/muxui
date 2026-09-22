@@ -7,6 +7,7 @@ import axe from 'axe-core';
 import { chromium } from 'playwright-core';
 import test from 'node:test';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { selectedStorybookFamilies, storybookSelectionLabel } from './storybook-family-selection.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
 const host = '127.0.0.1';
@@ -229,10 +230,16 @@ async function waitForDocumentAnimations(page) {
     document.documentElement.setAttribute('data-reduced-motion', 'true');
     await document.fonts.ready;
     await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
-    // Indeterminate components intentionally animate forever. Axe needs the
-    // settled DOM and computed styles, not an unbounded wait for decorative
-    // motion, so cancel the current visual animations before evaluation.
-    document.getAnimations().forEach((animation) => animation.cancel());
+    // Finish finite transitions so motion reaches its settled styles. Cancel
+    // only indeterminate animations, which otherwise never become idle.
+    document.getAnimations().forEach((animation) => {
+      try {
+        if (animation.effect?.getTiming?.().iterations === Infinity) animation.cancel();
+        else animation.finish();
+      } catch {
+        animation.cancel();
+      }
+    });
     await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
   });
   // Overlay and lifecycle stories settle their open/close attributes on a
@@ -452,6 +459,7 @@ async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
     0,
     `forced-colors/high-contrast/rtl ${story.id} has axe violations:\n${formatViolations(result.violations)}`,
   );
+  if (!contrastStory) return;
   const highContrastStoryUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(contrastStory.id)}&viewMode=story&globals=${encodeURIComponent('colorScheme:light;direction:rtl')}`;
   await page.goto(highContrastStoryUrl, { waitUntil: 'domcontentloaded' });
   await waitForStory(page, 'light');
@@ -570,11 +578,15 @@ async function runA11yWorker({
   const coverage = [];
   try {
     for (const scheme of schemes) {
-      await assertDisabledAutocompleteKeyboard(page, baseUrl, autocompleteInteraction, scheme);
-      coverage.push(`${scheme}:autocomplete-keyboard`);
-      await assertButtonMatrix(page, baseUrl, buttonMatrix, scheme);
-      coverage.push(`${scheme}:button-matrix`);
-      for (const story of [...defaults, ...states, linkIconComposition]) {
+      if (autocompleteInteraction) {
+        await assertDisabledAutocompleteKeyboard(page, baseUrl, autocompleteInteraction, scheme);
+        coverage.push(`${scheme}:autocomplete-keyboard`);
+      }
+      if (buttonMatrix) {
+        await assertButtonMatrix(page, baseUrl, buttonMatrix, scheme);
+        coverage.push(`${scheme}:button-matrix`);
+      }
+      for (const story of [...defaults, ...states, ...(linkIconComposition ? [linkIconComposition] : [])]) {
         try {
           const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
           await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
@@ -638,6 +650,8 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
   timeout: testTimeoutMs,
   skip: heavyAuditSkip('a11y-families'),
 }, async () => {
+  const selectedFamilies = selectedStorybookFamilies();
+  const focused = selectedFamilies !== null;
   const executablePath = await findBrowser();
   assert.ok(executablePath, 'Chrome or Chromium is required for the Storybook a11y gate (set MUXUI_CHROME_EXECUTABLE to override)');
 
@@ -661,32 +675,37 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       return response.json();
     });
     const stories = Object.values(index.entries).filter(({ type }) => type === 'story');
-    const defaults = stories.filter(({ name }) => name === 'Default');
-    const states = stories.filter(({ name }) => name === 'States');
-    const browserProofs = stories.filter(({ name }) => name?.toLowerCase() === 'browser proof');
-    const linkIconComposition = stories.find((story) => story.name === 'Icon composition' && storyFamily(story) === 'Link');
-    const buttonMatrix = stories.find((story) => story.exportName === 'Matrix' && storyFamily(story) === 'Button');
+    const familyFilter = focused ? new Set(selectedFamilies) : null;
+    const isSelected = (story) => !familyFilter || familyFilter.has(storyFamily(story));
+    const defaults = stories.filter((story) => story.name === 'Default' && isSelected(story));
+    const states = stories.filter((story) => story.name === 'States' && isSelected(story));
+    const browserProofs = stories.filter((story) => story.name?.toLowerCase() === 'browser proof' && isSelected(story));
+    const linkIconComposition = stories.find((story) => story.name === 'Icon composition'
+      && storyFamily(story) === 'Link' && isSelected(story));
+    const buttonMatrix = stories.find((story) => story.exportName === 'Matrix'
+      && storyFamily(story) === 'Button' && isSelected(story));
     const buttonStates = states.find((story) => storyFamily(story) === 'Button');
     const checkboxStates = states.find((story) => storyFamily(story) === 'Checkbox');
-    const autocompleteInteraction = stories.find(({ name }) => name === 'Disabled items keyboard navigation');
-    const expectedFamilies = new Set(manifest.families.map(({ family }) => family));
+    const autocompleteInteraction = stories.find(({ name }) => name === 'Disabled items keyboard navigation'
+      && isSelected({ title: 'Mux UI React/Autocomplete' }));
+    const expectedFamilies = new Set(selectedFamilies ?? manifest.families.map(({ family }) => family));
     assert.ok(expectedFamilies.size > 0, 'the generated Storybook manifest must contain the current union');
-    assert.equal(defaults.length, expectedFamilies.size, 'Storybook must expose one Default story for every family');
-    assert.equal(states.length, expectedFamilies.size, 'Storybook must expose one States story for every family');
-    assert.equal(browserProofs.length, expectedFamilies.size, 'Storybook must expose one Browser proof story for every family');
-    assert.deepEqual(new Set(defaults.map(storyFamily)), expectedFamilies, 'Default stories must cover every manifest family');
-    assert.deepEqual(new Set(states.map(storyFamily)), expectedFamilies, 'States stories must cover every manifest family');
-    assert.deepEqual(new Set(browserProofs.map(storyFamily)), expectedFamilies, 'Browser proof stories must cover every manifest family');
+    assert.equal(defaults.length, expectedFamilies.size, 'Storybook must expose one selected Default story for every family');
+    assert.equal(states.length, expectedFamilies.size, 'Storybook must expose one selected States story for every family');
+    assert.equal(browserProofs.length, expectedFamilies.size, 'Storybook must expose one selected Browser proof story for every family');
+    assert.deepEqual(new Set(defaults.map(storyFamily)), expectedFamilies, 'Default stories must cover every selected family');
+    assert.deepEqual(new Set(states.map(storyFamily)), expectedFamilies, 'States stories must cover every selected family');
+    assert.deepEqual(new Set(browserProofs.map(storyFamily)), expectedFamilies, 'Browser proof stories must cover every selected family');
     assert.deepEqual(
       new Set(defaults.map(storyFamily)),
       new Set(states.map(storyFamily)),
       'Default and States stories must cover the same families',
     );
-    assert.ok(autocompleteInteraction, 'Storybook must expose the disabled-item Autocomplete interaction story');
-    assert.ok(linkIconComposition, 'Storybook must expose the Link icon composition story');
-    assert.ok(buttonStates, 'Storybook must expose the Button States story for focused platform-mode proof');
-    assert.ok(checkboxStates, 'Storybook must expose the Checkbox States story for focused contrast proof');
-    assert.ok(buttonMatrix, 'Storybook must expose the Button Variant × size Matrix story');
+    if (!focused || expectedFamilies.has('Autocomplete')) assert.ok(autocompleteInteraction, 'Storybook must expose the disabled-item Autocomplete interaction story');
+    if (!focused || expectedFamilies.has('Link')) assert.ok(linkIconComposition, 'Storybook must expose the Link icon composition story');
+    if (!focused || expectedFamilies.has('Button')) assert.ok(buttonStates, 'Storybook must expose the Button States story for focused platform-mode proof');
+    if (!focused || expectedFamilies.has('Checkbox')) assert.ok(checkboxStates, 'Storybook must expose the Checkbox States story for focused contrast proof');
+    if (!focused || expectedFamilies.has('Button')) assert.ok(buttonMatrix, 'Storybook must expose the Button Variant × size Matrix story');
 
     browser = await chromium.launch({ executablePath, headless: true });
     const workerTotal = workerCount('MUXUI_STORYBOOK_A11Y_WORKERS');
@@ -712,23 +731,26 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
     const workerCoverage = workerResults.map(({ value }) => value);
 
     const expectedCoverage = workerSchemes.flatMap((schemes) => schemes.flatMap((scheme) => [
-      `${scheme}:autocomplete-keyboard`,
-      `${scheme}:button-matrix`,
-      ...[...defaults, ...states, linkIconComposition].map((story) => `${scheme}:axe:${story.id}`),
+      ...(autocompleteInteraction ? [`${scheme}:autocomplete-keyboard`] : []),
+      ...(buttonMatrix ? [`${scheme}:button-matrix`] : []),
+      ...[...defaults, ...states, ...(linkIconComposition ? [linkIconComposition] : [])].map((story) => `${scheme}:axe:${story.id}`),
       ...browserProofs.map((story) => `${scheme}:browser-proof:${story.id}`),
     ])).sort();
     const actualCoverage = workerCoverage.flat().sort();
     assert.deepEqual(actualCoverage, expectedCoverage, 'a11y worker coverage must account for every family, scheme, and proof');
 
-    const platformContext = await browser.newContext();
-    const platformPage = await platformContext.newPage();
-    platformPage.setDefaultNavigationTimeout(storyTimeoutMs);
-    platformPage.setDefaultTimeout(storyTimeoutMs);
-    try {
-      await assertPlatformModeCoverage(platformPage, baseUrl, buttonStates, checkboxStates);
-    } finally {
-      await platformContext.close();
+    if (buttonStates || checkboxStates) {
+      const platformContext = await browser.newContext();
+      const platformPage = await platformContext.newPage();
+      platformPage.setDefaultNavigationTimeout(storyTimeoutMs);
+      platformPage.setDefaultTimeout(storyTimeoutMs);
+      try {
+        await assertPlatformModeCoverage(platformPage, baseUrl, buttonStates ?? checkboxStates, checkboxStates);
+      } finally {
+        await platformContext.close();
+      }
     }
+    console.log(`[storybook-a11y] ${focused ? 'partial' : 'full'} proof: ${storybookSelectionLabel(selectedFamilies)}`);
   } finally {
     await browser?.close();
     await terminateProcess(storybook);

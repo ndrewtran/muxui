@@ -11,7 +11,7 @@
   color: var(--muxui-semantic-color-neutral-50);
   background-color: var(--muxui-semantic-surface-canvas);
   border: 2px dashed var(--muxui-semantic-color-neutral-26);
-  border-radius: var(--muxui-semantic-shape-compact-radius);
+  border-radius: var(--muxui-semantic-shape-radius-s);
   outline: none;
   transition:
     border-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
@@ -60,7 +60,7 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) translateY(var(--muxui-modal-y, 0px)) scale(var(--muxui-modal-scale, 1));
   z-index: 101;
   width: min(90vw, 30rem);
   max-inline-size: calc(100vw - (2 * var(--muxui-semantic-layout-viewport-inset)) - (2 * var(--muxui-semantic-layout-inset-large)) - 2px);
@@ -75,24 +75,19 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-control-content-gap);
   outline: none;
-  transition:
-    opacity var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
-    transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-dialog[data-entering],
-.muxui-dialog[data-exiting] {
-  opacity: 0;
-  transform: translate(-50%, calc(-50% - 0.5rem));
 }
 
 .muxui-dialog-close {
   aspect-ratio: 1;
   min-height: auto;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   border-radius: var(--muxui-semantic-shape-option-radius);
   top: var(--muxui-semantic-layout-inset-small);
   right: var(--muxui-semantic-layout-control-inset);
+}
+
+.muxui-dialog-backdrop[data-muxui-dialog-reduced] {
+  transition-duration: 0s !important;
 }
 
 .muxui-dialog-description,
@@ -306,9 +301,7 @@
   border-radius: var(--muxui-semantic-control-radius);
   box-shadow: var(--muxui-semantic-elevation-toast);
   outline: none;
-  transition:
-    opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing),
-    transform var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing);
+  transition: none;
 }
 
 .muxui-toast[data-variant='neutral'] {
@@ -327,10 +320,8 @@
   border-inline-start-color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-toast[data-entering],
-.muxui-toast[data-exiting] {
-  opacity: 0;
-  transform: translateY(var(--muxui-semantic-layout-group-gap));
+.muxui-toast[data-muxui-toast-exiting] {
+  pointer-events: none;
 }
 
 .muxui-toast-content {
@@ -366,7 +357,7 @@
 .muxui-toast-dismiss {
   aspect-ratio: 1;
   min-height: auto;
-  padding: var(--muxui-semantic-layout-tight-inset);
+  padding: var(--muxui-semantic-layout-inset-tight);
   border-radius: var(--muxui-semantic-shape-option-radius);
   flex: none;
   color: var(--muxui-semantic-color-neutral-80);
@@ -383,6 +374,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .muxui-dialog-backdrop {
+    transition-duration: 0s !important;
+  }
+
   .muxui-toast {
     transition: none;
   }
@@ -395,7 +390,7 @@
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
-  padding: var(--muxui-semantic-layout-tight-inset) var(--muxui-semantic-layout-inset-tiny);
+  padding: var(--muxui-semantic-layout-inset-tight) var(--muxui-semantic-layout-inset-tiny);
   border-radius: var(--muxui-semantic-control-radius);
   max-width: 15rem;
   overflow-wrap: anywhere;

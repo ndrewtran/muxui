@@ -146,6 +146,89 @@ test('E-G1.0-04 catalog exposes resolved requirement sets matching packed descri
   );
 });
 
+test('E-G1.0-04 motion consumers retain transition metadata and dependency closure', async () => {
+  const bundle = await readJson('../generated/catalog.json');
+  const cases = {
+    dialog: {
+      requirements: ['semantic.motion.modal-transition', 'semantic.motion.modal-dismiss-transition'],
+      dependencies: {
+        'semantic.motion.modal-transition': ['semantic.motion.modal-enter-duration', 'semantic.motion.modal-easing'],
+        'semantic.motion.modal-dismiss-transition': ['semantic.motion.exit-duration', 'semantic.motion.modal-easing'],
+      },
+    },
+    popover: {
+      requirements: ['semantic.motion.reveal-transition', 'semantic.motion.dismiss-transition'],
+      dependencies: {
+        'semantic.motion.reveal-transition': ['semantic.motion.reveal-duration', 'semantic.motion.reveal-easing'],
+        'semantic.motion.dismiss-transition': ['semantic.motion.exit-duration', 'semantic.motion.dismiss-easing'],
+      },
+    },
+    calendar: {
+      requirements: ['semantic.motion.content-resize-transition'],
+      dependencies: {
+        'semantic.motion.content-resize-transition': ['semantic.motion.content-resize-duration', 'semantic.motion.interaction-easing'],
+      },
+    },
+    rangeCalendar: {
+      requirements: ['semantic.motion.content-resize-transition', 'semantic.motion.state-transition', 'semantic.motion.dismiss-transition'],
+      dependencies: {
+        'semantic.motion.state-transition': ['semantic.motion.state-duration', 'semantic.motion.interaction-easing'],
+        'semantic.motion.dismiss-transition': ['semantic.motion.exit-duration', 'semantic.motion.dismiss-easing'],
+      },
+    },
+    tabs: {
+      requirements: ['semantic.motion.state-transition', 'semantic.motion.interaction-transition'],
+      dependencies: {
+        'semantic.motion.state-transition': ['semantic.motion.state-duration', 'semantic.motion.interaction-easing'],
+        'semantic.motion.interaction-transition': ['semantic.motion.interaction-duration', 'semantic.motion.interaction-easing'],
+      },
+    },
+  };
+  for (const [slug, expected] of Object.entries(cases)) {
+    const artifact = bundle.artifacts.find(({ id }) => id === `muxui:component:${slug === 'rangeCalendar' ? 'range-calendar' : slug}`);
+    assert.ok(artifact, `${slug}: canonical component artifact exists`);
+    const set = artifact.tokenRequirementSets['web.react:web.react'];
+    const requirements = new Set(set.requirements.map(({ token }) => token));
+    const closure = new Map(set.closure.map((entry) => [entry.token, entry]));
+    for (const token of expected.requirements) {
+      assert.ok(requirements.has(token), `${slug}: requirement ${token}`);
+      assert.equal(closure.get(token)?.type, 'transition', `${slug}: ${token} is structured transition metadata`);
+      assert.deepEqual(
+        closure.get(token)?.dependencies,
+        [...new Set(closure.get(token)?.dependencies ?? [])],
+        `${slug}: ${token} closure dependencies are unique`,
+      );
+      for (const dependency of expected.dependencies[token] ?? []) {
+        assert.ok(closure.has(dependency), `${slug}: ${token} retains ${dependency} in its closure`);
+      }
+    }
+  }
+});
+
+test('E-G1.0-04 every web.react full artifact response validates its token closure', async () => {
+  const bundle = await readJson('../generated/catalog.json');
+  const api = createCatalogApi(bundle);
+  const listed = api.listArtifacts({
+    kind: 'component',
+    platform: 'web.react',
+    purpose: null,
+    detail: 'brief',
+    limit: 100,
+    cursor: null,
+  });
+  validateFamily('query-envelope', listed);
+  for (const { id } of listed.data.items) {
+    const response = api.getArtifact({
+      id,
+      platform: 'web.react',
+      purpose: null,
+      detail: 'full',
+    });
+    validateFamily('query-envelope', response);
+    assert.equal(response.type, 'artifact.detail', `${id}: full web.react response succeeds`);
+  }
+});
+
 test('E-G1.0-04 test pack projection binds catalog, descriptors, and release maps', async () => {
   const bundle = await readJson('../generated/catalog.json');
   const identity = await readJson('../generated/catalog-package.json');

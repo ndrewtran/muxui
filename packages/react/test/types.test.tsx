@@ -294,6 +294,10 @@ const r13EnrichedCollections = (
     <Select label="Color" open={false} defaultOpen={false} onOpenChange={(open) => { const value: boolean = open; void value; }} />
     <Table aria-label="People" columns={[{ id: 'name', label: 'Name', sortable: true }]} sortDescriptor={{ column: 'name', direction: 'ascending' }} onSortChange={(next) => { const column: string = next.column; void column; }} />
     <Tabs aria-label="Sections" keyboardActivation="manual" />
+    <Tabs aria-label="Pill sections" variant="pill" />
+    <Tabs aria-label="Overflow sections" variant="overflow" />
+    <Tabs aria-label="Segment sections" variant="segment" />
+    <Tabs aria-label="Underline sections" variant="underline" />
     <CheckboxGroup aria-label="Choices" orientation="horizontal" size="sm" />
     <RadioGroup aria-label="Choice" size="sm" />
     <ToggleButtonGroup aria-label="Styles" size="sm" disallowEmptySelection selectionMode="multiple" selectedIds={['bold'] as readonly string[]} onSelectionChange={(ids) => { const value: readonly string[] = ids; void value; }} />
@@ -340,6 +344,9 @@ void menuLabel;
 // @ts-expect-error Tabs use an ARIA accessible name, not a field label.
 const tabsLabel = <Tabs label="Sections" aria-label="Sections" />;
 void tabsLabel;
+// @ts-expect-error Tabs variants belong to Mux UI's finite visual contract.
+const tabsVariant = <Tabs aria-label="Sections" variant="rail" />;
+void tabsVariant;
 // @ts-expect-error ToggleButtonGroup uses an ARIA accessible name, not a field label.
 const toggleButtonGroupLabel = <ToggleButtonGroup label="Styles" aria-label="Styles" />;
 void toggleButtonGroupLabel;

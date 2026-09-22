@@ -211,10 +211,11 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-breadcrumbs-item\[data-disabled\]:not\(\[data-current\]\)[^}]*color: var\(--muxui-semantic-content-default\)/u);
   assert.doesNotMatch(css, /\.muxui-breadcrumbs-item\[data-disabled\][^}]*opacity:/u);
 
-  assert.match(css, /\.muxui-dialog\[data-entering\][\s\S]*transform: translate\(-50%, calc\(-50% - 0\.5rem\)\)/u);
-  assert.match(css, /\.muxui-popover\[data-entering\][\s\S]*transform: scale\(0\.97\)/u);
+  assert.match(css, /\.muxui-dialog\s*\{[^}]*transform: translate\(-50%, -50%\)[^;]*;/u);
+  assert.doesNotMatch(css, /\.muxui-popover\[data-entering\][\s\S]*transform: scale\(0\.97\)/u);
   assert.match(css, /\.muxui-tooltip\[data-entering\][\s\S]*transform: scale\(0\.96\)/u);
-  assert.match(css, /\.muxui-toast\[data-exiting\][\s\S]*transform: translateY\(var\(--muxui-semantic-layout-group-gap\)\)/u);
+  assert.match(css, /\.muxui-toast\s*\{[\s\S]*transition: none;/u);
+  assert.match(css, /\.muxui-toast\[data-muxui-toast-exiting\][\s\S]*pointer-events: none;/u);
   assert.match(css, /\.muxui-dialog-backdrop\s*\{[\s\S]*position: fixed;[\s\S]*inset: 0;/u);
   assert.match(css, /\.muxui-dialog-content\s*\{[\s\S]*font-weight: var\(--muxui-semantic-typography-body-weight\)/u);
   assert.match(css, /\.muxui-field-description\s*\{[\s\S]*color: var\(--muxui-semantic-content-default\)/u);

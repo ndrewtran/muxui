@@ -85,7 +85,7 @@
 }
 
 .muxui-markdown-code {
-  padding-block: var(--muxui-semantic-layout-tight-inset);
+  padding-block: var(--muxui-semantic-layout-inset-tight);
   padding-inline: var(--muxui-semantic-layout-inset-tiny);
   border-radius: var(--muxui-semantic-shape-indicator-radius);
   background: var(--muxui-semantic-color-neutral-12);

@@ -19,6 +19,7 @@ import {
 } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
+import { MotionHeight } from './motion-components.mjs';
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -147,37 +148,43 @@ export const DisclosureGroup = React.forwardRef(function DisclosureGroup({
 
 DisclosureGroup.displayName = 'DisclosureGroup';
 
-export const Disclosure = React.forwardRef(function Disclosure({
-  title,
-  children,
-  id,
-  expanded,
-  defaultExpanded = false,
-  disabled = false,
-  className,
-  onExpandedChange,
-  ...props
-}, ref) {
-  const grouped = React.useContext(DisclosureGroupContext);
-  const trigger = React.createElement(AriaButton, { slot: 'trigger', className: 'muxui-disclosure-trigger' }, title, grouped
-    ? React.createElement(ChevronDownIcon, { className: 'muxui-disclosure-trigger-icon', 'aria-hidden': 'true', focusable: 'false' })
-    : null);
-  return React.createElement(AriaDisclosure, {
-    ...props,
-    ref,
-    className: classNames('muxui-disclosure', className),
+export const Disclosure = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function Disclosure({
+    title,
+    children,
     id,
-    isExpanded: expanded,
-    defaultExpanded,
-    isDisabled: disabled,
+    expanded,
+    defaultExpanded = false,
+    disabled = false,
+    className,
     onExpandedChange,
-  }, grouped
-    ? React.createElement('div', { className: 'muxui-disclosure-header' }, trigger)
-    : trigger,
-  React.createElement(AriaDisclosurePanel, { role: 'region', className: 'muxui-disclosure-panel' }, children));
-});
-
-Disclosure.displayName = 'Disclosure';
+    ...props
+  }, ref) {
+    const grouped = React.useContext(DisclosureGroupContext);
+    const triggerRef = React.useRef(null);
+    const panelHostRef = React.useRef(null);
+    return React.createElement(AriaDisclosure, {
+      ...props,
+      ref,
+      className: classNames('muxui-disclosure', className),
+      id,
+      isExpanded: expanded,
+      defaultExpanded,
+      isDisabled: disabled,
+      onExpandedChange,
+    }, ({ isExpanded }) => {
+      const trigger = React.createElement(AriaButton, { ref: triggerRef, slot: 'trigger', className: 'muxui-disclosure-trigger' }, title, grouped
+        ? React.createElement(ChevronDownIcon, { className: 'muxui-disclosure-trigger-icon', 'aria-hidden': 'true', focusable: 'false' })
+        : null);
+      return React.createElement(React.Fragment, null,
+        grouped ? React.createElement('div', { className: 'muxui-disclosure-header' }, trigger) : trigger,
+        React.createElement(AriaDisclosurePanel, { ref: panelHostRef, role: 'region', className: 'muxui-disclosure-panel' },
+          React.createElement(MotionHeight, { isOpen: isExpanded, triggerRef, hostRef: panelHostRef, className: 'muxui-disclosure-motion-panel' }, children)));
+    });
+  });
+  component.displayName = 'Disclosure';
+  return component;
+})();
 
 export const Group = React.forwardRef(function Group({
   children,

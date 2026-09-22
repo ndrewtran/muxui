@@ -1,0 +1,17 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:tabs-variants-react",
+  "kind": "example",
+  "name": "Tabs variants",
+  "summary": "Compare the supported underline, pill, segment, and overflow variants.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:tabs#web.react",
+    "guidanceImpact": "normative",
+    "purposes": ["explanation", "validation"],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/tabs/examples/react/variants.tsx"
+}

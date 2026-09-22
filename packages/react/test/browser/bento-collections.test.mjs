@@ -138,6 +138,10 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     await page.locator('#coordinate-trigger').click();
     const popup = page.getByTestId('coordinate-popup');
     await popup.waitFor();
+    await page.waitForFunction(() => {
+      const box = document.querySelector('[data-testid="coordinate-popup"]')?.getBoundingClientRect();
+      return box && Math.abs(box.x - 500) <= 1 && Math.abs(box.y - 100) <= 1;
+    });
     const coordinateBox = await popup.boundingBox();
     assert.ok(Math.abs(coordinateBox.x - 500) <= 1);
     assert.ok(Math.abs(coordinateBox.y - 100) <= 1);

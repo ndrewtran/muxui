@@ -351,6 +351,9 @@ function semanticIssues(family, value, ownership) {
       duration: 'ms',
       number: 'unitless',
       string: 'string',
+      easing: 'structured',
+      transition: 'structured',
+      effect: 'structured',
     };
     walkObjects(value, (object, path) => {
       if (Array.isArray(object.dispositions) && Object.hasOwn(object, 'contractDigest')) {
@@ -386,13 +389,15 @@ function semanticIssues(family, value, ownership) {
           });
         }
         const expectsNumber = ['dimension', 'duration', 'number'].includes(object.type);
+        const expectsStructured = ['effect', 'easing', 'transition'].includes(object.type);
         if (
           (expectsNumber && (typeof object.resolved !== 'number' || !Number.isFinite(object.resolved)))
-          || (!expectsNumber && typeof object.resolved !== 'string')
+          || (expectsStructured && (object.resolved === null || typeof object.resolved !== 'object' || Array.isArray(object.resolved)))
+          || (!expectsNumber && !expectsStructured && typeof object.resolved !== 'string')
         ) {
           issues.push({
             path: `${path}/resolved`,
-            message: `must be a ${expectsNumber ? 'finite number' : 'string'} for ${object.type}`,
+            message: `must be a ${expectsNumber ? 'finite number' : expectsStructured ? 'structured object' : 'string'} for ${object.type}`,
           });
         } else if (
           object.type === 'color'

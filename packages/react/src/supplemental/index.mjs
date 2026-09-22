@@ -1,4 +1,6 @@
 import React from 'react';
+import CheckIcon from 'lucide-react/dist/esm/icons/check.mjs';
+import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import {
   Autocomplete as AriaAutocomplete,
   Button as AriaButton,
@@ -22,7 +24,8 @@ import {
   Link as AriaLink,
   Modal as AriaModal,
   ModalOverlay as AriaModalOverlay,
-  Popover as AriaPopover,
+  OverlayTriggerStateContext,
+  PopoverContext,
   ProgressBar as AriaProgressBar,
   RadioField as AriaRadioField,
   RadioButton as AriaRadioButton,
@@ -49,8 +52,13 @@ import ChevronsUpDownIcon from 'lucide-react/dist/esm/icons/chevrons-up-down.mjs
 import ExternalLinkIcon from 'lucide-react/dist/esm/icons/external-link.mjs';
 import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
+import { useModalMotion } from '../dialog-motion.mjs';
+import { observeReducedMotion } from '../motion.mjs';
+import { PopoverMotion } from '../popover-motion.mjs';
+import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 
 const h = React.createElement;
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
 function cx(...values) {
   return values.filter(Boolean).join(' ');
@@ -134,6 +142,8 @@ function mappedFieldProps({ disabled, invalid, required, readOnly, ...props }) {
   };
 }
 
+const CheckboxFieldIndicatorContext = React.createContext(null);
+
 function pressHandler(onActivate) {
   return onActivate
     ? (event) => onActivate({ type: 'activate', pointerType: event?.pointerType, target: event?.target })
@@ -141,6 +151,86 @@ function pressHandler(onActivate) {
 }
 
 /* AlertDialog */
+const ModalMotionContext = React.createContext(null);
+const DIALOG_REDUCED_ATTRIBUTE = 'data-muxui-dialog-reduced';
+
+function MotionModalBackdrop({ children, className, onOpenChange, triggerRef: providedTriggerRef, ...props }, ref) {
+  const state = React.useContext(OverlayTriggerStateContext);
+  const popoverContext = React.useContext(PopoverContext);
+  const triggerRef = providedTriggerRef ?? popoverContext?.triggerRef;
+  const isOpen = props.isOpen ?? state?.isOpen ?? false;
+  const [backdropNode, setBackdropNode] = React.useState(null);
+  const [phase, setPhase] = React.useState({ open: Boolean(isOpen), exiting: false });
+  if (phase.open !== Boolean(isOpen)) setPhase({ open: Boolean(isOpen), exiting: !isOpen });
+  const releaseExit = React.useCallback(() => {
+    setPhase((current) => current.open || !current.exiting ? current : { ...current, exiting: false });
+  }, []);
+  const setBackdropRef = React.useCallback((node) => {
+    setBackdropNode(node);
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+  useIsomorphicLayoutEffect(() => {
+    if (!backdropNode) return undefined;
+    const originalOpacity = backdropNode.style.opacity;
+    const originalOpacityPriority = backdropNode.style.getPropertyPriority('opacity');
+    const originalTransition = backdropNode.style.transition;
+    const originalTransitionPriority = backdropNode.style.getPropertyPriority('transition');
+    const restoreStyle = () => {
+      if (originalOpacity) backdropNode.style.setProperty('opacity', originalOpacity, originalOpacityPriority);
+      else backdropNode.style.removeProperty('opacity');
+      if (originalTransition) backdropNode.style.setProperty('transition', originalTransition, originalTransitionPriority);
+      else backdropNode.style.removeProperty('transition');
+    };
+    const disconnect = observeReducedMotion(backdropNode, triggerRef?.current, (reduced) => {
+      backdropNode.toggleAttribute(DIALOG_REDUCED_ATTRIBUTE, reduced);
+      if (reduced) {
+        backdropNode.style.setProperty('opacity', '1', 'important');
+        backdropNode.style.setProperty('transition', 'none', 'important');
+      } else {
+        restoreStyle();
+      }
+    });
+    return () => {
+      disconnect();
+      backdropNode.removeAttribute(DIALOG_REDUCED_ATTRIBUTE);
+      restoreStyle();
+    };
+  }, [backdropNode, triggerRef]);
+  return h(AriaModalOverlay, {
+    ...props,
+    ref: setBackdropRef,
+    onOpenChange,
+    isExiting: !isOpen && phase.exiting,
+    className,
+  }, h(ModalMotionContext.Provider, { value: { isOpen: Boolean(isOpen), isExiting: !isOpen && phase.exiting, triggerRef, onExitComplete: releaseExit } }, children));
+}
+
+const MotionModalBackdropForwardRef = /*#__PURE__*/ React.forwardRef(MotionModalBackdrop);
+
+function MotionModalPopup({ children, className, ...props }, ref) {
+  const state = React.useContext(OverlayTriggerStateContext);
+  const motion = React.useContext(ModalMotionContext);
+  const popoverContext = React.useContext(PopoverContext);
+  const isOpen = motion?.isOpen ?? state?.isOpen ?? true;
+  const [popupNode, setPopupNode] = React.useState(null);
+  useModalMotion({
+    node: popupNode,
+    isOpen,
+    triggerRef: motion?.triggerRef ?? popoverContext?.triggerRef,
+    reducedAttribute: 'data-muxui-motion-reduced',
+    onExitComplete: motion?.onExitComplete,
+  });
+  const setRef = React.useCallback((node) => {
+    setPopupNode(node);
+    if (typeof ref === 'function') ref(node);
+    else if (ref) ref.current = node;
+  }, [ref]);
+  return h(AriaModal, { ...props, ref: setRef, isExiting: props.isExiting ?? motion?.isExiting, className }, children);
+}
+
+const MotionModalPopupForwardRef = /*#__PURE__*/ React.forwardRef(MotionModalPopup);
+
 function AlertDialogRoot({ open, defaultOpen = false, onOpenChange, children, ...props }) {
   return h(AriaDialogTrigger, {
     ...props,
@@ -167,15 +257,15 @@ function findAlertDialogDescriptionId(children) {
   return descriptionId;
 }
 
-const AlertDialog = {
+const AlertDialog = /*#__PURE__*/ (() => ({
   Root: React.forwardRef(function AlertDialogRootRef(props, ref) {
     return h(AlertDialogRoot, { ...props, ref });
   }),
   Backdrop: React.forwardRef(function AlertDialogBackdrop({ className, ...props }, ref) {
-    return h(AriaModalOverlay, { ...props, ref, className: cx('muxui-alert-dialog__backdrop', className) });
+    return h(MotionModalBackdropForwardRef, { ...props, ref, className: cx('muxui-alert-dialog__backdrop', className) });
   }),
   Popup: React.forwardRef(function AlertDialogPopup({ className, ...props }, ref) {
-    return h(AriaModal, { ...props, ref, className: cx('muxui-alert-dialog__popup', className) });
+    return h(MotionModalPopupForwardRef, { ...props, ref, className: cx('muxui-alert-dialog__popup', className) });
   }),
   Content: React.forwardRef(function AlertDialogContent({ className, children, 'aria-describedby': ariaDescribedby, ...props }, ref) {
     // Keep RAC's description slot lifecycle, then add caller-owned context IDs.
@@ -200,7 +290,7 @@ const AlertDialog = {
     const usesDefaultIcon = children === null || children === undefined;
     return h(AriaButton, { ...props, ref, slot: 'close', isDisabled: disabled, onPress: pressHandler(onActivate), 'aria-label': props['aria-label'] ?? (usesDefaultIcon ? 'Close' : undefined), 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', usesDefaultIcon && 'muxui-icon-button', 'muxui-alert-dialog__close', className) }, usesDefaultIcon ? h(XIcon, { size: 16, 'aria-hidden': true }) : children);
   }),
-};
+}))();
 
 /* ButtonGroup */
 export const ButtonGroup = React.forwardRef(function ButtonGroup({
@@ -262,11 +352,21 @@ function makeCheckboxField() {
     const resolvedSize = normalizeChoiceControlSize(size, 'CheckboxField');
     return h(AriaCheckboxField, { ...mappedFieldProps({ disabled, invalid, required, readOnly, ...props }), ref, isSelected: checked, defaultSelected: defaultChecked, isIndeterminate: indeterminate, onChange, name, value, 'data-size': resolvedSize, className: cx('muxui-checkbox-field', resolvedSize !== 'md' && `muxui-checkbox-field--${resolvedSize}`, className) });
   });
-  const Button = React.forwardRef(function CheckboxFieldButton({ disabled, className, ...props }, ref) {
-    return h(AriaCheckboxButton, { ...props, ref, isDisabled: disabled, className: cx('muxui-checkbox-field__button', className) });
+  const Button = React.forwardRef(function CheckboxFieldButton({ disabled, className, children, ...props }, ref) {
+    return h(AriaCheckboxButton, { ...props, ref, isDisabled: disabled, className: cx('muxui-checkbox-field__button', className) },
+      (renderProps) => h(CheckboxFieldIndicatorContext.Provider, { value: renderProps },
+        typeof children === 'function' ? children(renderProps) : children));
   });
   const Indicator = React.forwardRef(function CheckboxFieldIndicator({ className, children, ...props }, ref) {
-    return nativePart('span', 'muxui-checkbox-field__indicator', props, ref, children);
+    const renderProps = React.useContext(CheckboxFieldIndicatorContext);
+    const content = children === undefined || children === null
+      ? renderProps?.isIndeterminate
+        ? h(MinusIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
+        : renderProps?.isSelected
+          ? h(CheckIcon, { 'aria-hidden': true, focusable: 'false', size: 12 })
+          : null
+      : children;
+    return nativePart('span', 'muxui-checkbox-field__indicator', props, ref, content);
   });
   const Description = React.forwardRef(function CheckboxFieldDescription(props, ref) { return fieldText('description', 'muxui-checkbox-field__description', props, ref); });
   const Error = React.forwardRef(function CheckboxFieldError(props, ref) { return h(AriaFieldError, { ...props, ref, className: cx('muxui-checkbox-field__error', props.className) }); });
@@ -607,7 +707,7 @@ export const PaymentInput = {
 
 /* MultiSelect */
 const MultiSelectContext = React.createContext({ size: 'md', close: () => {} });
-export const MultiSelect = {
+export const MultiSelect = /*#__PURE__*/ (() => ({
   Root: React.forwardRef(function MultiSelectRoot({ size = 'md', label, placeholder = 'Select', description, errorMessage, disabled = false, required = false, invalid = false, items, children, selectedKeys, defaultSelectedKeys, onSelectionChange, showSearch = true, showFooter = true, onReset, onSelectAll, selectedCountFormatter, supportingText, emptyStateTitle = 'No results found', emptyStateDescription = 'Please try a different search term.', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
     const resolvedSize = normalizeChoiceControlSize(size, 'MultiSelect');
     const [query, setQuery] = React.useState('');
@@ -630,7 +730,7 @@ export const MultiSelect = {
     const search = showSearch && h('div', { className: 'muxui-multi-select__search-wrapper' }, h(AriaSearchField, { 'aria-label': 'Search', value: query, onChange: setQuery, autoFocus: true, className: 'muxui-multi-select__search' }, h(SearchIcon, { className: 'muxui-multi-select__search-icon', size: 16, 'aria-hidden': true }), h(AriaInput, { placeholder: 'Search', className: 'muxui-multi-select__search-input' })));
     const empty = h('div', { className: 'muxui-multi-select__empty' }, h('p', { className: 'muxui-multi-select__empty-title' }, emptyStateTitle), h('p', { className: 'muxui-multi-select__empty-description' }, emptyStateDescription), query && h('button', { type: 'button', className: 'muxui-multi-select__empty-clear', onClick: clearSearch }, 'Clear search'));
     const footer = showFooter && h('div', { className: 'muxui-multi-select__footer' }, h('button', { type: 'button', className: 'muxui-multi-select__footer-btn', onClick: onReset }, 'Reset'), h('button', { type: 'button', className: 'muxui-multi-select__footer-btn', onClick: onSelectAll }, 'Select all'));
-    const popup = h(AriaPopover, { placement: 'bottom', offset: 4, containerPadding: 0, className: cx('muxui-multi-select__popup', resolvedSize !== 'md' && `muxui-multi-select__popup--${resolvedSize}`), 'data-size': resolvedSize, style: { width: popoverWidth || undefined } }, h(AriaDialog, { className: 'muxui-multi-select__dialog' }, h(AriaAutocomplete, { filter: contains, inputValue: query, onInputChange: setQuery }, search, h(AriaListBox, { items: allItems, selectionMode: 'multiple', selectedKeys: controlled ? selected : undefined, defaultSelectedKeys: controlled ? undefined : selected, onSelectionChange: updateSelection, 'aria-label': typeof label === 'string' ? label : 'Options', renderEmptyState: () => empty, className: cx('muxui-multi-select__listbox', resolvedSize !== 'md' && `muxui-multi-select__listbox--${resolvedSize}`), 'data-size': resolvedSize }, children)), footer));
+    const popup = h(PopoverMotion, { placement: 'bottom', offset: 4, containerPadding: 0, className: cx('muxui-multi-select__popup', resolvedSize !== 'md' && `muxui-multi-select__popup--${resolvedSize}`), 'data-size': resolvedSize, style: { width: popoverWidth || undefined } }, h(AriaDialog, { className: 'muxui-multi-select__dialog' }, h(AriaAutocomplete, { filter: contains, inputValue: query, onInputChange: setQuery }, search, h(AriaListBox, { items: allItems, selectionMode: 'multiple', selectedKeys: controlled ? selected : undefined, defaultSelectedKeys: controlled ? undefined : selected, onSelectionChange: updateSelection, 'aria-label': typeof label === 'string' ? label : 'Options', renderEmptyState: () => empty, className: cx('muxui-multi-select__listbox', resolvedSize !== 'md' && `muxui-multi-select__listbox--${resolvedSize}`), 'data-size': resolvedSize }, children)), footer));
     const trigger = h(AriaButton, { ref: triggerRef, isDisabled: disabled, onClick: () => setPopoverWidth(`${triggerRef.current?.getBoundingClientRect().width ?? 0}px`), className: cx('muxui-multi-select__trigger', invalid && 'muxui-multi-select__trigger--invalid'), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? (ariaLabel === undefined && labelId ? labelId : undefined), 'aria-invalid': invalid || undefined, 'aria-required': required || undefined }, h('span', { className: cx('muxui-multi-select__trigger-inner', `muxui-multi-select__trigger-inner--${resolvedSize}`) }, h('span', { className: cx('muxui-multi-select__value', selectedCount ? 'muxui-multi-select__value--selected' : 'muxui-multi-select__value--placeholder') }, selectedCount ? h(React.Fragment, null, selectedCountFormatter?.(selectedCount) ?? `${selectedCount} selected`, supportingText && h('span', { className: 'muxui-multi-select__supporting-text' }, supportingText)) : placeholder), h('span', { className: 'muxui-multi-select__icon', 'aria-hidden': true }, h(ChevronDownIcon, { size: 16 }))));
     const select = h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen }, trigger, popup);
     return h(MultiSelectContext.Provider, { value: { size: resolvedSize, close: () => setOpen(false) } }, h('div', { ...props, ref, className: cx('muxui-multi-select', `muxui-multi-select--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-multi-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), select, description && !invalid && h('span', { className: 'muxui-multi-select__description' }, description), invalid && errorMessage && h('span', { className: 'muxui-multi-select__error' }, errorMessage)));
@@ -638,13 +738,48 @@ export const MultiSelect = {
   Item: React.forwardRef(function MultiSelectItem({ disabled = false, className, children, ...props }, ref) { return h(AriaListBoxItem, { ...props, ref, isDisabled: disabled, className: cx('muxui-multi-select__item', className) }, (renderProps) => h(React.Fragment, null, h('span', { className: 'muxui-multi-select__item-check', 'aria-hidden': true }, renderProps.isSelected && h('svg', { width: 12, height: 12, viewBox: '0 0 12 12', fill: 'none' }, h('path', { d: 'M2 6L5 9L10 3', stroke: 'currentColor', strokeWidth: 1.75, strokeLinecap: 'round', strokeLinejoin: 'round' }))), h('span', { className: 'muxui-multi-select__item-text' }, typeof children === 'function' ? children(renderProps) : children))); }),
   Footer: React.forwardRef(function MultiSelectFooter(props, ref) { return nativePart('div', 'muxui-multi-select__footer', props, ref); }),
   EmptyState: React.forwardRef(function MultiSelectEmptyState(props, ref) { return nativePart('div', 'muxui-multi-select__empty', props, ref); }),
-};
+}))();
 
 /* TagSelect */
 const TagSelectContext = React.createContext({ size: 'md' });
 const EMPTY_TAG_ITEMS = Object.freeze([]);
 const defaultTagSelectItemLabel = (item) => String(item.name ?? item.label ?? item.id);
-export const TagSelect = {
+
+function sameTagItems(first, second) {
+  return first.length === second.length && first.every((item, index) => item === second[index]);
+}
+
+function AnimatedTagChip({ item, index, active, size, disabled, label, tagButtonRefs, onRemove, onKeyDown, triggerRef, layoutKey }) {
+  const nodeRef = React.useRef(null);
+  const lifecycleRef = useMotionLifecycle({
+    isOpen: active,
+    placement: 'bottom',
+    triggerRef,
+    onExitComplete: () => onRemove(item.id, true),
+  });
+  useMotionLayout(nodeRef, layoutKey, triggerRef);
+  const setRef = React.useCallback((node) => {
+    nodeRef.current = node;
+    lifecycleRef(node);
+  }, [lifecycleRef]);
+  return h('span', {
+    ref: setRef,
+    className: `muxui-tag-select__tag muxui-tag-select__tag--${size}`,
+    'aria-hidden': active ? undefined : 'true',
+    inert: active ? undefined : true,
+  }, h('span', { className: 'muxui-tag-select__tag-text' }, label), h('button', {
+    ref: (element) => { if (index >= 0) tagButtonRefs.current[index] = element; },
+    type: 'button',
+    tabIndex: -1,
+    className: 'muxui-tag-select__tag-remove',
+    disabled: disabled || !active,
+    'aria-label': `Remove ${label}`,
+    onClick: () => onRemove(item.id),
+    onKeyDown: (event) => onKeyDown(event, item.id, index),
+  }, h(XIcon, { size: 14, 'aria-hidden': true })));
+}
+
+export const TagSelect = /*#__PURE__*/ (() => ({
   Root: React.forwardRef(function TagSelectRoot({ size = 'md', label, placeholder, description, errorMessage, disabled = false, required = false, invalid = false, items = EMPTY_TAG_ITEMS, children, selectedKeys: controlledKeys, defaultSelectedKeys, onSelectionChange, getItemLabel = defaultTagSelectItemLabel, className, ...props }, ref) {
     const resolvedSize = normalizeChoiceControlSize(size, 'TagSelect');
     const controlled = controlledKeys !== undefined;
@@ -667,6 +802,27 @@ export const TagSelect = {
       () => [...keys].map((key) => itemsById.get(key)).filter((item) => item !== undefined),
       [itemsById, keys],
     );
+    const selectedIdsRef = React.useRef(new Set());
+    selectedIdsRef.current = new Set(selectedItems.map((item) => item.id));
+    const [displayedItems, setDisplayedItems] = React.useState(() => selectedItems);
+    const [layoutVersion, setLayoutVersion] = React.useState(0);
+    React.useEffect(() => {
+      const selectedIds = new Set(selectedItems.map((item) => item.id));
+      setDisplayedItems((current) => {
+        const next = Array(current.length).fill(null);
+        current.forEach((item, index) => {
+          if (!selectedIds.has(item.id)) next[index] = item;
+        });
+        const remaining = [...selectedItems];
+        for (let index = 0; index < next.length && remaining.length > 0; index += 1) {
+          if (next[index] === null) next[index] = remaining.shift();
+        }
+        next.push(...remaining);
+        if (sameTagItems(current, next)) return current;
+        setLayoutVersion((version) => version + 1);
+        return next;
+      });
+    }, [selectedItems]);
     const filtered = React.useMemo(
       () => items.filter((item) => !keys.has(item.id) && contains(resolveLabel(item), query)),
       [contains, items, keys, query, resolveLabel],
@@ -703,13 +859,35 @@ export const TagSelect = {
         else inputRef.current?.focus();
       }
     };
-    const tagNodes = selectedItems.map((item, index) => h('span', { className: `muxui-tag-select__tag muxui-tag-select__tag--${resolvedSize}`, key: String(item.id) }, h('span', { className: 'muxui-tag-select__tag-text' }, resolveLabel(item)), h('button', { ref: (element) => { tagButtonRefs.current[index] = element; }, type: 'button', tabIndex: -1, className: 'muxui-tag-select__tag-remove', disabled, 'aria-label': `Remove ${resolveLabel(item)}`, onClick: () => handleRemove(item.id), onKeyDown: (event) => handleTagKeyDown(event, item.id, index) }, h(XIcon, { size: 14, 'aria-hidden': true }))));
+    const removeDisplayed = (key, exiting = false) => {
+      if (exiting) {
+        if (selectedIdsRef.current.has(key)) return;
+        setDisplayedItems((current) => current.filter((item) => item.id !== key));
+        setLayoutVersion((version) => version + 1);
+        return;
+      }
+      handleRemove(key);
+    };
+    const tagNodes = displayedItems.map((item) => h(AnimatedTagChip, {
+      key: String(item.id),
+      item,
+      index: selectedItems.findIndex((selectedItem) => selectedItem.id === item.id),
+      active: selectedIdsRef.current.has(item.id),
+      size: resolvedSize,
+      disabled,
+      label: resolveLabel(item),
+      tagButtonRefs,
+      onRemove: removeDisplayed,
+      onKeyDown: handleTagKeyDown,
+      triggerRef: groupRef,
+      layoutKey: layoutVersion,
+    }));
     const groupClass = cx('muxui-tag-select__group', `muxui-tag-select__group--${resolvedSize}`, invalid && 'muxui-tag-select__group--invalid');
-    const field = h(AriaComboBox, { inputValue: query, onInputChange: setQuery, onSelectionChange: handleSelectionChange, isDisabled: disabled, 'aria-labelledby': label ? labelId : undefined, 'aria-label': label ? undefined : 'Tags', 'aria-required': required || undefined, 'aria-invalid': invalid || undefined, allowsEmptyCollection: true, menuTrigger: 'focus', onOpenChange: handleOpenChange, className: 'muxui-tag-select__combobox' }, h(AriaGroup, { ref: groupRef, isDisabled: disabled, isInvalid: invalid, className: groupClass }, tagNodes, h(AriaInput, { ref: inputRef, placeholder: selectedItems.length === 0 ? placeholder : '', className: 'muxui-tag-select__input', onKeyDown: handleInputKeyDown })), h(AriaPopover, { placement: 'bottom start', offset: 4, containerPadding: 0, style: { width: popoverWidth || undefined }, className: 'muxui-tag-select__popup', 'data-size': resolvedSize }, h(AriaListBox, { items: filtered, className: 'muxui-tag-select__listbox', 'data-size': resolvedSize }, children)));
+    const field = h(AriaComboBox, { inputValue: query, onInputChange: setQuery, onSelectionChange: handleSelectionChange, isDisabled: disabled, 'aria-labelledby': label ? labelId : undefined, 'aria-label': label ? undefined : 'Tags', 'aria-required': required || undefined, 'aria-invalid': invalid || undefined, allowsEmptyCollection: true, menuTrigger: 'focus', onOpenChange: handleOpenChange, className: 'muxui-tag-select__combobox' }, h(AriaGroup, { ref: groupRef, isDisabled: disabled, isInvalid: invalid, className: groupClass }, tagNodes, h(AriaInput, { ref: inputRef, placeholder: selectedItems.length === 0 ? placeholder : '', className: 'muxui-tag-select__input', onKeyDown: handleInputKeyDown })), h(PopoverMotion, { placement: 'bottom start', offset: 4, containerPadding: 0, style: { width: popoverWidth || undefined }, className: 'muxui-tag-select__popup', 'data-size': resolvedSize }, h(AriaListBox, { items: filtered, className: 'muxui-tag-select__listbox', 'data-size': resolvedSize }, children)));
     return h(TagSelectContext.Provider, { value: { size: resolvedSize } }, h('div', { ...props, ref, className: cx('muxui-tag-select', className), 'data-size': resolvedSize, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-tag-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), field, invalid && errorMessage ? h('span', { className: 'muxui-tag-select__error' }, errorMessage) : description ? h('span', { className: 'muxui-tag-select__description' }, description) : null));
   }),
   Item: React.forwardRef(function TagSelectItem({ disabled = false, className, ...props }, ref) { return h(AriaListBoxItem, { ...props, ref, isDisabled: disabled, className: cx('muxui-tag-select__item', className) }); }),
-};
+}))();
 
 /* CommandPalette */
 export function useCommandPalette({ commands, query: controlledQuery, defaultQuery = '', onQueryChange, filter, sort, groupBy, getGroupTitle, onAction, onError, close, closeOnSelect = true }) {
@@ -789,18 +967,19 @@ function CommandPaletteInputProvider({ children }) {
     value: { ...inputProps, onChange: (event) => onChange?.(event.currentTarget.value) },
   }, children);
 }
-const CommandPalette = {
+const CommandPalette = /*#__PURE__*/ (() => ({
   Root: React.forwardRef(function CommandPaletteRoot({ open, defaultOpen = false, onOpenChange, size = 'md', closeOnSelect = true, className, children, ...props }, ref) {
     const resolvedSize = normalizeCommandPaletteSize(size);
     const controlled = open !== undefined;
     const [internalOpen, setInternalOpen] = React.useState(defaultOpen);
+    const triggerRef = React.useRef(null);
     const currentOpen = controlled ? open : internalOpen;
     const setOpen = (next) => { if (!controlled) setInternalOpen(next); onOpenChange?.(next); };
-    return h(CommandPaletteContext.Provider, { value: { open: currentOpen, setOpen, size: resolvedSize, closeOnSelect } }, h('div', { ...props, ref, className: cx('muxui-command-palette', resolvedSize !== 'md' && `muxui-command-palette--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-open': dataState(currentOpen) }, children));
+    return h(CommandPaletteContext.Provider, { value: { open: currentOpen, setOpen, size: resolvedSize, closeOnSelect, triggerRef } }, h('div', { ...props, ref, className: cx('muxui-command-palette', resolvedSize !== 'md' && `muxui-command-palette--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-open': dataState(currentOpen) }, children));
   }),
-  Trigger: React.forwardRef(function CommandPaletteTrigger({ disabled = false, onActivate, className, ...props }, ref) { const { setOpen, size } = useCommandPart('Trigger'); return h(AriaButton, { ...props, ref, isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(true); }, 'data-size': size, className: cx('muxui-command-palette__trigger', className) }); }),
-  Backdrop: React.forwardRef(function CommandPaletteBackdrop({ dismissable = true, className, ...props }, ref) { const { open, setOpen } = useCommandPart('Backdrop'); return h(AriaModalOverlay, { ...props, ref, isOpen: open, onOpenChange: setOpen, isDismissable: dismissable, className: cx('muxui-command-palette__backdrop', className) }); }),
-  Popup: React.forwardRef(function CommandPalettePopup({ className, children, ...props }, ref) { return h(AriaModal, { className: 'muxui-command-palette__popup' }, h(AriaDialog, { ...props, ref, className: cx('muxui-command-palette__dialog', className) }, children)); }),
+  Trigger: React.forwardRef(function CommandPaletteTrigger({ disabled = false, onActivate, className, ...props }, ref) { const { setOpen, size, triggerRef } = useCommandPart('Trigger'); const setRef = React.useCallback((node) => { triggerRef.current = node; if (typeof ref === 'function') ref(node); else if (ref) ref.current = node; }, [ref, triggerRef]); return h(AriaButton, { ...props, ref: setRef, isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(true); }, 'data-size': size, className: cx('muxui-command-palette__trigger', className) }); }),
+  Backdrop: React.forwardRef(function CommandPaletteBackdrop({ dismissable = true, className, ...props }, ref) { const { open, setOpen, triggerRef } = useCommandPart('Backdrop'); return h(MotionModalBackdropForwardRef, { ...props, ref, triggerRef, isOpen: open, onOpenChange: setOpen, isDismissable: dismissable, className: cx('muxui-command-palette__backdrop', className) }); }),
+  Popup: React.forwardRef(function CommandPalettePopup({ className, children, ...props }, ref) { return h(MotionModalPopupForwardRef, { className: 'muxui-command-palette__popup' }, h(AriaDialog, { ...props, ref, className: cx('muxui-command-palette__dialog', className) }, children)); }),
   Title: React.forwardRef(function CommandPaletteTitle({ className, ...props }, ref) { return h(AriaHeading, { ...props, ref, slot: 'title', className: cx('muxui-command-palette__title', className) }); }),
   Description: React.forwardRef(function CommandPaletteDescription(props, ref) { return nativePart('p', 'muxui-command-palette__description', props, ref); }),
   Close: React.forwardRef(function CommandPaletteClose({ disabled = false, onActivate, className, children, ...props }, ref) { const { setOpen } = useCommandPart('Close'); return h(AriaButton, { ...props, ref, 'aria-label': props['aria-label'] ?? (children ? undefined : 'Close'), isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(false); }, 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', 'muxui-icon-button', 'muxui-command-palette__close', className) }, children ?? h(XIcon, { size: 16, 'aria-hidden': true })); }),
@@ -837,7 +1016,7 @@ const CommandPalette = {
   Chips: React.forwardRef(function CommandPaletteChips(props, ref) { return nativePart('div', 'muxui-command-palette__chips', props, ref); }),
   Chip: React.forwardRef(function CommandPaletteChip(props, ref) { return nativePart('span', 'muxui-command-palette__chip', props, ref); }),
   ChipRemove: React.forwardRef(function CommandPaletteChipRemove({ disabled = false, children, ...props }, ref) { return h('button', { ...props, ref, type: 'button', disabled, className: cx('muxui-command-palette__chip-remove', props.className) }, children ?? h(XIcon, { size: 14, 'aria-hidden': true })); }),
-};
+}))();
 
 /* Header navigation */
 const HeaderNav = {

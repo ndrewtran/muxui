@@ -413,8 +413,8 @@
       "properties": {
         "token": { "type": "string", "pattern": "^(semantic|component)\\." },
         "requirement": { "enum": ["required", "optional", "deprecated"] },
-        "type": { "enum": ["color", "dimension", "duration", "number", "string"] },
-        "unit": { "enum": ["hex", "px", "ms", "unitless", "string"] },
+        "type": { "enum": ["color", "dimension", "duration", "number", "string", "easing", "transition"] },
+        "unit": { "enum": ["hex", "px", "ms", "unitless", "string", "structured"] },
         "modes": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
         "overridePolicy": { "enum": ["fixed", "theme", "instance"] },
         "fallback": {
@@ -432,11 +432,11 @@
       "properties": {
         "token": { "type": "string", "pattern": "^(reference|semantic|component)\\." },
         "layer": { "enum": ["reference", "semantic", "component"] },
-        "type": { "enum": ["color", "dimension", "duration", "number", "string"] },
-        "unit": { "enum": ["hex", "px", "ms", "unitless", "string"] },
+        "type": { "enum": ["color", "dimension", "duration", "number", "string", "effect", "easing", "transition"] },
+        "unit": { "enum": ["hex", "px", "ms", "unitless", "string", "structured"] },
         "meaning": { "type": "string", "minLength": 1 },
         "overridePolicy": { "enum": ["fixed", "theme", "instance"] },
-        "resolved": { "type": ["string", "number"] },
+        "resolved": { "type": ["string", "number", "object"] },
         "dependencies": {
           "type": "array",
           "items": { "type": "string", "pattern": "^(reference|semantic|component)\\." },

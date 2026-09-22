@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import {
   Autocomplete as AriaAutocomplete,
   Button as AriaButton,
@@ -25,7 +26,6 @@ import {
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
   NumberField as AriaNumberField,
-  Popover as AriaPopover,
   RangeCalendar as AriaRangeCalendar,
   SearchField as AriaSearchField,
   SwitchButton as AriaSwitchButton,
@@ -41,6 +41,9 @@ import MinusIcon from 'lucide-react/dist/esm/icons/minus.mjs';
 import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
+import { DatePopoverMotion } from './date-popover-motion.mjs';
+import { PopoverMotion } from './popover-motion.mjs';
+import { RangeSelectionMotion } from './range-selection-motion.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
@@ -269,12 +272,13 @@ function serializeDateValue(value) {
 }
 
 function calendarChildren(cellClass = 'muxui-calendar-cell') {
-  return React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
+  const grid = React.createElement(CalendarHeightMotion, null, React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
-      (date) => React.createElement(AriaCalendarCell, { date, className: cellClass })),
-  );
+      (date) => React.createElement(AriaCalendarCell, { date, className: cellClass, 'data-muxui-date': cellClass === 'muxui-range-calendar-cell' ? String(date) : undefined })),
+  ));
+  return cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
 }
 
 function calendarHeader() {
@@ -285,11 +289,11 @@ function calendarHeader() {
 }
 
 function datePopover() {
-  return React.createElement(AriaPopover, { className: 'muxui-date-popover' }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
+  return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
 }
 
 function rangeDatePopover() {
-  return React.createElement(AriaPopover, { className: 'muxui-date-popover' }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
+  return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
 }
 
 function dateInput() {
@@ -759,156 +763,161 @@ export const TimeField = React.forwardRef(function TimeField({
 
 TimeField.displayName = 'TimeField';
 
-export const DatePicker = React.forwardRef(function DatePicker({
-  label,
-  description,
-  errorMessage,
-  value,
-  defaultValue,
-  minValue,
-  maxValue,
-  unavailableDateMatcher,
-  isDateUnavailable: _upstreamDateUnavailable,
-  onChange,
-  onOpenChange,
-  open,
-  defaultOpen,
-  disabled = false,
-  readOnly = false,
-  required = false,
-  invalid = false,
-  size,
-  validationBehavior: _validationBehavior,
-  name,
-  className,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  ...props
-}, ref) {
-  assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
-  const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
-  const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
-  const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
-  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-  return React.createElement(AriaDatePicker, {
-    ...props,
-    ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
-    value: parsedValue,
-    defaultValue: parsedDefaultValue,
-    minValue: parsedMinValue,
-    maxValue: parsedMaxValue,
-    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
-    placeholderValue: DATE_PLACEHOLDER,
-    onChange: (next) => onChange?.(serializeDateValue(next)),
-    isOpen: open,
-    defaultOpen,
-    onOpenChange,
-    name,
-    className: classNames('muxui-date-picker', className),
-    'data-size': resolvedSize,
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+// Pure wrappers let unused date-picker imports omit motion code.
+export const DatePicker = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function DatePicker({
     label,
     description,
     errorMessage,
-    input: React.createElement(AriaGroup, { className: 'muxui-date-control' }, dateInput(), React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
-    children: datePopover(),
-  }));
-});
-
-DatePicker.displayName = 'DatePicker';
-
-export const DateRangePicker = React.forwardRef(function DateRangePicker({
-  label,
-  description,
-  errorMessage,
-  value,
-  defaultValue,
-  minValue,
-  maxValue,
-  unavailableDateMatcher,
-  isDateUnavailable: _upstreamDateUnavailable,
-  onChange,
-  onOpenChange,
-  open,
-  defaultOpen,
-  disabled = false,
-  readOnly = false,
-  required = false,
-  invalid = false,
-  size,
-  validationBehavior: _validationBehavior,
-  allowsNonContiguousRanges: _allowsNonContiguousRanges,
-  closeOnSelect: _closeOnSelect,
-  shouldCloseOnSelect: _shouldCloseOnSelect,
-  startName,
-  endName,
-  className,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  ...props
-}, ref) {
-  assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
-  const resolvedSize = normalizeChoiceControlSize(size, 'DateRangePicker');
-  const externalValidation = useMuxFormValidation([startName, endName]);
-  const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-  const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
-  const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-  const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
-  const resettingRef = React.useRef(false);
-  React.useEffect(() => {
-    if (value !== undefined) setFormValue(value);
-  }, [value]);
-  const handleChange = (next) => {
-    if (resettingRef.current) return;
-    const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined;
-    setFormValue(nextValue);
-    onChange?.(nextValue);
-  };
-  const handleReset = () => {
-    if (value === undefined) setFormValue(defaultValue);
-  };
-  const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-  const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
-  const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
-  return React.createElement(AriaDateRangePicker, {
-    ...props,
-    ref,
-    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
-    value: effectiveValueObject,
-    minValue: parsedMinValue,
-    maxValue: parsedMaxValue,
-    isDateUnavailable: unavailableDateCallback(unavailableDateMatcher, true),
-    placeholderValue: DATE_PLACEHOLDER,
-    onChange: handleChange,
-    isOpen: open,
-    defaultOpen,
+    value,
+    defaultValue,
+    minValue,
+    maxValue,
+    unavailableDateMatcher,
+    isDateUnavailable: _upstreamDateUnavailable,
+    onChange,
     onOpenChange,
-    name: undefined,
-    className: classNames('muxui-date-range-picker', className),
-    'data-size': resolvedSize,
+    open,
+    defaultOpen,
+    disabled = false,
+    readOnly = false,
+    required = false,
+    invalid = false,
+    size,
+    validationBehavior: _validationBehavior,
+    name,
+    className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+    ...props
+  }, ref) {
+    assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
+    const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
+    const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
+    const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
+    const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
+    return React.createElement(AriaDatePicker, {
+      ...props,
+      ref,
+      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      value: parsedValue,
+      defaultValue: parsedDefaultValue,
+      minValue: parsedMinValue,
+      maxValue: parsedMaxValue,
+      isDateUnavailable: unavailableDateCallback(unavailableDateMatcher),
+      placeholderValue: DATE_PLACEHOLDER,
+      onChange: (next) => onChange?.(serializeDateValue(next)),
+      isOpen: open,
+      defaultOpen,
+      onOpenChange,
+      name,
+      className: classNames('muxui-date-picker', className),
+      'data-size': resolvedSize,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+    }, fieldChildren({
+      label,
+      description,
+      errorMessage,
+      input: React.createElement(AriaGroup, { className: 'muxui-date-control' }, dateInput(), React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+      children: datePopover(),
+    }));
+  });
+  component.displayName = 'DatePicker';
+  return component;
+})();
+
+export const DateRangePicker = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function DateRangePicker({
     label,
     description,
-    errorMessage: effectiveErrorMessage,
-    input: React.createElement(AriaGroup, { className: 'muxui-date-range-control' },
-      React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
-      React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
-      React.createElement(AriaDateInput, { slot: 'end', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
-      React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
-    children: React.createElement(React.Fragment, null,
-      rangeDatePopover(),
-      formResetAnchor(resetInputRef),
-      startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
-      endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
-  }));
-});
-
-DateRangePicker.displayName = 'DateRangePicker';
+    errorMessage,
+    value,
+    defaultValue,
+    minValue,
+    maxValue,
+    unavailableDateMatcher,
+    isDateUnavailable: _upstreamDateUnavailable,
+    onChange,
+    onOpenChange,
+    open,
+    defaultOpen,
+    disabled = false,
+    readOnly = false,
+    required = false,
+    invalid = false,
+    size,
+    validationBehavior: _validationBehavior,
+    allowsNonContiguousRanges: _allowsNonContiguousRanges,
+    closeOnSelect: _closeOnSelect,
+    shouldCloseOnSelect: _shouldCloseOnSelect,
+    startName,
+    endName,
+    className,
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledby,
+    ...props
+  }, ref) {
+    assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateRangePicker');
+    const resolvedSize = normalizeChoiceControlSize(size, 'DateRangePicker');
+    const externalValidation = useMuxFormValidation([startName, endName]);
+    const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
+    const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
+    const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
+    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
+    const resettingRef = React.useRef(false);
+    React.useEffect(() => {
+      if (value !== undefined) setFormValue(value);
+    }, [value]);
+    const handleChange = (next) => {
+      if (resettingRef.current) return;
+      const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined;
+      setFormValue(nextValue);
+      onChange?.(nextValue);
+    };
+    const handleReset = () => {
+      if (value === undefined) setFormValue(defaultValue);
+    };
+    const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
+    const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
+    const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
+    return React.createElement(AriaDateRangePicker, {
+      ...props,
+      ref,
+      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
+      value: effectiveValueObject,
+      minValue: parsedMinValue,
+      maxValue: parsedMaxValue,
+      isDateUnavailable: unavailableDateCallback(unavailableDateMatcher, true),
+      placeholderValue: DATE_PLACEHOLDER,
+      onChange: handleChange,
+      isOpen: open,
+      defaultOpen,
+      onOpenChange,
+      name: undefined,
+      className: classNames('muxui-date-range-picker', className),
+      'data-size': resolvedSize,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+    }, fieldChildren({
+      label,
+      description,
+      errorMessage: effectiveErrorMessage,
+      input: React.createElement(AriaGroup, { className: 'muxui-date-range-control' },
+        React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
+        React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
+        React.createElement(AriaDateInput, { slot: 'end', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
+        React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+      children: React.createElement(React.Fragment, null,
+        rangeDatePopover(),
+        formResetAnchor(resetInputRef),
+        startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+        endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+    }));
+  });
+  component.displayName = 'DateRangePicker';
+  return component;
+})();
 
 function normalizeAutocompleteItems(items) {
   const usedIds = new Set();
@@ -947,138 +956,191 @@ function normalizeAutocompleteSize(size) {
   return resolved;
 }
 
-export const Autocomplete = React.forwardRef(function Autocomplete({
-  label,
-  description,
-  errorMessage,
-  items = [],
-  value,
-  defaultValue,
-  onChange,
-  onSelect,
-  disabled = false,
-  readOnly = false,
-  required = false,
-  invalid = false,
-  size,
-  validationBehavior: _validationBehavior,
-  name,
-  placeholder,
-  className,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  ...props
-}, ref) {
-  assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Autocomplete');
-  const resolvedSize = normalizeAutocompleteSize(size);
-  const normalizedItems = React.useMemo(() => normalizeAutocompleteItems(items), [items]);
-  const [inputValue, setInputValue] = React.useState(() => value ?? defaultValue ?? '');
-  React.useEffect(() => {
-    if (value !== undefined) setInputValue(value);
-  }, [value]);
-  const effectiveInputValue = value ?? inputValue;
-  const filteredItems = React.useMemo(() => {
-    const query = effectiveInputValue.toLocaleLowerCase();
-    return normalizedItems.filter((item) => autocompleteItemText(item).toLocaleLowerCase().includes(query));
-  }, [effectiveInputValue, normalizedItems]);
-  const [isOpen, setIsOpen] = React.useState(false);
-  const inputRef = React.useRef(null);
-  const popoverRef = React.useRef(null);
-  const suggestionsOpen = isOpen && filteredItems.length > 0;
-  const portalContainer = autocompletePortalContainer(inputRef.current);
-  React.useEffect(() => {
-    if (!suggestionsOpen) return undefined;
-    const handlePointerDown = (event) => {
-      const target = event.target;
-      if (inputRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
-      setIsOpen(false);
-    };
-    document.addEventListener('pointerdown', handlePointerDown, true);
-    return () => document.removeEventListener('pointerdown', handlePointerDown, true);
-  }, [suggestionsOpen]);
-  const filter = (textValue, inputValue) => textValue.toLocaleLowerCase().includes(inputValue.toLocaleLowerCase());
-  const handleSelect = (key) => {
-    if (disabled || readOnly) return;
-    const keyText = String(key);
-    const item = filteredItems.find((candidate) => String(candidate.id) === keyText);
-    if (item) {
-      if (item.disabled) return;
-      const nextValue = String(item.value);
-      setInputValue(nextValue);
-      onChange?.(nextValue);
-    }
-    onSelect?.(item);
-    setIsOpen(false);
-  };
-  const handleInputChange = (next) => {
-    if (disabled || readOnly) return;
-    if (value === undefined) setInputValue(next);
-    onChange?.(next);
-    setIsOpen(!disabled);
-  };
-  return React.createElement('div', {
-    ref,
-    className: classNames('muxui-autocomplete', className),
-    'data-size': resolvedSize,
-    'data-part': 'root',
-    onBlurCapture: (event) => {
-      if (!event.relatedTarget || (!event.currentTarget.contains(event.relatedTarget) && !popoverRef.current?.contains(event.relatedTarget))) {
-        setIsOpen(false);
-      }
-    },
-  }, React.createElement(AriaAutocomplete, {
-    ...props,
-    filter,
-    disableAutoFocusFirst: false,
-    inputValue: effectiveInputValue,
-    onInputChange: handleInputChange,
-  }, React.createElement(AriaSearchField, {
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
-    name,
-    className: 'muxui-autocomplete-search',
-    'data-part': 'search-field',
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledby,
-  }, fieldChildren({
+export const Autocomplete = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function Autocomplete({
     label,
     description,
     errorMessage,
-    input: React.createElement(AriaInput, {
-      ref: inputRef,
-      className: 'muxui-field-input',
-      'data-part': 'input',
-      placeholder,
-      onFocus: () => setIsOpen(!disabled),
-      onKeyDown: (event) => {
-        if (event.key === 'Escape') setIsOpen(false);
-        if (event.key === 'ArrowDown') setIsOpen(!disabled);
+    items = [],
+    value,
+    defaultValue,
+    onChange,
+    onSelect,
+    disabled = false,
+    readOnly = false,
+    required = false,
+    invalid = false,
+    size,
+    validationBehavior: _validationBehavior,
+    name,
+    placeholder,
+    className,
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledby,
+    ...props
+  }, ref) {
+    assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Autocomplete');
+    const resolvedSize = normalizeAutocompleteSize(size);
+    const normalizedItems = React.useMemo(() => normalizeAutocompleteItems(items), [items]);
+    const [inputValue, setInputValue] = React.useState(() => value ?? defaultValue ?? '');
+    React.useEffect(() => {
+      if (value !== undefined) setInputValue(value);
+    }, [value]);
+    const effectiveInputValue = value ?? inputValue;
+    const filteredItems = React.useMemo(() => {
+      const query = effectiveInputValue.toLocaleLowerCase();
+      return normalizedItems.filter((item) => autocompleteItemText(item).toLocaleLowerCase().includes(query));
+    }, [effectiveInputValue, normalizedItems]);
+    const [isOpen, setIsOpen] = React.useState(false);
+    const inputRef = React.useRef(null);
+    const popoverRef = React.useRef(null);
+    // Outside dismissal lets RAC restore this trigger; consume that focus without reopening.
+    const pendingFocusRestoreRef = React.useRef(false);
+    const pendingFocusRestoreCleanupRef = React.useRef(null);
+    const clearPendingFocusRestore = () => {
+      pendingFocusRestoreRef.current = false;
+      pendingFocusRestoreCleanupRef.current?.();
+      pendingFocusRestoreCleanupRef.current = null;
+    };
+    const armPendingFocusRestore = () => {
+      clearPendingFocusRestore();
+      pendingFocusRestoreRef.current = true;
+      const handleFocusIn = (event) => {
+        const target = event.target;
+        const externalFocus = target
+          && target !== document.body
+          && target !== document.documentElement
+          && target !== inputRef.current
+          && !inputRef.current?.contains(target)
+          && !popoverRef.current?.contains(target);
+        if (externalFocus) clearPendingFocusRestore();
+      };
+      const handleKeyDown = (event) => {
+        if (event.key === 'Tab') clearPendingFocusRestore();
+      };
+      document.addEventListener('focusin', handleFocusIn, true);
+      document.addEventListener('keydown', handleKeyDown, true);
+      pendingFocusRestoreCleanupRef.current = () => {
+        document.removeEventListener('focusin', handleFocusIn, true);
+        document.removeEventListener('keydown', handleKeyDown, true);
+      };
+    };
+    React.useEffect(() => () => clearPendingFocusRestore(), []);
+    const suggestionsOpen = isOpen && filteredItems.length > 0;
+    const portalContainer = autocompletePortalContainer(inputRef.current);
+    React.useEffect(() => {
+      if (!suggestionsOpen) return undefined;
+      const handlePointerDown = (event) => {
+        const target = event.target;
+        if (inputRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+        if (document.activeElement === inputRef.current) armPendingFocusRestore();
+        setIsOpen(false);
+      };
+      document.addEventListener('pointerdown', handlePointerDown, true);
+      return () => document.removeEventListener('pointerdown', handlePointerDown, true);
+    }, [suggestionsOpen]);
+    const filter = (textValue, inputValue) => textValue.toLocaleLowerCase().includes(inputValue.toLocaleLowerCase());
+    const handleSelect = (key) => {
+      if (disabled || readOnly) return;
+      const keyText = String(key);
+      const item = filteredItems.find((candidate) => String(candidate.id) === keyText);
+      if (item) {
+        if (item.disabled) return;
+        const nextValue = String(item.value);
+        setInputValue(nextValue);
+        onChange?.(nextValue);
+      }
+      onSelect?.(item);
+      setIsOpen(false);
+    };
+    const handleInputChange = (next) => {
+      clearPendingFocusRestore();
+      if (disabled || readOnly) return;
+      if (value === undefined) setInputValue(next);
+      onChange?.(next);
+      setIsOpen(!disabled);
+    };
+    return React.createElement('div', {
+      ref,
+      className: classNames('muxui-autocomplete', className),
+      'data-size': resolvedSize,
+      'data-part': 'root',
+      onBlurCapture: (event) => {
+        const relatedTarget = event.relatedTarget;
+        const outside = !relatedTarget || (!event.currentTarget.contains(relatedTarget) && !popoverRef.current?.contains(relatedTarget));
+        if (outside) {
+          if (relatedTarget && relatedTarget !== document.body && relatedTarget !== document.documentElement) {
+            clearPendingFocusRestore();
+          }
+          setIsOpen(false);
+        }
       },
-    }),
-  })),
-  React.createElement(AriaPopover, {
-    ref: popoverRef,
-    isOpen: suggestionsOpen,
-    onOpenChange: setIsOpen,
-    isNonModal: true,
-    triggerRef: inputRef,
-    placement: 'bottom',
-    offset: 0,
-    // Zero padding keeps a full-width field's overlay aligned at the viewport
-    // edge; the position hook still performs collision-aware placement.
-    containerPadding: 0,
-    // Keep portals inside subtree-scoped Mux runtime profiles so their tokens,
-    // direction, and other inherited custom properties remain available.
-    UNSTABLE_portalContainer: portalContainer,
-    className: 'muxui-autocomplete-popover',
-    'data-part': 'popover',
-  }, React.createElement(AriaListBox, {
-    items: filteredItems,
-    className: classNames('muxui-autocomplete-list', resolvedSize === 'md' ? undefined : `muxui-autocomplete-list--${resolvedSize}`),
-    'data-part': 'list',
-    'data-size': resolvedSize,
-    selectionMode: readOnly ? 'none' : 'single',
-    onAction: handleSelect,
-  }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, 'data-part': 'option', className: 'muxui-autocomplete-option' }, item.label)))));
-});
+    }, React.createElement(AriaAutocomplete, {
+      ...props,
+      filter,
+      disableAutoFocusFirst: false,
+      inputValue: effectiveInputValue,
+      onInputChange: handleInputChange,
+    }, React.createElement(AriaSearchField, {
+      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      name,
+      className: 'muxui-autocomplete-search',
+      'data-part': 'search-field',
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+    }, fieldChildren({
+      label,
+      description,
+      errorMessage,
+      input: React.createElement(AriaInput, {
+        ref: inputRef,
+        className: 'muxui-field-input',
+        'data-part': 'input',
+        placeholder,
+        onPointerDown: () => {
+          clearPendingFocusRestore();
+          if (document.activeElement === inputRef.current) setIsOpen(!disabled);
+        },
+        onFocus: () => {
+          if (pendingFocusRestoreRef.current) {
+            clearPendingFocusRestore();
+            return;
+          }
+          setIsOpen(!disabled);
+        },
+        onKeyDown: (event) => {
+          clearPendingFocusRestore();
+          if (event.key === 'Escape') setIsOpen(false);
+          if (event.key === 'ArrowDown') setIsOpen(!disabled);
+        },
+      }),
+    })),
+    React.createElement(PopoverMotion, {
+      ref: popoverRef,
+      isOpen: suggestionsOpen,
+      onOpenChange: setIsOpen,
+      isNonModal: true,
+      triggerRef: inputRef,
+      placement: 'bottom',
+      offset: 0,
+      // Zero padding keeps a full-width field's overlay aligned at the viewport
+      // edge; the position hook still performs collision-aware placement.
+      containerPadding: 0,
+      // Keep portals inside subtree-scoped Mux runtime profiles so their tokens,
+      // direction, and other inherited custom properties remain available.
+      UNSTABLE_portalContainer: portalContainer,
+      className: 'muxui-autocomplete-popover',
+      'data-part': 'popover',
+    }, React.createElement(AriaListBox, {
+      items: filteredItems,
+      className: classNames('muxui-autocomplete-list', resolvedSize === 'md' ? undefined : `muxui-autocomplete-list--${resolvedSize}`),
+      'data-part': 'list',
+      'data-size': resolvedSize,
+      selectionMode: readOnly ? 'none' : 'single',
+      onAction: handleSelect,
+    }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: autocompleteItemText(item), isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, 'data-part': 'option', className: 'muxui-autocomplete-option' }, item.label)))));
+  });
 
-Autocomplete.displayName = 'Autocomplete';
+  component.displayName = 'Autocomplete';
+  return component;
+})();

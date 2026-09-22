@@ -3,7 +3,7 @@
   "id": "muxui:guide:token-migration",
   "kind": "guide",
   "name": "Token contract migration",
-  "summary": "Apply the Mux UI token contract 4.0 removal and update explicit CSS and theme authoring references.",
+  "summary": "Apply the Mux UI token contract 5.0 typed easing and transition foundation while retaining the 4.0 removal updates in explicit CSS and theme authoring references.",
   "lifecycle": "experimental",
   "keywords": ["tokens", "migration", "contract", "typography", "motion"],
   "platforms": ["web.react"],

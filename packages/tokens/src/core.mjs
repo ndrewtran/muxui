@@ -1,6 +1,12 @@
 /* Pure token value formatting shared by browser authoring and Node transforms. */
+import { compileSpringCSS } from './motion-spring-css.mjs';
+
 const LAYER_RANK = Object.freeze({ reference: 0, semantic: 1, component: 2 });
 const MODE_AXES = Object.freeze(['colorScheme', 'contrast', 'motion', 'density', 'direction']);
+
+const EASING_KEYWORDS = new Set(['linear', 'ease', 'ease-in', 'ease-out', 'ease-in-out', 'step-start', 'step-end']);
+const EASING_KINDS = new Set(['keyword', 'cubic-bezier', 'linear']);
+const MAX_EASING_POINTS = 1000;
 
 export function cssName(tokenId) {
   return `--muxui-${tokenId.replaceAll('.', '-')}`;
@@ -35,9 +41,55 @@ function effectCssValue(effect) {
   ].filter(Boolean).join(' ')).join(', ');
 }
 
+function formatMotionNumber(value) {
+  return Number.isInteger(value) ? String(value) : String(Number(value.toFixed(6)));
+}
+
+export function formatEasingValue(value) {
+  if (value?.kind === 'keyword') return value.value;
+  if (value?.kind === 'cubic-bezier') {
+    return `cubic-bezier(${formatMotionNumber(value.x1)}, ${formatMotionNumber(value.y1)}, ${formatMotionNumber(value.x2)}, ${formatMotionNumber(value.y2)})`;
+  }
+  if (value?.kind === 'linear') return `linear(${value.points.map(formatMotionNumber).join(', ')})`;
+  return String(value);
+}
+
+function formatTransitionValue(value) {
+  const duration = `${formatNumber(value.duration)}ms`;
+  return `${duration} ${formatEasingValue(value.easing)}`;
+}
+
+function transitionCssDeclarations(token, dependencies = {}) {
+  const prefix = cssName(token.id);
+  const dependencyIds = dependencies[token.id] ?? [];
+  const durationValue = dependencyIds[0] ? `var(${cssName(dependencyIds[0])})` : `${formatNumber(token.value.duration)}ms`;
+  const easingValue = dependencyIds[1] ? `var(${cssName(dependencyIds[1])})` : formatEasingValue(token.value.easing);
+  const declarations = [
+    `  ${prefix}: ${durationValue} ${easingValue};`,
+    `  ${prefix}-duration: ${durationValue};`,
+    `  ${prefix}-easing: ${easingValue};`,
+  ];
+  if (token.value.spring) {
+    const visualDurationValue = dependencyIds[2] ? `var(${cssName(dependencyIds[2])})` : `${formatNumber(token.value.spring.visualDuration)}ms`;
+    const spring = compileSpringCSS({
+      visualDuration: token.value.spring.visualDuration / 1000,
+      bounce: token.value.spring.bounce,
+    });
+    declarations.push(
+      `  ${prefix}-spring-visual-duration: ${visualDurationValue};`,
+      `  ${prefix}-spring-duration: ${formatNumber(spring.duration)}ms;`,
+      `  ${prefix}-spring-easing: ${spring.easing};`,
+      `  ${prefix}-spring-bounce: ${formatMotionNumber(token.value.spring.bounce)};`,
+    );
+  }
+  return declarations.join('\n');
+}
+
 export function cssValue(token) {
   const effect = token.effect ?? (token.type === 'effect' ? token.value : undefined);
   if (effect) return effectCssValue(effect);
+  if (token.type === 'easing') return formatEasingValue(token.value);
+  if (token.type === 'transition') return formatTransitionValue(token.value);
   if (token.fluid) {
     const { min, max, coefficient, offset, lengthUnit, viewportUnit } = token.fluid;
     return `clamp(${formatNumber(min)}${lengthUnit}, calc(${formatNumber(coefficient)}${viewportUnit} + ${formatNumber(offset)}${lengthUnit}), ${formatNumber(max)}${lengthUnit})`;
@@ -55,8 +107,25 @@ export function cssDeclaration(token, dependencies = {}) {
   if (token.source === 'alias') {
     const targetId = dependencies[token.id]?.[0];
     if (!targetId) throw new TypeError(`MUXUI_TOKEN_ALIAS_METADATA_INVALID: ${token.id}`);
+    if (token.type === 'transition') {
+      const prefix = cssName(token.id);
+      const targetPrefix = cssName(targetId);
+      const declarations = [
+        `  ${prefix}: var(${targetPrefix});`,
+        `  ${prefix}-duration: var(${targetPrefix}-duration);`,
+        `  ${prefix}-easing: var(${targetPrefix}-easing);`,
+      ];
+      if (token.value.spring) declarations.push(
+        `  ${prefix}-spring-visual-duration: var(${targetPrefix}-spring-visual-duration);`,
+        `  ${prefix}-spring-duration: var(${targetPrefix}-spring-duration);`,
+        `  ${prefix}-spring-easing: var(${targetPrefix}-spring-easing);`,
+        `  ${prefix}-spring-bounce: var(${targetPrefix}-spring-bounce);`,
+      );
+      return declarations.join('\n');
+    }
     return `  ${cssName(token.id)}: var(${cssName(targetId)});`;
   }
+  if (token.type === 'transition') return transitionCssDeclarations(token, dependencies);
   return `  ${cssName(token.id)}: ${cssValue(token)};`;
 }
 
@@ -109,12 +178,52 @@ function validateEffectValue(value, path, fail) {
 }
 
 export function validatePureLiteral(type, unit, value, path, fail = defaultFail) {
-  const expected = ['dimension', 'duration', 'number'].includes(type) ? 'number' : type === 'effect' ? 'object' : 'string';
+  const expected = ['dimension', 'duration', 'number'].includes(type) ? 'number' : ['effect', 'easing', 'transition'].includes(type) ? 'object' : 'string';
   if (typeof value !== expected || (typeof value === 'number' && !Number.isFinite(value))) fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a ${expected}`, { path, type, unit });
-  const units = { color: ['hex'], dimension: ['px'], duration: ['ms'], number: ['unitless'], string: ['string'], effect: ['structured'] };
+  const units = { color: ['hex'], dimension: ['px'], duration: ['ms'], number: ['unitless'], string: ['string'], effect: ['structured'], easing: ['structured'], transition: ['structured'] };
   if (!units[type]?.includes(unit)) fail('MUXUI_TOKEN_UNIT_MISMATCH', `${path} has incompatible unit ${unit}`, { path, type, unit });
   if (type === 'color' && !/^#[a-fA-F0-9]{6}(?:[a-fA-F0-9]{2})?$/.test(value)) fail('MUXUI_TOKEN_TYPE_MISMATCH', `${path} must be a six- or eight-digit hex color`, { path });
   if (type === 'effect') validateEffectValue(value, path, fail);
+  if (type === 'easing') validateEasingValue(value, path, fail);
+  if (type === 'transition') validateTransitionValue(value, path, fail);
+}
+
+function validateEasingValue(value, path, fail) {
+  if (!isRecord(value) || !EASING_KINDS.has(value.kind)) fail('MUXUI_TOKEN_MOTION_EASING_INVALID', `${path} must be a supported easing value`, { path });
+  if (value.kind === 'keyword') {
+    if (Object.keys(value).length !== 2 || !EASING_KEYWORDS.has(value.value)) fail('MUXUI_TOKEN_MOTION_EASING_INVALID', `${path} keyword is unsupported`, { path });
+    return;
+  }
+  if (value.kind === 'cubic-bezier') {
+    if (Object.keys(value).some((key) => !['kind', 'x1', 'y1', 'x2', 'y2'].includes(key))
+      || ![value.x1, value.y1, value.x2, value.y2].every(Number.isFinite)
+      || value.x1 < 0 || value.x1 > 1 || value.x2 < 0 || value.x2 > 1
+      || Math.max(Math.abs(value.y1), Math.abs(value.y2)) > 100) {
+      fail('MUXUI_TOKEN_MOTION_EASING_INVALID', `${path} cubic-bezier coordinates are out of bounds`, { path });
+    }
+    return;
+  }
+  if (Object.keys(value).some((key) => !['kind', 'points'].includes(key))
+    || !Array.isArray(value.points) || value.points.length < 2 || value.points.length > MAX_EASING_POINTS
+    || !value.points.every((point) => Number.isFinite(point) && Math.abs(point) <= 100)
+    || value.points[0] !== 0 || value.points.at(-1) !== 1) {
+    fail('MUXUI_TOKEN_MOTION_EASING_INVALID', `${path} linear points must be bounded and run from 0 to 1`, { path });
+  }
+}
+
+function validateTransitionValue(value, path, fail) {
+  if (!isRecord(value) || value.kind !== 'transition'
+    || Object.keys(value).some((key) => !['kind', 'duration', 'easing', 'spring'].includes(key))
+    || !TOKEN_ID.test(value.duration) || !TOKEN_ID.test(value.easing)) {
+    fail('MUXUI_TOKEN_MOTION_TRANSITION_INVALID', `${path} must reference a duration and easing token`, { path });
+  }
+  if (value.spring !== undefined) {
+    const spring = value.spring;
+    if (!isRecord(spring) || spring.kind !== 'time' || Object.keys(spring).some((key) => !['kind', 'visualDuration', 'bounce'].includes(key))
+      || !TOKEN_ID.test(spring.visualDuration) || !Number.isFinite(spring.bounce) || spring.bounce < 0 || spring.bounce > 1) {
+      fail('MUXUI_TOKEN_MOTION_SPRING_INVALID', `${path}/spring must reference a duration with a bounded bounce`, { path });
+    }
+  }
 }
 
 function validateDecoration(definition, type, path, fail) {
@@ -149,6 +258,35 @@ function selectedBranch(definition, modes) {
     if (Object.hasOwn(definition.modes ?? {}, key)) return definition.modes[key];
   }
   return definition;
+}
+
+function canonicalTransitionBranch(source, tokenId, modes, fail, visiting = []) {
+  const definition = source.tokens[tokenId];
+  if (!definition) fail('MUXUI_TOKEN_ALIAS_MISSING', `${tokenId} does not exist`, { tokenId });
+  if (visiting.includes(tokenId)) {
+    fail('MUXUI_TOKEN_ALIAS_CYCLE', `token alias cycle: ${[...visiting, tokenId].join(' -> ')}`, {
+      cycle: [...visiting, tokenId],
+    });
+  }
+  const branch = selectedBranch(definition, modes);
+  if (Object.hasOwn(branch, 'alias')) {
+    const targetId = branch.alias;
+    const target = source.tokens[targetId];
+    if (!target) fail('MUXUI_TOKEN_ALIAS_MISSING', `${tokenId} aliases missing ${targetId}`, { tokenId, targetId });
+    if (LAYER_RANK[target.layer] > LAYER_RANK[definition.layer]) {
+      fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} cannot alias forward to ${targetId}`, { tokenId, targetId });
+    }
+    if (target.layer === definition.layer && definition.equivalence !== 'semantic-equivalence') {
+      fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} same-layer alias requires an explicit equivalence`, { tokenId, targetId });
+    }
+    if (target.type !== definition.type || target.unit !== definition.unit) {
+      fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} and ${targetId} have incompatible type or unit`, { tokenId, targetId });
+    }
+    return canonicalTransitionBranch(source, targetId, modes, fail, [...visiting, tokenId]);
+  }
+  if (definition.type !== 'transition') return null;
+  validateTransitionValue(branch.value, `tokens/${tokenId}`, fail);
+  return branch.value;
 }
 
 function assertModes(source, modes, fail) {
@@ -192,6 +330,19 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
     if (!isRecord(override) || Object.keys(override).some((key) => !['type', 'unit', 'value', 'fluid', 'formula', 'effect', 'relative', 'mix'].includes(key))) fail('MUXUI_TOKEN_OVERRIDE_UNAUTHORIZED', `${tokenId} override contains unsupported fields`, { tokenId });
     if (override.type !== definition.type || override.unit !== definition.unit) fail('MUXUI_TOKEN_TYPE_MISMATCH', `${tokenId} override changes type or unit`, { tokenId });
     validatePureLiteral(override.type, override.unit, override.value, `overrides/${tokenId}`, fail);
+    if (override.type === 'transition') {
+      const authored = canonicalTransitionBranch(source, tokenId, selectedModes, fail);
+      const candidate = override.value;
+      const sameRefs = authored?.kind === 'transition'
+        && candidate.duration === authored.duration
+        && candidate.easing === authored.easing
+        && Boolean(candidate.spring) === Boolean(authored.spring)
+        && (!candidate.spring || (
+          candidate.spring.kind === authored.spring.kind
+          && candidate.spring.visualDuration === authored.spring.visualDuration
+        ));
+      if (!sameRefs) fail('MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY', `${tokenId} overrides must preserve authored duration, easing, and visualDuration references`, { tokenId });
+    }
     if (override.type === 'string' && !SAFE_OVERRIDE_STRING.test(override.value)) fail('MUXUI_TOKEN_STRING_INVALID', `${tokenId} override must use the supported CSS string grammar`, { tokenId });
     validateDecoration(override, override.type, `overrides/${tokenId}`, fail);
     if (override.effect !== undefined && !sameStructuredValue(override.effect, override.value)) {
@@ -238,6 +389,29 @@ export function compilePureTokenGraph(source, { modes, responsive = false, overr
         value = mixColor(resolvedTarget.value, branch.mix.color, branch.mix.weight);
         dependencies.set(tokenId, [branch.mix.token]);
         sourceKind = override ? 'authoring-override' : 'mix';
+      } else if (definition.type === 'transition') {
+        validateTransitionValue(branch.value, `tokens/${tokenId}`, fail);
+        const durationTarget = source.tokens[branch.value.duration];
+        const easingTarget = source.tokens[branch.value.easing];
+        if (!durationTarget || !easingTarget) fail('MUXUI_TOKEN_MOTION_TRANSITION_MISSING', `${tokenId} references a missing duration or easing token`, { tokenId });
+        if (LAYER_RANK[durationTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition cannot reference forward to ${branch.value.duration}`, { tokenId, targetId: branch.value.duration });
+        if (LAYER_RANK[easingTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition cannot reference forward to ${branch.value.easing}`, { tokenId, targetId: branch.value.easing });
+        if (durationTarget.type !== 'duration' || durationTarget.unit !== 'ms') fail('MUXUI_TOKEN_MOTION_TRANSITION_TYPE_MISMATCH', `${tokenId} duration reference must be a duration token`, { tokenId, targetId: branch.value.duration });
+        if (easingTarget.type !== 'easing' || easingTarget.unit !== 'structured') fail('MUXUI_TOKEN_MOTION_TRANSITION_TYPE_MISMATCH', `${tokenId} easing reference must be an easing token`, { tokenId, targetId: branch.value.easing });
+        const duration = resolveToken(branch.value.duration);
+        const easing = resolveToken(branch.value.easing);
+        value = { kind: 'transition', duration: duration.value, easing: easing.value };
+        const transitionDependencies = [branch.value.duration, branch.value.easing];
+        if (branch.value.spring) {
+          const visualDurationTarget = source.tokens[branch.value.spring.visualDuration];
+          if (!visualDurationTarget || visualDurationTarget.type !== 'duration' || visualDurationTarget.unit !== 'ms') fail('MUXUI_TOKEN_MOTION_SPRING_TYPE_MISMATCH', `${tokenId} spring visualDuration must reference a duration token`, { tokenId, targetId: branch.value.spring.visualDuration });
+          if (LAYER_RANK[visualDurationTarget.layer] > LAYER_RANK[definition.layer]) fail('MUXUI_TOKEN_LAYER_DIRECTION', `${tokenId} transition spring cannot reference forward to ${branch.value.spring.visualDuration}`, { tokenId, targetId: branch.value.spring.visualDuration });
+          const visualDuration = resolveToken(branch.value.spring.visualDuration);
+          value.spring = { kind: 'time', visualDuration: visualDuration.value, bounce: branch.value.spring.bounce };
+          transitionDependencies.push(branch.value.spring.visualDuration);
+        }
+        dependencies.set(tokenId, transitionDependencies);
+        sourceKind = override ? 'authoring-override' : 'composition';
       } else {
         validatePureLiteral(definition.type, definition.unit, branch.value, `tokens/${tokenId}`, fail); value = branch.value; dependencies.set(tokenId, []);
       }
