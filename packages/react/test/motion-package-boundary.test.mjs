@@ -98,7 +98,7 @@ test('packed package resolves motion closure and temporal SSR from an isolated c
         'react-dom': '19.2.8',
       },
     }, null, 2)}\n`);
-    const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
+    const install = spawnSync('pnpm', ['install', '--prefer-offline', '--ignore-scripts'], {
       cwd: consumer,
       encoding: 'utf8',
       env: { ...process.env, npm_config_engine_strict: 'false' },
