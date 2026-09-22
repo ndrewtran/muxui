@@ -332,15 +332,15 @@
           "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
         },
         "type": {
-          "enum": ["color", "dimension", "duration", "number", "string"],
+          "enum": ["color", "dimension", "duration", "number", "string", "easing", "transition"],
           "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
         },
         "unit": {
-          "enum": ["hex", "px", "ms", "unitless", "string"],
+          "enum": ["hex", "px", "ms", "unitless", "string", "structured"],
           "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
         },
         "value": {
-          "anyOf": [{ "type": "string" }, { "type": "number" }],
+          "anyOf": [{ "type": "string" }, { "type": "number" }, { "type": "object" }],
           "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["binding-content", "binding-spec"] }
         }
       }

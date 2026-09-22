@@ -284,11 +284,25 @@ function themeBundle(options = {}) {
   const graph = compileTokenGraph(tokenSource, options);
   const cssDeclarations = declarations(theme.css);
   const values = new Map(Object.keys(graph.tokens).map((id) => [id, cssDeclarations.get(cssName(id))]));
-  return { theme, graph, values };
+  return { theme, graph, declarations: cssDeclarations, values };
 }
 
 function changedTokenIds(base, variant) {
-  return new Set([...variant.values].filter(([id, value]) => base.values.get(id) !== value).map(([id]) => id));
+  const changed = new Set();
+  for (const [id, token] of Object.entries(variant.graph.tokens)) {
+    const prefix = cssName(id);
+    const names = [`${prefix}`, `${prefix}-duration`, `${prefix}-easing`];
+    if (token.type === 'transition' && token.value.spring) {
+      names.push(
+        `${prefix}-spring-visual-duration`,
+        `${prefix}-spring-duration`,
+        `${prefix}-spring-easing`,
+        `${prefix}-spring-bounce`,
+      );
+    }
+    if (names.some((name) => base.declarations.get(name) !== variant.declarations.get(name))) changed.add(id);
+  }
+  return changed;
 }
 
 function dependentClosure(seedIds, ...graphs) {
@@ -316,9 +330,22 @@ function dependentClosure(seedIds, ...graphs) {
 }
 
 function serializeDeclarations(bundle, tokenIds) {
-  return [...tokenIds].sort((left, right) => left.localeCompare(right))
-    .map((id) => `  ${cssName(id)}: ${bundle.values.get(id)};`)
-    .join('\n');
+  return [...tokenIds].sort((left, right) => left.localeCompare(right)).flatMap((id) => {
+    const token = bundle.graph.tokens[id];
+    const prefix = cssName(id);
+    const names = [`${prefix}`, `${prefix}-duration`, `${prefix}-easing`];
+    if (token?.type === 'transition' && token.value.spring) {
+      names.push(
+        `${prefix}-spring-visual-duration`,
+        `${prefix}-spring-duration`,
+        `${prefix}-spring-easing`,
+        `${prefix}-spring-bounce`,
+      );
+    }
+    return names
+      .filter((name) => bundle.declarations.has(name))
+      .map((name) => `  ${name}: ${bundle.declarations.get(name)};`);
+  }).join('\n');
 }
 
 function deltaBlock(selector, bundle, tokenIds, emptyComment) {

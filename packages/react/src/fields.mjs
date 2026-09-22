@@ -994,6 +994,38 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     const [isOpen, setIsOpen] = React.useState(false);
     const inputRef = React.useRef(null);
     const popoverRef = React.useRef(null);
+    // Outside dismissal lets RAC restore this trigger; consume that focus without reopening.
+    const pendingFocusRestoreRef = React.useRef(false);
+    const pendingFocusRestoreCleanupRef = React.useRef(null);
+    const clearPendingFocusRestore = () => {
+      pendingFocusRestoreRef.current = false;
+      pendingFocusRestoreCleanupRef.current?.();
+      pendingFocusRestoreCleanupRef.current = null;
+    };
+    const armPendingFocusRestore = () => {
+      clearPendingFocusRestore();
+      pendingFocusRestoreRef.current = true;
+      const handleFocusIn = (event) => {
+        const target = event.target;
+        const externalFocus = target
+          && target !== document.body
+          && target !== document.documentElement
+          && target !== inputRef.current
+          && !inputRef.current?.contains(target)
+          && !popoverRef.current?.contains(target);
+        if (externalFocus) clearPendingFocusRestore();
+      };
+      const handleKeyDown = (event) => {
+        if (event.key === 'Tab') clearPendingFocusRestore();
+      };
+      document.addEventListener('focusin', handleFocusIn, true);
+      document.addEventListener('keydown', handleKeyDown, true);
+      pendingFocusRestoreCleanupRef.current = () => {
+        document.removeEventListener('focusin', handleFocusIn, true);
+        document.removeEventListener('keydown', handleKeyDown, true);
+      };
+    };
+    React.useEffect(() => () => clearPendingFocusRestore(), []);
     const suggestionsOpen = isOpen && filteredItems.length > 0;
     const portalContainer = autocompletePortalContainer(inputRef.current);
     React.useEffect(() => {
@@ -1001,6 +1033,7 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       const handlePointerDown = (event) => {
         const target = event.target;
         if (inputRef.current?.contains(target) || popoverRef.current?.contains(target)) return;
+        if (document.activeElement === inputRef.current) armPendingFocusRestore();
         setIsOpen(false);
       };
       document.addEventListener('pointerdown', handlePointerDown, true);
@@ -1021,6 +1054,7 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       setIsOpen(false);
     };
     const handleInputChange = (next) => {
+      clearPendingFocusRestore();
       if (disabled || readOnly) return;
       if (value === undefined) setInputValue(next);
       onChange?.(next);
@@ -1032,7 +1066,12 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       'data-size': resolvedSize,
       'data-part': 'root',
       onBlurCapture: (event) => {
-        if (!event.relatedTarget || (!event.currentTarget.contains(event.relatedTarget) && !popoverRef.current?.contains(event.relatedTarget))) {
+        const relatedTarget = event.relatedTarget;
+        const outside = !relatedTarget || (!event.currentTarget.contains(relatedTarget) && !popoverRef.current?.contains(relatedTarget));
+        if (outside) {
+          if (relatedTarget && relatedTarget !== document.body && relatedTarget !== document.documentElement) {
+            clearPendingFocusRestore();
+          }
           setIsOpen(false);
         }
       },
@@ -1058,8 +1097,19 @@ export const Autocomplete = /*#__PURE__*/ (() => {
         className: 'muxui-field-input',
         'data-part': 'input',
         placeholder,
-        onFocus: () => setIsOpen(!disabled),
+        onPointerDown: () => {
+          clearPendingFocusRestore();
+          if (document.activeElement === inputRef.current) setIsOpen(!disabled);
+        },
+        onFocus: () => {
+          if (pendingFocusRestoreRef.current) {
+            clearPendingFocusRestore();
+            return;
+          }
+          setIsOpen(!disabled);
+        },
         onKeyDown: (event) => {
+          clearPendingFocusRestore();
           if (event.key === 'Escape') setIsOpen(false);
           if (event.key === 'ArrowDown') setIsOpen(!disabled);
         },

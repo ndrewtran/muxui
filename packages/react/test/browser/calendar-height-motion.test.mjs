@@ -108,11 +108,18 @@ test('calendar month height interpolates without changing semantics or reduced m
         await page.waitForFunction(() => document.querySelector('.muxui-date-popover').getAnimations().every((animation) => animation.playState === 'finished'));
         assert.match(await page.locator('.muxui-date-popover').getAttribute('data-placement'), kind === 'range-picker' ? /top/u : /bottom/u);
       }
+      if (kind === 'calendar') {
+        await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-content-resize-transition-spring-visual-duration', '2s'));
+      }
       const initial = await settled(page);
       assert.equal(initial.rows, 4, `${kind}: February has four rows and no initial height animation`);
+      const firstResizeStarted = kind === 'calendar' ? Date.now() : null;
       await navigate(page, 'next');
       await inFlight(page, initial, true);
       const march = await settled(page, initial);
+      if (firstResizeStarted !== null) {
+        assert.ok(Date.now() - firstResizeStarted < 1_500, 'calendar resize keeps its total duration when visual duration is overridden');
+      }
       assert.equal(march.rows, 5);
       assert.ok(march.calendar > initial.calendar);
       await navigate(page, 'next');

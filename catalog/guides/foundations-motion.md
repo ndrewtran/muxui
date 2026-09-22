@@ -4,17 +4,19 @@ id: muxui:guide:foundations-motion
 
 # Motion
 
-Motion tokens pair finite durations with easing strings for interaction, reveal, dismissal, resizing, progress, and mode changes. The source declares full and reduced motion. Reduced motion is a supported mode, not a separate visual theme.
+Motion tokens pair finite durations with typed easing values and transition compositions for interaction, reveal, dismissal, resizing, progress, and mode changes. The source declares full and reduced motion. Reduced motion is a supported mode, not a separate visual theme.
 
 Use a purpose-specific duration and easing. Replay the explorer specimens with the button to see one finite movement; no motion starts automatically.
 
-Token contract `4.0.0` exports the canonical reference durations `reference.motion.duration-instant` (0ms), `-fast` (120ms), `-moderate` (180ms), `-slow` (300ms), and `-deliberate` (500ms). The older `reference.duration.*` names were removed because no Mux UI consumer used them. Update explicit authoring and CSS references to the `reference.motion.*` names.
+Token contract `5.0.0` exports the canonical reference durations `reference.motion.duration-instant` (0ms), `-fast` (120ms), `-moderate` (180ms), `-slow` (300ms), and `-deliberate` (500ms), plus structured easing tokens and semantic transition compositions. The older `reference.duration.*` names were removed because no Mux UI consumer used them. Update explicit authoring and CSS references to the `reference.motion.*` names.
 
 The raw `reference.motion.duration-fast` reference is fixed at 120ms. Semantic roles such as `semantic.motion.feedback-duration` use that primitive in full motion and switch to `reference.motion.duration-instant` in reduced motion. Use the semantic role when that mode behavior is required.
 
 `semantic.motion.feedback` and the unused generic roles `feedback-easing`, `state-easing`, `enter-duration`, `enter-easing`, `exit-easing`, `content-duration`, and `content-easing` were removed. Use `semantic.motion.feedback-duration` or the role owned by the entering, exiting, feedback, or content component. Equal current durations do not make roles interchangeable.
 
 Preserve reduced-motion behavior while migrating. Feedback, state, and exit durations use Fast in full motion and Instant in reduced motion. Exact duration matches can share a reference primitive while keeping each role's existing reduced branch. Keep the purpose-specific 150ms interaction, 200ms reveal, 600ms content resize, 1000ms spinner, 1200ms sweep, and 1500ms travel roles. Progress reduced motion is its own behavior and must not be implemented as a duration-zero shortcut.
+
+Transition tokens reference the existing duration and easing IDs so each timing is authored once. Spring-bearing compositions also emit a deterministic CSS settle-duration and `linear()` curve derived from Motion 13.4.0; canonical theme overrides regenerate that pair. A raw CSS override of a base duration or easing variable cannot recalculate the derived spring pair, so use the theme authoring/compiler path when changing spring timing.
 
 ```css
 .popover {

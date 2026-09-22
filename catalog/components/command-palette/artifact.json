@@ -177,6 +177,14 @@
           {
             "token": "semantic.control.size-lg",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.modal-transition",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.modal-dismiss-transition",
+            "requirement": "required"
           }
         ]
       },

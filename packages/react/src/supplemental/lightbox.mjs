@@ -47,7 +47,7 @@ function motionTarget(isOpen, exitOffset) {
 function progressTransition(transition) {
   if (!transition) return null;
   return transition.type === 'spring'
-    ? { type: 'spring', visualDuration: transition.visualDuration, bounce: 0 }
+    ? { type: 'spring', visualDuration: transition.visualDuration, bounce: transition.bounce }
     : transition;
 }
 

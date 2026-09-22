@@ -4,7 +4,37 @@ id: muxui:guide:token-migration
 
 # Token contract migration
 
-Token contract `4.0.0` removes redundant or unused token IDs before consumer
+Token contract `5.0.0` adds typed easing and transition compositions while
+retaining the `4.0.0` removals. The canonical source remains schema `2.1.0`;
+removed names are not exported, emitted as CSS variables, accepted by authoring
+documents, or available to component recipes. This guide is a direct change map
+for the current contract.
+
+Easing overrides now use a typed value. Replace a string override such as
+`{ "type": "string", "unit": "string", "value": "cubic-bezier(0.2, 0, 0, 1)" }`
+with `{ "type": "easing", "unit": "structured", "value": { "kind":
+"cubic-bezier", "x1": 0.2, "y1": 0, "x2": 0, "y2": 1 } }`. Transition
+overrides keep their canonical references and may adjust approved spring
+settings:
+
+```json
+{
+  "type": "transition",
+  "unit": "structured",
+  "value": {
+    "kind": "transition",
+    "duration": "semantic.motion.interaction-duration",
+    "easing": "semantic.motion.interaction-easing",
+    "spring": {
+      "kind": "time",
+      "visualDuration": "semantic.motion.interaction-duration",
+      "bounce": 0.2
+    }
+  }
+}
+```
+
+Token contract `4.0.0` removed redundant or unused token IDs before consumer
 adoption. The canonical source remains schema `2.1.0`; removed names are not
 exported, emitted as CSS variables, accepted by authoring documents, or
 available to component recipes. This guide is a direct change map for the
@@ -57,7 +87,7 @@ and `mono-color` roles have dark branches.
 
 ## Authoring and Scale
 
-Authoring documents must declare `tokenContractVersion: "4.0.0"` and reference
+Authoring documents must declare `tokenContractVersion: "5.0.0"` and reference
 only current token IDs. The compiler validates an exact contract match; it does
 not normalize older same-major documents or rewrite overrides. Scale imports
 follow the same rule. Saved Scale settings accept numeric curvature factors and

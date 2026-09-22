@@ -781,6 +781,12 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
         const trigger = popupPage.locator(`[data-size-row="${size}"] [data-control-id="command-palette"] .muxui-command-palette__trigger`);
         await clickAfterScroll(popupPage, trigger);
         await popupPage.locator(`[aria-label="Command search ${size}"]`).waitFor({ state: 'visible' });
+        await popupPage.waitForFunction((targetSize) => {
+          const input = document.querySelector(`[aria-label="Command search ${targetSize}"]`);
+          const popup = input?.closest('.muxui-command-palette__popup') ?? document.querySelector('.muxui-command-palette__popup');
+          const scale = Number(popup && getComputedStyle(popup).getPropertyValue('--muxui-modal-scale'));
+          return popup && (!Number.isFinite(scale) || Math.abs(scale - 1) < 0.00001);
+        }, size);
         collectCommandPaletteFailures(
           await measureCommandPaletteInput(popupPage, size),
           sizes[size],

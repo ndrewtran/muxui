@@ -4561,6 +4561,118 @@
       "name": "modes",
       "schema": "token-source.schema.json",
       "schemaPointer": "#/$defs/token/allOf/1/oneOf/1/properties/modes"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/0/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "value",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/0/properties/value"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/1/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "x1",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/1/properties/x1"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "y1",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/1/properties/y1"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "x2",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/1/properties/x2"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "y2",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/1/properties/y2"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/2/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "points",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/easingValue/oneOf/2/properties/points"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/springValue/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "visualDuration",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/springValue/properties/visualDuration"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "bounce",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/springValue/properties/bounce"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "kind",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/transitionValue/properties/kind"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "duration",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/transitionValue/properties/duration"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "easing",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/transitionValue/properties/easing"
+    },
+    {
+      "class": "authored",
+      "owner": "token-source-contract",
+      "name": "spring",
+      "schema": "token-source.schema.json",
+      "schemaPointer": "#/$defs/transitionValue/properties/spring"
     }
   ],
   "governedSchemas": [

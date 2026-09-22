@@ -207,16 +207,9 @@ test('R1.4 React component browser and axe matrix', async () => {
           await waitForFiniteDocumentAnimations(page);
           const keyboardState = await readChoiceFocusStyles(second);
           if (!keyboardState.active || !keyboardState.focusVisible) throw new Error(`${label} ${keyboardAction} must expose keyboard focus on the next choice`);
-          if (label === 'Radio') {
-            const expectedRing = /0(?:px)? 0(?:px)? 0(?:px)? 2px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 4px/u;
-            if (!expectedRing.test(keyboardState.indicatorBoxShadow ?? '')) {
-              throw new Error(`${label} ${keyboardAction} focus must retain its indicator ring: ${JSON.stringify(keyboardState)}`);
-            }
-          } else if (keyboardState.indicatorOutlineStyle !== 'solid'
-            || keyboardState.indicatorOutlineWidth !== '2px'
-            || keyboardState.indicatorOutlineOffset !== '2px'
-            || ['transparent', 'rgba(0, 0, 0, 0)'].includes(keyboardState.indicatorOutlineColor)) {
-            throw new Error(`${label} ${keyboardAction} focus must retain its indicator outline: ${JSON.stringify(keyboardState)}`);
+          const expectedRing = /0(?:px)? 0(?:px)? 0(?:px)? 2px[\s\S]*0(?:px)? 0(?:px)? 0(?:px)? 4px/u;
+          if (!expectedRing.test(keyboardState.indicatorBoxShadow ?? '')) {
+            throw new Error(`${label} ${keyboardAction} focus must retain its indicator ring: ${JSON.stringify(keyboardState)}`);
           }
 
           await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });
@@ -293,6 +286,18 @@ test('R1.4 React component browser and axe matrix', async () => {
         await profile.locator(':scope > h2').click();
         await autocompletePopover.waitFor({ state: 'detached' });
 
+        // A concrete outside focus target clears the dismissal restoration
+        // guard, so a later programmatic focus still opens the collection.
+        await autocompleteInput.click();
+        await autocompleteInput.press('ArrowDown');
+        await autocompletePopover.waitFor({ state: 'visible' });
+        await idleFixture.locator('button').click();
+        await autocompletePopover.waitFor({ state: 'detached' });
+        await autocompleteInput.focus();
+        await autocompletePopover.waitFor({ state: 'visible' });
+        await autocompleteInput.press('Escape');
+        await autocompletePopover.waitFor({ state: 'detached' });
+
         for (const scopedProfileName of expectedProfiles.slice(1, 2).concat(expectedProfiles.slice(-1))) {
           const scopedProfile = page.locator(`[data-profile="${scopedProfileName}"]`);
           const scopedInput = scopedProfile.locator('[data-component="autocomplete"] .muxui-autocomplete input');
@@ -367,8 +372,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const dialog = page.locator('[data-r1-4-overlay="dialog"]');
         if (await dialog.count() !== 1 || !await dialog.isVisible()) throw new Error('Dialog must open from its keyboard trigger');
         await page.keyboard.press('Escape');
-        await waitForFiniteDocumentAnimations(page);
-        if (await dialog.count() !== 0) throw new Error('Dialog Escape must dismiss the dialog');
+        await dialog.waitFor({ state: 'detached' });
 
         const popoverTrigger = profile.locator('[data-r1-4-control="popover-open"]');
         await popoverTrigger.focus();
@@ -376,8 +380,7 @@ test('R1.4 React component browser and axe matrix', async () => {
         const popover = page.locator('[data-r1-4-overlay="popover"]');
         if (await popover.count() !== 1 || !await popover.isVisible()) throw new Error('Popover must open from its keyboard trigger');
         await page.keyboard.press('Escape');
-        await waitForFiniteDocumentAnimations(page);
-        if (await popover.count() !== 0) throw new Error('Popover Escape must dismiss the popover');
+        await popover.waitFor({ state: 'detached' });
 
         const previewTrigger = profile.locator('[data-r1-4-control="preview-trigger"]');
         // PreviewTrigger opens its non-modal inner dialog on focus, so observe
@@ -403,14 +406,14 @@ test('R1.4 React component browser and axe matrix', async () => {
         if (await toast.count() !== 1 || !await toast.isVisible()) throw new Error('useToast must announce a visible toast');
         if (await toast.locator('[role="alert"]').count() !== 1) throw new Error('Toast must expose an announcement region');
         await toast.locator('.muxui-toast-dismiss').click();
-        if (await toast.count() !== 0) throw new Error('Toast dismiss must remove the notification');
+        await toast.waitFor({ state: 'detached' });
 
         const declarativeToastTrigger = profile.locator('[data-r1-4-control="toast-declarative"]');
         await declarativeToastTrigger.click();
         const declarativeToast = page.locator('.muxui-toast').filter({ hasText: 'A declarative notification is visible.' });
         if (await declarativeToast.count() !== 1 || !await declarativeToast.isVisible()) throw new Error('Toast component must render through ToastProvider');
         await declarativeToast.locator('.muxui-toast-dismiss').click();
-        if (await declarativeToast.count() !== 0) throw new Error('Declarative Toast dismiss must remove the notification');
+        await declarativeToast.waitFor({ state: 'detached' });
       }
     }
     await page.emulateMedia({ forcedColors: 'active', reducedMotion: 'no-preference' });

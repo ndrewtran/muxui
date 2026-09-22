@@ -211,7 +211,7 @@ test('MuxUI styles bind states and public theme hooks', async () => {
   assert.match(css, /\.muxui-breadcrumbs-item\[data-disabled\]:not\(\[data-current\]\)[^}]*color: var\(--muxui-semantic-content-default\)/u);
   assert.doesNotMatch(css, /\.muxui-breadcrumbs-item\[data-disabled\][^}]*opacity:/u);
 
-  assert.match(css, /\.muxui-dialog\s*\{[^}]*transform: translate\(-50%, -50%\);/u);
+  assert.match(css, /\.muxui-dialog\s*\{[^}]*transform: translate\(-50%, -50%\)[^;]*;/u);
   assert.doesNotMatch(css, /\.muxui-popover\[data-entering\][\s\S]*transform: scale\(0\.97\)/u);
   assert.match(css, /\.muxui-tooltip\[data-entering\][\s\S]*transform: scale\(0\.96\)/u);
   assert.match(css, /\.muxui-toast\s*\{[\s\S]*transition: none;/u);

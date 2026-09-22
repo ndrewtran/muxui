@@ -343,8 +343,8 @@ test('default theme link and invalid semantic colors meet contrast in both color
 });
 
 test('default theme motion scale removes Quick and preserves Fast (120ms) semantic roles', () => {
-  assert.equal(source.tokenContractVersion, '4.0.0');
-  assert.equal(Object.keys(source.tokens).length, 870);
+  assert.equal(source.tokenContractVersion, '5.0.0');
+  assert.equal(Object.keys(source.tokens).length, 878);
   assert.equal(Object.values(source.tokens).some((token) => Object.hasOwn(token, 'deprecation')), false);
   const durationScale = new Map([
     ['instant', 0], ['fast', 120], ['moderate', 180], ['slow', 300], ['deliberate', 500],
@@ -373,7 +373,124 @@ test('default theme motion scale removes Quick and preserves Fast (120ms) semant
   assert.equal(source.tokens['semantic.motion.modal-enter-duration'].alias, 'reference.motion.duration-moderate');
   assert.equal(full.tokens['semantic.motion.modal-enter-duration'].value, 180);
   assert.equal(reduced.tokens['semantic.motion.modal-enter-duration'].value, 0);
-  assert.equal(source.tokens['semantic.motion.modal-easing'].value, 'cubic-bezier(0.16, 1, 0.3, 1)');
+  assert.deepEqual({ ...source.tokens['semantic.motion.modal-easing'].value }, { kind: 'cubic-bezier', x1: 0.16, y1: 1, x2: 0.3, y2: 1 });
+});
+
+test('motion compositions preserve references and regenerate spring CSS from theme overrides', () => {
+  const defaultCss = compileWebTheme(source).css;
+  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-duration: var\(--muxui-semantic-motion-interaction-duration\);/u);
+  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-spring-duration: 350ms;/u);
+  assert.match(defaultCss, /--muxui-semantic-motion-interaction-transition-spring-easing: linear\(0, 0\.3049/u);
+  const overriddenCss = compileWebTheme(source, {
+    overrides: {
+      'semantic.motion.interaction-duration': { type: 'duration', unit: 'ms', value: 200 },
+    },
+  }).css;
+  assert.match(overriddenCss, /--muxui-semantic-motion-interaction-transition-spring-duration: 400ms;/u);
+  const reduced = compileWebTheme(source, { modes: { motion: 'reduced' } }).css;
+  assert.match(reduced, /--muxui-semantic-motion-state-transition-duration: var\(--muxui-semantic-motion-state-duration\);/u);
+  assert.match(reduced, /--muxui-semantic-motion-state-transition-spring-duration: 0ms;/u);
+  assert.throws(() => compileWebTheme(source, {
+    overrides: {
+      'semantic.motion.interaction-transition': {
+        type: 'transition',
+        unit: 'structured',
+        value: {
+          kind: 'transition',
+          duration: 'semantic.motion.state-duration',
+          easing: 'semantic.motion.interaction-easing',
+          spring: { kind: 'time', visualDuration: 'semantic.motion.state-duration', bounce: 0 },
+        },
+      },
+    },
+  }), /MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY/u);
+  const native = compileNativeTheme(source, { profile: 'native.ios' });
+  assert.ok(native.diagnostics.some(({ id, code }) => id === 'semantic.motion.interaction-transition' && code === 'MUXUI_TOKEN_TRANSITION_NATIVE_DEFERRED'));
+});
+
+test('transition overrides follow selected mode and alias target topology', () => {
+  const candidate = structuredClone(source);
+  candidate.tokens['semantic.motion.test-target'] = {
+    layer: 'semantic',
+    type: 'transition',
+    unit: 'structured',
+    meaning: 'Transition topology target.',
+    overridePolicy: 'theme',
+    value: {
+      kind: 'transition',
+      duration: 'semantic.motion.state-duration',
+      easing: 'semantic.motion.interaction-easing',
+      spring: { kind: 'time', visualDuration: 'semantic.motion.state-duration', bounce: 0 },
+    },
+  };
+  candidate.tokens['semantic.motion.test-target'].modes = {
+    'motion.reduced': {
+      value: {
+        kind: 'transition',
+        duration: 'reference.motion.duration-instant',
+        easing: 'semantic.motion.interaction-easing',
+        spring: { kind: 'time', visualDuration: 'reference.motion.duration-instant', bounce: 0 },
+      },
+    },
+  };
+  candidate.tokens['semantic.motion.test-alias'] = {
+    layer: 'semantic',
+    type: 'transition',
+    unit: 'structured',
+    meaning: 'Transition topology alias.',
+    overridePolicy: 'theme',
+    alias: 'semantic.motion.test-target',
+    equivalence: 'semantic-equivalence',
+  };
+  const fullOverride = {
+    type: 'transition',
+    unit: 'structured',
+    value: {
+      kind: 'transition',
+      duration: 'semantic.motion.state-duration',
+      easing: 'semantic.motion.interaction-easing',
+      spring: { kind: 'time', visualDuration: 'semantic.motion.state-duration', bounce: 0.2 },
+    },
+  };
+  assert.doesNotThrow(() => compileTokenGraph(candidate, {
+    overrides: { 'semantic.motion.test-alias': fullOverride },
+  }));
+  const reducedOverride = structuredClone(fullOverride);
+  reducedOverride.value.duration = 'reference.motion.duration-instant';
+  reducedOverride.value.spring.visualDuration = 'reference.motion.duration-instant';
+  assert.doesNotThrow(() => compileTokenGraph(candidate, {
+    modes: { motion: 'reduced' },
+    overrides: { 'semantic.motion.test-alias': reducedOverride },
+  }));
+  assert.throws(() => compileTokenGraph(candidate, {
+    modes: { motion: 'reduced' },
+    overrides: { 'semantic.motion.test-alias': fullOverride },
+  }), /MUXUI_TOKEN_MOTION_TRANSITION_TOPOLOGY/u);
+});
+
+test('transition references cannot point forward across token layers', () => {
+  const candidate = structuredClone(source);
+  candidate.tokens['component.motion.forward-duration'] = {
+    layer: 'component',
+    type: 'duration',
+    unit: 'ms',
+    meaning: 'Forward transition duration.',
+    overridePolicy: 'theme',
+    value: 120,
+  };
+  candidate.tokens['semantic.motion.forward-transition'] = {
+    layer: 'semantic',
+    type: 'transition',
+    unit: 'structured',
+    meaning: 'Invalid forward transition.',
+    overridePolicy: 'theme',
+    value: {
+      kind: 'transition',
+      duration: 'component.motion.forward-duration',
+      easing: 'semantic.motion.interaction-easing',
+    },
+  };
+  expectCode('MUXUI_TOKEN_LAYER_DIRECTION', () => compileTokenGraph(candidate));
 });
 
 test('default theme color modes preserve canonical shade positions', () => {

@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "4.0.0",
+  "tokenContractVersion": "5.0.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -880,11 +880,14 @@
     },
     "semantic.motion.interaction-easing": {
       "layer": "semantic",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Easing curve for standard interface state transitions and popup motion.",
       "overridePolicy": "theme",
-      "value": "ease"
+      "value": {
+        "kind": "keyword",
+        "value": "ease"
+      }
     },
     "semantic.layout.dense-gap": {
       "layer": "semantic",
@@ -1021,27 +1024,39 @@
     },
     "semantic.motion.reveal-easing": {
       "layer": "semantic",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Ease-out curve for content and overlay entry transitions.",
       "overridePolicy": "theme",
-      "value": "ease-out"
+      "value": {
+        "kind": "keyword",
+        "value": "ease-out"
+      }
     },
     "semantic.motion.dismiss-easing": {
       "layer": "semantic",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Ease-in curve for content and overlay dismissal transitions.",
       "overridePolicy": "theme",
-      "value": "ease-in"
+      "value": {
+        "kind": "keyword",
+        "value": "ease-in"
+      }
     },
     "semantic.motion.modal-easing": {
       "layer": "semantic",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Easing curve for modal panel and backdrop transitions.",
       "overridePolicy": "theme",
-      "value": "cubic-bezier(0.16, 1, 0.3, 1)"
+      "value": {
+        "kind": "cubic-bezier",
+        "x1": 0.16,
+        "y1": 1,
+        "x2": 0.3,
+        "y2": 1
+      }
     },
     "semantic.layout.payment-icon-inset": {
       "layer": "semantic",
@@ -1073,8 +1088,8 @@
     },
     "semantic.motion.constant-easing": {
       "layer": "semantic",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Linear curve for continuous progress motion such as spinner rotation.",
       "overridePolicy": "theme",
       "alias": "reference.motion.easing-linear"
@@ -1089,11 +1104,14 @@
     },
     "semantic.motion.progress-easing": {
       "layer": "semantic",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Ease-in-out curve for progress indicator movement.",
       "overridePolicy": "theme",
-      "value": "ease-in-out"
+      "value": {
+        "kind": "keyword",
+        "value": "ease-in-out"
+      }
     },
     "semantic.layout.navigation-inset-inline": {
       "layer": "semantic",
@@ -7857,43 +7875,70 @@
     },
     "reference.motion.easing-linear": {
       "layer": "reference",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Mux-owned token for --motion-easing-linear.",
       "overridePolicy": "fixed",
-      "value": "linear"
+      "value": {
+        "kind": "keyword",
+        "value": "linear"
+      }
     },
     "reference.motion.easing-standard": {
       "layer": "reference",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Mux-owned token for --motion-easing-standard.",
       "overridePolicy": "fixed",
-      "value": "cubic-bezier(0.2, 0, 0, 1)"
+      "value": {
+        "kind": "cubic-bezier",
+        "x1": 0.2,
+        "y1": 0,
+        "x2": 0,
+        "y2": 1
+      }
     },
     "reference.motion.easing-enter": {
       "layer": "reference",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Mux-owned token for --motion-easing-enter.",
       "overridePolicy": "fixed",
-      "value": "cubic-bezier(0, 0, 0, 1)"
+      "value": {
+        "kind": "cubic-bezier",
+        "x1": 0,
+        "y1": 0,
+        "x2": 0,
+        "y2": 1
+      }
     },
     "reference.motion.easing-exit": {
       "layer": "reference",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Mux-owned token for --motion-easing-exit.",
       "overridePolicy": "fixed",
-      "value": "cubic-bezier(0.3, 0, 1, 1)"
+      "value": {
+        "kind": "cubic-bezier",
+        "x1": 0.3,
+        "y1": 0,
+        "x2": 1,
+        "y2": 1
+      }
     },
     "reference.motion.easing-emphasized": {
       "layer": "reference",
-      "type": "string",
-      "unit": "string",
+      "type": "easing",
+      "unit": "structured",
       "meaning": "Mux-owned token for --motion-easing-emphasized.",
       "overridePolicy": "fixed",
-      "value": "cubic-bezier(0.2, 0, 0, 1.4)"
+      "value": {
+        "kind": "cubic-bezier",
+        "x1": 0.2,
+        "y1": 0,
+        "x2": 0,
+        "y2": 1.4
+      }
     },
     "semantic.motion.feedback-duration": {
       "layer": "semantic",
@@ -8916,6 +8961,127 @@
         "token": "semantic.color.neutral-default-100",
         "color": "#00000000",
         "weight": 0.48
+      }
+    },
+    "semantic.motion.interaction-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Semantic interaction transition composed from canonical motion timing roles.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.interaction-duration",
+        "easing": "semantic.motion.interaction-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.interaction-duration",
+          "bounce": 0
+        }
+      }
+    },
+    "semantic.motion.reveal-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Semantic reveal transition composed from canonical motion timing roles.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.reveal-duration",
+        "easing": "semantic.motion.reveal-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.reveal-duration",
+          "bounce": 0
+        }
+      }
+    },
+    "semantic.motion.dismiss-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Semantic dismiss transition composed from canonical motion timing roles.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.exit-duration",
+        "easing": "semantic.motion.dismiss-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.exit-duration",
+          "bounce": 0
+        }
+      }
+    },
+    "semantic.motion.state-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Semantic state transition composed from canonical motion timing roles.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.state-duration",
+        "easing": "semantic.motion.interaction-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.state-duration",
+          "bounce": 0
+        }
+      }
+    },
+    "semantic.motion.content-resize-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Semantic content resize transition composed from canonical motion timing roles.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.content-resize-duration",
+        "easing": "semantic.motion.interaction-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "semantic.motion.content-resize-duration",
+          "bounce": 0
+        }
+      }
+    },
+    "semantic.motion.progress-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Semantic progress transition composed from canonical motion timing roles.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.progress-update-duration",
+        "easing": "semantic.motion.progress-easing"
+      }
+    },
+    "semantic.motion.modal-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Modal panel transition composed from the modal enter duration and easing.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.modal-enter-duration",
+        "easing": "semantic.motion.modal-easing"
+      }
+    },
+    "semantic.motion.modal-dismiss-transition": {
+      "layer": "semantic",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Modal panel dismissal transition composed from the exit duration and easing.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "semantic.motion.exit-duration",
+        "easing": "semantic.motion.modal-easing"
       }
     }
   }

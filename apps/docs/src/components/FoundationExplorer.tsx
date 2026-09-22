@@ -620,7 +620,18 @@ function motionCurvePath(value: unknown): string | undefined {
 		'ease-out': [0, 0, 0.58, 1],
 		'ease-in-out': [0.42, 0, 0.58, 1],
 	};
-	const raw = String(value);
+	const candidate = value && typeof value === 'object' ? value as Record<string, unknown> : undefined;
+	if (candidate?.kind === 'linear' && Array.isArray(candidate.points) && candidate.points.length >= 2) {
+		const points = candidate.points.filter((point): point is number => typeof point === 'number' && Number.isFinite(point));
+		if (points.length === candidate.points.length) {
+			return points.map((point, index) => `${index === 0 ? 'M' : 'L'}${16 + 112 * index / (points.length - 1)} ${82 - 74 * point}`).join(' ');
+		}
+	}
+	const raw = candidate?.kind === 'keyword' && typeof candidate.value === 'string'
+		? candidate.value
+		: candidate?.kind === 'cubic-bezier' && ['x1', 'y1', 'x2', 'y2'].every((key) => typeof candidate[key] === 'number')
+			? `cubic-bezier(${candidate.x1}, ${candidate.y1}, ${candidate.x2}, ${candidate.y2})`
+			: String(value);
 	const match = raw.match(/^cubic-bezier\(([^)]+)\)$/u);
 	const points = match ? match[1].split(',').map(Number) : presets[raw];
 	if (!points || points.length !== 4 || !points.every(Number.isFinite)) return undefined;
@@ -707,14 +718,15 @@ function MotionEasingFamily({ family, replay }: { family: FoundationFamily; repl
 		<FoundationFamilyHeading family={family} />
 		<div className="foundation-family-rows">{family.tokens.map((easing) => {
 			const path = motionCurvePath(easing.defaultValue);
-			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><FoundationTokenLabel token={easing} /><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.motion.duration-fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{displayValue(easing.defaultValue)}</small></div>;
+			return <div className="foundation-family-row foundation-easing-row" data-foundation-token={easing.id} key={easing.id}><FoundationTokenLabel token={easing} /><div className="foundation-motion-track">{path ? <svg className="foundation-motion-curve" viewBox="0 0 140 104" aria-hidden="true"><path className="foundation-motion-curve-axis" d="M16 8V82H128" /><path className="foundation-motion-curve-path" d={path} /></svg> : null}<span className="foundation-motion-marker" key={`${easing.id}-${replay}`} style={{ animationName: replay ? 'foundation-motion-replay' : 'none', animationDuration: cssReference('reference.motion.duration-fast'), animationTimingFunction: cssReference(easing) }} /></div><small>{easing.defaultCssValue}</small></div>;
 		})}</div>
 	</section>;
 }
 
 function MotionPage({ data }: { data: FoundationData }) {
 	const durations = useMemo(() => data.tokens.filter((token) => token.type === 'duration'), [data.tokens]);
-	const easings = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'string'), [data.tokens]);
+	const easings = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'easing'), [data.tokens]);
+	const transitions = useMemo(() => data.tokens.filter((token) => token.id.includes('.motion.') && token.type === 'transition'), [data.tokens]);
 	const [replay, setReplay] = useState(0);
 	const groups = motionTimingGroups(durations);
 	const easingGroups = motionEasingGroups(easings);
@@ -736,7 +748,7 @@ function MotionPage({ data }: { data: FoundationData }) {
 			</div>
 			<div className="foundation-timing-groups">{groups.map((group) => <MotionTimingGroup key={group.id} group={group} replay={replay} allTokens={data.tokens} onReplay={replayMotion} appliedValues={appliedValues} />)}</div>
 		</section>
-		<TokenInventory tokens={[...durations, ...easings]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration and easing tokens, including mode-aware semantic roles." />
+		<TokenInventory tokens={[...durations, ...easings, ...transitions]} allTokens={data.tokens} title="Motion token inventory" description="Search all canonical duration, easing, and transition tokens, including mode-aware semantic roles." />
 	</div>;
 }
 
@@ -871,6 +883,9 @@ function SemanticTokenPreview({ token, value }: { token: FoundationToken; value:
 		kind = 'duration';
 		const duration = normalizeAppliedNumericValue(value, 'ms', 16) ?? Number(token.defaultValue);
 		sample = <span className="semantic-sample-timing"><span className="semantic-sample-timing-axis"><span style={{ width: `${Math.min(100, Math.max(0, duration) / 2000 * 100)}%` }} /></span><small>0–2,000 ms</small></span>;
+	} else if (token.type === 'transition') {
+		kind = 'transition';
+		sample = <code>{token.defaultCssValue}</code>;
 	} else if (family === 'motion') {
 		kind = 'easing';
 		const path = motionCurvePath(value);

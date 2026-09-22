@@ -129,7 +129,9 @@
           },
           { "token": "semantic.control.size-sm", "requirement": "required" },
           { "token": "semantic.control.size-md", "requirement": "required" },
-          { "token": "semantic.control.size-lg", "requirement": "required" }
+            { "token": "semantic.control.size-lg", "requirement": "required" },
+            { "token": "semantic.motion.reveal-transition", "requirement": "required" },
+            { "token": "semantic.motion.dismiss-transition", "requirement": "required" }
         ]
       },
       "platformSafety": [

@@ -1,7 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
 import { OverlayTriggerStateContext, PopoverContext } from 'react-aria-components';
-import { observeReducedMotion, resolvedMotionTransition } from './motion.mjs';
+import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -40,16 +40,16 @@ export function CalendarHeightMotion({ children }) {
       const from = controls ? body.getBoundingClientRect().height : targetHeight;
       targetHeight = nextHeight;
       settle();
-      const transition = resolvedMotionTransition(body, triggerRef?.current, 'content-resize');
+      const transition = resolvedMotionSpring(body, triggerRef?.current, 'content-resize', 'interaction');
       if (!transition || from <= 0 || nextHeight <= 0) return;
       body.style.height = `${from}px`;
       calendar.style.overflow = 'clip';
       // Animate a number so cleanup owns every height write, including interruption.
       controls = animate(from, nextHeight, {
         // The content-resize token bounds the whole interpolation, including settle.
-        type: 'spring',
+        type: transition.type,
         duration: transition.duration,
-        bounce: 0,
+        bounce: transition.bounce,
         onUpdate: (height) => { body.style.height = `${height}px`; },
         onComplete: () => {
           controls = null;
