@@ -141,6 +141,26 @@ async function waitForEntry(page, selector, independentTranslate = false) {
   }, [selector, independentTranslate], { timeout: 1800 });
 }
 
+async function waitForModalIntermediate(page, selector) {
+  const handle = await page.waitForFunction((value) => {
+    const node = document.querySelector(value);
+    if (!node) return false;
+    const style = getComputedStyle(node);
+    const opacity = Number(style.opacity);
+    const y = Number.parseFloat(style.getPropertyValue('--muxui-modal-y'));
+    const scale = Number.parseFloat(style.getPropertyValue('--muxui-modal-scale'));
+    if (!(Number.isFinite(opacity) && opacity > 0 && opacity < 1
+      && Number.isFinite(y) && y > -8 && y < 0
+      && Number.isFinite(scale) && scale > 0.97 && scale < 1)) return false;
+    return { opacity, modalY: y, modalScale: scale };
+  }, selector, { timeout: 1800 });
+  try {
+    return await handle.jsonValue();
+  } finally {
+    await handle.dispose();
+  }
+}
+
 async function waitForSettledVisual(page, selector, independentTranslate = false) {
   await page.waitForFunction(([value, usesTranslate]) => {
     const node = document.querySelector(value);
@@ -350,7 +370,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await page.locator(alertPopup).waitFor();
     assert.equal(await page.locator(alertPopup).evaluate((node) => !node.closest('#root')), true, 'alert dialog popup is retained in a portal');
     await waitForEntry(page, alertPopup, true);
-    const alertOpening = await readMetrics(page, alertPopup);
+    const alertOpening = await waitForModalIntermediate(page, alertPopup);
     assert.ok(alertOpening.modalY < 0 && alertOpening.modalY > -8, `alert entry uses the accepted y amplitude: ${JSON.stringify(alertOpening)}`);
     assert.ok(alertOpening.modalScale > 0.97 && alertOpening.modalScale < 1, `alert entry uses the accepted scale amplitude: ${JSON.stringify(alertOpening)}`);
     assert.equal(await page.locator(alertPopup).evaluate((node) => node.contains(document.activeElement)), true, 'alert dialog traps focus inside the portal');
@@ -401,7 +421,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await page.locator(commandPopup).waitFor();
     assert.equal(await page.locator(commandPopup).evaluate((node) => !node.closest('#root')), true, 'command palette popup is retained in a portal');
     await waitForEntry(page, commandPopup, true);
-    const commandOpening = await readMetrics(page, commandPopup);
+    const commandOpening = await waitForModalIntermediate(page, commandPopup);
     assert.ok(commandOpening.modalY < 0 && commandOpening.modalY > -8, `command palette entry uses the accepted y amplitude: ${JSON.stringify(commandOpening)}`);
     assert.ok(commandOpening.modalScale > 0.97 && commandOpening.modalScale < 1, `command palette entry uses the accepted scale amplitude: ${JSON.stringify(commandOpening)}`);
     assert.equal(await page.locator(commandPopup).evaluate((node) => node.contains(document.activeElement)), true, 'command palette focuses its portalled input');

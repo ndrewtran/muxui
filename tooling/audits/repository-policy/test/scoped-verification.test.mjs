@@ -34,17 +34,32 @@ const records = [
   { family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.mjs' },
 ];
 
+const inheritedStorybookEnvironmentKeys = ['MUXUI_STORYBOOK_AUDIT_EVENT', 'MUXUI_STORYBOOK_AUDIT_FORCE', 'GITHUB_EVENT_NAME'];
+
+function planWithoutInheritedStorybookSelection(input) {
+  const previous = new Map(inheritedStorybookEnvironmentKeys.map((key) => [key, process.env[key]]));
+  try {
+    for (const key of inheritedStorybookEnvironmentKeys) delete process.env[key];
+    return planScopedTask(input);
+  } finally {
+    for (const [key, value] of previous) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
 test('task arguments accept repeatable selectors and reject empty or mixed scopes', () => {
   assert.deepEqual(parseTaskArguments(['check', '--component', 'date-picker', '--component=calendar', '--preview']), {
     task: 'check', affected: false, full: false, generate: false, preview: true,
     components: ['date-picker', 'calendar'], packages: [], files: [],
   });
   assert.throws(() => parseTaskArguments(['check', '--component=']), /MUXUI_TASK_OPTION_VALUE_REQUIRED/u);
-  assert.throws(() => planScopedTask({
+  assert.throws(() => planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--component', 'button', '--package', '@muxui/react']),
     packages, policy, familyRecords: records,
   }), /MUXUI_TASK_SCOPE_CONFLICT/u);
-  assert.throws(() => planScopedTask({
+  assert.throws(() => planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--full', '--component', 'button']),
     packages, policy, familyRecords: records,
   }), /MUXUI_TASK_SCOPE_CONFLICT/u);
@@ -79,7 +94,7 @@ test('scoped selectors reject inherited forced-full Storybook events', () => {
 });
 
 test('component scope expands the canonical date family group and keeps generation prerequisites bounded', () => {
-  const plan = planScopedTask({
+  const plan = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--component', 'date-picker']),
     packages,
     policy,
@@ -93,7 +108,7 @@ test('component scope expands the canonical date family group and keeps generati
 });
 
 test('component aliases retain substrate families while Storybook selects public exports', () => {
-  const plan = planScopedTask({
+  const plan = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--component', 'dialog,Dialog,Modal,muxui:component:dialog#web.react,button']),
     packages,
     policy,
@@ -104,7 +119,7 @@ test('component aliases retain substrate families while Storybook selects public
 });
 
 test('package and file scopes include dependents while generation includes their prerequisite closure', () => {
-  const packagePlan = planScopedTask({
+  const packagePlan = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--package', '@muxui/react']),
     packages,
     policy,
@@ -112,18 +127,18 @@ test('package and file scopes include dependents while generation includes their
   assert.deepEqual(packagePlan.checkPackages.map(({ name }) => name).sort(), ['@muxui/docs', '@muxui/react', '@muxui/react-storybook']);
   assert.deepEqual(packagePlan.generationPackages.map(({ name }) => name), ['@muxui/schema', '@muxui/react', '@muxui/react-storybook', '@muxui/docs']);
 
-  const filePlan = planScopedTask({
+  const filePlan = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--files', 'packages/react/src/styles/fields.css']),
     packages,
     policy,
   });
   assert.deepEqual(filePlan.checkPackages.map(({ name }) => name).sort(), ['@muxui/docs', '@muxui/react', '@muxui/react-storybook']);
-  assert.throws(() => planScopedTask({
+  assert.throws(() => planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--files', 'unknown/file.css']),
     packages,
     policy,
   }), /MUXUI_FILE_SCOPE_UNMAPPED/u);
-  assert.throws(() => planScopedTask({
+  assert.throws(() => planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--files', 'packages/react/src/styles/fields.css,unknown/file.css']),
     packages,
     policy,
