@@ -281,7 +281,7 @@ const r13Collections = (
     <ToggleButtonGroup aria-label="Text style"><ToggleButton>Bold</ToggleButton></ToggleButtonGroup>
     <TokenField label="Tags" defaultValue={['one']} />
     <Toolbar aria-label="Actions"><Button>Save</Button></Toolbar>
-    <Tree aria-label="Navigation" items={[{ id: 'docs', label: <strong>Docs</strong> }]} />
+    <Tree aria-label="Navigation" expansionTrigger="row" items={[{ id: 'docs', label: <strong>Docs</strong> }]} />
     <Virtualizer aria-label="Results" items={[{ id: 'one', label: <strong>One</strong> }]} />
   </>
 );
@@ -356,6 +356,9 @@ void toolbarLabel;
 // @ts-expect-error Tree uses an ARIA accessible name, not a field label.
 const treeLabel = <Tree label="Navigation" aria-label="Navigation" />;
 void treeLabel;
+// @ts-expect-error Tree expansionTrigger is a finite interaction contract.
+const treeExpansionTrigger = <Tree aria-label="Navigation" expansionTrigger="menu" />;
+void treeExpansionTrigger;
 // @ts-expect-error Table's canonical API supports only `aria-label`.
 const tableLabelledBy = <Table aria-labelledby="people-heading" />;
 void tableLabelledBy;

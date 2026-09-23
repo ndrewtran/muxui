@@ -1,4 +1,5 @@
 import React from 'react';
+import { animate } from 'motion/react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import {
   Autocomplete as AriaAutocomplete,
@@ -42,6 +43,7 @@ import PlusIcon from 'lucide-react/dist/esm/icons/plus.mjs';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
 import { DatePopoverMotion } from './date-popover-motion.mjs';
+import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
 
@@ -49,6 +51,7 @@ const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
 const DATE_PLACEHOLDER = parseDate('2000-01-01');
 const TIME_PLACEHOLDER = parseTime('00:00');
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const MUX_RUNTIME_SCOPE_SELECTOR = [
   '[data-muxui-color-scheme]',
   '[data-muxui-contrast]',
@@ -66,6 +69,109 @@ function autocompletePortalContainer(input) {
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
+}
+
+function readTransform(node) {
+  if (typeof window === 'undefined') return 'none';
+  return window.getComputedStyle(node).transform || 'none';
+}
+
+function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }) {
+  const indicatorRef = React.useRef(null);
+  const controlsRef = React.useRef(null);
+  const settledTransformRef = React.useRef(null);
+  const previousStateRef = React.useRef(null);
+  const [reduced, setReduced] = React.useState(false);
+  const blocked = isDisabled || isReadOnly;
+
+  useIsomorphicLayoutEffect(() => () => {
+    const controls = controlsRef.current;
+    controlsRef.current = null;
+    controls?.stop();
+    indicatorRef.current?.style.removeProperty('transform');
+  }, []);
+
+  React.useEffect(() => {
+    const node = indicatorRef.current;
+    if (!node) return undefined;
+    return observeReducedMotion(node, node.parentElement, (nextReduced) => {
+      setReduced(nextReduced);
+      if (!nextReduced) return;
+      const controls = controlsRef.current;
+      controlsRef.current = null;
+      controls?.stop();
+      node.style.removeProperty('transform');
+      settledTransformRef.current = readTransform(node);
+    });
+  }, []);
+
+  useIsomorphicLayoutEffect(() => {
+    const node = indicatorRef.current;
+    if (!node) return undefined;
+    const nextState = {
+      isSelected: Boolean(isSelected),
+      isPressed: Boolean(isPressed),
+      blocked: Boolean(blocked),
+    };
+    const previousState = previousStateRef.current;
+    previousStateRef.current = nextState;
+    if (!previousState) {
+      settledTransformRef.current = readTransform(node);
+      return undefined;
+    }
+
+    const controls = controlsRef.current;
+    const interruptedTransform = controls ? readTransform(node) : settledTransformRef.current;
+    controlsRef.current = null;
+    controls?.stop();
+    node.style.removeProperty('transform');
+
+    if (reduced || blocked) {
+      settledTransformRef.current = readTransform(node);
+      return undefined;
+    }
+
+    const targetTransform = readTransform(node);
+    const fromTransform = interruptedTransform || targetTransform;
+    settledTransformRef.current = targetTransform;
+    if (fromTransform === targetTransform) return undefined;
+
+    const transition = resolvedMotionSpring(node, node.parentElement, 'state', 'interaction');
+    if (!transition) return undefined;
+
+    node.style.transform = fromTransform;
+    let active = true;
+    const complete = () => {
+      if (!active || controlsRef.current !== nextControls) return;
+      requestAnimationFrame(() => {
+        if (!active || controlsRef.current !== nextControls) return;
+        controlsRef.current = null;
+        node.style.removeProperty('transform');
+        settledTransformRef.current = targetTransform;
+      });
+    };
+    const nextControls = animate(node, { transform: [fromTransform, targetTransform] }, transition);
+    controlsRef.current = nextControls;
+    nextControls.then(() => {
+      complete();
+    });
+
+    return () => {
+      active = false;
+      if (controlsRef.current !== nextControls) return;
+      settledTransformRef.current = readTransform(node);
+      controlsRef.current = null;
+      nextControls.stop();
+    };
+  }, [blocked, isPressed, isSelected, reduced]);
+
+  return React.createElement('span', {
+    ref: indicatorRef,
+    className: 'muxui-switch-indicator',
+    'aria-hidden': 'true',
+    'data-selected': isSelected || undefined,
+    'data-motion-pressed': isPressed && !blocked && !reduced ? '' : undefined,
+  });
 }
 
 // TextField and SearchField own the field semantics and their serialized value.
@@ -607,8 +713,8 @@ export const Switch = React.forwardRef(function Switch({
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     onChange,
-  }, React.createElement(AriaSwitchButton, { className: 'muxui-switch' }, ({ isSelected }) => React.createElement(React.Fragment, null,
-    React.createElement('span', { className: 'muxui-switch-indicator', 'aria-hidden': 'true', 'data-selected': isSelected || undefined }),
+  }, React.createElement(AriaSwitchButton, { className: 'muxui-switch' }, ({ isSelected, isPressed, isDisabled, isReadOnly }) => React.createElement(React.Fragment, null,
+    React.createElement(SwitchMotionIndicator, { isSelected, isPressed, isDisabled, isReadOnly }),
     visibleLabel !== undefined && visibleLabel !== null
       ? React.createElement('span', { className: 'muxui-switch-label' }, visibleLabel)
       : null)),

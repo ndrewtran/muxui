@@ -1,15 +1,23 @@
 import React from 'react';
 import { I18nProvider } from 'react-aria-components';
-import { ColorPicker, ColorSlider } from '../../src/collections.mjs';
+import { ColorPicker, ColorSlider, ColorWheel } from '../../src/collections.mjs';
 
 export function ColorSliderMotionFixture() {
   const [value, setValue] = React.useState('#406699');
   const [options, setOptions] = React.useState({});
+  const [wheelValue, setWheelValue] = React.useState('#406699');
+  const [wheelOptions, setWheelOptions] = React.useState({});
   const ref = React.useRef(null);
+  const wheelRef = React.useRef(null);
   const changes = React.useRef([]);
+  const wheelChanges = React.useRef([]);
   React.useEffect(() => {
     window.__colorSliderProof = { ref, changes, setOptions };
-    return () => { delete window.__colorSliderProof; };
+    window.__colorWheelProof = { ref: wheelRef, changes: wheelChanges, setOptions: setWheelOptions, setValue: setWheelValue };
+    return () => {
+      delete window.__colorSliderProof;
+      delete window.__colorWheelProof;
+    };
   }, []);
   return React.createElement(React.Fragment, null,
     React.createElement(ColorSlider, {
@@ -23,5 +31,15 @@ export function ColorSliderMotionFixture() {
     React.createElement(ColorPicker, { readOnly: true, defaultValue: '#406699' },
       React.createElement(ColorSlider, { id: 'picker', label: 'Read-only picker' })),
     React.createElement(ColorSlider, { id: 'disabled', label: 'Disabled', defaultValue: '#406699', disabled: true }),
+    React.createElement(ColorWheel, {
+      id: 'wheel',
+      'aria-label': 'Hue',
+      ref: wheelRef,
+      outerRadius: 48,
+      innerRadius: 28,
+      value: wheelValue,
+      ...wheelOptions,
+      onChange: (next) => { wheelChanges.current.push(next); setWheelValue(next); },
+    }),
   );
 }

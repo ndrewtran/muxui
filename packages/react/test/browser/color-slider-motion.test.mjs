@@ -51,24 +51,30 @@ async function startServer() {
 
 const input = (page, id = 'controlled') => page.locator(`#${id} input[type="range"]`);
 const track = (page, id = 'controlled') => page.locator(`#${id}.muxui-color-slider-track`);
+const wheelInput = (page) => page.locator('#wheel');
+const wheelTrack = (page) => page.locator('.muxui-color-wheel-track');
+const wheelThumb = (page) => page.locator('.muxui-color-wheel-thumb');
 
 async function center(locator) {
   const rect = await locator.boundingBox();
   return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
 }
 
-async function waitForFace(page, predicate, id = 'controlled') {
-  await page.waitForFunction(({ id, predicate }) => {
-    const root = document.getElementById(id);
-    const matrix = new DOMMatrixReadOnly(getComputedStyle(root.querySelector('.muxui-color-slider-thumb-face')).transform);
-    const visual = new DOMMatrixReadOnly(getComputedStyle(root.querySelector('.muxui-color-slider-thumb-visual')).transform);
-    const opacity = Number(getComputedStyle(root.querySelector('.muxui-color-slider-thumb-halo')).opacity);
+async function waitForFace(page, predicate, id = 'controlled', component = 'slider') {
+  await page.waitForFunction(({ id, predicate, component }) => {
+    const root = component === 'wheel'
+      ? document.getElementById(id)?.closest('.muxui-color-wheel')
+      : document.getElementById(id);
+    const prefix = component === 'wheel' ? 'muxui-color-wheel' : 'muxui-color-slider';
+    const matrix = new DOMMatrixReadOnly(getComputedStyle(root.querySelector(`.${prefix}-thumb-face`)).transform);
+    const visual = new DOMMatrixReadOnly(getComputedStyle(root.querySelector(`.${prefix}-thumb-visual`)).transform);
+    const opacity = Number(getComputedStyle(root.querySelector(`.${prefix}-thumb-halo`)).opacity);
     if (predicate === 'hover') return matrix.a > 1.02;
     if (predicate === 'press') return matrix.a < 0.995;
     if (predicate === 'travel') return Math.abs(visual.m41) + Math.abs(visual.m42) > 2;
     if (predicate === 'position') return Math.abs(visual.m41) + Math.abs(visual.m42) < 0.1;
     return Math.abs(matrix.a - 1) < 0.001 && opacity < 0.001 && Math.abs(visual.m41) + Math.abs(visual.m42) < 0.1;
-  }, { id, predicate }, { timeout: 2500 });
+  }, { id, predicate, component }, { timeout: 2500 });
 }
 
 test('ColorSlider A preserves native interaction with finite, reduced-motion-safe decoration', { timeout: 90_000 }, async (t) => {
@@ -184,6 +190,95 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
       assert.equal(await input(page, 'disabled').isDisabled(), true);
     });
 
+    await t.test('ColorWheel mirrors finite hover, press, release, keyboard, disabled and reduced states', async () => {
+      await reset();
+      assert.equal(await wheelInput(page).count(), 1);
+      assert.equal(await page.evaluate(() => window.__colorWheelProof.ref.current === document.querySelector('.muxui-color-wheel')), true);
+      const thumb = wheelThumb(page);
+      const origin = await center(thumb);
+      const proofDir = process.env.MUXUI_COLOR_SLIDER_PROOF_DIR;
+      const captureWheel = async (name) => {
+        if (!proofDir) return;
+        const box = await page.locator('.muxui-color-wheel').boundingBox();
+        await page.screenshot({ path: `${proofDir}/wheel-${name}.png`, clip: box });
+      };
+      await page.mouse.move(0, 0);
+      await waitForFace(page, 'idle', 'wheel', 'wheel');
+      await captureWheel('light-idle');
+      await page.mouse.move(origin.x, origin.y);
+      await waitForFace(page, 'hover', 'wheel', 'wheel');
+      await captureWheel('light-hover');
+      await page.mouse.down();
+      await waitForFace(page, 'press', 'wheel', 'wheel');
+      await captureWheel('light-pressed');
+      await page.mouse.up();
+      await page.mouse.move(0, 0);
+      await waitForFace(page, 'idle', 'wheel', 'wheel');
+      await page.evaluate(() => document.documentElement.setAttribute('data-muxui-color-scheme', 'dark'));
+      await captureWheel('dark-idle');
+      await page.mouse.move(origin.x, origin.y);
+      await waitForFace(page, 'hover', 'wheel', 'wheel');
+      await captureWheel('dark-hover');
+      await page.mouse.down();
+      await waitForFace(page, 'press', 'wheel', 'wheel');
+      await captureWheel('dark-pressed');
+      await page.mouse.up();
+      await page.mouse.move(0, 0);
+      await waitForFace(page, 'idle', 'wheel', 'wheel');
+      await page.evaluate(() => document.documentElement.setAttribute('data-muxui-color-scheme', 'light'));
+
+      const rect = await wheelTrack(page).boundingBox();
+      const centerPoint = { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+      const ringRadius = rect.width / 2 - 6;
+      const top = { x: centerPoint.x, y: centerPoint.y - ringRadius };
+      const right = { x: centerPoint.x + ringRadius, y: centerPoint.y };
+      await page.mouse.move(top.x, top.y);
+      await page.mouse.down();
+      await waitForFace(page, 'press', 'wheel', 'wheel');
+      const topValue = Number(await wheelInput(page).inputValue());
+      await page.mouse.move(right.x, right.y);
+      await page.waitForFunction((before) => Number(document.querySelector('#wheel').value) !== before, topValue);
+      await page.mouse.up();
+      await page.mouse.move(0, 0);
+      await waitForFace(page, 'idle', 'wheel', 'wheel');
+      assert.ok((await page.evaluate(() => window.__colorWheelProof.changes.current)).every((value) => typeof value === 'string'));
+
+      await wheelInput(page).focus();
+      const keyboardBefore = Number(await wheelInput(page).inputValue());
+      await page.keyboard.down('ArrowRight');
+      await waitForFace(page, 'press', 'wheel', 'wheel');
+      assert.notEqual(Number(await wheelInput(page).inputValue()), keyboardBefore);
+      await page.keyboard.up('ArrowRight');
+      await waitForFace(page, 'idle', 'wheel', 'wheel');
+
+      for (const options of [{ readOnly: true }, { disabled: true }]) {
+        await page.evaluate((value) => window.__colorWheelProof.setOptions(value), options);
+        await page.mouse.move(0, 0);
+        await waitForFace(page, 'idle', 'wheel', 'wheel');
+        const before = await wheelInput(page).inputValue();
+        await page.mouse.click(top.x, top.y);
+        await wheelInput(page).press('End');
+        assert.equal(await wheelInput(page).inputValue(), before);
+        await waitForFace(page, 'idle', 'wheel', 'wheel');
+      }
+
+      await page.evaluate(() => window.__colorWheelProof.setOptions({}));
+      await page.waitForFunction(() => !document.querySelector('#wheel').disabled);
+      for (const mode of ['system', 'explicit']) {
+        await page.emulateMedia({ reducedMotion: mode === 'system' ? 'reduce' : 'no-preference' });
+        if (mode === 'explicit') await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
+        await page.evaluate(() => window.__colorWheelProof.setValue('#406699'));
+        await page.waitForFunction(() => Number(document.querySelector('#wheel').value) > 200);
+        const before = Number(await wheelInput(page).inputValue());
+        await wheelInput(page).focus();
+        await page.keyboard.press('ArrowRight');
+        await waitForFace(page, 'idle', 'wheel', 'wheel');
+        assert.notEqual(Number(await wheelInput(page).inputValue()), before);
+        if (mode === 'explicit') await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
+      }
+      await page.emulateMedia({ reducedMotion: 'no-preference' });
+    });
+
     await t.test('honors both reduced modes and unmount cleanup', async () => {
       await reset();
       for (const mode of ['system', 'explicit']) {
@@ -217,6 +312,11 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
         return { width: style.borderWidth, style: style.borderStyle };
       });
       assert.deepEqual(border, { width: '2px', style: 'solid' });
+      const wheelBorder = await page.locator('.muxui-color-wheel-thumb-face').evaluate((node) => {
+        const style = getComputedStyle(node);
+        return { width: style.borderWidth, style: style.borderStyle };
+      });
+      assert.deepEqual(wheelBorder, { width: '2px', style: 'solid' });
       await page.emulateMedia({ forcedColors: 'none' });
       await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
       const point = await center(page.locator('#controlled .muxui-color-slider-thumb'));

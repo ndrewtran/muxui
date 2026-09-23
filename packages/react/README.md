@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:251b298de7c4d38295fe2b5c3900d8da7adfecdcd02be566f50c9ac8a6e8931f -->
+<!-- @generated-content-sha256: sha256:fa51b2d96da3426e46ddf48e9e648d334fdc3d97c6f9c60cb3463c67f94ba8ac -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -150,7 +150,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TokenField | experimental | . | .muxui-token-field | label, aria-label, aria-labelledby, value, defaultValue, disabled, readOnly, name, placeholder |
 | Toolbar | experimental | . | .muxui-toolbar | aria-label, aria-labelledby, orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, open, defaultOpen, disabled, onOpenChange, className |
-| Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode |
+| Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
 | Virtualizer | experimental | . | .muxui-virtualizer | aria-label, items, height, itemHeight, overscan, disabled |
 
 ## Composition and native input contracts

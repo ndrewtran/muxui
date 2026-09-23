@@ -429,6 +429,7 @@
 .muxui-switch::before {
   content: '';
   position: absolute;
+  box-sizing: border-box;
   inset-inline-start: 0;
   inset-block-start: 50%;
   width: var(--muxui-component-switch-track-width);
@@ -475,6 +476,14 @@
 }
 
 .muxui-switch-indicator {
+  --muxui-component-switch-thumb-travel: calc(
+    var(--muxui-component-switch-track-width) - (var(--muxui-component-switch-thumb-offset) * 2) -
+      var(--muxui-component-switch-thumb-size)
+  );
+  --muxui-switch-indicator-x: 0px;
+  --muxui-switch-indicator-scale-x: 1;
+  --muxui-switch-indicator-scale-y: 1;
+
   position: absolute;
   inset-inline-start: var(--muxui-component-switch-thumb-offset);
   inset-block-start: 50%;
@@ -484,9 +493,10 @@
   background-color: var(--muxui-semantic-surface-emphasis);
   box-shadow: var(--muxui-semantic-elevation-indicator);
   transition:
-    transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing),
     background-color var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
-  transform: translate(0, -50%);
+  transform: translate(var(--muxui-switch-indicator-x), -50%) scaleX(var(--muxui-switch-indicator-scale-x))
+    scaleY(var(--muxui-switch-indicator-scale-y));
+  transform-origin: center;
   z-index: 1;
   flex-shrink: 0;
   pointer-events: none;
@@ -494,14 +504,42 @@
 
 .muxui-switch[data-selected] .muxui-switch-indicator,
 .muxui-switch-indicator[data-selected] {
-  transform: translate(
-    calc(
-      var(--muxui-component-switch-track-width) - (var(--muxui-component-switch-thumb-offset) * 1.2) -
-        var(--muxui-component-switch-thumb-size)
-    ),
-    -50%
-  );
+  --muxui-switch-indicator-x: var(--muxui-component-switch-thumb-travel);
   background-color: var(--muxui-semantic-action-foreground);
+}
+
+.muxui-switch-indicator[data-motion-pressed] {
+  --muxui-switch-indicator-scale-x: 1.08;
+  --muxui-switch-indicator-scale-y: 0.92;
+}
+
+.muxui-switch:dir(rtl)[data-selected] .muxui-switch-indicator,
+.muxui-switch:dir(rtl) .muxui-switch-indicator[data-selected] {
+  --muxui-switch-indicator-x: calc(var(--muxui-component-switch-thumb-travel) * -1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muxui-switch::before,
+  .muxui-switch-indicator {
+    transition: none;
+  }
+  .muxui-switch-indicator,
+  .muxui-switch-indicator[data-motion-pressed] {
+    --muxui-switch-indicator-scale-x: 1;
+    --muxui-switch-indicator-scale-y: 1;
+  }
+}
+
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch::before,
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator,
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
+  transition: none;
+}
+
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator,
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-switch-indicator[data-motion-pressed] {
+  --muxui-switch-indicator-scale-x: 1;
+  --muxui-switch-indicator-scale-y: 1;
 }
 /* MuxUI component source: text-field.css */
 .muxui-field-input {

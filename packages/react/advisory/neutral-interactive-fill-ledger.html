@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Neutral interactive fill ledger</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --background: #fff;
+  --foreground: #141414;
+  --muted: #555;
+  --line: #b8b8b8;
+  --link: #0756a8;
+  --visited: #603a90;
+  --focus: #005fcc;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  background: var(--background);
+  color: var(--foreground);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #000;
+    --foreground: #fff;
+    --muted: #c4c4c4;
+    --line: #555;
+    --link: #8fc5ff;
+    --visited: #d0a7ff;
+    --focus: #8fc5ff;
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: auto; }
+body { margin: 0; background: var(--background); color: var(--foreground); overflow-wrap: anywhere; }
+a { color: var(--link); text-decoration-thickness: .08em; text-underline-offset: .14em; overflow-wrap: anywhere; }
+a:visited { color: var(--visited); }
+a:focus-visible, button:focus-visible, input:focus-visible, [tabindex="0"]:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.document-header, .document-body { max-width: 100rem; margin-inline: auto; padding-inline: clamp(1rem, 3vw, 2.5rem); }
+.document-header { padding-top: clamp(1.5rem, 4vw, 3rem); padding-bottom: 1rem; }
+h1 { max-width: 24ch; margin: 0 0 1rem; font-size: clamp(1.8rem, 3.2vw, 2.6rem); line-height: 1.12; letter-spacing: -.025em; }
+h2 { margin: 2.4rem 0 .8rem; padding-top: .7rem; border-top: 1px solid var(--line); font-size: clamp(1.25rem, 2vw, 1.55rem); line-height: 1.25; }
+h3 { font-size: 1.12rem; }
+p { max-width: 100ch; margin: .7rem 0 1rem; }
+.document-body > p:first-child { margin-top: .25rem; }
+.section-nav { display: flex; flex-wrap: wrap; gap: .4rem 1.25rem; padding-block: .8rem .2rem; border-top: 1px solid var(--line); font-size: .94rem; }
+.section-nav a { white-space: nowrap; }
+.table-scroll { max-width: 100%; margin-block: 1rem 1.8rem; overflow-x: auto; overscroll-behavior-inline: contain; }
+table { width: 100%; min-width: 74rem; border-collapse: collapse; table-layout: fixed; font-size: .9rem; line-height: 1.45; }
+th, td { padding: .65rem .7rem; vertical-align: top; text-align: left; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+thead th { border-top: 1px solid var(--line); font-size: .8rem; font-weight: 700; }
+th:first-child, td:first-child { width: 4.6rem; white-space: nowrap; }
+th:nth-child(2), td:nth-child(2) { width: 20%; }
+th:nth-child(3), td:nth-child(3) { width: 40%; }
+th:nth-child(4), td:nth-child(4) { width: auto; }
+tbody tr[id] { scroll-margin-top: 1rem; }
+tr[hidden] { display: none; }
+.ledger-filter { max-width: 44rem; margin-block: 1rem 1.5rem; }
+.ledger-filter label { display: block; margin-bottom: .35rem; font-weight: 650; }
+.ledger-filter__controls { display: flex; gap: .5rem; }
+.ledger-filter input, .ledger-filter button { min-height: 2.5rem; padding: .4rem .65rem; border: 1px solid var(--line); border-radius: 0; background: var(--background); color: var(--foreground); font: inherit; }
+.ledger-filter input { min-width: 0; flex: 1; }
+.ledger-filter button { cursor: pointer; }
+.ledger-filter button:disabled { cursor: default; opacity: .65; }
+.ledger-filter__status { margin: .45rem 0 0; color: var(--muted); font-size: .9rem; }
+strong { font-weight: 700; }
+@media (max-width: 46rem) {
+  .document-header, .document-body { padding-inline: 1rem; }
+  .section-nav { gap: .35rem .9rem; }
+  .section-nav a { white-space: normal; }
+}
+@media print {
+  :root { color-scheme: light; --background: #fff; --foreground: #000; --muted: #333; --line: #777; --link: #000; --visited: #000; }
+  body { background: #fff; color: #000; font-size: 10pt; }
+  .document-header, .document-body { max-width: none; padding-inline: 0; }
+  .document-header { padding-top: 0; }
+  .section-nav { display: none; }
+  .ledger-filter { display: none; }
+  .table-scroll { overflow: visible; margin-block: .5rem 1rem; }
+  table { min-width: 0; font-size: 8pt; }
+  th, td { padding: .35rem; }
+  a { color: #000; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+  h2 { break-after: avoid; }
+  @page { margin: 14mm; }
+}
+</style>
+</head>
+<body>
+<header class="document-header"><h1 id="title">Neutral interactive fill ledger</h1><nav class="section-nav" aria-label="Ledger sections">
+  <a href="#scope">Scope and token boundary</a>
+  <a href="#recommendations">Recommended review</a>
+  <a href="#decisions">Design decisions</a>
+  <a href="#cascade">Cascade notes</a>
+  <a href="#validation">Future validation</a>
+  <a href="#provenance">Review provenance</a>
+</nav></header><main class="document-body">
+<p>Advisory source review for future tonal neutral fill work. This ledger records
+confirmed current fills and separates them from design recommendations. It
+does not set token policy, declare defects, provide release evidence, or
+authorize implementation.</p>
+<p>Baseline: branch codex/accept-react-motion, shared worktree on 2026-09-23,
+based on 25e273c plus the then-current uncommitted source. Core component,
+field, collection, and overlay style files were already dirty. Findings reflect
+the working tree, including its current ListBox nonselected focus and hover
+rules. Links target that worktree and may need refreshing if the source moves.</p>
+<h2 id="scope">Scope and token boundary</h2>
+<p>The source inventory covers the fixed 53-family snapshot and 26 supplemental
+React component records (24 roots and two subpaths), mapped through the React
+generator to 12 authored style sheets. This is search coverage, not a count of
+issues: <a href="../../../catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json">family snapshot</a>,
+<a href="../../../catalog/react-r1-6/supplemental-components.json#L4">supplemental inventory</a>,
+<a href="../src/generate.mjs#L936">generator mapping</a>.</p>
+<p>Include a state only when its current solid neutral fill is supported by the
+source and effective cascade. The canonical guide documents shared neutral
+action fills for buttons and disclosure triggers: 8%, 12%, and 16% of
+surface.strong source colour mixed with transparent for rest, hover, and
+pressed. Selection uses a separate 12% mix of selection.track. The guide does
+not direct every interactive fill to become tonal; component-specific mixes
+remain component-owned and must be judged over their actual rest surface
+(<a href="../../../catalog/guides/foundations-semantic-tokens.md#L31">token guidance</a>,
+<a href="../../../catalog/tokens/default-theme.json#L527">action definitions</a>,
+<a href="../../../catalog/tokens/default-theme.json#L729">selection definitions</a>,
+<a href="../../../catalog/guides/foundations-semantic-tokens.md#L37">mix guidance</a>).</p>
+<p>In the reviewed default theme, surface.subtle maps to adaptive neutral-12,
+which resolves to neutral-default-12 in light and neutral-default-98 in dark.
+Surface.hover maps to adaptive neutral-14, resolving to neutral-default-14
+and neutral-default-96. These are solid ramp colours. Surface.pressed and
+surface.strong are also solid roles; the action token uses surface.strong as
+its source, which resolves to neutral-default-90 in light and
+neutral-default-20 in dark. These roles are distinct from the tonal action
+mixes (<a href="../../../catalog/tokens/default-theme.json#L1419">surface roles</a>,
+<a href="../../../catalog/tokens/default-theme.json#L8602">dark subtle alias</a>,
+<a href="../../../catalog/tokens/default-theme.json#L8616">dark hover alias</a>,
+<a href="../../../catalog/tokens/default-theme.json#L809">pressed role</a>,
+<a href="../../../catalog/tokens/default-theme.json#L822">strong role</a>,
+<a href="../../../catalog/tokens/default-theme.json#L1562">border.strong mode</a>,
+<a href="../../../catalog/tokens/default-theme.json#L8868">dark strong alias</a>).</p>
+<p>ListBox selected fills and ToggleButtonGroup selected fills are explicitly
+excluded. Their other states remain in scope. Do not infer that body, primary,
+inverse, selected, or binary indicator fills are wrong because they are solid.
+Preserve forced-colors behaviour during future work.</p>
+<h2 id="recommendations">Recommended for future design review</h2>
+<p>All current fill facts below are source-confirmed. Design confidence describes
+fit for a future tonal treatment, not implementation evidence. P1 covers clear
+neutral action controls; P2 covers states whose surface role needs more design
+judgment. Every status is future review only.</p>
+<div class="ledger-filter" role="search" aria-labelledby="ledger-search-label">
+  <label id="ledger-search-label" for="ledger-search">Search all 29 entries</label>
+  <div class="ledger-filter__controls">
+    <input id="ledger-search" type="search" autocomplete="off" aria-describedby="ledger-search-status">
+    <button id="ledger-search-clear" type="button" disabled>Clear</button>
+  </div>
+  <p id="ledger-search-status" class="ledger-filter__status" role="status" aria-live="polite" aria-atomic="true">Showing all 29 entries.</p>
+</div>
+<div class="table-scroll" role="region" tabindex="0" aria-label="Recommended neutral fill review entries"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Component, anatomy, state</th>
+<th>Confirmed current fill, mode and source</th>
+<th>Design confidence, rationale, direction, priority</th>
+</tr>
+</thead>
+<tbody><tr id="NF01"><td>NF01</td>
+<td>DatePicker and DateRangePicker calendar trigger, hover and mouse-active</td>
+<td>Unscoped hover uses surface.hover; scoped light stays neutral-default-10 and scoped dark stays neutral-default-100 for rest, hover, and mouse press. <a href="../src/styles/base.css#L1056">Base hover</a>, <a href="../src/styles/base.css#L1080">shared control hover</a>, <a href="../src/styles/fields.css#L1018">light scope</a>, <a href="../src/styles/fields.css#L1040">dark scope</a>.</td>
+<td>Medium. Secondary action, but the solid field rest fill belongs to the field treatment. Keep that rest fill and review a 12% neutral source-colour hover layer over it. P1.</td>
+</tr>
+<tr id="NF02"><td>NF02</td>
+<td>SearchField clear button, hover and pressed</td>
+<td>surface.hover and surface.pressed; their dark-mode aliases resolve to neutral-default-96 and neutral-default-70. <a href="../src/styles/fields.css#L365">Hover</a>, <a href="../src/styles/fields.css#L370">pressed</a>, <a href="../../../catalog/tokens/default-theme.json#L8616">hover mode</a>, <a href="../../../catalog/tokens/default-theme.json#L809">pressed mode</a>.</td>
+<td>High. Discrete neutral action. Review shared neutral action hover/pressed mixes at 12% and 16%. P1.</td>
+</tr>
+<tr id="NF03"><td>NF03</td>
+<td>NumberField steppers, hover and active</td>
+<td>Hover uses surface.pressed; active uses border.strong. The reviewed theme maps those to neutral-20 / neutral-70 and neutral-26 / neutral-50 in light / dark. <a href="../src/styles/fields.css#L255">Stepper states</a>, <a href="../../../catalog/tokens/default-theme.json#L809">pressed mode</a>, <a href="../../../catalog/tokens/default-theme.json#L1562">border mode</a>.</td>
+<td>High. Button-like increment/decrement actions. Review 12% hover and 16% pressed mixes; retain the control border separately. P1.</td>
+</tr>
+<tr id="NF04"><td>NF04</td>
+<td>Toolbar child Buttons, hover, active, and pressed</td>
+<td>Generic selectors use surface.hover. Scoped hover and [data-pressed] overrides resolve to neutral-default-18 in light and neutral-default-92 in dark; unscoped states use surface.hover. <a href="../src/styles/collections.css#L1829">Generic rules</a>, <a href="../src/styles/collections.css#L2217">light scope</a>, <a href="../src/styles/collections.css#L2224">dark scope</a>.</td>
+<td>High. The children are Buttons with documented neutral action intent. Review the applicable neutral-toolbar treatment against 12% hover and 16% pressed fills; keep the outer surface.subtle structural and preserve toolbar variants. P1.</td>
+</tr>
+<tr id="NF05"><td>NF05</td>
+<td>ToggleButton and ToggleButtonGroup unselected button, hover</td>
+<td>The base hover uses solid neutral-14; the explicit dark rule repeats neutral-14. A motion-ready group trailing button suppresses this hover fill during its trailing phase. <a href="../src/styles/components.css#L753">Base hover</a>, <a href="../src/styles/components.css#L1247">dark hover</a>, <a href="../src/styles/components.css#L855">group trailing rule</a>.</td>
+<td>High. Neutral action button. Review the shared 12% hover token where the motion layer does not suppress the fill. Selected ToggleButtonGroup states are excluded. P1.</td>
+</tr>
+<tr id="NF06"><td>NF06</td>
+<td>TagGroup unselected tag, hover and pressed; tag remove button, hover</td>
+<td>Unselected tag uses surface.hover and surface.pressed; remove uses surface.hover. Selected tag hover instead resolves to action.background-hover. <a href="../src/styles/collections.css#L1717">Tag hover</a>, <a href="../src/styles/collections.css#L1722">tag pressed</a>, <a href="../src/styles/collections.css#L1742">selected hover override</a>, <a href="../src/styles/collections.css#L1775">remove hover</a>.</td>
+<td>Medium. Tags combine container and action roles. Review tonal hover/pressed layers only for unselected tags and remove controls; retain the selected action treatment. P2.</td>
+</tr>
+<tr id="NF07"><td>NF07</td>
+<td>Card button variants, hover and pressed</td>
+<td>Outlined/elevated hover use neutral-10, filled hover neutral-14; outlined/filled pressed use neutral-18 and elevated pressed neutral-14. <a href="../src/supplemental/styles.css#L305">Hover variants</a>, <a href="../src/supplemental/styles.css#L319">pressed variants</a>.</td>
+<td>Medium. A state layer could reduce the solid step, but must preserve outlined, elevated, and filled hierarchy, borders, and shadows. Review component-owned mixes over each rest surface. P2.</td>
+</tr>
+<tr id="NF08"><td>NF08</td>
+<td>HeaderNav and Sidebar navigation/actions, hover</td>
+<td>HeaderNav nav button, mobile trigger, and mobile close; Sidebar nav link, nav button, account trigger, feature-card dismiss, mobile menu button, and mobile close button. Hover is neutral-96 light / neutral-20 dark. <a href="../src/supplemental/styles.css#L992">HeaderNav light surface</a>, <a href="../src/supplemental/styles.css#L1137">dark surface</a>, <a href="../src/supplemental/styles.css#L1040">light nav button</a>, <a href="../src/supplemental/styles.css#L1080">mobile trigger</a>, <a href="../src/supplemental/styles.css#L1131">mobile close</a>, <a href="../src/supplemental/styles.css#L1152">dark nav button</a>, <a href="../src/supplemental/styles.css#L1166">dark mobile trigger</a>, <a href="../src/supplemental/styles.css#L1178">dark mobile close</a>, <a href="../src/supplemental/styles.css#L2177">Sidebar surface</a>, <a href="../src/supplemental/styles.css#L2290">light nav link</a>, <a href="../src/supplemental/styles.css#L2401">nav button</a>, <a href="../src/supplemental/styles.css#L2515">account trigger</a>, <a href="../src/supplemental/styles.css#L2578">feature dismiss</a>, <a href="../src/supplemental/styles.css#L2613">mobile menu</a>, <a href="../src/supplemental/styles.css#L2665">mobile close</a>, <a href="../src/supplemental/styles.css#L2711">dark nav link</a>, <a href="../src/supplemental/styles.css#L2723">dark nav button</a>, <a href="../src/supplemental/styles.css#L2748">dark account trigger</a>, <a href="../src/supplemental/styles.css#L2768">dark feature dismiss</a>, <a href="../src/supplemental/styles.css#L2787">dark mobile menu</a>, <a href="../src/supplemental/styles.css#L2793">dark mobile close</a>.</td>
+<td>Medium. In light mode, the neutral-100 navigation surface uses inverse foregrounds; surface.strong as a tint source can disappear against it. Review a component-owned transparent tint from the on-navigation neutral or currentColor, preserving foreground pairing in both modes. P2.</td>
+</tr>
+<tr id="NF09"><td>NF09</td>
+<td>MultiSelect footer action button, hover</td>
+<td>Solid neutral-14 fill with neutral-30 border. <a href="../src/supplemental/styles.css#L1802">Footer hover</a>.</td>
+<td>Medium. Discrete action within the selection surface. Review a 12% neutral hover layer while retaining its border. P2.</td>
+</tr>
+<tr id="NF10"><td>NF10</td>
+<td>InputTags tag, hover; tag remove control, hover</td>
+<td>Tag hover uses neutral-18; remove hover uses neutral-22. <a href="../src/supplemental/styles.css#L1283">Tag hover</a>, <a href="../src/supplemental/styles.css#L1320">remove hover</a>.</td>
+<td>Medium. Both are small neutral interaction targets. Review component-owned transparent fills at the underlying tag/group surface. P2.</td>
+</tr>
+<tr id="NF11"><td>NF11</td>
+<td>TagSelect tag remove button, hover</td>
+<td>Solid neutral-26 fill. <a href="../src/supplemental/styles.css#L3093">Remove hover</a>.</td>
+<td>Medium. Discrete remove action. Review a neutral transparent hover fill while preserving its foreground contrast. P2.</td>
+</tr>
+<tr id="NF12"><td>NF12</td>
+<td>CommandPalette chip remove button, hover</td>
+<td>Solid neutral-20 fill; the translucent popup chip surface has a separate neutral-12 mix. <a href="../src/supplemental/styles.css#L714">Remove hover</a>, <a href="../src/supplemental/styles.css#L719">translucent chip surface</a>.</td>
+<td>Medium. Small neutral action, with two popup surface treatments. Review a component-owned hover layer over each surface. P2.</td>
+</tr>
+<tr id="NF13"><td>NF13</td>
+<td>CommandPalette item, hover and pressed</td>
+<td>Default popup hover/pressed use solid neutral-12/18. The translucent popup already uses 44% neutral-18 and 56% neutral-22 mixes. Selected rows use accent fills. <a href="../src/supplemental/styles.css#L774">Hover</a>, <a href="../src/supplemental/styles.css#L787">pressed</a>, <a href="../src/supplemental/styles.css#L779">translucent states</a>, <a href="../src/supplemental/styles.css#L800">selected states</a>.</td>
+<td>Medium. Review tonal neutral hover/pressed only for unselected items in the default popup. Keep the existing translucent and accent-selected treatments. P2.</td>
+</tr>
+<tr id="NF14"><td>NF14</td>
+<td>TextEditor unselected toolbar and bubble-menu buttons, hover and pointer-active</td>
+<td>Generic toolbar hover/press are 7%/20% neutral-90 mixes. Bubble-menu hover resolves to solid neutral-18 in all modes and wins while pointer-active; dark main-toolbar hover/press also resolves to neutral-18. <a href="../src/text-editor/text-editor.css#L274">Generic states</a>, <a href="../src/text-editor/text-editor.css#L431">bubble override</a>, <a href="../src/text-editor/text-editor.css#L479">dark toolbar hover</a>.</td>
+<td>High. Button-like actions already have a tonal generic treatment. Review the bubble and dark-toolbar overrides for a mode-appropriate component mix; keep selected toolbar states separate. P1.</td>
+</tr>
+<tr id="NF15"><td>NF15</td>
+<td>Calendar and RangeCalendar unselected cells, hover</td>
+<td>Both use solid surface.subtle, which maps to neutral-12 light / neutral-98 dark. Selected hover follows a separate strong selection treatment. <a href="../src/styles/collections.css#L48">Calendar hover</a>, <a href="../src/styles/collections.css#L706">RangeCalendar hover</a>, <a href="../src/styles/collections.css#L58">selected Calendar hover</a>, <a href="../src/styles/collections.css#L766">selected RangeCalendar hover</a>.</td>
+<td>Medium. Review a light neutral state layer over the calendar surface without weakening selected, start/end, or unavailable treatments. P2.</td>
+</tr>
+<tr id="NF16"><td>NF16</td>
+<td>GridList unselected item, hover</td>
+<td>Solid surface.subtle; selected items take the later selection.track rule. <a href="../src/styles/collections.css#L396">Hover</a>, <a href="../src/styles/collections.css#L400">selection</a>.</td>
+<td>Medium. Review a tonal hover layer distinct from selection. P2.</td>
+</tr>
+<tr id="NF17"><td>NF17</td>
+<td>Table unselected row, hover</td>
+<td>Solid surface.subtle; selected rows use the separate 12% selection.background token. <a href="../src/styles/collections.css#L1540">Hover</a>, <a href="../src/styles/collections.css#L1544">selection</a>.</td>
+<td>Medium. A tonal hover layer could separate pointer feedback from selected feedback. P2.</td>
+</tr>
+<tr id="NF18"><td>NF18</td>
+<td>Tree unselected item row, hover</td>
+<td>Solid surface.subtle; selected rows use tonal selection.background. <a href="../src/styles/collections.css#L1869">Hover</a>, <a href="../src/styles/collections.css#L1873">selection</a>.</td>
+<td>Medium. Review a hover layer distinct from the existing selection fill. P2.</td>
+</tr>
+<tr id="NF19"><td>NF19</td>
+<td>Underline Tabs unselected tab, hover</td>
+<td>Solid surface.subtle. Pill, segment, and overflow hover/pressed states use neutral action tokens; selected hover states already use tonal fills. <a href="../src/styles/collections.css#L1637">Base tab hover</a>, <a href="../src/styles/collections.css#L949">other variants</a>, <a href="../src/styles/collections.css#L976">selected hover</a>, <a href="../src/styles/collections.css#L982">selected underline hover</a>.</td>
+<td>Medium. Review only unselected underline hover; preserve the other variant and selected-state treatments. P2.</td>
+</tr>
+<tr id="NF20"><td>NF20</td>
+<td>Select, ComboBox, Autocomplete, default CommandPalette, MultiSelect, and TagSelect option rows, focus; ListBox nonselected rows, hover only</td>
+<td>Shared item-focus-bg resolves to solid surface.hover (neutral-14 light / neutral-96 dark). Select/ComboBox dark focused rows explicitly use neutral-default-96. MultiSelect/TagSelect map hovered and focused rows to this fill. Default CommandPalette focus uses it; the translucent popup focus already uses a 50% mix and is excluded. <a href="../src/styles/base.css#L800">Shared focus</a>, <a href="../src/styles/collections.css#L467">ListBox hover and focus-only rule</a>, <a href="../src/styles/fields.css#L127">Autocomplete hover</a>, <a href="../src/styles/collections.css#L2368">Select/ComboBox dark focus</a>, <a href="../src/supplemental/styles.css#L783">CommandPalette translucent focus</a>, <a href="../src/supplemental/styles.css#L1724">MultiSelect</a>, <a href="../src/supplemental/styles.css#L3177">TagSelect</a>.</td>
+<td>Medium. These are navigable option surfaces, not the Menu action treatment. Review component-owned focus/hover layers separately from selection. ListBox keyboard focus without pointer hover is transparent; only its nonselected hover is included. P2.</td>
+</tr>
+<tr id="NF21"><td>NF21</td>
+<td>Virtualizer item, focused</td>
+<td>item-focus-bg is solid surface.hover in the default path; dark focus explicitly uses neutral-default-94. <a href="../src/styles/collections.css#L2659">Focus rule</a>, <a href="../src/styles/collections.css#L2670">dark override</a>.</td>
+<td>Medium. Review a tonal keyboard-focus surface while preserving the focus ring and contrast. P2.</td>
+</tr>
+</tbody></table></div>
+<h2 id="decisions">Needs a design decision before any uplift</h2>
+<p>These fills are confirmed, but serve selected, focused, binary, or editable-field
+roles. D1 means decide whether the strong state emphasis is intentional before
+changing its fill. D2 means decide whether the state needs a fill at all. Keep
+them visible for product review without treating opacity as the default
+correction.</p>
+<div class="table-scroll" role="region" tabindex="0" aria-label="Entries requiring a design decision"><table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Component, anatomy, state</th>
+<th>Confirmed current fill, mode and source</th>
+<th>Decision and priority</th>
+</tr>
+</thead>
+<tbody><tr id="NF22"><td>NF22</td>
+<td>Standalone ToggleButton, selected rest and hover</td>
+<td>Solid neutral-80 at rest and neutral-90 on hover in the current theme. <a href="../src/styles/components.css#L759">Selected states</a>, <a href="../src/styles/components.css#L1255">dark overrides</a>.</td>
+<td>Decide whether this strong selected treatment is intentional. Do not infer from the ToggleButtonGroup exclusion. D1.</td>
+</tr>
+<tr id="NF23"><td>NF23</td>
+<td>TextEditor toolbar button, selected/active rest and hover</td>
+<td>Light active rest is neutral-94 and hover neutral-80 with inverse text. Dark active rest is neutral-22; dark hover resolves to neutral-18. <a href="../src/text-editor/text-editor.css#L283">Light active states</a>, <a href="../src/text-editor/text-editor.css#L485">dark active rest</a>, <a href="../src/text-editor/text-editor.css#L479">dark hover override</a>.</td>
+<td>Active formatting communicates a persistent selection. Decide whether only hover should gain a translucent layer; retain the selected rest and inverse foreground unless product intent changes. D1.</td>
+</tr>
+<tr id="NF24"><td>NF24</td>
+<td>HeaderNav and Sidebar current navigation item</td>
+<td>Current item is neutral-94 in light and neutral-22 in dark, with on-navigation foreground. <a href="../src/supplemental/styles.css#L1046">HeaderNav current item</a>, <a href="../src/supplemental/styles.css#L1158">dark HeaderNav current item</a>, <a href="../src/supplemental/styles.css#L2295">Sidebar current link</a>, <a href="../src/supplemental/styles.css#L2406">Sidebar current button</a>, <a href="../src/supplemental/styles.css#L2718">dark Sidebar current link</a>, <a href="../src/supplemental/styles.css#L2730">dark Sidebar current button</a>.</td>
+<td>Current-page emphasis may intentionally be stronger than hover. If revised, use a component-owned tint that preserves the dark navigation surface and foreground pairing. D1.</td>
+</tr>
+<tr id="NF25"><td>NF25</td>
+<td>CommandPalette inline search input, hover</td>
+<td>Default popup uses solid neutral-12; translucent popup uses a 34% neutral-12 mix. <a href="../src/supplemental/styles.css#L634">Default hover</a>, <a href="../src/supplemental/styles.css#L640">translucent hover</a>.</td>
+<td>This is an editable field surface rather than an action button. Decide whether input-body hover needs a fill at all; if retained, preserve its rest surface and use a component-owned layer. D2.</td>
+</tr>
+<tr id="NF26"><td>NF26</td>
+<td>Checkbox and CheckboxField unchecked indicator, hover</td>
+<td>Indicator uses solid surface.hover, neutral-14 light / neutral-96 dark. Selected and indeterminate indicators use selection.track. <a href="../src/styles/components.css#L343">Hover rule</a>.</td>
+<td>A compact binary indicator may need opaque feedback for legibility. Review separately from button fills; keep selected and indeterminate semantics distinct. D2.</td>
+</tr>
+<tr id="NF27"><td>NF27</td>
+<td>RadioGroup and RadioField unselected indicator, hover</td>
+<td>RadioGroup uses surface.hover; RadioField uses solid neutral-14. <a href="../src/styles/collections.css#L657">RadioGroup</a>, <a href="../src/supplemental/styles.css#L2126">RadioField</a>.</td>
+<td>Small indicator surfaces may need stronger contrast than action backgrounds. Decide after checking both modes and selected-state feedback. D2.</td>
+</tr>
+<tr id="NF28"><td>NF28</td>
+<td>Switch and SwitchField unselected track, hover</td>
+<td>Solid neutral-26 in both authored hover rules. Selected hover uses an action/accent fill. <a href="../src/styles/fields.css#L463">Switch</a>, <a href="../src/supplemental/styles.css#L2873">SwitchField</a>.</td>
+<td>The track is a binary indicator; keep opaque treatment unless the design review confirms a tonal state remains clear. D2.</td>
+</tr>
+<tr id="NF29"><td>NF29</td>
+<td>DateField, TimeField, DatePicker, and DateRangePicker date segment, keyboard focus</td>
+<td>Shared segment style uses surface.emphasis mapped to neutral-80, paired with content.on-solid. <a href="../src/styles/base.css#L1020">Focused segment</a>, <a href="../src/fields.mjs#L406">shared date input</a>, <a href="../src/fields.mjs#L1014">range date input</a>.</td>
+<td>This is a strong focus inversion, not a subtle hover. Decide whether its focus contrast is intentional and preserve keyboard visibility. D1.</td>
+</tr>
+</tbody></table></div>
+<h2 id="cascade">Cascade notes and exclusions</h2>
+<p><strong>NF01, DatePicker:</strong> Chrome 153 with representative static DOM and sentinel
+token values confirmed the effective unscoped, light, and dark fill paths in
+the table. The scoped rest rules win by scoping proximity over equally specific
+generic hover selectors. Sentinel values identify token paths only; they are
+not canonical RGB evidence. This probe was targeted, not hydrated, visual, or
+accessibility proof.</p>
+<p><strong>NF14, TextEditor:</strong> The generic toolbar&#39;s tonal hover/active rules still
+apply outside the bubble menu. Inside it, the more specific bubble hover rule
+overrides the generic hover and wins during pointer-active overlap. The dark
+toolbar hover rule also resolves to solid neutral-18. A targeted static-DOM
+Chrome probe confirmed these effective paths; this is not hydrated or visual
+proof.</p>
+<p><strong>NF20/NF21, shared option focus:</strong> Most option rows use the shared item-focus
+fill, but local rules affect the result: Select/ComboBox have an explicit dark
+focused fill; the translucent CommandPalette focus is already mixed; ListBox
+keyboard focus without pointer hover is transparent; Virtualizer has its own
+dark neutral-94 fill. Menu focus uses an action token and stays excluded.</p>
+<p><strong>NF04, Toolbar:</strong> Scoped interaction rules take precedence over the generic
+surface-hover rule. Hover has higher specificity than the generic selector;
+the scoped data-pressed rule also wins. The light and dark values are recorded
+separately in the table.</p>
+<p><strong>DisclosureGroup is a confirmed false positive.</strong> The group hover rule appears
+to set solid neutral-12, but its selector specificity 0,4,0 loses to the
+regular Disclosure hover selector at 0,5,0. An SSR-backed Chrome 153 probe
+confirmed 12% neutral action hover and 16% pointer-active fills. Synthetic
+[data-pressed] covered CSS only, not runtime keyboard input. <a href="../src/styles/components.css#L433">Regular rule</a>,
+<a href="../src/styles/components.css#L1415">group rule</a>.</p>
+<p><strong>Menu focus is not a neutral fill.</strong> .muxui-menu-item[data-focused] uses
+action.background-hover and action.foreground; it is excluded from NF20.
+<a href="../src/styles/collections.css#L573">Menu focus</a>.</p>
+<p>Other reviewed boundaries: ordinary editable field hover generally changes the
+outline only; NF25 is the specific CommandPalette input exception. Disabled
+surface-hover rules are excluded. Static popup, card, and navigation rest
+surfaces are not state layers. Arbitrary user-colour swatches and slider/wheel
+thumbs are outside this neutral-fill ledger. Selected Tree/Table rows already
+use tonal selection; selected CommandPalette items use accent colour. The
+ListBox and ToggleButtonGroup selected fills remain explicitly excluded.</p>
+<h2 id="validation">Future implementation validation</h2>
+<p>For any approved uplift, check the actual state selector and computed fill in
+light/dark and standard/more-contrast modes, then verify hover, active, keyboard
+focus, disabled, selected, and forced-colors behaviour as applicable. Compare
+the mix over each real underlying surface, retain foreground contrast, and
+confirm reduced-motion and focus-ring behaviour. The audit&#39;s targeted browser
+probes do not replace those component checks. No forced-colors computed proof
+is claimed here. Change the owning component state rules; do not redefine
+surface.subtle, surface.hover, surface.pressed, or border.strong globally,
+because structural surfaces, disabled states, and control borders also use
+those roles.</p>
+<h2 id="provenance">Review provenance</h2>
+<p>Discovery began with provider thread
+1dbf2b48-7a5c-4e8a-8344-737c644c3b15; its final source message was recorded at
+2026-09-23T05:51:00.914Z in
+/Users/admin/.t3/userdata/logs/provider/events.1dbf2b48-7a5c-4e8a-8344-737c644c3b15.log.
+The thread is discovery context. Current-state findings link to the reviewed
+shared worktree.</p>
+</main>
+<script>
+(() => {
+  const search = document.getElementById('ledger-search');
+  const clear = document.getElementById('ledger-search-clear');
+  const status = document.getElementById('ledger-search-status');
+  const rows = Array.from(document.querySelectorAll('tbody tr[id^="NF"]'));
+
+  function applyFilter() {
+    const query = search.value.trim().toLocaleLowerCase();
+    let visible = 0;
+
+    for (const row of rows) {
+      const matches = !query || row.textContent.toLocaleLowerCase().includes(query);
+      row.hidden = !matches;
+      if (matches) visible += 1;
+    }
+
+    clear.disabled = !search.value;
+    status.textContent = query
+      ? `Showing ${visible} of ${rows.length} entries.`
+      : `Showing all ${rows.length} entries.`;
+  }
+
+  search.addEventListener('input', applyFilter);
+  clear.addEventListener('click', () => {
+    search.value = '';
+    applyFilter();
+    search.focus();
+  });
+  window.addEventListener('beforeprint', () => {
+    for (const row of rows) row.hidden = false;
+  });
+  window.addEventListener('afterprint', applyFilter);
+  applyFilter();
+})();
+</script>
+</body>
+</html>

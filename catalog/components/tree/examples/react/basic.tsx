@@ -1,6 +1,6 @@
 import { Tree } from '@muxui/react';
 export function BasicTreeExample() {
-  return <Tree aria-label="Project files" defaultExpandedIds={['project']} items={[{
+  return <Tree aria-label="Project files" items={[{
     id: 'project',
     label: 'Mux UI project',
     children: [

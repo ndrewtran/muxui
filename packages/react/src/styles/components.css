@@ -794,6 +794,114 @@
   border-right: none;
 }
 
+.muxui-toggle-button-group[data-orientation='vertical'] {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.muxui-toggle-button-group[data-orientation='vertical'] .muxui-toggle-button {
+  width: 100%;
+  border-right: none;
+  border-bottom: 1px solid var(--muxui-semantic-color-neutral-22);
+}
+
+.muxui-toggle-button-group[data-orientation='vertical'] .muxui-toggle-button:last-child {
+  border-bottom: none;
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'] > .muxui-toggle-button:last-of-type {
+  border-right: none;
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-orientation='vertical'] > .muxui-toggle-button:last-of-type {
+  border-bottom: none;
+}
+
+/* A single-select group paints one measured fill while its real buttons keep
+   owning state, focus, keyboard behavior, and the accessible name. */
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'] {
+  position: relative;
+  isolation: isolate;
+  --muxui-toggle-button-group-motion-fill: var(--muxui-semantic-color-neutral-80);
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'] > .muxui-toggle-button {
+  position: relative;
+  z-index: 1;
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[data-selected],
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[aria-checked='true'],
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[aria-pressed='true'] {
+  background-color: transparent;
+  outline-color: transparent;
+  color: var(--muxui-semantic-color-neutral-70);
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[data-selected]:hover,
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[aria-checked='true']:hover,
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[aria-pressed='true']:hover {
+  background-color: transparent;
+  outline-color: transparent;
+  color: var(--muxui-semantic-color-neutral-70);
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready]:has(> .muxui-toggle-button[data-selected]:hover:not([data-disabled])),
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready]:has(> .muxui-toggle-button[aria-checked='true']:hover:not([data-disabled])),
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready]:has(> .muxui-toggle-button[aria-pressed='true']:hover:not([data-disabled])) {
+  --muxui-toggle-button-group-motion-fill: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-trailing] > .muxui-toggle-button:hover:not([data-disabled]) {
+  background-color: transparent;
+  transition: none;
+}
+
+.muxui-toggle-button-group-motion-indicator {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 0;
+  background-color: var(--muxui-toggle-button-group-motion-fill);
+  box-sizing: border-box;
+}
+
+.muxui-toggle-button-group-motion-foreground {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.muxui-toggle-button-group-motion-label {
+  position: absolute !important;
+  z-index: 0;
+  margin: 0;
+  border: 0 !important;
+  outline: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  color: var(--muxui-semantic-color-neutral-80-fg) !important;
+  cursor: default !important;
+  pointer-events: none !important;
+  transition: none !important;
+}
+
+@media (forced-colors: active) {
+  .muxui-toggle-button-group-motion-indicator,
+  .muxui-toggle-button-group-motion-foreground {
+    display: none;
+  }
+
+  .muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[data-selected],
+  .muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[aria-checked='true'],
+  .muxui-toggle-button-group[data-muxui-toggle-motion='single'][data-muxui-toggle-motion-ready] > .muxui-toggle-button[aria-pressed='true'] {
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
 /* ToggleButton sizes use the finite sm/md/lg API. The values stay
    on Mux-owned token variables so a theme can change the control without
    rebuilding the component projection. */
@@ -1288,9 +1396,9 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: var(--muxui-semantic-layout-inset-medium)
-    var(--muxui-semantic-layout-inset-xlarge)
-    var(--muxui-semantic-layout-inset-medium)
+  padding: var(--muxui-semantic-layout-inset-small)
+    var(--muxui-semantic-layout-inset-large)
+    var(--muxui-semantic-layout-inset-small)
     var(--muxui-semantic-layout-inset-medium);
   border: 0;
   border-radius: 0;

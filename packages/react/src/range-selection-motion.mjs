@@ -61,6 +61,17 @@ function measureSegments(root, selecting) {
       const right = Math.max(...rects.map((rect) => rect.right)) - rootRect.left;
       const top = Math.min(...rects.map((rect) => rect.top)) - rootRect.top;
       const bottom = Math.max(...rects.map((rect) => rect.bottom)) - rootRect.top;
+      let leftCap = false;
+      let rightCap = false;
+      run.forEach((cell, index) => {
+        if (!cell.hasAttribute('data-selection-start')
+          && !cell.hasAttribute('data-selection-end')
+          && !cell.hasAttribute('data-muxui-range-provisional-endpoint')) return;
+        const rect = rects[index];
+        if (run.length === 1 || Math.abs(rect.left - rootRect.left - left) < 0.5) leftCap = true;
+        if (run.length === 1 || Math.abs(rect.right - rootRect.left - right) < 0.5) rightCap = true;
+      });
+      const cap = leftCap && rightCap ? 'both' : leftCap ? 'left' : rightCap ? 'right' : undefined;
       segments.push({
         key: `${rowIndex}:${rowSegmentIndex}`,
         row: rowIndex,
@@ -68,6 +79,7 @@ function measureSegments(root, selecting) {
         top,
         width: Math.max(0, right - left),
         height: Math.max(0, bottom - top),
+        cap,
       });
       rowSegmentIndex += 1;
       run = [];
@@ -136,6 +148,11 @@ export function RangeSelectionMotion({ children }) {
     if (!root || !layerRef.current) return undefined;
     const layer = layerRef.current;
     let active = true;
+    const pointerModeAttribute = 'data-muxui-range-pointer-mode';
+    const markPointerMode = () => {
+      if (!root.hasAttribute(pointerModeAttribute)) root.setAttribute(pointerModeAttribute, 'true');
+    };
+    const clearPointerMode = () => root.removeAttribute(pointerModeAttribute);
     const triggerNode = triggerRef?.current ?? null;
     const exitingKeys = new Set();
     const settleFrames = new Map();
@@ -222,10 +239,13 @@ export function RangeSelectionMotion({ children }) {
           band.setAttribute('aria-hidden', 'true');
           layer.appendChild(band);
           bandsRef.current.set(target.key, band);
+          if (target.cap) band.setAttribute('data-muxui-range-band-cap', target.cap);
           setGeometry(band, target);
           targetsRef.current.set(target.key, target);
           continue;
         }
+        if (target.cap) band.setAttribute('data-muxui-range-band-cap', target.cap);
+        else band.removeAttribute('data-muxui-range-band-cap');
         targetsRef.current.set(target.key, target);
         const returningFromExit = exitingKeys.has(target.key);
         if (returningFromExit) {
@@ -284,6 +304,11 @@ export function RangeSelectionMotion({ children }) {
     const resizeObserver = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(sync);
     resizeObserver?.observe(root);
     root.querySelector('.muxui-calendar-grid') && resizeObserver?.observe(root.querySelector('.muxui-calendar-grid'));
+    root.addEventListener('pointerover', markPointerMode, true);
+    root.addEventListener('pointerenter', markPointerMode, true);
+    root.addEventListener('pointermove', markPointerMode, true);
+    root.addEventListener('pointerdown', markPointerMode, true);
+    root.ownerDocument.addEventListener('keydown', clearPointerMode, true);
     sync();
 
     return () => {
@@ -291,6 +316,12 @@ export function RangeSelectionMotion({ children }) {
       syncRef.current = null;
       mutationObserver?.disconnect();
       resizeObserver?.disconnect();
+      root.removeEventListener('pointerover', markPointerMode, true);
+      root.removeEventListener('pointerenter', markPointerMode, true);
+      root.removeEventListener('pointermove', markPointerMode, true);
+      root.removeEventListener('pointerdown', markPointerMode, true);
+      root.ownerDocument.removeEventListener('keydown', clearPointerMode, true);
+      clearPointerMode();
       disconnectReduced();
       for (const controls of controlsRef.current.values()) controls.stop();
       controlsRef.current.clear();

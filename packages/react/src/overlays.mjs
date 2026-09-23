@@ -1,6 +1,7 @@
 import React from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { FocusScope } from 'react-aria/FocusScope';
+import { mergeRefs } from 'react-aria/mergeRefs';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
@@ -17,6 +18,7 @@ import {
   PreviewTrigger as AriaPreviewTrigger,
   Text as AriaText,
   Tooltip as AriaTooltip,
+  TooltipContext as AriaTooltipContext,
   TooltipTrigger as AriaTooltipTrigger,
   UNSTABLE_Toast as AriaToast,
   UNSTABLE_ToastContent as AriaToastContent,
@@ -25,7 +27,10 @@ import {
 } from 'react-aria-components';
 import { DialogMotion } from './dialog-motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
+import { observeReducedMotion } from './motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
+
+const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -498,6 +503,35 @@ export const PreviewTrigger = React.forwardRef(function PreviewTrigger({
 
 PreviewTrigger.displayName = 'PreviewTrigger';
 
+const TooltipMotion = React.forwardRef(function TooltipMotion({ children, triggerRef: requestedTriggerRef, ...props }, ref) {
+  const triggerContext = React.useContext(AriaTooltipContext);
+  const triggerRef = requestedTriggerRef ?? triggerContext?.triggerRef;
+  const reducedMotionTriggerRef = triggerContext?.triggerRef ?? triggerRef;
+  const [node, setNode] = React.useState(null);
+  const setRef = React.useMemo(() => mergeRefs(setNode, ref), [ref]);
+
+  useIsomorphicLayoutEffect(() => {
+    if (!node || node.nodeType !== 1 || !node.isConnected) return undefined;
+    const settle = (reduced) => {
+      node.toggleAttribute('data-muxui-motion-reduced', reduced);
+      if (reduced && typeof node.getAnimations === 'function') {
+        node.getAnimations().forEach((animation) => animation.cancel());
+      }
+    };
+    const disconnect = observeReducedMotion(node, reducedMotionTriggerRef?.current, settle);
+    return () => {
+      disconnect();
+      node.removeAttribute('data-muxui-motion-reduced');
+    };
+  }, [node, reducedMotionTriggerRef]);
+
+  return React.createElement(AriaTooltip, {
+    ...props,
+    ref: setRef,
+    triggerRef,
+  }, children);
+});
+
 /** RAC TooltipTrigger owns global hover/focus timing and keyboard modality semantics. */
 export const Tooltip = React.forwardRef(function Tooltip({
   content,
@@ -535,7 +569,7 @@ export const Tooltip = React.forwardRef(function Tooltip({
     closeDelay: normalizedCloseDelay,
     isOpen: adapter.isOpen,
     onOpenChange: adapter.handleOpenChange,
-  }, pressableTrigger(normalizedTrigger), React.createElement(AriaTooltip, {
+  }, pressableTrigger(normalizedTrigger), React.createElement(TooltipMotion, {
     ...props,
     ref,
     triggerRef: anchorRef,
