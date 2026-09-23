@@ -42,6 +42,10 @@ function readTranslate(node) {
   return match ? { x: Number(match[1]), y: Number(match[2] ?? 0) } : { x: 0, y: 0 };
 }
 
+function measureMotionContentHeight(node) {
+  return Math.max(node.scrollHeight, node.getBoundingClientRect().height);
+}
+
 function targetValues(isOpen, placement, exitOffset) {
   if (isOpen) return { opacity: 1, x: 0, y: 0 };
   const offset = exitOffset ?? placementOffset(placement);
@@ -272,6 +276,38 @@ export function useMotionLayout(nodeRef, layoutKey, triggerRef) {
   }, [nodeRef]);
 }
 
+/** Keep the grouped chevron on the semantic interaction spring, including reversals. */
+export function useDisclosureIconMotion(ref, isOpen) {
+  const angleRef = React.useRef(isOpen ? 180 : 0);
+  useIsomorphicLayoutEffect(() => {
+    const node = ref.current;
+    if (!node?.isConnected) return undefined;
+    const target = isOpen ? 180 : 0;
+    let active = true;
+    let controls = null;
+    const apply = (angle) => {
+      if (!active) return;
+      angleRef.current = angle;
+      node.style.transform = `rotate(${angle}deg)`;
+    };
+    const disconnect = observeReducedMotion(node, null, (reduced) => {
+      if (reduced) {
+        controls?.stop();
+        controls = null;
+        apply(target);
+      }
+    });
+    const transition = resolvedMotionSpring(node, null);
+    if (!transition || angleRef.current === target) apply(target);
+    else controls = animate(angleRef.current, target, { ...transition, onUpdate: apply });
+    return () => {
+      active = false;
+      controls?.stop();
+      disconnect();
+    };
+  }, [ref, isOpen]);
+}
+
 /** Animate a disclosure's measured content height without scaling its contents. */
 export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, ...props }) {
   const panelRef = React.useRef(null);
@@ -279,6 +315,9 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
   const controlsRef = React.useRef(null);
   const isOpenRef = React.useRef(Boolean(isOpen));
   const reducedRef = React.useRef(false);
+  const contentControlsRef = React.useRef(null);
+  const contentMountedRef = React.useRef(false);
+  const targetHeightRef = React.useRef(null);
   const animateTargetRef = React.useRef(null);
   const animationIdRef = React.useRef(0);
   const mountedRef = React.useRef(false);
@@ -299,8 +338,8 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     if (!panel || !content) return;
     const animationId = animationIdRef.current + 1;
     animationIdRef.current = animationId;
-    const host = hostRef?.current;
-    if (host && (isOpen || mountedRef.current)) host.removeAttribute('hidden');
+    const host = hostRef?.current ?? panel.parentElement;
+    if (host && (isOpenRef.current || mountedRef.current)) host.removeAttribute('hidden');
     const activeControls = controlsRef.current;
     const measuredHeight = panel.getBoundingClientRect().height;
     // A cleared control after an open spring can still be followed by a late
@@ -310,8 +349,10 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
       ? measuredHeight
       : isOpenRef.current && closedSettledRef.current
         ? 0
-        : measuredHeight || content.scrollHeight;
+        : targetHeightRef.current ?? (measuredHeight || measureMotionContentHeight(content));
+    targetHeightRef.current = targetHeight;
     controlsRef.current?.stop();
+    controlsRef.current = null;
     panel.style.overflow = 'hidden';
     panel.style.height = `${currentHeight}px`;
     closedSettledRef.current = false;
@@ -359,14 +400,14 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     controls.then(() => {
       if (controlsRef.current === controls) controlsRef.current = null;
       if (animationId !== animationIdRef.current) return;
-      const latestTarget = isOpenRef.current ? content.scrollHeight : 0;
+      const latestTarget = isOpenRef.current ? measureMotionContentHeight(content) : 0;
       if (latestTarget !== targetHeight) {
         animateTarget(latestTarget);
         return;
       }
       settle();
     });
-  }, [triggerRef]);
+  }, [hostRef, triggerRef]);
 
   const animateTargetRefCallback = React.useCallback(animateTarget, [animateTarget]);
   useIsomorphicLayoutEffect(() => {
@@ -385,7 +426,13 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
       // state update below still re-runs the target effect, but it must not be
       // the first thing that stops a spring after a runtime preference change.
       if (nextReduced) {
-        const targetHeight = isOpenRef.current ? contentRef.current?.scrollHeight ?? 0 : 0;
+        contentControlsRef.current?.stop();
+        contentControlsRef.current = null;
+        contentRef.current?.style.removeProperty('opacity');
+        contentRef.current?.style.removeProperty('transform');
+        const targetHeight = isOpenRef.current && contentRef.current
+          ? measureMotionContentHeight(contentRef.current)
+          : 0;
         animateTargetRef.current?.(targetHeight);
       }
       setReduced(nextReduced);
@@ -393,10 +440,53 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
   }, [triggerRef]);
 
   useIsomorphicLayoutEffect(() => {
+    const content = contentRef.current;
+    if (!content) return undefined;
+    const initial = !contentMountedRef.current;
+    contentMountedRef.current = true;
+    const transition = isOpen
+      ? resolvedMotionTransition(content, triggerRef?.current, 'reveal', 'reveal')
+      : resolvedMotionTransition(content, triggerRef?.current, 'exit', 'dismiss');
+    const settle = () => {
+      if (isOpen || !transition) {
+        content.style.removeProperty('opacity');
+        content.style.removeProperty('transform');
+      } else {
+        content.style.opacity = '0.82';
+        content.style.transform = 'translateY(3px)';
+      }
+    };
+    // Initial expanded content is already readable in SSR. Only subsequent
+    // state changes get the soft reveal; content resizes do not replay it.
+    if (initial || !transition) {
+      settle();
+      return undefined;
+    }
+    const from = readVisibleValues(content);
+    let active = true;
+    const controls = animate(content, {
+      opacity: [from.opacity, isOpen ? 1 : 0.82],
+      transform: [`translateY(${from.y}px)`, `translateY(${isOpen ? 0 : 3}px)`],
+    }, transition);
+    contentControlsRef.current = controls;
+    controls.then(() => {
+      if (!active || contentControlsRef.current !== controls) return;
+      contentControlsRef.current = null;
+      settle();
+    });
+    return () => {
+      active = false;
+      controls.stop();
+      if (contentControlsRef.current === controls) contentControlsRef.current = null;
+    };
+  }, [isOpen, reduced, triggerRef]);
+
+  useIsomorphicLayoutEffect(() => {
     const panel = panelRef.current;
     const content = contentRef.current;
     if (!panel || !content) return undefined;
-    animateTarget(isOpen ? content.scrollHeight : 0);
+    if (!isOpen && panel.contains(panel.ownerDocument.activeElement)) triggerRef?.current?.focus();
+    animateTarget(isOpen ? measureMotionContentHeight(content) : 0);
     return undefined;
   }, [animateTarget, isOpen, reduced]);
 
@@ -405,23 +495,29 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     if (!content || typeof ResizeObserver === 'undefined') return undefined;
     const observer = new ResizeObserver(() => {
       if (!isOpenRef.current) return;
-      animateTargetRef.current?.(content.scrollHeight);
+      const nextHeight = measureMotionContentHeight(content);
+      // Ignore the observer's initial delivery and unchanged sizes. Restarting
+      // an in-flight spring for either would discard its current trajectory.
+      if (Math.abs(nextHeight - targetHeightRef.current) >= 0.5) animateTargetRef.current?.(nextHeight);
     });
-    observer.observe(content);
+    // Padding changes alter the wrapper's border box without necessarily
+    // changing its content box, so observe the measured box explicitly.
+    observer.observe(content, { box: 'border-box' });
     return () => observer.disconnect();
   }, []);
 
   useIsomorphicLayoutEffect(() => {
-    const host = hostRef?.current;
+    // Child layout effects can run before RAC attaches the parent's ref.
+    const host = hostRef?.current ?? panelRef.current?.parentElement;
     if (!host || typeof MutationObserver === 'undefined') return undefined;
     const observer = new MutationObserver(() => {
-      if (!isOpenRef.current && !closedSettledRef.current && host.hasAttribute('hidden')) host.removeAttribute('hidden');
+      if ((isOpenRef.current || !closedSettledRef.current) && host.hasAttribute('hidden')) host.removeAttribute('hidden');
     });
     observer.observe(host, { attributes: true, attributeFilter: ['hidden'] });
     return () => observer.disconnect();
   }, [hostRef]);
 
-  React.useEffect(() => () => {
+  useIsomorphicLayoutEffect(() => () => {
     controlsRef.current?.stop();
     controlsRef.current = null;
     animationIdRef.current += 1;
@@ -436,5 +532,5 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     style: initialClosedStyle ? { ...props.style, height: '0px', overflow: 'hidden' } : props.style,
     'aria-hidden': !isOpen || undefined,
     inert: !isOpen || undefined,
-  }, React.createElement('div', { ref: contentRef }, children));
+  }, React.createElement('div', { ref: contentRef, className: 'muxui-disclosure-panel muxui-disclosure-motion-content' }, children));
 }

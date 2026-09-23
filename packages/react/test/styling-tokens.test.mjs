@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import { glob, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import test from 'node:test';
-import { compilePureTokenGraph, cssName } from '@muxui/tokens/core';
+import { compilePureTokenGraph, cssDeclaration } from '@muxui/tokens/core';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const source = JSON.parse(await readFile(resolve(packageRoot, '../../catalog/tokens/default-theme.json'), 'utf8'));
-const tokenIds = new Map(Object.keys(source.tokens).map((id) => [cssName(id), id]));
+const tokenGraph = compilePureTokenGraph(source);
+const tokenNames = new Set(Object.values(tokenGraph.tokens).flatMap((token) => [
+  ...cssDeclaration(token, tokenGraph.dependencies).matchAll(/^\s+(--muxui-[\w-]+):/gmu),
+].map(([, name]) => name)));
 const styles = [];
 for await (const path of glob('src/**/*.css', { cwd: packageRoot })) {
   styles.push({ path, css: await readFile(resolve(packageRoot, path), 'utf8') });
@@ -20,7 +23,7 @@ test('all authored component styles resolve design tokens through semantic or co
       // Renderer-owned geometry hooks may be locally defined or expose a fallback;
       // semantic token references must always exist in the canonical theme.
       const geometryHook = variable.startsWith('--muxui-component-') && (localHooks.has(variable) || fallback);
-      if (!tokenIds.has(variable) && !geometryHook) failures.push(`${path}: unknown ${match}`);
+      if (!tokenNames.has(variable) && !geometryHook) failures.push(`${path}: unknown ${match}`);
       if (variable.startsWith('--muxui-reference-')) failures.push(`${path}: reference-layer styling ${match}`);
     }
   }

@@ -54,9 +54,18 @@ function ToastControls() {
 
 function DisclosureFixture() {
   const [primaryGrown, setPrimaryGrown] = React.useState(false);
+  const [controlledOpen, setControlledOpen] = React.useState(true);
+  const [multiple, setMultiple] = React.useState(false);
+  const [expandedIds, setExpandedIds] = React.useState([]);
   React.useEffect(() => {
     window.__interactionGrowDisclosure = () => setPrimaryGrown(true);
-    return () => { delete window.__interactionGrowDisclosure; };
+    window.__interactionSetDisclosure = setControlledOpen;
+    window.__interactionSetMultiple = setMultiple;
+    return () => {
+      delete window.__interactionGrowDisclosure;
+      delete window.__interactionSetDisclosure;
+      delete window.__interactionSetMultiple;
+    };
   }, []);
   const primaryCopy = h(React.Fragment, null,
     disclosureCopy,
@@ -70,7 +79,9 @@ function DisclosureFixture() {
     }, primaryCopy),
     h(DisclosureGroup, {
       id: 'disclosure-group',
-      multiple: false,
+      multiple,
+      expandedIds,
+      onExpandedChange: setExpandedIds,
       'data-motion-id': 'disclosure-group',
     },
     h(Disclosure, {
@@ -82,7 +93,16 @@ function DisclosureFixture() {
       id: 'group-second',
       title: 'Second grouped disclosure',
       'data-motion-id': 'group-second',
-    }, disclosureCopy)),
+    }, disclosureCopy),
+    h(Disclosure, { id: 'group-disabled', title: 'Disabled grouped disclosure', disabled: true }, disclosureCopy)),
+    h(Disclosure, {
+      id: 'controlled-disclosure',
+      title: 'Controlled disclosure',
+      expanded: controlledOpen,
+      onExpandedChange: setControlledOpen,
+      'data-motion-id': 'controlled-disclosure',
+    }, disclosureCopy, h('button', { id: 'disclosure-content-action', type: 'button' }, 'Content action')),
+    h(Disclosure, { title: 'Disabled disclosure', disabled: true }, disclosureCopy),
   );
 }
 

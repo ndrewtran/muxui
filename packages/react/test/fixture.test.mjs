@@ -213,7 +213,9 @@ test('MuxUI styles bind states and public theme hooks', async () => {
 
   assert.match(css, /\.muxui-dialog\s*\{[^}]*transform: translate\(-50%, -50%\)[^;]*;/u);
   assert.doesNotMatch(css, /\.muxui-popover\[data-entering\][\s\S]*transform: scale\(0\.97\)/u);
-  assert.match(css, /\.muxui-tooltip\[data-entering\][\s\S]*transform: scale\(0\.96\)/u);
+  assert.match(css, /\.muxui-tooltip\s*\{[\s\S]*font-size: var\(--muxui-semantic-typography-tiny-size\);[\s\S]*line-height: var\(--muxui-semantic-typography-compact-line-height\)/u);
+  assert.match(css, /\.muxui-tooltip\s*\{[\s\S]*opacity var\(--muxui-semantic-motion-feedback-duration\)/u);
+  assert.match(css, /\.muxui-tooltip\[data-entering\][\s\S]*scale: 0\.9;[\s\S]*filter: blur\(5px\)/u);
   assert.match(css, /\.muxui-toast\s*\{[\s\S]*transition: none;/u);
   assert.match(css, /\.muxui-toast\[data-muxui-toast-exiting\][\s\S]*pointer-events: none;/u);
   assert.match(css, /\.muxui-dialog-backdrop\s*\{[\s\S]*position: fixed;[\s\S]*inset: 0;/u);

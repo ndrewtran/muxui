@@ -87,6 +87,7 @@ const SELECT_PROPS = Object.freeze({
   orientation: ['horizontal', 'vertical'],
   placement: ['top', 'bottom', 'start', 'end'],
   role: ['group', 'region', 'presentation'],
+  expansionTrigger: ['chevron', 'row'],
   selectionMode: ['none', 'single', 'multiple'],
   fit: ['cover', 'contain', 'fill', 'none'],
   radius: ['none', 'sm', 'md', 'lg', 'full'],

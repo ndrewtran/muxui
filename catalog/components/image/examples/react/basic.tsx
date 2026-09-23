@@ -2,7 +2,7 @@ import { Image } from '@muxui/react';
 
 export function BasicImageExample() {
   return <Image
-    src="/images/workspace.png"
+    src="https://placehold.co/320x180/png?text=Workspace+overview"
     alt="Workspace overview"
     width={320}
     height={180}

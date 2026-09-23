@@ -32,6 +32,9 @@ const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggl
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
+const colorSliderMotionSource = await readFile(resolve(packageRoot, 'src/color-slider-motion.mjs'), 'utf8');
+const colorWheelMotionSource = await readFile(resolve(packageRoot, 'src/color-wheel-motion.mjs'), 'utf8');
+const listBoxMotionSource = await readFile(resolve(packageRoot, 'src/listbox-motion.mjs'), 'utf8');
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
@@ -39,6 +42,9 @@ const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-c
 const popoverMotionSource = await readFile(resolve(packageRoot, 'src/popover-motion.mjs'), 'utf8');
 const tabsMotionSource = await readFile(resolve(packageRoot, 'src/tabs-motion.mjs'), 'utf8');
 const rangeSelectionMotionSource = await readFile(resolve(packageRoot, 'src/range-selection-motion.mjs'), 'utf8');
+const radioMotionSource = await readFile(resolve(packageRoot, 'src/radio-motion.mjs'), 'utf8');
+const sliderMotionSource = await readFile(resolve(packageRoot, 'src/slider-motion.mjs'), 'utf8');
+const toggleButtonGroupMotionSource = await readFile(resolve(packageRoot, 'src/toggle-button-group-motion.mjs'), 'utf8');
 const collectionsSource = await readFile(resolve(packageRoot, 'src/collections.mjs'), 'utf8');
 const overlaysSource = await readFile(resolve(packageRoot, 'src/overlays.mjs'), 'utf8');
 const overlayPositioningSource = await readFile(resolve(packageRoot, 'src/overlay-positioning.mjs'), 'utf8');
@@ -664,7 +670,7 @@ export declare const TokenField: React.ForwardRefExoticComponent<TokenFieldProps
 export type ToolbarProps = MuxUIAriaAccessibleName & { orientation?: 'horizontal' | 'vertical'; children?: React.ReactNode; className?: string; };
 export declare const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }
-export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
+export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; expansionTrigger?: 'chevron' | 'row'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
 export declare const Tree: React.ForwardRefExoticComponent<TreeProps & React.RefAttributes<HTMLDivElement>>;
 export type VirtualizerProps = MuxUIAriaLabel & { items?: MuxUIItems; height?: number; itemHeight?: number; overscan?: number; disabled?: boolean; onScroll?: React.UIEventHandler<HTMLDivElement>; className?: string; style?: React.CSSProperties; };
 export declare const Virtualizer: React.ForwardRefExoticComponent<VirtualizerProps & React.RefAttributes<HTMLDivElement>>;
@@ -1113,6 +1119,9 @@ const outputs = new Map([
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
   ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
+  ['color-slider-motion.mjs', generatedText('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
+  ['color-wheel-motion.mjs', generatedText('packages/react/src/color-wheel-motion.mjs', colorWheelMotionSource)],
+  ['listbox-motion.mjs', generatedText('packages/react/src/listbox-motion.mjs', listBoxMotionSource)],
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
   ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
@@ -1120,6 +1129,9 @@ const outputs = new Map([
   ['popover-motion.mjs', generatedText('packages/react/src/popover-motion.mjs', popoverMotionSource)],
   ['tabs-motion.mjs', generatedText('packages/react/src/tabs-motion.mjs', tabsMotionSource)],
   ['range-selection-motion.mjs', generatedText('packages/react/src/range-selection-motion.mjs', rangeSelectionMotionSource)],
+  ['radio-motion.mjs', generatedText('packages/react/src/radio-motion.mjs', radioMotionSource)],
+  ['slider-motion.mjs', generatedText('packages/react/src/slider-motion.mjs', sliderMotionSource)],
+  ['toggle-button-group-motion.mjs', generatedText('packages/react/src/toggle-button-group-motion.mjs', toggleButtonGroupMotionSource)],
   ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
   ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],
   ['overlay-positioning.mjs', generatedText('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],
