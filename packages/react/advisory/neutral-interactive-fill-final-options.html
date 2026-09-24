@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en" data-muxui-theme="standard-harbour" data-muxui-color-scheme="light" data-muxui-contrast="standard">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="data:,">
+<title>NF22–NF29 · Neutral interactive fill options</title>
+<style id="layout">
+*{box-sizing:border-box;animation:none!important;transition:none!important}
+html{font-size:16px}
+body{margin:0;background:#000!important;color:#fff!important;font:15px/1.5 system-ui,sans-serif}
+main{max-width:1480px;margin:auto;padding:28px}
+h1{margin:0 0 8px;font-size:28px;line-height:1.2;color:#fff}
+h2{margin:0 0 8px;font-size:21px;color:#fff}
+h3{margin:20px 0 8px;font-size:17px}
+h4{margin:0 0 8px;font-size:15px}
+p{max-width:100ch;margin:8px 0}
+a{color:inherit;text-underline-offset:3px}
+.lede{max-width:92ch}
+.recommendation{margin:14px 0 18px;padding-left:12px;border-left:2px solid #fff}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:20px 0 8px}
+.topbar nav,.filters{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.topbar a{font-weight:650}
+.filters{gap:12px}
+.filters label{display:flex;align-items:center;gap:7px}
+.filters select{min-height:36px;padding:4px 28px 4px 8px;border:1px solid #777;border-radius:0;background:#000;color:#fff;font:inherit}
+#status{min-height:24px;color:#fff}
+.group{margin:28px 0 44px;scroll-margin-top:16px}
+.group-intro{margin:0 0 12px;color:#fff}
+.option-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));}
+.option{min-width:0;padding:12px 16px 18px;border-top:1px solid #777}
+.option:not(:last-child){border-right:1px solid #555}
+.option-title{display:flex;align-items:baseline;gap:8px;margin:0 0 3px;font-size:18px;color:#fff}
+.option-letter{font-size:13px;letter-spacing:.08em}
+.option-summary{min-height:52px;margin:0 0 12px;color:#fff}
+.theme-panel{margin:0 0 16px;padding:14px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-default)}
+.theme-panel a,.theme-panel button,.theme-panel input{pointer-events:none!important}
+.theme-title{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:0 0 12px;color:var(--muxui-semantic-content-default)}
+.theme-title small{font-size:13px;font-weight:400}
+.state-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;align-items:start}
+.state-sample{min-width:0}
+.state-label{display:block;min-height:36px;margin-bottom:5px;font-size:13px;line-height:1.3;text-align:center;color:var(--muxui-semantic-content-muted)}
+.control-center{display:flex;min-height:48px;align-items:center;justify-content:center}
+.control-center>*{max-width:100%}
+.anatomy{margin:14px 0 0}
+.anatomy-title{margin:0 0 8px;font-size:14px;color:var(--muxui-semantic-content-default)}
+.editor-strip .state-label{min-height:34px}
+.editor-sample{display:flex;justify-content:center;min-height:44px;align-items:center}
+.editor-sample .muxui-text-editor__btn{font-family:inherit;font-size:17px;font-weight:700}
+.editor-sample .muxui-text-editor__bubble-menu{max-width:100%}
+.nav-specimen{margin-top:14px}
+.nav-key{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:4px;text-align:center;color:var(--muxui-semantic-content-muted);font-size:13px}
+.sidebar-state{display:grid;grid-template-columns:88px minmax(0,1fr);align-items:center;gap:8px;margin:6px 0}
+.sidebar-state>.state-label{margin:0;text-align:left}
+.header-nav-sample{padding:0!important;overflow:hidden}
+.header-nav-sample .muxui-header-nav{height:auto;min-height:4rem;padding-inline:12px!important;gap:4px}
+.header-nav-sample .muxui-header-nav__secondary{width:100%;justify-content:space-between;gap:2px}
+.header-nav-sample .muxui-header-nav__nav-btn{padding-inline:8px}
+.sidebar-sample{min-height:0!important;height:auto!important}
+.sidebar-sample .muxui-sidebar__nav-list{padding:8px!important;gap:2px}
+.sidebar-sample .muxui-sidebar__nav-link{min-height:40px}
+.sidebar-sample .muxui-sidebar__nav-icon{width:18px;height:18px}
+.palette-variant{margin:14px 0 18px}
+.palette-variant-title{margin:0 0 6px;font-size:14px;color:var(--muxui-semantic-content-default)}
+.palette-state{display:grid;grid-template-columns:88px minmax(0,1fr);align-items:center;gap:8px;margin:6px 0}
+.palette-state-label{font-size:13px;color:var(--muxui-semantic-content-muted)}
+.palette-sample .muxui-command-palette__popup{position:relative!important;inset:auto!important;left:auto!important;top:auto!important;transform:none!important;width:100%!important;max-width:none!important;max-height:none!important;overflow:visible!important}
+.palette-sample .muxui-command-palette__search-field{position:static!important}
+.palette-sample .muxui-command-palette__input{min-width:0!important}
+.indicator-family{margin:14px 0 18px}
+.indicator-family-title{margin:0 0 8px;font-size:14px;color:var(--muxui-semantic-content-default)}
+.indicator-variation{margin-top:10px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--muxui-semantic-content-default) 22%,transparent)}
+.variation-title{margin:0 0 6px;font-size:13px;color:var(--muxui-semantic-content-muted)}
+.indicator-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr));gap:8px 6px}
+.indicator-state{min-width:0}
+.indicator-state .state-label{text-align:left;min-height:32px;margin-bottom:2px}
+.indicator-control{display:flex;min-height:48px;align-items:center}
+.muxui-radio-indicator::after{content:''}
+.date-family{margin:14px 0 18px}
+.date-family-title{margin:0 0 8px;font-size:14px;color:var(--muxui-semantic-content-default)}
+.date-state{margin:8px 0 12px}
+.date-state .state-label{min-height:0;text-align:left;margin-bottom:3px}
+.date-state .muxui-date-field,.date-state .muxui-time-field{width:100%}
+.date-state .muxui-date-input{width:100%;min-height:44px}
+.date-segment-literal{user-select:none}
+.alternative-icon-fix .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon{color:var(--muxui-semantic-color-neutral-100)!important}
+.notes{border-top:1px solid #777;padding-top:16px;margin-top:32px}
+.notes p{max-width:110ch}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:650}
+.ref-note{color:#fff}
+.reference-links{display:flex;gap:16px;flex-wrap:wrap;margin-top:8px}
+.reference-links a{color:#fff}
+.visually-static{font-weight:650}
+@media(max-width:920px){
+ main{padding:18px}
+ .option-grid{grid-template-columns:1fr}
+ .option,.option:first-child{padding:14px 0}
+ .option:not(:last-child){border-right:0;border-bottom:1px solid #555}
+ .option-summary{min-height:0}
+}
+@media(max-width:520px){
+ main{padding:14px}
+ h1{font-size:24px}
+ .theme-panel{padding:10px}
+ .palette-state{grid-template-columns:75px minmax(0,1fr);gap:6px}
+ .header-nav-sample .muxui-header-nav{padding-inline:6px!important}
+ .header-nav-sample .muxui-header-nav__nav-btn{padding-inline:5px;font-size:13px}
+}
+</style>
+</head>
+<body>
+<main>
+  <h1>NF22–NF29 · Neutral interactive fills</h1>
+  <p class="lede">B · Calibrated is implemented for NF22–NF25 and NF29. C · Tonal is implemented for NF26–NF28. Compare historical samples with the current CSS; each state is static and forced for review, not a live React component.</p>
+  <p class="recommendation"><strong>Approved direction:</strong> keep selection and current-page emphasis clear, tune hover independently, and preserve the date segment’s strong focus fill while repairing the focused text contrast.</p>
+  <div class="topbar">
+    <nav aria-label="Decision groups">
+      <a href="#nf22-24">NF22–NF24 · selected/current</a>
+      <a href="#nf25">NF25 · search input</a>
+      <a href="#nf26-28">NF26–NF28 · indicators</a>
+      <a href="#nf29">NF29 · date/time focus</a>
+    </nav>
+    <div class="filters" aria-label="Specimen settings">
+      <label for="mode">Theme
+        <select id="mode">
+          <option value="both">Both</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+      <label for="contrast">Contrast
+        <select id="contrast">
+          <option value="standard">Standard</option>
+          <option value="more">More contrast</option>
+        </select>
+      </label>
+    </div>
+  </div>
+  <p id="status" role="status">Loading generated Harbour theme and component CSS…</p>
+  <div id="comparisons"></div>
+  <div class="notes">
+    <p><strong>Implementation boundary:</strong> NF22–NF29 are resolved. B reads current generated CSS for NF22–NF25 and NF29; C reads current generated CSS for NF26–NF28. A and the prior B indicator treatment preserve archived opaque hovers with local historical overrides. Baseline and implementation date: 2026-09-24.</p>
+    <details>
+      <summary>Technical recipes, source findings, and references</summary>
+      <p><strong>NF22:</strong> A uses selected neutral-80 with neutral-90 on hover. B preserves neutral-80 and layers an 8% neutral-100 transparent tint over the selected fill on hover. C uses a 14% neutral-100 transparent fill with a 2px inset edge and neutral-100 text; hover raises the tint to 22%.</p>
+      <p><strong>NF23:</strong> A preserves current Main and Bubble rules separately. Main active rest uses neutral-94 light / neutral-22 dark; Bubble active rest uses neutral-22 in both schemes. B preserves each active rest fill and layers a 6% mode-appropriate neutral tint over the fill on hover. C uses a 14% neutral-100 transparent fill and 2px inset edge, with neutral-100 text; hover raises the tint to 22%.</p>
+      <p><strong>NF24:</strong> A preserves neutral-94 light / neutral-22 dark current fills. B preserves those fills and layers a 6% current-foreground tint over current hover; the dark Sidebar current-link icon is corrected to neutral-100. C uses a 14% current-foreground transparent fill and inset edge, increasing to 22% on hover, and corrects that icon too.</p>
+      <p><strong>NF25:</strong> A shows the historical neutral-12 body hover fill, solid in a default popup and 34% in a translucent popup. B uses 2% in the default popup and 4% in the translucent popup. C removes only the hover body fill. Popup, search-field, input base, border, and current focus styling stay from source.</p>
+      <p><strong>NF26–NF28:</strong> A and B show the archived opaque hover fills. C adds an 8% surface-strong transparent tint over each exact unchecked rest fill; original hover borders remain unchanged. Checkbox core/Field and RadioGroup use surface.raised in light and neutral-default-98 in dark at rest. RadioField retains its neutral-10 adaptive rest fill. Switch and SwitchField retain neutral-20 at rest. Selected/indeterminate marks, disabled, focus, and forced-colors states are unchanged.</p>
+      <p><strong>NF29:</strong> A reproduces the pre-change focused segments. B preserves surface-emphasis and changes only focused-segment foreground to content.on-solid, including empty placeholders. An actual DateField/TimeField render confirmed the focused-placeholder attributes. Separate browser CSS samples confirmed the dark foreground collisions; measured contrast varies by theme and contrast mode. C is an optional 14% tonal focus fill, neutral-100 foreground, and independent focus ring.</p>
+      <p>The primary references are the existing Mux UI sources/tokens and Andrew’s approved calibrated work. Supporting craft references: <a href="https://ui.shadcn.com">shadcn’s compact component comparisons</a> and <a href="https://linear.app/changelog">Linear’s readable interaction-state contrast</a>. This comparison imports no external colors, fonts, or component geometry. Focus/selection remain separate states; no blanket accessibility certification is implied.</p>
+      <div class="reference-links"><a href="neutral-interactive-fill-ledger.html">Open the decision ledger</a><a href="neutral-interactive-fill-navigation-options.html">Open the prior navigation comparison</a><a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html">W3C non-text contrast</a><a href="https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/#kbd_focus_vs_selection">ARIA APG focus vs selection</a></div>
+    </details>
+  </div>
+</main>
+<script>
+const choices=[
+  {id:'a',name:'Before',letter:'A'},
+  {id:'b',name:'Calibrated · implemented',letter:'B'},
+  {id:'c',name:'Tonal alternative',letter:'C'}
+];
+const checkIcon='<svg viewBox="0 0 16 16" width="12" height="12" fill="none" aria-hidden="true"><path d="m3 8 3.2 3.2L13 4.8" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const radioDot='<span class="muxui-radio-field__dot" aria-hidden="true"></span>';
+const sidebarIcon='<svg class="muxui-sidebar__nav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="5" height="5" rx="1"/><rect x="12" y="3" width="5" height="5" rx="1"/><rect x="3" y="12" width="5" height="5" rx="1"/><rect x="12" y="12" width="5" height="5" rx="1"/></svg>';
+function stateAttrs(state){
+  if(state==='selected') return 'data-selected="true"';
+  if(state==='hover') return 'data-hovered="true" data-demo-hover="true"';
+  if(state==='selected-hover') return 'data-selected="true" data-hovered="true" data-demo-hover="true"';
+  if(state==='focus') return 'data-focus-visible="true"';
+  return '';
+}
+function stateLabel(state){
+  return {'rest':'Rest · unselected','selected':'Selected · rest','selected-hover':'Selected · hover','hover':'Hover · unchecked','focus':'Focus · unchecked','empty-focus':'Empty · focused','filled-focus':'Filled · focused','filled-rest':'Filled · rest'}[state]||state;
+}
+function optionColumn(choice,summary,content){
+  return '<article class="option" data-option="'+choice.id+'"><h3 class="option-title"><span class="option-letter">'+choice.letter+'</span>'+choice.name+'</h3><p class="option-summary">'+summary[choice.id]+'</p>'+content+'</article>';
+}
+function themePanel(mode,content){
+  const contrast=document.querySelector('#contrast').value;
+  const contrastLabel=contrast==='more'?'More contrast':'Standard';
+  return '<section class="theme-panel" data-muxui-theme="standard-harbour" data-muxui-color-scheme="'+mode+'" data-muxui-contrast="'+contrast+'"><h4 class="theme-title">'+(mode==='dark'?'Dark':'Light')+'<small>Standard Harbour · '+contrastLabel+'</small></h4>'+content+'</section>';
+}
+function themedContent(contentFactory){
+  const mode=document.querySelector('#mode').value;
+  const modes=mode==='both'?['light','dark']:[mode];
+  return modes.map(function(scheme){return themePanel(scheme,contentFactory(scheme));}).join('');
+}
+function groupShell(id,title,description,summary,contentFactory,choiceSet){
+  const groupChoices=choiceSet||choices;
+  return '<section class="group" id="'+id+'"><h2>'+title+'</h2><p class="group-intro">'+description+'</p><div class="option-grid">'+groupChoices.map(function(choice){return optionColumn(choice,summary,themedContent(function(mode){return contentFactory(choice.id,mode);}));}).join('')+'</div></section>';
+}
+function stateCells(states,render){
+  return '<div class="state-strip">'+states.map(function(state){return '<div class="state-sample"><span class="state-label">'+stateLabel(state)+'</span><div class="control-center">'+render(state)+'</div></div>';}).join('')+'</div>';
+}
+function toggleButton(state){
+  const selected=state==='selected'||state==='selected-hover';
+  const hover=state==='selected-hover';
+  let attrs=selected?' data-selected="true" aria-pressed="true"':' aria-pressed="false"';
+  if(hover) attrs+=' data-demo-hover="true"';
+  return '<button class="muxui-toggle-button muxui-toggle-button--md" type="button" tabindex="-1"'+attrs+'>Display</button>';
+}
+function editorButton(active,hover){
+  const cls='muxui-text-editor__btn'+(active?' muxui-text-editor__btn--active':'');
+  return '<button type="button" tabindex="-1" class="'+cls+'" aria-label="Bold"'+(active?' aria-pressed="true"':' aria-pressed="false"')+(hover?' data-demo-hover="true"':'')+'>B</button>';
+}
+function editorAnatomy(title,bubble,option){
+  const states=['rest','selected','selected-hover'];
+  const buttons=states.map(function(state){
+    return '<div class="state-sample"><span class="state-label">'+stateLabel(state)+'</span><div class="editor-sample">'+(bubble?'<div class="muxui-text-editor__bubble-menu">':'<div class="muxui-text-editor__toolbar">')+editorButton(state!=='rest',state==='selected-hover')+'</div></div></div>';
+  }).join('');
+  return '<div class="anatomy"><h4 class="anatomy-title">'+title+'</h4><div class="state-strip editor-strip">'+buttons+'</div></div>';
+}
+function headerNavStates(){
+  return '<div class="nav-specimen"><h4 class="anatomy-title">HeaderNav</h4><div class="nav-key"><span>Rest</span><span>Current</span><span>Current · hover</span></div><header class="muxui-header-nav header-nav-sample"><nav class="muxui-header-nav__secondary" aria-label="Static HeaderNav sample"><a tabindex="-1" class="muxui-header-nav__nav-btn" href="#nf22-24">Reports</a><a tabindex="-1" class="muxui-header-nav__nav-btn muxui-header-nav__nav-btn--current" aria-current="page" href="#nf22-24">Workspace</a><a tabindex="-1" class="muxui-header-nav__nav-btn muxui-header-nav__nav-btn--current" aria-current="page" data-demo-hover="true" href="#nf22-24">Workspace</a></nav></header></div>';
+}
+function sidebarStates(choice,mode){
+  const fix=choice==='c';
+  const darkFix=fix&&mode==='dark'?' alternative-icon-fix':'';
+  const states=[
+    {label:'Rest · unselected',current:false,hover:false},
+    {label:'Current · rest',current:true,hover:false},
+    {label:'Current · hover',current:true,hover:true}
+  ];
+  return '<div class="nav-specimen"><h4 class="anatomy-title">NF24 · Sidebar current link and icon</h4>'+states.map(function(state){
+    const current=state.current?' muxui-sidebar__nav-link--current':'';
+    const hover=state.hover?' data-demo-hover="true"':'';
+    return '<div class="sidebar-state"><span class="state-label">'+state.label+'</span><aside class="muxui-sidebar sidebar-sample'+darkFix+'"><ul class="muxui-sidebar__nav-list" role="list"><li class="muxui-sidebar__nav-item"><a tabindex="-1" class="muxui-sidebar__nav-link'+current+'"'+(state.current?' aria-current="page"':'')+hover+' href="#nf22-24">'+sidebarIcon+'<span class="muxui-sidebar__nav-label">'+(state.current?'Workspace':'Reports')+'</span></a></li></ul></aside></div>';
+  }).join('')+'</div>';
+}
+function selectedContent(choice,mode){
+  const toggle=stateCells(['rest','selected','selected-hover'],function(s){return toggleButton(s);});
+  return '<div class="anatomy"><h4 class="anatomy-title">NF22 · Standalone ToggleButton</h4>'+toggle+'</div>'+editorAnatomy('NF23 · TextEditor Main toolbar',false,choice)+editorAnatomy('NF23 · TextEditor Bubble menu',true,choice)+headerNavStates().replace('HeaderNav</h4>','NF24 · HeaderNav</h4>')+sidebarStates(choice,mode);
+}
+function searchInput(state){
+  const focus=state==='focus'?' data-demo-focus="true"':'';
+  const hover=state==='hover'?' data-demo-hover="true"':'';
+  return '<input tabindex="-1" class="muxui-command-palette__input" type="search" aria-label="Search settings" placeholder="Search settings"'+focus+hover+'>';
+}
+function paletteBlock(translucent,choice){
+  const name=translucent?'Translucent popup':'Default popup';
+  const className='muxui-command-palette__popup'+(translucent?' muxui-command-palette__popup--translucent':'');
+  const states=['rest','hover','focus'].map(function(state){
+    return '<div class="palette-state"><span class="palette-state-label">'+(state==='rest'?'Rest':state==='hover'?'Hover':'Focus')+'</span><div class="muxui-command-palette__search-field muxui-command-palette__search-field--inline" data-empty>'+searchInput(state)+'</div></div>';
+  }).join('');
+  return '<div class="palette-variant"><h4 class="palette-variant-title">'+name+'</h4><div class="muxui-command-palette palette-sample muxui-command-palette--sm"><div class="'+className+'"><div class="muxui-command-palette__dialog">'+states+'</div></div></div></div>';
+}
+function paletteContent(choice){
+  return paletteBlock(false,choice)+paletteBlock(true,choice);
+}
+function indicatorState(kind,variation,state){
+  const selected=state==='selected';
+  const focus=state==='focus';
+  const hover=state==='hover';
+  const attrs=stateAttrs(state);
+  const isField=variation==='Field';
+  if(kind==='checkbox'){
+    if(isField){
+      return '<div class="muxui-checkbox-field"><div class="muxui-checkbox-field__button" role="checkbox" aria-checked="'+selected+'" '+attrs+'><span class="muxui-checkbox-field__indicator">'+checkIcon+'</span><span>Weekly report</span></div></div>';
+    }
+    return '<div class="muxui-checkbox" role="checkbox" aria-checked="'+selected+'" '+attrs+'><span class="muxui-checkbox-indicator">'+checkIcon+'</span><span class="muxui-checkbox-label">Weekly report</span></div>';
+  }
+  if(kind==='radio'){
+    if(isField){
+      return '<div class="muxui-radio-field"><div class="muxui-radio-field__button" role="radio" aria-checked="'+selected+'" '+attrs+'><span class="muxui-radio-field__indicator">'+radioDot+'</span><span>Personal</span></div></div>';
+    }
+    return '<div class="muxui-radio" role="radio" aria-checked="'+selected+'" '+attrs+'><span class="muxui-radio-indicator"></span><span class="muxui-radio-label">Personal</span></div>';
+  }
+  if(isField){
+    return '<div class="muxui-switch-field"><div class="muxui-switch-field__button" role="switch" aria-checked="'+selected+'" '+attrs+'><span class="muxui-switch-field__thumb"></span><span>Notifications</span></div></div>';
+  }
+  return '<div class="muxui-switch" role="switch" aria-checked="'+selected+'" '+attrs+'><span class="muxui-switch-indicator"></span><span class="muxui-switch-label">Notifications</span></div>';
+}
+function indicatorFamily(kind,title,choice){
+  const states=['rest','hover','selected','focus'];
+  return '<section class="indicator-family"><h4 class="indicator-family-title">'+title+'</h4>'+['Core','Field'].map(function(variation){
+    return '<div class="indicator-variation"><p class="variation-title">'+variation+'</p><div class="indicator-grid">'+states.map(function(state){
+      return '<div class="indicator-state"><span class="state-label">'+stateLabel(state)+'</span><div class="indicator-control">'+indicatorState(kind,variation,state)+'</div></div>';
+    }).join('')+'</div></div>';
+  }).join('')+'</section>';
+}
+function indicatorContent(choice){
+  return indicatorFamily('checkbox','NF26 · Checkbox',choice)+indicatorFamily('radio','NF27 · Radio',choice)+indicatorFamily('switch','NF28 · Switch',choice);
+}
+function segment(type,value,focused,placeholder){
+  const ph=placeholder?' data-placeholder="true"':'';
+  return '<span class="muxui-date-segment" data-type="'+type+'"'+(focused?' data-focused="true"':'')+ph+'>'+value+'</span>';
+}
+function dateField(kind,state){
+  const empty=state==='empty-focus';
+  const focus=state==='filled-focus'||state==='empty-focus';
+  const root='muxui-'+(kind==='date'?'date-field':'time-field');
+  const input='<div class="muxui-date-input"'+(focus?' data-focused="true"':'')+'>'+(kind==='date'
+    ?segment('month',empty?'MM':'06',focus,empty)+'<span class="muxui-date-segment-literal">/</span>'+segment('day',empty?'DD':'18',false,empty)+'<span class="muxui-date-segment-literal">/</span>'+segment('year',empty?'YYYY':'2026',false,empty)
+    :segment('hour',empty?'--':'09',focus,empty)+'<span class="muxui-date-segment-literal">:</span>'+segment('minute',empty?'--':'42',false,empty))+'</div>';
+  return '<div class="'+root+'">'+input+'</div>';
+}
+function dateContent(choice){
+  const states=['filled-rest','filled-focus','empty-focus'];
+  return ['date','time'].map(function(kind){
+    return '<section class="date-family"><h4 class="date-family-title">'+(kind==='date'?'DateField':'TimeField')+'</h4>'+states.map(function(state){
+      const label=state==='filled-rest'?'Populated · rest':state==='filled-focus'?'Populated · focused segment':'Empty · focused placeholder';
+      return '<div class="date-state"><span class="state-label">'+label+'</span>'+dateField(kind,state)+'</div>';
+    }).join('')+'</section>';
+  }).join('');
+}
+function render(){
+  const groups=[];
+  groups.push(groupShell('nf22-24','NF22–NF24 · Selected and current states','Selection and current-page emphasis each need a clear rest state. Compare hover on the same control without blending the state labels.',{
+    a:'Historical colors and foregrounds, including the dark Sidebar current icon collision.',
+    b:'Keep strong selection; tune selected hover and repair the dark Sidebar current icon foreground.',
+    c:'Use a tonal selected fill with a separate inset indicator. Keep the current nav foreground pair.'
+  },selectedContent));
+  groups.push(groupShell('nf25','NF25 · CommandPalette inline search hover','The field body is transparent at rest inside both default and translucent popups. Focus is a separate static state.',{
+    a:'Historical hover: neutral-12 body fill; 34% in the translucent popup.',
+    b:'Calibrated hover: 2% body fill in default, 4% in translucent.',
+    c:'Remove only the hover body fill; preserve field base and focus styling.'
+  },paletteContent));
+  groups.push(groupShell('nf26-28','NF26–NF28 · Compact choice indicators','A and B preserve the prior opaque hover. C shows the implemented 8% tonal fill with the source border unchanged. Each family shows unchecked rest, unchecked hover, checked selection, and focus independently.',{
+    a:'Archived source hover fill and border; selected indicators stay distinct.',
+    b:'Archived prior B: same opaque hover, with source borders and focus intact.',
+    c:'Implemented: 8% surface-strong tint over each exact rest fill; original border.'
+  },indicatorContent,[
+    choices[0],
+    {id:'b',name:'Calibrated · archived',letter:'B'},
+    {id:'c',name:'Tonal · implemented',letter:'C'}
+  ]));
+  groups.push(groupShell('nf29','NF29 · Date and time segment keyboard focus','The current inverse focus fill stays visible. Compare populated and empty focused segments because placeholders use a separate foreground rule.',{
+    a:'Historical focus fill and foreground, including the dark text collision.',
+    b:'Keep surface-emphasis; focused populated and placeholder text use content.on-solid.',
+    c:'Optional tonal segment fill with an independent focus ring.'
+  },dateContent));
+  document.querySelector('#comparisons').innerHTML=groups.join('');
+}
+function proposalStyles(){
+  return [
+    // Preserve historical A/B samples after regeneration; prevent the earlier B recipes from leaking into C.
+    '[data-option="a"] .muxui-toggle-button[data-selected][data-demo-hover]{background-color:var(--muxui-semantic-color-neutral-90)!important;outline-color:var(--muxui-semantic-color-neutral-90)!important;}',
+    '[data-option="a"] .muxui-toggle-button[data-selected][data-demo-hover],[data-option="a"] .muxui-text-editor__btn--active[data-demo-hover],[data-option="a"] .muxui-header-nav__nav-btn--current[data-demo-hover],[data-option="a"] .muxui-sidebar__nav-link--current[data-demo-hover],[data-option="c"] .muxui-toggle-button[data-selected],[data-option="c"] .muxui-text-editor__btn--active{background-image:none!important;}',
+    '[data-option="a"] .muxui-text-editor__toolbar .muxui-text-editor__btn--active[data-demo-hover]{background-color:var(--muxui-semantic-color-neutral-80)!important;}',
+    '[data-option="a"] .muxui-text-editor__bubble-menu .muxui-text-editor__btn--active[data-demo-hover],[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-text-editor__btn--active[data-demo-hover]{background-color:var(--muxui-semantic-color-neutral-18)!important;}',
+    '[data-option="a"] .muxui-header-nav__nav-btn--current[data-demo-hover],[data-option="a"] .muxui-sidebar__nav-link--current[data-demo-hover]{background-color:var(--muxui-semantic-color-neutral-96)!important;}',
+    '[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-header-nav__nav-btn--current[data-demo-hover],[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-sidebar__nav-link--current[data-demo-hover]{background-color:var(--muxui-semantic-color-neutral-20)!important;}',
+    '[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon{color:var(--muxui-semantic-color-neutral-20)!important;}',
+    '[data-option="a"] .muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__input[data-demo-hover]{background-color:var(--muxui-semantic-color-neutral-12)!important;}',
+    '[data-option="a"] .muxui-command-palette__popup--translucent .muxui-command-palette__input[data-demo-hover]{background-color:color-mix(in srgb,var(--muxui-semantic-color-neutral-12) 34%,transparent)!important;}',
+    '[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-date-segment[data-focused]{color:var(--muxui-semantic-color-neutral-default-20)!important;}',
+    '[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-date-segment[data-focused][data-placeholder]{color:var(--muxui-semantic-color-neutral-default-60)!important;}',
+
+    '[data-option="a"] .muxui-checkbox[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-indicator,[data-option="b"] .muxui-checkbox[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-indicator,[data-option="a"] .muxui-checkbox-field__button[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-field__indicator,[data-option="b"] .muxui-checkbox-field__button[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-field__indicator,[data-option="a"] .muxui-radio[data-hovered]:not([data-disabled],[data-selected]) .muxui-radio-indicator,[data-option="b"] .muxui-radio[data-hovered]:not([data-disabled],[data-selected]) .muxui-radio-indicator{background-color:var(--muxui-semantic-surface-hover)!important;background-image:none!important;}',
+    '[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-checkbox[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-indicator,[data-option="b"] [data-muxui-color-scheme="dark"] .muxui-checkbox[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-indicator,[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-checkbox-field__button[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-field__indicator,[data-option="b"] [data-muxui-color-scheme="dark"] .muxui-checkbox-field__button[data-hovered]:not([data-disabled],[data-selected],[data-indeterminate]) .muxui-checkbox-field__indicator,[data-option="a"] [data-muxui-color-scheme="dark"] .muxui-radio[data-hovered]:not([data-disabled],[data-selected]) .muxui-radio-indicator,[data-option="b"] [data-muxui-color-scheme="dark"] .muxui-radio[data-hovered]:not([data-disabled],[data-selected]) .muxui-radio-indicator{background-color:var(--muxui-semantic-color-neutral-default-94)!important;}',
+    '[data-option="a"] .muxui-radio-field__button[data-hovered]:not([data-disabled],[data-selected]) .muxui-radio-field__indicator,[data-option="b"] .muxui-radio-field__button[data-hovered]:not([data-disabled],[data-selected]) .muxui-radio-field__indicator{background-color:var(--muxui-semantic-color-neutral-14)!important;background-image:none!important;}',
+    '[data-option="a"] .muxui-switch[data-hovered]:not([data-disabled],[data-selected])::before,[data-option="b"] .muxui-switch[data-hovered]:not([data-disabled],[data-selected])::before,[data-option="a"] .muxui-switch-field__button[data-hovered]:not([data-disabled],[data-selected])::before,[data-option="b"] .muxui-switch-field__button[data-hovered]:not([data-disabled],[data-selected])::before{background-color:var(--muxui-semantic-color-neutral-26)!important;background-image:none!important;}',
+
+    '[data-option="c"] .muxui-toggle-button[data-selected]{background-color:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 14%,transparent)!important;outline-color:var(--muxui-semantic-color-neutral-100)!important;color:var(--muxui-semantic-color-neutral-100)!important;box-shadow:inset 0 -2px var(--muxui-semantic-color-neutral-100)!important;}',
+    '[data-option="c"] .muxui-toggle-button[data-selected][data-demo-hover]{background-color:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 22%,transparent)!important;}',
+    '[data-option="c"] .muxui-text-editor__btn--active{background-color:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 14%,transparent)!important;color:var(--muxui-semantic-color-neutral-100)!important;box-shadow:inset 0 -2px var(--muxui-semantic-color-neutral-100)!important;}',
+    '[data-option="c"] .muxui-text-editor__btn--active[data-demo-hover]{background-color:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 22%,transparent)!important;}',
+    '[data-option="c"] .muxui-header-nav__nav-btn--current,[data-option="c"] .muxui-sidebar__nav-link--current{background:color-mix(in srgb,currentColor 14%,transparent)!important;box-shadow:inset 0 -2px currentColor!important;}',
+    '[data-option="c"] .muxui-header-nav__nav-btn--current[data-demo-hover],[data-option="c"] .muxui-sidebar__nav-link--current[data-demo-hover]{background:color-mix(in srgb,currentColor 22%,transparent)!important;}',
+    '[data-option="c"] .muxui-command-palette__input[data-demo-hover]{background-color:transparent!important;}',
+    '[data-option="c"] .muxui-date-segment[data-focused]{background:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 14%,transparent)!important;color:var(--muxui-semantic-color-neutral-100)!important;box-shadow:0 0 0 2px var(--muxui-semantic-focus-ring)!important;}',
+    '[data-option="c"] .muxui-date-segment[data-focused][data-placeholder]{color:var(--muxui-semantic-color-neutral-100)!important;background:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 14%,transparent)!important;}',
+    '[data-option="c"] .muxui-date-segment[data-focused]:not([data-placeholder]){background:color-mix(in srgb,var(--muxui-semantic-color-neutral-100) 14%,transparent)!important;}'
+  ].join('\n');
+}
+async function loadStyles(){
+  const files=['../generated/themes.css','../generated/styles.css'];
+  const texts=await Promise.all(files.map(async function(path){
+    const response=await fetch(path);
+    if(!response.ok) throw new Error('Could not load '+path+' ('+response.status+')');
+    return response.text();
+  }));
+  const componentStyle=document.createElement('style');
+  componentStyle.id='component-styles';
+  componentStyle.textContent=texts.join('\n').replace(/:hover\b/g,':is(:hover,[data-demo-hover])').replace(/:focus(?![-\w])/g,':is(:focus,[data-demo-focus])');
+  document.head.insertBefore(componentStyle,document.querySelector('#layout'));
+  const proposalStyle=document.createElement('style');
+  proposalStyle.id='proposal-styles';
+  proposalStyle.textContent=proposalStyles();
+  document.head.append(proposalStyle);
+  render();
+  document.querySelector('#mode').addEventListener('change',render);
+  document.querySelector('#contrast').addEventListener('change',render);
+  document.documentElement.dataset.ready='true';
+  document.querySelector('#status').textContent='Generated Harbour theme and Mux UI component styles loaded. Samples are static CSS states.';
+}
+loadStyles().catch(function(error){
+  document.documentElement.dataset.ready='error';
+  document.querySelector('#status').textContent='Style load failed: '+error.message;
+  console.error(error);
+});
+</script>
+</body>
+</html>

@@ -713,6 +713,19 @@
   }
 }
 
+@media (forced-colors: none) {
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope :where(
+      .muxui-date-field,
+      .muxui-time-field,
+      .muxui-date-picker,
+      .muxui-date-range-picker
+    ) .muxui-date-segment[data-focused] {
+      color: var(--muxui-semantic-content-on-solid);
+    }
+  }
+}
+
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-number-control > .muxui-field-input::placeholder {
     color: var(--muxui-semantic-color-neutral-default-60);
@@ -940,6 +953,26 @@
   :scope .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
     background-color: var(--muxui-semantic-color-neutral-26);
     border-color: var(--muxui-semantic-color-neutral-50);
+  }
+}
+
+@media (forced-colors: none) {
+  .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
+    background-color: var(--muxui-semantic-color-neutral-20);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+    );
+  }
+
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
+      background-color: var(--muxui-semantic-color-neutral-20);
+      background-image: linear-gradient(
+        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+      );
+    }
   }
 }
 

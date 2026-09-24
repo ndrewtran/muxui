@@ -3012,6 +3012,26 @@
   }
 }
 
+@media (forced-colors: none) {
+  .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
+    background-color: var(--muxui-semantic-surface-raised);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+    );
+  }
+
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
+      background-color: var(--muxui-semantic-color-neutral-default-98);
+      background-image: linear-gradient(
+        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+      );
+    }
+  }
+}
+
 /* Range endpoints keep selection paint when they fall outside this month. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
   :scope .muxui-range-calendar-cell[data-selection-start],
