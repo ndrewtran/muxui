@@ -99,7 +99,7 @@ function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }
       if (!nextReduced) return;
       const controls = controlsRef.current;
       controlsRef.current = null;
-      controls?.stop();
+      controls?.cancel();
       node.style.removeProperty('transform');
       settledTransformRef.current = readTransform(node);
     });

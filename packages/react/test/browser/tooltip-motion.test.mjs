@@ -91,6 +91,23 @@ async function waitForMotion(page) {
   }, undefined, { timeout: 1500 });
 }
 
+async function readEnteringScaleTarget(page) {
+  return page.locator('.muxui-tooltip').evaluate((node) => {
+    const probe = node.cloneNode(false);
+    probe.removeAttribute('id');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.setAttribute('data-entering', '');
+    probe.removeAttribute('data-exiting');
+    probe.style.setProperty('transition', 'none', 'important');
+    probe.style.setProperty('visibility', 'hidden');
+    probe.style.setProperty('pointer-events', 'none');
+    node.parentElement.append(probe);
+    const scale = getComputedStyle(probe).scale;
+    probe.remove();
+    return scale;
+  });
+}
+
 async function waitForSettled(page) {
   await page.waitForFunction(() => {
     const node = document.querySelector('.muxui-tooltip');
@@ -136,7 +153,8 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     assert.equal(entry.placement, 'top');
     assert.ok(entry.opacity < 1 || entry.entering, 'entry changes opacity before settling');
     assert.ok(Number.parseFloat(entry.translate.split(/\s+/u)[1]) > 4, 'top entry rises from an 8px offset');
-    assert.equal(entry.scale, '0.9', 'entry starts at the approved scale');
+    assert.equal(await readEnteringScaleTarget(page), '0.9', 'entering style targets the approved scale');
+    assert.ok(Number(entry.scale) >= 0.9 && Number(entry.scale) <= 1, `computed scale is the current entry sample: ${entry.scale}`);
     assert.match(entry.filter, /blur\(5px\)/u, 'entry starts with finite blur');
     assert.equal(await page.locator('#tooltip-trigger').getAttribute('aria-describedby'), await tooltip.getAttribute('id'));
     assert.equal((await readRefs(page)).objectAttached, true, 'object refs receive the mounted tooltip node');
