@@ -56,13 +56,14 @@ th:nth-child(2), td:nth-child(2) { width: 20%; }
 th:nth-child(3), td:nth-child(3) { width: 40%; }
 th:nth-child(4), td:nth-child(4) { width: auto; }
 tbody tr[id] { scroll-margin-top: 1rem; }
+.entry-status { display: inline-block; margin-left: .5em; color: var(--muted); font-size: .82em; font-weight: 650; text-decoration: none; white-space: nowrap; }
 tr[hidden] { display: none; }
 .ledger-filter { max-width: 44rem; margin-block: 1rem 1.5rem; }
 .ledger-filter label { display: block; margin-bottom: .35rem; font-weight: 650; }
 .ledger-filter__controls { display: flex; gap: .5rem; }
 .ledger-filter input, .ledger-filter button { min-height: 2.5rem; padding: .4rem .65rem; border: 1px solid var(--line); border-radius: 0; background: var(--background); color: var(--foreground); font: inherit; }
 .ledger-filter input { min-width: 0; flex: 1; }
-.ledger-filter button { cursor: pointer; }
+.ledger-filter button { flex: 0 0 auto; cursor: pointer; white-space: nowrap; }
 .ledger-filter button:disabled { cursor: default; opacity: .65; }
 .ledger-filter__status { margin: .45rem 0 0; color: var(--muted); font-size: .9rem; }
 strong { font-weight: 700; }
@@ -93,20 +94,23 @@ strong { font-weight: 700; }
 <header class="document-header"><h1 id="title">Neutral interactive fill ledger</h1><nav class="section-nav" aria-label="Ledger sections">
   <a href="#scope">Scope and token boundary</a>
   <a href="#recommendations">Recommended review</a>
+  <a href="#medium-assessment">Medium assessment</a>
   <a href="#decisions">Design decisions</a>
   <a href="#cascade">Cascade notes</a>
   <a href="#validation">Future validation</a>
+  <a href="#proof">Current verification</a>
   <a href="#provenance">Review provenance</a>
 </nav></header><main class="document-body">
-<p>Advisory source review for future tonal neutral fill work. This ledger records
-confirmed current fills and separates them from design recommendations. It
-does not set token policy, declare defects, provide release evidence, or
-authorize implementation.</p>
-<p>Baseline: branch codex/accept-react-motion, shared worktree on 2026-09-23,
-based on 25e273c plus the then-current uncommitted source. Core component,
-field, collection, and overlay style files were already dirty. Findings reflect
-the working tree, including its current ListBox nonselected focus and hover
-rules. Links target that worktree and may need refreshing if the source moves.</p>
+<p>Advisory source review for tonal neutral fills. This ledger records current
+fills, historical audit findings, and separate design recommendations. It does
+not set token policy, declare defects, or serve as release evidence or
+authorization for future changes.</p>
+<p>Historical audit baseline: branch codex/accept-react-motion, shared worktree
+on 2026-09-23, based on 25e273c plus the then-current uncommitted source. Core
+component, field, collection, and overlay style files were already dirty at
+that time. The current implementation and task-local verification below refer
+to the main shared worktree. The historical branch name and dirty-file notes do
+not describe the current checkout.</p>
 <h2 id="scope">Scope and token boundary</h2>
 <p>The source inventory covers the fixed 53-family snapshot and 26 supplemental
 React component records (24 roots and two subpaths), mapped through the React
@@ -114,8 +118,9 @@ generator to 12 authored style sheets. This is search coverage, not a count of
 issues: <a href="../../../catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json">family snapshot</a>,
 <a href="../../../catalog/react-r1-6/supplemental-components.json#L4">supplemental inventory</a>,
 <a href="../src/generate.mjs#L936">generator mapping</a>.</p>
-<p>Include a state only when its current solid neutral fill is supported by the
-source and effective cascade. The canonical guide documents shared neutral
+<p>Include a state only when its neutral fill is supported by the source and
+effective cascade. Completed entries record the implementation alongside the
+historical audit fill. The canonical guide documents shared neutral
 action fills for buttons and disclosure triggers: 8%, 12%, and 16% of
 surface.strong source colour mixed with transparent for rest, hover, and
 pressed. Selection uses a separate 12% mix of selection.track. The guide does
@@ -142,12 +147,9 @@ mixes (<a href="../../../catalog/tokens/default-theme.json#L1419">surface roles<
 <p>ListBox selected fills and ToggleButtonGroup selected fills are explicitly
 excluded. Their other states remain in scope. Do not infer that body, primary,
 inverse, selected, or binary indicator fills are wrong because they are solid.
-Preserve forced-colors behaviour during future work.</p>
-<h2 id="recommendations">Recommended for future design review</h2>
-<p>All current fill facts below are source-confirmed. Design confidence describes
-fit for a future tonal treatment, not implementation evidence. P1 covers clear
-neutral action controls; P2 covers states whose surface role needs more design
-judgment. Every status is future review only.</p>
+Existing forced-colors behaviour remains unchanged.</p>
+<h2 id="recommendations">Reviewed candidates and status</h2>
+<p><strong>29 resolved; no open design decisions.</strong> NF22–NF25 and NF29 use the approved B · Calibrated direction: four calibrated hover updates and one focused-foreground repair with its fill retained. NF26–NF28 now use C · Tonal: an 8% <code>surface.strong</code> transparent hover layer over each original indicator rest fill, with source borders preserved. NF20 retains keyboard focus after its pointer uplift; NF21 retains its keyboard locator. Global tokens are unchanged. Historical audit fills remain alongside the current implementation.</p>
 <div class="ledger-filter" role="search" aria-labelledby="ledger-search-label">
   <label id="ledger-search-label" for="ledger-search">Search all 29 entries</label>
   <div class="ledger-filter__controls">
@@ -161,123 +163,75 @@ judgment. Every status is future review only.</p>
 <tr>
 <th>ID</th>
 <th>Component, anatomy, state</th>
-<th>Confirmed current fill, mode and source</th>
-<th>Design confidence, rationale, direction, priority</th>
+<th>Current implementation or historical audit fill, mode and source</th>
+<th>Implementation status and assessment</th>
 </tr>
 </thead>
-<tbody><tr id="NF01"><td>NF01</td>
-<td>DatePicker and DateRangePicker calendar trigger, hover and mouse-active</td>
-<td>Unscoped hover uses surface.hover; scoped light stays neutral-default-10 and scoped dark stays neutral-default-100 for rest, hover, and mouse press. <a href="../src/styles/base.css#L1056">Base hover</a>, <a href="../src/styles/base.css#L1080">shared control hover</a>, <a href="../src/styles/fields.css#L1018">light scope</a>, <a href="../src/styles/fields.css#L1040">dark scope</a>.</td>
-<td>Medium. Secondary action, but the solid field rest fill belongs to the field treatment. Keep that rest fill and review a 12% neutral source-colour hover layer over it. P1.</td>
-</tr>
-<tr id="NF02"><td>NF02</td>
-<td>SearchField clear button, hover and pressed</td>
-<td>surface.hover and surface.pressed; their dark-mode aliases resolve to neutral-default-96 and neutral-default-70. <a href="../src/styles/fields.css#L365">Hover</a>, <a href="../src/styles/fields.css#L370">pressed</a>, <a href="../../../catalog/tokens/default-theme.json#L8616">hover mode</a>, <a href="../../../catalog/tokens/default-theme.json#L809">pressed mode</a>.</td>
-<td>High. Discrete neutral action. Review shared neutral action hover/pressed mixes at 12% and 16%. P1.</td>
-</tr>
-<tr id="NF03"><td>NF03</td>
-<td>NumberField steppers, hover and active</td>
-<td>Hover uses surface.pressed; active uses border.strong. The reviewed theme maps those to neutral-20 / neutral-70 and neutral-26 / neutral-50 in light / dark. <a href="../src/styles/fields.css#L255">Stepper states</a>, <a href="../../../catalog/tokens/default-theme.json#L809">pressed mode</a>, <a href="../../../catalog/tokens/default-theme.json#L1562">border mode</a>.</td>
-<td>High. Button-like increment/decrement actions. Review 12% hover and 16% pressed mixes; retain the control border separately. P1.</td>
-</tr>
-<tr id="NF04"><td>NF04</td>
-<td>Toolbar child Buttons, hover, active, and pressed</td>
-<td>Generic selectors use surface.hover. Scoped hover and [data-pressed] overrides resolve to neutral-default-18 in light and neutral-default-92 in dark; unscoped states use surface.hover. <a href="../src/styles/collections.css#L1829">Generic rules</a>, <a href="../src/styles/collections.css#L2217">light scope</a>, <a href="../src/styles/collections.css#L2224">dark scope</a>.</td>
-<td>High. The children are Buttons with documented neutral action intent. Review the applicable neutral-toolbar treatment against 12% hover and 16% pressed fills; keep the outer surface.subtle structural and preserve toolbar variants. P1.</td>
-</tr>
-<tr id="NF05"><td>NF05</td>
-<td>ToggleButton and ToggleButtonGroup unselected button, hover</td>
-<td>The base hover uses solid neutral-14; the explicit dark rule repeats neutral-14. A motion-ready group trailing button suppresses this hover fill during its trailing phase. <a href="../src/styles/components.css#L753">Base hover</a>, <a href="../src/styles/components.css#L1247">dark hover</a>, <a href="../src/styles/components.css#L855">group trailing rule</a>.</td>
-<td>High. Neutral action button. Review the shared 12% hover token where the motion layer does not suppress the fill. Selected ToggleButtonGroup states are excluded. P1.</td>
-</tr>
-<tr id="NF06"><td>NF06</td>
-<td>TagGroup unselected tag, hover and pressed; tag remove button, hover</td>
-<td>Unselected tag uses surface.hover and surface.pressed; remove uses surface.hover. Selected tag hover instead resolves to action.background-hover. <a href="../src/styles/collections.css#L1717">Tag hover</a>, <a href="../src/styles/collections.css#L1722">tag pressed</a>, <a href="../src/styles/collections.css#L1742">selected hover override</a>, <a href="../src/styles/collections.css#L1775">remove hover</a>.</td>
-<td>Medium. Tags combine container and action roles. Review tonal hover/pressed layers only for unselected tags and remove controls; retain the selected action treatment. P2.</td>
-</tr>
-<tr id="NF07"><td>NF07</td>
-<td>Card button variants, hover and pressed</td>
-<td>Outlined/elevated hover use neutral-10, filled hover neutral-14; outlined/filled pressed use neutral-18 and elevated pressed neutral-14. <a href="../src/supplemental/styles.css#L305">Hover variants</a>, <a href="../src/supplemental/styles.css#L319">pressed variants</a>.</td>
-<td>Medium. A state layer could reduce the solid step, but must preserve outlined, elevated, and filled hierarchy, borders, and shadows. Review component-owned mixes over each rest surface. P2.</td>
-</tr>
-<tr id="NF08"><td>NF08</td>
-<td>HeaderNav and Sidebar navigation/actions, hover</td>
-<td>HeaderNav nav button, mobile trigger, and mobile close; Sidebar nav link, nav button, account trigger, feature-card dismiss, mobile menu button, and mobile close button. Hover is neutral-96 light / neutral-20 dark. <a href="../src/supplemental/styles.css#L992">HeaderNav light surface</a>, <a href="../src/supplemental/styles.css#L1137">dark surface</a>, <a href="../src/supplemental/styles.css#L1040">light nav button</a>, <a href="../src/supplemental/styles.css#L1080">mobile trigger</a>, <a href="../src/supplemental/styles.css#L1131">mobile close</a>, <a href="../src/supplemental/styles.css#L1152">dark nav button</a>, <a href="../src/supplemental/styles.css#L1166">dark mobile trigger</a>, <a href="../src/supplemental/styles.css#L1178">dark mobile close</a>, <a href="../src/supplemental/styles.css#L2177">Sidebar surface</a>, <a href="../src/supplemental/styles.css#L2290">light nav link</a>, <a href="../src/supplemental/styles.css#L2401">nav button</a>, <a href="../src/supplemental/styles.css#L2515">account trigger</a>, <a href="../src/supplemental/styles.css#L2578">feature dismiss</a>, <a href="../src/supplemental/styles.css#L2613">mobile menu</a>, <a href="../src/supplemental/styles.css#L2665">mobile close</a>, <a href="../src/supplemental/styles.css#L2711">dark nav link</a>, <a href="../src/supplemental/styles.css#L2723">dark nav button</a>, <a href="../src/supplemental/styles.css#L2748">dark account trigger</a>, <a href="../src/supplemental/styles.css#L2768">dark feature dismiss</a>, <a href="../src/supplemental/styles.css#L2787">dark mobile menu</a>, <a href="../src/supplemental/styles.css#L2793">dark mobile close</a>.</td>
-<td>Medium. In light mode, the neutral-100 navigation surface uses inverse foregrounds; surface.strong as a tint source can disappear against it. Review a component-owned transparent tint from the on-navigation neutral or currentColor, preserving foreground pairing in both modes. P2.</td>
-</tr>
-<tr id="NF09"><td>NF09</td>
-<td>MultiSelect footer action button, hover</td>
-<td>Solid neutral-14 fill with neutral-30 border. <a href="../src/supplemental/styles.css#L1802">Footer hover</a>.</td>
-<td>Medium. Discrete action within the selection surface. Review a 12% neutral hover layer while retaining its border. P2.</td>
-</tr>
-<tr id="NF10"><td>NF10</td>
-<td>InputTags tag, hover; tag remove control, hover</td>
-<td>Tag hover uses neutral-18; remove hover uses neutral-22. <a href="../src/supplemental/styles.css#L1283">Tag hover</a>, <a href="../src/supplemental/styles.css#L1320">remove hover</a>.</td>
-<td>Medium. Both are small neutral interaction targets. Review component-owned transparent fills at the underlying tag/group surface. P2.</td>
-</tr>
-<tr id="NF11"><td>NF11</td>
-<td>TagSelect tag remove button, hover</td>
-<td>Solid neutral-26 fill. <a href="../src/supplemental/styles.css#L3093">Remove hover</a>.</td>
-<td>Medium. Discrete remove action. Review a neutral transparent hover fill while preserving its foreground contrast. P2.</td>
-</tr>
-<tr id="NF12"><td>NF12</td>
-<td>CommandPalette chip remove button, hover</td>
-<td>Solid neutral-20 fill; the translucent popup chip surface has a separate neutral-12 mix. <a href="../src/supplemental/styles.css#L714">Remove hover</a>, <a href="../src/supplemental/styles.css#L719">translucent chip surface</a>.</td>
-<td>Medium. Small neutral action, with two popup surface treatments. Review a component-owned hover layer over each surface. P2.</td>
-</tr>
-<tr id="NF13"><td>NF13</td>
-<td>CommandPalette item, hover and pressed</td>
-<td>Default popup hover/pressed use solid neutral-12/18. The translucent popup already uses 44% neutral-18 and 56% neutral-22 mixes. Selected rows use accent fills. <a href="../src/supplemental/styles.css#L774">Hover</a>, <a href="../src/supplemental/styles.css#L787">pressed</a>, <a href="../src/supplemental/styles.css#L779">translucent states</a>, <a href="../src/supplemental/styles.css#L800">selected states</a>.</td>
-<td>Medium. Review tonal neutral hover/pressed only for unselected items in the default popup. Keep the existing translucent and accent-selected treatments. P2.</td>
-</tr>
-<tr id="NF14"><td>NF14</td>
-<td>TextEditor unselected toolbar and bubble-menu buttons, hover and pointer-active</td>
-<td>Generic toolbar hover/press are 7%/20% neutral-90 mixes. Bubble-menu hover resolves to solid neutral-18 in all modes and wins while pointer-active; dark main-toolbar hover/press also resolves to neutral-18. <a href="../src/text-editor/text-editor.css#L274">Generic states</a>, <a href="../src/text-editor/text-editor.css#L431">bubble override</a>, <a href="../src/text-editor/text-editor.css#L479">dark toolbar hover</a>.</td>
-<td>High. Button-like actions already have a tonal generic treatment. Review the bubble and dark-toolbar overrides for a mode-appropriate component mix; keep selected toolbar states separate. P1.</td>
-</tr>
-<tr id="NF15"><td>NF15</td>
-<td>Calendar and RangeCalendar unselected cells, hover</td>
-<td>Both use solid surface.subtle, which maps to neutral-12 light / neutral-98 dark. Selected hover follows a separate strong selection treatment. <a href="../src/styles/collections.css#L48">Calendar hover</a>, <a href="../src/styles/collections.css#L706">RangeCalendar hover</a>, <a href="../src/styles/collections.css#L58">selected Calendar hover</a>, <a href="../src/styles/collections.css#L766">selected RangeCalendar hover</a>.</td>
-<td>Medium. Review a light neutral state layer over the calendar surface without weakening selected, start/end, or unavailable treatments. P2.</td>
-</tr>
-<tr id="NF16"><td>NF16</td>
-<td>GridList unselected item, hover</td>
-<td>Solid surface.subtle; selected items take the later selection.track rule. <a href="../src/styles/collections.css#L396">Hover</a>, <a href="../src/styles/collections.css#L400">selection</a>.</td>
-<td>Medium. Review a tonal hover layer distinct from selection. P2.</td>
-</tr>
-<tr id="NF17"><td>NF17</td>
-<td>Table unselected row, hover</td>
-<td>Solid surface.subtle; selected rows use the separate 12% selection.background token. <a href="../src/styles/collections.css#L1540">Hover</a>, <a href="../src/styles/collections.css#L1544">selection</a>.</td>
-<td>Medium. A tonal hover layer could separate pointer feedback from selected feedback. P2.</td>
-</tr>
-<tr id="NF18"><td>NF18</td>
-<td>Tree unselected item row, hover</td>
-<td>Solid surface.subtle; selected rows use tonal selection.background. <a href="../src/styles/collections.css#L1869">Hover</a>, <a href="../src/styles/collections.css#L1873">selection</a>.</td>
-<td>Medium. Review a hover layer distinct from the existing selection fill. P2.</td>
-</tr>
-<tr id="NF19"><td>NF19</td>
-<td>Underline Tabs unselected tab, hover</td>
-<td>Solid surface.subtle. Pill, segment, and overflow hover/pressed states use neutral action tokens; selected hover states already use tonal fills. <a href="../src/styles/collections.css#L1637">Base tab hover</a>, <a href="../src/styles/collections.css#L949">other variants</a>, <a href="../src/styles/collections.css#L976">selected hover</a>, <a href="../src/styles/collections.css#L982">selected underline hover</a>.</td>
-<td>Medium. Review only unselected underline hover; preserve the other variant and selected-state treatments. P2.</td>
-</tr>
-<tr id="NF20"><td>NF20</td>
-<td>Select, ComboBox, Autocomplete, default CommandPalette, MultiSelect, and TagSelect option rows, focus; ListBox nonselected rows, hover only</td>
-<td>Shared item-focus-bg resolves to solid surface.hover (neutral-14 light / neutral-96 dark). Select/ComboBox dark focused rows explicitly use neutral-default-96. MultiSelect/TagSelect map hovered and focused rows to this fill. Default CommandPalette focus uses it; the translucent popup focus already uses a 50% mix and is excluded. <a href="../src/styles/base.css#L800">Shared focus</a>, <a href="../src/styles/collections.css#L467">ListBox hover and focus-only rule</a>, <a href="../src/styles/fields.css#L127">Autocomplete hover</a>, <a href="../src/styles/collections.css#L2368">Select/ComboBox dark focus</a>, <a href="../src/supplemental/styles.css#L783">CommandPalette translucent focus</a>, <a href="../src/supplemental/styles.css#L1724">MultiSelect</a>, <a href="../src/supplemental/styles.css#L3177">TagSelect</a>.</td>
-<td>Medium. These are navigable option surfaces, not the Menu action treatment. Review component-owned focus/hover layers separately from selection. ListBox keyboard focus without pointer hover is transparent; only its nonselected hover is included. P2.</td>
-</tr>
-<tr id="NF21"><td>NF21</td>
-<td>Virtualizer item, focused</td>
-<td>item-focus-bg is solid surface.hover in the default path; dark focus explicitly uses neutral-default-94. <a href="../src/styles/collections.css#L2659">Focus rule</a>, <a href="../src/styles/collections.css#L2670">dark override</a>.</td>
-<td>Medium. Review a tonal keyboard-focus surface while preserving the focus ring and contrast. P2.</td>
-</tr>
+<tbody><tr id="NF01"><td><s>NF01</s></td><td><s>DatePicker and DateRangePicker calendar trigger, hover and mouse-active</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: B · Calibrated uses an 8% hover / 12% press <code>surface.strong</code> layer over the opaque neutral-10 light / neutral-100 dark trigger base. Historical audit fill: the unscoped hover used surface.hover; scoped hover and press stayed flat over their solid bases. <a href="../src/styles/fields.css#L1082">Current hover layer</a>, <a href="../src/styles/fields.css#L1090">press layer</a>, <a href="../src/styles/fields.css#L1051">light base</a>, <a href="../src/styles/fields.css#L1073">dark base</a>.</td><td>B · Calibrated. Opaque rest, selected/range, unavailable, and disabled treatments remain distinct.</td></tr>
+<tr id="NF02"><td><s>NF02</s></td><td><s>SearchField clear button, hover and pressed</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: 8% hover and 12% pressed mixes of surface.strong with transparent. Dark-scheme hover/pressed glyph foreground uses content.default; rest and disabled foregrounds are unchanged. <a href="../src/styles/fields.css#L366">Hover</a>, <a href="../src/styles/fields.css#L371">pressed</a>, <a href="../src/styles/fields.css#L1110">dark state foreground</a>. Historical audit fill: surface.hover and surface.pressed, resolving to neutral-default-96 and neutral-default-70 in dark. <a href="../../../catalog/tokens/default-theme.json#L8616">Hover mode</a>, <a href="../../../catalog/tokens/default-theme.json#L809">pressed mode</a>.</td><td>High-confidence discrete neutral action (historical assessment). B uses 8% hover and 12% pressed.</td></tr>
+<tr id="NF03"><td><s>NF03</s></td><td><s>NumberField steppers, hover and active</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: 8% hover and 12% active mixes of surface.strong with transparent. <a href="../src/styles/fields.css#L255">Stepper states</a>. Historical audit fill: hover used surface.pressed and active used border.strong, resolving to neutral-20 / neutral-70 and neutral-26 / neutral-50 in light / dark. <a href="../../../catalog/tokens/default-theme.json#L809">Pressed mode</a>, <a href="../../../catalog/tokens/default-theme.json#L1562">border mode</a>.</td><td>High-confidence button-like action (historical assessment). The control border remains separate. <strong>Completed 2026-09-23.</strong></td></tr>
+<tr id="NF04"><td><s>NF04</s></td><td><s>Toolbar child Buttons, hover, active, and pressed</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: direct-child neutral Toolbar Buttons use 8% hover and 12% active/data-pressed mixes of surface.strong with transparent. Pressed states retain the scoped normal foreground; the outer surface and variants are unchanged. <a href="../src/styles/collections.css#L1835">Direct-child rules</a>, <a href="../src/styles/collections.css#L1855">generic hover/press</a>, <a href="../src/styles/collections.css#L2244">light hover/press scopes</a>, <a href="../src/styles/collections.css#L2250">dark hover/press scopes</a>. Historical audit fill: scoped solid neutral-18 in light and neutral-92 in dark; generic states used surface.hover.</td><td>High-confidence neutral action (historical assessment). <strong>Completed 2026-09-23.</strong></td></tr>
+<tr id="NF05"><td><s>NF05</s></td><td><s>ToggleButton and ToggleButtonGroup unselected button, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected hover uses an 8% surface.strong mix with transparent. <a href="../src/styles/components.css#L753">Base hover</a>, <a href="../src/styles/components.css#L1248">dark hover</a>. Historical audit fill: solid neutral-14 in base and dark rules. The motion-ready group trailing button still suppresses hover fill during its trailing phase. <a href="../src/styles/components.css#L855">Group trailing rule</a>.</td><td>High-confidence neutral action (historical assessment). Selected ToggleButtonGroup states and trailing suppression remain unchanged. <strong>Completed 2026-09-23; hover only.</strong></td></tr>
+<tr id="NF06"><td><s>NF06</s></td><td><s>TagGroup unselected tag, hover and pressed; tag remove button, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected tag keeps its opaque rest with 3% hover / 8% pressed overlay layers; the transparent remove target uses an 8% hover mix. Selected tag treatment is unchanged. Historical audit fill: surface.hover / surface.pressed on the tag and surface.hover on remove; selected hover used action.background-hover. <a href="../src/styles/collections.css#L1737">Tag hover layer</a>, <a href="../src/styles/collections.css#L1745">pressed layer</a>, <a href="../src/styles/collections.css#L1768">selected hover</a>, <a href="../src/styles/collections.css#L1781">remove base</a>, <a href="../src/styles/collections.css#L1801">remove hover</a>.</td><td>B · Calibrated. The opaque tag base, selected accent treatment, focus ring, and remove target remain distinct.</td></tr>
+<tr id="NF07"><td><s>NF07</s></td><td><s>Card button variants, hover and pressed</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: outlined/elevated/filled hover layers are 3% / 2% / 4%; outlined/filled pressed are 8%, elevated pressed 6%. Variant bases, borders, and elevations remain separate; selected elevated hover/press also retain the inset ring with matching elevation. Historical audit fill: hover was neutral-10 on outlined/elevated and neutral-14 on filled; pressed was neutral-18 on outlined/filled and neutral-14 on elevated. <a href="../src/supplemental/styles.css#L305">Outlined hover</a>, <a href="../src/supplemental/styles.css#L313">elevated hover</a>, <a href="../src/supplemental/styles.css#L321">filled hover</a>, <a href="../src/supplemental/styles.css#L328">outlined/filled pressed</a>, <a href="../src/supplemental/styles.css#L337">elevated pressed</a>, <a href="../src/supplemental/styles.css#L350">selected inset ring</a>, <a href="../src/supplemental/styles.css#L356">selected hover ring/elevation</a>, <a href="../src/supplemental/styles.css#L362">selected pressed ring/elevation</a>.</td><td>B · Calibrated. Strength varies by variant to preserve its base hierarchy and elevation.</td></tr>
+<tr id="NF08"><td><s>NF08</s></td><td><s>HeaderNav and Sidebar navigation/actions, hover</s><span class="entry-status">Completed · 2026-09-24</span></td><td>Current: light controls keep their 4% neutral-10 hover layer, and safe dark noncurrent navigation keeps 4% neutral-100. The six previously deferred dark controls now use a 4% neutral-100 hover mix with transparent. HeaderNav mobile trigger/close and Sidebar dismiss/mobile menu/mobile close use neutral-100 foregrounds; the account trigger uses neutral-60 at rest and focus-only, neutral-100 on hover. Historical hover fill: neutral-96 light / neutral-20 dark, with dark foreground collisions. <a href="../src/supplemental/styles.css#L2840">Light uplift</a>, <a href="../src/supplemental/styles.css#L2856">safe dark uplift</a>, <a href="../src/supplemental/styles.css#L2866">six dark hover repairs</a>, <a href="../src/supplemental/styles.css#L2882">dark foregrounds</a>, <a href="../src/supplemental/styles.css#L2895">account foreground</a>.</td><td>B · Calibrated. Completed 2026-09-24. Resting surfaces, light mode, current-page treatments, geometry, and focus remain unchanged. The six new tonal hover rules apply only outside forced-colors mode, preserving its prior system-colour treatment.</td></tr>
+<tr id="NF09"><td><s>NF09</s></td><td><s>MultiSelect footer action button, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: transparent-rest footer action uses an 8% hover mix; neutral-30 border and focus treatment remain. No pressed state was added. Historical audit fill: solid neutral-14 with neutral-30 border. <a href="../src/supplemental/styles.css#L1822">Footer rest</a>, <a href="../src/supplemental/styles.css#L1843">hover</a>.</td><td>B · Calibrated. Hover only.</td></tr>
+<tr id="NF10"><td><s>NF10</s></td><td><s>InputTags tag, hover; tag remove control, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: opaque tag base gets a 4% hover overlay; its transparent-rest remove target uses an 8% hover mix. Historical audit fill: tag hover neutral-18 and remove hover neutral-22. <a href="../src/supplemental/styles.css#L1316">Tag layer</a>, <a href="../src/supplemental/styles.css#L1335">remove base</a>, <a href="../src/supplemental/styles.css#L1356">remove hover</a>.</td><td>B · Calibrated. The tag base and remove target remain separate; combined hover keeps the remove target distinct, with focus retained.</td></tr>
+<tr id="NF11"><td><s>NF11</s></td><td><s>TagSelect tag remove button, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: the transparent-rest remove target uses an 8% hover mix. Historical audit fill: solid neutral-26. <a href="../src/supplemental/styles.css#L3247">Remove base</a>, <a href="../src/supplemental/styles.css#L3268">hover</a>.</td><td>B · Calibrated. Chip base, focus, glyph contrast, disabled, and exit-chip states remain unchanged.</td></tr>
+<tr id="NF12"><td><s>NF12</s></td><td><s>CommandPalette chip remove button, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: the remove target uses an 8% transparent hover mix in both popup variants. The translucent popup chip surface remains its separate neutral-12 blend. Historical audit fill: solid neutral-20 on remove. <a href="../src/supplemental/styles.css#L725">Remove base</a>, <a href="../src/supplemental/styles.css#L741">hover</a>, <a href="../src/supplemental/styles.css#L746">translucent chip</a>.</td><td>B · Calibrated. Chip base/translucency, focus, and glyph contrast are preserved.</td></tr>
+<tr id="NF13"><td><s>NF13</s></td><td><s>CommandPalette item, hover and pressed</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected items in the default popup use 2% hover / 8% pressed; selected items are excluded. The translucent popup keeps its 44% hover and 56% pressed mixes. Historical audit fill: default hover/pressed used solid neutral-12/18; selected rows used accent fills. <a href="../src/supplemental/styles.css#L805">Default hover</a>, <a href="../src/supplemental/styles.css#L821">default pressed</a>, <a href="../src/supplemental/styles.css#L809">translucent hover/press</a>, <a href="../src/supplemental/styles.css#L833">selected states</a>, <a href="../src/supplemental/styles.css#L829">focus ring</a>.</td><td>B · Calibrated. This updates pointer feedback only; keyboard focus remains separately handled under NF20.</td></tr>
+<tr id="NF14"><td><s>NF14</s></td><td><s>TextEditor unselected toolbar and bubble-menu buttons, hover and pointer-active</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected bubble-menu buttons use 8% hover and 12% active mixes of surface.strong in both schemes; dark main-toolbar buttons use 8%/12%. Light main-toolbar buttons retain 7%/20%. Selected editor rest fills remain intact; NF23 records their calibrated hover layers. <a href="../src/text-editor/text-editor.css#L274">Generic states</a>, <a href="../src/text-editor/text-editor.css#L436">bubble hover/active</a>, <a href="../src/text-editor/text-editor.css#L487">dark toolbar hover</a>, <a href="../src/text-editor/text-editor.css#L494">dark toolbar active</a>. Historical audit fill: bubble-menu and dark main-toolbar hover/active resolved to solid neutral-18.</td><td>High-confidence button-like action (historical assessment). <strong>Completed 2026-09-23.</strong></td></tr>
+<tr id="NF15"><td><s>NF15</s></td><td><s>Calendar and RangeCalendar unselected cells, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: enabled, unselected in-month cells use a 2% <code>surface.strong</code> hover layer. Selected/provisional range, outside-month, unavailable/disabled, and focus states retain their separate rules. Historical audit fill: surface.subtle (neutral-12 light / neutral-98 dark); selected hover used a strong selection treatment. <a href="../src/styles/collections.css#L52">Calendar hover layer</a>, <a href="../src/styles/collections.css#L722">RangeCalendar hover layer</a>, <a href="../src/styles/collections.css#L62">selected Calendar</a>, <a href="../src/styles/collections.css#L782">selected RangeCalendar</a>, <a href="../src/styles/collections.css#L749">range focus</a>, <a href="../src/styles/collections.css#L824">provisional range</a>.</td><td>B · Calibrated. Only enabled, unselected in-month cells changed.</td></tr>
+<tr id="NF16"><td><s>NF16</s></td><td><s>GridList unselected item, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected hover uses a 4% <code>surface.strong</code> layer over the opaque light <code>surface.canvas</code> or custom dark base; selected/drop-target, disabled, dragging, and focus rules remain separate. Historical audit fill: surface.subtle on hover; dark rest used an 85% neutral-default-100/black blend. <a href="../src/styles/collections.css#L394">Rest</a>, <a href="../src/styles/collections.css#L2489">dark rest</a>, <a href="../src/styles/collections.css#L400">hover layer</a>, <a href="../src/styles/collections.css#L407">disabled/dragging fallback</a>, <a href="../src/styles/collections.css#L412">selection</a>, <a href="../src/styles/collections.css#L417">focus</a>, <a href="../src/styles/collections.css#L432">drag/drop</a>.</td><td>B · Calibrated. The state layer retains the opaque rest and preserves selection, drop/drag, and focus.</td></tr>
+<tr id="NF17"><td><s>NF17</s></td><td><s>Table unselected row, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected row hover uses a 2% <code>surface.strong</code> mix. Selected rows retain the separate 12% selection.background token, separator, foreground, and two-ring focus. Historical audit fill: solid surface.subtle. <a href="../src/styles/collections.css#L1560">Hover</a>, <a href="../src/styles/collections.css#L1564">selection</a>, <a href="../src/styles/collections.css#L1568">separator and focus rings</a>.</td><td>B · Calibrated. Selected, separator, foreground, and two-ring focus treatments remain intact.</td></tr>
+<tr id="NF18"><td><s>NF18</s></td><td><s>Tree unselected item row, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected row hover uses a 2% <code>surface.strong</code> mix; selected and focus rules remain separate. Historical audit fill: solid surface.subtle. Real Mux Tree SSR renders recursive React children as flattened sibling <code>div[role=&quot;row&quot;]</code> elements with <code>aria-level</code>; no nested-row overlay or wrapper is needed. <a href="../src/styles/collections.css#L1895">Hover</a>, <a href="../src/styles/collections.css#L1899">selection</a>, <a href="../src/styles/collections.css#L1903">focus</a>.</td><td>B · Calibrated. Hover strength is calibrated for the flattened row surface; preserve selection and focus.</td></tr>
+<tr id="NF19"><td><s>NF19</s></td><td><s>Underline Tabs unselected tab, hover</s><span class="entry-status">Completed · 2026-09-23</span></td><td>Current: unselected underline tabs use a 2% <code>surface.strong</code> hover mix. Selected-tab hover and pill/segment/overflow interactions retain their existing treatment. Historical audit fill: solid surface.subtle for base tab hover; selected underline hover retained its action treatment. <a href="../src/styles/collections.css#L1002">Unselected underline hover</a>, <a href="../src/styles/collections.css#L998">selected underline hover</a>, <a href="../src/styles/collections.css#L965">other variants</a>, <a href="../src/styles/collections.css#L881">moving underline</a>.</td><td>B · Calibrated. Only unselected underline-tab hover changed.</td></tr>
+<tr id="NF20"><td><s>NF20</s></td><td><s>Select, ComboBox, Autocomplete, default CommandPalette, MultiSelect, and TagSelect option rows, focus; ListBox nonselected rows, hover only</s><span class="entry-status">Resolved · Pointer uplift complete · Focus retained</span></td><td>Current split: ListBox nonselected pointer hover uses a 2% <code>surface.strong</code> mix; keyboard-only focus remains transparent with its 2px outline. Unselected MultiSelect/TagSelect pointer hover and combined hover/focus use a 2% mix with their 2px inset rings retained; selected-row pointer feedback and selection indicators remain unchanged. Focus-only fills remain for Select, ComboBox, Autocomplete, default CommandPalette, MultiSelect, and TagSelect; translucent CommandPalette focus retains its prior tonal fill. Historical audit focus fill: surface.hover, with the per-component exceptions below. <a href="../src/styles/base.css#L800">Shared focus</a>, <a href="../src/styles/collections.css#L479">ListBox focus-only</a>, <a href="../src/styles/collections.css#L485">ListBox pointer hover/ring</a>, <a href="../src/styles/base.css#L802">Autocomplete focus</a>, <a href="../src/styles/collections.css#L2390">Select/ComboBox dark focus</a>, <a href="../src/supplemental/styles.css#L813">translucent CommandPalette focus</a>, <a href="../src/supplemental/styles.css#L1766">MultiSelect hover</a>, <a href="../src/supplemental/styles.css#L1760">focus-only/ring</a>, <a href="../src/supplemental/styles.css#L1776">focus ring</a>, <a href="../src/supplemental/styles.css#L3358">TagSelect hover</a>, <a href="../src/supplemental/styles.css#L3352">focus-only</a>, <a href="../src/supplemental/styles.css#L3368">focus ring</a>.</td><td>Resolved · B pointer-state uplift complete; keyboard focus retained. Preserve selected-row pointer feedback and selection indicators. Keep focus-only fills for Select/ComboBox/Autocomplete/default CommandPalette/MultiSelect/TagSelect. ListBox keyboard-only focus stays transparent with its 2px outline; MultiSelect/TagSelect combined hover/focus keeps their 2px inset rings. The translucent CommandPalette focus remains tonal. <strong>Pointer-state update 2026-09-23.</strong></td></tr>
+<tr id="NF21"><td><s>NF21</s></td><td><s>Virtualizer item, focused</s><span class="entry-status">Resolved · Kept unchanged</span></td><td>Unchanged: <code>item-focus-bg</code> remains the solid surface.hover fill in the default path; dark focus remains neutral-default-94. <a href="../src/styles/collections.css#L2679">Focus rule</a>, <a href="../src/styles/collections.css#L2691">dark override</a>.</td><td>Resolved · Kept unchanged. The solid focused fill remains the primary per-item keyboard locator; a root-only ring is not an equivalent replacement.</td></tr>
 </tbody></table></div>
-<h2 id="decisions">Needs a design decision before any uplift</h2>
-<p>These fills are confirmed, but serve selected, focused, binary, or editable-field
-roles. D1 means decide whether the strong state emphasis is intentional before
-changing its fill. D2 means decide whether the state needs a fill at all. Keep
-them visible for product review without treating opacity as the default
-correction.</p>
-<div class="table-scroll" role="region" tabindex="0" aria-label="Entries requiring a design decision"><table>
+<h2 id="medium-assessment">Medium-confidence implementation status · 2026-09-24</h2>
+<p>Fourteen of the 16 medium-confidence entries are fully uplifted, including
+NF08’s dark navigation foreground repair. NF20’s pointer-state uplift is
+complete with keyboard focus retained; NF21 is resolved and kept unchanged.
+Across the full ledger, all 29 entries are resolved. NF22–NF25 and NF29 record
+the approved B implementation; NF26–NF28 record the approved C implementation.</p>
+<p>The implemented B · Calibrated and C · Tonal options use component-owned layers
+with strengths shown per entry; the percentages vary by state and underlying surface. Global
+tokens are unchanged. For opaque rests, the implementation layers a transparent
+state over the base rather than replacing the base fill. GridList selected and
+drop-target states retain precedence over its disabled/dragging hover fallback.</p>
+<p>Review implementation over the actual component surface and preserve
+foreground, border, focus-ring, and selection treatments. Supplemental hover
+styling itself does not need 3:1 contrast, but must not reduce component
+contrast or focus/selection-indicator contrast (<a href="https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html">WCAG non-text contrast</a>).
+Keyboard focus and persistent selection are distinct states (<a href="https://www.w3.org/WAI/ARIA/apg/practices/keyboard-interface/#kbd_focus_vs_selection">ARIA Authoring Practices</a>).</p>
+<p>The 2026-09-23 screenshots remain an exploratory comparison of a blanket 8% hover /
+12% press treatment over actual CSS rest surfaces. They are not the calibrated
+recipe or full live-component validation: the probe used standard-Harbour
+static DOM with forced pseudo/data states and transitions disabled, not
+hydrated React or full accessibility certification. In those samples, 8%
+appeared stronger than current Card, Table, and Tree hover; nearly
+imperceptible on the light inverse navigation surface; and visible or
+similar/stronger on Option and Virtualizer states. Selected Table/Tree fills did
+not change. That review deferred six dark HeaderNav and Sidebar controls
+because of their foreground/background collisions. NF08 completed those
+repairs on 2026-09-24 with the approved B · Calibrated recipe; the
+<a href="neutral-interactive-fill-navigation-options.html">historical comparison</a> preserves their previous appearance. The
+Tree screenshot compared sibling rows; real Mux Tree SSR preflight confirmed
+recursive React children render as flattened sibling <code>div[role="row"]</code>
+elements with <code>aria-level</code>, so no nested-row overlay or wrapper is
+needed.</p>
+<p><a href="assets/neutral-medium-light.png">Light comparison</a> ·
+<a href="assets/neutral-medium-dark.png">Dark comparison</a></p>
+<h2 id="decisions">Resolved design decisions · B/C implemented · 2026-09-24</h2>
+<p><a href="neutral-interactive-fill-final-options.html">Review NF22–NF29 in the four-group HTML comparison</a>.
+All eight decisions are resolved. The comparison preserves A’s historical appearance and prior B for NF26–NF28; current component CSS supplies B for NF22–NF25/NF29 and C for NF26–NF28.</p>
+<p>These entries originally required a design decision because their fills serve
+selected, focused, binary, or editable-field roles. The approved direction
+preserves strong state emphasis and base surfaces, calibrates hover where
+useful, and applies a tonal layer to the compact indicator hovers without
+changing their borders. Existing forced-colors treatment remains unchanged.</p>
+<div class="table-scroll" role="region" tabindex="0" aria-label="Resolved design decisions"><table>
 <thead>
 <tr>
 <th>ID</th>
@@ -286,46 +240,14 @@ correction.</p>
 <th>Decision and priority</th>
 </tr>
 </thead>
-<tbody><tr id="NF22"><td>NF22</td>
-<td>Standalone ToggleButton, selected rest and hover</td>
-<td>Solid neutral-80 at rest and neutral-90 on hover in the current theme. <a href="../src/styles/components.css#L759">Selected states</a>, <a href="../src/styles/components.css#L1255">dark overrides</a>.</td>
-<td>Decide whether this strong selected treatment is intentional. Do not infer from the ToggleButtonGroup exclusion. D1.</td>
-</tr>
-<tr id="NF23"><td>NF23</td>
-<td>TextEditor toolbar button, selected/active rest and hover</td>
-<td>Light active rest is neutral-94 and hover neutral-80 with inverse text. Dark active rest is neutral-22; dark hover resolves to neutral-18. <a href="../src/text-editor/text-editor.css#L283">Light active states</a>, <a href="../src/text-editor/text-editor.css#L485">dark active rest</a>, <a href="../src/text-editor/text-editor.css#L479">dark hover override</a>.</td>
-<td>Active formatting communicates a persistent selection. Decide whether only hover should gain a translucent layer; retain the selected rest and inverse foreground unless product intent changes. D1.</td>
-</tr>
-<tr id="NF24"><td>NF24</td>
-<td>HeaderNav and Sidebar current navigation item</td>
-<td>Current item is neutral-94 in light and neutral-22 in dark, with on-navigation foreground. <a href="../src/supplemental/styles.css#L1046">HeaderNav current item</a>, <a href="../src/supplemental/styles.css#L1158">dark HeaderNav current item</a>, <a href="../src/supplemental/styles.css#L2295">Sidebar current link</a>, <a href="../src/supplemental/styles.css#L2406">Sidebar current button</a>, <a href="../src/supplemental/styles.css#L2718">dark Sidebar current link</a>, <a href="../src/supplemental/styles.css#L2730">dark Sidebar current button</a>.</td>
-<td>Current-page emphasis may intentionally be stronger than hover. If revised, use a component-owned tint that preserves the dark navigation surface and foreground pairing. D1.</td>
-</tr>
-<tr id="NF25"><td>NF25</td>
-<td>CommandPalette inline search input, hover</td>
-<td>Default popup uses solid neutral-12; translucent popup uses a 34% neutral-12 mix. <a href="../src/supplemental/styles.css#L634">Default hover</a>, <a href="../src/supplemental/styles.css#L640">translucent hover</a>.</td>
-<td>This is an editable field surface rather than an action button. Decide whether input-body hover needs a fill at all; if retained, preserve its rest surface and use a component-owned layer. D2.</td>
-</tr>
-<tr id="NF26"><td>NF26</td>
-<td>Checkbox and CheckboxField unchecked indicator, hover</td>
-<td>Indicator uses solid surface.hover, neutral-14 light / neutral-96 dark. Selected and indeterminate indicators use selection.track. <a href="../src/styles/components.css#L343">Hover rule</a>.</td>
-<td>A compact binary indicator may need opaque feedback for legibility. Review separately from button fills; keep selected and indeterminate semantics distinct. D2.</td>
-</tr>
-<tr id="NF27"><td>NF27</td>
-<td>RadioGroup and RadioField unselected indicator, hover</td>
-<td>RadioGroup uses surface.hover; RadioField uses solid neutral-14. <a href="../src/styles/collections.css#L657">RadioGroup</a>, <a href="../src/supplemental/styles.css#L2126">RadioField</a>.</td>
-<td>Small indicator surfaces may need stronger contrast than action backgrounds. Decide after checking both modes and selected-state feedback. D2.</td>
-</tr>
-<tr id="NF28"><td>NF28</td>
-<td>Switch and SwitchField unselected track, hover</td>
-<td>Solid neutral-26 in both authored hover rules. Selected hover uses an action/accent fill. <a href="../src/styles/fields.css#L463">Switch</a>, <a href="../src/supplemental/styles.css#L2873">SwitchField</a>.</td>
-<td>The track is a binary indicator; keep opaque treatment unless the design review confirms a tonal state remains clear. D2.</td>
-</tr>
-<tr id="NF29"><td>NF29</td>
-<td>DateField, TimeField, DatePicker, and DateRangePicker date segment, keyboard focus</td>
-<td>Shared segment style uses surface.emphasis mapped to neutral-80, paired with content.on-solid. <a href="../src/styles/base.css#L1020">Focused segment</a>, <a href="../src/fields.mjs#L406">shared date input</a>, <a href="../src/fields.mjs#L1014">range date input</a>.</td>
-<td>This is a strong focus inversion, not a subtle hover. Decide whether its focus contrast is intentional and preserve keyboard visibility. D1.</td>
-</tr>
+<tbody><tr id="NF22"><td><s>NF22</s></td><td><s>Standalone ToggleButton, selected rest and hover</s><span class="entry-status">Completed · 2026-09-24</span></td><td>Current: selected rest stays opaque neutral-80. Enabled standalone selected hover keeps that base and adds an 8% neutral-100 transparent overlay, with the neutral-80 outline. Historical hover used solid neutral-90. <a href="../src/styles/components.css#L759">Selected states</a>, <a href="../src/styles/components.css#L1255">dark overrides</a>. <a href="../src/styles/components.css#L1271">Approved B implementation</a>.</td><td>B · Calibrated. <strong>Completed 2026-09-24.</strong> Selected foreground, keyboard focus, disabled state, and all ToggleButtonGroup selected fills remain unchanged.</td></tr>
+<tr id="NF23"><td><s>NF23</s></td><td><s>TextEditor toolbar button, selected/active rest and hover</s><span class="entry-status">Completed · 2026-09-24</span></td><td>Current: active hover layers a 6% neutral-100 tint over neutral-94 in the light Main toolbar and neutral-22 in the light Bubble menu. Dark Main and Bubble use a 6% neutral-10 tint over neutral-22. Historical Main hover was neutral-80 light / neutral-18 dark; Bubble hover was neutral-18. <a href="../src/text-editor/text-editor.css#L283">Main active states</a>, <a href="../src/text-editor/text-editor.css#L507">dark active rest</a>, <a href="../src/text-editor/text-editor.css#L500">dark hover</a>, <a href="../src/text-editor/text-editor.css#L436">Bubble active states</a>. <a href="../src/text-editor/text-editor.css#L571">Approved B implementation</a>.</td><td>B · Calibrated. <strong>Completed 2026-09-24.</strong> Selected rest fills, existing hover foregrounds, unselected states, and focus remain intact.</td></tr>
+<tr id="NF24"><td><s>NF24</s></td><td><s>HeaderNav and Sidebar current navigation item</s><span class="entry-status">Completed · 2026-09-24</span></td><td>Current: current hover layers 6% currentColor over the opaque neutral-94 light / neutral-22 dark current base. Applies to HeaderNav current items and Sidebar current links and buttons. Dark Sidebar current-link icons now use neutral-100. Historical current hover used neutral-96 light / neutral-20 dark; the dark current-link icon also used neutral-20. <a href="../src/supplemental/styles.css#L1078">HeaderNav current item</a>, <a href="../src/supplemental/styles.css#L1192">dark HeaderNav</a>, <a href="../src/supplemental/styles.css#L2336">Sidebar current link</a>, <a href="../src/supplemental/styles.css#L2447">current button</a>, <a href="../src/supplemental/styles.css#L2759">dark current link</a>, <a href="../src/supplemental/styles.css#L2771">dark current button</a>, <a href="../src/supplemental/styles.css#L2357">Sidebar icon</a>. <a href="../src/supplemental/styles.css#L2904">Approved B implementation</a>.</td><td>B · Calibrated. <strong>Completed 2026-09-24.</strong> Current-page emphasis and focus remain clear; the icon repair is limited to current links. NF08’s earlier navigation repairs are preserved.</td></tr>
+<tr id="NF25"><td><s>NF25</s></td><td><s>CommandPalette inline search input, hover</s><span class="entry-status">Completed · 2026-09-24</span></td><td>Current: enabled, unfocused, valid inline input hover uses a 2% surface.strong transparent mix in the default popup and 4% in the translucent popup. Historical hover was solid neutral-12 / 34% neutral-12 respectively. <a href="../src/supplemental/styles.css#L666">Inline hover</a>, <a href="../src/supplemental/styles.css#L672">translucent hover</a>. <a href="../src/supplemental/styles.css#L2941">Approved B implementation</a>.</td><td>B · Calibrated. <strong>Completed 2026-09-24.</strong> Popup, search-field and input resting surfaces, borders, focus, disabled/invalid states, and non-inline input treatment remain unchanged.</td></tr>
+<tr id="NF26"><td><s>NF26</s></td><td><s>Checkbox and CheckboxField unchecked indicator, hover</s><span class="entry-status">Resolved · Implemented C · 2026-09-24</span></td><td>Current: an 8% <code>surface.strong</code> transparent layer replaces the prior opaque <code>surface.hover</code> fill over the unchanged rest fill (<code>surface.raised</code> light / neutral-default-98 dark); the source hover border stays unchanged. Selected and indeterminate indicators retain selection.track. <a href="../src/styles/components.css#L1334">Tonal hover layer</a>, <a href="../src/styles/components.css#L1345">dark tonal layer</a>. Historical fill was <code>surface.hover</code> light and neutral-default-94 dark, with neutral-default-40 dark border.</td><td>C · Tonal. <strong>Resolved 2026-09-24 · Hover fill implemented.</strong> Preserve the original border, selected/indeterminate semantics, focus, disabled, and forced-colors treatment.</td></tr>
+<tr id="NF27"><td><s>NF27</s></td><td><s>RadioGroup and RadioField unselected indicator, hover</s><span class="entry-status">Resolved · Implemented C · 2026-09-24</span></td><td>Current: an 8% <code>surface.strong</code> transparent layer replaces each opaque hover fill over its unchanged rest fill. RadioGroup uses <code>surface.raised</code> light / neutral-default-98 dark and keeps its source borders. RadioField layers the same tint over its adaptive neutral-10 rest and retains the source neutral-60 hover border. <a href="../src/styles/collections.css#L3015">RadioGroup tonal hover</a>, <a href="../src/styles/collections.css#L3024">dark RadioGroup layer</a>, <a href="../src/supplemental/styles.css#L2953">RadioField tonal hover</a>. Historical fills were <code>surface.hover</code> light / neutral-default-94 dark for RadioGroup and adaptive neutral-14 for RadioField; the original borders remain.</td><td>C · Tonal. <strong>Resolved 2026-09-24 · Hover fill implemented.</strong> Preserve source borders, selected dot, focus, disabled, and forced-colors treatment.</td></tr>
+<tr id="NF28"><td><s>NF28</s></td><td><s>Switch and SwitchField unselected track, hover</s><span class="entry-status">Resolved · Implemented C · 2026-09-24</span></td><td>Current: an 8% <code>surface.strong</code> transparent layer replaces the opaque neutral-26 hover over the unchanged neutral-20 track base; the source neutral-50 hover border stays unchanged. Selected hover retains its action/accent fill. <a href="../src/styles/fields.css#L959">Switch tonal hover</a>, <a href="../src/supplemental/styles.css#L3043">SwitchField tonal hover</a>.</td><td>C · Tonal. <strong>Resolved 2026-09-24 · Hover fill implemented.</strong> Preserve the original track border, selected/focus distinction, disabled, and forced-colors treatment.</td></tr>
+<tr id="NF29"><td><s>NF29</s></td><td><s>DateField, TimeField, DatePicker, and DateRangePicker date segment, keyboard focus</s><span class="entry-status">Completed · 2026-09-24</span></td><td>Current: the shared focus retains surface.emphasis and uses content.on-solid for both populated and empty focused segments. The dark scoped foreground no longer overrides it. Historical default-token CSS probes measured 1.29:1 populated and 2.59:1 placeholder contrast against the dark focus fill; those are pre-repair default-token results, not Harbour values. An actual Mux DateField/TimeField render confirmed that focused placeholders carry both state attributes. <a href="../src/styles/base.css#L1020">Focused segment</a>, <a href="../src/styles/fields.css#L697">dark segment foregrounds</a>, <a href="../src/fields.mjs#L406">shared date input</a>, <a href="../src/fields.mjs#L1014">range date input</a>. <a href="../src/styles/fields.css#L718">Approved B implementation</a>.</td><td>B · Calibrated. <strong>Completed 2026-09-24 · Foreground repaired.</strong> The strong keyboard locator is retained. Unfocused placeholders, literal segments, root focus styling, geometry, and forced-colors behavior are preserved.</td></tr>
 </tbody></table></div>
 <h2 id="cascade">Cascade notes and exclusions</h2>
 <p><strong>NF01, DatePicker:</strong> Chrome 153 with representative static DOM and sentinel
@@ -334,30 +256,30 @@ the table. The scoped rest rules win by scoping proximity over equally specific
 generic hover selectors. Sentinel values identify token paths only; they are
 not canonical RGB evidence. This probe was targeted, not hydrated, visual, or
 accessibility proof.</p>
-<p><strong>NF14, TextEditor:</strong> The generic toolbar&#39;s tonal hover/active rules still
-apply outside the bubble menu. Inside it, the more specific bubble hover rule
-overrides the generic hover and wins during pointer-active overlap. The dark
-toolbar hover rule also resolves to solid neutral-18. A targeted static-DOM
-Chrome probe confirmed these effective paths; this is not hydrated or visual
-proof.</p>
+<p><strong>NF14 historical cascade audit:</strong> The initial static-DOM Chrome
+probe confirmed the pre-uplift bubble-menu and dark toolbar fills recorded
+above. The current unselected bubble-menu states use 8%/12% mixes in both
+schemes; dark main-toolbar states use 8%/12%, while the light main toolbar keeps
+its existing 7%/20% treatment. Selected editor rest states remain unchanged; their calibrated hover layers are recorded under NF23.</p>
 <p><strong>NF20/NF21, shared option focus:</strong> Most option rows use the shared item-focus
 fill, but local rules affect the result: Select/ComboBox have an explicit dark
 focused fill; the translucent CommandPalette focus is already mixed; ListBox
 keyboard focus without pointer hover is transparent; Virtualizer has its own
 dark neutral-94 fill. Menu focus uses an action token and stays excluded.</p>
-<p><strong>NF04, Toolbar:</strong> Scoped interaction rules take precedence over the generic
-surface-hover rule. Hover has higher specificity than the generic selector;
-the scoped data-pressed rule also wins. The light and dark values are recorded
-separately in the table.</p>
+<p><strong>NF04 historical cascade audit:</strong> Scoped toolbar rules took
+precedence over the generic surface-hover rule in the original audit. The
+current direct-child neutral Toolbar Button rules use 8% hover and 12%
+active/data-pressed mixes; the scoped normal foreground remains in place for
+pressed states.</p>
 <p><strong>DisclosureGroup is a confirmed false positive.</strong> The group hover rule appears
 to set solid neutral-12, but its selector specificity 0,4,0 loses to the
 regular Disclosure hover selector at 0,5,0. An SSR-backed Chrome 153 probe
 confirmed 12% neutral action hover and 16% pointer-active fills. Synthetic
 [data-pressed] covered CSS only, not runtime keyboard input. <a href="../src/styles/components.css#L433">Regular rule</a>,
-<a href="../src/styles/components.css#L1415">group rule</a>.</p>
+<a href="../src/styles/components.css#L1459">group rule</a>.</p>
 <p><strong>Menu focus is not a neutral fill.</strong> .muxui-menu-item[data-focused] uses
 action.background-hover and action.foreground; it is excluded from NF20.
-<a href="../src/styles/collections.css#L573">Menu focus</a>.</p>
+<a href="../src/styles/collections.css#L585">Menu focus</a>.</p>
 <p>Other reviewed boundaries: ordinary editable field hover generally changes the
 outline only; NF25 is the specific CommandPalette input exception. Disabled
 surface-hover rules are excluded. Static popup, card, and navigation rest
@@ -371,11 +293,69 @@ light/dark and standard/more-contrast modes, then verify hover, active, keyboard
 focus, disabled, selected, and forced-colors behaviour as applicable. Compare
 the mix over each real underlying surface, retain foreground contrast, and
 confirm reduced-motion and focus-ring behaviour. The audit&#39;s targeted browser
-probes do not replace those component checks. No forced-colors computed proof
-is claimed here. Change the owning component state rules; do not redefine
+probes do not replace those component checks. Change the owning component state
+rules; do not redefine
 surface.subtle, surface.hover, surface.pressed, or border.strong globally,
 because structural surfaces, disabled states, and control borders also use
 those roles.</p>
+<h2 id="proof">Current implementation verification</h2>
+<p><strong>2026-09-24, NF26–NF28 completed with C · Tonal, fill only.</strong> Checkbox, RadioGroup, Switch, and their Field variants now use the approved 8% surface.strong transparent hover layer over their existing rest fills. The original borders are preserved. The six-family scoped check passed 112 React component tests and its light/dark Storybook accessibility audit. After correcting SwitchField’s rule order, <code>pnpm check --component switch-field</code> passed 40 tests and its audit. These are separate runs.</p>
+<p>The final generated CSS passed 1,056 element/pseudo-element comparisons against C with the stronger-border override removed, plus 672 boundary cases checking original borders, selected/indeterminate, disabled, invalid, focus, and forced-colors states. The HTML comparison passed 2,112 element/pseudo-element comparisons, preserving archived A/B while C reads runtime CSS. Light/dark screenshots, standard/more contrast, reduced motion, responsive layout, ledger search/Clear, and relative links were checked. These are focused CSS fixtures and task checks, not full release or hydrated interaction proof. Local ephemeral output: <code>/tmp/nf26-28-runtime-proof.json</code>, <code>/tmp/nf26-28-boundary-proof.json</code>, and <code>/tmp/nf26-28-artifact-proof.json</code>.</p>
+<h3>Earlier B-round verification</h3>
+<p><strong>Historical, 2026-09-24: NF22–NF29 first resolved with B · Calibrated.</strong> NF22–NF25 applied calibrated hover layers; NF29 repaired the focused foreground while retaining the strong background; NF26–NF28 were kept unchanged in that round. The scoped command was <code>pnpm check --component toggle-button --component text-editor --component header-nav --component sidebar --component command-palette --component date-field --component time-field --component date-picker --component date-range-picker</code>. It passed 135 React component tests and the selected-family light/dark Storybook accessibility audit. After correcting dark scoped navigation precedence and preserving the current icon in forced-colors mode, the HeaderNav/Sidebar follow-up passed 40 tests and its light/dark audit. These are separate runs, not 175 distinct tests; they predate the approved NF26–NF28 C update.</p>
+<p>Historical B-round Chrome checks compared generated CSS, with the then-current B mock overrides removed, against the approved B samples: 2,112 element/pseudo-element style comparisons passed across light/dark, standard/more contrast, normal/reduced motion, and forced-colors preservation. A separate 712-case boundary matrix passed for ToggleButtonGroup selection/motion, disabled controls, native focus, non-inline and excluded input states, current navigation buttons, and all four date/time wrappers. Independent read-only review of the frozen runtime CSS found no actionable issues. These were representative CSS fixtures, not a complete hydrated interaction or accessibility audit; they predate the NF26–NF28 C update.</p>
+<p>The historical HTML comparison then read B from runtime CSS and preserved historical A plus the unchosen C. Its 2,016 component-style comparisons passed; desktop/tablet/mobile layout, mode/contrast controls, ledger search/Clear, and relative links were checked. Local ephemeral output: <code>/tmp/nf22-29-runtime-proof.json</code>, <code>/tmp/nf22-29-boundary-proof.json</code>, and <code>/tmp/nf22-29-artifact-proof.json</code>. These artifact results predate the NF26–NF28 C update. Focused task proof only, not full release evidence or R1.6 acceptance.</p>
+<p><strong>2026-09-24, NF08 completed.</strong> The final scoped run of
+<code>pnpm check --component header-nav --component sidebar</code> passed 40 React tests
+and the HeaderNav/Sidebar light/dark Storybook accessibility audit. A separate
+isolated Chrome probe compared actual authored CSS with the pre-NF08 source,
+with mock overrides removed: 96 rest/hover/focus combinations across light/dark
+and standard/more-contrast, 16 safe/current navigation comparisons, and 24
+focused forced-colors comparisons passed. This is representative static DOM
+with forced hover samples, not a complete interaction or accessibility audit.</p>
+<p>In the standard Harbour dark samples, hover foreground contrast rose from
+1.00:1 to 10.20–10.66:1. The account trigger’s resting contrast rose from
+2.08:1 to 4.61:1. Light values, resting backgrounds, native focus styling,
+geometry, safe/current navigation, and forced-colors treatment matched the
+baseline. <a href="neutral-interactive-fill-navigation-options.html">Before/A/B/C comparison</a>
+now preserves the historical baseline and marks B implemented. Ledger search,
+Clear, relative links, and desktop/mobile layout were checked. Local ephemeral
+probe output: <code>/tmp/nf08-runtime-proof.json</code>. Focused task proof only, not full release
+evidence or R1.6 acceptance.</p>
+<p><strong>2026-09-23, focused task proof only.</strong> The scoped check was
+<code>pnpm check --component search-field --component number-field --component toolbar --component toggle-button --component text-editor</code>.
+The initial five-family run passed 94 scoped tests and light/dark Storybook axe
+checks. After the dark SearchField foreground repair, its focused follow-up
+passed 39 tests and light/dark Storybook axe checks; these are separate runs,
+not 133 distinct tests. Chrome computed fills passed in light/dark ×
+standard/more-contrast modes. Selected, disabled, trailing-state, forced-colors,
+and reduced-motion checks passed, and a four-block CSS baseline comparison
+confirmed unaffected properties match HEAD. Independent reviews of the
+original and SearchField changes found no actionable findings.
+
+The earlier high-confidence entries use B’s 8% hover / 12% pressed mix (NF05
+hover only). The medium batch applies B · Calibrated through component-owned,
+surface-specific layers shown in the ledger; global tokens are unchanged. The initial medium-batch scoped run passed 106 React tests and the light/dark
+Storybook accessibility audit for 18 resolved families. After the source
+corrections, the six-family follow-up passed 71 React tests and its light/dark
+Storybook accessibility audit. These are separate runs, not 177 distinct tests.
+The follow-up command was <code>pnpm check --component card --component grid-list --component command-palette --component multi-select --component tag-select --component tag-group</code>.</p>
+<p>The 2026-09-23 final-source browser state matrix passed in light, dark, and the default
+date-trigger path. It checked the calibrated tints and opaque rests, retained
+selected/disabled/focus states, Calendar ranges, GridList drag/drop precedence,
+Tabs variants, CommandPalette foregrounds and translucent fills, option-row
+selection indicators, and the then-deferred dark navigation states. The separate
+NF12 probe passed all four chip-remove cases across both modes and popup
+variants. Independent review and targeted rereviews found no remaining
+actionable issues. The GridList fallback was corrected, selected elevated
+Cards retain their ring with hover/pressed elevation, original CommandPalette
+foregrounds and selected option-row feedback were restored, and dark TagGroup
+keeps its opaque rest under the tint. Runtime source stayed frozen during final
+review and checks. Whitespace verification passed.</p>
+<p>Final implementation screenshots: <a href="assets/neutral-interactive-fill-medium-implementation-light.png">Light</a> / <a href="assets/neutral-interactive-fill-medium-implementation-dark.png">Dark</a>. The ledger's search and Clear
+control were checked at desktop and mobile widths. Logs are local and ephemeral:
+<code>/tmp/muxui-medium-followup-check.log</code>, <code>/tmp/muxui-medium-final-probe.log</code>, and <code>/tmp/neutral-medium-chip-remove-check.json</code>. This is focused task proof, not full release
+evidence or R1.6 acceptance.</p>
 <h2 id="provenance">Review provenance</h2>
 <p>Discovery began with provider thread
 1dbf2b48-7a5c-4e8a-8344-737c644c3b15; its final source message was recorded at

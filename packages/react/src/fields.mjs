@@ -99,7 +99,7 @@ function SwitchMotionIndicator({ isSelected, isPressed, isDisabled, isReadOnly }
       if (!nextReduced) return;
       const controls = controlsRef.current;
       controlsRef.current = null;
-      controls?.stop();
+      controls?.cancel();
       node.style.removeProperty('transform');
       settledTransformRef.current = readTransform(node);
     });
@@ -676,53 +676,56 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
 
 CheckboxGroup.displayName = 'CheckboxGroup';
 
-export const Switch = React.forwardRef(function Switch({
-  label,
-  children,
-  selected,
-  defaultSelected = false,
-  onChange,
-  disabled = false,
-  readOnly = false,
-  description,
-  errorMessage,
-  required = false,
-  invalid = false,
-  size,
-  validationBehavior: _validationBehavior,
-  name,
-  value,
-  className,
-  'aria-label': ariaLabel,
-  'aria-labelledby': ariaLabelledby,
-  ...props
-}, ref) {
-  assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Switch');
-  const resolvedSize = normalizeChoiceControlSize(size, 'Switch');
-  const visibleLabel = label ?? children;
-  return React.createElement(AriaSwitchField, {
-    ...props,
-    ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
-    isSelected: selected,
-    defaultSelected,
+// Pure wrapping lets root-barrel consumers drop Switch's private motion edge.
+export const Switch = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function Switch({
+    label,
+    children,
+    selected,
+    defaultSelected = false,
+    onChange,
+    disabled = false,
+    readOnly = false,
+    description,
+    errorMessage,
+    required = false,
+    invalid = false,
+    size,
+    validationBehavior: _validationBehavior,
     name,
     value,
-    className: classNames('muxui-switch-field', className),
-    'data-size': resolvedSize,
+    className,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
-    onChange,
-  }, React.createElement(AriaSwitchButton, { className: 'muxui-switch' }, ({ isSelected, isPressed, isDisabled, isReadOnly }) => React.createElement(React.Fragment, null,
-    React.createElement(SwitchMotionIndicator, { isSelected, isPressed, isDisabled, isReadOnly }),
-    visibleLabel !== undefined && visibleLabel !== null
-      ? React.createElement('span', { className: 'muxui-switch-label' }, visibleLabel)
-      : null)),
-  fieldDescription(description),
-  fieldError(errorMessage));
-});
-
-Switch.displayName = 'Switch';
+    ...props
+  }, ref) {
+    assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Switch');
+    const resolvedSize = normalizeChoiceControlSize(size, 'Switch');
+    const visibleLabel = label ?? children;
+    return React.createElement(AriaSwitchField, {
+      ...props,
+      ref,
+      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      isSelected: selected,
+      defaultSelected,
+      name,
+      value,
+      className: classNames('muxui-switch-field', className),
+      'data-size': resolvedSize,
+      'aria-label': ariaLabel,
+      'aria-labelledby': ariaLabelledby,
+      onChange,
+    }, React.createElement(AriaSwitchButton, { className: 'muxui-switch' }, ({ isSelected, isPressed, isDisabled, isReadOnly }) => React.createElement(React.Fragment, null,
+      React.createElement(SwitchMotionIndicator, { isSelected, isPressed, isDisabled, isReadOnly }),
+      visibleLabel !== undefined && visibleLabel !== null
+        ? React.createElement('span', { className: 'muxui-switch-label' }, visibleLabel)
+        : null)),
+    fieldDescription(description),
+    fieldError(errorMessage));
+  });
+  component.displayName = 'Switch';
+  return component;
+})();
 
 export const Form = React.forwardRef(function Form({
   children,

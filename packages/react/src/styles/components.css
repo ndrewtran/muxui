@@ -751,7 +751,7 @@
 }
 
 .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   outline-color: var(--muxui-semantic-color-neutral-28);
   color: var(--muxui-semantic-color-neutral-90);
 }
@@ -1246,7 +1246,7 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
-    background-color: var(--muxui-semantic-color-neutral-14);
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
     border-color: var(--muxui-semantic-color-neutral-28);
     color: var(--muxui-semantic-color-neutral-90);
   }
@@ -1264,6 +1264,26 @@
   :scope .muxui-toggle-button[data-selected]:hover:not([data-disabled]) {
     background-color: var(--muxui-semantic-color-neutral-90);
     border-color: var(--muxui-semantic-color-neutral-90);
+  }
+}
+
+@media (forced-colors: none) {
+  .muxui-toggle-button[data-selected]:hover:not([data-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button) {
+    background-color: var(--muxui-semantic-color-neutral-80);
+    outline-color: var(--muxui-semantic-color-neutral-80);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 8%, transparent),
+      color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 8%, transparent)
+    );
+  }
+}
+
+@media (forced-colors: none) {
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-toggle-button[data-selected]:hover:not([data-disabled]):not(.muxui-toggle-button-group .muxui-toggle-button) {
+      background-color: var(--muxui-semantic-color-neutral-80);
+      outline-color: var(--muxui-semantic-color-neutral-80);
+    }
   }
 }
 
@@ -1308,6 +1328,30 @@
     .muxui-checkbox-field__indicator {
     background-color: var(--muxui-semantic-color-neutral-default-94);
     border-color: var(--muxui-semantic-color-neutral-default-40);
+  }
+}
+
+@media (forced-colors: none) {
+  .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
+  .muxui-checkbox-field__button[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
+    .muxui-checkbox-field__indicator {
+    background-color: var(--muxui-semantic-surface-raised);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+    );
+  }
+
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
+    :scope .muxui-checkbox-field__button[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
+      .muxui-checkbox-field__indicator {
+      background-color: var(--muxui-semantic-color-neutral-default-98);
+      background-image: linear-gradient(
+        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+      );
+    }
   }
 }
 

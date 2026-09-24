@@ -303,27 +303,42 @@
 
 
 .muxui-card--button.muxui-card--outlined[data-hovered]:not([data-disabled], [data-pending]) {
-  background-color: var(--muxui-semantic-color-neutral-10);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 3%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 3%, transparent)
+  );
   border-color: var(--muxui-semantic-color-neutral-30);
 }
 
 .muxui-card--button.muxui-card--elevated[data-hovered]:not([data-disabled], [data-pending]) {
-  background-color: var(--muxui-semantic-color-neutral-10);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent)
+  );
   box-shadow: var(--muxui-semantic-elevation-modal);
 }
 
 .muxui-card--button.muxui-card--filled[data-hovered]:not([data-disabled], [data-pending]) {
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent)
+  );
 }
 
 .muxui-card--button.muxui-card--outlined[data-pressed]:not([data-disabled], [data-pending]),
 .muxui-card--button.muxui-card--filled[data-pressed]:not([data-disabled], [data-pending]) {
-  background-color: var(--muxui-semantic-color-neutral-18);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+  );
   border-color: var(--muxui-semantic-color-neutral-40);
 }
 
 .muxui-card--button.muxui-card--elevated[data-pressed]:not([data-disabled], [data-pending]) {
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 6%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 6%, transparent)
+  );
   box-shadow: var(--muxui-semantic-elevation-floating);
 }
 
@@ -335,6 +350,18 @@
 .muxui-card--button.muxui-card--elevated[data-selected] {
   box-shadow:
     var(--muxui-semantic-elevation-overlay),
+    inset 0 0 0 2px var(--muxui-semantic-color-color-60);
+}
+
+.muxui-card--button.muxui-card--elevated[data-selected][data-hovered]:not([data-disabled], [data-pending]) {
+  box-shadow:
+    var(--muxui-semantic-elevation-modal),
+    inset 0 0 0 2px var(--muxui-semantic-color-color-60);
+}
+
+.muxui-card--button.muxui-card--elevated[data-selected][data-pressed]:not([data-disabled], [data-pending]) {
+  box-shadow:
+    var(--muxui-semantic-elevation-floating),
     inset 0 0 0 2px var(--muxui-semantic-color-color-60);
 }
 
@@ -712,7 +739,7 @@
 }
 
 .muxui-command-palette__chip-remove:hover {
-  background-color: var(--muxui-semantic-color-neutral-20);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-color-neutral-90);
 }
 
@@ -772,8 +799,11 @@
 }
 
 .muxui-command-palette__item[data-hovered] {
-  background-color: var(--muxui-semantic-color-neutral-12);
   color: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-hovered]:not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
 }
 
 .muxui-command-palette__popup--translucent .muxui-command-palette__item[data-hovered] {
@@ -785,8 +815,11 @@
 }
 
 .muxui-command-palette__item[data-pressed] {
-  background-color: var(--muxui-semantic-color-neutral-18);
   color: var(--muxui-semantic-color-neutral-100);
+}
+
+.muxui-command-palette__popup:not(.muxui-command-palette__popup--translucent) .muxui-command-palette__item[data-pressed]:not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
 }
 
 .muxui-command-palette__popup--translucent .muxui-command-palette__item[data-pressed] {
@@ -1281,7 +1314,10 @@
 }
 
 .muxui-input-tags__tag[data-hovered]:not([data-disabled]) {
-  background-color: var(--muxui-semantic-color-neutral-18);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent)
+  );
   outline-color: var(--muxui-semantic-color-neutral-30);
 }
 
@@ -1320,7 +1356,7 @@
 .muxui-input-tags__tag [slot='remove']:hover,
 .muxui-input-tags__tag button[aria-label*='remove' i]:hover,
 .muxui-input-tags__tag button[aria-label*='Remove' i]:hover {
-  background-color: var(--muxui-semantic-color-neutral-22);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-color-neutral-80);
 }
 
@@ -1727,6 +1763,11 @@
   color: var(--muxui-item-focus-color);
 }
 
+.muxui-multi-select__item:is(:hover, [data-hovered]):not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  color: var(--muxui-item-focus-color);
+}
+
 .muxui-multi-select__item[data-disabled] {
   opacity: 0.45;
   cursor: not-allowed;
@@ -1800,7 +1841,7 @@
 }
 
 .muxui-multi-select__footer-btn:hover {
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   border-color: var(--muxui-semantic-color-neutral-30);
   color: var(--muxui-semantic-color-neutral-90);
 }
@@ -2796,6 +2837,130 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   }
 }
 
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope :is(
+    .muxui-header-nav__nav-btn:not(.muxui-header-nav__nav-btn--current):hover,
+    .muxui-header-nav__mobile-trigger:hover,
+    .muxui-header-nav__mobile-close-btn:hover,
+    .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover,
+    .muxui-sidebar__nav-btn:not(.muxui-sidebar__nav-btn--current):hover,
+    .muxui-sidebar__account-trigger:hover,
+    .muxui-sidebar__feature-card-dismiss:hover,
+    .muxui-sidebar__mobile-menu-btn:hover,
+    .muxui-sidebar__mobile-close-btn:hover
+  ) {
+    background: color-mix(in srgb, var(--muxui-semantic-color-neutral-10) 4%, transparent);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :is(
+    .muxui-header-nav__nav-btn:not(.muxui-header-nav__nav-btn--current):hover,
+    .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover,
+    .muxui-sidebar__nav-btn:not(.muxui-sidebar__nav-btn--current):hover
+  ) {
+    background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+  }
+}
+
+@media (forced-colors: none) {
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope :is(
+      .muxui-header-nav__mobile-trigger:hover,
+      .muxui-header-nav__mobile-close-btn:hover,
+      .muxui-sidebar__account-trigger:hover,
+      .muxui-sidebar__feature-card-dismiss:hover,
+      .muxui-sidebar__mobile-menu-btn:hover,
+      .muxui-sidebar__mobile-close-btn:hover
+    ) {
+      background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+    }
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope :is(
+    .muxui-header-nav__mobile-trigger,
+    .muxui-header-nav__mobile-close-btn,
+    .muxui-sidebar__feature-card-dismiss,
+    .muxui-sidebar__mobile-menu-btn,
+    .muxui-sidebar__mobile-close-btn
+  ) {
+    color: var(--muxui-semantic-color-neutral-100);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__account-trigger {
+    color: var(--muxui-semantic-color-neutral-60);
+  }
+
+  :scope .muxui-sidebar__account-trigger:hover {
+    color: var(--muxui-semantic-color-neutral-100);
+  }
+}
+
+@media (forced-colors: none) {
+  .muxui-header-nav__nav-btn--current:hover,
+  .muxui-sidebar__nav-link--current:hover,
+  .muxui-sidebar__nav-btn--current:hover {
+    background-color: var(--muxui-semantic-color-neutral-94);
+  }
+
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-header-nav__nav-btn--current:hover,
+    :scope .muxui-sidebar__nav-link--current:hover,
+    :scope .muxui-sidebar__nav-btn--current:hover {
+      background-color: var(--muxui-semantic-color-neutral-22);
+      background-image: linear-gradient(
+        color-mix(in srgb, currentColor 6%, transparent),
+        color-mix(in srgb, currentColor 6%, transparent)
+      );
+    }
+  }
+
+  .muxui-header-nav__nav-btn--current:hover,
+  .muxui-sidebar__nav-link--current:hover,
+  .muxui-sidebar__nav-btn--current:hover {
+    background-image: linear-gradient(
+      color-mix(in srgb, currentColor 6%, transparent),
+      color-mix(in srgb, currentColor 6%, transparent)
+    );
+  }
+}
+
+@media (forced-colors: none) {
+  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+    :scope .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
+      color: var(--muxui-semantic-color-neutral-100);
+    }
+  }
+}
+
+@media (forced-colors: none) {
+  .muxui-command-palette__search-field--inline
+    .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
+  }
+
+  .muxui-command-palette__popup--translucent
+    .muxui-command-palette__search-field--inline
+    .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 4%, transparent);
+  }
+}
+
+@media (forced-colors: none) {
+  .muxui-radio-field__button[data-hovered]:not([data-disabled], [data-selected])
+    .muxui-radio-field__indicator {
+    background-color: var(--muxui-semantic-color-neutral-10);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+    );
+  }
+}
+
 /* switch-field */
 .muxui-switch-field {
   --muxui-switch-field-track-width: 2.5rem;
@@ -2873,6 +3038,16 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-switch-field__button[data-hovered]:not([data-disabled], [data-selected])::before {
   border-color: var(--muxui-semantic-color-neutral-50);
   background-color: var(--muxui-semantic-color-neutral-26);
+}
+
+@media (forced-colors: none) {
+  .muxui-switch-field__button[data-hovered]:not([data-disabled], [data-selected])::before {
+    background-color: var(--muxui-semantic-color-neutral-20);
+    background-image: linear-gradient(
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+      color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+    );
+  }
 }
 
 
@@ -3091,7 +3266,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 }
 
 .muxui-tag-select__tag-remove:hover:not(:disabled) {
-  background-color: var(--muxui-semantic-color-neutral-26);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-color-neutral-90);
 }
 
@@ -3177,6 +3352,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-tag-select__item[data-hovered],
 .muxui-tag-select__item[data-focused] {
   background-color: var(--muxui-item-focus-bg);
+  color: var(--muxui-item-focus-color);
+}
+
+.muxui-tag-select__item:is(:hover, [data-hovered]):not([data-selected], [aria-selected='true'], [data-disabled], [aria-disabled='true']) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 2%, transparent);
   color: var(--muxui-item-focus-color);
 }
 
