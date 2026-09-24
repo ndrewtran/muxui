@@ -751,7 +751,7 @@
 }
 
 .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
-  background-color: var(--muxui-semantic-color-neutral-14);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   outline-color: var(--muxui-semantic-color-neutral-28);
   color: var(--muxui-semantic-color-neutral-90);
 }
@@ -1246,7 +1246,7 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-toggle-button:hover:not([data-disabled], [data-selected]) {
-    background-color: var(--muxui-semantic-color-neutral-14);
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
     border-color: var(--muxui-semantic-color-neutral-28);
     color: var(--muxui-semantic-color-neutral-90);
   }

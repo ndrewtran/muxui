@@ -433,6 +433,14 @@
   color: var(--muxui-semantic-color-neutral-90);
 }
 
+.muxui-text-editor__bubble-menu .muxui-text-editor__btn:hover:not(.muxui-text-editor__btn--active) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+}
+
+.muxui-text-editor__bubble-menu .muxui-text-editor__btn:active:not(.muxui-text-editor__btn--active) {
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
+}
+
 .muxui-text-editor__bubble-menu .muxui-text-editor__btn--active {
   background-color: var(--muxui-semantic-color-neutral-22);
   color: var(--muxui-semantic-color-neutral-90);
@@ -476,7 +484,20 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-text-editor__btn:hover {
+  :scope .muxui-text-editor__btn:hover:not(.muxui-text-editor__btn--active) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
+    color: var(--muxui-semantic-color-neutral-90);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-text-editor__btn:active:not(.muxui-text-editor__btn--active) {
+    background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-text-editor__btn--active:hover {
     background-color: var(--muxui-semantic-color-neutral-18);
     color: var(--muxui-semantic-color-neutral-90);
   }

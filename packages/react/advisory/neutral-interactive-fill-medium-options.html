@@ -1,0 +1,332 @@
+<!doctype html>
+<html lang="en" data-muxui-theme="standard-harbour" data-muxui-color-scheme="light" data-muxui-contrast="standard">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Medium neutral fill options · Mux UI</title>
+  <style id="page-style">
+    :root { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 13px; color-scheme: light dark; }
+    * { box-sizing: border-box; transition: none !important; animation: none !important; }
+    *::before, *::after { transition: none !important; animation: none !important; }
+    html, body { min-height: 100%; margin: 0; background: #000; color: #fff; }
+    button { font: inherit; }
+    body { padding: 22px 26px 30px; }
+    .page { max-width: 1800px; margin: 0 auto; color: #fff !important; }
+    .page h1 { color: #fff !important; }
+    .page .intro { color: #c7c7c7 !important; }
+    .page .scope { color: #9c9c9c !important; }
+    .page .fine-print { color: #aaa !important; }
+    .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 18px; }
+    h1 { margin: 0; font-size: 21px; line-height: 1.2; font-weight: 620; letter-spacing: -.02em; }
+    .intro { margin: 6px 0 0; max-width: 880px; color: #c7c7c7; font-size: 12px; line-height: 1.5; }
+    .scope { margin: 5px 0 0; color: #9c9c9c; font-size: 11px; }
+    .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; padding: 11px 0 13px; border-top: 1px solid #292929; border-bottom: 1px solid #292929; }
+    .control-set { display: flex; align-items: center; gap: 6px; }
+    .control-label { margin-right: 3px; color: #999; font-size: 11px; }
+    .control-set button { padding: 4px 8px; border: 1px solid #484848; border-radius: 2px; background: transparent; color: #bbb; cursor: pointer; }
+    .control-set button[aria-pressed="true"] { border-color: #ddd; color: #fff; }
+    .key { margin: 12px 0 10px; color: #aaa; font-size: 11px; line-height: 1.5; }
+    .key strong { color: #fff; font-weight: 620; }
+    .key + .key { margin-top: 0; }
+    .modes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; align-items: start; }
+    #modes[data-view="light"], #modes[data-view="dark"] { grid-template-columns: minmax(0, 1fr); }
+    .mode { min-width: 0; padding: 12px; color: var(--muxui-semantic-content-strong); background: var(--muxui-semantic-surface-canvas); }
+    .mode[hidden] { display: none; }
+    .mode[data-scheme="light"] { --nav-source: var(--muxui-semantic-color-neutral-10); }
+    .mode[data-scheme="dark"] { --nav-source: var(--muxui-semantic-color-neutral-100); }
+    .mode-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 9px; border-bottom: 1px solid var(--muxui-semantic-border-default); }
+    .mode-heading h2 { margin: 0; font-size: 14px; font-weight: 620; }
+    .mode-heading span { color: var(--muxui-semantic-content-muted); font-size: 10px; }
+    .option-head, .comparison { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .option-head { border-bottom: 1px solid var(--muxui-semantic-border-default); }
+    .option-head > div { min-width: 0; padding: 8px 7px; border-left: 1px solid var(--muxui-semantic-border-default); }
+    .option-head > div:first-child { border-left: 0; }
+    .option-head strong { display: block; font-size: 10px; line-height: 1.3; }
+    .option-head small { display: block; margin-top: 2px; color: var(--muxui-semantic-content-muted); font-size: 9px; line-height: 1.3; }
+    .group { padding: 10px 0 11px; border-bottom: 1px solid var(--muxui-semantic-border-default); }
+    .group-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; margin: 0 0 6px; }
+    .group-title strong { font-size: 11px; font-weight: 650; }
+    .group-title span { color: var(--muxui-semantic-content-muted); font-size: 9px; line-height: 1.4; }
+    .option-cell { min-width: 0; padding: 5px 7px 1px; border-left: 1px solid var(--muxui-semantic-border-default); }
+    .option-cell:first-child { border-left: 0; }
+    .sample { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; }
+    .sample + .sample { margin-top: 7px; }
+    .sample-label { flex: 0 0 100%; color: var(--muxui-semantic-content-muted); font-size: 8px; line-height: 1.25; }
+    .sample-note { display: block; margin: 5px 0 0; color: var(--muxui-semantic-content-muted); font-size: 8px; line-height: 1.35; }
+    .candidate-fill[data-preview-hover], .candidate-fill[data-preview-press] { background-color: var(--candidate-rest-color) !important; background-image: linear-gradient(var(--candidate-overlay), var(--candidate-overlay)), var(--candidate-rest-image) !important; }
+    .candidate-fill[data-preview-hover], .candidate-fill[data-hovered][data-preview-hover] { --candidate-alpha: var(--hover-alpha); }
+    .candidate-fill[data-preview-press], .candidate-fill[data-pressed][data-preview-press] { --candidate-alpha: var(--press-alpha); }
+    .candidate-fill { --candidate-overlay: color-mix(in srgb, var(--overlay-source, var(--muxui-semantic-surface-strong)) var(--candidate-alpha), transparent); }
+    .candidate-fill[data-overlay-source="navigation"] { --overlay-source: var(--nav-source); }
+    .target-faint[data-preview-hover] { --candidate-alpha: var(--hover-alpha); }
+    .target-faint[data-preview-press] { --candidate-alpha: var(--press-alpha); }
+    .candidate-fill[data-preview-hover], .candidate-fill[data-preview-press] { background-image: linear-gradient(var(--candidate-overlay), var(--candidate-overlay)), var(--candidate-rest-image) !important; }
+    .candidate-fill[data-preview-hover][data-transparent="true"], .candidate-fill[data-preview-press][data-transparent="true"] { background-color: var(--candidate-overlay) !important; background-image: var(--candidate-rest-image) !important; }
+    .sample-stack { display: grid; gap: 5px; width: 100%; }
+    .small-control { min-width: 0; }
+    .muxui-date-picker { width: min(100%, 220px); }
+    .muxui-date-control { min-width: 0; }
+    .muxui-date-input { width: 1px !important; flex: 1 1 auto !important; min-width: 24px !important; max-width: 100%; }
+    .muxui-date-control { display: flex; align-items: center; width: 100%; min-width: 0; }
+    .muxui-date-trigger { flex: none; }
+    .action-probe { display: inline-flex; align-items: center; gap: 4px; }
+    .action-probe .sample-label { margin-bottom: 1px; }
+    .safe-navs { display: grid; gap: 5px; width: 100%; }
+    .safe-navs > .muxui-header-nav, .safe-navs > .muxui-sidebar, .safe-navs > .unchanged { width: 100%; min-width: 0; max-width: 100%; }
+    .muxui-header-nav { height: auto; min-height: 2.5rem; padding-inline: 8px; gap: 4px; }
+    .muxui-header-nav__secondary { gap: 2px; min-width: 0; }
+    .muxui-header-nav__logo-link { margin-right: 2px; }
+    .muxui-header-nav__nav-btn { min-height: 27px; min-width: 0; padding-inline: 4px; font-size: 8px; }
+    .safe-navs > .muxui-header-nav { overflow: hidden; }
+    .muxui-sidebar { height: auto; min-height: 56px; padding: 4px; }
+    .muxui-sidebar__nav-list { flex: none; overflow: visible; padding: 2px; }
+    .muxui-sidebar__nav-link { min-height: 27px; padding: 4px 6px; font-size: 9px; }
+    .muxui-sidebar__account-card { min-height: 42px; }
+    .muxui-sidebar__account-trigger, .muxui-sidebar__feature-card-dismiss, .muxui-sidebar__mobile-menu-btn, .muxui-sidebar__mobile-close-btn { width: 24px; height: 24px; }
+    .muxui-sidebar__feature-card { min-height: 40px; }
+    .safe-navs .muxui-sidebar__mobile-drawer, .safe-navs .muxui-header-nav__mobile-drawer { position: static !important; inset: auto !important; display: block !important; width: 100% !important; height: auto !important; min-height: 0 !important; max-height: none !important; transform: none !important; visibility: visible !important; opacity: 1 !important; overflow: visible !important; }
+    .safe-navs .muxui-sidebar__mobile-close-row { position: static !important; inset: auto !important; width: 100%; height: auto; }
+    .tag-probes { display: grid; gap: 6px; width: 100%; }
+    .muxui-tag-group, .muxui-tag-list, .muxui-input-tags, .muxui-tag-select__group { min-width: 0; }
+    .muxui-tag-list { flex-wrap: wrap; }
+    .muxui-input-tags__group, .muxui-tag-select__group { min-height: 32px; padding-inline: 4px; }
+    .palette-probes .muxui-command-palette__popup { position: relative !important; inset: auto !important; transform: none !important; width: 100% !important; min-width: 0 !important; max-width: 100% !important; margin: 0 !important; padding: 4px; }
+    .muxui-command-palette__chip { display: inline-flex; align-items: center; gap: 2px; }
+    .card-probes { display: grid; gap: 4px; width: 100%; }
+    .card-row { display: flex; gap: 4px; width: 100%; }
+    .card-row > .muxui-card { flex: 1; min-width: 0; min-height: 39px; padding: 5px 3px; font-size: 8px; }
+    .palette-probes, .collection-probes, .option-probes { display: grid; gap: 6px; width: 100%; }
+    .muxui-command-palette__item { padding: 5px 7px; font-size: 9px; }
+    .muxui-calendar-grid { display: grid; grid-template-columns: repeat(3, 28px); }
+    .muxui-calendar-cell, .muxui-range-calendar-cell { width: 28px; height: 28px; }
+    .muxui-grid-list { display: grid; gap: 2px; width: 100%; }
+    .muxui-grid-list-item { min-height: 27px; padding: 5px 7px; }
+    .muxui-table { width: 100%; }
+    .muxui-table-row { display: grid; grid-template-columns: 1fr 1fr; padding: 5px 6px; }
+    .muxui-tree { width: 100%; margin: 0; padding: 0; list-style: none; }
+    .muxui-tree-item { padding: 5px 7px; }
+    .muxui-tab-list { display: flex; gap: 2px; }
+    .muxui-tab { min-width: 0; padding: 4px 5px; font-size: 8px; }
+    .muxui-select-listbox, .muxui-list-box, .muxui-multi-select__listbox, .muxui-tag-select__listbox { display: grid; gap: 2px; width: 100%; }
+    .muxui-list-box-item, .muxui-multi-select__item, .muxui-tag-select__item { min-height: 26px; padding: 4px 6px; font-size: 9px; }
+    .muxui-virtualizer { width: 100%; max-height: 64px; overflow: auto; }
+    .muxui-virtualizer-item { padding: 5px 6px; }
+    .fine-print { margin: 8px 0 0; color: var(--muxui-semantic-content-muted); font-size: 9px; line-height: 1.4; }
+    body[data-focus="a"] .option-cell:not([data-option="a"]), body[data-focus="b"] .option-cell:not([data-option="b"]), body[data-focus="c"] .option-cell:not([data-option="c"]) { opacity: .3; }
+    body[data-focus="a"] .option-head [data-option="a"], body[data-focus="b"] .option-head [data-option="b"], body[data-focus="c"] .option-head [data-option="c"] { outline: 1px solid currentColor; outline-offset: -1px; }
+    @media (max-width: 1200px) { .modes { grid-template-columns: minmax(0, 1fr); } }
+    @media (max-width: 680px) {
+      body { padding: 16px 12px 24px; }
+      .top { flex-direction: column; gap: 8px; }
+      .mode { padding: 8px; }
+      .option-head, .comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .option-head > div:nth-child(3), .option-cell:nth-child(3) { border-left: 0; }
+      .option-cell { border-bottom: 1px solid var(--muxui-semantic-border-default); }
+      .safe-navs > .muxui-header-nav { overflow: hidden; }
+      .muxui-header-nav__logo-link { display: none; }
+      .muxui-header-nav__secondary { width: 100%; min-width: 0; justify-content: flex-end; }
+      .muxui-header-nav__nav-btn { min-width: 0; padding-inline: 4px; font-size: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body data-view="both" data-focus="all">
+  <main class="page">
+    <header class="top">
+      <div>
+        <h1>Medium neutral interaction fills</h1>
+        <p class="intro">Current Harbour CSS beside three local state-layer calibrations. B follows the quieter reference direction while using smaller fills where the current surface already gives enough feedback.</p>
+        <p class="scope">Advisory comparison · medium assessment scope · Virtualizer focus retained</p>
+      </div>
+    </header>
+    <nav class="controls" aria-label="Preview controls">
+      <div class="control-set" aria-label="Color scheme">
+        <span class="control-label">Mode</span>
+        <button type="button" data-view="both" aria-pressed="true">Both</button>
+        <button type="button" data-view="light" aria-pressed="false">Light</button>
+        <button type="button" data-view="dark" aria-pressed="false">Dark</button>
+      </div>
+      <div class="control-set" aria-label="Emphasize a comparison">
+        <span class="control-label">Emphasize</span>
+        <button type="button" data-focus="all" aria-pressed="true">All</button>
+        <button type="button" data-focus="a" aria-pressed="false">A</button>
+        <button type="button" data-focus="b" aria-pressed="false">B</button>
+        <button type="button" data-focus="c" aria-pressed="false">C</button>
+      </div>
+    </nav>
+    <p class="key"><strong>A · Subtle</strong> uses about 0.65× B. <strong>B · Calibrated</strong> is the recommended medium assessment. <strong>C · Defined</strong> uses about 1.5× B, capped at 14%. Percentages below show each exact hover and press layer.</p>
+    <p class="key">Transparent rows and actions receive a direct tint. Opaque controls keep their measured current rest color and background image beneath a separate tint layer. Selection, focus, disabled, and translucent CommandPalette states stay at current CSS values.</p>
+    <div class="modes" id="modes" aria-live="off"></div>
+    <p class="fine-print"><strong>Scope map:</strong> Date and footer actions NF01, NF09. Navigation NF08 safe nav links and all Light-mode mobile/action hovers; dark Sidebar account, dismiss, and mobile states are deferred. Tags and removal targets NF06, NF10, NF11, NF12. Cards NF07. CommandPalette pointer states NF13. Calendar and collections NF15, NF16, NF17, NF18, NF19. ListBox pointer hover and split option-row review NF20. Virtualizer keyboard focus NF21 stays unchanged.</p>
+  </main>
+  <script>
+    const options = [
+      { key: "current", name: "Current", note: "Harbour source CSS" },
+      { key: "a", name: "A · Subtle", note: "about 0.65× B" },
+      { key: "b", name: "B · Calibrated", note: "recommended" },
+      { key: "c", name: "C · Defined", note: "about 1.5× B" }
+    ];
+
+    const fills = {
+      dateHover: { a: 5, b: 8, c: 12 }, datePress: { a: 8, b: 12, c: 14 },
+      footerHover: { a: 5, b: 8, c: 12 }, navHover: { a: 3, b: 4, c: 6 },
+      tagGroupHover: { a: 2, b: 3, c: 5 }, tagHover: { a: 3, b: 4, c: 6 }, tagPress: { a: 5, b: 8, c: 12 }, removeHover: { a: 5, b: 8, c: 12 },
+      cardOutlinedHover: { a: 2, b: 3, c: 5 }, cardOutlinedPress: { a: 5, b: 8, c: 12 },
+      cardElevatedHover: { a: 1, b: 2, c: 3 }, cardElevatedPress: { a: 4, b: 6, c: 9 },
+      cardFilledHover: { a: 3, b: 4, c: 6 }, cardFilledPress: { a: 5, b: 8, c: 12 },
+      paletteHover: { a: 1, b: 2, c: 3 }, palettePress: { a: 5, b: 8, c: 12 },
+      gridHover: { a: 3, b: 4, c: 6 }, fineHover: { a: 1, b: 2, c: 4 },
+      optionHover: { a: 1, b: 2, c: 4 }
+    };
+
+    function makeTarget(fillKey, state, transparent, source) {
+      return `candidate-fill fill-${fillKey} state-${state}${transparent ? " transparent-fill" : ""}${source === "navigation" ? " overlay-navigation" : ""}`;
+    }
+
+    const groups = [
+      {
+        id: "NF01/NF09", title: "Date and footer actions", detail: "A/B/C DatePicker hover 5/8/12%, press 8/12/14%. Footer hover 5/8/12%.",
+        html: (key) => `<div class="sample"><span class="sample-label">Date trigger · hover</span><div class="muxui-date-picker"><label class="muxui-field-label">Due date</label><div class="muxui-date-control"><input class="muxui-date-input" value="Sep 23, 2026" readonly><button class="muxui-date-trigger ${key === 'current' ? '' : makeTarget('dateHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''} aria-label="Open calendar">▦</button></div></div></div><div class="sample"><span class="sample-label">Date trigger · press</span><div class="muxui-date-picker"><label class="muxui-field-label">Due date</label><div class="muxui-date-control"><input class="muxui-date-input" value="Sep 23, 2026" readonly><button class="muxui-date-trigger ${key === 'current' ? '' : makeTarget('datePress','press',false)}" ${key === 'current' ? 'data-hovered data-pressed' : ''} aria-label="Open calendar">▦</button></div></div></div><div class="sample"><span class="sample-label">MultiSelect footer action · hover</span><button class="muxui-multi-select__footer-btn ${key === 'current' ? '' : makeTarget('footerHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}>Add selected</button><button class="muxui-multi-select__footer-btn" data-disabled aria-disabled="true" disabled>Unavailable</button></div>`
+      },
+      {
+        id: "NF08", title: "Inverse navigation and navigation actions", detail: "A/B/C safe nav and Light-mode mobile/action hover 3/4/6%. Dark Sidebar account, dismiss, and mobile controls retain authored fills for a later contrast review.",
+        html: (key, scheme) => {
+          const current = key === "current";
+          const dark = scheme === "dark";
+          const lightAction = !current && !dark;
+          const actionClass = lightAction ? makeTarget("navHover", "hover", false, "navigation") : "";
+          const actionState = current || dark ? "data-preview-hover" : "";
+          return `<div class="safe-navs"><header class="muxui-header-nav"><a class="muxui-header-nav__logo-link" aria-label="Harbour home">H</a><nav class="muxui-header-nav__secondary"><a class="muxui-header-nav__nav-btn ${current ? "" : makeTarget("navHover", "hover", false, "navigation")}" ${current ? "data-preview-hover" : ""}>Overview</a><a class="muxui-header-nav__nav-btn muxui-header-nav__nav-btn--current">Projects</a></nav></header><aside class="muxui-sidebar"><ul class="muxui-sidebar__nav-list"><li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link ${current ? "" : makeTarget("navHover", "hover", false, "navigation")}" ${current ? "data-preview-hover" : ""}><span class="muxui-sidebar__nav-label">Overview</span></a></li><li class="muxui-sidebar__nav-item"><a class="muxui-sidebar__nav-link muxui-sidebar__nav-link--current"><span class="muxui-sidebar__nav-label">Projects</span></a></li></ul></aside><div class="sample"><span class="sample-label">HeaderNav mobile trigger / close · ${dark ? "current dark state held" : "light tonal hover"}</span><header class="muxui-header-nav"><a class="muxui-header-nav__logo-link" aria-label="Harbour home">H</a><button class="muxui-header-nav__mobile-trigger ${actionClass}" ${actionState} aria-label="Open navigation">☰</button><div class="muxui-header-nav__mobile-drawer"><button class="muxui-header-nav__mobile-close-btn ${actionClass}" ${actionState} aria-label="Close navigation">×</button></div></header></div><div class="sample"><span class="sample-label">Sidebar account / dismiss / menu / close · ${dark ? "authored dark state held" : "light tonal hover"}</span><aside class="muxui-sidebar"><div class="muxui-sidebar__account-card"><div class="muxui-sidebar__account-avatar-wrap"><span class="muxui-sidebar__account-avatar--placeholder">AC</span></div><div class="muxui-sidebar__account-info"><div class="muxui-sidebar__account-name">Alex Chen</div><div class="muxui-sidebar__account-email">alex@example.test</div></div><button class="muxui-sidebar__account-trigger ${actionClass}" ${actionState} aria-label="Account options">⋯</button></div><div class="muxui-sidebar__feature-card"><span class="muxui-sidebar__feature-card-title">Invite team</span><button class="muxui-sidebar__feature-card-dismiss ${actionClass}" ${actionState} aria-label="Dismiss">×</button></div><div class="control-row"><button class="muxui-sidebar__mobile-menu-btn ${actionClass}" ${actionState} aria-label="Open menu">☰</button><div class="muxui-sidebar__mobile-drawer"><div class="muxui-sidebar__mobile-close-row"><button class="muxui-sidebar__mobile-close-btn ${actionClass}" ${actionState} aria-label="Close">×</button></div></div></div></aside></div></div>`;
+        }
+      },
+      {
+        id: "NF06/NF10/NF11/NF12", title: "Tags and nested remove targets", detail: "A/B/C TagGroup hover 2/3/5%, press 5/8/12%. InputTags hover 3/4/6%. Removers 5/8/12%.",
+        html: (key) => `<div class="tag-probes"><div class="sample"><span class="sample-label">TagGroup · container hover / press · remove hover</span><ul class="muxui-tag-list"><li class="muxui-tag ${key === 'current' ? '' : makeTarget('tagGroupHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''}>Reports<button class="muxui-tag-remove ${key === 'current' ? '' : makeTarget('removeHover','hover',true)}" ${key === 'current' ? 'data-preview-hover' : ''} aria-label="Remove Reports">×</button></li><li class="muxui-tag ${key === 'current' ? '' : makeTarget('tagPress','press',false)}" ${key === 'current' ? 'data-pressed' : ''}>Draft</li></ul></div><div class="sample"><span class="sample-label">InputTags · tag hover / nested remove</span><div class="muxui-input-tags"><div class="muxui-input-tags__group"><span class="muxui-input-tags__tag ${key === 'current' ? '' : makeTarget('tagHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''}>Design<button slot="remove" class="${key === 'current' ? '' : makeTarget('removeHover','hover',true)}" ${key === 'current' ? 'data-preview-hover' : ''} aria-label="Remove Design">×</button></span><input class="muxui-input-tags__input" placeholder="Add tag"></div></div></div><div class="sample"><span class="sample-label">TagSelect remove / CommandPalette chip remove · hover</span><div class="muxui-tag-select__tag"><span class="muxui-tag-select__tag-text">Harbour</span><button class="muxui-tag-select__tag-remove ${key === 'current' ? '' : makeTarget('removeHover','hover',true)}" ${key === 'current' ? 'data-preview-hover' : ''} aria-label="Remove Harbour">×</button></div><div class="muxui-command-palette__chip"><span>Search</span><button class="muxui-command-palette__chip-remove ${key === 'current' ? '' : makeTarget('removeHover','hover',true)}" ${key === 'current' ? 'data-preview-hover' : ''} aria-label="Remove Search">×</button></div></div></div>`
+      },
+      {
+        id: "NF07", title: "Card variants", detail: "A/B/C outlined hover 2/3/5%, press 5/8/12%; elevated hover 1/2/3%, press 4/6/9%; filled hover 3/4/6%, press 5/8/12%.",
+        html: (key) => `<div class="card-probes"><div class="sample"><span class="sample-label">Hover · outlined / elevated / filled</span><div class="card-row"><button class="muxui-card muxui-card--button muxui-card--sm muxui-card--outlined ${key === 'current' ? '' : makeTarget('cardOutlinedHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''}>Outlined</button><button class="muxui-card muxui-card--button muxui-card--sm muxui-card--elevated ${key === 'current' ? '' : makeTarget('cardElevatedHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''}>Elevated</button><button class="muxui-card muxui-card--button muxui-card--sm muxui-card--filled ${key === 'current' ? '' : makeTarget('cardFilledHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''}>Filled</button></div></div><div class="sample"><span class="sample-label">Press · outlined / elevated / filled</span><div class="card-row"><button class="muxui-card muxui-card--button muxui-card--sm muxui-card--outlined ${key === 'current' ? '' : makeTarget('cardOutlinedPress','press',false)}" ${key === 'current' ? 'data-pressed' : ''}>Outlined</button><button class="muxui-card muxui-card--button muxui-card--sm muxui-card--elevated ${key === 'current' ? '' : makeTarget('cardElevatedPress','press',false)}" ${key === 'current' ? 'data-pressed' : ''}>Elevated</button><button class="muxui-card muxui-card--button muxui-card--sm muxui-card--filled ${key === 'current' ? '' : makeTarget('cardFilledPress','press',false)}" ${key === 'current' ? 'data-pressed' : ''}>Filled</button></div></div></div>`
+      },
+      {
+        id: "NF13/NF20", title: "CommandPalette pointer states and held focus", detail: "A/B/C default popup hover 1/2/3%, press 5/8/12%. Selected, keyboard-focused, and translucent popup rows keep current CSS.",
+        html: (key) => `<div class="palette-probes"><div class="sample"><span class="sample-label">Default popup · pointer hover / press / selected</span><div class="muxui-command-palette__popup"><div class="muxui-command-palette__listbox"><div class="muxui-command-palette__item ${key === 'current' ? '' : makeTarget('paletteHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}>Open project</div><div class="muxui-command-palette__item ${key === 'current' ? '' : makeTarget('palettePress','press',true)}" ${key === 'current' ? 'data-pressed' : ''}>Create project</div><div class="muxui-command-palette__item" data-selected>Selected command</div><div class="muxui-command-palette__item" data-focused data-focus-visible>Keyboard focus held</div></div></div></div><div class="sample"><span class="sample-label">Translucent popup · pointer and focused fill held</span><div class="muxui-command-palette__popup muxui-command-palette__popup--translucent"><div class="muxui-command-palette__listbox"><div class="muxui-command-palette__item" data-hovered>Pointer hover held</div><div class="muxui-command-palette__item" data-focused data-focus-visible>Translucent focus held</div></div></div></div></div>`
+      },
+      {
+        id: "NF15/NF16/NF17/NF18/NF19", title: "Calendar and collection rows", detail: "Calendar, Table, Tree, and underline tabs 1/2/4%. GridList retains its opaque custom rest and uses 3/4/6%.",
+        html: (key) => `<div class="collection-probes"><div class="sample"><span class="sample-label">Calendar + RangeCalendar · enabled cell hover 1/2/4%</span><div class="muxui-calendar-grid"><button class="muxui-calendar-cell ${key === 'current' ? '' : makeTarget('fineHover','hover',true)}" ${key === 'current' ? 'data-preview-hover' : ''} data-today>23</button><button class="muxui-range-calendar-cell ${key === 'current' ? '' : makeTarget('fineHover','hover',true)}" ${key === 'current' ? 'data-preview-hover' : ''} data-today>24</button><button class="muxui-range-calendar-cell" data-selected data-selection-start>25</button></div></div><div class="sample"><span class="sample-label">GridList · custom dark rest · hover 3/4/6%</span><div class="muxui-grid-list"><div class="muxui-grid-list-item ${key === 'current' ? '' : makeTarget('gridHover','hover',false)}" ${key === 'current' ? 'data-hovered' : ''}>Project overview</div><div class="muxui-grid-list-item" data-selected>Selected item</div></div></div><div class="sample"><span class="sample-label">Table / Tree / underline tab · hover 1/2/4%</span><div class="muxui-table"><div class="muxui-table-body"><div class="muxui-table-row ${key === 'current' ? '' : makeTarget('fineHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}><div class="muxui-table-cell">Northstar</div><div class="muxui-table-cell">Active</div></div><div class="muxui-table-row" data-selected><div class="muxui-table-cell">Harbour</div><div class="muxui-table-cell">Selected</div></div></div></div><ul class="muxui-tree"><li class="muxui-tree-item ${key === 'current' ? '' : makeTarget('fineHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}><span class="muxui-tree-item-content"><span class="muxui-tree-item-label">Overview</span></span></li><li class="muxui-tree-item" data-selected><span class="muxui-tree-item-content"><span class="muxui-tree-item-label">Projects</span></span></li></ul><div class="muxui-tabs" data-variant="underline"><div class="muxui-tab-list"><button class="muxui-tab ${key === 'current' ? '' : makeTarget('fineHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}>Activity</button><button class="muxui-tab" data-selected aria-selected="true">Settings</button></div></div></div></div>`
+      },
+      {
+        id: "NF20/NF21", title: "Option rows and Virtualizer focus", detail: "ListBox, MultiSelect, and TagSelect pointer hover 1/2/4%. Keyboard focus fills and rings stay unchanged. Virtualizer focus is unchanged.",
+        html: (key) => `<div class="option-probes"><div class="sample"><span class="sample-label">ListBox · pointer hover candidate / keyboard focus held</span><div class="muxui-list-box"><div class="muxui-list-box-item ${key === 'current' ? '' : makeTarget('optionHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}>Unselected pointer row</div><div class="muxui-list-box-item" data-focused data-focus-visible>Focus only · held</div></div></div><div class="sample"><span class="sample-label">MultiSelect + TagSelect · pointer hover candidate / focus held</span><div class="muxui-multi-select__listbox"><div class="muxui-multi-select__item ${key === 'current' ? '' : makeTarget('optionHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}>Pointer row</div><div class="muxui-multi-select__item" data-focused data-focus-visible>Keyboard focus held</div></div><div class="muxui-tag-select__listbox"><div class="muxui-tag-select__item ${key === 'current' ? '' : makeTarget('optionHover','hover',true)}" ${key === 'current' ? 'data-hovered' : ''}>Pointer row</div><div class="muxui-tag-select__item" data-focused data-focus-visible>Keyboard focus held</div></div></div><div class="sample"><span class="sample-label">Select / ComboBox / Autocomplete focus marker · held</span><div class="muxui-select-listbox"><div class="muxui-select-option" data-focused data-focus-visible>Active project</div><div class="muxui-combo-box-option" data-focused data-focus-visible>Matching result</div><div class="muxui-autocomplete-option" data-focused data-focus-visible>Suggested value</div></div></div><div class="sample"><span class="sample-label">Virtualizer · focused item stays current</span><div class="muxui-virtualizer"><div class="muxui-virtualizer-item" data-focused data-focus-visible>Focused result</div><div class="muxui-virtualizer-item">Next result</div></div></div></div>`
+      }
+    ];
+
+    function optionHeader() {
+      return `<div class="option-head">${options.map((option) => `<div data-option="${option.key}"><strong>${option.name}</strong><small>${option.note}</small></div>`).join("")}</div>`;
+    }
+
+    function modePanel(scheme) {
+      const panel = document.createElement("section");
+      panel.className = "mode";
+      panel.dataset.scheme = scheme;
+      panel.dataset.muxuiTheme = "standard-harbour";
+      panel.dataset.muxuiColorScheme = scheme;
+      panel.dataset.muxuiContrast = "standard";
+      panel.innerHTML = `<div class="mode-heading"><h2>${scheme === "light" ? "Light" : "Dark"} Harbour</h2><span>Actual token values and component CSS</span></div>${optionHeader()}`;
+      groups.forEach((group) => {
+        const section = document.createElement("section");
+        section.className = "group";
+        section.dataset.id = group.id;
+        section.innerHTML = `<h3 class="group-title"><strong>${group.title}</strong><span>${group.id} · ${group.detail}</span></h3><div class="comparison">${options.map((option) => `<div class="option-cell" data-option="${option.key}">${group.html(option.key, scheme)}</div>`).join("")}</div>`;
+        panel.append(section);
+      });
+      return panel;
+    }
+
+    async function loadComponentStyles() {
+      const paths = [
+        "../generated/themes.css", "../generated/styles.css", "../src/styles/base.css",
+        "../src/styles/components.css", "../src/styles/fields.css", "../src/styles/collections.css",
+        "../src/text-editor/text-editor.css", "../src/supplemental/styles.css"
+      ];
+      const responses = await Promise.all(paths.map((path) => fetch(path)));
+      if (responses.some((response) => !response.ok)) throw new Error("Could not load the live Harbour preview CSS.");
+      const sources = await Promise.all(responses.map((response) => response.text()));
+      let generated = sources[1];
+      for (const sourceIndex of [3, 4, 5, 6]) {
+        const block = sources[sourceIndex].trim();
+        const count = generated.split(block).length - 1;
+        if (count !== 1) throw new Error("Generated styles no longer contain one source block for the medium preview.");
+        generated = generated.replace(block, "");
+      }
+      const authored = [sources[0], generated, sources[2], sources[3], sources[4], sources[5], sources[6], sources[7]].join("\n");
+      const simulatedHover = authored.replaceAll(":hover", "[data-preview-hover]").replaceAll(":active", "[data-preview-press]");
+      const style = document.createElement("style");
+      style.dataset.source = "Harbour generated and current source CSS";
+      style.textContent = authored + "\n" + simulatedHover;
+      document.head.append(style);
+      const fit = document.createElement("style");
+      fit.dataset.source = "Static fixture containment";
+      fit.textContent = `.mode .muxui-date-picker { width: min(100%, 280px) !important; min-width: 0 !important; } .mode .muxui-date-control { display: flex !important; width: 100% !important; min-width: 0 !important; } .mode .muxui-date-input { width: auto !important; flex: 1 1 0% !important; min-width: 0 !important; max-width: 100% !important; } .safe-navs .muxui-sidebar { width: 100% !important; max-width: 100% !important; min-width: 0 !important; height: auto !important; min-height: 0 !important; } .safe-navs .muxui-sidebar__feature-card-dismiss { position: static !important; inset: auto !important; } .safe-navs .control-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }`;
+      document.head.append(fit);
+      document.getElementById("modes").replaceChildren(modePanel("light"), modePanel("dark"));
+      document.getElementById("modes").dataset.view = document.body.dataset.view;
+      document.querySelectorAll("[data-hovered]").forEach((element) => element.setAttribute("data-preview-hover", ""));
+      document.querySelectorAll("[data-pressed]").forEach((element) => element.setAttribute("data-preview-press", ""));
+      document.querySelectorAll(".candidate-fill").forEach((element) => {
+        const fillKey = [...element.classList].find((name) => name.startsWith("fill-"))?.slice(5);
+        if (fillKey) element.dataset.fillKey = fillKey;
+        if (element.classList.contains("state-hover")) {
+          element.setAttribute("data-preview-hover", "");
+          element.setAttribute("data-hovered", "");
+        } else {
+          element.setAttribute("data-preview-press", "");
+          element.setAttribute("data-pressed", "");
+        }
+        if (element.classList.contains("overlay-navigation")) element.dataset.overlaySource = "navigation";
+        if (element.classList.contains("transparent-fill")) element.dataset.transparent = "true";
+      });
+      applyPreviewLayers();
+    }
+
+    function applyPreviewLayers() {
+      document.querySelectorAll(".candidate-fill[data-fill-key]").forEach((element) => {
+        const fillKey = element.dataset.fillKey;
+        const percentages = fills[fillKey];
+        const activeAlpha = percentages[element.closest(".option-cell").dataset.option];
+        element.style.setProperty("--candidate-alpha", `${activeAlpha}%`);
+        element.style.setProperty("--candidate-overlay", `color-mix(in srgb, ${element.dataset.overlaySource === "navigation" ? "var(--nav-source)" : "var(--muxui-semantic-surface-strong)"} ${activeAlpha}%, transparent)`);
+        const stateAttrs = ["data-preview-hover", "data-preview-press", "data-hovered", "data-pressed"];
+        const saved = stateAttrs.filter((attribute) => element.hasAttribute(attribute));
+        stateAttrs.forEach((attribute) => element.removeAttribute(attribute));
+        const rest = getComputedStyle(element);
+        element.style.setProperty("--candidate-rest-color", rest.backgroundColor);
+        element.style.setProperty("--candidate-rest-image", rest.backgroundImage === "none" ? "none" : rest.backgroundImage);
+        saved.forEach((attribute) => element.setAttribute(attribute, ""));
+        element.dataset.previewPercent = `${activeAlpha}%`;
+      });
+    }
+
+    function setMode(view) {
+      document.body.dataset.view = view;
+      document.getElementById("modes").dataset.view = view;
+      document.querySelectorAll(".mode").forEach((panel) => { panel.hidden = view !== "both" && panel.dataset.scheme !== view; });
+      document.querySelectorAll("button[data-view]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.view === view)));
+    }
+
+    document.querySelectorAll("button[data-view]").forEach((button) => button.addEventListener("click", () => setMode(button.dataset.view)));
+    document.querySelectorAll("button[data-focus]").forEach((button) => button.addEventListener("click", () => {
+      document.body.dataset.focus = button.dataset.focus;
+      document.querySelectorAll("button[data-focus]").forEach((item) => item.setAttribute("aria-pressed", String(item === button)));
+    }));
+
+    loadComponentStyles().catch((error) => {
+      const message = document.createElement("p");
+      message.className = "fine-print";
+      message.textContent = `Preview CSS failed to load: ${error.message}`;
+      document.querySelector(".page").append(message);
+    });
+  </script>
+</body>
+</html>

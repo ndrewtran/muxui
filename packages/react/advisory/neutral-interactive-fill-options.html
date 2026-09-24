@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>Neutral interaction fills · Mux UI</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 13px;
+      --n10: #f2f1f0; --n12: #edeceb; --n14: #e8e7e6; --n18: #dfdcdb;
+      --n20: #dad7d6; --n22: #d5d2d1; --n26: #cbc8c6; --n28: #c6c3c0;
+      --n30: #c1bebb; --n40: #a9a4a0; --n50: #918b86; --n60: #79716b;
+      --n70: #5f5954; --n80: #45403d; --n90: #2b2826; --n92: #262321;
+      --n88: #302d2b; --n94: #211e1d; --n96: #1b1a18; --n98: #161514; --n100: #11100f;
+      --n5: #f9f8f8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #fff; background: #000; }
+    button { font: inherit; }
+    .page { max-width: 1600px; margin: 0 auto; padding: 24px 28px 36px; }
+    header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 18px; }
+    h1 { margin: 0; font-size: 21px; line-height: 1.2; font-weight: 620; letter-spacing: -.02em; }
+    .scope { margin: 6px 0 0; color: #a6a6a6; font-size: 12px; }
+    .ledger { color: inherit; text-decoration-color: #777; text-underline-offset: 3px; white-space: nowrap; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; padding: 12px 0 16px; border-top: 1px solid #292929; border-bottom: 1px solid #292929; }
+    .control-set { display: flex; align-items: center; gap: 7px; }
+    .control-label { color: #999; font-size: 11px; }
+    .control-set button {
+      padding: 4px 7px; color: #bbb; background: transparent; border: 1px solid #444; border-radius: 2px; cursor: pointer;
+    }
+    .control-set button[aria-pressed="true"] { color: #fff; border-color: #ddd; }
+    .key { margin: 13px 0 17px; color: #aaa; font-size: 11px; }
+    .key strong { color: #fff; font-weight: 600; }
+    .modes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 26px; align-items: start; }
+    .mode { min-width: 0; padding: 14px 14px 0; color: var(--ink); background: var(--canvas); }
+    .mode[data-scheme="light"] {
+      --canvas: #fff; --ink: #111; --muted: #65615e; --line: #dedcda;
+      --strong: var(--n90); --subtle: var(--n12); --raised: var(--n10); --field: var(--n5);
+      --outline: var(--n22); --hover-outline: var(--n28); --field-border: var(--n26); --muted-ink: var(--n70);
+      --toolbar-fg: var(--n70); --toolbar-current-pressed-fg: var(--n20);
+      --action-hover-current: var(--n14); --action-pressed-current: var(--n20);
+      --toolbar-bg: var(--n12); --toolbar-border: var(--n22); --toolbar-hover: var(--n18);
+      --editor-main-bg: var(--n100); --editor-main-border: var(--n90);
+      --editor-bubble-bg: var(--n10); --editor-bubble-border: var(--n20);
+      --editor-bubble-hover: var(--n18); --editor-muted: var(--n60);
+      --editor-strong: var(--n90); --editor-active-bg: var(--n94); --editor-active-fg: var(--n10);
+      --selection-bg: var(--n80); --selection-fg: var(--n10);
+    }
+    .mode[data-scheme="dark"] {
+      --canvas: #000; --ink: #fff; --muted: #a7a7a7; --line: #2b2b2b;
+      --strong: var(--n20); --subtle: var(--n98); --raised: var(--n10); --field: #020202;
+      --outline: var(--n88); --hover-outline: #35322f; --field-border: #35322f; --muted-ink: var(--n40);
+      --toolbar-fg: var(--n40); --toolbar-current-pressed-fg: var(--n90);
+      --action-hover-current: var(--n96); --action-pressed-current: var(--n70);
+      --toolbar-bg: var(--n98); --toolbar-border: var(--n90); --toolbar-hover: var(--n92);
+      --editor-main-bg: var(--n96); --editor-main-border: var(--n88);
+      --editor-bubble-bg: var(--n100); --editor-bubble-border: var(--n90);
+      --editor-bubble-hover: var(--n92); --editor-muted: var(--n40);
+      --editor-strong: var(--n20); --editor-active-bg: var(--n88); --editor-active-fg: var(--n14);
+      --selection-bg: var(--n30); --selection-fg: var(--n100);
+    }
+    .mode[hidden] { display: none; }
+    .mode-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 0 0 13px; }
+    .mode-heading h2 { margin: 0; font-size: 15px; font-weight: 620; }
+    .mode-heading span { color: var(--muted); font-size: 10px; }
+    .column-head, .comparison {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .column-head { border-bottom: 1px solid var(--line); }
+    .column-head > div { min-width: 0; padding: 8px 7px 9px; border-left: 1px solid var(--line); }
+    .column-head > div:first-child { border-left: 0; }
+    .column-head strong { display: block; font-size: 10px; line-height: 1.3; }
+    .column-head small { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; line-height: 1.3; }
+    .component { padding: 12px 0 13px; border-bottom: 1px solid var(--line); }
+    .component-heading { display: flex; align-items: baseline; gap: 7px; margin: 0 0 7px; }
+    .component-heading strong { font-size: 11px; font-weight: 650; }
+    .component-heading span { color: var(--muted); font-size: 10px; }
+    .comparison { align-items: stretch; }
+    .option-cell { min-width: 0; padding: 6px 7px 3px; border-left: 1px solid var(--line); transition: opacity 120ms ease; }
+    .option-cell:first-child { border-left: 0; }
+    body[data-focus="a"] .option-cell:not([data-option="a"]),
+    body[data-focus="b"] .option-cell:not([data-option="b"]),
+    body[data-focus="c"] .option-cell:not([data-option="c"]) { opacity: .24; }
+    .sample-caption { display: flex; justify-content: space-between; gap: 4px; margin: 0 0 4px; color: var(--muted); font-size: 9px; }
+    .preview-control { display: inline-flex; align-items: center; justify-content: center; color: var(--control-fg, var(--ink)); }
+    .state-hover { background: var(--state-fill, var(--hover-fill)); }
+    .state-press { background: var(--state-fill, var(--press-fill)); }
+
+    /* NF02: clear buttons keep the source input surface, geometry and glyph. */
+    .search-control {
+      display: flex; align-items: center; justify-content: space-between; gap: 6px;
+      height: 30px; margin-bottom: 5px; padding: 0 5px 0 8px; color: var(--ink);
+      background: var(--field); outline: 1px solid var(--field-border); border-radius: 5px;
+      font-size: 10px;
+    }
+    .search-value { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+    .search-glyph { position: relative; width: 10px; height: 10px; flex: none; border: 1.4px solid currentColor; border-radius: 50%; opacity: .65; }
+    .search-glyph::after { position: absolute; content: ""; width: 4px; height: 1px; right: -3px; bottom: -1px; background: currentColor; transform: rotate(48deg); }
+    .clear { width: 22px; height: 22px; flex: none; border-radius: 50%; font-size: 14px; line-height: 1; }
+
+    /* NF03: the middle control and stepper dividers stay visible in each state. */
+    .number-control {
+      display: grid; grid-template-columns: 25px minmax(22px, 1fr) 25px; align-items: stretch;
+      width: 100%; height: 29px; margin-bottom: 6px; overflow: hidden;
+      color: var(--ink); background: var(--field); outline: 1px solid var(--field-border); border-radius: 5px;
+      font-size: 12px;
+    }
+    .stepper { background: var(--raised); color: var(--muted-ink); }
+    .stepper.state-hover { background: var(--state-fill, var(--hover-fill)); color: var(--strong); }
+    .stepper.state-press { background: var(--state-fill, var(--press-fill)); color: var(--strong); }
+    .stepper:first-child { border-right: 1px solid var(--outline); border-radius: 4px 0 0 4px; }
+    .stepper:last-child { border-left: 1px solid var(--outline); border-radius: 0 4px 4px 0; }
+    .number-value { display: flex; align-items: center; justify-content: center; font-size: 10px; }
+
+    /* NF04: previews use the existing compact neutral direct-child toolbar intent. */
+    .toolbar {
+      display: flex; align-items: center; justify-content: space-around; gap: 2px;
+      min-height: 36px; padding: 3px; background: var(--toolbar-bg); border: 1px solid var(--toolbar-border); border-radius: 5px;
+    }
+    .toolbar-child { min-width: 28px; height: 26px; padding: 0 4px; border-radius: 3px; color: var(--toolbar-fg, var(--muted-ink)); font-size: 11px; }
+    .toolbar-child.state-press, .toolbar-child.toolbar-data-pressed { color: var(--toolbar-fg, var(--muted-ink)); }
+    .toolbar-child.toolbar-data-pressed { background: var(--state-fill, var(--press-fill)); }
+    .option-cell[data-option="current"] .toolbar-child.toolbar-data-pressed { color: var(--toolbar-current-pressed-fg, var(--toolbar-fg)); }
+
+    /* NF05: transparent ToggleButtons inherit the selectable underlay. */
+    .toggle-probe { padding: 4px 0 5px; background: var(--probe-bg, var(--canvas)); }
+    body[data-underlay="tinted"] .toggle-probe { --probe-bg: var(--subtle); }
+    .toggle-standalone { width: 30px; height: 28px; margin-bottom: 6px; border: 0; outline: 1px solid var(--outline); outline-offset: -1px; border-radius: 5px; color: var(--muted-ink); }
+    .toggle-standalone.state-hover, .toggle-child.state-hover { color: var(--strong); outline-color: var(--hover-outline); }
+    .toggle-group { display: inline-flex; overflow: hidden; border: 1px solid var(--outline); border-radius: 4px; }
+    .toggle-child { min-width: 29px; height: 23px; padding: 0 4px; border-right: 1px solid var(--outline); outline: 1px solid var(--outline); outline-offset: -1px; color: var(--muted-ink); font-size: 8px; }
+    .toggle-child:last-child { border-right: 0; }
+    .toggle-child.selected { color: var(--selection-fg); background: var(--selection-bg); }
+    .toggle-child.trailing { background: transparent; }
+
+    /* NF14: toolbar and bubble-menu surfaces, plus contextual selected state, remain source-shaped. */
+    .editor-main-stage { margin-bottom: 6px; padding: 3px 0; background: var(--canvas); }
+    body[data-underlay="tinted"] .editor-main-stage { background: var(--subtle); }
+    .editor-bar { display: flex; align-items: center; gap: 2px; width: max-content; max-width: 100%; padding: 3px; border: 1px solid; border-radius: 5px; }
+    .editor-main { padding: 0; border: 0; border-radius: 0; background: transparent; }
+    .editor-bubble { background: var(--editor-bubble-bg); border-color: var(--editor-bubble-border); }
+    .editor-child { width: 23px; height: 23px; border-radius: 3px; color: var(--editor-muted); font-size: 10px; }
+    .editor-child.state-hover { color: var(--editor-strong); }
+    .editor-child.selected { color: var(--editor-active-fg); background: var(--editor-active-bg); }
+    .editor-label { margin: 0 0 3px; color: var(--muted); font-size: 8px; }
+    .fine-print { margin: 12px 0 0; color: var(--muted); font-size: 9px; line-height: 1.4; }
+    body[data-focus="a"] .column-head [data-option="a"],
+    body[data-focus="b"] .column-head [data-option="b"],
+    body[data-focus="c"] .column-head [data-option="c"] { outline: 1px solid currentColor; outline-offset: -1px; }
+    @media (max-width: 1150px) {
+      .modes { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+      .mode { padding-inline: 12px; }
+    }
+    @media (max-width: 620px) {
+      .page { padding: 17px 12px 26px; }
+      header { flex-direction: column; gap: 10px; }
+      .column-head, .comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .column-head > div:nth-child(3), .option-cell:nth-child(3) { border-left: 0; }
+      .option-cell { border-bottom: 1px solid var(--line); }
+      .mode { padding-inline: 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0.01ms !important; } }
+  </style>
+</head>
+<body data-view="both" data-underlay="plain" data-focus="all">
+  <main class="page">
+    <header>
+      <div>
+        <h1>Neutral interaction fills</h1>
+        <p class="scope">High-confidence review · NF02 · NF03 · NF04 · NF05 · NF14</p>
+      </div>
+      <a class="ledger" href="neutral-interactive-fill-ledger.md">Open source ledger ↗</a>
+    </header>
+    <nav class="controls" aria-label="Preview controls">
+      <div class="control-set" aria-label="Color scheme">
+        <span class="control-label">Mode</span>
+        <button type="button" data-view="both" aria-pressed="true">Both</button>
+        <button type="button" data-view="light" aria-pressed="false">Light</button>
+        <button type="button" data-view="dark" aria-pressed="false">Dark</button>
+      </div>
+      <div class="control-set" aria-label="Transparent button underlay">
+        <span class="control-label">Button underlay</span>
+        <button type="button" data-underlay="plain" aria-pressed="true">Plain</button>
+        <button type="button" data-underlay="tinted" aria-pressed="false">Tinted</button>
+      </div>
+      <div class="control-set" aria-label="Emphasize a comparison">
+        <span class="control-label">Emphasize</span>
+        <button type="button" data-focus="all" aria-pressed="true">All</button>
+        <button type="button" data-focus="a" aria-pressed="false">A</button>
+        <button type="button" data-focus="b" aria-pressed="false">B</button>
+        <button type="button" data-focus="c" aria-pressed="false">C</button>
+      </div>
+    </nav>
+    <p class="key"><strong>A · Shared action · recommended</strong> uses the existing adaptive source at 12% hover and 16% pressed. <strong>B · Quiet</strong> (8% / 12%) and <strong>C · Stronger</strong> (16% / 20%) are local proposals, not canonical tokens. NF14’s light main toolbar keeps its existing 7% / 20% mix in every option.</p>
+    <p class="key"><strong>Decision:</strong> B · Quiet chosen for implementation (8% hover / 12% pressed; NF05 hover only 8%).</p>
+    <div class="modes" id="modes"></div>
+  </main>
+  <!-- Current fills and component surfaces are drawn from the linked ledger, its
+       cited React selectors, and catalog/tokens/default-theme.json. The A column
+       mirrors semantic.action.neutral-background-hover/pressed: color-mix of
+       semantic.surface.strong at 12%/16%; surface.strong resolves to adaptive
+       neutral-90 in light and neutral-default-20 in dark. B/C are review-only. -->
+  <script>
+    const components = [
+      { id: "NF02", title: "SearchField clear", detail: "hover · pressed" },
+      { id: "NF03", title: "NumberField stepper", detail: "hover · active" },
+      { id: "NF04", title: "Toolbar child Buttons", detail: "hover · active · data-pressed" },
+      { id: "NF05", title: "Unselected ToggleButton", detail: "hover only" },
+      { id: "NF14", title: "TextEditor toolbar + bubble menu", detail: "hover · pointer-active" }
+    ];
+    const options = [
+      { key: "current", name: "Current", note: "sourced baseline" },
+      { key: "a", name: "A · Shared", note: "12% / 16% · recommended" },
+      { key: "b", name: "B · Quiet", note: "8% / 12% · local proposal" },
+      { key: "c", name: "C · Stronger", note: "16% / 20% · local proposal" }
+    ];
+    const percents = { a: [12, 16], b: [8, 12], c: [16, 20] };
+    const componentsById = Object.fromEntries(components.map(function (item) { return [item.id, item]; }));
+
+    function currentFills(id, scheme) {
+      const dark = scheme === "dark";
+      const n = function (value) { return "var(--n" + value + ")"; };
+      const mix = function (percent) { return "color-mix(in srgb, var(--strong) " + percent + "%, transparent)"; };
+      if (id === "NF02") return [n(dark ? 96 : 14), n(dark ? 70 : 20)];
+      if (id === "NF03") return [n(dark ? 70 : 20), n(dark ? 50 : 26)];
+      if (id === "NF04") return [n(dark ? 92 : 18), n(dark ? 92 : 18)];
+      if (id === "NF05") return [n(dark ? 96 : 14), ""];
+      if (id === "NF14") return dark ? [n(92), n(92), n(92), n(92)] : [mix(7), mix(20), n(18), n(18)];
+      return ["", ""];
+    }
+
+    function fillsFor(id, option, scheme) {
+      if (option.key === "current") return currentFills(id, scheme);
+      const values = percents[option.key];
+      const mix = function (percent) { return "color-mix(in srgb, var(--strong) " + percent + "%, transparent)"; };
+      if (id === "NF14" && scheme === "light") return [mix(7), mix(20), mix(values[0]), mix(values[1])];
+      return [mix(values[0]), mix(values[1]), mix(values[0]), mix(values[1])];
+    }
+
+    function stateStyle(fill) {
+      return fill ? " style=\"--state-fill:" + fill + ";padding:0\"" : "";
+    }
+
+    function stateButton(label, icon, fill, kind, extraClass) {
+      const cls = ["preview-control", "state-" + kind, extraClass || ""].filter(Boolean).join(" ");
+      return "<span class=\"" + cls + "\" role=\"img\" aria-label=\"" + label + "\" style=\"--state-fill:" + fill + "\">" + icon + "</span>";
+    }
+
+    function searchControl(label, fill, kind) {
+      return "<div class=\"search-control\"><span class=\"search-value\"><i class=\"search-glyph\" aria-hidden=\"true\"></i><span>Andrew</span></span>" +
+        stateButton(label, "×", fill, kind, "clear") + "</div>";
+    }
+
+    function numberControl(label, fill, kind) {
+      return "<div class=\"number-control\"><span class=\"preview-control stepper\">−</span><span class=\"number-value\">3</span>" +
+        stateButton(label, "+", fill, kind, "stepper") + "</div>";
+    }
+
+    function toolbarSample(hover, press) {
+      return "<div class=\"toolbar\"><span class=\"preview-control toolbar-child state-hover\" role=\"img\" aria-label=\"Hovered child button\" style=\"--state-fill:" + hover + "\">≡</span>" +
+        "<span class=\"preview-control toolbar-child state-press\" role=\"img\" aria-label=\"Pointer-active child button\" style=\"--state-fill:" + press + "\">↵</span>" +
+        "<span class=\"preview-control toolbar-child toolbar-data-pressed\" role=\"img\" aria-label=\"Data-pressed child button\" style=\"--state-fill:" + press + "\">↗</span></div>";
+    }
+
+    function toggleSample(hover, scheme) {
+      const selectedBg = scheme === "dark" ? "var(--n30)" : "var(--n80)";
+      const selectedFg = scheme === "dark" ? "var(--n100)" : "var(--n10)";
+      return "<div class=\"toggle-probe\"><span class=\"preview-control toggle-standalone state-hover\" role=\"img\" aria-label=\"Standalone ToggleButton hovered\" style=\"--state-fill:" + hover + "\">⌁</span><br>" +
+        "<span class=\"toggle-group\"><span class=\"preview-control toggle-child state-hover\" role=\"img\" aria-label=\"Unselected group button hovered\" style=\"--state-fill:" + hover + "\">Day</span>" +
+        "<span class=\"preview-control toggle-child selected\" role=\"img\" aria-label=\"Selected button remains unchanged\" style=\"--selection-bg:" + selectedBg + ";--selection-fg:" + selectedFg + "\">Week</span>" +
+        "<span class=\"preview-control toggle-child state-hover trailing\" role=\"img\" aria-label=\"Motion trailing hover fill suppressed\">Year</span></span></div>";
+    }
+
+    function editorButtons(hover, press, scheme, bubble) {
+      const activeBg = bubble ? (scheme === "dark" ? "var(--n88)" : "var(--n22)") : (scheme === "dark" ? "var(--n88)" : "var(--n94)");
+      const activeFg = bubble ? (scheme === "dark" ? "var(--n20)" : "var(--n90)") : (scheme === "dark" ? "var(--n14)" : "var(--n10)");
+      return "<div class=\"editor-bar " + (bubble ? "editor-bubble" : "editor-main") + "\">" +
+        "<span class=\"preview-control editor-child selected\" role=\"img\" aria-label=\"Selected formatting stays unchanged\" style=\"--editor-active-bg:" + activeBg + ";--editor-active-fg:" + activeFg + "\">B</span>" +
+        "<span class=\"preview-control editor-child state-hover\" role=\"img\" aria-label=\"Unselected editor button hovered\" style=\"--state-fill:" + hover + "\">I</span>" +
+        "<span class=\"preview-control editor-child state-press\" role=\"img\" aria-label=\"Unselected editor button pointer-active\" style=\"--state-fill:" + press + "\">U</span></div>";
+    }
+
+    function sample(id, option, scheme, fills) {
+      const h = fills[0];
+      const p = fills[1];
+      if (id === "NF02") return "<div class=\"sample-caption\"><span>hover</span><span>pressed</span></div>" + searchControl("Clear hover", h, "hover") + searchControl("Clear pressed", p, "press");
+      if (id === "NF03") return "<div class=\"sample-caption\"><span>hover</span><span>active</span></div>" + numberControl("Increment hovered", h, "hover") + numberControl("Increment active", p, "press");
+      if (id === "NF04") return "<div class=\"sample-caption\"><span>hover · active · data-pressed</span></div>" + toolbarSample(h, p);
+      if (id === "NF05") return "<div class=\"sample-caption\"><span>hover</span><span>selected / trailing unchanged</span></div>" + toggleSample(h, scheme);
+      if (id === "NF14") {
+        return "<p class=\"editor-label\">Main toolbar · hover / pointer-down</p><div class=\"editor-main-stage\">" + editorButtons(h, p, scheme, false) + "</div>" +
+          "<p class=\"editor-label\">Bubble menu · hover / pointer-down</p>" + editorButtons(fills[2], fills[3], scheme, true);
+      }
+      return "";
+    }
+
+    function cell(component, option, scheme) {
+      const fills = fillsFor(component.id, option, scheme);
+      const attrs = " data-option=\"" + option.key + "\" style=\"--hover-fill:" + fills[0] + ";--press-fill:" + fills[1] + "\"";
+      return "<div class=\"option-cell\"" + attrs + ">" + sample(component.id, option, scheme, fills) + "</div>";
+    }
+
+    function modePanel(scheme) {
+      const label = scheme === "dark" ? "Dark" : "Light";
+      let html = "<section class=\"mode\" data-scheme=\"" + scheme + "\"><div class=\"mode-heading\"><h2>" + label + " mode</h2><span>Current source fills beside simulated options</span></div>";
+      html += "<div class=\"column-head\">" + options.map(function (option) {
+        return "<div data-option=\"" + option.key + "\"><strong>" + option.name + "</strong><small>" + option.note + "</small></div>";
+      }).join("") + "</div>";
+      html += components.map(function (component) {
+        return "<section class=\"component\" data-id=\"" + component.id + "\"><h3 class=\"component-heading\"><strong>" + component.id + "</strong><span>" + component.title + " · " + component.detail + "</span></h3><div class=\"comparison\">" +
+          options.map(function (option) { return cell(component, option, scheme); }).join("") + "</div>" +
+          (component.id === "NF04" ? "<p class=\"fine-print\">Options inherit the legible toolbar action foreground for data-pressed. Current keeps the low-contrast source foreground in both modes; this separate correction is called out for review.</p>" : "") +
+          (component.id === "NF14" ? "<p class=\"fine-print\">Bubble pointer-down includes hover. Current shows the hover rule winning; options use the pressed mix for that combined state.</p>" : "") +
+          "</section>";
+      }).join("");
+      return html + "</section>";
+    }
+
+    document.getElementById("modes").innerHTML = modePanel("light") + modePanel("dark");
+    document.querySelectorAll("button[data-view]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        document.body.dataset.view = button.dataset.view;
+        document.querySelectorAll(".mode").forEach(function (panel) {
+          panel.hidden = button.dataset.view !== "both" && panel.dataset.scheme !== button.dataset.view;
+        });
+        document.querySelectorAll("button[data-view]").forEach(function (item) { item.setAttribute("aria-pressed", String(item === button)); });
+      });
+    });
+    document.querySelectorAll("button[data-underlay]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        document.body.dataset.underlay = button.dataset.underlay;
+        document.querySelectorAll("button[data-underlay]").forEach(function (item) { item.setAttribute("aria-pressed", String(item === button)); });
+      });
+    });
+    document.querySelectorAll("button[data-focus]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        document.body.dataset.focus = button.dataset.focus;
+        document.querySelectorAll("button[data-focus]").forEach(function (item) { item.setAttribute("aria-pressed", String(item === button)); });
+      });
+    });
+  </script>
+</body>
+</html>

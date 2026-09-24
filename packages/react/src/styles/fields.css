@@ -185,7 +185,7 @@
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   border: 0;
   outline: 1px solid var(--muxui-field-border-color);
-  outline-offset: -1px;
+  outline-offset: 0;
   border-radius: var(--muxui-semantic-control-radius);
   background-color: var(--muxui-field-bg);
   overflow: hidden;
@@ -253,12 +253,12 @@
 }
 
 .muxui-number-stepper:hover:not(:disabled) {
-  background-color: var(--muxui-semantic-surface-pressed);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-content-strong);
 }
 
 .muxui-number-stepper:active:not(:disabled) {
-  background-color: var(--muxui-semantic-border-strong);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
 }
 
 .muxui-number-field[data-disabled] .muxui-number-control {
@@ -363,12 +363,12 @@
 }
 
 .muxui-search-clear[data-hovered] {
-  background-color: var(--muxui-semantic-surface-hover);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-content-default);
 }
 
 .muxui-search-clear[data-pressed] {
-  background-color: var(--muxui-semantic-surface-pressed);
+  background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent);
 }
 
 .muxui-search-clear[data-focus-visible] {
@@ -1046,9 +1046,37 @@
   }
 }
 
+.muxui-date-picker .muxui-date-control .muxui-date-trigger:is(:hover, [data-hovered]):not([data-disabled], :disabled),
+.muxui-date-range-picker .muxui-date-range-control .muxui-date-trigger:is(:hover, [data-hovered]):not([data-disabled], :disabled) {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
+  );
+}
+
+.muxui-date-picker .muxui-date-control .muxui-date-trigger:is(:active, [data-pressed]):not([data-disabled], :disabled),
+.muxui-date-range-picker .muxui-date-range-control .muxui-date-trigger:is(:active, [data-pressed]):not([data-disabled], :disabled) {
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent),
+    color-mix(in srgb, var(--muxui-semantic-surface-strong) 12%, transparent)
+  );
+}
+
+.muxui-date-control .muxui-date-trigger:is(:hover, [data-hovered]):where(:not([data-disabled], :disabled)),
+.muxui-date-range-control .muxui-date-trigger:is(:hover, [data-hovered]):where(:not([data-disabled], :disabled)) {
+  background-color: var(--muxui-semantic-surface-raised);
+}
+
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-search-clear {
     color: var(--muxui-semantic-color-neutral-default-60);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-search-clear[data-hovered]:not([data-disabled], :disabled),
+  :scope .muxui-search-clear[data-pressed]:not([data-disabled], :disabled) {
+    color: var(--muxui-semantic-content-default);
   }
 }
 
@@ -1078,6 +1106,11 @@
     outline-color: ButtonText !important;
     background-color: Canvas !important;
     color: CanvasText !important;
+  }
+
+  .muxui-date-picker .muxui-date-trigger,
+  .muxui-date-range-picker .muxui-date-trigger {
+    background-image: none !important;
   }
 
   .muxui-select-trigger:focus-visible,
