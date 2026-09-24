@@ -93,27 +93,58 @@ async function readMetrics(page, selector) {
   });
 }
 
-async function readDisclosureLayout(page, selector) {
-  return page.locator(selector).evaluate((panel) => {
+async function readDisclosureLayout(page, selector, { stableFrames = 0, padding } = {}) {
+  return page.locator(selector).evaluate(async (panel, options) => {
     const host = panel.parentElement;
     const content = panel.firstElementChild;
     if (!host || !content) throw new Error('Disclosure motion wrapper is incomplete.');
-    const hostStyle = getComputedStyle(host);
-    const contentStyle = getComputedStyle(content);
+    if (options.padding !== undefined) content.style.padding = options.padding;
     const number = (value) => Number.parseFloat(value) || 0;
-    return {
-      panelHeight: panel.getBoundingClientRect().height,
-      hostHeight: host.getBoundingClientRect().height,
-      contentHeight: content.getBoundingClientRect().height,
-      hostPaddingTop: number(hostStyle.paddingTop),
-      hostPaddingBottom: number(hostStyle.paddingBottom),
-      contentPaddingTop: number(contentStyle.paddingTop),
-      contentPaddingBottom: number(contentStyle.paddingBottom),
-      contentPaddingLeft: number(contentStyle.paddingLeft),
-      contentPaddingRight: number(contentStyle.paddingRight),
-      styleHeight: panel.style.height,
+    const read = () => {
+      const hostStyle = getComputedStyle(host);
+      const contentStyle = getComputedStyle(content);
+      return {
+        panelHeight: panel.getBoundingClientRect().height,
+        hostHeight: host.getBoundingClientRect().height,
+        contentHeight: content.getBoundingClientRect().height,
+        hostPaddingTop: number(hostStyle.paddingTop),
+        hostPaddingBottom: number(hostStyle.paddingBottom),
+        contentPaddingTop: number(contentStyle.paddingTop),
+        contentPaddingBottom: number(contentStyle.paddingBottom),
+        contentPaddingLeft: number(contentStyle.paddingLeft),
+        contentPaddingRight: number(contentStyle.paddingRight),
+        styleHeight: panel.style.height,
+        styleOverflow: panel.style.overflow,
+        ariaHidden: panel.getAttribute('aria-hidden'),
+        inert: panel.hasAttribute('inert') || panel.inert === true,
+        hostHidden: host.hasAttribute('hidden'),
+      };
     };
-  });
+    if (!options.stableFrames) return read();
+
+    let previous = read();
+    let consecutiveStableFrames = 0;
+    let minimumSampledPanelHeight = Infinity;
+    const started = performance.now();
+    while (performance.now() - started < 5000) {
+      await new Promise(requestAnimationFrame);
+      const current = read();
+      minimumSampledPanelHeight = Math.min(minimumSampledPanelHeight, current.panelHeight);
+      const settledOpen = !current.styleHeight
+        && !current.styleOverflow
+        && current.ariaHidden === null
+        && !current.inert
+        && !current.hostHidden
+        && Math.abs(current.panelHeight - current.contentHeight) < 1;
+      const stableGeometry = Math.abs(current.panelHeight - previous.panelHeight) < 0.1
+        && Math.abs(current.hostHeight - previous.hostHeight) < 0.1
+        && Math.abs(current.contentHeight - previous.contentHeight) < 0.1;
+      consecutiveStableFrames = settledOpen && stableGeometry ? consecutiveStableFrames + 1 : 0;
+      if (consecutiveStableFrames >= options.stableFrames) return { ...current, minimumSampledPanelHeight };
+      previous = current;
+    }
+    throw new Error(`Disclosure layout did not settle: ${JSON.stringify(read())}`);
+  }, { stableFrames, padding });
 }
 
 async function waitForDisclosureIntermediate(page, selector) {
@@ -650,10 +681,10 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await waitForDisclosureOpen(page, primaryPanel);
     assert.ok((await readMetrics(page, primaryPanel)).height > beforeResize);
     await page.setViewportSize({ width: 390, height: 900 });
-    await waitForDisclosureOpen(page, primaryPanel);
-    const afterWidthChange = await readMetrics(page, primaryPanel);
+    const afterWidthChange = await readDisclosureLayout(page, primaryPanel, { stableFrames: 2 });
     assert.equal(afterWidthChange.styleOverflow, '', 'narrow content is unclipped after resizing');
-    assert.ok(afterWidthChange.height > beforeResize, 'copy reflows at narrow widths');
+    assert.equal(afterWidthChange.styleHeight, '', 'resized open content releases its animated height');
+    assert.ok(afterWidthChange.panelHeight > beforeResize, 'copy reflows at narrow widths');
 
     await page.evaluate(() => {
       document.documentElement.dataset.muxuiColorScheme = 'dark';
@@ -671,21 +702,17 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     const firstPanel = disclosurePanel('group-first');
     const firstContent = `${firstPanel} > .muxui-disclosure-panel`;
     await page.addStyleTag({ content: '[data-motion-id="group-first"] .muxui-disclosure-panel { padding: 14px; }' });
-    await waitForDisclosureOpen(page, firstPanel);
-    const allSidePadding = await readDisclosureLayout(page, firstPanel);
+    const allSidePadding = await readDisclosureLayout(page, firstPanel, { stableFrames: 2 });
     assert.equal(allSidePadding.hostPaddingTop, 0, 'the RAC region host owns no top padding');
     assert.equal(allSidePadding.hostPaddingBottom, 0, 'the RAC region host owns no bottom padding');
     assert.equal(allSidePadding.contentPaddingTop, 14, 'all-side user padding stays on measured content');
     assert.equal(allSidePadding.contentPaddingBottom, 14, 'all-side user padding stays on measured content');
     assert.ok(Math.abs(allSidePadding.panelHeight - allSidePadding.contentHeight) < 1, 'expanded panel height includes content padding');
 
-    await page.locator(firstContent).evaluate((node) => { node.style.padding = '9px 14px 23px'; });
-    await page.waitForFunction((selector) => {
-      const node = document.querySelector(selector);
-      return Boolean(node?.style.height) && Number.parseFloat(node.style.height) > 0;
-    }, firstPanel);
-    await waitForDisclosureOpen(page, firstPanel);
-    const asymmetricPadding = await readDisclosureLayout(page, firstPanel);
+    const asymmetricPadding = await readDisclosureLayout(page, firstPanel, {
+      padding: '9px 14px 23px',
+      stableFrames: 2,
+    });
     assert.equal(asymmetricPadding.contentPaddingTop, 9, 'asymmetric top padding is retained');
     assert.equal(asymmetricPadding.contentPaddingBottom, 23, 'asymmetric bottom padding is retained');
     assert.ok(Math.abs(asymmetricPadding.panelHeight - asymmetricPadding.contentHeight) < 1, 'open retarget settles at the padded content height');
@@ -705,15 +732,12 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await waitForDisclosureIntermediate(page, firstPanel);
     const openingBeforePaddingChange = await readDisclosureLayout(page, firstPanel);
     assert.ok(openingBeforePaddingChange.panelHeight > 0.5, 'relative padding opening starts above zero');
-    await page.locator(firstContent).evaluate((node) => { node.style.padding = '0.75em 1em 1.5em'; });
-    await page.waitForFunction((selector) => {
-      const node = document.querySelector(selector);
-      return Boolean(node?.style.height) && Number.parseFloat(node.style.height) > 0;
-    }, firstPanel);
-    const openingAfterPaddingChange = await readDisclosureLayout(page, firstPanel);
-    assert.ok(openingAfterPaddingChange.panelHeight >= openingBeforePaddingChange.panelHeight - 2, 'opening padding retarget does not restart from zero');
-    await waitForDisclosureOpen(page, firstPanel);
-    const relativePadding = await readDisclosureLayout(page, firstPanel);
+    const relativePadding = await readDisclosureLayout(page, firstPanel, {
+      padding: '0.75em 1em 1.5em',
+      stableFrames: 2,
+    });
+    assert.ok(relativePadding.minimumSampledPanelHeight > 0.5, 'opening padding retarget never collapses to zero');
+    assert.ok(relativePadding.minimumSampledPanelHeight >= openingBeforePaddingChange.panelHeight - 2, 'opening padding retarget preserves its current height');
     assert.ok(relativePadding.contentPaddingBottom > relativePadding.contentPaddingTop, 'font-relative padding keeps its unequal block sizes');
 
     await first.click();
