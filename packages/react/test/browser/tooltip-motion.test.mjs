@@ -64,10 +64,12 @@ async function startServer() {
   return { server, url: `http://127.0.0.1:${address.port}` };
 }
 
-async function readMotion(page) {
-  return page.locator('.muxui-tooltip').evaluate((node) => {
+async function readMotion(page, expectedOffset) {
+  const motion = await page.waitForFunction((offset) => {
+    const node = document.querySelector('.muxui-tooltip');
+    if (!node) return false;
     const style = getComputedStyle(node);
-    return {
+    const snapshot = {
       opacity: Number(style.opacity),
       translate: style.translate,
       scale: style.scale,
@@ -76,22 +78,21 @@ async function readMotion(page) {
       entering: node.hasAttribute('data-entering'),
       exiting: node.hasAttribute('data-exiting'),
     };
-  });
+    if (offset) {
+      const translation = style.translate.split(/\s+/u);
+      const component = Number.parseFloat(translation[offset.axis === 'x' ? 0 : 1]);
+      if (!Number.isFinite(component) || component * offset.direction <= 0) return false;
+    }
+    return snapshot;
+  }, expectedOffset, { timeout: expectedOffset ? 1500 : 5000 });
+  try {
+    return await motion.jsonValue();
+  } finally {
+    await motion.dispose();
+  }
 }
 
-async function waitForMotion(page) {
-  await page.waitForFunction(() => {
-    const node = document.querySelector('.muxui-tooltip');
-    if (!node) return false;
-    const style = getComputedStyle(node);
-    return Number(style.opacity) < 0.99
-      || style.translate !== 'none' && style.translate !== '0px 0px'
-      || style.scale !== 'none' && style.scale !== '1'
-      || style.filter !== 'none';
-  }, undefined, { timeout: 1500 });
-}
-
-async function readEnteringScaleTarget(page) {
+async function readEnteringMotionTargets(page) {
   return page.locator('.muxui-tooltip').evaluate((node) => {
     const probe = node.cloneNode(false);
     probe.removeAttribute('id');
@@ -102,9 +103,15 @@ async function readEnteringScaleTarget(page) {
     probe.style.setProperty('visibility', 'hidden');
     probe.style.setProperty('pointer-events', 'none');
     node.parentElement.append(probe);
-    const scale = getComputedStyle(probe).scale;
+    const style = getComputedStyle(probe);
+    const targets = {
+      opacity: Number(style.opacity),
+      translate: style.translate,
+      scale: style.scale,
+      filter: style.filter,
+    };
     probe.remove();
-    return scale;
+    return targets;
   });
 }
 
@@ -148,14 +155,21 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     await configure(page, true, 'top');
     const tooltip = page.locator('.muxui-tooltip');
     await tooltip.waitFor();
-    await waitForMotion(page);
-    const entry = await readMotion(page);
+    const entry = await readMotion(page, { axis: 'y', direction: 1 });
     assert.equal(entry.placement, 'top');
-    assert.ok(entry.opacity < 1 || entry.entering, 'entry changes opacity before settling');
-    assert.ok(Number.parseFloat(entry.translate.split(/\s+/u)[1]) > 4, 'top entry rises from an 8px offset');
-    assert.equal(await readEnteringScaleTarget(page), '0.9', 'entering style targets the approved scale');
+    assert.ok(Number.isFinite(entry.opacity) && entry.opacity >= 0 && entry.opacity < 1, `entry opacity is the current transition sample: ${entry.opacity}`);
+    const topOffset = Number.parseFloat(entry.translate.split(/\s+/u)[1]);
+    assert.ok(topOffset > 0 && topOffset <= 8, `top entry offset is a directional sample of its 8px target: ${entry.translate}`);
+    assert.deepEqual(await readEnteringMotionTargets(page), {
+      opacity: 0,
+      translate: '0px 8px',
+      scale: '0.9',
+      filter: 'blur(5px)',
+    }, 'entering styles declare their authored targets without sampling a transition');
     assert.ok(Number(entry.scale) >= 0.9 && Number(entry.scale) <= 1, `computed scale is the current entry sample: ${entry.scale}`);
-    assert.match(entry.filter, /blur\(5px\)/u, 'entry starts with finite blur');
+    const entryBlur = entry.filter.match(/^blur\(([\d.]+)px\)$/u);
+    assert.ok(entryBlur, `entry filter is a finite in-flight blur sample: ${entry.filter}`);
+    assert.ok(Number(entryBlur[1]) > 0 && Number(entryBlur[1]) <= 5, `entry blur sample stays within its authored target: ${entry.filter}`);
     assert.equal(await page.locator('#tooltip-trigger').getAttribute('aria-describedby'), await tooltip.getAttribute('id'));
     assert.equal((await readRefs(page)).objectAttached, true, 'object refs receive the mounted tooltip node');
     await waitForSettled(page);
@@ -169,10 +183,12 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
 
     await configure(page, true, 'top', true, 'top-edge');
     await tooltip.waitFor();
-    await waitForMotion(page);
-    const flippedEntry = await readMotion(page);
+    const flippedEntry = await readMotion(page, { axis: 'y', direction: -1 });
     assert.equal(flippedEntry.placement, 'bottom', 'top placement flips below a top-edge trigger');
-    assert.ok(Number.parseFloat(flippedEntry.translate.split(/\s+/u)[1]) < -4, 'flipped entry uses the bottom placement vector');
+    const flippedTargets = await readEnteringMotionTargets(page);
+    assert.equal(flippedTargets.translate, '0px -8px', 'flipped entry targets the bottom placement vector');
+    const flippedOffset = Number.parseFloat(flippedEntry.translate.split(/\s+/u)[1]);
+    assert.ok(flippedOffset < 0 && flippedOffset >= -8, `flipped entry offset stays within its directional target: ${flippedEntry.translate}`);
     await waitForSettled(page);
 
     await configure(page, false);
@@ -180,20 +196,24 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
 
     await configure(page, true, 'bottom');
     await tooltip.waitFor();
-    await waitForMotion(page);
-    const bottomEntry = await readMotion(page);
+    const bottomEntry = await readMotion(page, { axis: 'y', direction: -1 });
     assert.equal(bottomEntry.placement, 'bottom');
-    assert.ok(Number.parseFloat(bottomEntry.translate.split(/\s+/u)[1]) < -4, 'bottom entry rises toward the trigger');
+    const bottomTargets = await readEnteringMotionTargets(page);
+    assert.equal(bottomTargets.translate, '0px -8px', 'bottom entry targets the authored upward vector');
+    const bottomOffset = Number.parseFloat(bottomEntry.translate.split(/\s+/u)[1]);
+    assert.ok(bottomOffset < 0 && bottomOffset >= -8, `bottom entry offset stays within its directional target: ${bottomEntry.translate}`);
     await waitForSettled(page);
 
     await configure(page, false);
     await tooltip.waitFor({ state: 'detached' });
     await configure(page, true, 'start');
     await tooltip.waitFor();
-    await waitForMotion(page);
-    const leftEntry = await readMotion(page);
+    const leftEntry = await readMotion(page, { axis: 'x', direction: 1 });
     assert.equal(leftEntry.placement, 'left');
-    assert.ok(Number.parseFloat(leftEntry.translate.split(/\s+/u)[0]) > 4, 'left entry moves inward from the placement edge');
+    const leftTargets = await readEnteringMotionTargets(page);
+    assert.equal(leftTargets.translate, '8px', 'left entry targets the authored inward vector');
+    const leftOffset = Number.parseFloat(leftEntry.translate.split(/\s+/u)[0]);
+    assert.ok(leftOffset > 0 && leftOffset <= 8, `left entry offset stays within its directional target: ${leftEntry.translate}`);
     await waitForSettled(page);
 
     await configure(page, false);
@@ -201,7 +221,7 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-feedback-duration', '800ms'));
     await configure(page, true, 'start');
     await tooltip.waitFor();
-    await waitForMotion(page);
+    await readMotion(page, { axis: 'x', direction: 1 });
     await configure(page, false);
     await configure(page, true, 'end');
     await tooltip.waitFor();
@@ -224,7 +244,7 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await configure(page, true, 'top');
     await tooltip.waitFor();
-    await waitForMotion(page);
+    await readMotion(page, { axis: 'y', direction: 1 });
     await tooltip.evaluate((node) => { node.style.opacity = '0.97'; });
     assert.equal(await tooltip.evaluate((node) => node.style.opacity), '0.97');
     await page.evaluate(() => document.getElementById('tooltip-trigger').setAttribute('data-muxui-motion', 'reduced'));
