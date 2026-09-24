@@ -578,49 +578,52 @@ function collectionProps(props, componentName) {
 
 const ListBoxContext = React.createContext({ disabled: false });
 
-export const ListBox = React.forwardRef(function ListBoxRoot({ items = [], selectedIds, defaultSelectedIds, onSelectionChange, onAction, selectionMode = 'single', disabled = false, children, className, style, layout = 'stack', orientation = 'vertical', ...props }, ref) {
-  accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'ListBox');
-  if (layout !== 'stack' && layout !== 'grid') throw new TypeError('ListBox layout must be stack or grid');
-  if (orientation !== 'vertical' && orientation !== 'horizontal') throw new TypeError('ListBox orientation must be vertical or horizontal');
-  const normalized = normalizeItems(items);
-  const hasChildren = children !== undefined && children !== null;
-  const disabledKeys = new Set(normalized.filter((item) => disabled || item.disabled).map((item) => item.id));
-  const actionProps = onAction ? {
-    onAction: (key) => {
-      const item = normalized.find((candidate) => candidate.id === String(key));
-      if (!disabled && !item?.disabled) onAction(item ?? collectionItem(key));
-    },
-  } : {};
-  const listBox = React.createElement(AriaListBox, {
-    ...props, items: hasChildren ? undefined : normalized, selectionMode,
-    selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), disabledKeys,
-    onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); },
-    ...actionProps,
-    'data-disabled': disabled || undefined, 'aria-disabled': disabled || undefined,
-    layout, orientation, style, className: classNames('muxui-list-box', className),
-  }, hasChildren ? children : (item) => React.createElement(ListBox.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label));
-  return React.createElement(ListBoxContext.Provider, { value: { disabled } },
-    React.createElement(ListBoxMotion, { selectionMode, rootRef: ref }, listBox));
-});
-ListBox.displayName = 'ListBox';
-
 function collectionItem(id) {
   return { id: String(id), key: String(id), value: String(id) };
 }
 
-ListBox.Root = ListBox;
-ListBox.Section = React.forwardRef(function ListBoxSection({ children, className, title, ...props }, ref) {
-  return React.createElement(AriaListBoxSection, { ...props, ref, className: classNames('muxui-list-box-section', className) },
-    title !== undefined ? React.createElement(ListBox.Header, null, title) : null, children);
-});
-ListBox.Header = React.forwardRef(function ListBoxHeader({ children, className, ...props }, ref) {
-  return React.createElement(AriaHeader, { ...props, ref, className: classNames('muxui-list-box-section-header', className) }, children);
-});
-ListBox.Item = React.forwardRef(function ListBoxItem({ children, id, textValue, disabled = false, className, ...props }, ref) {
-  const context = React.useContext(ListBoxContext);
-  const effectiveDisabled = disabled || context.disabled;
-  return React.createElement(AriaListBoxItem, { ...props, ref, id, textValue: textValue ?? (textContent(children) || undefined), isDisabled: effectiveDisabled, 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined, className: classNames('muxui-list-box-item', className) }, children);
-});
+// Keep component creation and metadata local so unused motion can be removed.
+export const ListBox = /*#__PURE__*/ (() => {
+  const ListBox = React.forwardRef(function ListBoxRoot({ items = [], selectedIds, defaultSelectedIds, onSelectionChange, onAction, selectionMode = 'single', disabled = false, children, className, style, layout = 'stack', orientation = 'vertical', ...props }, ref) {
+    accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'ListBox');
+    if (layout !== 'stack' && layout !== 'grid') throw new TypeError('ListBox layout must be stack or grid');
+    if (orientation !== 'vertical' && orientation !== 'horizontal') throw new TypeError('ListBox orientation must be vertical or horizontal');
+    const normalized = normalizeItems(items);
+    const hasChildren = children !== undefined && children !== null;
+    const disabledKeys = new Set(normalized.filter((item) => disabled || item.disabled).map((item) => item.id));
+    const actionProps = onAction ? {
+      onAction: (key) => {
+        const item = normalized.find((candidate) => candidate.id === String(key));
+        if (!disabled && !item?.disabled) onAction(item ?? collectionItem(key));
+      },
+    } : {};
+    const listBox = React.createElement(AriaListBox, {
+      ...props, items: hasChildren ? undefined : normalized, selectionMode,
+      selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), disabledKeys,
+      onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); },
+      ...actionProps,
+      'data-disabled': disabled || undefined, 'aria-disabled': disabled || undefined,
+      layout, orientation, style, className: classNames('muxui-list-box', className),
+    }, hasChildren ? children : (item) => React.createElement(ListBox.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label));
+    return React.createElement(ListBoxContext.Provider, { value: { disabled } },
+      React.createElement(ListBoxMotion, { selectionMode, rootRef: ref }, listBox));
+  });
+  ListBox.displayName = 'ListBox';
+  ListBox.Root = ListBox;
+  ListBox.Section = React.forwardRef(function ListBoxSection({ children, className, title, ...props }, ref) {
+    return React.createElement(AriaListBoxSection, { ...props, ref, className: classNames('muxui-list-box-section', className) },
+      title !== undefined ? React.createElement(ListBox.Header, null, title) : null, children);
+  });
+  ListBox.Header = React.forwardRef(function ListBoxHeader({ children, className, ...props }, ref) {
+    return React.createElement(AriaHeader, { ...props, ref, className: classNames('muxui-list-box-section-header', className) }, children);
+  });
+  ListBox.Item = React.forwardRef(function ListBoxItem({ children, id, textValue, disabled = false, className, ...props }, ref) {
+    const context = React.useContext(ListBoxContext);
+    const effectiveDisabled = disabled || context.disabled;
+    return React.createElement(AriaListBoxItem, { ...props, ref, id, textValue: textValue ?? (textContent(children) || undefined), isDisabled: effectiveDisabled, 'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined, className: classNames('muxui-list-box-item', className) }, children);
+  });
+  return ListBox;
+})();
 
 export const GridList = React.forwardRef(function GridList(props, ref) {
   const { normalized, rest, selectedKeys, defaultSelectedKeys, onSelectionChange, onAction, selectionMode, className, disabled, disabledKeys } = collectionProps(props, 'grid-list');
@@ -853,37 +856,40 @@ export const Select = /*#__PURE__*/ (() => {
   return Select;
 })();
 
-export const RadioGroup = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-  accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
-  const labelId = React.useId();
-  const primitiveLabel = typeof label === 'string' || typeof label === 'number' || typeof label === 'bigint'
-    ? String(label)
-    : undefined;
-  const generatedLabelledby = ariaLabel === undefined && ariaLabelledby === undefined && primitiveLabel === undefined && label !== undefined && label !== null
-    ? labelId
-    : undefined;
-  if (orientation !== 'horizontal' && orientation !== 'vertical') {
-    throw new TypeError('RadioGroup orientation must be horizontal or vertical');
-  }
-  if (options.length > 0 && children !== undefined && children !== null) {
-    throw new TypeError('RadioGroup options and children are mutually exclusive');
-  }
-  const resolvedSize = normalizeChoiceControlSize(size, 'RadioGroup');
-  const radioContent = options.length > 0
-    ? options.map((option) => React.createElement(AriaRadio, { key: String(option.id ?? option.value), value: String(option.value ?? option.id), isDisabled: disabled || option.disabled, className: classNames('muxui-radio', resolvedSize === undefined || resolvedSize === 'md' ? undefined : `muxui-radio--${resolvedSize}`) }, (renderProps) => React.createElement(React.Fragment, null,
-      React.createElement(RadioMotionIndicator, { renderProps }),
-      option.label ?? option.value)))
-    : children;
-  const group = React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel ?? (ariaLabelledby === undefined ? primitiveLabel : undefined), 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
-  const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref }, group);
-  const content = label === undefined
-    ? motionGroup
-    : React.createElement('div', { className: 'muxui-radio-group-field', 'data-disabled': disabled || undefined, 'data-invalid': invalid || undefined },
-      React.createElement('span', { id: generatedLabelledby, className: 'muxui-field-label' }, label),
-      motionGroup);
-  return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, content);
-});
-RadioGroup.displayName = 'RadioGroup';
+export const RadioGroup = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+    accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
+    const labelId = React.useId();
+    const primitiveLabel = typeof label === 'string' || typeof label === 'number' || typeof label === 'bigint'
+      ? String(label)
+      : undefined;
+    const generatedLabelledby = ariaLabel === undefined && ariaLabelledby === undefined && primitiveLabel === undefined && label !== undefined && label !== null
+      ? labelId
+      : undefined;
+    if (orientation !== 'horizontal' && orientation !== 'vertical') {
+      throw new TypeError('RadioGroup orientation must be horizontal or vertical');
+    }
+    if (options.length > 0 && children !== undefined && children !== null) {
+      throw new TypeError('RadioGroup options and children are mutually exclusive');
+    }
+    const resolvedSize = normalizeChoiceControlSize(size, 'RadioGroup');
+    const radioContent = options.length > 0
+      ? options.map((option) => React.createElement(AriaRadio, { key: String(option.id ?? option.value), value: String(option.value ?? option.id), isDisabled: disabled || option.disabled, className: classNames('muxui-radio', resolvedSize === undefined || resolvedSize === 'md' ? undefined : `muxui-radio--${resolvedSize}`) }, (renderProps) => React.createElement(React.Fragment, null,
+        React.createElement(RadioMotionIndicator, { renderProps }),
+        option.label ?? option.value)))
+      : children;
+    const group = React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel ?? (ariaLabelledby === undefined ? primitiveLabel : undefined), 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
+    const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref }, group);
+    const content = label === undefined
+      ? motionGroup
+      : React.createElement('div', { className: 'muxui-radio-group-field', 'data-disabled': disabled || undefined, 'data-invalid': invalid || undefined },
+        React.createElement('span', { id: generatedLabelledby, className: 'muxui-field-label' }, label),
+        motionGroup);
+    return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, content);
+  });
+  component.displayName = 'RadioGroup';
+  return component;
+})();
 
 export const Slider = /* @__PURE__ */ (() => {
   const component = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
