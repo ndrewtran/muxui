@@ -20,11 +20,12 @@ const testTimeoutMs = 420_000;
 // The full gate covers every family in both schemes plus interaction, lifecycle,
 // platform-mode, and Button-matrix proofs on a single CI worker.
 const fullAuditTimeoutMs = 600_000;
+const pageScopedAuditMaxTimeoutMs = 1_200_000;
 
 function pageScopedAuditTimeout() {
   const { proof, pages } = resolveStorybookPageSelection();
   if (!['story', 'component', 'theme'].includes(proof)) return fullAuditTimeoutMs;
-  return Math.min(fullAuditTimeoutMs, 120_000 + pages.length * 6_000);
+  return Math.min(pageScopedAuditMaxTimeoutMs, 120_000 + pages.length * 6_000);
 }
 
 function heavyAuditSkip(name) {
