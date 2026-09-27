@@ -1714,6 +1714,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--muxui-semantic-layout-control-gap);
+  outline: none;
+}
+
+.muxui-tag-list[data-focus-visible],
+.muxui-tag-list:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
 .muxui-tag {
@@ -1778,6 +1786,7 @@
 .muxui-tag[data-selected][data-hovered] {
   background-color: var(--muxui-semantic-action-background-hover);
   outline-color: var(--muxui-semantic-action-background-hover);
+  color: var(--muxui-semantic-action-foreground-hover);
 }
 
 .muxui-tag[data-disabled] {
@@ -2154,6 +2163,19 @@
   :where(.muxui-calendar-cell, .muxui-range-calendar-cell, .muxui-grid-list-item, .muxui-list-box-item, .muxui-menu-item, .muxui-select-option, .muxui-combo-box-option, .muxui-tab, .muxui-table-row, .muxui-tag):focus-visible {
     outline: 2px solid Highlight;
     outline-offset: 1px;
+  }
+
+  .muxui-tag-list[data-focus-visible],
+  .muxui-tag-list:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+    box-shadow: none;
+  }
+
+  .muxui-tag[data-selected][data-hovered] {
+    background: Highlight !important;
+    color: HighlightText !important;
+    outline-color: Highlight !important;
   }
 
   .muxui-list-box-item[data-selected],
@@ -2934,6 +2956,7 @@
   :scope .muxui-tag[data-selected][data-hovered] {
     background-color: var(--muxui-semantic-action-selection-background-hover);
     border-color: var(--muxui-semantic-action-selection-background-hover);
+    color: var(--muxui-semantic-action-foreground-hover);
   }
 }
 

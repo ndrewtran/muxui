@@ -79,7 +79,7 @@
 
 .muxui-command-palette__close.muxui-button {
   position: absolute;
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-semantic-content-default);
   min-height: auto;
 }
 
@@ -555,7 +555,7 @@
   --muxui-field-color: var(--muxui-semantic-color-neutral-90);
   --muxui-field-focus-border: var(--muxui-focus-ring-color);
   --muxui-field-focus-glow: 0 0 0 0px var(--muxui-focus-ring-glow);
-  --muxui-field-placeholder-color: var(--muxui-semantic-color-neutral-50);
+  --muxui-field-placeholder-color: var(--muxui-semantic-field-placeholder);
   --muxui-item-color: var(--muxui-semantic-color-neutral-80);
   --muxui-item-focus-bg: var(--muxui-semantic-color-neutral-14);
   --muxui-item-focus-color: var(--muxui-semantic-color-neutral-90);
@@ -685,6 +685,10 @@
 
 .muxui-command-palette__input:hover:not(:focus, [data-disabled], [data-invalid]) {
   border-color: var(--muxui-semantic-color-neutral-40);
+}
+
+.muxui-command-palette__input::placeholder {
+  color: var(--muxui-field-placeholder-color);
 }
 
 .muxui-command-palette__clear {

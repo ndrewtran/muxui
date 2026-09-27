@@ -486,6 +486,23 @@ test('Storybook colour audit preserves intrinsic alpha in canonical effect paint
     assert.notEqual(differentAlpha?.token, effectId, 'different alpha must not match the effect color');
     assert.ok(result.nonToken.some((paint) => paint.property === 'box-shadow'
       && paint.examples.some((example) => example.includes('#different-alpha'))));
+
+    const toastEffect = tokens['semantic.elevation.toast'];
+    await page.evaluate(() => {
+      const fractionalAlpha = document.createElement('div');
+      fractionalAlpha.id = 'fractional-effect-alpha';
+      fractionalAlpha.style.cssText = 'width:40px;height:24px;box-shadow:0 1px 2px rgba(0,0,0,0.105)';
+      const differentFraction = document.createElement('div');
+      differentFraction.id = 'different-fractional-effect-alpha';
+      differentFraction.style.cssText = 'width:40px;height:24px;box-shadow:0 1px 2px rgba(0,0,0,0.11)';
+      document.body.append(fractionalAlpha, differentFraction);
+    });
+    const fractionalResult = await page.evaluate(collectStorybookPaints, { tokens });
+    const fractionalShadow = fractionalResult.paints.find((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes('#fractional-effect-alpha')));
+    assert.equal(fractionalShadow?.token, toastEffect.id, JSON.stringify(fractionalResult.paints));
+    assert.ok(fractionalResult.nonToken.some((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes('#different-fractional-effect-alpha'))));
   } finally {
     await browser.close();
   }

@@ -366,6 +366,11 @@
   display: block;
 }
 
+.muxui-checkbox[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-indicator svg,
+.muxui-checkbox-field__button[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-field__indicator svg {
+  color: var(--muxui-semantic-action-foreground-hover);
+}
+
 .muxui-checkbox.muxui-checkbox--sm .muxui-checkbox-indicator {
   inline-size: 0.875rem;
   block-size: 0.875rem;
@@ -1093,6 +1098,16 @@
 
 .muxui-button[data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
   background-color: var(--muxui-button-background-pressed, var(--muxui-semantic-action-background-pressed));
+}
+
+.muxui-button[data-variant='primary']:hover:not([data-disabled], [data-pending]),
+.muxui-button[data-variant='primary'][data-hovered]:not([data-disabled], [data-pending]) {
+  --muxui-button-foreground: var(--muxui-semantic-action-foreground-hover);
+}
+
+.muxui-button[data-variant='primary']:active:not([data-disabled], [data-pending]),
+.muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
+  --muxui-button-foreground: var(--muxui-semantic-action-foreground-pressed);
 }
 
 .muxui-button[data-pending]::after {

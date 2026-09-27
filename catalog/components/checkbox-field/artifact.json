@@ -89,6 +89,10 @@
             "requirement": "required"
           },
           {
+            "token": "semantic.action.foreground-hover",
+            "requirement": "required"
+          },
+          {
             "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           },

@@ -90,7 +90,9 @@
           { "token": "semantic.control.size-lg", "requirement": "required" },
           { "token": "semantic.action.neutral-background", "requirement": "required" },
           { "token": "semantic.action.neutral-background-hover", "requirement": "required" },
-          { "token": "semantic.action.neutral-background-pressed", "requirement": "required" }
+          { "token": "semantic.action.neutral-background-pressed", "requirement": "required" },
+          { "token": "semantic.action.foreground-hover", "requirement": "required" },
+          { "token": "semantic.action.foreground-pressed", "requirement": "required" }
         ]
       },
     "platformSafety": [

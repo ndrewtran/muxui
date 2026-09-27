@@ -63,8 +63,9 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
   function applyAlpha(key, alpha) {
     if (alpha === 1) return key;
     const channels = key.split(',').map(Number);
-    channels[3] = Math.round(channels[3] * alpha * 10000) / 10000;
-    return channels.join(',');
+    const combinedAlpha = channels[3] * alpha;
+    // Match CSSOM's computed-color serialization, including its alpha quantization.
+    return normalize(`rgba(${channels.slice(0, 3).join(' ')} / ${combinedAlpha})`);
   }
 
   for (const token of Object.values(tokens)) {

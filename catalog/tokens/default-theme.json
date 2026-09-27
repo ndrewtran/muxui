@@ -572,6 +572,29 @@
       "alias": "semantic.color.color-60-fg",
       "equivalence": "semantic-equivalence"
     },
+    "semantic.action.foreground-hover": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Foreground content on a hovered immediate action.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-60-fg",
+      "equivalence": "semantic-equivalence",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-50-fg"
+        }
+      }
+    },
+    "semantic.action.foreground-pressed": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Foreground content on a pressed immediate action.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-40-fg",
+      "equivalence": "semantic-equivalence"
+    },
     "semantic.action.danger-background": {
       "layer": "semantic",
       "type": "color",
@@ -2317,6 +2340,29 @@
           "kind": "time",
           "visualDuration": "component.disclosuregroup.motion-duration",
           "bounce": 0.38
+        }
+      }
+    },
+    "component.dropzone.drop-target-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent selection fill behind a DropZone while files are targeted.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.selection.track",
+        "color": "#00000000",
+        "weight": 0.08
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.action.selection-background",
+            "color": "#00000000",
+            "weight": 0.08
+          }
         }
       }
     },
