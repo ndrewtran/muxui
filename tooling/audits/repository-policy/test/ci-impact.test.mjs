@@ -817,6 +817,32 @@ test('scoped plans split into independent groups that each repeat the generation
   assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
+const generationFilters = (command) => command.args.filter((_, index) => command.args[index - 1] === '--filter');
+
+test('a React-test-only group generates the React closure it imports in its own runner', async () => {
+  const testFile = 'test/browser/tree-toggle-browser.test.mjs';
+  const groups = executionGroups(await plan([`packages/react/${testFile}`]), { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(groups), ['react']);
+  const [generation, check] = groups[0].commands;
+  assert.equal(generation.prerequisite, true);
+  assert.deepEqual(generationFilters(generation), ['@muxui/catalog', '@muxui/react', '@muxui/schema', '@muxui/tokens']);
+  assert.equal(check.args.at(-1), testFile);
+});
+
+test('story-only groups generate Storybook metadata unless this process already prepared it', async () => {
+  const result = await plan([sizingExamplePath]);
+  const groups = executionGroups(result, { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(groups), ['checks', 'storybook-story']);
+  for (const group of groups) {
+    assert.equal(group.commands[0].prerequisite, true);
+    assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
+  }
+
+  const prepared = executionGroups(result, { packages, environment: {}, pageIndex, metadataPrepared: true });
+  assert.deepEqual(groupIds(prepared), groupIds(groups));
+  assert.ok(!prepared.flatMap(({ commands }) => commands).some(({ prerequisite }) => prerequisite), 'metadata preparation already generated the closure');
+});
+
 test('theme proof skips families already covered by component proof', async () => {
   const mixed = await plan(['catalog/tokens/default-theme.json', collectionsPath], treeRuntimeChange);
   assert.deepEqual(mixed.storyRuns.map(({ proof, families }) => ({ proof, families })), [
