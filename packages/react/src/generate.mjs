@@ -32,9 +32,13 @@ const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggl
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
+const calendarSelectionMotionSource = await readFile(resolve(packageRoot, 'src/calendar-selection-motion.mjs'), 'utf8');
 const colorSliderMotionSource = await readFile(resolve(packageRoot, 'src/color-slider-motion.mjs'), 'utf8');
 const colorWheelMotionSource = await readFile(resolve(packageRoot, 'src/color-wheel-motion.mjs'), 'utf8');
 const listBoxMotionSource = await readFile(resolve(packageRoot, 'src/listbox-motion.mjs'), 'utf8');
+const treeMotionSource = await readFile(resolve(packageRoot, 'src/tree-motion.mjs'), 'utf8');
+const gridListMotionSource = await readFile(resolve(packageRoot, 'src/grid-list-motion.mjs'), 'utf8');
+const menuMotionSource = await readFile(resolve(packageRoot, 'src/menu-motion.mjs'), 'utf8');
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
@@ -1123,9 +1127,13 @@ const outputs = new Map([
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', flatIconButtonImport(fieldsSource))],
   ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
+  ['calendar-selection-motion.mjs', generatedText('packages/react/src/calendar-selection-motion.mjs', calendarSelectionMotionSource)],
   ['color-slider-motion.mjs', generatedText('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
   ['color-wheel-motion.mjs', generatedText('packages/react/src/color-wheel-motion.mjs', colorWheelMotionSource)],
   ['listbox-motion.mjs', generatedText('packages/react/src/listbox-motion.mjs', listBoxMotionSource)],
+  ['tree-motion.mjs', generatedText('packages/react/src/tree-motion.mjs', treeMotionSource)],
+  ['grid-list-motion.mjs', generatedText('packages/react/src/grid-list-motion.mjs', gridListMotionSource)],
+  ['menu-motion.mjs', generatedText('packages/react/src/menu-motion.mjs', menuMotionSource)],
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
   ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],

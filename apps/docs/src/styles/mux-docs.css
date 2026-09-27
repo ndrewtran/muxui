@@ -493,7 +493,15 @@ pre code {
 	align-items: center;
 	justify-items: start;
 	min-height: 3rem;
+	max-width: 100%;
 	margin-block-start: auto;
+	overflow: visible;
+}
+
+/* Keep island roots within the preview while preserving each component's own overflow. */
+.showcase-preview > astro-island > * {
+	min-width: 0;
+	max-width: 100%;
 }
 
 /* Starlight’s TOC stays a quiet narrow rail beside the article. */
@@ -789,7 +797,7 @@ site-search button > kbd {
 }
 
 @media (max-width: 30rem) {
-	.home-showcase { grid-template-columns: 1fr; }
+	.home-showcase { grid-template-columns: minmax(0, 1fr); }
 	.showcase-item { min-height: 9rem; }
 }
 

@@ -14,8 +14,9 @@ delegation, and final decisions.
 ## Named team routing
 
 When delegation is useful, only root delegates to the named reusable agents
-below. Every spawn uses `fork_turns="none"` and the minimum task-local context;
-subagents never spawn or delegate.
+below. Every delegation starts fresh, without inherited conversation turns, and
+receives only the minimum task-local context; subagents never spawn or
+delegate.
 
 - `coder`: normally owns one complete bounded execution after preflight:
   repository research, implementation, routine debugging, focused checks, and

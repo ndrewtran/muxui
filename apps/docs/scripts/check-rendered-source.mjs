@@ -106,6 +106,41 @@ for (const component of listComponents()) {
 
 console.log(`Rendered source contract passed: ${checked} canonical React examples preserve exact pre.textContent.`);
 
+const homePath = resolve(docsDist, 'index.html');
+assert(existsSync(homePath), 'Built Starlight home page is missing.');
+const home = parseFragment(readFileSync(homePath, 'utf8'));
+const showcase = elements(home).find((node) => node.tagName === 'div' && classNames(node).has('home-showcase'));
+assert(showcase !== undefined, 'Built Starlight home page has no component showcase.');
+const showcaseItems = elements(showcase).filter((node) => node.tagName === 'div' && classNames(node).has('showcase-item'));
+const components = listComponents();
+assert(showcaseItems.length === components.length, `Home showcase has ${showcaseItems.length} components, expected ${components.length}.`);
+for (const component of components) {
+	const slug = component.id.slice(component.id.lastIndexOf(':') + 1);
+	const href = `/components/${slug}/`;
+	const matches = showcaseItems.filter((item) => elements(item).some((node) => (
+		node.tagName === 'a'
+		&& attributeValue(node, 'href') === href
+		&& textContent(node) === component.name
+	)));
+	assert(matches.length === 1, `Home showcase must link to ${component.name} exactly once.`);
+	const examples = canonicalCatalog.getArtifact({
+		id: component.id,
+		platform: 'web.react',
+		detail: 'full',
+		section: 'examples',
+	});
+	assert(examples.type === 'artifact.detail', `Could not retrieve home preview for ${component.id}.`);
+	const source = examples.data.value?.[0]?.source?.content;
+	assert(typeof source === 'string' && source.length > 0, `Component ${component.id} has no canonical home preview source.`);
+	const preview = elements(matches[0]).find((node) => node.tagName === 'div' && classNames(node).has('showcase-preview'));
+	assert(preview !== undefined, `Home preview is missing for ${component.id}.`);
+	const island = elements(preview).find((node) => node.tagName === 'astro-island');
+	assert(island !== undefined, `Home preview is not a runnable Astro island for ${component.id}.`);
+	const props = attributeValue(island, 'props');
+	assert(typeof props === 'string' && props.includes(source), `Home preview does not use the first canonical example for ${component.id}.`);
+}
+console.log(`Home showcase contract passed: all ${components.length} enabled web.react components link to one runnable canonical example.`);
+
 const foundationsDirectory = resolve(docsDist, 'foundations');
 const foundationRoutes = [
 	'foundations',

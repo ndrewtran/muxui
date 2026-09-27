@@ -111,6 +111,7 @@
   ],
   "globalTaskInputs": [
     ".agents/",
+    ".claude/",
     ".github/",
     ".node-version",
     ".npmrc",
@@ -132,6 +133,7 @@
     "package": "@muxui/react-storybook",
     "fullInputPrefixes": [
       ".agents/",
+      ".claude/",
       ".github/",
       "catalog/components/",
       "catalog/react-r1-0/",
@@ -169,9 +171,12 @@
     ],
     "policyPrefixes": [
       ".agents/",
+      ".claude/",
       ".github/",
+      ".gitignore",
       "AGENTS.md",
       "decisions/",
+      "docs/agents/",
       "strategy/",
       "tooling/AGENTS.md",
       "tooling/audits/repository-policy/"

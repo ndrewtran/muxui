@@ -95,6 +95,33 @@ async function waitForSettled(page, selector) {
   }, selector, { timeout: 3000 });
 }
 
+async function waitForMenuOverlay(page, label, { aligned = false, identity = false, timeout = 3000 } = {}) {
+  await page.waitForFunction(({ expectedLabel, shouldAlign, shouldBeIdentity }) => {
+    const item = document.activeElement;
+    const overlay = item?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
+    if (item?.textContent?.trim() !== expectedLabel || !item.hasAttribute('data-focused') || !overlay || overlay.hidden) return false;
+    const transform = getComputedStyle(overlay).transform;
+    if (shouldBeIdentity && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)') return false;
+    if (!shouldAlign) return true;
+    const itemRect = item.getBoundingClientRect();
+    const overlayRect = overlay.getBoundingClientRect();
+    return Math.abs(itemRect.left - overlayRect.left) < 0.75
+      && Math.abs(itemRect.top - overlayRect.top) < 0.75
+      && Math.abs(itemRect.width - overlayRect.width) < 0.75
+      && Math.abs(itemRect.height - overlayRect.height) < 0.75;
+  }, { expectedLabel: label, shouldAlign: aligned, shouldBeIdentity: identity }, { timeout });
+}
+
+async function waitForMenuTravel(page, label) {
+  await page.waitForFunction((expectedLabel) => {
+    const item = document.activeElement;
+    const overlay = item?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
+    const transform = overlay && getComputedStyle(overlay).transform;
+    return item?.textContent?.trim() === expectedLabel && item.hasAttribute('data-focused')
+      && overlay && !overlay.hidden && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
+  }, label, { timeout: 1500 });
+}
+
 test('field and collection popovers use the shared placement-aware Motion lifecycle', { timeout: 90_000 }, async () => {
   const { server, url } = await startServer();
   let browser;
@@ -157,8 +184,53 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     await page.keyboard.press('Escape');
     await page.locator('.muxui-menu-popup').waitFor({ state: 'detached' });
 
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.evaluate(() => {
+      const root = document.getElementById('root');
+      root.setAttribute('data-muxui-motion', 'reduced');
+      document.documentElement.setAttribute('data-muxui-motion', 'full');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-duration', '800ms');
+      document.documentElement.style.setProperty('--muxui-semantic-motion-state-transition-spring-visual-duration', '800ms');
+    });
+
+    await page.locator('#motion-menu-trigger').click();
+    const menuPopup = page.locator('.muxui-menu-popup').first();
+    await menuPopup.waitFor();
+    await page.waitForFunction(() => {
+      const popups = [...document.querySelectorAll('.muxui-menu-popup')];
+      return popups.length === 1 && popups.every((node) => node.hasAttribute('data-muxui-motion-reduced'));
+    });
+    await page.getByRole('menuitem', { name: 'One', exact: true }).focus();
+    await waitForMenuOverlay(page, 'One', { aligned: true, identity: true });
+    await page.keyboard.press('ArrowDown');
+    await waitForMenuOverlay(page, 'More actions', { aligned: true, identity: true });
+    const submenuOpenedAt = Date.now();
+    await page.keyboard.press('ArrowRight');
+    await waitForMenuOverlay(page, 'Two', { aligned: true, identity: true, timeout: 300 });
+    assert.ok(Date.now() - submenuOpenedAt < 300, 'nested Menu overlay inherits trigger-local reduced motion');
+    assert.equal(await menuPopup.evaluate((node) => node.hasAttribute('data-muxui-motion-reduced')), true);
+
+    await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
+    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu-popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
+    await waitForMenuOverlay(page, 'Two', { aligned: true, identity: true });
+    await page.keyboard.press('ArrowDown');
+    await waitForMenuTravel(page, 'Three');
+
+    const motionReducedAt = Date.now();
+    await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'reduced'));
+    await page.waitForFunction(() => document.querySelector('.muxui-menu-popup')?.hasAttribute('data-muxui-motion-reduced'));
+    await waitForMenuOverlay(page, 'Three', { aligned: true, identity: true, timeout: 300 });
+    assert.ok(Date.now() - motionReducedAt < 300, 'trigger-local reduced mode settles the nested Menu overlay during travel');
+
+    await page.evaluate(() => document.getElementById('root').setAttribute('data-muxui-motion', 'full'));
+    await page.waitForFunction(() => [...document.querySelectorAll('.muxui-menu-popup')].every((node) => !node.hasAttribute('data-muxui-motion-reduced')));
+    await page.keyboard.press('ArrowUp');
+    await waitForMenuTravel(page, 'Two');
+
     await page.evaluate(() => {
       document.documentElement.style.removeProperty('--muxui-semantic-motion-reveal-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-duration');
+      document.documentElement.style.removeProperty('--muxui-semantic-motion-state-transition-spring-visual-duration');
       window.__muxuiPopoverUnmount();
     });
     await page.locator('#popover-unmounted').waitFor({ state: 'attached' });

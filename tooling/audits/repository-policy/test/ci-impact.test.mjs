@@ -360,6 +360,10 @@ test('Scale, Starlight docs, and CI policy edits stay in their independent owner
   assert.equal(policy.full, false);
   assert.equal(policy.docs || policy.scale || policy.reactPackageFull || policy.storyTooling, false);
   assert.deepEqual(policy.storyRuns, []);
+
+  const guidance = await plan(['.gitignore', 'docs/agents/domain.md']);
+  assert.equal(guidance.policy, true);
+  assert.equal(guidance.full || guidance.docs, false);
 });
 
 test('root package scripts remain policy-scoped while workspace toolchain inputs require full proof', async () => {
