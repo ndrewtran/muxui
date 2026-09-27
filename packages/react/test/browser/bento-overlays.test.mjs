@@ -190,7 +190,11 @@ test('anchored overlays position on every logical alignment, use independent anc
     for (const kind of ['popover', 'tooltip']) {
       await configure(page, { kind, placement: 'bottom-end', offset: 6, anchor: true });
       if (kind === 'popover') await page.locator('#trigger').click();
-      else { await page.locator('#outside').focus(); await page.keyboard.press('Tab'); }
+      else {
+        // Park the pointer off #trigger so hover cannot reopen the tooltip after Escape.
+        await page.mouse.move(0, 0);
+        await page.locator('#outside').focus(); await page.keyboard.press('Tab');
+      }
       const selector = kind === 'popover' ? '.muxui-popover-positioner' : '.muxui-tooltip';
       await page.locator(selector).waitFor();
       await page.waitForFunction((selector) => document.querySelector(selector)?.hasAttribute('data-placement'), selector);

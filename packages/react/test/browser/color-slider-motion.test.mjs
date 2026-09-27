@@ -268,11 +268,14 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
         await page.emulateMedia({ reducedMotion: mode === 'system' ? 'reduce' : 'no-preference' });
         if (mode === 'explicit') await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
         await page.evaluate(() => window.__colorWheelProof.setValue('#406699'));
-        await page.waitForFunction(() => Number(document.querySelector('#wheel').value) > 200);
+        // #406699 is hue 214; a looser check can match the previous iteration's 215 before setValue commits.
+        await page.waitForFunction(() => Number(document.querySelector('#wheel').value) === 214);
         const before = Number(await wheelInput(page).inputValue());
         await wheelInput(page).focus();
         await page.keyboard.press('ArrowRight');
         await waitForFace(page, 'idle', 'wheel', 'wheel');
+        // Reduced mode is already idle, so wait for the key's committed value rather than reading it immediately.
+        await page.waitForFunction((before) => Number(document.querySelector('#wheel').value) !== before, before);
         assert.notEqual(Number(await wheelInput(page).inputValue()), before);
         if (mode === 'explicit') await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
       }
