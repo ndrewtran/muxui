@@ -154,6 +154,18 @@ async function settleEntry(page) {
   return readEntryMotion(page);
 }
 
+async function readDatePopoverShadow(page) {
+  return page.locator('.muxui-date-popover').evaluate((node) => {
+    const reference = document.createElement('div');
+    reference.style.boxShadow = '0 4px 16px color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 10%, transparent)';
+    document.body.append(reference);
+    const referenceShadow = getComputedStyle(reference).boxShadow;
+    const actualShadow = getComputedStyle(node).boxShadow;
+    reference.remove();
+    return { actualShadow, referenceShadow };
+  });
+}
+
 function assertEntryMotion(entry) {
   const fade = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.opacity !== undefined));
   const travel = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.transform !== undefined));
@@ -196,13 +208,13 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     const fullSettled = await settleEntry(page);
     assert.equal(fullSettled.opacity, '1');
     assert.equal(fullSettled.transformY, 0);
-    const lightShadow = await page.locator('.muxui-date-popover').evaluate((node) => getComputedStyle(node).boxShadow);
-    assert.match(lightShadow, /rgba\(\s*17,\s*16,\s*15,\s*0\.1\)/u, 'light popover shadow retains the 10% neutral-100 paint');
-    assert.match(lightShadow, /0px 4px 16px 0px/u, 'light popover shadow retains its offset and blur');
+    const lightShadow = await readDatePopoverShadow(page);
+    assert.equal(lightShadow.actualShadow, lightShadow.referenceShadow, 'light popover matches the original 10% neutral-100 shadow recipe');
+    assert.match(lightShadow.actualShadow, /0px 4px 16px 0px$/u, 'light popover shadow retains its offset and blur');
     await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'dark'; });
-    const darkShadow = await page.locator('.muxui-date-popover').evaluate((node) => getComputedStyle(node).boxShadow);
-    assert.match(darkShadow, /rgba\(\s*242,\s*241,\s*240,\s*0\.1\)/u, 'dark popover shadow retains the mode-inverted 10% neutral paint');
-    assert.match(darkShadow, /0px 4px 16px 0px/u, 'dark popover shadow retains its offset and blur');
+    const darkShadow = await readDatePopoverShadow(page);
+    assert.equal(darkShadow.actualShadow, darkShadow.referenceShadow, 'dark popover matches the original mode-resolved shadow recipe');
+    assert.match(darkShadow.actualShadow, /0px 4px 16px 0px$/u, 'dark popover shadow retains its offset and blur');
     await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'light'; });
     await page.keyboard.press('ArrowRight');
     await page.waitForFunction(() => document.activeElement?.matches('.muxui-calendar-cell[data-focus-visible]'));

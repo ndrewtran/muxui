@@ -435,16 +435,16 @@ test('Storybook colour audit recognizes canonical token mixes and shadow-only fo
     const derived = tokens['semantic.color.neutral-5'];
     const source = tokens[derived.mix.token];
     const focusGlow = tokens['semantic.focus.neutral-glow'];
-    const datePopover = tokens['component.datepicker.popover-shadow'];
-    const datePopoverLayer = datePopover.effect.layers[0];
-    const datePopoverColor = datePopoverLayer.color.value.match(/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/iu).slice(1)
+    const datePopover = tokens['component.datepicker.popover-shadow-color'];
+    const datePopoverSource = tokens[datePopover.mix.token];
+    const datePopoverColor = datePopoverSource.value.match(/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/iu).slice(1)
       .map((channel) => Number.parseInt(channel, 16));
-    const datePopoverShadow = `${datePopoverLayer.offsetX.value}${datePopoverLayer.offsetX.unit} ${datePopoverLayer.offsetY.value}${datePopoverLayer.offsetY.unit} ${datePopoverLayer.blur.value}${datePopoverLayer.blur.unit} ${datePopoverLayer.spread.value}${datePopoverLayer.spread.unit} rgba(${datePopoverColor.join(',')},${datePopoverLayer.color.alpha})`;
+    const datePopoverMix = `color-mix(in ${datePopover.mix.space}, ${datePopoverSource.value} ${datePopover.mix.weight * 100}%, ${datePopover.mix.color})`;
     const baseStyles = await readFile(resolve(appRoot, '../../packages/react/src/styles/base.css'), 'utf8');
     const supplementalStyles = await readFile(resolve(appRoot, '../../packages/react/src/supplemental/styles.css'), 'utf8');
     assert.match(baseStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-focus-neutral-glow\) 30%, transparent\)/u);
     assert.match(supplementalStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-color-neutral-60\) 30%, transparent\)/u);
-    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="date-popover-effect" style="width:80px;height:24px;box-shadow:${datePopoverShadow}">Mode-specific popover effect</div><div id="nearby-shadow" style="width:80px;height:24px;box-shadow:0 0 1px rgba(${datePopoverColor.join(',')},0.11)">Unowned nearby shadow alpha</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
+    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="date-popover-color" style="width:80px;height:24px;box-shadow:0 4px 16px ${datePopoverMix}">Token-backed date popover shadow color</div><div id="nearby-shadow" style="width:80px;height:24px;box-shadow:0 0 1px rgba(${datePopoverColor.join(',')},0.11)">Unowned nearby shadow alpha</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
     const result = await page.evaluate(collectStorybookPaints, { tokens });
     assert.deepEqual(result.problems, []);
     assert.deepEqual(result.nonToken.length, 3);
@@ -457,6 +457,35 @@ test('Storybook colour audit recognizes canonical token mixes and shadow-only fo
       && rgba.endsWith(',0.3') && [focusGlow.id, tokens['semantic.color.neutral-60'].id].includes(token)), JSON.stringify(result.paints));
     assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
       && rgba.endsWith(',0.1') && token === datePopover.id), JSON.stringify(result.paints));
+  } finally {
+    await browser.close();
+  }
+});
+
+test('Storybook colour audit preserves intrinsic alpha in canonical effect paints', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    const effect = structuredClone(graphs.light['semantic.elevation.indicator']);
+    const effectId = 'semantic.test.intrinsic-alpha-shadow';
+    effect.id = effectId;
+    effect.value.layers[0].color = { value: '#173b5d80' };
+    const tokens = { ...graphs.light, [effectId]: effect };
+    await page.setContent(`<html><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}">
+      <div id="intrinsic-alpha" style="width:40px;height:24px;box-shadow:0 1px 2px #173b5d80"></div>
+      <div id="different-alpha" style="width:40px;height:24px;box-shadow:0 1px 2px #173b5db3"></div>
+    </body></html>`);
+
+    const result = await page.evaluate(collectStorybookPaints, { tokens });
+    assert.deepEqual(result.problems, []);
+    const shadowFor = (id) => result.paints.find((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes(`#${id}`)));
+    const intrinsicAlpha = shadowFor('intrinsic-alpha');
+    const differentAlpha = shadowFor('different-alpha');
+    assert.equal(intrinsicAlpha?.token, effectId, JSON.stringify(result.paints));
+    assert.notEqual(differentAlpha?.token, effectId, 'different alpha must not match the effect color');
+    assert.ok(result.nonToken.some((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes('#different-alpha'))));
   } finally {
     await browser.close();
   }

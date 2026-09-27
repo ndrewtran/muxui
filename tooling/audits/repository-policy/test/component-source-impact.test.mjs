@@ -537,7 +537,7 @@ test('shared date popover styles resolve through each picker family selector', a
   const sourcePath = 'packages/react/src/styles/base.css';
   const after = await readFile(path.join(repositoryRoot, sourcePath), 'utf8');
   const before = after.replace(
-    'box-shadow: var(--muxui-component-datepicker-popover-shadow);',
+    'box-shadow: 0 4px 16px var(--muxui-component-datepicker-popover-shadow-color);',
     'box-shadow: var(--muxui-semantic-elevation-popover);',
   );
   assert.notEqual(before, after, 'fixture must target the shared date popover shadow rule');

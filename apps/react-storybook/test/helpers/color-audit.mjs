@@ -104,8 +104,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     if (ownsDynamicColorPaint(element, pseudo, property)) return;
     let key;
     try {
-      key = normalize(value);
-      key = applyAlpha(key, alpha);
+      key = applyAlpha(normalize(value), alpha);
     }
     catch (error) {
       problems.push({ element: describe(element, pseudo), property, value, reason: error.message });

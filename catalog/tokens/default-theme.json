@@ -2192,39 +2192,17 @@
       "overridePolicy": "theme",
       "alias": "reference.effect.shadow-s"
     },
-    "component.datepicker.popover-shadow": {
+    "component.datepicker.popover-shadow-color": {
       "layer": "component",
-      "type": "effect",
-      "unit": "structured",
-      "meaning": "Shadow used by the shared DatePicker and DateRangePicker calendar popover.",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent neutral paint for the shared DatePicker and DateRangePicker calendar popover shadow.",
       "overridePolicy": "theme",
-      "value": {
-        "kind": "shadow",
-        "layers": [
-          {
-            "offsetX": { "value": 0, "unit": "px" },
-            "offsetY": { "value": 4, "unit": "px" },
-            "blur": { "value": 16, "unit": "px" },
-            "spread": { "value": 0, "unit": "px" },
-            "color": { "value": "#11100f", "alpha": 0.1 }
-          }
-        ]
-      },
-      "modes": {
-        "colorScheme.dark": {
-          "value": {
-            "kind": "shadow",
-            "layers": [
-              {
-                "offsetX": { "value": 0, "unit": "px" },
-                "offsetY": { "value": 4, "unit": "px" },
-                "blur": { "value": 16, "unit": "px" },
-                "spread": { "value": 0, "unit": "px" },
-                "color": { "value": "#f2f1f0", "alpha": 0.1 }
-              }
-            ]
-          }
-        }
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.neutral-100",
+        "color": "#00000000",
+        "weight": 0.1
       }
     },
     "component.button.background": {
