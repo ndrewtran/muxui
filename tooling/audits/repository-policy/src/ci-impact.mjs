@@ -588,8 +588,14 @@ function selectedCheckOwners(plan, packages) {
   if (plan.tokens) names.add('@muxui/tokens');
   if (plan.docs) names.add('@muxui/docs');
   if (plan.scale) names.add('@muxui/scale');
-  if (plan.reactTheme || plan.reactProjectionCheck || plan.reactPackageFull || plan.reactFamilies.length > 0) {
+  // Every React test and the Tailwind consumer import generated React output.
+  if (plan.reactTheme || plan.reactProjectionCheck || plan.reactPackageFull || plan.reactFamilies.length > 0
+    || plan.reactTestFiles?.length > 0 || plan.tailwind) {
     names.add('@muxui/react');
+  }
+  // Story proofs and Storybook unit tests read the generated page index.
+  if (plan.storyTooling || plan.storybookGenerationCheck || plan.storyRuns?.length > 0) {
+    names.add('@muxui/react-storybook');
   }
   return [...names].filter((name) => packages.some((item) => item.name === name));
 }
@@ -1015,10 +1021,10 @@ export async function buildPullRequestImpact({
   plan.reactTestFiles = [...plan.reactTestFiles].filter((file) => !componentRoutedTestFiles.has(file)).sort();
   plan.packageChecks = [...plan.packageChecks].sort();
   if (plan.reactFamilies.length > 0) requireScopedEntrypoint(plan, packages, 'react');
-  plan.generationPackages = scopedGenerationPackages(plan, packages);
   const refreshed = refreshStoryRuns(plan, pageIndex);
   if (refreshed.storyRuns.length > 0) requireScopedEntrypoint(refreshed, packages, 'storybook');
   refreshed.scopedEntrypointChecks = [...refreshed.scopedEntrypointChecks].sort();
+  refreshed.generationPackages = scopedGenerationPackages(refreshed, packages);
   return refreshed;
 }
 
@@ -1194,11 +1200,12 @@ function plannedCommands(plan, {
   validateScopedEntrypoints(packages, [...requiredEntrypoints]);
   if (plan.full) return fullPlannedCommands(environment);
 
+  // Every group repeats this generation in its own fresh runner. Only skip
+  // what metadata preparation already generated earlier in this same process:
+  // `@muxui/react-storybook generate` covers `@muxui/react...` plus itself.
   let generationPackages = plan.generationPackages ?? scopedGenerationPackages(plan, packages);
   if (metadataPrepared) {
-    const preparedNames = new Set(dependencyClosure(packages, ['@muxui/react'])
-      .filter(({ manifest }) => typeof manifest.scripts?.generate === 'string')
-      .map(({ name }) => name));
+    const preparedNames = new Set(['@muxui/react-storybook', ...dependencyClosure(packages, ['@muxui/react']).map(({ name }) => name)]);
     generationPackages = generationPackages.filter((name) => !preparedNames.has(name));
   }
   if (generationPackages.length > 0) {
