@@ -173,8 +173,10 @@
       ".agents/",
       ".claude/",
       ".github/",
+      ".gitignore",
       "AGENTS.md",
       "decisions/",
+      "docs/agents/",
       "strategy/",
       "tooling/AGENTS.md",
       "tooling/audits/repository-policy/"
