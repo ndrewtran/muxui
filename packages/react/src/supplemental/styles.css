@@ -1146,7 +1146,7 @@
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgb(0 0 0 / 0.5);
+  background: var(--muxui-semantic-overlay-scrim);
   display: flex;
   flex-direction: column;
 }
@@ -1154,7 +1154,7 @@
 .muxui-header-nav__mobile-drawer {
   width: 100%;
   background: var(--muxui-semantic-color-neutral-100);
-  box-shadow: 0 4px 24px rgb(0 0 0 / 0.12);
+  box-shadow: 0 4px 24px var(--muxui-component-headernav-mobile-drawer-shadow-color);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -1164,6 +1164,7 @@
 .muxui-header-nav__mobile-dialog {
   display: flex;
   flex-direction: column;
+  color: var(--muxui-semantic-content-on-solid);
   outline: none;
 }
 
@@ -1236,6 +1237,12 @@
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-header-nav__mobile-drawer {
     background: var(--muxui-semantic-color-neutral-14);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-header-nav__mobile-dialog {
+    color: var(--muxui-semantic-content-default);
   }
 }
 
