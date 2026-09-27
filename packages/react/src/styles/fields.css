@@ -40,7 +40,7 @@
 
 .muxui-autocomplete-search[data-invalid] > .muxui-field-input:is(:focus, [data-focused]),
 .muxui-autocomplete-search > .muxui-field-input[data-invalid]:is(:focus, [data-focused]) {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
+  box-shadow: 0 0 0 3px var(--muxui-semantic-feedback-invalid-focus);
 }
 
 .muxui-autocomplete-popover {
@@ -860,7 +860,7 @@
   }
 
   :scope .muxui-autocomplete-search[data-invalid] > .muxui-field-label {
-    color: var(--muxui-semantic-feedback-invalid-content);
+    color: var(--muxui-semantic-feedback-invalid);
   }
 }
 

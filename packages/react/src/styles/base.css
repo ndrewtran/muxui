@@ -593,10 +593,6 @@
   color: var(--muxui-semantic-feedback-invalid);
 }
 
-.muxui-autocomplete-search[data-invalid] > .muxui-field-label {
-  color: var(--muxui-semantic-feedback-invalid-content);
-}
-
 :where(
   .muxui-input__root,
   .muxui-text-area,

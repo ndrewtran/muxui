@@ -1353,6 +1353,19 @@
       "overridePolicy": "theme",
       "alias": "reference.color.red-60"
     },
+    "semantic.feedback.invalid-focus": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent focus ring color for invalid controls.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.feedback.invalid",
+        "color": "#00000000",
+        "weight": 0.2
+      }
+    },
     "semantic.focus.ring": {
       "layer": "semantic",
       "type": "color",
