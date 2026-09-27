@@ -1168,22 +1168,7 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-disclosure-trigger {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 8%, transparent);
     color: var(--muxui-semantic-color-neutral-default-18);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-disclosure:not([data-disabled])
-    .muxui-disclosure-trigger:hover:not([data-disabled], [data-pending]) {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 12%, transparent);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-disclosure:not([data-disabled])
-    .muxui-disclosure-trigger:active:not([data-disabled], [data-pending]) {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 16%, transparent);
   }
 }
 
