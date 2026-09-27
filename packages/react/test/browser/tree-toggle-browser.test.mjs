@@ -210,14 +210,21 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     assert.ok(geometry.toggleHeight > 0, 'caret hit area has no height');
     assert.ok(Math.abs(geometry.toggleLeft - geometry.contentLeft) < 20, 'caret hit area is detached from its row');
     assert.match(String(geometry.hitTag), /^(BUTTON|svg|path)$/u);
-    assert.equal(geometry.hitButtonClass, 'muxui-tree-toggle');
+    assert.ok(
+      geometry.hitButtonClass.split(/\s+/u).includes('muxui-tree-toggle'),
+      `caret hit target must be the Tree toggle button: ${geometry.hitButtonClass}`,
+    );
 
     await page.mouse.click(geometry.x, geometry.y);
     await page.locator('[aria-level="2"]').first().waitFor();
     assert.equal(await parent.getAttribute('data-expanded'), 'true');
 
     await toggle.focus();
-    assert.equal(await page.evaluate(() => document.activeElement?.className), 'muxui-tree-toggle');
+    assert.equal(
+      await page.evaluate(() => document.activeElement?.classList.contains('muxui-tree-toggle')),
+      true,
+      'Tree toggle button receives keyboard focus',
+    );
     await toggle.press('Enter');
     await page.waitForFunction(() => document.querySelector('.muxui-tree-item')?.getAttribute('data-expanded') !== 'true');
     assert.equal(await page.locator('[aria-level="2"]').count(), 0);
