@@ -12,7 +12,9 @@ import { FILE_COMPONENT_SEARCH_REQUEST, FILE_COMPONENT_SEARCH_RESPONSE } from 's
 import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { collectStorybookPaints } from './helpers/color-audit.mjs';
+import { fetchStorybookIndex } from './helpers/storybook-index.mjs';
 import { colourStateSignatures } from './storybook-colors-report.mjs';
+import { resolveStorybookPageSelection, validateRuntimeStoryPages } from './storybook-page-selection.mjs';
 import { backgroundOptions, buildTheme, managerThemeCss, previewThemeCss } from '../.storybook/theme.mjs';
 import { projectMeasurePalette } from '../.storybook/measure-palette.mjs';
 
@@ -37,6 +39,173 @@ function workerCount(variable) {
   return Number(value);
 }
 
+function pageColourAuditTimeout(selection) {
+  return Math.min(900000, Math.max(120000, 120000 + selection.pages.length * 1200));
+}
+
+function createColourAuditResources(signal) {
+  let browser;
+  let server;
+  let closed = false;
+  let closePromise;
+  const closeResources = () => {
+    closed = true;
+    closePromise ??= Promise.allSettled([
+      ...(browser ? [browser.close()] : []),
+      ...(server ? [server.stop()] : []),
+    ]).then((results) => {
+      const failure = results.find((result) => result.status === 'rejected');
+      if (failure?.status === 'rejected') throw failure.reason;
+    });
+    return closePromise;
+  };
+  const closeOnAbort = () => { void closeResources().catch(() => {}); };
+  signal.addEventListener('abort', closeOnAbort, { once: true });
+
+  return {
+    async trackBrowser(instance) {
+      browser = instance;
+      if (closed) await instance.close();
+    },
+    async trackServer(instance) {
+      server = instance;
+      if (closed) await instance.stop();
+    },
+    close() {
+      signal.removeEventListener('abort', closeOnAbort);
+      return closeResources();
+    },
+  };
+}
+
+test('selected Storybook pages paint only canonical Mux colours in light and dark', {
+  timeout: pageColourAuditTimeout(resolveStorybookPageSelection()),
+  skip: (() => {
+    const { proof } = resolveStorybookPageSelection();
+    return ['story', 'component', 'theme'].includes(proof) ? false : `not part of ${proof} proof`;
+  })(),
+}, async (t) => {
+  const selection = resolveStorybookPageSelection();
+  assert.ok(selection.pages.length > 0, 'selected Storybook colour proof must include at least one page');
+  const resources = createColourAuditResources(t.signal);
+  const startedAt = performance.now();
+  let activeProof = 'browser discovery';
+  const reportAbort = () => {
+    t.diagnostic(`[storybook-colours] aborted after ${Math.round(performance.now() - startedAt)}ms during ${activeProof}`);
+  };
+  t.signal.addEventListener('abort', reportAbort, { once: true });
+  const coverage = [];
+  let successMessage;
+  try {
+    t.signal.throwIfAborted();
+    const executablePath = await browserPath();
+    t.signal.throwIfAborted();
+    activeProof = 'launching Chrome';
+    const browser = await chromium.launch({ executablePath, headless: true });
+    await resources.trackBrowser(browser);
+    t.signal.throwIfAborted();
+    activeProof = 'Storybook startup';
+    const server = await startStorybook(t.signal);
+    await resources.trackServer(server);
+    t.signal.throwIfAborted();
+    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
+    page.setDefaultTimeout(15000);
+    const index = await fetchStorybookIndex(`${server.url}/index.json`, { signal: t.signal });
+    t.signal.throwIfAborted();
+    const stories = validateRuntimeStoryPages(selection, index);
+    assert.equal(stories.length, selection.pages.length, 'runtime Storybook pages must exactly match the selected page IDs');
+
+    for (const scheme of ['light', 'dark']) {
+      for (const story of stories) {
+        t.signal.throwIfAborted();
+        activeProof = `${scheme} ${story.id} colour audit`;
+        await page.goto(`${server.url}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`, {
+          waitUntil: 'domcontentloaded',
+        });
+        await page.waitForFunction((expectedScheme) => {
+          const root = document.querySelector('#storybook-root');
+          const visible = (element) => {
+            if (!element) return false;
+            const style = getComputedStyle(element);
+            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+          };
+          return Boolean(root?.firstElementChild)
+            && Boolean(document.querySelector('.muxui-storybook-surface'))
+            && document.documentElement.getAttribute('data-muxui-color-scheme') === expectedScheme
+            && !visible(document.querySelector('.sb-errordisplay'))
+            && !visible(document.querySelector('.sb-preparing-story'));
+        }, scheme);
+        await page.evaluate(async () => {
+          document.documentElement.setAttribute('data-reduced-motion', 'true');
+          await document.fonts.ready;
+          await new Promise(requestAnimationFrame);
+          document.getAnimations().forEach((animation) => {
+            try {
+              if (animation.effect?.getTiming?.().iterations === Infinity) animation.cancel();
+              else animation.finish();
+            } catch {
+              animation.cancel();
+            }
+          });
+          await new Promise(requestAnimationFrame);
+        });
+        if (story.name === 'States') {
+          await page.waitForFunction(() => {
+            const status = document.querySelector(
+              '.muxui-storybook-lifecycle-showcase [data-muxui-storybook-lifecycle] .muxui-storybook-transition-status',
+            );
+            return !status || status.getAttribute('data-muxui-storybook-transition') === 'open';
+          });
+        }
+        const result = await page.evaluate(collectStorybookPaints, {
+          tokens: graphs[scheme],
+          scope: 'canvas',
+        });
+        if (result.nonToken.length > 0) {
+          const paints = result.nonToken;
+          const diagnostics = await page.evaluate((unexpected) => ({
+            scheme: document.documentElement.getAttribute('data-muxui-color-scheme'),
+            matches: unexpected.flatMap((paint) => [...document.querySelectorAll('*')]
+              .filter((element) => getComputedStyle(element).backgroundColor === paint.value)
+              .map((element) => ({
+                tag: element.tagName,
+                className: element.className,
+                id: element.id,
+                background: getComputedStyle(element).backgroundColor,
+                transition: getComputedStyle(element).transition,
+              }))).slice(0, 12),
+            animations: document.getAnimations().map((animation) => ({
+              playState: animation.playState,
+              currentTime: animation.currentTime,
+              timing: animation.effect?.getTiming?.(),
+            })),
+          }), paints);
+          t.diagnostic(`${scheme}/${story.id} unexpected-paint-details=${JSON.stringify(diagnostics)}`);
+        }
+        assert.ok(result.elements > 0 && result.paintOccurrences > 0, `${scheme}/${story.id}: empty canvas colour audit`);
+        assert.deepEqual(result.problems, [], `${scheme}/${story.id}: colour audit could not resolve all paints`);
+        assert.deepEqual(result.media, [], `${scheme}/${story.id}: image colours require explicit verification`);
+        assert.deepEqual(result.nonToken, [], `${scheme}/${story.id}: page painted colours outside canonical Mux tokens`);
+        coverage.push(`${scheme}:${story.id}`);
+        t.diagnostic(`${scheme}/${story.id}: ${result.elements} visible elements, ${result.paintOccurrences} paint occurrences`);
+      }
+    }
+
+    const expected = ['light', 'dark'].flatMap((scheme) => stories.map(({ id }) => `${scheme}:${id}`)).sort();
+    assert.deepEqual(coverage.sort(), expected, 'colour coverage must include every selected page in both schemes');
+    successMessage = `partial ${selection.proof} proof: ${selection.label}, ${coverage.length} page-scheme checks`;
+  } finally {
+    activeProof = 'cleanup';
+    try {
+      await resources.close();
+    } finally {
+      t.signal.removeEventListener('abort', reportAbort);
+    }
+  }
+  t.signal.throwIfAborted();
+  console.log(`[storybook-colours] ${successMessage}, ${Math.round(performance.now() - startedAt)}ms`);
+});
+
 async function browserPath() {
   for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, process.env.CHROME_PATH,
     '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'].filter(Boolean)) {
@@ -45,7 +214,8 @@ async function browserPath() {
   throw new Error('Chrome or Chromium is required for the Storybook colour audit');
 }
 
-async function startStorybook() {
+async function startStorybook(signal) {
+  signal?.throwIfAborted();
   if (process.env.MUXUI_STORYBOOK_COLORS_URL) return { url: process.env.MUXUI_STORYBOOK_COLORS_URL, stop() {} };
   const reservation = createServer();
   await new Promise((done) => reservation.listen(0, '127.0.0.1', done));
@@ -56,17 +226,48 @@ async function startStorybook() {
   });
   let output = '';
   for (const stream of [child.stdout, child.stderr]) stream.on('data', (chunk) => { output = (output + chunk).slice(-12000); });
-  const stop = () => child.kill('SIGTERM');
+  let stopPromise;
+  const stop = () => {
+    if (stopPromise) return stopPromise;
+    signal?.removeEventListener('abort', stop);
+    if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve();
+    stopPromise = new Promise((resolvePromise) => {
+      let forceTimer;
+      const settle = () => {
+        clearTimeout(forceTimer);
+        child.off('close', settle);
+        child.off('error', settle);
+        resolvePromise();
+      };
+      child.once('close', settle);
+      child.once('error', settle);
+      child.kill('SIGTERM');
+      forceTimer = setTimeout(() => child.kill('SIGKILL'), 3000);
+    });
+    return stopPromise;
+  };
+  signal?.addEventListener('abort', stop, { once: true });
   const url = `http://127.0.0.1:${port}`;
   try {
     const deadline = Date.now() + 90000;
     while (Date.now() < deadline) {
+      signal?.throwIfAborted();
       if (child.exitCode !== null) throw new Error(`Storybook exited: ${output}`);
-      try { if ((await fetch(`${url}/index.json`)).ok) return { url, stop }; } catch { /* Wait for startup. */ }
-      await delay(250);
+      try {
+        const timeout = AbortSignal.timeout(1000);
+        const requestSignal = signal ? AbortSignal.any([timeout, signal]) : timeout;
+        if ((await fetch(`${url}/index.json`, { signal: requestSignal })).ok) return { url, stop };
+      } catch (error) {
+        if (signal?.aborted) throw error;
+        // Storybook may still be compiling or restarting its Vite server.
+      }
+      await delay(250, undefined, signal ? { signal } : undefined);
     }
     throw new Error(`Storybook did not start: ${output}`);
-  } catch (error) { stop(); throw error; }
+  } catch (error) {
+    await stop();
+    throw error;
+  }
 }
 
 function colourAuditArtifactDirectory() {
@@ -188,6 +389,33 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
     assert.ok(report.nonToken.some((paint) => paint.rgba.endsWith(',0.123')), 'alpha must remain part of colour identity');
     assert.ok(!report.nonToken.some((paint) => paint.examples.some((example) => example.includes('#no-paint-'))), 'Unpainted SVG fill/stroke must remain unpainted');
   } finally { await browser.close(); }
+});
+
+test('Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    const tokens = graphs.dark;
+    const derived = tokens['semantic.color.neutral-5'];
+    const source = tokens[derived.mix.token];
+    const focusGlow = tokens['semantic.focus.neutral-glow'];
+    const baseStyles = await readFile(resolve(appRoot, '../../packages/react/src/styles/base.css'), 'utf8');
+    const supplementalStyles = await readFile(resolve(appRoot, '../../packages/react/src/supplemental/styles.css'), 'utf8');
+    assert.match(baseStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-focus-neutral-glow\) 30%, transparent\)/u);
+    assert.match(supplementalStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-color-neutral-60\) 30%, transparent\)/u);
+    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
+    const result = await page.evaluate(collectStorybookPaints, { tokens });
+    assert.deepEqual(result.problems, []);
+    assert.deepEqual(result.nonToken.length, 2);
+    assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#unowned-mix'))));
+    assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#focus-background'))));
+    assert.ok(result.paints.some(({ property, rgba, token }) => property === 'background-color'
+      && rgba === '14.45,13.6,12.75,1' && tokens[token]?.mix), JSON.stringify(result.paints));
+    assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
+      && rgba.endsWith(',0.3') && [focusGlow.id, tokens['semantic.color.neutral-60'].id].includes(token)), JSON.stringify(result.paints));
+  } finally {
+    await browser.close();
+  }
 });
 
 test('Storybook colour declarations reference Mux tokens, including values that happen to match the palette', async () => {

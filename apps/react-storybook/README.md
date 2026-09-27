@@ -34,3 +34,13 @@ while its full two-worker run is being hardened; set
 `MUXUI_STORYBOOK_A11Y_WORKERS=2` for an explicit comparison. Set
 `MUXUI_STORYBOOK_COLORS_WORKERS=1` to run the colour audit serially when
 comparing timings.
+
+The policy runner uses `pnpm --filter @muxui/react-storybook run check:scoped`
+for focused Storybook work. Set `MUXUI_STORYBOOK_AUDIT_PROOF=story` with
+`MUXUI_STORYBOOK_FAMILIES` and exact `MUXUI_STORYBOOK_STORY_IDS` to check only
+those pages in both schemes. `component` checks every page in the selected
+families, `theme` checks palette paints and colour contrast across both schemes
+for all consumer pages unless family or page filters narrow it, and `chrome`
+checks manager and docs colours. `full` delegates to the complete package audit.
+Canonical page IDs and authored example source mappings come from the generated
+`.storybook/generated/manifest.mjs` page index.

@@ -1,6 +1,7 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { generatedText, loadPolicy } from '../../../tooling/audits/repository-policy/src/policy.mjs';
+import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import { transformWithOxc } from 'vite';
 import { adapterNames } from './storybook-factory.mjs';
 
@@ -65,6 +66,49 @@ const canonicalStoryExamples = new Map(await Promise.all(
   }),
 ));
 
+const standardStoryDefinitions = [
+  { exportName: 'Default', expression: "createStory(record, 'default')" },
+  { exportName: 'States', expression: "createStory(record, 'states')" },
+  { exportName: 'Controlled', expression: 'createControlledStory(record)' },
+  { exportName: 'Uncontrolled', expression: 'createUncontrolledStory(record)' },
+  { exportName: 'Events', expression: 'createEventsStory(record)' },
+  { exportName: 'Anatomy', expression: 'createAnatomyStory(record)' },
+  { exportName: 'BrowserProof', expression: 'createBrowserProofStory(record)' },
+];
+
+const familyStoryDefinitions = [
+  {
+    family: 'Button',
+    exportName: 'Matrix',
+    name: 'Variant × size',
+    source: () => `const buttonMatrix = createButtonMatrixStory(record);
+export const Matrix = {
+  name: ${stringLiteral('Variant × size')},
+  args: buttonMatrix.args,
+  argTypes: buttonMatrix.argTypes,
+  parameters: buttonMatrix.parameters,
+  render: buttonMatrix.render,
+};`,
+  },
+  {
+    family: 'Autocomplete',
+    exportName: 'DisabledItemsInteraction',
+    name: 'Disabled items keyboard navigation',
+    source: () => `export const DisabledItemsInteraction = {
+  name: ${stringLiteral('Disabled items keyboard navigation')},
+  args: {
+    label: 'Choose a city',
+    items: [
+      { id: 'disabled', label: 'Disabled', value: 'disabled', disabled: true },
+      { id: 'enabled', label: 'Enabled', value: 'enabled' },
+      { id: 'also-disabled', label: 'Also disabled', value: 'also-disabled', disabled: true },
+    ],
+  },
+  render: (args) => createStory(record, 'default').render(args),
+};`,
+  },
+];
+
 function fail(message) {
   throw new Error(`REACT_STORYBOOK_GENERATION_ERROR: ${message}`);
 }
@@ -79,6 +123,36 @@ function storyId(record) {
 
 function stringLiteral(value) {
   return `'${value.replaceAll('\\', '\\\\').replaceAll("'", "\\'").replaceAll('\n', '\\n')}'`;
+}
+
+function storyPagesFor(record) {
+  const standard = standardStoryDefinitions.map(({ exportName, name, expression }) => ({
+    exportName,
+    name: name ?? storyNameFromExport(exportName),
+    emit: `export const ${exportName} = ${expression};`,
+  }));
+  const familySpecific = familyStoryDefinitions
+    .filter(({ family }) => family === record.family)
+    .map(({ exportName, name, source }) => ({ exportName, name, emit: source() }));
+  const canonical = canonicalStoryExamples.get(record.family);
+  const authored = canonical ? [{
+    exportName: canonical.exportName,
+    name: canonical.storyName,
+    source: canonical.source,
+    emit: `export const ${canonical.exportName} = {
+  name: ${stringLiteral(canonical.storyName)},
+  parameters: {
+    docs: {
+      source: {
+        code: ${JSON.stringify(canonical.code)},
+        language: 'tsx',
+      },
+    },
+  },
+  render: () => React.createElement(${canonical.importName}),
+};`,
+  }] : [];
+  return [...standard, ...authored, ...familySpecific];
 }
 
 const bindings = descriptor.bindings;
@@ -102,6 +176,10 @@ const missingAdapters = names.filter((name) => !adapterNames.includes(name));
 const unknownAdapters = adapterNames.filter((name) => !names.includes(name));
 if (missingAdapters.length) fail(`missing explicit adapters: ${missingAdapters.join(', ')}`);
 if (unknownAdapters.length) fail(`unknown explicit adapters: ${unknownAdapters.join(', ')}`);
+
+function storyFilename(record) {
+  return `${record.tranche.replaceAll('.', '-').toLowerCase()}-${familySlug(record.family)}.stories.mjs`;
+}
 
 function storySource(record) {
   const canonicalExample = canonicalStoryExamples.get(record.family);
@@ -156,49 +234,11 @@ export default {
   },
   argTypes: argTypesForBinding(binding),
 };
-export const Default = createStory(record, 'default');
-export const States = createStory(record, 'states');
-export const Controlled = createControlledStory(record);
-export const Uncontrolled = createUncontrolledStory(record);
-export const Events = createEventsStory(record);
-export const Anatomy = createAnatomyStory(record);
-export const BrowserProof = createBrowserProofStory(record);${canonicalExample ? `
-export const ${canonicalExample.exportName} = {
-  name: ${stringLiteral(canonicalExample.storyName)},
-  parameters: {
-    docs: {
-      source: {
-        code: ${JSON.stringify(canonicalExample.code)},
-        language: 'tsx',
-      },
-    },
-  },
-  render: () => React.createElement(${canonicalExample.importName}),
-};` : ''}${record.family === 'Button' ? `
-const buttonMatrix = createButtonMatrixStory(record);
-export const Matrix = {
-  name: 'Variant × size',
-  args: buttonMatrix.args,
-  argTypes: buttonMatrix.argTypes,
-  parameters: buttonMatrix.parameters,
-  render: buttonMatrix.render,
-};` : ''}${record.family === 'Autocomplete' ? `
-export const DisabledItemsInteraction = {
-  name: 'Disabled items keyboard navigation',
-  args: {
-    label: 'Choose a city',
-    items: [
-      { id: 'disabled', label: 'Disabled', value: 'disabled', disabled: true },
-      { id: 'enabled', label: 'Enabled', value: 'enabled' },
-      { id: 'also-disabled', label: 'Also disabled', value: 'also-disabled', disabled: true },
-    ],
-  },
-  render: (args) => createStory(record, 'default').render(args),
-};` : ''}${record.family === 'Autocomplete' ? '' : '\n'}`;
+${storyPagesFor(record).map(({ emit }) => emit).join('\n')}${record.family === 'Autocomplete' ? '' : '\n'}`;
 }
 
 const outputs = new Map(records.map((record) => [
-  `${record.tranche.replaceAll('.', '-').toLowerCase()}-${familySlug(record.family)}.stories.mjs`,
+  storyFilename(record),
   generatedText({ source: generatedSource, body: storySource(record), policy }),
 ]));
 for (const canonicalExample of canonicalStoryExamples.values()) {
@@ -222,6 +262,16 @@ const manifest = {
     props: binding.api.props,
     defaults: binding.api.defaults ?? {},
     states: binding.states,
+  })),
+  pageIndex: records.map((record) => ({
+    family: record.family,
+    storyFile: `apps/react-storybook/.storybook/generated/${storyFilename(record)}`,
+    stories: storyPagesFor(record).map(({ exportName, name, source }) => ({
+      exportName,
+      id: toId(storyId(record), storyNameFromExport(exportName)),
+      name,
+      ...(source ? { source } : {}),
+    })),
   })),
 };
 const manifestBody = [

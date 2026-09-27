@@ -8,6 +8,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
   const media = new Set();
   const canonical = new Map();
   const effects = new Map();
+  const tokensById = new Map(Object.values(tokens).map((token) => [token.id, token]));
 
   function normalize(value) {
     if (!CSS.supports('color', value)) throw new Error(`Invalid colour: ${value}`);
@@ -27,12 +28,34 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
       .concat(Math.round(alpha * 10000) / 10000).join(',');
   }
 
+  function tokenColorExpression(token, seen = new Set()) {
+    if (!token.mix) return token.value;
+    if (seen.has(token.id)) throw new Error(`Cyclic token colour mix: ${token.id}`);
+    const source = tokensById.get(token.mix.token);
+    if (!source) throw new Error(`Missing token colour mix source: ${token.mix.token}`);
+    const next = new Set(seen).add(token.id);
+    return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, next)} ${token.mix.weight * 100}%, ${token.mix.color})`;
+  }
+
   for (const token of Object.values(tokens)) {
-    if (token.type === 'color') canonical.set(normalize(token.value), token.id);
+    if (token.type === 'color') {
+      canonical.set(normalize(token.value), token.id);
+      // The token CSS generator emits mix tokens as color-mix(), which keeps
+      // fractional channels that the compiled hex token value rounds away.
+      if (token.mix) canonical.set(normalize(tokenColorExpression(token)), token.id);
+    }
     if (token.type === 'effect' && token.value?.kind === 'shadow') {
       for (const layer of token.value.layers) {
         effects.set(normalize(`rgb(from ${layer.color.value} r g b / ${layer.color.alpha ?? 1})`), token.id);
       }
+    }
+  }
+
+  // The authored 30% neutral focus glow is a canonical shadow effect, not a palette color.
+  for (const tokenId of ['semantic.focus.neutral-glow', 'semantic.color.neutral-60']) {
+    const token = tokens[tokenId];
+    if (token?.type === 'color') {
+      effects.set(normalize(`color-mix(in srgb, ${token.value} 30%, transparent)`), token.id);
     }
   }
 

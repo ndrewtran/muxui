@@ -29,8 +29,9 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
-      - name: Select Storybook browser audit coverage
+      - name: Select full-path Storybook browser audit coverage
         id: storybook-audit
+        if: github.event_name != 'pull_request'
         env:
           MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
         run: |
@@ -38,19 +39,14 @@ jobs:
             | tee "$RUNNER_TEMP/storybook-audit-selection.txt" >> "$GITHUB_OUTPUT"
           cat "$RUNNER_TEMP/storybook-audit-selection.txt"
 
-      - name: Bootstrap generated projections
-        run: pnpm generate
-
-      - name: Run affected deterministic checks (pull request)
+      - name: Plan and run owner-scoped pull request checks
         if: github.event_name == 'pull_request'
         env:
-          MUXUI_STORYBOOK_AUDIT_MODE: ${{ steps.storybook-audit.outputs.mode }}
-          MUXUI_STORYBOOK_AUDIT_REASON: ${{ steps.storybook-audit.outputs.reason }}
-          MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
+          GITHUB_BASE_REF: ${{ github.base_ref }}
           MUXUI_STORYBOOK_A11Y_WORKERS: '1'
           MUXUI_STORYBOOK_COLORS_WORKERS: '2'
           MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: ${{ runner.temp }}/storybook-colour-audit
-        run: pnpm check
+        run: node tooling/audits/repository-policy/src/ci-impact.mjs
 
       - name: Run full deterministic checks (manual and schedule)
         if: github.event_name != 'pull_request'
@@ -73,16 +69,21 @@ jobs:
           retention-days: 3
 
       - name: Verify theme authoring in browser
+        if: github.event_name != 'pull_request'
         run: pnpm --filter @muxui/scale check:browser
 
       - name: Verify complex React interactions in Chrome
+        if: github.event_name != 'pull_request'
         run: pnpm --filter @muxui/react check:browser
 
       - name: Install isolated Tailwind consumer
+        if: github.event_name != 'pull_request'
         run: pnpm --dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile
 
       - name: Compile isolated Tailwind consumer
+        if: github.event_name != 'pull_request'
         run: pnpm --dir tests/fixtures/tailwind-consumer check
 
       - name: Verify generation identity
+        if: github.event_name != 'pull_request'
         run: pnpm generate:check

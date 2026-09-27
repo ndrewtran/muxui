@@ -19,6 +19,33 @@ partial proof, never full release proof; broaden only for shared workspace or
 dependency changes, release work, or an explicit all request. This does not
 require a task-local operation descriptor.
 
+## Pull request CI routing
+
+GitHub pull requests use `src/ci-impact.mjs` to plan checks from the merge-base
+to head diff. The plan is printed as JSON before checks run. PR text and labels
+do not establish ownership or narrow proof. Canonical React records, generated
+Storybook page IDs, changed importer paths, and explicit owner routes determine
+the checks; an unresolved path fails with a mapping diagnostic.
+
+Component runtime and CSS changes select the affected React families, their
+verified named test cases and browser proofs, and every Storybook page in those
+families. A changed authored example or Storybook story export selects only its
+canonical page ID. Theme/token changes run their compiler and projection checks
+with theme color and contrast proofs, without component keyboard suites.
+Documentation-only changes run the documentation owner; Scale-only changes
+run the theme-authoring checks; repository-policy and workflow changes run the
+policy checks. Mixed changes combine and deduplicate those scopes.
+
+The PR planner prepares ignored React or Storybook metadata only when those
+owners are needed to resolve canonical families or page IDs. A full workspace
+plan is reserved for identified workspace-wide inputs such as the Node/pnpm
+toolchain, workspace layout, or shared root dependency/engine fields. Lockfile
+changes route through verified workspace importers; changes whose consumers
+cannot be resolved fail with an actionable ownership error. Manual and
+scheduled CI keep the explicit full graph and broad browser checks. Local
+`pnpm check`, `pnpm check:all`, and generation commands keep their existing
+semantics.
+
 Evidence capture and disclosure remain owned by the architecture, Product Scope,
 package, and evidence references. See
 [`tests/evidence/README.md`](../../../tests/evidence/README.md) before retaining

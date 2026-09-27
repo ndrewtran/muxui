@@ -13,10 +13,10 @@ const byKey = new Map(records.flatMap((record) => [
   [record.slug, record],
 ]));
 
-export function selectedStorybookFamilies() {
-  const raw = process.env.MUXUI_STORYBOOK_FAMILIES
-    ?? process.env.MUXUI_STORYBOOK_FAMILY_FILTER
-    ?? process.env.MUXUI_STORYBOOK_FAMILY;
+export function selectedStorybookFamilies(environment = process.env) {
+  const raw = environment.MUXUI_STORYBOOK_FAMILIES
+    ?? environment.MUXUI_STORYBOOK_FAMILY_FILTER
+    ?? environment.MUXUI_STORYBOOK_FAMILY;
   if (raw === undefined || raw === null) return null;
   const values = [...new Set(raw.split(',').map((value) => value.trim()))];
   if (values.length === 0 || values.some((value) => !value)) {
@@ -27,8 +27,8 @@ export function selectedStorybookFamilies() {
   return [...new Set(values.map((value) => byKey.get(value.toLowerCase()).family))].sort();
 }
 
-export function isFocusedStorybookSelection() {
-  return selectedStorybookFamilies() !== null;
+export function isFocusedStorybookSelection(environment = process.env) {
+  return selectedStorybookFamilies(environment) !== null;
 }
 
 export function filterStorybookEntries(entries, families = selectedStorybookFamilies()) {

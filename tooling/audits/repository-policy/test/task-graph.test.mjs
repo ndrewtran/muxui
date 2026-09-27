@@ -226,6 +226,6 @@ test('component checks route substrate and public names from the generated contr
   assert.match(result.stdout, /Storybook families: Button, Dialog/u);
   assert.deepEqual((await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line)), [
     { args: ['--filter', '@muxui/react', 'run', 'check:component'], components: 'Button,Modal', stories: 'Button,Dialog' },
-    { args: ['--filter', '@muxui/react-storybook', 'run', 'check:component'], components: 'Button,Modal', stories: 'Button,Dialog' },
+    { args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'], components: 'Button,Modal', stories: 'Button,Dialog' },
   ]);
 });
