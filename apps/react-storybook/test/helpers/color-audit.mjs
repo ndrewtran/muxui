@@ -191,6 +191,21 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     return true;
   }
 
+  function hasVerifiedTransparentPixel(element) {
+    if (element.localName !== 'img' || !element.complete || element.naturalWidth !== 1 || element.naturalHeight !== 1) return false;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return false;
+      context.drawImage(element, 0, 0);
+      return context.getImageData(0, 0, 1, 1).data[3] === 0;
+    } catch {
+      return false;
+    }
+  }
+
   let elements = 0;
   function inspect(element, pseudo = '') {
     const style = getComputedStyle(element, pseudo);
@@ -266,7 +281,9 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     elements += 1;
     inspect(element);
     if (element.matches('img,video,object,embed,input[type="image"],svg image')) {
-      media.add(`${element.localName}: ${element.currentSrc || element.src || element.data || element.getAttribute('href') || element.getAttribute('xlink:href') || '(unresolved source)'}`);
+      if (!hasVerifiedTransparentPixel(element)) {
+        media.add(`${element.localName}: ${element.currentSrc || element.src || element.data || element.getAttribute('href') || element.getAttribute('xlink:href') || '(unresolved source)'}`);
+      }
     }
     if (element.localName === 'canvas') {
       const recorded = canvasPaints.filter((paint) => paint.id === element.id);

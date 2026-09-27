@@ -342,6 +342,8 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
   try {
     const page = await browser.newPage();
     const foreground = graphs.light['semantic.content.strong'].value;
+    const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    const opaquePixel = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='red'/%3E%3C/svg%3E";
     await page.setContent(`<style>
       body { color:${foreground}; background:${graphs.light['semantic.surface.canvas'].value} }
       div { width:80px; height:25px }
@@ -370,7 +372,13 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
       <rect id="hidden-stroke" width="10" height="10" fill="none" stroke="rgb(1,2,3)" stroke-width="0"/>
       </defs><use id="svg-text-use" href="#text-shape"/><use id="no-paint-fill" href="#hidden-fill"/>
       <use id="no-paint-stroke" href="#hidden-stroke"/></svg><canvas id="canvas" width="10" height="10"></canvas>
-      <img width="10" height="10" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Crect width='10' height='10' fill='red'/%3E%3C/svg%3E">`);
+      <img width="10" height="10" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Crect width='10' height='10' fill='red'/%3E%3C/svg%3E">
+      <img id="transparent-pixel" width="10" height="10" src="${transparentPixel}">
+      <img id="opaque-pixel" width="10" height="10" src="${opaquePixel}">`);
+    await page.locator('#transparent-pixel').evaluate((image) => image.decode());
+    await page.locator('#opaque-pixel').evaluate((image) => image.decode());
+    const transparentPixelSource = await page.locator('#transparent-pixel').evaluate((image) => image.currentSrc);
+    const opaquePixelSource = await page.locator('#opaque-pixel').evaluate((image) => image.currentSrc);
     await page.locator('#selection').evaluate((element) => {
       const range = document.createRange(); range.selectNodeContents(element);
       document.getSelection().removeAllRanges(); document.getSelection().addRange(range);
@@ -383,6 +391,8 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
     const report = await page.evaluate(collectStorybookPaints, { tokens: graphs.light, canvasPaints });
     assert.deepEqual(report.problems, []);
     assert.ok(report.media.some((source) => source.startsWith('img: data:image/svg+xml,')), 'Image paint cannot be silently excluded');
+    assert.ok(report.media.includes(`img: ${opaquePixelSource}`), 'Opaque single-pixel image paint remains unverified');
+    assert.ok(!report.media.includes(`img: ${transparentPixelSource}`), 'A decoded transparent pixel has no visible image paint');
     for (const id of ['solid', 'alpha', 'shadow', 'text-shadow', 'filter', 'gradient', 'border', 'outline', 'pseudo', 'svg', 'svg-use', 'svg-gradient', 'svg-text-use', 'marker', 'selection', 'scrollbar', 'canvas']) {
       assert.ok(report.nonToken.some((paint) => paint.examples.some((example) => example.includes(`#${id}`))), `audit missed ${id}`);
     }
