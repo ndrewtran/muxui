@@ -39,7 +39,7 @@ function targetValues(isOpen) {
  * The explicit exit flag keeps focus and portal ownership in RAC until Motion
  * reports the current close cycle complete.
  */
-export function DatePopoverMotion({ children, placement, triggerRef: requestedTriggerRef }) {
+export function DatePopoverMotion({ children, placement, triggerRef: requestedTriggerRef, ownerClassName }) {
   const overlayState = React.useContext(OverlayTriggerStateContext);
   const popoverContext = React.useContext(PopoverContext);
   const triggerRef = requestedTriggerRef ?? popoverContext?.triggerRef;
@@ -136,6 +136,6 @@ export function DatePopoverMotion({ children, placement, triggerRef: requestedTr
     placement,
     triggerRef: requestedTriggerRef,
     isExiting: !isOpen && phase.exiting,
-    className: 'muxui-date-popover',
+    className: `muxui-date-popover ${ownerClassName}`,
   }, children);
 }

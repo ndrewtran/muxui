@@ -159,6 +159,14 @@
             "requirement": "required"
           },
           {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.field.placeholder",
+            "requirement": "required"
+          },
+          {
             "token": "semantic.focus.ring",
             "requirement": "required"
           },

@@ -110,6 +110,22 @@
           {
             "token": "semantic.motion.feedback-duration",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.content.on-solid",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.overlay.scrim",
+            "requirement": "required"
+          },
+          {
+            "token": "component.sidebar.shadow-color",
+            "requirement": "required"
           }
         ]
       },

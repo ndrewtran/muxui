@@ -342,6 +342,8 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
   try {
     const page = await browser.newPage();
     const foreground = graphs.light['semantic.content.strong'].value;
+    const transparentPixel = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+    const opaquePixel = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1' height='1'%3E%3Crect width='1' height='1' fill='red'/%3E%3C/svg%3E";
     await page.setContent(`<style>
       body { color:${foreground}; background:${graphs.light['semantic.surface.canvas'].value} }
       div { width:80px; height:25px }
@@ -370,7 +372,13 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
       <rect id="hidden-stroke" width="10" height="10" fill="none" stroke="rgb(1,2,3)" stroke-width="0"/>
       </defs><use id="svg-text-use" href="#text-shape"/><use id="no-paint-fill" href="#hidden-fill"/>
       <use id="no-paint-stroke" href="#hidden-stroke"/></svg><canvas id="canvas" width="10" height="10"></canvas>
-      <img width="10" height="10" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Crect width='10' height='10' fill='red'/%3E%3C/svg%3E">`);
+      <img width="10" height="10" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10'%3E%3Crect width='10' height='10' fill='red'/%3E%3C/svg%3E">
+      <img id="transparent-pixel" width="10" height="10" src="${transparentPixel}">
+      <img id="opaque-pixel" width="10" height="10" src="${opaquePixel}">`);
+    await page.locator('#transparent-pixel').evaluate((image) => image.decode());
+    await page.locator('#opaque-pixel').evaluate((image) => image.decode());
+    const transparentPixelSource = await page.locator('#transparent-pixel').evaluate((image) => image.currentSrc);
+    const opaquePixelSource = await page.locator('#opaque-pixel').evaluate((image) => image.currentSrc);
     await page.locator('#selection').evaluate((element) => {
       const range = document.createRange(); range.selectNodeContents(element);
       document.getSelection().removeAllRanges(); document.getSelection().addRange(range);
@@ -383,12 +391,50 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
     const report = await page.evaluate(collectStorybookPaints, { tokens: graphs.light, canvasPaints });
     assert.deepEqual(report.problems, []);
     assert.ok(report.media.some((source) => source.startsWith('img: data:image/svg+xml,')), 'Image paint cannot be silently excluded');
+    assert.ok(report.media.includes(`img: ${opaquePixelSource}`), 'Opaque single-pixel image paint remains unverified');
+    assert.ok(!report.media.includes(`img: ${transparentPixelSource}`), 'A decoded transparent pixel has no visible image paint');
     for (const id of ['solid', 'alpha', 'shadow', 'text-shadow', 'filter', 'gradient', 'border', 'outline', 'pseudo', 'svg', 'svg-use', 'svg-gradient', 'svg-text-use', 'marker', 'selection', 'scrollbar', 'canvas']) {
       assert.ok(report.nonToken.some((paint) => paint.examples.some((example) => example.includes(`#${id}`))), `audit missed ${id}`);
     }
     assert.ok(report.nonToken.some((paint) => paint.rgba.endsWith(',0.123')), 'alpha must remain part of colour identity');
     assert.ok(!report.nonToken.some((paint) => paint.examples.some((example) => example.includes('#no-paint-'))), 'Unpainted SVG fill/stroke must remain unpainted');
   } finally { await browser.close(); }
+});
+
+test('Storybook colour audit accepts dynamic color data only on marked Mux paint parts', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    const tokens = graphs.light;
+    await page.setContent(`<html><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}">
+      <div id="area" class="muxui-color-area" data-muxui-color-paint="area" style="width:40px;height:24px;background-image:linear-gradient(rgb(1,2,3),rgb(4,5,6));background-color:rgb(55,56,57);background-blend-mode:screen;border:1px solid rgb(7,8,9);outline:1px solid rgb(49,50,51);box-shadow:0 0 2px rgb(52,53,54)"><span id="area-text" style="color:rgb(10,11,12)">label</span></div>
+      <div id="area-thumb" class="muxui-color-area-thumb" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(13,14,15)"></div>
+      <div id="slider-track" class="muxui-color-slider-track" data-muxui-color-paint="track" style="width:40px;height:8px;background-image:linear-gradient(rgb(16,17,18),rgb(19,20,21))"></div>
+      <div id="slider-thumb" class="muxui-color-slider-thumb-face" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(22,23,24)"></div>
+      <div id="wheel-track" class="muxui-color-wheel-track" data-muxui-color-paint="track" style="width:40px;height:40px;background-image:conic-gradient(rgb(25,26,27),rgb(28,29,30))"></div>
+      <div id="wheel-thumb" class="muxui-color-wheel-thumb-face" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(31,32,33)"></div>
+      <div id="swatch" class="muxui-color-swatch" data-muxui-color-paint="sample" style="width:16px;height:16px;background-color:rgb(34,35,36);background-image:linear-gradient(rgb(37,38,39),rgb(40,41,42))"></div>
+      <div id="unowned-marker" data-muxui-color-paint="area" style="width:24px;height:16px;background-image:linear-gradient(rgb(43,44,45),rgb(46,47,48))"></div>
+      <div id="wrong-blend" class="muxui-color-area" data-muxui-color-paint="area" style="width:24px;height:16px;background-blend-mode:multiply;mix-blend-mode:screen"></div>
+    </body></html>`);
+
+    const result = await page.evaluate(collectStorybookPaints, { tokens });
+    assert.deepEqual(result.media, []);
+    assert.ok(result.problems.some(({ element, property }) => element.includes('#wrong-blend') && property === 'background-blend-mode'));
+    assert.ok(result.problems.some(({ element, property }) => element.includes('#wrong-blend') && property === 'mix-blend-mode'));
+    const unowned = (id, property) => result.nonToken.some((paint) => paint.property === property
+      && paint.examples.some((example) => example.includes(`#${id}`)));
+    assert.ok(unowned('area', 'border-top-color'), 'component borders remain token-audited');
+    assert.ok(unowned('area', 'outline-color'), 'focus paint remains token-audited');
+    assert.ok(unowned('area', 'box-shadow'), 'shadows remain token-audited');
+    assert.ok(unowned('area-text', 'color'), 'ordinary descendant text remains token-audited');
+    assert.ok(unowned('unowned-marker', 'background-image'), 'a marker without the owned part cannot opt out');
+    assert.ok(!result.nonToken.some((paint) => ['background-color', 'background-image'].includes(paint.property)
+      && ['area', 'area-thumb', 'slider-track', 'slider-thumb', 'wheel-track', 'wheel-thumb', 'swatch']
+        .some((id) => paint.examples.some((example) => example.includes(`#${id}`)))), JSON.stringify(result.nonToken));
+  } finally {
+    await browser.close();
+  }
 });
 
 test('Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity', async () => {
@@ -399,20 +445,74 @@ test('Storybook colour audit recognizes canonical token mixes and shadow-only fo
     const derived = tokens['semantic.color.neutral-5'];
     const source = tokens[derived.mix.token];
     const focusGlow = tokens['semantic.focus.neutral-glow'];
+    const datePopover = tokens['component.datepicker.popover-shadow-color'];
+    const datePopoverSource = tokens[datePopover.mix.token];
+    const datePopoverColor = datePopoverSource.value.match(/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/iu).slice(1)
+      .map((channel) => Number.parseInt(channel, 16));
+    const datePopoverMix = `color-mix(in ${datePopover.mix.space}, ${datePopoverSource.value} ${datePopover.mix.weight * 100}%, ${datePopover.mix.color})`;
     const baseStyles = await readFile(resolve(appRoot, '../../packages/react/src/styles/base.css'), 'utf8');
     const supplementalStyles = await readFile(resolve(appRoot, '../../packages/react/src/supplemental/styles.css'), 'utf8');
     assert.match(baseStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-focus-neutral-glow\) 30%, transparent\)/u);
     assert.match(supplementalStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-color-neutral-60\) 30%, transparent\)/u);
-    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
+    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="date-popover-color" style="width:80px;height:24px;box-shadow:0 4px 16px ${datePopoverMix}">Token-backed date popover shadow color</div><div id="nearby-shadow" style="width:80px;height:24px;box-shadow:0 0 1px rgba(${datePopoverColor.join(',')},0.11)">Unowned nearby shadow alpha</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
     const result = await page.evaluate(collectStorybookPaints, { tokens });
     assert.deepEqual(result.problems, []);
-    assert.deepEqual(result.nonToken.length, 2);
+    assert.deepEqual(result.nonToken.length, 3);
+    assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#nearby-shadow'))));
     assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#unowned-mix'))));
     assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#focus-background'))));
     assert.ok(result.paints.some(({ property, rgba, token }) => property === 'background-color'
       && rgba === '14.45,13.6,12.75,1' && tokens[token]?.mix), JSON.stringify(result.paints));
     assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
       && rgba.endsWith(',0.3') && [focusGlow.id, tokens['semantic.color.neutral-60'].id].includes(token)), JSON.stringify(result.paints));
+    assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
+      && rgba.endsWith(',0.1') && token === datePopover.id), JSON.stringify(result.paints));
+  } finally {
+    await browser.close();
+  }
+});
+
+test('Storybook colour audit preserves intrinsic alpha in canonical effect paints', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    const effect = structuredClone(graphs.light['semantic.elevation.indicator']);
+    const effectId = 'semantic.test.intrinsic-alpha-shadow';
+    effect.id = effectId;
+    effect.value.layers[0].color = { value: '#173b5d80' };
+    const tokens = { ...graphs.light, [effectId]: effect };
+    await page.setContent(`<html><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}">
+      <div id="intrinsic-alpha" style="width:40px;height:24px;box-shadow:0 1px 2px #173b5d80"></div>
+      <div id="different-alpha" style="width:40px;height:24px;box-shadow:0 1px 2px #173b5db3"></div>
+    </body></html>`);
+
+    const result = await page.evaluate(collectStorybookPaints, { tokens });
+    assert.deepEqual(result.problems, []);
+    const shadowFor = (id) => result.paints.find((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes(`#${id}`)));
+    const intrinsicAlpha = shadowFor('intrinsic-alpha');
+    const differentAlpha = shadowFor('different-alpha');
+    assert.equal(intrinsicAlpha?.token, effectId, JSON.stringify(result.paints));
+    assert.notEqual(differentAlpha?.token, effectId, 'different alpha must not match the effect color');
+    assert.ok(result.nonToken.some((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes('#different-alpha'))));
+
+    const toastEffect = tokens['semantic.elevation.toast'];
+    await page.evaluate(() => {
+      const fractionalAlpha = document.createElement('div');
+      fractionalAlpha.id = 'fractional-effect-alpha';
+      fractionalAlpha.style.cssText = 'width:40px;height:24px;box-shadow:0 1px 2px rgba(0,0,0,0.105)';
+      const differentFraction = document.createElement('div');
+      differentFraction.id = 'different-fractional-effect-alpha';
+      differentFraction.style.cssText = 'width:40px;height:24px;box-shadow:0 1px 2px rgba(0,0,0,0.11)';
+      document.body.append(fractionalAlpha, differentFraction);
+    });
+    const fractionalResult = await page.evaluate(collectStorybookPaints, { tokens });
+    const fractionalShadow = fractionalResult.paints.find((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes('#fractional-effect-alpha')));
+    assert.equal(fractionalShadow?.token, toastEffect.id, JSON.stringify(fractionalResult.paints));
+    assert.ok(fractionalResult.nonToken.some((paint) => paint.property === 'box-shadow'
+      && paint.examples.some((example) => example.includes('#different-fractional-effect-alpha'))));
   } finally {
     await browser.close();
   }

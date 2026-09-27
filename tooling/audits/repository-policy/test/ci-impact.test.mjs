@@ -238,6 +238,37 @@ test('generated CSF export changes select only the matching page ID', async () =
   assert.equal(result.storyChrome, false);
 });
 
+test('Storybook CI family selections project substrate families through public exports', async () => {
+  const recordsWithModal = [...records, {
+    family: 'Modal', export: 'Dialog', slug: 'dialog', source: 'packages/react/src/overlays.mjs', parts: ['root', 'trigger', 'panel'],
+  }];
+  const sharedStorybook = await plan(['apps/react-storybook/src/storybook-factory.mjs'], { records: recordsWithModal });
+  const families = sharedStorybook.storyRuns[0].families;
+  assert.ok(families.includes('Dialog'));
+  assert.ok(!families.includes('Modal'));
+  const command = executionCommands(sharedStorybook, { packages, environment: {} })
+    .find(({ args }) => args.includes('check:scoped'));
+  const selected = command.env.MUXUI_STORYBOOK_FAMILIES.split(',');
+  assert.ok(selected.includes('Dialog'));
+  assert.ok(!selected.includes('Modal'));
+
+  const overlaysPath = 'packages/react/src/overlays.mjs';
+  const dialogBefore = 'export const Dialog = () => null;';
+  const dialogAfter = 'export const Dialog = () => 1;';
+  const sourceChange = await plan([overlaysPath], {
+    records: recordsWithModal,
+    pageIndex: [{ family: 'Dialog', stories: [{ exportName: 'BrowserProof' }] }],
+    textSnapshots: { [overlaysPath]: { before: dialogBefore, after: dialogAfter } },
+    moduleSources: {
+      ...cssModuleSources,
+      [overlaysPath]: { before: dialogBefore, after: dialogAfter },
+    },
+  });
+  assert.deepEqual(sourceChange.reactFamilies, ['Modal']);
+  assert.deepEqual(sourceChange.reactBehaviorProofFamilies, ['Modal']);
+  assert.deepEqual(sourceChange.storyRuns[0].families, ['Dialog']);
+});
+
 test('generator tooling checks emitted page IDs only when the generator output changes', async () => {
   const path = 'apps/react-storybook/src/generate-stories.mjs';
   const metadataOnly = await plan([path], {

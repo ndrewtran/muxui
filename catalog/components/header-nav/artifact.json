@@ -80,6 +80,22 @@
           {
             "token": "semantic.motion.feedback-duration",
             "requirement": "required"
+          },
+          {
+            "token": "semantic.content.on-solid",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.overlay.scrim",
+            "requirement": "required"
+          },
+          {
+            "token": "component.headernav.mobile-drawer-shadow-color",
+            "requirement": "required"
           }
         ]
       },

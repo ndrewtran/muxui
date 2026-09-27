@@ -40,7 +40,7 @@
 
 .muxui-autocomplete-search[data-invalid] > .muxui-field-input:is(:focus, [data-focused]),
 .muxui-autocomplete-search > .muxui-field-input[data-invalid]:is(:focus, [data-focused]) {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent);
+  box-shadow: 0 0 0 3px var(--muxui-semantic-feedback-invalid-focus);
 }
 
 .muxui-autocomplete-popover {
@@ -847,24 +847,6 @@
 
 /* Invalid field labels use the consumer-facing feedback color in every mode. */
 @scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope :where(
-    .muxui-text-field,
-    .muxui-search-field,
-    .muxui-number-field,
-    .muxui-date-field,
-    .muxui-date-picker,
-    .muxui-date-range-picker,
-    .muxui-time-field
-  )[data-invalid] .muxui-field-label {
-    color: var(--muxui-semantic-feedback-invalid-content);
-  }
-
-  :scope .muxui-autocomplete-search[data-invalid] > .muxui-field-label {
-    color: var(--muxui-semantic-feedback-invalid-content);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
     .muxui-text-field,
     .muxui-search-field,

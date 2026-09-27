@@ -154,6 +154,18 @@ async function settleEntry(page) {
   return readEntryMotion(page);
 }
 
+async function readDatePopoverShadow(page) {
+  return page.locator('.muxui-date-popover').evaluate((node) => {
+    const reference = document.createElement('div');
+    reference.style.boxShadow = '0 4px 16px color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 10%, transparent)';
+    document.body.append(reference);
+    const referenceShadow = getComputedStyle(reference).boxShadow;
+    const actualShadow = getComputedStyle(node).boxShadow;
+    reference.remove();
+    return { actualShadow, referenceShadow };
+  });
+}
+
 function assertEntryMotion(entry) {
   const fade = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.opacity !== undefined));
   const travel = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.transform !== undefined));
@@ -188,6 +200,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await openCalendar(page);
+    assert.equal(await page.locator('.muxui-date-picker-popover').count(), 1, 'DatePicker popup carries its canonical family selector');
     await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) > 0));
     const fullEntry = await readEntryMotion(page);
     assert.equal(fullEntry.animationName, 'none', 'entry is owned by Motion, not a second CSS animation');
@@ -195,6 +208,35 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     const fullSettled = await settleEntry(page);
     assert.equal(fullSettled.opacity, '1');
     assert.equal(fullSettled.transformY, 0);
+    const lightShadow = await readDatePopoverShadow(page);
+    assert.equal(lightShadow.actualShadow, lightShadow.referenceShadow, 'light popover matches the original 10% neutral-100 shadow recipe');
+    assert.match(lightShadow.actualShadow, /0px 4px 16px 0px$/u, 'light popover shadow retains its offset and blur');
+    await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'dark'; });
+    const darkShadow = await readDatePopoverShadow(page);
+    assert.equal(darkShadow.actualShadow, darkShadow.referenceShadow, 'dark popover matches the original mode-resolved shadow recipe');
+    assert.match(darkShadow.actualShadow, /0px 4px 16px 0px$/u, 'dark popover shadow retains its offset and blur');
+    await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'light'; });
+    await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(() => document.activeElement?.matches('.muxui-calendar-cell[data-focus-visible]'));
+    const muxFocus = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow };
+    });
+    assert.equal(muxFocus.outlineStyle, 'none', 'Calendar keyboard focus replaces the user-agent outline');
+    assert.notEqual(muxFocus.boxShadow, 'none', 'Calendar keeps its token-backed Mux focus rings');
+    await page.emulateMedia({ forcedColors: 'active' });
+    const forcedColorsFocus = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return {
+        active: matchMedia('(forced-colors: active)').matches,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    assert.equal(forcedColorsFocus.active, true);
+    assert.equal(forcedColorsFocus.outlineStyle, 'solid', 'forced colors retain a system focus outline');
+    assert.equal(forcedColorsFocus.outlineWidth, '2px');
+    await page.emulateMedia({ forcedColors: 'none' });
     await capturePopup(page, '/tmp/muxui-date-popover-full-light.png');
     await closeCalendarWithEscape(page);
 
@@ -444,6 +486,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await rangePage.waitForFunction(() => document.documentElement.dataset.muxuiDateRangePopoverHydrated === 'true');
     await rangePage.locator('.muxui-date-range-control .muxui-date-trigger').click();
     await rangePage.locator('.muxui-date-popover').waitFor();
+    assert.equal(await rangePage.locator('.muxui-date-range-picker-popover').count(), 1, 'DateRangePicker popup carries its canonical family selector');
     await rangePage.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 200));
     const rangeEntry = await readEntryMotion(rangePage);
     assertEntryMotion(rangeEntry);

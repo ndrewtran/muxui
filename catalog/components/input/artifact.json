@@ -90,6 +90,10 @@
             "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           },
+          {
+            "token": "semantic.field.placeholder",
+            "requirement": "required"
+          },
           { "token": "semantic.control.size-sm", "requirement": "required" },
           { "token": "semantic.control.size-md", "requirement": "required" },
           { "token": "semantic.control.size-lg", "requirement": "required" }

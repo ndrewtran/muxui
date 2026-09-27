@@ -9,6 +9,29 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
   const canonical = new Map();
   const effects = new Map();
   const tokensById = new Map(Object.values(tokens).map((token) => [token.id, token]));
+  // These exact Mux parts paint user-selected colors. Only their listed paint
+  // properties may be dynamic; descendants and ordinary component chrome stay audited.
+  const dynamicColorParts = [
+    ['.muxui-color-area[data-muxui-color-paint="area"]', ['background-color', 'background-image']],
+    ['.muxui-color-area-thumb[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-slider-track[data-muxui-color-paint="track"]', ['background-image']],
+    ['.muxui-color-slider-thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-wheel-track[data-muxui-color-paint="track"]', ['background-image']],
+    ['.muxui-color-wheel-thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-swatch[data-muxui-color-paint="sample"]', ['background-color', 'background-image']],
+  ];
+
+  function ownsDynamicColorPaint(element, pseudo, property) {
+    return !pseudo && dynamicColorParts.some(([selector, properties]) => (
+      properties.includes(property) && element.matches(selector)
+    ));
+  }
+
+  function ownsColorAreaBlend(element, pseudo, value) {
+    return !pseudo
+      && element.matches('.muxui-color-area[data-muxui-color-paint="area"]')
+      && value.split(',').every((mode) => mode.trim() === 'screen');
+  }
 
   function normalize(value) {
     if (!CSS.supports('color', value)) throw new Error(`Invalid colour: ${value}`);
@@ -37,6 +60,14 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, next)} ${token.mix.weight * 100}%, ${token.mix.color})`;
   }
 
+  function applyAlpha(key, alpha) {
+    if (alpha === 1) return key;
+    const channels = key.split(',').map(Number);
+    const combinedAlpha = channels[3] * alpha;
+    // Match CSSOM's computed-color serialization, including its alpha quantization.
+    return normalize(`rgba(${channels.slice(0, 3).join(' ')} / ${combinedAlpha})`);
+  }
+
   for (const token of Object.values(tokens)) {
     if (token.type === 'color') {
       canonical.set(normalize(token.value), token.id);
@@ -46,7 +77,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     }
     if (token.type === 'effect' && token.value?.kind === 'shadow') {
       for (const layer of token.value.layers) {
-        effects.set(normalize(`rgb(from ${layer.color.value} r g b / ${layer.color.alpha ?? 1})`), token.id);
+        effects.set(applyAlpha(normalize(layer.color.value), layer.color.alpha ?? 1), token.id);
       }
     }
   }
@@ -71,14 +102,10 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
 
   function add(element, pseudo, property, value, alpha = 1) {
     if (value === 'none' || value === 'auto') return;
+    if (ownsDynamicColorPaint(element, pseudo, property)) return;
     let key;
     try {
-      key = normalize(value);
-      if (alpha !== 1) {
-        const channels = key.split(',').map(Number);
-        channels[3] = Math.round(channels[3] * alpha * 10000) / 10000;
-        key = channels.join(',');
-      }
+      key = applyAlpha(normalize(value), alpha);
     }
     catch (error) {
       problems.push({ element: describe(element, pseudo), property, value, reason: error.message });
@@ -164,6 +191,21 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     return true;
   }
 
+  function hasVerifiedTransparentPixel(element) {
+    if (element.localName !== 'img' || !element.complete || element.naturalWidth !== 1 || element.naturalHeight !== 1) return false;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1;
+      canvas.height = 1;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      if (!context) return false;
+      context.drawImage(element, 0, 0);
+      return context.getImageData(0, 0, 1, 1).data[3] === 0;
+    } catch {
+      return false;
+    }
+  }
+
   let elements = 0;
   function inspect(element, pseudo = '') {
     const style = getComputedStyle(element, pseudo);
@@ -190,7 +232,8 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     filter(element, pseudo, 'backdrop-filter', style.backdropFilter);
     for (const property of ['mix-blend-mode', 'background-blend-mode']) {
       const value = style.getPropertyValue(property);
-      if (value.split(',').some((mode) => mode.trim() !== 'normal')) {
+      if (value.split(',').some((mode) => mode.trim() !== 'normal')
+        && !(property === 'background-blend-mode' && ownsColorAreaBlend(element, pseudo, value))) {
         problems.push({ element: describe(element, pseudo), property, value, reason: 'Blending manufactures colours outside token paint values' });
       }
     }
@@ -238,7 +281,9 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     elements += 1;
     inspect(element);
     if (element.matches('img,video,object,embed,input[type="image"],svg image')) {
-      media.add(`${element.localName}: ${element.currentSrc || element.src || element.data || element.getAttribute('href') || element.getAttribute('xlink:href') || '(unresolved source)'}`);
+      if (!hasVerifiedTransparentPixel(element)) {
+        media.add(`${element.localName}: ${element.currentSrc || element.src || element.data || element.getAttribute('href') || element.getAttribute('xlink:href') || '(unresolved source)'}`);
+      }
     }
     if (element.localName === 'canvas') {
       const recorded = canvasPaints.filter((paint) => paint.id === element.id);

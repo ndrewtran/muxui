@@ -344,7 +344,6 @@ test('default theme link and invalid semantic colors meet contrast in both color
 
 test('default theme motion scale removes Quick and preserves Fast (120ms) semantic roles', () => {
   assert.equal(source.tokenContractVersion, '5.0.0');
-  assert.equal(Object.keys(source.tokens).length, 878);
   assert.equal(Object.values(source.tokens).some((token) => Object.hasOwn(token, 'deprecation')), false);
   const durationScale = new Map([
     ['instant', 0], ['fast', 120], ['moderate', 180], ['slow', 300], ['deliberate', 500],

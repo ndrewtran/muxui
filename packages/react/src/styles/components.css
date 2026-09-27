@@ -366,6 +366,11 @@
   display: block;
 }
 
+.muxui-checkbox[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-indicator svg,
+.muxui-checkbox-field__button[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-field__indicator svg {
+  color: var(--muxui-semantic-action-foreground-hover);
+}
+
 .muxui-checkbox.muxui-checkbox--sm .muxui-checkbox-indicator {
   inline-size: 0.875rem;
   block-size: 0.875rem;
@@ -1095,6 +1100,16 @@
   background-color: var(--muxui-button-background-pressed, var(--muxui-semantic-action-background-pressed));
 }
 
+.muxui-button[data-variant='primary']:hover:not([data-disabled], [data-pending]),
+.muxui-button[data-variant='primary'][data-hovered]:not([data-disabled], [data-pending]) {
+  --muxui-button-foreground: var(--muxui-semantic-action-foreground-hover);
+}
+
+.muxui-button[data-variant='primary']:active:not([data-disabled], [data-pending]),
+.muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
+  --muxui-button-foreground: var(--muxui-semantic-action-foreground-pressed);
+}
+
 .muxui-button[data-pending]::after {
   content: none;
 }
@@ -1168,22 +1183,7 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-disclosure-trigger {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 8%, transparent);
     color: var(--muxui-semantic-color-neutral-default-18);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-disclosure:not([data-disabled])
-    .muxui-disclosure-trigger:hover:not([data-disabled], [data-pending]) {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 12%, transparent);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-disclosure:not([data-disabled])
-    .muxui-disclosure-trigger:active:not([data-disabled], [data-pending]) {
-    background-color: color-mix(in srgb, var(--muxui-semantic-color-neutral-default-18) 16%, transparent);
   }
 }
 
@@ -1438,7 +1438,7 @@
   margin-block: 0;
   border: 0;
   border-radius: 0;
-  background-color: color-mix(in srgb, var(--muxui-semantic-action-neutral-background) 50%, transparent);
+  background-color: var(--muxui-component-disclosuregroup-background);
   transition:
     margin-block-start var(--muxui-component-disclosuregroup-transition-spring-duration) var(--muxui-component-disclosuregroup-transition-spring-easing),
     border-radius var(--muxui-component-disclosuregroup-transition-spring-duration) var(--muxui-component-disclosuregroup-transition-spring-easing);
@@ -1519,6 +1519,10 @@
   flex: 0 0 auto;
   color: var(--muxui-semantic-color-neutral-default-50);
   transform: rotate(0deg);
+  --muxui-semantic-motion-content-resize-transition-duration: var(--muxui-component-disclosuregroup-transition-duration);
+  --muxui-semantic-motion-content-resize-transition-easing: var(--muxui-component-disclosuregroup-transition-easing);
+  --muxui-semantic-motion-content-resize-transition-spring-visual-duration: var(--muxui-component-disclosuregroup-transition-spring-visual-duration);
+  --muxui-semantic-motion-content-resize-transition-spring-bounce: var(--muxui-component-disclosuregroup-transition-spring-bounce);
 }
 
 .muxui-disclosure-group > .muxui-disclosure[data-expanded] > .muxui-disclosure-header > .muxui-disclosure-trigger > .muxui-disclosure-trigger-icon {

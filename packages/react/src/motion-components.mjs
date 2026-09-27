@@ -4,6 +4,24 @@ import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } 
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const ENTRY_DISTANCE = 4;
+const DISCLOSURE_GROUP_BASE_DURATION = 0.268;
+const DISCLOSURE_GROUP_SPRING_PHASES = Object.freeze({
+  open: Object.freeze({ duration: 0.58, visualDuration: 0.3022, bounce: 0.32 }),
+  close: Object.freeze({ duration: 0.46, visualDuration: 0.2545, bounce: 0.26 }),
+  icon: Object.freeze({ duration: 0.42, visualDuration: 0.228, bounce: 0.28 }),
+});
+
+// Motion 13.4 maps these duration-based springs to the shared token time-spring base.
+function disclosureGroupSpring(base, phase) {
+  if (!base) return null;
+  const target = DISCLOSURE_GROUP_SPRING_PHASES[phase];
+  return {
+    ...base,
+    duration: base.duration * (target.duration / DISCLOSURE_GROUP_BASE_DURATION),
+    visualDuration: base.visualDuration * (target.visualDuration / DISCLOSURE_GROUP_BASE_DURATION),
+    bounce: base.bounce * (target.bounce / 0.38),
+  };
+}
 
 function placementOffset(placement) {
   const side = String(placement ?? 'bottom').split('-')[0];
@@ -57,6 +75,13 @@ function progressTransition(transition) {
   return transition.type === 'spring'
     ? { type: 'spring', visualDuration: transition.visualDuration, bounce: transition.bounce }
     : transition;
+}
+
+function disclosureGroupReveal(content, componentNode, trigger) {
+  const reveal = resolvedMotionTransition(content, trigger, 'reveal', 'reveal');
+  const component = resolvedMotionTransition(componentNode, trigger, 'content-resize', 'interaction');
+  if (!reveal || !component) return null;
+  return { ...reveal, duration: Math.min(reveal.duration, component.duration) };
 }
 
 /**
@@ -276,8 +301,8 @@ export function useMotionLayout(nodeRef, layoutKey, triggerRef) {
   }, [nodeRef]);
 }
 
-/** Keep the grouped chevron on the semantic interaction spring, including reversals. */
-export function useDisclosureIconMotion(ref, isOpen) {
+/** Keep the grouped chevron on the component spring, including reversals. */
+export function useDisclosureIconMotion(ref, isOpen, grouped = false) {
   const angleRef = React.useRef(isOpen ? 180 : 0);
   useIsomorphicLayoutEffect(() => {
     const node = ref.current;
@@ -297,7 +322,10 @@ export function useDisclosureIconMotion(ref, isOpen) {
         apply(target);
       }
     });
-    const transition = resolvedMotionSpring(node, null);
+    const base = grouped
+      ? resolvedMotionSpring(node, null, 'content-resize', 'interaction')
+      : resolvedMotionSpring(node, null);
+    const transition = grouped ? disclosureGroupSpring(base, 'icon') : base;
     if (!transition || angleRef.current === target) apply(target);
     else controls = animate(angleRef.current, target, { ...transition, onUpdate: apply });
     return () => {
@@ -305,11 +333,11 @@ export function useDisclosureIconMotion(ref, isOpen) {
       controls?.stop();
       disconnect();
     };
-  }, [ref, isOpen]);
+  }, [grouped, ref, isOpen]);
 }
 
 /** Animate a disclosure's measured content height without scaling its contents. */
-export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, ...props }) {
+export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, grouped = false, ...props }) {
   const panelRef = React.useRef(null);
   const contentRef = React.useRef(null);
   const controlsRef = React.useRef(null);
@@ -385,7 +413,10 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
       settle();
       return;
     }
-    const transition = resolvedMotionSpring(panel, triggerRef?.current, 'content-resize', 'interaction');
+    const base = resolvedMotionSpring(panel, triggerRef?.current, 'content-resize', 'interaction');
+    const transition = grouped
+      ? disclosureGroupSpring(base, isOpenRef.current ? 'open' : 'close')
+      : base;
     if (!transition || Math.abs(currentHeight - targetHeight) < 0.5) {
       settle();
       return;
@@ -407,7 +438,7 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
       }
       settle();
     });
-  }, [hostRef, triggerRef]);
+  }, [grouped, hostRef, triggerRef]);
 
   const animateTargetRefCallback = React.useCallback(animateTarget, [animateTarget]);
   useIsomorphicLayoutEffect(() => {
@@ -426,10 +457,16 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
       // state update below still re-runs the target effect, but it must not be
       // the first thing that stops a spring after a runtime preference change.
       if (nextReduced) {
-        contentControlsRef.current?.stop();
+        const contentControls = contentControlsRef.current;
         contentControlsRef.current = null;
-        contentRef.current?.style.removeProperty('opacity');
-        contentRef.current?.style.removeProperty('transform');
+        if (grouped) contentControls?.cancel();
+        else contentControls?.stop();
+        const content = contentRef.current;
+        if (content) {
+          if (grouped) content.style.opacity = isOpenRef.current ? '1' : '0';
+          else content.style.removeProperty('opacity');
+          content.style.removeProperty('transform');
+        }
         const targetHeight = isOpenRef.current && contentRef.current
           ? measureMotionContentHeight(contentRef.current)
           : 0;
@@ -444,11 +481,17 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     if (!content) return undefined;
     const initial = !contentMountedRef.current;
     contentMountedRef.current = true;
-    const transition = isOpen
-      ? resolvedMotionTransition(content, triggerRef?.current, 'reveal', 'reveal')
-      : resolvedMotionTransition(content, triggerRef?.current, 'exit', 'dismiss');
+    const transition = grouped
+      ? disclosureGroupReveal(content, panelRef.current, triggerRef?.current)
+      : isOpen
+        ? resolvedMotionTransition(content, triggerRef?.current, 'reveal', 'reveal')
+        : resolvedMotionTransition(content, triggerRef?.current, 'exit', 'dismiss');
     const settle = () => {
-      if (isOpen || !transition) {
+      if (grouped) {
+        if (isOpen) content.style.removeProperty('opacity');
+        else content.style.opacity = '0';
+        content.style.removeProperty('transform');
+      } else if (isOpen || !transition) {
         content.style.removeProperty('opacity');
         content.style.removeProperty('transform');
       } else {
@@ -464,10 +507,13 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     }
     const from = readVisibleValues(content);
     let active = true;
-    const controls = animate(content, {
-      opacity: [from.opacity, isOpen ? 1 : 0.82],
-      transform: [`translateY(${from.y}px)`, `translateY(${isOpen ? 0 : 3}px)`],
-    }, transition);
+    const values = grouped
+      ? { opacity: [from.opacity, isOpen ? 1 : 0] }
+      : {
+        opacity: [from.opacity, isOpen ? 1 : 0.82],
+        transform: [`translateY(${from.y}px)`, `translateY(${isOpen ? 0 : 3}px)`],
+      };
+    const controls = animate(content, values, transition);
     contentControlsRef.current = controls;
     controls.then(() => {
       if (!active || contentControlsRef.current !== controls) return;
@@ -476,10 +522,12 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     });
     return () => {
       active = false;
-      controls.stop();
-      if (contentControlsRef.current === controls) contentControlsRef.current = null;
+      if (contentControlsRef.current === controls) {
+        controls.stop();
+        contentControlsRef.current = null;
+      }
     };
-  }, [isOpen, reduced, triggerRef]);
+  }, [grouped, isOpen, reduced, triggerRef]);
 
   useIsomorphicLayoutEffect(() => {
     const panel = panelRef.current;

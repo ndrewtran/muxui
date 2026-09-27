@@ -148,9 +148,9 @@ export const DisclosureGroup = React.forwardRef(function DisclosureGroup({
 
 DisclosureGroup.displayName = 'DisclosureGroup';
 
-function DisclosureChevron({ isOpen }) {
+function DisclosureChevron({ isOpen, grouped }) {
   const ref = React.useRef(null);
-  useDisclosureIconMotion(ref, isOpen);
+  useDisclosureIconMotion(ref, isOpen, grouped);
   return React.createElement(ChevronDownIcon, { ref, className: 'muxui-disclosure-trigger-icon', 'aria-hidden': 'true', focusable: 'false' });
 }
 
@@ -180,12 +180,12 @@ export const Disclosure = /*#__PURE__*/ (() => {
       onExpandedChange,
     }, ({ isExpanded }) => {
       const trigger = React.createElement(AriaButton, { ref: triggerRef, slot: 'trigger', className: 'muxui-disclosure-trigger' }, title, grouped
-        ? React.createElement(DisclosureChevron, { isOpen: isExpanded })
+        ? React.createElement(DisclosureChevron, { isOpen: isExpanded, grouped })
         : null);
       return React.createElement(React.Fragment, null,
         grouped ? React.createElement('div', { className: 'muxui-disclosure-header' }, trigger) : trigger,
         React.createElement(AriaDisclosurePanel, { ref: panelHostRef, role: 'region', className: 'muxui-disclosure-panel-host' },
-          React.createElement(MotionHeight, { isOpen: isExpanded, triggerRef, hostRef: panelHostRef, className: 'muxui-disclosure-motion-panel' }, children)));
+          React.createElement(MotionHeight, { isOpen: isExpanded, triggerRef, hostRef: panelHostRef, className: 'muxui-disclosure-motion-panel', grouped }, children)));
     });
   });
   component.displayName = 'Disclosure';

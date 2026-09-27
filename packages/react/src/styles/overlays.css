@@ -26,7 +26,7 @@
 
 .muxui-drop-zone[data-drop-target] {
   border-color: var(--muxui-semantic-selection-track);
-  background-color: color-mix(in srgb, var(--muxui-semantic-selection-track) 8%, transparent);
+  background-color: var(--muxui-component-dropzone-drop-target-background);
   color: var(--muxui-semantic-selection-track);
 }
 
@@ -49,7 +49,6 @@
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-drop-zone[data-drop-target] {
     border-color: var(--muxui-semantic-action-selection-background);
-    background-color: color-mix(in srgb, var(--muxui-semantic-action-selection-background) 8%, transparent);
     color: var(--muxui-semantic-action-selection-background);
   }
 }
@@ -238,6 +237,11 @@
 .muxui-preview-content {
   line-height: var(--muxui-semantic-typography-text-line-height);
   color-scheme: light;
+}
+
+.muxui-preview-trigger .muxui-preview-content:focus-visible {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
 }
 
 /* MuxUI component source: toast.css */
@@ -634,6 +638,11 @@
     background: Canvas;
     color: CanvasText;
     box-shadow: none;
+  }
+
+  .muxui-preview-trigger .muxui-preview-content:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
   }
 
   .muxui-dialog-backdrop {

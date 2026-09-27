@@ -572,6 +572,29 @@
       "alias": "semantic.color.color-60-fg",
       "equivalence": "semantic-equivalence"
     },
+    "semantic.action.foreground-hover": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Foreground content on a hovered immediate action.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-60-fg",
+      "equivalence": "semantic-equivalence",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-50-fg"
+        }
+      }
+    },
+    "semantic.action.foreground-pressed": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Foreground content on a pressed immediate action.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-40-fg",
+      "equivalence": "semantic-equivalence"
+    },
     "semantic.action.danger-background": {
       "layer": "semantic",
       "type": "color",
@@ -1270,6 +1293,22 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-m"
     },
+    "semantic.control.color-thumb-border": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Default white keyline separating color-control thumbs from selected colors in both color schemes.",
+      "overridePolicy": "theme",
+      "value": "#ffffff"
+    },
+    "semantic.control.color-thumb-shadow": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Default translucent black separation shadow around color-control thumbs in both color schemes.",
+      "overridePolicy": "theme",
+      "value": "#0000004d"
+    },
     "semantic.field.background": {
       "layer": "semantic",
       "type": "color",
@@ -1352,6 +1391,19 @@
       "meaning": "Validation text and invalid labels using the fixed red palette shade; independent of invalid control borders.",
       "overridePolicy": "theme",
       "alias": "reference.color.red-60"
+    },
+    "semantic.feedback.invalid-focus": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent focus ring color for invalid controls.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.feedback.invalid",
+        "color": "#00000000",
+        "weight": 0.2
+      }
     },
     "semantic.focus.ring": {
       "layer": "semantic",
@@ -2163,6 +2215,45 @@
       "overridePolicy": "theme",
       "alias": "reference.effect.shadow-s"
     },
+    "component.datepicker.popover-shadow-color": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent neutral paint for the shared DatePicker and DateRangePicker calendar popover shadow.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.neutral-100",
+        "color": "#00000000",
+        "weight": 0.1
+      }
+    },
+    "component.headernav.mobile-drawer-shadow-color": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent neutral paint for the HeaderNav mobile drawer shadow.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.neutral-default-100",
+        "color": "#00000000",
+        "weight": 0.12
+      }
+    },
+    "component.sidebar.shadow-color": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent neutral paint for Sidebar surface shadows.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.neutral-default-100",
+        "color": "#00000000",
+        "weight": 0.12
+      }
+    },
     "component.button.background": {
       "layer": "component",
       "type": "color",
@@ -2235,13 +2326,26 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-2xl"
     },
+    "component.disclosuregroup.background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Subtle surface behind grouped disclosure rows.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.action.neutral-background",
+        "color": "#00000000",
+        "weight": 0.5
+      }
+    },
     "component.disclosuregroup.motion-duration": {
       "layer": "component",
       "type": "duration",
       "unit": "ms",
-      "meaning": "Duration of grouped disclosure height and spacing changes.",
+      "meaning": "Base visual duration used by the grouped disclosure spring choreography.",
       "overridePolicy": "theme",
-      "alias": "reference.motion.duration-slow",
+      "value": 268,
       "modes": {
         "motion.reduced": {
           "alias": "reference.motion.duration-instant"
@@ -2252,7 +2356,7 @@
       "layer": "component",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Coordinated zero-bounce height, spacing, and corner transition for grouped disclosures.",
+      "meaning": "Coordinated spring height, spacing, and corner transition for grouped disclosures.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -2261,7 +2365,30 @@
         "spring": {
           "kind": "time",
           "visualDuration": "component.disclosuregroup.motion-duration",
-          "bounce": 0
+          "bounce": 0.38
+        }
+      }
+    },
+    "component.dropzone.drop-target-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent selection fill behind a DropZone while files are targeted.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.selection.track",
+        "color": "#00000000",
+        "weight": 0.08
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "mix": {
+            "space": "srgb",
+            "token": "semantic.action.selection-background",
+            "color": "#00000000",
+            "weight": 0.08
+          }
         }
       }
     },

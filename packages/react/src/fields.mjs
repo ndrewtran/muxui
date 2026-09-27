@@ -395,11 +395,11 @@ function calendarHeader() {
 }
 
 function datePopover() {
-  return React.createElement(DatePopoverMotion, null, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
+  return React.createElement(DatePopoverMotion, { ownerClassName: 'muxui-date-picker-popover' }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren())));
 }
 
 function rangeDatePopover(triggerRef) {
-  return React.createElement(DatePopoverMotion, { placement: 'bottom end', triggerRef }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
+  return React.createElement(DatePopoverMotion, { placement: 'bottom end', triggerRef, ownerClassName: 'muxui-date-range-picker-popover' }, React.createElement(AriaDialog, { className: 'muxui-date-dialog' }, React.createElement(AriaRangeCalendar, { className: 'muxui-calendar' }, calendarHeader(), calendarChildren('muxui-range-calendar-cell'))));
 }
 
 function dateInput() {

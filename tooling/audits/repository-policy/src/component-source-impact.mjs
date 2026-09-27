@@ -787,6 +787,30 @@ function ownersForClass(className, records) {
   return new Set(matches.filter(({ slugLength }) => slugLength === longest).map(({ family }) => family));
 }
 
+const statePseudoClasses = new Set([
+  'active', 'checked', 'disabled', 'enabled', 'focus', 'focus-visible', 'hover', 'indeterminate',
+  'invalid', 'open', 'optional', 'placeholder-shown', 'read-only', 'read-write', 'required', 'valid',
+]);
+const stateAttributes = new Set([
+  'disabled', 'checked', 'required', 'readonly', 'selected', 'open',
+  'aria-checked', 'aria-current', 'aria-disabled', 'aria-expanded', 'aria-haspopup', 'aria-invalid',
+  'aria-pressed', 'aria-readonly', 'aria-required', 'aria-selected',
+]);
+
+function isStateOnlySelector(selector) {
+  const nodes = selector.children?.toArray() ?? [];
+  return nodes.length > 0 && nodes.every((node) => {
+    if (node.type === 'PseudoClassSelector') {
+      return statePseudoClasses.has(node.name.toLowerCase()) && !node.children;
+    }
+    if (node.type === 'AttributeSelector') {
+      const name = node.name?.name?.toLowerCase();
+      return typeof name === 'string' && (name.startsWith('data-') || stateAttributes.has(name));
+    }
+    return false;
+  });
+}
+
 function selectorOwners(selector, records, inherited = []) {
   const owners = new Set();
   let hasUnanchoredRelation = false;
@@ -794,11 +818,18 @@ function selectorOwners(selector, records, inherited = []) {
     selectorOwners(inheritedSelector, records).forEach((family) => owners.add(family));
   }
 
-  for (const node of selector.children?.toArray() ?? []) {
+  const nodes = selector.children?.toArray() ?? [];
+  for (const node of nodes) {
     if (node.type === 'ClassSelector') {
       ownersForClass(node.name, records).forEach((family) => owners.add(family));
-      continue;
     }
+  }
+
+  // State-only branches of :is()/:where() refine the selector they occur in.
+  // They may use the selector's established component anchor, but cannot borrow
+  // ownership from a sibling alternative inside the same functional pseudo.
+  const stateFallbackOwners = new Set(owners);
+  for (const node of nodes) {
     if (node.type !== 'PseudoClassSelector') continue;
 
     const pseudoName = node.name.toLowerCase();
@@ -817,6 +848,10 @@ function selectorOwners(selector, records, inherited = []) {
     for (const alternative of alternatives) {
       const alternativeOwners = selectorOwners(alternative, records);
       if (alternativeOwners.size === 0) {
+        if (isStateOnlySelector(alternative) && stateFallbackOwners.size > 0) {
+          stateFallbackOwners.forEach((family) => owners.add(family));
+          continue;
+        }
         fail('STYLE_OWNERSHIP', `selector pseudo :${pseudoName}() alternative "${cssTree.generate(alternative)}" has no canonical component owner`);
       }
       alternativeOwners.forEach((family) => owners.add(family));

@@ -86,6 +86,10 @@
             "requirement": "required"
           },
           {
+            "token": "component.disclosuregroup.background",
+            "requirement": "required"
+          },
+          {
             "token": "semantic.action.neutral-background-hover",
             "requirement": "required"
           },
@@ -199,6 +203,10 @@
           },
           {
             "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.background",
             "requirement": "required"
           },
           {
