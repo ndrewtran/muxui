@@ -471,12 +471,12 @@ function applyPackageImpact(plan, packageName, records) {
   }
   if (packageName === '@muxui/react') {
     plan.reactPackageFull = true;
-    familyAll(records).forEach((family) => addUnique(plan.storyFamilies, family));
+    storybookFamilies(records).forEach((family) => addUnique(plan.storyFamilies, family));
     plan.tailwind = true;
     return 'React renderer and all direct component consumers';
   }
   if (packageName === '@muxui/react-storybook') {
-    familyAll(records).forEach((family) => addUnique(plan.storyFamilies, family));
+    storybookFamilies(records).forEach((family) => addUnique(plan.storyFamilies, family));
     plan.storyTooling = true;
     return 'Storybook renderer and all emitted pages';
   }
@@ -496,8 +496,14 @@ function routeLockfileImporter(plan, importer, packages, records) {
   plan.reasons.push(`lockfile importer ${importer} changes ${description}`);
 }
 
-function familyAll(records) {
-  return records.map(({ family }) => family).sort();
+function storybookFamilies(records) {
+  return records.map((record) => record.export ?? record.family).sort();
+}
+
+function storybookFamilyFor(records, family) {
+  const record = records.find((candidate) => candidate.family === family);
+  if (!record) throw new Error(`MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: ${family}`);
+  return record.export ?? record.family;
 }
 
 function storybookUnitRoute(path) {
@@ -752,7 +758,7 @@ export async function buildPullRequestImpact({
       const impact = reactPackageWideChanges(reactPackageBefore, reactPackageAfter);
       if (impact.pagesAffected) {
         plan.reactPackageFull = true;
-        familyAll(records).forEach((family) => plan.storyFamilies.add(family));
+        storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
         plan.tailwind = true;
         plan.reasons.push(`${impact.reason}; validate every direct component consumer`);
       } else {
@@ -774,7 +780,7 @@ export async function buildPullRequestImpact({
         plan.storyChrome = true;
         plan.reasons.push(`${path} changes Storybook manager chrome`);
       } else if (config.reactStorybookSharedPaths.includes(path)) {
-        familyAll(records).forEach((family) => plan.storyFamilies.add(family));
+        storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
         plan.reasons.push(`${path} is shared by every Storybook page`);
       } else if (config.reactStorybookGeneratorPaths.includes(path)) {
         plan.storyTooling = true;
@@ -801,7 +807,7 @@ export async function buildPullRequestImpact({
         const before = await readBaseText(path);
         const after = await readHeadText(path);
         const impact = storybookPackageWideChanges(before, after);
-        if (impact.pagesAffected) familyAll(records).forEach((family) => plan.storyFamilies.add(family));
+        if (impact.pagesAffected) storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
         plan.storyTooling = true;
         addStoryUnitRoute(plan, 'apps/react-storybook/test/storybook-page-selection.test.mjs');
         plan.reasons.push(impact.pagesAffected
@@ -821,7 +827,7 @@ export async function buildPullRequestImpact({
       const record = parts[2] ? recordForSlug(records, parts[2]) : null;
       if (record && /\/artifact\.json$/u.test(path)) {
         plan.reactFamilies.add(record.family);
-        plan.storyFamilies.add(record.family);
+        plan.storyFamilies.add(record.export ?? record.family);
         plan.catalog = true;
         plan.reasons.push(`${path} changes the canonical component record for ${record.family}`);
       } else if (/\/examples\/react\/.*\.tsx?$/u.test(path) || /\/examples\/react\/.*\.example\.json$/u.test(path)) {
@@ -898,7 +904,7 @@ export async function buildPullRequestImpact({
     if (path === 'packages/react/src/generate.mjs') {
       plan.reactPackageFull = true;
       plan.reactProjectionCheck = false;
-      familyAll(records).forEach((family) => plan.storyFamilies.add(family));
+      storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
       plan.tailwind = true;
       plan.reasons.push('React projection compiler changes every canonical React family');
       continue;
@@ -908,7 +914,7 @@ export async function buildPullRequestImpact({
     const impact = analyzeReactSourceChange({ before, after, sourcePath: path, records, moduleSources });
     impact.families.forEach((family) => {
       plan.reactFamilies.add(family);
-      plan.storyFamilies.add(family);
+      plan.storyFamilies.add(storybookFamilyFor(records, family));
     });
     if (impact.families.length > 0) plan.reasons.push(impact.reason ?? `${path} changed exported ${impact.families.join(', ')}`);
   }
@@ -922,7 +928,7 @@ export async function buildPullRequestImpact({
       if (impact.theme) plan.themeFamilies.add(family);
       else {
         plan.reactFamilies.add(family);
-        plan.storyFamilies.add(family);
+        plan.storyFamilies.add(storybookFamilyFor(records, family));
       }
     });
     if (impact.theme) {
@@ -964,8 +970,10 @@ export async function buildPullRequestImpact({
       if (!record) throw new Error(`MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: ${family}`);
       return record;
     });
-    const behaviorProofFamilies = selectedRecords.flatMap(({ family }) => {
-      const page = pageIndex.find((candidate) => candidate.family === family);
+    const behaviorProofFamilies = selectedRecords.flatMap((record) => {
+      const family = record.family;
+      const storyFamily = record.export ?? family;
+      const page = pageIndex.find((candidate) => candidate.family === storyFamily);
       return page?.stories.some((story) => story.exportName === 'BrowserProof') ? [family] : [];
     });
     const selection = componentTestSelection(selectedRecords, Object.keys(componentTestSources), {
