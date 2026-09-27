@@ -86,10 +86,10 @@
   cursor: not-allowed;
 }
 
-.muxui-calendar[data-disabled] .muxui-calendar-previous > svg,
-.muxui-calendar[data-disabled] .muxui-calendar-next > svg,
-.muxui-range-calendar[data-disabled] .muxui-calendar-previous > svg,
-.muxui-range-calendar[data-disabled] .muxui-calendar-next > svg {
+.muxui-calendar[data-disabled] .muxui-calendar-previous svg,
+.muxui-calendar[data-disabled] .muxui-calendar-next svg,
+.muxui-range-calendar[data-disabled] .muxui-calendar-previous svg,
+.muxui-range-calendar[data-disabled] .muxui-calendar-next svg {
   opacity: 0.45;
 }
 
@@ -1812,6 +1812,15 @@
   pointer-events: none;
 }
 
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tag-remove {
+  --muxui-icon-button-size: 1.5rem;
+}
+
+.muxui-tag-remove .muxui-icon-button-icon {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
 .muxui-tag-group .muxui-field-label {
   color: var(--muxui-semantic-content-default);
   font-family: var(--muxui-semantic-typography-text-font-family);
@@ -1951,6 +1960,17 @@
   opacity: 0;
   cursor: pointer;
   outline: none;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tree-toggle {
+  --muxui-icon-button-size: 0.75rem;
+  height: 100%;
+  min-height: 0;
+}
+
+.muxui-tree-toggle .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 /* Keep the actual RAC chevron button over the visible indicator
@@ -2326,6 +2346,15 @@
   border-radius: 0;
   color: var(--muxui-semantic-color-neutral-default-60);
   transition: transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-combo-box-trigger {
+  --muxui-icon-button-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+}
+
+.muxui-combo-box-trigger .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .muxui-combo-box-arrow {

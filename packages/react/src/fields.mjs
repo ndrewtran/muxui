@@ -3,7 +3,6 @@ import { animate } from 'motion/react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
 import {
   Autocomplete as AriaAutocomplete,
-  Button as AriaButton,
   Calendar as AriaCalendar,
   CalendarCell as AriaCalendarCell,
   CalendarGrid as AriaCalendarGrid,
@@ -46,6 +45,7 @@ import { DatePopoverMotion } from './date-popover-motion.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { RangeSelectionMotion } from './range-selection-motion.mjs';
+import { IconButton } from './supplemental/icon-button.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
@@ -389,9 +389,9 @@ function calendarChildren(cellClass = 'muxui-calendar-cell') {
 
 function calendarHeader() {
   return React.createElement('div', { className: 'muxui-calendar-header' },
-    React.createElement(AriaButton, { slot: 'previous', 'aria-label': 'Previous month', className: 'muxui-calendar-previous' }, React.createElement(ChevronLeftIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { slot: 'previous', 'aria-label': 'Previous month', className: 'muxui-calendar-previous' }, React.createElement(ChevronLeftIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })),
     React.createElement(AriaCalendarHeading, { className: 'muxui-calendar-heading' }),
-    React.createElement(AriaButton, { slot: 'next', 'aria-label': 'Next month', className: 'muxui-calendar-next' }, React.createElement(ChevronRightIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })));
+    React.createElement(IconButton, { slot: 'next', 'aria-label': 'Next month', className: 'muxui-calendar-next' }, React.createElement(ChevronRightIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })));
 }
 
 function datePopover() {
@@ -566,7 +566,7 @@ export const SearchField = React.forwardRef(function SearchField({
           ref: inputRef,
         }),
       }),
-      React.createElement(AriaButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search', onPress: onClear }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
+      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search', onActivate: onClear }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
   }));
 });
 
@@ -618,9 +618,9 @@ export const NumberField = React.forwardRef(function NumberField({
     description,
     errorMessage,
     input: React.createElement(AriaGroup, { className: 'muxui-number-control' },
-      React.createElement(AriaButton, { slot: 'decrement', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-decrement' }, React.createElement(MinusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })),
+      React.createElement(IconButton, { slot: 'decrement', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-decrement' }, React.createElement(MinusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })),
       React.createElement(AriaInput, { className: 'muxui-field-input', inputMode: 'decimal' }),
-      React.createElement(AriaButton, { slot: 'increment', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-increment' }, React.createElement(PlusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
+      React.createElement(IconButton, { slot: 'increment', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-increment' }, React.createElement(PlusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
   }));
 });
 
@@ -928,7 +928,7 @@ export const DatePicker = /*#__PURE__*/ (() => {
       label,
       description,
       errorMessage,
-      input: React.createElement(AriaGroup, { className: 'muxui-date-control' }, dateInput(), React.createElement(AriaButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+      input: React.createElement(AriaGroup, { className: 'muxui-date-control' }, dateInput(), React.createElement(IconButton, { slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
       children: datePopover(),
     }));
   });
@@ -1017,7 +1017,7 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
         React.createElement(AriaDateInput, { slot: 'start', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
         React.createElement('span', { className: 'muxui-date-range-separator', 'aria-hidden': 'true' }, '–'),
         React.createElement(AriaDateInput, { slot: 'end', className: 'muxui-date-input' }, (segment) => React.createElement(AriaDateSegment, { segment, className: 'muxui-date-segment' })),
-        React.createElement(AriaButton, { ref: triggerRef, slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
+        React.createElement(IconButton, { ref: triggerRef, slot: 'button', type: 'button', 'aria-label': 'Open calendar', className: 'muxui-date-trigger' }, calendarGlyph())),
       children: React.createElement(React.Fragment, null,
         rangeDatePopover(triggerRef),
         formResetAnchor(resetInputRef),

@@ -4,7 +4,7 @@ id: muxui:guide:foundations-component-tokens
 
 # Component tokens
 
-Component tokens are the final customization points owned by a component family. The current canonical source declares Button roles for background, foreground, minimum height, inline padding, and radius. Each role aliases the semantic value that supplies its default.
+Component tokens are the final customization points owned by a component family. The current canonical source declares Button roles for background, foreground, minimum height, inline padding, and radius, plus DisclosureGroup roles for icon size, label gap, radius, and coordinated motion. Defaults come from semantic or reference aliases, or component-specific values.
 
 Use a component token when a component needs a family-specific customization. Use the semantic token when a page-wide role should change. Do not reuse a Button token as a field or overlay contract.
 

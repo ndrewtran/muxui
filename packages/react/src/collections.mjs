@@ -89,6 +89,7 @@ import { RadioGroupMotion, RadioMotionIndicator } from './radio-motion.mjs';
 import { SliderMotionTrack } from './slider-motion.mjs';
 import { TabsMotion } from './tabs-motion.mjs';
 import { ToggleButtonGroupMotion } from './toggle-button-group-motion.mjs';
+import { IconButton } from './supplemental/icon-button.mjs';
 
 function classNames(base, className) {
   return [base, className].filter(Boolean).join(' ');
@@ -254,9 +255,9 @@ function calendarGrid(cellClass = 'muxui-calendar-cell') {
 
 function calendarHeader() {
   return React.createElement('div', { className: 'muxui-calendar-header' },
-    React.createElement(AriaButton, { slot: 'previous', 'aria-label': 'Previous month', className: 'muxui-calendar-previous' }, React.createElement(ChevronLeftIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { slot: 'previous', 'aria-label': 'Previous month', className: 'muxui-calendar-previous' }, React.createElement(ChevronLeftIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })),
     React.createElement(AriaCalendarHeading, { className: 'muxui-calendar-heading' }),
-    React.createElement(AriaButton, { slot: 'next', 'aria-label': 'Next month', className: 'muxui-calendar-next' }, React.createElement(ChevronRightIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })));
+    React.createElement(IconButton, { slot: 'next', 'aria-label': 'Next month', className: 'muxui-calendar-next' }, React.createElement(ChevronRightIcon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' })));
 }
 
 function calendarProps(props, name, labelId) {
@@ -759,7 +760,7 @@ export const ComboBox = /*#__PURE__*/ (() => {
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
-        React.createElement(AriaButton, { className: 'muxui-combo-box-trigger', 'aria-label': 'Show options' },
+        React.createElement(IconButton, { className: 'muxui-combo-box-trigger', 'aria-label': 'Show options' },
           React.createElement(ChevronDownIcon, { className: 'muxui-combo-box-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
       description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
       errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
@@ -990,7 +991,7 @@ export const Tabs = /*#__PURE__*/ (() => {
 export const TagGroup = React.forwardRef(function TagGroup({ label, items = [], onRemove, onAction, disabled = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   const normalized = normalizeItems(items);
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'TagGroup');
-  return React.createElement(AriaTagGroup, { ref, onRemove: (keys) => { if (!disabled) onRemove?.([...keys].map(String).map((id) => normalized.find((item) => item.id === id)).filter((item) => item && !item.disabled)); }, onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tag-group', className) }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTagList, { items: normalized, className: 'muxui-tag-list' }, (item) => React.createElement(AriaTag, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, className: 'muxui-tag' }, item.label, onRemove ? React.createElement(AriaButton, { slot: 'remove', isDisabled: disabled || item.disabled, className: 'muxui-tag-remove' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null)));
+  return React.createElement(AriaTagGroup, { ref, onRemove: (keys) => { if (!disabled) onRemove?.([...keys].map(String).map((id) => normalized.find((item) => item.id === id)).filter((item) => item && !item.disabled)); }, onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tag-group', className) }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTagList, { items: normalized, className: 'muxui-tag-list' }, (item) => React.createElement(AriaTag, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, className: 'muxui-tag' }, item.label, onRemove ? React.createElement(IconButton, { slot: 'remove', disabled: disabled || item.disabled, className: 'muxui-tag-remove' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null)));
 });
 TagGroup.displayName = 'TagGroup';
 
@@ -1162,7 +1163,7 @@ function treeItem(item, expansionTrigger, treeDisabled) {
     React.createElement(AriaTreeItemContent, null, ({ state }) => {
       rowExpansion.toggleKey = rowExpansionEnabled ? () => state.toggleKey(item.id) : undefined;
       return React.createElement('div', { className: 'muxui-tree-item-content' },
-        nested.length ? React.createElement(AriaButton, { slot: 'chevron', 'aria-label': 'Toggle', isDisabled: item.disabled, className: 'muxui-tree-toggle' }, React.createElement(ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', fill: 'currentColor', strokeWidth: 0, size: 16 })) : null,
+        nested.length ? React.createElement(IconButton, { slot: 'chevron', 'aria-label': 'Toggle', disabled: item.disabled, className: 'muxui-tree-toggle' }, React.createElement(ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', fill: 'currentColor', strokeWidth: 0, size: 16 })) : null,
         React.createElement('span', { className: 'muxui-tree-item-label' }, item.label));
     }),
     nested.map((child) => React.cloneElement(treeItem(child, expansionTrigger, treeDisabled), { key: child.id })));

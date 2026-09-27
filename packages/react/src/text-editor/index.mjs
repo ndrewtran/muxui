@@ -11,7 +11,6 @@ import {
 } from 'lucide-react';
 import {
   ColorField as AriaColorField,
-  Button as AriaButton,
   Dialog as AriaDialog,
   DialogTrigger,
   Input as AriaInput,
@@ -19,6 +18,8 @@ import {
   Popover as AriaPopover,
   parseColor,
 } from 'react-aria-components';
+import { Button } from '../button.mjs';
+import { IconButton } from '../supplemental/icon-button.mjs';
 
 const SAFE_LINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
 const SAFE_IMAGE_PROTOCOLS = new Set(['http:', 'https:']);
@@ -289,11 +290,17 @@ function Action({ editor, disabled, action, label, icon: Icon, callbacks }) {
       : action.type === 'fontSize'
         ? editor?.getAttributes('textStyle').fontSize === action.value
         : editor?.isActive(action.type);
-  return React.createElement('button', {
-    type: 'button', className: cx('muxui-text-editor__btn', active && 'muxui-text-editor__btn--active'), 'data-disabled': disabled ? 'true' : undefined,
-    disabled, 'aria-label': label, 'aria-pressed': Boolean(active),
-    onClick: () => run(editor, action, callbacks),
-  }, Icon ? React.createElement(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }) : label);
+  const buttonProps = {
+    className: cx('muxui-text-editor__btn', active && 'muxui-text-editor__btn--active'),
+    'data-disabled': disabled ? 'true' : undefined,
+    disabled,
+    'aria-label': label,
+    'aria-pressed': Boolean(active),
+    onActivate: () => run(editor, action, callbacks),
+  };
+  return Icon
+    ? React.createElement(IconButton, buttonProps, React.createElement(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))
+    : React.createElement(Button, buttonProps, label);
 }
 
 function ColorPicker({ editor, disabled, callbacks }) {
@@ -311,7 +318,7 @@ function ColorPicker({ editor, disabled, callbacks }) {
     apply(hex);
   };
   return React.createElement(DialogTrigger, { isOpen: open, onOpenChange: setOpen },
-    React.createElement(AriaButton, { className: 'muxui-text-editor__btn', isDisabled: disabled, 'aria-label': 'Text color', onPress: () => setOpen(true) }, React.createElement(Type, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, 'aria-label': 'Text color', onActivate: () => setOpen(true) }, React.createElement(Type, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
     React.createElement(AriaPopover, { className: 'muxui-text-editor__color-popup' },
       React.createElement(AriaDialog, { className: 'muxui-text-editor__color-dialog', 'aria-label': 'Text color picker' },
         React.createElement('div', { className: 'muxui-text-editor__color-swatches' }, [...SAFE_COLORS].map((hex) => React.createElement('button', { key: hex, type: 'button', className: 'muxui-text-editor__color-swatch', style: { backgroundColor: hex }, 'aria-label': hex, onClick: () => apply(hex) }))),
@@ -332,7 +339,7 @@ function ImagePicker({ editor, disabled, callbacks }) {
     if (src === null) return false;
     return insert(src);
   };
-  return React.createElement('button', { type: 'button', className: 'muxui-text-editor__btn', disabled, 'data-disabled': disabled ? 'true' : undefined, 'aria-label': 'Insert image', onClick: () => {
+  return React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, 'data-disabled': disabled ? 'true' : undefined, 'aria-label': 'Insert image', onActivate: () => {
     if (callbacks.onImageRequest) callbacks.onImageRequest({ insertImage: (src, alt) => insert(src, alt) });
     else promptImage();
   } }, React.createElement(ImageIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }));
@@ -344,10 +351,18 @@ function Separator() {
 
 function Toolbar({ editor, disabled, variant, floating, callbacks }) {
   const advanced = variant === 'advanced';
-  const request = (label, callback, actions, fallback = () => false, Icon) => React.createElement('button', {
-    type: 'button', className: 'muxui-text-editor__btn', disabled, 'data-disabled': disabled ? 'true' : undefined, 'aria-label': label,
-    onClick: () => callback ? callback(actions) : fallback(),
-  }, Icon ? React.createElement(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }) : label);
+  const request = (label, callback, actions, fallback = () => false, Icon) => {
+    const buttonProps = {
+      className: 'muxui-text-editor__btn',
+      disabled,
+      'data-disabled': disabled ? 'true' : undefined,
+      'aria-label': label,
+      onActivate: () => callback ? callback(actions) : fallback(),
+    };
+    return Icon
+      ? React.createElement(IconButton, buttonProps, React.createElement(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))
+      : React.createElement(Button, buttonProps, label);
+  };
   const linkActions = { setLink: (href) => run(editor, { type: 'link', href }), unsetLink: () => run(editor, { type: 'unlink' }) };
   const promptLink = () => {
     if (typeof window === 'undefined') return false;
@@ -409,7 +424,7 @@ function BubbleMenu({ editor, disabled, callbacks }) {
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'bold' }, label: 'Bold', icon: Bold }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'italic' }, label: 'Italic', icon: Italic }),
     React.createElement(Action, { editor, disabled, callbacks, action: { type: 'underline' }, label: 'Underline', icon: Underline }),
-    React.createElement('button', { type: 'button', className: 'muxui-text-editor__btn', disabled, 'data-disabled': disabled ? 'true' : undefined, 'aria-label': 'Insert link', onClick: requestLink }, React.createElement(LinkIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
+    React.createElement(IconButton, { className: 'muxui-text-editor__btn', disabled, 'data-disabled': disabled ? 'true' : undefined, 'aria-label': 'Insert link', onActivate: requestLink }, React.createElement(LinkIcon, { size: 16, 'aria-hidden': 'true', focusable: 'false' })),
   );
 }
 

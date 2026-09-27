@@ -430,7 +430,7 @@ test('Checkbox and Radio generated CSS suppresses native input outlines', async 
   }
 });
 
-test('DisclosureGroup uses accordion trigger geometry without changing standalone Disclosure sizing', async () => {
+test('DisclosureGroup uses soft accordion geometry without changing standalone Disclosure sizing', async () => {
   const server = renderToString(React.createElement(React.Fragment, null,
     React.createElement(Disclosure, { title: 'Standalone' }, 'Content'),
     React.createElement(DisclosureGroup, null,
@@ -443,7 +443,12 @@ test('DisclosureGroup uses accordion trigger geometry without changing standalon
   assert.ok(grouped);
   assert.equal(grouped.closest('.muxui-disclosure-group')?.classList.contains('muxui-disclosure-group'), true);
   const styles = await readFile(new URL('../generated/styles.css', import.meta.url), 'utf8');
-  assert.match(styles, /\.muxui-disclosure-group \.muxui-disclosure-trigger\s*\{[^}]*width:\s*100%[\s\S]*padding:\s*var\(--muxui-semantic-layout-control-inset\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure-header > \.muxui-disclosure-trigger\s*\{[^}]*width:\s*100%[\s\S]*min-block-size:\s*var\(--muxui-semantic-control-size-md\)[\s\S]*font-size:\s*var\(--muxui-semantic-typography-label-m-font-size\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure > \.muxui-disclosure-panel-host > \.muxui-disclosure-motion-panel > \.muxui-disclosure-panel\s*\{[^}]*padding-inline:\s*calc\(var\(--muxui-semantic-control-padding-inline\) \* 1\.25\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\s*\{[^}]*background-color:\s*color-mix\(in srgb, var\(--muxui-semantic-action-neutral-background\) 50%, transparent\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\s*\{[^}]*transition:[^}]*margin-block-start var\(--muxui-component-disclosuregroup-transition-spring-duration\) var\(--muxui-component-disclosuregroup-transition-spring-easing\)[^}]*border-radius var\(--muxui-component-disclosuregroup-transition-spring-duration\) var\(--muxui-component-disclosuregroup-transition-spring-easing\)/u);
+  assert.match(styles, /\.muxui-disclosure-group > \.muxui-disclosure\[data-expanded\]:not\(:first-child\)[\s\S]*margin-block-start:\s*var\(--muxui-semantic-layout-group-gap\)/u);
+  assert.doesNotMatch(styles, /\.muxui-disclosure-group\s+\.muxui-disclosure-trigger\s*\{/u, 'grouped trigger styles stay scoped to direct children');
   assert.match(styles, /\.muxui-disclosure-trigger\s*\{[\s\S]*width:\s*fit-content/u);
   dom.window.close();
 });

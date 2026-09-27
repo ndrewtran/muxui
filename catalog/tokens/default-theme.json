@@ -2203,6 +2203,68 @@
       "overridePolicy": "theme",
       "alias": "semantic.control.radius"
     },
+    "component.disclosuregroup.icon-size": {
+      "layer": "component",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Leading and trailing icon size in grouped disclosure triggers.",
+      "overridePolicy": "theme",
+      "value": 24,
+      "relative": {
+        "value": 1.5,
+        "unit": "rem"
+      }
+    },
+    "component.disclosuregroup.label-gap": {
+      "layer": "component",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Separation between a grouped disclosure icon and its label.",
+      "overridePolicy": "theme",
+      "value": 8,
+      "relative": {
+        "value": 0.5,
+        "unit": "rem"
+      }
+    },
+    "component.disclosuregroup.radius": {
+      "layer": "component",
+      "type": "dimension",
+      "unit": "px",
+      "meaning": "Corner radius of connected closed groups and expanded disclosure surfaces.",
+      "overridePolicy": "theme",
+      "alias": "reference.dimension.radius-2xl"
+    },
+    "component.disclosuregroup.motion-duration": {
+      "layer": "component",
+      "type": "duration",
+      "unit": "ms",
+      "meaning": "Duration of grouped disclosure height and spacing changes.",
+      "overridePolicy": "theme",
+      "alias": "reference.motion.duration-slow",
+      "modes": {
+        "motion.reduced": {
+          "alias": "reference.motion.duration-instant"
+        }
+      }
+    },
+    "component.disclosuregroup.transition": {
+      "layer": "component",
+      "type": "transition",
+      "unit": "structured",
+      "meaning": "Coordinated zero-bounce height, spacing, and corner transition for grouped disclosures.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "transition",
+        "duration": "component.disclosuregroup.motion-duration",
+        "easing": "semantic.motion.interaction-easing",
+        "spring": {
+          "kind": "time",
+          "visualDuration": "component.disclosuregroup.motion-duration",
+          "bounce": 0
+        }
+      }
+    },
     "reference.color.amber-10": {
       "layer": "reference",
       "type": "color",

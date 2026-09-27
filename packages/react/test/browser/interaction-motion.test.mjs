@@ -147,6 +147,41 @@ async function readDisclosureLayout(page, selector, { stableFrames = 0, padding 
   }, { stableFrames, padding });
 }
 
+async function captureDisclosureGroupMotion(page, triggerSelector, duration = 1150) {
+  return page.locator(triggerSelector).evaluate(async (trigger, sampleDuration) => {
+    const group = trigger.closest('.muxui-disclosure-group');
+    if (!group) throw new Error('Disclosure trigger is outside its group.');
+    const rows = [...group.children].filter((row) => row.classList.contains('muxui-disclosure'));
+    const read = () => rows.map((row, index) => {
+      const rect = row.getBoundingClientRect();
+      const next = rows[index + 1];
+      const nextRect = next?.getBoundingClientRect();
+      const style = getComputedStyle(row);
+      const panelHost = row.querySelector('.muxui-disclosure-panel-host');
+      return {
+        expanded: row.hasAttribute('data-expanded'),
+        top: rect.top,
+        bottom: rect.bottom,
+        panelHeight: panelHost?.getBoundingClientRect().height ?? 0,
+        gapAfter: nextRect ? nextRect.top - rect.bottom : 0,
+        marginBlockStart: Number.parseFloat(style.marginBlockStart) || 0,
+        radiusTop: Number.parseFloat(style.borderTopLeftRadius) || 0,
+        radiusBottom: Number.parseFloat(style.borderBottomLeftRadius) || 0,
+      };
+    });
+    const before = read();
+    trigger.click();
+    const immediate = read();
+    const frames = [];
+    const started = performance.now();
+    while (performance.now() - started < sampleDuration) {
+      await new Promise(requestAnimationFrame);
+      frames.push(read());
+    }
+    return { before, immediate, frames, after: read() };
+  }, duration);
+}
+
 async function waitForDisclosureIntermediate(page, selector) {
   await page.waitForFunction((value) => {
     const node = document.querySelector(value);
@@ -302,13 +337,80 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await waitForDisclosureOpen(page, primaryPanel);
     assert.ok((await page.locator(primaryPanel).evaluate((node) => node.getBoundingClientRect().height)) > 0, 'rapid disclosure toggle settles open');
 
-    const firstGroupTrigger = page.locator('[data-motion-id="group-first"] .muxui-disclosure-trigger');
-    const secondGroupTrigger = page.locator('[data-motion-id="group-second"] .muxui-disclosure-trigger');
-    await firstGroupTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="group-first"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
-    await secondGroupTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="group-second"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true'
-      && document.querySelector('[data-motion-id="group-first"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'false');
+    const firstGroupTrigger = '[data-motion-id="group-first"] .muxui-disclosure-trigger';
+    const secondGroupTrigger = '[data-motion-id="group-second"] .muxui-disclosure-trigger';
+    const firstGroupPanel = disclosurePanel('group-first');
+    const secondGroupPanel = disclosurePanel('group-second');
+    const groupGeometry = await page.locator('[data-motion-id="disclosure-group"]').evaluate((group) => {
+      const style = getComputedStyle(group);
+      const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const pixels = (token) => {
+        const value = style.getPropertyValue(token).trim();
+        return Number.parseFloat(value) * (value.endsWith('rem') ? rem : 1);
+      };
+      const panel = group.querySelector('.muxui-disclosure-motion-panel');
+      return {
+        gap: pixels('--muxui-semantic-layout-group-gap'),
+        radius: pixels('--muxui-component-disclosuregroup-radius'),
+        iconSize: group.querySelector('.muxui-disclosure-trigger-icon').getBoundingClientRect().width,
+        duration: getComputedStyle(panel).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
+        surroundingDuration: style.getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
+        nestedDuration: getComputedStyle(panel.firstElementChild).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
+      };
+    });
+    assert.equal(groupGeometry.iconSize, 24);
+    assert.equal(groupGeometry.duration, '300ms', 'grouped panels use the faster component spring');
+    assert.equal(groupGeometry.nestedDuration, groupGeometry.surroundingDuration, 'panel content preserves the surrounding motion role for nested controls');
+    const openingGroupItem = await captureDisclosureGroupMotion(page, firstGroupTrigger);
+    assert.equal(openingGroupItem.before[0].panelHeight, 0);
+    assert.equal(openingGroupItem.before[0].gapAfter, 0);
+    assert.ok(Math.abs(openingGroupItem.immediate[0].gapAfter - openingGroupItem.before[0].gapAfter) < 1.5, 'the click frame keeps its starting gap while React commits');
+    const firstExpandedFrame = openingGroupItem.frames.find((frame) => frame[0].expanded);
+    assert.ok(firstExpandedFrame, 'opening state commits during the sampled frames');
+    assert.ok(firstExpandedFrame[0].gapAfter < groupGeometry.gap, 'opening does not insert the full token gap in one frame');
+    assert.ok(openingGroupItem.frames.some((frame) => frame[0].gapAfter > 1 && frame[0].gapAfter < groupGeometry.gap - 1), 'opening gap passes through intermediate frame geometry');
+    assert.ok(openingGroupItem.frames.some((frame) => frame[0].radiusBottom > 1 && frame[0].radiusBottom < groupGeometry.radius - 1), 'expanded corner radius animates with its spacing');
+    assert.ok(Math.abs(openingGroupItem.after[0].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(openingGroupItem.after[0].radiusBottom - groupGeometry.radius) < 0.5);
+    await waitForDisclosureOpen(page, firstGroupPanel);
+
+    const partialGroupClose = await captureDisclosureGroupMotion(page, firstGroupTrigger, 180);
+    assert.ok(Math.abs(partialGroupClose.immediate[0].gapAfter - partialGroupClose.before[0].gapAfter) < 1.5, 'the close click frame keeps its starting gap while React commits');
+    assert.ok(partialGroupClose.frames.some((frame) => !frame[0].expanded), 'closing state commits during the sampled frames');
+    assert.ok(partialGroupClose.immediate[0].gapAfter > groupGeometry.gap - 1, 'closing starts from the open gap');
+    assert.ok(partialGroupClose.after[0].gapAfter > 0 && partialGroupClose.after[0].gapAfter < groupGeometry.gap, 'closing reduces the gap progressively');
+    assert.ok(partialGroupClose.after[0].panelHeight > 0, 'closing keeps the measured panel in flow while it moves');
+
+    const reversedGroupOpen = await captureDisclosureGroupMotion(page, firstGroupTrigger);
+    assert.ok(Math.abs(reversedGroupOpen.immediate[0].gapAfter - reversedGroupOpen.before[0].gapAfter) < 1.5, 'reversing the close preserves the current gap on its click frame');
+    assert.ok(Math.abs(reversedGroupOpen.immediate[0].panelHeight - reversedGroupOpen.before[0].panelHeight) < 1.5, 'reversing the close preserves current panel height on its click frame');
+    assert.ok(reversedGroupOpen.frames.some((frame) => frame[0].expanded && frame[0].gapAfter > reversedGroupOpen.before[0].gapAfter), 'reversal grows smoothly from the in-flight gap');
+    assert.ok(Math.abs(reversedGroupOpen.after[0].gapAfter - groupGeometry.gap) < 0.5);
+    await waitForDisclosureOpen(page, firstGroupPanel);
+
+    const switchingGroupItem = await captureDisclosureGroupMotion(page, secondGroupTrigger);
+    assert.ok(switchingGroupItem.before[0].panelHeight > 0);
+    assert.equal(switchingGroupItem.before[1].panelHeight, 0);
+    assert.ok(switchingGroupItem.after[0].expanded === false && switchingGroupItem.after[1].expanded === true);
+    assert.ok(switchingGroupItem.frames.every((frame) => Math.abs(frame[0].gapAfter - groupGeometry.gap) < 0.5), 'single-mode switching keeps one gap at the shared boundary');
+    assert.ok(switchingGroupItem.frames.some((frame) => frame[1].gapAfter > 1 && frame[1].gapAfter < groupGeometry.gap - 1), 'the newly expanded row grows its neighboring gap continuously');
+    assert.ok(Math.abs(switchingGroupItem.after[0].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(switchingGroupItem.after[1].gapAfter - groupGeometry.gap) < 0.5);
+    await waitForDisclosureOpen(page, secondGroupPanel);
+    await waitForDisclosureClosed(page, firstGroupPanel);
+    assert.ok((await readMetrics(page, firstGroupPanel)).height <= 0.5);
+    assert.ok((await readMetrics(page, secondGroupPanel)).height > 0);
+
+    const closingGroupItem = await captureDisclosureGroupMotion(page, secondGroupTrigger);
+    assert.ok(Math.abs(closingGroupItem.before[0].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(closingGroupItem.before[1].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(closingGroupItem.immediate[1].gapAfter - closingGroupItem.before[1].gapAfter) < 1.5, 'closing retains its starting gap before animating');
+    assert.ok(closingGroupItem.frames.some((frame) => !frame[1].expanded), 'closing state commits during the sampled frames');
+    assert.ok(closingGroupItem.frames.some((frame) => frame[1].gapAfter > 1 && frame[1].gapAfter < groupGeometry.gap - 1));
+    assert.equal(closingGroupItem.after[0].gapAfter, 0);
+    assert.equal(closingGroupItem.after[1].gapAfter, 0);
+    await waitForDisclosureClosed(page, secondGroupPanel);
+    assert.ok((await readMetrics(page, secondGroupPanel)).height <= 0.5);
 
     await page.waitForFunction(() => typeof window.__interactionToastAdd === 'function');
     await page.evaluate(() => {

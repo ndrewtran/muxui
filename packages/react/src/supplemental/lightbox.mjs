@@ -2,6 +2,7 @@ import React from 'react';
 import { animate } from 'motion/react';
 import { Dialog, Modal, ModalOverlay } from 'react-aria-components';
 import { Button } from '../button.mjs';
+import { IconButton } from './icon-button.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from '../motion.mjs';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
@@ -650,20 +651,23 @@ function NavButton({ direction: delta, children, disabled = false, onActivate, c
   const value = React.useContext(Context);
   const index = value?.selected ? value.list.indexOf(value.selected) : -1;
   const unavailable = !value || !value.visible || (!value.loop && (delta < 0 ? index <= 0 : index >= value.list.length - 1));
-  return React.createElement(Button, {
+  const controlProps = {
     ...props,
     disabled: disabled || unavailable,
     variant: 'ghost',
     className: cx(delta < 0 ? 'muxui-lightbox-previous' : 'muxui-lightbox-next', className),
     'aria-label': props['aria-label'] ?? (delta < 0 ? 'Previous' : 'Next'),
     onActivate: (event) => { onActivate?.(event); value?.navigate(delta); },
-  }, children ?? React.createElement(delta < 0 ? ChevronLeft : ChevronRight, { size: 24, 'aria-hidden': 'true', focusable: 'false' }));
+  };
+  return children === undefined || children === null
+    ? React.createElement(IconButton, controlProps, React.createElement(delta < 0 ? ChevronLeft : ChevronRight, { size: 24, 'aria-hidden': 'true', focusable: 'false' }))
+    : React.createElement(Button, controlProps, children);
 }
 export function LightboxPrevious(props) { return React.createElement(NavButton, { ...props, direction: -1 }); }
 export function LightboxNext(props) { return React.createElement(NavButton, { ...props, direction: 1 }); }
 export function LightboxClose({ onActivate, className, children, ...props }) {
   const value = React.useContext(Context);
-  return React.createElement(Button, {
+  const controlProps = {
     ...props,
     size: 'sm',
     variant: 'ghost',
@@ -671,5 +675,8 @@ export function LightboxClose({ onActivate, className, children, ...props }) {
     'aria-label': props['aria-label'] ?? 'Close',
     disabled: props.disabled || !value?.visible,
     onActivate: (event) => { onActivate?.(event); value?.close(); },
-  }, children ?? React.createElement(X, { size: 16, 'aria-hidden': 'true', focusable: 'false' }));
+  };
+  return children === undefined || children === null
+    ? React.createElement(IconButton, controlProps, React.createElement(X, { size: 16, 'aria-hidden': 'true', focusable: 'false' }))
+    : React.createElement(Button, controlProps, children);
 }

@@ -691,8 +691,8 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
       if (!(alertTextClose.width > alertIconClose.width)) {
         behaviorFailures.push(`alert-dialog text close rendered ${alertTextClose.width}px, expected wider than icon close ${alertIconClose.width}px`);
       }
-      if (Math.abs(alertTextClose.height - sizes.sm) >= 0.01) {
-        behaviorFailures.push(`alert-dialog text close rendered ${alertTextClose.height}px high, expected ${sizes.sm}px`);
+      if (Math.abs(alertTextClose.height - sizes.md) >= 0.01) {
+        behaviorFailures.push(`alert-dialog text close rendered ${alertTextClose.height}px high, expected ${sizes.md}px`);
       }
       if (alertTextClose.className.includes('muxui-icon-button')) {
         behaviorFailures.push('alert-dialog text close retains the icon-button class');

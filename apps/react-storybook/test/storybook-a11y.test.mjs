@@ -493,6 +493,61 @@ async function assertPlatformModeCoverage(page, baseUrl, story, contrastStory) {
   });
 }
 
+async function assertDialogLifecycleDismissal(page, baseUrl, story, scheme) {
+  const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+  await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+  await waitForStory(page, scheme);
+  await waitForDocumentAnimations(page);
+
+  const enteringSection = '[data-muxui-storybook-lifecycle="entering"]';
+  const enteringDialog = '.muxui-dialog.muxui-storybook-lifecycle-dialog-entering';
+  const trigger = page.locator(`${enteringSection} .muxui-dialog-trigger`);
+  const close = page.locator(`${enteringDialog} .muxui-dialog-close`);
+  const waitForOpen = (selector) => page.waitForFunction((dialogSelector) => {
+    const dialog = document.querySelector(dialogSelector);
+    const backdrop = dialog?.closest('.muxui-dialog-backdrop');
+    if (!backdrop || backdrop.hasAttribute('data-exiting')) return false;
+    const style = getComputedStyle(backdrop);
+    return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+  }, selector, { timeout: storyTimeoutMs });
+  const waitForClosed = () => page.waitForFunction(
+    () => document.querySelector('.muxui-dialog-backdrop') === null,
+    undefined,
+    { timeout: storyTimeoutMs },
+  );
+
+  await waitForOpen(enteringDialog);
+  await close.click();
+  await waitForClosed();
+
+  for (let cycle = 0; cycle < 2; cycle += 1) {
+    await trigger.click();
+    await waitForOpen(enteringDialog);
+    await close.click();
+    await waitForClosed();
+  }
+
+  await trigger.click();
+  await waitForOpen(enteringDialog);
+  await page.keyboard.press('Escape');
+  await waitForClosed();
+
+  const lifecycleSelect = page.locator('[data-muxui-storybook-lifecycle-select="Dialog"]');
+  await lifecycleSelect.selectOption('exiting');
+  await page.waitForFunction(() => document.querySelector(
+    '[data-muxui-storybook-lifecycle="exiting"] .muxui-storybook-transition-status',
+  )?.getAttribute('data-muxui-storybook-transition') === 'open', undefined, { timeout: storyTimeoutMs });
+  const exitingTrigger = page.locator('[data-muxui-storybook-lifecycle="exiting"] .muxui-dialog-trigger');
+  const exitingDialog = '.muxui-dialog.muxui-storybook-lifecycle-dialog-exiting';
+  await waitForOpen(exitingDialog);
+  await page.locator(`${exitingDialog} .muxui-dialog-close`).click();
+  await waitForClosed();
+  await exitingTrigger.click();
+  await waitForOpen(exitingDialog);
+  await page.keyboard.press('Escape');
+  await waitForClosed();
+}
+
 test('NumberField sizing story computes fit-content, 12rem, and full container widths', { timeout: testTimeoutMs }, async () => {
   const executablePath = await findBrowser();
   assert.ok(executablePath, 'Chrome or Chromium is required for the NumberField sizing browser proof (set MUXUI_CHROME_EXECUTABLE to override)');
@@ -617,6 +672,10 @@ async function runA11yWorker({
             `${scheme} ${story.id} (${storyFamily(story)}) has axe violations:\n${formatViolations(result.violations)}`,
           );
           coverage.push(`${scheme}:axe:${story.id}`);
+          if (story.name === 'States' && family === 'Dialog') {
+            await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:dialog-state-dismissal`);
+          }
         } catch (error) {
           if (error?.name === 'AssertionError') throw error;
           const diagnostics = await page.evaluate(() => ({
@@ -733,6 +792,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
     const expectedCoverage = workerSchemes.flatMap((schemes) => schemes.flatMap((scheme) => [
       ...(autocompleteInteraction ? [`${scheme}:autocomplete-keyboard`] : []),
       ...(buttonMatrix ? [`${scheme}:button-matrix`] : []),
+      ...(expectedFamilies.has('Dialog') ? [`${scheme}:dialog-state-dismissal`] : []),
       ...[...defaults, ...states, ...(linkIconComposition ? [linkIconComposition] : [])].map((story) => `${scheme}:axe:${story.id}`),
       ...browserProofs.map((story) => `${scheme}:browser-proof:${story.id}`),
     ])).sort();

@@ -31,3 +31,29 @@
   font-size: var(--muxui-semantic-typography-label-m-font-size);
   color: var(--muxui-semantic-color-neutral-60);
 }
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox-previous,
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox-next {
+  width: fit-content;
+  height: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  min-height: var(--muxui-control-target-size, var(--muxui-control-size-md));
+  padding-inline: var(--muxui-component-button-padding-inline, var(--muxui-semantic-control-padding-inline));
+  padding-block: max(0px, calc((var(--muxui-control-target-size, var(--muxui-control-size-md)) - 1em) / 2));
+}
+
+.muxui-lightbox-previous .muxui-icon-button-icon,
+.muxui-lightbox-next .muxui-icon-button-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-lightbox-close {
+  --muxui-icon-button-size: 1.5rem;
+  min-height: auto;
+  padding: var(--muxui-semantic-layout-inset-tight);
+}
+
+.muxui-lightbox-close .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
+}

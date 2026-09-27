@@ -234,8 +234,17 @@
   font-family: var(--muxui-semantic-typography-text-font-family);
 }
 
-.muxui-number-stepper > svg {
+.muxui-number-stepper svg {
   flex-shrink: 0;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-number-stepper {
+  --muxui-icon-button-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+}
+
+.muxui-number-stepper .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .muxui-number-stepper[data-disabled] {
@@ -357,7 +366,16 @@
   transform: translateX(calc(-1 * var(--muxui-semantic-layout-inset-tight)));
 }
 
-.muxui-search-clear > svg {
+.muxui-search-clear svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-search-clear {
+  --muxui-icon-button-size: 1.5rem;
+}
+
+.muxui-search-clear .muxui-icon-button-icon {
   width: 1rem;
   height: 1rem;
 }
@@ -1037,6 +1055,15 @@
   background-clip: padding-box;
 }
 
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-date-trigger {
+  --muxui-icon-button-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
+}
+
+.muxui-date-trigger .muxui-icon-button-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
 .muxui-date-range-control .muxui-date-trigger {
   inline-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
 }
@@ -1057,8 +1084,8 @@
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-date-picker .muxui-date-trigger > svg,
-  :scope .muxui-date-range-picker .muxui-date-trigger > svg {
+  :scope .muxui-date-picker .muxui-date-trigger svg,
+  :scope .muxui-date-range-picker .muxui-date-trigger svg {
     color: var(--muxui-semantic-color-neutral-default-70);
   }
 }

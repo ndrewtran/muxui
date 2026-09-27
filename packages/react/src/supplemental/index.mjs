@@ -56,6 +56,8 @@ import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
+import { Button as MuxUIButton } from '../button.mjs';
+import { IconButton } from './icon-button.mjs';
 
 const h = React.createElement;
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -286,9 +288,21 @@ const AlertDialog = /*#__PURE__*/ (() => ({
   Actions: React.forwardRef(function AlertDialogActions({ className, ...props }, ref) {
     return nativePart('div', 'muxui-alert-dialog__actions', props, ref);
   }),
-  Close: React.forwardRef(function AlertDialogClose({ disabled = false, onActivate, className, children, ...props }, ref) {
+  Close: React.forwardRef(function AlertDialogClose({ disabled, onActivate, className, children, ...props }, ref) {
     const usesDefaultIcon = children === null || children === undefined;
-    return h(AriaButton, { ...props, ref, slot: 'close', isDisabled: disabled, onPress: pressHandler(onActivate), 'aria-label': props['aria-label'] ?? (usesDefaultIcon ? 'Close' : undefined), 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', usesDefaultIcon && 'muxui-icon-button', 'muxui-alert-dialog__close', className) }, usesDefaultIcon ? h(XIcon, { size: 16, 'aria-hidden': true }) : children);
+    const buttonProps = {
+      ...props,
+      ref,
+      slot: 'close',
+      disabled,
+      size: usesDefaultIcon ? 'sm' : 'md',
+      variant: usesDefaultIcon ? 'ghost' : 'neutral',
+      onActivate,
+      className: cx('muxui-alert-dialog__close', className),
+    };
+    return usesDefaultIcon
+      ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Close' }, h(XIcon, { size: 16, 'aria-hidden': true }))
+      : h(MuxUIButton, buttonProps, children);
   }),
 }))();
 
@@ -767,14 +781,14 @@ function AnimatedTagChip({ item, index, active, size, disabled, label, tagButton
     className: `muxui-tag-select__tag muxui-tag-select__tag--${size}`,
     'aria-hidden': active ? undefined : 'true',
     inert: active ? undefined : true,
-  }, h('span', { className: 'muxui-tag-select__tag-text' }, label), h('button', {
+  }, h('span', { className: 'muxui-tag-select__tag-text' }, label), h(IconButton, {
     ref: (element) => { if (index >= 0) tagButtonRefs.current[index] = element; },
     type: 'button',
     tabIndex: -1,
     className: 'muxui-tag-select__tag-remove',
     disabled: disabled || !active,
     'aria-label': `Remove ${label}`,
-    onClick: () => onRemove(item.id),
+    onActivate: () => onRemove(item.id),
     onKeyDown: (event) => onKeyDown(event, item.id, index),
   }, h(XIcon, { size: 14, 'aria-hidden': true })));
 }
@@ -982,7 +996,14 @@ const CommandPalette = /*#__PURE__*/ (() => ({
   Popup: React.forwardRef(function CommandPalettePopup({ className, children, ...props }, ref) { return h(MotionModalPopupForwardRef, { className: 'muxui-command-palette__popup' }, h(AriaDialog, { ...props, ref, className: cx('muxui-command-palette__dialog', className) }, children)); }),
   Title: React.forwardRef(function CommandPaletteTitle({ className, ...props }, ref) { return h(AriaHeading, { ...props, ref, slot: 'title', className: cx('muxui-command-palette__title', className) }); }),
   Description: React.forwardRef(function CommandPaletteDescription(props, ref) { return nativePart('p', 'muxui-command-palette__description', props, ref); }),
-  Close: React.forwardRef(function CommandPaletteClose({ disabled = false, onActivate, className, children, ...props }, ref) { const { setOpen } = useCommandPart('Close'); return h(AriaButton, { ...props, ref, 'aria-label': props['aria-label'] ?? (children ? undefined : 'Close'), isDisabled: disabled, onPress: (event) => { pressHandler(onActivate)?.(event); setOpen(false); }, 'data-variant': 'ghost', 'data-size': 'sm', className: cx('muxui-button', 'muxui-icon-button', 'muxui-command-palette__close', className) }, children ?? h(XIcon, { size: 16, 'aria-hidden': true })); }),
+  Close: React.forwardRef(function CommandPaletteClose({ disabled = false, onActivate, className, children, ...props }, ref) {
+    const { setOpen } = useCommandPart('Close');
+    const handleActivate = (event) => { pressHandler(onActivate)?.(event); setOpen(false); };
+    const buttonProps = { ...props, ref, disabled, size: 'sm', variant: 'ghost', onActivate: handleActivate, className: cx('muxui-command-palette__close', className) };
+    return children === null || children === undefined
+      ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Close' }, h(XIcon, { size: 16, 'aria-hidden': true }))
+      : h(MuxUIButton, buttonProps, children);
+  }),
   Content: React.forwardRef(function CommandPaletteContent({ className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-command-palette__content', className) }, h(AriaAutocomplete, null, h(CommandPaletteInputProvider, null, children))); }),
   SearchField: React.forwardRef(function CommandPaletteSearchField({ variant = 'inline', className, ...props }, ref) { return h(AriaSearchField, { ...props, ref, 'aria-label': props['aria-label'] ?? 'Search commands', className: cx('muxui-command-palette__search-field', `muxui-command-palette__search-field--${variant}`, className) }); }),
   Input: React.forwardRef(function CommandPaletteInput({ disabled, className, onKeyDown, ...props }, ref) {
@@ -1015,7 +1036,12 @@ const CommandPalette = /*#__PURE__*/ (() => ({
   Footer: React.forwardRef(function CommandPaletteFooter(props, ref) { return nativePart('div', 'muxui-command-palette__footer', props, ref); }),
   Chips: React.forwardRef(function CommandPaletteChips(props, ref) { return nativePart('div', 'muxui-command-palette__chips', props, ref); }),
   Chip: React.forwardRef(function CommandPaletteChip(props, ref) { return nativePart('span', 'muxui-command-palette__chip', props, ref); }),
-  ChipRemove: React.forwardRef(function CommandPaletteChipRemove({ disabled = false, children, ...props }, ref) { return h('button', { ...props, ref, type: 'button', disabled, className: cx('muxui-command-palette__chip-remove', props.className) }, children ?? h(XIcon, { size: 14, 'aria-hidden': true })); }),
+  ChipRemove: React.forwardRef(function CommandPaletteChipRemove({ disabled = false, children, ...props }, ref) {
+    const buttonProps = { ...props, ref, type: 'button', disabled, className: cx('muxui-command-palette__chip-remove', props.className) };
+    return children === null || children === undefined
+      ? h(IconButton, { ...buttonProps, 'aria-label': props['aria-label'] ?? 'Remove chip' }, h(XIcon, { size: 14, 'aria-hidden': true }))
+      : h('button', buttonProps, children);
+  }),
 }))();
 
 /* Header navigation */
@@ -1025,7 +1051,7 @@ const HeaderNav = {
   NavButton: React.forwardRef(function HeaderNavButton({ href, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, className: cx('muxui-header-nav__nav-btn', current && 'muxui-header-nav__nav-btn--current', className), 'aria-current': current ? 'page' : undefined }); }),
   Actions: React.forwardRef(function HeaderNavActions(props, ref) { return nativePart('div', 'muxui-header-nav__actions', props, ref); }),
   Secondary: React.forwardRef(function HeaderNavSecondary(props, ref) { return nativePart('nav', 'muxui-header-nav__secondary', props, ref); }),
-  MobileTrigger: function HeaderNavMobileTrigger({ children }) { return h(AriaDialogTrigger, null, h(AriaButton, { className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(AriaButton, { onPress: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true }))), children))))); },
+  MobileTrigger: function HeaderNavMobileTrigger({ children }) { return h(AriaDialogTrigger, null, h(IconButton, { className: 'muxui-header-nav__mobile-trigger', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true })), h(AriaModalOverlay, { className: 'muxui-header-nav__mobile-overlay' }, h(AriaModal, { className: 'muxui-header-nav__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-header-nav__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-header-nav__mobile-close-row' }, h(IconButton, { size: 'sm', onActivate: close, className: 'muxui-header-nav__mobile-close-btn', 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true }))), children))))); },
 };
 
 /* Sidebar */
@@ -1037,9 +1063,9 @@ const Sidebar = {
   NavList: React.forwardRef(function SidebarNavList(props, ref) { return nativePart('ul', 'muxui-sidebar__nav-list', props, ref); }),
   NavItem: function SidebarNavItem({ href, icon: Icon, badge, current = false, children, items, external = false }) { const link = (entry, child = false) => h(AriaLink, { href: entry.href, className: cx('muxui-sidebar__nav-link', child && 'muxui-sidebar__nav-child-link', entry.current && 'muxui-sidebar__nav-link--current'), 'aria-current': entry.current ? 'page' : undefined }, entry.label); if (items?.length) return h('li', { className: 'muxui-sidebar__nav-item' }, h('details', null, h('summary', { className: cx('muxui-sidebar__nav-link', current && 'muxui-sidebar__nav-link--current') }, Icon && h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }), h('span', { className: 'muxui-sidebar__nav-label' }, children), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true })), h('ul', { className: 'muxui-sidebar__nav-children' }, items.map((entry) => h('li', { key: entry.href, className: 'muxui-sidebar__nav-item' }, link(entry, true)))))); return h('li', { className: 'muxui-sidebar__nav-item' }, h(AriaLink, { href, className: cx('muxui-sidebar__nav-link', current && 'muxui-sidebar__nav-link--current'), 'aria-current': current ? 'page' : undefined }, Icon && h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }), h('span', { className: 'muxui-sidebar__nav-label' }, children), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), external && h(ExternalLinkIcon, { className: 'muxui-sidebar__nav-external', 'aria-hidden': true }))); },
   NavButton: React.forwardRef(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-btn', current && 'muxui-sidebar__nav-btn--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', 'aria-hidden': true }), props.children); }),
-  AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(AriaButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true })), children); }),
+  AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true })), children); }),
   AccountMenu: React.forwardRef(function SidebarAccountMenu(props, ref) { return nativePart('div', 'muxui-sidebar__account-menu', props, ref); }),
-  MobileTrigger: function SidebarMobileTrigger({ children, logo }) { return h(AriaDialogTrigger, null, h('header', { className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(AriaButton, { className: 'muxui-sidebar__mobile-menu-btn', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true }))), h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(AriaButton, { className: 'muxui-sidebar__mobile-close-btn', onPress: close, 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true }))), children))))); },
+  MobileTrigger: function SidebarMobileTrigger({ children, logo }) { return h(AriaDialogTrigger, null, h('header', { className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { className: 'muxui-sidebar__mobile-menu-btn', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true }))), h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true }))), children))))); },
   FeatureCard: React.forwardRef(function SidebarFeatureCard({ title, description, dismissLabel, onDismiss, ...props }, ref) { return nativePart('div', 'muxui-sidebar__feature-card', props, ref, h(React.Fragment, null, title && h('div', { className: 'muxui-sidebar__feature-card-title' }, title), description && h('div', { className: 'muxui-sidebar__feature-card-description' }, description), props.children, onDismiss && h('button', { type: 'button', className: 'muxui-sidebar__feature-card-dismiss', onClick: onDismiss }, dismissLabel ?? 'Dismiss'))); }),
 };
 

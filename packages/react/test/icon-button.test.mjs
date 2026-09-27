@@ -3,6 +3,7 @@ import test from 'node:test';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
+import { NumberField } from '../src/fields.mjs';
 import { IconButton } from '../src/supplemental/icon-button.mjs';
 
 const icon = React.createElement('svg', { viewBox: '0 0 24 24' }, React.createElement('title', null, 'Decorative icon'));
@@ -51,4 +52,17 @@ test('IconButton preserves its name, native form props, and pending/disabled sta
   assert.equal(new JSDOM(submitHtml).window.document.querySelector('button').type, 'submit');
   const html = renderToStaticMarkup(React.createElement(IconButton, { 'aria-label': 'Save', disabled: true }, icon));
   assert.equal(new JSDOM(html).window.document.querySelector('button').disabled, true);
+});
+
+test('IconButton inherits slot-provided NumberField names and disabled state', () => {
+  const html = renderToStaticMarkup(React.createElement(NumberField, { label: 'Quantity', defaultValue: 2, disabled: true }));
+  const document = new JSDOM(html).window.document;
+  const decrement = document.querySelector('.muxui-number-stepper-decrement');
+  const increment = document.querySelector('.muxui-number-stepper-increment');
+  for (const [button, action] of [[decrement, 'Decrease'], [increment, 'Increase']]) {
+    assert.equal(button.disabled, true);
+    assert.equal(button.getAttribute('aria-label'), action);
+    const labelledBy = button.getAttribute('aria-labelledby').split(/\s+/u);
+    assert.ok(labelledBy.some((id) => document.getElementById(id)?.textContent === 'Quantity'));
+  }
 });

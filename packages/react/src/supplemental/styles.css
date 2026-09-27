@@ -738,6 +738,15 @@
   cursor: pointer;
 }
 
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-command-palette__chip-remove {
+  --muxui-icon-button-size: 1.5rem;
+}
+
+.muxui-command-palette__chip-remove .muxui-icon-button-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
 .muxui-command-palette__chip-remove:hover {
   background-color: color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent);
   color: var(--muxui-semantic-color-neutral-90);
@@ -1163,6 +1172,12 @@
 
 .muxui-header-nav__mobile-close-btn:hover {
   background: var(--muxui-semantic-color-neutral-96);
+}
+
+.muxui-header-nav__mobile-trigger .muxui-icon-button-icon,
+.muxui-header-nav__mobile-close-btn .muxui-icon-button-icon {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 
@@ -2563,6 +2578,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   height: 1rem;
 }
 
+.muxui-sidebar__account-trigger .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
 
 
 .muxui-sidebar__account-menu {
@@ -2653,6 +2673,12 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-sidebar__mobile-menu-btn:hover {
   background: var(--muxui-semantic-color-neutral-96);
+}
+
+.muxui-sidebar__mobile-menu-btn .muxui-icon-button-icon,
+.muxui-sidebar__mobile-close-btn .muxui-icon-button-icon {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 
@@ -3263,6 +3289,15 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   transition:
     background-color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing),
     color var(--muxui-semantic-motion-state-duration) var(--muxui-semantic-motion-interaction-easing);
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-tag-select__tag-remove {
+  --muxui-icon-button-size: 1.5rem;
+}
+
+.muxui-tag-select__tag-remove .muxui-icon-button-icon {
+  width: 0.875rem;
+  height: 0.875rem;
 }
 
 .muxui-tag-select__tag-remove:hover:not(:disabled) {

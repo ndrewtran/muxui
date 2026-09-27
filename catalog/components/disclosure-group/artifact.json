@@ -70,7 +70,43 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.control.radius",
+            "token": "semantic.control.padding-block",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-md",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.group-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background-hover",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.icon-size",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.label-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.motion-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.transition",
             "requirement": "required"
           }
         ]
@@ -150,7 +186,43 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.control.radius",
+            "token": "semantic.control.padding-block",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-md",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.group-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background-hover",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.icon-size",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.label-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.radius",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.motion-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "component.disclosuregroup.transition",
             "requirement": "required"
           }
         ]

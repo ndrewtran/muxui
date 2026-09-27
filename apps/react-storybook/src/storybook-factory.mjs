@@ -1037,15 +1037,19 @@ function LifecycleTransition({ family, state, args }) {
   const [toastMounted, setToastMounted] = React.useState(isClosing);
   const [toastRevision, setToastRevision] = React.useState(0);
   const [phase, setPhase] = React.useState(isClosing ? 'open' : 'closed');
+  const userInteracted = React.useRef(false);
 
   React.useEffect(() => {
+    userInteracted.current = false;
     const frame = scheduleFrame(() => {
+      if (userInteracted.current) return;
       setPhase(isClosing ? 'exiting' : 'entering');
       if (isToast) setToastMounted(!isClosing);
       else setOpen(!isClosing);
     });
     const reopen = isClosing
       ? setTimeout(() => {
+        if (userInteracted.current) return;
         setPhase('entering');
         if (isToast) {
           setToastRevision(1);
@@ -1055,6 +1059,7 @@ function LifecycleTransition({ family, state, args }) {
       }, 300)
       : undefined;
     const settle = setTimeout(() => {
+      if (userInteracted.current) return;
       setPhase('open');
     }, isClosing ? 600 : 300);
     return () => {
@@ -1073,6 +1078,12 @@ function LifecycleTransition({ family, state, args }) {
       : null;
   } else {
     transitionArgs.open = open;
+    transitionArgs.onOpenChange = (nextOpen) => {
+      args.onOpenChange?.(nextOpen);
+      userInteracted.current = true;
+      setOpen(nextOpen);
+      setPhase(nextOpen ? 'open' : 'closed');
+    };
     rendered = renderFamily(family, transitionArgs);
   }
   return e(React.Fragment, null,

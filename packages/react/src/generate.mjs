@@ -933,6 +933,9 @@ const generatedSupplementalSource = supplementalSource
   .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
   .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
   .replaceAll("from '../button.mjs'", "from './button.mjs'");
+const flatIconButtonImport = (source) => source
+  .replaceAll("from './supplemental/icon-button.mjs'", "from './icon-button.mjs'")
+  .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'");
 const currentMappedRecords = (await Promise.all(r16Supplemental.components.map(async (entry) => {
   const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
   const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
@@ -947,6 +950,7 @@ const currentMappedRecords = (await Promise.all(r16Supplemental.components.map(a
     artifact,
     sourceText: sourceText
       .replaceAll("from '../button.mjs'", "from './button.mjs'")
+      .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'")
       .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
       .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
       .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
@@ -1117,7 +1121,7 @@ const outputs = new Map([
   ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],
   ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
-  ['fields.mjs', generatedText('packages/react/src/fields.mjs', fieldsSource)],
+  ['fields.mjs', generatedText('packages/react/src/fields.mjs', flatIconButtonImport(fieldsSource))],
   ['calendar-height-motion.mjs', generatedText('packages/react/src/calendar-height-motion.mjs', calendarHeightMotionSource)],
   ['color-slider-motion.mjs', generatedText('packages/react/src/color-slider-motion.mjs', colorSliderMotionSource)],
   ['color-wheel-motion.mjs', generatedText('packages/react/src/color-wheel-motion.mjs', colorWheelMotionSource)],
@@ -1127,13 +1131,13 @@ const outputs = new Map([
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
   ['motion-components.mjs', generatedText('packages/react/src/motion-components.mjs', motionComponentsSource)],
   ['popover-motion.mjs', generatedText('packages/react/src/popover-motion.mjs', popoverMotionSource)],
-  ['tabs-motion.mjs', generatedText('packages/react/src/tabs-motion.mjs', tabsMotionSource)],
+  ['tabs-motion.mjs', generatedText('packages/react/src/tabs-motion.mjs', flatIconButtonImport(tabsMotionSource))],
   ['range-selection-motion.mjs', generatedText('packages/react/src/range-selection-motion.mjs', rangeSelectionMotionSource)],
   ['radio-motion.mjs', generatedText('packages/react/src/radio-motion.mjs', radioMotionSource)],
   ['slider-motion.mjs', generatedText('packages/react/src/slider-motion.mjs', sliderMotionSource)],
   ['toggle-button-group-motion.mjs', generatedText('packages/react/src/toggle-button-group-motion.mjs', toggleButtonGroupMotionSource)],
-  ['collections.mjs', generatedText('packages/react/src/collections.mjs', collectionsSource)],
-  ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', overlaysSource)],
+  ['collections.mjs', generatedText('packages/react/src/collections.mjs', flatIconButtonImport(collectionsSource))],
+  ['overlays.mjs', generatedText('packages/react/src/overlays.mjs', flatIconButtonImport(overlaysSource))],
   ['overlay-positioning.mjs', generatedText('packages/react/src/overlay-positioning.mjs', overlayPositioningSource)],
 ]);
 for (const source of [...currentSubpathRecords, ...currentEagerRecords]) {

@@ -78,12 +78,19 @@
 }
 
 .muxui-dialog-close {
+  position: absolute;
   aspect-ratio: 1;
   min-height: auto;
   padding: var(--muxui-semantic-layout-inset-tight);
   border-radius: var(--muxui-semantic-shape-option-radius);
   top: var(--muxui-semantic-layout-inset-small);
   right: var(--muxui-semantic-layout-control-inset);
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-dialog-close {
+  --muxui-icon-button-size: 1.5rem;
+  min-height: auto;
+  padding: var(--muxui-semantic-layout-inset-tight);
 }
 
 .muxui-dialog-backdrop[data-muxui-dialog-reduced] {
@@ -364,6 +371,12 @@
   font-size: var(--muxui-semantic-typography-utility-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
   line-height: 1;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-toast-dismiss {
+  --muxui-icon-button-size: 1.5rem;
+  min-height: auto;
+  padding: var(--muxui-semantic-layout-inset-tight);
 }
 
 @media (max-width: 30rem) {

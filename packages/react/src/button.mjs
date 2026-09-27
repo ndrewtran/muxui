@@ -18,8 +18,8 @@ function assertButtonOption(name, value, allowed) {
 export const Button = React.forwardRef(function Button({
   children,
   className,
-  disabled = false,
-  pending = false,
+  disabled,
+  pending,
   showTextWhileLoading = false,
   variant = 'primary',
   size = 'md',
@@ -44,6 +44,14 @@ export const Button = React.forwardRef(function Button({
   const callerNamesButton = props['aria-label'] != null || props['aria-labelledby'] != null;
   const pendingContentLabelId = `muxui-button-label-${React.useId()}`;
   const labelPendingContent = pending && !showTextWhileLoading && !callerNamesButton;
+  // Omit undefined state props so RAC slots can supply their own state; an explicit false still wins.
+  const inheritedStateProps = {
+    ...(disabled === undefined ? {} : { isDisabled: disabled }),
+    ...(pending === undefined ? {} : { isPending: pending }),
+  };
+  const pendingAriaProps = pending === undefined && ariaBusy === undefined
+    ? {}
+    : { 'aria-busy': pending || ariaBusy || undefined };
   const content = React.createElement('span', {
     className: ['muxui-button-content', showPendingText ? 'muxui-button-content--with-spinner' : ''].filter(Boolean).join(' '),
     id: labelPendingContent ? pendingContentLabelId : undefined,
@@ -61,11 +69,10 @@ export const Button = React.forwardRef(function Button({
   })) : null;
   return React.createElement(AriaButton, {
     ...props,
+    ...inheritedStateProps,
     ref,
     type,
     className: ['muxui-button', className].filter(Boolean).join(' '),
-    isDisabled: disabled,
-    isPending: pending,
     render: (domProps) => React.createElement('button', {
       ...domProps,
       ...(labelPendingContent && !callerNamesButton
@@ -73,7 +80,7 @@ export const Button = React.forwardRef(function Button({
         : {}),
       'data-variant': variant,
       'data-size': size,
-      'aria-busy': pending || ariaBusy || undefined,
+      ...pendingAriaProps,
     }),
     onPress: handlePress,
   }, content, spinner);
