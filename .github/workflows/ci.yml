@@ -11,8 +11,10 @@ on:
 permissions:
   contents: read
 
+# Only pull requests share (and cancel) a group; every main run keeps its own so
+# quick successive merges never drop a pending full run.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -47,7 +49,7 @@ jobs:
         run: |
           scope=--full
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then scope=; fi
-          node tooling/audits/repository-policy/src/ci-impact.mjs --preview --github-output $scope
+          node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output $scope
 
   # Each group is self-contained: it repeats its generation prerequisites in a
   # fresh runner, so "re-run failed jobs" repeats only the failed groups.

@@ -1078,9 +1078,11 @@ function storyProofEnvironment(storyRun, environment) {
 
 // CI shards large Storybook page selections by family so one job stays inside
 // the scoped audit timeouts in apps/react-storybook/test.
-export const storyShardPageBudget = 120;
+// 80 pages keeps the scoped formula (120 s + 6 s/page) near its 600 s cap.
+export const storyShardPageBudget = 80;
 
 const sharedGroup = '*';
+const workspaceRootPackage = '@muxui/workspace';
 const groupTimeoutMinutes = { checks: 30, react: 30, browser: 30, tailwind: 15, storybook: 30 };
 const fullStorybookEnvironment = {
   MUXUI_STORYBOOK_AUDIT_MODE: 'full',
@@ -1112,30 +1114,28 @@ function storyRunPageCounts(storyRun, pageIndex) {
   return counts;
 }
 
-// Splits a story run into consecutive family chunks of at most `budget` pages
-// (a single larger family keeps its own chunk);
-// a run within budget (or chrome proof, which selects no pages) stays whole.
+// Splits a story run over ceil(pages / budget) shards of consecutive families,
+// balanced by page count (a shard may exceed the budget by at most one family).
+// Families with no selected pages are dropped; a run within budget (or chrome
+// proof, which selects no pages) stays whole.
 export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageBudget) {
   if (storyRun.proof === 'chrome' || pageIndex.length === 0) return [storyRun];
   const counts = storyRunPageCounts(storyRun, pageIndex);
   const total = [...counts.values()].reduce((sum, count) => sum + count, 0);
   if (total <= budget) return [storyRun];
-  const families = storyRun.families.length > 0 ? storyRun.families : [...counts.keys()];
-  // Aim for evenly sized shards rather than filling each one to the budget.
-  const target = Math.ceil(total / Math.ceil(total / budget));
-  const chunks = [];
-  let pages = 0;
+  const families = (storyRun.families.length > 0 ? storyRun.families : [...counts.keys()])
+    .filter((family) => (counts.get(family) ?? 0) > 0);
+  const shardCount = Math.ceil(total / budget);
+  const chunks = Array.from({ length: shardCount }, () => []);
+  let before = 0;
   for (const family of families) {
-    const count = counts.get(family) ?? 0;
-    if (chunks.length === 0 || pages >= target || pages + count > budget) {
-      chunks.push([]);
-      pages = 0;
-    }
-    chunks.at(-1).push(family);
-    pages += count;
+    const count = counts.get(family);
+    // Each family goes to the shard containing its middle page.
+    chunks[Math.min(shardCount - 1, Math.floor(((before + count / 2) * shardCount) / total))].push(family);
+    before += count;
   }
   const familyOfStory = new Map(pageIndex.flatMap(({ family, stories }) => stories.map(({ id }) => [id, family])));
-  return chunks.map((chunk) => ({
+  return chunks.filter((chunk) => chunk.length > 0).map((chunk) => ({
     ...storyRun,
     families: chunk,
     storyIds: storyRun.storyIds.filter((id) => chunk.includes(familyOfStory.get(id))),
@@ -1163,9 +1163,11 @@ function fullPlannedCommands(environment) {
   // `pnpm check:all` split into independent groups: full generation, then each
   // package's own check script, with React and Storybook in their own jobs.
   add(sharedGroup, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate'], { prerequisite: true });
+  // Exclusion-only filters select the workspace root too; its `check` script is
+  // the affected-scope runner, not a package check, so exclude it explicitly.
   add('checks', [
     '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
-    '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook', 'run', 'check',
+    '--filter', `!${workspaceRootPackage}`, '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook', 'run', 'check',
   ], { unsetEnv: storybookSelectionKeys });
   add('checks', ['generate:check']);
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
@@ -1482,9 +1484,20 @@ async function pullRequestPlan({ preview, includeWorktree, environment }) {
   return { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared };
 }
 
+// --preview plans from existing metadata and fails if it is missing; --plan
+// (the CI plan job) prepares metadata on a fresh checkout but runs no checks.
+export function executionMode({ preview = false, planOnly = false, group = null } = {}) {
+  return {
+    prepareMetadata: !preview,
+    run: preview || planOnly ? 'none' : group ? 'group' : 'all',
+  };
+}
+
 export async function runCiImpact({
-  preview = false, includeWorktree = false, full = false, group = null, githubOutput = false, environment = process.env,
+  preview = false, planOnly = false, includeWorktree = false, full = false, group = null, githubOutput = false,
+  environment = process.env,
 } = {}) {
+  const mode = executionMode({ preview, planOnly, group });
   const context = full
     ? {
       plan: fullWorkspacePlan(`${environment.GITHUB_EVENT_NAME ?? 'local'} runs the full workspace graph`),
@@ -1494,7 +1507,7 @@ export async function runCiImpact({
       mergeBase: null,
       metadataPrepared: false,
     }
-    : await pullRequestPlan({ preview, includeWorktree, environment });
+    : await pullRequestPlan({ preview: !mode.prepareMetadata, includeWorktree, environment });
   const { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared } = context;
   const options = { packages, metadataPrepared, environment, pageIndex };
   const groups = executionGroups(plan, options);
@@ -1507,9 +1520,9 @@ export async function runCiImpact({
     if (!environment.GITHUB_OUTPUT) throw new Error('MUXUI_CI_IMPACT_GITHUB_OUTPUT_MISSING: --github-output needs GITHUB_OUTPUT');
     await appendFile(environment.GITHUB_OUTPUT, `groups=${JSON.stringify(matrix)}\n`);
   }
-  if (preview) {
-    console.log('[ci-impact] preview complete; no checks executed');
-  } else if (group) {
+  if (mode.run === 'none') {
+    console.log('[ci-impact] planning complete; no checks executed');
+  } else if (mode.run === 'group') {
     const selected = groups.find(({ id }) => id === group);
     if (!selected) {
       throw new Error(`MUXUI_CI_IMPACT_GROUP_UNKNOWN: ${group} is not in this plan (${groups.map(({ id }) => id).join(', ') || 'no groups'})`);
@@ -1523,10 +1536,13 @@ export async function runCiImpact({
 }
 
 export function parseCliArguments(args) {
-  const options = { preview: false, includeWorktree: false, full: false, group: null, githubOutput: false };
+  const options = {
+    preview: false, planOnly: false, includeWorktree: false, full: false, group: null, githubOutput: false,
+  };
   const flags = {
     '--dry-run': 'preview',
     '--preview': 'preview',
+    '--plan': 'planOnly',
     '--include-worktree': 'includeWorktree',
     '--full': 'full',
     '--github-output': 'githubOutput',

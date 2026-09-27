@@ -9,6 +9,7 @@ import {
   executeCommands,
   executionCommands,
   executionGroups,
+  executionMode,
   fullWorkspacePlan,
   groupMatrix,
   isPolicyOnlyLockfileChange,
@@ -19,6 +20,7 @@ import {
   reactPackageWideChanges,
   rootPackageWideChanges,
   shardStoryRun,
+  storyShardPageBudget,
   validateScopedEntrypoints,
 } from '../src/ci-impact.mjs';
 import { componentTestSelection } from '../src/component-test-selection.mjs';
@@ -827,37 +829,53 @@ test('theme proof skips families already covered by component proof', async () =
   assert.ok(!everyFamily.storyRuns.some(({ proof }) => proof === 'theme'));
 });
 
-test('large Storybook runs shard by family within the page budget', () => {
-  const bigIndex = ['A', 'B', 'C', 'D', 'E'].map((family) => ({
-    family,
+test('large Storybook runs shard by family into balanced jobs within the page budget', () => {
+  // 79 families of six consumer pages plus one BrowserProof page, like the real index.
+  const realIndex = Array.from({ length: 79 }, (_, index) => ({
+    family: `F${String(index).padStart(2, '0')}`,
     stories: [
-      ...Array.from({ length: 49 }, (_, index) => ({ id: `${family}-${index}`, exportName: `S${index}` })),
-      { id: `${family}-proof`, exportName: 'BrowserProof' },
+      ...Array.from({ length: 6 }, (_, story) => ({ id: `f${index}-${story}`, exportName: `S${story}` })),
+      { id: `f${index}-proof`, exportName: 'BrowserProof' },
     ],
   }));
-  const component = { proof: 'component', families: ['A', 'B', 'C', 'D', 'E'], storyIds: [], reason: 'r' };
-  assert.deepEqual(shardStoryRun(component, bigIndex).map(({ families }) => families), [['A', 'B'], ['C', 'D'], ['E']]);
-  assert.deepEqual(shardStoryRun({ ...component, families: ['A', 'B'] }, bigIndex), [{ ...component, families: ['A', 'B'] }]);
-  // All-consumer theme proof counts only consumer pages and names families explicitly per shard.
-  const theme = { proof: 'theme', families: [], storyIds: [], reason: 'r' };
-  assert.deepEqual(shardStoryRun(theme, bigIndex, 100).map(({ families }) => families), [['A', 'B'], ['C', 'D'], ['E']]);
-  const story = { proof: 'story', families: ['A', 'C'], storyIds: ['A-1', 'C-2'], reason: 'r' };
-  assert.deepEqual(shardStoryRun(story, bigIndex, 1).map(({ families, storyIds }) => [families, storyIds]), [
-    [['A'], ['A-1']], [['C'], ['C-2']],
-  ]);
+  const allFamilies = realIndex.map(({ family }) => family);
+  const pagesIn = (shard, consumerOnly) => shard.families.length * (consumerOnly ? 6 : 7);
 
-  const smallFamilies = Array.from({ length: 24 }, (_, index) => ({
-    family: `F${String(index).padStart(2, '0')}`,
-    stories: Array.from({ length: 7 }, (_, story) => ({ id: `f${index}-${story}`, exportName: `S${story}` })),
-  }));
-  const balanced = shardStoryRun({ ...component, families: smallFamilies.map(({ family }) => family) }, smallFamilies);
-  assert.deepEqual(balanced.map(({ families }) => families.length), [12, 12], '168 pages split evenly, not 119 + 49');
+  const component = { proof: 'component', families: allFamilies, storyIds: [], reason: 'r' };
+  const componentShards = shardStoryRun(component, realIndex);
+  assert.equal(componentShards.length, Math.ceil(553 / storyShardPageBudget));
+  assert.ok(componentShards.every((shard) => pagesIn(shard, false) <= storyShardPageBudget + 7));
+  assert.deepEqual(componentShards.flatMap(({ families }) => families), allFamilies);
+
+  // All-consumer theme proof counts only consumer pages and names families per shard;
+  // a BrowserProof-only family has no theme pages and never becomes its own shard.
+  const proofOnly = { family: 'ProofOnly', stories: [{ id: 'proof-only', exportName: 'BrowserProof' }] };
+  const theme = { proof: 'theme', families: [], storyIds: [], reason: 'r' };
+  const themeShards = shardStoryRun(theme, [...realIndex, proofOnly]);
+  assert.equal(themeShards.length, Math.ceil(474 / storyShardPageBudget));
+  assert.ok(themeShards.every((shard) => pagesIn(shard, true) <= storyShardPageBudget + 6));
+  assert.ok(!themeShards.some(({ families }) => families.includes('ProofOnly')));
+
+  const small = { ...component, families: allFamilies.slice(0, 5) };
+  assert.deepEqual(shardStoryRun(small, realIndex), [small]);
+  const story = { proof: 'story', families: ['F00', 'F02'], storyIds: ['f0-1', 'f2-2'], reason: 'r' };
+  assert.deepEqual(shardStoryRun(story, realIndex, 1).map(({ families, storyIds }) => [families, storyIds]), [
+    [['F00'], ['f0-1']], [['F02'], ['f2-2']],
+  ]);
 
   const componentOnly = {
     ...fullWorkspacePlan(), full: false, storyRuns: [component], reactFamilies: [], reactTestFiles: [], packageChecks: [], storyUnitTests: [],
   };
-  const sharded = executionGroups(componentOnly, { packages, environment: {}, pageIndex: bigIndex });
-  assert.deepEqual(groupIds(sharded), ['storybook-component-1', 'storybook-component-2', 'storybook-component-3']);
+  const sharded = executionGroups(componentOnly, { packages, environment: {}, pageIndex: realIndex });
+  assert.deepEqual(groupIds(sharded), componentShards.map((_, index) => `storybook-component-${index + 1}`));
+});
+
+test('the CI plan job prepares missing metadata while --preview and --plan run no checks', () => {
+  assert.deepEqual(executionMode({ planOnly: true }), { prepareMetadata: true, run: 'none' });
+  assert.deepEqual(executionMode({ preview: true }), { prepareMetadata: false, run: 'none' });
+  assert.deepEqual(executionMode({ group: 'react' }), { prepareMetadata: true, run: 'group' });
+  assert.deepEqual(executionMode({}), { prepareMetadata: true, run: 'all' });
+  assert.equal(parseCliArguments(['--plan', '--github-output']).planOnly, true);
 });
 
 test('the full plan splits check:all into independently runnable groups', () => {
@@ -871,7 +889,10 @@ test('the full plan splits check:all into independently runnable groups', () => 
     assert.ok(group.timeoutMinutes > 0);
   }
   const byId = Object.fromEntries(groups.map((group) => [group.id, group.commands.slice(1).map(({ args }) => args.join(' '))]));
-  assert.ok(byId.checks[0].endsWith('--no-bail --filter !@muxui/react --filter !@muxui/react-storybook run check'));
+  // The workspace root's `check` is the affected-scope runner, so it must stay excluded.
+  assert.ok(byId.checks[0].endsWith(
+    '--no-bail --filter !@muxui/workspace --filter !@muxui/react --filter !@muxui/react-storybook run check',
+  ));
   assert.deepEqual(byId.checks.slice(1), ['generate:check']);
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
   assert.deepEqual(byId.browser, ['--filter @muxui/scale run check:browser', '--filter @muxui/react run check:browser']);
@@ -886,7 +907,7 @@ test('the full plan splits check:all into independently runnable groups', () => 
 
 test('CLI arguments select preview, full, group, and GitHub output modes', () => {
   assert.deepEqual(parseCliArguments(['--full', '--group', 'react', '--github-output']), {
-    preview: false, includeWorktree: false, full: true, group: 'react', githubOutput: true,
+    preview: false, planOnly: false, includeWorktree: false, full: true, group: 'react', githubOutput: true,
   });
   assert.equal(parseCliArguments(['--dry-run']).preview, true);
   assert.throws(() => parseCliArguments(['--group']), /MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN/u);
