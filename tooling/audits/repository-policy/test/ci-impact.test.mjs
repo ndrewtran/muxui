@@ -8,12 +8,17 @@ import {
   executeCommand,
   executeCommands,
   executionCommands,
+  executionGroups,
+  fullWorkspacePlan,
+  groupMatrix,
   isPolicyOnlyLockfileChange,
   needsStorybookGeneration,
   normalizeCommand,
+  parseCliArguments,
   prepareStorybookMetadata,
   reactPackageWideChanges,
   rootPackageWideChanges,
+  shardStoryRun,
   validateScopedEntrypoints,
 } from '../src/ci-impact.mjs';
 import { componentTestSelection } from '../src/component-test-selection.mjs';
@@ -178,8 +183,7 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
     storyIds: [],
     reason: 'all pages in the affected component families',
   }]);
-  assert.deepEqual(result.reactTestFiles, []);
-  assert.ok(!result.reactTestFiles.includes('test/browser/tree-toggle-browser.test.mjs'));
+  assert.deepEqual(result.reactTestFiles, ['test/motion-package-boundary.test.mjs']);
   assert.ok(!result.storyRuns.some(({ families }) => families.includes('MultiSelect')));
 
   const selection = selectComponentTests(['TagSelect']);
@@ -762,4 +766,129 @@ test('unknown owners, missing exact page metadata, and empty diffs fail closed',
   await assert.rejects(plan(['scripts/unowned-change.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING/u);
   await assert.rejects(plan(['catalog/components/number-field/examples/react/unknown.tsx']), /MUXUI_CI_IMPACT_STORY_PAGE_MISSING/u);
   await assert.rejects(plan([]), /MUXUI_CI_IMPACT_EMPTY/u);
+});
+
+const treeBefore = 'export const Tree = () => null;';
+const treeAfter = 'export const Tree = () => 1;';
+const treeRuntimeChange = {
+  textSnapshots: { [collectionsPath]: { before: treeBefore, after: treeAfter } },
+  moduleSources: { ...cssModuleSources, [collectionsPath]: { before: treeBefore, after: treeAfter } },
+};
+const groupIds = (groups) => groups.map(({ id }) => id);
+
+test('React runtime changes run the Motion bundle boundary test; stylesheet-only changes do not', async () => {
+  const runtime = await plan([collectionsPath], treeRuntimeChange);
+  assert.ok(runtime.reactTestFiles.includes('test/motion-package-boundary.test.mjs'));
+  assert.ok(executionCommands(runtime, { packages }).some(({ args }) => args.at(-1) === 'test/motion-package-boundary.test.mjs'));
+
+  const cssPath = 'packages/react/src/styles/components.css';
+  const stylesheet = await plan([cssPath], {
+    textSnapshots: { [cssPath]: { before: '.muxui-tree { color: black; }', after: '.muxui-tree { color: white; }' } },
+    moduleSources: cssModuleSources,
+  });
+  assert.ok(!stylesheet.reactTestFiles.includes('test/motion-package-boundary.test.mjs'));
+
+  const generator = await plan(['packages/react/src/generate.mjs']);
+  assert.equal(generator.reactPackageFull, true);
+  assert.ok(!generator.reactTestFiles.includes('test/motion-package-boundary.test.mjs'), 'the full React check already runs it');
+});
+
+test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
+  const result = await plan([collectionsPath, '.github/workflows/ci.yml'], treeRuntimeChange);
+  const groups = executionGroups(result, { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(groups), ['checks', 'react', 'storybook-component']);
+  const generation = executionCommands(result, { packages })[0];
+  assert.equal(generation.prerequisite, true);
+  for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
+  assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
+    ['--filter', '@muxui/repository-policy', 'run', 'check'],
+    ['--filter', '@muxui/react-storybook', 'run', 'generate:check'],
+  ]);
+  assert.ok(groups[1].commands.some(({ args }) => args.includes('check:component')));
+  assert.equal(groups[2].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
+  assert.deepEqual(groupMatrix(groups).map(({ id, kind }) => [id, kind]), [
+    ['checks', 'checks'], ['react', 'react'], ['storybook-component', 'storybook'],
+  ]);
+
+  const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(tokens), ['checks', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
+  assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
+});
+
+test('theme proof skips families already covered by component proof', async () => {
+  const mixed = await plan(['catalog/tokens/default-theme.json', collectionsPath], treeRuntimeChange);
+  assert.deepEqual(mixed.storyRuns.map(({ proof, families }) => ({ proof, families })), [
+    { proof: 'component', families: ['Tree'] },
+    { proof: 'theme', families: ['MultiSelect', 'NumberField', 'TagSelect'] },
+    { proof: 'chrome', families: [] },
+  ]);
+
+  const everyFamily = await plan(['catalog/tokens/default-theme.json', 'apps/react-storybook/src/storybook-factory.mjs']);
+  assert.ok(!everyFamily.storyRuns.some(({ proof }) => proof === 'theme'));
+});
+
+test('large Storybook runs shard by family within the page budget', () => {
+  const bigIndex = ['A', 'B', 'C', 'D', 'E'].map((family) => ({
+    family,
+    stories: [
+      ...Array.from({ length: 49 }, (_, index) => ({ id: `${family}-${index}`, exportName: `S${index}` })),
+      { id: `${family}-proof`, exportName: 'BrowserProof' },
+    ],
+  }));
+  const component = { proof: 'component', families: ['A', 'B', 'C', 'D', 'E'], storyIds: [], reason: 'r' };
+  assert.deepEqual(shardStoryRun(component, bigIndex).map(({ families }) => families), [['A', 'B'], ['C', 'D'], ['E']]);
+  assert.deepEqual(shardStoryRun({ ...component, families: ['A', 'B'] }, bigIndex), [{ ...component, families: ['A', 'B'] }]);
+  // All-consumer theme proof counts only consumer pages and names families explicitly per shard.
+  const theme = { proof: 'theme', families: [], storyIds: [], reason: 'r' };
+  assert.deepEqual(shardStoryRun(theme, bigIndex, 100).map(({ families }) => families), [['A', 'B'], ['C', 'D'], ['E']]);
+  const story = { proof: 'story', families: ['A', 'C'], storyIds: ['A-1', 'C-2'], reason: 'r' };
+  assert.deepEqual(shardStoryRun(story, bigIndex, 1).map(({ families, storyIds }) => [families, storyIds]), [
+    [['A'], ['A-1']], [['C'], ['C-2']],
+  ]);
+
+  const smallFamilies = Array.from({ length: 24 }, (_, index) => ({
+    family: `F${String(index).padStart(2, '0')}`,
+    stories: Array.from({ length: 7 }, (_, story) => ({ id: `f${index}-${story}`, exportName: `S${story}` })),
+  }));
+  const balanced = shardStoryRun({ ...component, families: smallFamilies.map(({ family }) => family) }, smallFamilies);
+  assert.deepEqual(balanced.map(({ families }) => families.length), [12, 12], '168 pages split evenly, not 119 + 49');
+
+  const componentOnly = {
+    ...fullWorkspacePlan(), full: false, storyRuns: [component], reactFamilies: [], reactTestFiles: [], packageChecks: [], storyUnitTests: [],
+  };
+  const sharded = executionGroups(componentOnly, { packages, environment: {}, pageIndex: bigIndex });
+  assert.deepEqual(groupIds(sharded), ['storybook-component-1', 'storybook-component-2', 'storybook-component-3']);
+});
+
+test('the full plan splits check:all into independently runnable groups', () => {
+  const groups = executionGroups(fullWorkspacePlan('push runs the full workspace graph'), {
+    packages, environment: { RUNNER_TEMP: '/tmp/runner' },
+  });
+  assert.deepEqual(groupIds(groups), ['checks', 'react', 'browser', 'storybook-a11y', 'storybook', 'tailwind']);
+  for (const group of groups) {
+    assert.deepEqual(group.commands[0].args, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
+    assert.equal(group.commands[0].prerequisite, true);
+    assert.ok(group.timeoutMinutes > 0);
+  }
+  const byId = Object.fromEntries(groups.map((group) => [group.id, group.commands.slice(1).map(({ args }) => args.join(' '))]));
+  assert.ok(byId.checks[0].endsWith('--no-bail --filter !@muxui/react --filter !@muxui/react-storybook run check'));
+  assert.deepEqual(byId.checks.slice(1), ['generate:check']);
+  assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
+  assert.deepEqual(byId.browser, ['--filter @muxui/scale run check:browser', '--filter @muxui/react run check:browser']);
+  assert.ok(byId['storybook-a11y'][0].endsWith('test/storybook-a11y.test.mjs'));
+  assert.ok(!byId.storybook.at(-1).includes('storybook-a11y'));
+  assert.ok(byId.storybook.at(-1).includes('test/storybook-colors.test.mjs'));
+  const storybookEnv = groups.find(({ id }) => id === 'storybook-a11y').commands[1].env;
+  assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_MODE, 'full');
+  assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_FORCE, '1');
+  assert.equal(storybookEnv.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR, '/tmp/runner/storybook-colour-audit');
+});
+
+test('CLI arguments select preview, full, group, and GitHub output modes', () => {
+  assert.deepEqual(parseCliArguments(['--full', '--group', 'react', '--github-output']), {
+    preview: false, includeWorktree: false, full: true, group: 'react', githubOutput: true,
+  });
+  assert.equal(parseCliArguments(['--dry-run']).preview, true);
+  assert.throws(() => parseCliArguments(['--group']), /MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN/u);
+  assert.throws(() => parseCliArguments(['--nope']), /MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN/u);
 });
