@@ -195,6 +195,35 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     const fullSettled = await settleEntry(page);
     assert.equal(fullSettled.opacity, '1');
     assert.equal(fullSettled.transformY, 0);
+    const lightShadow = await page.locator('.muxui-date-popover').evaluate((node) => getComputedStyle(node).boxShadow);
+    assert.match(lightShadow, /rgba\(\s*17,\s*16,\s*15,\s*0\.1\)/u, 'light popover shadow retains the 10% neutral-100 paint');
+    assert.match(lightShadow, /0px 4px 16px 0px/u, 'light popover shadow retains its offset and blur');
+    await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'dark'; });
+    const darkShadow = await page.locator('.muxui-date-popover').evaluate((node) => getComputedStyle(node).boxShadow);
+    assert.match(darkShadow, /rgba\(\s*242,\s*241,\s*240,\s*0\.1\)/u, 'dark popover shadow retains the mode-inverted 10% neutral paint');
+    assert.match(darkShadow, /0px 4px 16px 0px/u, 'dark popover shadow retains its offset and blur');
+    await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'light'; });
+    await page.keyboard.press('ArrowRight');
+    await page.waitForFunction(() => document.activeElement?.matches('.muxui-calendar-cell[data-focus-visible]'));
+    const muxFocus = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return { outlineStyle: style.outlineStyle, boxShadow: style.boxShadow };
+    });
+    assert.equal(muxFocus.outlineStyle, 'none', 'Calendar keyboard focus replaces the user-agent outline');
+    assert.notEqual(muxFocus.boxShadow, 'none', 'Calendar keeps its token-backed Mux focus rings');
+    await page.emulateMedia({ forcedColors: 'active' });
+    const forcedColorsFocus = await page.evaluate(() => {
+      const style = getComputedStyle(document.activeElement);
+      return {
+        active: matchMedia('(forced-colors: active)').matches,
+        outlineStyle: style.outlineStyle,
+        outlineWidth: style.outlineWidth,
+      };
+    });
+    assert.equal(forcedColorsFocus.active, true);
+    assert.equal(forcedColorsFocus.outlineStyle, 'solid', 'forced colors retain a system focus outline');
+    assert.equal(forcedColorsFocus.outlineWidth, '2px');
+    await page.emulateMedia({ forcedColors: 'none' });
     await capturePopup(page, '/tmp/muxui-date-popover-full-light.png');
     await closeCalendarWithEscape(page);
 

@@ -60,6 +60,13 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     return `color-mix(in ${token.mix.space}, ${tokenColorExpression(source, next)} ${token.mix.weight * 100}%, ${token.mix.color})`;
   }
 
+  function applyAlpha(key, alpha) {
+    if (alpha === 1) return key;
+    const channels = key.split(',').map(Number);
+    channels[3] = Math.round(channels[3] * alpha * 10000) / 10000;
+    return channels.join(',');
+  }
+
   for (const token of Object.values(tokens)) {
     if (token.type === 'color') {
       canonical.set(normalize(token.value), token.id);
@@ -69,7 +76,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     }
     if (token.type === 'effect' && token.value?.kind === 'shadow') {
       for (const layer of token.value.layers) {
-        effects.set(normalize(`rgb(from ${layer.color.value} r g b / ${layer.color.alpha ?? 1})`), token.id);
+        effects.set(applyAlpha(normalize(layer.color.value), layer.color.alpha ?? 1), token.id);
       }
     }
   }
@@ -98,11 +105,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     let key;
     try {
       key = normalize(value);
-      if (alpha !== 1) {
-        const channels = key.split(',').map(Number);
-        channels[3] = Math.round(channels[3] * alpha * 10000) / 10000;
-        key = channels.join(',');
-      }
+      key = applyAlpha(key, alpha);
     }
     catch (error) {
       problems.push({ element: describe(element, pseudo), property, value, reason: error.message });

@@ -435,20 +435,28 @@ test('Storybook colour audit recognizes canonical token mixes and shadow-only fo
     const derived = tokens['semantic.color.neutral-5'];
     const source = tokens[derived.mix.token];
     const focusGlow = tokens['semantic.focus.neutral-glow'];
+    const datePopover = tokens['component.datepicker.popover-shadow'];
+    const datePopoverLayer = datePopover.effect.layers[0];
+    const datePopoverColor = datePopoverLayer.color.value.match(/^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/iu).slice(1)
+      .map((channel) => Number.parseInt(channel, 16));
+    const datePopoverShadow = `${datePopoverLayer.offsetX.value}${datePopoverLayer.offsetX.unit} ${datePopoverLayer.offsetY.value}${datePopoverLayer.offsetY.unit} ${datePopoverLayer.blur.value}${datePopoverLayer.blur.unit} ${datePopoverLayer.spread.value}${datePopoverLayer.spread.unit} rgba(${datePopoverColor.join(',')},${datePopoverLayer.color.alpha})`;
     const baseStyles = await readFile(resolve(appRoot, '../../packages/react/src/styles/base.css'), 'utf8');
     const supplementalStyles = await readFile(resolve(appRoot, '../../packages/react/src/supplemental/styles.css'), 'utf8');
     assert.match(baseStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-focus-neutral-glow\) 30%, transparent\)/u);
     assert.match(supplementalStyles, /--muxui-focus-ring-glow:\s*color-mix\(in srgb, var\(--muxui-semantic-color-neutral-60\) 30%, transparent\)/u);
-    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
+    await page.setContent(`<html data-muxui-color-scheme="dark"><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}"><div style="width:80px;height:24px;background:color-mix(in ${derived.mix.space}, ${source.value} ${derived.mix.weight * 100}%, ${derived.mix.color})">Derived field surface</div><div id="focus-glow" style="width:80px;height:24px;box-shadow:0 0 1px color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Canonical focus opacity</div><div id="date-popover-effect" style="width:80px;height:24px;box-shadow:${datePopoverShadow}">Mode-specific popover effect</div><div id="nearby-shadow" style="width:80px;height:24px;box-shadow:0 0 1px rgba(${datePopoverColor.join(',')},0.11)">Unowned nearby shadow alpha</div><div id="unowned-mix" style="width:80px;height:24px;background:color-mix(in srgb, rgb(1,2,3) 30%, transparent)">Unowned mix</div><div id="focus-background" style="width:80px;height:24px;background:color-mix(in srgb, ${focusGlow.value} 30%, transparent)">Focus mix is not a palette paint</div></body></html>`);
     const result = await page.evaluate(collectStorybookPaints, { tokens });
     assert.deepEqual(result.problems, []);
-    assert.deepEqual(result.nonToken.length, 2);
+    assert.deepEqual(result.nonToken.length, 3);
+    assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#nearby-shadow'))));
     assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#unowned-mix'))));
     assert.ok(result.nonToken.some(({ examples }) => examples.some((example) => example.includes('#focus-background'))));
     assert.ok(result.paints.some(({ property, rgba, token }) => property === 'background-color'
       && rgba === '14.45,13.6,12.75,1' && tokens[token]?.mix), JSON.stringify(result.paints));
     assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
       && rgba.endsWith(',0.3') && [focusGlow.id, tokens['semantic.color.neutral-60'].id].includes(token)), JSON.stringify(result.paints));
+    assert.ok(result.paints.some(({ property, rgba, token }) => property === 'box-shadow'
+      && rgba.endsWith(',0.1') && token === datePopover.id), JSON.stringify(result.paints));
   } finally {
     await browser.close();
   }

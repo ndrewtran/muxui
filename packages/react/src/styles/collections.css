@@ -271,6 +271,14 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--muxui-semantic-layout-control-gap);
+  outline: none;
+}
+
+.muxui-color-swatch-picker[data-focus-visible],
+.muxui-color-swatch-picker:focus-visible {
+  box-shadow:
+    0 0 0 2px var(--muxui-focus-ring-inner),
+    0 0 0 4px var(--muxui-focus-ring-outer);
 }
 
 .muxui-color-swatch-picker-item {
@@ -3059,4 +3067,15 @@
 .muxui-calendar-cell,
 .muxui-range-calendar-cell {
   transition: none;
+}
+
+@media (forced-colors: active) {
+  .muxui-color-swatch-picker[data-focus-visible],
+  .muxui-color-swatch-picker:focus-visible,
+  .muxui-color-swatch-picker-item[data-focus-visible],
+  .muxui-color-swatch-picker-item:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+    box-shadow: none;
+  }
 }

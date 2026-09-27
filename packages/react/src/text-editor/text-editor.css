@@ -560,7 +560,7 @@
 }
 
 .muxui-text-editor[data-invalid] .muxui-text-editor__description {
-  color: var(--muxui-semantic-feedback-invalid-content);
+  color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-text-editor[data-readonly] .muxui-text-editor__content .ProseMirror {

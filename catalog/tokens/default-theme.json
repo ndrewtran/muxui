@@ -2192,6 +2192,41 @@
       "overridePolicy": "theme",
       "alias": "reference.effect.shadow-s"
     },
+    "component.datepicker.popover-shadow": {
+      "layer": "component",
+      "type": "effect",
+      "unit": "structured",
+      "meaning": "Shadow used by the shared DatePicker and DateRangePicker calendar popover.",
+      "overridePolicy": "theme",
+      "value": {
+        "kind": "shadow",
+        "layers": [
+          {
+            "offsetX": { "value": 0, "unit": "px" },
+            "offsetY": { "value": 4, "unit": "px" },
+            "blur": { "value": 16, "unit": "px" },
+            "spread": { "value": 0, "unit": "px" },
+            "color": { "value": "#11100f", "alpha": 0.1 }
+          }
+        ]
+      },
+      "modes": {
+        "colorScheme.dark": {
+          "value": {
+            "kind": "shadow",
+            "layers": [
+              {
+                "offsetX": { "value": 0, "unit": "px" },
+                "offsetY": { "value": 4, "unit": "px" },
+                "blur": { "value": 16, "unit": "px" },
+                "spread": { "value": 0, "unit": "px" },
+                "color": { "value": "#f2f1f0", "alpha": 0.1 }
+              }
+            ]
+          }
+        }
+      }
+    },
     "component.button.background": {
       "layer": "component",
       "type": "color",

@@ -1062,7 +1062,7 @@
   background: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-semantic-border-faint);
   border-radius: var(--muxui-semantic-control-radius);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 10%, transparent);
+  box-shadow: var(--muxui-component-datepicker-popover-shadow);
   outline: none;
 }
 
@@ -1117,6 +1117,7 @@
   height: var(--muxui-calendar-cell-size, 28px);
   border-radius: var(--muxui-semantic-shape-pill-radius);
   border: none;
+  outline: none;
   background: transparent;
   cursor: pointer;
   font-family: var(--muxui-semantic-typography-text-font-family);

@@ -327,6 +327,12 @@ test('TimeField controlled and uncontrolled stories use canonical local time arg
   assert.doesNotThrow(() => renderToStaticMarkup(story.Uncontrolled.render(story.Uncontrolled.args)));
 });
 
+test('InputTags controlled and uncontrolled stories render their list values', async () => {
+  const story = await import('../.storybook/generated/r1-6-input-tags.stories.mjs');
+  assert.doesNotThrow(() => renderToStaticMarkup(story.Controlled.render(story.Controlled.args)));
+  assert.doesNotThrow(() => renderToStaticMarkup(story.Uncontrolled.render(story.Uncontrolled.args)));
+});
+
 test('Button Matrix statically covers every finite visual tuple and States keeps pending/disabled', () => {
   const binding = descriptor.bindings.find(({ export: family }) => family === 'Button');
   assert.ok(binding, 'Button descriptor binding');

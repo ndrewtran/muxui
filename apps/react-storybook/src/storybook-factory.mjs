@@ -184,6 +184,7 @@ function sampleControlledValue(binding, family, controlled, uncontrolled, source
   if (controlled === 'selectedId') return 'Melbourne';
   if (controlled.endsWith('Ids')) return [];
   if (controlled !== 'value') return undefined;
+  if (family === 'InputTags') return ['Mux', 'UI'];
   if (family === 'CheckboxGroup' || family === 'TokenField') return [];
   if (family === 'DateRangePicker' || family === 'RangeCalendar') return { start: '2026-08-26', end: '2026-09-01' };
   if (family === 'TimeField') return '09:30';

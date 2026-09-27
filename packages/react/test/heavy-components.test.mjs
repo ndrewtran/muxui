@@ -239,22 +239,29 @@ test('TextEditor advanced controls expose the color dialog and durable image URL
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   let root;
+  let editor;
+  let editorDestroyed;
   try {
     root = createRoot(document.querySelector('#root'));
     await act(async () => root.render(React.createElement(TextEditor, { label: 'Document', toolbar: 'advanced' })));
+    editor = document.querySelector('.ProseMirror')?.editor;
+    assert.ok(editor, 'advanced TextEditor mounts its owned Tiptap instance');
+    editorDestroyed = new Promise((resolve) => editor.on('destroy', resolve));
     assert.equal(document.querySelectorAll('.muxui-text-editor__select').length, 2);
     assert.equal(document.querySelectorAll('input[type="file"][accept="image/*"]').length, 0);
     assert.equal(document.querySelectorAll('[aria-label="Insert image"]').length, 1);
-    await act(async () => document.querySelector('[aria-label="Text color"]').click());
+    const colorTrigger = document.querySelector('[aria-label="Text color"]');
+    await act(async () => colorTrigger.click());
     assert.equal(document.querySelectorAll('.muxui-text-editor__color-swatch').length, 16);
     assert.equal(document.querySelector('[role="dialog"][aria-label="Text color picker"]') !== null, true);
     const customColor = document.querySelector('.muxui-text-editor__color-field input');
     assert.ok(customColor);
     assert.equal(customColor.type, 'text');
     await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
-    await act(async () => new Promise((resolve) => setTimeout(resolve, 0)));
   } finally {
     await act(async () => root?.unmount());
+    if (editor && !editor.isDestroyed) await editorDestroyed;
+    dom.window.close();
     restore();
   }
 });
