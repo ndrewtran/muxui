@@ -2241,6 +2241,19 @@
         "weight": 0.12
       }
     },
+    "component.sidebar.shadow-color": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent neutral paint for Sidebar surface shadows.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.color.neutral-default-100",
+        "color": "#00000000",
+        "weight": 0.12
+      }
+    },
     "component.button.background": {
       "layer": "component",
       "type": "color",

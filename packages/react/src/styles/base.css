@@ -490,7 +490,8 @@
   outline-color: var(--muxui-field-focus-border);
   box-shadow: var(--muxui-field-focus-glow);
 }
-.muxui-field-input::placeholder {
+.muxui-field-input::placeholder,
+.muxui-input::placeholder {
   color: var(--muxui-field-placeholder-color);
 }
 

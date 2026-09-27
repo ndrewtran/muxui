@@ -2613,7 +2613,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   min-width: 16.5rem;
   border-radius: var(--muxui-semantic-shape-feature-card-radius);
   background: var(--muxui-semantic-color-neutral-98);
-  box-shadow: 0 4px 24px rgb(0 0 0 / 0.12);
+  box-shadow: 0 4px 24px var(--muxui-component-sidebar-shadow-color);
   border: 1px solid var(--muxui-semantic-color-neutral-90);
   overflow: hidden;
 }
@@ -2711,7 +2711,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgb(0 0 0 / 0.5);
+  background: var(--muxui-semantic-overlay-scrim);
   display: flex;
 }
 
@@ -2720,7 +2720,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   max-width: 90vw;
   height: 100%;
   background: var(--muxui-semantic-color-neutral-100);
-  box-shadow: 4px 0 24px rgb(0 0 0 / 0.12);
+  box-shadow: 4px 0 24px var(--muxui-component-sidebar-shadow-color);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
@@ -2730,6 +2730,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: flex;
   flex-direction: column;
   height: 100%;
+  color: var(--muxui-semantic-content-on-solid);
   outline: none;
 }
 
@@ -2872,6 +2873,12 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-sidebar__mobile-drawer {
     background: var(--muxui-semantic-color-neutral-14);
+  }
+}
+
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-sidebar__mobile-dialog {
+    color: var(--muxui-semantic-content-default);
   }
 }
 
