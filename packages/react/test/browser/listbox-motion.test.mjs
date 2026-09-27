@@ -100,6 +100,17 @@ function assertRectsClose(actual, expected, message = 'rectangles should align')
   }
 }
 
+async function resolveBackgroundToken(page, token) {
+  return page.evaluate((tokenName) => {
+    const probe = document.createElement('span');
+    probe.style.backgroundColor = `var(${tokenName})`;
+    document.body.append(probe);
+    const backgroundColor = getComputedStyle(probe).backgroundColor;
+    probe.remove();
+    return backgroundColor;
+  }, token);
+}
+
 async function readListBox(page, selector) {
   return page.locator(selector).evaluate((root) => {
     const options = [...root.querySelectorAll('[role="option"]')];
@@ -209,7 +220,11 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     const multiInitial = await readListBox(page, multi);
     assert.deepEqual(multiInitial.selected.sort(), ['Alpha', 'Gamma']);
     assert.equal(multiInitial.shapeCount, 0);
-    assert.equal(await page.locator(`${multi} [role="option"][aria-selected="true"]`).first().evaluate((node) => getComputedStyle(node).backgroundColor), 'rgb(169, 164, 160)');
+    assert.equal(
+      await page.locator(`${multi} [role="option"][aria-selected="true"]`).first().evaluate((node) => getComputedStyle(node).backgroundColor),
+      await resolveBackgroundToken(page, '--muxui-semantic-color-neutral-90'),
+      'multiple selection uses the neutral-90 token',
+    );
     await page.evaluate(() => window.__listBoxSetMultiple(['beta', 'gamma']));
     await page.waitForFunction(() => document.querySelectorAll('#multiple-list [role="option"][aria-selected="true"]').length === 2);
     await page.waitForFunction(() => document.querySelector('#multiple-list [role="option"][data-key="alpha"]')?.getAttribute('aria-selected') === 'false');

@@ -69,6 +69,22 @@ for (const exportName of ['Button', 'TextField']) {
   });
 }
 
+test('public Switch bundle retains its required private motion edge', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'muxui-motion-public-switch-'));
+  try {
+    const chunk = await bundlePublicExport('Switch', directory);
+    const retainedMotionModules = Object.entries(chunk.modules)
+      .filter(([id, module]) => motionModulePattern.test(id) && module.renderedLength > 0);
+    assert.ok(
+      retainedMotionModules.length > 0,
+      'Switch retains the bundled motion dependency closure required by its interaction feedback',
+    );
+    assert.match(chunk.code, /\banimate\b/u, 'Switch bundle includes the motion runtime call');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 test('packed package resolves motion closure and temporal SSR from an isolated consumer', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'muxui-motion-packed-consumer-'));
   try {

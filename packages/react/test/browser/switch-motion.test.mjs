@@ -133,23 +133,61 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     await primaryInput.focus();
     await page.keyboard.down('Space');
     await page.waitForFunction(() => document.querySelector('#primary-switch .muxui-switch')?.hasAttribute('data-pressed'));
+    await page.waitForFunction(() => {
+      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      return node?.hasAttribute('data-motion-pressed')
+        && node.getAnimations().some((animation) => animation.playState === 'running'
+          && animation.effect?.getKeyframes().some((frame) => frame.transform !== undefined));
+    });
+    const pressedAnimation = await page.locator('#primary-switch .muxui-switch-indicator').evaluate((node) => {
+      const animation = node.getAnimations().find((candidate) => candidate.playState === 'running'
+        && candidate.effect?.getKeyframes().some((frame) => frame.transform !== undefined));
+      if (!animation) return null;
+      window.__switchPressAnimationOutcome = animation.finished.then(
+        () => 'finished',
+        (error) => error?.name === 'AbortError' ? 'cancelled' : `rejected:${error?.name ?? 'unknown'}`,
+      );
+      window.__switchPressAnimationNode = node;
+      window.__switchReducedStableFrames = 0;
+      return { playState: animation.playState, keyframes: animation.effect?.getKeyframes() };
+    });
+    assert.ok(pressedAnimation?.playState === 'running' && pressedAnimation.keyframes?.some((frame) => frame.transform !== undefined),
+      'pressed state starts a running transform spring before system reduced motion is enabled');
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    const systemReducedPress = await page.locator('#primary-switch .muxui-switch-indicator').evaluate((node) => {
+    assert.equal(await page.evaluate(() => window.__switchPressAnimationOutcome), 'cancelled',
+      'system reduced motion cancels the active press animation instead of allowing it to finish');
+    const systemReducedPressHandle = await page.waitForFunction(() => {
+      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
+      if (!node) {
+        window.__switchReducedStableFrames = 0;
+        return false;
+      }
+      const initialMatrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
+      const ready = node.closest('.muxui-switch')?.hasAttribute('data-pressed')
+        && !node.hasAttribute('data-motion-pressed') && !node.style.transform
+        && Math.abs(Math.hypot(initialMatrix.m11, initialMatrix.m12) - 1) < 0.001
+        && Math.abs(Math.hypot(initialMatrix.m21, initialMatrix.m22) - 1) < 0.001
+        && node.getAnimations().length === 0
+        && node === window.__switchPressAnimationNode && node.isConnected;
+      if (!ready) {
+        window.__switchReducedStableFrames = 0;
+        return false;
+      }
+      window.__switchReducedStableFrames += 1;
+      if (window.__switchReducedStableFrames < 2) return false;
       node.setAttribute('data-motion-pressed', '');
-      const matrix = new DOMMatrixReadOnly(getComputedStyle(node).transform);
+      const style = getComputedStyle(node);
+      const matrix = new DOMMatrixReadOnly(style.transform);
       const result = {
         scaleX: Math.hypot(matrix.m11, matrix.m12),
         scaleY: Math.hypot(matrix.m21, matrix.m22),
       };
       node.removeAttribute('data-motion-pressed');
       return result;
-    });
+    }, undefined, { timeout: 3000 });
+    const systemReducedPress = await systemReducedPressHandle.jsonValue();
     assert.ok(Math.abs(systemReducedPress.scaleX - 1) < 0.001 && Math.abs(systemReducedPress.scaleY - 1) < 0.001,
       `system reduced motion overrides an active press marker: ${JSON.stringify(systemReducedPress)}`);
-    await page.waitForFunction(() => {
-      const node = document.querySelector('#primary-switch .muxui-switch-indicator');
-      return node && node.closest('.muxui-switch')?.hasAttribute('data-pressed') && !node.style.transform && node.getAnimations().length === 0;
-    });
     await page.keyboard.up('Space');
     await waitForSettled(page, false);
     await page.emulateMedia({ reducedMotion: 'no-preference' });

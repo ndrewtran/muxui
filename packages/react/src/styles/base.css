@@ -1213,10 +1213,21 @@
   background-color: var(--muxui-semantic-action-neutral-background-pressed);
 }
 
-.muxui-calendar-previous > svg,
-.muxui-calendar-next > svg {
+.muxui-calendar-previous svg,
+.muxui-calendar-next svg {
   color: currentColor;
   stroke: currentColor;
+}
+
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-calendar-previous,
+.muxui-button.muxui-icon-button[data-muxui-icon-button].muxui-calendar-next {
+  --muxui-icon-button-size: 28px;
+}
+
+.muxui-calendar-previous .muxui-icon-button-icon,
+.muxui-calendar-next .muxui-icon-button-icon {
+  width: 1rem;
+  height: 1rem;
 }
 
 .muxui-calendar-heading {

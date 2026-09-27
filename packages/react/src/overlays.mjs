@@ -5,7 +5,6 @@ import { mergeRefs } from 'react-aria/mergeRefs';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
-  Button as AriaButton,
   Dialog as AriaDialog,
   DialogContext as AriaDialogContext,
   DialogTrigger as AriaDialogTrigger,
@@ -29,6 +28,7 @@ import { DialogMotion } from './dialog-motion.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
 import { observeReducedMotion } from './motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from './motion-components.mjs';
+import { IconButton } from './supplemental/icon-button.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 
@@ -195,7 +195,7 @@ function DialogContent({ title, description, actions, children, ariaLabel, dismi
     description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog-description', descriptionClassName) }, description) : null,
     React.createElement('div', { className: classNames('muxui-dialog-content', contentClassName) }, children),
     actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog-actions', actionsClassName) }, actions) : null,
-    dismissable ? React.createElement(AriaButton, { slot: 'close', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
+    dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
 }
 
 function DialogOverlay({ dismissable, backdropClassName, children, state, insideTrigger, originRef }) {
@@ -709,7 +709,7 @@ function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef 
     React.createElement(AriaToastContent, { className: 'muxui-toast-content' },
       React.createElement(AriaText, { slot: 'title', className: classNames('muxui-toast-title', !hasTitle && 'muxui-toast-title-fallback') }, hasTitle ? value.title : TOAST_FALLBACK_TITLE),
       React.createElement(AriaText, { slot: 'description', className: 'muxui-toast-message' }, value.message)),
-    React.createElement(AriaButton, { slot: 'close', className: 'muxui-toast-dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })));
+    React.createElement(IconButton, { slot: 'close', size: 'sm', className: 'muxui-toast-dismiss', 'aria-label': 'Dismiss notification' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })));
 }
 
 /** Stable MuxUI facade over RAC's unstable queue/region implementation. */

@@ -93,27 +93,93 @@ async function readMetrics(page, selector) {
   });
 }
 
-async function readDisclosureLayout(page, selector) {
-  return page.locator(selector).evaluate((panel) => {
+async function readDisclosureLayout(page, selector, { stableFrames = 0, padding } = {}) {
+  return page.locator(selector).evaluate(async (panel, options) => {
     const host = panel.parentElement;
     const content = panel.firstElementChild;
     if (!host || !content) throw new Error('Disclosure motion wrapper is incomplete.');
-    const hostStyle = getComputedStyle(host);
-    const contentStyle = getComputedStyle(content);
+    if (options.padding !== undefined) content.style.padding = options.padding;
     const number = (value) => Number.parseFloat(value) || 0;
-    return {
-      panelHeight: panel.getBoundingClientRect().height,
-      hostHeight: host.getBoundingClientRect().height,
-      contentHeight: content.getBoundingClientRect().height,
-      hostPaddingTop: number(hostStyle.paddingTop),
-      hostPaddingBottom: number(hostStyle.paddingBottom),
-      contentPaddingTop: number(contentStyle.paddingTop),
-      contentPaddingBottom: number(contentStyle.paddingBottom),
-      contentPaddingLeft: number(contentStyle.paddingLeft),
-      contentPaddingRight: number(contentStyle.paddingRight),
-      styleHeight: panel.style.height,
+    const read = () => {
+      const hostStyle = getComputedStyle(host);
+      const contentStyle = getComputedStyle(content);
+      return {
+        panelHeight: panel.getBoundingClientRect().height,
+        hostHeight: host.getBoundingClientRect().height,
+        contentHeight: content.getBoundingClientRect().height,
+        hostPaddingTop: number(hostStyle.paddingTop),
+        hostPaddingBottom: number(hostStyle.paddingBottom),
+        contentPaddingTop: number(contentStyle.paddingTop),
+        contentPaddingBottom: number(contentStyle.paddingBottom),
+        contentPaddingLeft: number(contentStyle.paddingLeft),
+        contentPaddingRight: number(contentStyle.paddingRight),
+        styleHeight: panel.style.height,
+        styleOverflow: panel.style.overflow,
+        ariaHidden: panel.getAttribute('aria-hidden'),
+        inert: panel.hasAttribute('inert') || panel.inert === true,
+        hostHidden: host.hasAttribute('hidden'),
+      };
     };
-  });
+    if (!options.stableFrames) return read();
+
+    let previous = read();
+    let consecutiveStableFrames = 0;
+    let minimumSampledPanelHeight = Infinity;
+    const started = performance.now();
+    while (performance.now() - started < 5000) {
+      await new Promise(requestAnimationFrame);
+      const current = read();
+      minimumSampledPanelHeight = Math.min(minimumSampledPanelHeight, current.panelHeight);
+      const settledOpen = !current.styleHeight
+        && !current.styleOverflow
+        && current.ariaHidden === null
+        && !current.inert
+        && !current.hostHidden
+        && Math.abs(current.panelHeight - current.contentHeight) < 1;
+      const stableGeometry = Math.abs(current.panelHeight - previous.panelHeight) < 0.1
+        && Math.abs(current.hostHeight - previous.hostHeight) < 0.1
+        && Math.abs(current.contentHeight - previous.contentHeight) < 0.1;
+      consecutiveStableFrames = settledOpen && stableGeometry ? consecutiveStableFrames + 1 : 0;
+      if (consecutiveStableFrames >= options.stableFrames) return { ...current, minimumSampledPanelHeight };
+      previous = current;
+    }
+    throw new Error(`Disclosure layout did not settle: ${JSON.stringify(read())}`);
+  }, { stableFrames, padding });
+}
+
+async function captureDisclosureGroupMotion(page, triggerSelector, duration = 1150) {
+  return page.locator(triggerSelector).evaluate(async (trigger, sampleDuration) => {
+    const group = trigger.closest('.muxui-disclosure-group');
+    if (!group) throw new Error('Disclosure trigger is outside its group.');
+    const rows = [...group.children].filter((row) => row.classList.contains('muxui-disclosure'));
+    const read = () => rows.map((row, index) => {
+      const rect = row.getBoundingClientRect();
+      const next = rows[index + 1];
+      const nextRect = next?.getBoundingClientRect();
+      const style = getComputedStyle(row);
+      const panelHost = row.querySelector('.muxui-disclosure-panel-host');
+      return {
+        expanded: row.hasAttribute('data-expanded'),
+        top: rect.top,
+        bottom: rect.bottom,
+        panelHeight: panelHost?.getBoundingClientRect().height ?? 0,
+        gapAfter: nextRect ? nextRect.top - rect.bottom : 0,
+        marginBlockStart: Number.parseFloat(style.marginBlockStart) || 0,
+        radiusTop: Number.parseFloat(style.borderTopLeftRadius) || 0,
+        radiusBottom: Number.parseFloat(style.borderBottomLeftRadius) || 0,
+      };
+    });
+    const before = read();
+    trigger.click();
+    const immediate = read();
+    const frames = [];
+    const started = performance.now();
+    while (performance.now() - started < sampleDuration) {
+      await new Promise(requestAnimationFrame);
+      frames.push(read());
+    }
+    return { before, immediate, frames, after: read() };
+  }, duration);
 }
 
 async function waitForDisclosureIntermediate(page, selector) {
@@ -271,13 +337,80 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await waitForDisclosureOpen(page, primaryPanel);
     assert.ok((await page.locator(primaryPanel).evaluate((node) => node.getBoundingClientRect().height)) > 0, 'rapid disclosure toggle settles open');
 
-    const firstGroupTrigger = page.locator('[data-motion-id="group-first"] .muxui-disclosure-trigger');
-    const secondGroupTrigger = page.locator('[data-motion-id="group-second"] .muxui-disclosure-trigger');
-    await firstGroupTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="group-first"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
-    await secondGroupTrigger.click();
-    await page.waitForFunction(() => document.querySelector('[data-motion-id="group-second"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true'
-      && document.querySelector('[data-motion-id="group-first"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'false');
+    const firstGroupTrigger = '[data-motion-id="group-first"] .muxui-disclosure-trigger';
+    const secondGroupTrigger = '[data-motion-id="group-second"] .muxui-disclosure-trigger';
+    const firstGroupPanel = disclosurePanel('group-first');
+    const secondGroupPanel = disclosurePanel('group-second');
+    const groupGeometry = await page.locator('[data-motion-id="disclosure-group"]').evaluate((group) => {
+      const style = getComputedStyle(group);
+      const rem = Number.parseFloat(getComputedStyle(document.documentElement).fontSize);
+      const pixels = (token) => {
+        const value = style.getPropertyValue(token).trim();
+        return Number.parseFloat(value) * (value.endsWith('rem') ? rem : 1);
+      };
+      const panel = group.querySelector('.muxui-disclosure-motion-panel');
+      return {
+        gap: pixels('--muxui-semantic-layout-group-gap'),
+        radius: pixels('--muxui-component-disclosuregroup-radius'),
+        iconSize: group.querySelector('.muxui-disclosure-trigger-icon').getBoundingClientRect().width,
+        duration: getComputedStyle(panel).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
+        surroundingDuration: style.getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
+        nestedDuration: getComputedStyle(panel.firstElementChild).getPropertyValue('--muxui-semantic-motion-content-resize-transition-spring-visual-duration').trim(),
+      };
+    });
+    assert.equal(groupGeometry.iconSize, 24);
+    assert.equal(groupGeometry.duration, '300ms', 'grouped panels use the faster component spring');
+    assert.equal(groupGeometry.nestedDuration, groupGeometry.surroundingDuration, 'panel content preserves the surrounding motion role for nested controls');
+    const openingGroupItem = await captureDisclosureGroupMotion(page, firstGroupTrigger);
+    assert.equal(openingGroupItem.before[0].panelHeight, 0);
+    assert.equal(openingGroupItem.before[0].gapAfter, 0);
+    assert.ok(Math.abs(openingGroupItem.immediate[0].gapAfter - openingGroupItem.before[0].gapAfter) < 1.5, 'the click frame keeps its starting gap while React commits');
+    const firstExpandedFrame = openingGroupItem.frames.find((frame) => frame[0].expanded);
+    assert.ok(firstExpandedFrame, 'opening state commits during the sampled frames');
+    assert.ok(firstExpandedFrame[0].gapAfter < groupGeometry.gap, 'opening does not insert the full token gap in one frame');
+    assert.ok(openingGroupItem.frames.some((frame) => frame[0].gapAfter > 1 && frame[0].gapAfter < groupGeometry.gap - 1), 'opening gap passes through intermediate frame geometry');
+    assert.ok(openingGroupItem.frames.some((frame) => frame[0].radiusBottom > 1 && frame[0].radiusBottom < groupGeometry.radius - 1), 'expanded corner radius animates with its spacing');
+    assert.ok(Math.abs(openingGroupItem.after[0].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(openingGroupItem.after[0].radiusBottom - groupGeometry.radius) < 0.5);
+    await waitForDisclosureOpen(page, firstGroupPanel);
+
+    const partialGroupClose = await captureDisclosureGroupMotion(page, firstGroupTrigger, 180);
+    assert.ok(Math.abs(partialGroupClose.immediate[0].gapAfter - partialGroupClose.before[0].gapAfter) < 1.5, 'the close click frame keeps its starting gap while React commits');
+    assert.ok(partialGroupClose.frames.some((frame) => !frame[0].expanded), 'closing state commits during the sampled frames');
+    assert.ok(partialGroupClose.immediate[0].gapAfter > groupGeometry.gap - 1, 'closing starts from the open gap');
+    assert.ok(partialGroupClose.after[0].gapAfter > 0 && partialGroupClose.after[0].gapAfter < groupGeometry.gap, 'closing reduces the gap progressively');
+    assert.ok(partialGroupClose.after[0].panelHeight > 0, 'closing keeps the measured panel in flow while it moves');
+
+    const reversedGroupOpen = await captureDisclosureGroupMotion(page, firstGroupTrigger);
+    assert.ok(Math.abs(reversedGroupOpen.immediate[0].gapAfter - reversedGroupOpen.before[0].gapAfter) < 1.5, 'reversing the close preserves the current gap on its click frame');
+    assert.ok(Math.abs(reversedGroupOpen.immediate[0].panelHeight - reversedGroupOpen.before[0].panelHeight) < 1.5, 'reversing the close preserves current panel height on its click frame');
+    assert.ok(reversedGroupOpen.frames.some((frame) => frame[0].expanded && frame[0].gapAfter > reversedGroupOpen.before[0].gapAfter), 'reversal grows smoothly from the in-flight gap');
+    assert.ok(Math.abs(reversedGroupOpen.after[0].gapAfter - groupGeometry.gap) < 0.5);
+    await waitForDisclosureOpen(page, firstGroupPanel);
+
+    const switchingGroupItem = await captureDisclosureGroupMotion(page, secondGroupTrigger);
+    assert.ok(switchingGroupItem.before[0].panelHeight > 0);
+    assert.equal(switchingGroupItem.before[1].panelHeight, 0);
+    assert.ok(switchingGroupItem.after[0].expanded === false && switchingGroupItem.after[1].expanded === true);
+    assert.ok(switchingGroupItem.frames.every((frame) => Math.abs(frame[0].gapAfter - groupGeometry.gap) < 0.5), 'single-mode switching keeps one gap at the shared boundary');
+    assert.ok(switchingGroupItem.frames.some((frame) => frame[1].gapAfter > 1 && frame[1].gapAfter < groupGeometry.gap - 1), 'the newly expanded row grows its neighboring gap continuously');
+    assert.ok(Math.abs(switchingGroupItem.after[0].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(switchingGroupItem.after[1].gapAfter - groupGeometry.gap) < 0.5);
+    await waitForDisclosureOpen(page, secondGroupPanel);
+    await waitForDisclosureClosed(page, firstGroupPanel);
+    assert.ok((await readMetrics(page, firstGroupPanel)).height <= 0.5);
+    assert.ok((await readMetrics(page, secondGroupPanel)).height > 0);
+
+    const closingGroupItem = await captureDisclosureGroupMotion(page, secondGroupTrigger);
+    assert.ok(Math.abs(closingGroupItem.before[0].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(closingGroupItem.before[1].gapAfter - groupGeometry.gap) < 0.5);
+    assert.ok(Math.abs(closingGroupItem.immediate[1].gapAfter - closingGroupItem.before[1].gapAfter) < 1.5, 'closing retains its starting gap before animating');
+    assert.ok(closingGroupItem.frames.some((frame) => !frame[1].expanded), 'closing state commits during the sampled frames');
+    assert.ok(closingGroupItem.frames.some((frame) => frame[1].gapAfter > 1 && frame[1].gapAfter < groupGeometry.gap - 1));
+    assert.equal(closingGroupItem.after[0].gapAfter, 0);
+    assert.equal(closingGroupItem.after[1].gapAfter, 0);
+    await waitForDisclosureClosed(page, secondGroupPanel);
+    assert.ok((await readMetrics(page, secondGroupPanel)).height <= 0.5);
 
     await page.waitForFunction(() => typeof window.__interactionToastAdd === 'function');
     await page.evaluate(() => {
@@ -650,10 +783,10 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await waitForDisclosureOpen(page, primaryPanel);
     assert.ok((await readMetrics(page, primaryPanel)).height > beforeResize);
     await page.setViewportSize({ width: 390, height: 900 });
-    await waitForDisclosureOpen(page, primaryPanel);
-    const afterWidthChange = await readMetrics(page, primaryPanel);
+    const afterWidthChange = await readDisclosureLayout(page, primaryPanel, { stableFrames: 2 });
     assert.equal(afterWidthChange.styleOverflow, '', 'narrow content is unclipped after resizing');
-    assert.ok(afterWidthChange.height > beforeResize, 'copy reflows at narrow widths');
+    assert.equal(afterWidthChange.styleHeight, '', 'resized open content releases its animated height');
+    assert.ok(afterWidthChange.panelHeight > beforeResize, 'copy reflows at narrow widths');
 
     await page.evaluate(() => {
       document.documentElement.dataset.muxuiColorScheme = 'dark';
@@ -671,21 +804,17 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     const firstPanel = disclosurePanel('group-first');
     const firstContent = `${firstPanel} > .muxui-disclosure-panel`;
     await page.addStyleTag({ content: '[data-motion-id="group-first"] .muxui-disclosure-panel { padding: 14px; }' });
-    await waitForDisclosureOpen(page, firstPanel);
-    const allSidePadding = await readDisclosureLayout(page, firstPanel);
+    const allSidePadding = await readDisclosureLayout(page, firstPanel, { stableFrames: 2 });
     assert.equal(allSidePadding.hostPaddingTop, 0, 'the RAC region host owns no top padding');
     assert.equal(allSidePadding.hostPaddingBottom, 0, 'the RAC region host owns no bottom padding');
     assert.equal(allSidePadding.contentPaddingTop, 14, 'all-side user padding stays on measured content');
     assert.equal(allSidePadding.contentPaddingBottom, 14, 'all-side user padding stays on measured content');
     assert.ok(Math.abs(allSidePadding.panelHeight - allSidePadding.contentHeight) < 1, 'expanded panel height includes content padding');
 
-    await page.locator(firstContent).evaluate((node) => { node.style.padding = '9px 14px 23px'; });
-    await page.waitForFunction((selector) => {
-      const node = document.querySelector(selector);
-      return Boolean(node?.style.height) && Number.parseFloat(node.style.height) > 0;
-    }, firstPanel);
-    await waitForDisclosureOpen(page, firstPanel);
-    const asymmetricPadding = await readDisclosureLayout(page, firstPanel);
+    const asymmetricPadding = await readDisclosureLayout(page, firstPanel, {
+      padding: '9px 14px 23px',
+      stableFrames: 2,
+    });
     assert.equal(asymmetricPadding.contentPaddingTop, 9, 'asymmetric top padding is retained');
     assert.equal(asymmetricPadding.contentPaddingBottom, 23, 'asymmetric bottom padding is retained');
     assert.ok(Math.abs(asymmetricPadding.panelHeight - asymmetricPadding.contentHeight) < 1, 'open retarget settles at the padded content height');
@@ -705,15 +834,12 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await waitForDisclosureIntermediate(page, firstPanel);
     const openingBeforePaddingChange = await readDisclosureLayout(page, firstPanel);
     assert.ok(openingBeforePaddingChange.panelHeight > 0.5, 'relative padding opening starts above zero');
-    await page.locator(firstContent).evaluate((node) => { node.style.padding = '0.75em 1em 1.5em'; });
-    await page.waitForFunction((selector) => {
-      const node = document.querySelector(selector);
-      return Boolean(node?.style.height) && Number.parseFloat(node.style.height) > 0;
-    }, firstPanel);
-    const openingAfterPaddingChange = await readDisclosureLayout(page, firstPanel);
-    assert.ok(openingAfterPaddingChange.panelHeight >= openingBeforePaddingChange.panelHeight - 2, 'opening padding retarget does not restart from zero');
-    await waitForDisclosureOpen(page, firstPanel);
-    const relativePadding = await readDisclosureLayout(page, firstPanel);
+    const relativePadding = await readDisclosureLayout(page, firstPanel, {
+      padding: '0.75em 1em 1.5em',
+      stableFrames: 2,
+    });
+    assert.ok(relativePadding.minimumSampledPanelHeight > 0.5, 'opening padding retarget never collapses to zero');
+    assert.ok(relativePadding.minimumSampledPanelHeight >= openingBeforePaddingChange.panelHeight - 2, 'opening padding retarget preserves its current height');
     assert.ok(relativePadding.contentPaddingBottom > relativePadding.contentPaddingTop, 'font-relative padding keeps its unequal block sizes');
 
     await first.click();

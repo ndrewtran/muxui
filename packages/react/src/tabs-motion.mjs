@@ -5,6 +5,7 @@ import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import ChevronUpIcon from 'lucide-react/dist/esm/icons/chevron-up.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
+import { IconButton } from './supplemental/icon-button.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const TAB_SELECTOR = '[role="tab"]';
@@ -453,25 +454,25 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
   }, [orientation, root, variant]);
 
   const beforeButton = variant === 'overflow' && edges.overflow
-    ? React.createElement('button', {
+    ? React.createElement(IconButton, {
       type: 'button',
       className: `muxui-tabs-motion-edge muxui-tabs-motion-edge--${orientation === 'vertical' ? 'before' : 'left'}`,
       'aria-label': orientation === 'vertical' ? 'Scroll tabs up' : 'Scroll tabs left',
       'aria-controls': `${instanceId}-viewport`,
       'aria-disabled': disabled || !edges.before || undefined,
       disabled: disabled || !edges.before,
-      onClick: () => scrollByRef.current?.(-1),
+      onActivate: () => scrollByRef.current?.(-1),
     }, React.createElement(orientation === 'vertical' ? ChevronUpIcon : ChevronLeftIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))
     : null;
   const afterButton = variant === 'overflow' && edges.overflow
-    ? React.createElement('button', {
+    ? React.createElement(IconButton, {
       type: 'button',
       className: `muxui-tabs-motion-edge muxui-tabs-motion-edge--${orientation === 'vertical' ? 'after' : 'right'}`,
       'aria-label': orientation === 'vertical' ? 'Scroll tabs down' : 'Scroll tabs right',
       'aria-controls': `${instanceId}-viewport`,
       'aria-disabled': disabled || !edges.after || undefined,
       disabled: disabled || !edges.after,
-      onClick: () => scrollByRef.current?.(1),
+      onActivate: () => scrollByRef.current?.(1),
     }, React.createElement(orientation === 'vertical' ? ChevronDownIcon : ChevronRightIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))
     : null;
 

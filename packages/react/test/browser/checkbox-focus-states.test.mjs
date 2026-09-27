@@ -24,6 +24,7 @@ function indicatorPaint(locator) {
     const style = getComputedStyle(element);
     return {
       backgroundColor: style.backgroundColor,
+      backgroundImage: style.backgroundImage,
       borderColor: style.borderColor,
       boxShadow: style.boxShadow,
       outlineColor: style.outlineColor,
@@ -55,6 +56,17 @@ async function resolvedTokenPaint(page, token) {
     probe.remove();
     return paint;
   }, token);
+}
+
+async function resolvedHoverOverlay(page) {
+  return page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.backgroundImage = 'linear-gradient(color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent), color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent))';
+    document.body.append(probe);
+    const backgroundImage = getComputedStyle(probe).backgroundImage;
+    probe.remove();
+    return backgroundImage;
+  });
 }
 
 function assertPaintMatchesToken(paint, tokens, label) {
@@ -184,8 +196,8 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
           ? ['--muxui-semantic-color-neutral-default-98', '--muxui-semantic-color-neutral-default-60']
           : ['--muxui-semantic-surface-raised', '--muxui-semantic-border-indicator'],
         uncheckedHover: mode === 'dark'
-          ? ['--muxui-semantic-color-neutral-default-94', '--muxui-semantic-color-neutral-default-40']
-          : ['--muxui-semantic-surface-hover', '--muxui-semantic-border-indicator-hover'],
+          ? ['--muxui-semantic-color-neutral-default-98', '--muxui-semantic-color-neutral-default-40']
+          : ['--muxui-semantic-surface-raised', '--muxui-semantic-border-indicator-hover'],
         invalid: mode === 'dark'
           ? ['--muxui-semantic-color-neutral-default-98', '--muxui-semantic-feedback-invalid-border']
           : ['--muxui-semantic-surface-raised', '--muxui-semantic-feedback-invalid-border'],
@@ -200,6 +212,7 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
         backgroundColor: (await resolvedTokenPaint(page, expectedTokens.uncheckedHover[0])).backgroundColor,
         borderColor: (await resolvedTokenPaint(page, expectedTokens.uncheckedHover[1])).borderColor,
       };
+      const expectedUncheckedHoverImage = await resolvedHoverOverlay(page);
       const expectedInvalid = {
         backgroundColor: (await resolvedTokenPaint(page, expectedTokens.invalid[0])).backgroundColor,
         borderColor: (await resolvedTokenPaint(page, expectedTokens.invalid[1])).borderColor,
@@ -249,11 +262,12 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
       await fieldButton.hover();
       const fieldUncheckedHover = await settledIndicatorPaint(fieldIndicator);
       assert.deepEqual(
-        { backgroundColor: fieldUncheckedHover.backgroundColor, borderColor: fieldUncheckedHover.borderColor },
-        { backgroundColor: coreUncheckedHover.backgroundColor, borderColor: coreUncheckedHover.borderColor },
+        { backgroundColor: fieldUncheckedHover.backgroundColor, backgroundImage: fieldUncheckedHover.backgroundImage, borderColor: fieldUncheckedHover.borderColor },
+        { backgroundColor: coreUncheckedHover.backgroundColor, backgroundImage: coreUncheckedHover.backgroundImage, borderColor: coreUncheckedHover.borderColor },
         `${mode} unchecked hover indicator paint`,
       );
       assertPaintMatchesToken(coreUncheckedHover, expectedUncheckedHover, `${mode} unchecked hover token`);
+      assert.equal(coreUncheckedHover.backgroundImage, expectedUncheckedHoverImage, `${mode} unchecked hover overlay token`);
 
       const coreIndeterminatePaint = await settledIndicatorPaint(coreIndeterminateIndicator);
       const fieldIndeterminatePaint = await settledIndicatorPaint(fieldIndeterminateIndicator);
