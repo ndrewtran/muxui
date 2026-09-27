@@ -101,6 +101,10 @@
             "requirement": "required"
           },
           {
+            "token": "semantic.field.placeholder",
+            "requirement": "required"
+          },
+          {
             "token": "semantic.motion.feedback-duration",
             "requirement": "required"
           },
