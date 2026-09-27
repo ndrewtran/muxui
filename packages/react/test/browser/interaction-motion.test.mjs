@@ -158,6 +158,10 @@ async function captureDisclosureGroupMotion(page, triggerSelector, duration = 11
       const nextRect = next?.getBoundingClientRect();
       const style = getComputedStyle(row);
       const panelHost = row.querySelector('.muxui-disclosure-panel-host');
+      const content = row.querySelector('.muxui-disclosure-motion-content');
+      const contentStyle = content && getComputedStyle(content);
+      const icon = row.querySelector('.muxui-disclosure-trigger-icon');
+      const iconMatrix = icon && new DOMMatrixReadOnly(getComputedStyle(icon).transform);
       return {
         expanded: row.hasAttribute('data-expanded'),
         top: rect.top,
@@ -167,6 +171,9 @@ async function captureDisclosureGroupMotion(page, triggerSelector, duration = 11
         marginBlockStart: Number.parseFloat(style.marginBlockStart) || 0,
         radiusTop: Number.parseFloat(style.borderTopLeftRadius) || 0,
         radiusBottom: Number.parseFloat(style.borderBottomLeftRadius) || 0,
+        contentOpacity: contentStyle ? Number(contentStyle.opacity) : 1,
+        contentTransform: contentStyle?.transform ?? 'none',
+        iconAngle: iconMatrix ? Math.round(Math.atan2(iconMatrix.m12, iconMatrix.m11) * 180 / Math.PI) : 0,
       };
     });
     const before = read();
@@ -359,8 +366,9 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
       };
     });
     assert.equal(groupGeometry.iconSize, 24);
-    assert.equal(groupGeometry.duration, '300ms', 'grouped panels use the faster component spring');
+    assert.equal(groupGeometry.duration, '268ms', 'grouped panels use the calibrated component spring base');
     assert.equal(groupGeometry.nestedDuration, groupGeometry.surroundingDuration, 'panel content preserves the surrounding motion role for nested controls');
+    const gapOvershoot = groupGeometry.gap * 0.1 + 0.5;
     const openingGroupItem = await captureDisclosureGroupMotion(page, firstGroupTrigger);
     assert.equal(openingGroupItem.before[0].panelHeight, 0);
     assert.equal(openingGroupItem.before[0].gapAfter, 0);
@@ -369,22 +377,31 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.ok(firstExpandedFrame, 'opening state commits during the sampled frames');
     assert.ok(firstExpandedFrame[0].gapAfter < groupGeometry.gap, 'opening does not insert the full token gap in one frame');
     assert.ok(openingGroupItem.frames.some((frame) => frame[0].gapAfter > 1 && frame[0].gapAfter < groupGeometry.gap - 1), 'opening gap passes through intermediate frame geometry');
+    assert.ok(openingGroupItem.frames.every((frame) => frame[0].gapAfter >= -gapOvershoot && frame[0].gapAfter <= groupGeometry.gap + gapOvershoot), 'opening spring overshoot stays bounded by the token gap');
     assert.ok(openingGroupItem.frames.some((frame) => frame[0].radiusBottom > 1 && frame[0].radiusBottom < groupGeometry.radius - 1), 'expanded corner radius animates with its spacing');
+    assert.ok(openingGroupItem.frames.some((frame) => frame[0].contentOpacity > 0 && frame[0].contentOpacity < 1), 'group content fades in during the panel spring');
+    assert.ok(openingGroupItem.frames.every((frame) => frame[0].contentTransform === 'none'), 'group content fades without a vertical transform');
     assert.ok(Math.abs(openingGroupItem.after[0].gapAfter - groupGeometry.gap) < 0.5);
     assert.ok(Math.abs(openingGroupItem.after[0].radiusBottom - groupGeometry.radius) < 0.5);
+    assert.ok(Math.abs(openingGroupItem.after[0].contentOpacity - 1) < 0.001);
+    assert.equal(openingGroupItem.after[0].iconAngle, 180, 'group chevron settles at the expanded angle');
     await waitForDisclosureOpen(page, firstGroupPanel);
 
     const partialGroupClose = await captureDisclosureGroupMotion(page, firstGroupTrigger, 180);
     assert.ok(Math.abs(partialGroupClose.immediate[0].gapAfter - partialGroupClose.before[0].gapAfter) < 1.5, 'the close click frame keeps its starting gap while React commits');
     assert.ok(partialGroupClose.frames.some((frame) => !frame[0].expanded), 'closing state commits during the sampled frames');
     assert.ok(partialGroupClose.immediate[0].gapAfter > groupGeometry.gap - 1, 'closing starts from the open gap');
-    assert.ok(partialGroupClose.after[0].gapAfter > 0 && partialGroupClose.after[0].gapAfter < groupGeometry.gap, 'closing reduces the gap progressively');
+    assert.ok(partialGroupClose.frames.some((frame) => frame[0].gapAfter > 1 && frame[0].gapAfter < groupGeometry.gap - 1), 'closing moves the gap through intermediate geometry');
+    assert.ok(partialGroupClose.frames.every((frame) => frame[0].gapAfter >= -gapOvershoot && frame[0].gapAfter <= groupGeometry.gap + gapOvershoot), 'closing spring overshoot stays bounded by the token gap');
     assert.ok(partialGroupClose.after[0].panelHeight > 0, 'closing keeps the measured panel in flow while it moves');
+    assert.ok(partialGroupClose.frames.some((frame) => frame[0].contentOpacity > 0 && frame[0].contentOpacity < 1), 'group content fades out during the panel spring');
+    assert.ok(partialGroupClose.frames.every((frame) => frame[0].contentTransform === 'none'), 'group content close has no vertical transform');
 
     const reversedGroupOpen = await captureDisclosureGroupMotion(page, firstGroupTrigger);
     assert.ok(Math.abs(reversedGroupOpen.immediate[0].gapAfter - reversedGroupOpen.before[0].gapAfter) < 1.5, 'reversing the close preserves the current gap on its click frame');
     assert.ok(Math.abs(reversedGroupOpen.immediate[0].panelHeight - reversedGroupOpen.before[0].panelHeight) < 1.5, 'reversing the close preserves current panel height on its click frame');
     assert.ok(reversedGroupOpen.frames.some((frame) => frame[0].expanded && frame[0].gapAfter > reversedGroupOpen.before[0].gapAfter), 'reversal grows smoothly from the in-flight gap');
+    assert.ok(reversedGroupOpen.frames.every((frame) => frame[0].gapAfter >= -gapOvershoot && frame[0].gapAfter <= groupGeometry.gap + gapOvershoot), 'reversal spring overshoot stays bounded by the token gap');
     assert.ok(Math.abs(reversedGroupOpen.after[0].gapAfter - groupGeometry.gap) < 0.5);
     await waitForDisclosureOpen(page, firstGroupPanel);
 
@@ -393,6 +410,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.equal(switchingGroupItem.before[1].panelHeight, 0);
     assert.ok(switchingGroupItem.after[0].expanded === false && switchingGroupItem.after[1].expanded === true);
     assert.ok(switchingGroupItem.frames.every((frame) => Math.abs(frame[0].gapAfter - groupGeometry.gap) < 0.5), 'single-mode switching keeps one gap at the shared boundary');
+    assert.ok(switchingGroupItem.frames.every((frame) => frame[0].gapAfter >= -gapOvershoot && frame[0].gapAfter <= groupGeometry.gap + gapOvershoot), 'middle expansion stays within the token gap bounds');
     assert.ok(switchingGroupItem.frames.some((frame) => frame[1].gapAfter > 1 && frame[1].gapAfter < groupGeometry.gap - 1), 'the newly expanded row grows its neighboring gap continuously');
     assert.ok(Math.abs(switchingGroupItem.after[0].gapAfter - groupGeometry.gap) < 0.5);
     assert.ok(Math.abs(switchingGroupItem.after[1].gapAfter - groupGeometry.gap) < 0.5);
@@ -407,10 +425,62 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.ok(Math.abs(closingGroupItem.immediate[1].gapAfter - closingGroupItem.before[1].gapAfter) < 1.5, 'closing retains its starting gap before animating');
     assert.ok(closingGroupItem.frames.some((frame) => !frame[1].expanded), 'closing state commits during the sampled frames');
     assert.ok(closingGroupItem.frames.some((frame) => frame[1].gapAfter > 1 && frame[1].gapAfter < groupGeometry.gap - 1));
+    assert.ok(closingGroupItem.frames.every((frame) => frame[0].gapAfter >= -gapOvershoot && frame[0].gapAfter <= groupGeometry.gap + gapOvershoot), 'middle close spring overshoot stays bounded by the token gap');
     assert.equal(closingGroupItem.after[0].gapAfter, 0);
     assert.equal(closingGroupItem.after[1].gapAfter, 0);
     await waitForDisclosureClosed(page, secondGroupPanel);
     assert.ok((await readMetrics(page, secondGroupPanel)).height <= 0.5);
+
+    await page.locator(firstGroupTrigger).click();
+    await page.waitForFunction(() => {
+      const content = document.querySelector('[data-motion-id="group-first"] .muxui-disclosure-motion-content');
+      const opacity = Number.parseFloat(getComputedStyle(content).opacity);
+      return opacity > 0 && opacity < 1;
+    }, undefined, { timeout: 1800 });
+    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
+    await page.waitForFunction(() => {
+      const row = document.querySelector('[data-motion-id="group-first"]');
+      const content = row?.querySelector('.muxui-disclosure-motion-content');
+      const panel = row?.querySelector('.muxui-disclosure-motion-panel');
+      return row?.getAttribute('data-expanded') === 'true'
+        && Number.parseFloat(getComputedStyle(content).opacity) === 1
+        && panel?.style.height === ''
+        && panel.getBoundingClientRect().height > 0;
+    }, undefined, { timeout: 500 });
+    assert.equal(await page.locator('[data-motion-id="group-first"] .muxui-disclosure-motion-content').evaluate((node) => Number.parseFloat(getComputedStyle(node).opacity)), 1, 'reduced motion snaps an in-flight grouped fade to readable content');
+    await page.locator(firstGroupTrigger).click();
+    await waitForDisclosureClosed(page, firstGroupPanel);
+    await page.evaluate(() => document.documentElement.removeAttribute('data-reduced-motion'));
+
+    const group = page.locator('[data-motion-id="disclosure-group"]');
+    await group.evaluate((node) => {
+      node.style.setProperty('--muxui-component-disclosuregroup-transition-duration', '0ms');
+      node.style.setProperty('--muxui-component-disclosuregroup-transition-spring-visual-duration', '0ms');
+      node.style.setProperty('--muxui-component-disclosuregroup-transition-spring-duration', '0ms');
+      node.style.setProperty('--muxui-component-disclosuregroup-transition-spring-easing', 'linear');
+    });
+    const zeroDurationOpen = await captureDisclosureGroupMotion(page, firstGroupTrigger, 100);
+    assert.ok(zeroDurationOpen.after[0].panelHeight > 0, 'zero component duration opens panel height immediately');
+    assert.equal(zeroDurationOpen.after[0].contentOpacity, 1, 'zero component duration does not leave new content invisible during the reveal');
+    assert.ok(zeroDurationOpen.frames.every((frame) => Math.abs(frame[0].contentOpacity - 1) < 0.001), 'zero component duration skips the grouped opacity fade');
+    await waitForDisclosureOpen(page, firstGroupPanel);
+    const zeroDurationClose = await captureDisclosureGroupMotion(page, firstGroupTrigger, 100);
+    assert.ok(zeroDurationClose.after[0].panelHeight <= 0.5, 'zero component duration closes panel height immediately');
+    assert.equal(zeroDurationClose.after[0].contentOpacity, 0, 'zero component duration settles closed content immediately');
+    await waitForDisclosureClosed(page, firstGroupPanel);
+
+    await group.evaluate((node) => {
+      node.style.removeProperty('--muxui-component-disclosuregroup-transition-duration');
+      node.style.removeProperty('--muxui-component-disclosuregroup-transition-spring-visual-duration');
+      node.style.removeProperty('--muxui-component-disclosuregroup-transition-spring-duration');
+      node.style.removeProperty('--muxui-component-disclosuregroup-transition-spring-easing');
+      node.style.setProperty('--muxui-component-disclosuregroup-transition-spring-bounce', '0');
+    });
+    const bounceFreeOpen = await captureDisclosureGroupMotion(page, firstGroupTrigger);
+    const bounceFreeFrames = [bounceFreeOpen.before[0], ...bounceFreeOpen.frames.map((frame) => frame[0]), bounceFreeOpen.after[0]];
+    assert.ok(bounceFreeFrames.every((frame, index) => index === 0 || frame.panelHeight >= bounceFreeFrames[index - 1].panelHeight - 0.5), 'zero-bounce theme keeps grouped panel height monotonic');
+    assert.ok(bounceFreeFrames.every((frame, index) => index === 0 || frame.iconAngle >= bounceFreeFrames[index - 1].iconAngle - 1), `zero-bounce theme keeps grouped chevron monotonic: ${bounceFreeFrames.map((frame) => frame.iconAngle).join(',')}`);
+    await waitForDisclosureOpen(page, firstGroupPanel);
 
     await page.waitForFunction(() => typeof window.__interactionToastAdd === 'function');
     await page.evaluate(() => {
@@ -857,6 +927,7 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await first.click();
     await waitForDisclosureClosed(page, firstPanel);
+    assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`)).opacity, 0);
     await first.click();
     await waitForDisclosureOpen(page, firstPanel);
     assert.equal((await readMetrics(page, `${firstPanel} > .muxui-disclosure-motion-content`)).transform, 'none');

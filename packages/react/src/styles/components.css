@@ -1438,7 +1438,7 @@
   margin-block: 0;
   border: 0;
   border-radius: 0;
-  background-color: color-mix(in srgb, var(--muxui-semantic-action-neutral-background) 50%, transparent);
+  background-color: var(--muxui-component-disclosuregroup-background);
   transition:
     margin-block-start var(--muxui-component-disclosuregroup-transition-spring-duration) var(--muxui-component-disclosuregroup-transition-spring-easing),
     border-radius var(--muxui-component-disclosuregroup-transition-spring-duration) var(--muxui-component-disclosuregroup-transition-spring-easing);
@@ -1519,6 +1519,10 @@
   flex: 0 0 auto;
   color: var(--muxui-semantic-color-neutral-default-50);
   transform: rotate(0deg);
+  --muxui-semantic-motion-content-resize-transition-duration: var(--muxui-component-disclosuregroup-transition-duration);
+  --muxui-semantic-motion-content-resize-transition-easing: var(--muxui-component-disclosuregroup-transition-easing);
+  --muxui-semantic-motion-content-resize-transition-spring-visual-duration: var(--muxui-component-disclosuregroup-transition-spring-visual-duration);
+  --muxui-semantic-motion-content-resize-transition-spring-bounce: var(--muxui-component-disclosuregroup-transition-spring-bounce);
 }
 
 .muxui-disclosure-group > .muxui-disclosure[data-expanded] > .muxui-disclosure-header > .muxui-disclosure-trigger > .muxui-disclosure-trigger-icon {

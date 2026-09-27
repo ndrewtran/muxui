@@ -301,6 +301,20 @@ async function waitForDocumentAnimations(page) {
     });
     await new Promise((resolveFrame) => requestAnimationFrame(resolveFrame));
   });
+  // Motion's imperative spring runner is not listed by document.getAnimations().
+  // Reduced motion settles grouped disclosure content in its own layout effects.
+  await page.waitForFunction(() => [...document.querySelectorAll('.muxui-disclosure-group > .muxui-disclosure')].every((row) => {
+    const content = row.querySelector('.muxui-disclosure-motion-content');
+    const panel = row.querySelector('.muxui-disclosure-motion-panel');
+    if (!content || !panel) return false;
+    const expanded = row.hasAttribute('data-expanded');
+    const style = getComputedStyle(content);
+    const opacity = Number.parseFloat(style.opacity);
+    const height = panel.getBoundingClientRect().height;
+    return Math.abs(opacity - (expanded ? 1 : 0)) < 0.001
+      && style.transform === 'none'
+      && (expanded ? height > 0 : height < 0.5);
+  }), undefined, { timeout: storyTimeoutMs });
 }
 
 async function waitForLifecycleReadiness(page) {

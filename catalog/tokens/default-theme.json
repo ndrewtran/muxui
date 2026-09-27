@@ -2235,13 +2235,26 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-2xl"
     },
+    "component.disclosuregroup.background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Subtle surface behind grouped disclosure rows.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.action.neutral-background",
+        "color": "#00000000",
+        "weight": 0.5
+      }
+    },
     "component.disclosuregroup.motion-duration": {
       "layer": "component",
       "type": "duration",
       "unit": "ms",
-      "meaning": "Duration of grouped disclosure height and spacing changes.",
+      "meaning": "Base visual duration used by the grouped disclosure spring choreography.",
       "overridePolicy": "theme",
-      "alias": "reference.motion.duration-slow",
+      "value": 268,
       "modes": {
         "motion.reduced": {
           "alias": "reference.motion.duration-instant"
@@ -2252,7 +2265,7 @@
       "layer": "component",
       "type": "transition",
       "unit": "structured",
-      "meaning": "Coordinated zero-bounce height, spacing, and corner transition for grouped disclosures.",
+      "meaning": "Coordinated spring height, spacing, and corner transition for grouped disclosures.",
       "overridePolicy": "theme",
       "value": {
         "kind": "transition",
@@ -2261,7 +2274,7 @@
         "spring": {
           "kind": "time",
           "visualDuration": "component.disclosuregroup.motion-duration",
-          "bounce": 0
+          "bounce": 0.38
         }
       }
     },
