@@ -10,6 +10,7 @@ import { chromium } from 'playwright-core';
 import test from 'node:test';
 import manifest from '../.storybook/generated/manifest.mjs';
 import { selectedStorybookFamilies, storybookSelectionLabel } from './storybook-family-selection.mjs';
+import { resolveStorybookPageSelection, validateRuntimeStoryPages } from './storybook-page-selection.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
 const host = '127.0.0.1';
@@ -19,6 +20,12 @@ const testTimeoutMs = 420_000;
 // The full gate covers every family in both schemes plus interaction, lifecycle,
 // platform-mode, and Button-matrix proofs on a single CI worker.
 const fullAuditTimeoutMs = 600_000;
+
+function pageScopedAuditTimeout() {
+  const { proof, pages } = resolveStorybookPageSelection();
+  if (!['story', 'component', 'theme'].includes(proof)) return fullAuditTimeoutMs;
+  return Math.min(fullAuditTimeoutMs, 120_000 + pages.length * 6_000);
+}
 
 function heavyAuditSkip(name) {
   const isPullRequestSelection = process.env.MUXUI_STORYBOOK_AUDIT_EVENT === 'pull_request';
@@ -306,8 +313,8 @@ async function waitForLifecycleReadiness(page) {
   }, undefined, { timeout: storyTimeoutMs });
 }
 
-async function runAxe(page, contextSelector) {
-  return page.evaluate(async (contextSelector) => {
+async function runAxe(page, contextSelector, options) {
+  return page.evaluate(async ({ contextSelector, options }) => {
     const deadline = performance.now() + 5_000;
     while (window.axe._running) {
       if (performance.now() >= deadline) throw new Error('Axe did not become idle before evaluation');
@@ -315,8 +322,8 @@ async function runAxe(page, contextSelector) {
     }
     const context = contextSelector ? document.querySelector(contextSelector) : document.body;
     if (!context) throw new Error(`Axe context did not resolve: ${contextSelector}`);
-    return window.axe.run(context);
-  }, contextSelector);
+    return window.axe.run(context, options);
+  }, { contextSelector, options });
 }
 
 async function waitForInteractionOpen(page, family) {
@@ -653,7 +660,17 @@ test('audit cleanup closes a browser acquired after timeout exactly once', async
   assert.equal(closeCount, 1);
 });
 
-test('NumberField sizing story computes fit-content, 12rem, and full container widths', { timeout: testTimeoutMs }, async (t) => {
+test('NumberField sizing story computes fit-content, 12rem, and full container widths', {
+  timeout: testTimeoutMs,
+  skip: (() => {
+    const selection = resolveStorybookPageSelection();
+    if (selection.proof === 'full') return false;
+    if (!['story', 'component'].includes(selection.proof)) return `not part of ${selection.proof} proof`;
+    return selection.pages.some(({ family, name }) => family === 'NumberField' && name === 'Sizing')
+      ? false
+      : 'NumberField sizing page is outside the selected Storybook pages';
+  })(),
+}, async (t) => {
   const resources = createAuditResources(t.signal);
   try {
     throwIfAborted(t.signal);
@@ -831,6 +848,334 @@ async function runA11yWorker({
     }
   }
 }
+
+async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, signal, onProgress }) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  page.setDefaultNavigationTimeout(storyTimeoutMs);
+  page.setDefaultTimeout(storyTimeoutMs);
+  const coverage = [];
+  try {
+    for (const scheme of schemes) {
+      for (const story of stories) {
+        throwIfAborted(signal);
+        const family = storyFamily(story);
+        onProgress?.(`${scheme} ${family}/${story.name}`);
+        if (story.exportName === 'BrowserProof') {
+          await waitForBrowserProof(page, story, baseUrl, scheme);
+          coverage.push(`${scheme}:browser-proof:${story.id}`);
+        } else if (story.name === 'Disabled items keyboard navigation') {
+          await assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme);
+          coverage.push(`${scheme}:autocomplete-keyboard:${story.id}`);
+        } else if (story.name === 'Variant × size') {
+          await assertButtonMatrix(page, baseUrl, story, scheme);
+          coverage.push(`${scheme}:button-matrix:${story.id}`);
+        }
+
+        const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+        await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+        await waitForStory(page, scheme);
+        await waitForDocumentAnimations(page);
+        if (story.name === 'States') await waitForLifecycleReadiness(page);
+        await page.addScriptTag({ content: axe.source });
+
+        const interactionOpen = story.name === 'States' && INTERACTION_OPEN_LOCATORS[family];
+        if (interactionOpen) {
+          await waitForInteractionOpen(page, family);
+          await waitForDocumentAnimations(page);
+          const portalResult = await runAxe(page, `${interactionOpen.overlay}:not([hidden])`);
+          assert.equal(
+            portalResult.violations.length,
+            0,
+            `${scheme} ${story.id} open portal has axe violations:\n${formatViolations(portalResult.violations)}`,
+          );
+          coverage.push(`${scheme}:open-portal:${story.id}`);
+          const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
+          if (!controlledOpen) {
+            await focusInteractionOverlayForDismissal(page, family);
+            await page.keyboard.press('Escape');
+            await waitForInteractionClosed(page, family);
+          }
+        }
+
+        const result = await runAxe(page);
+        assert.equal(
+          result.violations.length,
+          0,
+          `${scheme} ${story.id} (${family}) has axe violations:\n${formatViolations(result.violations)}`,
+        );
+        coverage.push(`${scheme}:axe:${story.id}`);
+        if (story.name === 'States' && family === 'Dialog') {
+          await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
+          coverage.push(`${scheme}:dialog-state-dismissal:${story.id}`);
+        }
+      }
+    }
+    return coverage;
+  } finally {
+    try {
+      await context.close();
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
+  }
+}
+
+function expectedSelectedPageCoverage(stories, schemes) {
+  return schemes.flatMap((scheme) => stories.flatMap((story) => [
+    `${scheme}:axe:${story.id}`,
+    ...(story.exportName === 'BrowserProof' ? [`${scheme}:browser-proof:${story.id}`] : []),
+    ...(story.name === 'Disabled items keyboard navigation' ? [`${scheme}:autocomplete-keyboard:${story.id}`] : []),
+    ...(story.name === 'Variant × size' ? [`${scheme}:button-matrix:${story.id}`] : []),
+    ...(story.name === 'States' && INTERACTION_OPEN_LOCATORS[storyFamily(story)] ? [`${scheme}:open-portal:${story.id}`] : []),
+    ...(story.name === 'States' && storyFamily(story) === 'Dialog' ? [`${scheme}:dialog-state-dismissal:${story.id}`] : []),
+  ])).sort();
+}
+
+test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
+  timeout: pageScopedAuditTimeout(),
+  skip: (() => {
+    const { proof } = resolveStorybookPageSelection();
+    return ['story', 'component'].includes(proof) ? false : `not part of ${proof} proof`;
+  })(),
+}, async (t) => {
+  const selection = resolveStorybookPageSelection();
+  const resources = createAuditResources(t.signal);
+  const startedAt = performance.now();
+  let activeProof = 'browser discovery';
+  const reportAbort = () => {
+    t.diagnostic(`[storybook-a11y] aborted after ${Math.round(performance.now() - startedAt)}ms during ${activeProof}`);
+  };
+  t.signal.addEventListener('abort', reportAbort, { once: true });
+  let successMessage;
+
+  try {
+    throwIfAborted(t.signal);
+    assert.ok(selection.pages.length > 0, 'selected Storybook a11y proof must include at least one page');
+    const executablePath = await findBrowser();
+    throwIfAborted(t.signal);
+    assert.ok(executablePath, 'Chrome or Chromium is required for the Storybook a11y gate (set MUXUI_CHROME_EXECUTABLE to override)');
+
+    const preferredPort = configuredPort();
+    let port;
+    try {
+      port = await reservePort(preferredPort);
+    } catch (error) {
+      if (preferredPort === undefined) throw error;
+      port = await reservePort(undefined);
+    }
+    throwIfAborted(t.signal);
+
+    activeProof = 'Storybook startup';
+    const started = await startStorybook(port, t.signal);
+    await resources.trackStorybook(started.child);
+    throwIfAborted(t.signal);
+    const baseUrl = started.baseUrl;
+    activeProof = 'reading Storybook index';
+    const index = await fetch(`${baseUrl}/index.json`, {
+      signal: AbortSignal.any([AbortSignal.timeout(10_000), t.signal]),
+    }).then(async (response) => {
+      assert.ok(response.ok, `Storybook index request failed with HTTP ${response.status}`);
+      return response.json();
+    });
+    throwIfAborted(t.signal);
+    const stories = validateRuntimeStoryPages(selection, index);
+    assert.equal(stories.length, selection.pages.length, 'runtime Storybook pages must exactly match the selected page IDs');
+
+    activeProof = 'launching Chrome';
+    const browser = await chromium.launch({ executablePath, headless: true });
+    await resources.trackBrowser(browser);
+    throwIfAborted(t.signal);
+    const workerTotal = workerCount('MUXUI_STORYBOOK_A11Y_WORKERS');
+    const workerSchemes = workerTotal === 1 ? [['light', 'dark']] : [['light'], ['dark']];
+    activeProof = 'selected page a11y workers';
+    const workerResults = await Promise.allSettled(workerSchemes.map((schemes) => runSelectedPageA11yWorker({
+      browser,
+      baseUrl,
+      stories,
+      schemes,
+      signal: t.signal,
+      onProgress: (message) => { activeProof = message; },
+    })));
+    throwIfAborted(t.signal);
+    const workerErrors = workerResults.filter(({ status }) => status === 'rejected');
+    if (workerErrors.length > 0) {
+      throw new AggregateError(
+        workerErrors.map(({ reason }) => reason),
+        `${workerErrors.length} selected Storybook page a11y worker(s) failed`,
+      );
+    }
+    const actualCoverage = workerResults.flatMap(({ value }) => value).sort();
+    const expectedCoverage = expectedSelectedPageCoverage(stories, workerSchemes.flat());
+    assert.deepEqual(actualCoverage, expectedCoverage, 'selected Storybook page coverage must account for every page, scheme, and applicable proof');
+
+    const buttonStates = stories.find((story) => story.name === 'States' && storyFamily(story) === 'Button');
+    const checkboxStates = stories.find((story) => story.name === 'States' && storyFamily(story) === 'Checkbox');
+    if (buttonStates || checkboxStates) {
+      activeProof = 'selected platform-mode coverage';
+      const platformContext = await browser.newContext();
+      const platformPage = await platformContext.newPage();
+      platformPage.setDefaultNavigationTimeout(storyTimeoutMs);
+      platformPage.setDefaultTimeout(storyTimeoutMs);
+      try {
+        await assertPlatformModeCoverage(platformPage, baseUrl, buttonStates ?? checkboxStates, checkboxStates);
+      } finally {
+        try {
+          await platformContext.close();
+        } catch (error) {
+          if (!t.signal.aborted) throw error;
+        }
+      }
+    }
+    throwIfAborted(t.signal);
+    successMessage = `partial ${selection.proof} proof: ${selection.label} (${stories.length} pages, light+dark, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
+  } finally {
+    activeProof = 'cleanup';
+    try {
+      await resources.close();
+    } finally {
+      t.signal.removeEventListener('abort', reportAbort);
+    }
+  }
+  throwIfAborted(t.signal);
+  console.log(`[storybook-a11y] ${successMessage}, ${Math.round(performance.now() - startedAt)}ms)`);
+});
+
+async function runThemeContrastWorker({ browser, baseUrl, stories, schemes, signal, onProgress }) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  page.setDefaultNavigationTimeout(storyTimeoutMs);
+  page.setDefaultTimeout(storyTimeoutMs);
+  const coverage = [];
+  try {
+    for (const scheme of schemes) {
+      for (const story of stories) {
+        throwIfAborted(signal);
+        const family = storyFamily(story);
+        onProgress?.(`${scheme} ${family}/${story.name} contrast`);
+        const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+        await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+        await waitForStory(page, scheme);
+        await waitForDocumentAnimations(page);
+        if (story.name === 'States') {
+          await waitForLifecycleReadiness(page);
+          if (INTERACTION_OPEN_LOCATORS[family]) {
+            await waitForInteractionOpen(page, family);
+            await waitForDocumentAnimations(page);
+          }
+        }
+        await page.addScriptTag({ content: axe.source });
+        const result = await runAxe(page, undefined, {
+          runOnly: { type: 'rule', values: ['color-contrast'] },
+        });
+        assert.equal(
+          result.violations.length,
+          0,
+          `${scheme} ${story.id} (${family}) has colour contrast violations:\n${formatViolations(result.violations)}`,
+        );
+        coverage.push(`${scheme}:${story.id}:color-contrast`);
+      }
+    }
+    return coverage;
+  } finally {
+    try {
+      await context.close();
+    } catch (error) {
+      if (!signal.aborted) throw error;
+    }
+  }
+}
+
+test('all selected Storybook pages meet theme contrast in light and dark', {
+  timeout: pageScopedAuditTimeout(),
+  skip: (() => {
+    const { proof } = resolveStorybookPageSelection();
+    return proof === 'theme' ? false : `not part of ${proof} proof`;
+  })(),
+}, async (t) => {
+  const selection = resolveStorybookPageSelection();
+  const resources = createAuditResources(t.signal);
+  const startedAt = performance.now();
+  let activeProof = 'browser discovery';
+  const reportAbort = () => {
+    t.diagnostic(`[storybook-theme-contrast] aborted after ${Math.round(performance.now() - startedAt)}ms during ${activeProof}`);
+  };
+  t.signal.addEventListener('abort', reportAbort, { once: true });
+  let successMessage;
+
+  try {
+    throwIfAborted(t.signal);
+    assert.ok(selection.pages.length > 0, 'theme contrast proof must include at least one consumer page');
+    assert.ok(selection.pages.every(({ exportName }) => exportName !== 'BrowserProof'), 'theme contrast proof excludes behavior-only BrowserProof stories');
+    const executablePath = await findBrowser();
+    throwIfAborted(t.signal);
+    assert.ok(executablePath, 'Chrome or Chromium is required for the Storybook theme contrast gate (set MUXUI_CHROME_EXECUTABLE to override)');
+
+    const preferredPort = configuredPort();
+    let port;
+    try {
+      port = await reservePort(preferredPort);
+    } catch (error) {
+      if (preferredPort === undefined) throw error;
+      port = await reservePort(undefined);
+    }
+    throwIfAborted(t.signal);
+
+    activeProof = 'Storybook startup';
+    const started = await startStorybook(port, t.signal);
+    await resources.trackStorybook(started.child);
+    throwIfAborted(t.signal);
+    const baseUrl = started.baseUrl;
+    activeProof = 'reading Storybook index';
+    const index = await fetch(`${baseUrl}/index.json`, {
+      signal: AbortSignal.any([AbortSignal.timeout(10_000), t.signal]),
+    }).then(async (response) => {
+      assert.ok(response.ok, `Storybook index request failed with HTTP ${response.status}`);
+      return response.json();
+    });
+    throwIfAborted(t.signal);
+    const stories = validateRuntimeStoryPages(selection, index);
+    assert.equal(stories.length, selection.pages.length, 'runtime Storybook pages must exactly match the selected theme IDs');
+
+    activeProof = 'launching Chrome';
+    const browser = await chromium.launch({ executablePath, headless: true });
+    await resources.trackBrowser(browser);
+    throwIfAborted(t.signal);
+    const workerTotal = workerCount('MUXUI_STORYBOOK_A11Y_WORKERS');
+    const workerSchemes = workerTotal === 1 ? [['light', 'dark']] : [['light'], ['dark']];
+    activeProof = 'theme contrast workers';
+    const workerResults = await Promise.allSettled(workerSchemes.map((schemes) => runThemeContrastWorker({
+      browser,
+      baseUrl,
+      stories,
+      schemes,
+      signal: t.signal,
+      onProgress: (message) => { activeProof = message; },
+    })));
+    throwIfAborted(t.signal);
+    const workerErrors = workerResults.filter(({ status }) => status === 'rejected');
+    if (workerErrors.length > 0) {
+      throw new AggregateError(
+        workerErrors.map(({ reason }) => reason),
+        `${workerErrors.length} Storybook theme contrast worker(s) failed`,
+      );
+    }
+    const actualCoverage = workerResults.flatMap(({ value }) => value).sort();
+    const expectedCoverage = ['light', 'dark'].flatMap((scheme) => stories.map(({ id }) => `${scheme}:${id}:color-contrast`)).sort();
+    assert.deepEqual(actualCoverage, expectedCoverage, 'theme contrast coverage must include every selected consumer page and scheme');
+    throwIfAborted(t.signal);
+    successMessage = `partial theme proof: ${selection.label} (${stories.length} pages, both schemes, ${workerTotal} worker${workerTotal === 1 ? '' : 's'}`;
+  } finally {
+    activeProof = 'cleanup';
+    try {
+      await resources.close();
+    } finally {
+      t.signal.removeEventListener('abort', reportAbort);
+    }
+  }
+  throwIfAborted(t.signal);
+  console.log(`[storybook-theme-contrast] ${successMessage}, ${Math.round(performance.now() - startedAt)}ms)`);
+});
 
 test('all Mux UI React Storybook families are axe-clean in light and dark', {
   timeout: fullAuditTimeoutMs,

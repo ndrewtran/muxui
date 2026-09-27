@@ -235,6 +235,7 @@ export function familyRecordsFromContract(contract, bindings = []) {
     name: record.name,
     slug: record.slug ?? String(record.family ?? record.export).replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase(),
     source: record.source,
+    parts: record.parts ?? record.api?.parts ?? [],
   })).filter(({ family, slug }) => family && slug);
 }
 

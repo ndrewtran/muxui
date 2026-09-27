@@ -370,6 +370,12 @@ importers:
       '@muxui/tooling':
         specifier: workspace:*
         version: link:../../../packages/tooling
+      acorn:
+        specifier: 8.18.0
+        version: 8.18.0
+      css-tree:
+        specifier: 3.2.1
+        version: 3.2.1
 
 packages:
 

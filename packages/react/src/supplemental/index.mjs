@@ -783,6 +783,7 @@ function AnimatedTagChip({ item, index, active, size, disabled, label, tagButton
     inert: active ? undefined : true,
   }, h('span', { className: 'muxui-tag-select__tag-text' }, label), h(IconButton, {
     ref: (element) => { if (index >= 0) tagButtonRefs.current[index] = element; },
+    slot: null,
     type: 'button',
     tabIndex: -1,
     className: 'muxui-tag-select__tag-remove',

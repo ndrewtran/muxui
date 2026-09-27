@@ -87,10 +87,12 @@ function environmentFor(plan, options) {
   } else if (plan.focusedComponent) {
     const families = plan.familySelection.join(',');
     environment.MUXUI_COMPONENT_FAMILIES = families;
+    environment.MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE ??= '1';
     environment.MUXUI_STORYBOOK_FAMILIES = plan.storybookFamilySelection.join(',');
     environment.MUXUI_STORYBOOK_AUDIT_MODE = 'focused';
     environment.MUXUI_STORYBOOK_AUDIT_EVENT = 'component';
     environment.MUXUI_STORYBOOK_AUDIT_FORCE = '0';
+    environment.MUXUI_STORYBOOK_AUDIT_PROOF ??= 'component';
     environment.MUXUI_STORYBOOK_AUDIT_REASON = `component scope selected ${families}`;
   }
   return environment;
@@ -123,7 +125,7 @@ function focusedCheckCommands(plan) {
   if (plan.checkPackages.some(({ name }) => name === '@muxui/react-storybook')) {
     commands.push({
       command: 'pnpm',
-      args: ['--filter', '@muxui/react-storybook', 'run', 'check:component'],
+      args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
       label: '@muxui/react-storybook selected-family audits',
     });
   }

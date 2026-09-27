@@ -160,6 +160,65 @@
       "release"
     ]
   },
+  "pullRequestImpact": {
+    "schemaVersion": 1,
+    "fullInputPaths": [
+      ".node-version",
+      ".npmrc",
+      "pnpm-workspace.yaml"
+    ],
+    "policyPrefixes": [
+      ".agents/",
+      ".github/",
+      "AGENTS.md",
+      "decisions/",
+      "strategy/",
+      "tooling/AGENTS.md",
+      "tooling/audits/repository-policy/"
+    ],
+    "themePrefixes": [
+      "catalog/tokens/",
+      "packages/foundation/",
+      "packages/tokens/"
+    ],
+    "documentationPrefixes": [
+      "apps/docs/"
+    ],
+    "reactStylePrefixes": [
+      "packages/react/src/styles/",
+      "packages/react/src/supplemental/styles.css"
+    ],
+    "tailwindRelevantPrefixes": [
+      "catalog/tokens/",
+      "packages/react/src/styles/",
+      "packages/react/src/supplemental/",
+      "packages/tokens/",
+      "tests/fixtures/tailwind-consumer/"
+    ],
+    "tailwindRelevantPaths": [
+      "packages/react/package.json",
+      "packages/tokens/package.json"
+    ],
+    "reactStorybookPath": "apps/react-storybook/",
+    "reactStorybookSharedPaths": [
+      "apps/react-storybook/src/storybook-factory.mjs",
+      "apps/react-storybook/.storybook/preview.mjs"
+    ],
+    "reactStorybookGeneratorPaths": [
+      "apps/react-storybook/src/generate-stories.mjs"
+    ],
+    "reactStorybookSelectionPaths": [
+      "apps/react-storybook/src/check-scoped.mjs",
+      "apps/react-storybook/test/storybook-page-selection.mjs",
+      "apps/react-storybook/test/storybook-page-selection.test.mjs",
+      "apps/react-storybook/test/storybook-family-selection.mjs",
+      "apps/react-storybook/test/storybook-family-selection.test.mjs"
+    ],
+    "reactStorybookChromePaths": [
+      "apps/react-storybook/src/storybook-theme.mjs",
+      "apps/react-storybook/.storybook/theme.mjs"
+    ]
+  },
   "dependencyPreparation": {
     "argvTemplate": [
       "pnpm",
