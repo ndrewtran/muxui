@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -180,6 +181,9 @@ export async function validateGeneratedFile(repositoryRoot, repositoryPath, poli
 
 export async function walkFiles(root, current = root) {
   const entries = await readdir(current, { withFileTypes: true });
+  // A nested directory with its own .git (e.g. an agent worktree) is a
+  // separate checkout, not part of this repository.
+  if (current !== root && entries.some(({ name }) => name === '.git')) return [];
   const files = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (isIgnoredRepositoryEntry(entry.name)) continue;
@@ -191,6 +195,29 @@ export async function walkFiles(root, current = root) {
     }
   }
   return files;
+}
+
+// Narrows walked files to repository content (tracked plus untracked but not
+// ignored), so ignored local evidence never fails the identity scan. Roots
+// outside a repository, such as test fixtures, keep every walked file.
+export function repositoryVisibleFiles(repositoryRoot, files) {
+  const result = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) return files;
+  const visible = new Set(result.stdout.split('\0').filter(Boolean).map(normalizePath));
+  return files.filter((path) => visible.has(path));
+}
+
+// Mirrors a clean CI checkout after generation: visible projections plus the
+// ignored `generated/` outputs that generation creates. Other ignored local
+// build output (dist/, build/, coverage/) cannot carry markers and is skipped.
+export function projectionFilesToValidate(files, visibleFiles, policy) {
+  const visible = new Set(visibleFiles);
+  return files.filter((path) => classifyPath(path, policy) === 'projection'
+    && (visible.has(path) || path.split('/').includes('generated')));
 }
 
 function isAllowlistedIdentityPath(path, allowlistedPaths) {
@@ -346,8 +373,9 @@ export async function auditRepository(repositoryRoot) {
   await auditRootContract(resolvedRoot, policy);
 
   const files = await walkFiles(resolvedRoot);
-  const identity = await auditCurrentIdentity(resolvedRoot, policy, files);
-  const generatedFiles = files.filter((path) => classifyPath(path, policy) === 'projection');
+  const visibleFiles = repositoryVisibleFiles(resolvedRoot, files);
+  const identity = await auditCurrentIdentity(resolvedRoot, policy, visibleFiles);
+  const generatedFiles = projectionFilesToValidate(files, visibleFiles, policy);
   for (const path of generatedFiles) {
     await validateGeneratedFile(resolvedRoot, path, policy);
   }

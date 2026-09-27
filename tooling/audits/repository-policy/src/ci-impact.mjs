@@ -544,6 +544,9 @@ function storybookUnitRoute(path) {
   if (file === 'test/storybook-colors-report.mjs' || file === 'test/storybook-colors-report.test.mjs') {
     return { file: 'test/storybook-colors-report.test.mjs' };
   }
+  if (file === 'test/storybook-audit-failures.mjs' || file === 'test/storybook-audit-failures.test.mjs') {
+    return { file: 'test/storybook-audit-failures.test.mjs' };
+  }
   if (file === 'test/storybook.test.mjs') {
     return exact('test/storybook.test.mjs', [
       'private host and exact Mux UI React family projection',
@@ -1027,11 +1030,14 @@ export function normalizeCommand(command) {
     args: command.args,
     env: command.env ?? {},
     unsetEnv: command.unsetEnv ?? [],
+    // Prerequisites (install/generation) stop the run on failure because later
+    // results would be meaningless; every other command is a collect-all check.
+    ...(command.prerequisite ? { prerequisite: true } : {}),
   };
 }
 
-function pnpmCommand(args, { env = {}, unsetEnv = [] } = {}) {
-  return normalizeCommand({ command: 'pnpm', args, env, unsetEnv });
+function pnpmCommand(args, { env = {}, unsetEnv = [], prerequisite = false } = {}) {
+  return normalizeCommand({ command: 'pnpm', args, env, unsetEnv, prerequisite });
 }
 
 function storyProofEnvironment(storyRun, environment) {
@@ -1058,7 +1064,7 @@ export function executionCommands(plan, {
     add(['check:all']);
     add(['--filter', '@muxui/scale', 'run', 'check:browser']);
     add(['--filter', '@muxui/react', 'run', 'check:browser']);
-    add(['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile']);
+    add(['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
     add(['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
     add(['generate:check']);
     return commands;
@@ -1075,7 +1081,7 @@ export function executionCommands(plan, {
     const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present'];
     for (const name of generationPackages) args.push('--filter', name);
     args.push('run', 'generate');
-    add(args);
+    add(args, { prerequisite: true });
   }
 
   if (plan.policy) add(['--filter', '@muxui/repository-policy', 'run', 'check']);
@@ -1132,7 +1138,7 @@ export function executionCommands(plan, {
     });
   }
   if (plan.tailwind) {
-    add(['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile']);
+    add(['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
     add(['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
   }
   return commands;
@@ -1149,16 +1155,39 @@ export function executeCommand(command, {
   Object.assign(env, normalized.env);
   const result = spawn(normalized.command, normalized.args, { cwd, stdio: 'inherit', env });
   if (result.error) throw result.error;
-  if (result.status !== 0) process.exit(result.status ?? 1);
-  return result.status;
+  return result.status ?? 1;
 }
 
-async function execute(commands, commandRunner = executeCommand) {
-  for (const command of commands) {
-    console.log(`[ci-impact] command: ${[command.command, ...command.args].join(' ')}`);
-    if (Object.keys(command.env).length > 0) console.log(`[ci-impact] command env: ${JSON.stringify(command.env)}`);
-    commandRunner(command);
+const commandLine = (command) => [command.command, ...command.args].join(' ');
+
+// Runs every check and reports all failures at the end; a failed prerequisite
+// stops immediately. Exits with the first failure's status when anything failed.
+export function executeCommands(commands, {
+  commandRunner = executeCommand,
+  log = console.log,
+  logError = console.error,
+  exit = process.exit,
+} = {}) {
+  const failures = [];
+  const finish = () => {
+    if (failures.length === 0) return failures;
+    logError(`[ci-impact] ${failures.length} of ${commands.length} command(s) failed:`);
+    for (const { command, status } of failures) logError(`[ci-impact]   exit ${status}: ${commandLine(command)}`);
+    exit(failures[0].status);
+    return failures;
+  };
+  for (const [index, command] of commands.map(normalizeCommand).entries()) {
+    log(`[ci-impact] command: ${commandLine(command)}`);
+    if (Object.keys(command.env).length > 0) log(`[ci-impact] command env: ${JSON.stringify(command.env)}`);
+    const status = commandRunner(command);
+    if (status === 0) continue;
+    failures.push({ command, status });
+    if (command.prerequisite) {
+      logError(`[ci-impact] prerequisite failed; skipping the remaining ${commands.length - index - 1} command(s)`);
+      return finish();
+    }
   }
+  return finish();
 }
 
 function storybookGenerationCommand() {
@@ -1182,7 +1211,11 @@ export async function prepareStorybookMetadata({
     throw new Error('MUXUI_CI_IMPACT_METADATA_MISSING: run the scoped React/Storybook generation prerequisite before dry-run planning');
   }
   log('[ci-impact] metadata preparation: generate the React contract and Storybook page index required by this owner scope');
-  commandRunner(storybookGenerationCommand());
+  const status = commandRunner(storybookGenerationCommand());
+  if (status !== 0) {
+    console.error(`[ci-impact] metadata preparation failed with exit ${status}; skipping all checks`);
+    process.exit(status);
+  }
   return true;
 }
 
@@ -1288,7 +1321,7 @@ export async function runCiImpact({ preview = false, includeWorktree = false, en
   if (preview) {
     console.log('[ci-impact] preview complete; no checks executed');
   } else {
-    await execute(commands);
+    executeCommands(commands);
   }
   return report;
 }

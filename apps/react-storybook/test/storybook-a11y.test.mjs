@@ -9,6 +9,7 @@ import axe from 'axe-core';
 import { chromium } from 'playwright-core';
 import test from 'node:test';
 import manifest from '../.storybook/generated/manifest.mjs';
+import { assertNoPageFailures, recordPageFailure } from './storybook-audit-failures.mjs';
 import { selectedStorybookFamilies, storybookSelectionLabel } from './storybook-family-selection.mjs';
 import { resolveStorybookPageSelection, validateRuntimeStoryPages } from './storybook-page-selection.mjs';
 
@@ -757,6 +758,7 @@ async function runA11yWorker({
   schemes,
   signal,
   onProgress,
+  failures,
 }) {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -768,12 +770,20 @@ async function runA11yWorker({
       throwIfAborted(signal);
       onProgress?.(`${scheme} interaction and matrix proof`);
       if (autocompleteInteraction) {
-        await assertDisabledAutocompleteKeyboard(page, baseUrl, autocompleteInteraction, scheme);
-        coverage.push(`${scheme}:autocomplete-keyboard`);
+        try {
+          await assertDisabledAutocompleteKeyboard(page, baseUrl, autocompleteInteraction, scheme);
+          coverage.push(`${scheme}:autocomplete-keyboard`);
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: autocompleteInteraction.id, family: 'Autocomplete', check: 'keyboard' }, error, { signal });
+        }
       }
       if (buttonMatrix) {
-        await assertButtonMatrix(page, baseUrl, buttonMatrix, scheme);
-        coverage.push(`${scheme}:button-matrix`);
+        try {
+          await assertButtonMatrix(page, baseUrl, buttonMatrix, scheme);
+          coverage.push(`${scheme}:button-matrix`);
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: buttonMatrix.id, family: 'Button', check: 'matrix' }, error, { signal });
+        }
       }
       for (const story of [...defaults, ...states, ...(linkIconComposition ? [linkIconComposition] : [])]) {
         try {
@@ -815,8 +825,11 @@ async function runA11yWorker({
             coverage.push(`${scheme}:dialog-state-dismissal`);
           }
         } catch (error) {
-          if (signal.aborted) throw error;
-          if (error?.name === 'AssertionError') throw error;
+          const failure = { scheme, id: story.id, family: storyFamily(story) };
+          if (signal.aborted || error?.name === 'AssertionError') {
+            recordPageFailure(failures, failure, error, { signal });
+            continue;
+          }
           const diagnostics = await page.evaluate(() => ({
             body: document.body?.innerText?.slice(0, 1_000),
             html: document.documentElement?.outerHTML?.slice(0, 2_000),
@@ -824,20 +837,24 @@ async function runA11yWorker({
             surfaceCount: document.querySelectorAll('.muxui-storybook-surface').length,
             rootChildCount: document.querySelector('#storybook-root')?.childElementCount,
           })).catch(() => ({ body: '', html: '' }));
-          throw new Error(
+          recordPageFailure(failures, failure, new Error(
             `${scheme} ${story.id} (${storyFamily(story)}) failed to render before axe evaluation: ${error.message}\n`
               + `body=${diagnostics.body}\nroot=${diagnostics.root}\n`
               + `surfaceCount=${diagnostics.surfaceCount} rootChildCount=${diagnostics.rootChildCount}\n`
               + `html=${diagnostics.html}`,
             { cause: error },
-          );
+          ), { signal });
         }
       }
       for (const story of browserProofs) {
         throwIfAborted(signal);
         onProgress?.(`${scheme} ${storyFamily(story)} Browser proof`);
-        await waitForBrowserProof(page, story, baseUrl, scheme);
-        coverage.push(`${scheme}:browser-proof:${story.id}`);
+        try {
+          await waitForBrowserProof(page, story, baseUrl, scheme);
+          coverage.push(`${scheme}:browser-proof:${story.id}`);
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: story.id, family: storyFamily(story), check: 'browser proof' }, error, { signal });
+        }
       }
     }
     return coverage;
@@ -850,7 +867,7 @@ async function runA11yWorker({
   }
 }
 
-async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, signal, onProgress }) {
+async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, signal, onProgress, failures }) {
   const context = await browser.newContext();
   const page = await context.newPage();
   page.setDefaultNavigationTimeout(storyTimeoutMs);
@@ -862,53 +879,57 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
         throwIfAborted(signal);
         const family = storyFamily(story);
         onProgress?.(`${scheme} ${family}/${story.name}`);
-        if (story.exportName === 'BrowserProof') {
-          await waitForBrowserProof(page, story, baseUrl, scheme);
-          coverage.push(`${scheme}:browser-proof:${story.id}`);
-        } else if (story.name === 'Disabled items keyboard navigation') {
-          await assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme);
-          coverage.push(`${scheme}:autocomplete-keyboard:${story.id}`);
-        } else if (story.name === 'Variant × size') {
-          await assertButtonMatrix(page, baseUrl, story, scheme);
-          coverage.push(`${scheme}:button-matrix:${story.id}`);
-        }
-
-        const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
-        await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
-        await waitForStory(page, scheme);
-        await waitForDocumentAnimations(page);
-        if (story.name === 'States') await waitForLifecycleReadiness(page);
-        await page.addScriptTag({ content: axe.source });
-
-        const interactionOpen = story.name === 'States' && INTERACTION_OPEN_LOCATORS[family];
-        if (interactionOpen) {
-          await waitForInteractionOpen(page, family);
-          await waitForDocumentAnimations(page);
-          const portalResult = await runAxe(page, `${interactionOpen.overlay}:not([hidden])`);
-          assert.equal(
-            portalResult.violations.length,
-            0,
-            `${scheme} ${story.id} open portal has axe violations:\n${formatViolations(portalResult.violations)}`,
-          );
-          coverage.push(`${scheme}:open-portal:${story.id}`);
-          const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
-          if (!controlledOpen) {
-            await focusInteractionOverlayForDismissal(page, family);
-            await page.keyboard.press('Escape');
-            await waitForInteractionClosed(page, family);
+        try {
+          if (story.exportName === 'BrowserProof') {
+            await waitForBrowserProof(page, story, baseUrl, scheme);
+            coverage.push(`${scheme}:browser-proof:${story.id}`);
+          } else if (story.name === 'Disabled items keyboard navigation') {
+            await assertDisabledAutocompleteKeyboard(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:autocomplete-keyboard:${story.id}`);
+          } else if (story.name === 'Variant × size') {
+            await assertButtonMatrix(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:button-matrix:${story.id}`);
           }
-        }
 
-        const result = await runAxe(page);
-        assert.equal(
-          result.violations.length,
-          0,
-          `${scheme} ${story.id} (${family}) has axe violations:\n${formatViolations(result.violations)}`,
-        );
-        coverage.push(`${scheme}:axe:${story.id}`);
-        if (story.name === 'States' && family === 'Dialog') {
-          await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
-          coverage.push(`${scheme}:dialog-state-dismissal:${story.id}`);
+          const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+          await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+          await waitForStory(page, scheme);
+          await waitForDocumentAnimations(page);
+          if (story.name === 'States') await waitForLifecycleReadiness(page);
+          await page.addScriptTag({ content: axe.source });
+
+          const interactionOpen = story.name === 'States' && INTERACTION_OPEN_LOCATORS[family];
+          if (interactionOpen) {
+            await waitForInteractionOpen(page, family);
+            await waitForDocumentAnimations(page);
+            const portalResult = await runAxe(page, `${interactionOpen.overlay}:not([hidden])`);
+            assert.equal(
+              portalResult.violations.length,
+              0,
+              `${scheme} ${story.id} open portal has axe violations:\n${formatViolations(portalResult.violations)}`,
+            );
+            coverage.push(`${scheme}:open-portal:${story.id}`);
+            const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
+            if (!controlledOpen) {
+              await focusInteractionOverlayForDismissal(page, family);
+              await page.keyboard.press('Escape');
+              await waitForInteractionClosed(page, family);
+            }
+          }
+
+          const result = await runAxe(page);
+          assert.equal(
+            result.violations.length,
+            0,
+            `${scheme} ${story.id} (${family}) has axe violations:\n${formatViolations(result.violations)}`,
+          );
+          coverage.push(`${scheme}:axe:${story.id}`);
+          if (story.name === 'States' && family === 'Dialog') {
+            await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
+            coverage.push(`${scheme}:dialog-state-dismissal:${story.id}`);
+          }
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: story.id, family }, error, { signal });
         }
       }
     }
@@ -990,6 +1011,7 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
     const workerTotal = workerCount('MUXUI_STORYBOOK_A11Y_WORKERS');
     const workerSchemes = workerTotal === 1 ? [['light', 'dark']] : [['light'], ['dark']];
     activeProof = 'selected page a11y workers';
+    const failures = [];
     const workerResults = await Promise.allSettled(workerSchemes.map((schemes) => runSelectedPageA11yWorker({
       browser,
       baseUrl,
@@ -997,6 +1019,7 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
       schemes,
       signal: t.signal,
       onProgress: (message) => { activeProof = message; },
+      failures,
     })));
     throwIfAborted(t.signal);
     const workerErrors = workerResults.filter(({ status }) => status === 'rejected');
@@ -1006,6 +1029,7 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
         `${workerErrors.length} selected Storybook page a11y worker(s) failed`,
       );
     }
+    assertNoPageFailures('selected Storybook page a11y audit', failures);
     const actualCoverage = workerResults.flatMap(({ value }) => value).sort();
     const expectedCoverage = expectedSelectedPageCoverage(stories, workerSchemes.flat());
     assert.deepEqual(actualCoverage, expectedCoverage, 'selected Storybook page coverage must account for every page, scheme, and applicable proof');
@@ -1042,7 +1066,7 @@ test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
   console.log(`[storybook-a11y] ${successMessage}, ${Math.round(performance.now() - startedAt)}ms)`);
 });
 
-async function runThemeContrastWorker({ browser, baseUrl, stories, schemes, signal, onProgress }) {
+async function runThemeContrastWorker({ browser, baseUrl, stories, schemes, signal, onProgress, failures }) {
   const context = await browser.newContext();
   const page = await context.newPage();
   page.setDefaultNavigationTimeout(storyTimeoutMs);
@@ -1054,27 +1078,31 @@ async function runThemeContrastWorker({ browser, baseUrl, stories, schemes, sign
         throwIfAborted(signal);
         const family = storyFamily(story);
         onProgress?.(`${scheme} ${family}/${story.name} contrast`);
-        const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
-        await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
-        await waitForStory(page, scheme);
-        await waitForDocumentAnimations(page);
-        if (story.name === 'States') {
-          await waitForLifecycleReadiness(page);
-          if (INTERACTION_OPEN_LOCATORS[family]) {
-            await waitForInteractionOpen(page, family);
-            await waitForDocumentAnimations(page);
+        try {
+          const storyUrl = `${baseUrl}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`;
+          await page.goto(storyUrl, { waitUntil: 'domcontentloaded' });
+          await waitForStory(page, scheme);
+          await waitForDocumentAnimations(page);
+          if (story.name === 'States') {
+            await waitForLifecycleReadiness(page);
+            if (INTERACTION_OPEN_LOCATORS[family]) {
+              await waitForInteractionOpen(page, family);
+              await waitForDocumentAnimations(page);
+            }
           }
+          await page.addScriptTag({ content: axe.source });
+          const result = await runAxe(page, undefined, {
+            runOnly: { type: 'rule', values: ['color-contrast'] },
+          });
+          assert.equal(
+            result.violations.length,
+            0,
+            `${scheme} ${story.id} (${family}) has colour contrast violations:\n${formatViolations(result.violations)}`,
+          );
+          coverage.push(`${scheme}:${story.id}:color-contrast`);
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: story.id, family }, error, { signal });
         }
-        await page.addScriptTag({ content: axe.source });
-        const result = await runAxe(page, undefined, {
-          runOnly: { type: 'rule', values: ['color-contrast'] },
-        });
-        assert.equal(
-          result.violations.length,
-          0,
-          `${scheme} ${story.id} (${family}) has colour contrast violations:\n${formatViolations(result.violations)}`,
-        );
-        coverage.push(`${scheme}:${story.id}:color-contrast`);
       }
     }
     return coverage;
@@ -1145,6 +1173,7 @@ test('all selected Storybook pages meet theme contrast in light and dark', {
     const workerTotal = workerCount('MUXUI_STORYBOOK_A11Y_WORKERS');
     const workerSchemes = workerTotal === 1 ? [['light', 'dark']] : [['light'], ['dark']];
     activeProof = 'theme contrast workers';
+    const failures = [];
     const workerResults = await Promise.allSettled(workerSchemes.map((schemes) => runThemeContrastWorker({
       browser,
       baseUrl,
@@ -1152,6 +1181,7 @@ test('all selected Storybook pages meet theme contrast in light and dark', {
       schemes,
       signal: t.signal,
       onProgress: (message) => { activeProof = message; },
+      failures,
     })));
     throwIfAborted(t.signal);
     const workerErrors = workerResults.filter(({ status }) => status === 'rejected');
@@ -1161,6 +1191,7 @@ test('all selected Storybook pages meet theme contrast in light and dark', {
         `${workerErrors.length} Storybook theme contrast worker(s) failed`,
       );
     }
+    assertNoPageFailures('Storybook theme contrast audit', failures);
     const actualCoverage = workerResults.flatMap(({ value }) => value).sort();
     const expectedCoverage = ['light', 'dark'].flatMap((scheme) => stories.map(({ id }) => `${scheme}:${id}:color-contrast`)).sort();
     assert.deepEqual(actualCoverage, expectedCoverage, 'theme contrast coverage must include every selected consumer page and scheme');
@@ -1262,6 +1293,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
     const workerTotal = workerCount('MUXUI_STORYBOOK_A11Y_WORKERS');
     const workerSchemes = workerTotal === 1 ? [['light', 'dark']] : [['light'], ['dark']];
     activeProof = 'a11y workers';
+    const failures = [];
     const workerResults = await Promise.allSettled(workerSchemes.map((schemes) => runA11yWorker({
       browser,
       baseUrl,
@@ -1274,6 +1306,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       schemes,
       signal: t.signal,
       onProgress: (message) => { activeProof = message; },
+      failures,
     })));
     throwIfAborted(t.signal);
     const workerErrors = workerResults.filter(({ status }) => status === 'rejected');
@@ -1283,6 +1316,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
         `${workerErrors.length} Storybook a11y worker(s) failed`,
       );
     }
+    assertNoPageFailures('Storybook family a11y audit', failures);
     const workerCoverage = workerResults.map(({ value }) => value);
 
     const expectedCoverage = workerSchemes.flatMap((schemes) => schemes.flatMap((scheme) => [

@@ -6,6 +6,7 @@ import {
   buildPullRequestImpact,
   changedLockfileImporters,
   executeCommand,
+  executeCommands,
   executionCommands,
   isPolicyOnlyLockfileChange,
   needsStorybookGeneration,
@@ -558,6 +559,48 @@ test('clean Storybook metadata bootstrap executes a normalized generation comman
   });
   assert.equal(result, 0);
   assert.equal(spawnCalls[1][2].env.MUXUI_BOOTSTRAP_TEST_ENV, 'defaulted');
+});
+
+function runFixture(statuses, prerequisites = []) {
+  const ran = [];
+  const errors = [];
+  const exits = [];
+  const commands = Object.keys(statuses).map((name) => ({
+    command: name, args: [], prerequisite: prerequisites.includes(name),
+  }));
+  executeCommands(commands, {
+    commandRunner: ({ command }) => {
+      ran.push(command);
+      return statuses[command];
+    },
+    log: () => {},
+    logError: (line) => errors.push(line),
+    exit: (status) => exits.push(status),
+  });
+  return { ran, errors, exits };
+}
+
+test('CI checks keep running after a failure and exit once with every failure summarized', () => {
+  const { ran, errors, exits } = runFixture({ generate: 0, lint: 2, unit: 0, audit: 1 }, ['generate']);
+  assert.deepEqual(ran, ['generate', 'lint', 'unit', 'audit']);
+  assert.deepEqual(exits, [2]);
+  assert.ok(errors.some((line) => line.includes('2 of 4 command(s) failed')));
+  assert.ok(errors.some((line) => line.includes('exit 2: lint')));
+  assert.ok(errors.some((line) => line.includes('exit 1: audit')));
+
+  assert.deepEqual(runFixture({ lint: 0, unit: 0 }).exits, []);
+});
+
+test('a failed CI prerequisite stops the run before dependent checks', () => {
+  const { ran, errors, exits } = runFixture({ generate: 3, lint: 0, unit: 0 }, ['generate']);
+  assert.deepEqual(ran, ['generate']);
+  assert.deepEqual(exits, [3]);
+  assert.ok(errors.some((line) => line.includes('skipping the remaining 2 command(s)')));
+});
+
+test('generation and install commands are marked as CI prerequisites', async () => {
+  const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
