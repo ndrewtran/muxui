@@ -1,5 +1,6 @@
 import { spawnSync } from 'node:child_process';
-import { readFile, readdir } from 'node:fs/promises';
+import { readdirSync } from 'node:fs';
+import { appendFile, readFile, readdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
@@ -14,6 +15,7 @@ const repositoryRoot = resolve(process.env.MUXUI_TASK_REPOSITORY_ROOT ?? resolve
 const reactContractPath = 'packages/react/generated/r1-6-contract.json';
 const reactDescriptorPath = 'packages/react/generated/descriptor.json';
 const storybookManifestPath = 'apps/react-storybook/.storybook/generated/manifest.mjs';
+const motionBoundaryTestFile = 'test/motion-package-boundary.test.mjs';
 
 const scopedEntrypoints = {
   react: {
@@ -604,7 +606,7 @@ function normalizeTaskPaths(changedPaths) {
   return [...new Set(changedPaths.map(normalizePath).filter(Boolean))].sort();
 }
 
-function refreshStoryRuns(plan) {
+function refreshStoryRuns(plan, pageIndex) {
   plan.storyRuns = [];
   if (plan.storyFamilies.length > 0) {
     plan.storyRuns.push({
@@ -627,14 +629,31 @@ function refreshStoryRuns(plan) {
       reason: 'only the exact canonical story pages whose sources changed',
     });
   }
-  if (plan.storyTheme) plan.storyRuns.push({
-    proof: 'theme',
-    families: plan.themeFamilies,
-    storyIds: plan.themeStoryIds,
-    reason: plan.themeFamilies.length || plan.themeStoryIds.length
-      ? 'theme contrast proof for the affected CSS consumer pages'
-      : 'all-consumer theme contrast proof',
-  });
+  if (plan.storyTheme) {
+    // Component proof runs full axe (color-contrast included) and the same
+    // colour audit on every page of its families, so theme proof skips them.
+    const componentFamilies = new Set(plan.storyFamilies);
+    const allConsumer = plan.themeFamilies.length === 0 && plan.themeStoryIds.length === 0;
+    if (componentFamilies.size === 0 || plan.themeStoryIds.length > 0 || (allConsumer && pageIndex.length === 0)) {
+      plan.storyRuns.push({
+        proof: 'theme',
+        families: plan.themeFamilies,
+        storyIds: plan.themeStoryIds,
+        reason: allConsumer ? 'all-consumer theme contrast proof' : 'theme contrast proof for the affected CSS consumer pages',
+      });
+    } else {
+      const candidates = allConsumer
+        ? pageIndex.filter(({ stories }) => stories.some(({ exportName }) => exportName !== 'BrowserProof')).map(({ family }) => family)
+        : plan.themeFamilies;
+      const families = [...new Set(candidates)].filter((family) => !componentFamilies.has(family)).sort();
+      if (families.length > 0) plan.storyRuns.push({
+        proof: 'theme',
+        families,
+        storyIds: [],
+        reason: 'theme contrast proof for consumer pages outside the component proof families',
+      });
+    }
+  }
   if (plan.storyChrome) plan.storyRuns.push({ proof: 'chrome', families: [], storyIds: [], reason: 'manager chrome color proof' });
   plan.storybookGenerationCheck = plan.storyRuns.length > 0;
   return plan;
@@ -921,6 +940,12 @@ export async function buildPullRequestImpact({
     });
     if (impact.families.length > 0) plan.reasons.push(impact.reason ?? `${path} changed exported ${impact.families.join(', ')}`);
   }
+  // Family routing cannot see bundle leaks (Motion pulled into unrelated
+  // public exports), so every runtime change also runs the bundle boundary test.
+  if (reactSourcePaths.length > 0 && !plan.reactPackageFull) {
+    plan.reactTestFiles.add(motionBoundaryTestFile);
+    plan.reasons.push('React runtime source changed; verify public export bundles keep their Motion boundary');
+  }
 
   const cssPaths = changed.filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.css'));
   for (const path of cssPaths) {
@@ -991,7 +1016,7 @@ export async function buildPullRequestImpact({
   plan.packageChecks = [...plan.packageChecks].sort();
   if (plan.reactFamilies.length > 0) requireScopedEntrypoint(plan, packages, 'react');
   plan.generationPackages = scopedGenerationPackages(plan, packages);
-  const refreshed = refreshStoryRuns(plan);
+  const refreshed = refreshStoryRuns(plan, pageIndex);
   if (refreshed.storyRuns.length > 0) requireScopedEntrypoint(refreshed, packages, 'storybook');
   refreshed.scopedEntrypointChecks = [...refreshed.scopedEntrypointChecks].sort();
   return refreshed;
@@ -1051,24 +1076,123 @@ function storyProofEnvironment(storyRun, environment) {
   };
 }
 
-export function executionCommands(plan, {
-  packages = [], metadataPrepared = false, environment = process.env,
+// CI shards large Storybook page selections by family so one job stays inside
+// the scoped audit timeouts in apps/react-storybook/test.
+// 80 pages keeps the scoped formula (120 s + 6 s/page) near its 600 s cap.
+export const storyShardPageBudget = 80;
+
+const sharedGroup = '*';
+const workspaceRootPackage = '@muxui/workspace';
+const groupTimeoutMinutes = { checks: 30, react: 30, browser: 30, tailwind: 15, storybook: 30 };
+const fullStorybookEnvironment = {
+  MUXUI_STORYBOOK_AUDIT_MODE: 'full',
+  MUXUI_STORYBOOK_AUDIT_EVENT: 'check:all',
+  MUXUI_STORYBOOK_AUDIT_FORCE: '1',
+  MUXUI_STORYBOOK_AUDIT_REASON: 'full graph requires full Storybook coverage',
+};
+const storybookSelectionKeys = [
+  'MUXUI_STORYBOOK_AUDIT_PROOF', 'MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS',
+  'MUXUI_STORYBOOK_FAMILY_FILTER', 'MUXUI_STORYBOOK_FAMILY', 'MUXUI_COMPONENT_FAMILIES',
+];
+
+function storyRunPageCounts(storyRun, pageIndex) {
+  const counts = new Map();
+  const add = (family) => counts.set(family, (counts.get(family) ?? 0) + 1);
+  if (storyRun.storyIds.length > 0) {
+    for (const page of pageIndex) {
+      for (const story of page.stories) if (storyRun.storyIds.includes(story.id)) add(page.family);
+    }
+    return counts;
+  }
+  const families = new Set(storyRun.families);
+  for (const page of pageIndex) {
+    if (storyRun.families.length > 0 && !families.has(page.family)) continue;
+    for (const story of page.stories) {
+      if (storyRun.proof !== 'theme' || story.exportName !== 'BrowserProof') add(page.family);
+    }
+  }
+  return counts;
+}
+
+// Splits a story run over ceil(pages / budget) shards of consecutive families,
+// balanced by page count (a shard may exceed the budget by at most one family).
+// Families with no selected pages are dropped; a run within budget (or chrome
+// proof, which selects no pages) stays whole.
+export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageBudget) {
+  if (storyRun.proof === 'chrome' || pageIndex.length === 0) return [storyRun];
+  const counts = storyRunPageCounts(storyRun, pageIndex);
+  const total = [...counts.values()].reduce((sum, count) => sum + count, 0);
+  if (total <= budget) return [storyRun];
+  const families = (storyRun.families.length > 0 ? storyRun.families : [...counts.keys()])
+    .filter((family) => (counts.get(family) ?? 0) > 0);
+  const shardCount = Math.ceil(total / budget);
+  const chunks = Array.from({ length: shardCount }, () => []);
+  let before = 0;
+  for (const family of families) {
+    const count = counts.get(family);
+    // Each family goes to the shard containing its middle page.
+    chunks[Math.min(shardCount - 1, Math.floor(((before + count / 2) * shardCount) / total))].push(family);
+    before += count;
+  }
+  const familyOfStory = new Map(pageIndex.flatMap(({ family, stories }) => stories.map(({ id }) => [id, family])));
+  return chunks.filter((chunk) => chunk.length > 0).map((chunk) => ({
+    ...storyRun,
+    families: chunk,
+    storyIds: storyRun.storyIds.filter((id) => chunk.includes(familyOfStory.get(id))),
+  }));
+}
+
+function storybookTestFiles() {
+  return readdirSync(resolve(repositoryRoot, 'apps/react-storybook/test'))
+    .filter((name) => name.endsWith('.test.mjs'))
+    .sort()
+    .map((name) => `test/${name}`);
+}
+
+function fullPlannedCommands(environment) {
+  const planned = [];
+  const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
+  const storybookEnv = {
+    ...fullStorybookEnvironment,
+    MUXUI_STORYBOOK_A11Y_WORKERS: '1',
+    MUXUI_STORYBOOK_COLORS_WORKERS: '2',
+    ...(environment.RUNNER_TEMP ? { MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: `${environment.RUNNER_TEMP}/storybook-colour-audit` } : {}),
+  };
+  const nodeTest = ['--filter', '@muxui/react-storybook', 'exec', 'node', '--test', '--test-concurrency=1'];
+  const a11yFile = 'test/storybook-a11y.test.mjs';
+  // `pnpm check:all` split into independent groups: full generation, then each
+  // package's own check script, with React and Storybook in their own jobs.
+  add(sharedGroup, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate'], { prerequisite: true });
+  // Exclusion-only filters select the workspace root too; its `check` script is
+  // the affected-scope runner, not a package check, so exclude it explicitly.
+  add('checks', [
+    '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
+    '--filter', `!${workspaceRootPackage}`, '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook', 'run', 'check',
+  ], { unsetEnv: storybookSelectionKeys });
+  add('checks', ['generate:check']);
+  add('react', ['--filter', '@muxui/react', 'run', 'check']);
+  add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser']);
+  add('browser', ['--filter', '@muxui/react', 'run', 'check:browser']);
+  add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
+  add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
+  add('storybook', [...nodeTest, ...storybookTestFiles().filter((file) => file !== a11yFile)], {
+    env: storybookEnv, unsetEnv: storybookSelectionKeys,
+  });
+  add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
+  add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
+  return planned;
+}
+
+function plannedCommands(plan, {
+  packages = [], metadataPrepared = false, environment = process.env, pageIndex = [],
 } = {}) {
-  const commands = [];
-  const add = (args, options) => commands.push(pnpmCommand(args, options));
+  const planned = [];
+  const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
   const requiredEntrypoints = new Set(plan.scopedEntrypointChecks ?? []);
   if (!plan.full && !plan.reactPackageFull && plan.reactFamilies?.length > 0) requiredEntrypoints.add('react');
   if (!plan.full && plan.storyRuns?.length > 0) requiredEntrypoints.add('storybook');
   validateScopedEntrypoints(packages, [...requiredEntrypoints]);
-  if (plan.full) {
-    add(['check:all']);
-    add(['--filter', '@muxui/scale', 'run', 'check:browser']);
-    add(['--filter', '@muxui/react', 'run', 'check:browser']);
-    add(['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
-    add(['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
-    add(['generate:check']);
-    return commands;
-  }
+  if (plan.full) return fullPlannedCommands(environment);
 
   let generationPackages = plan.generationPackages ?? scopedGenerationPackages(plan, packages);
   if (metadataPrepared) {
@@ -1081,48 +1205,48 @@ export function executionCommands(plan, {
     const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present'];
     for (const name of generationPackages) args.push('--filter', name);
     args.push('run', 'generate');
-    add(args, { prerequisite: true });
+    add(sharedGroup, args, { prerequisite: true });
   }
 
-  if (plan.policy) add(['--filter', '@muxui/repository-policy', 'run', 'check']);
-  if (plan.catalog) add(['--filter', '@muxui/catalog', 'run', 'check']);
-  if (plan.tokens) add(['--filter', '@muxui/tokens', 'run', 'check']);
-  if (plan.docs) add(['--filter', '@muxui/docs', 'run', 'check']);
+  if (plan.policy) add('checks', ['--filter', '@muxui/repository-policy', 'run', 'check']);
+  if (plan.catalog) add('checks', ['--filter', '@muxui/catalog', 'run', 'check']);
+  if (plan.tokens) add('checks', ['--filter', '@muxui/tokens', 'run', 'check']);
+  if (plan.docs) add('checks', ['--filter', '@muxui/docs', 'run', 'check']);
   if (plan.scale) {
-    add(['--filter', '@muxui/scale', 'run', 'check']);
-    add(['--filter', '@muxui/scale', 'run', 'check:browser']);
+    add('checks', ['--filter', '@muxui/scale', 'run', 'check']);
+    add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser']);
   }
   if (plan.reactTheme) {
-    add(['--filter', '@muxui/react', 'run', 'generate:check']);
-    add(['--filter', '@muxui/react', 'exec', 'node', '--test', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs']);
+    add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
+    add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', 'test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs']);
   }
   if (plan.reactProjectionCheck && !plan.reactPackageFull && !plan.reactTheme) {
-    add(['--filter', '@muxui/react', 'run', 'generate:check']);
+    add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
   }
   if (plan.reactPackageFull) {
-    add(['--filter', '@muxui/react', 'run', 'check']);
-    add(['--filter', '@muxui/react', 'run', 'check:browser']);
+    add('react', ['--filter', '@muxui/react', 'run', 'check']);
+    add('browser', ['--filter', '@muxui/react', 'run', 'check:browser']);
   } else if (plan.reactFamilies.length > 0) {
     const env = {
       MUXUI_COMPONENT_FAMILIES: plan.reactFamilies.join(','),
       MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE: '0',
       ...(plan.reactBehaviorProofFamilies.length ? { MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES: plan.reactBehaviorProofFamilies.join(',') } : {}),
     };
-    add(scopedEntrypointArgs('react', packages), {
+    add('react', scopedEntrypointArgs('react', packages), {
       env,
       unsetEnv: ['MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES'],
     });
   }
   for (const testFile of plan.reactTestFiles) {
-    add(['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile]);
+    add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile]);
   }
-  for (const packageName of plan.packageChecks) add(['--filter', packageName, 'run', 'check']);
+  for (const packageName of plan.packageChecks) add('checks', ['--filter', packageName, 'run', 'check']);
   if (plan.storyTooling || plan.storybookGenerationCheck) {
-    add(['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
+    add('checks', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   }
   if (plan.storyTooling) {
     for (const { file, testNamePattern } of plan.storyUnitTests) {
-      add([
+      add('checks', [
         '--filter', '@muxui/react-storybook', 'exec', 'node', '--test',
         ...(testNamePattern ? [`--test-name-pattern=${testNamePattern}`] : []),
         file,
@@ -1132,16 +1256,41 @@ export function executionCommands(plan, {
     }
   }
   for (const storyRun of plan.storyRuns) {
-    add(scopedEntrypointArgs('storybook', packages), {
-      env: storyProofEnvironment(storyRun, environment),
-      unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
+    const shards = shardStoryRun(storyRun, pageIndex);
+    shards.forEach((shard, index) => {
+      add(`storybook-${storyRun.proof}${shards.length > 1 ? `-${index + 1}` : ''}`, scopedEntrypointArgs('storybook', packages), {
+        env: storyProofEnvironment(shard, environment),
+        unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
+      });
     });
   }
   if (plan.tailwind) {
-    add(['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
-    add(['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
+    add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
+    add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
   }
-  return commands;
+  return planned;
+}
+
+// Serial command list for running the whole plan in one process.
+export function executionCommands(plan, options = {}) {
+  return plannedCommands(plan, options).map(({ command }) => command);
+}
+
+// Independent CI jobs: each group repeats the shared prerequisites (generation)
+// so it can run alone in a fresh runner.
+export function executionGroups(plan, options = {}) {
+  const planned = plannedCommands(plan, options);
+  const shared = planned.filter(({ group }) => group === sharedGroup).map(({ command }) => command);
+  const groups = new Map();
+  for (const { group, command } of planned) {
+    if (group === sharedGroup) continue;
+    if (!groups.has(group)) groups.set(group, []);
+    groups.get(group).push(command);
+  }
+  return [...groups].map(([id, commands]) => {
+    const kind = id.startsWith('storybook') ? 'storybook' : id;
+    return { id, kind, timeoutMinutes: groupTimeoutMinutes[kind], commands: [...shared, ...commands] };
+  });
 }
 
 export function executeCommand(command, {
@@ -1219,7 +1368,7 @@ export async function prepareStorybookMetadata({
   return true;
 }
 
-function planReport(plan, { baseRef, mergeBase, metadataPrepared, commands }) {
+function planReport(plan, { baseRef, mergeBase, metadataPrepared, groups }) {
   return {
     schemaVersion: plan.schemaVersion,
     baseRef,
@@ -1229,7 +1378,7 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, commands }) {
     fullReasons: plan.fullReasons,
     metadataPreparation: metadataPrepared ? ['@muxui/react-storybook generate'] : [],
     preparationCommands: metadataPrepared ? [storybookGenerationCommand()] : [],
-    commands: commands.map(normalizeCommand),
+    groups,
     generationPackages: plan.generationPackages,
     checks: {
       policy: plan.policy,
@@ -1256,7 +1405,26 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, commands }) {
   };
 }
 
-export async function runCiImpact({ preview = false, includeWorktree = false, environment = process.env } = {}) {
+// The push/schedule/manual plan: the whole workspace graph without a diff.
+export function fullWorkspacePlan(reason = 'full workspace graph requested') {
+  return {
+    schemaVersion: 1,
+    changedPaths: [],
+    full: true,
+    fullReasons: [reason],
+    generationPackages: [],
+    scopedEntrypointChecks: [],
+    storyRuns: [],
+    reasons: [`full workspace proof: ${reason}`],
+  };
+}
+
+// The GitHub Actions matrix: one entry per independently runnable group.
+export function groupMatrix(groups) {
+  return groups.map(({ id, kind, timeoutMinutes }) => ({ id, kind, timeoutMinutes }));
+}
+
+async function pullRequestPlan({ preview, includeWorktree, environment }) {
   const baseRef = environment.MUXUI_BASE_REF ?? (environment.GITHUB_BASE_REF ? `origin/${environment.GITHUB_BASE_REF}` : 'origin/main');
   const mergeBase = resolveMergeBase(baseRef);
   const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
@@ -1313,24 +1481,81 @@ export async function runCiImpact({ preview = false, includeWorktree = false, en
     lockfileBefore,
     lockfileAfter,
   });
+  return { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared };
+}
 
-  const commands = executionCommands(plan, { packages, metadataPrepared, environment });
-  const report = planReport(plan, { baseRef, mergeBase, metadataPrepared, commands });
-  console.log(`[ci-impact] changed paths=${changedPaths.join(', ') || '(none)'}`);
+// --preview plans from existing metadata and fails if it is missing; --plan
+// (the CI plan job) prepares metadata on a fresh checkout but runs no checks.
+export function executionMode({ preview = false, planOnly = false, group = null } = {}) {
+  return {
+    prepareMetadata: !preview,
+    run: preview || planOnly ? 'none' : group ? 'group' : 'all',
+  };
+}
+
+export async function runCiImpact({
+  preview = false, planOnly = false, includeWorktree = false, full = false, group = null, githubOutput = false,
+  environment = process.env,
+} = {}) {
+  const mode = executionMode({ preview, planOnly, group });
+  const context = full
+    ? {
+      plan: fullWorkspacePlan(`${environment.GITHUB_EVENT_NAME ?? 'local'} runs the full workspace graph`),
+      packages: await discoverWorkspacePackages(repositoryRoot),
+      pageIndex: [],
+      baseRef: null,
+      mergeBase: null,
+      metadataPrepared: false,
+    }
+    : await pullRequestPlan({ preview: !mode.prepareMetadata, includeWorktree, environment });
+  const { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared } = context;
+  const options = { packages, metadataPrepared, environment, pageIndex };
+  const groups = executionGroups(plan, options);
+  const report = planReport(plan, { baseRef, mergeBase, metadataPrepared, groups });
+  const matrix = groupMatrix(groups);
+  console.log(`[ci-impact] changed paths=${plan.changedPaths.join(', ') || '(none)'}`);
   console.log(`[ci-impact] plan=${JSON.stringify(report, null, 2)}`);
-  if (preview) {
-    console.log('[ci-impact] preview complete; no checks executed');
+  console.log(`[ci-impact] groups=${JSON.stringify(matrix)}`);
+  if (githubOutput) {
+    if (!environment.GITHUB_OUTPUT) throw new Error('MUXUI_CI_IMPACT_GITHUB_OUTPUT_MISSING: --github-output needs GITHUB_OUTPUT');
+    await appendFile(environment.GITHUB_OUTPUT, `groups=${JSON.stringify(matrix)}\n`);
+  }
+  if (mode.run === 'none') {
+    console.log('[ci-impact] planning complete; no checks executed');
+  } else if (mode.run === 'group') {
+    const selected = groups.find(({ id }) => id === group);
+    if (!selected) {
+      throw new Error(`MUXUI_CI_IMPACT_GROUP_UNKNOWN: ${group} is not in this plan (${groups.map(({ id }) => id).join(', ') || 'no groups'})`);
+    }
+    console.log(`[ci-impact] running group ${selected.id} (${selected.commands.length} command(s))`);
+    executeCommands(selected.commands);
   } else {
-    executeCommands(commands);
+    executeCommands(executionCommands(plan, options));
   }
   return report;
 }
 
-const cliArgs = process.argv.slice(2);
-const preview = cliArgs.some((arg) => arg === '--dry-run' || arg === '--preview');
-const includeWorktree = cliArgs.includes('--include-worktree');
-const unknownArgs = cliArgs.filter((arg) => !['--dry-run', '--preview', '--include-worktree'].includes(arg));
-if (unknownArgs.length > 0) throw new Error(`MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN: ${unknownArgs.join(', ')}`);
+export function parseCliArguments(args) {
+  const options = {
+    preview: false, planOnly: false, includeWorktree: false, full: false, group: null, githubOutput: false,
+  };
+  const flags = {
+    '--dry-run': 'preview',
+    '--preview': 'preview',
+    '--plan': 'planOnly',
+    '--include-worktree': 'includeWorktree',
+    '--full': 'full',
+    '--github-output': 'githubOutput',
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (flags[arg]) options[flags[arg]] = true;
+    else if (arg === '--group' && args[index + 1] && !args[index + 1].startsWith('--')) options.group = args[++index];
+    else throw new Error(`MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN: ${arg}`);
+  }
+  return options;
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  await runCiImpact({ preview, includeWorktree });
+  await runCiImpact(parseCliArguments(process.argv.slice(2)));
 }

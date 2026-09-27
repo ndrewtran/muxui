@@ -21,12 +21,13 @@ const testTimeoutMs = 420_000;
 // The full gate covers every family in both schemes plus interaction, lifecycle,
 // platform-mode, and Button-matrix proofs on a single CI worker.
 const fullAuditTimeoutMs = 600_000;
-const pageScopedAuditMaxTimeoutMs = 1_200_000;
 
+// CI shards large page selections by family (ci-impact storyShardPageBudget),
+// so a scoped run stays well inside the full-audit cap.
 function pageScopedAuditTimeout() {
   const { proof, pages } = resolveStorybookPageSelection();
   if (!['story', 'component', 'theme'].includes(proof)) return fullAuditTimeoutMs;
-  return Math.min(pageScopedAuditMaxTimeoutMs, 120_000 + pages.length * 6_000);
+  return Math.min(fullAuditTimeoutMs, 120_000 + pages.length * 6_000);
 }
 
 function heavyAuditSkip(name) {
@@ -911,6 +912,14 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
             coverage.push(`${scheme}:open-portal:${story.id}`);
             const controlledOpen = manifest.families.find(({ family: name }) => name === family)?.props.includes('open');
             if (!controlledOpen) {
+              // The full-page axe run below happens after dismissal; check open-state
+              // page contrast first so component proof covers everything theme proof does.
+              const openContrast = await runAxe(page, undefined, { runOnly: { type: 'rule', values: ['color-contrast'] } });
+              assert.equal(
+                openContrast.violations.length,
+                0,
+                `${scheme} ${story.id} (${family}) open state has colour contrast violations:\n${formatViolations(openContrast.violations)}`,
+              );
               await focusInteractionOverlayForDismissal(page, family);
               await page.keyboard.press('Escape');
               await waitForInteractionClosed(page, family);

@@ -2,6 +2,8 @@ name: Deterministic workspace checks
 
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
   schedule:
     - cron: '0 3 * * 0'
@@ -9,9 +11,20 @@ on:
 permissions:
   contents: read
 
+# Only pull requests share (and cancel) a group; every main run keeps its own so
+# quick successive merges never drop a pending full run.
+concurrency:
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  check:
+  # Pull requests plan owner-scoped groups from the merge-base diff; push,
+  # schedule, and manual runs plan the full workspace graph.
+  plan:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      groups: ${{ steps.plan.outputs.groups }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -29,61 +42,77 @@ jobs:
       - name: Install workspace
         run: pnpm install --frozen-lockfile
 
-      - name: Select full-path Storybook browser audit coverage
-        id: storybook-audit
-        if: github.event_name != 'pull_request'
-        env:
-          MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
-        run: |
-          node tooling/audits/repository-policy/src/storybook-audit-selection.mjs --github-output \
-            | tee "$RUNNER_TEMP/storybook-audit-selection.txt" >> "$GITHUB_OUTPUT"
-          cat "$RUNNER_TEMP/storybook-audit-selection.txt"
-
-      - name: Plan and run owner-scoped pull request checks
-        if: github.event_name == 'pull_request'
+      - name: Plan check groups
+        id: plan
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
-          MUXUI_STORYBOOK_A11Y_WORKERS: '1'
-          MUXUI_STORYBOOK_COLORS_WORKERS: '2'
-          MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: ${{ runner.temp }}/storybook-colour-audit
-        run: node tooling/audits/repository-policy/src/ci-impact.mjs
+        run: |
+          scope=--full
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then scope=; fi
+          node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output $scope
 
-      - name: Run full deterministic checks (manual and schedule)
-        if: github.event_name != 'pull_request'
+  # Each group is self-contained: it repeats its generation prerequisites in a
+  # fresh runner, so "re-run failed jobs" repeats only the failed groups.
+  run:
+    needs: plan
+    if: needs.plan.outputs.groups != '[]'
+    name: run ${{ matrix.group.id }}
+    runs-on: ubuntu-latest
+    timeout-minutes: ${{ matrix.group.timeoutMinutes }}
+    strategy:
+      fail-fast: false
+      matrix:
+        group: ${{ fromJSON(needs.plan.outputs.groups) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+
+      - name: Activate pinned pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.33.0 --activate
+
+      - name: Install workspace
+        run: pnpm install --frozen-lockfile
+
+      - name: Run ${{ matrix.group.id }} checks
         env:
-          MUXUI_STORYBOOK_AUDIT_MODE: ${{ steps.storybook-audit.outputs.mode }}
-          MUXUI_STORYBOOK_AUDIT_REASON: ${{ steps.storybook-audit.outputs.reason }}
-          MUXUI_STORYBOOK_AUDIT_EVENT: ${{ github.event_name }}
-          MUXUI_STORYBOOK_A11Y_WORKERS: '1'
-          MUXUI_STORYBOOK_COLORS_WORKERS: '2'
-          MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR: ${{ runner.temp }}/storybook-colour-audit
-        run: pnpm check:all
+          GITHUB_BASE_REF: ${{ github.base_ref }}
+          MUXUI_CI_GROUP: ${{ matrix.group.id }}
+        run: |
+          scope=--full
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then scope=; fi
+          node tooling/audits/repository-policy/src/ci-impact.mjs --group "$MUXUI_CI_GROUP" $scope
 
       - name: Upload Storybook colour diagnostics
-        if: always()
+        if: always() && matrix.group.kind == 'storybook'
         uses: actions/upload-artifact@v4
         with:
-          name: storybook-colour-diagnostics
+          name: storybook-colour-diagnostics-${{ matrix.group.id }}
           path: ${{ runner.temp }}/storybook-colour-audit
           if-no-files-found: ignore
           retention-days: 3
 
-      - name: Verify theme authoring in browser
-        if: github.event_name != 'pull_request'
-        run: pnpm --filter @muxui/scale check:browser
-
-      - name: Verify complex React interactions in Chrome
-        if: github.event_name != 'pull_request'
-        run: pnpm --filter @muxui/react check:browser
-
-      - name: Install isolated Tailwind consumer
-        if: github.event_name != 'pull_request'
-        run: pnpm --dir tests/fixtures/tailwind-consumer install --ignore-workspace --frozen-lockfile
-
-      - name: Compile isolated Tailwind consumer
-        if: github.event_name != 'pull_request'
-        run: pnpm --dir tests/fixtures/tailwind-consumer check
-
-      - name: Verify generation identity
-        if: github.event_name != 'pull_request'
-        run: pnpm generate:check
+  # The single required status check: passes only when planning succeeded and
+  # every planned group passed (an empty plan passes).
+  check:
+    needs: [plan, run]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every planned group to pass
+        env:
+          PLAN_RESULT: ${{ needs.plan.result }}
+          RUN_RESULT: ${{ needs.run.result }}
+          GROUPS: ${{ needs.plan.outputs.groups }}
+        run: |
+          echo "plan=$PLAN_RESULT run=$RUN_RESULT groups=$GROUPS"
+          if [ "$PLAN_RESULT" != success ]; then exit 1; fi
+          if [ "$GROUPS" = '[]' ] && [ "$RUN_RESULT" = skipped ]; then exit 0; fi
+          [ "$RUN_RESULT" = success ]
