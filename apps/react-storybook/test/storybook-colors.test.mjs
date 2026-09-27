@@ -13,6 +13,7 @@ import { compilePureTokenGraph } from '@muxui/tokens/core';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { collectStorybookPaints } from './helpers/color-audit.mjs';
 import { fetchStorybookIndex } from './helpers/storybook-index.mjs';
+import { assertNoPageFailures, recordPageFailure } from './storybook-audit-failures.mjs';
 import { colourStateSignatures } from './storybook-colors-report.mjs';
 import { resolveStorybookPageSelection, validateRuntimeStoryPages } from './storybook-page-selection.mjs';
 import { backgroundOptions, buildTheme, managerThemeCss, previewThemeCss } from '../.storybook/theme.mjs';
@@ -95,6 +96,7 @@ test('selected Storybook pages paint only canonical Mux colours in light and dar
   };
   t.signal.addEventListener('abort', reportAbort, { once: true });
   const coverage = [];
+  const failures = [];
   let successMessage;
   try {
     t.signal.throwIfAborted();
@@ -119,78 +121,83 @@ test('selected Storybook pages paint only canonical Mux colours in light and dar
       for (const story of stories) {
         t.signal.throwIfAborted();
         activeProof = `${scheme} ${story.id} colour audit`;
-        await page.goto(`${server.url}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`, {
-          waitUntil: 'domcontentloaded',
-        });
-        await page.waitForFunction((expectedScheme) => {
-          const root = document.querySelector('#storybook-root');
-          const visible = (element) => {
-            if (!element) return false;
-            const style = getComputedStyle(element);
-            return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-          };
-          return Boolean(root?.firstElementChild)
-            && Boolean(document.querySelector('.muxui-storybook-surface'))
-            && document.documentElement.getAttribute('data-muxui-color-scheme') === expectedScheme
-            && !visible(document.querySelector('.sb-errordisplay'))
-            && !visible(document.querySelector('.sb-preparing-story'));
-        }, scheme);
-        await page.evaluate(async () => {
-          document.documentElement.setAttribute('data-reduced-motion', 'true');
-          await document.fonts.ready;
-          await new Promise(requestAnimationFrame);
-          document.getAnimations().forEach((animation) => {
-            try {
-              if (animation.effect?.getTiming?.().iterations === Infinity) animation.cancel();
-              else animation.finish();
-            } catch {
-              animation.cancel();
-            }
+        try {
+          await page.goto(`${server.url}/iframe.html?id=${encodeURIComponent(story.id)}&viewMode=story&globals=${encodeURIComponent(`colorScheme:${scheme}`)}`, {
+            waitUntil: 'domcontentloaded',
           });
-          await new Promise(requestAnimationFrame);
-        });
-        if (story.name === 'States') {
-          await page.waitForFunction(() => {
-            const status = document.querySelector(
-              '.muxui-storybook-lifecycle-showcase [data-muxui-storybook-lifecycle] .muxui-storybook-transition-status',
-            );
-            return !status || status.getAttribute('data-muxui-storybook-transition') === 'open';
+          await page.waitForFunction((expectedScheme) => {
+            const root = document.querySelector('#storybook-root');
+            const visible = (element) => {
+              if (!element) return false;
+              const style = getComputedStyle(element);
+              return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+            };
+            return Boolean(root?.firstElementChild)
+              && Boolean(document.querySelector('.muxui-storybook-surface'))
+              && document.documentElement.getAttribute('data-muxui-color-scheme') === expectedScheme
+              && !visible(document.querySelector('.sb-errordisplay'))
+              && !visible(document.querySelector('.sb-preparing-story'));
+          }, scheme);
+          await page.evaluate(async () => {
+            document.documentElement.setAttribute('data-reduced-motion', 'true');
+            await document.fonts.ready;
+            await new Promise(requestAnimationFrame);
+            document.getAnimations().forEach((animation) => {
+              try {
+                if (animation.effect?.getTiming?.().iterations === Infinity) animation.cancel();
+                else animation.finish();
+              } catch {
+                animation.cancel();
+              }
+            });
+            await new Promise(requestAnimationFrame);
           });
+          if (story.name === 'States') {
+            await page.waitForFunction(() => {
+              const status = document.querySelector(
+                '.muxui-storybook-lifecycle-showcase [data-muxui-storybook-lifecycle] .muxui-storybook-transition-status',
+              );
+              return !status || status.getAttribute('data-muxui-storybook-transition') === 'open';
+            });
+          }
+          const result = await page.evaluate(collectStorybookPaints, {
+            tokens: graphs[scheme],
+            scope: 'canvas',
+          });
+          if (result.nonToken.length > 0) {
+            const paints = result.nonToken;
+            const diagnostics = await page.evaluate((unexpected) => ({
+              scheme: document.documentElement.getAttribute('data-muxui-color-scheme'),
+              matches: unexpected.flatMap((paint) => [...document.querySelectorAll('*')]
+                .filter((element) => getComputedStyle(element).backgroundColor === paint.value)
+                .map((element) => ({
+                  tag: element.tagName,
+                  className: element.className,
+                  id: element.id,
+                  background: getComputedStyle(element).backgroundColor,
+                  transition: getComputedStyle(element).transition,
+                }))).slice(0, 12),
+              animations: document.getAnimations().map((animation) => ({
+                playState: animation.playState,
+                currentTime: animation.currentTime,
+                timing: animation.effect?.getTiming?.(),
+              })),
+            }), paints);
+            t.diagnostic(`${scheme}/${story.id} unexpected-paint-details=${JSON.stringify(diagnostics)}`);
+          }
+          assert.ok(result.elements > 0 && result.paintOccurrences > 0, `${scheme}/${story.id}: empty canvas colour audit`);
+          assert.deepEqual(result.problems, [], `${scheme}/${story.id}: colour audit could not resolve all paints: ${JSON.stringify(result.problems.slice(0, 6))}`);
+          assert.deepEqual(result.media, [], `${scheme}/${story.id}: image colours require explicit verification: ${JSON.stringify(result.media.slice(0, 6))}`);
+          assert.deepEqual(result.nonToken, [], `${scheme}/${story.id}: page painted colours outside canonical Mux tokens: ${JSON.stringify(result.nonToken.slice(0, 6))}`);
+          coverage.push(`${scheme}:${story.id}`);
+          t.diagnostic(`${scheme}/${story.id}: ${result.elements} visible elements, ${result.paintOccurrences} paint occurrences`);
+        } catch (error) {
+          recordPageFailure(failures, { scheme, id: story.id }, error, { signal: t.signal });
         }
-        const result = await page.evaluate(collectStorybookPaints, {
-          tokens: graphs[scheme],
-          scope: 'canvas',
-        });
-        if (result.nonToken.length > 0) {
-          const paints = result.nonToken;
-          const diagnostics = await page.evaluate((unexpected) => ({
-            scheme: document.documentElement.getAttribute('data-muxui-color-scheme'),
-            matches: unexpected.flatMap((paint) => [...document.querySelectorAll('*')]
-              .filter((element) => getComputedStyle(element).backgroundColor === paint.value)
-              .map((element) => ({
-                tag: element.tagName,
-                className: element.className,
-                id: element.id,
-                background: getComputedStyle(element).backgroundColor,
-                transition: getComputedStyle(element).transition,
-              }))).slice(0, 12),
-            animations: document.getAnimations().map((animation) => ({
-              playState: animation.playState,
-              currentTime: animation.currentTime,
-              timing: animation.effect?.getTiming?.(),
-            })),
-          }), paints);
-          t.diagnostic(`${scheme}/${story.id} unexpected-paint-details=${JSON.stringify(diagnostics)}`);
-        }
-        assert.ok(result.elements > 0 && result.paintOccurrences > 0, `${scheme}/${story.id}: empty canvas colour audit`);
-        assert.deepEqual(result.problems, [], `${scheme}/${story.id}: colour audit could not resolve all paints`);
-        assert.deepEqual(result.media, [], `${scheme}/${story.id}: image colours require explicit verification`);
-        assert.deepEqual(result.nonToken, [], `${scheme}/${story.id}: page painted colours outside canonical Mux tokens`);
-        coverage.push(`${scheme}:${story.id}`);
-        t.diagnostic(`${scheme}/${story.id}: ${result.elements} visible elements, ${result.paintOccurrences} paint occurrences`);
       }
     }
 
+    assertNoPageFailures('selected Storybook page colour audit', failures);
     const expected = ['light', 'dark'].flatMap((scheme) => stories.map(({ id }) => `${scheme}:${id}`)).sort();
     assert.deepEqual(coverage.sort(), expected, 'colour coverage must include every selected page in both schemes');
     successMessage = `partial ${selection.proof} proof: ${selection.label}, ${coverage.length} page-scheme checks`;

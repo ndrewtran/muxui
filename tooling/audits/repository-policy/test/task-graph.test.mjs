@@ -89,6 +89,32 @@ test('E-G0.0-02: affected selection runs a changed package before every dependen
   );
 });
 
+test('full checks continue past a failing package and still exit non-zero', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-task-no-bail-'));
+  await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  await writeFile(
+    join(root, 'tooling/audits/repository-policy/repository-policy.json'),
+    JSON.stringify({ globalTaskInputs: [] }),
+  );
+  await writeFile(join(root, 'touch.mjs'), "import { writeFileSync } from 'node:fs';\nwriteFileSync('ran', '');\n");
+  for (const [name, check] of [['a', 'exit 1'], ['b', 'node ../../touch.mjs']]) {
+    await mkdir(join(root, `packages/${name}`), { recursive: true });
+    await writeFile(
+      join(root, `packages/${name}/package.json`),
+      JSON.stringify({ name: `@fixture/${name}`, version: '0.0.0', private: true, scripts: { check } }),
+    );
+  }
+
+  const result = spawnSync(process.execPath, [affectedTaskRunner, 'check'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root },
+  });
+  assert.notEqual(result.status, 0);
+  await readFile(join(root, 'packages/b/ran'), 'utf8');
+});
+
 test('full check boundary overrides inherited Storybook skip selection', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-full-'));
   await mkdir(join(root, 'packages/app'), { recursive: true });
@@ -142,7 +168,7 @@ test('full check boundary overrides inherited Storybook skip selection', async (
 
   assert.match(result.stdout, /\[workspace-task\] check: full graph/);
   assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
-    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'check'],
+    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', 'run', 'check'],
     mode: 'full',
     event: 'check:all',
     force: '1',
@@ -171,7 +197,7 @@ test('full check boundary overrides inherited Storybook skip selection', async (
 
   assert.match(affectedResult.stdout, /\[workspace-task\] check: full graph/);
   assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
-    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'check'],
+    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', 'run', 'check'],
     mode: 'full',
     event: 'check:all',
     force: '1',

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { mkdtemp, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -10,8 +11,10 @@ import {
   auditRepository,
   generatedText,
   loadPolicy,
+  repositoryVisibleFiles,
   sha256,
   validateGeneratedFile,
+  walkFiles,
 } from '../src/policy.mjs';
 import { GenerationProofError, verifyGenerationState } from '../src/generation-proof.mjs';
 
@@ -68,6 +71,20 @@ test('identity reset audit rejects stale current names but permits explicit hist
   await writeFile(join(root, 'src/current.txt'), 'use @muxui/react\nconst record = { muxuiSource: "current" };\n');
   const result = await auditCurrentIdentity(root, identityPolicy, ['src/current.txt', 'history/retained.txt']);
   assert.deepEqual(result, { scanned: 1, allowlisted: 1 });
+});
+
+test('identity scan skips ignored local files but keeps untracked repository files', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-identity-ignored-'));
+  await mkdir(join(root, 'evidence'), { recursive: true });
+  await writeFile(join(root, '.gitignore'), 'evidence/\n');
+  await writeFile(join(root, 'evidence/local.txt'), 'core-ui\n');
+  await writeFile(join(root, 'draft.txt'), 'muxui\n');
+  assert.equal(spawnSync('git', ['init', '--quiet'], { cwd: root }).status, 0);
+
+  assert.deepEqual(
+    repositoryVisibleFiles(root, await walkFiles(root)),
+    ['.gitignore', 'draft.txt'],
+  );
 });
 
 test('E-G0.0-03: generated output validates against its source and digest', async () => {

@@ -105,8 +105,10 @@ function generationArgs(plan) {
   return args;
 }
 
+// Checks use --no-bail so one run reports every failing package; pnpm still
+// exits non-zero. Generation stays fail-fast because checks depend on it.
 function checkArgs(plan, options) {
-  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present'];
+  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail'];
   if (plan.scope === 'affected') args.push(...filterArguments(plan.directPackages, true));
   else if (!plan.full && !plan.focusedComponent) args.push(...filterArguments(plan.checkPackages, false));
   args.push('run', options.task);
@@ -175,14 +177,16 @@ if (options.task === 'generate') {
 if (plan.focusedComponent) {
   const commands = focusedCheckCommands(plan);
   if (commands.length === 0) throw new Error('MUXUI_COMPONENT_CHECK_EMPTY: no focused component package checks are available');
+  const failures = [];
   for (const { command, args, label } of commands) {
     console.log(`[workspace-task] ${label}: ${commandText(command, args)}`);
     if (options.preview) continue;
     const status = run(command, args, environment);
-    if (status !== 0) process.exit(status);
+    if (status !== 0) failures.push({ label, status });
   }
   if (options.preview) console.log('[workspace-task] preview complete; no commands executed');
-  process.exit(0);
+  for (const { label, status } of failures) console.error(`[workspace-task] failed (exit ${status}): ${label}`);
+  process.exit(failures[0]?.status ?? 0);
 }
 
 const args = checkArgs(plan, options);

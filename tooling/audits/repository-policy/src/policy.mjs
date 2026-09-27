@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
@@ -193,6 +194,20 @@ export async function walkFiles(root, current = root) {
   return files;
 }
 
+// Narrows walked files to repository content (tracked plus untracked but not
+// ignored), so ignored local evidence never fails the identity scan. Roots
+// outside a repository, such as test fixtures, keep every walked file.
+export function repositoryVisibleFiles(repositoryRoot, files) {
+  const result = spawnSync('git', ['ls-files', '-z', '--cached', '--others', '--exclude-standard'], {
+    cwd: repositoryRoot,
+    encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (result.error || result.status !== 0) return files;
+  const visible = new Set(result.stdout.split('\0').filter(Boolean).map(normalizePath));
+  return files.filter((path) => visible.has(path));
+}
+
 function isAllowlistedIdentityPath(path, allowlistedPaths) {
   return allowlistedPaths.some((prefix) => {
     const normalizedPrefix = prefix.replace(/\/+$/u, '');
@@ -346,7 +361,7 @@ export async function auditRepository(repositoryRoot) {
   await auditRootContract(resolvedRoot, policy);
 
   const files = await walkFiles(resolvedRoot);
-  const identity = await auditCurrentIdentity(resolvedRoot, policy, files);
+  const identity = await auditCurrentIdentity(resolvedRoot, policy, repositoryVisibleFiles(resolvedRoot, files));
   const generatedFiles = files.filter((path) => classifyPath(path, policy) === 'projection');
   for (const path of generatedFiles) {
     await validateGeneratedFile(resolvedRoot, path, policy);
