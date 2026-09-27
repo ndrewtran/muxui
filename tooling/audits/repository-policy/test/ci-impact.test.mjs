@@ -258,7 +258,7 @@ test('generator tooling checks emitted page IDs only when the generator output c
     proof: 'story', families: ['NumberField'], storyIds: [sizingStoryId],
     reason: 'only the exact canonical story pages whose sources changed',
   }]);
-  const pageCommands = executionCommands(emittedPage, { packages });
+  const pageCommands = executionCommands(emittedPage, { packages, environment: {} });
   assert.equal(pageCommands.filter(({ args }) => args.includes('check:scoped')).length, 1);
   assert.deepEqual(pageCommands.at(-1).env, {
     MUXUI_STORYBOOK_AUDIT_PROOF: 'story',
