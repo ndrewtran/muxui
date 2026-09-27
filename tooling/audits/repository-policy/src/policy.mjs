@@ -211,6 +211,15 @@ export function repositoryVisibleFiles(repositoryRoot, files) {
   return files.filter((path) => visible.has(path));
 }
 
+// Mirrors a clean CI checkout after generation: visible projections plus the
+// ignored `generated/` outputs that generation creates. Other ignored local
+// build output (dist/, build/, coverage/) cannot carry markers and is skipped.
+export function projectionFilesToValidate(files, visibleFiles, policy) {
+  const visible = new Set(visibleFiles);
+  return files.filter((path) => classifyPath(path, policy) === 'projection'
+    && (visible.has(path) || path.split('/').includes('generated')));
+}
+
 function isAllowlistedIdentityPath(path, allowlistedPaths) {
   return allowlistedPaths.some((prefix) => {
     const normalizedPrefix = prefix.replace(/\/+$/u, '');
@@ -364,8 +373,9 @@ export async function auditRepository(repositoryRoot) {
   await auditRootContract(resolvedRoot, policy);
 
   const files = await walkFiles(resolvedRoot);
-  const identity = await auditCurrentIdentity(resolvedRoot, policy, repositoryVisibleFiles(resolvedRoot, files));
-  const generatedFiles = files.filter((path) => classifyPath(path, policy) === 'projection');
+  const visibleFiles = repositoryVisibleFiles(resolvedRoot, files);
+  const identity = await auditCurrentIdentity(resolvedRoot, policy, visibleFiles);
+  const generatedFiles = projectionFilesToValidate(files, visibleFiles, policy);
   for (const path of generatedFiles) {
     await validateGeneratedFile(resolvedRoot, path, policy);
   }

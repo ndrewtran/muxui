@@ -11,6 +11,7 @@ import {
   auditRepository,
   generatedText,
   loadPolicy,
+  projectionFilesToValidate,
   repositoryVisibleFiles,
   sha256,
   validateGeneratedFile,
@@ -84,6 +85,24 @@ test('identity scan skips ignored local files but keeps untracked repository fil
   assert.deepEqual(
     repositoryVisibleFiles(root, await walkFiles(root)),
     ['.gitignore', 'draft.txt'],
+  );
+});
+
+test('projection markers skip ignored build output but still require them in ignored generated output', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-ignored-projections-'));
+  await mkdir(join(root, 'apps/docs/dist'), { recursive: true });
+  await mkdir(join(root, 'packages/react/generated'), { recursive: true });
+  await writeFile(join(root, '.gitignore'), 'dist/\ngenerated/\n');
+  await writeFile(join(root, 'apps/docs/dist/bundle.js'), 'unmarked\n');
+  await writeFile(join(root, 'packages/react/generated/styles.css'), 'unmarked\n');
+  assert.equal(spawnSync('git', ['init', '--quiet'], { cwd: root }).status, 0);
+
+  const files = await walkFiles(root);
+  const selected = projectionFilesToValidate(files, repositoryVisibleFiles(root, files), policy);
+  assert.deepEqual(selected, ['packages/react/generated/styles.css']);
+  await assert.rejects(
+    validateGeneratedFile(root, selected[0], policy),
+    (error) => error.code === 'GENERATED_MARKER_MISSING',
   );
 });
 
