@@ -344,6 +344,7 @@ export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, second
     colorName: colorName?.trim() || (secondary ? `${primary.getColorName(locale)}, ${secondary.getColorName(locale)}` : undefined),
     isDisabled: effectiveDisabled, 'aria-disabled': effectiveDisabled || undefined,
     'data-disabled': effectiveDisabled || undefined, 'data-readonly': pickerState.readOnly || undefined,
+    'data-muxui-color-paint': 'sample',
     'data-shape': shape, 'data-two-tone': secondary ? '' : undefined,
     className: classNames('muxui-color-swatch', className),
     style: secondary ? {
@@ -400,6 +401,7 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
       'aria-label': ariaLabel,
       'aria-labelledby': labelledby,
       'data-readonly': effectiveReadOnly || undefined,
+      'data-muxui-color-paint': 'area',
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
       onKeyDownCapture: preventReadOnlyInteraction,
@@ -409,6 +411,7 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
       className: classNames('muxui-color-area', className),
     }, React.createElement(AriaColorThumb, {
       className: 'muxui-color-area-thumb',
+      'data-muxui-color-paint': 'sample',
       'data-readonly': effectiveReadOnly || undefined,
     })),
   );
@@ -561,6 +564,7 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
           isDisabled: effectiveDisabled || item.disabled,
           'aria-disabled': effectiveDisabled || item.disabled || undefined,
           'data-disabled': effectiveDisabled || item.disabled || undefined,
+          'data-muxui-color-paint': 'sample',
           className: 'muxui-color-swatch',
         }),
       )),

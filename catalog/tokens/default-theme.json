@@ -1270,6 +1270,22 @@
       "overridePolicy": "theme",
       "alias": "reference.dimension.radius-m"
     },
+    "semantic.control.color-thumb-border": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Default white keyline separating color-control thumbs from selected colors in both color schemes.",
+      "overridePolicy": "theme",
+      "value": "#ffffff"
+    },
+    "semantic.control.color-thumb-shadow": {
+      "layer": "semantic",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Default translucent black separation shadow around color-control thumbs in both color schemes.",
+      "overridePolicy": "theme",
+      "value": "#0000004d"
+    },
     "semantic.field.background": {
       "layer": "semantic",
       "type": "color",

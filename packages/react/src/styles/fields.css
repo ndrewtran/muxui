@@ -856,24 +856,6 @@
     .muxui-date-range-picker,
     .muxui-time-field
   )[data-invalid] .muxui-field-label {
-    color: var(--muxui-semantic-feedback-invalid-content);
-  }
-
-  :scope .muxui-autocomplete-search[data-invalid] > .muxui-field-label {
-    color: var(--muxui-semantic-feedback-invalid);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(
-    .muxui-text-field,
-    .muxui-search-field,
-    .muxui-number-field,
-    .muxui-date-field,
-    .muxui-date-picker,
-    .muxui-date-range-picker,
-    .muxui-time-field
-  )[data-invalid] .muxui-field-label {
     color: var(--muxui-semantic-feedback-invalid);
   }
 

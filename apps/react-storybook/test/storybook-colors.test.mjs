@@ -391,6 +391,42 @@ test('Storybook colour audit detects solid, alpha, shadow, gradient, SVG and pse
   } finally { await browser.close(); }
 });
 
+test('Storybook colour audit accepts dynamic color data only on marked Mux paint parts', async () => {
+  const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
+  try {
+    const page = await browser.newPage();
+    const tokens = graphs.light;
+    await page.setContent(`<html><body style="color:${tokens['semantic.content.strong'].value};background:${tokens['semantic.surface.canvas'].value}">
+      <div id="area" class="muxui-color-area" data-muxui-color-paint="area" style="width:40px;height:24px;background-image:linear-gradient(rgb(1,2,3),rgb(4,5,6));background-color:rgb(55,56,57);background-blend-mode:screen;border:1px solid rgb(7,8,9);outline:1px solid rgb(49,50,51);box-shadow:0 0 2px rgb(52,53,54)"><span id="area-text" style="color:rgb(10,11,12)">label</span></div>
+      <div id="area-thumb" class="muxui-color-area-thumb" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(13,14,15)"></div>
+      <div id="slider-track" class="muxui-color-slider-track" data-muxui-color-paint="track" style="width:40px;height:8px;background-image:linear-gradient(rgb(16,17,18),rgb(19,20,21))"></div>
+      <div id="slider-thumb" class="muxui-color-slider-thumb-face" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(22,23,24)"></div>
+      <div id="wheel-track" class="muxui-color-wheel-track" data-muxui-color-paint="track" style="width:40px;height:40px;background-image:conic-gradient(rgb(25,26,27),rgb(28,29,30))"></div>
+      <div id="wheel-thumb" class="muxui-color-wheel-thumb-face" data-muxui-color-paint="sample" style="width:12px;height:12px;background-color:rgb(31,32,33)"></div>
+      <div id="swatch" class="muxui-color-swatch" data-muxui-color-paint="sample" style="width:16px;height:16px;background-color:rgb(34,35,36);background-image:linear-gradient(rgb(37,38,39),rgb(40,41,42))"></div>
+      <div id="unowned-marker" data-muxui-color-paint="area" style="width:24px;height:16px;background-image:linear-gradient(rgb(43,44,45),rgb(46,47,48))"></div>
+      <div id="wrong-blend" class="muxui-color-area" data-muxui-color-paint="area" style="width:24px;height:16px;background-blend-mode:multiply;mix-blend-mode:screen"></div>
+    </body></html>`);
+
+    const result = await page.evaluate(collectStorybookPaints, { tokens });
+    assert.deepEqual(result.media, []);
+    assert.ok(result.problems.some(({ element, property }) => element.includes('#wrong-blend') && property === 'background-blend-mode'));
+    assert.ok(result.problems.some(({ element, property }) => element.includes('#wrong-blend') && property === 'mix-blend-mode'));
+    const unowned = (id, property) => result.nonToken.some((paint) => paint.property === property
+      && paint.examples.some((example) => example.includes(`#${id}`)));
+    assert.ok(unowned('area', 'border-top-color'), 'component borders remain token-audited');
+    assert.ok(unowned('area', 'outline-color'), 'focus paint remains token-audited');
+    assert.ok(unowned('area', 'box-shadow'), 'shadows remain token-audited');
+    assert.ok(unowned('area-text', 'color'), 'ordinary descendant text remains token-audited');
+    assert.ok(unowned('unowned-marker', 'background-image'), 'a marker without the owned part cannot opt out');
+    assert.ok(!result.nonToken.some((paint) => ['background-color', 'background-image'].includes(paint.property)
+      && ['area', 'area-thumb', 'slider-track', 'slider-thumb', 'wheel-track', 'wheel-thumb', 'swatch']
+        .some((id) => paint.examples.some((example) => example.includes(`#${id}`)))), JSON.stringify(result.nonToken));
+  } finally {
+    await browser.close();
+  }
+});
+
 test('Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity', async () => {
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   try {

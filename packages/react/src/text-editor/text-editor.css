@@ -34,7 +34,7 @@
 }
 
 .muxui-text-editor[data-invalid] .muxui-text-editor__label {
-  color: var(--muxui-semantic-feedback-invalid-content);
+  color: var(--muxui-semantic-feedback-invalid);
 }
 
 /* ─── HintText ─────────────────────────────────────────────────────────────── */

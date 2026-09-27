@@ -627,27 +627,7 @@
   .muxui-tag-select__label,
   .muxui-payment-input__label
 ) {
-  color: var(--muxui-semantic-feedback-invalid-content);
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(
-    .muxui-input__root,
-    .muxui-text-area,
-    .muxui-input-tags,
-    .muxui-multi-select,
-    .muxui-tag-select,
-    .muxui-payment-input
-  )[data-invalid] :where(
-    .muxui-input__label,
-    .muxui-text-area__label,
-    .muxui-input-tags__label,
-    .muxui-multi-select__label,
-    .muxui-tag-select__label,
-    .muxui-payment-input__label
-  ) {
-    color: var(--muxui-semantic-feedback-invalid);
-  }
+  color: var(--muxui-semantic-feedback-invalid);
 }
 
 .muxui-slider > .muxui-field-label,
@@ -1245,11 +1225,10 @@
   width: 0.78125rem;
   height: 0.78125rem;
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  /* The shared color-thumb primitive uses a white keyline in both themes. */
-  border: 2px solid white;
+  border: 2px solid var(--muxui-semantic-control-color-thumb-border);
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.3),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+    0 0 0 1px var(--muxui-semantic-control-color-thumb-shadow),
+    inset 0 0 0 1px var(--muxui-semantic-control-color-thumb-shadow);
   outline: none;
   transition: box-shadow var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing);
 }

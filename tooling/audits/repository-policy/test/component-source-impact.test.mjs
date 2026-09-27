@@ -511,6 +511,26 @@ test('selector ownership excludes negative qualifiers and checks bounded versus 
   assert.throws(() => analyze(':not(.muxui-tree)'), /changed selector.*no canonical family owner/u);
   assert.throws(() => analyze('main:has(.muxui-tree)'), /relational selector :has\(\).*canonical owner/u);
   assert.throws(() => analyze(':is(.muxui-tree, .external-widget)'), /:is\(\) alternative.*no canonical component owner/u);
+  assert.throws(() => analyze(':is(.muxui-tree, :focus)'), /:is\(\) alternative.*no canonical component owner/u,
+    'a state alternative cannot borrow ownership from another :is() alternative');
+});
+
+test('state-only :is alternatives inherit the anchored owner for the real Autocomplete selector', async () => {
+  const sourcePath = 'packages/react/src/styles/fields.css';
+  const after = await readFile(path.join(repositoryRoot, sourcePath), 'utf8');
+  const before = after.replace(
+    'box-shadow: 0 0 0 3px var(--muxui-semantic-feedback-invalid-focus);',
+    'box-shadow: 0 0 0 3px var(--muxui-semantic-focus-ring);',
+  );
+  assert.notEqual(before, after, 'fixture must update the real focused Autocomplete rule');
+  const records = [{
+    family: 'Autocomplete', export: 'Autocomplete', slug: 'autocomplete',
+    source: 'packages/react/src/collections.mjs', parts: ['root', 'label', 'input'],
+  }];
+
+  const result = analyzeReactStyleChange({ records, sourcePath, before, after });
+  assert.deepEqual(result.families, ['Autocomplete']);
+  assert.match(result.reason, /\.muxui-autocomplete-search\[data-invalid\].*\.muxui-field-input:is\(:focus,\[data-focused\]\)/u);
 });
 
 test('unknown and global selectors fail while formatting-only CSS is a semantic no-op', () => {

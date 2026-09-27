@@ -9,6 +9,29 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
   const canonical = new Map();
   const effects = new Map();
   const tokensById = new Map(Object.values(tokens).map((token) => [token.id, token]));
+  // These exact Mux parts paint user-selected colors. Only their listed paint
+  // properties may be dynamic; descendants and ordinary component chrome stay audited.
+  const dynamicColorParts = [
+    ['.muxui-color-area[data-muxui-color-paint="area"]', ['background-color', 'background-image']],
+    ['.muxui-color-area-thumb[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-slider-track[data-muxui-color-paint="track"]', ['background-image']],
+    ['.muxui-color-slider-thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-wheel-track[data-muxui-color-paint="track"]', ['background-image']],
+    ['.muxui-color-wheel-thumb-face[data-muxui-color-paint="sample"]', ['background-color']],
+    ['.muxui-color-swatch[data-muxui-color-paint="sample"]', ['background-color', 'background-image']],
+  ];
+
+  function ownsDynamicColorPaint(element, pseudo, property) {
+    return !pseudo && dynamicColorParts.some(([selector, properties]) => (
+      properties.includes(property) && element.matches(selector)
+    ));
+  }
+
+  function ownsColorAreaBlend(element, pseudo, value) {
+    return !pseudo
+      && element.matches('.muxui-color-area[data-muxui-color-paint="area"]')
+      && value.split(',').every((mode) => mode.trim() === 'screen');
+  }
 
   function normalize(value) {
     if (!CSS.supports('color', value)) throw new Error(`Invalid colour: ${value}`);
@@ -71,6 +94,7 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
 
   function add(element, pseudo, property, value, alpha = 1) {
     if (value === 'none' || value === 'auto') return;
+    if (ownsDynamicColorPaint(element, pseudo, property)) return;
     let key;
     try {
       key = normalize(value);
@@ -190,7 +214,8 @@ export function collectStorybookPaints({ tokens, scope = 'manager', canvasPaints
     filter(element, pseudo, 'backdrop-filter', style.backdropFilter);
     for (const property of ['mix-blend-mode', 'background-blend-mode']) {
       const value = style.getPropertyValue(property);
-      if (value.split(',').some((mode) => mode.trim() !== 'normal')) {
+      if (value.split(',').some((mode) => mode.trim() !== 'normal')
+        && !(property === 'background-blend-mode' && ownsColorAreaBlend(element, pseudo, value))) {
         problems.push({ element: describe(element, pseudo), property, value, reason: 'Blending manufactures colours outside token paint values' });
       }
     }
