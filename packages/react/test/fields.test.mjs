@@ -508,7 +508,8 @@ test('date picker calendar triggers retain icon wrapper sizing and scoped popove
   assert.match(styles, /\.muxui-icon\s*\{[^}]*width:\s*1\.5rem;[^}]*height:\s*1\.5rem;/u);
   assert.match(styles, /\.muxui-icon--sm\s*\{[^}]*width:\s*1rem;[^}]*height:\s*1rem;/u);
   assert.match(styles, /\.muxui-date-popover\s*\{[^}]*border:\s*1px solid var\(--muxui-semantic-border-faint\)/u);
-  assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+\.muxui-date-popover\s*\{/u);
+  assert.match(styles, /\.muxui-date-picker-popover,\s*\.muxui-date-range-picker-popover\s*\{[^}]*box-shadow:\s*var\(--muxui-component-datepicker-popover-shadow\)/u);
+  assert.doesNotMatch(styles, /\[data-muxui-color-scheme='dark'\]\s+:where\(\.muxui-date-picker-popover,\s*\.muxui-date-range-picker-popover\)/u);
 });
 
 test('DateRangePicker renders its visual separator without exposing it to assistive technology', async () => {

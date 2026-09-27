@@ -533,6 +533,36 @@ test('state-only :is alternatives inherit the anchored owner for the real Autoco
   assert.match(result.reason, /\.muxui-autocomplete-search\[data-invalid\].*\.muxui-field-input:is\(:focus,\[data-focused\]\)/u);
 });
 
+test('shared date popover styles resolve through each picker family selector', async () => {
+  const sourcePath = 'packages/react/src/styles/base.css';
+  const after = await readFile(path.join(repositoryRoot, sourcePath), 'utf8');
+  const before = after.replace(
+    'box-shadow: var(--muxui-component-datepicker-popover-shadow);',
+    'box-shadow: var(--muxui-semantic-elevation-popover);',
+  );
+  assert.notEqual(before, after, 'fixture must target the shared date popover shadow rule');
+  const records = [
+    {
+      family: 'DatePicker', export: 'DatePicker', slug: 'date-picker', source: 'packages/react/src/fields.mjs',
+      parts: ['root', 'label', 'input', 'segment', 'trigger', 'calendar', 'description', 'error'],
+    },
+    {
+      family: 'DateRangePicker', export: 'DateRangePicker', slug: 'date-range-picker', source: 'packages/react/src/fields.mjs',
+      parts: ['root', 'label', 'start', 'end', 'trigger', 'calendar', 'description', 'error'],
+    },
+  ];
+
+  const result = analyzeReactStyleChange({ records, sourcePath, before, after });
+  assert.deepEqual(result.families, ['DatePicker', 'DateRangePicker']);
+
+  assert.throws(() => analyzeReactStyleChange({
+    records,
+    sourcePath,
+    before: '.muxui-date-popover { box-shadow: none; }',
+    after: '.muxui-date-popover { box-shadow: 0 4px 16px black; }',
+  }), /changed selector.*no canonical family owner/u);
+});
+
 test('unknown and global selectors fail while formatting-only CSS is a semantic no-op', () => {
   assert.throws(
     () => analyzeReactStyleChange({

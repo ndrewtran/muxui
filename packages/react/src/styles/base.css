@@ -1062,8 +1062,13 @@
   background: var(--muxui-popup-bg);
   border: 1px solid var(--muxui-semantic-border-faint);
   border-radius: var(--muxui-semantic-control-radius);
-  box-shadow: var(--muxui-component-datepicker-popover-shadow);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 10%, transparent);
   outline: none;
+}
+
+.muxui-date-picker-popover,
+.muxui-date-range-picker-popover {
+  box-shadow: var(--muxui-component-datepicker-popover-shadow);
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
