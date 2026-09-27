@@ -639,34 +639,37 @@ export const ListBox = /*#__PURE__*/ (() => {
   return ListBox;
 })();
 
-export const GridList = React.forwardRef(function GridList(props, ref) {
-  const { normalized, rest, selectedKeys, defaultSelectedKeys, onSelectionChange, onAction, selectionMode, className, disabled, disabledKeys } = collectionProps(props, 'grid-list');
-  const gridList = React.createElement(AriaGridList, {
-    ...rest,
-    items: normalized,
-    selectionMode,
-    selectedKeys,
-    defaultSelectedKeys,
-    disabledKeys,
-    onSelectionChange,
-    onAction: (key) => {
-      const item = normalized.find((candidate) => candidate.id === String(key));
-      if (!disabled && !item?.disabled) onAction?.(item);
-    },
-    isDisabled: disabled,
-    'aria-disabled': disabled || undefined,
-    className,
-  }, (item) => React.createElement(AriaGridListItem, {
-    id: item.id,
-    textValue: item.textValue,
-    isDisabled: disabled || item.disabled,
-    'data-disabled': disabled || item.disabled || undefined,
-    'aria-disabled': disabled || item.disabled || undefined,
-    className: 'muxui-grid-list-item',
-  }, item.label));
-  return React.createElement(GridListMotion, { rootRef: ref }, gridList);
-});
-GridList.displayName = 'GridList';
+export const GridList = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function GridList(props, ref) {
+    const { normalized, rest, selectedKeys, defaultSelectedKeys, onSelectionChange, onAction, selectionMode, className, disabled, disabledKeys } = collectionProps(props, 'grid-list');
+    const gridList = React.createElement(AriaGridList, {
+      ...rest,
+      items: normalized,
+      selectionMode,
+      selectedKeys,
+      defaultSelectedKeys,
+      disabledKeys,
+      onSelectionChange,
+      onAction: (key) => {
+        const item = normalized.find((candidate) => candidate.id === String(key));
+        if (!disabled && !item?.disabled) onAction?.(item);
+      },
+      isDisabled: disabled,
+      'aria-disabled': disabled || undefined,
+      className,
+    }, (item) => React.createElement(AriaGridListItem, {
+      id: item.id,
+      textValue: item.textValue,
+      isDisabled: disabled || item.disabled,
+      'data-disabled': disabled || item.disabled || undefined,
+      'aria-disabled': disabled || item.disabled || undefined,
+      className: 'muxui-grid-list-item',
+    }, item.label));
+    return React.createElement(GridListMotion, { rootRef: ref }, gridList);
+  });
+  component.displayName = 'GridList';
+  return component;
+})();
 
 // RAC supplies trigger semantics while Mux preserves native button handlers and refs.
 const CollectionTrigger = React.forwardRef(function CollectionTrigger({ children, disabled, onActivate, className, ...nativeProps }, ref) {
@@ -1209,23 +1212,26 @@ function treeItem(item, expansionTrigger, treeDisabled) {
     nested.map((child) => React.cloneElement(treeItem(child, expansionTrigger, treeDisabled), { key: child.id })));
 }
 
-export const Tree = React.forwardRef(function Tree({ items = [], selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, onSelectionChange, onExpandedChange, onAction, selectionMode = 'single', expansionTrigger = 'row', disabled = false, children: _children, className, ...props }, ref) {
-  accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'Tree');
-  const normalizedExpansionTrigger = normalizeTreeExpansionTrigger(expansionTrigger);
-  const normalized = normalizeTreeItems(items);
-  const allKeys = treeKeys(normalized);
-  const disabledKeys = new Set(disabled ? allKeys : allKeys.filter((key) => findTreeItem(normalized, key)?.disabled));
-  const expanded = expandedIds === 'all' ? new Set(allKeys) : keySet(expandedIds);
-  const defaultExpanded = defaultExpandedIds === 'all' ? new Set(allKeys) : keySet(defaultExpandedIds);
-  const motionControllerRef = React.useRef(null);
-  const handleExpandedChange = React.useCallback((keys) => {
-    motionControllerRef.current?.beforeExpandedChange();
-    if (!disabled) onExpandedChange?.(keyList(keys));
-  }, [disabled, onExpandedChange]);
-  const tree = React.createElement(AriaTree, { ...props, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), expandedKeys: expanded, defaultExpandedKeys: defaultExpanded, disabledKeys, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onExpandedChange: handleExpandedChange, onAction: (key) => { const item = findTreeItem(normalized, key); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, className: classNames('muxui-tree', className) }, normalized.map((item) => React.cloneElement(treeItem(item, normalizedExpansionTrigger, disabled), { key: item.id })));
-  return React.createElement(TreeMotion, { rootRef: ref, controllerRef: motionControllerRef }, tree);
-});
-Tree.displayName = 'Tree';
+export const Tree = /*#__PURE__*/ (() => {
+  const component = React.forwardRef(function Tree({ items = [], selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, onSelectionChange, onExpandedChange, onAction, selectionMode = 'single', expansionTrigger = 'row', disabled = false, children: _children, className, ...props }, ref) {
+    accessibleName({ ariaLabel: props['aria-label'], ariaLabelledby: props['aria-labelledby'] }, 'Tree');
+    const normalizedExpansionTrigger = normalizeTreeExpansionTrigger(expansionTrigger);
+    const normalized = normalizeTreeItems(items);
+    const allKeys = treeKeys(normalized);
+    const disabledKeys = new Set(disabled ? allKeys : allKeys.filter((key) => findTreeItem(normalized, key)?.disabled));
+    const expanded = expandedIds === 'all' ? new Set(allKeys) : keySet(expandedIds);
+    const defaultExpanded = defaultExpandedIds === 'all' ? new Set(allKeys) : keySet(defaultExpandedIds);
+    const motionControllerRef = React.useRef(null);
+    const handleExpandedChange = React.useCallback((keys) => {
+      motionControllerRef.current?.beforeExpandedChange();
+      if (!disabled) onExpandedChange?.(keyList(keys));
+    }, [disabled, onExpandedChange]);
+    const tree = React.createElement(AriaTree, { ...props, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), expandedKeys: expanded, defaultExpandedKeys: defaultExpanded, disabledKeys, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onExpandedChange: handleExpandedChange, onAction: (key) => { const item = findTreeItem(normalized, key); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, className: classNames('muxui-tree', className) }, normalized.map((item) => React.cloneElement(treeItem(item, normalizedExpansionTrigger, disabled), { key: item.id })));
+    return React.createElement(TreeMotion, { rootRef: ref, controllerRef: motionControllerRef }, tree);
+  });
+  component.displayName = 'Tree';
+  return component;
+})();
 
 function assertPositiveVirtualizerNumber(value, property) {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) throw new TypeError(`Virtualizer ${property} must be a finite number greater than 0`);
