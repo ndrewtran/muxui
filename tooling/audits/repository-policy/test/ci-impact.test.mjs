@@ -5,9 +5,12 @@ import test from 'node:test';
 import {
   buildPullRequestImpact,
   changedLockfileImporters,
+  executeCommand,
   executionCommands,
   isPolicyOnlyLockfileChange,
   needsStorybookGeneration,
+  normalizeCommand,
+  prepareStorybookMetadata,
   reactPackageWideChanges,
   rootPackageWideChanges,
   validateScopedEntrypoints,
@@ -476,6 +479,50 @@ test('metadata bootstrap follows lockfile consumers that require canonical React
     packages,
     lockfileImporters: ['packages/tokens'],
   }), true);
+});
+
+test('clean Storybook metadata bootstrap executes a normalized generation command', async () => {
+  const spawnCalls = [];
+  const commandCalls = [];
+  const commandRunner = (command) => {
+    commandCalls.push(normalizeCommand(command));
+    return executeCommand(command, {
+      environment: { MUXUI_BOOTSTRAP_TEST_ENV: 'preserved' },
+      spawn: (...args) => {
+        spawnCalls.push(args);
+        return { status: 0 };
+      },
+    });
+  };
+
+  const prepared = await prepareStorybookMetadata({
+    needsMetadata: true,
+    readCurrentText: async () => null,
+    commandRunner,
+    log: () => {},
+  });
+
+  assert.equal(prepared, true);
+  assert.deepEqual(commandCalls, [{
+    command: 'pnpm',
+    args: ['--filter', '@muxui/react-storybook', 'run', 'generate'],
+    env: {},
+    unsetEnv: [],
+  }]);
+  assert.equal(spawnCalls.length, 1, 'the bootstrap command is executed, not merely added to a preview plan');
+  assert.equal(spawnCalls[0][0], 'pnpm');
+  assert.deepEqual(spawnCalls[0][1], ['--filter', '@muxui/react-storybook', 'run', 'generate']);
+  assert.equal(spawnCalls[0][2].env.MUXUI_BOOTSTRAP_TEST_ENV, 'preserved');
+
+  const result = executeCommand({ command: 'fixture', args: [] }, {
+    environment: { MUXUI_BOOTSTRAP_TEST_ENV: 'defaulted' },
+    spawn: (...args) => {
+      spawnCalls.push(args);
+      return { status: 0 };
+    },
+  });
+  assert.equal(result, 0);
+  assert.equal(spawnCalls[1][2].env.MUXUI_BOOTSTRAP_TEST_ENV, 'defaulted');
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {

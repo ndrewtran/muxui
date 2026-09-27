@@ -1010,8 +1010,20 @@ export function needsStorybookGeneration(paths, config, {
   });
 }
 
+export function normalizeCommand(command) {
+  if (!command || typeof command.command !== 'string' || !Array.isArray(command.args)) {
+    throw new Error('MUXUI_CI_IMPACT_COMMAND_INVALID: commands require a command string and argument array');
+  }
+  return {
+    command: command.command,
+    args: command.args,
+    env: command.env ?? {},
+    unsetEnv: command.unsetEnv ?? [],
+  };
+}
+
 function pnpmCommand(args, { env = {}, unsetEnv = [] } = {}) {
-  return { command: 'pnpm', args, env, unsetEnv };
+  return normalizeCommand({ command: 'pnpm', args, env, unsetEnv });
 }
 
 function storyProofEnvironment(storyRun, environment) {
@@ -1118,21 +1130,52 @@ export function executionCommands(plan, {
   return commands;
 }
 
-function run(command) {
-  const env = { ...process.env };
-  for (const key of command.unsetEnv) delete env[key];
-  Object.assign(env, command.env);
-  const result = spawnSync(command.command, command.args, { cwd: repositoryRoot, stdio: 'inherit', env });
+export function executeCommand(command, {
+  spawn = spawnSync,
+  cwd = repositoryRoot,
+  environment = process.env,
+} = {}) {
+  const normalized = normalizeCommand(command);
+  const env = { ...environment };
+  for (const key of normalized.unsetEnv) delete env[key];
+  Object.assign(env, normalized.env);
+  const result = spawn(normalized.command, normalized.args, { cwd, stdio: 'inherit', env });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status ?? 1);
+  return result.status;
 }
 
-async function execute(commands) {
+async function execute(commands, commandRunner = executeCommand) {
   for (const command of commands) {
     console.log(`[ci-impact] command: ${[command.command, ...command.args].join(' ')}`);
     if (Object.keys(command.env).length > 0) console.log(`[ci-impact] command env: ${JSON.stringify(command.env)}`);
-    run(command);
+    commandRunner(command);
   }
+}
+
+function storybookGenerationCommand() {
+  return pnpmCommand(['--filter', '@muxui/react-storybook', 'run', 'generate']);
+}
+
+export async function prepareStorybookMetadata({
+  needsMetadata,
+  preview = false,
+  readCurrentText = currentText,
+  commandRunner = executeCommand,
+  log = console.log,
+} = {}) {
+  if (!needsMetadata) return false;
+  const [contractSource, manifestSource] = await Promise.all([
+    readCurrentText(reactContractPath),
+    readCurrentText(storybookManifestPath),
+  ]);
+  if (contractSource && manifestSource) return false;
+  if (preview) {
+    throw new Error('MUXUI_CI_IMPACT_METADATA_MISSING: run the scoped React/Storybook generation prerequisite before dry-run planning');
+  }
+  log('[ci-impact] metadata preparation: generate the React contract and Storybook page index required by this owner scope');
+  commandRunner(storybookGenerationCommand());
+  return true;
 }
 
 function planReport(plan, { baseRef, mergeBase, metadataPrepared, commands }) {
@@ -1144,10 +1187,8 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, commands }) {
     decision: plan.full ? 'full-workspace' : 'owner-scoped',
     fullReasons: plan.fullReasons,
     metadataPreparation: metadataPrepared ? ['@muxui/react-storybook generate'] : [],
-    preparationCommands: metadataPrepared
-      ? [{ command: 'pnpm', args: ['--filter', '@muxui/react-storybook', 'run', 'generate'], env: {} }]
-      : [],
-    commands: commands.map(({ command, args, env, unsetEnv }) => ({ command, args, env, unsetEnv })),
+    preparationCommands: metadataPrepared ? [storybookGenerationCommand()] : [],
+    commands: commands.map(normalizeCommand),
     generationPackages: plan.generationPackages,
     checks: {
       policy: plan.policy,
@@ -1205,21 +1246,7 @@ export async function runCiImpact({ preview = false, includeWorktree = false, en
     lockfileImporters,
     reactPackagePagesAffected: reactPackageImpact.pagesAffected,
   });
-  let metadataPrepared = false;
-  if (needsMetadata) {
-    const [contractSource, manifestSource] = await Promise.all([
-      currentText(reactContractPath),
-      currentText(storybookManifestPath),
-    ]);
-    if (!contractSource || !manifestSource) {
-      if (preview) {
-        throw new Error('MUXUI_CI_IMPACT_METADATA_MISSING: run the scoped React/Storybook generation prerequisite before dry-run planning');
-      }
-      console.log('[ci-impact] metadata preparation: generate the React contract and Storybook page index required by this owner scope');
-      run('pnpm', ['--filter', '@muxui/react-storybook', 'run', 'generate']);
-      metadataPrepared = true;
-    }
-  }
+  const metadataPrepared = await prepareStorybookMetadata({ needsMetadata, preview });
 
   const records = needsMetadata ? await generatedReactRecords() : [];
   const pageIndex = needsMetadata ? await generatedStoryIndex() : [];
