@@ -1,0 +1,32 @@
+---
+import { componentSummaries, getComponentPage } from '../lib/catalog.ts';
+import ExampleHost from './ExampleHost.tsx';
+import TimeFieldExampleHost from './TimeFieldExampleHost.tsx';
+
+const showcaseItems = componentSummaries.map(({ id, name }) => {
+	const slug = id.slice(id.lastIndexOf(':') + 1);
+	const example = getComponentPage(slug)?.examples[0];
+	if (!example) throw new Error(`The canonical React example is missing for ${id}.`);
+	return {
+		name,
+		slug,
+		href: `/components/${slug}/`,
+		source: example.source.content,
+	};
+});
+---
+
+<div class="home-showcase not-content" aria-label="Component showcase">
+	{showcaseItems.map((item) => (
+		<div class="showcase-item">
+			<a class="showcase-name" href={item.href}>{item.name}</a>
+			<div class="showcase-preview">
+				{item.slug === 'time-field'
+					? <TimeFieldExampleHost source={item.source} client:only="react" />
+					: /* Its display: contents root has no box for client:visible to observe. */ item.slug === 'command-palette'
+						? <ExampleHost source={item.source} client:load />
+					: <ExampleHost source={item.source} client:visible />}
+			</div>
+		</div>
+	))}
+</div>

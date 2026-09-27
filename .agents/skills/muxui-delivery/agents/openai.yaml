@@ -1,4 +1,4 @@
 interface:
   display_name: "Mux UI Delivery"
   short_description: "Triage Mux UI delivery through canonical owners"
-  default_prompt: "Use $muxui-delivery to map this Mux UI task to canonical owners and the active milestone, then route one bounded implementation through focused deterministic checks, risk-based review, and the protected pull-request workflow; keep the root accountable and use fork_turns=none for every spawn."
+  default_prompt: "Use $muxui-delivery to map this Mux UI task to canonical owners and the active milestone, then route one bounded implementation through focused deterministic checks, risk-based review, and the protected pull-request workflow; keep the root accountable and start every delegated agent fresh with only task-local context."

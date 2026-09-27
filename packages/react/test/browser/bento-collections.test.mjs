@@ -15,6 +15,7 @@ const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
 function CollectionsFixture() {
   const h = React.createElement;
   const [menuOpen, setMenuOpen] = React.useState(false);
+  const [coordinateActionsDisabled, setCoordinateActionsDisabled] = React.useState(false);
   const [action, setAction] = React.useState('');
   const [actionCount, setActionCount] = React.useState(0);
   const [itemActionCount, setItemActionCount] = React.useState(0);
@@ -25,6 +26,14 @@ function CollectionsFixture() {
   const [keys, setKeys] = React.useState(0);
   const [submitted, setSubmitted] = React.useState('');
   const [readOnlyChanges, setReadOnlyChanges] = React.useState(0);
+  const actionsMenuListRef = React.useCallback((node) => {
+    if (!node) {
+      window.__actionsMenuLegacyRefDetaches = (window.__actionsMenuLegacyRefDetaches ?? 0) + 1;
+      return undefined;
+    }
+    window.__actionsMenuRefAttached = true;
+    return () => { window.__actionsMenuRefCleanups = (window.__actionsMenuRefCleanups ?? 0) + 1; };
+  }, []);
   const anchor = React.useRef(null);
   const trigger = React.useRef(null);
   const label = React.useRef(null);
@@ -35,7 +44,7 @@ function CollectionsFixture() {
     h(Menu.Root, { open: menuOpen, onOpenChange: setMenuOpen, onAction: (item) => { setAction(item.id); setActionCount((count) => count + 1); } },
       h(Menu.Trigger, { id: 'menu-trigger' }, 'Actions'),
       h(Menu.Popup, null,
-        h(Menu.List, { 'aria-label': 'Actions' },
+        h(Menu.List, { ref: actionsMenuListRef, 'aria-label': 'Actions' },
           h(Menu.Section, null, h(Menu.Header, null, 'Editing'), h(Menu.Item, { id: 'cut' }, 'Cut')),
           h(Menu.Separator),
           h(Menu.Item, { id: 'disabled', disabled: true }, 'Unavailable'),
@@ -51,7 +60,12 @@ function CollectionsFixture() {
     h('output', { id: 'menu-open' }, String(menuOpen)),
     h(Menu.Root, { disabled: true }, h(Menu.Trigger, { disabled: false, id: 'disabled-menu' }, 'Disabled menu'), h(Menu.Popup, null, h(Menu.List, null, h(Menu.Item, { id: 'never' }, 'Never')))),
     h('span', { ref: anchor, id: 'coordinate-anchor', style: { position: 'absolute', left: 500, top: 100, width: 0, height: 0 } }),
-    h(Menu.Root, null, h(Menu.Trigger, { id: 'coordinate-trigger' }, 'Coordinate menu'), h(Menu.Popup, { anchorRef: anchor, offset: 0, containerPadding: 0, shouldFlip: false, 'data-testid': 'coordinate-popup' }, h(Menu.List, { 'aria-label': 'Coordinate actions' }, h(Menu.Item, { id: 'inspect' }, 'Inspect')))),
+    h(Menu.Root, { shouldCloseOnSelect: false, onAction: () => setCoordinateActionsDisabled(true) },
+      h(Menu.Trigger, { id: 'coordinate-trigger' }, 'Coordinate menu'),
+      h(Menu.Popup, { anchorRef: anchor, offset: 0, containerPadding: 0, shouldFlip: false, 'data-testid': 'coordinate-popup' },
+        h(Menu.List, { 'aria-label': 'Coordinate actions' },
+          h(Menu.Item, { id: 'inspect', disabled: coordinateActionsDisabled }, 'Inspect'),
+          h(Menu.Item, { id: 'disable-actions', disabled: coordinateActionsDisabled }, 'Disable actions')))),
     h(ListBox.Root, { 'aria-label': 'Palette', layout: 'grid', selectedIds: selected, onSelectionChange: setSelected, style: { width: 252, gridTemplateColumns: 'repeat(3, 1fr)' } },
       h(ListBox.Section, { title: 'Numbers' }, ['one', 'two', 'three', 'four', 'five', 'six'].map((id) => h(ListBox.Item, { id, key: id, textValue: id, style: { minHeight: 40 } }, h('strong', null, id))))),
     h('output', { id: 'selected' }, selected.join(',')),
@@ -117,8 +131,54 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     await menuTrigger.focus();
     await menuTrigger.press('ArrowDown');
     await page.getByRole('menuitem', { name: 'Cut', exact: true }).waitFor();
+    const cutItem = page.getByRole('menuitem', { name: 'Cut', exact: true });
+    await cutItem.hover();
     await page.keyboard.press('ArrowDown');
     assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).evaluate((node) => document.activeElement === node), true);
+    await page.waitForFunction(() => {
+      const item = document.activeElement;
+      const menu = item?.closest('.muxui-menu');
+      const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
+      const transform = overlay && getComputedStyle(overlay).transform;
+      return item?.textContent?.trim() === 'Share' && item.hasAttribute('data-focused')
+        && overlay && !overlay.hidden && transform !== 'none' && transform !== 'matrix(1, 0, 0, 1, 0, 0)';
+    }, null, { timeout: 3000 });
+    await page.waitForFunction(() => {
+      const item = document.activeElement;
+      const menu = item?.closest('.muxui-menu');
+      const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
+      const itemRect = item?.getBoundingClientRect();
+      const overlayRect = overlay?.getBoundingClientRect();
+      return item?.textContent?.trim() === 'Share' && overlay && !overlay.hidden && itemRect && overlayRect
+        && Math.abs(itemRect.left - overlayRect.left) < 0.75
+        && Math.abs(itemRect.top - overlayRect.top) < 0.75
+        && Math.abs(itemRect.width - overlayRect.width) < 0.75
+        && Math.abs(itemRect.height - overlayRect.height) < 0.75;
+    }, null, { timeout: 3000 });
+    const lightWash = await page.evaluate(() => {
+      const overlay = document.activeElement?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
+      return overlay && getComputedStyle(overlay).backgroundColor;
+    });
+    assert.ok(lightWash && lightWash !== 'rgba(0, 0, 0, 0)');
+    await page.evaluate(() => { document.documentElement.dataset.muxuiColorScheme = 'dark'; });
+    const darkWash = await page.evaluate(() => {
+      const overlay = document.activeElement?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
+      return overlay && getComputedStyle(overlay).backgroundColor;
+    });
+    assert.ok(darkWash && darkWash !== 'rgba(0, 0, 0, 0)');
+    assert.notEqual(darkWash, lightWash);
+    await page.evaluate(() => { delete document.documentElement.dataset.muxuiColorScheme; });
+    await page.emulateMedia({ forcedColors: 'active' });
+    const forcedColors = await page.evaluate(() => {
+      const item = document.activeElement;
+      const overlay = item?.closest('.muxui-menu')?.querySelector(':scope > [data-muxui-menu-focus]');
+      const style = getComputedStyle(item);
+      return { active: matchMedia('(forced-colors: active)').matches, overlay: getComputedStyle(overlay).display, background: style.backgroundColor };
+    });
+    assert.equal(forcedColors.active, true);
+    assert.equal(forcedColors.overlay, 'none');
+    assert.notEqual(forcedColors.background, 'rgba(0, 0, 0, 0)');
+    await page.emulateMedia({ forcedColors: 'none' });
     assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).getAttribute('data-has-submenu'), 'true');
     await page.keyboard.press('ArrowRight');
     assert.equal(await page.getByRole('menuitem', { name: 'Share', exact: true }).getAttribute('data-open'), 'true');
@@ -133,6 +193,8 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     assert.equal(await page.locator('#action-count').textContent(), '1');
     assert.equal(await page.locator('#item-action-count').textContent(), '1');
     assert.equal(await page.locator('#menu-open').textContent(), 'false');
+    await page.waitForFunction(() => window.__actionsMenuRefCleanups === 1);
+    assert.equal(await page.evaluate(() => window.__actionsMenuLegacyRefDetaches ?? 0), 0);
     await page.waitForFunction(() => document.activeElement?.id === 'menu-trigger');
     assert.equal(await page.locator('#disabled-menu').isDisabled(), true);
     await page.locator('#coordinate-trigger').click();
@@ -145,6 +207,37 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     const coordinateBox = await popup.boundingBox();
     assert.ok(Math.abs(coordinateBox.x - 500) <= 1);
     assert.ok(Math.abs(coordinateBox.y - 100) <= 1);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    const inspectItem = page.getByRole('menuitem', { name: 'Inspect', exact: true });
+    await inspectItem.focus();
+    await page.waitForFunction(() => {
+      const item = document.activeElement;
+      const menu = item?.closest('.muxui-menu');
+      const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
+      return item?.textContent?.trim() === 'Inspect' && overlay && !overlay.hidden;
+    });
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => {
+      const item = document.activeElement;
+      const menu = item?.closest('.muxui-menu');
+      const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
+      const itemRect = item?.getBoundingClientRect();
+      const overlayRect = overlay?.getBoundingClientRect();
+      return item?.textContent?.trim() === 'Disable actions' && overlay && !overlay.hidden
+        && getComputedStyle(overlay).transform === 'none' && itemRect && overlayRect
+        && Math.abs(itemRect.left - overlayRect.left) < 0.75
+        && Math.abs(itemRect.top - overlayRect.top) < 0.75
+        && Math.abs(itemRect.width - overlayRect.width) < 0.75
+        && Math.abs(itemRect.height - overlayRect.height) < 0.75;
+    }, null, { timeout: 3000 });
+    await page.getByRole('menuitem', { name: 'Disable actions', exact: true }).click();
+    await page.waitForFunction(() => {
+      const menu = document.querySelector('[data-testid="coordinate-popup"] .muxui-menu');
+      const overlay = menu?.querySelector(':scope > [data-muxui-menu-focus]');
+      const items = [...(menu?.querySelectorAll('.muxui-menu-item') ?? [])];
+      return items.length === 2 && items.every((item) => item.getAttribute('aria-disabled') === 'true')
+        && overlay?.hidden && getComputedStyle(overlay).display === 'none';
+    });
     await page.keyboard.press('Escape');
     const palette = page.getByRole('listbox', { name: 'Palette' });
     await palette.getByRole('option', { name: 'one', exact: true }).focus();

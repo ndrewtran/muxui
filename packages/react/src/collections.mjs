@@ -1,8 +1,12 @@
 import React from 'react';
 import { CalendarHeightMotion } from './calendar-height-motion.mjs';
+import { CalendarSelectionCell, CalendarSelectionMotion } from './calendar-selection-motion.mjs';
 import { ColorSliderMotionTrack } from './color-slider-motion.mjs';
 import { ColorWheelMotionTrack } from './color-wheel-motion.mjs';
 import { ListBoxMotion } from './listbox-motion.mjs';
+import { TreeMotion } from './tree-motion.mjs';
+import { GridListMotion } from './grid-list-motion.mjs';
+import { MenuMotion } from './menu-motion.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import ChevronLeftIcon from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
@@ -248,7 +252,10 @@ function calendarGrid(cellClass = 'muxui-calendar-cell') {
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
-      (date) => React.createElement(AriaCalendarCell, { date, className: cellClass, 'data-muxui-date': cellClass === 'muxui-range-calendar-cell' ? String(date) : undefined })),
+      (date) => cellClass === 'muxui-calendar-cell'
+        ? React.createElement(AriaCalendarCell, { date, className: cellClass },
+          (renderProps) => React.createElement(CalendarSelectionCell, renderProps))
+        : React.createElement(AriaCalendarCell, { date, className: cellClass, 'data-muxui-date': String(date) })),
   ));
   return cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
 }
@@ -287,10 +294,12 @@ export const Calendar = /*#__PURE__*/ (() => {
   const component = React.forwardRef(function Calendar(props, ref) {
     const { label, description: _description, errorMessage: _errorMessage, ...rest } = props;
     const labelId = React.useId();
-    return React.createElement(AriaCalendar, { ...calendarProps({ ...rest, label }, 'Calendar', labelId), ref },
-      label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
-      calendarHeader(),
-      calendarGrid());
+    const calendar = React.createElement(AriaCalendar, calendarProps({ ...rest, label }, 'Calendar', labelId),
+      () => React.createElement(React.Fragment, null,
+        label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
+        calendarHeader(),
+        calendarGrid()));
+    return React.createElement(CalendarSelectionMotion, { rootRef: ref }, calendar);
   });
   component.displayName = 'Calendar';
   return component;
@@ -632,7 +641,30 @@ export const ListBox = /*#__PURE__*/ (() => {
 
 export const GridList = React.forwardRef(function GridList(props, ref) {
   const { normalized, rest, selectedKeys, defaultSelectedKeys, onSelectionChange, onAction, selectionMode, className, disabled, disabledKeys } = collectionProps(props, 'grid-list');
-  return React.createElement(AriaGridList, { ...rest, ref, items: normalized, selectionMode, selectedKeys, defaultSelectedKeys, disabledKeys, onSelectionChange, onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-disabled': disabled || undefined, className }, (item) => React.createElement(AriaGridListItem, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, 'data-disabled': disabled || item.disabled || undefined, 'aria-disabled': disabled || item.disabled || undefined, className: 'muxui-grid-list-item' }, item.label));
+  const gridList = React.createElement(AriaGridList, {
+    ...rest,
+    items: normalized,
+    selectionMode,
+    selectedKeys,
+    defaultSelectedKeys,
+    disabledKeys,
+    onSelectionChange,
+    onAction: (key) => {
+      const item = normalized.find((candidate) => candidate.id === String(key));
+      if (!disabled && !item?.disabled) onAction?.(item);
+    },
+    isDisabled: disabled,
+    'aria-disabled': disabled || undefined,
+    className,
+  }, (item) => React.createElement(AriaGridListItem, {
+    id: item.id,
+    textValue: item.textValue,
+    isDisabled: disabled || item.disabled,
+    'data-disabled': disabled || item.disabled || undefined,
+    'aria-disabled': disabled || item.disabled || undefined,
+    className: 'muxui-grid-list-item',
+  }, item.label));
+  return React.createElement(GridListMotion, { rootRef: ref }, gridList);
 });
 GridList.displayName = 'GridList';
 
@@ -698,22 +730,26 @@ export const Menu = /*#__PURE__*/ (() => {
     const normalized = normalizeItems(items);
     const hasChildren = children !== undefined && children !== null;
     const disabledKeys = new Set(normalized.filter((item) => effectiveDisabled || item.disabled).map((item) => item.id));
+    const menu = React.createElement(AriaMenu, {
+      ...props,
+      items: hasChildren ? undefined : normalized,
+      disabledKeys,
+      shouldCloseOnSelect: shouldCloseOnSelect ?? context.shouldCloseOnSelect ?? true,
+      onAction: (key) => {
+        const item = normalized.find((candidate) => candidate.id === String(key)) ?? collectionItem(key);
+        if (!effectiveDisabled && !item.disabled) {
+          onAction?.(item);
+          onSelect?.(item);
+          context.onAction?.(item);
+          context.onSelect?.(item);
+        }
+      },
+      'data-disabled': effectiveDisabled || undefined,
+      'aria-disabled': effectiveDisabled || undefined,
+      className: classNames(standalone ? 'muxui-menu' : 'muxui-menu muxui-menu-list', className),
+    }, hasChildren ? children : (item) => React.createElement(MenuItem, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label));
     return React.createElement(MenuContext.Provider, { value: { ...context, disabled: effectiveDisabled } },
-      React.createElement(AriaMenu, {
-        ...props, ref, items: hasChildren ? undefined : normalized, disabledKeys,
-        shouldCloseOnSelect: shouldCloseOnSelect ?? context.shouldCloseOnSelect ?? true,
-        onAction: (key) => {
-          const item = normalized.find((candidate) => candidate.id === String(key)) ?? collectionItem(key);
-          if (!effectiveDisabled && !item.disabled) {
-            onAction?.(item);
-            onSelect?.(item);
-            context.onAction?.(item);
-            context.onSelect?.(item);
-          }
-        },
-        'data-disabled': effectiveDisabled || undefined, 'aria-disabled': effectiveDisabled || undefined,
-        className: classNames(standalone ? 'muxui-menu' : 'muxui-menu muxui-menu-list', className),
-      }, hasChildren ? children : (item) => React.createElement(MenuItem, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label)));
+      React.createElement(MenuMotion, { rootRef: ref }, menu));
   });
 
   const MenuItem = React.forwardRef(function MenuItem({ children, id, textValue, disabled = false, className, onAction, ...props }, ref) {
@@ -1181,7 +1217,13 @@ export const Tree = React.forwardRef(function Tree({ items = [], selectedIds, de
   const disabledKeys = new Set(disabled ? allKeys : allKeys.filter((key) => findTreeItem(normalized, key)?.disabled));
   const expanded = expandedIds === 'all' ? new Set(allKeys) : keySet(expandedIds);
   const defaultExpanded = defaultExpandedIds === 'all' ? new Set(allKeys) : keySet(defaultExpandedIds);
-  return React.createElement(AriaTree, { ...props, ref, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), expandedKeys: expanded, defaultExpandedKeys: defaultExpanded, disabledKeys, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onExpandedChange: (keys) => { if (!disabled) onExpandedChange?.(keyList(keys)); }, onAction: (key) => { const item = findTreeItem(normalized, key); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, className: classNames('muxui-tree', className) }, normalized.map((item) => React.cloneElement(treeItem(item, normalizedExpansionTrigger, disabled), { key: item.id })));
+  const motionControllerRef = React.useRef(null);
+  const handleExpandedChange = React.useCallback((keys) => {
+    motionControllerRef.current?.beforeExpandedChange();
+    if (!disabled) onExpandedChange?.(keyList(keys));
+  }, [disabled, onExpandedChange]);
+  const tree = React.createElement(AriaTree, { ...props, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), expandedKeys: expanded, defaultExpandedKeys: defaultExpanded, disabledKeys, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onExpandedChange: handleExpandedChange, onAction: (key) => { const item = findTreeItem(normalized, key); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, className: classNames('muxui-tree', className) }, normalized.map((item) => React.cloneElement(treeItem(item, normalizedExpansionTrigger, disabled), { key: item.id })));
+  return React.createElement(TreeMotion, { rootRef: ref, controllerRef: motionControllerRef }, tree);
 });
 Tree.displayName = 'Tree';
 

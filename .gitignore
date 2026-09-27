@@ -15,3 +15,8 @@ build/
 /packages/schema/generated/
 /packages/tooling/generated/
 /packages/web/generated/
+
+# Local agent client state stays untracked; only the shared skills discovery
+# link to `.agents/skills` is tracked.
+/.claude/*
+!/.claude/skills

@@ -49,3 +49,17 @@ dependents. Reuse unchanged evidence and expand only for relevant failures.
 Focused reports are partial proof, never full release proof; use the full graph
 for shared workspace configuration or dependency changes, release work, or an
 explicit all request.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `ndrewtran/muxui` via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` plus accepted decisions in `decisions/`. See `docs/agents/domain.md`.

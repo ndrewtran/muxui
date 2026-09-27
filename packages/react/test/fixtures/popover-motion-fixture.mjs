@@ -27,7 +27,12 @@ export function PopoverMotionFixture() {
       React.createElement(Menu.Popup, null,
         React.createElement(Menu.List, { 'aria-label': 'Motion menu' },
           React.createElement(Menu.Item, { id: 'one' }, 'One'),
-          React.createElement(Menu.Item, { id: 'two' }, 'Two')))),
+          React.createElement(Menu.Submenu, { delay: 20 },
+            React.createElement(Menu.Item, { id: 'more-actions', textValue: 'More actions' }, 'More actions'),
+            React.createElement(Menu.Popup, null,
+              React.createElement(Menu.List, { 'aria-label': 'Nested motion menu' },
+                React.createElement(Menu.Item, { id: 'two' }, 'Two'),
+                React.createElement(Menu.Item, { id: 'three' }, 'Three'))))))),
     React.createElement(Select, {
       ref: selectRef,
       label: 'Motion select',
