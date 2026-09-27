@@ -101,6 +101,12 @@
   outline: none;
 }
 
+.muxui-alert-dialog__trigger:focus-visible,
+.muxui-alert-dialog__trigger[data-focus-visible] {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
+}
+
 
 
 .muxui-alert-dialog__content {
@@ -108,6 +114,13 @@
   flex-direction: column;
   gap: var(--muxui-semantic-layout-action-gap);
   outline: none;
+}
+
+@media (forced-colors: active) {
+  .muxui-alert-dialog__trigger:focus-visible,
+  .muxui-alert-dialog__trigger[data-focus-visible] {
+    outline-color: Highlight;
+  }
 }
 
 /* image */
