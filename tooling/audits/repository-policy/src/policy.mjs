@@ -181,6 +181,9 @@ export async function validateGeneratedFile(repositoryRoot, repositoryPath, poli
 
 export async function walkFiles(root, current = root) {
   const entries = await readdir(current, { withFileTypes: true });
+  // A nested directory with its own .git (e.g. an agent worktree) is a
+  // separate checkout, not part of this repository.
+  if (current !== root && entries.some(({ name }) => name === '.git')) return [];
   const files = [];
   for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
     if (isIgnoredRepositoryEntry(entry.name)) continue;

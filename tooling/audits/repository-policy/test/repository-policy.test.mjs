@@ -87,6 +87,17 @@ test('identity scan skips ignored local files but keeps untracked repository fil
   );
 });
 
+test('repository walk skips nested checkouts such as agent worktrees', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-nested-worktree-'));
+  await mkdir(join(root, '.claude/worktrees/agent/packages'), { recursive: true });
+  await writeFile(join(root, '.claude/worktrees/agent/.git'), 'gitdir: elsewhere\n');
+  await writeFile(join(root, '.claude/worktrees/agent/packages/output.js'), 'stale\n');
+  await writeFile(join(root, '.git'), 'gitdir: elsewhere\n');
+  await writeFile(join(root, 'kept.txt'), 'kept\n');
+
+  assert.deepEqual(await walkFiles(root), ['kept.txt']);
+});
+
 test('E-G0.0-03: generated output validates against its source and digest', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-policy-'));
   await mkdir(join(root, 'catalog'), { recursive: true });
