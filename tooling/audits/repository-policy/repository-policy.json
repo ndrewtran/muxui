@@ -15,7 +15,6 @@
     "allowlistedPaths": [
       "decisions/",
       "tests/evidence/",
-      "strategy/archive/",
       "catalog/react-r1-0/",
       "catalog/tokens/default-theme.json",
       "tests/fixtures/g0.4/",
@@ -31,8 +30,7 @@
       "tooling/audits/repository-policy/src/evidence-verify.mjs",
       "tooling/audits/repository-policy/src/react-aria-family-evaluate.mjs",
       "tooling/audits/repository-policy/src/react-aria-stage1-source-verify.mjs",
-      "tooling/audits/repository-policy/test/evidence-integrity.test.mjs",
-      "tooling/audits/repository-policy/test/historical-catalog-compatibility.test.mjs"
+      "tooling/audits/repository-policy/test/evidence-integrity.test.mjs"
     ]
   },
   "requiredRootCommands": [

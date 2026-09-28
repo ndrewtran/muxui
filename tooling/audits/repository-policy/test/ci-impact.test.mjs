@@ -942,7 +942,7 @@ test('the full plan splits check:all into independently runnable groups', () => 
   assert.ok(!byId.storybook.at(-1).includes('storybook-a11y'));
   assert.ok(byId.storybook.at(-1).includes('test/storybook-colors.test.mjs'));
   const storybookEnv = groups.find(({ id }) => id === 'storybook-a11y').commands[1].env;
-  assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_MODE, 'full');
+  assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_EVENT, 'check:all');
   assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_FORCE, '1');
   assert.equal(storybookEnv.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR, '/tmp/runner/storybook-colour-audit');
 });
