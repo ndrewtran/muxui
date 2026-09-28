@@ -75,3 +75,18 @@ test('routes repository-policy and skill changes through ordinary governance met
     body: completeBody,
   }), []);
 });
+
+test('protects every file under the delivery skill, including references', () => {
+  for (const file of [
+    '.agents/skills/muxui-delivery/SKILL.md',
+    '.agents/skills/muxui-delivery/references/ci-delivery.md',
+  ]) {
+    const errors = validatePlanningPullRequest({ files: [file], labels: [], body: '' });
+    assert.equal(errors.length, 2, file);
+  }
+  assert.deepEqual(validatePlanningPullRequest({
+    files: ['.agents/skills/other/SKILL.md'],
+    labels: [],
+    body: '',
+  }), []);
+});
