@@ -357,6 +357,35 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.ok(reversedScroll < reversalStart, `opposite arrow interrupts and reverses the scroll (${reversalStart} -> ${reversedScroll})`);
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < 1);
 
+    // Keyboard, element.click(), and assistive-tech activation reverse without a pointerdown stopping
+    // the scroll first. Both clicks run inside the recorder so Motion's frame step precedes each sample;
+    // the spin lands activation late in the frame, where a stale final step would overshoot.
+    const clickReversal = await recordFrames(page, (spinMs, state) => {
+      const root = document.querySelector('#light-overflow-tabs');
+      const viewport = root.querySelector('.muxui-tabs-motion-overflow-viewport');
+      if (!state.started) {
+        state.started = true;
+        root.querySelector('button[aria-label="Scroll tabs right"]').click();
+        return null;
+      }
+      if (state.base !== undefined) return viewport.scrollLeft;
+      // The left arrow enables a render after the scroll leaves the start edge.
+      const previous = root.querySelector('button[aria-label="Scroll tabs left"]');
+      if (viewport.scrollLeft < 6 || previous.disabled) return null;
+      state.base = viewport.scrollLeft;
+      const until = performance.now() + spinMs;
+      while (performance.now() < until) { /* busy frame */ }
+      previous.click();
+      // Recorded after the click: this is the position the activation frame paints.
+      return { base: state.base, painted: viewport.scrollLeft };
+    }, 8);
+    await clickReversal.waitFor(({ frames }) => frames.length > 8);
+    const [clickActivation, ...clickFrames] = await clickReversal.stop();
+    const clickPainted = [clickActivation.painted, ...clickFrames];
+    assert.ok(clickPainted.every((offset) => offset <= clickActivation.base + 0.5), `click reversal never paints past the activation position ${clickActivation.base}: ${JSON.stringify(clickPainted)}`);
+    assert.ok(clickPainted.at(-1) < clickActivation.base, `click reversal moves backwards: ${JSON.stringify(clickPainted)}`);
+    await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < 1);
+
     const scrollDestination = await overflowViewport.evaluate((node) => Math.min(node.scrollWidth - node.clientWidth, node.scrollLeft + node.clientWidth * 0.8));
     await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
     await page.waitForFunction((destination) => {
