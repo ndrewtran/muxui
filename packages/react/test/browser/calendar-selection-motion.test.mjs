@@ -6,6 +6,7 @@ import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { createServer } from 'vite';
 import { fixture } from '../fixtures/calendar-selection-motion-fixture.mjs';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
@@ -157,6 +158,10 @@ test('Calendar selection circle travels within a month, resets across dates/page
       };
       requestAnimationFrame(sample);
     });
+    const travelRecording = await recordFrames(page, () => {
+      const rect = document.querySelector('#primary .muxui-calendar-selection')?.getBoundingClientRect();
+      return rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : null;
+    });
 
     await target.click();
     assert.equal(await target.getAttribute('data-selected'), 'true', 'RAC selection updates immediately');
@@ -178,12 +183,8 @@ test('Calendar selection circle travels within a month, resets across dates/page
     assert.ok(colorTransition.duration >= 850, 'selected foreground uses the Calendar state-motion duration');
     assert.notEqual(targetForegroundAtStart, targetForegroundBeforeClick, 'new selected label begins changing colour immediately');
     assert.notEqual(targetForegroundAtStart, selectedForeground, 'new selected label is still transitioning while the indicator moves');
-    await page.waitForTimeout(120);
-    const traveling = await markerCenter(marker);
     const sourceCenter = await center(source);
     const targetCenter = await center(target);
-    assert.ok(traveling.y > sourceCenter.y + 1 && traveling.y < targetCenter.y - 1, 'circle visibly crosses rows between selected days');
-    assert.ok(traveling.x > targetCenter.x + 1, 'circle also moves horizontally across the grid');
     const sourceLabelAfter = await sourceLabel.boundingBox();
     const targetLabelAfter = await targetLabel.boundingBox();
     assert.ok(Math.abs(sourceLabelAfter.y - sourceLabelBefore.y) < 0.5, 'old date text remains anchored while the circle travels');
@@ -191,6 +192,10 @@ test('Calendar selection circle travels within a month, resets across dates/page
     assert.deepEqual(await markerCenter(secondary.locator('.muxui-calendar-selection')), secondaryBefore, 'other Calendar instances do not retarget');
     await waitForMarkerAlignment(page, 'primary');
     await waitForTravelCompletion(page, 'primary');
+    const travelFrames = await travelRecording.stop();
+    const traveling = travelFrames.find(({ x, y }) => y > sourceCenter.y + 1 && y < targetCenter.y - 1 && x > targetCenter.x + 1);
+    assert.ok(traveling && traveling.y > sourceCenter.y + 1 && traveling.y < targetCenter.y - 1, `circle visibly crosses rows between selected days: ${JSON.stringify(travelFrames)}`);
+    assert.ok(traveling.x > targetCenter.x + 1, 'circle also moves horizontally across the grid');
     const movingScale = await page.evaluate(() => Object.assign(window.__calendarSquishPeak, { done: true }));
     assert.ok(movingScale.x > 1.03 && movingScale.y < 0.97, 'selection paint squishes while its outer circle travels');
     await page.waitForFunction(() => {

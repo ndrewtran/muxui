@@ -8,6 +8,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { GridListMotionFixture } from '../fixtures/grid-list-motion-fixture.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
@@ -111,13 +112,17 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     assert.equal(await layer.evaluate((node) => getComputedStyle(node).pointerEvents), 'none');
     assert.ok(Math.abs(first.top - (await rowRect(page, 'One')).top) < 0.75);
 
+    const travelRecording = await recordFrames(page, (selector) => {
+      const rect = document.querySelector(`${selector} .muxui-grid-list-hover`)?.getBoundingClientRect();
+      return rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null;
+    }, primary);
     const target = await moveToRow(page, 'Two');
-    await page.waitForTimeout(80);
-    const middle = await layerRect(page, primary);
-    assert.ok(middle.top > Math.min(first.top, target.top) + 0.75
-      && middle.top < Math.max(first.top, target.top) - 0.75,
-    `overlay should be between rows during travel: ${JSON.stringify({ first, middle, target })}`);
     await waitForLayerAlignment(page, primary, 'Two');
+    const travelFrames = await travelRecording.stop();
+    const middle = travelFrames.find(({ top }) => top > Math.min(first.top, target.top) + 0.75 && top < Math.max(first.top, target.top) - 0.75);
+    assert.ok(middle && middle.top > Math.min(first.top, target.top) + 0.75
+      && middle.top < Math.max(first.top, target.top) - 0.75,
+    `overlay should be between rows during travel: ${JSON.stringify({ first, travelFrames, target })}`);
     assert.deepEqual(errors, []);
 
     await page.mouse.move(800, 580);
@@ -179,6 +184,13 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     assert.ok(oneRect);
     const pressPoint = { x: oneRect.x + oneRect.width * 0.28, y: oneRect.y + oneRect.height * 0.58 };
     await page.mouse.move(pressPoint.x, pressPoint.y);
+    const sampleRipple = (selector) => {
+      const node = document.querySelector(`${selector} .muxui-grid-list-ripple`);
+      if (!node) return null;
+      const style = getComputedStyle(node);
+      return { scale: new DOMMatrixReadOnly(style.transform).a, opacity: Number(style.opacity) };
+    };
+    const expandRecording = await recordFrames(page, sampleRipple, primary);
     await page.mouse.down();
     const ripple = page.locator(`${primary} .muxui-grid-list-ripple`);
     await ripple.waitFor({ state: 'attached' });
@@ -201,14 +213,16 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     assert.equal(initialRipple.opacity, 0.08);
     assert.equal(initialRipple.hidden, 'true');
     assert.equal(initialRipple.pointerEvents, 'none');
-    await page.waitForTimeout(70);
-    const scale = await ripple.evaluate((node) => new DOMMatrixReadOnly(getComputedStyle(node).transform).a);
-    assert.ok(scale > 0 && scale < 1, `ripple should be expanding: scale=${scale}`);
+    await expandRecording.waitFor(({ frames }) => frames.some(({ scale }) => scale > 0 && scale < 1), { timeout: 2_000 });
+    const expandFrames = await expandRecording.stop();
+    const scale = expandFrames.find((frame) => frame.scale > 0 && frame.scale < 1)?.scale;
+    assert.ok(scale > 0 && scale < 1, `ripple should be expanding: ${JSON.stringify(expandFrames)}`);
+    const fadeRecording = await recordFrames(page, sampleRipple, primary);
     await page.mouse.up();
-    await page.waitForTimeout(90);
-    const fadingOpacity = await ripple.evaluate((node) => Number(getComputedStyle(node).opacity));
-    assert.ok(fadingOpacity > 0 && fadingOpacity < 0.08, `released ripple should fade: opacity=${fadingOpacity}`);
     await page.waitForFunction((selector) => document.querySelectorAll(`${selector} .muxui-grid-list-ripple`).length === 0, primary);
+    const fadeFrames = await fadeRecording.stop();
+    const fadingOpacity = fadeFrames.find(({ opacity }) => opacity > 0 && opacity < 0.08)?.opacity;
+    assert.ok(fadingOpacity > 0 && fadingOpacity < 0.08, `released ripple should fade: ${JSON.stringify(fadeFrames)}`);
 
     const selectedRow = page.locator(`${primary} [role="row"][aria-selected="true"]`);
     await selectedRow.scrollIntoViewIfNeeded();

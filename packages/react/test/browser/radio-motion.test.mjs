@@ -6,6 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { createServer } from 'vite';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { RadioMotionFixture } from '../fixtures/radio-motion-fixture.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../..');
@@ -144,12 +145,16 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     assert.equal(await group(page, 'compound').locator('.muxui-radio-motion-dot').count(), 1, 'compound RadioField gets the same travelling dot');
 
     const controlledBefore = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
+    const travelRecording = await recordFrames(page, () => {
+      const rect = document.querySelector('#controlled .muxui-radio-motion-dot')?.getBoundingClientRect();
+      return rect ? { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 } : null;
+    });
     await activate(page, 'controlled', 'two');
-    await page.waitForTimeout(120);
-    const controlledDuring = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
-    assert.ok(controlledDuring.y > controlledBefore.y + 1, 'dot visibly leaves the first indicator during travel');
-    assert.ok(controlledDuring.y < controlledBefore.y + 30, 'dot is still between indicators during travel');
     await waitForAlignment(page, 'controlled');
+    const travelFrames = await travelRecording.stop();
+    const controlledDuring = travelFrames.find(({ y }) => y > controlledBefore.y + 1 && y < controlledBefore.y + 30);
+    assert.ok(controlledDuring && controlledDuring.y > controlledBefore.y + 1, `dot visibly leaves the first indicator during travel: ${JSON.stringify(travelFrames)}`);
+    assert.ok(controlledDuring.y < controlledBefore.y + 30, 'dot is still between indicators during travel');
     const controlledAfter = await selectedIndicator(page, 'controlled');
     const controlledDotAfter = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
     assert.ok(controlledAfter);
