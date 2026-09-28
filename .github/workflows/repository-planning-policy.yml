@@ -55,7 +55,7 @@ jobs:
               `${process.env.GITHUB_WORKSPACE}/.github/scripts/validate-planning-pr.cjs`,
             );
             const errors = validator.validatePlanningPullRequest({
-              files: files.map((file) => file.filename),
+              files: validator.changedPaths(files),
               labels,
               body: pullRequest.body || '',
             });

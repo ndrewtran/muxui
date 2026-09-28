@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { validatePlanningPullRequest } = require('./validate-planning-pr.cjs');
+const { changedPaths, validatePlanningPullRequest } = require('./validate-planning-pr.cjs');
 
 const completeBody = `
 - Authority change record: #1
@@ -92,4 +92,44 @@ test('protects every file under the delivery skill and issue forms, but not sibl
   ]) {
     assert.deepEqual(validatePlanningPullRequest({ files: [file], labels: [], body: '' }), [], file);
   }
+});
+
+test('changedPaths includes previous names once and skips missing ones', () => {
+  assert.deepEqual(changedPaths([
+    { filename: 'docs/x.md', previous_filename: 'strategy/product-scope.md' },
+    { filename: 'README.md' },
+    { filename: 'a.md', previous_filename: undefined },
+    { filename: 'strategy/product-scope.md' },
+  ]), ['docs/x.md', 'strategy/product-scope.md', 'README.md', 'a.md']);
+});
+
+test('treats a rename out of a protected path as an authority change', () => {
+  const errors = validatePlanningPullRequest({
+    files: changedPaths([
+      { filename: 'docs/x.md', previous_filename: '.agents/skills/muxui-delivery/references/x.md' },
+    ]),
+    labels: [],
+    body: '',
+  });
+  assert.equal(errors.length, 2);
+  assert.match(errors[0], /label/);
+  assert.match(errors[1], /change record/);
+});
+
+test('ignores a rename between unprotected paths', () => {
+  assert.deepEqual(validatePlanningPullRequest({
+    files: changedPaths([{ filename: 'docs/b.md', previous_filename: 'docs/a.md' }]),
+    labels: [],
+    body: '',
+  }), []);
+});
+
+test('requires Product Scope fields when product-scope.md is renamed away', () => {
+  const errors = validatePlanningPullRequest({
+    files: changedPaths([{ filename: 'docs/product-scope.md', previous_filename: 'strategy/product-scope.md' }]),
+    labels: ['type:decision'],
+    body: '- Authority change record: #12\n',
+  });
+  assert.equal(errors.length, 5);
+  assert.match(errors[0], /Scope version effect/);
 });
