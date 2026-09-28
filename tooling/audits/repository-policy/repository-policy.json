@@ -27,14 +27,10 @@
       "tooling/audits/repository-policy/test/repository-policy.test.mjs",
       "packages/schema/schemas/react-r1.schema.json",
       "packages/tooling/test/local-resolver.test.mjs",
-      "tooling/audits/repository-policy/src/delivery-workflow-authority-verify.mjs",
       "tooling/audits/repository-policy/src/evidence-applicability-supersession.mjs",
       "tooling/audits/repository-policy/src/evidence-verify.mjs",
-      "tooling/audits/repository-policy/src/g1-2-applicability-continuity-verify.mjs",
-      "tooling/audits/repository-policy/src/r1-continuous-authority-compatibility.mjs",
       "tooling/audits/repository-policy/src/react-aria-family-evaluate.mjs",
       "tooling/audits/repository-policy/src/react-aria-stage1-source-verify.mjs",
-      "tooling/audits/repository-policy/test/delivery-workflow-authority.test.mjs",
       "tooling/audits/repository-policy/test/evidence-integrity.test.mjs",
       "tooling/audits/repository-policy/test/historical-catalog-compatibility.test.mjs"
     ]
