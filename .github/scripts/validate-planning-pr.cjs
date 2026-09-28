@@ -13,8 +13,6 @@ const AUTHORITY_LABELS = new Set([
 ]);
 
 const PLANNING_CONTROL_FILES = new Set([
-  '.agents/skills/muxui-delivery/SKILL.md',
-  '.agents/skills/muxui-delivery/agents/openai.yaml',
   '.github/CODEOWNERS',
   '.github/pull_request_template.md',
   '.github/workflows/repository-planning-policy.yml',
@@ -27,10 +25,17 @@ const PLANNING_CONTROL_FILES = new Set([
   'tooling/audits/repository-policy/package.json',
 ]);
 
+// Every file under these directories is planning control, including the
+// delivery skill's references.
+const PLANNING_CONTROL_PREFIXES = [
+  '.agents/skills/muxui-delivery/',
+  '.github/ISSUE_TEMPLATE/',
+];
+
 function isProtectedPlanningFile(file) {
   return AUTHORITY_FILES.has(file)
     || PLANNING_CONTROL_FILES.has(file)
-    || file.startsWith('.github/ISSUE_TEMPLATE/');
+    || PLANNING_CONTROL_PREFIXES.some((prefix) => file.startsWith(prefix));
 }
 
 function fieldValue(body, label) {
@@ -85,6 +90,7 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
 module.exports = {
   AUTHORITY_FILES,
   PLANNING_CONTROL_FILES,
+  PLANNING_CONTROL_PREFIXES,
   isProtectedPlanningFile,
   validatePlanningPullRequest,
 };
