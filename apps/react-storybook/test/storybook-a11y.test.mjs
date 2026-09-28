@@ -30,16 +30,6 @@ function pageScopedAuditTimeout() {
   return Math.min(fullAuditTimeoutMs, 120_000 + pages.length * 6_000);
 }
 
-function heavyAuditSkip(name) {
-  const isPullRequestSelection = process.env.MUXUI_STORYBOOK_AUDIT_EVENT === 'pull_request';
-  const forceFull = process.env.MUXUI_STORYBOOK_AUDIT_FORCE === '1';
-  return process.env.MUXUI_STORYBOOK_AUDIT_MODE === 'skip-heavy'
-    && isPullRequestSelection
-    && !forceFull
-    ? `CI selection marked ${name} unrelated to the changed inputs`
-    : false;
-}
-
 function workerCount(variable) {
   const value = process.env[variable] ?? '1';
   assert.ok(value === '1' || value === '2', `${variable} must be 1 or 2, got ${value}`);
@@ -1220,7 +1210,6 @@ test('all selected Storybook pages meet theme contrast in light and dark', {
 
 test('all Mux UI React Storybook families are axe-clean in light and dark', {
   timeout: fullAuditTimeoutMs,
-  skip: heavyAuditSkip('a11y-families'),
 }, async (t) => {
   const resources = createAuditResources(t.signal);
   const startedAt = performance.now();
