@@ -115,7 +115,7 @@ test('full checks continue past a failing package and still exit non-zero', asyn
   await readFile(join(root, 'packages/b/ran'), 'utf8');
 });
 
-test('full check boundary overrides inherited Storybook skip selection', async () => {
+test('full check boundary overrides inherited focused Storybook selection', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-full-'));
   await mkdir(join(root, 'packages/app'), { recursive: true });
   await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
@@ -158,7 +158,7 @@ test('full check boundary overrides inherited Storybook skip selection', async (
         PATH: `${join(root, 'bin')}:${process.env.PATH}`,
         MUXUI_TASK_LOG: logPath,
         MUXUI_TASK_REPOSITORY_ROOT: root,
-        MUXUI_STORYBOOK_AUDIT_MODE: 'skip-heavy',
+        MUXUI_STORYBOOK_AUDIT_MODE: 'focused',
         MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
         MUXUI_STORYBOOK_AUDIT_FORCE: '0',
         MUXUI_STORYBOOK_FAMILIES: 'DatePicker',
@@ -187,7 +187,7 @@ test('full check boundary overrides inherited Storybook skip selection', async (
         MUXUI_BASE_REF: 'HEAD',
         MUXUI_TASK_LOG: logPath,
         MUXUI_TASK_REPOSITORY_ROOT: root,
-        MUXUI_STORYBOOK_AUDIT_MODE: 'skip-heavy',
+        MUXUI_STORYBOOK_AUDIT_MODE: 'focused',
         MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
         MUXUI_STORYBOOK_AUDIT_FORCE: '0',
         MUXUI_STORYBOOK_FAMILIES: 'DatePicker',

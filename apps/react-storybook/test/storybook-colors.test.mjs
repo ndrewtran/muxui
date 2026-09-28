@@ -24,16 +24,6 @@ const graphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
   colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
 ]));
 
-function heavyAuditSkip(name) {
-  const isPullRequestSelection = process.env.MUXUI_STORYBOOK_AUDIT_EVENT === 'pull_request';
-  const forceFull = process.env.MUXUI_STORYBOOK_AUDIT_FORCE === '1';
-  return process.env.MUXUI_STORYBOOK_AUDIT_MODE === 'skip-heavy'
-    && isPullRequestSelection
-    && !forceFull
-    ? `CI selection marked ${name} unrelated to the changed inputs`
-    : false;
-}
-
 function workerCount(variable) {
   const value = process.env[variable] ?? '2';
   assert.ok(value === '1' || value === '2', `${variable} must be 1 or 2, got ${value}`);
@@ -1672,7 +1662,6 @@ async function runColourWorker({ browser, schemes, workerId }) {
 
 test('Storybook manager and docs paint only canonical Mux colours in light and dark', {
   timeout: 420000,
-  skip: heavyAuditSkip('manager-colours'),
 }, async (t) => {
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   const report = { storybookVersion: '10.5.10', tokenSource: 'catalog/tokens/default-theme.json', states: [] };

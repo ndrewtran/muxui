@@ -27,14 +27,10 @@
       "tooling/audits/repository-policy/test/repository-policy.test.mjs",
       "packages/schema/schemas/react-r1.schema.json",
       "packages/tooling/test/local-resolver.test.mjs",
-      "tooling/audits/repository-policy/src/delivery-workflow-authority-verify.mjs",
       "tooling/audits/repository-policy/src/evidence-applicability-supersession.mjs",
       "tooling/audits/repository-policy/src/evidence-verify.mjs",
-      "tooling/audits/repository-policy/src/g1-2-applicability-continuity-verify.mjs",
-      "tooling/audits/repository-policy/src/r1-continuous-authority-compatibility.mjs",
       "tooling/audits/repository-policy/src/react-aria-family-evaluate.mjs",
       "tooling/audits/repository-policy/src/react-aria-stage1-source-verify.mjs",
-      "tooling/audits/repository-policy/test/delivery-workflow-authority.test.mjs",
       "tooling/audits/repository-policy/test/evidence-integrity.test.mjs",
       "tooling/audits/repository-policy/test/historical-catalog-compatibility.test.mjs"
     ]
@@ -127,40 +123,6 @@
     "strategy/": ["@muxui/repository-policy"],
     "tests/": ["@muxui/repository-policy"],
     "tooling/": ["@muxui/repository-policy"]
-  },
-  "storybookAuditSelection": {
-    "schemaVersion": 1,
-    "package": "@muxui/react-storybook",
-    "fullInputPrefixes": [
-      ".agents/",
-      ".claude/",
-      ".github/",
-      "catalog/components/",
-      "catalog/react-r1-0/",
-      "catalog/react-r1-5/",
-      "catalog/react-r1-6/",
-      "catalog/tokens/",
-      "tooling/audits/repository-policy/"
-    ],
-    "fullInputPaths": [
-      ".node-version",
-      ".npmrc",
-      "AGENTS.md",
-      "package.json",
-      "pnpm-lock.yaml",
-      "pnpm-workspace.yaml"
-    ],
-    "safeUnrelatedPrefixes": [
-      "apps/docs/",
-      "apps/react-playground/",
-      "apps/scale/"
-    ],
-    "forceFullEvents": [
-      "schedule",
-      "workflow_dispatch",
-      "check:all",
-      "release"
-    ]
   },
   "pullRequestImpact": {
     "schemaVersion": 1,
