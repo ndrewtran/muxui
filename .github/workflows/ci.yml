@@ -23,7 +23,7 @@ jobs:
   # Pull requests plan owner-scoped groups from the merge-base diff; push,
   # schedule, and manual runs plan the full workspace graph. Pull requests
   # also mark groups that passed in an earlier run of the same PR, with no
-  # affecting change since, as reused. Set repository variable
+  # affecting change since, as reused (never for fork PRs). Set repository variable
   # MUXUI_CI_REUSE=off to always run every group.
   plan:
     runs-on: ubuntu-latest
@@ -54,6 +54,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           MUXUI_CI_REUSE: ${{ vars.MUXUI_CI_REUSE }}
           MUXUI_PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          MUXUI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
             node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output \
