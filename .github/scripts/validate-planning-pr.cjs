@@ -38,6 +38,17 @@ function isProtectedPlanningFile(file) {
     || PLANNING_CONTROL_PREFIXES.some((prefix) => file.startsWith(prefix));
 }
 
+// A rename or move out of a protected path still changes that path, so the
+// previous name counts alongside the new one.
+function changedPaths(files) {
+  const paths = new Set();
+  for (const file of files) {
+    paths.add(file.filename);
+    if (file.previous_filename) paths.add(file.previous_filename);
+  }
+  return [...paths];
+}
+
 function fieldValue(body, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const match = body.match(new RegExp(`^\\s*-?\\s*${escaped}:\\s*(.+?)\\s*$`, 'im'));
@@ -91,6 +102,7 @@ module.exports = {
   AUTHORITY_FILES,
   PLANNING_CONTROL_FILES,
   PLANNING_CONTROL_PREFIXES,
+  changedPaths,
   isProtectedPlanningFile,
   validatePlanningPullRequest,
 };
