@@ -44,9 +44,11 @@ lifecycle, capability availability, Project status, and evidence kept separate.
 
 ## 2. Classify
 
-Classify as aligned implementation, required correction, adjacent improvement,
-potential deviation, tracker mismatch, or unverified (definitions in
-`alignment-workflow.md`). Report a compact route: owner, milestone
+Classify as aligned implementation, candidate discovery, required correction,
+adjacent improvement, new capability or ontology, later-gate work, rejected
+scope, non-waivable conflict, tracker mismatch, or unverified (definitions and
+dispositions in `alignment-workflow.md`). Any class whose disposition is Stop
+goes to step 4. Report a compact route: owner, milestone
 relationship, required checks, review lenses, and the next protected-PR action.
 
 Done when: the class is stated before any write.
@@ -63,7 +65,11 @@ implementation design is ordinary delivery (Decision 0011).
 4. Freeze the exact diff and deterministic results before independent review;
    rebuild downstream proof after any real correction.
 5. Deliver through a topic branch and a protected, non-draft pull request with
-   current CI and review-bot coverage (`ci-delivery.md`).
+   current CI and review-bot coverage (`ci-delivery.md`), and merge only under
+   Andrew's stated disposition.
+
+Done when: the pull request's current head has green CI and review-bot
+coverage, and it is merged or held as that disposition directs.
 
 Ordinary work needs no delivery-profile packet, review-packet digest,
 `ChangeIntentEnvelope`, operation descriptor, per-component acceptance, or
@@ -96,8 +102,9 @@ Stop before the affected write and ask Andrew, using the format in
 - activate a deferred renderer or capability, or add an undocumented
   exception;
 - set a decision-bearing Project field without Andrew's recorded choice;
-- publish to npm, change a dist-tag, merge the final R1-exit pull request,
-  deploy, or touch production or a consumer project; or
+- publish, change a dist-tag, merge the final R1-exit pull request, deploy,
+  touch production or a consumer project, or perform another external
+  mutation not already authorized; or
 - cross another stop recorded in accepted authority.
 
 Solve delivery-process problems within existing owners; a new policy or
@@ -120,6 +127,9 @@ review findings create no new human decision while product meaning and the
 authorized boundary stay unchanged; rerun affected checks and review the
 current head. For evidence, follow `tests/evidence/README.md`; task notes and
 review discussion are not evidence unless an owner admits them.
+
+Done when: every check the risk requires has passed on the frozen diff, and
+every triggered review has no unresolved finding.
 
 ## 6. Report completion
 

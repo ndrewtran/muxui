@@ -76,17 +76,20 @@ test('routes repository-policy and skill changes through ordinary governance met
   }), []);
 });
 
-test('protects every file under the delivery skill, including references', () => {
+test('protects every file under the delivery skill and issue forms, but not sibling paths', () => {
   for (const file of [
     '.agents/skills/muxui-delivery/SKILL.md',
+    '.agents/skills/muxui-delivery/agents/openai.yaml',
     '.agents/skills/muxui-delivery/references/ci-delivery.md',
+    '.github/ISSUE_TEMPLATE/x.yml',
   ]) {
     const errors = validatePlanningPullRequest({ files: [file], labels: [], body: '' });
     assert.equal(errors.length, 2, file);
   }
-  assert.deepEqual(validatePlanningPullRequest({
-    files: ['.agents/skills/other/SKILL.md'],
-    labels: [],
-    body: '',
-  }), []);
+  for (const file of [
+    '.agents/skills/other/SKILL.md',
+    '.agents/skills/muxui-delivery-extra/x.md',
+  ]) {
+    assert.deepEqual(validatePlanningPullRequest({ files: [file], labels: [], body: '' }), [], file);
+  }
 });

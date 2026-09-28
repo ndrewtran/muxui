@@ -86,9 +86,11 @@ chain is accepted and the milestone is ready.
    changes:
    - Routine: after an explicit issue close or reopen, or a PR merge, mirror
      the event on the already-mapped item when the live workflow gives one
-     unambiguous status mapping, and link the exact PR when missing. Apply it
-     at preflight and closure without asking, re-read the item, and treat an
-     already-correct value as success.
+     unambiguous status mapping, and link the exact PR when missing. Also
+     routine: a workflow status the Roadmap already proves, such as moving a
+     ready milestone to `active` when its first implementation PR opens. Apply
+     these at preflight and closure without asking, re-read the item, and
+     treat an already-correct value as success.
    - Decision-bearing: priority, iteration, target release, dates, blockers,
      assignees, reviewers, scope, authority or evidence references,
      exceptions, and any ambiguous status. Apply only Andrew's exact recorded

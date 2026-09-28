@@ -15,9 +15,10 @@
 
 Andrew's instruction accepts the bounded Decision 0009 amendment 06
 direction: the repository delivery skill becomes the single repository-scoped
-owner of Mux UI delivery guidance, the user-level `muxui-delivery-guard` skill
-is retired, and every file under `.agents/skills/muxui-delivery/`, including
-its references, is protected as planning control.
+owner of Mux UI delivery guidance, and the user-level `muxui-delivery-guard`
+skill is retired. The decision record's proposed protection of every file under
+`.agents/skills/muxui-delivery/` is not part of this acceptance; it is adopted
+only when Andrew merges the pull request.
 
 This acceptance does not claim implementation, check results, review, merge,
 or repository adoption before the protected pull request is merged. The exact

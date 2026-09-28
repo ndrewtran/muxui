@@ -20,13 +20,13 @@ ask which checkout is authoritative.
 
 ## State domains
 
-| Domain | Owner | Values |
+| Domain | Owner | Values defined in |
 | --- | --- | --- |
-| Product commitment | Product Scope | `candidate`, `admitted`, `committed`, `deferred`, `rejected` |
-| Milestone delivery | Roadmap | `not-ready`, `ready`, `active`, `evidence-review`, `complete`, `blocked` |
-| Artifact maturity | Canonical artifact or binding | `experimental`, `stable`, `deprecated`, `removed` |
-| Capability availability | Capability manifest plus passed activation evidence | Enabled, disabled, or honestly unavailable |
-| Work execution | Delivery Project | Workflow status and mutable delivery fields |
+| Product commitment | Product Scope | Product Scope "Commitment states" |
+| Milestone delivery | Roadmap | Roadmap "Status vocabulary" |
+| Artifact maturity | Canonical artifact or binding | Architecture "Controlled vocabulary" (Lifecycle) |
+| Capability availability | Capability manifest plus passed activation evidence | The manifest's declared schema |
+| Work execution | Delivery Project | The live `Status` field options |
 
 Resolve each domain from its own owner. There is no generic "activation state".
 
