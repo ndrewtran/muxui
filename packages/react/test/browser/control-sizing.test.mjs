@@ -766,7 +766,8 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
       }
     }
     for (const size of [...sizeRows].reverse()) {
-      const popupPage = await browser.newPage({ viewport: { width: 1600, height: 1200 } });
+      // This measures sizing, not motion: reduced motion opens the palette already settled.
+      const popupPage = await browser.newPage({ viewport: { width: 1600, height: 1200 }, reducedMotion: 'reduce' });
       popupPage.on('pageerror', (error) => errors.push(`command-palette/${size}: ${error.message}`));
       popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`command-palette/${size}: ${message.text()}`); });
       try {
@@ -784,8 +785,9 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
         await popupPage.waitForFunction((targetSize) => {
           const input = document.querySelector(`[aria-label="Command search ${targetSize}"]`);
           const popup = input?.closest('.muxui-command-palette__popup') ?? document.querySelector('.muxui-command-palette__popup');
-          const scale = Number(popup && getComputedStyle(popup).getPropertyValue('--muxui-modal-scale'));
-          return popup && (!Number.isFinite(scale) || Math.abs(scale - 1) < 0.00001);
+          // Settled modals drop the inline scale variable; an empty value means scale(1).
+          const scale = popup && getComputedStyle(popup).getPropertyValue('--muxui-modal-scale').trim();
+          return popup && (scale === '' || Math.abs(Number(scale) - 1) < 0.00001);
         }, size);
         collectCommandPaletteFailures(
           await measureCommandPaletteInput(popupPage, size),
