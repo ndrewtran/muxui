@@ -10,6 +10,8 @@ on:
 
 permissions:
   contents: read
+  # Pull-request plans read earlier runs' jobs and reuse records.
+  actions: read
 
 # Only pull requests share (and cancel) a group; every main run keeps its own so
 # quick successive merges never drop a pending full run.
@@ -19,7 +21,10 @@ concurrency:
 
 jobs:
   # Pull requests plan owner-scoped groups from the merge-base diff; push,
-  # schedule, and manual runs plan the full workspace graph.
+  # schedule, and manual runs plan the full workspace graph. Pull requests
+  # also mark groups that passed in an earlier run of the same PR, with no
+  # affecting change since, as reused (never for fork PRs). Set repository variable
+  # MUXUI_CI_REUSE=off to always run every group.
   plan:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -46,10 +51,28 @@ jobs:
         id: plan
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
+          GH_TOKEN: ${{ github.token }}
+          MUXUI_CI_REUSE: ${{ vars.MUXUI_CI_REUSE }}
+          MUXUI_PR_HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          MUXUI_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
-          scope=--full
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then scope=; fi
-          node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output $scope
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output \
+              --reuse-record "$RUNNER_TEMP/ci-reuse-record.json"
+          else
+            node tooling/audits/repository-policy/src/ci-impact.mjs --plan --github-output --full
+          fi
+
+      # Later runs of this PR read this record to reuse passed groups.
+      - name: Upload reuse record
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-reuse-record
+          path: ${{ runner.temp }}/ci-reuse-record.json
+          if-no-files-found: warn
+          retention-days: 14
+          overwrite: true
 
   # Each group is self-contained: it repeats its generation prerequisites in a
   # fresh runner, so "re-run failed jobs" repeats only the failed groups.
@@ -63,24 +86,37 @@ jobs:
       fail-fast: false
       matrix:
         group: ${{ fromJSON(needs.plan.outputs.groups) }}
+    # A reused group passed in an earlier run of this PR; it only reports that.
     steps:
+      - name: Reuse earlier pass
+        if: matrix.group.reusedFrom != ''
+        env:
+          GROUP_ID: ${{ matrix.group.id }}
+          REUSED_FROM: ${{ matrix.group.reusedFrom }}
+        run: echo "::notice title=Reused::$GROUP_ID passed in $REUSED_FROM; changes since do not affect it"
+
       - uses: actions/checkout@v4
+        if: matrix.group.reusedFrom == ''
         with:
           fetch-depth: 0
 
       - uses: actions/setup-node@v4
+        if: matrix.group.reusedFrom == ''
         with:
           node-version-file: .node-version
 
       - name: Activate pinned pnpm
+        if: matrix.group.reusedFrom == ''
         run: |
           corepack enable
           corepack prepare pnpm@10.33.0 --activate
 
       - name: Install workspace
+        if: matrix.group.reusedFrom == ''
         run: pnpm install --frozen-lockfile
 
       - name: Run ${{ matrix.group.id }} checks
+        if: matrix.group.reusedFrom == ''
         env:
           GITHUB_BASE_REF: ${{ github.base_ref }}
           MUXUI_CI_GROUP: ${{ matrix.group.id }}
@@ -90,7 +126,7 @@ jobs:
           node tooling/audits/repository-policy/src/ci-impact.mjs --group "$MUXUI_CI_GROUP" $scope
 
       - name: Upload Storybook colour diagnostics
-        if: always() && matrix.group.kind == 'storybook'
+        if: always() && matrix.group.kind == 'storybook' && matrix.group.reusedFrom == ''
         uses: actions/upload-artifact@v4
         with:
           name: storybook-colour-diagnostics-${{ matrix.group.id }}

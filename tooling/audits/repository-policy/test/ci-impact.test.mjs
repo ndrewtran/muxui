@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import {
   buildPullRequestImpact,
@@ -12,6 +15,7 @@ import {
   executionMode,
   fullWorkspacePlan,
   groupMatrix,
+  groupPackageDirectories,
   isPolicyOnlyLockfileChange,
   needsStorybookGeneration,
   normalizeCommand,
@@ -19,10 +23,22 @@ import {
   prepareStorybookMetadata,
   reactPackageWideChanges,
   rootPackageWideChanges,
+  runCiImpact,
   shardStoryRun,
   storyShardPageBudget,
   validateScopedEntrypoints,
 } from '../src/ci-impact.mjs';
+import {
+  affectedReason,
+  createGitHubClient,
+  decideReuse,
+  groupSignature,
+  loadEarlierRuns,
+  planReuse,
+  reuseBlockedPath,
+  reuseDisabledReason,
+  reuseRecord,
+} from '../src/ci-reuse.mjs';
 import { componentTestSelection } from '../src/component-test-selection.mjs';
 import { loadPolicy } from '../src/policy.mjs';
 
@@ -933,9 +949,388 @@ test('the full plan splits check:all into independently runnable groups', () => 
 
 test('CLI arguments select preview, full, group, and GitHub output modes', () => {
   assert.deepEqual(parseCliArguments(['--full', '--group', 'react', '--github-output']), {
-    preview: false, planOnly: false, includeWorktree: false, full: true, group: 'react', githubOutput: true,
+    preview: false, planOnly: false, includeWorktree: false, full: true, group: 'react', githubOutput: true, reuseRecord: null,
   });
+  assert.equal(parseCliArguments(['--plan', '--reuse-record', '/tmp/record.json']).reuseRecord, '/tmp/record.json');
   assert.equal(parseCliArguments(['--dry-run']).preview, true);
   assert.throws(() => parseCliArguments(['--group']), /MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN/u);
   assert.throws(() => parseCliArguments(['--nope']), /MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN/u);
+});
+
+// Pull-request reuse of groups that passed in earlier runs.
+const commitA = 'a'.repeat(40);
+const commitB = 'b'.repeat(40);
+const commitHead = 'c'.repeat(40);
+const prHead = '1'.repeat(40);
+const reuseGroups = [
+  { id: 'checks', kind: 'checks', signature: 'd'.repeat(64), packageDirectories: [] },
+  { id: 'react', kind: 'react', signature: 'e'.repeat(64), packageDirectories: ['packages/react'] },
+  { id: 'storybook-component', kind: 'storybook', signature: 'f'.repeat(64), storyRun: { proof: 'component', families: ['Tree'] } },
+];
+const noDelta = { changedPaths: [] };
+const noHeadChanges = async () => [];
+const docsDelta = { changedPaths: ['apps/docs/src/index.md'], groupIds: ['checks'], storyRuns: [], storyTooling: false };
+
+function earlierRun(runNumber, conclusions, { testedCommit = commitA, groups = reuseGroups, entryCommits = {}, headSha = prHead } = {}) {
+  return {
+    runId: 1000 + runNumber,
+    runNumber,
+    url: `https://github.com/o/r/actions/runs/${1000 + runNumber}`,
+    headSha,
+    jobs: Object.entries(conclusions).map(([id, conclusion]) => ({ name: `run ${id}`, conclusion })),
+    record: {
+      version: 1,
+      testedCommit,
+      headCommit: headSha,
+      groups: groups.map(({ id, signature }) => ({ id, signature, testedCommit: entryCommits[id] ?? testedCommit })),
+    },
+  };
+}
+
+const decide = (earlierRuns, delta = noDelta, groups = reuseGroups, headChangesFor = noHeadChanges) => decideReuse({
+  groups, earlierRuns, deltaFor: async () => delta, headChangesFor,
+});
+const outcome = (decisions) => Object.fromEntries(decisions.map(({ id, reusedFrom, reason }) => [id, reusedFrom ? 'reused' : reason]));
+
+test('group signatures are stable under key order and change with any command detail', () => {
+  const command = { command: 'pnpm', args: ['run', 'check'], env: { B: '2', A: '1' }, unsetEnv: [], prerequisite: true };
+  const signature = groupSignature([command]);
+  assert.match(signature, /^[0-9a-f]{64}$/u);
+  assert.equal(groupSignature([{ ...command, env: { A: '1', B: '2' } }]), signature);
+  for (const changed of [
+    { ...command, args: ['run', 'check:all'] },
+    { ...command, env: { A: '1', B: '3' } },
+    { ...command, unsetEnv: ['A'] },
+    { ...command, prerequisite: false },
+  ]) assert.notEqual(groupSignature([changed]), signature);
+});
+
+test('only a successful job with an identical signature counts as an earlier pass', async () => {
+  const signatureChanged = earlierRun(2, { checks: 'success' }, { groups: [{ id: 'checks', signature: '0'.repeat(64) }] });
+  assert.deepEqual(outcome(await decide([earlierRun(1, { checks: 'failure', react: 'cancelled' })])), {
+    checks: 'failure in run #1', react: 'no earlier pass', 'storybook-component': 'no earlier pass',
+  });
+  assert.equal(outcome(await decide([signatureChanged])).checks, 'signature changed');
+  assert.equal(outcome(await decide([{ ...earlierRun(3, { checks: 'success' }), record: null }])).checks, 'no earlier pass');
+  assert.equal(outcome(await decide([{ ...earlierRun(3, { checks: 'timed_out' }), record: null }])).checks, 'timed_out in run #3');
+  assert.equal(outcome(await decide([{ ...earlierRun(3, { checks: 'success' }), jobs: null }])).checks, 'jobs of run #3 are unreadable');
+});
+
+test('an unaffected group is reused with the commit it was actually tested on', async () => {
+  const seen = [];
+  const run = earlierRun(4, { checks: 'success', react: 'success' }, { testedCommit: commitB, entryCommits: { react: commitA } });
+  const decisions = await decideReuse({
+    groups: reuseGroups,
+    earlierRuns: [run],
+    deltaFor: async (commit) => {
+      seen.push(commit);
+      return commit === commitA ? noDelta : docsDelta;
+    },
+    headChangesFor: noHeadChanges,
+  });
+  assert.deepEqual(outcome(decisions), {
+    checks: `affected since ${commitB.slice(0, 7)}: changes route to checks`,
+    react: 'reused',
+    'storybook-component': 'no earlier pass',
+  });
+  assert.deepEqual(seen.sort(), [commitA, commitB]);
+  const react = decisions.find(({ id }) => id === 'react');
+  assert.match(react.reusedFrom, /run #4 \(https:\/\/github\.com\/o\/r\/actions\/runs\/1004\) at aaaaaaa/u);
+  const record = reuseRecord({ head: commitHead, headCommit: prHead, groups: reuseGroups, decisions });
+  assert.equal(record.headCommit, prHead);
+  assert.deepEqual(record.groups.map(({ id, testedCommit }) => [id, testedCommit]), [
+    ['checks', commitHead], ['react', commitA], ['storybook-component', commitHead],
+  ]);
+  assert.equal(groupMatrix([{ id: 'react', kind: 'react', timeoutMinutes: 30 }], decisions)[0].reusedFrom, react.reusedFrom);
+});
+
+test('a group walks back past unfinished jobs but a newer failure blocks reuse', async () => {
+  const older = earlierRun(5, { checks: 'success', react: 'success' }, { testedCommit: commitA });
+  const cancelled = earlierRun(6, { checks: 'cancelled', react: 'success' }, { testedCommit: commitB });
+  const walked = await decide([cancelled, older]);
+  assert.match(walked.find(({ id }) => id === 'checks').reusedFrom, /^run #5 /u);
+  assert.match(walked.find(({ id }) => id === 'react').reusedFrom, /^run #6 /u);
+  const inProgress = earlierRun(7, { checks: null, react: 'skipped' });
+  assert.deepEqual(Object.values(outcome(await decide([inProgress, older]))).slice(0, 2), ['reused', 'reused']);
+  const failed = earlierRun(8, { checks: 'failure', react: 'action_required' });
+  assert.deepEqual(outcome(await decide([failed, older])), {
+    checks: 'failure in run #8', react: 'action_required in run #8', 'storybook-component': 'no earlier pass',
+  });
+});
+
+test('CI machinery, dependency, and toolchain changes block every reuse', async () => {
+  for (const path of [
+    '.github/workflows/ci.yml', 'tooling/audits/repository-policy/src/ci-impact.mjs', 'pnpm-lock.yaml', 'package.json',
+    'pnpm-workspace.yaml', '.node-version', '.npmrc', 'packages/react/package.json',
+  ]) {
+    assert.ok(reuseBlockedPath(path), path);
+    for (const group of reuseGroups) assert.match(affectedReason(group, { ...docsDelta, changedPaths: [path] }), /CI machinery changed/u);
+  }
+  assert.ok(!reuseBlockedPath('apps/docs/src/index.md'));
+  assert.match(affectedReason(reuseGroups[0], { changedPaths: ['x'], full: 'workspace input' }), /full workspace/u);
+  assert.match(affectedReason(reuseGroups[0], { changedPaths: ['x'] }), /no group mapping/u);
+
+  // The earlier run's own PR head must share this run's workflow and planner.
+  const all = { checks: 'success', react: 'success', 'storybook-component': 'success' };
+  const heads = [];
+  const machinery = await decide([earlierRun(9, all, { headSha: commitB })], noDelta, reuseGroups, async (head) => {
+    heads.push(head);
+    return ['apps/docs/src/index.md', '.github/workflows/ci.yml'];
+  });
+  assert.deepEqual(heads, [commitB]);
+  assert.ok(machinery.every(({ reusedFrom, reason }) => reusedFrom === '' && reason.includes("run #9's head: .github/workflows/ci.yml")));
+  const unfetchable = await decide([earlierRun(9, all)], noDelta, reuseGroups, async () => { throw new Error('fetch timed out'); });
+  assert.ok(unfetchable.every(({ reason }) => reason.includes('fetch timed out')));
+});
+
+test('package groups rerun for changes inside their package closure', () => {
+  const [checks, react] = reuseGroups;
+  const insideReact = { changedPaths: ['packages/react/src/button.css'], groupIds: ['storybook-component'], storyRuns: [], storyTooling: false };
+  assert.match(affectedReason(react, insideReact), /changes touch packages\/react\/src\/button\.css/u);
+  assert.equal(affectedReason(checks, insideReact), null);
+  assert.match(affectedReason({ ...checks, packageDirectories: null }, insideReact), /package set of checks is unknown/u);
+
+  const byName = (name, path, dependencies = {}) => ({ name, path, manifest: { dependencies } });
+  const workspace = [
+    byName('@muxui/schema', 'packages/schema'),
+    byName('@muxui/tokens', 'packages/tokens', { '@muxui/schema': 'workspace:*' }),
+    byName('@muxui/react', 'packages/react', { '@muxui/tokens': 'workspace:*' }),
+    byName('@muxui/docs', 'apps/docs'),
+  ];
+  const pnpm = (...args) => ({ command: 'pnpm', args });
+  assert.deepEqual(groupPackageDirectories([pnpm('--filter', '@muxui/react', 'run', 'check')], workspace), [
+    'packages/react', 'packages/schema', 'packages/tokens',
+  ]);
+  assert.deepEqual(groupPackageDirectories([
+    pnpm('--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'),
+    pnpm('--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check'),
+  ], workspace), ['packages/react', 'packages/schema', 'packages/tokens', 'tests/fixtures/tailwind-consumer']);
+  assert.equal(groupPackageDirectories([pnpm('generate:check')], workspace), null);
+  assert.equal(groupPackageDirectories([pnpm('--filter', '!@muxui/react', 'run', 'check')], workspace), null);
+  assert.equal(groupPackageDirectories([pnpm('--dir', 'elsewhere', 'run', 'check')], workspace), null);
+});
+
+test('Storybook groups are affected only by overlapping families, tooling, or chrome proof', () => {
+  const [, react, tree] = reuseGroups;
+  const chrome = { ...tree, id: 'storybook-chrome', storyRun: { proof: 'chrome', families: [] } };
+  const storyDelta = (storyRuns, extra = {}) => ({
+    changedPaths: ['catalog/components/number-field/artifact.json'], groupIds: ['react'], storyRuns, storyTooling: false, ...extra,
+  });
+  const numberField = storyDelta([{ proof: 'component', families: ['NumberField'] }]);
+  assert.equal(affectedReason(tree, numberField), null);
+  assert.equal(affectedReason(chrome, numberField), null);
+  assert.match(affectedReason(react, numberField), /changes route to react/u);
+  assert.match(affectedReason({ ...react, id: 'browser', kind: 'browser', packageDirectories: [] }, numberField), /react/u);
+  assert.match(affectedReason(tree, storyDelta([{ proof: 'story', families: ['NumberField', 'Tree'] }])), /story proof for NumberField, Tree/u);
+  assert.match(affectedReason(tree, storyDelta([{ proof: 'theme', families: [] }])), /every family/u);
+  assert.match(affectedReason({ ...tree, storyRun: { proof: 'theme', families: [] } }, numberField), /NumberField/u);
+  assert.match(affectedReason(tree, storyDelta([], { storyTooling: true })), /Storybook tooling/u);
+  assert.match(affectedReason(chrome, storyDelta([{ proof: 'chrome', families: [] }])), /chrome/u);
+  assert.match(affectedReason({ ...tree, storyRun: undefined }, numberField), /no reuse rule/u);
+});
+
+test('an identical tree reuses every earlier pass', async () => {
+  const all = { checks: 'success', react: 'success', 'storybook-component': 'success' };
+  assert.deepEqual(Object.values(outcome(await decide([earlierRun(7, all)]))), ['reused', 'reused', 'reused']);
+});
+
+const reuseEnvironment = {
+  GITHUB_EVENT_NAME: 'pull_request',
+  GITHUB_RUN_ATTEMPT: '1',
+  GITHUB_REPOSITORY: 'o/r',
+  GITHUB_RUN_ID: '2000',
+  GITHUB_HEAD_REF: 'fix/thing',
+  GITHUB_WORKFLOW_REF: 'o/r/.github/workflows/ci.yml@refs/pull/9/merge',
+  MUXUI_PR_HEAD_REPO: 'o/r',
+  MUXUI_PR_HEAD_SHA: commitHead,
+};
+const commandGroups = reuseGroups.map(({ id, kind, storyRun, packageDirectories }) => ({
+  id, kind, storyRun, packageDirectories, commands: [{ command: 'pnpm', args: [id] }],
+}));
+
+function fakeClient(runs, { jobsFail = [], recordFail = [] } = {}) {
+  const calls = [];
+  const find = (id) => runs.find(({ apiRun }) => apiRun.id === id);
+  return {
+    calls,
+    listRuns(branch) {
+      calls.push(['list', branch]);
+      return runs.map(({ apiRun }) => apiRun);
+    },
+    runJobs(id) {
+      if (jobsFail.includes(id)) throw new Error('HTTP 502');
+      return find(id).jobs;
+    },
+    downloadRecord(id) {
+      if (recordFail.includes(id)) throw new Error('no artifact');
+      return find(id).record;
+    },
+  };
+}
+
+function apiRunFor(run, overrides = {}) {
+  return {
+    ...run,
+    apiRun: {
+      id: run.runId, run_number: run.runNumber, html_url: run.url, event: 'pull_request', head_sha: run.headSha,
+      head_branch: 'fix/thing', head_repository: { full_name: 'o/r' }, ...overrides,
+    },
+  };
+}
+
+test('reuse is off outside first-attempt same-repository pull request runs, with the kill switch, or for full plans', async () => {
+  assert.equal(reuseDisabledReason(reuseEnvironment), null);
+  assert.match(reuseDisabledReason({ ...reuseEnvironment, GITHUB_RUN_ATTEMPT: '2' }), /attempt 2/u);
+  assert.match(reuseDisabledReason({ ...reuseEnvironment, MUXUI_CI_REUSE: 'off' }), /MUXUI_CI_REUSE/u);
+  assert.match(reuseDisabledReason(reuseEnvironment, { full: true }), /full-workspace/u);
+  assert.match(reuseDisabledReason({ ...reuseEnvironment, GITHUB_EVENT_NAME: 'push' }), /not a pull_request/u);
+  assert.match(reuseDisabledReason({ ...reuseEnvironment, MUXUI_PR_HEAD_REPO: 'fork/r' }), /fork pull request/u);
+  assert.match(reuseDisabledReason({ ...reuseEnvironment, MUXUI_PR_HEAD_SHA: '' }), /MUXUI_PR_HEAD_SHA/u);
+  for (const environment of [{ ...reuseEnvironment, MUXUI_CI_REUSE: 'off' }, { ...reuseEnvironment, MUXUI_PR_HEAD_REPO: 'fork/r' }]) {
+    const client = fakeClient([]);
+    const { decisions, record } = await planReuse({
+      groups: commandGroups, head: commitHead, environment, client, deltaFor: async () => noDelta, headChangesFor: noHeadChanges, log: () => {},
+    });
+    assert.deepEqual(client.calls, []);
+    assert.ok(decisions.every(({ reusedFrom }) => reusedFrom === ''));
+    assert.ok(record.groups.every(({ testedCommit }) => testedCommit === commitHead));
+  }
+});
+
+test('earlier runs come from the same PR head and API, artifact, or head mismatches degrade to no reuse', async () => {
+  const signed = commandGroups.map(({ id, kind, storyRun, commands }) => ({ id, kind, storyRun, signature: groupSignature(commands) }));
+  const all = { checks: 'success', react: 'success', 'storybook-component': 'success' };
+  const good = apiRunFor(earlierRun(3, all, { groups: signed }));
+  const brokenJobs = apiRunFor(earlierRun(4, all, { groups: signed }));
+  const missingRecord = apiRunFor(earlierRun(5, all, { groups: signed }));
+  const forgedHead = apiRunFor(earlierRun(6, all, { groups: signed }), { head_sha: commitB });
+  const otherFork = apiRunFor(earlierRun(7, all, { groups: signed }), { head_repository: { full_name: 'fork/r' } });
+  const current = apiRunFor(earlierRun(1000, all, { groups: signed }), { id: 2000 });
+  const logs = [];
+  const client = fakeClient([current, otherFork, forgedHead, missingRecord, brokenJobs, good], { jobsFail: [1004], recordFail: [1005] });
+  const loaded = loadEarlierRuns({ client, environment: reuseEnvironment, log: (line) => logs.push(line) });
+  assert.deepEqual(loaded.map(({ runNumber, jobs, record }) => [runNumber, jobs !== null, record !== null]), [
+    [6, true, false], [5, true, false], [4, false, true], [3, true, true],
+  ]);
+  assert.ok(['HTTP 502', 'no artifact', 'is not the run head'].every((text) => logs.some((line) => line.includes(text))));
+
+  const quiet = { head: commitHead, environment: reuseEnvironment, headChangesFor: noHeadChanges, log: () => {} };
+  const blocked = await planReuse({ ...quiet, groups: commandGroups, client, deltaFor: async () => noDelta });
+  assert.ok(blocked.decisions.every(({ reason }) => reason === 'jobs of run #4 are unreadable'));
+  const reused = await planReuse({ ...quiet, groups: commandGroups, client: fakeClient([forgedHead, good]), deltaFor: async () => noDelta });
+  assert.ok(reused.decisions.every(({ reusedFrom }) => reusedFrom.startsWith('run #3 ')));
+
+  const failing = { listRuns() { throw new Error('HTTP 403'); } };
+  const failed = await planReuse({ ...quiet, groups: commandGroups, client: failing, deltaFor: async () => noDelta });
+  assert.ok(failed.decisions.every(({ reusedFrom, reason }) => reusedFrom === '' && reason.includes('HTTP 403')));
+
+  const deltaFails = await planReuse({
+    ...quiet, groups: commandGroups, client: fakeClient([good]), deltaFor: async () => { throw new Error('fetch failed'); },
+  });
+  assert.ok(deltaFails.decisions.every(({ reusedFrom, reason }) => reusedFrom === '' && reason.includes('delta plan failed: fetch failed')));
+});
+
+test('the GitHub client lists workflow runs and rejects partial job pages', () => {
+  const calls = [];
+  const client = createGitHubClient({
+    repository: 'o/r',
+    workflow: 'ci.yml',
+    gh: (args) => {
+      calls.push(args);
+      return args[3].endsWith('/jobs')
+        ? JSON.stringify({ total_count: 2, jobs: [{ name: 'run checks', conclusion: 'success' }] })
+        : JSON.stringify({ workflow_runs: [] });
+    },
+  });
+  assert.deepEqual(client.listRuns('fix/thing'), []);
+  assert.deepEqual(calls[0], [
+    'api', '-X', 'GET', 'repos/o/r/actions/workflows/ci.yml/runs', '-f', 'event=pull_request', '-f', 'branch=fix/thing', '-f', 'per_page=30',
+  ]);
+  assert.throws(() => client.runJobs(7), /unexpected jobs page/u);
+});
+
+test('a reuse failure still finishes planning with every group set to run', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'ci-reuse-output-'));
+  const output = join(directory, 'output');
+  const log = console.log;
+  console.log = () => {};
+  try {
+    await runCiImpact({
+      full: true,
+      planOnly: true,
+      githubOutput: true,
+      reuseRecord: join(directory, 'missing', 'record.json'),
+      environment: { ...reuseEnvironment, GITHUB_OUTPUT: output },
+    });
+  } finally {
+    console.log = log;
+  }
+  const matrix = JSON.parse(readFileSync(output, 'utf8').replace(/^groups=/u, ''));
+  assert.ok(matrix.length > 0 && matrix.every(({ reusedFrom }) => reusedFrom === ''));
+  rmSync(directory, { recursive: true, force: true });
+});
+
+// A real repository: T carries a commit that a force-push dropped from HEAD,
+// and HEAD renames a docs page and edits a canonical story example.
+test('deltaImpact diffs trees directly and maps story IDs to families in a real repository', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ci-reuse-repo-'));
+  const write = (path, content) => {
+    mkdirSync(dirname(join(root, path)), { recursive: true });
+    writeFileSync(join(root, path), content);
+  };
+  const run = (...args) => {
+    const result = spawnSync(args[0], args.slice(1), { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout.trim();
+  };
+  const commit = (message) => run('git', '-c', 'user.name=t', '-c', 'user.email=t@example.com', '-c', 'commit.gpgsign=false', 'commit', '-qam', message);
+  const example = 'catalog/components/number-field/examples/react/sizing.tsx';
+  try {
+    write('tooling/audits/repository-policy/repository-policy.json', JSON.stringify({ pullRequestImpact: config }));
+    write('packages/react/package.json', JSON.stringify({
+      name: '@muxui/react', scripts: { 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' },
+    }));
+    write('apps/react-storybook/package.json', JSON.stringify({
+      name: '@muxui/react-storybook', dependencies: { '@muxui/react': 'workspace:*' }, scripts: { 'check:scoped': 'node src/check-scoped.mjs' },
+    }));
+    write('apps/docs/guide.md', '# Guide\n');
+    write(example, 'export const Sizing = 1;\n');
+    run('git', 'init', '-q', '-b', 'main');
+    run('git', 'add', '.');
+    commit('base');
+    run('git', 'checkout', '-q', '-b', 'dropped');
+    write('apps/scale/src/app.mjs', 'export {};\n');
+    run('git', 'add', '.');
+    commit('dropped by a force-push');
+    const tested = run('git', 'rev-parse', 'HEAD');
+    run('git', 'checkout', '-q', 'main');
+    run('git', 'mv', 'apps/docs/guide.md', 'apps/docs/handbook.md');
+    write(example, 'export const Sizing = 2;\n');
+    commit('rename and edit');
+    // Untracked generated metadata, as the plan job prepares it.
+    write('packages/react/generated/r1-6-contract.json', JSON.stringify({
+      components: [{ family: 'NumberField', export: 'NumberField', slug: 'number-field', source: 'packages/react/src/fields.mjs' }],
+    }));
+    write('apps/react-storybook/.storybook/generated/manifest.mjs', `export const manifest = Object.freeze(${JSON.stringify({
+      schema: 'muxui-react-storybook-manifest-v1',
+      pageIndex: [{
+        family: 'NumberField',
+        storyFile: 'apps/react-storybook/.storybook/generated/number-field.stories.mjs',
+        stories: [{ id: 'number-field--sizing', exportName: 'Sizing', source: example }],
+      }],
+    })});\n`);
+
+    const script = `const { deltaImpact } = await import(${JSON.stringify(resolve(import.meta.dirname, '../src/ci-impact.mjs'))});
+      console.log(JSON.stringify(await deltaImpact(process.env.TESTED, { environment: {} })));`;
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      cwd: root, encoding: 'utf8', env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root, TESTED: tested },
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
+    assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
+    assert.deepEqual(delta.groupIds, ['checks', 'browser', 'storybook-story']);
+    assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

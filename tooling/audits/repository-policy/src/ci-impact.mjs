@@ -1,10 +1,11 @@
 import { spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
-import { appendFile, readFile, readdir } from 'node:fs/promises';
+import { appendFile, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
 import { analyzeReactSourceChange, analyzeReactStyleChange } from './component-source-impact.mjs';
+import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from './ci-reuse.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
 import { dependencyClosure, familyRecordsFromContract } from './scoped-verification.mjs';
 import { componentTestSelection } from './component-test-selection.mjs';
@@ -61,8 +62,8 @@ function scopedEntrypointArgs(name, packages) {
   return ['--filter', packageName, 'run', scriptName];
 }
 
-function git(args, { cwd = repositoryRoot, allowFailure = false } = {}) {
-  const result = spawnSync('git', args, { cwd, encoding: 'buffer', maxBuffer: 16 * 1024 * 1024 });
+function git(args, { cwd = repositoryRoot, allowFailure = false, timeout } = {}) {
+  const result = spawnSync('git', args, { cwd, encoding: 'buffer', maxBuffer: 16 * 1024 * 1024, timeout });
   if (result.error) throw result.error;
   if (result.status !== 0 && !allowFailure) {
     throw new Error(`MUXUI_CI_IMPACT_GIT_FAILED: git ${args.join(' ')} exited ${result.status ?? 'unknown'}`);
@@ -1269,6 +1270,7 @@ function plannedCommands(plan, {
         env: storyProofEnvironment(shard, environment),
         unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
       });
+      planned.at(-1).storyRun = { proof: shard.proof, families: shard.families };
     });
   }
   if (plan.tailwind) {
@@ -1289,14 +1291,23 @@ export function executionGroups(plan, options = {}) {
   const planned = plannedCommands(plan, options);
   const shared = planned.filter(({ group }) => group === sharedGroup).map(({ command }) => command);
   const groups = new Map();
-  for (const { group, command } of planned) {
+  const storyRuns = new Map();
+  for (const { group, command, storyRun } of planned) {
     if (group === sharedGroup) continue;
     if (!groups.has(group)) groups.set(group, []);
     groups.get(group).push(command);
+    if (storyRun) storyRuns.set(group, storyRun);
   }
   return [...groups].map(([id, commands]) => {
     const kind = id.startsWith('storybook') ? 'storybook' : id;
-    return { id, kind, timeoutMinutes: groupTimeoutMinutes[kind], commands: [...shared, ...commands] };
+    return {
+      id,
+      kind,
+      timeoutMinutes: groupTimeoutMinutes[kind],
+      commands: [...shared, ...commands],
+      // Scoped Storybook groups keep their page selection for reuse decisions.
+      ...(storyRuns.has(id) ? { storyRun: storyRuns.get(id) } : {}),
+    };
   });
 }
 
@@ -1427,16 +1438,18 @@ export function fullWorkspacePlan(reason = 'full workspace graph requested') {
 }
 
 // The GitHub Actions matrix: one entry per independently runnable group.
-export function groupMatrix(groups) {
-  return groups.map(({ id, kind, timeoutMinutes }) => ({ id, kind, timeoutMinutes }));
+// `reusedFrom` is always a string so workflow `if:` comparisons stay exact.
+export function groupMatrix(groups, decisions = []) {
+  return groups.map(({ id, kind, timeoutMinutes }) => ({
+    id, kind, timeoutMinutes, reusedFrom: decisions.find((decision) => decision.id === id)?.reusedFrom ?? '',
+  }));
 }
 
-async function pullRequestPlan({ preview, includeWorktree, environment }) {
-  const baseRef = environment.MUXUI_BASE_REF ?? (environment.GITHUB_BASE_REF ? `origin/${environment.GITHUB_BASE_REF}` : 'origin/main');
-  const mergeBase = resolveMergeBase(baseRef);
+// Plans the owner-scoped checks for `changedPaths` between `base` and the
+// current worktree; the pull-request plan and the reuse delta plan share it.
+async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
   const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
   if (!config || config.schemaVersion !== 1) throw new Error('MUXUI_CI_IMPACT_POLICY_MISSING: pullRequestImpact schemaVersion 1 is required');
-  const changedPaths = collectPullRequestPaths({ baseRef: mergeBase, includeWorktree });
   const packages = await discoverWorkspacePackages(repositoryRoot);
   const rootPackageBefore = changedPaths.includes('package.json') ? textAtRef(mergeBase, 'package.json') : undefined;
   const rootPackageAfter = changedPaths.includes('package.json') ? await currentText('package.json') : undefined;
@@ -1488,7 +1501,102 @@ async function pullRequestPlan({ preview, includeWorktree, environment }) {
     lockfileBefore,
     lockfileAfter,
   });
-  return { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared };
+  return { plan, packages, pageIndex, metadataPrepared };
+}
+
+async function pullRequestPlan({ preview, includeWorktree, environment }) {
+  const baseRef = environment.MUXUI_BASE_REF ?? (environment.GITHUB_BASE_REF ? `origin/${environment.GITHUB_BASE_REF}` : 'origin/main');
+  const mergeBase = resolveMergeBase(baseRef);
+  const changedPaths = collectPullRequestPaths({ baseRef: mergeBase, includeWorktree });
+  return { ...(await planAgainstBase({ base: mergeBase, changedPaths, preview })), baseRef, mergeBase };
+}
+
+function ensureCommit(commit) {
+  if (!/^[0-9a-f]{40}$/u.test(commit ?? '')) throw new Error(`MUXUI_CI_REUSE_COMMIT_INVALID: ${commit}`);
+  if (git(['cat-file', '-e', `${commit}^{commit}`], { allowFailure: true }).status !== 0) {
+    git(['fetch', '--no-tags', '--quiet', 'origin', commit], { timeout: reuseCommandTimeoutMs });
+  }
+}
+
+// Paths that differ between two commits. A direct tree diff (not merge-base)
+// so commits that a force-push dropped still count as changes.
+export function changedPathsBetween(from, to = 'HEAD') {
+  ensureCommit(from);
+  if (to !== 'HEAD') ensureCommit(to);
+  return [...new Set(parseNameStatus(git(['diff', '--name-status', '-z', '--find-renames', from, to]).stdout))].sort();
+}
+
+// The reuse delta: what the planner would run for the changes from an earlier
+// tested commit to HEAD.
+export async function deltaImpact(testedCommit, { environment = process.env } = {}) {
+  const changedPaths = changedPathsBetween(testedCommit);
+  if (changedPaths.length === 0 || changedPaths.some(reuseBlockedPath)) return { changedPaths };
+  // Preview mode: a delta that needs Storybook metadata the current plan did
+  // not prepare throws, which means no reuse rather than extra generation.
+  const { plan, packages, pageIndex, metadataPrepared } = await planAgainstBase({ base: testedCommit, changedPaths, preview: true });
+  if (plan.full) return { changedPaths, full: plan.fullReasons.join('; ') };
+  const groups = executionGroups(plan, { packages, metadataPrepared, environment, pageIndex });
+  const familyOfStory = new Map(pageIndex.flatMap(({ family, stories }) => stories.map(({ id }) => [id, family])));
+  return {
+    changedPaths,
+    groupIds: groups.map(({ id }) => id),
+    storyTooling: plan.storyTooling,
+    storyRuns: plan.storyRuns.map(({ proof, families, storyIds }) => ({
+      proof,
+      // An unknown story ID selects every family.
+      families: storyIds.some((id) => !familyOfStory.has(id))
+        ? []
+        : [...new Set([...families, ...storyIds.map((id) => familyOfStory.get(id))])].sort(),
+    })),
+  };
+}
+
+const tailwindFixture = 'tests/fixtures/tailwind-consumer';
+
+// Directories of the packages a group's commands operate on plus their
+// dependency closure; null when any command's package scope is not explicit.
+export function groupPackageDirectories(commands, packages) {
+  const roots = new Set();
+  const directories = new Set();
+  for (const { args } of commands) {
+    const filters = args.filter((_, index) => args[index - 1] === '--filter');
+    const directory = args[args.indexOf('--dir') + 1];
+    if (args.includes('--dir')) {
+      if (directory !== tailwindFixture) return null;
+      // The fixture consumes the published React and token outputs.
+      directories.add(tailwindFixture);
+      roots.add('@muxui/react').add('@muxui/tokens');
+    } else if (filters.length === 0) {
+      return null;
+    }
+    filters.forEach((name) => roots.add(name));
+  }
+  if ([...roots].some((name) => !packages.some((item) => item.name === name))) return null;
+  const closure = dependencyClosure(packages, [...roots]).map(({ path }) => path);
+  return [...new Set([...closure, ...directories])].sort();
+}
+
+// Decides which groups an earlier run of this PR already proved, then writes
+// this run's reuse record and step summary. Reuse problems never fail planning.
+async function writeReuse({ plan, full, groups, packages, reuseRecord, reuseClient, environment }) {
+  try {
+    const head = git(['rev-parse', 'HEAD']).stdout.toString('utf8').trim();
+    const { decisions, record } = await planReuse({
+      groups: groups.map((group) => ({ ...group, packageDirectories: groupPackageDirectories(group.commands, packages) })),
+      head,
+      full: full || plan.full,
+      environment,
+      client: reuseClient,
+      deltaFor: (testedCommit) => deltaImpact(testedCommit, { environment }),
+      headChangesFor: (earlierHead) => changedPathsBetween(earlierHead, environment.MUXUI_PR_HEAD_SHA),
+    });
+    if (record) await writeFile(reuseRecord, `${JSON.stringify(record, null, 2)}\n`);
+    if (environment.GITHUB_STEP_SUMMARY) await appendFile(environment.GITHUB_STEP_SUMMARY, reuseSummary(decisions));
+    return decisions;
+  } catch (error) {
+    console.log(`[ci-reuse] reuse failed; running every group: ${error.message}`);
+    return [];
+  }
 }
 
 // --preview plans from existing metadata and fails if it is missing; --plan
@@ -1502,7 +1610,7 @@ export function executionMode({ preview = false, planOnly = false, group = null 
 
 export async function runCiImpact({
   preview = false, planOnly = false, includeWorktree = false, full = false, group = null, githubOutput = false,
-  environment = process.env,
+  reuseRecord = null, reuseClient = null, environment = process.env,
 } = {}) {
   const mode = executionMode({ preview, planOnly, group });
   const context = full
@@ -1519,7 +1627,8 @@ export async function runCiImpact({
   const options = { packages, metadataPrepared, environment, pageIndex };
   const groups = executionGroups(plan, options);
   const report = planReport(plan, { baseRef, mergeBase, metadataPrepared, groups });
-  const matrix = groupMatrix(groups);
+  const reuse = reuseRecord ? await writeReuse({ plan, full, groups, packages, reuseRecord, reuseClient, environment }) : [];
+  const matrix = groupMatrix(groups, reuse);
   console.log(`[ci-impact] changed paths=${plan.changedPaths.join(', ') || '(none)'}`);
   console.log(`[ci-impact] plan=${JSON.stringify(report, null, 2)}`);
   console.log(`[ci-impact] groups=${JSON.stringify(matrix)}`);
@@ -1544,7 +1653,7 @@ export async function runCiImpact({
 
 export function parseCliArguments(args) {
   const options = {
-    preview: false, planOnly: false, includeWorktree: false, full: false, group: null, githubOutput: false,
+    preview: false, planOnly: false, includeWorktree: false, full: false, group: null, githubOutput: false, reuseRecord: null,
   };
   const flags = {
     '--dry-run': 'preview',
@@ -1558,6 +1667,7 @@ export function parseCliArguments(args) {
     const arg = args[index];
     if (flags[arg]) options[flags[arg]] = true;
     else if (arg === '--group' && args[index + 1] && !args[index + 1].startsWith('--')) options.group = args[++index];
+    else if (arg === '--reuse-record' && args[index + 1] && !args[index + 1].startsWith('--')) options.reuseRecord = args[++index];
     else throw new Error(`MUXUI_CI_IMPACT_ARGUMENT_UNKNOWN: ${arg}`);
   }
   return options;
