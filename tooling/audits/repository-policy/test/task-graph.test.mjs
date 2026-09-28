@@ -135,7 +135,7 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
     [
       '#!/usr/bin/env node',
       "import { writeFileSync } from 'node:fs';",
-      "writeFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), mode: process.env.MUXUI_STORYBOOK_AUDIT_MODE, event: process.env.MUXUI_STORYBOOK_AUDIT_EVENT, force: process.env.MUXUI_STORYBOOK_AUDIT_FORCE, families: process.env.MUXUI_STORYBOOK_FAMILIES }));",
+      "writeFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ args: process.argv.slice(2), event: process.env.MUXUI_STORYBOOK_AUDIT_EVENT, force: process.env.MUXUI_STORYBOOK_AUDIT_FORCE, families: process.env.MUXUI_STORYBOOK_FAMILIES }));",
       '',
     ].join('\n'),
   );
@@ -158,7 +158,6 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
         PATH: `${join(root, 'bin')}:${process.env.PATH}`,
         MUXUI_TASK_LOG: logPath,
         MUXUI_TASK_REPOSITORY_ROOT: root,
-        MUXUI_STORYBOOK_AUDIT_MODE: 'focused',
         MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
         MUXUI_STORYBOOK_AUDIT_FORCE: '0',
         MUXUI_STORYBOOK_FAMILIES: 'DatePicker',
@@ -169,7 +168,6 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
   assert.match(result.stdout, /\[workspace-task\] check: full graph/);
   assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
     args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', 'run', 'check'],
-    mode: 'full',
     event: 'check:all',
     force: '1',
   });
@@ -187,7 +185,6 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
         MUXUI_BASE_REF: 'HEAD',
         MUXUI_TASK_LOG: logPath,
         MUXUI_TASK_REPOSITORY_ROOT: root,
-        MUXUI_STORYBOOK_AUDIT_MODE: 'focused',
         MUXUI_STORYBOOK_AUDIT_EVENT: 'pull_request',
         MUXUI_STORYBOOK_AUDIT_FORCE: '0',
         MUXUI_STORYBOOK_FAMILIES: 'DatePicker',
@@ -198,7 +195,6 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
   assert.match(affectedResult.stdout, /\[workspace-task\] check: full graph/);
   assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
     args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', 'run', 'check'],
-    mode: 'full',
     event: 'check:all',
     force: '1',
   });

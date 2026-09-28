@@ -79,21 +79,16 @@ function environmentFor(plan, options) {
   }
   if (plan.full) {
     if (options.task === 'check') {
-      environment.MUXUI_STORYBOOK_AUDIT_MODE = 'full';
       environment.MUXUI_STORYBOOK_AUDIT_EVENT = 'check:all';
       environment.MUXUI_STORYBOOK_AUDIT_FORCE = '1';
-      environment.MUXUI_STORYBOOK_AUDIT_REASON = 'full graph requires full Storybook coverage';
     }
   } else if (plan.focusedComponent) {
-    const families = plan.familySelection.join(',');
-    environment.MUXUI_COMPONENT_FAMILIES = families;
+    environment.MUXUI_COMPONENT_FAMILIES = plan.familySelection.join(',');
     environment.MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE ??= '1';
     environment.MUXUI_STORYBOOK_FAMILIES = plan.storybookFamilySelection.join(',');
-    environment.MUXUI_STORYBOOK_AUDIT_MODE = 'focused';
     environment.MUXUI_STORYBOOK_AUDIT_EVENT = 'component';
     environment.MUXUI_STORYBOOK_AUDIT_FORCE = '0';
     environment.MUXUI_STORYBOOK_AUDIT_PROOF ??= 'component';
-    environment.MUXUI_STORYBOOK_AUDIT_REASON = `component scope selected ${families}`;
   }
   return environment;
 }

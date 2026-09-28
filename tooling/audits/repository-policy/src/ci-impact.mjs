@@ -1092,10 +1092,8 @@ const sharedGroup = '*';
 const workspaceRootPackage = '@muxui/workspace';
 const groupTimeoutMinutes = { checks: 30, react: 30, browser: 30, tailwind: 15, storybook: 30 };
 const fullStorybookEnvironment = {
-  MUXUI_STORYBOOK_AUDIT_MODE: 'full',
   MUXUI_STORYBOOK_AUDIT_EVENT: 'check:all',
   MUXUI_STORYBOOK_AUDIT_FORCE: '1',
-  MUXUI_STORYBOOK_AUDIT_REASON: 'full graph requires full Storybook coverage',
 };
 const storybookSelectionKeys = [
   'MUXUI_STORYBOOK_AUDIT_PROOF', 'MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS',
