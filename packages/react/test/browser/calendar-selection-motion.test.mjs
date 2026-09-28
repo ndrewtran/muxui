@@ -142,6 +142,21 @@ test('Calendar selection circle travels within a month, resets across dates/page
     const targetForegroundBeforeClick = await targetLabel.evaluate((node) => getComputedStyle(node).color);
     const sourceLabelBefore = await sourceLabel.boundingBox();
     const targetLabelBefore = await targetLabel.boundingBox();
+    // The squish peak lasts ~220 ms, so record it every frame in-page instead of racing round trips.
+    await page.evaluate(() => {
+      const peak = window.__calendarSquishPeak = { x: 1, y: 1, done: false };
+      const sample = () => {
+        const paint = document.querySelector('#primary .muxui-calendar-selection[data-selection-traveling] .muxui-calendar-selection-paint');
+        const transform = paint && getComputedStyle(paint).transform;
+        if (transform && transform !== 'none') {
+          const matrix = new DOMMatrixReadOnly(transform);
+          peak.x = Math.max(peak.x, Math.hypot(matrix.a, matrix.b));
+          peak.y = Math.min(peak.y, Math.hypot(matrix.c, matrix.d));
+        }
+        if (!peak.done) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
 
     await target.click();
     assert.equal(await target.getAttribute('data-selected'), 'true', 'RAC selection updates immediately');
@@ -173,11 +188,11 @@ test('Calendar selection circle travels within a month, resets across dates/page
     const targetLabelAfter = await targetLabel.boundingBox();
     assert.ok(Math.abs(sourceLabelAfter.y - sourceLabelBefore.y) < 0.5, 'old date text remains anchored while the circle travels');
     assert.ok(Math.abs(targetLabelAfter.y - targetLabelBefore.y) < 0.5, 'new date text remains anchored while the circle travels');
-    const movingScale = await paintScale(marker.locator('.muxui-calendar-selection-paint'));
-    assert.ok(movingScale.x > 1.03 && movingScale.y < 0.97, 'selection paint squishes while its outer circle travels');
     assert.deepEqual(await markerCenter(secondary.locator('.muxui-calendar-selection')), secondaryBefore, 'other Calendar instances do not retarget');
     await waitForMarkerAlignment(page, 'primary');
     await waitForTravelCompletion(page, 'primary');
+    const movingScale = await page.evaluate(() => Object.assign(window.__calendarSquishPeak, { done: true }));
+    assert.ok(movingScale.x > 1.03 && movingScale.y < 0.97, 'selection paint squishes while its outer circle travels');
     await page.waitForFunction(() => {
       const selected = document.querySelector('#primary .muxui-calendar-cell[data-selected]');
       const label = selected?.querySelector('.muxui-calendar-date');
