@@ -7,7 +7,7 @@
 - Owner: Andrew / `ndrewtran`
 - Outcome: Accepted user direction; repository adoption through a protected pull request
 - Acceptance date: 28 September 2026
-- Request: Andrew asked whether the `muxui-delivery-guard` skill should be scoped to the muxui project instead of being global.
+- Request: `Does muxui-delivery-guard need to be a global skill? Shouldn't it just be scoped to the muxui project so it can be used while developing muxui?`
 - Approval instruction: `Do that`, in reply to the proposal to merge the guard into the repository delivery skill through an authority pull request.
 - Human acceptance: Andrew / `ndrewtran`: `Do that`
 
