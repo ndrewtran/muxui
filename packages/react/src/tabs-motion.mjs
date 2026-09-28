@@ -223,9 +223,11 @@ export function TabsMotion({ children, orientation = 'horizontal', variant = 'un
       indicatorAnimationRef.current = null;
     };
     const stopScrollAnimation = () => {
-      scrollAnimationRef.current?.stop();
+      const controls = scrollAnimationRef.current;
+      // Clear first: stop() runs a final onUpdate that would otherwise scroll past the painted position.
       scrollAnimationRef.current = null;
       scrollTarget = null;
+      controls?.stop();
     };
     const setScrollPosition = (position) => {
       if (!viewport) return;
