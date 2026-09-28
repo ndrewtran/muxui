@@ -6,6 +6,7 @@ import { renderToString } from 'react-dom/server';
 import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { createServer } from 'vite';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { InteractionMotionFixture } from '../fixtures/interaction-motion-fixture.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../..');
@@ -189,13 +190,19 @@ async function captureDisclosureGroupMotion(page, triggerSelector, duration = 11
   }, duration);
 }
 
+// Resolves with the in-flight geometry from the same frame that matched.
 async function waitForDisclosureIntermediate(page, selector) {
-  await page.waitForFunction((value) => {
+  const handle = await page.waitForFunction((value) => {
     const node = document.querySelector(value);
     const full = node?.firstElementChild?.scrollHeight ?? 0;
     const height = node?.getBoundingClientRect().height ?? 0;
-    return full > 0 && height > 0.5 && height < full - 0.5;
+    return full > 0 && height > 0.5 && height < full - 0.5 && { height, full };
   }, selector, { timeout: 1800 });
+  try {
+    return await handle.jsonValue();
+  } finally {
+    await handle.dispose();
+  }
 }
 
 async function waitForDisclosureOpen(page, selector) {
@@ -318,10 +325,8 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.equal((await readMetrics(page, primaryPanel)).ariaHidden, 'true', 'closed disclosure is aria-hidden');
     await primaryTrigger.click();
     await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
-    await waitForDisclosureIntermediate(page, primaryPanel);
-    const opening = await readMetrics(page, primaryPanel);
-    const openingFullHeight = await page.locator(primaryPanel).evaluate((node) => node.firstElementChild.scrollHeight);
-    assert.ok(opening.height > 0 && opening.height < openingFullHeight, 'disclosure expand has an in-flight measured height');
+    const opening = await waitForDisclosureIntermediate(page, primaryPanel);
+    assert.ok(opening.height > 0 && opening.height < opening.full, 'disclosure expand has an in-flight measured height');
     await waitForDisclosureOpen(page, primaryPanel);
     const naturalHeight = await page.locator(primaryPanel).evaluate((node) => node.getBoundingClientRect().height);
     assert.ok(naturalHeight > 0, 'open disclosure has natural height');
@@ -329,8 +334,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
 
     await primaryTrigger.click();
     await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'false');
-    await waitForDisclosureIntermediate(page, primaryPanel);
-    const closing = await readMetrics(page, primaryPanel);
+    const closing = await waitForDisclosureIntermediate(page, primaryPanel);
     assert.ok(closing.height > 0 && closing.height < naturalHeight, 'disclosure collapse has an in-flight measured height');
     await waitForDisclosureClosed(page, primaryPanel);
 
@@ -759,16 +763,20 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
     await primaryTrigger.click();
     await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
     await waitForDisclosureIntermediate(page, primaryPanel);
-    await page.waitForFunction((selector) => {
+    // Grow in the same frame that records the late in-flight height.
+    const growthRecording = await recordFrames(page, (selector, state) => {
+      if (state.grown) return null;
       const node = document.querySelector(selector);
       const full = node?.firstElementChild?.scrollHeight ?? 0;
       const height = node?.getBoundingClientRect().height ?? 0;
-      return Boolean(node?.style.height) && full > 0 && height > full * 0.85 && height < full - 0.5;
-    }, primaryPanel, { timeout: 1500 });
-    const beforeGrowth = await readMetrics(page, primaryPanel);
-    const beforeGrowthFull = await page.locator(primaryPanel).evaluate((node) => node.firstElementChild.scrollHeight);
-    assert.ok(beforeGrowth.height > 0 && beforeGrowth.height < beforeGrowthFull, 'late growth starts during the open spring');
-    await page.evaluate(() => window.__interactionGrowDisclosure());
+      if (!(Boolean(node?.style.height) && full > 0 && height > full * 0.85 && height < full - 0.5)) return null;
+      state.grown = true;
+      window.__interactionGrowDisclosure();
+      return { height, full };
+    }, primaryPanel);
+    await growthRecording.waitFor(({ state }) => state.grown, { timeout: 1500 });
+    const [beforeGrowth] = await growthRecording.stop();
+    assert.ok(beforeGrowth.height > 0 && beforeGrowth.height < beforeGrowth.full, 'late growth starts during the open spring');
     await page.waitForFunction((selector) => document.querySelector(selector)?.textContent.includes('Late content arrives') === true, primaryPanel, { timeout: 1000 });
     const growthSamples = await page.evaluate((selector) => new Promise((resolve) => {
       const node = document.querySelector(selector);

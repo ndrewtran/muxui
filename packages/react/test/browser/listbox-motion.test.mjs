@@ -8,6 +8,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ListBoxMotionFixture } from '../fixtures/listbox-motion-fixture.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
@@ -71,6 +72,12 @@ async function labelRects(page, selector) {
     const value = range?.getBoundingClientRect();
     return { id: option.id, rect: value ? { left: value.left, top: value.top, width: value.width, height: value.height } : null };
   }));
+}
+
+// Serialized into the page by recordFrames, so it must stay self-contained.
+function sampleShape(selector) {
+  const rect = document.querySelector(`${selector} [data-muxui-list-box-selection]`)?.getBoundingClientRect();
+  return rect ? { shape: { left: rect.left, top: rect.top, width: rect.width, height: rect.height } } : null;
 }
 
 async function waitForSelected(page, selector, label) {
@@ -157,17 +164,18 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     assert.deepEqual(initial.shape, initial.selectedRects[0]);
 
     const labelsBefore = await labelRects(page, single);
+    const travelRecording = await recordFrames(page, sampleShape, single);
     await page.evaluate(() => window.__listBoxSetSingle('three'));
     await waitForSelected(page, single, 'Three');
     const target = await readListBox(page, single);
     assert.deepEqual(target.selected, ['Three']);
-    await page.waitForTimeout(35);
-    const middle = await readListBox(page, single);
-    assert.ok(middle.shape && target.shape && initial.shape);
+    await waitForShapeAlignment(page, single);
+    const travelFrames = await travelRecording.stop();
+    assert.ok(target.shape && initial.shape);
     const minTop = Math.min(initial.shape.top, target.selectedRects[0].top);
     const maxTop = Math.max(initial.shape.top, target.selectedRects[0].top);
-    assert.ok(middle.shape.top > minTop + 0.5 && middle.shape.top < maxTop - 0.5, `selection shape should be in flight: ${JSON.stringify({ initial, middle, target })}`);
-    await waitForShapeAlignment(page, single);
+    const middle = travelFrames.find(({ shape }) => shape.top > minTop + 0.5 && shape.top < maxTop - 0.5);
+    assert.ok(middle, `selection shape should be in flight: ${JSON.stringify({ initial, travelFrames, target })}`);
     const settled = await readListBox(page, single);
     assertRectsClose(settled.shape, settled.selectedRects[0]);
     const labelsAfter = await labelRects(page, single);
@@ -176,14 +184,51 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     await page.evaluate(() => window.__listBoxSetSingle('one'));
     await waitForSelected(page, single, 'One');
     await waitForShapeAlignment(page, single);
-    await page.evaluate(() => window.__listBoxSetSingle('three'));
-    await waitForSelected(page, single, 'Three');
-    await page.waitForTimeout(22);
-    const beforeInterrupt = await readListBox(page, single);
-    await page.evaluate(() => window.__listBoxSetSingle('one'));
-    await waitForSelected(page, single, 'One');
-    const interruptedTarget = await readListBox(page, single);
-    assert.ok(beforeInterrupt.shape && interruptedTarget.shape && interruptedTarget.selectedRects[0]);
+    // Interrupt from inside the page while the shape travels, then compare the last frame
+    // of the interrupted animation with the first frame of its replacement, so the pair
+    // straddles the retarget instead of a Node round trip.
+    const interruptRecording = await recordFrames(page, (selector, state) => {
+      const root = document.querySelector(selector);
+      const rect = (node) => {
+        const value = node?.getBoundingClientRect();
+        return value ? { left: value.left, top: value.top, width: value.width, height: value.height } : null;
+      };
+      const selected = root.querySelector('[role="option"][aria-selected="true"]');
+      const shapeNode = root.querySelector('[data-muxui-list-box-selection]');
+      const animation = shapeNode?.getAnimations()[0] ?? null;
+      state.ids ??= new WeakMap();
+      state.nextId ??= 1;
+      if (animation && !state.ids.has(animation)) state.ids.set(animation, state.nextId++);
+      const frame = {
+        selected: selected?.textContent.trim(),
+        selectedRects: selected ? [rect(selected)] : [],
+        shape: rect(shapeNode),
+        animation: animation ? state.ids.get(animation) : null,
+      };
+      if (!state.started) {
+        state.started = true;
+        state.startTop = frame.shape?.top;
+        window.__listBoxSetSingle('three');
+        return null;
+      }
+      if (!state.interrupted) {
+        // Interrupt early in the travel, once the shape is clear of the 5px in-flight bound.
+        if (frame.selected !== 'Three' || !frame.shape || Math.abs(frame.shape.top - state.startTop) < 10) return null;
+        state.interrupted = true;
+        state.interruptedAnimation = frame.animation;
+        window.__listBoxSetSingle('one');
+        return frame;
+      }
+      if (state.done) return null;
+      state.done = frame.animation !== state.interruptedAnimation;
+      return frame;
+    }, single);
+    await interruptRecording.waitFor(({ state }) => state.done);
+    const interruptFrames = await interruptRecording.stop();
+    const retarget = interruptFrames.findIndex(({ animation }) => animation !== interruptFrames[0].animation);
+    const beforeInterrupt = interruptFrames[retarget - 1];
+    const interruptedTarget = interruptFrames[retarget];
+    assert.ok(beforeInterrupt?.shape && interruptedTarget?.shape && interruptedTarget.selectedRects[0]);
     assert.ok(Math.abs(interruptedTarget.shape.top - beforeInterrupt.shape.top) < 8, `selection shape should continue from its interrupted position: ${JSON.stringify({ beforeInterrupt, interruptedTarget })}`);
     assert.ok(Math.abs(interruptedTarget.shape.top - interruptedTarget.selectedRects[0].top) > 5, `interruption should retain an in-flight position: ${JSON.stringify({ beforeInterrupt, interruptedTarget })}`);
     await waitForShapeAlignment(page, single);

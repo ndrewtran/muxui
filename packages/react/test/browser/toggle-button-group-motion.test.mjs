@@ -8,6 +8,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { createServer } from 'vite';
 import { chromium } from 'playwright-core';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ToggleButtonGroupMotionFixture } from '../fixtures/toggle-button-group-motion-fixture.mjs';
 
 const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
@@ -94,6 +95,27 @@ async function readGroup(page, selector) {
   });
 }
 
+// Serialized into the page by recordFrames, so it must stay self-contained.
+function sampleTravel(selector) {
+  const root = document.querySelector(selector);
+  const buttons = [...root.querySelectorAll(':scope > .muxui-toggle-button')];
+  const selected = buttons.filter((button) => button.hasAttribute('data-selected')
+    || button.getAttribute('aria-checked') === 'true'
+    || button.getAttribute('aria-pressed') === 'true');
+  const indicator = root.querySelector('.muxui-toggle-button-group-motion-indicator');
+  const rect = (node) => {
+    const value = node?.getBoundingClientRect();
+    return value ? { left: value.left, top: value.top, width: value.width, height: value.height } : null;
+  };
+  if (!indicator) return null;
+  return {
+    trailing: root.hasAttribute('data-muxui-toggle-motion-trailing'),
+    buttonBackgrounds: buttons.map((button) => getComputedStyle(button).backgroundColor),
+    indicator: rect(indicator),
+    selectedRects: selected.map(rect),
+  };
+}
+
 async function waitForSelected(page, selector, text) {
   await page.waitForFunction(({ rootSelector, expected }) => {
     const root = document.querySelector(rootSelector);
@@ -151,30 +173,54 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const restingUnselectedHover = await readGroup(page, primary);
     assert.notEqual(restingUnselectedHover.buttonBackgrounds[1], 'rgba(0, 0, 0, 0)', 'unselected hover should retain its resting background');
 
+    const travelRecording = await recordFrames(page, sampleTravel, primary);
     await page.evaluate(() => window.__toggleSetPrimary('two'));
     await waitForSelected(page, primary, 'Two');
-    await page.waitForFunction(() => document.querySelector('#primary-toggle[data-muxui-toggle-motion-trailing]'));
-    await page.waitForTimeout(90);
-    const inFlight = await readGroup(page, primary);
-    assert.equal(inFlight.trailing, true);
+    await waitForAlignment(page, primary);
+    const travelFrames = (await travelRecording.stop()).filter(({ trailing }) => trailing);
+    // Assert on the widest trailing frame: the stretch peak is brief.
+    const inFlight = travelFrames.reduce((widest, frame) => (frame.indicator.width > (widest?.indicator.width ?? -1) ? frame : widest), null);
+    assert.equal(inFlight?.trailing, true, `trailing travel is recorded: ${JSON.stringify(travelFrames)}`);
     assert.equal(inFlight.buttonBackgrounds[1], 'rgba(0, 0, 0, 0)', 'hover paint should not cover the outgoing moving fill');
     assert.ok(inFlight.indicator && initial.indicator);
     assert.ok(inFlight.indicator.left !== initial.indicator.left, 'fill should physically move toward the next button');
     assert.ok(inFlight.indicator.width > Math.max(initial.indicator.width, inFlight.selectedRects[0].width) + 0.2,
       `trailing travel should briefly stretch the fill: ${JSON.stringify({ initial, inFlight })}`);
-    await waitForAlignment(page, primary);
     const settledTwo = await readGroup(page, primary);
     assertRectsClose(settledTwo.indicator, settledTwo.selectedRects[0], 'fill should settle exactly on target');
 
-    await page.evaluate(() => window.__toggleSetPrimary('long'));
-    await waitForSelected(page, primary, 'Longer selection');
-    await page.waitForTimeout(35);
-    const beforeReverse = await readGroup(page, primary);
-    await page.evaluate(() => window.__toggleSetPrimary('one'));
-    await waitForSelected(page, primary, 'One');
-    await page.waitForTimeout(20);
-    const afterReverse = await readGroup(page, primary);
-    assert.ok(beforeReverse.indicator && afterReverse.indicator);
+    // Reverse in the same frame that records the moving fill, then read the fill
+    // one frame after the reversal commits.
+    const reversalRecording = await recordFrames(page, (selector, state) => {
+      const root = document.querySelector(selector);
+      const rect = root.querySelector('.muxui-toggle-button-group-motion-indicator')?.getBoundingClientRect();
+      const indicator = rect ? { left: rect.left, top: rect.top, width: rect.width, height: rect.height } : null;
+      const selected = [...root.querySelectorAll(':scope > .muxui-toggle-button')]
+        .find((button) => button.hasAttribute('data-selected') || button.getAttribute('aria-checked') === 'true' || button.getAttribute('aria-pressed') === 'true')
+        ?.textContent.trim();
+      if (!state.started) {
+        state.started = true;
+        state.startLeft = indicator?.left;
+        window.__toggleSetPrimary('long');
+        return null;
+      }
+      if (!state.reversed) {
+        if (selected !== 'Longer selection' || !indicator || Math.abs(indicator.left - state.startLeft) < 0.5) return null;
+        state.reversed = true;
+        window.__toggleSetPrimary('one');
+        return { phase: 'beforeReverse', indicator };
+      }
+      if (selected !== 'One' || state.afterReverse) return null;
+      state.committedFrames = (state.committedFrames ?? 0) + 1;
+      if (state.committedFrames < 2) return null;
+      state.afterReverse = true;
+      return { phase: 'afterReverse', indicator };
+    }, primary);
+    await reversalRecording.waitFor(({ state }) => state.afterReverse);
+    const reversalFrames = await reversalRecording.stop();
+    const beforeReverse = reversalFrames.find(({ phase }) => phase === 'beforeReverse');
+    const afterReverse = reversalFrames.find(({ phase }) => phase === 'afterReverse');
+    assert.ok(beforeReverse?.indicator && afterReverse?.indicator);
     assert.ok(Math.abs(afterReverse.indicator.left - beforeReverse.indicator.left) < 28,
       `reversal should continue from the rendered position: ${JSON.stringify({ beforeReverse, afterReverse })}`);
     await waitForAlignment(page, primary);

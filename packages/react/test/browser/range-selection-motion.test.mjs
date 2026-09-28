@@ -164,7 +164,10 @@ async function samplePointerTransition(page, fromDate, toDate) {
     window.__muxuiRangePointerFrames = [];
     window.__muxuiRangeFirstPointerEventAt = null;
     const started = performance.now();
+    let lastPointerEventAt = started;
+    window.__muxuiRangePointerDone = false;
     const markPointerEvent = () => {
+      lastPointerEventAt = performance.now();
       if (window.__muxuiRangeFirstPointerEventAt === null) window.__muxuiRangeFirstPointerEventAt = Math.round(performance.now() - started);
     };
     window.__muxuiRangePointerEventMarker = markPointerEvent;
@@ -191,13 +194,16 @@ async function samplePointerTransition(page, fromDate, toDate) {
         t: Math.round(performance.now() - started),
         cells,
       });
-      if (performance.now() - started < 320) window.requestAnimationFrame(sample);
+      // Keep sampling for 320ms after the latest pointer event, however late it lands.
+      const waiting = window.__muxuiRangeFirstPointerEventAt === null && performance.now() - started < 5_000;
+      if (waiting || performance.now() - lastPointerEventAt < 320) window.requestAnimationFrame(sample);
+      else window.__muxuiRangePointerDone = true;
     };
     window.requestAnimationFrame(sample);
   });
   await page.mouse.move(fromRect.x + fromRect.width / 2, fromRect.y + fromRect.height / 2);
   await page.mouse.move(toRect.x + toRect.width / 2, toRect.y + toRect.height / 2, { steps: 16 });
-  await page.waitForTimeout(340);
+  await page.waitForFunction(() => window.__muxuiRangePointerDone === true);
   return page.evaluate(() => {
     const result = {
       frames: window.__muxuiRangePointerFrames ?? [],
@@ -206,6 +212,7 @@ async function samplePointerTransition(page, fromDate, toDate) {
     for (const eventType of ['pointerover', 'pointermove', 'pointerdown']) document.removeEventListener(eventType, window.__muxuiRangePointerEventMarker, true);
     delete window.__muxuiRangePointerFrames;
     delete window.__muxuiRangeFirstPointerEventAt;
+    delete window.__muxuiRangePointerDone;
     delete window.__muxuiRangePointerEventMarker;
     return result;
   });

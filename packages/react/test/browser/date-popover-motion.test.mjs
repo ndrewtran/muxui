@@ -8,6 +8,7 @@ import test from 'node:test';
 import { createServer } from 'vite';
 import { Button } from '../../src/button.mjs';
 import { DatePicker, DateRangePicker } from '../../src/fields.mjs';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -166,6 +167,35 @@ async function readDatePopoverShadow(page) {
   });
 }
 
+// Serialized into the page by recordFrames, so it must stay self-contained.
+function samplePopover() {
+  const node = document.querySelector('.muxui-date-popover');
+  if (!node) return null;
+  const style = getComputedStyle(node);
+  return {
+    opacity: style.opacity,
+    transformY: new DOMMatrixReadOnly(style.transform).m42,
+    animations: node.getAnimations().map((animation) => ({
+      duration: animation.effect?.getComputedTiming().duration,
+      easing: animation.effect?.getComputedTiming().easing,
+      keyframes: animation.effect?.getKeyframes().map(({ opacity, transform }) => ({ opacity, transform })),
+    })),
+  };
+}
+
+// Opens the popup with an 800ms reveal and returns the first recorded frame that is
+// visibly in flight (or the last frame, for the assertion message).
+async function recordSlowedEntry(page) {
+  const recording = await recordFrames(page, samplePopover);
+  await openCalendar(page);
+  const inFlight = ({ opacity, transformY, animations }) => animations.some(({ duration }) => Number(duration) === 800)
+    && opacity !== '1' && transformY > -4 && transformY < 0;
+  await recording.waitFor(({ frames }) => frames.some(({ opacity, transformY, animations }) => animations.some(({ duration }) => Number(duration) === 800)
+    && opacity !== '1' && transformY > -4 && transformY < 0), { timeout: 2_000 }).catch(() => {});
+  const frames = await recording.stop();
+  return frames.find(inFlight) ?? frames.at(-1) ?? { animations: [] };
+}
+
 function assertEntryMotion(entry) {
   const fade = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.opacity !== undefined));
   const travel = entry.animations.find(({ keyframes }) => keyframes.some((frame) => frame.transform !== undefined));
@@ -240,10 +270,13 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await capturePopup(page, '/tmp/muxui-date-popover-full-light.png');
     await closeCalendarWithEscape(page);
 
+    const secondRecording = await recordFrames(page, samplePopover);
     await openCalendar(page);
-    const secondEntry = await readEntryMotion(page);
+    await secondRecording.waitFor(({ frames }) => frames.some(({ opacity, transformY }) => Number(opacity) < 1 && transformY < 0), { timeout: 2_000 }).catch(() => {});
+    const secondFrames = await secondRecording.stop();
+    const secondEntry = secondFrames.find(({ opacity, transformY }) => Number(opacity) < 1 && transformY < 0);
+    assert.ok(secondEntry && Number(secondEntry.opacity) < 1 && secondEntry.transformY < 0, `a fresh node replays entry after a completed close: ${JSON.stringify(secondFrames)}`);
     assertEntryMotion(secondEntry);
-    assert.ok(Number(secondEntry.opacity) < 1 && secondEntry.transformY < 0, 'a fresh node replays entry after a completed close');
     await page.mouse.click(8, 8);
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
     assert.equal(await page.evaluate(() => document.activeElement?.matches('.muxui-date-trigger')), true, 'outside dismissal restores trigger focus');
@@ -312,10 +345,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
     });
-    await openCalendar(page);
-    await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 800));
-    await page.waitForTimeout(80);
-    const slowedSystemEntry = await readEntryMotion(page);
+    const slowedSystemEntry = await recordSlowedEntry(page);
     assert.equal(slowedSystemEntry.animations.some(({ duration }) => Number(duration) === 800), true, 'system reduction test starts from a slowed entry');
     assert.ok(slowedSystemEntry.opacity !== '1' && slowedSystemEntry.transformY > -4 && slowedSystemEntry.transformY < 0, `slowed entry is visibly in flight: ${JSON.stringify(slowedSystemEntry)}`);
     const systemReductionStarted = Date.now();
@@ -350,10 +380,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
       document.getElementById('root').removeAttribute('data-muxui-motion');
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '800ms');
     });
-    await openCalendar(page);
-    await page.waitForFunction(() => document.querySelector('.muxui-date-popover')?.getAnimations().some((animation) => Number(animation.effect?.getComputedTiming().duration) === 800));
-    await page.waitForTimeout(80);
-    const slowedNestedEntry = await readEntryMotion(page);
+    const slowedNestedEntry = await recordSlowedEntry(page);
     assert.equal(slowedNestedEntry.animations.some(({ duration }) => Number(duration) === 800), true, 'nested reduction test starts from a slowed entry');
     assert.ok(slowedNestedEntry.opacity !== '1' && slowedNestedEntry.transformY > -4 && slowedNestedEntry.transformY < 0, `slowed nested entry is visibly in flight: ${JSON.stringify(slowedNestedEntry)}`);
     const nestedReductionStarted = Date.now();

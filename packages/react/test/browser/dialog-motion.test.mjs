@@ -7,6 +7,7 @@ import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { createServer } from 'vite';
 import { Dialog } from '../../src/overlays.mjs';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const chromeCandidates = [
@@ -103,6 +104,27 @@ async function readMotion(page) {
   });
 }
 
+// Serialized into the page by recordFrames, so it must stay self-contained.
+function samplePanel() {
+  const node = document.querySelector('.muxui-dialog');
+  const backdrop = document.querySelector('.muxui-dialog-backdrop');
+  if (!node) return null;
+  const style = getComputedStyle(node);
+  const backdropStyle = backdrop && getComputedStyle(backdrop);
+  return {
+    opacity: Number(style.opacity),
+    y: Number.parseFloat(style.getPropertyValue('--muxui-modal-y')) || 0,
+    scale: Number.parseFloat(style.getPropertyValue('--muxui-modal-scale')) || 1,
+    backdropExiting: backdrop?.hasAttribute('data-exiting') ?? false,
+    backdropDuration: backdropStyle?.transitionDuration,
+    backdropEasing: backdropStyle?.transitionTimingFunction,
+  };
+}
+
+function isMidFlight({ opacity, y, scale }) {
+  return opacity > 0 && opacity < 1 && y < 0 && y > -8 && scale > 0.97 && scale < 1;
+}
+
 async function openTriggered(page) {
   await page.locator('.muxui-dialog-trigger').click();
   await page.locator('.muxui-dialog').waitFor();
@@ -154,15 +176,16 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await waitForHydration(page);
     assert.equal(await page.locator('.muxui-dialog').count(), 0, 'SSR and hydration begin closed');
 
+    const entryRecording = await recordFrames(page, samplePanel);
     await openTriggered(page);
     await waitForPanelEntry(page);
-    await page.waitForTimeout(45);
-    const entry = await readMotion(page);
-    assert.ok(entry.opacity > 0 && entry.opacity < 1, `entry fades in: ${JSON.stringify(entry)}`);
-    assert.ok(entry.y < 0 && entry.y > -8, `entry translates toward center: ${JSON.stringify(entry)}`);
-    assert.ok(entry.scale > 0.97 && entry.scale < 1, `entry scales toward the settled panel: ${JSON.stringify(entry)}`);
     assert.equal(await page.locator('.muxui-dialog-backdrop').evaluate((node) => getComputedStyle(node).transitionDuration), '0.18s', 'backdrop uses modal entry duration');
     await settleEntry(page);
+    const entryFrames = await entryRecording.stop();
+    const entry = entryFrames.find(isMidFlight) ?? {};
+    assert.ok(entry.opacity > 0 && entry.opacity < 1, `entry fades in: ${JSON.stringify(entryFrames)}`);
+    assert.ok(entry.y < 0 && entry.y > -8, `entry translates toward center: ${JSON.stringify(entry)}`);
+    assert.ok(entry.scale > 0.97 && entry.scale < 1, `entry scales toward the settled panel: ${JSON.stringify(entry)}`);
     const settledEntry = await readMotion(page);
     assert.equal(settledEntry.opacity, 1);
     assert.ok(Math.abs(settledEntry.y) < 1, `entry settles at y=0: ${JSON.stringify(settledEntry)}`);
@@ -172,20 +195,16 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.screenshot({ path: '/tmp/muxui-dialog-motion-full-light.png' });
     assert.equal(await page.locator('.muxui-dialog').evaluate((node) => node.contains(document.activeElement)), true, 'opening moves focus into the dialog');
 
+    const exitRecording = await recordFrames(page, samplePanel);
     await page.keyboard.press('Escape');
-    await waitForPanelExit(page);
-    await page.waitForTimeout(35);
-    const exit = await readMotion(page);
-    assert.ok(exit.opacity < 1, `exit fades out: ${JSON.stringify(exit)}`);
+    await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
+    const exitFrames = (await exitRecording.stop()).filter(({ backdropExiting }) => backdropExiting);
+    const exit = exitFrames.find(isMidFlight) ?? {};
+    assert.ok(exit.opacity < 1, `exit fades out: ${JSON.stringify(exitFrames)}`);
     assert.ok(exit.y < 0 && exit.y > -8, `exit translates upward: ${JSON.stringify(exit)}`);
     assert.ok(exit.scale < 1 && exit.scale > 0.97, `exit scales down: ${JSON.stringify(exit)}`);
-    const exitBackdrop = await page.locator('.muxui-dialog-backdrop').evaluate((node) => {
-      const style = getComputedStyle(node);
-      return { duration: style.transitionDuration, easing: style.transitionTimingFunction };
-    });
-    assert.equal(exitBackdrop.duration, '0.12s', 'backdrop uses modal exit duration');
-    assert.equal(exitBackdrop.easing, 'cubic-bezier(0.16, 1, 0.3, 1)', 'backdrop uses modal easing');
-    await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
+    assert.equal(exit.backdropDuration, '0.12s', 'backdrop uses modal exit duration');
+    assert.equal(exit.backdropEasing, 'cubic-bezier(0.16, 1, 0.3, 1)', 'backdrop uses modal easing');
     await page.waitForFunction(() => document.activeElement?.classList.contains('muxui-dialog-trigger'));
     assert.equal(await page.locator('.muxui-dialog-trigger').evaluate((node) => document.activeElement === node), true, 'Escape restores trigger focus');
 

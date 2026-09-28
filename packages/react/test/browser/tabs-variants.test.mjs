@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { createServer } from 'vite';
+import { recordFrames } from '../fixtures/frame-recorder.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../..');
 const chromeCandidates = [
@@ -337,12 +338,11 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await overflowViewport.evaluate((node) => { node.scrollLeft = 0; });
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs button[aria-label="Scroll tabs left"]')?.disabled);
     const initialScroll = await overflowViewport.evaluate((node) => node.scrollLeft);
-    await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
-    await page.waitForTimeout(80);
-    const inFlightScroll = await overflowViewport.evaluate((node) => node.scrollLeft);
-    assert.ok(inFlightScroll > initialScroll, 'next arrow starts an animated scroll');
     const maxScroll = await overflowViewport.evaluate((node) => node.scrollWidth - node.clientWidth);
-    assert.ok(inFlightScroll < maxScroll - 0.5, 'next arrow remains observable before settling');
+    const scrollRecording = await recordFrames(page, () => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport').scrollLeft);
+    await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
+    // Lets the scroll get under way before the reversal; the in-flight claim reads the recording.
+    await page.waitForTimeout(80);
     const reversalStart = await overflowMotion.evaluate((root) => {
       const position = root.querySelector('.muxui-tabs-motion-overflow-viewport').scrollLeft;
       root.querySelector('button[aria-label="Scroll tabs left"]').click();
@@ -350,6 +350,10 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     });
     await page.waitForTimeout(80);
     const reversedScroll = await overflowViewport.evaluate((node) => node.scrollLeft);
+    const scrollFrames = await scrollRecording.stop();
+    const inFlightScroll = scrollFrames.find((offset) => offset > initialScroll && offset < maxScroll - 0.5) ?? scrollFrames.at(-1);
+    assert.ok(inFlightScroll > initialScroll, `next arrow starts an animated scroll: ${JSON.stringify(scrollFrames)}`);
+    assert.ok(inFlightScroll < maxScroll - 0.5, 'next arrow remains observable before settling');
     assert.ok(reversedScroll < reversalStart, `opposite arrow interrupts and reverses the scroll (${reversalStart} -> ${reversedScroll})`);
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < 1);
 
