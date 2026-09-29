@@ -6,7 +6,8 @@ import { FOUNDATION_DATA, FOUNDATION_PAGES, foundationPage } from '../../lib/fou
 import { getGuide } from '../../lib/catalog.ts';
 
 export function getStaticPaths() {
-	return FOUNDATION_PAGES.map((page) => ({ params: { foundation: page.slug }, props: { page } }));
+	// The overview card copy is not needed by the page, and leaving it out keeps the island props small.
+	return FOUNDATION_PAGES.map(({ card: _card, ...page }) => ({ params: { foundation: page.slug }, props: { page } }));
 }
 
 const { page } = Astro.props as { page: ReturnType<typeof foundationPage> };

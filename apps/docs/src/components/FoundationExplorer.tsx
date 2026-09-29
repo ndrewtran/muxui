@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { CSSProperties } from 'react';
 import type { FoundationPage, FoundationToken, TypographyRole } from '../lib/foundations.ts';
+import { FOUNDATION_PAGES } from '../lib/foundation-pages.ts';
 import { normalizeAppliedNumericValue } from '../lib/foundation-values.ts';
 import { TokenExpression, TokenPath } from '../lib/token-path.ts';
 import '../styles/semantic-tokens.css';
@@ -308,23 +309,11 @@ function Overview({ data }: { data: FoundationData }) {
 		</section>
 		<section className="foundation-section" aria-labelledby="foundation-pages-title">
 			<h2 id="foundation-pages-title">Explore by purpose</h2>
-			<div className="foundation-page-grid">{FOUNDATION_LINKS.map((item) => <a className="foundation-page-link" href={`/foundations/${item.slug}/`} key={item.slug}><span className="foundation-eyebrow">{item.label}</span><strong>{item.title}</strong><span>{item.description}</span><small>{counts(item)} canonical tokens</small></a>)}</div>
+			<div className="foundation-page-grid">{FOUNDATION_PAGES.map((item) => <a className="foundation-page-link" href={`/foundations/${item.slug}/`} key={item.slug}><span className="foundation-eyebrow">{item.card.eyebrow}</span><strong>{item.title}</strong><span>{item.card.description}</span><small>{counts(item)} canonical tokens</small></a>)}</div>
 		</section>
 		<p className="foundation-source-note">Facts on these pages are projected from <code>catalog/tokens/default-theme.json</code>. The displayed applied value is read from the site’s active custom properties and can change when a Scale theme is applied.</p>
 	</div>;
 }
-
-const FOUNDATION_LINKS: readonly FoundationPage[] = [
-	{ slug: 'reference-tokens', label: 'Layer 01', title: 'Reference tokens', description: 'Stable primitives for colour, dimensions, type, motion, and effects.', kind: 'layer', layer: 'reference' },
-	{ slug: 'semantic-tokens', label: 'Layer 02', title: 'Semantic tokens', description: 'Interface roles for content, surfaces, actions, states, and layout.', kind: 'layer', layer: 'semantic' },
-	{ slug: 'colour', label: 'Category', title: 'Colour', description: 'Full canonical ramps plus role-based interface colour specimens.', kind: 'category', category: 'colour' },
-	{ slug: 'typography', label: 'Category', title: 'Typography', description: 'Real type specimens mapped to the theme’s role and variant graph.', kind: 'category', category: 'typography' },
-	{ slug: 'spacing', label: 'Category', title: 'Spacing and dimensions', description: 'Rulers, gaps, insets, control sizing, and the complete dimension inventory.', kind: 'category', category: 'spacing' },
-	{ slug: 'shape', label: 'Category', title: 'Shape', description: 'Equal-size corner specimens for reference and semantic radius roles.', kind: 'category', category: 'shape' },
-	{ slug: 'elevation', label: 'Category', title: 'Elevation and effects', description: 'Typed shadows and equal-size surfaces at each depth level.', kind: 'category', category: 'elevation' },
-	{ slug: 'motion', label: 'Category', title: 'Motion', description: 'User-triggered timing and easing replays with reduced-motion safety.', kind: 'category', category: 'motion' },
-	{ slug: 'component-tokens', label: 'Layer 03', title: 'Component tokens', description: 'Component-owned aliases with honest property previews.', kind: 'layer', layer: 'component' },
-];
 
 function ColorRamp({ family, tokens }: { family: string; tokens: readonly FoundationToken[] }) {
 	return <div className="foundation-color-ramp"><div className="foundation-ramp-heading"><strong>{family}</strong><span>{tokens.length} steps</span></div><div className="foundation-ramp-grid">{tokens.map((token) => <button className="foundation-swatch" data-swatch-id={token.id} type="button" key={token.id} style={{ backgroundColor: cssReference(token) }} title={`Inspect ${token.id}`} onClick={() => focusToken(token.id)}><span>{token.id.split('-').at(-1)}</span><small>{token.defaultValue as string}</small></button>)}</div></div>;
@@ -487,8 +476,8 @@ function familyMaximum(tokens: readonly FoundationToken[], values?: AppliedNumer
 	return Math.max(...tokens.map((token) => values?.get(token.id) ?? numericTokenValue(token)), 0);
 }
 
-function familyBarWidth(token: FoundationToken, tokens: readonly FoundationToken[], values?: AppliedNumericValues): string {
-	const maximum = familyMaximum(tokens, values);
+/** `maximum` is the row's `familyMaximum`, computed once per family by the caller. */
+function familyBarWidth(token: FoundationToken, maximum: number, values?: AppliedNumericValues): string {
 	if (maximum === 0) return '0%';
 	const value = values?.get(token.id) ?? numericTokenValue(token);
 	return `${Math.max(0, Math.min(100, value / maximum * 100))}%`;
@@ -521,11 +510,11 @@ function FoundationDimensionFamily({ family, appliedValues }: { family: Foundati
 		<FoundationFamilyHeading family={family} />
 		<div className="foundation-family-axis" aria-hidden="true"><span /><div><span>0</span><span>{specimenValue(maximum)} {family.tokens[0]?.unit}</span></div><span /></div>
 		<div className="foundation-ruler foundation-family-ruler">
-			{family.tokens.map((token) => <div className="foundation-ruler-row" data-foundation-token={token.id} key={token.id}>
+			{family.tokens.map((token) => { const width = familyBarWidth(token, maximum, appliedValues); return <div className="foundation-ruler-row" data-foundation-token={token.id} key={token.id}>
 				<FoundationTokenLabel token={token} />
-				<div className="foundation-ruler-track"><span data-foundation-scale-width={familyBarWidth(token, family.tokens, appliedValues)} className={(appliedValues.get(token.id) ?? numericTokenValue(token)) === 0 ? 'is-zero' : undefined} style={{ width: familyBarWidth(token, family.tokens, appliedValues) }} /></div>
+				<div className="foundation-ruler-track"><span data-foundation-scale-width={width} className={(appliedValues.get(token.id) ?? numericTokenValue(token)) === 0 ? 'is-zero' : undefined} style={{ width }} /></div>
 				<small>{specimenValue(appliedValues.get(token.id) ?? token.defaultValue)} {token.unit}</small>
-			</div>)}
+			</div>; })}
 		</div>
 	</section>;
 }
@@ -689,8 +678,8 @@ function motionTimingGroups(durations: readonly FoundationToken[]): readonly Mot
 	].map((group) => ({ ...group, tokens: sortMotionTimings(group.tokens) }));
 }
 
-function MotionTimingEntry({ token, replay, allTokens, family, appliedValues }: { token: FoundationToken; replay: number; allTokens: readonly FoundationToken[]; family: MotionTimingGroup; appliedValues: AppliedNumericValues }) {
-	const width = familyBarWidth(token, family.tokens, appliedValues);
+function MotionTimingEntry({ token, replay, allTokens, maximum, appliedValues }: { token: FoundationToken; replay: number; allTokens: readonly FoundationToken[]; maximum: number; appliedValues: AppliedNumericValues }) {
+	const width = familyBarWidth(token, maximum, appliedValues);
 	return <div className="foundation-family-row foundation-timing-row" data-foundation-token={token.id}>
 		<div className="foundation-timing-meta"><strong>{motionTimingLabel(token)}</strong><small>{motionTimingScope(token)}</small></div>
 		<div className="foundation-timing-track" aria-hidden="true"><span className="foundation-timing-bar" data-foundation-scale-width={width} style={{ width }} /><span className="foundation-timing-sample" key={`${token.id}-${replay}`} style={{ animationName: replay ? 'foundation-timing-replay' : 'none', animationDuration: cssReference(token) }}>Aa</span></div>
@@ -699,10 +688,11 @@ function MotionTimingEntry({ token, replay, allTokens, family, appliedValues }: 
 }
 
 function MotionTimingGroup({ group, replay, allTokens, onReplay, appliedValues }: { group: MotionTimingGroup; replay: number; allTokens: readonly FoundationToken[]; onReplay: () => void; appliedValues: AppliedNumericValues }) {
+	const maximum = familyMaximum(group.tokens, appliedValues);
 	return <section className="foundation-timing-group foundation-family" data-foundation-family={group.id} aria-labelledby={`foundation-family-${group.id}`}>
 		<FoundationFamilyHeading family={group} action={<button type="button" className="foundation-action" onClick={onReplay}>Replay motion</button>} />
-		<div className="foundation-family-axis foundation-timing-axis" aria-hidden="true"><span /><div><span>0</span><span>{specimenValue(familyMaximum(group.tokens, appliedValues))} {group.tokens[0]?.unit}</span></div><span /></div>
-		<div className="foundation-family-rows">{group.tokens.map((token) => <MotionTimingEntry key={token.id} token={token} replay={replay} allTokens={allTokens} family={group} appliedValues={appliedValues} />)}</div>
+		<div className="foundation-family-axis foundation-timing-axis" aria-hidden="true"><span /><div><span>0</span><span>{specimenValue(maximum)} {group.tokens[0]?.unit}</span></div><span /></div>
+		<div className="foundation-family-rows">{group.tokens.map((token) => <MotionTimingEntry key={token.id} token={token} replay={replay} allTokens={allTokens} maximum={maximum} appliedValues={appliedValues} />)}</div>
 	</section>;
 }
 
