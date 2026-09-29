@@ -161,13 +161,9 @@ test('E-G0.2-01 negative: generated bundle matches its canonical source manifest
 });
 
 test('R1.4 guide sources preserve Markdown newlines', async () => {
-  const manifest = JSON.parse(await readFile(
-    join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
-    'utf8',
-  ));
-  const guideSources = manifest.records
-    .filter(({ family, sourcePath }) => family === 'guide' && sourcePath?.includes('-usage.md'))
-    .map(({ sourcePath }) => sourcePath);
+  const guideSources = baseBundle.artifacts
+    .filter(({ kind, source }) => kind === 'guide' && source.content?.includes('-usage.md'))
+    .map(({ source }) => source.content);
   assert.equal(guideSources.length, 55);
   for (const sourcePath of guideSources) {
     const source = await readFile(join(repositoryRoot, sourcePath), 'utf8');
@@ -938,6 +934,52 @@ test('E-G0.2-05 negative: compiler uses the declared manifest and rejects duplic
     await assert.rejects(
       compileCatalog({ repositoryRoot, sourceManifestPath: manifestPath }),
       /MUXUI_CATALOG_SOURCE_INVALID: duplicate/,
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('compiler reads content from each record source and rejects bad sources', async () => {
+  const manifest = JSON.parse(await readFile(
+    join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
+    'utf8',
+  ));
+  assert.equal(manifest.records.some((entry) => 'sourcePath' in entry), false);
+  const withSource = baseBundle.artifacts.filter(({ record }) => record.source !== undefined);
+  assert.deepEqual([...new Set(withSource.map(({ kind }) => kind))].sort(), ['example', 'guide']);
+  for (const { record, source } of withSource) {
+    assert.equal(source.content, record.source);
+    const bytes = await readFile(join(repositoryRoot, record.source), 'utf8');
+    assert.equal(source.contentDigest, `sha256:${createHash('sha256').update(bytes).digest('hex')}`);
+  }
+
+  // A root of symlinks to the real repository plus one rewritten example
+  // record lets the compiler read a bad source without touching the checkout.
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-catalog-source-'));
+  try {
+    for (const name of await readdir(repositoryRoot)) {
+      if (name !== '.git') await symlink(join(repositoryRoot, name), join(temporaryRoot, name));
+    }
+    const index = manifest.records.findIndex(({ family }) => family === 'example');
+    const example = JSON.parse(await readFile(join(repositoryRoot, manifest.records[index].path), 'utf8'));
+    const fixturePath = 'fixture/bad.example.json';
+    await mkdir(join(temporaryRoot, 'fixture'));
+    manifest.records[index] = { family: 'example', path: fixturePath };
+    await writeFile(join(temporaryRoot, 'catalog-sources.json'), JSON.stringify(manifest));
+    const compileWithSource = async (source) => {
+      await writeFile(join(temporaryRoot, fixturePath), JSON.stringify({ ...example, source }));
+      return compileCatalog({ repositoryRoot: temporaryRoot, sourceManifestPath: 'catalog-sources.json' });
+    };
+    await assert.rejects(compileWithSource('catalog/components/missing/basic.tsx'), { code: 'ENOENT' });
+    await assert.rejects(compileWithSource('../outside.tsx'), /MUXUI_SCHEMA_INVALID/);
+    await assert.rejects(compileWithSource('/etc/hosts'), /MUXUI_SCHEMA_INVALID/);
+    // The manifest no longer accepts a restated source path.
+    manifest.records[index] = { ...manifest.records[index], sourcePath: example.source };
+    await writeFile(join(temporaryRoot, 'catalog-sources.json'), JSON.stringify(manifest));
+    await assert.rejects(
+      compileCatalog({ repositoryRoot: temporaryRoot, sourceManifestPath: 'catalog-sources.json' }),
+      new RegExp(`MUXUI_CATALOG_SOURCE_INVALID: invalid records/${index}$`),
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });
