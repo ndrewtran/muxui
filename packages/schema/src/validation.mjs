@@ -1,12 +1,18 @@
 import { canonicalJson, parseJsonStrict, sha256Digest } from './canonical.mjs';
 import { platformSafetyRequirementIds } from '../generated/platform-safety-contract.mjs';
 import {
+  escapeJsonPointer,
+  familyFiles,
+  isObject,
   loadFamilySchema,
   loadJsonDocument,
-  resolveJsonPointer,
   resolveSchemaReference,
 } from './contracts.mjs';
-import { loadFieldOwnershipRegistry } from './field-ownership.mjs';
+import {
+  collectSchemaFieldDeclarations,
+  loadFieldOwnershipPolicy,
+  loadFieldOwnershipRegistry,
+} from './field-ownership.mjs';
 
 export class SchemaValidationError extends Error {
   constructor(code, issues) {
@@ -15,10 +21,6 @@ export class SchemaValidationError extends Error {
     this.code = code;
     this.issues = issues;
   }
-}
-
-function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function sameValue(left, right) {
@@ -718,10 +720,6 @@ export function validateContractDocument(fileName, value, { schemas } = {}) {
   return value;
 }
 
-function escapeJsonPointer(segment) {
-  return segment.replaceAll('~', '~0').replaceAll('/', '~1');
-}
-
 function ownershipError(path, message) {
   return new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [{ path, message }]);
 }
@@ -730,29 +728,12 @@ function isOwnerName(value) {
   return typeof value === 'string' && value.length > 0;
 }
 
-function unescapeJsonPointer(segment) {
-  return segment.replaceAll('~1', '/').replaceAll('~0', '~');
-}
-
-/** True when the pointer resolves inside the schema to a property declaration named `name`. */
-function declaresField(schema, { name, schemaPointer }) {
-  const match = typeof schemaPointer === 'string'
-    ? /^#\/(?:.+\/)?properties\/([^/]+)$/u.exec(schemaPointer)
-    : null;
-  if (!match || unescapeJsonPointer(match[1]) !== name) return false;
-  try {
-    resolveJsonPointer(schema, schemaPointer);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Checks a registry view against the ownership rules. The policy rows in
- * field-ownership.json are the locked reference: a supplied view cannot change
- * a governed schema's or reserved field's class and owner, and every field must
- * be a real property of its governed schema carrying that schema's owner.
+ * Checks a registry view against the ownership rules. Every catalog family
+ * schema must be governed. Governed-schema rows and reserved fields must match
+ * the authored policy in field-ownership.json, so a supplied view cannot change
+ * their class or owner. Fields must cover each governed schema's property
+ * declarations exactly, once each, with that schema's class and owner.
  */
 export function validateFieldOwnershipRegistry(
   registry = loadFieldOwnershipRegistry(),
@@ -766,59 +747,66 @@ export function validateFieldOwnershipRegistry(
   ) {
     throw ownershipError('$', 'must declare classes, governed schemas, reserved fields, and fields');
   }
-  const policy = loadJsonDocument('field-ownership.json');
+  const policy = loadFieldOwnershipPolicy();
   const classes = new Set(registry.classes);
-  const lockedContexts = new Map(policy.governedSchemas.map((row) => [row.file, row]));
+  const policyContexts = new Map(policy.governedSchemas.map((row) => [row.file, row]));
   const contexts = new Map();
   for (const governed of registry.governedSchemas) {
-    const locked = lockedContexts.get(governed.file);
+    const authored = policyContexts.get(governed.file);
     if (
       contexts.has(governed.file)
       || !classes.has(governed.class)
       || !isOwnerName(governed.owner)
-      || governed.class !== locked?.class
-      || governed.owner !== locked?.owner
+      || governed.class !== authored?.class
+      || governed.owner !== authored?.owner
     ) {
       throw ownershipError(
         `$/governedSchemas/${governed.file}`,
-        'must match the locked canonical class and owner',
+        'must match the authored class and owner',
       );
     }
     contexts.set(governed.file, governed);
   }
-  if (contexts.size !== lockedContexts.size) {
-    throw ownershipError(
-      '$/governedSchemas',
-      `must cover the locked schemas: ${[...lockedContexts.keys()].join(', ')}`,
-    );
+  for (const file of [...Object.values(familyFiles), ...policyContexts.keys()]) {
+    if (!contexts.has(file)) {
+      throw ownershipError('$/governedSchemas', `must govern ${file}`);
+    }
   }
 
-  const lockedReserved = new Map(policy.reservedFields.map((field) => [field.name, field]));
+  const policyReserved = new Map(policy.reservedFields.map((field) => [field.name, field]));
   const reservedNames = new Set();
   for (const field of registry.reservedFields) {
-    const locked = lockedReserved.get(field.name);
+    const authored = policyReserved.get(field.name);
     if (
       reservedNames.has(field.name)
       || !classes.has(field.class)
       || !isOwnerName(field.owner)
       || field.forbiddenInAuthoredSource !== true
-      || field.class !== locked?.class
-      || field.owner !== locked?.owner
+      || field.class !== authored?.class
+      || field.owner !== authored?.owner
     ) {
       throw ownershipError(
         `$/reservedFields/${field.name}`,
-        'must match one locked reserved class, owner, and authored-source prohibition',
+        'must match one authored reserved class, owner, and authored-source prohibition',
       );
     }
     reservedNames.add(field.name);
   }
-  if (reservedNames.size !== lockedReserved.size) {
+  if (reservedNames.size !== policyReserved.size) {
     throw ownershipError(
       '$/reservedFields',
-      `must cover the locked reserved fields: ${[...lockedReserved.keys()].join(', ')}`,
+      `must cover the authored reserved fields: ${[...policyReserved.keys()].join(', ')}`,
     );
   }
 
+  const declarations = new Map();
+  for (const file of contexts.keys()) {
+    for (const declaration of collectSchemaFieldDeclarations(
+      schemas?.[file] ?? loadJsonDocument(file),
+    )) {
+      declarations.set(`${file}${declaration.schemaPointer}`, declaration);
+    }
+  }
   const keys = new Set();
   for (const field of registry.fields) {
     const key = `${field.schema}${field.schemaPointer}`;
@@ -833,11 +821,16 @@ export function validateFieldOwnershipRegistry(
         'must carry its governed schema\'s class and canonical owner',
       );
     }
-    if (!declaresField(schemas?.[field.schema] ?? loadJsonDocument(field.schema), field)) {
+    if (declarations.get(key)?.name !== field.name) {
       throw ownershipError(
         `$/fields/${key}`,
-        'must point to a property of the same name inside its governed schema',
+        'must name a property declared by its governed schema',
       );
+    }
+  }
+  for (const key of declarations.keys()) {
+    if (!keys.has(key)) {
+      throw ownershipError(`$/fields/${key}`, 'is missing an ownership declaration');
     }
   }
   return registry;

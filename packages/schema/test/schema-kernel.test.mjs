@@ -32,6 +32,7 @@ import {
   guide,
   tokenSource,
 } from './fixtures.mjs';
+import { loadJsonDocument } from '../src/contracts.mjs';
 
 const normativeExampleSource = '<Button disabled={false}>Save</Button>\n';
 
@@ -702,8 +703,23 @@ test('E-G0.1-03: editorial content and normative binding closure affect the corr
   );
 });
 
-test('field ownership rules reject orphan, duplicate, unclassed, and authored reserved fields', () => {
+test('field ownership rules reject orphan, duplicate, missing, unclassed, and authored reserved fields', () => {
   const ownership = validateFieldOwnershipRegistry();
+  assert.deepEqual(ownership.reservedFields.map(({ name }) => name).sort(), [
+    'contentRevision',
+    'evidenceResults',
+    'evidenceStatus',
+    'exportPath',
+    'packageVersion',
+    'sourceLocation',
+    'specRevision',
+  ]);
+  for (const value of [ownership, ownership.fields, ownership.fields[0], ownership.governedSchemas[0]]) {
+    assert.ok(Object.isFrozen(value));
+  }
+  assert.throws(() => {
+    ownership.governedSchemas[0].owner = 'hijacked';
+  }, TypeError);
   for (const { file, class: fieldClass, owner } of ownership.governedSchemas) {
     const fields = ownership.fields.filter(({ schema }) => schema === file);
     assert.ok(fields.every((field) => field.class === fieldClass && field.owner === owner), file);
@@ -739,6 +755,24 @@ test('field ownership rules reject orphan, duplicate, unclassed, and authored re
   reject((registry) => {
     registry.reservedFields.push({ ...registry.reservedFields[0] });
   }, 'reserved field declared twice');
+  reject((registry) => registry.fields.pop(), 'missing field');
+  reject((registry) => {
+    registry.fields.push({
+      ...registry.fields.find(({ schema }) => schema === 'component.schema.json'),
+      name: 'x',
+      schemaPointer: '#/properties/properties/properties/x',
+    });
+  }, 'pointer through a property named properties');
+
+  const componentSchema = structuredClone(loadJsonDocument('component.schema.json'));
+  componentSchema.properties.undeclaredOwner = { type: 'string' };
+  assert.throws(
+    () => validateFieldOwnershipRegistry(ownership, {
+      schemas: { 'component.schema.json': componentSchema },
+    }),
+    (error) => error.code === 'MUXUI_FIELD_OWNERSHIP_INVALID'
+      && error.message.includes('component.schema.json#/properties/undeclaredOwner'),
+  );
 
   for (const { name } of ownership.reservedFields) {
     const record = component();

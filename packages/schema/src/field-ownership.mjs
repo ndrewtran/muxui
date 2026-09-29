@@ -1,15 +1,7 @@
-import { loadJsonDocument } from './contracts.mjs';
-
-function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-function escapeJsonPointer(segment) {
-  return segment.replaceAll('~', '~0').replaceAll('/', '~1');
-}
+import { escapeJsonPointer, isObject, loadJsonDocument } from './contracts.mjs';
 
 /** Lists every `properties` declaration in a schema, including nested keyword subschemas. */
-function collectSchemaFieldDeclarations(schema, pointer = '#', declarations = []) {
+export function collectSchemaFieldDeclarations(schema, pointer = '#', declarations = []) {
   if (Array.isArray(schema)) {
     schema.forEach((item, index) => collectSchemaFieldDeclarations(
       item,
@@ -34,29 +26,46 @@ function collectSchemaFieldDeclarations(schema, pointer = '#', declarations = []
   return declarations;
 }
 
-function synthesize(policy) {
-  const fields = policy.governedSchemas.flatMap((governed) => (
-    collectSchemaFieldDeclarations(loadJsonDocument(governed.file))
-      .map(({ name, schemaPointer }) => ({
-        class: governed.class,
-        name,
-        owner: governed.owner,
-        schema: governed.file,
-        schemaPointer,
-      }))
-  ));
-  return { ...policy, fields };
+function deepFreeze(value) {
+  if (value !== null && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const item of Object.values(value)) deepFreeze(item);
+  }
+  return value;
 }
 
-let defaultRegistry;
+let policy;
+let registry;
 
 /**
- * Returns the field-ownership registry view: the canonical policy in
- * `schemas/field-ownership.json` plus one `fields` entry per property declared
- * by each governed schema, carrying that schema's single class and owner.
- * The view is built once and shared, so callers that mutate it must clone first.
+ * Returns a frozen copy of the authored policy in `schemas/field-ownership.json`
+ * (classes, governed-schema rows, and reserved fields). It never shares objects
+ * with the registry view, so validation can compare a supplied view against it.
+ */
+export function loadFieldOwnershipPolicy() {
+  policy ??= deepFreeze(structuredClone(loadJsonDocument('field-ownership.json')));
+  return policy;
+}
+
+/**
+ * Returns the frozen field-ownership registry view: the authored policy plus
+ * one `fields` entry per property declared by each governed schema, carrying
+ * that schema's single class and owner. Callers that need to mutate it clone it.
  */
 export function loadFieldOwnershipRegistry() {
-  defaultRegistry ??= synthesize(loadJsonDocument('field-ownership.json'));
-  return defaultRegistry;
+  if (!registry) {
+    const view = structuredClone(loadJsonDocument('field-ownership.json'));
+    view.fields = view.governedSchemas.flatMap((governed) => (
+      collectSchemaFieldDeclarations(loadJsonDocument(governed.file))
+        .map(({ name, schemaPointer }) => ({
+          class: governed.class,
+          name,
+          owner: governed.owner,
+          schema: governed.file,
+          schemaPointer,
+        }))
+    ));
+    registry = deepFreeze(view);
+  }
+  return registry;
 }

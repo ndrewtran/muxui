@@ -7,6 +7,14 @@ export const schemaDirectory = join(
   '../schemas',
 );
 
+export function isObject(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export function escapeJsonPointer(segment) {
+  return segment.replaceAll('~', '~0').replaceAll('/', '~1');
+}
+
 export const familyFiles = Object.freeze({
   'artifact-ref': 'artifact-ref.schema.json',
   binding: 'binding.schema.json',
