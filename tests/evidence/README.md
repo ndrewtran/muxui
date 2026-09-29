@@ -15,3 +15,10 @@ for human acceptance. Before capture:
 Retained records must keep their own privacy, retention, expiry, exception, and
 advisory bindings. Task-local review notes are not repository evidence. Hosted
 URLs and mutable Project values remain observations outside immutable records.
+
+## Retired capture scripts
+
+Some older gate READMEs and indexes, such as g0.5, g1.0, and g1.1, cite capture
+scripts (`capture-g0.5.mjs`, `capture-g1.0.mjs`, `capture-g1.1.mjs`) that were
+retired with the migration records. The citations stay because records are
+append-only and unchanged; the scripts remain available in git history.
