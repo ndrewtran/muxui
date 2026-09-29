@@ -46,15 +46,21 @@ jobs:
           corepack install
           echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
+      # Only this job saves the store cache; run jobs restore it read-only.
       - name: Cache pnpm store
         uses: actions/cache@v4
         with:
           path: ${{ env.PNPM_STORE }}
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'tests/fixtures/tailwind-consumer/pnpm-lock.yaml') }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
 
       - name: Install workspace
         run: pnpm install --frozen-lockfile
+
+      # Drop packages the current lockfile no longer uses before the cache
+      # post-step saves the store, so a restored older store never accumulates.
+      - name: Prune pnpm store
+        run: pnpm store prune
 
       - name: Plan check groups
         id: plan
@@ -121,12 +127,12 @@ jobs:
           corepack install
           echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
-      - name: Cache pnpm store
+      - name: Restore pnpm store
         if: matrix.group.reusedFrom == ''
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.PNPM_STORE }}
-          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'tests/fixtures/tailwind-consumer/pnpm-lock.yaml') }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
 
       - name: Install workspace

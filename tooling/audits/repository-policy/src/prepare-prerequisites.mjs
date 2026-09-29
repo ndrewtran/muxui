@@ -2,7 +2,8 @@
 // `node <this file> '@muxui/react...'` in an app's `check` or `build` script.
 // The workspace runner and CI generate every prerequisite once, serially,
 // before any check and set MUXUI_PREREQUISITES_READY=1, so package commands
-// they invoke never write generated output again.
+// they invoke never write generated output again. The variable is internal:
+// never export it by hand, or standalone commands check stale output.
 import { spawnSync } from 'node:child_process';
 
 export const prerequisitesReadyVariable = 'MUXUI_PREREQUISITES_READY';

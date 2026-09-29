@@ -68,6 +68,8 @@ function run(command, args, env) {
 
 function environmentFor(plan, options) {
   const environment = { ...process.env };
+  // Only this runner's own generation step may mark prerequisites ready.
+  delete environment[prerequisitesReadyVariable];
   const familyKeys = [
     'MUXUI_COMPONENT_FAMILIES',
     'MUXUI_STORYBOOK_FAMILIES',
