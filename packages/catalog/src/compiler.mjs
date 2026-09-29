@@ -127,8 +127,6 @@ export function assertAcceptedQueryProfile({ manifest, pageBudgetProfile }) {
   return pageBudgetProfile;
 }
 
-export const assertPhaseAQueryProfile = assertAcceptedQueryProfile;
-
 function tokenize(value) {
   return String(value).toLowerCase().match(/[a-z0-9]+/g) ?? [];
 }

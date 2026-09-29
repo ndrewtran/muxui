@@ -1,7 +1,6 @@
 export {
   assertSafeDiagnostics,
   executeCommand,
-  registryIdentity,
   runCli,
 } from './cli.mjs';
 export { parseCliArguments } from './parser.mjs';
