@@ -1,12 +1,18 @@
 import { canonicalJson, parseJsonStrict, sha256Digest } from './canonical.mjs';
 import { platformSafetyRequirementIds } from '../generated/platform-safety-contract.mjs';
 import {
+  escapeJsonPointer,
+  familyFiles,
+  isObject,
   loadFamilySchema,
   loadJsonDocument,
-  requiredFieldOwnershipContexts,
-  requiredReservedFields,
   resolveSchemaReference,
 } from './contracts.mjs';
+import {
+  collectSchemaFieldDeclarations,
+  loadFieldOwnershipPolicy,
+  loadFieldOwnershipRegistry,
+} from './field-ownership.mjs';
 
 export class SchemaValidationError extends Error {
   constructor(code, issues) {
@@ -15,10 +21,6 @@ export class SchemaValidationError extends Error {
     this.code = code;
     this.issues = issues;
   }
-}
-
-function isObject(value) {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 function sameValue(left, right) {
@@ -249,7 +251,7 @@ function semanticIssues(family, value, ownership) {
     }
   });
   if (['binding', 'capability', 'component', 'example', 'guide', 'token-source'].includes(family)) {
-    const ownershipRegistry = ownership ?? loadJsonDocument('field-ownership.json');
+    const ownershipRegistry = ownership ?? loadFieldOwnershipRegistry();
     const forbidden = new Set(
       [...ownershipRegistry.fields, ...(ownershipRegistry.reservedFields ?? [])]
         .filter((field) => field.forbiddenInAuthoredSource)
@@ -718,154 +720,118 @@ export function validateContractDocument(fileName, value, { schemas } = {}) {
   return value;
 }
 
-function escapeJsonPointer(segment) {
-  return segment.replaceAll('~', '~0').replaceAll('/', '~1');
+function ownershipError(path, message) {
+  return new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [{ path, message }]);
 }
 
-function collectSchemaFieldDeclarations(schema, pointer = '#', declarations = []) {
-  if (Array.isArray(schema)) {
-    schema.forEach((item, index) => collectSchemaFieldDeclarations(
-      item,
-      `${pointer}/${index}`,
-      declarations,
-    ));
-    return declarations;
-  }
-  if (!isObject(schema)) return declarations;
-  for (const [keyword, value] of Object.entries(schema)) {
-    const keywordPointer = `${pointer}/${escapeJsonPointer(keyword)}`;
-    if (keyword === 'properties' && isObject(value)) {
-      for (const [name, propertySchema] of Object.entries(value)) {
-        const schemaPointer = `${keywordPointer}/${escapeJsonPointer(name)}`;
-        declarations.push({ name, schemaPointer });
-        collectSchemaFieldDeclarations(propertySchema, schemaPointer, declarations);
-      }
-    } else {
-      collectSchemaFieldDeclarations(value, keywordPointer, declarations);
-    }
-  }
-  return declarations;
+function isOwnerName(value) {
+  return typeof value === 'string' && value.length > 0;
 }
 
+/**
+ * Checks a registry view against the ownership rules. Every catalog family
+ * schema must be governed. Governed-schema rows and reserved fields must match
+ * the authored policy in field-ownership.json, so a supplied view cannot change
+ * their class or owner. Fields must cover each governed schema's property
+ * declarations exactly, once each, with that schema's class and owner.
+ */
 export function validateFieldOwnershipRegistry(
-  registry = loadJsonDocument('field-ownership.json'),
+  registry = loadFieldOwnershipRegistry(),
   { schemas } = {},
 ) {
-  if (!Array.isArray(registry.classes) || !Array.isArray(registry.fields)) {
-    throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-      { path: '$', message: 'must declare classes and contextual fields' },
-    ]);
+  if (
+    !Array.isArray(registry.classes)
+    || !Array.isArray(registry.governedSchemas)
+    || !Array.isArray(registry.reservedFields)
+    || !Array.isArray(registry.fields)
+  ) {
+    throw ownershipError('$', 'must declare classes, governed schemas, reserved fields, and fields');
   }
-  const requiredContexts = new Map(
-    requiredFieldOwnershipContexts.map((context) => [context.file, context]),
-  );
+  const policy = loadFieldOwnershipPolicy();
+  const classes = new Set(registry.classes);
+  const policyContexts = new Map(policy.governedSchemas.map((row) => [row.file, row]));
   const contexts = new Map();
-  for (const governed of registry.governedSchemas ?? []) {
-    const requiredContext = requiredContexts.get(governed.file);
+  for (const governed of registry.governedSchemas) {
+    const authored = policyContexts.get(governed.file);
     if (
       contexts.has(governed.file)
-      || !registry.classes.includes(governed.class)
-      || !governed.owner
-      || governed.class !== requiredContext?.class
-      || governed.owner !== requiredContext?.owner
+      || !classes.has(governed.class)
+      || !isOwnerName(governed.owner)
+      || governed.class !== authored?.class
+      || governed.owner !== authored?.owner
     ) {
-      throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-        {
-          path: `$/governedSchemas/${governed.file}`,
-          message: 'must match the locked canonical class and owner',
-        },
-      ]);
+      throw ownershipError(
+        `$/governedSchemas/${governed.file}`,
+        'must match the authored class and owner',
+      );
     }
     contexts.set(governed.file, governed);
   }
-  if (
-    contexts.size !== requiredFieldOwnershipContexts.length
-    || requiredFieldOwnershipContexts.some(({ file }) => !contexts.has(file))
-  ) {
-    throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-      {
-        path: '$/governedSchemas',
-        message: `must cover the locked schemas: ${requiredFieldOwnershipContexts
-          .map(({ file }) => file)
-          .join(', ')}`,
-      },
-    ]);
-  }
-  const expected = new Map();
-  for (const governed of contexts.values()) {
-    for (const declaration of collectSchemaFieldDeclarations(
-      schemas?.[governed.file] ?? loadJsonDocument(governed.file),
-    )) {
-      const key = `${governed.file}${declaration.schemaPointer}`;
-      expected.set(key, { ...declaration, ...governed });
+  for (const file of [...Object.values(familyFiles), ...policyContexts.keys()]) {
+    if (!contexts.has(file)) {
+      throw ownershipError('$/governedSchemas', `must govern ${file}`);
     }
   }
-  const declared = new Set();
-  for (const field of registry.fields) {
-    const key = `${field.schema}${field.schemaPointer}`;
-    const context = expected.get(key);
-    if (declared.has(key)) {
-      throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-        { path: `$/fields/${key}`, message: 'has more than one owner declaration' },
-      ]);
-    }
-    declared.add(key);
-    if (
-      !context
-      || field.name !== context.name
-      || field.class !== context.class
-      || field.owner !== context.owner
-    ) {
-      throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-        {
-          path: `$/fields/${key}`,
-          message: 'must match one governed schema field, class, and canonical owner',
-        },
-      ]);
-    }
-  }
-  for (const key of expected.keys()) {
-    if (!declared.has(key)) {
-      throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-        { path: `$/fields/${key}`, message: 'is missing an ownership declaration' },
-      ]);
-    }
-  }
-  const requiredReserved = new Map(
-    requiredReservedFields.map((field) => [field.name, field]),
-  );
+
+  const policyReserved = new Map(policy.reservedFields.map((field) => [field.name, field]));
   const reservedNames = new Set();
-  for (const field of registry.reservedFields ?? []) {
-    const requiredField = requiredReserved.get(field.name);
+  for (const field of registry.reservedFields) {
+    const authored = policyReserved.get(field.name);
     if (
       reservedNames.has(field.name)
-      || !registry.classes.includes(field.class)
-      || !field.owner
-      || field.class !== requiredField?.class
-      || field.owner !== requiredField?.owner
-      || field.forbiddenInAuthoredSource !== requiredField?.forbiddenInAuthoredSource
+      || !classes.has(field.class)
+      || !isOwnerName(field.owner)
+      || field.forbiddenInAuthoredSource !== true
+      || field.class !== authored?.class
+      || field.owner !== authored?.owner
     ) {
-      throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-        {
-          path: `$/reservedFields/${field.name}`,
-          message: 'must match one locked reserved class, owner, and authored-source prohibition',
-        },
-      ]);
+      throw ownershipError(
+        `$/reservedFields/${field.name}`,
+        'must match one authored reserved class, owner, and authored-source prohibition',
+      );
     }
     reservedNames.add(field.name);
   }
-  if (
-    reservedNames.size !== requiredReservedFields.length
-    || requiredReservedFields.some(({ name }) => !reservedNames.has(name))
-  ) {
-    throw new SchemaValidationError('MUXUI_FIELD_OWNERSHIP_INVALID', [
-      {
-        path: '$/reservedFields',
-        message: `must cover the locked reserved fields: ${requiredReservedFields
-          .map(({ name }) => name)
-          .join(', ')}`,
-      },
-    ]);
+  if (reservedNames.size !== policyReserved.size) {
+    throw ownershipError(
+      '$/reservedFields',
+      `must cover the authored reserved fields: ${[...policyReserved.keys()].join(', ')}`,
+    );
+  }
+
+  const declarations = new Map();
+  for (const file of contexts.keys()) {
+    for (const declaration of collectSchemaFieldDeclarations(
+      schemas?.[file] ?? loadJsonDocument(file),
+    )) {
+      declarations.set(`${file}${declaration.schemaPointer}`, declaration);
+    }
+  }
+  const keys = new Set();
+  for (const field of registry.fields) {
+    const key = `${field.schema}${field.schemaPointer}`;
+    if (keys.has(key)) {
+      throw ownershipError(`$/fields/${key}`, 'has more than one owner declaration');
+    }
+    keys.add(key);
+    const context = contexts.get(field.schema);
+    if (!context || field.class !== context.class || field.owner !== context.owner) {
+      throw ownershipError(
+        `$/fields/${key}`,
+        'must carry its governed schema\'s class and canonical owner',
+      );
+    }
+    if (declarations.get(key)?.name !== field.name) {
+      throw ownershipError(
+        `$/fields/${key}`,
+        'must name a property declared by its governed schema',
+      );
+    }
+  }
+  for (const key of declarations.keys()) {
+    if (!keys.has(key)) {
+      throw ownershipError(`$/fields/${key}`, 'is missing an ownership declaration');
+    }
   }
   return registry;
 }
@@ -913,10 +879,7 @@ export function relationEdges(records) {
 }
 
 export function validateCatalogRecords(records, { schemas, ownership } = {}) {
-  validateFieldOwnershipRegistry(
-    ownership ?? loadJsonDocument('field-ownership.json'),
-    { schemas },
-  );
+  validateFieldOwnershipRegistry(ownership ?? loadFieldOwnershipRegistry(), { schemas });
   validateRelationRegistry();
   const ids = new Map();
   for (const record of records) {

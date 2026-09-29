@@ -32,6 +32,7 @@ import {
   guide,
   tokenSource,
 } from './fixtures.mjs';
+import { loadJsonDocument } from '../src/contracts.mjs';
 
 const normativeExampleSource = '<Button disabled={false}>Save</Button>\n';
 
@@ -108,12 +109,6 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
     'muxui.experimental.g01-proof': { strategy: 'memo' },
   };
   assert.equal(validateCatalogRecords([nestedStrategy, tokenSource()]).records.length, 2);
-  const missingOwnership = structuredClone(ownership);
-  missingOwnership.fields.pop();
-  assert.throws(
-    () => validateFieldOwnershipRegistry(missingOwnership),
-    expectCode('MUXUI_FIELD_OWNERSHIP_INVALID'),
-  );
   const duplicateOwnership = structuredClone(ownership);
   duplicateOwnership.fields.push(structuredClone(duplicateOwnership.fields[0]));
   assert.throws(
@@ -706,6 +701,89 @@ test('E-G0.1-03: editorial content and normative binding closure affect the corr
     () => validateFamily('example', forbiddenDowngrade),
     /implementation-relevant examples must be normative/,
   );
+});
+
+test('field ownership rules reject orphan, duplicate, missing, unclassed, and authored reserved fields', () => {
+  const ownership = validateFieldOwnershipRegistry();
+  assert.deepEqual(ownership.reservedFields.map(({ name }) => name).sort(), [
+    'contentRevision',
+    'evidenceResults',
+    'evidenceStatus',
+    'exportPath',
+    'packageVersion',
+    'sourceLocation',
+    'specRevision',
+  ]);
+  for (const value of [ownership, ownership.fields, ownership.fields[0], ownership.governedSchemas[0]]) {
+    assert.ok(Object.isFrozen(value));
+  }
+  assert.throws(() => {
+    ownership.governedSchemas[0].owner = 'hijacked';
+  }, TypeError);
+  for (const { file, class: fieldClass, owner } of ownership.governedSchemas) {
+    const fields = ownership.fields.filter(({ schema }) => schema === file);
+    assert.ok(fields.every((field) => field.class === fieldClass && field.owner === owner), file);
+  }
+  const reject = (mutate, label) => {
+    const registry = structuredClone(ownership);
+    mutate(registry);
+    assert.throws(
+      () => validateFieldOwnershipRegistry(registry),
+      expectCode('MUXUI_FIELD_OWNERSHIP_INVALID'),
+      label,
+    );
+  };
+  reject((registry) => registry.governedSchemas.push({ ...registry.governedSchemas[0] }), 'file claimed twice');
+  reject((registry) => {
+    registry.classes = registry.classes.filter((name) => name !== 'derived');
+  }, 'class outside classes');
+  reject((registry) => {
+    registry.fields.push({ ...registry.fields[0], schema: 'ungoverned.schema.json' });
+  }, 'field in an ungoverned schema');
+  reject((registry) => {
+    registry.fields.push({ ...registry.fields[0], schemaPointer: '#/properties/notDeclared', name: 'notDeclared' });
+  }, 'pointer outside its schema');
+  reject((registry) => {
+    registry.fields[0].name = `${registry.fields[0].name}Renamed`;
+  }, 'name differs from the declared property');
+  reject((registry) => {
+    registry.fields[0].schemaPointer = registry.fields[0].schemaPointer.replace(/\/properties\/[^/]+$/u, '');
+  }, 'pointer is not a property declaration');
+  reject((registry) => {
+    registry.fields[0].class = registry.classes.find((name) => name !== registry.fields[0].class);
+  }, 'field class differs from its schema');
+  reject((registry) => {
+    registry.reservedFields.push({ ...registry.reservedFields[0] });
+  }, 'reserved field declared twice');
+  reject((registry) => registry.fields.pop(), 'missing field');
+  reject((registry) => {
+    registry.fields.push({
+      ...registry.fields.find(({ schema }) => schema === 'component.schema.json'),
+      name: 'x',
+      schemaPointer: '#/properties/properties/properties/x',
+    });
+  }, 'pointer through a property named properties');
+
+  const componentSchema = structuredClone(loadJsonDocument('component.schema.json'));
+  componentSchema.properties.undeclaredOwner = { type: 'string' };
+  assert.throws(
+    () => validateFieldOwnershipRegistry(ownership, {
+      schemas: { 'component.schema.json': componentSchema },
+    }),
+    (error) => error.code === 'MUXUI_FIELD_OWNERSHIP_INVALID'
+      && error.message.includes('component.schema.json#/properties/undeclaredOwner'),
+  );
+
+  for (const { name } of ownership.reservedFields) {
+    const record = component();
+    record[name] = 'authored';
+    assert.ok(
+      validationIssues('component', record).some((issue) => (
+        issue.path === `$/${name}` && issue.message === 'is derived or proved and cannot be authored'
+      )),
+      name,
+    );
+  }
 });
 
 test('E-G0.1-04: package/source locations remain derived and generated types retain owner linkage', async () => {
