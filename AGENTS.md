@@ -62,4 +62,4 @@ Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `
 
 ### Domain docs
 
-Single-context: root `CONTEXT.md` plus accepted decisions in `decisions/`. See `docs/agents/domain.md`.
+Single-context: accepted decisions in `decisions/`, plus a root `CONTEXT.md` glossary once one is created. See `docs/agents/domain.md`.
