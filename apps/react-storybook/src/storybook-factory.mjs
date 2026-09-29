@@ -3,9 +3,6 @@ import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
-const storyFixtureSymbol = Symbol.for('muxui.storybook.fixture');
-function fixtureRenderModel(fixture) { return fixture; }
-function fixtureFieldPropsFor() { return {}; }
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview(args) {
@@ -274,42 +271,37 @@ function resetStateArgs(binding, sourceArgs, preserveExplicit = false) {
   return args;
 }
 
-function fixtureDataFromInput(fixtureInput, name, defaultValue) {
-  return fixtureInput ? fixtureRenderModel(fixtureInput).data[name] ?? defaultValue : defaultValue;
-}
-
 function canSupplyStateValue(args, props, name, preserveExplicit) {
   if (!preserveExplicit) return true;
   const fallback = UNCONTROLLED_PROPS.get(name);
   return !Object.hasOwn(args, name) && !(fallback && props.has(fallback) && Object.hasOwn(args, fallback));
 }
 
-function setSelectedState(args, props, family, fixtureInput, preserveExplicit) {
-  const model = fixtureInput ? fixtureRenderModel(fixtureInput) : undefined;
+function setSelectedState(args, props, family, preserveExplicit) {
   if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) return setControlledArg(args, props, 'checked', true);
   if (props.has('selected') && canSupplyStateValue(args, props, 'selected', preserveExplicit)) return setControlledArg(args, props, 'selected', true);
   if (props.has('selectedIds')) {
     if (props.has('selectionMode')) args.selectionMode = 'single';
     const selectedId = family === 'Tree'
-      ? model?.selected.treeId ?? 'src'
+      ? 'src'
       : family === 'Table'
-        ? model?.selected.rowId ?? 'ada'
+        ? 'ada'
         : family === 'ToggleButtonGroup'
-          ? model?.selected.toggleId ?? 'bold'
-          : model?.selected.itemId ?? 'Melbourne';
+          ? 'bold'
+          : 'Melbourne';
     if (canSupplyStateValue(args, props, 'selectedIds', preserveExplicit)) return setControlledArg(args, props, 'selectedIds', [selectedId]);
     return undefined;
   }
-  if (props.has('selectedId') && canSupplyStateValue(args, props, 'selectedId', preserveExplicit)) return setControlledArg(args, props, 'selectedId', model?.selected.itemId ?? 'Melbourne');
+  if (props.has('selectedId') && canSupplyStateValue(args, props, 'selectedId', preserveExplicit)) return setControlledArg(args, props, 'selectedId', 'Melbourne');
   if (!props.has('value')) return undefined;
   if (!canSupplyStateValue(args, props, 'value', preserveExplicit)) return undefined;
-  if (family === 'CheckboxGroup') return setControlledArg(args, props, 'value', [model?.selected.choice ?? 'email']);
-  if (family === 'RadioGroup') return setControlledArg(args, props, 'value', model?.selected.option ?? 's');
-  if (family === 'Tabs') return setControlledArg(args, props, 'value', model?.selected.item ?? 'overview');
-  if (family === 'Select') return setControlledArg(args, props, 'value', model?.selected.item ?? 'Melbourne');
-  if (family === 'Calendar') return setControlledArg(args, props, 'value', fixtureDataFromInput(fixtureInput, 'date', '2026-08-26'));
-  if (family === 'RangeCalendar') return setControlledArg(args, props, 'value', fixtureDataFromInput(fixtureInput, 'dateRange', { start: '2026-08-26', end: '2026-09-01' }));
-  if (family === 'ColorSwatchPicker') return setControlledArg(args, props, 'value', model?.selected.color ?? '#ff0000');
+  if (family === 'CheckboxGroup') return setControlledArg(args, props, 'value', ['email']);
+  if (family === 'RadioGroup') return setControlledArg(args, props, 'value', 's');
+  if (family === 'Tabs') return setControlledArg(args, props, 'value', 'overview');
+  if (family === 'Select') return setControlledArg(args, props, 'value', 'Melbourne');
+  if (family === 'Calendar') return setControlledArg(args, props, 'value', '2026-08-26');
+  if (family === 'RangeCalendar') return setControlledArg(args, props, 'value', { start: '2026-08-26', end: '2026-09-01' });
+  if (family === 'ColorSwatchPicker') return setControlledArg(args, props, 'value', '#ff0000');
   if (typeof args.value === 'number') return setControlledArg(args, props, 'value', args.max ?? args.maxValue ?? 72);
   return undefined;
 }
@@ -394,7 +386,7 @@ function stateIsSupported(binding, state, family) {
   }
 }
 
-function applyStateArgs(args, binding, state, family, fixtureInput, preserveExplicit = false) {
+function applyStateArgs(args, binding, state, family, preserveExplicit = false) {
   const props = new Set(binding.api.props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
@@ -417,7 +409,7 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
       if (props.has('required') && canSupplyStateValue(args, props, 'required', preserveExplicit)) args.required = true;
       break;
     case 'selected':
-      setSelectedState(args, props, family, fixtureInput, preserveExplicit);
+      setSelectedState(args, props, family, preserveExplicit);
       break;
     case 'checked':
       if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) setControlledArg(args, props, 'checked', true);
@@ -431,12 +423,7 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
       break;
     case 'expanded':
       if (props.has('expanded')) setControlledArg(args, props, 'expanded', true);
-      else if (props.has('expandedIds')) {
-        const model = fixtureInput ? fixtureRenderModel(fixtureInput) : undefined;
-        setControlledArg(args, props, 'expandedIds', [family === 'Tree'
-          ? model?.selected.treeId ?? 'src'
-          : model?.selected.disclosureId ?? 'one']);
-      }
+      else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', [family === 'Tree' ? 'src' : 'one']);
       break;
     case 'collapsed':
       if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
@@ -448,12 +435,7 @@ function applyStateArgs(args, binding, state, family, fixtureInput, preserveExpl
     case 'open':
     case 'opening':
     case 'entering':
-      // Story open cases use the same user action in both renderers. Keep
-      // DatePicker variants closed at mount so the capture runner can click
-      // the public trigger before taking the paired screenshot.
-      if (props.has('open') && !(fixtureInput && normalizedState === 'open' && ['DatePicker', 'DateRangePicker'].includes(family))) {
-        setControlledArg(args, props, 'open', true);
-      }
+      if (props.has('open')) setControlledArg(args, props, 'open', true);
       break;
     case 'closed':
     case 'closing':
@@ -520,7 +502,7 @@ export function storyArgsForBinding(binding, variant, family) {
 export function stateArgsForBinding(binding, state, family, sourceArgs) {
   const explicitArgs = sourceArgs !== undefined;
   const args = sourceArgs ?? normalizeDefaultArgs(binding);
-  const projected = applyStateArgs(resetStateArgs(binding, args, explicitArgs), binding, state, family, args[storyFixtureSymbol], explicitArgs);
+  const projected = applyStateArgs(resetStateArgs(binding, args, explicitArgs), binding, state, family, explicitArgs);
   if (!explicitArgs) return projected;
   // A state supplies missing demonstration values. Explicit controls retain
   // precedence, including false, empty values, and uncontrolled defaults.
@@ -543,53 +525,30 @@ function fallback(value, defaultValue) {
   return value === undefined || value === null || value === '' ? defaultValue : value;
 }
 
-function fixtureCopy(args, defaultValue) {
-  const fixture = args[storyFixtureSymbol];
-  return fixture ? fixtureRenderModel(fixture).copy ?? defaultValue : defaultValue;
+// An own arg wins even when it is undefined; otherwise use the default.
+function ownArg(args, name, defaultValue) {
+  return Object.hasOwn(args, name) ? args[name] : defaultValue;
 }
 
-function fixtureData(args, name, defaultValue) {
-  const fixture = args[storyFixtureSymbol];
-  if (Object.hasOwn(args, name)) return args[name];
-  return fixture ? fixtureRenderModel(fixture).data[name] ?? defaultValue : defaultValue;
-}
-
-function fixtureState(args) {
-  return args[storyFixtureSymbol]?.state;
-}
-
-function fixtureChildren(args, name, defaultValue) {
-  const children = fixtureData(args, 'children', {});
-  return children?.[name] ?? defaultValue;
-}
-
-function fixtureFieldProps(args, family, defaults) {
-  const fixture = args[storyFixtureSymbol];
-  if (!fixture) return defaults;
-  const fieldProps = fixtureFieldPropsFor(fixture, family);
-  // Select.Value documents "Select an item" as its empty-state copy;
-  // keep Mux UI's Storybook adapter equivalent while preserving explicit fixture
-  // placeholder mutations for contract tests and consumer stories.
-  return family === 'Select' && fieldProps.placeholder === 'Enter a name'
-    ? { ...fieldProps, placeholder: 'Select an item' }
-    : fieldProps;
+function ownChildArg(args, name, defaultValue) {
+  return ownArg(args, 'children', {})?.[name] ?? defaultValue;
 }
 
 const ADAPTERS = {
   IconButton: (args) => e(MuxUI.IconButton, { ...args, 'aria-label': fallback(args['aria-label'], 'Search') }, e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }, e('circle', { cx: 10.5, cy: 10.5, r: 6.5 }), e('path', { d: 'm16 16 4 4' }))),
-  Button: (args) => e(MuxUI.Button, args, fixtureCopy(args, 'Save')),
+  Button: (args) => e(MuxUI.Button, args, 'Save'),
   Breadcrumbs: (args) => e(MuxUI.Breadcrumbs, {
     ...args,
-    // Mux UI's public Breadcrumbs contract uses item records; the canonical
-    // fixture intentionally keeps these as renderer-neutral labels.
-    items: fixtureData(args, 'items', fallback(args.items, ['Home', 'Docs'])).map((item, index) => typeof item === 'object'
+    // Mux UI's public Breadcrumbs contract uses item records; the default
+    // story data intentionally keeps these as renderer-neutral labels.
+    items: ownArg(args, 'items', fallback(args.items, ['Home', 'Docs'])).map((item, index) => typeof item === 'object'
       ? item
       : { id: String(index), label: String(item), href: '#' }),
-    'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Breadcrumb')),
+    'aria-label': fallback(args['aria-label'], 'Breadcrumb'),
   }),
-  Checkbox: (args) => e(MuxUI.Checkbox, args, fixtureCopy(args, 'Enable notifications')),
-  Disclosure: (args) => e(MuxUI.Disclosure, { ...args, title: fixtureCopy(args, 'Details') }, fixtureCopy(args, 'Details') + ' content'),
-  DisclosureGroup: (args) => e(MuxUI.DisclosureGroup, args, ...fixtureChildren(args, 'disclosureGroup', [{ id: 'one', title: 'One', content: 'First panel' }, { id: 'two', title: 'Two', content: 'Second panel' }]).map(({ id, title, content }) => e(MuxUI.Disclosure, { key: id, id, title }, content))),
+  Checkbox: (args) => e(MuxUI.Checkbox, args, 'Enable notifications'),
+  Disclosure: (args) => e(MuxUI.Disclosure, { ...args, title: 'Details' }, 'Details content'),
+  DisclosureGroup: (args) => e(MuxUI.DisclosureGroup, args, ...ownChildArg(args, 'disclosureGroup', [{ id: 'one', title: 'One', content: 'First panel' }, { id: 'two', title: 'Two', content: 'Second panel' }]).map(({ id, title, content }) => e(MuxUI.Disclosure, { key: id, id, title }, content))),
   Group: (args) => e(
     MuxUI.Group,
     { ...args, 'aria-label': fallback(args['aria-label'], 'Document actions') },
@@ -597,150 +556,117 @@ const ADAPTERS = {
     e(MuxUI.Button, null, 'Duplicate'),
     e(MuxUI.Button, null, 'Archive'),
   ),
-  Link: (args) => e(MuxUI.Link, { ...args, href: fallback(args.href, '/settings') }, fixtureCopy(args, 'Settings')),
-  Meter: (args) => {
-    const state = fixtureState(args);
-    const fixtureValue = Object.hasOwn(args, 'value')
-      ? args.value
-      : state === 'low' ? 24 : state === 'high' ? 88 : fixtureData(args, 'values', {}).meter ?? 72;
-    return e(MuxUI.Meter, { ...args, label: fallback(args.label, fixtureCopy(args, 'Storage')), value: fixtureValue });
-  },
-  ProgressBar: (args) => e(MuxUI.ProgressBar, { ...args, label: fallback(args.label, fixtureCopy(args, 'Upload')), value: args.indeterminate || Object.hasOwn(args, 'value') && args.value == null ? undefined : Object.hasOwn(args, 'value') ? args.value : fixtureState(args) === 'complete' ? 100 : (fixtureData(args, 'values', {}).progress ?? 64) }),
+  Link: (args) => e(MuxUI.Link, { ...args, href: fallback(args.href, '/settings') }, 'Settings'),
+  Meter: (args) => e(MuxUI.Meter, { ...args, label: fallback(args.label, 'Storage'), value: Object.hasOwn(args, 'value') ? args.value : ownArg(args, 'values', {}).meter ?? 72 }),
+  ProgressBar: (args) => e(MuxUI.ProgressBar, { ...args, label: fallback(args.label, 'Upload'), value: args.indeterminate || Object.hasOwn(args, 'value') && args.value == null ? undefined : Object.hasOwn(args, 'value') ? args.value : (ownArg(args, 'values', {}).progress ?? 64) }),
   Separator: (args) => e(MuxUI.Separator, args),
-  ToggleButton: (args) => e(MuxUI.ToggleButton, args, fixtureCopy(args, 'Pin')),
-  Autocomplete: (args) => e(MuxUI.Autocomplete, { ...args, ...fixtureFieldProps(args, 'Autocomplete', { label: fallback(args.label, fixtureCopy(args, 'Choose a city')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Choose a city')) }), items: fixtureData(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
-  CheckboxGroup: (args) => e(MuxUI.CheckboxGroup, { ...args, label: fallback(args.label, fixtureCopy(args, 'Notifications')) }, ...fixtureData(args, 'choices', [{ value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS' }]).map(({ value, label }) => e(MuxUI.Checkbox, { key: value, value }, label))),
-  DateField: (args) => e(MuxUI.DateField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Birthday')), defaultValue: args.value === undefined ? fixtureData(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue }),
-  DatePicker: (args) => e(MuxUI.DatePicker, { ...args, label: fallback(args.label, fixtureCopy(args, 'Due date')), defaultValue: args.value === undefined ? fixtureData(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue }),
-  DateRangePicker: (args) => e(MuxUI.DateRangePicker, { ...args, label: fallback(args.label, fixtureCopy(args, 'Trip dates')), defaultValue: args.value === undefined ? fixtureData(args, 'dateRange', fallback(args.defaultValue, { start: '2026-08-26', end: '2026-09-01' })) : args.defaultValue }),
-  Form: (args) => e(MuxUI.Form, args, e(MuxUI.TextField, { label: fixtureChildren(args, 'form', { fieldLabel: 'Name' }).fieldLabel, name: 'name' }), e(MuxUI.Button, { type: 'submit' }, fixtureChildren(args, 'form', { submit: 'Save' }).submit)),
-  NumberField: (args) => e(MuxUI.NumberField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Quantity')), defaultValue: args.value === undefined ? (fixtureData(args, 'values', {}).number ?? args.defaultValue ?? 2) : args.defaultValue, minValue: args.minValue ?? 0 }),
+  ToggleButton: (args) => e(MuxUI.ToggleButton, args, 'Pin'),
+  Autocomplete: (args) => e(MuxUI.Autocomplete, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
+  CheckboxGroup: (args) => e(MuxUI.CheckboxGroup, { ...args, label: fallback(args.label, 'Notifications') }, ...ownArg(args, 'choices', [{ value: 'email', label: 'Email' }, { value: 'sms', label: 'SMS' }]).map(({ value, label }) => e(MuxUI.Checkbox, { key: value, value }, label))),
+  DateField: (args) => e(MuxUI.DateField, { ...args, label: fallback(args.label, 'Birthday'), defaultValue: args.value === undefined ? ownArg(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue }),
+  DatePicker: (args) => e(MuxUI.DatePicker, { ...args, label: fallback(args.label, 'Due date'), defaultValue: args.value === undefined ? ownArg(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue }),
+  DateRangePicker: (args) => e(MuxUI.DateRangePicker, { ...args, label: fallback(args.label, 'Trip dates'), defaultValue: args.value === undefined ? ownArg(args, 'dateRange', fallback(args.defaultValue, { start: '2026-08-26', end: '2026-09-01' })) : args.defaultValue }),
+  Form: (args) => e(MuxUI.Form, args, e(MuxUI.TextField, { label: ownChildArg(args, 'form', { fieldLabel: 'Name' }).fieldLabel, name: 'name' }), e(MuxUI.Button, { type: 'submit' }, ownChildArg(args, 'form', { submit: 'Save' }).submit)),
+  NumberField: (args) => e(MuxUI.NumberField, { ...args, label: fallback(args.label, 'Quantity'), defaultValue: args.value === undefined ? (ownArg(args, 'values', {}).number ?? args.defaultValue ?? 2) : args.defaultValue, minValue: args.minValue ?? 0 }),
   SearchField: (args) => e(MuxUI.SearchField, {
     ...args,
-    ...fixtureFieldProps(args, 'SearchField', { label: fallback(args.label, fixtureCopy(args, 'Search')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Search')) }),
-    onClear: args.onClear ?? (args[storyFixtureSymbol] && args.value ? () => {} : undefined),
+    label: fallback(args.label, 'Search'),
+    placeholder: fallback(args.placeholder, 'Search'),
+    onClear: args.onClear,
   }),
-  Switch: (args) => e(MuxUI.Switch, { ...args, label: fallback(args.label, fixtureCopy(args, 'Notifications')) }),
-  TextField: (args) => e(MuxUI.TextField, { ...args, label: fixtureData(args, 'label', fallback(args.label, fixtureCopy(args, 'Name'))), placeholder: fixtureData(args, 'placeholder', fallback(args.placeholder, fixtureCopy(args, 'Enter a name'))) }),
-  TimeField: (args) => e(MuxUI.TimeField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Start time')), defaultValue: args.value === undefined ? fixtureData(args, 'time', fallback(args.defaultValue, '09:30')) : args.defaultValue }),
+  Switch: (args) => e(MuxUI.Switch, { ...args, label: fallback(args.label, 'Notifications') }),
+  TextField: (args) => e(MuxUI.TextField, { ...args, label: ownArg(args, 'label', fallback(args.label, 'Name')), placeholder: ownArg(args, 'placeholder', fallback(args.placeholder, 'Enter a name')) }),
+  TimeField: (args) => e(MuxUI.TimeField, { ...args, label: fallback(args.label, 'Start time'), defaultValue: args.value === undefined ? ownArg(args, 'time', fallback(args.defaultValue, '09:30')) : args.defaultValue }),
   Calendar: (args) => e(MuxUI.Calendar, {
     ...args,
-    // Story fixtures stay visually unlabeled with their historical
-    // accessible name; ordinary stories default to an accessible-only name
-    // unless a visible label is explicitly supplied.
-    label: args[storyFixtureSymbol] ? undefined : args.label,
-    'aria-label': args[storyFixtureSymbol]
-      ? fixtureCopy(args, 'Date')
-      : args.label !== undefined ? args['aria-label'] : fallback(args['aria-label'], 'Choose a date'),
-    defaultValue: args.value === undefined ? fixtureData(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue,
+    // Default to an accessible-only name unless a visible label is supplied.
+    label: args.label,
+    'aria-label': args.label !== undefined ? args['aria-label'] : fallback(args['aria-label'], 'Choose a date'),
+    defaultValue: args.value === undefined ? ownArg(args, 'date', fallback(args.defaultValue, '2026-08-26')) : args.defaultValue,
   }),
   ColorArea: (args) => e(MuxUI.ColorArea, {
     ...args,
-    'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Color')),
-    defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue,
+    'aria-label': fallback(args['aria-label'], 'Color'),
+    defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue,
   }),
-  ColorField: (args) => e(MuxUI.ColorField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Color')), defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
-  ColorPicker: (args) => e(MuxUI.ColorPicker, { ...args, defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue },
-    e(MuxUI.ColorArea, { 'aria-label': fixtureCopy(args, 'Color'), defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
-    e(MuxUI.ColorField, { label: fixtureCopy(args, 'Color'), defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue })),
-  ColorSlider: (args) => e(MuxUI.ColorSlider, { ...args, label: fallback(args.label, fixtureCopy(args, 'Red')), channel: fallback(args.channel, 'red'), defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
-  ColorSwatch: (args) => e(MuxUI.ColorSwatch, { ...args, color: fixtureData(args, 'color', fallback(args.color, '#ff0000')) }),
-  ColorSwatchPicker: (args) => e(MuxUI.ColorSwatchPicker, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Palette')), items: fixtureData(args, 'items', fallback(args.items, [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }])) }),
-  ColorWheel: (args) => e(MuxUI.ColorWheel, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Hue')), outerRadius: args.outerRadius ?? 96, innerRadius: args.innerRadius ?? 64, defaultValue: args.value === undefined ? fixtureData(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
-  ComboBox: (args) => e(MuxUI.ComboBox, { ...args, ...fixtureFieldProps(args, 'ComboBox', { label: fallback(args.label, fixtureCopy(args, 'Choose a city')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Choose a city')) }), items: fixtureData(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
-  GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Grid')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['One', 'Two'])) }),
-  ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'List')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['One', 'Two'])) }),
-  Menu: (args) => e(MuxUI.Menu, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Actions')), items: fixtureData(args, 'items', fallback(args.items, ['Save', 'Delete'])) }),
-  RadioGroup: (args) => e(MuxUI.RadioGroup, { ...args, label: fallback(args.label, fixtureCopy(args, 'Size')), options: fixtureData(args, 'options', fallback(args.options, [{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }])) }),
+  ColorField: (args) => e(MuxUI.ColorField, { ...args, label: fallback(args.label, 'Color'), defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
+  ColorPicker: (args) => e(MuxUI.ColorPicker, { ...args, defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue },
+    e(MuxUI.ColorArea, { 'aria-label': 'Color', defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
+    e(MuxUI.ColorField, { label: 'Color', defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue })),
+  ColorSlider: (args) => e(MuxUI.ColorSlider, { ...args, label: fallback(args.label, 'Red'), channel: fallback(args.channel, 'red'), defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
+  ColorSwatch: (args) => e(MuxUI.ColorSwatch, { ...args, color: ownArg(args, 'color', fallback(args.color, '#ff0000')) }),
+  ColorSwatchPicker: (args) => e(MuxUI.ColorSwatchPicker, { ...args, 'aria-label': fallback(args['aria-label'], 'Palette'), items: ownArg(args, 'items', fallback(args.items, [{ id: 'red', color: '#ff0000' }, { id: 'blue', color: '#0000ff' }])) }),
+  ColorWheel: (args) => e(MuxUI.ColorWheel, { ...args, 'aria-label': fallback(args['aria-label'], 'Hue'), outerRadius: args.outerRadius ?? 96, innerRadius: args.innerRadius ?? 64, defaultValue: args.value === undefined ? ownArg(args, 'color', fallback(args.defaultValue, '#ff0000')) : args.defaultValue }),
+  ComboBox: (args) => e(MuxUI.ComboBox, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
+  GridList: (args) => e(MuxUI.GridList, { ...args, 'aria-label': fallback(args['aria-label'], 'Grid'), items: ownArg(args, 'items', fallback(args.items, ['One', 'Two'])) }),
+  ListBox: (args) => e(MuxUI.ListBox, { ...args, 'aria-label': fallback(args['aria-label'], 'List'), items: ownArg(args, 'items', fallback(args.items, ['One', 'Two'])) }),
+  Menu: (args) => e(MuxUI.Menu, { ...args, 'aria-label': fallback(args['aria-label'], 'Actions'), items: ownArg(args, 'items', fallback(args.items, ['Save', 'Delete'])) }),
+  RadioGroup: (args) => e(MuxUI.RadioGroup, { ...args, label: fallback(args.label, 'Size'), options: ownArg(args, 'options', fallback(args.options, [{ value: 's', label: 'Small' }, { value: 'l', label: 'Large' }])) }),
   RangeCalendar: (args) => e(MuxUI.RangeCalendar, {
     ...args,
-    label: args[storyFixtureSymbol] ? undefined : fallback(args.label, fixtureCopy(args, 'Trip')),
-    'aria-label': args[storyFixtureSymbol] ? fixtureCopy(args, 'Trip') : args['aria-label'],
-    defaultValue: args.value === undefined ? fixtureData(args, 'dateRange', fallback(args.defaultValue, { start: '2026-08-26', end: '2026-09-01' })) : args.defaultValue,
+    label: fallback(args.label, 'Trip'),
+    'aria-label': args['aria-label'],
+    defaultValue: args.value === undefined ? ownArg(args, 'dateRange', fallback(args.defaultValue, { start: '2026-08-26', end: '2026-09-01' })) : args.defaultValue,
   }),
-  Select: (args) => e(MuxUI.Select, { ...args, ...fixtureFieldProps(args, 'Select', { label: fallback(args.label, fixtureCopy(args, 'Choose a city')), placeholder: fallback(args.placeholder, fixtureCopy(args, 'Choose a city')) }), items: fixtureData(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
-  Slider: (args) => e(MuxUI.Slider, { ...args, label: fallback(args.label, fixtureCopy(args, 'Volume')), defaultValue: args.value === undefined ? (fixtureData(args, 'values', {}).slider ?? args.defaultValue ?? 60) : args.defaultValue }),
-  Table: (args) => e(MuxUI.Table, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'People')), columns: fixtureData(args, 'columns', fallback(args.columns, [{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'role', label: 'Role' }])), rows: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'rows', fallback(args.rows, [{ id: 'ada', values: { name: 'Ada', role: 'Engineer' } }, { id: 'grace', values: { name: 'Grace', role: 'Designer' } }])) }),
-  Tabs: (args) => e(MuxUI.Tabs, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Sections')), items: fixtureData(args, 'items', fallback(args.items, [{ id: 'overview', label: 'Overview', panel: 'Overview content' }, { id: 'details', label: 'Details', panel: 'Details content' }])) }),
-  TagGroup: (args) => e(MuxUI.TagGroup, { ...args, label: fallback(args.label, fixtureCopy(args, 'Tags')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['Design', 'Engineering'])), onRemove: args.onRemove ?? (args[storyFixtureSymbol] && args.removable ? () => {} : undefined) }),
-  ToggleButtonGroup: (args) => e(MuxUI.ToggleButtonGroup, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Formatting')) }, ...fixtureChildren(args, 'toggleButtonGroup', [{ id: 'bold', label: 'Bold' }, { id: 'italic', label: 'Italic' }]).map(({ id, label }) => e(MuxUI.ToggleButton, { key: id, id }, label))),
-  TokenField: (args) => e(MuxUI.TokenField, { ...args, label: fallback(args.label, fixtureCopy(args, 'Recipients')), defaultValue: args.value === undefined ? (args.defaultValue ?? ['Andrew', 'Mux UI']) : args.defaultValue, placeholder: fallback(args.placeholder, 'Add recipient') }),
-  Toolbar: (args) => e(MuxUI.Toolbar, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Formatting')) }, ...fixtureChildren(args, 'toolbar', ['Bold', 'Italic']).map((label) => e(MuxUI.Button, { key: label }, label))),
-  Tree: (args) => e(MuxUI.Tree, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Files')), items: fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, [{ id: 'src', label: 'src', children: [{ id: 'main', label: 'main.jsx' }] }])), defaultExpandedIds: args.expandedIds === undefined ? (args.defaultExpandedIds ?? (args[storyFixtureSymbol] ? undefined : ['src'])) : args.defaultExpandedIds }),
+  Select: (args) => e(MuxUI.Select, { ...args, label: fallback(args.label, 'Choose a city'), placeholder: fallback(args.placeholder, 'Choose a city'), items: ownArg(args, 'items', fallback(args.items, ['Melbourne', 'Sydney'])) }),
+  Slider: (args) => e(MuxUI.Slider, { ...args, label: fallback(args.label, 'Volume'), defaultValue: args.value === undefined ? (ownArg(args, 'values', {}).slider ?? args.defaultValue ?? 60) : args.defaultValue }),
+  Table: (args) => e(MuxUI.Table, { ...args, 'aria-label': fallback(args['aria-label'], 'People'), columns: ownArg(args, 'columns', fallback(args.columns, [{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'role', label: 'Role' }])), rows: ownArg(args, 'rows', fallback(args.rows, [{ id: 'ada', values: { name: 'Ada', role: 'Engineer' } }, { id: 'grace', values: { name: 'Grace', role: 'Designer' } }])) }),
+  Tabs: (args) => e(MuxUI.Tabs, { ...args, 'aria-label': fallback(args['aria-label'], 'Sections'), items: ownArg(args, 'items', fallback(args.items, [{ id: 'overview', label: 'Overview', panel: 'Overview content' }, { id: 'details', label: 'Details', panel: 'Details content' }])) }),
+  TagGroup: (args) => e(MuxUI.TagGroup, { ...args, label: fallback(args.label, 'Tags'), items: ownArg(args, 'items', fallback(args.items, ['Design', 'Engineering'])), onRemove: args.onRemove }),
+  ToggleButtonGroup: (args) => e(MuxUI.ToggleButtonGroup, { ...args, 'aria-label': fallback(args['aria-label'], 'Formatting') }, ...ownChildArg(args, 'toggleButtonGroup', [{ id: 'bold', label: 'Bold' }, { id: 'italic', label: 'Italic' }]).map(({ id, label }) => e(MuxUI.ToggleButton, { key: id, id }, label))),
+  TokenField: (args) => e(MuxUI.TokenField, { ...args, label: fallback(args.label, 'Recipients'), defaultValue: args.value === undefined ? (args.defaultValue ?? ['Andrew', 'Mux UI']) : args.defaultValue, placeholder: fallback(args.placeholder, 'Add recipient') }),
+  Toolbar: (args) => e(MuxUI.Toolbar, { ...args, 'aria-label': fallback(args['aria-label'], 'Formatting') }, ...ownChildArg(args, 'toolbar', ['Bold', 'Italic']).map((label) => e(MuxUI.Button, { key: label }, label))),
+  Tree: (args) => e(MuxUI.Tree, { ...args, 'aria-label': fallback(args['aria-label'], 'Files'), items: ownArg(args, 'items', fallback(args.items, [{ id: 'src', label: 'src', children: [{ id: 'main', label: 'main.jsx' }] }])), defaultExpandedIds: args.expandedIds === undefined ? (args.defaultExpandedIds ?? ['src']) : args.defaultExpandedIds }),
   Virtualizer: (args) => {
-    const viewport = args[storyFixtureSymbol]?.frame?.virtualizer;
-    const height = args.height ?? viewport?.height ?? 180;
+    const height = args.height ?? 180;
     if (!Number.isFinite(height) || height <= 0) throw new Error('MuxUI Storybook Virtualizer requires a finite positive height');
-    const items = fixtureState(args) === 'empty' ? [] : fixtureData(args, 'items', fallback(args.items, ['Result 1', 'Result 2', 'Result 3']));
-    const hasViewport = Boolean(viewport);
-    const virtualizer = e(MuxUI.Virtualizer, {
+    const items = ownArg(args, 'items', fallback(args.items, ['Result 1', 'Result 2', 'Result 3']));
+    return e(MuxUI.Virtualizer, {
       ...args,
-      'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Results')),
+      'aria-label': fallback(args['aria-label'], 'Results'),
       items,
       height,
       itemHeight: args.itemHeight ?? 32,
-      style: hasViewport
-        ? {
-          ...(args.style ?? {}),
-          boxSizing: 'border-box',
-          width: `${viewport.width}px`,
-          height: `${height}px`,
-          maxHeight: `${height}px`,
-          overflow: 'auto',
-        }
-        : args.style,
+      style: args.style,
     });
-    return virtualizer;
   },
-  DropZone: (args) => e(MuxUI.DropZone, { ...args, 'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Upload files')) }, fallback(args.children, fixtureCopy(args, 'Drop files here'))),
-  FileTrigger: (args) => e(MuxUI.FileTrigger, { ...args }, fallback(args.children, e(MuxUI.Button, null, fixtureCopy(args, 'Choose files')))),
+  DropZone: (args) => e(MuxUI.DropZone, { ...args, 'aria-label': fallback(args['aria-label'], 'Upload files') }, fallback(args.children, 'Drop files here')),
+  FileTrigger: (args) => e(MuxUI.FileTrigger, { ...args }, fallback(args.children, e(MuxUI.Button, null, 'Choose files'))),
   Dialog: (args) => e(MuxUI.Dialog, {
     ...args,
-    title: fallback(args.title, fixtureCopy(args, 'Delete draft')),
-    trigger: fallback(args.trigger, e(MuxUI.Button, null, fixtureCopy(args, 'Open dialog'))),
-  }, fallback(args.children, e('p', null, `${fixtureCopy(args, 'Delete draft')} content.`))),
+    title: fallback(args.title, 'Delete draft'),
+    trigger: fallback(args.trigger, e(MuxUI.Button, null, 'Open dialog')),
+  }, fallback(args.children, e('p', null, 'Delete draft content.'))),
   Popover: (args) => e(MuxUI.Popover, {
     ...args,
-    'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'More actions')),
-    trigger: fallback(args.trigger, e(MuxUI.Button, null, fixtureCopy(args, 'More actions'))),
-  }, fallback(args.children, args[storyFixtureSymbol]
-    ? e(React.Fragment, null,
-      e('h2', { className: 'muxui-popover-title' }, fixtureCopy(args, 'More actions')),
-      e('p', { className: 'muxui-popover-description' }, `${fixtureCopy(args, 'More actions')} content.`),
-    )
-    : e('p', null, `${fixtureCopy(args, 'More actions')} content.`))),
+    'aria-label': fallback(args['aria-label'], 'More actions'),
+    trigger: fallback(args.trigger, e(MuxUI.Button, null, 'More actions')),
+  }, fallback(args.children, e('p', null, 'More actions content.'))),
   PreviewTrigger: (args) => e(MuxUI.PreviewTrigger, {
     ...args,
-    'aria-label': fallback(args['aria-label'], fixtureCopy(args, 'Document preview')),
+    'aria-label': fallback(args['aria-label'], 'Document preview'),
     delay: args.delay ?? 0,
     closeDelay: args.closeDelay ?? 0,
-    placement: args.placement ?? (args[storyFixtureSymbol] ? 'bottom' : undefined),
-    trigger: fallback(args.trigger, e(MuxUI.Button, null, args[storyFixtureSymbol] ? fixtureCopy(args, 'Document preview') : 'Preview document')),
-  }, fallback(args.children, args[storyFixtureSymbol]
-    ? `${fixtureCopy(args, 'Document preview')} content.`
-    : e('p', null, `${fixtureCopy(args, 'Document preview')} content.`))),
-  Toast: (args) => {
-    const toast = e(MuxUI.Toast, {
-      ...args,
-      variant: args.variant === 'info' ? 'neutral' : args.variant,
-      message: fallback(args.message, fixtureCopy(args, 'Saved')),
-      title: fallback(args.title, fixtureCopy(args, 'Saved')),
-    });
-    return args[storyFixtureSymbol]
-      ? e(MuxUI.ToastProvider, { placement: 'bottom-end' }, toast)
-      : toast;
-  },
+    placement: args.placement,
+    trigger: fallback(args.trigger, e(MuxUI.Button, null, 'Preview document')),
+  }, fallback(args.children, e('p', null, 'Document preview content.'))),
+  Toast: (args) => e(MuxUI.Toast, {
+    ...args,
+    variant: args.variant === 'info' ? 'neutral' : args.variant,
+    message: fallback(args.message, 'Saved'),
+    title: fallback(args.title, 'Saved'),
+  }),
   Tooltip: (args) => e(MuxUI.Tooltip, {
     ...args,
-    content: fallback(args.content, fixtureCopy(args, 'Keyboard shortcut: ⌘K')),
+    content: fallback(args.content, 'Keyboard shortcut: ⌘K'),
     delay: args.delay ?? 0,
     closeDelay: args.closeDelay ?? 0,
-    trigger: fallback(args.trigger, e(MuxUI.Button, null, fixtureCopy(args, 'Keyboard help'))),
+    trigger: fallback(args.trigger, e(MuxUI.Button, null, 'Keyboard help')),
   }),
 };
 
 // R1.6 families use their authored compound anatomy in the private showcase.
-// These adapters deliberately keep the fixture data small while exercising
+// These adapters deliberately keep the example data small while exercising
 // the public root or dedicated subpath export and every catalogued part.
 Object.assign(ADAPTERS, {
   AlertDialog: (args) => e(MuxUI.AlertDialog.Root, { defaultOpen: args.open ?? false, className: args.className },
@@ -888,7 +814,7 @@ Object.assign(ADAPTERS, {
     e(MuxUI.TextArea.Description, null, 'Optional'),
     e(MuxUI.TextArea.Error, null, args.invalid ? 'Invalid notes' : null),
   ),
-  Text: (args) => e(MuxUI.Text, { ...args }, fixtureCopy(args, 'Manage your profile details.')),
+  Text: (args) => e(MuxUI.Text, { ...args }, 'Manage your profile details.'),
   Resizable: (args) => e(MuxUI.Resizable, { ...args, defaultSizes: args.defaultSizes ?? { main: 60, side: 40 } },
     e(MuxUI.ResizablePanel, { id: 'main' }, 'Main'),
     e(MuxUI.ResizableHandle, { id: 'main-side', before: 'main', after: 'side', 'aria-label': 'Resize panels' }),
