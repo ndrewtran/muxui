@@ -1,62 +1,30 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { HeavyBrowserFixture } from '../fixtures/heavy-browser-fixture.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const chromeCandidates = [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean);
 const selectAllModifier = process.platform === 'darwin' ? 'Meta' : 'Control';
-
-async function findChrome() {
-  const { access } = await import('node:fs/promises');
-  for (const candidate of chromeCandidates) {
-    try { await access(candidate); return candidate; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for heavy browser verification.');
-}
 
 function fixtureDocument() {
   const body = renderToStaticMarkup(React.createElement(HeavyBrowserFixture, { interactive: true }));
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,heavy"><style>
+  return pageShell({ head: `<style>
 :root { --muxui-semantic-color-neutral-10:#f2f1f0; --muxui-semantic-color-neutral-20:#dad7d6; --muxui-semantic-color-neutral-30:#c1bebb; --muxui-semantic-color-neutral-40:#a9a4a0; --muxui-semantic-color-neutral-90:#2b2826; --muxui-semantic-surface-raised:#fff; --muxui-semantic-typography-text-color:#111; --muxui-semantic-content-link:#025768; --muxui-semantic-content-muted:#79716b; --muxui-semantic-focus-ring:#5d5aeb; --muxui-semantic-feedback-invalid:#cc3330; --muxui-semantic-control-radius:8px; --muxui-reference-dimension-space-xs:4px; --muxui-reference-dimension-space-s:8px; --muxui-reference-dimension-space-2xs:2px; --muxui-reference-dimension-space-3xs:1px; --muxui-reference-dimension-space-l:16px; --muxui-reference-dimension-space-2xl:32px; --muxui-reference-dimension-radius-xs:4px; --muxui-reference-dimension-radius-m:8px; --muxui-reference-dimension-radius-xl:16px; --muxui-reference-dimension-radius-full:999px; --muxui-reference-effect-shadow-l:0 12px 30px rgb(0 0 0 / .2); --muxui-reference-effect-shadow-m:0 4px 12px rgb(0 0 0 / .2); --muxui-reference-effect-shadow-s:0 2px 6px rgb(0 0 0 / .2); --muxui-reference-typography-body-font:sans-serif; --muxui-reference-typography-mono-font:monospace; }
 [data-theme="dark"] { --muxui-semantic-color-neutral-10:#302d2b; --muxui-semantic-color-neutral-20:#5f5954; --muxui-semantic-color-neutral-30:#4a4542; --muxui-semantic-color-neutral-40:#79716b; --muxui-semantic-color-neutral-90:#e8e7e6; --muxui-semantic-surface-raised:#211e1d; --muxui-semantic-typography-text-color:#f2f1f0; --muxui-semantic-content-link:#7badb1; --muxui-semantic-content-muted:#a9a4a0; }
-</style></head><body><div id="root">${body}</div><script type="module" src="/packages/react/test/fixtures/heavy-browser-entry.mjs"></script></body></html>`;
+</style>`, body: `<div id="root">${body}</div>`, entry: '/packages/react/test/fixtures/heavy-browser-entry.mjs' });
 }
 
 test('heavy React ports hydrate and preserve core browser interactions', { timeout: 90_000 }, async () => {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: { include: ['react', 'react-dom', 'react-dom/client', 'lucide-react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'heavy-fixture-document', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/heavy-fixture.html') {
-          response.statusCode = 200;
-          response.setHeader('content-type', 'text/html');
-          response.end(fixtureDocument());
-          return;
-        }
-        next();
-      });
-    } }],
-  });
+  const { url, close } = await startServer({ root: 'repository', pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;
   try {
-    await server.listen();
-    const address = server.httpServer.address();
-    assert.equal(typeof address, 'object');
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${address.port}/heavy-fixture.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/heavy-fixture.html`, { waitUntil: 'networkidle' });
     await page.waitForSelector('.ProseMirror');
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.equal(await page.locator('#heavy-fixture').getAttribute('data-interactive'), 'true');
@@ -222,6 +190,6 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     assert.equal(await page.getByRole('dialog').count(), 0);
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

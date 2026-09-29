@@ -1,26 +1,10 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { Dialog, Popover, Tooltip, PreviewTrigger } from '../../src/overlays.mjs';
 import { AlertDialog } from '../../src/supplemental/index.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function StatefulPopoverContent() {
   const [count, setCount] = React.useState(0);
@@ -87,7 +71,7 @@ const fixtureCss = `
 `;
 
 async function withFixture(run, direction = 'ltr') {
-  const html = `<!doctype html><html dir="${direction}" lang="${direction === 'rtl' ? 'ar' : 'en'}"><head><meta charset="utf-8"><link rel="icon" href="data:,"></head><body><div id="root">${renderToString(React.createElement(OverlayFixture))}</div><script type="module" src="/overlay-fixture.mjs"></script></body></html>`;
+  const html = pageShell({ attributes: `dir="${direction}" lang="${direction === 'rtl' ? 'ar' : 'en'}"`, body: `<div id="root">${renderToString(React.createElement(OverlayFixture))}</div>`, entry: '/overlay-fixture.mjs' });
   const entry = `import React from 'react';
     import { hydrateRoot } from 'react-dom/client';
     import { Dialog, Popover, Tooltip, PreviewTrigger } from '/packages/react/src/overlays.mjs';
@@ -102,31 +86,22 @@ async function withFixture(run, direction = 'ltr') {
     const style = document.createElement('style'); style.textContent = ${JSON.stringify(fixtureCss)}; document.head.append(style);
     const root = hydrateRoot(document.getElementById('root'), React.createElement(OverlayFixture));
     window.unmountFixture = () => root.unmount();`;
-  const virtualEntry = fileURLToPath(new URL('./bento-overlays-fixture.mjs', import.meta.url));
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-overlay-vite-'));
-  const server = await createServer({
-    cacheDir,
-    resolve: { alias: { 'react-dom': fileURLToPath(new URL('../../node_modules/react-dom', import.meta.url)), react: fileURLToPath(new URL('../../node_modules/react', import.meta.url)) } },
-    configFile: false, root: repositoryRoot, logLevel: 'error',
-    optimizeDeps: { entries: ['packages/react/src/overlays.mjs', 'packages/react/src/supplemental/index.mjs'], include: ['react', 'react-dom/client'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'bento-overlay-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/overlay-fixture.html') { response.setHeader('content-type', 'text/html'); response.end(html); }
-        else next();
-      });
-    }, resolveId(id) { if (id === '/overlay-fixture.mjs') return virtualEntry; }, load(id) { if (id === virtualEntry) return entry; } }],
+  const { url, close } = await startServer({
+    root: 'repository',
+    aliasReact: true,
+    entries: ['packages/react/src/overlays.mjs', 'packages/react/src/supplemental/index.mjs'],
+    pages: { '/overlay-fixture.html': html },
+    modules: { '/overlay-fixture.mjs': entry },
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ locale: direction === 'rtl' ? 'ar-EG' : 'en-US', viewport: { width: 900, height: 640 } });
     page.setDefaultTimeout(10_000);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/overlay-fixture.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/overlay-fixture.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true').catch((error) => { throw new Error(`${error.message}\n${errors.join('\n')}`); });
     await run(page);
     await page.evaluate(() => window.unmountFixture());
@@ -134,7 +109,7 @@ async function withFixture(run, direction = 'ltr') {
     assert.equal(await page.locator('#root').getAttribute('inert'), null);
     assert.equal(await page.locator('#root').getAttribute('aria-hidden'), null);
     assert.deepEqual(errors, [], errors.join('\n'));
-  } finally { await browser?.close(); await server.close(); await rm(cacheDir, { recursive: true, force: true }); }
+  } finally { await browser?.close(); await close(); }
 }
 
 async function configure(page, config) {

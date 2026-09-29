@@ -1,54 +1,21 @@
 import assert from 'node:assert/strict';
-import { access, mkdir } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { RadioMotionFixture } from '../fixtures/radio-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-
-async function chromePath() {
-  const candidates = [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean);
-  for (const candidate of candidates) {
-    try { await access(candidate); return candidate; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(RadioMotionFixture)));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><link rel="stylesheet" href="/src/supplemental/styles.css"><style>
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><link rel="stylesheet" href="/src/supplemental/styles.css"><style>
     :root { --muxui-semantic-motion-state-duration: 800ms; }
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     main { display: grid; grid-template-columns: repeat(2, minmax(180px, 1fr)); gap: 32px; }
     .muxui-radio-group { gap: 6px; }
-  </style></head><body>${body}<script type="module" src="/test/fixtures/radio-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/radio-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-    plugins: [{ name: 'radio-motion-proof', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/radio-motion.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(documentHtml());
-      });
-    } }],
-  });
-  await server.listen();
-  return { server, url: `http://127.0.0.1:${server.httpServer.address().port}/radio-motion.html` };
+  </style>`, body, entry: '/test/fixtures/radio-motion-browser-entry.mjs' });
 }
 
 const group = (page, id) => page.locator(`#${id} [role="radiogroup"]`);
@@ -85,6 +52,25 @@ async function waitForAlignment(page, id) {
     return Math.abs(dotRect.left + dotRect.width / 2 - (indicatorRect.left + indicatorRect.width / 2)) < 1
       && Math.abs(dotRect.top + dotRect.height / 2 - (indicatorRect.top + indicatorRect.height / 2)) < 1;
   }, id, { timeout: 5000 });
+}
+
+// Waits until the dot has left `from` but not yet reached the checked radio.
+async function waitForTravel(page, id, from) {
+  await page.waitForFunction(({ groupId, start }) => {
+    const inputNode = document.querySelector(`#${groupId} input[type="radio"]:checked`);
+    const dot = document.querySelector(`#${groupId} .muxui-radio-motion-dot`);
+    const owner = inputNode?.closest('.muxui-radio, .muxui-radio-field__button');
+    const indicator = owner?.querySelector('.muxui-radio-indicator, .muxui-radio-field__indicator');
+    if (!dot || !indicator) return false;
+    const dotRect = dot.getBoundingClientRect();
+    const indicatorRect = indicator.getBoundingClientRect();
+    const x = dotRect.left + dotRect.width / 2;
+    const y = dotRect.top + dotRect.height / 2;
+    const moved = Math.abs(x - start.x) + Math.abs(y - start.y) > 1;
+    const arrived = Math.abs(x - (indicatorRect.left + indicatorRect.width / 2)) < 1
+      && Math.abs(y - (indicatorRect.top + indicatorRect.height / 2)) < 1;
+    return moved && !arrived;
+  }, { groupId: id, start: from });
 }
 
 async function waitForFrames(page, count = 2) {
@@ -128,16 +114,16 @@ async function assertForcedDotContrast(page, id, message) {
 }
 
 test('RadioGroup Motion moves one scoped dot while preserving RAC state and reduced modes', { timeout: 90_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/radio-motion-browser-entry.mjs'], pages: { '/radio-motion.html': documentHtml } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1000, height: 800 } });
     page.setDefaultTimeout(5000);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/radio-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.muxuiRadioHydrated === 'true');
     assert.deepEqual(errors, []);
     assert.equal(await page.locator('[role="radiogroup"]').count(), 6);
@@ -182,7 +168,7 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     await input(page, 'horizontal', 'one').focus();
     await page.keyboard.press('ArrowRight');
     assert.equal(await group(page, 'horizontal').locator('input[type="radio"]:checked').inputValue(), 'two', 'horizontal keyboard navigation follows the inline axis');
-    await page.waitForTimeout(120);
+    await waitForTravel(page, 'horizontal', horizontalBefore);
     const horizontalDuring = await center(group(page, 'horizontal').locator('.muxui-radio-motion-dot'));
     assert.ok(horizontalDuring.x > horizontalBefore.x + 1, 'horizontal dot travels along the inline axis');
     await waitForAlignment(page, 'horizontal');
@@ -190,13 +176,14 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     await activate(page, 'read-only', 'two');
     assert.equal(await page.locator('#read-only input[type="radio"]:checked').inputValue(), 'one');
     await page.locator('#radio-form').evaluate((form) => form.reset());
-    await page.waitForTimeout(50);
+    await page.waitForFunction(() => document.querySelector('#uncontrolled input[type="radio"]:checked')?.value === 'one');
     assert.equal(await page.locator('#uncontrolled input[type="radio"]:checked').inputValue(), 'one', 'form reset restores uncontrolled state');
 
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'full'));
+    const reducedFrom = await center(group(page, 'controlled').locator('.muxui-radio-motion-dot'));
     await activate(page, 'controlled', 'one');
-    await page.waitForTimeout(60);
+    await waitForTravel(page, 'controlled', reducedFrom);
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
     await waitForFrames(page);
     await assertAlignedNow(page, 'controlled', 'explicit reduced mode settles a midflight dot immediately');
@@ -212,6 +199,7 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     await page.emulateMedia({ reducedMotion: 'no-preference' });
 
     await activate(page, 'controlled', 'two');
+    // Retarget shortly after the first change; travel need not have begun, so no condition applies.
     await page.waitForTimeout(40);
     await activate(page, 'controlled', 'one');
     await waitForAlignment(page, 'controlled');
@@ -245,6 +233,6 @@ test('RadioGroup Motion moves one scoped dot while preserving RAC state and redu
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

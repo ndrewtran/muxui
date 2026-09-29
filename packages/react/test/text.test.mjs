@@ -11,49 +11,9 @@ import {
 } from 'react-aria-components';
 import { JSDOM } from 'jsdom';
 import { Text } from '../src/supplemental/index.mjs';
+import { installDom } from './support/dom.mjs';
 
 const h = React.createElement;
-
-function installDom(dom) {
-  const keys = [
-    'window',
-    'document',
-    'Element',
-    'HTMLElement',
-    'HTMLDivElement',
-    'HTMLHeadingElement',
-    'HTMLSpanElement',
-    'HTMLInputElement',
-    'HTMLTextAreaElement',
-    'HTMLLabelElement',
-    'HTMLUListElement',
-    'HTMLLIElement',
-    'HTMLButtonElement',
-    'SVGElement',
-    'Node',
-    'MutationObserver',
-    'CSS',
-    'getComputedStyle',
-    'requestAnimationFrame',
-    'cancelAnimationFrame',
-    'Event',
-    'KeyboardEvent',
-    'MouseEvent',
-  ];
-  const previous = Object.fromEntries(keys.map((key) => [key, globalThis[key]]));
-  Object.assign(globalThis, Object.fromEntries(keys.map((key) => [key, dom.window[key] ?? globalThis[key]])));
-  globalThis.CSS ??= { escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/gu, (character) => `\\${character}`) };
-  dom.window.HTMLElement.prototype.attachEvent ??= () => {};
-  dom.window.HTMLElement.prototype.detachEvent ??= () => {};
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  return () => {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete globalThis[key];
-      else globalThis[key] = value;
-    }
-    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-  };
-}
 
 test('Text SSR keeps native host semantics, role, slots, and canonical classes', () => {
   const html = renderToStaticMarkup(h(React.Fragment, null,

@@ -12,6 +12,7 @@ import {
   TokenField, ToggleButtonGroup, Toolbar, Tree, Virtualizer,
 } from '../src/collections.mjs';
 import { ToggleButton } from '../src/components.mjs';
+import { createDom } from './support/dom.mjs';
 
 const slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
 const events = new Map([
@@ -92,55 +93,8 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
   }
 });
 
-function installDom(markup = '<div id="root"></div>') {
-  const dom = new JSDOM(`<!doctype html>${markup}`, { url: 'http://localhost/' });
-  const globals = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTableElement', 'HTMLTextAreaElement', 'HTMLLabelElement', 'HTMLDivElement', 'HTMLFormElement', 'SVGElement', 'Node', 'NodeFilter', 'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'FocusEvent', 'PointerEvent', 'MutationObserver', 'InputEvent', 'FormData', 'ResizeObserver', 'getComputedStyle'];
-  const previous = new Map(globals.map((name) => [name, globalThis[name]]));
-  const elementPrototype = dom.window.HTMLElement.prototype;
-  const previousScrollTo = elementPrototype.scrollTo;
-  elementPrototype.scrollTo ??= () => {};
-  const previousAttachEvent = elementPrototype.attachEvent;
-  const previousDetachEvent = elementPrototype.detachEvent;
-  elementPrototype.attachEvent ??= () => {};
-  elementPrototype.detachEvent ??= () => {};
-  const previousCss = globalThis.CSS;
-  globalThis.CSS ??= { escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/gu, (character) => `\\${character}`) };
-  const previousAnimationFrame = globalThis.requestAnimationFrame;
-  const previousCancelAnimationFrame = globalThis.cancelAnimationFrame;
-  globalThis.requestAnimationFrame ??= (callback) => setTimeout(callback, 0);
-  globalThis.cancelAnimationFrame ??= (handle) => clearTimeout(handle);
-  for (const name of globals) if (dom.window[name]) globalThis[name] = dom.window[name];
-  const hadActFlag = 'IS_REACT_ACT_ENVIRONMENT' in globalThis;
-  const previousActFlag = globalThis.IS_REACT_ACT_ENVIRONMENT;
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  return {
-    dom,
-    restore() {
-      for (const [name, value] of previous) {
-        if (value === undefined) delete globalThis[name];
-        else globalThis[name] = value;
-      }
-      if (previousCss === undefined) delete globalThis.CSS;
-      else globalThis.CSS = previousCss;
-      if (previousAnimationFrame === undefined) delete globalThis.requestAnimationFrame;
-      else globalThis.requestAnimationFrame = previousAnimationFrame;
-      if (previousCancelAnimationFrame === undefined) delete globalThis.cancelAnimationFrame;
-      else globalThis.cancelAnimationFrame = previousCancelAnimationFrame;
-      if (previousScrollTo === undefined) delete elementPrototype.scrollTo;
-      else elementPrototype.scrollTo = previousScrollTo;
-      if (previousAttachEvent === undefined) delete elementPrototype.attachEvent;
-      else elementPrototype.attachEvent = previousAttachEvent;
-      if (previousDetachEvent === undefined) delete elementPrototype.detachEvent;
-      else elementPrototype.detachEvent = previousDetachEvent;
-      if (hadActFlag) globalThis.IS_REACT_ACT_ENVIRONMENT = previousActFlag;
-      else delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-      dom.window.close();
-    },
-  };
-}
-
 function installVirtualizerDom() {
-  const env = installDom();
+  const env = createDom();
   const elementPrototype = env.dom.window.HTMLElement.prototype;
   const previousWidth = Object.getOwnPropertyDescriptor(elementPrototype, 'clientWidth');
   const previousHeight = Object.getOwnPropertyDescriptor(elementPrototype, 'clientHeight');
@@ -238,7 +192,7 @@ test('R1.3 temporal adapters preserve ISO values and calendar navigation', async
   }));
   assert.doesNotMatch(unsupportedRangeProps, /UNSUPPORTED_(?:DESCRIPTION|ERROR)/u);
   assert.throws(() => renderToString(React.createElement(Calendar, { label: 'Date', value: '15-01-2025' })), /YYYY-MM-DD/u);
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -319,7 +273,7 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
   assert.equal(ssr.querySelector('.muxui-color-swatch-picker[role="listbox"]')?.getAttribute('data-readonly'), 'true');
   assert.equal(ssr.querySelector('.muxui-slider')?.getAttribute('data-readonly'), 'true');
   assert.equal(ssr.querySelector('.muxui-slider-thumb')?.getAttribute('data-readonly'), 'true');
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -454,7 +408,7 @@ test('R1.3 ColorArea associates visible and explicit labels with its interactive
   assert.equal(serverInputs.length, 2);
   assert.equal(serverInputs.every((input) => input.getAttribute('aria-labelledby')?.split(' ').includes(serverLabel.id)), true);
 
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   try {
@@ -478,7 +432,7 @@ test('R1.3 ColorArea associates visible and explicit labels with its interactive
 });
 
 test('R1.3 scalar composites preserve string and numeric callbacks with disabled guards', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   try {
@@ -518,7 +472,7 @@ test('R1.3 scalar composites preserve string and numeric callbacks with disabled
 });
 
 test('Slider exposes disabled state on its labelled group while preserving thumb semantics', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   try {
@@ -547,7 +501,7 @@ test('Slider exposes disabled state on its labelled group while preserving thumb
 });
 
 test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   try {
@@ -636,7 +590,7 @@ test('R1.3 field collections keep unsupported props out of public DOM surfaces',
 });
 
 test('R1.3 menu, table, and tag actions return normalized MuxUI items', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const actions = [];
@@ -675,7 +629,7 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
 });
 
 test('R1.3 collections keep disabled items inert and preserve composite anatomy', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const actions = [];
@@ -704,7 +658,7 @@ test('R1.3 collections keep disabled items inert and preserve composite anatomy'
 });
 
 test('R1.3 collection items expose keyboard focus-visible state when unselected', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const items = [{ id: 'first', label: 'First' }, { id: 'second', label: 'Second' }];
@@ -747,7 +701,7 @@ test('R1.3 collection items expose keyboard focus-visible state when unselected'
 });
 
 test('R1.3 Select renders normalized options and submits the selected MuxUI value', async () => {
-  const env = installDom('<form id="form"><div id="root"></div></form>');
+  const env = createDom('<form id="form"><div id="root"></div></form>');
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -833,7 +787,7 @@ test('R1.3 Select renders normalized options and submits the selected MuxUI valu
 });
 
 test('R1.3 TokenField owns uncontrolled reset and repeated form entries', async () => {
-  const env = installDom('<form id="form"><div id="root"></div></form>');
+  const env = createDom('<form id="form"><div id="root"></div></form>');
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -932,7 +886,7 @@ test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a boun
 });
 
 test('R1.3 Tree flattens nested items for keyboard collection semantics', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const actions = [];
@@ -972,7 +926,7 @@ test('R1.3 Tree flattens nested items for keyboard collection semantics', async 
 });
 
 test('R1.3 unavailable calendar dates stay focusable but never select', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const unavailable = [];
@@ -1028,7 +982,7 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
     sortDescriptor: { column: 'name', direction: 'ascending' },
   })), /column must be sortable/u);
 
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const opens = [];
@@ -1095,7 +1049,7 @@ test('R1.3 ToggleButtonGroup bounds IDs and Toolbar keeps child-owned state', as
     'aria-label': 'Styles', selectionMode: 'invalid',
   }, React.createElement(ToggleButton, { id: 'bold' }, 'Bold'))), /selectionMode must be/u);
 
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -1126,7 +1080,7 @@ test('R1.3 ToggleButtonGroup bounds IDs and Toolbar keeps child-owned state', as
 });
 
 test('R1.3 direct readOnly controls retain focus while blocking mutation', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -1168,7 +1122,7 @@ test('R1.3 direct readOnly controls retain focus while blocking mutation', async
 });
 
 test('R1.3 readOnly mutation guards block RAC-handled range and swatch changes', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const changes = [];
@@ -1214,7 +1168,7 @@ test('R1.3 readOnly mutation guards block RAC-handled range and swatch changes',
 });
 
 test('R1.3 Slider onChangeEnd follows RAC interaction lifecycle', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const ends = [];
@@ -1336,7 +1290,7 @@ test('R1.3 Virtualizer mounts exact fixed-row windows and preserves focused iden
 });
 
 test('R1.3 Menu ordering and GridList disabled hooks stay canonical', async () => {
-  const env = installDom();
+  const env = createDom();
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const eventsSeen = [];

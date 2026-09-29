@@ -1,16 +1,9 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { ListBox, Menu, Select } from '../../src/collections.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function CollectionsFixture() {
   const h = React.createElement;
@@ -85,15 +78,6 @@ function CollectionsFixture() {
     h('output', { id: 'readonly-changes' }, String(readOnlyChanges)));
 }
 
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
 test('Bento collections hydrate and preserve nested menu, spatial grid, and Select form/focus contracts', { timeout: 90_000 }, async () => {
   const entry = `import React from 'react';
     import { hydrateRoot } from 'react-dom/client';
@@ -102,28 +86,16 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     import '/src/styles/collections.css';
     ${CollectionsFixture.toString()}
     hydrateRoot(document.getElementById('root'), React.createElement(CollectionsFixture));`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,"></head><body><div id="root">${renderToString(React.createElement(CollectionsFixture))}</div><script type="module" src="/bento-collections-entry.mjs"></script></body></html>`;
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-collections-vite-'));
-  const server = await createServer({ configFile: false, root: join(repositoryRoot, 'packages/react'), cacheDir, logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['src/collections.mjs'], include: ['react', 'react-dom/client', 'react-aria-components'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'bento-collections-fixture', resolveId(id) { if (id === '/bento-collections-entry.mjs') return fileURLToPath(new URL('./bento-collections-entry.mjs', import.meta.url)); }, load(id) { if (id === fileURLToPath(new URL('./bento-collections-entry.mjs', import.meta.url))) return entry; }, configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/bento-collections.html') { response.setHeader('content-type', 'text/html'); response.end(html); }
-        else next();
-      });
-    } }],
-  });
+  const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(CollectionsFixture))}</div>`, entry: '/bento-collections-entry.mjs' });
+  const { url, close } = await startServer({ entries: ['src/collections.mjs'], pages: { '/bento-collections.html': html }, modules: { '/bento-collections-entry.mjs': entry } });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1000, height: 900 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/bento-collections.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/bento-collections.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.ready, null, { timeout: 10000 }).catch((error) => { throw new Error(`${error.message}\n${errors.join('\n')}`); });
     assert.equal(await page.locator('html').getAttribute('data-ready'), 'BUTTON,SPAN,SPAN,SPAN');
     assert.deepEqual(errors, []);
@@ -271,7 +243,6 @@ test('Bento collections hydrate and preserve nested menu, spatial grid, and Sele
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

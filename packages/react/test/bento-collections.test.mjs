@@ -3,28 +3,10 @@ import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { JSDOM } from 'jsdom';
 import { ListBox, Menu, Select } from '../src/collections.mjs';
+import { createDom } from './support/dom.mjs';
 
 const h = React.createElement;
-
-function installDom(markup = '') {
-  const dom = new JSDOM(`<!doctype html><body><div id="root">${markup}</div></body>`, { url: 'http://localhost/' });
-  const names = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLSelectElement', 'HTMLTextAreaElement', 'HTMLLabelElement', 'HTMLDivElement', 'HTMLFormElement', 'SVGElement', 'Node', 'NodeFilter', 'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'FocusEvent', 'PointerEvent', 'MutationObserver', 'InputEvent', 'FormData', 'getComputedStyle', 'CSS', 'requestAnimationFrame', 'cancelAnimationFrame', 'IS_REACT_ACT_ENVIRONMENT'];
-  const originals = new Map(names.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
-  for (const name of names) if (dom.window[name]) Object.defineProperty(globalThis, name, { value: dom.window[name], configurable: true, writable: true });
-  globalThis.CSS = { escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/gu, (character) => `\\${character}`) };
-  globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0);
-  globalThis.cancelAnimationFrame = clearTimeout;
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  dom.window.HTMLElement.prototype.scrollTo = () => {};
-  dom.window.HTMLElement.prototype.attachEvent = () => {};
-  dom.window.HTMLElement.prototype.detachEvent = () => {};
-  return { container: dom.window.document.querySelector('#root'), restore() {
-    for (const [name, descriptor] of originals) { if (descriptor) Object.defineProperty(globalThis, name, descriptor); else delete globalThis[name]; }
-    dom.window.close();
-  } };
-}
 
 test('compound ListBox hydrates sections, controls selection, and keeps root-disabled items inert', async () => {
   const selected = [];
@@ -33,21 +15,22 @@ test('compound ListBox hydrates sections, controls selection, and keeps root-dis
     h(ListBox.Section, null, h(ListBox.Header, null, 'Numbers'),
       h(ListBox.Item, { id: 'one', ref: itemRef, textValue: 'One', disabled: false }, h('strong', null, 'One')),
       h(ListBox.Item, { id: 'two', textValue: 'Two', disabled: false }, 'Two')));
-  const env = installDom(renderToString(fixture()));
+  const env = createDom(`<div id="root">${renderToString(fixture())}</div>`);
+  const container = document.getElementById('root');
   const recoverable = [];
   let root;
   try {
-    await act(async () => { root = hydrateRoot(env.container, fixture(), { onRecoverableError: (error) => recoverable.push(error.message) }); });
+    await act(async () => { root = hydrateRoot(container, fixture(), { onRecoverableError: (error) => recoverable.push(error.message) }); });
     assert.deepEqual(recoverable, []);
     assert.equal(itemRef.current.tagName, 'DIV');
-    assert.equal(env.container.querySelector('header').textContent, 'Numbers');
-    assert.equal(env.container.querySelector('[role="listbox"]').dataset.layout, 'grid');
-    const options = [...env.container.querySelectorAll('[role="option"]')];
+    assert.equal(container.querySelector('header').textContent, 'Numbers');
+    assert.equal(container.querySelector('[role="listbox"]').dataset.layout, 'grid');
+    const options = [...container.querySelectorAll('[role="option"]')];
     await act(async () => options[1].click());
     assert.deepEqual(selected, [['two']]);
     assert.equal(options[0].getAttribute('aria-selected'), 'true');
     await act(async () => root.render(fixture(true)));
-    for (const option of env.container.querySelectorAll('[role="option"]')) {
+    for (const option of container.querySelectorAll('[role="option"]')) {
       assert.equal(option.getAttribute('aria-disabled'), 'true');
       await act(async () => option.click());
     }
@@ -56,8 +39,9 @@ test('compound ListBox hydrates sections, controls selection, and keeps root-dis
 });
 
 test('compound Menu action ordering is Mux-owned and disabled cannot be overridden by children', async () => {
-  const env = installDom();
-  const root = createRoot(env.container);
+  const env = createDom();
+  const container = document.getElementById('root');
+  const root = createRoot(container);
   const seen = [];
   const fixture = (disabled = false) => h(Menu, { 'aria-label': 'Actions', disabled, onAction: (item) => seen.push(['action', item]), onSelect: (item) => seen.push(['select', item]) },
     h(Menu.Section, { title: h('strong', null, 'Editing') },
@@ -65,19 +49,19 @@ test('compound Menu action ordering is Mux-owned and disabled cannot be overridd
     h(Menu.Separator), h(Menu.Item, { id: 'blocked', disabled: true }, 'Blocked'));
   try {
     await act(async () => root.render(fixture()));
-    assert.equal(env.container.querySelector('.muxui-menu-section').tagName, 'SECTION');
-    assert.equal(env.container.querySelector('.muxui-menu-separator').tagName, 'HR');
-    await act(async () => env.container.querySelector('[role="menuitem"]').click());
+    assert.equal(container.querySelector('.muxui-menu-section').tagName, 'SECTION');
+    assert.equal(container.querySelector('.muxui-menu-separator').tagName, 'HR');
+    await act(async () => container.querySelector('[role="menuitem"]').click());
     assert.deepEqual(seen, [['item'], ['action', { id: 'copy', key: 'copy', value: 'copy' }], ['select', { id: 'copy', key: 'copy', value: 'copy' }]]);
     await act(async () => root.render(fixture(true)));
-    for (const item of env.container.querySelectorAll('[role="menuitem"]')) {
+    for (const item of container.querySelectorAll('[role="menuitem"]')) {
       assert.equal(item.getAttribute('aria-disabled'), 'true');
       await act(async () => item.click());
     }
     assert.equal(seen.length, 3);
     await act(async () => root.render(h(Menu.Root, { disabled: true, open: true, onAction: () => {}, onSelect: () => {} },
       h(Menu.Trigger, { disabled: false }, 'Disabled root'), h(Menu.Popup, null, h(Menu.List, { disabled: false }, h(Menu.Item, { id: 'never', disabled: false }, 'Never'))))));
-    assert.equal(env.container.querySelector('button').disabled, true);
+    assert.equal(container.querySelector('button').disabled, true);
     assert.equal(document.querySelector('[role="menu"]'), null);
   } finally { await act(async () => root.unmount()); env.restore(); }
 });
@@ -99,8 +83,9 @@ test('Select composition names and spans remain explicit while simple usage keep
 });
 
 test('compound triggers preserve native pointer, context-menu, auxiliary-click handlers and button refs', async () => {
-  const env = installDom();
-  const root = createRoot(env.container);
+  const env = createDom();
+  const container = document.getElementById('root');
+  const root = createRoot(container);
   const seen = [];
   const menuRef = React.createRef();
   const selectRef = React.createRef();

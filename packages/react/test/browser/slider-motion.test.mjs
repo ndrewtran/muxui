@@ -1,51 +1,18 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { SliderMotionFixture } from '../fixtures/slider-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-
-async function chromePath() {
-  const candidates = [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean);
-  for (const candidate of candidates) {
-    try { await access(candidate); return candidate; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement(SliderMotionFixture));
-  return `<!doctype html><html data-muxui-motion="full" data-muxui-color-scheme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><style>
+  return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><style>
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     #root { display: flex; flex-direction: column; gap: 28px; align-items: start; }
     .muxui-slider { width: 260px; }
     #vertical { min-block-size: 160px; }
-  </style></head><body><div id="root">${body}</div><script type="module" src="/test/fixtures/slider-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false, root: packageRoot, logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/slider-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react', 'motion/react-m'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-    plugins: [{ name: 'slider-motion-proof', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/slider-motion.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(documentHtml());
-      });
-    } }],
-  });
-  await server.listen();
-  return { server, url: `http://127.0.0.1:${server.httpServer.address().port}/slider-motion.html` };
+  </style>`, body: `<div id="root">${body}</div>`, entry: '/test/fixtures/slider-motion-browser-entry.mjs' });
 }
 
 const input = (page, id = 'controlled') => page.locator(`#${id} input[type="range"]`);
@@ -72,10 +39,10 @@ async function waitForScale(page, predicate, id = 'controlled') {
 }
 
 test('numeric Slider A keeps RAC semantics while adding finite tactile thumb motion', { timeout: 90_000 }, async (t) => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/slider-motion-browser-entry.mjs'], pages: { '/slider-motion.html': documentHtml } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 800, height: 900 } });
     page.setDefaultTimeout(5000);
     const errors = [];
@@ -83,7 +50,7 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     const reset = async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference', forcedColors: 'none' });
-      await page.goto(url, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/slider-motion.html`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => Boolean(window.__sliderMotionProof));
     };
 
@@ -174,7 +141,7 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
       const touchPage = await browser.newPage({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
       touchPage.on('pageerror', (error) => errors.push(error.message));
       try {
-        await touchPage.goto(url, { waitUntil: 'networkidle' });
+        await touchPage.goto(`${url}/slider-motion.html`, { waitUntil: 'networkidle' });
         await touchPage.waitForFunction(() => Boolean(window.__sliderMotionProof));
         const cdp = await touchPage.context().newCDPSession(touchPage);
         const range = await track(touchPage).boundingBox();
@@ -195,6 +162,6 @@ test('numeric Slider A keeps RAC semantics while adding finite tactile thumb mot
     });
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

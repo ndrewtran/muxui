@@ -20,40 +20,7 @@ import {
 import { ToggleButtonGroup, RadioGroup } from '../src/collections.mjs';
 import { CheckboxGroup } from '../src/fields.mjs';
 import { RadioField } from '../src/supplemental/index.mjs';
-
-function installDom(dom) {
-  const keys = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLAnchorElement', 'HTMLLabelElement', 'HTMLDivElement', 'HTMLOListElement', 'HTMLLIElement', 'SVGElement', 'Node', 'Event', 'MouseEvent', 'KeyboardEvent', 'PointerEvent', 'MutationObserver', 'getComputedStyle'];
-  const previous = Object.fromEntries(keys.map((key) => [key, globalThis[key]]));
-  Object.assign(globalThis, {
-    window: dom.window,
-    document: dom.window.document,
-    Element: dom.window.Element,
-    HTMLElement: dom.window.HTMLElement,
-    HTMLButtonElement: dom.window.HTMLButtonElement,
-    HTMLInputElement: dom.window.HTMLInputElement,
-    HTMLAnchorElement: dom.window.HTMLAnchorElement,
-    HTMLLabelElement: dom.window.HTMLLabelElement,
-    HTMLDivElement: dom.window.HTMLDivElement,
-    HTMLOListElement: dom.window.HTMLOListElement,
-    HTMLLIElement: dom.window.HTMLLIElement,
-    SVGElement: dom.window.SVGElement,
-    Node: dom.window.Node,
-    Event: dom.window.Event,
-    MouseEvent: dom.window.MouseEvent,
-    KeyboardEvent: dom.window.KeyboardEvent,
-    PointerEvent: dom.window.PointerEvent ?? dom.window.MouseEvent,
-    MutationObserver: dom.window.MutationObserver,
-    getComputedStyle: dom.window.getComputedStyle,
-    IS_REACT_ACT_ENVIRONMENT: true,
-  });
-  return () => {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete globalThis[key];
-      else globalThis[key] = value;
-    }
-    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-  };
-}
+import { installDom } from './support/dom.mjs';
 
 function allComponents({ onCheck, onDisclosure, onToggle, onLink } = {}) {
   return React.createElement(React.Fragment, null,

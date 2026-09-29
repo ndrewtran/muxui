@@ -1,37 +1,11 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { Button } from '../../src/button.mjs';
 import { DatePicker, DateRangePicker } from '../../src/fields.mjs';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-const repositoryRoot = resolve(packageRoot, '../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function dateDocument() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(DatePicker, {
@@ -39,12 +13,12 @@ function dateDocument() {
     defaultValue: '2026-08-26',
     open: false,
   })));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/packages/react/generated/styles.css"></head><body style="margin: 96px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);">${body}<script type="module" src="/packages/react/test/fixtures/date-popover-motion-browser-entry.mjs"></script></body></html>`;
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">', bodyAttributes: 'style="margin: 96px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body, entry: '/packages/react/test/fixtures/date-popover-motion-browser-entry.mjs' });
 }
 
 function buttonDocument() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(Button, null, 'Save')));
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,"></head><body>${body}<script type="module" src="/packages/react/test/fixtures/button-only-browser-entry.mjs"></script></body></html>`;
+  return pageShell({ body, entry: '/packages/react/test/fixtures/button-only-browser-entry.mjs' });
 }
 
 function rangeDocument() {
@@ -53,44 +27,7 @@ function rangeDocument() {
     defaultValue: { start: '2026-08-20', end: '2026-08-26' },
     open: false,
   })));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/packages/react/generated/styles.css"></head><body style="margin: 96px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);">${body}<script type="module" src="/packages/react/test/fixtures/date-range-popover-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'date-popover-motion-fixtures',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/date-popover-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(dateDocument());
-            return;
-          }
-          if (request.url === '/button-only.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(buttonDocument());
-            return;
-          }
-          if (request.url === '/date-range-popover-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(rangeDocument());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">', bodyAttributes: 'style="margin: 96px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body, entry: '/packages/react/test/fixtures/date-range-popover-motion-browser-entry.mjs' });
 }
 
 async function waitForHydration(page) {
@@ -211,10 +148,13 @@ async function capturePopup(page, path) {
 }
 
 test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({
+    root: 'repository',
+    pages: { '/date-popover-motion.html': dateDocument, '/button-only.html': buttonDocument, '/date-range-popover-motion.html': rangeDocument },
+  });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -364,6 +304,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assert.equal(systemReducedDuringEntry.transformY, 0, 'system reduction settles the entry position');
     assert.equal(systemReducedDuringEntry.animations.some(({ duration }) => Number(duration) > 1), false, 'system reduction stops the active entry');
     await page.emulateMedia({ reducedMotion: 'no-preference' });
+    // Give a wrongly replayed entry time to start before asserting there is none.
     await page.waitForTimeout(120);
     const systemRestoredWhileOpen = await readEntryMotion(page);
     assert.equal(systemRestoredWhileOpen.reduced, false, 'restoring system motion clears the private reduced marker');
@@ -399,6 +340,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assert.equal(nestedReducedDuringEntry.transformY, 0, 'nested reduction settles the entry position');
     assert.equal(nestedReducedDuringEntry.animations.some(({ duration }) => Number(duration) > 1), false, 'nested reduction stops the active entry');
     await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
+    // Give a wrongly replayed entry time to start before asserting there is none.
     await page.waitForTimeout(120);
     const nestedRestoredWhileOpen = await readEntryMotion(page);
     assert.equal(nestedRestoredWhileOpen.reduced, false, 'restoring nested motion clears the private reduced marker');
@@ -529,6 +471,6 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     await rangePage.close();
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

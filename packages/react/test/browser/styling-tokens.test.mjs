@@ -1,23 +1,14 @@
 import assert from 'node:assert/strict';
-import { access, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { chromium } from 'playwright-core';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
 import { Button, Checkbox } from '../../generated/index.mjs';
 import { CheckboxField } from '../../generated/supplemental.mjs';
+import { launchBrowser } from './harness.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../..');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for styling verification.');
-}
 
 function contrastRatio(foreground, background) {
   const luminance = (color) => {
@@ -56,7 +47,7 @@ test('calendar, field and collection hooks respond independently to gap and inse
   const calendarGap = calendarRule.match(/gap:\s*var\((--muxui-semantic-[\w-]+)\)/u)?.[1];
   assert.match(calendarInset, /inset/u);
   assert.match(calendarGap, /gap/u);
-  const browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
     // These are the renderer's public styling hooks; DOM/interaction contracts are
@@ -101,7 +92,7 @@ test('calendar, field and collection hooks respond independently to gap and inse
 
 test('generated aliases rebind through combined and nested mode scopes', { timeout: 30_000 }, async () => {
   const css = await readFile(resolve(packageRoot, 'generated/styles.css'), 'utf8');
-  const browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
     await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>
@@ -178,7 +169,7 @@ test('immediate action labels and selection marks retain contrast in every inter
       React.createElement(CheckboxField.Button, null,
         React.createElement(CheckboxField.Indicator), 'Selected field choice')),
     React.createElement('span', { id: 'selected-tag', className: 'muxui-tag', 'data-selected': true }, 'Selected tag')));
-  const browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
     await page.setContent(`<!doctype html><html data-muxui-color-scheme="light"><head><style>${css}</style></head><body>${markup}</body></html>`);
@@ -309,7 +300,7 @@ test('immediate action labels and selection marks retain contrast in every inter
 test('focus, choice geometry, and validation text have independent semantic overrides', { timeout: 30_000 }, async () => {
   const css = (await Promise.all(['generated/styles.css', 'generated/supplemental.css', 'src/text-editor/text-editor.css']
     .map((path) => readFile(resolve(packageRoot, path), 'utf8')))).join('\n');
-  const browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage();
     await page.setContent(`<!doctype html><html><head><style>${css}</style></head><body>

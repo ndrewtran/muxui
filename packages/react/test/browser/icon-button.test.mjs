@@ -1,46 +1,21 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { IconButtonFixture } from '../fixtures/icon-button-fixture.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 test('IconButton hydrates, activates by keyboard, preserves pending focus/name/size, and submits forms', { timeout: 90_000 }, async () => {
-  const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,"></head><body><div id="root">${renderToString(React.createElement(IconButtonFixture))}</div><script type="module" src="/packages/react/test/fixtures/icon-button-browser-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false, root: repositoryRoot, logLevel: 'error',
-    optimizeDeps: { entries: ['packages/react/test/fixtures/icon-button-browser-entry.mjs'], include: ['react', 'react-dom/client'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'icon-button-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/icon-button.html') return next();
-        response.setHeader('content-type', 'text/html'); response.end(html);
-      });
-    } }],
-  });
+  const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(IconButtonFixture))}</div>`, entry: '/packages/react/test/fixtures/icon-button-browser-entry.mjs' });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/icon-button-browser-entry.mjs'], pages: { '/icon-button.html': html } });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/icon-button.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/icon-button.html`, { waitUntil: 'networkidle' });
     assert.equal(await page.locator('html').getAttribute('data-ready'), 'BUTTON');
     const action = page.getByRole('button', { name: 'Close panel', exact: true });
     await action.focus();
@@ -83,6 +58,6 @@ test('IconButton hydrates, activates by keyboard, preserves pending focus/name/s
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

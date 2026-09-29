@@ -1,35 +1,10 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { Tree } from '../../src/collections.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function findChrome() {
-  const { access } = await import('node:fs/promises');
-  for (const candidate of chromeCandidates) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const items = [
   {
@@ -122,51 +97,27 @@ function RowFixture({ controlled = false, selectionMode = 'single', disabled = f
 
 function fixtureDocument(mode = 'chevron') {
   const body = renderToStaticMarkup(React.createElement('div', { id: 'root' }, React.createElement(Fixture, { mode })));
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,tree-toggle"><style>
+  return pageShell({ head: `<style>
     body { margin: 0; }
     .muxui-tree { width: 320px; }
-  </style></head><body>${body}<script type="module" src="/packages/react/test/fixtures/tree-toggle-browser-entry.mjs"></script></body></html>`;
+  </style>`, body, entry: '/packages/react/test/fixtures/tree-toggle-browser-entry.mjs' });
 }
 
 test('real browser expands Tree from the visible caret and preserves disabled behavior', { timeout: 90_000 }, async () => {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: {
-      force: true,
-      // The middleware HTML is virtual, so scan its real entry before browser requests.
-      entries: ['packages/react/test/fixtures/tree-toggle-browser-entry.mjs'],
-      include: ['react', 'react-dom', 'react-dom/client'],
-    },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'tree-toggle-fixture-document',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url?.split('?')[0] === '/tree-toggle.html') {
-            response.statusCode = 200;
-            response.setHeader('content-type', 'text/html');
-            const mode = new URL(request.url, 'http://127.0.0.1').searchParams.get('mode') ?? 'chevron';
-            response.end(fixtureDocument(mode));
-            return;
-          }
-          next();
-        });
-      },
-    }],
+  const { url, close } = await startServer({
+    root: 'repository',
+    // The middleware HTML is virtual, so scan its real entry before browser requests.
+    entries: ['packages/react/test/fixtures/tree-toggle-browser-entry.mjs'],
+    pages: { '/tree-toggle.html': (url) => fixtureDocument(url.searchParams.get('mode') ?? 'chevron') },
   });
   let browser;
   try {
-    await server.listen();
-    const address = server.httpServer.address();
-    assert.equal(typeof address, 'object');
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 800, height: 500 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${address.port}/tree-toggle.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/tree-toggle.html`, { waitUntil: 'networkidle' });
     const parent = page.locator('.muxui-tree-item').first();
     const toggle = parent.locator('.muxui-tree-toggle');
     const content = parent.locator('.muxui-tree-item-content');
@@ -178,6 +129,7 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     assert.equal(await parent.getAttribute('data-expanded'), null);
     assert.equal(await page.locator('[aria-level="2"]').count(), 0);
     await parentLabel.click();
+    // Negative check: the click must not expand the item, which has no event to await.
     await page.waitForTimeout(50);
     assert.equal(await parent.getAttribute('data-expanded'), null);
     assert.equal(await page.locator('[aria-level="2"]').count(), 0);
@@ -239,11 +191,12 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     const disabledGeometry = await disabledToggle.boundingBox();
     assert.ok(disabledGeometry && disabledGeometry.width >= 12 && disabledGeometry.height > 0);
     await disabledToggle.click({ force: true });
+    // Negative check: the click must not expand the item, which has no event to await.
     await page.waitForTimeout(50);
     assert.equal(await disabledParent.getAttribute('data-expanded'), null);
     assert.equal(await disabledParent.locator('[aria-level="2"]').count(), 0);
 
-    const fixtureUrl = `http://127.0.0.1:${address.port}/tree-toggle.html`;
+    const fixtureUrl = `${url}/tree-toggle.html`;
     await page.goto(`${fixtureUrl}?mode=row`, { waitUntil: 'networkidle' });
     const rowTree = page.locator('.muxui-tree');
     const rowParent = rowTree.locator('.muxui-tree-item[data-key="row-parent"]');
@@ -349,6 +302,6 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

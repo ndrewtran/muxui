@@ -1,45 +1,16 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { fixture } from '../fixtures/calendar-selection-motion-fixture.mjs';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-
-const repositoryRoot = resolve(import.meta.dirname, '../../../..');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
-  return `<!doctype html><html data-muxui-motion="full" data-muxui-color-scheme="light"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/packages/react/generated/styles.css"><link rel="stylesheet" href="/packages/react/src/styles/collections.css"><style>
+  return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><link rel="stylesheet" href="/packages/react/src/styles/collections.css"><style>
     :root { --muxui-semantic-motion-state-duration: 900ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 900ms; }
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); }
     main { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 32px; }
-  </style></head><body><div id="root">${renderToString(fixture())}</div><script type="module" src="/packages/react/test/fixtures/calendar-selection-motion-fixture.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false, root: repositoryRoot, logLevel: 'error',
-    server: { host: '127.0.0.1', port: 0 },
-    plugins: [{ name: 'calendar-selection-motion-proof', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/calendar-selection-motion.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(documentHtml());
-      });
-    } }],
-  });
-  await server.listen();
-  return { server, url: `http://127.0.0.1:${server.httpServer.address().port}/calendar-selection-motion.html` };
+  </style>`, body: `<div id="root">${renderToString(fixture())}</div>`, entry: '/packages/react/test/fixtures/calendar-selection-motion-fixture.mjs' });
 }
 
 function cell(page, calendar, day) {
@@ -111,19 +82,19 @@ async function waitForFrames(page, count = 2) {
 }
 
 test('Calendar selection circle travels within a month, resets across dates/pages, and preserves semantics', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ root: 'repository', pages: { '/calendar-selection-motion.html': documentHtml } });
   let browser;
   try {
     const staticMarkup = renderToString(fixture());
     assert.match(staticMarkup, /class="muxui-calendar-selection"/u, 'SSR paints the selected circle before effects');
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1100, height: 900 }, locale: 'en-US', reducedMotion: 'no-preference' });
     page.setDefaultTimeout(5000);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     page.on('requestfailed', (request) => errors.push(`${request.url()}: ${request.failure()?.errorText}`));
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/calendar-selection-motion.html`, { waitUntil: 'networkidle' });
     try {
       await page.waitForFunction(() => window.__muxuiCalendarSelectionProof);
     } catch {
@@ -210,7 +181,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
 
     const interruptedTarget = cell(page, 'primary', 18);
     await interruptedTarget.click();
-    await page.waitForTimeout(60);
+    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar-selection')?.hasAttribute('data-selection-traveling'));
     await page.evaluate(() => window.__muxuiCalendarSelectionProof.clearPrimary());
     await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar-cell[data-selected]')?.textContent === '16');
     await page.evaluate(() => window.__muxuiCalendarSelectionProof.setPrimaryMotionPolicy('always'));
@@ -276,7 +247,7 @@ test('Calendar selection circle travels within a month, resets across dates/page
     const rapidFirst = cell(page, 'primary', 12);
     const rapidLast = cell(page, 'primary', 13);
     await rapidFirst.click();
-    await page.waitForTimeout(60);
+    await page.waitForFunction(() => document.querySelector('#primary .muxui-calendar-selection')?.hasAttribute('data-selection-traveling'));
     await rapidLast.click();
     assert.equal(await rapidLast.getAttribute('data-selected'), 'true', 'rapid selection immediately targets the latest date');
     assert.equal(await page.evaluate(() => window.__muxuiCalendarSelectionProof.changes.at(-1)), '2026-03-13');
@@ -287,6 +258,6 @@ test('Calendar selection circle travels within a month, resets across dates/page
     await page.close();
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

@@ -5,73 +5,9 @@ import { resolve } from 'node:path';
 import React, { act } from 'react';
 import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { JSDOM } from 'jsdom';
+import { createDom } from './support/dom.mjs';
 
-function installDom(markup = '<div id="root"></div>') {
-  const dom = new JSDOM(`<!doctype html>${markup}`, { url: 'http://localhost/' });
-  class ResizeObserverMock {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  }
-  dom.window.ResizeObserver = ResizeObserverMock;
-  dom.window.matchMedia ??= () => ({
-    matches: false,
-    media: '',
-    onchange: null,
-    addEventListener() {},
-    removeEventListener() {},
-    addListener() {},
-    removeListener() {},
-    dispatchEvent: () => false,
-  });
-  dom.window.PointerEvent ??= dom.window.MouseEvent;
-  dom.window.requestAnimationFrame ??= (callback) => dom.window.setTimeout(callback, 0);
-  dom.window.cancelAnimationFrame ??= (handle) => dom.window.clearTimeout(handle);
-  const keys = [
-    'window', 'document', 'Document', 'DocumentFragment', 'Element', 'HTMLElement', 'HTMLButtonElement',
-    'HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement', 'HTMLDivElement', 'SVGElement', 'Node', 'NodeFilter',
-    'Event', 'CustomEvent', 'MouseEvent', 'KeyboardEvent', 'FocusEvent', 'PointerEvent', 'MutationObserver',
-    'File', 'Blob', 'FileReader', 'DOMRect', 'ResizeObserver', 'getComputedStyle', 'requestAnimationFrame',
-    'cancelAnimationFrame',
-  ];
-  const previous = new Map(keys.map((key) => [key, globalThis[key]]));
-  for (const key of keys) {
-    if (dom.window[key] !== undefined) globalThis[key] = dom.window[key];
-  }
-  const previousCss = globalThis.CSS;
-  globalThis.CSS ??= { escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/gu, (character) => `\\${character}`) };
-  const elementPrototype = dom.window.HTMLElement.prototype;
-  const previousScrollTo = elementPrototype.scrollTo;
-  const previousAttachEvent = elementPrototype.attachEvent;
-  const previousDetachEvent = elementPrototype.detachEvent;
-  elementPrototype.scrollTo ??= () => {};
-  elementPrototype.attachEvent ??= () => {};
-  elementPrototype.detachEvent ??= () => {};
-  const hadActFlag = 'IS_REACT_ACT_ENVIRONMENT' in globalThis;
-  const previousActFlag = globalThis.IS_REACT_ACT_ENVIRONMENT;
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  return {
-    dom,
-    restore() {
-      for (const [key, value] of previous) {
-        if (value === undefined) delete globalThis[key];
-        else globalThis[key] = value;
-      }
-      if (previousCss === undefined) delete globalThis.CSS;
-      else globalThis.CSS = previousCss;
-      if (previousScrollTo === undefined) delete elementPrototype.scrollTo;
-      else elementPrototype.scrollTo = previousScrollTo;
-      if (previousAttachEvent === undefined) delete elementPrototype.attachEvent;
-      else elementPrototype.attachEvent = previousAttachEvent;
-      if (previousDetachEvent === undefined) delete elementPrototype.detachEvent;
-      else elementPrototype.detachEvent = previousDetachEvent;
-      if (hadActFlag) globalThis.IS_REACT_ACT_ENVIRONMENT = previousActFlag;
-      else delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-      dom.window.close();
-    },
-  };
-}
+const installDom = (markup) => createDom(markup, { globals: ['File', 'Blob', 'FileReader'], layoutStubs: true });
 
 const moduleEnvironment = installDom();
 const { UNSTABLE_ToastQueue } = await import('react-aria-components');

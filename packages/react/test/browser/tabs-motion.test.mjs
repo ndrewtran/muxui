@@ -1,67 +1,13 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { TabsMotionFixture } from '../fixtures/tabs-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(TabsMotionFixture)));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"></head><body style="margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);">${body}<script type="module" src="/test/fixtures/tabs-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['src/collections.mjs'], include: ['react', 'react-dom/client', 'react-aria-components'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-    plugins: [{
-      name: 'tabs-motion-fixture',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/tabs-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(documentHtml());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css">', bodyAttributes: 'style="margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body, entry: '/test/fixtures/tabs-motion-browser-entry.mjs' });
 }
 
 async function readIndicator(page, selector) {
@@ -90,10 +36,10 @@ async function readIndicator(page, selector) {
 }
 
 test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize, and reduced state', { timeout: 90_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['src/collections.mjs'], pages: { '/tabs-motion.html': documentHtml } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -241,6 +187,6 @@ test('Tabs Motion tracks label geometry across controlled, RTL, vertical, resize
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

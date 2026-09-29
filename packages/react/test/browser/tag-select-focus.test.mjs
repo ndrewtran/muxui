@@ -1,36 +1,9 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { TagSelect } from '../../src/supplemental/index.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const packageRoot = fileURLToPath(new URL('../..', import.meta.url));
-const virtualEntryId = fileURLToPath(new URL('./.tag-select-focus-entry.mjs', import.meta.url));
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function findChrome() {
-  for (const candidate of chromeCandidates) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function TagSelectFocusFixture() {
   const items = [
@@ -60,47 +33,23 @@ hydrateRoot(document.getElementById('root'), React.createElement(TagSelectFocusF
 document.documentElement.dataset.ready = 'true';
 `;
 
-const html = `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"></head><body><div id="root">${renderToString(React.createElement(TagSelectFocusFixture))}</div><script type="module" src="/tag-select-focus-entry.mjs"></script></body></html>`;
+const html = pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css">', body: `<div id="root">${renderToString(React.createElement(TagSelectFocusFixture))}</div>`, entry: '/tag-select-focus-entry.mjs' });
 
 test('TagSelect chip removal keeps ComboBox focus and popup behavior independent', { timeout: 60_000 }, async () => {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    optimizeDeps: {
-      entries: ['src/supplemental/index.mjs'],
-      include: ['react', 'react-dom/client', 'react-aria-components'],
-    },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'tag-select-focus-entry',
-      resolveId(id) {
-        if (id === '/tag-select-focus-entry.mjs') return virtualEntryId;
-      },
-      load(id) {
-        if (id === virtualEntryId) return browserEntry;
-      },
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url !== '/tag-select-focus.html') return next();
-          response.setHeader('content-type', 'text/html');
-          response.end(html);
-        });
-      },
-    }],
+  const { url, close } = await startServer({
+    entries: ['src/supplemental/index.mjs'],
+    pages: { '/tag-select-focus.html': html },
+    modules: { '/tag-select-focus-entry.mjs': browserEntry },
   });
   let browser;
   try {
-    await server.listen();
-    const address = server.httpServer.address();
-    assert.ok(address && typeof address === 'object');
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     page.on('response', (response) => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
-    await page.goto(`http://127.0.0.1:${address.port}/tag-select-focus.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/tag-select-focus.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true' && window.__resetTagSelect);
 
     await page.getByRole('button', { name: 'Remove Beta', exact: true }).click();
@@ -123,6 +72,6 @@ test('TagSelect chip removal keeps ComboBox focus and popup behavior independent
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

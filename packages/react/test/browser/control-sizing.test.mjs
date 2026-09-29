@@ -1,27 +1,13 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { ControlSizingFixture } from '../fixtures/control-sizing-fixture.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const packageRoot = resolve(import.meta.dirname, '../..');
-const repositoryRoot = resolve(packageRoot, '../..');
 const sizes = Object.freeze({ sm: 32, md: 36, lg: 40 });
 const compactRemoveMinimum = 24;
 const sizeRows = Object.freeze(Object.keys(sizes));
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
 const sizedTargets = Object.freeze({
   button: { selector: '.muxui-button' },
   'icon-button': { selector: '.muxui-button' },
@@ -101,18 +87,6 @@ const portalTargets = Object.freeze({
   },
 });
 
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for sizing verification.');
-}
-
 async function waitForFixtureHydrated(page) {
   await page.waitForFunction(() => document.documentElement.getAttribute('data-control-sizing-hydrated') === 'true', undefined, { timeout: 5_000 });
 }
@@ -144,7 +118,7 @@ async function clickAfterScroll(page, locator) {
 
 function fixtureDocument() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(ControlSizingFixture)));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-density="comfortable"><head><meta charset="utf-8"><link rel="icon" href="data:,control-sizing"><link rel="stylesheet" href="/packages/react/generated/styles.css"><link rel="stylesheet" href="/packages/react/generated/supplemental.css"><style>
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-density="comfortable"', head: `<link rel="stylesheet" href="/packages/react/generated/styles.css"><link rel="stylesheet" href="/packages/react/generated/supplemental.css"><style>
     :root { color-scheme: light; }
     html[data-muxui-color-scheme='dark'] { color-scheme: dark; }
     body { box-sizing: border-box; min-width: 1240px; margin: 24px; background: var(--muxui-semantic-surface-canvas, #fff); color: var(--muxui-semantic-content-strong, #111); font-family: Inter, system-ui, sans-serif; font-size: 16px; }
@@ -159,36 +133,7 @@ function fixtureDocument() {
     [data-text-scale='200'] .sizing-case[data-control-id='button'] .muxui-button,
     [data-text-scale='200'] .sizing-case[data-control-id='text-field'] .muxui-field-input { line-height: 1.5; }
     :root[data-test-spacing='wide'] { --muxui-component-button-padding-inline: 40px; }
-  </style></head><body>${body}<script type="module" src="/packages/react/test/fixtures/control-sizing-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: { include: ['react', 'react-dom', 'react-dom/client', 'lucide-react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'control-sizing-fixture-document',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/control-sizing.html') {
-            response.statusCode = 200;
-            response.setHeader('content-type', 'text/html');
-            response.end(fixtureDocument());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}/control-sizing.html` };
+  </style>`, body, entry: '/packages/react/test/fixtures/control-sizing-browser-entry.mjs' });
 }
 
 async function measureTargets(page, rowSelector, targets) {
@@ -641,15 +586,15 @@ function collectDefaultMeasurementFailures(measurements, label, failures) {
 }
 
 test('hydrated controls keep 32/36/40 targets across scoped themes and densities', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ root: 'repository', pages: { '/control-sizing.html': fixtureDocument } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1600, height: 1200 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
     await page.locator('#control-sizing-fixture .muxui-button').first().waitFor();
     await waitForFixtureHydrated(page);
     await waitForTimeFieldsMounted(page);
@@ -748,7 +693,7 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
       popupPage.on('pageerror', (error) => errors.push(`autocomplete/${size}: ${error.message}`));
       popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`autocomplete/${size}: ${message.text()}`); });
       try {
-        await popupPage.goto(url, { waitUntil: 'networkidle' });
+        await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
         await popupPage.locator('#control-sizing-fixture .muxui-button').first().waitFor();
         await waitForFixtureHydrated(popupPage);
         await waitForTimeFieldsMounted(popupPage);
@@ -771,7 +716,7 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
       popupPage.on('pageerror', (error) => errors.push(`command-palette/${size}: ${error.message}`));
       popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`command-palette/${size}: ${message.text()}`); });
       try {
-        await popupPage.goto(url, { waitUntil: 'networkidle' });
+        await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
         await popupPage.locator('#control-sizing-fixture .muxui-button').first().waitFor();
         await waitForFixtureHydrated(popupPage);
         await waitForTimeFieldsMounted(popupPage);
@@ -809,7 +754,7 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
         popupPage.on('pageerror', (error) => errors.push(`${controlId}/${size}: ${error.message}`));
         popupPage.on('console', (message) => { if (message.type() === 'error') errors.push(`${controlId}/${size}: ${message.text()}`); });
         try {
-          await popupPage.goto(url, { waitUntil: 'networkidle' });
+          await popupPage.goto(`${url}/control-sizing.html`, { waitUntil: 'networkidle' });
           await popupPage.locator('#control-sizing-fixture .muxui-button').first().waitFor();
           await waitForFixtureHydrated(popupPage);
           await waitForTimeFieldsMounted(popupPage);
@@ -998,6 +943,6 @@ test('hydrated controls keep 32/36/40 targets across scoped themes and densities
     await page.emulateMedia({ forcedColors: 'none' });
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

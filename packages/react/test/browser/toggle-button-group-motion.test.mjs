@@ -1,60 +1,19 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ToggleButtonGroupMotionFixture } from '../fixtures/toggle-button-group-motion-fixture.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const packageRoot = resolve(repositoryRoot, 'packages/react');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
-async function startServer() {
-  const html = `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/components.css"><style>
+function documentHtml() {
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/components.css"><style>
     :root { --muxui-semantic-motion-state-duration: 1200ms; --muxui-semantic-motion-state-transition-duration: 1200ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 1200ms; }
     body { margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); font-family: system-ui, sans-serif; }
     main { display: grid; gap: 20px; max-width: 760px; }
     section { display: grid; gap: 8px; justify-items: start; }
     output { font-size: 12px; }
-  </style></head><body><div id="root">${renderToString(React.createElement(ToggleButtonGroupMotionFixture))}</div><script type="module" src="/test/fixtures/toggle-button-group-motion-browser-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    cacheDir: await mkdtemp(join(tmpdir(), 'muxui-toggle-button-group-motion-vite-')),
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/toggle-button-group-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'toggle-button-group-motion-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/toggle-button-group-motion.html') {
-          response.setHeader('content-type', 'text/html');
-          response.end(html);
-          return;
-        }
-        next();
-      });
-    } }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, cacheDir: server.config.cacheDir, url: `http://127.0.0.1:${address.port}/toggle-button-group-motion.html` };
+  </style>`, body: `<div id="root">${renderToString(React.createElement(ToggleButtonGroupMotionFixture))}</div>`, entry: '/test/fixtures/toggle-button-group-motion-browser-entry.mjs' });
 }
 
 function assertRectsClose(actual, expected, message = 'rectangles should align') {
@@ -142,15 +101,15 @@ async function waitForAlignment(page, selector) {
 test('ToggleButtonGroup selection fill follows state with a restrained trailing stretch', { timeout: 90_000 }, async () => {
   const serverMarkup = renderToString(React.createElement(ToggleButtonGroupMotionFixture));
   assert.equal(serverMarkup.includes('data-muxui-toggle-motion'), false);
-  const { server, cacheDir, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/toggle-button-group-motion-browser-entry.mjs'], pages: { '/toggle-button-group-motion.html': documentHtml() } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1100, height: 1000 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/toggle-button-group-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.toggleButtonGroupMotionHydrated === 'true');
     assert.deepEqual(errors, []);
 
@@ -169,7 +128,7 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     await page.mouse.move(0, 0);
 
     await page.locator(`${primary} > .muxui-toggle-button`).nth(1).hover();
-    await page.waitForTimeout(180);
+    await page.waitForFunction((selector) => getComputedStyle(document.querySelectorAll(`${selector} > .muxui-toggle-button`)[1]).backgroundColor !== 'rgba(0, 0, 0, 0)', primary);
     const restingUnselectedHover = await readGroup(page, primary);
     assert.notEqual(restingUnselectedHover.buttonBackgrounds[1], 'rgba(0, 0, 0, 0)', 'unselected hover should retain its resting background');
 
@@ -261,6 +220,7 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
 
     const required = '#required-toggle';
     await page.locator(`${required} > .muxui-toggle-button`).first().click();
+    // Negative check: a required group must not clear its only selection, which has no event to await.
     await page.waitForTimeout(30);
     assert.deepEqual((await readGroup(page, required)).selected, ['One']);
 
@@ -317,6 +277,7 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     const disabledInitial = await readGroup(page, disabled);
     assert.equal(disabledInitial.motion, null);
     await page.locator(`${disabled} > .muxui-toggle-button`).nth(1).click({ force: true });
+    // Negative check: a disabled group must not change selection, which has no event to await.
     await page.waitForTimeout(20);
     assert.deepEqual((await readGroup(page, disabled)).selected, ['One']);
 
@@ -328,7 +289,6 @@ test('ToggleButtonGroup selection fill follows state with a restrained trailing 
     assert.ok(Number.parseFloat(disabledChild.selectedOpacity) < 1);
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

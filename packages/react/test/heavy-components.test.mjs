@@ -9,24 +9,7 @@ import { Markdown } from '../src/markdown/index.mjs';
 import { TextEditor, isTextEditorDocument, normalizeTextEditorDocument } from '../src/text-editor/index.mjs';
 import { Resizable, ResizableHandle, ResizablePanel } from '../src/supplemental/resizable.mjs';
 import { Lightbox, LightboxBackdrop, LightboxClose, LightboxContent, LightboxNext, LightboxPopup, LightboxTrigger } from '../src/supplemental/lightbox.mjs';
-
-function installDom(dom) {
-  const keys = ['window', 'document', 'Element', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement', 'SVGElement', 'Node', 'NodeFilter', 'Event', 'InputEvent', 'KeyboardEvent', 'MouseEvent', 'FocusEvent', 'PointerEvent', 'MutationObserver', 'requestAnimationFrame', 'cancelAnimationFrame', 'getComputedStyle'];
-  const previous = Object.fromEntries(keys.map((key) => [key, globalThis[key]]));
-  Object.assign(globalThis, Object.fromEntries(keys.map((key) => [key, dom.window[key] ?? globalThis[key]])));
-  globalThis.requestAnimationFrame ??= (callback) => setTimeout(callback, 0);
-  globalThis.cancelAnimationFrame ??= (handle) => clearTimeout(handle);
-  dom.window.HTMLElement.prototype.attachEvent ??= () => {};
-  dom.window.HTMLElement.prototype.detachEvent ??= () => {};
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  return () => {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete globalThis[key];
-      else globalThis[key] = value;
-    }
-    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-  };
-}
+import { installDom } from './support/dom.mjs';
 
 function reactProps(element) {
   const key = Object.keys(element).find((name) => name.startsWith('__reactProps'));

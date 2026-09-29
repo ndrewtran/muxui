@@ -1,23 +1,9 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { TextBrowserFixture } from '../fixtures/text-browser-fixture.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const typographyContracts = [
   ['display-l', '--muxui-semantic-typography-display-l-font-size', '--muxui-semantic-typography-display-color', '--muxui-semantic-typography-display-font-family'],
@@ -31,33 +17,16 @@ const typographyContracts = [
 ];
 
 test('Text preserves native refs and resolves field and collection text-slot IDs in a real browser', { timeout: 90_000 }, async () => {
-  const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,text"></head><body><div id="root">${renderToString(React.createElement(TextBrowserFixture))}</div><script type="module" src="/packages/react/test/fixtures/text-browser-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: {
-      entries: ['packages/react/test/fixtures/text-browser-entry.mjs'],
-      include: ['react', 'react-dom/client', 'react-aria-components'],
-    },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'text-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/text.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(html);
-      });
-    } }],
-  });
+  const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(TextBrowserFixture))}</div>`, entry: '/packages/react/test/fixtures/text-browser-entry.mjs' });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/text-browser-entry.mjs'], pages: { '/text.html': html } });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/text.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/text.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.textReady === 'true');
     await page.evaluate(() => document.fonts.ready);
 
@@ -130,6 +99,6 @@ test('Text preserves native refs and resolves field and collection text-slot IDs
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

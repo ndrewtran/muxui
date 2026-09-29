@@ -1,21 +1,8 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { fixture } from '../fixtures/calendar-height-motion-browser-entry.mjs';
-
-const repositoryRoot = resolve(import.meta.dirname, '../../../..');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function geometry(page) {
   return page.locator('.muxui-calendar-grid').evaluate((grid) => {
@@ -77,24 +64,18 @@ async function inFlight(page, previous, growing) {
   return current;
 }
 
+function documentHtml(kind) {
+  return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">', bodyAttributes: `data-kind="${kind}" style="margin:80px;background:var(--muxui-semantic-surface-canvas)"`, body: `<div id="root">${renderToString(fixture(kind))}</div>`, entry: '/packages/react/test/fixtures/calendar-height-motion-browser-entry.mjs' });
+}
+
 test('calendar month height interpolates without changing semantics or reduced motion', { timeout: 120_000 }, async () => {
-  const server = await createServer({
-    configFile: false, root: repositoryRoot, logLevel: 'error',
-    server: { host: '127.0.0.1', port: 0 },
-    plugins: [{ name: 'calendar-height-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        const kind = /^\/calendar-height\/(calendar|range|picker|range-picker)$/u.exec(request.url)?.[1];
-        if (!kind) return next();
-        response.setHeader('Content-Type', 'text/html; charset=utf-8');
-        response.end(`<!doctype html><html data-muxui-motion="full" data-muxui-color-scheme="light"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/packages/react/generated/styles.css"></head><body data-kind="${kind}" style="margin:80px;background:var(--muxui-semantic-surface-canvas)"><div id="root">${renderToString(fixture(kind))}</div><script type="module" src="/packages/react/test/fixtures/calendar-height-motion-browser-entry.mjs"></script></body></html>`);
-      });
-    } }],
+  const { url, close } = await startServer({
+    root: 'repository',
+    pages: Object.fromEntries(['calendar', 'range', 'picker', 'range-picker'].map((kind) => [`/calendar-height/${kind}`, () => documentHtml(kind)])),
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
-    const url = `http://127.0.0.1:${server.httpServer.address().port}`;
+    browser = await launchBrowser();
     for (const kind of ['calendar', 'range', 'picker', 'range-picker']) {
       const page = await browser.newPage({ viewport: { width: 1000, height: 800 }, locale: 'en-US', reducedMotion: 'no-preference' });
       const errors = [];
@@ -186,6 +167,7 @@ test('calendar month height interpolates without changing semantics or reduced m
         window.removedCalendarBody = document.querySelector('.muxui-calendar-grid').parentElement;
         window.unmountCalendar();
       });
+      // Outlast the height animation to prove unmount stopped it; there is no event to wait for.
       await page.waitForTimeout(650);
       assert.equal(await page.evaluate(() => window.removedCalendarBody.style.height), '', 'unmount stops all later height writes');
       assert.deepEqual(errors, [], `${kind}: no hydration, observer, or runtime errors`);
@@ -193,6 +175,6 @@ test('calendar month height interpolates without changing semantics or reduced m
     }
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

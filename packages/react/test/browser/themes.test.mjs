@@ -1,20 +1,14 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
-import { join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
-import { createServer } from 'vite';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import source from '../../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { Button, Meter, TextField } from '../../generated/index.mjs';
 import { MUXUI_THEME_PRESETS, MUXUI_THEME_PRESETS_BY_ID } from '../../generated/themes.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
 const themeModes = [
   ['light', 'standard'],
   ['light', 'more'],
@@ -33,15 +27,6 @@ const colorRoles = [
   'semantic.field.content',
   'semantic.selection.track',
 ];
-
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for theme browser verification.');
-}
 
 function expectedThemeCases() {
   assert.equal(MUXUI_THEME_PRESETS.length, 15, 'browser proof uses all exported Mux theme presets');
@@ -163,58 +148,31 @@ requestAnimationFrame(() => { document.documentElement.dataset.themeReady = 'tru
 
 test('Mux preset themes resolve compiler colors and live React scopes in Chrome', { timeout: 120_000 }, async () => {
   const cases = expectedThemeCases();
-  const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,muxui-themes"></head><body>
+  const html = pageShell({ body: `
     ${renderThemeFixture()}
     <section id="compiler-probes">${probeMarkup(cases)}</section>
-    <script type="module" src="/muxui-themes-browser-entry.mjs"></script>
-  </body></html>`;
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-themes-vite-'));
-  const virtualEntryId = resolve(import.meta.dirname, '.muxui-themes-browser-entry.mjs');
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    cacheDir,
-    logLevel: 'error',
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'muxui-themes-browser-entry',
-      resolveId(id) {
-        if (id === '/muxui-themes-browser-entry.mjs') return virtualEntryId;
-      },
-      load(id) {
-        if (id === virtualEntryId) return browserEntry;
-      },
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url !== '/themes-browser.html') return next();
-          response.setHeader('content-type', 'text/html');
-          response.end(html);
-        });
-      },
-    }],
-  });
+  `, entry: '/muxui-themes-browser-entry.mjs' });
+  const { url, close } = await startServer({ root: 'repository', pages: { '/themes-browser.html': html }, modules: { '/muxui-themes-browser-entry.mjs': browserEntry } });
   let browser;
   try {
-    await server.listen();
-    const address = server.httpServer.address();
-    assert.ok(address && typeof address === 'object');
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${address.port}/themes-browser.html`, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(1_000);
-    if (await page.locator('#harbour-button').count() === 0) {
+    await page.goto(`${url}/themes-browser.html`, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => document.documentElement.dataset.themeReady === 'true').catch(async (error) => {
       const debug = await page.evaluate(() => ({
         url: location.href,
         root: document.getElementById('root')?.innerHTML,
         ready: document.documentElement.dataset.themeReady,
       }));
-      assert.fail(`theme fixture did not render: ${JSON.stringify({ errors, debug })}`);
+      throw new Error(`${error.message}\ntheme fixture did not become ready: ${JSON.stringify({ errors, debug })}`);
+    });
+    if (await page.locator('#harbour-button').count() === 0) {
+      assert.fail(`theme fixture did not render: ${JSON.stringify({ errors })}`);
     }
     await page.locator('#harbour-button').waitFor({ timeout: 10_000 });
-    await page.waitForFunction(() => document.documentElement.dataset.themeReady === 'true');
     assert.deepEqual(errors, [], errors.join('\n'));
     assert.equal(await page.locator('#harbour-button').getAttribute('data-variant'), 'primary');
     assert.equal(await page.locator('#harbour-field').getAttribute('aria-labelledby') !== null, true);
@@ -447,7 +405,6 @@ test('Mux preset themes resolve compiler colors and live React scopes in Chrome'
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

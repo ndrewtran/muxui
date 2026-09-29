@@ -5,30 +5,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { SelectNative } from '../src/supplemental/select-native.mjs';
-
-function installDom(dom) {
-  const keys = [
-    'window', 'document', 'Element', 'HTMLElement', 'HTMLSelectElement',
-    'HTMLLabelElement', 'HTMLDivElement', 'HTMLFormElement', 'Node', 'Event',
-    'InputEvent', 'FocusEvent', 'MutationObserver', 'FormData', 'CSS',
-    'getComputedStyle', 'requestAnimationFrame', 'cancelAnimationFrame',
-  ];
-  const previous = Object.fromEntries(keys.map((key) => [key, globalThis[key]]));
-  Object.assign(globalThis, Object.fromEntries(keys.map((key) => [key, dom.window[key] ?? globalThis[key]])));
-  globalThis.requestAnimationFrame ??= (callback) => setTimeout(callback, 0);
-  globalThis.cancelAnimationFrame ??= (handle) => clearTimeout(handle);
-  globalThis.CSS ??= { escape: (value) => String(value).replace(/[^a-zA-Z0-9_-]/gu, (character) => `\\${character}`) };
-  dom.window.HTMLElement.prototype.attachEvent ??= () => {};
-  dom.window.HTMLElement.prototype.detachEvent ??= () => {};
-  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
-  return () => {
-    for (const [key, value] of Object.entries(previous)) {
-      if (value === undefined) delete globalThis[key];
-      else globalThis[key] = value;
-    }
-    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-  };
-}
+import { installDom } from './support/dom.mjs';
 
 function optionTree() {
   return [

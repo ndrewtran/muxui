@@ -1,48 +1,7 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/tabs-variant-preview-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
-}
+import { launchBrowser, startServer } from './harness.mjs';
 
 async function readGeometry(page, selector) {
   return page.locator(selector).evaluate((root) => {
@@ -63,11 +22,48 @@ async function readGeometry(page, selector) {
   });
 }
 
+// One frame of the contrast tabs: selected text against its inverse copy, and the mask against the shape.
+function sampleContrast(selector) {
+  const root = document.querySelector(selector);
+  const selected = root.querySelector('[role="tab"][aria-selected="true"]');
+  const label = selected?.querySelector('.muxui-tab-label');
+  const foreground = root.querySelector('.muxui-tabs-motion-foreground');
+  const indicator = root.querySelector('.muxui-tabs-motion-underline');
+  const copy = [...(foreground?.querySelectorAll('.muxui-tabs-motion-label') ?? [])]
+    .find((node) => node.textContent?.trim() === selected?.textContent?.trim());
+  const rangeRect = (node) => {
+    if (!node) return null;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    const rect = range.getBoundingClientRect();
+    return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+  };
+  const indicatorRect = indicator?.getBoundingClientRect();
+  const foregroundRect = foreground?.getBoundingClientRect();
+  const clip = foreground ? getComputedStyle(foreground).clipPath : '';
+  const clipValues = clip.match(/^inset\(([-\d.]+)px calc\(100% - ([-\d.]+)px\) calc\(100% - ([-\d.]+)px\) ([-\d.]+)px/u);
+  const left = (indicatorRect?.left ?? 0) - (foregroundRect?.left ?? 0);
+  const top = (indicatorRect?.top ?? 0) - (foregroundRect?.top ?? 0);
+  return {
+    aligned: Boolean(label && copy && Math.abs(rangeRect(label).left - rangeRect(copy).left) < 0.5
+      && Math.abs(rangeRect(label).top - rangeRect(copy).top) < 0.5),
+    clipAligned: Boolean(clipValues && indicatorRect && foregroundRect
+      && Math.abs(Number(clipValues[1]) - top) < 0.75
+      && Math.abs(Number(clipValues[2]) - (left + indicatorRect.width)) < 0.75
+      && Math.abs(Number(clipValues[3]) - (top + indicatorRect.height)) < 0.75
+      && Math.abs(Number(clipValues[4]) - left) < 0.75),
+    originalColor: label ? getComputedStyle(label).color : '',
+    contrastColor: copy ? getComputedStyle(copy).color : '',
+    indicatorWidth: indicatorRect?.width ?? 0,
+    selectedWidth: selected?.getBoundingClientRect().width ?? 0,
+  };
+}
+
 test('Tabs variants render A contrast geometry, overflow affordances, and isolated motion', { timeout: 90_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/tabs-variant-preview-browser-entry.mjs'] });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1200, height: 900 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -291,44 +287,10 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-state-duration', '900ms'));
     await overflowMotion.locator('[role="tab"]').filter({ hasText: 'Team' }).click();
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs [role="tab"][aria-selected="true"]')?.textContent?.trim() === 'Team');
-    const contrastSamples = [];
-    for (let index = 0; index < 8; index += 1) {
-      contrastSamples.push(await overflowMotion.evaluate((root) => {
-        const selected = root.querySelector('[role="tab"][aria-selected="true"]');
-        const label = selected?.querySelector('.muxui-tab-label');
-        const foreground = root.querySelector('.muxui-tabs-motion-foreground');
-        const indicator = root.querySelector('.muxui-tabs-motion-underline');
-        const copy = [...(foreground?.querySelectorAll('.muxui-tabs-motion-label') ?? [])]
-          .find((node) => node.textContent?.trim() === selected?.textContent?.trim());
-        const rangeRect = (node) => {
-          if (!node) return null;
-          const range = document.createRange();
-          range.selectNodeContents(node);
-          const rect = range.getBoundingClientRect();
-          return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-        };
-        const indicatorRect = indicator?.getBoundingClientRect();
-        const foregroundRect = foreground?.getBoundingClientRect();
-        const clip = foreground ? getComputedStyle(foreground).clipPath : '';
-        const clipValues = clip.match(/^inset\(([-\d.]+)px calc\(100% - ([-\d.]+)px\) calc\(100% - ([-\d.]+)px\) ([-\d.]+)px/u);
-        const left = (indicatorRect?.left ?? 0) - (foregroundRect?.left ?? 0);
-        const top = (indicatorRect?.top ?? 0) - (foregroundRect?.top ?? 0);
-        return {
-          aligned: Boolean(label && copy && Math.abs(rangeRect(label).left - rangeRect(copy).left) < 0.5
-            && Math.abs(rangeRect(label).top - rangeRect(copy).top) < 0.5),
-          clipAligned: Boolean(clipValues && indicatorRect && foregroundRect
-            && Math.abs(Number(clipValues[1]) - top) < 0.75
-            && Math.abs(Number(clipValues[2]) - (left + indicatorRect.width)) < 0.75
-            && Math.abs(Number(clipValues[3]) - (top + indicatorRect.height)) < 0.75
-            && Math.abs(Number(clipValues[4]) - left) < 0.75),
-          originalColor: label ? getComputedStyle(label).color : '',
-          contrastColor: copy ? getComputedStyle(copy).color : '',
-          indicatorWidth: indicatorRect?.width ?? 0,
-          selectedWidth: selected?.getBoundingClientRect().width ?? 0,
-        };
-      }));
-      await page.waitForTimeout(60);
-    }
+    const contrastRecording = await recordFrames(page, sampleContrast, '#light-overflow-tabs');
+    await contrastRecording.waitFor(({ frames }) => frames.some(({ indicatorWidth, selectedWidth }) => Math.abs(indicatorWidth - selectedWidth) > 0.5)
+      && Math.abs(frames.at(-1).indicatorWidth - frames.at(-1).selectedWidth) < 0.5);
+    const contrastSamples = await contrastRecording.stop();
     assert.ok(contrastSamples.every(({ aligned, clipAligned }) => aligned && clipAligned), 'selected text and mask stay aligned during overflow selection');
     assert.ok(contrastSamples.some(({ indicatorWidth, selectedWidth }) => Math.abs(indicatorWidth - selectedWidth) > 0.5), 'selection captures an intermediate shape position');
     const settledContrast = contrastSamples.at(-1);
@@ -341,20 +303,30 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     const maxScroll = await overflowViewport.evaluate((node) => node.scrollWidth - node.clientWidth);
     const scrollRecording = await recordFrames(page, () => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport').scrollLeft);
     await overflowMotion.locator('button[aria-label="Scroll tabs right"]').click();
-    // Lets the scroll get under way before the reversal; the in-flight claim reads the recording.
-    await page.waitForTimeout(80);
+    // The reversal must interrupt a scroll that is under way and has enabled the opposite arrow.
+    await page.waitForFunction((start) => {
+      const root = document.querySelector('#light-overflow-tabs');
+      return root.querySelector('.muxui-tabs-motion-overflow-viewport').scrollLeft > start
+        && !root.querySelector('button[aria-label="Scroll tabs left"]').disabled;
+    }, initialScroll);
     const reversalStart = await overflowMotion.evaluate((root) => {
       const position = root.querySelector('.muxui-tabs-motion-overflow-viewport').scrollLeft;
       root.querySelector('button[aria-label="Scroll tabs left"]').click();
       return position;
     });
-    await page.waitForTimeout(80);
+    await page.waitForFunction((start) => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport').scrollLeft < start, reversalStart);
     const reversedScroll = await overflowViewport.evaluate((node) => node.scrollLeft);
     const scrollFrames = await scrollRecording.stop();
     const inFlightScroll = scrollFrames.find((offset) => offset > initialScroll && offset < maxScroll - 0.5) ?? scrollFrames.at(-1);
     assert.ok(inFlightScroll > initialScroll, `next arrow starts an animated scroll: ${JSON.stringify(scrollFrames)}`);
     assert.ok(inFlightScroll < maxScroll - 0.5, 'next arrow remains observable before settling');
     assert.ok(reversedScroll < reversalStart, `opposite arrow interrupts and reverses the scroll (${reversalStart} -> ${reversedScroll})`);
+    // A late reversal would first carry the scroll well past where the click landed.
+    const forwardFrames = scrollFrames.filter((offset) => offset <= reversalStart);
+    const frameStep = Math.max(0, ...forwardFrames.slice(1).map((offset, index) => offset - forwardFrames[index]));
+    const peakScroll = Math.max(...scrollFrames);
+    assert.ok(peakScroll <= reversalStart + frameStep + 0.5 && peakScroll < maxScroll - 0.5,
+      `reversal stops the forward scroll within one frame (${reversalStart} + ${frameStep} -> peak ${peakScroll} of ${maxScroll})`);
     await page.waitForFunction(() => document.querySelector('#light-overflow-tabs .muxui-tabs-motion-overflow-viewport')?.scrollLeft < 1);
 
     // Keyboard, element.click(), and assistive-tech activation reverse without a pointerdown stopping
@@ -569,6 +541,6 @@ test('Tabs variants render A contrast geometry, overflow affordances, and isolat
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });
