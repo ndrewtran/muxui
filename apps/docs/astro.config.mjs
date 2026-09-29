@@ -7,6 +7,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { muxTokenPathTransformer } from './src/components/code-theme.ts';
+import { FOUNDATION_OVERVIEW, FOUNDATION_PAGES } from './src/lib/foundation-pages.ts';
 
 const repositoryRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
 const themePrepaintBundle = buildSync({
@@ -70,16 +71,8 @@ do {
 } while (componentCursor !== undefined);
 
 const foundationSidebar = [
-	{ label: 'Overview', link: '/foundations/' },
-	{ label: 'Reference tokens', link: '/foundations/reference-tokens/' },
-	{ label: 'Semantic tokens', link: '/foundations/semantic-tokens/' },
-	{ label: 'Colour', link: '/foundations/colour/' },
-	{ label: 'Typography', link: '/foundations/typography/' },
-	{ label: 'Spacing', link: '/foundations/spacing/' },
-	{ label: 'Shape', link: '/foundations/shape/' },
-	{ label: 'Elevation', link: '/foundations/elevation/' },
-	{ label: 'Motion', link: '/foundations/motion/' },
-	{ label: 'Component tokens', link: '/foundations/component-tokens/' },
+	{ label: FOUNDATION_OVERVIEW.label, link: '/foundations/' },
+	...FOUNDATION_PAGES.map(({ label, slug }) => ({ label, link: `/foundations/${slug}/` })),
 ];
 
 // https://astro.build/config

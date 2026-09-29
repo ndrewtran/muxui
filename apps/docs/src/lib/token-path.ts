@@ -122,6 +122,11 @@ export function tokenPathSegments(value: string, metadata?: TokenPathMetadata): 
 	return createCssVariableSegments(value, metadata) ?? createCanonicalSegments(value, metadata) ?? [];
 }
 
+type TokenPathLookup = {
+	matches: ReadonlyMap<string, TokenPathMetadata>;
+	matcher: RegExp;
+};
+
 function pathMatches(tokens: readonly TokenPathMetadata[]): Map<string, TokenPathMetadata> {
 	const matches = new Map<string, TokenPathMetadata>();
 	for (const token of tokens) {
@@ -135,6 +140,24 @@ function createMatcher(matches: ReadonlyMap<string, TokenPathMetadata>): RegExp 
 	const values = [...matches.keys()].sort((left, right) => right.length - left.length).map(escapeRegExp);
 	if (values.length === 0) return /(?!)/gu;
 	return new RegExp(`(?<![A-Za-z0-9_.-])(?:${values.join('|')})(?![A-Za-z0-9_.-])`, 'gu');
+}
+
+const lookups = new WeakMap<readonly TokenPathMetadata[], TokenPathLookup>();
+
+/**
+ * Build the lookup map and longest-first matcher once per token array. Callers
+ * pass the frozen foundation token list, so the cache hits on every render. The
+ * shared global regex is safe because `findTokenPathMatches` resets it and
+ * `matchAll` iterates a clone.
+ */
+function tokenPathLookup(tokens: readonly TokenPathMetadata[]): TokenPathLookup {
+	let lookup = lookups.get(tokens);
+	if (!lookup) {
+		const matches = pathMatches(tokens);
+		lookup = { matches, matcher: createMatcher(matches) };
+		lookups.set(tokens, lookup);
+	}
+	return lookup;
 }
 
 function findTokenPathMatches(value: string, matches: ReadonlyMap<string, TokenPathMetadata>, matcher: RegExp): TokenPathMatch[] {
@@ -158,8 +181,8 @@ function findTokenPathMatches(value: string, matches: ReadonlyMap<string, TokenP
 
 /** Find only exact canonical IDs and generated Mux CSS variables in text. */
 export function tokenPathMatches(value: string, tokens: readonly TokenPathMetadata[]): readonly TokenPathMatch[] {
-	const matches = pathMatches(tokens);
-	return findTokenPathMatches(value, matches, createMatcher(matches));
+	const { matches, matcher } = tokenPathLookup(tokens);
+	return findTokenPathMatches(value, matches, matcher);
 }
 
 function decorationsForCode(code: string, matches: ReadonlyMap<string, TokenPathMetadata>, matcher: RegExp): ShikiDecoration[] {
@@ -188,8 +211,7 @@ function decorationsForCode(code: string, matches: ReadonlyMap<string, TokenPath
  * byte-for-byte compatible with the canonical example.
  */
 export function createTokenPathTransformer(tokens: readonly TokenPathMetadata[]): ShikiTransformer {
-	const matches = pathMatches(tokens);
-	const matcher = createMatcher(matches);
+	const { matches, matcher } = tokenPathLookup(tokens);
 	return {
 		name: 'muxui-canonical-token-paths',
 		preprocess(code, options) {
@@ -250,8 +272,7 @@ function reactNode(node: TokenPathNode, key: string): ReactNode {
 
 /** Render var(), declarations, and other expressions while preserving every character. */
 export function TokenExpression({ value, tokens }: { value: string; tokens: readonly TokenPathMetadata[] }): ReactNode {
-	const matches = pathMatches(tokens);
-	const matcher = createMatcher(matches);
+	const { matches, matcher } = tokenPathLookup(tokens);
 	const nodes = decorateText(value, matches, matcher);
 	if (nodes.length === 1 && nodes[0]?.type === 'text') return value;
 	return React.createElement('span', { className: 'mux-token-expression' }, nodes.map((node, index) => reactNode(node, `expression-${index}`)));
