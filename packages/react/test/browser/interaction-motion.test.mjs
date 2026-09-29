@@ -1,72 +1,20 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { InteractionMotionFixture } from '../fixtures/interaction-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(InteractionMotionFixture)));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/base.css"><link rel="stylesheet" href="/src/styles/components.css"><link rel="stylesheet" href="/src/styles/overlays.css"><link rel="stylesheet" href="/src/styles/fields.css"><link rel="stylesheet" href="/src/styles/collections.css"><link rel="stylesheet" href="/src/supplemental/styles.css"></head><body style="margin: 32px; display: flex; flex-direction: column; gap: 24px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);">${body}<script type="module" src="/test/fixtures/interaction-motion-browser-entry.mjs"></script></body></html>`;
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/base.css"><link rel="stylesheet" href="/src/styles/components.css"><link rel="stylesheet" href="/src/styles/overlays.css"><link rel="stylesheet" href="/src/styles/fields.css"><link rel="stylesheet" href="/src/styles/collections.css"><link rel="stylesheet" href="/src/supplemental/styles.css">', bodyAttributes: 'style="margin: 32px; display: flex; flex-direction: column; gap: 24px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong);"', body, entry: '/test/fixtures/interaction-motion-browser-entry.mjs' });
 }
 
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: {
-      entries: ['src/components.mjs', 'src/overlays.mjs', 'src/supplemental/index.mjs'],
-      include: ['react', 'react-dom/client', 'react-aria-components'],
-    },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-    plugins: [{
-      name: 'interaction-motion-fixture',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/interaction-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(documentHtml());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
-}
+const serverOptions = {
+  entries: ['src/components.mjs', 'src/overlays.mjs', 'src/supplemental/index.mjs'],
+  pages: { '/interaction-motion.html': documentHtml },
+};
 
 async function readMetrics(page, selector) {
   return page.locator(selector).evaluate((node) => {
@@ -293,10 +241,10 @@ function toastSelector(id) {
 }
 
 test('primary interaction surfaces expose real motion lifecycles and preserve public semantics', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer(serverOptions);
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
     page.setDefaultTimeout(8000);
     const errors = [];
@@ -339,9 +287,11 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     await waitForDisclosureClosed(page, primaryPanel);
 
     await primaryTrigger.click();
-    await page.waitForTimeout(80);
+    const reopening = await waitForDisclosureIntermediate(page, primaryPanel);
     await primaryTrigger.click();
-    await page.waitForTimeout(80);
+    // Click 3 must reverse a collapse that is already shrinking, not the unfinished expand.
+    await page.waitForFunction(({ selector, from }) => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'false'
+      && document.querySelector(selector).getBoundingClientRect().height < from - 0.5, { selector: primaryPanel, from: reopening.height });
     await primaryTrigger.click();
     await page.waitForFunction(() => document.querySelector('[data-motion-id="primary-disclosure"] .muxui-disclosure-trigger')?.getAttribute('aria-expanded') === 'true');
     await waitForDisclosureIntermediate(page, primaryPanel);
@@ -527,6 +477,7 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     const pauseToast = page.locator(toastSelector('toast-pause'));
     await pauseToast.waitFor();
     await pauseToast.hover();
+    // Outlast the 650 ms toast timeout: a paused timer has no event to wait for.
     await page.waitForTimeout(900);
     assert.equal(await pauseToast.count(), 1, 'hover pauses the toast timer');
     assert.equal(await page.evaluate(() => window.__interactionToastDismisses?.['toast-pause'] ?? 0), 0, 'paused toast is not dismissed while hovered');
@@ -682,15 +633,15 @@ test('primary interaction surfaces expose real motion lifecycles and preserve pu
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });
 
 test('Toast origin reduction and late disclosure growth settle without flashes', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer(serverOptions);
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
     page.setDefaultTimeout(8000);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
@@ -730,6 +681,7 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
     await mountToast.waitFor({ state: 'detached', timeout: 1000 });
     assert.ok(Date.now() - mountCloseStarted < 500, 'reduced Toast mounted under #root closes immediately');
     await page.waitForFunction(() => window.__interactionToastDismisses?.['toast-mount-reduced'] === 1, undefined, { timeout: 1000 });
+    // A second dismissal would arrive later; give it time before asserting there is none.
     await page.waitForTimeout(100);
     assert.equal(await page.evaluate(() => window.__interactionToastDismisses?.['toast-mount-reduced'] ?? 0), 1, 'reduced Toast mount dismisses once');
     await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
@@ -754,6 +706,7 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
     await runtimeToast.waitFor({ state: 'detached', timeout: 1000 });
     assert.ok(Date.now() - runtimeCloseStarted < 500, 'runtime reduced Toast closes immediately');
     await page.waitForFunction(() => window.__interactionToastDismisses?.['toast-runtime-reduced'] === 1, undefined, { timeout: 1000 });
+    // A second dismissal would arrive later; give it time before asserting there is none.
     await page.waitForTimeout(100);
     assert.equal(await page.evaluate(() => window.__interactionToastDismisses?.['toast-runtime-reduced'] ?? 0), 1, 'runtime reduced Toast dismisses once');
     await page.evaluate(() => document.getElementById('root').removeAttribute('data-muxui-motion'));
@@ -801,15 +754,15 @@ test('Toast origin reduction and late disclosure growth settle without flashes',
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });
 
 test('Disclosure soft reveal preserves initial paint, focus, resizing and reduced semantics', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer(serverOptions);
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 960, height: 900 } });
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     const errors = [];
@@ -942,6 +895,6 @@ test('Disclosure soft reveal preserves initial paint, focus, resizing and reduce
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

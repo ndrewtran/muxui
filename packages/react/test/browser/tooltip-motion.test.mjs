@@ -1,67 +1,13 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { TooltipMotionFixture } from '../fixtures/tooltip-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(TooltipMotionFixture)));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><style>body { margin: 0; }</style></head><body>${body}<script type="module" src="/test/fixtures/tooltip-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/tooltip-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-    plugins: [{
-      name: 'tooltip-motion-fixture',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/tooltip-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(documentHtml());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<style>body { margin: 0; }</style>', body, entry: '/test/fixtures/tooltip-motion-browser-entry.mjs' });
 }
 
 async function readMotion(page, expectedOffset) {
@@ -136,10 +82,10 @@ async function readRefs(page) {
 }
 
 test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC semantics', { timeout: 90_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/tooltip-motion-browser-entry.mjs'], pages: { '/tooltip-motion.html': documentHtml } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1000, height: 700 } });
     page.setDefaultTimeout(5000);
     const errors = [];
@@ -279,6 +225,6 @@ test('Tooltip motion is finite, placement-aware, reduced-safe, and preserves RAC
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

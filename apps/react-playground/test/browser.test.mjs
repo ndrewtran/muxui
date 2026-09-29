@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 const require = createRequire(import.meta.url);
 
 const candidates = [
+  process.env.MUXUI_CHROME_EXECUTABLE,
   process.env.CHROME_PATH,
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   '/usr/bin/google-chrome',

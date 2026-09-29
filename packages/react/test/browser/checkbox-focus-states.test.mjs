@@ -1,23 +1,8 @@
 import assert from 'node:assert/strict';
-import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const packageRoot = fileURLToPath(new URL('../..', import.meta.url));
-
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function indicatorPaint(locator) {
   return locator.evaluate((element) => {
@@ -84,7 +69,6 @@ function assertKeyboardFocusPaint(paint, label) {
 }
 
 test('Checkbox and CheckboxField share pointer and keyboard focus modality in light, dark, and forced colors', { timeout: 120_000 }, async () => {
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-checkbox-focus-vite-'));
   const entry = `import React from 'react';
     import { createRoot } from 'react-dom/client';
     import { Checkbox } from '/src/components.mjs';
@@ -108,52 +92,26 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
           h(CheckboxField.Button, null, h(CheckboxField.Indicator, null), h('span', null, 'Field disabled'))));
     }
     createRoot(document.getElementById('root')).render(h(App));`;
-  const entryPath = join(cacheDir, 'checkbox-focus-states-entry.mjs');
-  await writeFile(entryPath, entry);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,"><style>
+  const html = pageShell({ head: `<style>
     html, body { min-height: 100%; margin: 0; }
     body { padding: 48px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     main { display: grid; gap: 12px; }
-  </style></head><body><div id="root"></div><script type="module" src="/checkbox-focus-states-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    cacheDir,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: [entryPath], include: ['react', 'react-dom/client', 'react-aria', 'react-aria-components'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot, cacheDir] } },
-    plugins: [{
-      name: 'muxui-checkbox-focus-fixture',
-      resolveId(id) {
-        if (id === '/checkbox-focus-states-entry.mjs') return entryPath;
-        return undefined;
-      },
-      load(id) {
-        if (id === entryPath) return entry;
-        return undefined;
-      },
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/checkbox-focus.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(html);
-          } else next();
-        });
-      },
-    }],
+  </style>`, body: '<div id="root"></div>', entry: '/checkbox-focus-states-entry.mjs' });
+  const { url, close } = await startServer({
+    entries: ['src/components.mjs', 'src/supplemental/index.mjs'],
+    pages: { '/checkbox-focus.html': html },
+    modules: { '/checkbox-focus-states-entry.mjs': entry },
   });
   let browser;
   const evidenceDir = process.env.MUXUI_CHECKBOX_FOCUS_EVIDENCE_DIR ?? '/tmp/muxui-checkbox-focus-evidence';
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
     page.setDefaultTimeout(10_000);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/checkbox-focus.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/checkbox-focus.html`, { waitUntil: 'networkidle' });
     try {
       await page.locator('[data-checkbox-focus-fixture]').waitFor();
     } catch (error) {
@@ -325,7 +283,6 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

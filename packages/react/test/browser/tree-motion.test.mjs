@@ -1,61 +1,19 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
 import { TreeMotionFixture } from '../fixtures/tree-motion-fixture.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const packageRoot = resolve(repositoryRoot, 'packages/react');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
-async function startServer() {
+function documentHtml() {
   const body = renderToString(React.createElement(TreeMotionFixture));
-  const html = `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: `<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>
     :root { --muxui-semantic-motion-interaction-duration: 360ms; --muxui-semantic-motion-interaction-easing: cubic-bezier(0.2, 0, 0, 1); --muxui-semantic-motion-state-duration: 300ms; }
     body { margin: 32px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     .tree-motion-fixture { display: grid; grid-template-columns: 320px 320px; gap: 48px; align-items: start; }
     .tree-motion-fixture h2 { margin: 0 0 12px; font: inherit; }
     .muxui-tree { width: 320px; }
-  </style></head><body><div id="root">${body}</div><script type="module" src="/test/fixtures/tree-motion-browser-entry.mjs"></script></body></html>`;
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-tree-motion-vite-'));
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    cacheDir,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/tree-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'tree-motion-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/tree-motion.html') {
-          response.setHeader('content-type', 'text/html');
-          response.end(html);
-          return;
-        }
-        next();
-      });
-    } }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, cacheDir, url: `http://127.0.0.1:${address.port}/tree-motion.html` };
+  </style>`, body: `<div id="root">${body}</div>`, entry: '/test/fixtures/tree-motion-browser-entry.mjs' });
 }
 
 function row(tree, key) {
@@ -78,13 +36,13 @@ async function waitForRevealToSettle(page, selector) {
 }
 
 test('Tree coordinates branch motion and full-row hover while collapse stays semantic', { timeout: 90_000 }, async () => {
-  const { server, cacheDir, url } = await startServer();
-  const browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+  const { url, close } = await startServer({ entries: ['test/fixtures/tree-motion-browser-entry.mjs'], pages: { '/tree-motion.html': documentHtml() } });
+  const browser = await launchBrowser();
   try {
     const page = await browser.newPage({ viewport: { width: 1100, height: 800 } });
     const pageErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
-    await page.goto(url);
+    await page.goto(`${url}/tree-motion.html`);
 
     const trees = page.locator('.muxui-tree');
     const primary = trees.nth(0);
@@ -303,7 +261,6 @@ test('Tree coordinates branch motion and full-row hover while collapse stays sem
     assert.deepEqual(pageErrors, [], 'browser has no uncaught runtime errors');
   } finally {
     await browser.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

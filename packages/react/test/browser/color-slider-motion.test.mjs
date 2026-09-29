@@ -1,52 +1,19 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { ColorSliderMotionFixture } from '../fixtures/color-slider-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-
-async function chromePath() {
-  const candidates = [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-    '/Applications/Chromium.app/Contents/MacOS/Chromium', '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean);
-  for (const candidate of candidates) {
-    try { await access(candidate); return candidate; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement(ColorSliderMotionFixture));
-  return `<!doctype html><html data-muxui-motion="full" data-muxui-color-scheme="light"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><style>
+  return pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: `<meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/generated/styles.css"><style>
     body { margin: 40px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-strong); }
     #root { display: flex; flex-direction: column; gap: 28px; align-items: start; }
     .muxui-color-slider { width: 260px; }
     .muxui-color-slider:has(#vertical) { width: 15px; }
     #vertical { height: 120px; }
-  </style></head><body><div id="root">${body}</div><script type="module" src="/test/fixtures/color-slider-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false, root: packageRoot, logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/color-slider-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react', 'motion/react-m'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [resolve(packageRoot, '../..')] } },
-    plugins: [{ name: 'color-slider-motion-proof', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/color-slider-motion.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(documentHtml());
-      });
-    } }],
-  });
-  await server.listen();
-  return { server, url: `http://127.0.0.1:${server.httpServer.address().port}/color-slider-motion.html` };
+  </style>`, body: `<div id="root">${body}</div>`, entry: '/test/fixtures/color-slider-motion-browser-entry.mjs' });
 }
 
 const input = (page, id = 'controlled') => page.locator(`#${id} input[type="range"]`);
@@ -78,10 +45,10 @@ async function waitForFace(page, predicate, id = 'controlled', component = 'slid
 }
 
 test('ColorSlider A preserves native interaction with finite, reduced-motion-safe decoration', { timeout: 90_000 }, async (t) => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/color-slider-motion-browser-entry.mjs'], pages: { '/color-slider-motion.html': documentHtml } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 800, height: 850 } });
     page.setDefaultTimeout(5000);
     const errors = [];
@@ -89,7 +56,7 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     const reset = async () => {
       await page.emulateMedia({ reducedMotion: 'no-preference', forcedColors: 'none' });
-      await page.goto(url, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/color-slider-motion.html`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => Boolean(window.__colorSliderProof));
     };
 
@@ -337,7 +304,7 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
       const touchPage = await browser.newPage({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
       touchPage.on('pageerror', (error) => errors.push(error.message));
       try {
-        await touchPage.goto(url, { waitUntil: 'networkidle' });
+        await touchPage.goto(`${url}/color-slider-motion.html`, { waitUntil: 'networkidle' });
         await touchPage.waitForFunction(() => Boolean(window.__colorSliderProof));
         const cdp = await touchPage.context().newCDPSession(touchPage);
         const rect = await track(touchPage).boundingBox();
@@ -355,6 +322,6 @@ test('ColorSlider A preserves native interaction with finite, reduced-motion-saf
     });
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

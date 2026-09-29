@@ -1,34 +1,9 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { Slider } from '../../src/collections.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function findChrome() {
-  const { access } = await import('node:fs/promises');
-  for (const candidate of chromeCandidates) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function fixtureDocument() {
   const body = renderToStaticMarkup(React.createElement('div', { id: 'root' }, React.createElement(Slider, {
@@ -40,42 +15,19 @@ function fixtureDocument() {
     readOnly: true,
     step: 1,
   })));
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,read-only-slider"><style>.muxui-slider { width: 400px; } .muxui-slider-track { height: 24px; }</style></head><body>${body}<script type="module" src="/packages/react/test/fixtures/read-only-slider-browser-entry.mjs"></script></body></html>`;
+  return pageShell({ head: '<style>.muxui-slider { width: 400px; } .muxui-slider-track { height: 24px; }</style>', body, entry: '/packages/react/test/fixtures/read-only-slider-browser-entry.mjs' });
 }
 
 test('real browser read-only Slider blocks keyboard and pointer changes while retaining focus', { timeout: 90_000 }, async () => {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: { include: ['react', 'react-dom', 'react-dom/client'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'read-only-slider-fixture-document',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/read-only-slider.html') {
-            response.statusCode = 200;
-            response.setHeader('content-type', 'text/html');
-            response.end(fixtureDocument());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
+  const { url, close } = await startServer({ root: 'repository', pages: { '/read-only-slider.html': fixtureDocument } });
   let browser;
   try {
-    await server.listen();
-    const address = server.httpServer.address();
-    assert.equal(typeof address, 'object');
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 800, height: 500 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${address.port}/read-only-slider.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/read-only-slider.html`, { waitUntil: 'networkidle' });
 
     const slider = page.locator('.muxui-slider input[type="range"]');
     await slider.waitFor();
@@ -103,6 +55,6 @@ test('real browser read-only Slider blocks keyboard and pointer changes while re
     assert.equal(await page.evaluate(() => document.activeElement?.id), inputId);
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

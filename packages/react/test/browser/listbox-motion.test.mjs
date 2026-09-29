@@ -1,54 +1,13 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { ListBoxMotionFixture } from '../fixtures/listbox-motion-fixture.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const packageRoot = resolve(repositoryRoot, 'packages/react');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
-async function startServer() {
-  const html = `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>:root { --muxui-semantic-motion-state-duration: 400ms; }</style></head><body style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"><div id="root">${renderToString(React.createElement(ListBoxMotionFixture))}</div><script type="module" src="/test/fixtures/listbox-motion-browser-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    cacheDir: await mkdtemp(join(tmpdir(), 'muxui-listbox-motion-vite-')),
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/listbox-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'listbox-motion-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/listbox-motion.html') {
-          response.setHeader('content-type', 'text/html');
-          response.end(html);
-          return;
-        }
-        next();
-      });
-    } }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, cacheDir: server.config.cacheDir, url: `http://127.0.0.1:${address.port}/listbox-motion.html` };
+function documentHtml() {
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>:root { --muxui-semantic-motion-state-duration: 400ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${renderToString(React.createElement(ListBoxMotionFixture))}</div>`, entry: '/test/fixtures/listbox-motion-browser-entry.mjs' });
 }
 
 function rect(node) {
@@ -144,15 +103,15 @@ async function readListBox(page, selector) {
 }
 
 test('ListBox selection backdrop moves independently from focus and honors collection motion contracts', { timeout: 90_000 }, async () => {
-  const { server, cacheDir, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/listbox-motion-browser-entry.mjs'], pages: { '/listbox-motion.html': documentHtml() } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1100, height: 1100 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/listbox-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.listBoxMotionHydrated === 'true');
     assert.deepEqual(errors, []);
 
@@ -319,7 +278,7 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     const scroll = page.locator('#scroll-list');
     await scroll.evaluate((node) => { node.scrollTop = node.scrollHeight; });
     await page.getByRole('option', { name: 'Scroll 8', exact: true }).scrollIntoViewIfNeeded();
-    await page.waitForTimeout(20);
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const scrollShapeBefore = await readListBox(page, '#scroll-list');
     assert.ok(scrollShapeBefore.shape);
     await page.evaluate(() => window.__listBoxSetScroll('scroll-8'));
@@ -333,6 +292,7 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     await waitForShapeAlignment(page, single);
     await page.evaluate(() => window.__listBoxSetSingle('three'));
     await waitForSelected(page, single, 'Three');
+    // Let the shape travel briefly so reduction interrupts it mid-flight.
     await page.waitForTimeout(22);
     const reducedStart = await readListBox(page, single);
     await page.evaluate(() => document.documentElement.setAttribute('data-muxui-motion', 'reduced'));
@@ -370,7 +330,6 @@ test('ListBox selection backdrop moves independently from focus and honors colle
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

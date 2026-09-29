@@ -6,35 +6,7 @@ import { renderToStaticMarkup, renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { Avatar } from '../src/supplemental/avatar.mjs';
 import { Image } from '../src/supplemental/image.mjs';
-
-function installDom(dom) {
-  const names = [
-    'window', 'document', 'Element', 'HTMLElement', 'HTMLImageElement', 'Node', 'Event',
-    'MouseEvent', 'KeyboardEvent', 'MutationObserver',
-  ];
-  const previous = Object.fromEntries(names.map((name) => [name, globalThis[name]]));
-  Object.assign(globalThis, {
-    window: dom.window,
-    document: dom.window.document,
-    Element: dom.window.Element,
-    HTMLElement: dom.window.HTMLElement,
-    HTMLImageElement: dom.window.HTMLImageElement,
-    Node: dom.window.Node,
-    Event: dom.window.Event,
-    MouseEvent: dom.window.MouseEvent,
-    KeyboardEvent: dom.window.KeyboardEvent,
-    MutationObserver: dom.window.MutationObserver,
-    IS_REACT_ACT_ENVIRONMENT: true,
-  });
-  return () => {
-    for (const [name, value] of Object.entries(previous)) {
-      if (value === undefined) delete globalThis[name];
-      else globalThis[name] = value;
-    }
-    delete globalThis.IS_REACT_ACT_ENVIRONMENT;
-    dom.window.close();
-  };
-}
+import { installDom } from './support/dom.mjs';
 
 function imageElement(document) {
   const image = document.querySelector('img.muxui-image');

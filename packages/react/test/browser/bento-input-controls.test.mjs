@@ -1,20 +1,13 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { TextField, SearchField } from '../../src/fields.mjs';
 import { Button } from '../../src/button.mjs';
 import { IconButton } from '../../src/supplemental/icon-button.mjs';
 import { CommandPalette, useCommandPalette } from '../../src/supplemental/command-palette.mjs';
 import { ColorSwatch } from '../../src/collections.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 // This same fixture renders on the server and hydrates in the browser.
 function InputControlsFixture() {
@@ -165,18 +158,7 @@ function InputControlsFixture() {
             h(CommandPalette.Footer, null, 'Application results'))))));
 }
 
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
 test('Bento input and control host contracts in a real browser', { timeout: 90_000 }, async (t) => {
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-input-controls-'));
-  const entryPath = fileURLToPath(new URL('bento-input-controls-entry.mjs', import.meta.url));
   const entry = `import React from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { TextField, SearchField } from '/src/fields.mjs';
@@ -187,30 +169,22 @@ import { ColorSwatch } from '/src/collections.mjs';
 import '/generated/styles.css';
 ${InputControlsFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFixture));`;
-  const html = `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,"></head><body><div id="root">${renderToString(React.createElement(InputControlsFixture))}</div><script type="module" src="/bento-input-controls-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false, root: fileURLToPath(new URL('../..', import.meta.url)), cacheDir, logLevel: 'error',
-    optimizeDeps: { entries: ['src/fields.mjs', 'src/button.mjs', 'src/supplemental/command-palette.mjs'], include: ['react', 'react-dom/client', 'react-aria-components'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'bento-input-controls-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/bento-input-controls.html') {
-          response.setHeader('content-type', 'text/html'); response.end(html);
-        } else next();
-      });
-    }, resolveId(id) { if (id === '/bento-input-controls-entry.mjs') return entryPath; }, load(id) { if (id === entryPath) return entry; } }],
+  const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(InputControlsFixture))}</div>`, entry: '/bento-input-controls-entry.mjs' });
+  const { url, close } = await startServer({
+    entries: ['src/fields.mjs', 'src/button.mjs', 'src/supplemental/command-palette.mjs'],
+    pages: { '/bento-input-controls.html': html },
+    modules: { '/bento-input-controls-entry.mjs': entry },
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const newPage = async () => {
       const page = await browser.newPage();
       page.setDefaultTimeout(10_000);
       const errors = [];
       page.on('pageerror', (error) => errors.push(error.message));
       page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-      await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/bento-input-controls.html`, { waitUntil: 'networkidle' });
+      await page.goto(`${url}/bento-input-controls.html`, { waitUntil: 'networkidle' });
       await page.waitForFunction(() => document.documentElement.dataset.ready === 'true', null, { timeout: 10_000 }).catch((error) => {
         throw new Error(`${error.message}\n${errors.join('\n')}`);
       });
@@ -421,7 +395,6 @@ hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFi
     });
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

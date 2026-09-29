@@ -1,35 +1,10 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { Dialog } from '../../src/overlays.mjs';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
-
-const repositoryRoot = resolve(import.meta.dirname, '../../../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function dialogDocument() {
   const body = renderToString(React.createElement('div', { id: 'root' },
@@ -43,34 +18,7 @@ function dialogDocument() {
       }, React.createElement('p', null, 'Dialog body')),
     ),
   ));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/packages/react/generated/styles.css"></head><body style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)">${body}<script type="module" src="/packages/react/test/fixtures/dialog-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'dialog-motion-fixture',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/dialog-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(dialogDocument());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">', bodyAttributes: 'style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body, entry: '/packages/react/test/fixtures/dialog-motion-browser-entry.mjs' });
 }
 
 async function waitForHydration(page) {
@@ -163,10 +111,10 @@ async function waitForPanelExit(page) {
 }
 
 test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, focus, and reduced cleanup', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ root: 'repository', pages: { '/dialog-motion.html': dialogDocument } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 }, reducedMotion: 'no-preference' });
     page.setDefaultTimeout(10_000);
     const errors = [];
@@ -212,6 +160,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.locator('.muxui-dialog').waitFor();
     await settleEntry(page);
     await page.locator('.muxui-dialog-close').click();
+    // Negative check: a rejected close must not start an exit, which has no event to await.
     await page.waitForTimeout(35);
     assert.equal(await page.locator('.muxui-dialog').count(), 1, 'a rejected controlled close leaves the dialog open');
     assert.equal(await page.locator('.muxui-dialog-backdrop').getAttribute('data-exiting'), null, 'a rejected close does not enter exit state');
@@ -232,6 +181,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.evaluate(() => window.__muxuiDialogSetOpen(true));
     await page.locator('.muxui-dialog').waitFor();
     await waitForPanelEntry(page);
+    // Let the entry progress mid-flight before reducing it.
     await page.waitForTimeout(50);
     await page.locator('#dialog-scope').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
     await page.waitForFunction(() => {
@@ -267,6 +217,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.screenshot({ path: '/tmp/muxui-dialog-motion-full-dark.png' });
     await page.evaluate(() => window.__muxuiDialogSetOpen(false));
     await waitForPanelExit(page);
+    // Let the exit progress mid-flight before reducing it.
     await page.waitForTimeout(40);
     const slowedExitReductionStarted = Date.now();
     await page.locator('#dialog-scope').evaluate((node) => node.setAttribute('data-muxui-motion', 'reduced'));
@@ -331,6 +282,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
     await openTriggered(page);
     await waitForPanelEntry(page);
+    // Let the entry progress mid-flight before unmounting it.
     await page.waitForTimeout(40);
     const capturedStyle = await page.evaluate(() => {
       window.__muxuiDialogCaptured = document.querySelector('.muxui-dialog');
@@ -339,6 +291,7 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     await page.evaluate(() => window.__muxuiDialogUnmount());
     await page.locator('.muxui-dialog').waitFor({ state: 'detached' });
     const detachedStyle = await page.evaluate(() => window.__muxuiDialogCaptured?.style.cssText);
+    // Negative check: give any stray Motion write after unmount time to land.
     await page.waitForTimeout(240);
     const laterDetachedStyle = await page.evaluate(() => window.__muxuiDialogCaptured?.style.cssText);
     assert.equal(typeof capturedStyle, 'string', 'active panel captured before unmount');
@@ -347,6 +300,6 @@ test('Dialog motion owns panel pixels while RAC retains lifecycle, dismissal, fo
     assert.deepEqual(errors, [], errors.join(' | '));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

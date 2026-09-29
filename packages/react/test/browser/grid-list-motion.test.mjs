@@ -1,57 +1,15 @@
 import assert from 'node:assert/strict';
-import { access, mkdtemp, rm } from 'node:fs/promises';
-import { join, resolve } from 'node:path';
-import { tmpdir } from 'node:os';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { GridListMotionFixture } from '../fixtures/grid-list-motion-fixture.mjs';
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const packageRoot = resolve(repositoryRoot, 'packages/react');
-
-async function chromePath() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
-async function startServer() {
+function documentHtml() {
   const markup = renderToString(React.createElement(GridListMotionFixture));
   assert.doesNotMatch(markup, /data-muxui-grid-list-motion-ready|data-muxui-grid-list-hover/u);
-  const html = `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>:root { --muxui-semantic-motion-state-transition-duration: 320ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 320ms; }</style></head><body style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"><div id="root">${markup}</div><script type="module" src="/test/fixtures/grid-list-motion-browser-entry.mjs"></script></body></html>`;
-  const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-grid-list-motion-vite-'));
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    cacheDir,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['test/fixtures/grid-list-motion-browser-entry.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion/react'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'grid-list-motion-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url === '/grid-list-motion.html') {
-          response.setHeader('content-type', 'text/html');
-          response.end(html);
-          return;
-        }
-        next();
-      });
-    } }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, cacheDir, url: `http://127.0.0.1:${address.port}/grid-list-motion.html` };
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/styles/collections.css"><style>:root { --muxui-semantic-motion-state-transition-duration: 320ms; --muxui-semantic-motion-state-transition-spring-visual-duration: 320ms; }</style>', bodyAttributes: 'style="margin:32px;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body: `<div id="root">${markup}</div>`, entry: '/test/fixtures/grid-list-motion-browser-entry.mjs' });
 }
 
 async function rowRect(page, label) {
@@ -91,15 +49,15 @@ async function waitForLayerAlignment(page, selector, label) {
 }
 
 test('GridList hover overlay travels between rows and falls back for motion preferences', { timeout: 90_000 }, async () => {
-  const { server, cacheDir, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['test/fixtures/grid-list-motion-browser-entry.mjs'], pages: { '/grid-list-motion.html': documentHtml() } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 900, height: 640 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/grid-list-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.gridListMotionHydrated === 'true');
     assert.deepEqual(errors, []);
 
@@ -128,6 +86,7 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     await page.mouse.move(800, 580);
     await page.waitForFunction((selector) => Number(getComputedStyle(document.querySelector(selector)).opacity) < 0.01, `${primary} .muxui-grid-list-hover`);
     await moveToRow(page, 'Selected');
+    // Negative check: give a wrongly shown hover layer time to fade in.
     await page.waitForTimeout(150);
     const selected = await page.getByRole('row', { name: 'Selected', exact: true }).evaluate((row) => ({
       selected: row.getAttribute('aria-selected'),
@@ -138,6 +97,7 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     assert.ok((await layerRect(page, primary)).opacity < 0.01);
 
     await moveToRow(page, 'Disabled');
+    // Negative check: give a wrongly shown hover layer time to fade in.
     await page.waitForTimeout(150);
     assert.equal(await page.getByRole('row', { name: 'Disabled', exact: true }).getAttribute('aria-disabled'), 'true');
     assert.ok((await layerRect(page, primary)).opacity < 0.01);
@@ -344,7 +304,6 @@ test('GridList hover overlay travels between rows and falls back for motion pref
     assert.deepEqual(errors, []);
   } finally {
     await browser?.close();
-    await server.close();
-    await rm(cacheDir, { recursive: true, force: true });
+    await close();
   }
 });

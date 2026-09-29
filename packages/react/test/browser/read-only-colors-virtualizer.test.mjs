@@ -1,34 +1,9 @@
 import assert from 'node:assert/strict';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import test from 'node:test';
-import { fileURLToPath } from 'node:url';
 import { ColorArea, ColorSlider, ColorSwatch, ColorWheel, Virtualizer } from '../../src/collections.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function findChrome() {
-  const { access } = await import('node:fs/promises');
-  for (const candidate of chromeCandidates) {
-    try {
-      await access(candidate);
-      return candidate;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function Fixture() {
   return React.createElement('div', { id: 'proof-fixture' },
@@ -66,48 +41,25 @@ function Fixture() {
 
 function fixtureDocument() {
   const body = renderToStaticMarkup(React.createElement('div', { id: 'root' }, React.createElement(Fixture)));
-  return `<!doctype html><html><head><meta charset="utf-8"><link rel="icon" href="data:,colors-virtualizer"><style>
+  return pageShell({ head: `<style>
     body { margin: 0; }
     .muxui-color-area { width: 220px; height: 160px; }
     .muxui-color-slider { width: 220px; }
     .muxui-color-slider-track { height: 24px; }
     .muxui-color-wheel { width: 96px; height: 96px; }
-  </style></head><body>${body}<script type="module" src="/packages/react/test/fixtures/read-only-colors-virtualizer-browser-entry.mjs"></script></body></html>`;
+  </style>`, body, entry: '/packages/react/test/fixtures/read-only-colors-virtualizer-browser-entry.mjs' });
 }
 
 test('real browser proves read-only color controls, disabled swatch semantics, and fixed overscan', { timeout: 90_000 }, async () => {
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: { include: ['react', 'react-dom', 'react-dom/client'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'read-only-colors-virtualizer-fixture-document',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/read-only-colors-virtualizer.html') {
-            response.statusCode = 200;
-            response.setHeader('content-type', 'text/html');
-            response.end(fixtureDocument());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
+  const { url, close } = await startServer({ root: 'repository', pages: { '/read-only-colors-virtualizer.html': fixtureDocument } });
   let browser;
   try {
-    await server.listen();
-    const address = server.httpServer.address();
-    assert.equal(typeof address, 'object');
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 800, height: 700 } });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${address.port}/read-only-colors-virtualizer.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/read-only-colors-virtualizer.html`, { waitUntil: 'networkidle' });
     await page.locator('.muxui-color-area').waitFor();
     assert.deepEqual(errors, [], errors.join('\n'));
 
@@ -159,6 +111,6 @@ test('real browser proves read-only color controls, disabled swatch semantics, a
     assert.deepEqual(scrolledLayout.items, ['Item 8', 'Item 9', 'Item 10', 'Item 11', 'Item 12', 'Item 13', 'Item 14']);
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

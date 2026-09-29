@@ -1,23 +1,9 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
-import { createServer } from 'vite';
 import { SwitchMotionFixture } from '../fixtures/switch-motion-fixture.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
-
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function indicatorState(page, selector = '#primary-switch') {
   return page.locator(`${selector} .muxui-switch-indicator`).evaluate((node) => {
@@ -59,33 +45,16 @@ async function waitForSettled(page, expectedSelected, selector = '#primary-switc
 }
 
 test('Switch motion preserves native states, press feedback, RTL travel, and reduced motion', { timeout: 90_000 }, async () => {
-  const html = `<!doctype html><html data-muxui-motion="full" data-muxui-color-scheme="light"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/packages/react/generated/styles.css"></head><body><div id="root">${renderToString(React.createElement(SwitchMotionFixture))}</div><script type="module" src="/packages/react/test/fixtures/switch-motion-browser-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: {
-      entries: ['packages/react/test/fixtures/switch-motion-browser-entry.mjs'],
-      include: ['react', 'react-dom/client', 'react-aria-components'],
-    },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'switch-motion-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/switch-motion.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(html);
-      });
-    } }],
-  });
+  const html = pageShell({ attributes: 'data-muxui-motion="full" data-muxui-color-scheme="light"', head: '<link rel="stylesheet" href="/packages/react/generated/styles.css">', body: `<div id="root">${renderToString(React.createElement(SwitchMotionFixture))}</div>`, entry: '/packages/react/test/fixtures/switch-motion-browser-entry.mjs' });
+  const { url, close } = await startServer({ root: 'repository', entries: ['packages/react/test/fixtures/switch-motion-browser-entry.mjs'], pages: { '/switch-motion.html': html } });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 720, height: 600 }, reducedMotion: 'no-preference' });
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/switch-motion.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/switch-motion.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.switchMotionReady === 'true');
 
     assert.equal(errors.length, 0, errors.join('\n'));
@@ -250,6 +219,6 @@ test('Switch motion preserves native states, press feedback, RTL travel, and red
     assert.equal(errors.length, 0, errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

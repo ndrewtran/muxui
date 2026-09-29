@@ -1,14 +1,9 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { createServer } from 'vite';
-import { chromium } from 'playwright-core';
 import { ImageAvatarConsumerFixture } from '../fixtures/image-avatar-consumer-fixture.mjs';
-
-const repositoryRoot = fileURLToPath(new URL('../../../..', import.meta.url));
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function contrastRatio(first, second) {
   const parse = (value) => {
@@ -25,43 +20,21 @@ function contrastRatio(first, second) {
   return (Math.max(firstLuminance, secondLuminance) + 0.05) / (Math.min(firstLuminance, secondLuminance) + 0.05);
 }
 
-async function findChrome() {
-  for (const path of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN,
-    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium',
-    '/usr/bin/google-chrome', '/usr/bin/chromium'].filter(Boolean)) {
-    try { await access(path); return path; } catch { /* Try the next installed browser. */ }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
-
 test('Image and Avatar load, recover, preserve native callbacks, and hydrate in light/dark themes', { timeout: 90_000 }, async () => {
-  const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><div id="root">${renderToString(React.createElement(ImageAvatarConsumerFixture))}</div><script type="module" src="/packages/react/test/fixtures/image-avatar-browser-entry.mjs"></script></body></html>`;
-  const server = await createServer({
-    configFile: false,
-    root: repositoryRoot,
-    logLevel: 'error',
-    optimizeDeps: {
-      entries: ['packages/react/test/fixtures/image-avatar-browser-entry.mjs'],
-      include: ['react', 'react-dom/client', 'react-aria-components'],
+  const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(ImageAvatarConsumerFixture))}</div>`, entry: '/packages/react/test/fixtures/image-avatar-browser-entry.mjs' });
+  const { url, close } = await startServer({
+    root: 'repository',
+    entries: ['packages/react/test/fixtures/image-avatar-browser-entry.mjs'],
+    pages: { '/image-avatar.html': html },
+    middleware(request, response, next) {
+      if (!request.url?.startsWith('/missing-')) return next();
+      response.statusCode = 404;
+      response.end();
     },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{ name: 'image-avatar-fixture', configureServer(vite) {
-      vite.middlewares.use((request, response, next) => {
-        if (!request.url?.startsWith('/missing-')) return next();
-        response.statusCode = 404;
-        response.end();
-      });
-      vite.middlewares.use((request, response, next) => {
-        if (request.url !== '/image-avatar.html') return next();
-        response.setHeader('content-type', 'text/html');
-        response.end(html);
-      });
-    } }],
   });
   let browser;
   try {
-    await server.listen();
-    browser = await chromium.launch({ executablePath: await findChrome(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage();
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
@@ -70,7 +43,7 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
       if (message.text().includes('Failed to load resource: the server responded with a status of 404')) return;
       errors.push(message.text());
     });
-    await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/image-avatar.html`, { waitUntil: 'networkidle' });
+    await page.goto(`${url}/image-avatar.html`, { waitUntil: 'networkidle' });
     await page.waitForFunction(() => document.documentElement.dataset.imageAvatarReady === 'true');
 
     const image = page.locator('#image-case .muxui-image').first();
@@ -121,6 +94,6 @@ test('Image and Avatar load, recover, preserve native callbacks, and hydrate in 
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });

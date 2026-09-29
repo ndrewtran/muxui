@@ -1,69 +1,14 @@
 import assert from 'node:assert/strict';
-import { access } from 'node:fs/promises';
-import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
-import { chromium } from 'playwright-core';
 import test from 'node:test';
-import { createServer } from 'vite';
 import { recordFrames } from '../fixtures/frame-recorder.mjs';
 import { LightboxMotionFixture } from '../fixtures/lightbox-motion-fixture.mjs';
-
-const packageRoot = resolve(import.meta.dirname, '../..');
-const repositoryRoot = resolve(packageRoot, '../..');
-const chromeCandidates = [
-  process.env.MUXUI_CHROME_EXECUTABLE,
-  process.env.CHROME_BIN,
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-  '/Applications/Chromium.app/Contents/MacOS/Chromium',
-  '/usr/bin/google-chrome',
-  '/usr/bin/chromium',
-].filter(Boolean);
-
-async function chromePath() {
-  for (const path of chromeCandidates) {
-    try {
-      await access(path);
-      return path;
-    } catch {
-      // Try the next installed browser.
-    }
-  }
-  throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
-}
+import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 function documentHtml() {
   const body = renderToString(React.createElement('div', { id: 'root' }, React.createElement(LightboxMotionFixture)));
-  return `<!doctype html><html data-muxui-color-scheme="light" data-muxui-motion="full"><head><meta charset="utf-8"><link rel="icon" href="data:,"><link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/supplemental/lightbox.css"></head><body style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)">${body}<script type="module" src="/test/fixtures/lightbox-motion-browser-entry.mjs"></script></body></html>`;
-}
-
-async function startServer() {
-  const server = await createServer({
-    configFile: false,
-    root: packageRoot,
-    logLevel: 'error',
-    resolve: { dedupe: ['react', 'react-dom'] },
-    optimizeDeps: { entries: ['src/supplemental/lightbox.mjs'], include: ['react', 'react-dom/client', 'react-aria-components', 'motion'] },
-    server: { host: '127.0.0.1', port: 0, fs: { allow: [repositoryRoot] } },
-    plugins: [{
-      name: 'lightbox-motion-fixture',
-      configureServer(vite) {
-        vite.middlewares.use((request, response, next) => {
-          if (request.url === '/lightbox-motion.html') {
-            response.setHeader('content-type', 'text/html');
-            response.end(documentHtml());
-            return;
-          }
-          next();
-        });
-      },
-    }],
-  });
-  await server.listen();
-  const address = server.httpServer.address();
-  assert.equal(typeof address, 'object');
-  assert.ok(address?.port);
-  return { server, url: `http://127.0.0.1:${address.port}` };
+  return pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/src/supplemental/lightbox.css">', bodyAttributes: 'style="margin:0;background:var(--muxui-semantic-surface-canvas);color:var(--muxui-semantic-content-strong)"', body, entry: '/test/fixtures/lightbox-motion-browser-entry.mjs' });
 }
 
 async function waitForHydration(page) {
@@ -117,10 +62,10 @@ async function waitForCrossfade(page) {
 }
 
 test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safely, and settles reduced scopes', { timeout: 120_000 }, async () => {
-  const { server, url } = await startServer();
+  const { url, close } = await startServer({ entries: ['src/supplemental/lightbox.mjs'], pages: { '/lightbox-motion.html': documentHtml } });
   let browser;
   try {
-    browser = await chromium.launch({ executablePath: await chromePath(), headless: true });
+    browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1200, height: 800 }, reducedMotion: 'no-preference' });
     page.setDefaultTimeout(10_000);
     const errors = [];
@@ -334,6 +279,7 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     await page.locator('#lightbox-unmounted').waitFor({ state: 'attached' });
     await popup.waitFor({ state: 'detached' });
     const detachedStyle = await page.evaluate(() => window.__muxuiLightboxCaptured?.style.cssText);
+    // Negative check: give any stray Motion write after unmount time to land.
     await page.waitForTimeout(250);
     const laterDetachedStyle = await page.evaluate(() => window.__muxuiLightboxCaptured?.style.cssText);
     assert.equal(typeof capturedStyle, 'string', 'active shell captured before unmount');
@@ -342,6 +288,6 @@ test('Lightbox motion retains RAC lifecycle, crossfades images, interrupts safel
     assert.deepEqual(errors, [], errors.join(' | '));
   } finally {
     await browser?.close();
-    await server.close();
+    await close();
   }
 });
