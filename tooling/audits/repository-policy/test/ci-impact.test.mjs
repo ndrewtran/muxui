@@ -368,10 +368,15 @@ test('token changes request compiler and theme contrast proof without behavior o
 });
 
 test('Scale, Starlight docs, and CI policy edits stay in their independent owner scopes', async () => {
-  const scale = await plan(['apps/scale/src/App.jsx']);
+  const scale = await plan(['apps/scale/test/browser/theme-builder.test.mjs']);
   assert.equal(scale.scale, true);
   assert.equal(scale.docs || scale.catalog || scale.tokens || scale.reactTheme || scale.storyTooling, false);
   assert.deepEqual(scale.storyRuns, []);
+
+  // Docs embeds Scale's App by path, so Scale source also selects the docs owner.
+  const scaleSource = await plan(['apps/scale/src/App.jsx']);
+  assert.equal(scaleSource.scale && scaleSource.docs, true);
+  assert.equal(scaleSource.catalog || scaleSource.tokens || scaleSource.reactTheme || scaleSource.storyTooling, false);
 
   const docs = await plan(['apps/docs/src/content/docs/foundations/index.mdx']);
   assert.equal(docs.docs, true);
@@ -400,6 +405,38 @@ test('root and directory guidance docs without another owner take the policy rou
     assert.equal(result.full || result.catalog || result.docs || result.storyTooling, false, path);
     assert.deepEqual(result.storyRuns, [], path);
   }
+});
+
+test('policy-run fixture tests and retained evidence route to the repository-policy check', async () => {
+  const paths = [
+    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/consumers/button-web.consumer.mjs',
+    'tests/evidence/README.md', 'tests/evidence/g0.4/index.json',
+  ];
+  for (const path of paths) {
+    const result = await plan([path]);
+    assert.equal(result.policy, true, path);
+    assert.equal(result.full || result.docs || result.scale || result.catalog || result.storyTooling, false, path);
+    assert.deepEqual(executionCommands(result, { packages }).slice(1).map(({ args }) => args), [
+      ['--filter', '@muxui/repository-policy', 'run', 'check'],
+    ], path);
+  }
+});
+
+test('Scale and docs changes run the Scale docs browser test as one ordinary check', async () => {
+  // The script builds the docs itself, so a build failure fails only this check.
+  const { scripts } = JSON.parse(readFileSync(resolve(repositoryRoot, 'apps/scale/package.json'), 'utf8'));
+  assert.match(scripts['check:browser:docs'], /^pnpm --filter @muxui\/docs build && /u);
+  for (const path of ['apps/scale/src/App.jsx', 'apps/scale/test/browser/docs-theme.test.mjs', 'apps/docs/src/pages/scale.astro']) {
+    const groups = executionGroups(await plan([path]), { packages, environment: {}, pageIndex });
+    const browser = groups.find(({ id }) => id === 'browser');
+    assert.ok(browser, path);
+    const command = browser.commands.find(({ args }) => args.includes('check:browser:docs'));
+    assert.deepEqual(command?.args, ['--filter', '@muxui/scale', 'run', 'check:browser:docs'], path);
+    assert.notEqual(command.prerequisite, true, path);
+    assert.ok(!browser.commands.some(({ args }) => args.includes('build')), path);
+  }
+  const policy = executionGroups(await plan(['.github/workflows/ci.yml']), { packages, environment: {}, pageIndex });
+  assert.ok(!policy.some(({ id }) => id === 'browser'));
 });
 
 test('root package scripts remain policy-scoped while workspace toolchain inputs require full proof', async () => {
@@ -670,7 +707,10 @@ test('clean owner checks schedule only their generation dependencies before chec
 
   const docs = await plan(['apps/docs/src/content/docs/foundations/index.mdx']);
   const docsCommands = executionCommands(docs, { packages });
-  assert.deepEqual(docsCommands.map(({ args }) => args), [['--filter', '@muxui/docs', 'run', 'check']]);
+  assert.deepEqual(docsCommands.map(({ args }) => args), [
+    ['--filter', '@muxui/docs', 'run', 'check'],
+    ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
+  ]);
 });
 
 test('React package metadata expands only for runtime package boundary changes', async () => {
@@ -956,7 +996,10 @@ test('the full plan splits check:all into independently runnable groups', () => 
   ));
   assert.deepEqual(byId.checks.slice(1), ['generate:check']);
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
-  assert.deepEqual(byId.browser, ['--filter @muxui/scale run check:browser', '--filter @muxui/react run check:browser']);
+  assert.deepEqual(byId.browser, [
+    '--filter @muxui/scale run check:browser', '--filter @muxui/react run check:browser',
+    '--filter @muxui/scale run check:browser:docs',
+  ]);
   assert.ok(byId['storybook-a11y'][0].endsWith('test/storybook-a11y.test.mjs'));
   assert.ok(!byId.storybook.at(-1).includes('storybook-a11y'));
   assert.ok(byId.storybook.at(-1).includes('test/storybook-colors.test.mjs'));

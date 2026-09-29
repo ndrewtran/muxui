@@ -26,8 +26,11 @@ families. A changed authored example or Storybook story export selects only its
 canonical page ID. Theme/token changes run their compiler and projection checks
 with theme color and contrast proofs, without component keyboard suites.
 Documentation-only changes run the documentation owner; Scale-only changes
-run the theme-authoring checks; repository-policy and workflow changes run the
-policy checks. Mixed changes combine and deduplicate those scopes.
+run the theme-authoring checks, and Scale source also runs the documentation
+owner that embeds it. Either route runs the Scale docs browser test, which
+builds the docs site first. Repository-policy, workflow, policy-run fixture, and
+retained evidence changes run the policy checks. Mixed changes combine and
+deduplicate those scopes.
 
 The PR planner prepares ignored React or Storybook metadata only when those
 owners are needed to resolve canonical families or page IDs. A full workspace

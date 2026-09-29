@@ -191,6 +191,7 @@ test('repository policy routes navigation and CI paths to the policy check with 
   const policyPaths = [
     'README.md', 'LICENSE', '.gitignore', 'docs/agents/domain.md', 'apps/AGENTS.md',
     'AGENTS.md', '.github/workflows/ci.yml', '.agents/skills/example/SKILL.md', '.claude/skills',
+    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/entry-contract.test.mjs', 'tests/evidence/g0.4/index.json',
   ];
   for (const path of policyPaths) {
     const plan = planWithoutInheritedStorybookSelection({
@@ -207,4 +208,20 @@ test('repository policy routes navigation and CI paths to the policy check with 
   for (const path of ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.node-version']) {
     assert.equal(changedPackageSelection({ changedPaths: [path], packages: realPackages, policy: realPolicy }).mode, 'full', path);
   }
+});
+
+test('Scale source also selects docs, which embeds it by path without a workspace dependency', async () => {
+  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+  const [realPolicy, realPackages] = await Promise.all([
+    loadPolicy(repositoryRoot),
+    discoverWorkspacePackages(repositoryRoot),
+  ]);
+  const selected = (path) => planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--files', path]),
+    packages: realPackages,
+    policy: realPolicy,
+  }).checkPackages.map(({ name }) => name).sort();
+  assert.deepEqual(selected('apps/scale/src/App.jsx'), ['@muxui/docs', '@muxui/scale']);
+  assert.deepEqual(selected('apps/scale/test/browser/docs-theme.test.mjs'), ['@muxui/scale']);
+  assert.deepEqual(selected('apps/docs/src/pages/scale.astro'), ['@muxui/docs']);
 });

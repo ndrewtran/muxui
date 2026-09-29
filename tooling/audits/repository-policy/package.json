@@ -14,7 +14,7 @@
     "css-tree": "3.2.1"
   },
   "scripts": {
-    "check": "node src/cli.mjs && node --test test/evidence-integrity.test.mjs test/react-aria-stage1-source.test.mjs test/release-prepare.test.mjs test/repository-policy.test.mjs test/scoped-verification.test.mjs test/component-test-selection.test.mjs test/component-source-impact.test.mjs test/ci-impact.test.mjs test/storybook-generator-impact.test.mjs test/task-graph.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs",
+    "check": "node src/cli.mjs && node src/evidence-verify.mjs && node --test test/evidence-integrity.test.mjs test/react-aria-stage1-source.test.mjs test/release-prepare.test.mjs test/repository-policy.test.mjs test/scoped-verification.test.mjs test/component-test-selection.test.mjs test/component-source-impact.test.mjs test/ci-impact.test.mjs test/storybook-generator-impact.test.mjs test/task-graph.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs ../../../tests/fixtures/g0.4/fixture-corpus.test.mjs ../../../tests/fixtures/g1.0/entry-contract.test.mjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
   }

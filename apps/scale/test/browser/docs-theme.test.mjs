@@ -35,6 +35,21 @@ async function waitForScale(page) {
   await page.evaluate(() => document.fonts.ready);
 }
 
+// Docs examples hydrate lazily inside Suspense after their Astro island loads,
+// so a visible trigger can still be inert server markup. Wait until React has
+// hydrated the node and the page is idle before interacting with it.
+async function waitForHydrated(locator) {
+  await locator.waitFor();
+  await locator.evaluate((node) => new Promise((resolveReady) => {
+    const check = () => {
+      if (Object.keys(node).some((key) => key.startsWith('__reactProps$'))) requestIdleCallback(() => resolveReady());
+      else requestAnimationFrame(check);
+    };
+    check();
+  }));
+  return locator;
+}
+
 async function screenshot(page, name) {
   const directory = process.env.MUXUI_DOCS_SCREENSHOT_DIR;
   if (!directory) return;
@@ -148,7 +163,12 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await page.goto(`${url}/scale/`);
     await waitForScale(page);
     assert.equal(await page.locator('h1').count(), 1, 'embedded editor does not add a second page h1');
-    assert.equal(await page.locator('.right-sidebar-container').evaluate((node) => getComputedStyle(node).display), 'none');
+    // The Scale page moves its native table of contents into the right sidebar after the playground hydrates.
+    assert.notEqual(await page.locator('.right-sidebar-container').evaluate((node) => getComputedStyle(node).display), 'none');
+    assert.equal(await page.locator('[data-scale-toc-template]').count(), 0);
+    const tocTargets = await page.locator('.right-sidebar-container starlight-toc a[href^="#"]:not([href="#_top"])').evaluateAll((links) => links.map((link) => link.getAttribute('href').slice(1)));
+    assert.deepEqual(tocTargets, ['theme-playground-title', 'standard-themes-title', 'mono-themes-title', 'css-tokens-title', 'component-preview-title']);
+    for (const id of tocTargets) assert.equal(await page.locator(`[id="${id}"]`).count(), 1, `Scale TOC target #${id} resolves once`);
     assert.equal(await page.getByRole('button', { name: 'Save', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Load', exact: true }).count(), 0);
     const defaultBrand = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--muxui-reference-color-brand-60').trim());
@@ -189,8 +209,7 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await page.waitForFunction(() => document.querySelector('.scale-app')?.dataset.muxuiMotion === 'reduced' && document.querySelector('.scale-app')?.dataset.muxuiDensity === 'compact');
     const portalPage = await context.newPage();
     await portalPage.goto(`${url}/components/select/`);
-    await portalPage.locator('.muxui-select-trigger').first().waitFor();
-    await portalPage.locator('.muxui-select-trigger').first().click();
+    await (await waitForHydrated(portalPage.locator('.muxui-select-trigger').first())).click();
     await portalPage.locator('.muxui-select-popover').waitFor();
     const portal = portalPage.locator('.muxui-select-popover');
     assert.notEqual(await portal.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
@@ -224,8 +243,7 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await portalPage.setViewportSize({ width: 1280, height: 900 });
     await portalPage.goto(`${url}/components/dialog/`);
     const dialogTrigger = portalPage.locator('.muxui-dialog-trigger').first();
-    await dialogTrigger.waitFor();
-    await dialogTrigger.click();
+    await (await waitForHydrated(dialogTrigger)).click();
     const dialog = portalPage.locator('.muxui-dialog');
     await dialog.waitFor();
     const desktopDialog = await dialog.evaluate((node) => {
@@ -351,8 +369,7 @@ test('docs Scale applies one validated theme across shell, islands and portals',
 
     const importedPortalPage = await context.newPage();
     await importedPortalPage.goto(`${url}/components/select/`);
-    await importedPortalPage.locator('.muxui-select-trigger').first().waitFor();
-    await importedPortalPage.locator('.muxui-select-trigger').first().click();
+    await (await waitForHydrated(importedPortalPage.locator('.muxui-select-trigger').first())).click();
     await importedPortalPage.locator('.muxui-select-popover').waitFor();
     const importedPortal = importedPortalPage.locator('.muxui-select-popover');
     assert.equal(await importedPortal.evaluate((node) => getComputedStyle(node).borderTopLeftRadius), await resolveToken(importedPortalPage, 'border-radius', '--muxui-semantic-control-radius'));

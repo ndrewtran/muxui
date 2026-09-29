@@ -177,14 +177,19 @@ function matchesPath(path, patterns) {
     : path === pattern);
 }
 
-function ownerPackagesForPath(path, packages, policy) {
-  const direct = packageForPath(packages, path);
-  if (direct) return [direct.name];
-  const owners = policy.affectedPathOwners ?? {};
-  return Object.entries(owners)
+function policyPackagesForPath(path, packages, mapping = {}) {
+  return Object.entries(mapping)
     .filter(([prefix]) => path === prefix || path.startsWith(prefix))
     .flatMap(([, names]) => names)
     .filter((name) => packages.some((item) => item.name === name));
+}
+
+// `affectedPathConsumers` adds packages that import another package's source
+// by path without a workspace dependency (docs embeds Scale's App).
+function ownerPackagesForPath(path, packages, policy) {
+  const direct = packageForPath(packages, path);
+  const owners = direct ? [direct.name] : policyPackagesForPath(path, packages, policy.affectedPathOwners);
+  return [...new Set([...owners, ...policyPackagesForPath(path, packages, policy.affectedPathConsumers)])];
 }
 
 const FULL_STORYBOOK_EVENTS = new Set(['schedule', 'workflow_dispatch', 'check:all', 'release']);
