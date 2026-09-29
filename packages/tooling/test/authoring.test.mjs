@@ -5,7 +5,7 @@ import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { createCatalogApi } from '@muxui/catalog';
 import { compileCatalog } from '@muxui/catalog/compiler';
-import { canonicalJson } from '@muxui/schema';
+import { canonicalJson, loadFieldOwnershipRegistry } from '@muxui/schema';
 import {
   AuthoringPolicyError,
   affectedClosure,
@@ -598,11 +598,11 @@ test('E-R1.5-02: every React family and example source passes canonical diagnosi
 
 test('E-G0.5-04: an injected stable field must couple scaffold, diff, diagnostics, and closure', async () => {
   const { context, component, revisionContext } = await setup();
-  const [componentSchema, bindingSchema, ownership] = await Promise.all([
+  const [componentSchema, bindingSchema] = await Promise.all([
     readFile(resolve(repositoryRoot, 'packages/schema/schemas/component.schema.json'), 'utf8'),
     readFile(resolve(repositoryRoot, 'packages/schema/schemas/binding.schema.json'), 'utf8'),
-    readFile(resolve(repositoryRoot, 'packages/schema/schemas/field-ownership.json'), 'utf8'),
   ]).then((documents) => documents.map((document) => JSON.parse(document)));
+  const ownership = structuredClone(loadFieldOwnershipRegistry());
   componentSchema.required.push('newStableField');
   componentSchema.properties.newStableField = {
     type: 'string',

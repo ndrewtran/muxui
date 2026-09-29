@@ -1,9 +1,9 @@
 import { canonicalDigest } from './canonical.mjs';
 import {
   loadFamilySchema,
-  loadJsonDocument,
   resolveSchemaReference,
 } from './contracts.mjs';
+import { loadFieldOwnershipRegistry } from './field-ownership.mjs';
 import { SchemaValidationError } from './validation.mjs';
 
 const AUTHORING_FAMILIES = Object.freeze(['binding', 'component']);
@@ -209,7 +209,7 @@ function declarationsFor(family, schemas) {
 export function validateAuthoringMetadata({ schemas, ownership } = {}) {
   const declarations = AUTHORING_FAMILIES
     .flatMap((family) => declarationsFor(family, schemas));
-  const registry = ownership ?? loadJsonDocument('field-ownership.json');
+  const registry = ownership ?? loadFieldOwnershipRegistry();
   const owners = new Map(registry.fields.map((field) => [
     `${field.schema}${field.schemaPointer}`,
     field,
@@ -283,7 +283,7 @@ function findProperty(node, fileName, pointer, segment, schemas, visited = new S
 }
 
 function ownerFor(fileName, schemaPointer, ownership) {
-  const field = (ownership ?? loadJsonDocument('field-ownership.json')).fields.find((entry) => (
+  const field = (ownership ?? loadFieldOwnershipRegistry()).fields.find((entry) => (
     entry.schema === fileName && entry.schemaPointer === schemaPointer
   ));
   if (!field) {

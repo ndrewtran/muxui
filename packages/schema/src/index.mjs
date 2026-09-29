@@ -42,6 +42,7 @@ export {
   parseJsonStrict,
   sha256Digest,
 } from './canonical.mjs';
+export { loadFieldOwnershipRegistry } from './field-ownership.mjs';
 export {
   classifySchemaChange,
   negotiateSchemaVersion,
