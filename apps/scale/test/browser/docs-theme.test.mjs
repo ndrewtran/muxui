@@ -148,7 +148,12 @@ test('docs Scale applies one validated theme across shell, islands and portals',
     await page.goto(`${url}/scale/`);
     await waitForScale(page);
     assert.equal(await page.locator('h1').count(), 1, 'embedded editor does not add a second page h1');
-    assert.equal(await page.locator('.right-sidebar-container').evaluate((node) => getComputedStyle(node).display), 'none');
+    // The Scale page moves its native table of contents into the right sidebar after the playground hydrates.
+    assert.notEqual(await page.locator('.right-sidebar-container').evaluate((node) => getComputedStyle(node).display), 'none');
+    assert.equal(await page.locator('[data-scale-toc-template]').count(), 0);
+    const tocTargets = await page.locator('.right-sidebar-container starlight-toc a[href^="#"]:not([href="#_top"])').evaluateAll((links) => links.map((link) => link.getAttribute('href').slice(1)));
+    assert.deepEqual(tocTargets, ['theme-playground-title', 'standard-themes-title', 'mono-themes-title', 'css-tokens-title', 'component-preview-title']);
+    for (const id of tocTargets) assert.equal(await page.locator(`[id="${id}"]`).count(), 1, `Scale TOC target #${id} resolves once`);
     assert.equal(await page.getByRole('button', { name: 'Save', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: 'Load', exact: true }).count(), 0);
     const defaultBrand = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--muxui-reference-color-brand-60').trim());
