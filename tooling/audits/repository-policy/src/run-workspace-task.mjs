@@ -118,7 +118,11 @@ if (packages.length === 0) {
   process.exit(0);
 }
 const policy = await loadPolicy(repositoryRoot);
-const rootManifest = await readFile(resolve(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse, () => null);
+// The root manifest names the workspace root that affected checks must exclude.
+const rootManifestPath = resolve(repositoryRoot, 'package.json');
+const rootManifest = await readFile(rootManifestPath, 'utf8').then(JSON.parse).catch((error) => {
+  throw new Error(`MUXUI_ROOT_MANIFEST_UNREADABLE: ${rootManifestPath} (${error.message})`);
+});
 const hasExplicitScope = options.components.length > 0 || options.packages.length > 0 || options.files.length > 0;
 const changedPaths = options.affected && !hasExplicitScope ? collectChangedPaths() : [];
 const familyRecords = options.components.length > 0 ? await loadReactFamilyRecords(repositoryRoot) : [];
@@ -167,7 +171,7 @@ if (plan.focusedComponent) {
   process.exit(failures[0]?.status ?? 0);
 }
 
-const args = checkArgs(plan, { task: options.task, workspaceRootName: rootManifest?.name });
+const args = checkArgs(plan, { task: options.task, workspaceRootName: rootManifest.name });
 console.log(`[workspace-task] check command: ${commandText('pnpm', args)}`);
 if (options.preview) {
   console.log('[workspace-task] preview complete; no commands executed');

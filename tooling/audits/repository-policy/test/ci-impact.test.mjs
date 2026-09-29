@@ -658,6 +658,12 @@ test('clean owner checks schedule only their generation dependencies before chec
   assert.deepEqual(policyCommands[1].args, ['--filter', '@muxui/repository-policy', 'run', 'check']);
   assert.ok(!policyCommands.some(({ args }) => args.includes('@muxui/react-storybook')));
 
+  // Local planning reads this prerequisite from policy; CI hard-codes it.
+  const { generationPrerequisites } = await loadPolicy(repositoryRoot);
+  for (const name of generationPrerequisites['@muxui/repository-policy']) {
+    assert.ok(policy.generationPackages.includes(name), `CI policy route generates ${name}`);
+  }
+
   const policyAfterStorybookBootstrap = executionCommands(policy, { packages, metadataPrepared: true });
   assert.ok(!policyAfterStorybookBootstrap[0].args.includes('@muxui/react'));
   assert.deepEqual(policyAfterStorybookBootstrap[1].args, ['--filter', '@muxui/repository-policy', 'run', 'check']);
