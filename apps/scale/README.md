@@ -49,10 +49,9 @@ from the draft; docs pages restore that theme through the shared prepaint
 controller. The embedded page does not expose the standalone development
 Save/Load endpoint. Use the standalone app when you need local catalog saves.
 
-After a docs build, run the embedded browser flow with:
+Run the embedded browser flow, which builds the docs site first, with:
 
 ```sh
-pnpm --filter @muxui/docs build
 pnpm --filter @muxui/scale check:browser:docs
 ```
 

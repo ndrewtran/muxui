@@ -755,16 +755,19 @@ export async function buildPullRequestImpact({
       plan.reasons.push(`${path} changes theme/token inputs; validate compiler, projections, and consumer contrast`);
       continue;
     }
-    if (matches(path, config.documentationPrefixes)) {
+    // Docs also embeds source it imports by path (Scale's App), so a path can
+    // select both the documentation and its owning application.
+    const documentationInput = matches(path, config.documentationPrefixes);
+    if (documentationInput) {
       plan.docs = true;
-      plan.reasons.push(`${path} is owned by the documentation application`);
-      continue;
+      plan.reasons.push(`${path} is owned by or embedded in the documentation application`);
     }
     if (path.startsWith('apps/scale/')) {
       plan.scale = true;
       plan.reasons.push(`${path} is owned by the theme authoring application`);
       continue;
     }
+    if (documentationInput) continue;
 
     if (matches(path, config.reactStylePrefixes)) plan.tailwind = true;
 
@@ -1154,6 +1157,12 @@ function storybookTestFiles() {
     .map((name) => `test/${name}`);
 }
 
+// Scale's `check:browser:docs` builds `apps/docs/dist` and then serves it, so a
+// failed docs build fails only this command, never later checks.
+function addScaleDocsBrowserCommand(add) {
+  add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
+}
+
 function fullPlannedCommands(environment) {
   const planned = [];
   const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
@@ -1178,6 +1187,7 @@ function fullPlannedCommands(environment) {
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
   add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser']);
   add('browser', ['--filter', '@muxui/react', 'run', 'check:browser']);
+  addScaleDocsBrowserCommand(add);
   add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
   add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   add('storybook', [...nodeTest, ...storybookTestFiles().filter((file) => file !== a11yFile)], {
@@ -1243,6 +1253,7 @@ function plannedCommands(plan, {
       unsetEnv: ['MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES'],
     });
   }
+  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add);
   for (const testFile of plan.reactTestFiles) {
     add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile]);
   }
