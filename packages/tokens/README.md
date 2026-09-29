@@ -8,7 +8,8 @@ pages explain migration rationale and are not a second token registry.
 ## Compile a theme
 
 The Node entry point exposes `compileTokenGraph`, `compileWebTheme`, and
-`compileNativeTheme`. The browser-safe `@muxui/tokens/core` entry point owns
+`compileNativeTheme`. A caller that needs both the graph and its web theme
+compiles the graph once and passes it to `webThemeFromGraph`. The browser-safe `@muxui/tokens/core` entry point owns
 the same graph resolver and CSS value formatting. Sources and overrides are
 validated before output; unsupported native recipes receive explicit
 diagnostics. Native transforms do not establish renderer support.

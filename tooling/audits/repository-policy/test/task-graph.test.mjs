@@ -182,7 +182,7 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
 
   assert.match(result.stdout, /\[workspace-task\] check: full graph/);
   assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
-    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', 'run', 'check'],
+    args: ['--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail', 'run', 'check'],
     event: 'check:all',
     force: '1',
   });
@@ -209,7 +209,7 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
 
   assert.match(affectedResult.stdout, /\[workspace-task\] check: full graph/);
   assert.deepEqual(await readFile(logPath, 'utf8').then(JSON.parse), {
-    args: ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', 'run', 'check'],
+    args: ['--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail', 'run', 'check'],
     event: 'check:all',
     force: '1',
   });
@@ -266,4 +266,62 @@ test('component checks route substrate and public names from the generated contr
     { args: ['--filter', '@muxui/react', 'run', 'check:component'], components: 'Button,Modal', stories: 'Button,Dialog' },
     { args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'], components: 'Button,Modal', stories: 'Button,Dialog' },
   ]);
+});
+
+test('generated checks tell package scripts their prerequisites are ready', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-task-prerequisites-'));
+  await mkdir(join(root, 'packages/app'), { recursive: true });
+  await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
+  await mkdir(join(root, 'bin'), { recursive: true });
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  await writeRootManifest(root);
+  await writeFile(join(root, 'tooling/audits/repository-policy/repository-policy.json'), '{}');
+  await writeFile(join(root, 'packages/app/package.json'), JSON.stringify({ name: '@fixture/app', version: '0.0.0', private: true }));
+  await writeFile(join(root, 'bin/pnpm'), [
+    '#!/usr/bin/env node',
+    "import { appendFileSync } from 'node:fs';",
+    "appendFileSync(process.env.MUXUI_TASK_LOG, JSON.stringify({ task: process.argv.at(-1), ready: process.env.MUXUI_PREREQUISITES_READY ?? null }) + '\\n');",
+    '',
+  ].join('\n'));
+  await chmod(join(root, 'bin/pnpm'), 0o755);
+
+  const logPath = join(root, 'runner-environment.jsonl');
+  for (const args of [['check', '--full', '--generate'], ['check', '--full']]) {
+    run(process.execPath, [affectedTaskRunner, ...args], {
+      cwd: root,
+      env: { ...process.env, PATH: `${join(root, 'bin')}:${process.env.PATH}`, MUXUI_TASK_LOG: logPath, MUXUI_TASK_REPOSITORY_ROOT: root, MUXUI_PREREQUISITES_READY: '1' },
+    });
+  }
+  assert.deepEqual((await readFile(logPath, 'utf8')).trim().split('\n').map((line) => JSON.parse(line)), [
+    { task: 'generate', ready: '1' },
+    { task: 'check', ready: '1' },
+    // An inherited flag is cleared when the runner did not generate.
+    { task: 'check', ready: null },
+  ]);
+});
+
+test('a failing isolated React check still runs the later check stage and exits non-zero', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-task-stages-'));
+  await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
+  await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  await writeRootManifest(root);
+  await writeFile(join(root, 'tooling/audits/repository-policy/repository-policy.json'), JSON.stringify({ globalTaskInputs: [] }));
+  await writeFile(join(root, 'touch.mjs'), "import { writeFileSync } from 'node:fs';\nwriteFileSync('ran', '');\n");
+  for (const [directory, name, check] of [['react', '@muxui/react', 'exit 1'], ['app', '@fixture/app', 'node ../../touch.mjs']]) {
+    await mkdir(join(root, `packages/${directory}`), { recursive: true });
+    await writeFile(
+      join(root, `packages/${directory}/package.json`),
+      JSON.stringify({ name, version: '0.0.0', private: true, scripts: { check } }),
+    );
+  }
+
+  const result = spawnSync(process.execPath, [affectedTaskRunner, 'check', '--full'], {
+    cwd: root,
+    encoding: 'utf8',
+    env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root },
+  });
+  assert.match(result.stdout, /check stage 1: pnpm .*--filter @muxui\/react run check/u);
+  assert.match(result.stdout, /check stage 2: pnpm .*--filter !@muxui\/react/u);
+  assert.notEqual(result.status, 0);
+  await readFile(join(root, 'packages/app/ran'), 'utf8');
 });

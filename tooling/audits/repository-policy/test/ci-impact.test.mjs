@@ -20,6 +20,7 @@ import {
   needsStorybookGeneration,
   normalizeCommand,
   parseCliArguments,
+  preparedCommandRunner,
   prepareStorybookMetadata,
   reactPackageWideChanges,
   rootPackageWideChanges,
@@ -41,6 +42,8 @@ import {
 } from '../src/ci-reuse.mjs';
 import { componentTestSelection } from '../src/component-test-selection.mjs';
 import { loadPolicy } from '../src/policy.mjs';
+import { dependencyClosure } from '../src/scoped-verification.mjs';
+import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const config = (await loadPolicy(repositoryRoot)).pullRequestImpact;
@@ -95,11 +98,11 @@ const pageIndex = [
 
 const packages = [
   { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: {}, scripts: { check: 'pnpm --filter @muxui/docs^... generate && check' } } },
+  { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
   { name: '@muxui/react', path: 'packages/react', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
   { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
   { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'pnpm --filter @muxui/react... generate && check' } } },
+  { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && check' } } },
   { name: '@muxui/schema', path: 'packages/schema', manifest: { dependencies: {}, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/tooling', path: 'packages/tooling', manifest: { dependencies: {}, scripts: { generate: 'generate' } } },
   { name: '@muxui/tokens', path: 'packages/tokens', manifest: { dependencies: { '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
@@ -705,12 +708,34 @@ test('clean owner checks schedule only their generation dependencies before chec
   assert.ok(!policyAfterStorybookBootstrap[0].args.includes('@muxui/react'));
   assert.deepEqual(policyAfterStorybookBootstrap[1].args, ['--filter', '@muxui/repository-policy', 'run', 'check']);
 
+  // Docs and Scale checks no longer generate their own prerequisites in CI:
+  // the shared generation covers the docs closure, including for Scale-only
+  // changes, whose docs browser test builds the docs site.
+  const docsGeneration = [
+    '--recursive', '--sort', '--workspace-concurrency=1', '--if-present',
+    '--filter', '@muxui/catalog', '--filter', '@muxui/react', '--filter', '@muxui/schema',
+    '--filter', '@muxui/tooling', '--filter', '@muxui/tokens', 'run', 'generate',
+  ];
   const docs = await plan(['apps/docs/src/content/docs/foundations/index.mdx']);
   const docsCommands = executionCommands(docs, { packages });
   assert.deepEqual(docsCommands.map(({ args }) => args), [
+    docsGeneration,
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
   ]);
+  const scale = await plan(['apps/scale/test/browser/theme-builder.test.mjs']);
+  assert.deepEqual(executionCommands(scale, { packages })[0].args, docsGeneration);
+});
+
+test('planned CI commands run with their prerequisites marked ready', () => {
+  const environments = [];
+  const spawn = (command, args, { env }) => {
+    environments.push(env);
+    return { status: 0 };
+  };
+  const runner = preparedCommandRunner({ PATH: 'bin' }, { spawn });
+  assert.equal(runner({ command: 'pnpm', args: ['--filter', '@muxui/docs', 'run', 'check'], env: { EXTRA: '1' } }), 0);
+  assert.deepEqual(environments, [{ PATH: 'bin', MUXUI_PREREQUISITES_READY: '1', EXTRA: '1' }]);
 });
 
 test('React package metadata expands only for runtime package boundary changes', async () => {
@@ -1395,4 +1420,63 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+// Planned commands run with MUXUI_PREREQUISITES_READY=1, so every prerequisite
+// a package script would prepare itself must be in the plan's shared generation.
+function scriptPrerequisites(workspacePackages, owner, scriptName, seen = new Set()) {
+  const key = `${owner.name} ${scriptName}`;
+  const script = owner.manifest.scripts?.[scriptName];
+  if (!script || seen.has(key)) return [];
+  seen.add(key);
+  const filters = [...script.matchAll(/prepare-prerequisites\.mjs (\S+)/gu)].map(([, filter]) => filter);
+  // Follow `pnpm <script>` and `pnpm --filter <package> <script>` calls.
+  const nested = [...script.matchAll(/(?:^|&& )pnpm (?:--filter (\S+) )?(?:run )?([a-z:]+)/gu)].flatMap(([, target, name]) => {
+    const next = target ? workspacePackages.find((item) => item.name === target) : owner;
+    return next ? scriptPrerequisites(workspacePackages, next, name, seen) : [];
+  });
+  return [...filters, ...nested];
+}
+
+function filterSelection(workspacePackages, filter) {
+  const match = filter.match(/^(@[^.^]+)(\^?)\.\.\.$/u);
+  assert.ok(match, `unsupported prerequisite filter ${filter}`);
+  return dependencyClosure(workspacePackages, [match[1]])
+    .filter(({ name }) => !match[2] || name !== match[1])
+    .filter(({ manifest }) => typeof manifest.scripts?.generate === 'string')
+    .map(({ name }) => name);
+}
+
+test('CI generation covers every prerequisite that planned package scripts would prepare', async () => {
+  const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+  const plans = {
+    docs: await plan(['apps/docs/src/content/docs/foundations/index.mdx'], { packages: workspacePackages }),
+    scale: await plan(['apps/scale/src/App.jsx'], { packages: workspacePackages }),
+    scaleOnly: await plan(['apps/scale/test/browser/theme-builder.test.mjs'], { packages: workspacePackages }),
+    storybook: await plan([sizingExamplePath], { packages: workspacePackages }),
+    playground: await plan(['apps/react-playground/src/main.jsx'], { packages: workspacePackages }),
+    full: fullWorkspacePlan(),
+  };
+  assert.ok(plans.playground.packageChecks.includes('@muxui/react-playground'));
+  assert.ok(plans.storybook.storyRuns.length > 0);
+  let checked = 0;
+  for (const [label, planned] of Object.entries(plans)) {
+    const commands = executionCommands(planned, { packages: workspacePackages, environment: {}, pageIndex });
+    const generation = commands.find(({ prerequisite, args }) => prerequisite && args.at(-1) === 'generate');
+    const generated = new Set(planned.full
+      ? workspacePackages.map(({ name }) => name)
+      : generation?.args.filter((_, index) => generation.args[index - 1] === '--filter') ?? []);
+    for (const { args } of commands) {
+      const runIndex = args.indexOf('run');
+      const owner = workspacePackages.find(({ name }) => name === args[args.indexOf('--filter') + 1]);
+      if (runIndex === -1 || !owner || args.includes('--recursive')) continue;
+      for (const filter of scriptPrerequisites(workspacePackages, owner, args[runIndex + 1])) {
+        checked += 1;
+        for (const name of filterSelection(workspacePackages, filter)) {
+          assert.ok(generated.has(name), `${label}: ${args.join(' ')} needs ${name} generated (${filter})`);
+        }
+      }
+    }
+  }
+  assert.ok(checked >= 5, `expected prerequisite-preparing scripts in the plans, found ${checked}`);
 });

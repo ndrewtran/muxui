@@ -487,7 +487,12 @@ function publicTokenEntries(graph) {
 }
 
 export function compileWebTheme(source, options = {}) {
-  const graph = compileTokenGraph(source, options);
+  return webThemeFromGraph(compileTokenGraph(source, options));
+}
+
+// Projects an already compiled graph, so a caller that also needs the graph
+// compiles it once: `webThemeFromGraph(compileTokenGraph(source, options))`.
+export function webThemeFromGraph(graph) {
   const declarations = publicTokenEntries(graph)
     .map((token) => cssDeclaration(token, graph.dependencies))
     .join('\n');

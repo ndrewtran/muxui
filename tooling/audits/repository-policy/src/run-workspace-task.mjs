@@ -1,10 +1,11 @@
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { loadPolicy, normalizePath } from './policy.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
+import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import {
-  checkArgs,
+  checkStages,
   generationArgs,
   loadReactFamilyRecords,
   parseTaskArguments,
@@ -67,6 +68,8 @@ function run(command, args, env) {
 
 function environmentFor(plan, options) {
   const environment = { ...process.env };
+  // Only this runner's own generation step may mark prerequisites ready.
+  delete environment[prerequisitesReadyVariable];
   const familyKeys = [
     'MUXUI_COMPONENT_FAMILIES',
     'MUXUI_STORYBOOK_FAMILIES',
@@ -146,6 +149,9 @@ if (shouldGenerate) {
   const args = generationArgs(plan);
   console.log(`[workspace-task] generate command: ${commandText('pnpm', args)}`);
   if (!options.preview) {
+    // The plan generates every prerequisite of its checks, so package scripts
+    // skip their standalone prerequisite generation (prepare-prerequisites.mjs).
+    environment[prerequisitesReadyVariable] = '1';
     const status = run('pnpm', args, environment);
     if (status !== 0) process.exit(status);
   }
@@ -171,10 +177,25 @@ if (plan.focusedComponent) {
   process.exit(failures[0]?.status ?? 0);
 }
 
-const args = checkArgs(plan, { task: options.task, workspaceRootName: rootManifest.name });
-console.log(`[workspace-task] check command: ${commandText('pnpm', args)}`);
+function runConcurrently(command, args, env) {
+  return new Promise((resolveStatus, reject) => {
+    const child = spawn(command, args, { cwd: repositoryRoot, stdio: 'inherit', env });
+    child.on('error', reject);
+    child.on('close', (status) => resolveStatus(status ?? 1));
+  });
+}
+
+const stages = checkStages(plan, { task: options.task, workspaceRootName: rootManifest.name });
+stages.forEach((commands, index) => {
+  for (const args of commands) console.log(`[workspace-task] check stage ${index + 1}: ${commandText('pnpm', args)}`);
+});
 if (options.preview) {
   console.log('[workspace-task] preview complete; no commands executed');
   process.exit(0);
 }
-process.exit(run('pnpm', args, environment));
+// Run every stage, even after a failure, then exit with the first failure.
+const statuses = [];
+for (const commands of stages) {
+  statuses.push(...await Promise.all(commands.map((args) => runConcurrently('pnpm', args, environment))));
+}
+process.exit(statuses.find((status) => status !== 0) ?? 0);

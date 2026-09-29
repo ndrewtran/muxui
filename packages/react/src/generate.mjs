@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { canonicalJson } from '@muxui/schema';
-import { compileTokenGraph, compileWebTheme } from '@muxui/tokens';
+import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts } from './r1-contracts.mjs';
@@ -290,8 +290,8 @@ function declarations(css) {
 }
 
 function themeBundle(options = {}) {
-  const theme = compileWebTheme(tokenSource, options);
   const graph = compileTokenGraph(tokenSource, options);
+  const theme = webThemeFromGraph(graph);
   const cssDeclarations = declarations(theme.css);
   const values = new Map(Object.keys(graph.tokens).map((id) => [id, cssDeclarations.get(cssName(id))]));
   return { theme, graph, declarations: cssDeclarations, values };
