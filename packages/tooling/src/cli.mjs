@@ -1,5 +1,5 @@
 import * as catalogApi from '@muxui/catalog';
-import { canonicalJson, validateFamily } from '@muxui/schema';
+import { validateFamily } from '@muxui/schema';
 import { commandRegistry } from '../generated/command-surface.mjs';
 import { parseCliArguments } from './parser.mjs';
 import { resolvePnpmProjectCatalog } from './pnpm-adapter.mjs';
@@ -114,8 +114,4 @@ export function runCli(args) {
     return { stdout: '', stderr: text, exitCode };
   }
   return { stdout: text, stderr: '', exitCode };
-}
-
-export function registryIdentity() {
-  return canonicalJson(commandRegistry);
 }

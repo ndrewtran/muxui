@@ -21,12 +21,10 @@
       "tests/fixtures/g1.0/",
       "tests/fixtures/g1.2/",
       "packages/react-native/test/contract.test.mjs",
-      "packages/tokens/fixtures/button-minimum-phase-b.json",
       "tooling/audits/repository-policy/src/policy.mjs",
       "tooling/audits/repository-policy/test/repository-policy.test.mjs",
       "packages/schema/schemas/react-r1.schema.json",
       "packages/tooling/test/local-resolver.test.mjs",
-      "tooling/audits/repository-policy/src/evidence-applicability-supersession.mjs",
       "tooling/audits/repository-policy/src/evidence-verify.mjs",
       "tooling/audits/repository-policy/src/react-aria-family-evaluate.mjs",
       "tooling/audits/repository-policy/src/react-aria-stage1-source-verify.mjs",
@@ -38,7 +36,6 @@
     "check:all",
     "docs",
     "generate",
-    "generate:react",
     "generate:check",
     "scale",
     "storybook",
@@ -84,23 +81,6 @@
     {
       "path": "packages/react/generated/release.json",
       "provenance": "packages/react/generated/release.json.provenance"
-    }
-  ],
-  "generatorProjectionGroups": [
-    {
-      "id": "muxui-catalog-generation-v1",
-      "whenCanonicalSourcePrefixes": ["catalog/"],
-      "whenProjectionsInclude": [
-        "packages/catalog/generated/catalog.json",
-        "packages/catalog/generated/catalog-package.json"
-      ],
-      "outputs": [
-        "packages/catalog/generated/catalog-package.json",
-        "packages/catalog/generated/catalog-package.json.provenance",
-        "packages/catalog/generated/catalog.json",
-        "packages/catalog/generated/catalog.json.provenance",
-        "packages/catalog/generated/catalog.mjs"
-      ]
     }
   ],
   "globalTaskInputs": [
@@ -181,7 +161,6 @@
       "packages/react/package.json",
       "packages/tokens/package.json"
     ],
-    "reactStorybookPath": "apps/react-storybook/",
     "reactStorybookSharedPaths": [
       "apps/react-storybook/src/storybook-factory.mjs",
       "apps/react-storybook/.storybook/preview.mjs"
@@ -200,27 +179,6 @@
       "apps/react-storybook/src/storybook-theme.mjs",
       "apps/react-storybook/.storybook/theme.mjs"
     ]
-  },
-  "dependencyPreparation": {
-    "argvTemplate": [
-      "pnpm",
-      "install",
-      "--offline",
-      "--frozen-lockfile",
-      "--ignore-scripts",
-      "--store-dir",
-      "<declared-offline-store>"
-    ],
-    "environmentKeys": [
-      "CI",
-      "HOME",
-      "LANG",
-      "LC_ALL",
-      "PATH",
-      "TMPDIR"
-    ],
-    "profile": "muxui-dependency-preparation-command-v1",
-    "storePlaceholder": "<declared-offline-store>"
   },
   "toolchain": {
     "node": "24.19.0",
