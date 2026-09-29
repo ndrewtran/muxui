@@ -1,8 +1,11 @@
 import { spawnSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { loadPolicy, normalizePath } from './policy.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 import {
+  checkArgs,
+  generationArgs,
   loadReactFamilyRecords,
   parseTaskArguments,
   planScopedTask,
@@ -52,10 +55,6 @@ function packageNames(items) {
   return items.map(({ name }) => name).join(', ') || '(none)';
 }
 
-function filterArguments(items, dependent) {
-  return items.flatMap(({ name }) => ['--filter', dependent ? `...${name}` : name]);
-}
-
 function commandText(command, args) {
   return [command, ...args].map((value) => (/\s/u.test(value) ? JSON.stringify(value) : value)).join(' ');
 }
@@ -93,23 +92,6 @@ function environmentFor(plan, options) {
   return environment;
 }
 
-function generationArgs(plan) {
-  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present'];
-  if (!plan.full) args.push(...filterArguments(plan.generationPackages, false));
-  args.push('run', 'generate');
-  return args;
-}
-
-// Checks use --no-bail so one run reports every failing package; pnpm still
-// exits non-zero. Generation stays fail-fast because checks depend on it.
-function checkArgs(plan, options) {
-  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail'];
-  if (plan.scope === 'affected') args.push(...filterArguments(plan.directPackages, true));
-  else if (!plan.full && !plan.focusedComponent) args.push(...filterArguments(plan.checkPackages, false));
-  args.push('run', options.task);
-  return args;
-}
-
 function focusedCheckCommands(plan) {
   const commands = [];
   if (plan.checkPackages.some(({ name }) => name === '@muxui/react')) {
@@ -136,6 +118,7 @@ if (packages.length === 0) {
   process.exit(0);
 }
 const policy = await loadPolicy(repositoryRoot);
+const rootManifest = await readFile(resolve(repositoryRoot, 'package.json'), 'utf8').then(JSON.parse, () => null);
 const hasExplicitScope = options.components.length > 0 || options.packages.length > 0 || options.files.length > 0;
 const changedPaths = options.affected && !hasExplicitScope ? collectChangedPaths() : [];
 const familyRecords = options.components.length > 0 ? await loadReactFamilyRecords(repositoryRoot) : [];
@@ -184,7 +167,7 @@ if (plan.focusedComponent) {
   process.exit(failures[0]?.status ?? 0);
 }
 
-const args = checkArgs(plan, options);
+const args = checkArgs(plan, { task: options.task, workspaceRootName: rootManifest?.name });
 console.log(`[workspace-task] check command: ${commandText('pnpm', args)}`);
 if (options.preview) {
   console.log('[workspace-task] preview complete; no commands executed');

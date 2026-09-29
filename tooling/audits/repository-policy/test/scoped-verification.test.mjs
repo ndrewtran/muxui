@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
+import { resolve } from 'node:path';
 import test from 'node:test';
+import { loadPolicy } from '../src/policy.mjs';
+import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 import {
   changedPackageSelection,
+  checkArgs,
   dependencyClosure,
   parseTaskArguments,
   planScopedTask,
@@ -162,4 +166,45 @@ test('affected selection maps owner roots, keeps package changes proportional, a
 test('component resolution fails clearly for unknown IDs', () => {
   assert.deepEqual(resolveComponents(['date-picker'], records).map(({ family }) => family), ['DatePicker']);
   assert.throws(() => resolveComponents(['does-not-exist'], records), /MUXUI_COMPONENT_UNKNOWN/u);
+});
+
+test('affected check args exclude the workspace root that dependent filters would select', () => {
+  const plan = planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--affected']),
+    packages,
+    policy,
+    changedPaths: ['packages/schema/src/index.mjs'],
+  });
+  assert.deepEqual(checkArgs(plan, { task: 'check', workspaceRootName: '@muxui/workspace' }), [
+    '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
+    '--filter', '...@muxui/schema', '--filter', '!@muxui/workspace', 'run', 'check',
+  ]);
+});
+
+test('repository policy routes navigation and CI paths to the policy check with React generation', async () => {
+  const repositoryRoot = resolve(import.meta.dirname, '../../../..');
+  const [realPolicy, realPackages] = await Promise.all([
+    loadPolicy(repositoryRoot),
+    discoverWorkspacePackages(repositoryRoot),
+  ]);
+  const reactClosure = dependencyClosure(realPackages, ['@muxui/react']).map(({ name }) => name);
+  const policyPaths = [
+    'README.md', 'LICENSE', '.gitignore', 'docs/agents/domain.md', 'apps/AGENTS.md',
+    'AGENTS.md', '.github/workflows/ci.yml', '.agents/skills/example/SKILL.md', '.claude/skills',
+  ];
+  for (const path of policyPaths) {
+    const plan = planWithoutInheritedStorybookSelection({
+      options: parseTaskArguments(['check', '--affected']),
+      packages: realPackages,
+      policy: realPolicy,
+      changedPaths: [path],
+    });
+    assert.equal(plan.scope, 'affected', path);
+    assert.deepEqual(plan.checkPackages.map(({ name }) => name), ['@muxui/repository-policy'], path);
+    const generation = plan.generationPackages.map(({ name }) => name);
+    for (const name of reactClosure) assert.ok(generation.includes(name), `${path} generates ${name}`);
+  }
+  for (const path of ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.npmrc', '.node-version']) {
+    assert.equal(changedPackageSelection({ changedPaths: [path], packages: realPackages, policy: realPolicy }).mode, 'full', path);
+  }
 });
