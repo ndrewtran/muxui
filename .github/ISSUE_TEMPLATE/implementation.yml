@@ -15,14 +15,14 @@ body:
     id: scope_ids
     attributes:
       label: Scope ID(s)
-      placeholder: SCOPE-COMP-BUTTON; SCOPE-SYSTEM-CURRICULUM
+      placeholder: SCOPE-COMP-BUTTON-REACT; SCOPE-REACT-BREADTH-001
     validations:
       required: true
   - type: input
     id: roadmap_milestone
     attributes:
       label: Roadmap milestone
-      placeholder: G1.3
+      placeholder: R1 exit
     validations:
       required: true
   - type: textarea
@@ -36,7 +36,7 @@ body:
     id: evidence_ids
     attributes:
       label: Evidence ID(s)
-      placeholder: E-G1.3-01; E-G1.3-02
+      placeholder: E-R1-EXIT-01
     validations:
       required: true
   - type: textarea

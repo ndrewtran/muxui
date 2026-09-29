@@ -5,7 +5,7 @@ contact_links:
     about: Check architectural authority, invariants, ownership, and capability gates before opening work.
   - name: Mux UI milestone roadmap
     url: https://github.com/ndrewtran/muxui/blob/main/strategy/milestone-roadmap.md
-    about: Check gate entry conditions, deliverables, acceptance evidence, and scope controls.
+    about: Check milestone entry conditions, deliverables, acceptance evidence, and scope controls.
   - name: Mux UI product scope
     url: https://github.com/ndrewtran/muxui/blob/main/strategy/product-scope.md
     about: Check immutable scope IDs, commitments, release boundaries, tracker references, and non-goals.

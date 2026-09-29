@@ -290,7 +290,7 @@ async function assertGenerated() {
   try {
     entries = await readdir(generatedRoot);
   } catch {
-    fail('generated story output is missing; run pnpm generate:stories');
+    fail('generated story output is missing; run pnpm --filter @muxui/react-storybook generate');
   }
   const expectedNames = new Set(outputs.keys());
   for (const entry of entries) {

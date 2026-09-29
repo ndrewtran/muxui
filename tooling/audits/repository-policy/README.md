@@ -4,20 +4,13 @@ This package owns Mux UI's deterministic repository-policy checks. For delivery
 work, begin with the repository [route map](../../../AGENTS.md), then read the
 canonical Architecture, Roadmap, Product Scope, and relevant evidence owner.
 The repository entrypoint audits navigation, ownership, generated output, and
-artifact naming. Normal component delivery uses the smallest sufficient root
-scope: `pnpm check --component <family-or-slug>` for family checks,
-`--package <name|path>` for a package and its dependents, or `--files
-<path[,path]>` for exact task files. Repeat selectors within one selector kind
-as needed; do not mix component, package, and file selectors. Use
-`--dry-run` or `--preview` to print the plan without executing it. Unscoped
-`pnpm check` maps changed owners to dependents and scopes generation to their
-prerequisites; explicit scopes ignore unrelated dirty files.
+artifact naming.
 
-`pnpm check:all` remains the complete deterministic workspace graph and
-`pnpm release:prepare` remains full release preparation. Focused reports are
-partial proof, never full release proof; broaden only for shared workspace or
-dependency changes, release work, or an explicit all request. This does not
-require a task-local operation descriptor.
+This package implements the root `pnpm check`, `pnpm check:all`, and
+`pnpm release:prepare` commands. Their scopes and proof rules are in the root
+route map's Verification section. The runner rejects a mix of component,
+package, and file selectors, and scoped work needs no task-local operation
+descriptor.
 
 ## Pull request CI routing
 

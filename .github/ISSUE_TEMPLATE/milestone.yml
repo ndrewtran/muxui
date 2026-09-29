@@ -1,6 +1,6 @@
 name: Roadmap milestone
-description: Track one architecture-roadmap milestone or gate exit.
-title: "[G?.?] "
+description: Track one milestone from the Roadmap current milestone register.
+title: "[Milestone] "
 labels:
   - type:milestone
 body:
@@ -9,22 +9,19 @@ body:
       value: |
         The roadmap is normative. This issue records mutable execution state and must not weaken its entry conditions, evidence assertions, or scope controls.
   - type: dropdown
-    id: gate
-    attributes:
-      label: Gate
-      options:
-        - Gate 0
-        - Gate 1
-        - Gate 2
-        - Gate 3
-        - Cross-gate
-    validations:
-      required: true
-  - type: input
     id: roadmap_milestone
     attributes:
       label: Roadmap milestone
-      placeholder: G0.0
+      options:
+        - R1 exit
+        - P2.1
+        - P2.2
+        - P2.3
+        - P2 exit
+        - W1.0
+        - N1.0
+        - X1.0
+        - S1.0
     validations:
       required: true
   - type: textarea
@@ -52,7 +49,7 @@ body:
     id: evidence
     attributes:
       label: Acceptance evidence IDs
-      placeholder: E-G0.0-01 … E-G0.0-04
+      placeholder: E-P2.1-01
     validations:
       required: true
   - type: input
@@ -60,7 +57,7 @@ body:
     attributes:
       label: Product Scope IDs
       description: Use immutable IDs from strategy/product-scope.md; do not use Pending, TBD, or inferred IDs.
-      placeholder: SCOPE-FOUNDATION-001
+      placeholder: SCOPE-REACT-BREADTH-001
     validations:
       required: true
   - type: textarea

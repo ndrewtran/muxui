@@ -6,7 +6,8 @@ renderer. Storybook 10.5.10, `@storybook/react-vite` 10.5.10, and the
 React 19.2.8 and Vite 8.2.1 baseline.
 
 The generator reads the Mux UI-owned React descriptor and the canonical R1 family
-snapshot. It emits one tracked package-owned CSF story module per family. The
+snapshot. It emits one CSF story module per family into the gitignored
+`.storybook/generated/` directory. The
 sidebar presents component families alphabetically, while each story retains its
 R1 tranche metadata and deep-link ID. The explicit
 renderer adapters are checked against that descriptor so the private projection
@@ -18,12 +19,10 @@ pnpm --filter @muxui/react-storybook check
 pnpm --filter @muxui/react-storybook build
 ```
 
-For bounded verification, use `pnpm check --component <family-or-slug>` for
-selected React and Storybook family audits, `pnpm check --package
-@muxui/react-storybook` for the package scope, or `pnpm check --files
-apps/react-storybook/<path[,path]>` for exact task files. Explicit scopes ignore
-unrelated dirty paths. Focused audits are partial proof; use `pnpm check:all`
-when full workspace coverage is required.
+For bounded verification, `pnpm check --component <family-or-slug>` runs
+selected React and Storybook family audits and `pnpm check --package
+@muxui/react-storybook` covers the package scope. Common scope and proof rules
+live in the root [`AGENTS.md`](../../AGENTS.md) Verification section.
 
 Direct package checks run the complete browser audits. The colour audit uses
 two isolated browser contexts by default. The a11y audit defaults to one worker
