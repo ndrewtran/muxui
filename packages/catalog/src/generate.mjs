@@ -4,6 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { canonicalJson, parseJsonStrict } from '@muxui/schema';
 import { generatedText } from '../../../tooling/audits/repository-policy/src/policy.mjs';
 import { compileCatalog } from './compiler.mjs';
+import { assertManifestCompleteness } from './completeness.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const source = 'packages/catalog/catalog-sources.json';
@@ -14,6 +15,10 @@ const repositoryPolicy = parseJsonStrict(await readFile(
   'utf8',
 ));
 const { bundle, bytes } = await compileCatalog({ repositoryRoot, sourceManifestPath: source });
+await assertManifestCompleteness({
+  repositoryRoot,
+  manifest: parseJsonStrict(await readFile(join(repositoryRoot, source), 'utf8')),
+});
 const tokenArtifact = bundle.artifacts.find(({ kind }) => kind === 'token');
 if (!tokenArtifact) throw new Error('CATALOG_TOKEN_CONTRACT_MISSING: expected one canonical token source');
 if (packageManifest.version !== bundle.catalogVersion) {

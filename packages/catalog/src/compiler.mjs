@@ -115,6 +115,25 @@ function validateSourceManifest(manifest) {
   };
 }
 
+/**
+ * Fails when two generation examples for the same binding share a preference,
+ * because authored preference must choose one example deterministically.
+ */
+export function assertExamplePreferences(records) {
+  const claimed = new Map();
+  for (const record of records) {
+    if (record.kind !== 'example' || !record.binding.purposes.includes('generation')) continue;
+    const key = `${record.binding.ref}\0${record.binding.preference}`;
+    const other = claimed.get(key);
+    if (other !== undefined) {
+      throw new Error(
+        `MUXUI_CATALOG_SOURCE_INVALID: ${other} and ${record.id} tie on generation preference ${record.binding.preference} for ${record.binding.ref}`,
+      );
+    }
+    claimed.set(key, record.id);
+  }
+}
+
 export function assertAcceptedQueryProfile({ manifest, pageBudgetProfile }) {
   validateFamily('token-section-page-budget-profile', pageBudgetProfile);
   if (
@@ -269,6 +288,7 @@ export async function compileCatalog({
 
   const records = loaded.map(({ record }) => record);
   const { edges } = validateCatalogRecords(records);
+  assertExamplePreferences(records);
   const relations = sortByKeys(edges, ['type', 'source', 'target']);
   const examples = records.filter(({ kind }) => kind === 'example');
   const tokens = records.filter(({ kind }) => kind === 'token');
