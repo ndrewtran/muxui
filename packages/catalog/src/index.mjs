@@ -654,6 +654,11 @@ function selectedSection(bundle, artifact, request) {
         )
         && (request.purpose === null || candidate.binding.purposes.includes(request.purpose))
       ))
+      // Authored preference chooses the lead example; ID breaks ties across bindings.
+      .sort((left, right) => (
+        left.record.binding.preference - right.record.binding.preference
+        || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0)
+      ))
       .map((candidate) => summary(candidate, request.detail));
   }
   return null;

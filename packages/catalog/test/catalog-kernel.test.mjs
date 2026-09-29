@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -13,7 +13,8 @@ import {
   validateFamily,
 } from '@muxui/schema';
 import { catalogJson } from '../generated/catalog.mjs';
-import { compileCatalog } from '../src/compiler.mjs';
+import { assertExamplePreferences, compileCatalog } from '../src/compiler.mjs';
+import { assertManifestCompleteness } from '../src/completeness.mjs';
 import {
   createCatalogApi,
   getArtifact,
@@ -199,11 +200,11 @@ test('R1.4 catalog closure registers and discovers every canonical family', asyn
   }
 });
 
-test('R1.5 React curriculum selects one exact generation example for every family', () => {
+test('R1.5 React curriculum selects one preferred generation example for every family', () => {
   const components = baseBundle.artifacts
     .filter(({ kind }) => kind === 'component')
     .sort((left, right) => left.id.localeCompare(right.id));
-  assert.equal(components.length, 59);
+  assert.equal(components.length, 74);
   const selected = components.map((component) => {
     const response = getArtifact({
       id: component.id,
@@ -212,9 +213,13 @@ test('R1.5 React curriculum selects one exact generation example for every famil
       purpose: 'generation',
       detail: 'brief',
     });
-    assert.equal(response.data.value.length, 1, component.id);
-    const example = baseBundle.artifacts.find(({ id }) => id === response.data.value[0].id);
-    assert.ok(example, component.id);
+    // The API itself must lead with the preferred example, in preference order.
+    const returned = response.data.value
+      .map(({ id }) => baseBundle.artifacts.find((artifact) => artifact.id === id));
+    assert.ok(returned.length > 0, component.id);
+    const preferences = returned.map(({ record }) => record.binding.preference);
+    assert.deepEqual(preferences, [...preferences].sort((left, right) => left - right), component.id);
+    const [example] = returned;
     assert.deepEqual(example.record.prerequisites, [], component.id);
     assert.equal(example.record.binding.preference, 0, component.id);
     assert.equal(example.record.complexity, 'minimal', component.id);
@@ -223,7 +228,36 @@ test('R1.5 React curriculum selects one exact generation example for every famil
     assert.equal(example.record.binding.ref, `${component.id}#web.react`, component.id);
     return example.id;
   });
-  assert.equal(new Set(selected).size, 59);
+  assert.equal(new Set(selected).size, 74);
+});
+
+test('examples section orders by authored preference, not artifact ID', () => {
+  const response = getArtifact({
+    id: 'muxui:component:popover',
+    platform: 'web.react',
+    section: 'examples',
+    detail: 'brief',
+  });
+  // popover-anchored-react sorts before popover-basic-react by ID but has preference 1.
+  assert.deepEqual(
+    response.data.value.map(({ id }) => id),
+    ['muxui:example:popover-basic-react', 'muxui:example:popover-anchored-react'],
+  );
+});
+
+test('example preference negative: tied generation preferences on one binding fail', () => {
+  const basic = baseBundle.artifacts.find(({ id }) => id === 'muxui:example:popover-basic-react').record;
+  const anchored = baseBundle.artifacts.find(({ id }) => id === 'muxui:example:popover-anchored-react').record;
+  assertExamplePreferences([basic, anchored]);
+  const tied = structuredClone(anchored);
+  tied.binding.preference = basic.binding.preference;
+  assert.throws(
+    () => assertExamplePreferences([basic, tied]),
+    /MUXUI_CATALOG_SOURCE_INVALID: muxui:example:popover-basic-react and muxui:example:popover-anchored-react tie on generation preference 0/,
+  );
+  const explanationOnly = structuredClone(tied);
+  explanationOnly.binding.purposes = ['explanation'];
+  assertExamplePreferences([basic, explanationOnly]);
 });
 
 test('R1.3 catalog closure registers and discovers every canonical family', async () => {
@@ -904,6 +938,56 @@ test('E-G0.2-05 negative: compiler uses the declared manifest and rejects duplic
     await assert.rejects(
       compileCatalog({ repositoryRoot, sourceManifestPath: manifestPath }),
       /MUXUI_CATALOG_SOURCE_INVALID: duplicate/,
+    );
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('catalog source manifest lists every canonical component and example record', async () => {
+  const manifest = JSON.parse(await readFile(
+    join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
+    'utf8',
+  ));
+  await assertManifestCompleteness({ repositoryRoot, manifest });
+});
+
+test('catalog completeness negative: unlisted records, stale exclusions, and symlinks fail', async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-catalog-completeness-'));
+  try {
+    const listed = 'catalog/components/listed/artifact.json';
+    const artifact = 'catalog/components/unlisted/artifact.json';
+    const example = 'catalog/components/unlisted/examples/react/basic.example.json';
+    for (const path of [listed, artifact, example, 'catalog/components/unlisted/examples/react/basic.tsx']) {
+      await mkdir(join(temporaryRoot, path, '..'), { recursive: true });
+      await writeFile(join(temporaryRoot, path), '{}');
+    }
+    const manifest = { records: [{ family: 'component', path: listed }] };
+    await assert.rejects(
+      assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions: {} }),
+      (error) => error.message.startsWith('MUXUI_CATALOG_SOURCE_UNLISTED:')
+        && error.message.includes(artifact)
+        && error.message.includes(example)
+        && !error.message.includes(listed)
+        && !error.message.includes('basic.tsx'),
+    );
+    const exclusions = { [artifact]: 'fixture reason', [example]: 'fixture reason' };
+    await assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions });
+    for (const [label, stale] of [
+      ['listed', { ...exclusions, [listed]: 'already listed' }],
+      ['missing', { ...exclusions, 'catalog/components/gone/artifact.json': 'deleted folder' }],
+      ['reasonless', { ...exclusions, [artifact]: ' ' }],
+    ]) {
+      await assert.rejects(
+        assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions: stale }),
+        /MUXUI_CATALOG_SOURCE_EXCLUSION_STALE:/,
+        label,
+      );
+    }
+    await symlink(join(temporaryRoot, listed), join(temporaryRoot, 'catalog/components/unlisted/linked.json'));
+    await assert.rejects(
+      assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions }),
+      /MUXUI_CATALOG_SOURCE_INVALID: .*linked\.json must be a plain file or directory/,
     );
   } finally {
     await rm(temporaryRoot, { recursive: true, force: true });

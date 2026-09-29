@@ -389,6 +389,11 @@
       "sourcePath": "catalog/components/search-field/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/search-field/examples/react/native-input.example.json",
+      "sourcePath": "catalog/components/search-field/examples/react/native-input.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/search-field-usage.json",
       "sourcePath": "catalog/guides/search-field-usage.md"
@@ -415,6 +420,11 @@
       "family": "example",
       "path": "catalog/components/text-field/examples/react/basic.example.json",
       "sourcePath": "catalog/components/text-field/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-field/examples/react/native-input.example.json",
+      "sourcePath": "catalog/components/text-field/examples/react/native-input.tsx"
     },
     {
       "family": "guide",
@@ -515,6 +525,11 @@
       "sourcePath": "catalog/components/color-swatch/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/color-swatch/examples/react/two-tone.example.json",
+      "sourcePath": "catalog/components/color-swatch/examples/react/two-tone.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/color-swatch-usage.json",
       "sourcePath": "catalog/guides/color-swatch-usage.md"
@@ -585,6 +600,11 @@
       "sourcePath": "catalog/components/list-box/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/list-box/examples/react/grid.example.json",
+      "sourcePath": "catalog/components/list-box/examples/react/grid.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/list-box-usage.json",
       "sourcePath": "catalog/guides/list-box-usage.md"
@@ -597,6 +617,11 @@
       "family": "example",
       "path": "catalog/components/menu/examples/react/basic.example.json",
       "sourcePath": "catalog/components/menu/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/menu/examples/react/nested.example.json",
+      "sourcePath": "catalog/components/menu/examples/react/nested.tsx"
     },
     {
       "family": "guide",
@@ -833,6 +858,11 @@
       "sourcePath": "catalog/components/popover/examples/react/basic.tsx"
     },
     {
+      "family": "example",
+      "path": "catalog/components/popover/examples/react/anchored.example.json",
+      "sourcePath": "catalog/components/popover/examples/react/anchored.tsx"
+    },
+    {
       "family": "guide",
       "path": "catalog/guides/popover-usage.json",
       "sourcePath": "catalog/guides/popover-usage.md"
@@ -947,6 +977,146 @@
       "family": "example",
       "path": "catalog/components/command-palette/examples/react/managed-commands.example.json",
       "sourcePath": "catalog/components/command-palette/examples/react/managed-commands.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/alert-dialog/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/alert-dialog/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/alert-dialog/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/button-group/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/button-group/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/button-group/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/card/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/card/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/card/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/checkbox-field/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/checkbox-field/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/checkbox-field/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/color-mode-toggle/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/color-mode-toggle/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/color-mode-toggle/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/header-nav/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/header-nav/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/header-nav/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/input/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/input/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/input-tags/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/input-tags/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/input-tags/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/multi-select/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/multi-select/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/multi-select/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/payment-input/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/payment-input/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/payment-input/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/progress-circle/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/progress-circle/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/progress-circle/examples/react/basic.tsx"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/progress-circle/examples/react/indeterminate.example.json",
+      "sourcePath": "catalog/components/progress-circle/examples/react/indeterminate.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/radio-field/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/radio-field/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/radio-field/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/sidebar/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/sidebar/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/sidebar/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/switch-field/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/switch-field/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/switch-field/examples/react/basic.tsx"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/text-area/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-area/examples/react/basic.example.json",
+      "sourcePath": "catalog/components/text-area/examples/react/basic.tsx"
     }
   ]
 }
