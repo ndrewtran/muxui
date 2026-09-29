@@ -5,7 +5,7 @@ import { loadPolicy } from '../src/policy.mjs';
 import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 import {
   changedPackageSelection,
-  checkArgs,
+  checkStages,
   dependencyClosure,
   parseTaskArguments,
   planScopedTask,
@@ -175,9 +175,39 @@ test('affected check args exclude the workspace root that dependent filters woul
     policy,
     changedPaths: ['packages/schema/src/index.mjs'],
   });
-  assert.deepEqual(checkArgs(plan, { task: 'check', workspaceRootName: '@muxui/workspace' }), [
-    '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
-    '--filter', '...@muxui/schema', '--filter', '!@muxui/workspace', 'run', 'check',
+  assert.deepEqual(checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace' }), [
+    [['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check']],
+    [
+      ['--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check'],
+      [
+        '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
+        '--filter', '...@muxui/schema', '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook',
+        '--filter', '!@muxui/workspace', 'run', 'check',
+      ],
+    ],
+  ]);
+});
+
+test('scoped check stages isolate React and run Storybook beside the remaining checks', () => {
+  const plan = planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--package', '@muxui/schema']),
+    packages,
+    policy,
+  });
+  assert.deepEqual(checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace' }), [
+    [['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check']],
+    [
+      ['--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check'],
+      [
+        '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
+        '--filter', '@muxui/schema', '--filter', '@muxui/docs', '--filter', '@muxui/repository-policy', 'run', 'check',
+      ],
+    ],
+  ]);
+  const only = (name) => ({ ...plan, checkPackages: packages.filter((item) => item.name === name) });
+  assert.deepEqual(checkStages(only('@muxui/react'), { task: 'check' }).map((stage) => stage.length), [1]);
+  assert.deepEqual(checkStages(only('@muxui/react-storybook'), { task: 'check' }), [
+    [['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check']],
   ]);
 });
 

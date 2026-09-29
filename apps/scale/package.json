@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @muxui/react... generate && vite",
-    "build": "pnpm --filter @muxui/react... generate && vite build",
-    "check": "pnpm --filter @muxui/react... generate && node src/check.mjs",
-    "check:browser": "pnpm --filter @muxui/react... generate && node --test test/browser/theme-builder.test.mjs",
+    "dev": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && vite",
+    "build": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && vite build",
+    "check": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/check.mjs",
+    "check:browser": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node --test test/browser/theme-builder.test.mjs",
     "check:browser:docs": "pnpm --filter @muxui/docs build && node --test test/browser/docs-theme.test.mjs"
   },
   "dependencies": {
