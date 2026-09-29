@@ -6,6 +6,7 @@ import { parse } from 'acorn';
 import { pathToFileURL } from 'node:url';
 import { analyzeReactSourceChange, analyzeReactStyleChange } from './component-source-impact.mjs';
 import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from './ci-reuse.mjs';
+import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
 import { dependencyClosure, familyRecordsFromContract } from './scoped-verification.mjs';
 import { componentTestSelection } from './component-test-selection.mjs';
@@ -587,7 +588,8 @@ function selectedCheckOwners(plan, packages) {
   }
   if (plan.catalog) names.add('@muxui/catalog');
   if (plan.tokens) names.add('@muxui/tokens');
-  if (plan.docs) names.add('@muxui/docs');
+  // Either route runs Scale's docs browser test, which builds the docs site.
+  if (plan.docs || plan.scale) names.add('@muxui/docs');
   if (plan.scale) names.add('@muxui/scale');
   // Every React test and the Tailwind consumer import generated React output.
   if (plan.reactTheme || plan.reactProjectionCheck || plan.reactPackageFull || plan.reactFamilies.length > 0
@@ -601,10 +603,10 @@ function selectedCheckOwners(plan, packages) {
   return [...names].filter((name) => packages.some((item) => item.name === name));
 }
 
+// Each group generates these once, serially, before its checks; package
+// scripts then skip their standalone prerequisite generation.
 export function scopedGenerationPackages(plan, packages) {
-  const selfGeneratingChecks = new Set(['@muxui/docs', '@muxui/scale']);
-  const roots = selectedCheckOwners(plan, packages).filter((name) => !selfGeneratingChecks.has(name));
-  return dependencyClosure(packages, roots)
+  return dependencyClosure(packages, selectedCheckOwners(plan, packages))
     .filter(({ manifest }) => typeof manifest.scripts?.generate === 'string')
     .map(({ name }) => name);
 }
@@ -1334,6 +1336,14 @@ export function executeCommand(command, {
   return result.status ?? 1;
 }
 
+// Planned commands run after the plan's shared generation (or, for a scoped
+// plan, the metadata preparation it replaces), so package scripts skip their
+// standalone prerequisite generation instead of writing generated output again.
+export function preparedCommandRunner(environment = process.env, { spawn = spawnSync } = {}) {
+  const prepared = { ...environment, [prerequisitesReadyVariable]: '1' };
+  return (command) => executeCommand(command, { environment: prepared, spawn });
+}
+
 const commandLine = (command) => [command.command, ...command.args].join(' ');
 
 // Runs every check and reports all failures at the end; a failed prerequisite
@@ -1653,9 +1663,9 @@ export async function runCiImpact({
       throw new Error(`MUXUI_CI_IMPACT_GROUP_UNKNOWN: ${group} is not in this plan (${groups.map(({ id }) => id).join(', ') || 'no groups'})`);
     }
     console.log(`[ci-impact] running group ${selected.id} (${selected.commands.length} command(s))`);
-    executeCommands(selected.commands);
+    executeCommands(selected.commands, { commandRunner: preparedCommandRunner(environment) });
   } else {
-    executeCommands(executionCommands(plan, options));
+    executeCommands(executionCommands(plan, options), { commandRunner: preparedCommandRunner(environment) });
   }
   return report;
 }

@@ -4,14 +4,14 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "pnpm --filter @muxui/docs^... generate && astro dev",
+    "dev": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && astro dev",
     "start": "pnpm dev",
-    "build": "pnpm --filter @muxui/docs^... generate && astro build",
-    "check:docs": "pnpm --filter @muxui/docs^... generate && node scripts/check-docs.mjs",
+    "build": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && astro build",
+    "check:docs": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && node scripts/check-docs.mjs",
     "check:docs:rendered": "node scripts/check-rendered-source.mjs",
     "preview": "astro preview",
-    "astro": "pnpm --filter @muxui/docs^... generate && astro",
-    "check": "pnpm --filter @muxui/docs^... generate && node scripts/check.mjs"
+    "astro": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && astro",
+    "check": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && node scripts/check.mjs"
   },
   "dependencies": {
     "@astrojs/react": "5.0.7",

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "pnpm --filter @muxui/react... generate && node scripts/build.mjs",
+    "build": "node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node scripts/build.mjs",
     "check": "pnpm build && node --test test/*.test.mjs"
   },
   "dependencies": { "@muxui/react": "workspace:*" },

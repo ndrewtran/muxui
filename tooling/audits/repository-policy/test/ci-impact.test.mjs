@@ -20,6 +20,7 @@ import {
   needsStorybookGeneration,
   normalizeCommand,
   parseCliArguments,
+  preparedCommandRunner,
   prepareStorybookMetadata,
   reactPackageWideChanges,
   rootPackageWideChanges,
@@ -95,11 +96,11 @@ const pageIndex = [
 
 const packages = [
   { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: {}, scripts: { check: 'pnpm --filter @muxui/docs^... generate && check' } } },
+  { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
   { name: '@muxui/react', path: 'packages/react', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
   { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
   { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'pnpm --filter @muxui/react... generate && check' } } },
+  { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && check' } } },
   { name: '@muxui/schema', path: 'packages/schema', manifest: { dependencies: {}, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/tooling', path: 'packages/tooling', manifest: { dependencies: {}, scripts: { generate: 'generate' } } },
   { name: '@muxui/tokens', path: 'packages/tokens', manifest: { dependencies: { '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
@@ -705,12 +706,34 @@ test('clean owner checks schedule only their generation dependencies before chec
   assert.ok(!policyAfterStorybookBootstrap[0].args.includes('@muxui/react'));
   assert.deepEqual(policyAfterStorybookBootstrap[1].args, ['--filter', '@muxui/repository-policy', 'run', 'check']);
 
+  // Docs and Scale checks no longer generate their own prerequisites in CI:
+  // the shared generation covers the docs closure, including for Scale-only
+  // changes, whose docs browser test builds the docs site.
+  const docsGeneration = [
+    '--recursive', '--sort', '--workspace-concurrency=1', '--if-present',
+    '--filter', '@muxui/catalog', '--filter', '@muxui/react', '--filter', '@muxui/schema',
+    '--filter', '@muxui/tooling', '--filter', '@muxui/tokens', 'run', 'generate',
+  ];
   const docs = await plan(['apps/docs/src/content/docs/foundations/index.mdx']);
   const docsCommands = executionCommands(docs, { packages });
   assert.deepEqual(docsCommands.map(({ args }) => args), [
+    docsGeneration,
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
   ]);
+  const scale = await plan(['apps/scale/test/browser/theme-builder.test.mjs']);
+  assert.deepEqual(executionCommands(scale, { packages })[0].args, docsGeneration);
+});
+
+test('planned CI commands run with their prerequisites marked ready', () => {
+  const environments = [];
+  const spawn = (command, args, { env }) => {
+    environments.push(env);
+    return { status: 0 };
+  };
+  const runner = preparedCommandRunner({ PATH: 'bin' }, { spawn });
+  assert.equal(runner({ command: 'pnpm', args: ['--filter', '@muxui/docs', 'run', 'check'], env: { EXTRA: '1' } }), 0);
+  assert.deepEqual(environments, [{ PATH: 'bin', MUXUI_PREREQUISITES_READY: '1', EXTRA: '1' }]);
 });
 
 test('React package metadata expands only for runtime package boundary changes', async () => {

@@ -362,18 +362,47 @@ export function generationArgs(plan) {
   return args;
 }
 
+// Checks run after serial generation and only read generated output, so they
+// run in concurrent lanes. --sort still starts a package's check only after its
+// dependencies' checks, so each timing-heavy suite gets its own lane instead of
+// holding back the next dependency level.
+// - React's check runs alone first: its pack tests run React's prepack, which
+//   rewrites the shared generated output every other check reads.
+// - Storybook's long browser audits run in their own lane beside the rest.
 // Checks use --no-bail so one run reports every failing package; pnpm still
 // exits non-zero. Generation stays fail-fast because checks depend on it.
-// Dependent filters (`...name`) also select the workspace root when it depends
-// on a changed package; its `check` script is this runner, so exclude it.
-export function checkArgs(plan, { task, workspaceRootName }) {
-  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail'];
-  if (plan.scope === 'affected') {
-    args.push(...filterArguments(plan.directPackages, true));
-    if (workspaceRootName) args.push('--filter', `!${workspaceRootName}`);
-  } else if (!plan.full && !plan.focusedComponent) {
-    args.push(...filterArguments(plan.checkPackages, false));
+export const isolatedCheckPackages = ['@muxui/react'];
+export const laneCheckPackages = ['@muxui/react-storybook'];
+export const checkConcurrency = 2;
+
+function checkCommand(concurrency, filters, task) {
+  return ['--recursive', '--sort', `--workspace-concurrency=${concurrency}`, '--if-present', '--no-bail', ...filters, 'run', task];
+}
+
+// Returns stages of pnpm argument lists: stages run in order, and the commands
+// in one stage run at the same time. Dependent filters (`...name`) and
+// exclusion filters also select the workspace root when it depends on a
+// changed package; its `check` script is this runner, so exclude it.
+export function checkStages(plan, { task, workspaceRootName }) {
+  const selected = (names) => names.filter((name) => plan.checkPackages.some((item) => item.name === name));
+  const isolated = selected(isolatedCheckPackages);
+  const lanes = selected(laneCheckPackages);
+  const separate = [...isolated, ...lanes];
+  const stages = isolated.map((name) => [checkCommand(1, ['--filter', name], task)]);
+  const shared = lanes.map((name) => checkCommand(1, ['--filter', name], task));
+  const remaining = plan.checkPackages.filter(({ name }) => !separate.includes(name));
+  if (plan.full || remaining.length > 0) {
+    const filters = [];
+    if (plan.scope === 'affected') filters.push(...filterArguments(plan.directPackages, true));
+    else if (!plan.full) filters.push(...filterArguments(remaining, false));
+    if (plan.scope === 'affected' || (plan.full && separate.length > 0)) {
+      for (const name of separate) filters.push('--filter', `!${name}`);
+      if (workspaceRootName) filters.push('--filter', `!${workspaceRootName}`);
+    }
+    shared.push(checkCommand(checkConcurrency, filters, task));
   }
-  args.push('run', task);
-  return args;
+  // Parallel lanes interleave output, so pnpm prefixes each line with its package.
+  if (shared.length > 1) stages.push(shared.map((args) => ['--stream', ...args]));
+  else if (shared.length > 0) stages.push(shared);
+  return stages;
 }
