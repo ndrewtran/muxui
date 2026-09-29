@@ -23,6 +23,12 @@ function run(command, args, options) {
   return result;
 }
 
+// The runner reads the root manifest to exclude the workspace root from
+// affected checks, so every fixture workspace needs one.
+function writeRootManifest(root, fields = {}) {
+  return writeFile(join(root, 'package.json'), JSON.stringify({ name: '@fixture/workspace', private: true, ...fields }));
+}
+
 test('E-G0.0-02: affected selection runs a changed package before every dependent', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-graph-'));
   await mkdir(join(root, 'packages/leaf'), { recursive: true });
@@ -31,6 +37,12 @@ test('E-G0.0-02: affected selection runs a changed package before every dependen
   await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
 
   await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  // The root depends on the leaf, so `...@fixture/leaf` would select it too;
+  // its check stands in for the root runner and must never run.
+  await writeRootManifest(root, {
+    scripts: { check: 'node record.mjs root' },
+    devDependencies: { '@fixture/leaf': 'workspace:*' },
+  });
   await writeFile(
     join(root, 'tooling/audits/repository-policy/repository-policy.json'),
     JSON.stringify({ globalTaskInputs: [] }),
@@ -83,6 +95,7 @@ test('E-G0.0-02: affected selection runs a changed package before every dependen
   );
 
   assert.match(result.stdout, /\[workspace-task\] check: changed packages plus dependents/);
+  assert.match(result.stdout, /--filter !@fixture\/workspace/u);
   assert.deepEqual(
     (await readFile(logPath, 'utf8')).trim().split('\n'),
     ['leaf', 'middle', 'app'],
@@ -93,6 +106,7 @@ test('full checks continue past a failing package and still exit non-zero', asyn
   const root = await mkdtemp(join(tmpdir(), 'muxui-task-no-bail-'));
   await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
   await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  await writeRootManifest(root);
   await writeFile(
     join(root, 'tooling/audits/repository-policy/repository-policy.json'),
     JSON.stringify({ globalTaskInputs: [] }),
@@ -122,6 +136,7 @@ test('full check boundary overrides inherited focused Storybook selection', asyn
   await mkdir(join(root, 'bin'), { recursive: true });
 
   await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n');
+  await writeRootManifest(root);
   await writeFile(
     join(root, 'tooling/audits/repository-policy/repository-policy.json'),
     JSON.stringify({ globalTaskInputs: ['shared/'] }),
@@ -207,6 +222,7 @@ test('component checks route substrate and public names from the generated contr
   await mkdir(join(root, 'tooling/audits/repository-policy'), { recursive: true });
   await mkdir(join(root, 'bin'), { recursive: true });
   await writeFile(join(root, 'pnpm-workspace.yaml'), 'packages:\n  - packages/*\n  - apps/*\n');
+  await writeRootManifest(root);
   await writeFile(join(root, 'tooling/audits/repository-policy/repository-policy.json'), '{}');
   for (const [path, name] of [['packages/react', '@muxui/react'], ['apps/react-storybook', '@muxui/react-storybook']]) {
     await writeFile(join(root, path, 'package.json'), JSON.stringify({ name, version: '0.0.0', private: true }));

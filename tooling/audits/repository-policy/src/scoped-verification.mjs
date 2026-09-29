@@ -324,9 +324,13 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
       : scope === 'component'
         ? directPackages
         : dependentClosure(packages, directPackages.map(({ name }) => name));
+  // Some checks read another package's ignored generated output without a
+  // package dependency; policy declares those extra generation roots.
+  const prerequisites = policy.generationPrerequisites ?? {};
+  const generationRoots = checkPackages.flatMap(({ name }) => [name, ...(prerequisites[name] ?? [])]);
   const generationPackages = full
     ? packages
-    : dependencyClosure(packages, checkPackages.map(({ name }) => name));
+    : dependencyClosure(packages, generationRoots);
 
   return {
     scope,
@@ -340,4 +344,31 @@ export function planScopedTask({ options, packages, policy, familyRecords = [] ,
     generationPackages,
     changedPaths,
   };
+}
+
+function filterArguments(items, dependent) {
+  return items.flatMap(({ name }) => ['--filter', dependent ? `...${name}` : name]);
+}
+
+export function generationArgs(plan) {
+  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present'];
+  if (!plan.full) args.push(...filterArguments(plan.generationPackages, false));
+  args.push('run', 'generate');
+  return args;
+}
+
+// Checks use --no-bail so one run reports every failing package; pnpm still
+// exits non-zero. Generation stays fail-fast because checks depend on it.
+// Dependent filters (`...name`) also select the workspace root when it depends
+// on a changed package; its `check` script is this runner, so exclude it.
+export function checkArgs(plan, { task, workspaceRootName }) {
+  const args = ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail'];
+  if (plan.scope === 'affected') {
+    args.push(...filterArguments(plan.directPackages, true));
+    if (workspaceRootName) args.push('--filter', `!${workspaceRootName}`);
+  } else if (!plan.full && !plan.focusedComponent) {
+    args.push(...filterArguments(plan.checkPackages, false));
+  }
+  args.push('run', task);
+  return args;
 }

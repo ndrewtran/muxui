@@ -389,6 +389,19 @@ test('Scale, Starlight docs, and CI policy edits stay in their independent owner
   assert.equal(guidance.full || guidance.docs, false);
 });
 
+test('root and directory guidance docs without another owner take the policy route', async () => {
+  const guidancePaths = [
+    'LICENSE', 'README.md', 'apps/AGENTS.md', 'apps/react-storybook/AGENTS.md', 'catalog/AGENTS.md',
+    'packages/AGENTS.md', 'tests/AGENTS.md', 'tests/evidence/README.md', 'tests/fixtures/g1.2/AGENTS.md',
+  ];
+  for (const path of guidancePaths) {
+    const result = await plan([path]);
+    assert.equal(result.policy, true, path);
+    assert.equal(result.full || result.catalog || result.docs || result.storyTooling, false, path);
+    assert.deepEqual(result.storyRuns, [], path);
+  }
+});
+
 test('root package scripts remain policy-scoped while workspace toolchain inputs require full proof', async () => {
   const before = JSON.stringify({ name: 'workspace', scripts: { check: 'old' } });
   const after = JSON.stringify({ name: 'workspace', scripts: { check: 'new' } });
@@ -644,6 +657,12 @@ test('clean owner checks schedule only their generation dependencies before chec
   assert.ok(policyCommands[0].args.includes('@muxui/repository-policy'));
   assert.deepEqual(policyCommands[1].args, ['--filter', '@muxui/repository-policy', 'run', 'check']);
   assert.ok(!policyCommands.some(({ args }) => args.includes('@muxui/react-storybook')));
+
+  // Local planning reads this prerequisite from policy; CI hard-codes it.
+  const { generationPrerequisites } = await loadPolicy(repositoryRoot);
+  for (const name of generationPrerequisites['@muxui/repository-policy']) {
+    assert.ok(policy.generationPackages.includes(name), `CI policy route generates ${name}`);
+  }
 
   const policyAfterStorybookBootstrap = executionCommands(policy, { packages, metadataPrepared: true });
   assert.ok(!policyAfterStorybookBootstrap[0].args.includes('@muxui/react'));

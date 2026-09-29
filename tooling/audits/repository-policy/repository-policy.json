@@ -104,23 +104,31 @@
     }
   ],
   "globalTaskInputs": [
-    ".agents/",
-    ".claude/",
-    ".github/",
     ".node-version",
     ".npmrc",
-    "AGENTS.md",
     "package.json",
     "pnpm-lock.yaml",
     "pnpm-workspace.yaml"
   ],
   "affectedPathOwners": {
+    ".agents/": ["@muxui/repository-policy"],
+    ".claude/": ["@muxui/repository-policy"],
+    ".github/": ["@muxui/repository-policy"],
+    ".gitignore": ["@muxui/repository-policy"],
+    "AGENTS.md": ["@muxui/repository-policy"],
+    "LICENSE": ["@muxui/repository-policy"],
+    "README.md": ["@muxui/repository-policy"],
+    "apps/AGENTS.md": ["@muxui/repository-policy"],
     "catalog/": ["@muxui/catalog"],
     "decisions/": ["@muxui/repository-policy"],
+    "docs/agents/": ["@muxui/repository-policy"],
     "packages/": ["@muxui/repository-policy"],
     "strategy/": ["@muxui/repository-policy"],
     "tests/": ["@muxui/repository-policy"],
     "tooling/": ["@muxui/repository-policy"]
+  },
+  "generationPrerequisites": {
+    "@muxui/repository-policy": ["@muxui/react"]
   },
   "pullRequestImpact": {
     "schemaVersion": 1,
@@ -135,9 +143,18 @@
       ".github/",
       ".gitignore",
       "AGENTS.md",
+      "LICENSE",
+      "README.md",
+      "apps/AGENTS.md",
+      "apps/react-storybook/AGENTS.md",
+      "catalog/AGENTS.md",
       "decisions/",
       "docs/agents/",
+      "packages/AGENTS.md",
       "strategy/",
+      "tests/AGENTS.md",
+      "tests/evidence/README.md",
+      "tests/fixtures/g1.2/AGENTS.md",
       "tooling/AGENTS.md",
       "tooling/audits/repository-policy/"
     ],
