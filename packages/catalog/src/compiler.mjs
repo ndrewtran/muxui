@@ -84,7 +84,7 @@ function validateSourceManifest(manifest) {
       || typeof entry !== 'object'
       || Array.isArray(entry)
       || !['capability', 'component', 'example', 'guide', 'token-source'].includes(entry.family)
-      || Object.keys(entry).some((key) => !['baselineOccurrencesPath', 'family', 'path', 'sourcePath'].includes(key))
+      || Object.keys(entry).some((key) => !['baselineOccurrencesPath', 'family', 'path'].includes(key))
     ) {
       throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: invalid records/${index}`);
     }
@@ -94,9 +94,6 @@ function validateSourceManifest(manifest) {
       if (entry.family !== 'token-source') {
         throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: records/${index}/baselineOccurrencesPath requires token-source`);
       }
-    }
-    if (entry.sourcePath !== undefined) {
-      assertRelativePath(entry.sourcePath, `records/${index}/sourcePath`);
     }
     if (paths.has(entry.path)) {
       throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: duplicate ${entry.path}`);
@@ -257,13 +254,11 @@ export async function compileCatalog({
     validateFamily(entry.family, record);
     let sourceBytes;
     let baselineOccurrencesBytes;
-    if (entry.sourcePath !== undefined) {
-      sourceBytes = await readFile(resolve(repositoryRoot, entry.sourcePath), 'utf8');
-      if (record.source !== entry.sourcePath) {
-        throw new Error(
-          `MUXUI_CATALOG_SOURCE_INVALID: ${entry.path} must point to ${entry.sourcePath}`,
-        );
-      }
+    // Guide and example records name their content file in `source`; the
+    // manifest lists only the record, and the content is read from there.
+    if (record.source !== undefined) {
+      assertRelativePath(record.source, `${entry.path}/source`);
+      sourceBytes = await readFile(resolve(repositoryRoot, record.source), 'utf8');
     }
     if (entry.baselineOccurrencesPath !== undefined) {
       baselineOccurrencesBytes = await readFile(
@@ -376,8 +371,8 @@ export async function compileCatalog({
       } : {}),
       source: {
         record: entry.path,
-        ...(entry.sourcePath === undefined ? {} : {
-          content: entry.sourcePath,
+        ...(record.source === undefined ? {} : {
+          content: record.source,
           contentDigest: sha256Digest(sourceBytes),
         }),
       },
@@ -391,11 +386,11 @@ export async function compileCatalog({
     commandRegistryDigest: sha256Digest(commandRegistryBytes),
     pageBudgetProfileDigest: sha256Digest(pageBudgetProfileBytes),
     platformSafetyContractDigest: canonicalDigest(platformSafetyContract),
-    inputs: loaded.map(({ entry, recordBytes, sourceBytes, baselineOccurrencesBytes }) => ({
+    inputs: loaded.map(({ entry, record, recordBytes, sourceBytes, baselineOccurrencesBytes }) => ({
       path: entry.path,
       digest: sha256Digest(recordBytes),
-      ...(entry.sourcePath === undefined ? {} : {
-        sourcePath: entry.sourcePath,
+      ...(record.source === undefined ? {} : {
+        sourcePath: record.source,
         sourceDigest: sha256Digest(sourceBytes),
       }),
       ...(entry.baselineOccurrencesPath === undefined ? {} : {

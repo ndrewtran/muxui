@@ -15,88 +15,71 @@
     },
     {
       "family": "guide",
-      "path": "catalog/guides/accessibility.json",
-      "sourcePath": "catalog/guides/accessibility.md"
+      "path": "catalog/guides/accessibility.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/contribution.json",
-      "sourcePath": "catalog/guides/contribution.md"
+      "path": "catalog/guides/contribution.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/discovery.json",
-      "sourcePath": "catalog/guides/discovery.md"
+      "path": "catalog/guides/discovery.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/lifecycle.json",
-      "sourcePath": "catalog/guides/lifecycle.md"
+      "path": "catalog/guides/lifecycle.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/themes.json",
-      "sourcePath": "catalog/guides/themes.md"
+      "path": "catalog/guides/themes.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/token-migration.json",
-      "sourcePath": "catalog/guides/token-migration.md"
+      "path": "catalog/guides/token-migration.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations.json",
-      "sourcePath": "catalog/guides/foundations.md"
+      "path": "catalog/guides/foundations.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-colour.json",
-      "sourcePath": "catalog/guides/foundations-colour.md"
+      "path": "catalog/guides/foundations-colour.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-component-tokens.json",
-      "sourcePath": "catalog/guides/foundations-component-tokens.md"
+      "path": "catalog/guides/foundations-component-tokens.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-elevation.json",
-      "sourcePath": "catalog/guides/foundations-elevation.md"
+      "path": "catalog/guides/foundations-elevation.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-motion.json",
-      "sourcePath": "catalog/guides/foundations-motion.md"
+      "path": "catalog/guides/foundations-motion.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-reference-tokens.json",
-      "sourcePath": "catalog/guides/foundations-reference-tokens.md"
+      "path": "catalog/guides/foundations-reference-tokens.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-semantic-tokens.json",
-      "sourcePath": "catalog/guides/foundations-semantic-tokens.md"
+      "path": "catalog/guides/foundations-semantic-tokens.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-shape.json",
-      "sourcePath": "catalog/guides/foundations-shape.md"
+      "path": "catalog/guides/foundations-shape.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-spacing.json",
-      "sourcePath": "catalog/guides/foundations-spacing.md"
+      "path": "catalog/guides/foundations-spacing.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/foundations-typography.json",
-      "sourcePath": "catalog/guides/foundations-typography.md"
+      "path": "catalog/guides/foundations-typography.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/control-sizing-usage.json",
-      "sourcePath": "catalog/guides/control-sizing-usage.md"
+      "path": "catalog/guides/control-sizing-usage.json"
     },
     {
       "family": "component",
@@ -104,28 +87,23 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/button/examples/html/basic.example.json",
-      "sourcePath": "catalog/components/button/examples/html/basic.html"
+      "path": "catalog/components/button/examples/html/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/button/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/button/examples/react/basic.tsx"
+      "path": "catalog/components/button/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/button/examples/react/states.example.json",
-      "sourcePath": "catalog/components/button/examples/react/states.tsx"
+      "path": "catalog/components/button/examples/react/states.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/button/examples/react/variants.example.json",
-      "sourcePath": "catalog/components/button/examples/react/variants.tsx"
+      "path": "catalog/components/button/examples/react/variants.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/button-usage.json",
-      "sourcePath": "catalog/guides/button-usage.md"
+      "path": "catalog/guides/button-usage.json"
     },
     {
       "family": "token-source",
@@ -137,13 +115,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/breadcrumbs/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/breadcrumbs/examples/react/basic.tsx"
+      "path": "catalog/components/breadcrumbs/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/breadcrumbs-usage.json",
-      "sourcePath": "catalog/guides/breadcrumbs-usage.md"
+      "path": "catalog/guides/breadcrumbs-usage.json"
     },
     {
       "family": "component",
@@ -151,13 +127,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/checkbox/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/checkbox/examples/react/basic.tsx"
+      "path": "catalog/components/checkbox/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/checkbox-usage.json",
-      "sourcePath": "catalog/guides/checkbox-usage.md"
+      "path": "catalog/guides/checkbox-usage.json"
     },
     {
       "family": "component",
@@ -165,13 +139,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/disclosure/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/disclosure/examples/react/basic.tsx"
+      "path": "catalog/components/disclosure/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/disclosure-usage.json",
-      "sourcePath": "catalog/guides/disclosure-usage.md"
+      "path": "catalog/guides/disclosure-usage.json"
     },
     {
       "family": "component",
@@ -179,13 +151,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/disclosure-group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/disclosure-group/examples/react/basic.tsx"
+      "path": "catalog/components/disclosure-group/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/disclosure-group-usage.json",
-      "sourcePath": "catalog/guides/disclosure-group-usage.md"
+      "path": "catalog/guides/disclosure-group-usage.json"
     },
     {
       "family": "component",
@@ -193,13 +163,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/group/examples/react/basic.tsx"
+      "path": "catalog/components/group/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/group-usage.json",
-      "sourcePath": "catalog/guides/group-usage.md"
+      "path": "catalog/guides/group-usage.json"
     },
     {
       "family": "component",
@@ -207,18 +175,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/link/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/link/examples/react/basic.tsx"
+      "path": "catalog/components/link/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/link/examples/react/icon-composition.example.json",
-      "sourcePath": "catalog/components/link/examples/react/icon-composition.tsx"
+      "path": "catalog/components/link/examples/react/icon-composition.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/link-usage.json",
-      "sourcePath": "catalog/guides/link-usage.md"
+      "path": "catalog/guides/link-usage.json"
     },
     {
       "family": "component",
@@ -226,13 +191,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/meter/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/meter/examples/react/basic.tsx"
+      "path": "catalog/components/meter/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/meter-usage.json",
-      "sourcePath": "catalog/guides/meter-usage.md"
+      "path": "catalog/guides/meter-usage.json"
     },
     {
       "family": "component",
@@ -240,13 +203,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/progress-bar/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/progress-bar/examples/react/basic.tsx"
+      "path": "catalog/components/progress-bar/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/progress-bar-usage.json",
-      "sourcePath": "catalog/guides/progress-bar-usage.md"
+      "path": "catalog/guides/progress-bar-usage.json"
     },
     {
       "family": "component",
@@ -254,13 +215,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/separator/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/separator/examples/react/basic.tsx"
+      "path": "catalog/components/separator/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/separator-usage.json",
-      "sourcePath": "catalog/guides/separator-usage.md"
+      "path": "catalog/guides/separator-usage.json"
     },
     {
       "family": "component",
@@ -268,13 +227,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/toggle-button/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/toggle-button/examples/react/basic.tsx"
+      "path": "catalog/components/toggle-button/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/toggle-button-usage.json",
-      "sourcePath": "catalog/guides/toggle-button-usage.md"
+      "path": "catalog/guides/toggle-button-usage.json"
     },
     {
       "family": "component",
@@ -282,13 +239,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/autocomplete/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/autocomplete/examples/react/basic.tsx"
+      "path": "catalog/components/autocomplete/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/autocomplete-usage.json",
-      "sourcePath": "catalog/guides/autocomplete-usage.md"
+      "path": "catalog/guides/autocomplete-usage.json"
     },
     {
       "family": "component",
@@ -296,13 +251,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/checkbox-group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/checkbox-group/examples/react/basic.tsx"
+      "path": "catalog/components/checkbox-group/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/checkbox-group-usage.json",
-      "sourcePath": "catalog/guides/checkbox-group-usage.md"
+      "path": "catalog/guides/checkbox-group-usage.json"
     },
     {
       "family": "component",
@@ -310,13 +263,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/date-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/date-field/examples/react/basic.tsx"
+      "path": "catalog/components/date-field/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/date-field-usage.json",
-      "sourcePath": "catalog/guides/date-field-usage.md"
+      "path": "catalog/guides/date-field-usage.json"
     },
     {
       "family": "component",
@@ -324,13 +275,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/date-picker/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/date-picker/examples/react/basic.tsx"
+      "path": "catalog/components/date-picker/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/date-picker-usage.json",
-      "sourcePath": "catalog/guides/date-picker-usage.md"
+      "path": "catalog/guides/date-picker-usage.json"
     },
     {
       "family": "component",
@@ -338,13 +287,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/date-range-picker/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/date-range-picker/examples/react/basic.tsx"
+      "path": "catalog/components/date-range-picker/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/date-range-picker-usage.json",
-      "sourcePath": "catalog/guides/date-range-picker-usage.md"
+      "path": "catalog/guides/date-range-picker-usage.json"
     },
     {
       "family": "component",
@@ -352,13 +299,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/form/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/form/examples/react/basic.tsx"
+      "path": "catalog/components/form/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/form-usage.json",
-      "sourcePath": "catalog/guides/form-usage.md"
+      "path": "catalog/guides/form-usage.json"
     },
     {
       "family": "component",
@@ -366,18 +311,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/number-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/number-field/examples/react/basic.tsx"
+      "path": "catalog/components/number-field/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/number-field/examples/react/sizing.example.json",
-      "sourcePath": "catalog/components/number-field/examples/react/sizing.tsx"
+      "path": "catalog/components/number-field/examples/react/sizing.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/number-field-usage.json",
-      "sourcePath": "catalog/guides/number-field-usage.md"
+      "path": "catalog/guides/number-field-usage.json"
     },
     {
       "family": "component",
@@ -385,18 +327,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/search-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/search-field/examples/react/basic.tsx"
+      "path": "catalog/components/search-field/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/search-field/examples/react/native-input.example.json",
-      "sourcePath": "catalog/components/search-field/examples/react/native-input.tsx"
+      "path": "catalog/components/search-field/examples/react/native-input.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/search-field-usage.json",
-      "sourcePath": "catalog/guides/search-field-usage.md"
+      "path": "catalog/guides/search-field-usage.json"
     },
     {
       "family": "component",
@@ -404,13 +343,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/switch/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/switch/examples/react/basic.tsx"
+      "path": "catalog/components/switch/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/switch-usage.json",
-      "sourcePath": "catalog/guides/switch-usage.md"
+      "path": "catalog/guides/switch-usage.json"
     },
     {
       "family": "component",
@@ -418,18 +355,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/text-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/text-field/examples/react/basic.tsx"
+      "path": "catalog/components/text-field/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/text-field/examples/react/native-input.example.json",
-      "sourcePath": "catalog/components/text-field/examples/react/native-input.tsx"
+      "path": "catalog/components/text-field/examples/react/native-input.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/text-field-usage.json",
-      "sourcePath": "catalog/guides/text-field-usage.md"
+      "path": "catalog/guides/text-field-usage.json"
     },
     {
       "family": "component",
@@ -437,13 +371,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/time-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/time-field/examples/react/basic.tsx"
+      "path": "catalog/components/time-field/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/time-field-usage.json",
-      "sourcePath": "catalog/guides/time-field-usage.md"
+      "path": "catalog/guides/time-field-usage.json"
     },
     {
       "family": "component",
@@ -451,13 +383,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/calendar/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/calendar/examples/react/basic.tsx"
+      "path": "catalog/components/calendar/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/calendar-usage.json",
-      "sourcePath": "catalog/guides/calendar-usage.md"
+      "path": "catalog/guides/calendar-usage.json"
     },
     {
       "family": "component",
@@ -465,13 +395,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-area/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-area/examples/react/basic.tsx"
+      "path": "catalog/components/color-area/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-area-usage.json",
-      "sourcePath": "catalog/guides/color-area-usage.md"
+      "path": "catalog/guides/color-area-usage.json"
     },
     {
       "family": "component",
@@ -479,13 +407,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-field/examples/react/basic.tsx"
+      "path": "catalog/components/color-field/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-field-usage.json",
-      "sourcePath": "catalog/guides/color-field-usage.md"
+      "path": "catalog/guides/color-field-usage.json"
     },
     {
       "family": "component",
@@ -493,13 +419,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-picker/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-picker/examples/react/basic.tsx"
+      "path": "catalog/components/color-picker/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-picker-usage.json",
-      "sourcePath": "catalog/guides/color-picker-usage.md"
+      "path": "catalog/guides/color-picker-usage.json"
     },
     {
       "family": "component",
@@ -507,13 +431,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-slider/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-slider/examples/react/basic.tsx"
+      "path": "catalog/components/color-slider/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-slider-usage.json",
-      "sourcePath": "catalog/guides/color-slider-usage.md"
+      "path": "catalog/guides/color-slider-usage.json"
     },
     {
       "family": "component",
@@ -521,18 +443,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-swatch/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-swatch/examples/react/basic.tsx"
+      "path": "catalog/components/color-swatch/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/color-swatch/examples/react/two-tone.example.json",
-      "sourcePath": "catalog/components/color-swatch/examples/react/two-tone.tsx"
+      "path": "catalog/components/color-swatch/examples/react/two-tone.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-swatch-usage.json",
-      "sourcePath": "catalog/guides/color-swatch-usage.md"
+      "path": "catalog/guides/color-swatch-usage.json"
     },
     {
       "family": "component",
@@ -540,13 +459,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-swatch-picker/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-swatch-picker/examples/react/basic.tsx"
+      "path": "catalog/components/color-swatch-picker/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-swatch-picker-usage.json",
-      "sourcePath": "catalog/guides/color-swatch-picker-usage.md"
+      "path": "catalog/guides/color-swatch-picker-usage.json"
     },
     {
       "family": "component",
@@ -554,13 +471,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-wheel/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-wheel/examples/react/basic.tsx"
+      "path": "catalog/components/color-wheel/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/color-wheel-usage.json",
-      "sourcePath": "catalog/guides/color-wheel-usage.md"
+      "path": "catalog/guides/color-wheel-usage.json"
     },
     {
       "family": "component",
@@ -568,13 +483,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/combo-box/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/combo-box/examples/react/basic.tsx"
+      "path": "catalog/components/combo-box/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/combo-box-usage.json",
-      "sourcePath": "catalog/guides/combo-box-usage.md"
+      "path": "catalog/guides/combo-box-usage.json"
     },
     {
       "family": "component",
@@ -582,13 +495,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/grid-list/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/grid-list/examples/react/basic.tsx"
+      "path": "catalog/components/grid-list/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/grid-list-usage.json",
-      "sourcePath": "catalog/guides/grid-list-usage.md"
+      "path": "catalog/guides/grid-list-usage.json"
     },
     {
       "family": "component",
@@ -596,18 +507,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/list-box/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/list-box/examples/react/basic.tsx"
+      "path": "catalog/components/list-box/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/list-box/examples/react/grid.example.json",
-      "sourcePath": "catalog/components/list-box/examples/react/grid.tsx"
+      "path": "catalog/components/list-box/examples/react/grid.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/list-box-usage.json",
-      "sourcePath": "catalog/guides/list-box-usage.md"
+      "path": "catalog/guides/list-box-usage.json"
     },
     {
       "family": "component",
@@ -615,18 +523,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/menu/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/menu/examples/react/basic.tsx"
+      "path": "catalog/components/menu/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/menu/examples/react/nested.example.json",
-      "sourcePath": "catalog/components/menu/examples/react/nested.tsx"
+      "path": "catalog/components/menu/examples/react/nested.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/menu-usage.json",
-      "sourcePath": "catalog/guides/menu-usage.md"
+      "path": "catalog/guides/menu-usage.json"
     },
     {
       "family": "component",
@@ -634,13 +539,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/radio-group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/radio-group/examples/react/basic.tsx"
+      "path": "catalog/components/radio-group/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/radio-group-usage.json",
-      "sourcePath": "catalog/guides/radio-group-usage.md"
+      "path": "catalog/guides/radio-group-usage.json"
     },
     {
       "family": "component",
@@ -648,13 +551,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/range-calendar/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/range-calendar/examples/react/basic.tsx"
+      "path": "catalog/components/range-calendar/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/range-calendar-usage.json",
-      "sourcePath": "catalog/guides/range-calendar-usage.md"
+      "path": "catalog/guides/range-calendar-usage.json"
     },
     {
       "family": "component",
@@ -662,13 +563,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/select/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/select/examples/react/basic.tsx"
+      "path": "catalog/components/select/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/select-usage.json",
-      "sourcePath": "catalog/guides/select-usage.md"
+      "path": "catalog/guides/select-usage.json"
     },
     {
       "family": "component",
@@ -676,13 +575,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/slider/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/slider/examples/react/basic.tsx"
+      "path": "catalog/components/slider/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/slider-usage.json",
-      "sourcePath": "catalog/guides/slider-usage.md"
+      "path": "catalog/guides/slider-usage.json"
     },
     {
       "family": "component",
@@ -690,13 +587,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/table/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/table/examples/react/basic.tsx"
+      "path": "catalog/components/table/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/table-usage.json",
-      "sourcePath": "catalog/guides/table-usage.md"
+      "path": "catalog/guides/table-usage.json"
     },
     {
       "family": "component",
@@ -704,18 +599,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/tabs/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/tabs/examples/react/basic.tsx"
+      "path": "catalog/components/tabs/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/tabs/examples/react/variants.example.json",
-      "sourcePath": "catalog/components/tabs/examples/react/variants.tsx"
+      "path": "catalog/components/tabs/examples/react/variants.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/tabs-usage.json",
-      "sourcePath": "catalog/guides/tabs-usage.md"
+      "path": "catalog/guides/tabs-usage.json"
     },
     {
       "family": "component",
@@ -723,13 +615,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/tag-group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/tag-group/examples/react/basic.tsx"
+      "path": "catalog/components/tag-group/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/tag-group-usage.json",
-      "sourcePath": "catalog/guides/tag-group-usage.md"
+      "path": "catalog/guides/tag-group-usage.json"
     },
     {
       "family": "component",
@@ -737,13 +627,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/toggle-button-group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/toggle-button-group/examples/react/basic.tsx"
+      "path": "catalog/components/toggle-button-group/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/toggle-button-group-usage.json",
-      "sourcePath": "catalog/guides/toggle-button-group-usage.md"
+      "path": "catalog/guides/toggle-button-group-usage.json"
     },
     {
       "family": "component",
@@ -751,13 +639,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/token-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/token-field/examples/react/basic.tsx"
+      "path": "catalog/components/token-field/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/token-field-usage.json",
-      "sourcePath": "catalog/guides/token-field-usage.md"
+      "path": "catalog/guides/token-field-usage.json"
     },
     {
       "family": "component",
@@ -765,13 +651,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/toolbar/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/toolbar/examples/react/basic.tsx"
+      "path": "catalog/components/toolbar/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/toolbar-usage.json",
-      "sourcePath": "catalog/guides/toolbar-usage.md"
+      "path": "catalog/guides/toolbar-usage.json"
     },
     {
       "family": "component",
@@ -779,13 +663,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/tree/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/tree/examples/react/basic.tsx"
+      "path": "catalog/components/tree/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/tree-usage.json",
-      "sourcePath": "catalog/guides/tree-usage.md"
+      "path": "catalog/guides/tree-usage.json"
     },
     {
       "family": "component",
@@ -793,13 +675,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/virtualizer/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/virtualizer/examples/react/basic.tsx"
+      "path": "catalog/components/virtualizer/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/virtualizer-usage.json",
-      "sourcePath": "catalog/guides/virtualizer-usage.md"
+      "path": "catalog/guides/virtualizer-usage.json"
     },
     {
       "family": "component",
@@ -807,13 +687,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/drop-zone/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/drop-zone/examples/react/basic.tsx"
+      "path": "catalog/components/drop-zone/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/drop-zone-usage.json",
-      "sourcePath": "catalog/guides/drop-zone-usage.md"
+      "path": "catalog/guides/drop-zone-usage.json"
     },
     {
       "family": "component",
@@ -821,13 +699,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/file-trigger/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/file-trigger/examples/react/basic.tsx"
+      "path": "catalog/components/file-trigger/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/file-trigger-usage.json",
-      "sourcePath": "catalog/guides/file-trigger-usage.md"
+      "path": "catalog/guides/file-trigger-usage.json"
     },
     {
       "family": "component",
@@ -835,18 +711,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/dialog/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/dialog/examples/react/basic.tsx"
+      "path": "catalog/components/dialog/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/dialog/examples/react/controlled.example.json",
-      "sourcePath": "catalog/components/dialog/examples/react/controlled.tsx"
+      "path": "catalog/components/dialog/examples/react/controlled.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/dialog-usage.json",
-      "sourcePath": "catalog/guides/dialog-usage.md"
+      "path": "catalog/guides/dialog-usage.json"
     },
     {
       "family": "component",
@@ -854,18 +727,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/popover/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/popover/examples/react/basic.tsx"
+      "path": "catalog/components/popover/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/popover/examples/react/anchored.example.json",
-      "sourcePath": "catalog/components/popover/examples/react/anchored.tsx"
+      "path": "catalog/components/popover/examples/react/anchored.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/popover-usage.json",
-      "sourcePath": "catalog/guides/popover-usage.md"
+      "path": "catalog/guides/popover-usage.json"
     },
     {
       "family": "component",
@@ -873,13 +743,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/preview-trigger/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/preview-trigger/examples/react/basic.tsx"
+      "path": "catalog/components/preview-trigger/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/preview-trigger-usage.json",
-      "sourcePath": "catalog/guides/preview-trigger-usage.md"
+      "path": "catalog/guides/preview-trigger-usage.json"
     },
     {
       "family": "component",
@@ -887,13 +755,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/toast/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/toast/examples/react/basic.tsx"
+      "path": "catalog/components/toast/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/toast-usage.json",
-      "sourcePath": "catalog/guides/toast-usage.md"
+      "path": "catalog/guides/toast-usage.json"
     },
     {
       "family": "component",
@@ -901,13 +767,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/tooltip/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/tooltip/examples/react/basic.tsx"
+      "path": "catalog/components/tooltip/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/tooltip-usage.json",
-      "sourcePath": "catalog/guides/tooltip-usage.md"
+      "path": "catalog/guides/tooltip-usage.json"
     },
     {
       "family": "component",
@@ -915,13 +779,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/icon-button/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/icon-button/examples/react/basic.tsx"
+      "path": "catalog/components/icon-button/examples/react/basic.example.json"
     },
     {
       "family": "guide",
-      "path": "catalog/guides/icon-button-usage.json",
-      "sourcePath": "catalog/guides/icon-button-usage.md"
+      "path": "catalog/guides/icon-button-usage.json"
     },
     {
       "family": "component",
@@ -929,8 +791,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/text/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/text/examples/react/basic.tsx"
+      "path": "catalog/components/text/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -938,8 +799,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/avatar/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/avatar/examples/react/basic.tsx"
+      "path": "catalog/components/avatar/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -947,8 +807,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/image/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/image/examples/react/basic.tsx"
+      "path": "catalog/components/image/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -956,8 +815,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/select-native/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/select-native/examples/react/basic.tsx"
+      "path": "catalog/components/select-native/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -965,18 +823,15 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/command-palette/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/command-palette/examples/react/basic.tsx"
+      "path": "catalog/components/command-palette/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/command-palette/examples/react/controlled-query.example.json",
-      "sourcePath": "catalog/components/command-palette/examples/react/controlled-query.tsx"
+      "path": "catalog/components/command-palette/examples/react/controlled-query.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/command-palette/examples/react/managed-commands.example.json",
-      "sourcePath": "catalog/components/command-palette/examples/react/managed-commands.tsx"
+      "path": "catalog/components/command-palette/examples/react/managed-commands.example.json"
     },
     {
       "family": "component",
@@ -984,8 +839,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/alert-dialog/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/alert-dialog/examples/react/basic.tsx"
+      "path": "catalog/components/alert-dialog/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -993,8 +847,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/button-group/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/button-group/examples/react/basic.tsx"
+      "path": "catalog/components/button-group/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1002,8 +855,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/card/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/card/examples/react/basic.tsx"
+      "path": "catalog/components/card/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1011,8 +863,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/checkbox-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/checkbox-field/examples/react/basic.tsx"
+      "path": "catalog/components/checkbox-field/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1020,8 +871,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/color-mode-toggle/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/color-mode-toggle/examples/react/basic.tsx"
+      "path": "catalog/components/color-mode-toggle/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1029,8 +879,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/header-nav/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/header-nav/examples/react/basic.tsx"
+      "path": "catalog/components/header-nav/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1038,8 +887,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/input/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/input/examples/react/basic.tsx"
+      "path": "catalog/components/input/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1047,8 +895,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/input-tags/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/input-tags/examples/react/basic.tsx"
+      "path": "catalog/components/input-tags/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1056,8 +903,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/multi-select/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/multi-select/examples/react/basic.tsx"
+      "path": "catalog/components/multi-select/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1065,8 +911,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/payment-input/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/payment-input/examples/react/basic.tsx"
+      "path": "catalog/components/payment-input/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1074,13 +919,11 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/progress-circle/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/progress-circle/examples/react/basic.tsx"
+      "path": "catalog/components/progress-circle/examples/react/basic.example.json"
     },
     {
       "family": "example",
-      "path": "catalog/components/progress-circle/examples/react/indeterminate.example.json",
-      "sourcePath": "catalog/components/progress-circle/examples/react/indeterminate.tsx"
+      "path": "catalog/components/progress-circle/examples/react/indeterminate.example.json"
     },
     {
       "family": "component",
@@ -1088,8 +931,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/radio-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/radio-field/examples/react/basic.tsx"
+      "path": "catalog/components/radio-field/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1097,8 +939,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/sidebar/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/sidebar/examples/react/basic.tsx"
+      "path": "catalog/components/sidebar/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1106,8 +947,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/switch-field/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/switch-field/examples/react/basic.tsx"
+      "path": "catalog/components/switch-field/examples/react/basic.example.json"
     },
     {
       "family": "component",
@@ -1115,8 +955,7 @@
     },
     {
       "family": "example",
-      "path": "catalog/components/text-area/examples/react/basic.example.json",
-      "sourcePath": "catalog/components/text-area/examples/react/basic.tsx"
+      "path": "catalog/components/text-area/examples/react/basic.example.json"
     }
   ]
 }

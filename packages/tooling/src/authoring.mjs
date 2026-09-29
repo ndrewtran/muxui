@@ -163,9 +163,6 @@ function validateManifest(manifest) {
       );
     }
     assertRelativePath(entry.path, `records/${index}/path`);
-    if (entry.sourcePath !== undefined) {
-      assertRelativePath(entry.sourcePath, `records/${index}/sourcePath`);
-    }
   }
 }
 
@@ -639,9 +636,9 @@ function isCatalogSource(context, path) {
     || context.sourceManifest.commandRegistryPath === path
     || context.sourceManifest.pageBudgetProfilePath === path
     || context.sourceManifest.platformSafetyContractPath === path
-    || context.sourceManifest.records.some((entry) => (
-      entry.path === path || entry.sourcePath === path
-    ));
+    || context.sourceManifest.records.some((entry) => entry.path === path)
+    // Content files are named by their record's `source`, not the manifest.
+    || context.catalogBundle.artifacts.some(({ source }) => source.content === path);
 }
 
 function packageForPath(packages, path) {
