@@ -13,6 +13,7 @@ import {
   canonicalDigest,
   contentRevision,
   contentRevisionPreimage,
+  loadFieldOwnershipRegistry,
   resolveAuthoringField,
   validateAuthoringMetadata,
 } from '../src/index.mjs';
@@ -190,7 +191,7 @@ test('E-G0.5-02: corrected identity and runtime-profile fields change observed s
 test('E-G0.5-04 negative: a new stable field cannot bypass authoring and ownership coupling', async () => {
   const componentSchema = await schemaDocument('component.schema.json');
   const bindingSchema = await schemaDocument('binding.schema.json');
-  const ownership = await schemaDocument('field-ownership.json');
+  const ownership = structuredClone(loadFieldOwnershipRegistry());
   const baselineCount = validateAuthoringMetadata().length;
   componentSchema.required.push('newStableField');
   componentSchema.properties.newStableField = { type: 'string', minLength: 1 };
@@ -239,7 +240,7 @@ test('E-G0.5-04 negative: schema-bearing keywords and references cannot hide aut
   const [baselineComponent, bindingSchema, ownership] = await Promise.all([
     schemaDocument('component.schema.json'),
     schemaDocument('binding.schema.json'),
-    schemaDocument('field-ownership.json'),
+    structuredClone(loadFieldOwnershipRegistry()),
   ]);
   const payload = (field) => ({
     type: 'object',
