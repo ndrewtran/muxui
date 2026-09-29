@@ -41,12 +41,14 @@ import {
   TYPOGRAPHY_ROLES,
   TYPOGRAPHY_TOKEN_DEFAULTS,
   createScaleDocument,
+  draftScaleDocument,
   previewCss,
   previewTheme,
   previewSwatches,
   presetSettings,
   randomScaleSettings,
   radiusValue,
+  rootCssFromPreview,
   serializeScaleDocument,
   settingsFromDocument,
   validateScaleDocument,
@@ -637,10 +639,12 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
     finally { setImportInputKey((value) => value + 1); }
   };
 
+  // Only the embedded Apply flow reads the draft document and its signature.
   const draftDocument = React.useMemo(() => {
-    try { return createScaleDocument(settings, { slug }); }
+    if (!embedded) return null;
+    try { return draftScaleDocument(settings, slug); }
     catch { return null; }
-  }, [settings, slug]);
+  }, [embedded, settings, slug]);
   const draftSignature = React.useMemo(() => draftDocument ? serializeScaleDocument(draftDocument) : null, [draftDocument]);
   const appliedSignature = React.useMemo(() => {
     if (!appliedTheme) return null;
@@ -682,7 +686,9 @@ export default function App({ embedded = false, loadTheme = null, saveTheme = nu
   React.useEffect(() => {
     if (embedded && previewState.unsupported.length) setStatus({ tone: 'error', text: `Draft preview unavailable for requested modes: ${previewState.unsupported.join(', ')}.` });
   }, [embedded, previewState.unsupported.join('|')]);
-  const css = React.useMemo(() => previewCss(settings, { selector: ':root' }), [settings]);
+  // Standalone previews compile the copyable CSS modes, so only the selector differs.
+  // Embedded previews follow the site's mode axes and compile the copy separately.
+  const css = React.useMemo(() => embedded ? previewCss(settings, { selector: ':root' }) : rootCssFromPreview(compiled.css), [embedded, settings, compiled.css]);
   React.useLayoutEffect(() => {
     if (embedded) return undefined;
     // Overlay portals live outside the app element and need the same theme scope.

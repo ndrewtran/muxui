@@ -88,11 +88,15 @@ function scaleInputsFromSettings(settings) {
   };
 }
 
-export function validateScaleDocument(document) {
+function assertScaleDocumentShape(document) {
   if (!isRecord(document)) throw new TypeError('MUXUI_SCALE_DOCUMENT_INVALID');
   if (typeof document.id !== 'string' || !document.id.startsWith('muxui:theme:')) throw new TypeError('MUXUI_SCALE_SOURCE_ID_INVALID');
   assertSlug(document.id.slice('muxui:theme:'.length));
   if (!isRecord(document.scale)) throw new TypeError('MUXUI_SCALE_INPUTS_INVALID');
+}
+
+export function validateScaleDocument(document) {
+  assertScaleDocumentShape(document);
   validateThemeAuthoringDocument(document, { source: defaultThemeSource });
   return document;
 }
@@ -118,7 +122,26 @@ export function settingsFromDocument(document) {
   const colorMode = document.modes.colorScheme.includes(defaultThemeSource.theme.defaultModes.colorScheme) ? defaultThemeSource.theme.defaultModes.colorScheme : document.modes.colorScheme[0];
   return { ...DEFAULT_SETTINGS, family: document.scale.mode, presetId: document.scale.presetId, namedColor: document.scale.namedColor, neutralColor: document.scale.neutralColor, whiteAnchor: document.scale.whiteAnchor, contrastPivot: document.scale.contrastPivot, curvature: document.scale.curvature, colorMode, background: colorMode, themeModes: structuredClone(document.modes), additionalOverrides: Object.fromEntries(Object.entries(document.overrides).filter(([id]) => !Object.hasOwn(generated.assignments, id)).map(([id, value]) => [id, structuredClone(value)])) };
 }
-export function serializeScaleDocument(document) { return serializeThemeAuthoringDocument(validateScaleDocument(document), { source: defaultThemeSource }); }
+// The shared serializer runs the full authoring validation, so only Scale's own checks run here.
+export function serializeScaleDocument(document) {
+  assertScaleDocumentShape(document);
+  return serializeThemeAuthoringDocument(document, { source: defaultThemeSource });
+}
+
+// Scale treats settings objects as immutable, so one validated document per
+// settings object serves validation, the embedded draft, and the preview.
+// Callers only receive copies with a replaced id and must not mutate them.
+const settingsDocuments = new WeakMap();
+function settingsDocument(settings) {
+  let document = settingsDocuments.get(settings);
+  if (!document) {
+    document = createScaleDocument(settings);
+    settingsDocuments.set(settings, document);
+  }
+  return document;
+}
+function withSlug(document, slug) { return { ...document, id: `muxui:theme:${assertSlug(slug)}` }; }
+export function draftScaleDocument(settings, slug) { return withSlug(settingsDocument(settings), slug); }
 export function presetSettings(family, presetId) {
   if (!['standard', 'mono'].includes(family)) throw new TypeError('MUXUI_SCALE_MODE_INVALID');
   const preset = (family === 'mono' ? MONO_PRESETS : STANDARD_PRESETS).find(([id]) => id === presetId);
@@ -138,8 +161,9 @@ export function previewPalette(settings, kind, steps) {
     return { step, value };
   });
 }
-export function previewTheme(settings, { selector = '.muxui-scale-preview', modes = { colorScheme: settings.colorMode } } = {}) {
-  const compiled = compileThemeAuthoringDocument(createScaleDocument(settings, { slug: 'preview' }), {
+const PREVIEW_SELECTOR = '.muxui-scale-preview';
+export function previewTheme(settings, { selector = PREVIEW_SELECTOR, modes = { colorScheme: settings.colorMode } } = {}) {
+  const compiled = compileThemeAuthoringDocument(withSlug(settingsDocument(settings), 'preview'), {
     source: defaultThemeSource,
     target: 'web.css',
     selector,
@@ -149,6 +173,12 @@ export function previewTheme(settings, { selector = '.muxui-scale-preview', mode
   return compiled;
 }
 export function previewCss(settings, options) { return previewTheme(settings, options).css; }
+// The compiler emits the selector only as the block prefix, so CSS compiled for
+// the default preview selector becomes the copyable `:root` CSS for the same modes.
+export function rootCssFromPreview(css) {
+  if (!css.startsWith(`${PREVIEW_SELECTOR} {`)) throw new TypeError('MUXUI_SCALE_CSS_PROJECTION_INVALID');
+  return `:root${css.slice(PREVIEW_SELECTOR.length)}`;
+}
 
 export function previewSwatches(compiled, kind, steps) {
   const prefix = kind === 'named' ? 'color' : 'neutral';
@@ -168,7 +198,7 @@ export function validateScaleSettings(settings) {
     || !settings.themeModes?.colorScheme?.includes(settings.colorMode)
     || (settings.background === 'light') !== (settings.colorMode === 'light')) throw new TypeError('MUXUI_SCALE_SETTINGS_INVALID');
   if (typeof settings.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_SCALE_SETTINGS_INVALID');
-  createScaleDocument(settings);
+  settingsDocument(settings);
   return settings;
 }
 

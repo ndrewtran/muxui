@@ -9,11 +9,13 @@ import {
   TYPOGRAPHY_METRIC_GROUPS,
   TYPOGRAPHY_ROLES,
   createScaleDocument,
+  draftScaleDocument,
   previewCss,
   previewPalette,
   previewTheme,
   previewSwatches,
   presetSettings,
+  rootCssFromPreview,
   settingsFromDocument,
   validateScaleSettings,
   randomScaleSettings,
@@ -238,4 +240,14 @@ test('typography matrix metadata follows canonical roles and round-trips linked 
   const restored = settingsFromDocument(JSON.parse(serializeScaleDocument(document)));
   assert.deepEqual(restored.additionalOverrides[body.metrics.fontWeight], settings.additionalOverrides[body.metrics.fontWeight]);
   assert.deepEqual(createScaleDocument(restored, { slug: 'typography-matrix' }), document);
+});
+
+test('reused settings work matches fresh documents and root CSS compiles', () => {
+  for (const settings of [DEFAULT_SETTINGS, { ...DEFAULT_SETTINGS, ...presetSettings('mono', MONO_PRESETS[0][0]), colorMode: 'dark', background: 'dark' }]) {
+    validateScaleSettings(settings);
+    assert.deepEqual(draftScaleDocument(settings, 'reused-draft'), createScaleDocument(settings, { slug: 'reused-draft' }));
+    assert.equal(rootCssFromPreview(previewCss(settings)), previewCss(settings, { selector: ':root' }));
+  }
+  assert.throws(() => draftScaleDocument(DEFAULT_SETTINGS, '../escape'), /SLUG_INVALID/u);
+  assert.throws(() => rootCssFromPreview(previewCss(DEFAULT_SETTINGS, { selector: ':root' })), /CSS_PROJECTION_INVALID/u);
 });
