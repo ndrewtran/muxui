@@ -959,6 +959,26 @@ These deliverables establish implementation readiness for the three families,
 not milestone completion, publication, support, consumer mutation, or a
 final R1-exit merge authorization.
 
+### Post-R1.6 Figma token export addition
+
+Decision 0020 names Figma and pulls the export-only slice of G3.5 forward.
+Private `@muxui/tokens` owns a deterministic transform from the canonical
+token source to Figma variables, text styles, and effect styles, a
+lossy/unsupported report, an idempotent Plugin API applier that never
+deletes, and a package-local CLI. Figma content remains a disposable
+projection; nothing generated is committed.
+
+| ID | Required assertion | Retained evidence |
+| --- | --- | --- |
+| `E-FIGMA-EXPORT-01` | Repeated export of the same canonical source yields an identical document with token contract version and source digest provenance. | Package determinism test. |
+| `E-FIGMA-EXPORT-02` | Every token is exported or listed in the unsupported report with a reason; lossy mappings are reported. | Package coverage test. |
+| `E-FIGMA-EXPORT-03` | Every exported variable's web code syntax names the exact CSS custom property emitted by the web compiler. | Package parity test. |
+| `E-FIGMA-EXPORT-04` | A second applier run over unchanged export reports no creates or updates, changed values update in place, and removed tokens are reported as orphans without deletion. | Applier test against an in-memory Plugin API fake. |
+
+Import, round-trip, proposals, components, Code Connect, additional themes,
+and pruning remain G3.5 or later. This addition establishes no milestone
+completion, public package, support, or release claim.
+
 ### R1 exit — React prerelease publication
 
 **Entry:** R1.5 complete plus exact tarball, release manifest, provenance,
@@ -1625,6 +1645,11 @@ release, have fixed ownership, and remain subordinate to deterministic proof.
 projection/import-proposal workflow over stable canonical token and artifact
 identities.
 
+**Early export slice:** Decision 0020 landed a Figma token export ahead of
+these entry conditions (see "Post-R1.6 Figma token export addition"). The
+remaining deliverables and entry conditions below still apply to import,
+round-trip, and every other G3.5 capability.
+
 **Entry conditions**
 
 - Gate 2 package, token-contract, artifact, binding, and release identities are
@@ -2069,7 +2094,7 @@ remove or weaken these assertions without changing the architecture.
 | Lifecycle, SemVer, historical retrieval, trust | G0.1 schema rules, R1 experimental prerelease lifecycle/history, P2.1 portfolio version/release, P2.2 installed authority, G3.2 migrations. |
 | Token/theme/fallback/override policy | G0.1–G0.5 establish the canonical contract; R1.0 and R1.6 prove React use and private authoring; later W1/N1 profile proof and G3.5 external design-tool interchange remain separately gated. |
 | React-primary product boundaries | Global guardrails, R1 package-only React prereleases, P2 capability/productization enablement, separately activated W1/N1/X1/S1, independent Gate 3 admission. |
-| Design-tool interoperability | G3.5 export/import-proposal and round-trip proof. |
+| Design-tool interoperability | Decision 0020 Figma token export (export only); G3.5 import-proposal and round-trip proof. |
 | Promptable semantics | G3.6 observed-task discovery and bounded activation only. |
 | Agent-safe write paths | R1.5 previews, G2.5 safe consumer operations, G2.6 allowlisted canonical proposals, G3.2 migrations. |
 | Deferred extensions, frameworks, higher-order artifacts, and protocols | G3.7–G3.11 independent milestones. |
@@ -2091,7 +2116,7 @@ and stays absent until that trigger is proved.
 | Canonical proposal writes | G2.6 | Closed operation schema, complete review packet, owner, proof, digest-bound approval. |
 | Migration | G3.2 | A real version-bounded need and a deterministic transform or maintained reviewed codemod. |
 | Private additional themes and local consumer theme editing | R1.6 | Stable canonical token/theme types, complete Mux UI namespace mapping, profile/fallback/accessibility validation, and private authoring round-trip proof. |
-| Design-tool interchange | G3.5 | Stable IDs, observed named workflow, export proof, loss policy, import as proposal. |
+| Design-tool interchange | G3.5 | Stable IDs, observed named workflow, export proof, loss policy, import as proposal. The Figma token export under Decision 0020 is available early and does not satisfy this trigger. |
 | Promptable semantic fields/relations | After G3.6 admission | Repeated task evidence, stable owner/meaning, deterministic consumer, measurable improvement. |
 | Model evaluations as release gates | G3.4 | Repeated baseline, predeclared threshold, variance policy, failure owner. |
 | Executable extensions or consumer overlays | G3.7 separately | Threat model, demand, namespace/integrity/permission/revocation proof. |
