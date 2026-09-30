@@ -93,3 +93,41 @@ The isolated `tests/fixtures/tailwind-consumer` fixture compiles the real Mux
 stylesheet and exercises each supported namespace with Tailwind 4.1.13.
 The mapping follows Tailwind's [theme variable contract](https://tailwindcss.com/docs/theme)
 and its [transition-duration implementation](https://github.com/tailwindlabs/tailwindcss/blob/v4.1.13/packages/tailwindcss/src/utilities.ts).
+
+## Export to Figma
+
+Decision 0020 admits an export-only Figma projection. Figma content is never
+canonical; rerun the export after token changes instead of editing Figma.
+
+```sh
+pnpm --filter @muxui/tokens figma:export report     # lossy/unsupported report (JSON)
+pnpm --filter @muxui/tokens figma:export plan       # collections, modes, batch sizes
+pnpm --filter @muxui/tokens figma:export batch 1    # one ready-to-run applier script
+pnpm --filter @muxui/tokens figma:export scripts    # every script, in order
+```
+
+`compileFigmaExport({ source })` in `src/figma.mjs` builds the document from
+the canonical graph resolver. Collections are fixed by layer and type:
+`Reference` (unscoped), `Semantic color`, `Semantic dimension`, and
+`Semantic number and string`, with component tokens joining the semantic
+collection for their type. Each collection's modes are the union of the axes
+its tokens vary on (at most four modes), and the first mode follows
+`theme.defaultModes`. Motion and direction are not exported. Aliases stay Figma
+aliases; color-mix and formula recipes are resolved per mode, fluid sizes use
+their static defaults, and dimensions are pixels at a 16px root. Each variable
+carries its token ID and meaning in its description and
+`codeSyntax.WEB = var(--muxui-…)`. Typography roles become text styles bound
+to font-size and font-weight variables; effect tokens become effect styles.
+Durations, easings, and transitions are listed as unsupported.
+
+Run the scripts in order through a Plugin API runner such as the Figma MCP
+`use_figma` tool. Each script is at most 40,000 bytes and self-contained: it
+ensures every collection and mode, then upserts its slice. Variables come
+first, with alias targets before aliases, then text and effect styles; the
+last script reports orphans. Items are matched by the Mux ID in shared plugin
+data (`muxui`/`id`). The applier creates missing items, updates changed ones,
+leaves unchanged ones alone, never deletes, and returns a compact summary:
+created/updated/unchanged counts, orphaned items, orphaned modes
+(`modeOrphans`), `errorCount`, and a capped error list. When a collection
+gains an axis, a stale default mode is renamed to the new default rather than
+duplicated.

@@ -1,5 +1,5 @@
 ---
-scopeVersion: 12.0.1
+scopeVersion: 12.1.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -75,6 +75,10 @@ families. Private `motion/react` and `motion/react-m` imports remain local to
 the owning renderer modules; Mux UI owns public APIs, tokens, modes, CSS,
 accessibility, SSR/hydration, and lifecycle. Registry metadata is not install,
 lockfile, package, or proof evidence.
+
+Product Scope `12.1.0` applies Decision 0020: Figma is the named design tool,
+and an export-only slice of the admitted design-tool items lands early inside
+private `@muxui/tokens`. Import and round-trip keep their G3.5 conditions.
 
 ## Scope vocabulary
 
@@ -514,7 +518,7 @@ without truncation.
 | `SCOPE-THEME-ACCESSIBILITY` | `committed` | Observable forced-colors/high-contrast React behavior at R1; native dynamic-color/accessibility mappings activate and are independently fulfilled/evidenced only at N1. Owning bindings satisfy `SCOPE-THEME-PLATFORM-SAFETY`; this item does not own requirement identity or the non-disable rule. | R1 now; N1 later |
 | `SCOPE-THEME-RUNTIME` | `admitted` | Runtime theme switching per explicitly supported/proved profile; complete static output remains mandatory | Productization or capability release |
 | `SCOPE-THEME-ADDITIONAL` | `admitted` | Additional first-party themes and local consumer theme editing through the private Mux UI theme-authoring capability | R1.6 private authoring proof; public or hosted release remains separately admitted |
-| `SCOPE-DESIGN-TOOL` | `admitted` | One named external design-tool interchange profile and proposal-only round-trip | Capability release through G3.5; it does not own the private theme-authoring capability |
+| `SCOPE-DESIGN-TOOL` | `admitted` | One named external design-tool interchange profile and proposal-only round-trip; Figma is named, and its export-only token slice is available early under Decision 0020 | Import and round-trip through G3.5; the early export is a private `@muxui/tokens` projection with no release claim; it does not own the private theme-authoring capability |
 
 CSS-derived values never become native authority. Consumer themes can assign
 only permitted existing roles and cannot change Mux UI token identity, type,
@@ -631,7 +635,7 @@ explicit no-activation decision without making Mux UI incomplete.
 | `SCOPE-CAP-MIGRATION` | `deferred` | Declarative migrations and reviewed codemods | A real version-bounded supported migration need with retrievable old/new specs and bounded transformation. | G3.2 |
 | `SCOPE-CAP-MCP-HOSTED` | `deferred` | Read-only hosted MCP | Stable query/compatibility policy plus privacy, security, availability, cache isolation, and failure separation. | G3.3 |
 | `SCOPE-CAP-AGENT-GATES` | `admitted` | Promote selected agent evaluations | Repeated baseline, predeclared threshold/variance/retry policy, canonical prompt IDs, and a failure owner. | G3.4 |
-| `SCOPE-CAP-DESIGN-TOOL` | `admitted` | One named external design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. Additional themes are governed by `SCOPE-CAP-THEME-AUTHORING-PRIVATE`. | G3.5 |
+| `SCOPE-CAP-DESIGN-TOOL` | `admitted` | One named external design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. Decision 0020 lands a Figma export-only slice early without satisfying this trigger. Additional themes are governed by `SCOPE-CAP-THEME-AUTHORING-PRIVATE`. | G3.5 (export slice: Decision 0020) |
 | `SCOPE-CAP-THEME-AUTHORING-PRIVATE` | `admitted` | Private `apps/scale` maintainer capability for adding, editing, previewing, importing, exporting, persisting, and round-tripping Mux UI themes | Canonical token/theme ownership, typed override safety, complete theme parity proof, and a disable path that leaves canonical sources authoritative. | R1.6 |
 | `SCOPE-CAP-TAILWIND-CONSUMER` | `admitted` | Optional Tailwind consumer build adapter generated from Mux UI-owned token/theme transforms | Actual consumer compilation proof; Tailwind is a consumer build dependency only and never a Mux UI runtime, peer, or styling-engine dependency. | R1.6 |
 | `SCOPE-CAP-PROMPT-SEMANTICS` | `admitted` | Promptable-semantics discovery | Privacy-safe task corpus and baseline over existing tokens, variants, patterns, decision context, and examples. Activation of any field remains separately admitted. | G3.6 |
@@ -1323,3 +1327,22 @@ created. Mux UI owns the public contract, reduced modes, CSS, accessibility,
 SSR/hydration, refs, and lifecycle. React Native, `web.html`, cross-renderer
 equivalence, stable support, publication, consumer mutation, and final R1-exit
 merge remain outside this clarification.
+
+## Product Scope 12.1.0: Figma token export
+
+[Decision 0020](../decisions/0020-figma-token-export.md) names Figma as the
+design tool for `SCOPE-DESIGN-TOOL` and `SCOPE-CAP-DESIGN-TOOL` and admits
+their export-only slice ahead of G3.5. Andrew's observed workflow is applying
+canonical tokens to a Figma file through the Figma MCP. Private
+`@muxui/tokens` owns a deterministic export of variables, text styles, and
+effect styles with a lossy/unsupported report, plus an idempotent applier
+that never deletes. Architecture already assigns design-tool transforms to
+that package, and the Roadmap records the addition and its evidence IDs.
+
+This minor revision changes no committed release, platform, package, public
+surface, support claim, or non-goal. Figma content remains a projection under
+`SCOPE-NONGOAL-001`, and no generated export is committed. Import, round-trip,
+proposals, components, Code Connect, additional themes, and pruning keep their
+G3.5 conditions. Andrew authorized applying the export to one Figma file he
+supplied; writes to any other file remain separate actions. Rollback deletes
+the transform and CLI; any Figma file is disposable.
