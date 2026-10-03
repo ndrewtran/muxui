@@ -1,0 +1,67 @@
+name: npm publish
+
+# Manual, environment-gated npm workflow. The npm-publish environment requires
+# Andrew's approval and only deploys from main. It currently only verifies the
+# NPM_TOKEN credentials with read-only commands; the rc.1 publish job will be
+# added later under Andrew's authorization.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Never run two npm jobs at once, and never cancel one mid-flight.
+concurrency:
+  group: npm-publish
+  cancel-in-progress: false
+
+jobs:
+  verify-credentials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: npm-publish
+    steps:
+      # Checked out only so setup-node can read .node-version.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      # registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          registry-url: https://registry.npmjs.org
+
+      - name: Verify npm credentials (read-only)
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
+            echo "::error title=Missing NPM_TOKEN::The npm-publish environment has no NPM_TOKEN secret."
+            exit 1
+          fi
+
+          echo "npm whoami:"
+          npm whoami
+
+          echo "Packages in @muxui visible to this token:"
+          packages=$(npm access list packages @muxui --json 2>&1) || {
+            echo "$packages"
+            echo "::error title=npm access failed::Could not list @muxui packages."
+            exit 1
+          }
+          # An empty result is expected before the first publish.
+          if [ -z "$packages" ]; then echo "(none)"; else echo "$packages"; fi
+
+          echo "@muxui/react dist-tags:"
+          if tags=$(npm view @muxui/react dist-tags --json 2>&1); then
+            echo "$tags"
+          elif echo "$tags" | grep -q E404; then
+            echo "::notice title=Not yet published::@muxui/react returned E404, expected before the first publish."
+          else
+            echo "$tags"
+            echo "::error title=npm view failed::Unexpected error reading @muxui/react dist-tags."
+            exit 1
+          fi
