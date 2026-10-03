@@ -882,6 +882,17 @@ export async function buildPullRequestImpact({
       continue;
     }
 
+    // Guide bytes feed the catalog digest pinned by @muxui/tooling dense
+    // goldens, and docs renders every guide. No renderer or Storybook page
+    // reads guides, so per-family usage guides need no family route.
+    if (path.startsWith('catalog/guides/')) {
+      plan.catalog = true;
+      plan.docs = true;
+      plan.packageChecks.add('@muxui/tooling');
+      plan.reasons.push(`${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
+      continue;
+    }
+
     const packageOwner = packageByPath(path, packages);
     if (packageOwner) {
       const { name } = packageOwner;
