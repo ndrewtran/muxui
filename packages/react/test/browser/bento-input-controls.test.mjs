@@ -5,7 +5,7 @@ import { renderToString } from 'react-dom/server';
 import { TextField, SearchField } from '../../src/fields.mjs';
 import { Button } from '../../src/button.mjs';
 import { IconButton } from '../../src/supplemental/icon-button.mjs';
-import { CommandPalette, useCommandPalette } from '../../src/supplemental/command-palette.mjs';
+import { CommandPalette, useCommandPalette } from '../../src/supplemental/index.mjs';
 import { ColorSwatch } from '../../src/collections.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
@@ -164,14 +164,14 @@ import { hydrateRoot } from 'react-dom/client';
 import { TextField, SearchField } from '/src/fields.mjs';
 import { Button } from '/src/button.mjs';
 import { IconButton } from '/src/supplemental/icon-button.mjs';
-import { CommandPalette, useCommandPalette } from '/src/supplemental/command-palette.mjs';
+import { CommandPalette, useCommandPalette } from '/src/supplemental/index.mjs';
 import { ColorSwatch } from '/src/collections.mjs';
 import '/generated/styles.css';
 ${InputControlsFixture.toString()}
 hydrateRoot(document.getElementById('root'), React.createElement(InputControlsFixture));`;
   const html = pageShell({ body: `<div id="root">${renderToString(React.createElement(InputControlsFixture))}</div>`, entry: '/bento-input-controls-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/fields.mjs', 'src/button.mjs', 'src/supplemental/command-palette.mjs'],
+    entries: ['src/fields.mjs', 'src/button.mjs', 'src/supplemental/index.mjs'],
     pages: { '/bento-input-controls.html': html },
     modules: { '/bento-input-controls-entry.mjs': entry },
   });

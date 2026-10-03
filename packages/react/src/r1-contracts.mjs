@@ -339,5 +339,3 @@ export function assertReactR15GeneratedContracts({
 
   return { closure, closureRecord, descriptor, release, currentContract };
 }
-
-export const assertReactR15ClosureContracts = assertReactR15GeneratedContracts;
