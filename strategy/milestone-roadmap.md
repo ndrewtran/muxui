@@ -672,8 +672,8 @@ new decorative affordance is admitted.
 R1.6 also admits the exact internal, replaceable `react-aria@3.51.0` edge
 for `Resizable`, extended by Decision 0018 to `SelectNative`'s `useField`;
 `marked@13.0.3` for the typed Markdown parser boundary,
-and the eight `@tiptap/*@3.22.3` packages for `TextEditor`. Their
-integrity, license/notice, peer-compatibility, lockfile, module-isolation,
+and the eight `@tiptap/*@3.31.4` packages for `TextEditor` (Decision 0011
+amendment 04). Their integrity, license/notice, peer-compatibility, lockfile, module-isolation,
 tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof is
 required. No upstream implementation type or object is public.
 
@@ -880,7 +880,8 @@ Storybook owns neither canonical examples nor token/theme data.
   Lucide for the nine listed roots, `motion@13.4.0` for bounded component
   motion in existing admitted bindings, `react-aria@3.51.0` for `Resizable`,
   `marked@13.0.3` for the typed Markdown parser boundary, and the eight
-  `@tiptap/*@3.22.3` packages for `TextEditor`. Their license/notice,
+  `@tiptap/*@3.31.4` packages for `TextEditor` (Decision 0011 amendment 04).
+  Their license/notice,
   integrity, peer-compatibility, lockfile, isolation, tree-shaking,
   SSR/hydration, packed-consumer, and Markdown security proofs are required;
   no upstream implementation type or object becomes public.
@@ -1986,11 +1987,12 @@ React bindings, and
 and `TextEditor`. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
 `useMove`, with Decision 0018 extending the same edge to SelectNative's
 `useField`; `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
-and `@tiptap/core@3.22.3`, `@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`,
-`@tiptap/starter-kit@3.22.3`, `@tiptap/extension-image@3.22.3`,
-`@tiptap/extension-placeholder@3.22.3`,
-`@tiptap/extension-text-align@3.22.3`, and
-`@tiptap/extension-text-style@3.22.3` for `TextEditor` only. All are
+and `@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`, `@tiptap/react@3.31.4`,
+`@tiptap/starter-kit@3.31.4`, `@tiptap/extension-image@3.31.4`,
+`@tiptap/extension-placeholder@3.31.4`,
+`@tiptap/extension-text-align@3.31.4`, and
+`@tiptap/extension-text-style@3.31.4` for `TextEditor` only (Decision 0011
+amendment 04). All are
 internal, replaceable, module-isolated implementation edges; no upstream public
 type, Tiptap editor object, or parser object crosses the Mux UI
 public boundary. The Lucide edge carries npm integrity

@@ -193,3 +193,145 @@ test('heavy React ports hydrate and preserve core browser interactions', { timeo
     await close();
   }
 });
+
+// Opens the heavy fixture and returns keyboard helpers for #document-editor,
+// whose onChange output is mirrored into the editor-document output.
+async function openDocumentEditor(browser, url) {
+  const page = await browser.newPage({ viewport: { width: 1200, height: 800 } });
+  await page.goto(`${url}/heavy-fixture.html`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('#document-editor.ProseMirror');
+  const editor = page.locator('#document-editor');
+  // Let ProseMirror read DOM selection and onChange output before asserting.
+  const settle = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  return {
+    page,
+    editor,
+    settle,
+    focusInEditor: () => page.evaluate(() => document.querySelector('#document-editor').contains(document.activeElement)),
+    focusOnPageControl: () => page.evaluate(() => document.activeElement !== null && document.activeElement !== document.body),
+    editorDocument: async () => {
+      await settle();
+      return JSON.parse(await page.locator('[data-testid="editor-document"]').textContent());
+    },
+    caretAtStartOf: async (text) => {
+      await editor.getByText(text, { exact: true }).click();
+      await page.keyboard.press('Home');
+      await settle();
+    },
+    clear: async () => {
+      await editor.focus();
+      await editor.press(`${selectAllModifier}+A`);
+      await page.keyboard.press('Backspace');
+    },
+  };
+}
+
+const paragraph = (text) => (text === undefined ? { type: 'paragraph' } : { type: 'paragraph', content: [{ type: 'text', text }] });
+const bulletList = (...items) => ({ type: 'bulletList', content: items.map((content) => ({ type: 'listItem', content })) });
+
+// Tiptap 3.30 added a ListKeymap Tab handler that nests a text block
+// (paragraph or heading) that starts right after a list into the list's last
+// item (Decision 0011 amendment 04). Tab and Shift+Tab must still leave the
+// editor everywhere else they did under 3.22.3.
+test('TextEditor Tab and Shift+Tab leave the editor except when nesting after a list', { timeout: 60_000 }, async () => {
+  const { url, close } = await startServer({ root: 'repository', pages: { '/heavy-fixture.html': fixtureDocument } });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const { page, focusInEditor, focusOnPageControl, editorDocument, caretAtStartOf, clear } = await openDocumentEditor(browser, url);
+
+    // Ordinary paragraph: Tab and Shift+Tab move focus out without editing.
+    const before = await editorDocument();
+    for (const key of ['Tab', 'Shift+Tab']) {
+      await caretAtStartOf('Hydrated draft');
+      assert.equal(await focusInEditor(), true);
+      await page.keyboard.press(key);
+      assert.equal(await focusInEditor(), false, `${key} leaves an ordinary paragraph`);
+      assert.equal(await focusOnPageControl(), true, `${key} moves focus to another page control`);
+      assert.deepEqual(await editorDocument(), before, `${key} does not edit an ordinary paragraph`);
+    }
+
+    // A list followed by a paragraph, plus Tiptap's trailing empty paragraph.
+    await clear();
+    await page.keyboard.type('- one');
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('after');
+    const listThenParagraph = { type: 'doc', content: [bulletList([paragraph('one')]), paragraph('after'), paragraph()] };
+    assert.deepEqual(await editorDocument(), listThenParagraph);
+
+    // Shift+Tab at the start of that paragraph still leaves the editor.
+    await caretAtStartOf('after');
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await focusInEditor(), false, 'Shift+Tab leaves a paragraph that follows a list');
+    assert.deepEqual(await editorDocument(), listThenParagraph);
+
+    // Tab at the start of that paragraph nests it into the last list item.
+    await caretAtStartOf('after');
+    await page.keyboard.press('Tab');
+    assert.equal(await focusInEditor(), true, 'Tab nests instead of leaving');
+    const nested = { type: 'doc', content: [bulletList([paragraph('one'), paragraph('after')]), paragraph()] };
+    assert.deepEqual(await editorDocument(), nested);
+
+    // Tab again at the start of the nested text leaves the editor: no trap.
+    await caretAtStartOf('after');
+    await page.keyboard.press('Tab');
+    assert.equal(await focusInEditor(), false, 'Tab leaves once the paragraph is nested');
+    assert.equal(await focusOnPageControl(), true);
+    assert.deepEqual(await editorDocument(), nested);
+
+    // Inside a non-first list item, Tab sinks and Shift+Tab lifts, keeping focus.
+    await clear();
+    await page.keyboard.type('- one');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('two');
+    const flatList = { type: 'doc', content: [bulletList([paragraph('one')], [paragraph('two')]), paragraph()] };
+    assert.deepEqual(await editorDocument(), flatList);
+    await caretAtStartOf('two');
+    await page.keyboard.press('Tab');
+    assert.equal(await focusInEditor(), true, 'Tab sinks a list item');
+    assert.deepEqual(await editorDocument(), { type: 'doc', content: [bulletList([paragraph('one'), bulletList([paragraph('two')])]), paragraph()] });
+    await caretAtStartOf('two');
+    await page.keyboard.press('Shift+Tab');
+    assert.equal(await focusInEditor(), true, 'Shift+Tab lifts a nested list item');
+    assert.deepEqual(await editorDocument(), flatList);
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});
+
+// Pins two editing changes accepted by Decision 0011 amendment 04.
+test('TextEditor blockquote Backspace and leading code block ArrowUp follow Tiptap 3.31', { timeout: 60_000 }, async () => {
+  const { url, close } = await startServer({ root: 'repository', pages: { '/heavy-fixture.html': fixtureDocument } });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const { page, editorDocument, caretAtStartOf, clear } = await openDocumentEditor(browser, url);
+
+    // Backspace at the start of a second paragraph in a blockquote lifts it
+    // out and splits the quote. Under 3.22.3 it joined the paragraphs into
+    // one quoted paragraph: blockquote > paragraph "onetwo".
+    await clear();
+    await page.keyboard.type('> one');
+    await page.keyboard.press('Enter');
+    await page.keyboard.type('two');
+    assert.deepEqual(await editorDocument(), { type: 'doc', content: [{ type: 'blockquote', content: [paragraph('one'), paragraph('two')] }, paragraph()] });
+    await caretAtStartOf('two');
+    await page.keyboard.press('Backspace');
+    assert.deepEqual(await editorDocument(), { type: 'doc', content: [{ type: 'blockquote', content: [paragraph('one')] }, paragraph('two'), paragraph()] });
+
+    // ArrowUp at the start of a leading code block inserts an empty paragraph
+    // before it and reports the change. Under 3.22.3 the document was unchanged.
+    await clear();
+    await page.keyboard.type('``` code');
+    const codeBlock = { type: 'codeBlock', content: [{ type: 'text', text: 'code' }] };
+    assert.deepEqual(await editorDocument(), { type: 'doc', content: [codeBlock, paragraph()] });
+    await caretAtStartOf('code');
+    await page.keyboard.press('ArrowUp');
+    assert.deepEqual(await editorDocument(), { type: 'doc', content: [paragraph(), codeBlock, paragraph()] });
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});

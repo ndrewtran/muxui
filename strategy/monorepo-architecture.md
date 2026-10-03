@@ -1030,11 +1030,12 @@ hook uses. It is the already-resolved React Aria
 closure of the pinned `react-aria-components@1.20.0` baseline, so the direct
 declaration must not introduce a second version. `marked@13.0.3` only for the `Markdown`
 lexer behind a Mux UI-owned typed parser/AST boundary; and
-`@tiptap/core@3.22.3`, `@tiptap/pm@3.22.3`, `@tiptap/react@3.22.3`,
-`@tiptap/starter-kit@3.22.3`, `@tiptap/extension-image@3.22.3`,
-`@tiptap/extension-placeholder@3.22.3`,
-`@tiptap/extension-text-align@3.22.3`, and
-`@tiptap/extension-text-style@3.22.3` only for `TextEditor`. These are direct
+`@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`, `@tiptap/react@3.31.4`,
+`@tiptap/starter-kit@3.31.4`, `@tiptap/extension-image@3.31.4`,
+`@tiptap/extension-placeholder@3.31.4`,
+`@tiptap/extension-text-align@3.31.4`, and
+`@tiptap/extension-text-style@3.31.4` only for `TextEditor` (Decision 0011
+amendment 04 moved the set from `3.22.3`). These are direct
 Mux package implementation edges, never source-package or runtime/build/dev/
 peer/generated-source dependencies. Their package licenses, notices, npm
 integrity, React peer compatibility, and exact lockfile pins are proof
@@ -1182,7 +1183,7 @@ flowchart TD
   motion["motion@13.4.0\ninternal component motion"]
   resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
   markdown["marked@13.0.3\nMarkdown lexer only"]
-  editor["Tiptap 3.22.3 packages\nTextEditor only"]
+  editor["Tiptap 3.31.4 packages\nTextEditor only"]
   peers["react + react-dom\n>=19.2.0 <20 peers"]
   web["@muxui/web\nlater W1 track"]
   native["@muxui/react-native\nlater N1 track"]
@@ -1232,8 +1233,8 @@ peer-compatible. No Lucide export, type, name, prop, import path, or public
 Icon API/catalog/package is part of the Mux UI surface. R1.6 also admits
 `react-aria@3.51.0` for `Resizable`/`useMove`, extended by Decision 0018 to
 `SelectNative`/`useField`; `marked@13.0.3` for the typed
-`Markdown` parser boundary, and the exact eight `@tiptap/*@3.22.3` packages
-for `TextEditor`. These module-local edges remain internal and replaceable; no
+`Markdown` parser boundary, and the exact eight `@tiptap/*@3.31.4` packages
+for `TextEditor` (Decision 0011 amendment 04). These module-local edges remain internal and replaceable; no
 upstream runtime types or editor/parser objects are public.
 
 | Package | Responsibility | Must not own |

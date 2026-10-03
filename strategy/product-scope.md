@@ -1,5 +1,5 @@
 ---
-scopeVersion: 12.1.1
+scopeVersion: 12.1.2
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -84,6 +84,10 @@ Product Scope `12.1.1` applies Decision 0021 as a patch: the remaining 6.0.0,
 6.0.3, and 6.0.4 amendment sections move to the ignored recovery archive, and
 the fixed 53-family registry and breadth rule they carried move unchanged into
 the React `0.1` prerelease boundary.
+
+Product Scope `12.1.2` applies Decision 0011 amendment 04 as a patch
+clarification: the same eight internal `TextEditor` Tiptap packages move from
+`3.22.3` to exact `3.31.4`, so consumer installs resolve one Tiptap version.
 
 ## Scope vocabulary
 
@@ -864,7 +868,8 @@ accessibility, package, compatibility, integrity, or generation failures.
   no Lucide export, type, name, prop, import path, or public Icon API, catalog,
   or package; plus the R1.6 internal, replaceable supplemental-affordance edges
   `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
-  parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`;
+  parser boundary, and the eight `@tiptap/*@3.31.4` packages for `TextEditor`
+  (Decision 0011 amendment 04);
   `motion@13.4.0` for bounded component motion in existing admitted React
   bindings; no Mux UI workspace runtime edge or dependency public API/type
   leak is permitted;
@@ -1064,10 +1069,11 @@ supplemental affordance roots `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`,
 `TagSelect`, and `TextEditor`. R1.6 also admits `react-aria@3.51.0` for
 `Resizable`'s `useMove`, `marked@13.0.3` behind the typed Markdown parser
-boundary, and the eight `@tiptap/*@3.22.3` packages only inside
-`TextEditor`. These are internal, replaceable implementation edges with
-package, integrity, peer, lockfile, isolation, tree-shaking, SSR/hydration,
-packed-consumer, and focused security proof obligations. Upstream editor,
+boundary, and the eight `@tiptap/*@3.31.4` packages only inside
+`TextEditor` (Decision 0011 amendment 04; originally `3.22.3`). These are
+internal, replaceable implementation edges with package, integrity, peer,
+lockfile, isolation, tree-shaking, SSR/hydration, packed-consumer, and focused
+security proof obligations. Upstream editor,
 parser, and implementation types remain outside the public API.
 
 Canonical ownership remains `catalog/tokens/` for data, `@muxui/tokens` for
@@ -1217,3 +1223,25 @@ acceptance scope above and in Architecture.
 This patch adds, removes, or transitions no Scope ID and changes no
 commitment, release boundary, platform, package, public surface, support
 claim, or non-goal.
+
+## Product Scope 12.1.2: TextEditor Tiptap exact pin
+
+[Decision 0011 amendment 04](../decisions/0011-amendment-04-tiptap-exact-pin.md)
+moves the eight internal `TextEditor` packages from `3.22.3` to exact
+`3.31.4`: `@tiptap/core`, `@tiptap/pm`, `@tiptap/react`,
+`@tiptap/starter-kit`, `@tiptap/extension-image`,
+`@tiptap/extension-placeholder`, `@tiptap/extension-text-align`, and
+`@tiptap/extension-text-style`. The workspace override cannot reach consumers,
+and `@tiptap/starter-kit@3.22.3` declares its bundled extensions with caret
+ranges, so a consumer install could pair newer extensions with core `3.22.3`.
+From `3.30.0`, every Tiptap manifest pins its Tiptap dependencies exactly, so
+`3.31.4` resolves one version in consumer installs.
+
+This patch changes no package set, component or family, public API, package or
+platform commitment, support/lifecycle claim, release boundary, or milestone
+state. Existing Scope IDs retain their states, including
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`, `SCOPE-PKG-REACT`, and
+`SCOPE-PROOF-PACKAGE`; no new Scope ID or commitment transition is created.
+Tiptap types and editor objects remain outside the Mux UI public API, and the
+existing integrity, license/notice, lockfile, isolation, SSR/hydration, and
+packed-consumer proof obligations apply to the new version.

@@ -841,7 +841,7 @@ Object.assign(ADAPTERS, {
     ),
   ),
   Markdown: (args) => e(Markdown, { ...args, source: args.source ?? '## Mux UI\n\nA **bounded** example.' }),
-  TextEditor: (args) => e(TextEditor, { ...args, defaultValue: args.defaultValue ?? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Mux UI' }] }] } }),
+  TextEditor: (args) => e(TextEditor, { ...args, label: fallback(args.label, 'Note'), defaultValue: args.defaultValue ?? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Mux UI' }] }] } }),
 });
 
 export const adapterNames = Object.freeze(Object.keys(ADAPTERS));
