@@ -6,6 +6,7 @@ import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts } from './r1-contracts.mjs';
+import { readSupplementalMapping } from './supplemental-mapping.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -21,7 +22,7 @@ const upstreamExports = JSON.parse(upstreamExportsRaw);
 assertReactR10SourceContracts({ snapshot: upstreamSnapshot, upstreamExports, upstreamExportsBytes: upstreamExportsRaw });
 const familySnapshot = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
 const r15ClosureSource = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
-const r16Supplemental = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/react-r1-6/supplemental-components.json'), 'utf8'));
+const r16SupplementalComponents = readSupplementalMapping(repositoryRoot);
 const r11Slugs = ['button', 'breadcrumbs', 'checkbox', 'disclosure', 'disclosure-group', 'group', 'link', 'meter', 'progress-bar', 'separator', 'toggle-button'];
 const r12Slugs = ['autocomplete', 'checkbox-group', 'date-field', 'date-picker', 'date-range-picker', 'form', 'number-field', 'search-field', 'switch', 'text-field', 'time-field'];
 const r13Slugs = ['calendar', 'color-area', 'color-field', 'color-picker', 'color-slider', 'color-swatch', 'color-swatch-picker', 'color-wheel', 'combo-box', 'grid-list', 'list-box', 'menu', 'radio-group', 'range-calendar', 'select', 'slider', 'table', 'tabs', 'tag-group', 'toggle-button-group', 'token-field', 'toolbar', 'tree', 'virtualizer'];
@@ -235,19 +236,17 @@ const allCatalogArtifacts = (await Promise.all(
     }),
 )).filter(Boolean);
 const allCatalogArtifactsBySlug = new Map(allCatalogArtifacts.map((artifact) => [artifact.id.slice('muxui:component:'.length), artifact]));
-const mappedR16Slugs = new Set(r16Supplemental.components.map(({ slug }) => slug));
+const mappedR16Slugs = new Set(r16SupplementalComponents.map(({ slug }) => slug));
 const historicalCatalogSlugs = new Set(familySnapshot.families.map(({ family }) => (family === 'Modal' ? 'dialog' : family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase())));
 const unexpectedCurrentSlugs = [...allCatalogArtifactsBySlug.keys()].filter((slug) => !historicalCatalogSlugs.has(slug) && !mappedR16Slugs.has(slug));
-if (!Array.isArray(r16Supplemental.components) || unexpectedCurrentSlugs.length > 0) {
+if (unexpectedCurrentSlugs.length > 0) {
   throw new Error('MUXUI_REACT_R16_CANONICAL_MAPPING_DRIFT');
 }
-for (const entry of r16Supplemental.components) {
+for (const entry of r16SupplementalComponents) {
   const artifact = allCatalogArtifactsBySlug.get(entry.slug);
   const module = entry.export?.module;
   if (!artifact || artifact.id !== `muxui:component:${entry.slug}`
-    || artifact.name !== entry.export?.name
-    || !entry.binding || entry.binding !== `${artifact.id}#web.react`
-    || !entry.apiOwner || !entry.stateOwner || !entry.anatomyOwner
+    || artifact.name !== entry.export.name
     || !entry.runtimeSource || !entry.styleSource
     || (module === './text-editor' && entry.slug !== 'text-editor')
     || (module === './markdown' && entry.slug !== 'markdown')
@@ -261,8 +260,8 @@ for (const entry of r16Supplemental.components) {
     }
   }
 }
-if (new Set(r16Supplemental.components.map(({ export: componentExport }) => componentExport.name)).size !== r16Supplemental.components.length
-  || new Set(r16Supplemental.components.map(({ binding }) => binding)).size !== r16Supplemental.components.length) {
+if (new Set(r16SupplementalComponents.map(({ export: componentExport }) => componentExport.name)).size !== r16SupplementalComponents.length
+  || new Set(r16SupplementalComponents.map(({ binding }) => binding)).size !== r16SupplementalComponents.length) {
   throw new Error('MUXUI_REACT_R16_MAPPING_IDENTITY_DRIFT');
 }
 for (const artifact of componentArtifacts) {
@@ -713,7 +712,7 @@ const reactTypesBody = typesBody.replace("export const reactCompatibility: Reado
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
 const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components 1.20.0 is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
-const readmeMappingBySlug = new Map(r16Supplemental.components.map((entry) => [entry.slug, entry]));
+const readmeMappingBySlug = new Map(r16SupplementalComponents.map((entry) => [entry.slug, entry]));
 const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.localeCompare(right.name)).map((artifact) => {
   const slug = artifact.id.slice('muxui:component:'.length);
   const binding = artifact.bindings['web.react'];
@@ -940,7 +939,7 @@ const generatedSupplementalSource = supplementalSource
 const flatIconButtonImport = (source) => source
   .replaceAll("from './supplemental/icon-button.mjs'", "from './icon-button.mjs'")
   .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'");
-const currentMappedRecords = (await Promise.all(r16Supplemental.components.map(async (entry) => {
+const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(async (entry) => {
   const sourceText = await readFile(resolve(repositoryRoot, entry.runtimeSource), 'utf8');
   const style = await readFile(resolve(repositoryRoot, entry.styleSource), 'utf8');
   const artifact = allCatalogArtifactsBySlug.get(entry.slug);

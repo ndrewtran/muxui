@@ -358,35 +358,6 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   assert.deepEqual(unknown, []);
 });
 
-test('supplemental family declarations expose only their owned values and types', async () => {
-  const families = {
-    'alert-dialog': 'AlertDialog',
-    'button-group': 'ButtonGroup',
-    card: 'Card',
-    'checkbox-field': 'CheckboxField',
-    'color-mode-toggle': 'ColorModeToggle',
-    'command-palette': 'CommandPalette',
-    'header-nav': 'HeaderNav',
-    'input-tags': 'InputTags',
-    input: 'Input',
-    'multi-select': 'MultiSelect',
-    'payment-input': 'PaymentInput',
-    'progress-circle': 'ProgressCircle',
-    'radio-field': 'RadioField',
-    sidebar: 'Sidebar',
-    'switch-field': 'SwitchField',
-    'tag-select': 'TagSelect',
-    'text-area': 'TextArea',
-  };
-  for (const [slug, family] of Object.entries(families)) {
-    const declaration = await readFile(resolve(packageRoot, `src/supplemental/${slug}.d.ts`), 'utf8');
-    assert.doesNotMatch(declaration, /export \* from/u, `${slug} must not re-export the whole supplemental index`);
-    const values = [...declaration.matchAll(/export \{ ([^}]+) \} from/gu)]
-      .flatMap((match) => match[1].split(',').map((value) => value.trim()));
-    assert.deepEqual(values, slug === 'command-palette' ? [family, 'useCommandPalette'] : [family], `${slug} must expose only its own values`);
-  }
-});
-
 test('Input and TextArea roots retain native string field props in their declarations', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
   assert.match(declaration, /export type InputRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);

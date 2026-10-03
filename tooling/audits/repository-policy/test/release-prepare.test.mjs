@@ -10,6 +10,7 @@ import {
   assertStylesheetAssetUrls,
   deriveCurrentExportSurface,
 } from '../src/release-proof.mjs';
+import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packageRoot = join(repositoryRoot, 'packages/react');
@@ -66,7 +67,7 @@ test('release proof accepts the current React package source boundary', () => {
 
 test('current generated descriptor and release metadata use the canonical full export order', () => {
   const historicalSnapshot = JSON.parse(readFileSync(join(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
-  const supplementalComponents = JSON.parse(readFileSync(join(repositoryRoot, 'catalog/react-r1-6/supplemental-components.json'), 'utf8')).components;
+  const supplementalComponents = readSupplementalMapping(repositoryRoot);
   const surface = deriveCurrentExportSurface({
     historicalFamilies: historicalSnapshot.families,
     supplementalComponents,
