@@ -11,7 +11,7 @@ const RIPPLE_HOST_CLASS = 'muxui-grid-list-ripple-host';
 const RIPPLE_CLASS = 'muxui-grid-list-ripple';
 const RIPPLE_BLOCKED_SELECTOR = '[data-disabled], [aria-disabled="true"], [data-dragging], [data-drop-target]';
 const RIPPLE_CONTROL_SELECTOR = 'button, a[href], input, select, textarea, [contenteditable="true"], [role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"]';
-const INELIGIBLE_SELECTOR = [
+const INELIGIBLE_SELECTOR = /*#__PURE__*/ [
   '[data-selected]', '[aria-selected="true"]', '[data-disabled]', '[aria-disabled="true"]',
   '[data-dragging]', '[data-drop-target]', '[data-pressed]', '[aria-pressed="true"]',
   '[data-focus-visible]', ':focus-visible',

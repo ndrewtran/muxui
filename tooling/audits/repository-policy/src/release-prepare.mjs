@@ -20,6 +20,10 @@ import {
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
+  findModuleSideEffects,
+  findPinnedDuplicateVersions,
+  isolatedPackageManagerEnvironment,
+  nodeBundledCli,
   readGeneratedOutputNames,
   summarizeBundleModules,
 } from './release-proof.mjs';
@@ -83,14 +87,42 @@ function copyConsumerTool(consumer, file) {
   copyFileSync(join(consumerToolRoot, file), join(consumer, file));
 }
 
-function assertSingleTiptapCore(consumer, label) {
+// Duplicate versions of exact runtime pins found in clean consumers; recorded in the manifest.
+const duplicateVersionWarnings = [];
+
+// Walks a consumer's installed runtime graph: exactly one @tiptap/core is required,
+// and every other exact-pinned dependency resolving to several versions is a warning.
+function checkConsumerGraph(consumer, label) {
   const closure = collectInstalledClosure(consumer, '@muxui/react', { excludedNames: Object.keys(expectedPeerDependencies) });
   const version = assertSingleInstalledVersion(closure, '@tiptap/core', 'R1_EXIT_CONSUMER_TIPTAP_CORE_SKEW');
-  const skewed = [...closure].filter(([name, versions]) => name.startsWith('@tiptap/') && versions.length > 1);
-  if (skewed.length !== 0) {
-    console.log(`${label}: note, other Tiptap packages resolve to several versions: ${skewed.map(([name, versions]) => `${name}@${versions.join('|')}`).join(', ')}`);
+  for (const duplicate of findPinnedDuplicateVersions(closure, expectedRuntimeDependencies)) {
+    duplicateVersionWarnings.push({ consumer: label, ...duplicate });
+    console.log(`R1 exit warning (${label}): ${duplicate.name} is pinned to ${duplicate.pinned} but installs ${duplicate.versions.join(', ')}`);
   }
   return { closure, version };
+}
+
+// Child processes that run consumer code or package managers; every one is bounded.
+function runChild(label, command, args, { timeout = 300_000, ...options } = {}) {
+  const result = spawnSync(command, args, { encoding: 'utf8', stdio: 'pipe', maxBuffer: 64 * 1024 * 1024, timeout, ...options });
+  if (result.error?.code === 'ETIMEDOUT' || (result.signal === 'SIGTERM' && result.status === null)) {
+    fail('R1_EXIT_CHILD_PROCESS_TIMEOUT', `${label} exceeded ${timeout}ms`);
+  }
+  return result;
+}
+
+function childOutput(result) {
+  return tail(result.error?.message || result.stderr || result.stdout || `exited with ${result.signal ?? result.status}`);
+}
+
+function exportTarget(entry) {
+  if (typeof entry === 'string') return entry;
+  if (!entry || typeof entry !== 'object') return undefined;
+  for (const condition of ['import', 'node', 'default']) {
+    const target = exportTarget(entry[condition]);
+    if (target) return target;
+  }
+  return undefined;
 }
 
 // Resolves a proof tool pinned by the React package's devDependencies, so release
@@ -102,8 +134,7 @@ function resolvePinnedTool(name) {
   if (toolManifest.version !== manifest.devDependencies?.[name]) {
     fail('R1_EXIT_PACK_PROOF_TOOL_UNAVAILABLE', `expected the pinned ${name} ${manifest.devDependencies?.[name]}, found ${toolManifest.version}`);
   }
-  const entry = toolManifest.exports?.['.'];
-  const relative = typeof entry === 'string' ? entry : entry?.import ?? entry?.default ?? toolManifest.main;
+  const relative = exportTarget(toolManifest.exports?.['.']) ?? toolManifest.main;
   return { version: toolManifest.version, url: pathToFileURL(join(dirname(manifestPath), relative)).href };
 }
 
@@ -119,24 +150,17 @@ function exampleImports(source) {
   return names;
 }
 
-// Drops the npm_* script context (and any npm token) that `pnpm release:prepare` exports,
-// so each clean consumer installs with its package manager's own defaults.
-function cleanPackageManagerEnvironment() {
-  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^(?:npm_|PNPM_SCRIPT_SRC_DIR$|INIT_CWD$)/iu.test(name)));
-}
+const yarnVersion = '1.22.22';
+const workspacePnpmVersion = JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8')).packageManager.replace(/^pnpm@/u, '');
 
-function packageManagerCandidates() {
+// The pinned package managers of the online matrix; every one is required.
+function packageManagerMatrix() {
   const execPath = process.env.npm_execpath ?? '';
-  const pnpm = /pnpm/iu.test(execPath) ? [process.execPath, execPath] : ['pnpm'];
   return [
-    { name: 'pnpm', command: pnpm },
-    { name: 'npm', command: ['npm'] },
-    { name: 'yarn', command: ['yarn'] },
+    { name: 'pnpm', command: /pnpm/iu.test(execPath) ? [process.execPath, execPath] : ['pnpm'], expectedVersion: workspacePnpmVersion },
+    { name: 'npm', command: [process.execPath, nodeBundledCli('npm')] },
+    { name: 'yarn', command: [process.execPath, nodeBundledCli('corepack'), `yarn@${yarnVersion}`], expectedVersion: yarnVersion },
   ];
-}
-
-function runPackageManager(command, args, options) {
-  return spawnSync(command[0], [...command.slice(1), ...args], { encoding: 'utf8', stdio: 'pipe', ...options });
 }
 
 function sha256(value) {
@@ -648,13 +672,11 @@ try {
     name: 'muxui-r1-5-clean-consumer', private: true, type: 'module',
     dependencies: { '@muxui/react': `file:../muxui-react-${candidateVersion}.tgz`, react: '19.2.8', 'react-dom': '19.2.8' },
   }, null, 2)}\n`);
-  const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
+  const install = runChild('offline consumer install', 'pnpm', ['install', '--offline', '--ignore-scripts'], {
     cwd: consumer,
-    encoding: 'utf8',
-    stdio: 'pipe',
     env: { ...process.env, npm_config_engine_strict: 'false' },
   });
-  if (install.status !== 0) fail('R1.5_PACK_CONSUMER_INSTALL_FAILED', tail(install.stderr || install.stdout));
+  if (install.status !== 0) fail('R1.5_PACK_CONSUMER_INSTALL_FAILED', childOutput(install));
 
   const consumerScript = `
     import { performance } from 'node:perf_hooks';
@@ -734,11 +756,7 @@ try {
     if (!rejected) throw new Error('undeclared component subpath resolved');
     console.log(JSON.stringify({ packedImportMilliseconds, ssrMilliseconds }));
   `;
-  const consumerCheck = spawnSync(process.execPath, ['--input-type=module', '--eval', consumerScript], {
-    cwd: consumer,
-    encoding: 'utf8',
-    stdio: 'pipe',
-  });
+  const consumerCheck = runChild('offline consumer import', process.execPath, ['--input-type=module', '--eval', consumerScript], { cwd: consumer });
   if (consumerCheck.status !== 0) fail('R1.5_PACK_CONSUMER_IMPORT_FAILED', consumerCheck.stderr || consumerCheck.stdout);
   const measurementLine = consumerCheck.stdout.trim().split('\n').filter(Boolean).at(-1);
   const measurements = JSON.parse(measurementLine ?? '{}');
@@ -752,7 +770,7 @@ try {
   console.log(`R1.5 packed import ${measurements.packedImportMilliseconds.toFixed(2)}ms / ${budgets.packedImportMilliseconds}ms; SSR ${measurements.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms`);
 
   // The offline consumer must resolve one editor engine, as the online matrix does.
-  const offlineGraph = assertSingleTiptapCore(consumer, 'R1 exit offline consumer');
+  const offlineGraph = checkConsumerGraph(consumer, 'offline pnpm');
   console.log(`R1 exit offline consumer resolves @tiptap/core ${offlineGraph.version} across ${offlineGraph.closure.size} runtime packages`);
 
   // Public declaration surface, re-exports, and generated guidance name no upstream package.
@@ -783,6 +801,12 @@ try {
   });
   console.log(`R1 exit public-surface leak scan passed for ${upstreamNames.length} upstream names across ${generatedEntries.filter((entry) => entry.endsWith('.d.ts')).length} declarations, ${publicJsTargets.length} public entries, README, and ${guidanceJsonFiles.length + guidanceModules.length} guidance projections`);
 
+  // `sideEffects: ["*.css"]` holds only while no packed JS module runs code at import time.
+  const packedModules = generatedEntries.filter((entry) => entry.endsWith('.mjs'));
+  const sideEffectFindings = packedModules.flatMap((entry) => findModuleSideEffects(readArchiveFile(archive, entry)).map((finding) => `${entry}: ${finding}`));
+  if (sideEffectFindings.length !== 0) fail('R1_EXIT_PACK_SIDE_EFFECTS_INVALID', sideEffectFindings.join('; '));
+  console.log(`R1 exit side-effect scan passed for ${packedModules.length} packed JS modules`);
+
   // SSR every canonical catalog example and fixture on the packed artifact, then hydrate it in jsdom.
   const { version: viteVersion, url: viteUrl } = resolvePinnedTool('vite');
   const vite = await import(viteUrl);
@@ -812,8 +836,10 @@ try {
     exportModules: componentModules,
     valueChecks: { file: 'export-fixtures.mjs', name: 'checkValueExports' },
   })}\n`);
-  const serverRender = spawnSync(process.execPath, ['render-examples.mjs', 'ssr-plan.json', 'ssr-result.json'], { cwd: consumer, encoding: 'utf8', stdio: 'pipe' });
-  if (serverRender.status !== 0) fail('R1_EXIT_PACK_SSR_FAILED', tail(serverRender.stderr || serverRender.stdout || `exited with ${serverRender.signal ?? serverRender.status}`));
+  // Server and client both use React's development build, which reports mismatches and provides act.
+  const developmentEnvironment = { ...process.env, NODE_ENV: 'development' };
+  const serverRender = runChild('packed SSR render', process.execPath, ['render-examples.mjs', 'ssr-plan.json', 'ssr-result.json'], { cwd: consumer, env: developmentEnvironment });
+  if (serverRender.status !== 0) fail('R1_EXIT_PACK_SSR_FAILED', childOutput(serverRender));
   const serverResult = JSON.parse(readFileSync(join(consumer, 'ssr-result.json'), 'utf8'));
   const covered = new Set([...exampleCoverage, ...serverResult.valueExports, ...serverResult.renders.flatMap(({ covers }) => covers)]);
   const uncovered = Object.entries(serverResult.exportKeys)
@@ -823,8 +849,10 @@ try {
   if (!Number.isFinite(serverResult.ssrMilliseconds) || serverResult.ssrMilliseconds > budgets.ssrMilliseconds) {
     fail('R1.5_PACK_PERFORMANCE_BUDGET_EXCEEDED', JSON.stringify({ exampleSsrMilliseconds: serverResult.ssrMilliseconds, budgets }));
   }
-  const hydration = spawnSync(process.execPath, ['hydrate-examples.mjs', 'ssr-result.json', 'hydration-result.json', resolvePinnedTool('jsdom').url], { cwd: consumer, encoding: 'utf8', stdio: 'pipe' });
-  if (hydration.status !== 0) fail('R1_EXIT_PACK_HYDRATION_MISMATCH', tail(hydration.stderr || hydration.stdout || `exited with ${hydration.signal ?? hydration.status}`));
+  const hydration = runChild('packed hydration', process.execPath, ['hydrate-examples.mjs', 'ssr-result.json', 'hydration-result.json', resolvePinnedTool('jsdom').url], { cwd: consumer, env: developmentEnvironment });
+  // The hydration script exits 3 only for mismatches; any other failure is the script's own.
+  if (hydration.status === 3) fail('R1_EXIT_PACK_HYDRATION_MISMATCH', childOutput(hydration));
+  if (hydration.status !== 0) fail('R1_EXIT_PACK_HYDRATION_SCRIPT_FAILED', childOutput(hydration));
   const hydrationResult = JSON.parse(readFileSync(join(consumer, 'hydration-result.json'), 'utf8'));
   const consoleNotes = hydrationResult.results.filter(({ consoleErrors }) => consoleErrors.length !== 0);
   const exportCount = Object.values(serverResult.exportKeys).reduce((sum, names) => sum + names.length, 0);
@@ -893,17 +921,20 @@ try {
   const bundleBytes = bundleModules.reduce((sum, { bytes }) => sum + bytes, 0);
   console.log(`R1 exit tree-shaking (vite ${viteVersion}, Button only): ${bundleBytes} rendered JS bytes from ${bundleModules.length} modules; @muxui/react keeps only ${[...buttonModules].join(', ')}; packages: ${summarizeBundleModules(bundleModules, 'consumer').map(([name, bytes]) => `${name} ${bytes}`).join(', ')}; stylesheet ${bundleCss.length} bytes kept`);
 
-  // Online clean-consumer install matrix: each available package manager installs the exact tarball from the public registry.
-  for (const { name, command } of packageManagerCandidates()) {
-    const environment = { ...cleanPackageManagerEnvironment(), npm_config_engine_strict: 'false' };
-    // Probe outside the repository so a Corepack shim ignores the workspace packageManager pin.
-    const probe = runPackageManager(command, ['--version'], { cwd: temp, env: environment });
-    if (probe.status !== 0 || probe.error) {
-      if (name === 'pnpm') fail('R1_EXIT_CONSUMER_MATRIX_UNAVAILABLE', 'pnpm is required for the online consumer matrix');
-      console.log(`R1 exit consumer matrix ${name}: skipped; ${name} is not available (${probe.error?.code ?? tail(probe.stderr || probe.stdout, 200).trim()})`);
-      continue;
-    }
-    const version = probe.stdout.trim();
+  // Online clean-consumer install matrix: pnpm, npm, and yarn each install the exact
+  // tarball from the public registry with no host configuration or credentials.
+  const userConfig = join(temp, 'empty-userconfig');
+  const globalConfig = join(temp, 'empty-globalconfig');
+  writeFileSync(userConfig, '');
+  writeFileSync(globalConfig, '');
+  const environment = isolatedPackageManagerEnvironment(process.env, { userConfig, globalConfig });
+  const matrixResults = [];
+  for (const { name, command, expectedVersion } of packageManagerMatrix()) {
+    // Probe outside the repository so Corepack ignores the workspace packageManager pin.
+    const probe = runChild(`${name} version probe`, command[0], [...command.slice(1), '--version'], { cwd: temp, env: environment, timeout: 120_000 });
+    const version = probe.stdout?.trim();
+    if (probe.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_UNAVAILABLE', `${name}: ${childOutput(probe)}`);
+    if (expectedVersion && version !== expectedVersion) fail('R1_EXIT_CONSUMER_MATRIX_UNAVAILABLE', `${name} must be the pinned ${expectedVersion}, found ${version}`);
     const matrixConsumer = join(temp, `matrix-${name}`);
     mkdirSync(matrixConsumer);
     copyFileSync(archive, join(matrixConsumer, candidateArchiveName));
@@ -911,21 +942,21 @@ try {
       name: `muxui-r1-exit-${name}-consumer`, private: true, type: 'module',
       dependencies: { '@muxui/react': `file:./${candidateArchiveName}`, react: '19.2.8', 'react-dom': '19.2.8' },
     }, null, 2)}\n`);
-    let installArgs;
-    if (name === 'pnpm') installArgs = ['install', '--ignore-scripts', '--no-frozen-lockfile', '--registry=https://registry.npmjs.org/'];
-    else if (name === 'npm') installArgs = ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org/'];
-    else if (Number.parseInt(version, 10) >= 2) {
-      writeFileSync(join(matrixConsumer, '.yarnrc.yml'), 'nodeLinker: node-modules\nenableScripts: false\nenableTelemetry: false\nenableImmutableInstalls: false\nnpmRegistryServer: "https://registry.npmjs.org"\n');
-      writeFileSync(join(matrixConsumer, 'yarn.lock'), '');
-      installArgs = ['install'];
-    } else installArgs = ['install', '--ignore-scripts', '--ignore-engines', '--non-interactive', '--registry', 'https://registry.npmjs.org/'];
-    const install = runPackageManager(command, installArgs, { cwd: matrixConsumer, env: environment, timeout: 600_000 });
-    if (install.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_INSTALL_FAILED', `${name} ${version}: ${tail(install.error?.message || install.stderr || install.stdout)}`);
+    const configCheck = runChild(`${name} config check`, process.execPath, [nodeBundledCli('npm'), 'config', 'get', 'userconfig'], { cwd: matrixConsumer, env: environment, timeout: 60_000 });
+    if (configCheck.stdout?.trim() !== userConfig) fail('R1_EXIT_CONSUMER_MATRIX_AUTH_LEAK', `${name} consumer reads ${configCheck.stdout?.trim() || 'an unknown'} user config`);
+    const installArgs = {
+      pnpm: ['install', '--ignore-scripts', '--no-frozen-lockfile', '--registry=https://registry.npmjs.org/'],
+      npm: ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org/'],
+      yarn: ['install', '--ignore-scripts', '--ignore-engines', '--non-interactive', '--no-default-rc', '--registry', 'https://registry.npmjs.org/'],
+    }[name];
+    const install = runChild(`${name} consumer install`, command[0], [...command.slice(1), ...installArgs], { cwd: matrixConsumer, env: environment, timeout: 600_000 });
+    if (install.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_INSTALL_FAILED', `${name} ${version}: ${childOutput(install)}`);
     copyConsumerTool(matrixConsumer, 'matrix-smoke.mjs');
-    const smoke = spawnSync(process.execPath, ['matrix-smoke.mjs', JSON.stringify(packedManifest.exports)], { cwd: matrixConsumer, encoding: 'utf8', stdio: 'pipe' });
-    if (smoke.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_IMPORT_FAILED', `${name} ${version}: ${tail(smoke.stderr || smoke.stdout)}`);
+    const smoke = runChild(`${name} consumer smoke`, process.execPath, ['matrix-smoke.mjs', JSON.stringify(packedManifest.exports)], { cwd: matrixConsumer });
+    if (smoke.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_IMPORT_FAILED', `${name} ${version}: ${childOutput(smoke)}`);
     const smokeResult = JSON.parse(smoke.stdout.trim().split('\n').at(-1));
-    const { closure, version: tiptapCore } = assertSingleTiptapCore(matrixConsumer, `R1 exit consumer matrix ${name}`);
+    const { closure, version: tiptapCore } = checkConsumerGraph(matrixConsumer, `${name} ${version}`);
+    matrixResults.push({ packageManager: name, version, tiptapCore, runtimePackages: closure.size });
     console.log(`R1 exit consumer matrix ${name} ${version}: online install, ${smokeResult.imported.length} subpaths imported, ${smokeResult.resolved.length} stylesheets resolved, SSR ${smokeResult.rendered.join(' and ')}, one @tiptap/core ${tiptapCore} across ${closure.size} runtime packages`);
   }
 
@@ -982,6 +1013,12 @@ try {
       compression: 'gzip',
     },
     files: expectedPackageEntries,
+    consumerVerification: {
+      onlineMatrix: matrixResults,
+      warnings: {
+        duplicateDependencyVersions: duplicateVersionWarnings,
+      },
+    },
     guidance: {
       descriptor: { path: 'generated/descriptor.json', version: descriptor.version, exports: descriptor.exports.length },
       release: { path: 'generated/release.json', version: release.version, exports: release.componentExports.length },

@@ -49,10 +49,10 @@ import { IconButton } from './supplemental/icon-button.mjs';
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const ISO_TIME_PATTERN = /^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d(?:\.\d+)?)?$/u;
-const DATE_PLACEHOLDER = parseDate('2000-01-01');
-const TIME_PLACEHOLDER = parseTime('00:00');
+const DATE_PLACEHOLDER = /*#__PURE__*/ parseDate('2000-01-01');
+const TIME_PLACEHOLDER = /*#__PURE__*/ parseTime('00:00');
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-const MUX_RUNTIME_SCOPE_SELECTOR = [
+const MUX_RUNTIME_SCOPE_SELECTOR = /*#__PURE__*/ [
   '[data-muxui-color-scheme]',
   '[data-muxui-contrast]',
   '[data-muxui-motion]',

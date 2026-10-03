@@ -454,7 +454,7 @@ const expectedThemePresetCount = tokenSource.theme.scale.standardPresets.length 
 if (new Set(themeIds).size !== themeIds.length || new Set(themeCollection).size !== 2 || themeMetadata.length !== expectedThemePresetCount) {
   throw new Error('MUXUI_REACT_THEME_PRESET_INVENTORY_INVALID');
 }
-const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = deepFreeze(Object.fromEntries(MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
+const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = /*#__PURE__*/ deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = /*#__PURE__*/ deepFreeze(/*#__PURE__*/ Object.fromEntries(/*#__PURE__*/ MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
 const themeTypesBody = `export type MuxUIThemeCollection = 'standard' | 'monochrome';
 export type MuxUIStandardThemeId = ${tokenSource.theme.scale.standardPresets.map(({ id }) => `'standard-${id}'`).join(' | ')};
 export type MuxUIMonochromeThemeId = ${tokenSource.theme.scale.monochromePresets.map(({ id }) => `'monochrome-${id}'`).join(' | ')};
@@ -507,7 +507,7 @@ const compatibility = {
   publication: r15ClosureSource.publication,
   support: 'unproved; R1.5 React exports only',
 };
-const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = deepFreeze(${canonicalJson(compatibility)});\n`;
+const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
 const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.mjs';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
 const typesBody = `import type * as React from 'react';
 

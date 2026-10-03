@@ -1,7 +1,8 @@
 // Client half of the packed SSR/hydration proof. Run from a clean consumer:
 // `node hydrate-examples.mjs <server-result.json> <result.json> <jsdom-url>`. Installs a
 // jsdom window before React DOM or Mux UI load, then hydrates each server
-// render and records recoverable errors and hydration warnings.
+// render and records recoverable errors and hydration warnings. Exits 3 for a
+// hydration mismatch; any other non-zero exit is a failure of the script itself.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
@@ -37,6 +38,7 @@ const { hydrateRoot } = await import('react-dom/client');
 
 const hydrationPattern = /hydrat|did not match|server rendered|server html|mismatch/iu;
 const results = [];
+const scriptFailures = [];
 const originalError = console.error;
 for (const { id, file, name, html } of renders) {
   const module = await import(pathToFileURL(resolve(file)).href);
@@ -51,13 +53,13 @@ for (const { id, file, name, html } of renders) {
     await act(async () => {
       root = hydrateRoot(container, React.createElement(module[name]), {
         onRecoverableError: (error) => recoverable.push(String(error?.message ?? error)),
-        onUncaughtError: (error) => recoverable.push(`uncaught: ${error?.message ?? error}`),
+        onUncaughtError: (error) => scriptFailures.push(`${id}: uncaught ${error?.stack ?? error}`),
       });
     });
     await act(async () => { await new Promise((done) => setTimeout(done, 0)); });
     await act(async () => { root.unmount(); });
   } catch (error) {
-    recoverable.push(`thrown: ${error?.message ?? error}`);
+    scriptFailures.push(`${id}: thrown ${error?.stack ?? error}`);
   } finally {
     console.error = originalError;
     container.remove();
@@ -70,8 +72,12 @@ for (const { id, file, name, html } of renders) {
 }
 writeFileSync(resultPath, `${JSON.stringify({ results })}\n`);
 window.close();
+if (scriptFailures.length !== 0) {
+  console.error(scriptFailures.join('\n'));
+  process.exit(2);
+}
 const failed = results.filter(({ hydrationErrors }) => hydrationErrors.length !== 0);
 if (failed.length !== 0) {
   console.error(failed.map(({ id, hydrationErrors }) => `${id}: ${hydrationErrors[0].split('\n', 1)[0]}`).join('\n'));
-  process.exit(1);
+  process.exit(3);
 }

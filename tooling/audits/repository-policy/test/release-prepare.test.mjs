@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { execFile } from 'node:child_process';
+import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import { parse } from 'acorn';
 import {
   assertBundleRetention,
   assertExactArchiveEntries,
@@ -18,7 +19,11 @@ import {
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
+  findModuleSideEffects,
+  findPinnedDuplicateVersions,
   findPublicSurfaceLeaks,
+  isolatedPackageManagerEnvironment,
+  nodeBundledCli,
   readGeneratedOutputNames,
 } from '../src/release-proof.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
@@ -317,19 +322,96 @@ test('the React package declares only stylesheets as side effects and generated 
   const generatedRoot = join(packageRoot, 'generated');
   const modules = readdirSync(generatedRoot).filter((name) => name.endsWith('.mjs'));
   assert.ok(modules.length > 0);
-  for (const name of modules) {
-    const { body } = parse(readFileSync(join(generatedRoot, name), 'utf8'), { ecmaVersion: 'latest', sourceType: 'module' });
-    for (const node of body) {
-      if (node.type === 'ImportDeclaration') {
-        assert.notEqual(node.specifiers.length, 0, `${name} has a side-effect import of ${node.source.value}`);
-        continue;
-      }
-      if (node.type !== 'ExpressionStatement') continue;
-      // Only component metadata such as `Button.displayName = 'Button'` may run at import.
-      const { expression } = node;
-      assert.equal(expression.type, 'AssignmentExpression', `${name} runs a top-level expression`);
-      assert.equal(expression.left.type, 'MemberExpression', `${name} assigns outside a component`);
-      assert.ok(['displayName', 'Root'].includes(expression.left.property.name), `${name} assigns ${expression.left.property.name} at import`);
-    }
+  for (const name of modules) assert.deepEqual(findModuleSideEffects(readFileSync(join(generatedRoot, name), 'utf8')), [], name);
+});
+
+test('the module side-effect allowlist rejects import-time work', () => {
+  const allowed = `import React from 'react';
+    import { parseDate } from 'date';
+    export { A } from './a.mjs';
+    export * from './b.mjs';
+    function f() { window.x = 1; }
+    class C extends Base { static size = 2; method() {} }
+    const n = 1, s = 'x', fn = () => window.y, set = new Set(['a']), map = new WeakMap();
+    const Context = React.createContext(null);
+    export const Button = React.forwardRef(function Button() { return null; });
+    const frozen = Object.freeze({ open: Object.freeze({ duration: 0.2 }), list: ['a'] });
+    const choose = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+    const date = /*#__PURE__*/ parseDate('2000-01-01');
+    Button.displayName = 'Button';
+    Button.Root = Button;
+    export default function Root() {}`;
+  assert.deepEqual(findModuleSideEffects(allowed), []);
+  for (const source of [
+    "import './register.css';",
+    'if (typeof window !== "undefined") window.x = 1;',
+    'const x = register();',
+    'export const y = install();',
+    'export default install();',
+    "Button.displayName = (track(), 'Button');",
+    'Button.displayName = name();',
+    'window.muxui = {};',
+    'register();',
+    'const x = /*#__PURE__*/ wrap(register());',
+    'const x = Object.freeze(register());',
+    'class C { static { register(); } }',
+    'class C { static value = register(); }',
+    'class C extends mixin(Base) {}',
+    'const x = [...items];',
+    'const x = { [key()]: 1 };',
+    'const x = new Registry();',
+    'for (const x of []) {}',
+  ]) {
+    assert.equal(findModuleSideEffects(source).length, 1, source);
   }
+});
+
+// A local registry records the Authorization header npm sends: the host's
+// token reaches it from an ordinary environment, never from the isolated one.
+test('clean-consumer installs send no host registry auth', async () => {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-auth-'));
+  const authorizations = [];
+  const server = createServer((request, response) => {
+    authorizations.push(request.headers.authorization ?? null);
+    response.writeHead(401, { 'content-type': 'application/json' });
+    response.end('{}');
+  });
+  try {
+    await new Promise((done) => server.listen(0, '127.0.0.1', done));
+    const registry = `http://127.0.0.1:${server.address().port}/`;
+    const home = join(root, 'home');
+    const consumer = join(root, 'consumer');
+    mkdirSync(home);
+    mkdirSync(consumer);
+    writeFileSync(join(home, '.npmrc'), `${registry.slice('http:'.length)}:_authToken=host-secret-token\n`);
+    const userConfig = join(root, 'empty-userconfig');
+    const globalConfig = join(root, 'empty-globalconfig');
+    writeFileSync(userConfig, '');
+    writeFileSync(globalConfig, '');
+    const host = { ...process.env, HOME: home, USERPROFILE: home, YARN_NPM_AUTH_TOKEN: 'host-secret-token', npm_config_userconfig: join(home, '.npmrc') };
+    const whoami = (environment) => new Promise((done) => {
+      execFile(process.execPath, [nodeBundledCli('npm'), 'whoami', `--registry=${registry}`], { cwd: consumer, env: environment, timeout: 60_000 }, (error, stdout, stderr) => done(stderr));
+    });
+    await whoami(host);
+    assert.ok(authorizations.includes('Bearer host-secret-token'), 'control: the host token reaches an ordinary npm call');
+    const isolated = isolatedPackageManagerEnvironment(host, { userConfig, globalConfig });
+    assert.equal(Object.keys(isolated).some((name) => /^yarn_/iu.test(name)), false);
+    authorizations.length = 0;
+    assert.match(await whoami(isolated), /ENEEDAUTH/u, 'npm finds no credentials in the isolated environment');
+    assert.equal(authorizations.some((value) => value !== null), false, 'the isolated environment sends no credentials');
+  } finally {
+    server.close();
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('pinned duplicate versions are reported for every exact runtime pin', () => {
+  const closure = new Map([
+    ['@internationalized/date', ['3.12.3', '3.12.4']],
+    ['@tiptap/core', ['3.31.4']],
+    ['motion', ['13.4.0', '13.5.0']],
+  ]);
+  assert.deepEqual(findPinnedDuplicateVersions(closure, { '@internationalized/date': '3.12.3', '@tiptap/core': '3.31.4', motion: '^13.4.0' }), [
+    { name: '@internationalized/date', pinned: '3.12.3', versions: ['3.12.3', '3.12.4'] },
+  ]);
 });

@@ -455,9 +455,9 @@ function makeSwitchField() {
   return Object.freeze({ Root, Button, Thumb, Description, Error });
 }
 
-export const CheckboxField = makeCheckboxField();
-export const RadioField = makeRadioField();
-export const SwitchField = makeSwitchField();
+export const CheckboxField = /*#__PURE__*/ makeCheckboxField();
+export const RadioField = /*#__PURE__*/ makeRadioField();
+export const SwitchField = /*#__PURE__*/ makeSwitchField();
 
 /* Color mode */
 export const ColorModeToggle = React.forwardRef(function ColorModeToggle({
@@ -536,7 +536,7 @@ function associatedFieldText(slot, className, props, ref, register) {
 }
 
 const Input = {
-  Root: fieldRoot(AriaTextField, 'muxui-input__root'),
+  Root: /*#__PURE__*/ fieldRoot(AriaTextField, 'muxui-input__root'),
   Input: React.forwardRef(function InputInput({ disabled, className, 'aria-describedby': ariaDescribedby, ...props }, ref) {
     const association = React.useContext(InputAssociationContext);
     const visualSize = association?.size ?? 'md';
@@ -559,7 +559,7 @@ const Input = {
 };
 
 const TextArea = {
-  Root: fieldRoot(AriaTextField, 'muxui-text-area'),
+  Root: /*#__PURE__*/ fieldRoot(AriaTextField, 'muxui-text-area'),
   TextArea: React.forwardRef(function TextAreaInput({ disabled, className, ...props }, ref) { return h(AriaTextArea, { ...props, ref, disabled, className: cx('muxui-text-area__textarea', className) }); }),
   Label: React.forwardRef(function TextAreaLabel(props, ref) { return h(AriaLabel, { ...props, ref, className: cx('muxui-text-area__label', props.className) }); }),
   Description: React.forwardRef(function TextAreaDescription(props, ref) { return fieldText('description', 'muxui-text-area__description', props, ref); }),
