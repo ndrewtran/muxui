@@ -116,6 +116,45 @@ export const selectedSwatch: string = MUXUI_THEME_PRESETS[0].swatch.primary;
     });
     assert.equal(typecheck.status, 0, `${typecheck.stdout}\n${typecheck.stderr}`);
 
+    // Server-render the supplemental families' catalog examples from the packed package.
+    const renderedSlugs = ['text', 'image', 'avatar', 'select-native'];
+    const renderDist = join(consumer, 'render-dist');
+    const renderConfig = join(consumer, 'tsconfig.render.json');
+    await writeFile(renderConfig, `${JSON.stringify({
+      extends: './tsconfig.json',
+      // ES module output so Node runs the emitted examples directly.
+      compilerOptions: { noEmit: false, outDir: 'render-dist', rootDir: 'examples', module: 'ES2022', moduleResolution: 'Bundler' },
+      include: renderedSlugs.map((slug) => `examples/${slug}/*.tsx`),
+    }, null, 2)}\n`);
+    const emit = spawnSync(tsc, ['-p', renderConfig], { cwd: consumer, env: process.env, encoding: 'utf8' });
+    assert.equal(emit.status, 0, `${emit.stdout}\n${emit.stderr}`);
+    await writeFile(join(renderDist, 'package.json'), '{ "type": "module" }\n');
+    const renderProbe = join(renderDist, 'render.mjs');
+    await writeFile(renderProbe, `import assert from 'node:assert/strict';
+import { readdir } from 'node:fs/promises';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+const markup = {};
+for (const slug of ${JSON.stringify(renderedSlugs)}) {
+  for (const file of await readdir(new URL(\`./\${slug}/\`, import.meta.url))) {
+    const module = await import(\`./\${slug}/\${file}\`);
+    const examples = Object.values(module).filter((value) => typeof value === 'function');
+    assert.ok(examples.length > 0, \`\${slug}/\${file} exports an example component\`);
+    markup[slug] = examples.map((Example) => renderToStaticMarkup(React.createElement(Example))).join('');
+  }
+}
+assert.match(markup.text, /<h2 class="muxui-text muxui-text--heading-md">Account<\\/h2>/);
+assert.match(markup.text, /class="muxui-text muxui-text--mono-sm"/);
+assert.match(markup.image, /<img[^>]*class="muxui-image muxui-image--radius-md muxui-image--fit-cover"/);
+assert.match(markup.image, /style="--muxui-image-ratio:320 \\/ 180"/);
+assert.match(markup.avatar, /<span[^>]*class="muxui-avatar__fallback"[^>]*>AB<\\/span>/);
+assert.match(markup.avatar, /<span role="img" aria-label="Andrew"[^>]*data-image-state="loading">/);
+assert.doesNotMatch(markup.avatar, /<span[^>]*hidden=""[^>]*>AB</);
+assert.match(markup['select-native'], /<label[^>]*for="([^"]+)"[^>]*>Saved panel<\\/label><select[^>]*id="\\1"/);
+`);
+    const rendered = spawnSync(process.execPath, [renderProbe], { cwd: consumer, env: process.env, encoding: 'utf8' });
+    assert.equal(rendered.status, 0, `${rendered.stdout}\n${rendered.stderr}`);
+
     const loader = join(consumer, 'trace-loader.mjs');
     await writeFile(loader, `export async function resolve(specifier, context, nextResolve) {
   if (specifier === 'marked' || specifier.startsWith('@tiptap/')) process.stderr.write(\`FORBIDDEN_EDGE:\${specifier}\\n\`);

@@ -248,7 +248,8 @@ test('MuxUI styles bind states and public theme hooks', async () => {
 
   assert.match(css, /--muxui-reference-color-brand-60: #025768;/u);
   assert.doesNotMatch(css, /var\(--muxui-private-/u);
-  assert.doesNotMatch(css, /(?:--color-60|--radius-m|--space-xs)/u);
+  // Custom properties only; BEM modifiers such as muxui-image--radius-md are class names.
+  assert.doesNotMatch(css, /(?<![\w-])(?:--color-60|--radius-m|--space-xs)/u);
 });
 
 test('pending Button preserves its accessible name without overriding caller naming', () => {

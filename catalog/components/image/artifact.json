@@ -68,7 +68,7 @@
       "behavior": [
         "Renders a native HTMLImageElement and forwards native attributes, dimensions, refs, and callbacks.",
         "fallbackSrc and fallbackSrcSet provide one bounded recovery attempt; changing the primary source or source set clears stale recovery state.",
-        "radius and fit select Mux styling hooks without changing intrinsic image dimensions."
+        "radius and fit select the muxui-image--radius-* and muxui-image--fit-* modifier classes without changing intrinsic image dimensions; when width and height are both set, the declared box keeps its ratio through the --muxui-image-ratio custom property, which consumer classes and styles can override, so fit applies and loading does not shift layout."
       ],
       "accessibility": [
         "alt is required by the public type and runtime contract; an empty alt keeps decorative images out of the accessibility tree.",

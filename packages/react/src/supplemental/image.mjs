@@ -17,6 +17,16 @@ function hasSource(src, srcSet) {
   return [src, srcSet].some((value) => typeof value === 'string' && value.trim().length > 0);
 }
 
+// Native width/height map to `aspect-ratio: auto w / h`, so the source ratio
+// replaces the declared box once it loads. A plain ratio keeps the declared box
+// (and object-fit) while `block-size: auto` still scales it responsively. It is
+// passed as a custom property so consumer classes can still set aspect-ratio.
+function declaredAspectRatio(width, height) {
+  const w = Number(width);
+  const h = Number(height);
+  return w > 0 && h > 0 && Number.isFinite(w) && Number.isFinite(h) ? `${w} / ${h}` : undefined;
+}
+
 function assignRef(ref, value) {
   if (typeof ref === 'function') ref(value);
   else if (ref) ref.current = value;
@@ -36,6 +46,7 @@ export const Image = React.forwardRef(function Image({
   radius = 'none',
   fit = 'cover',
   className,
+  style,
   onError,
   ...props
 }, ref) {
@@ -71,16 +82,18 @@ export const Image = React.forwardRef(function Image({
     if (!image?.complete || image.naturalWidth > 0) return;
     applyError();
   }, [applyError, key, usingFallback]);
+  const aspectRatio = declaredAspectRatio(props.width, props.height);
   return h('img', {
     ...props,
     ref: setImageRef,
     alt,
+    style: aspectRatio ? { '--muxui-image-ratio': aspectRatio, ...style } : style,
     src: usingFallback ? fallbackSrc : src,
     srcSet: usingFallback ? fallbackSrcSet : srcSet,
     onError: handleError,
     className: classNames(
       'muxui-image',
-      resolvedRadius !== 'none' && `muxui-image-radius-${resolvedRadius}`,
+      resolvedRadius !== 'none' && `muxui-image--radius-${resolvedRadius}`,
       `muxui-image--fit-${resolvedFit}`,
       failed && 'muxui-image--error',
       className,
