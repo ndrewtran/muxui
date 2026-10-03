@@ -268,11 +268,12 @@ for (const { milestone, pullRequest, issue } of milestones) {
       if (index < 0) throw new Error(`R1_CAPTURE_COVERAGE_MISSING: ${assertionId} cites "${name}"`);
       return { test: name, excerpt: checkExcerpt.path, line: index + 1 };
     });
-    // Decision 0022 halves stay `partial`; a wholly deferred item is `unmet`.
-    // Otherwise any part outside the excerpt keeps the record inconclusive.
-    const outcome = deferred
-      ? (/\bhalf\b/u.test(deferred.part) ? 'partial' : 'unmet')
-      : (notInExcerpt.length === 0 && evidenced.length > 0 ? 'pass' : 'inconclusive');
+    // Outcome rule: `unmet` when the whole assertion is deferred; otherwise
+    // `inconclusive` when any non-deferred part rests only on the PR body;
+    // otherwise `partial` when some part is deferred, else `pass`.
+    const wholeDeferred = deferred && !/\bhalf\b/u.test(deferred.part);
+    const shown = notInExcerpt.length === 0 && evidenced.length > 0;
+    const outcome = wholeDeferred ? 'unmet' : !shown ? 'inconclusive' : deferred ? 'partial' : 'pass';
     const record = canonicalJson({
       schema: 'muxui-evidence-record-v1',
       assertionId,
@@ -329,8 +330,9 @@ one record per roadmap assertion under \`records/\`.
 
 Each record's \`coverage\` cites the excerpt lines that evidence it and names
 the parts that rest only on author-reported PR validation; those records are
-\`inconclusive\`. Deferred halves are \`partial\` and a wholly deferred item is
-\`unmet\`. This root makes no
+\`inconclusive\` even when another part is deferred. A record is \`partial\`
+only when every non-deferred part is shown and some part is deferred, and a
+wholly deferred item is \`unmet\`. This root makes no
 assistive-technology, support, publication, or release claim. Recapture with
 \`node ${captureTool}\` only while the hosted logs exist; retained bytes are
 never edited.

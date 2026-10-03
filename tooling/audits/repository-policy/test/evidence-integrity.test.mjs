@@ -98,11 +98,11 @@ test('R1.1-R1.5 retained CI evidence covers every assertion honestly and stays d
   const sha = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
   // The reviewed outcome per assertion; a change here is a deliberate evidence change.
   const expectedOutcomes = {
-    'E-R1.1-01': 'pass', 'E-R1.1-02': 'inconclusive', 'E-R1.1-03': 'pass', 'E-R1.1-04': 'partial',
+    'E-R1.1-01': 'pass', 'E-R1.1-02': 'inconclusive', 'E-R1.1-03': 'pass', 'E-R1.1-04': 'inconclusive',
     'E-R1.2-01': 'pass', 'E-R1.2-02': 'pass', 'E-R1.2-03': 'partial', 'E-R1.2-04': 'inconclusive',
     'E-R1.3-01': 'pass', 'E-R1.3-02': 'pass', 'E-R1.3-03': 'pass', 'E-R1.3-04': 'partial', 'E-R1.3-05': 'inconclusive',
     'E-R1.4-01': 'pass', 'E-R1.4-02': 'pass', 'E-R1.4-03': 'pass', 'E-R1.4-04': 'unmet', 'E-R1.4-05': 'inconclusive', 'E-R1.4-06': 'inconclusive',
-    'E-R1.5-01': 'pass', 'E-R1.5-02': 'pass', 'E-R1.5-03': 'partial', 'E-R1.5-04': 'pass', 'E-R1.5-05': 'inconclusive', 'E-R1.5-06': 'inconclusive',
+    'E-R1.5-01': 'pass', 'E-R1.5-02': 'pass', 'E-R1.5-03': 'inconclusive', 'E-R1.5-04': 'pass', 'E-R1.5-05': 'inconclusive', 'E-R1.5-06': 'inconclusive',
   };
   for (const [milestone, count] of Object.entries(assertionCounts)) {
     const root = join(repositoryRoot, 'tests/evidence', milestone.toLowerCase());
@@ -131,9 +131,9 @@ test('R1.1-R1.5 retained CI evidence covers every assertion honestly and stays d
       const deferred = DEFERRED_R1_EVIDENCE.find(({ id }) => id === assertionId);
       const { coverage } = record;
       // A pass rests entirely on retained excerpt lines; anything author-reported is not a pass.
-      const expected = deferred
-        ? (/\bhalf\b/u.test(deferred.part) ? 'partial' : 'unmet')
-        : (coverage.authorReportedOnly.length === 0 && coverage.evidencedInExcerpt.length > 0 ? 'pass' : 'inconclusive');
+      const shown = coverage.authorReportedOnly.length === 0 && coverage.evidencedInExcerpt.length > 0;
+      const expected = deferred && !/\bhalf\b/u.test(deferred.part) ? 'unmet'
+        : !shown ? 'inconclusive' : deferred ? 'partial' : 'pass';
       assert.equal(record.outcome, expected, assertionId);
       assert.equal(record.outcome, expectedOutcomes[assertionId], assertionId);
       assert.equal(record.deferred?.deferredTo, deferred?.deferredTo, assertionId);
