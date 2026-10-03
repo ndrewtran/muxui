@@ -47,4 +47,42 @@ test('compatibility and publication boundaries remain explicit', async () => {
   assert.equal(reactCompatibility.compatibilityProfile.runtimeProfile, 'web.react');
   assert.equal(reactCompatibility.compatibilityProfile.status, 'representative-baseline');
   assert.equal(reactCompatibility.publication.status, 'disabled');
+  assert.ok(reactCompatibility.compatibilityProfile.notClaimed.includes('assistive technology'));
+  const assistiveTechnology = release.assistiveTechnology;
+  assert.equal(assistiveTechnology.claim, 'none');
+  assert.equal(assistiveTechnology.decision, 'muxui:decision:0022');
+  assert.deepEqual(assistiveTechnology.evidenceRequiredBefore, ['any assistive-technology support claim', 'S1.0 stable promotion']);
+  assert.deepEqual(reactCompatibility.compatibilityProfile.assistiveTechnology, assistiveTechnology);
+  // Decision 0022's table: deferred IDs, parts, and family counts.
+  assert.deepEqual(assistiveTechnology.deferredEvidence.map(({ id, part, status, deferredTo, families }) => [id, part, status, deferredTo, families?.length]), [
+    ['E-R1.1-04', 'manual half', 'unmet', 'S1.0', 1],
+    ['E-R1.2-03', 'manual and assistive-technology half', 'unmet', 'S1.0', 5],
+    ['E-R1.3-04', 'manual and assistive-technology half', 'unmet', 'S1.0', 22],
+    ['E-R1.4-04', 'manual and assistive-technology proof', 'unmet', 'S1.0', 7],
+    ['E-R1.5-03', 'risk-profile half', 'unmet', 'S1.0', undefined],
+  ]);
+  const r15Deferred = [assistiveTechnology.deferredEvidence.at(-1)];
+  assert.equal(release.historical.evidence.status, 'logged-not-retained');
+  assert.deepEqual(release.historical.evidence.deferred, r15Deferred);
+  const closure = await generatedJson('r1-5-closure.json');
+  assert.equal(closure.evidence.status, 'logged-not-retained');
+  assert.deepEqual(closure.evidence.deferred, r15Deferred);
+  for (const family of closure.families) {
+    const { evidence } = family;
+    assert.equal(evidence.status, 'logged-not-retained');
+    assert.equal(evidence.retention, release.historical.evidence.retention);
+    // Every unmet tranche item covering this family is listed, never hidden under the status.
+    const expected = assistiveTechnology.deferredEvidence
+      .filter(({ families }) => !families || families.includes(family.export.name))
+      .map(({ id }) => id);
+    assert.deepEqual(evidence.deferred.map(({ id }) => id), expected, family.export.name);
+  }
+  const deferredIds = (name) => closure.families.find((family) => family.export.name === name).evidence.deferred.map(({ id }) => id);
+  assert.deepEqual(deferredIds('Popover'), ['E-R1.4-04', 'E-R1.5-03']);
+  assert.deepEqual(deferredIds('Button'), ['E-R1.5-03']);
+  assert.deepEqual(deferredIds('DisclosureGroup'), ['E-R1.1-04', 'E-R1.5-03']);
+  assert.equal(release.publicationPreparation.distTag, 'next');
+  assert.match(release.publicationPreparation.latestDistTag, /not claimed or promoted/u);
+  assert.match(release.publicationPreparation.rollback, /^prepared, not exercised: deprecate a bad 0\.1\.0-rc\.1 .* publish a fixed 0\.1\.0-rc\.2 as a new exact candidate/u);
+  assert.match(release.publicationPreparation.rollback, /re-point latest from the deprecated rc to the fixed rc, without stable promotion/u);
 });

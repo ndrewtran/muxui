@@ -1,22 +1,24 @@
 import assert from 'node:assert/strict';
 import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
-import React from 'react';
-import { act } from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { resolve } from 'node:path';
-import { createDom } from './support/dom.mjs';
+import { createDom, installDom } from './support/dom.mjs';
 import {
   AlertDialog,
   Breadcrumbs,
   Calendar,
   Checkbox,
+  CheckboxField,
   ComboBox,
   CommandPalette,
   DatePicker,
   DateRangePicker,
+  Disclosure,
+  DisclosureGroup,
   HeaderNav,
   Lightbox,
   LightboxBackdrop,
@@ -33,6 +35,7 @@ import {
   SearchField,
   Select,
   Sidebar,
+  Tabs,
   TagGroup,
   TagSelect,
   Tree,
@@ -103,6 +106,9 @@ test('MuxUI affordances render the accepted Lucide glyph mapping as decorative S
     React.createElement(Select, { label: 'Country', items: ['Australia'] }),
     React.createElement(TagGroup, { label: 'Tags', items: ['MuxUI'], onRemove: () => {} }),
     React.createElement(Tree, { 'aria-label': 'Navigation', items: [{ id: 'root', label: 'Root', children: [{ id: 'child', label: 'Child' }] }] }),
+    React.createElement(DisclosureGroup, null, React.createElement(Disclosure, { id: 'details', title: 'Details' }, 'More')),
+    React.createElement(CheckboxField.Root, { defaultChecked: true }, React.createElement(CheckboxField.Button, null, React.createElement(CheckboxField.Indicator), 'Accept')),
+    React.createElement(CheckboxField.Root, { indeterminate: true }, React.createElement(CheckboxField.Button, null, React.createElement(CheckboxField.Indicator), 'Mixed')),
   ));
   const dom = new JSDOM(`<!doctype html>${markup}`);
   const iconCases = [
@@ -131,6 +137,28 @@ test('MuxUI affordances render the accepted Lucide glyph mapping as decorative S
     const icon = dom.window.document.querySelector(selector);
     assert.equal(icon?.classList.contains('muxui-icon'), true);
     assert.equal(icon?.classList.contains('muxui-icon--sm'), true);
+  }
+  // Disclosure's trigger is named by its visible title, not an aria-label.
+  const disclosureIcon = dom.window.document.querySelector('.muxui-disclosure-trigger svg');
+  assert.ok(disclosureIcon, 'missing icon lucide-chevron-down');
+  assert.equal(disclosureIcon.classList.contains('lucide-chevron-down'), true);
+  assert.equal(disclosureIcon.getAttribute('aria-hidden'), 'true');
+  assert.equal(disclosureIcon.getAttribute('focusable'), 'false');
+  const disclosureTrigger = disclosureIcon.closest('button');
+  assert.equal(disclosureTrigger?.getAttribute('aria-label'), null);
+  assert.equal(disclosureTrigger?.textContent, 'Details');
+  // CheckboxField's input is named by its wrapping label text, not an aria-label.
+  for (const [state, className, label] of [['selected', 'lucide-check', 'Accept'], ['indeterminate', 'lucide-minus', 'Mixed']]) {
+    const icon = dom.window.document.querySelector(`.muxui-checkbox-field[data-${state}] .muxui-checkbox-field__indicator svg`);
+    assert.ok(icon, `missing icon ${className}`);
+    assert.equal(icon.classList.contains(className), true);
+    assert.equal(icon.getAttribute('aria-hidden'), 'true');
+    assert.equal(icon.getAttribute('focusable'), 'false');
+    const fieldLabel = icon.closest('label');
+    assert.equal(fieldLabel?.textContent, label);
+    const input = fieldLabel?.querySelector('input[type="checkbox"]');
+    assert.ok(input);
+    assert.equal(input.getAttribute('aria-label'), null);
   }
   const treeIcon = dom.window.document.querySelector('.muxui-tree-toggle svg');
   assert.equal(treeIcon?.getAttribute('fill'), 'currentColor');
@@ -255,6 +283,47 @@ test('R1.6 Lucide roots keep icons decorative and take accessible names from the
       }
     }
   } finally {
+    restore();
+  }
+});
+
+// Tabs renders its overflow scroll buttons only after measuring overflow, so
+// the viewport reports a scrollable extent that jsdom cannot lay out itself.
+test('Tabs overflow scroll buttons render the accepted Lucide chevrons as decorative SVGs', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom, { layoutStubs: true });
+  const viewportClass = 'muxui-tabs-motion-overflow-viewport';
+  for (const [property, value] of [['scrollWidth', 400], ['clientWidth', 100], ['scrollHeight', 400], ['clientHeight', 100]]) {
+    Object.defineProperty(dom.window.HTMLElement.prototype, property, {
+      configurable: true,
+      get() { return this.classList.contains(viewportClass) ? value : 0; },
+    });
+  }
+  const items = ['One', 'Two', 'Three'].map((label) => ({ id: label.toLowerCase(), label, panel: label }));
+  const root = createRoot(document.querySelector('#root'));
+  try {
+    await act(async () => root.render(React.createElement('div', null,
+      React.createElement(Tabs, { 'aria-label': 'Horizontal', variant: 'overflow', items }),
+      React.createElement(Tabs, { 'aria-label': 'Vertical', variant: 'overflow', orientation: 'vertical', items }))));
+    const iconCases = [
+      ['.muxui-tabs-motion-edge--left svg', 'lucide-chevron-left', 'Scroll tabs left'],
+      ['.muxui-tabs-motion-edge--right svg', 'lucide-chevron-right', 'Scroll tabs right'],
+      ['.muxui-tabs-motion-edge--before svg', 'lucide-chevron-up', 'Scroll tabs up'],
+      ['.muxui-tabs-motion-edge--after svg', 'lucide-chevron-down', 'Scroll tabs down'],
+    ];
+    for (const [selector, className, label] of iconCases) {
+      const icon = document.querySelector(selector);
+      assert.ok(icon, `missing icon ${className}`);
+      assert.equal(icon.classList.contains(className), true);
+      assert.equal(icon.getAttribute('aria-hidden'), 'true');
+      assert.equal(icon.getAttribute('focusable'), 'false');
+      assert.equal(icon.closest('button')?.getAttribute('aria-label'), label);
+    }
+  } finally {
+    await act(async () => root.unmount());
+    for (const property of ['scrollWidth', 'clientWidth', 'scrollHeight', 'clientHeight']) {
+      delete dom.window.HTMLElement.prototype[property];
+    }
     restore();
   }
 });

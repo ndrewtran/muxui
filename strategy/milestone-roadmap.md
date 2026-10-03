@@ -663,11 +663,15 @@ The graph also includes the exact internal, replaceable
 `lucide-react@1.37.0` edge for existing control affordances and the nine
 R1.6 roots `AlertDialog`, `CommandPalette`, `HeaderNav`, `Lightbox`,
 `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
-`TextEditor`. Its integrity, ISC license, Feather-derived MIT notice, React
-peer compatibility, lockfile pin, module isolation, and packed-consumer proof
-are required. Existing control affordances remain bounded to their established
-Mux UI modules; no Lucide export, public Icon API, decorative component, or
-new decorative affordance is admitted.
+`TextEditor`. Decision 0011 amendment 03 adds the four decorative `Tabs`
+overflow scroll chevrons (`chevron-left`, `chevron-right`, `chevron-up`, and
+`chevron-down`), named by their Mux-owned button labels, the decorative
+`Disclosure` trigger `chevron-down`, and the decorative `CheckboxField`
+`check` and `minus`. Its integrity, ISC license, Feather-derived MIT notice,
+React peer compatibility, lockfile pin, module isolation, and packed-consumer
+proof are required. Existing control affordances remain bounded to their
+established Mux UI modules; no Lucide export, public Icon API, decorative
+component, or new decorative affordance beyond those listed is admitted.
 
 R1.6 also admits the exact internal, replaceable `react-aria@3.51.0` edge
 for `Resizable`, extended by Decision 0018 to `SelectNative`'s `useField`;
@@ -740,10 +744,19 @@ Mux UI-owned CSS, generated package surfaces, and packed proof.
 SSR/hydration, and automated accessibility; `E-R1.1-03` generated
 descriptor/guidance/export parity and packed consumer; `E-R1.1-04`
 risk-selected browser/manual results, advisories, exceptions, and release
-manifest.
+manifest (manual half for `DisclosureGroup` unmet, provisionally, and
+deferred to `S1.0` by Decision 0022).
 
 **Exit:** every committed family in the fixed R1.1 allocation is export-ready;
-an exact `0.1.0-alpha.N` publication may be proposed.
+an exact `0.1.0-alpha.N` publication may be proposed. Prerelease amendment
+(Decision 0022): the `DisclosureGroup` manual half of `E-R1.1-04`
+(provisional: applies if its risk class is declared Composite) is recorded as
+unmet, not passed, and deferred to `S1.0`. An rc on `next` may still export
+`DisclosureGroup` with assistive-technology support explicitly unproved and
+not claimed. R1.1 is complete for the rc prerelease boundary on its logged
+evidence, which must be captured into retained evidence before the R1 exit;
+the deferred item is a required `S1.0` entry condition, and no completion
+claim rests on the missing evidence.
 
 ### R1.2 Forms and field controls
 
@@ -755,11 +768,20 @@ composition contracts under Mux UI-owned hooks and tokens.
 
 **Evidence:** `E-R1.2-01` canonical/binding closure;
 `E-R1.2-02` form/input/label/error behavior and types;
-`E-R1.2-03` browser and required accessibility proof;
+`E-R1.2-03` browser and required accessibility proof (manual and
+assistive-technology half unmet; deferred to `S1.0` by Decision 0022);
 `E-R1.2-04` generated/packed/release correlation.
 
 **Exit:** the fixed R1.2 allocation's exact export and prerelease conditions
-pass.
+pass. Prerelease amendment (Decision 0022): the manual and
+assistive-technology half of `E-R1.2-03` is recorded as unmet, not passed, and
+deferred to `S1.0`. An rc on `next` may still export `Autocomplete`,
+`DatePicker`, `DateRangePicker`, `CheckboxGroup`, and `Form` with
+assistive-technology support explicitly unproved and not claimed. R1.2 is
+complete for the rc prerelease boundary on its logged evidence, which must be
+captured into retained evidence before the R1 exit; the deferred item is a
+required `S1.0` entry condition, and no completion claim rests on the missing
+evidence.
 
 ### R1.3 Collections and composites
 
@@ -772,10 +794,18 @@ contract comparisons.
 **Evidence:** `E-R1.3-01` canonical/binding closure;
 `E-R1.3-02` keyboard/focus behavior; `E-R1.3-03`
 selection/form/composition behavior; `E-R1.3-04` required accessibility
-evidence; `E-R1.3-05` generated/packed/release correlation.
+evidence (manual and assistive-technology half unmet; deferred to `S1.0` by
+Decision 0022); `E-R1.3-05` generated/packed/release correlation.
 
 **Exit:** the fixed R1.3 allocation's exact export and prerelease conditions
-pass.
+pass. Prerelease amendment (Decision 0022): the manual and
+assistive-technology half of `E-R1.3-04` is recorded as unmet, not passed, and
+deferred to `S1.0`. An rc on `next` may still export the 22 R1.3 collection
+and composite families listed in Decision 0022 with assistive-technology
+support explicitly unproved and not claimed. R1.3 is complete for the rc
+prerelease boundary on its logged evidence, which must be captured into
+retained evidence before the R1 exit; the deferred item is a required `S1.0`
+entry condition, and no completion claim rests on the missing evidence.
 
 ### R1.4 Overlays and temporal interactions
 
@@ -790,12 +820,20 @@ responsible focus/accessibility fixes.
 `E-R1.4-02` overlay/focus/dismissal behavior;
 `E-R1.4-03` temporal/announcement/concurrency behavior;
 `E-R1.4-04` manual and assistive-technology proof required by the exact risk
-profiles; `E-R1.4-05` teardown/advisory/exception proof;
+profiles (unmet; deferred to `S1.0` by Decision 0022);
+`E-R1.4-05` teardown/advisory/exception proof;
 `E-R1.4-06` generated/packed/release correlation.
 
 **Exit:** every family in the fixed R1.4 allocation is export-ready and has
 complete evidence for its exact contract and risk profile. Missing required
-proof keeps the component unexported and blocks R1.4 completion. An exact alpha
+proof keeps the component unexported and blocks R1.4 completion, except as
+this amendment records. Prerelease amendment (Decision 0022): `E-R1.4-04` is
+recorded as unmet, not passed, and deferred to `S1.0`. An rc on `next` may
+still export the seven R1.4 families with assistive-technology support
+explicitly unproved and not claimed. R1.4 is complete for the rc prerelease
+boundary on its logged evidence, which must be captured into retained evidence
+before the R1 exit; the deferred item is a required `S1.0` entry condition,
+and no completion claim rests on the missing evidence. An exact alpha
 publication candidate may be prepared only after all seven R1.4 families
 satisfy this exit. No publication, secondary-renderer, stable, `latest`, or
 equivalence claim follows.
@@ -814,7 +852,9 @@ committed family remains export-ready at R1 exit.
 
 **Evidence:** `E-R1.5-01` upstream disposition completeness;
 `E-R1.5-02` canonical/binding/export/CSS coverage;
-`E-R1.5-03` risk-profile and visual contract proof;
+`E-R1.5-03` risk-profile and visual contract proof (visual half recorded;
+risk-profile half unmet, because no binding declares a risk profile, and
+deferred to `S1.0` by Decision 0022);
 `E-R1.5-04` package/guidance/descriptor parity; `E-R1.5-05`
 compatibility and performance; `E-R1.5-06` informational agent discovery
 and final exception/advisory closure.
@@ -822,7 +862,13 @@ and final exception/advisory closure.
 **Exit:** the exact committed-family reconciliation is `53/53`; no defer,
 exclude, or not-a-component completion path remains; R1.6 may begin. The
 `@muxui/react@0.1.0-rc.1` proposal remains gated by R1.6 and exact R1 exit
-conditions.
+conditions. Prerelease amendment (Decision 0022): the risk-profile half of
+`E-R1.5-03` is recorded as unmet, not passed, and deferred to `S1.0`. An rc on
+`next` may still export every binding with no declared risk profile and
+support unproved and not claimed. R1.5 is complete for the rc prerelease
+boundary on its logged evidence, which must be captured into retained evidence
+before the R1 exit; the deferred item is a required `S1.0` entry condition,
+and no completion claim rests on the missing evidence.
 
 ### R1.6 React parity and private Mux theme authoring
 
@@ -877,7 +923,8 @@ Storybook owns neither canonical examples nor token/theme data.
   Tailwind remains a consumer build dependency only and is absent from Mux
   runtime, peer, generated-source, and styling-engine closure.
 - Exact internal, replaceable dependencies remain at owning Mux modules:
-  Lucide for the nine listed roots, `motion@13.4.0` for bounded component
+  Lucide for the nine listed roots and those admitted by Decision 0011
+  amendment 03, `motion@13.4.0` for bounded component
   motion in existing admitted bindings, `react-aria@3.51.0` for `Resizable`,
   `marked@13.0.3` for the typed Markdown parser boundary, and the eight
   `@tiptap/*@3.31.4` packages for `TextEditor` (Decision 0011 amendment 04).
@@ -986,14 +1033,38 @@ completion, public package, support, or release claim.
 
 **Entry:** R1.5 complete plus exact tarball, release manifest, provenance,
 registry control, checks, rollback plan, and human publish authorization.
+R1.1 through R1.5 are complete for the rc prerelease boundary only on logged
+check and review evidence, and a transient log cannot satisfy this exit.
+Capturing that logged evidence into retained evidence is therefore a required
+entry condition and a required step before the rc.1 cut, done before the logs
+expire around 2026-11-23 (Decision 0022). Until the capture lands, the
+generated records keep R1.5 evidence `logged-not-retained`.
 
 **Evidence:** `E-R1-EXIT-01` exact tarball/export/install tuple;
 `E-R1-EXIT-02` registry/provenance/integrity; `E-R1-EXIT-03` published clean-
-consumer verification; `E-R1-EXIT-04` dist-tag and rollback verification.
+consumer verification; `E-R1-EXIT-04` dist-tag verification with rollback
+prepared, not exercised: `next` points at the current verified rc, nothing
+claims or promotes `latest`, and the Decision 0023 deprecate and fix-forward
+plan is prepared in the release manifest, with no prior `next` pointer
+assumed.
 
-**Exit:** only `@muxui/react@0.1.0-rc.1` is published to `next`. No `latest`,
-stable, framework-free, native, React Native Web, parity, or equivalence claim
-is made.
+**Exit:** only `@muxui/react@0.1.0-rc.1`, or a fix-forward rc that replaces
+it, is published, with `--tag next`. If rc.1 is the first publish, the registry also points `latest` at it
+(Decision 0023). Apart from a separately authorized re-point of `latest` to
+the fix-forward rc during a rollback, nothing claims or promotes `latest`, no
+stable release is promoted, and install guidance uses `@muxui/react@next`
+until a stable release moves `latest`. No `latest`, stable, framework-free,
+native, React Native Web, parity, or equivalence claim is made. A bad rc.1 is
+deprecated with a message and fixed forward. A fix-forward `rc.N+1` is a new
+exact candidate with its own release preparation, `E-R1-EXIT-01` through
+`E-R1-EXIT-03` evidence, and publish authorization; this exit and
+`E-R1-EXIT-04` then apply to the current verified rc. Mux UI unpublishes only
+for a security or legal problem, with explicit authorization, inside npm's
+72-hour no-dependents window. Under Decision 0022, rc.1 also makes no
+assistive-technology support claim; its compatibility profile and release
+manifest say so. Existing automated accessibility, keyboard, and focus proof
+stays required. Assistive-technology evidence is required before any such
+claim and before `S1.0` stable promotion.
 
 The R1 exit package graph includes the same exact internal,
 replaceable `lucide-react@1.37.0` edge and its ISC plus Feather-derived MIT
@@ -1024,7 +1095,15 @@ publication authorization or change the final R1-exit merge stop.
 - `X1.0` owns any cross-platform semantic-comparison or feature-equivalence
   claim after the relevant renderer exits.
 - `S1.0` owns stable React promotion after a published R1 prerelease, observed
-  stabilization demand, and an accepted lifecycle/compatibility lock.
+  stabilization demand, and an accepted lifecycle/compatibility lock. Before
+  promotion, the deferred `E-R1.1-04` (`DisclosureGroup` manual half),
+  `E-R1.2-03` and `E-R1.3-04` (manual and assistive-technology half),
+  `E-R1.4-04`, and `E-R1.5-03` (risk-profile half) are required entry
+  conditions (Decision 0022). Because Architecture's risk-class table (see
+  "Evidence requirements are derived from a declared interaction risk class")
+  makes the declared class the basis of promotion evidence, every exported
+  component also declares its risk class and passes the manual and
+  assistive-technology evidence that class requires.
 
 ## Historical Gate 1 — superseded cross-platform sequence
 
@@ -1753,7 +1832,7 @@ valid outcomes and do not make the core product incomplete.
 | W1.0 | Framework-free web activation | R1 exit, demand, accepted lock, explicit activation | W1 tranches |
 | N1.0 | React Native activation | R1 exit, demand, accepted platform/profile lock, explicit activation | N1 tranches |
 | X1.0 | Cross-platform comparison/equivalence | Relevant R1/W1/N1 exits | Exact claimed matrix only |
-| S1.0 | Stable React promotion | Published R1 prerelease, demand, accepted stable lock | Stable React release only |
+| S1.0 | Stable React promotion | Published R1 prerelease, demand, accepted stable lock, a declared risk class for every exported component, and the deferred R1 manual/AT evidence (Decision 0022) | Stable React release only |
 
 ### Optional capability register
 
@@ -1784,11 +1863,11 @@ rows, which were audit locators only, to the ignored recovery archive.
 | Architecture fixture | First release-blocking milestone | Evidence IDs |
 | --- | --- | --- |
 | Standalone React package/substrate baseline | R1.0 | `E-R1.0-01` through `E-R1.0-05` |
-| Foundation/simple-control tranche | R1.1 | `E-R1.1-01` through `E-R1.1-04` |
-| Forms/field-control tranche | R1.2 | `E-R1.2-01` through `E-R1.2-04` |
-| Collection/composite tranche | R1.3 | `E-R1.3-01` through `E-R1.3-05` |
-| Overlay/temporal tranche | R1.4 | `E-R1.4-01` through `E-R1.4-06` |
-| Pinned-upstream disposition and React breadth closure | R1.5 | `E-R1.5-01` through `E-R1.5-06` |
+| Foundation/simple-control tranche | R1.1 | `E-R1.1-01` through `E-R1.1-04`; `DisclosureGroup` manual half of `E-R1.1-04` unmet (provisional) and deferred to `S1.0` (Decision 0022) |
+| Forms/field-control tranche | R1.2 | `E-R1.2-01` through `E-R1.2-04`; manual and assistive-technology half of `E-R1.2-03` unmet and deferred to `S1.0` (Decision 0022) |
+| Collection/composite tranche | R1.3 | `E-R1.3-01` through `E-R1.3-05`; manual and assistive-technology half of `E-R1.3-04` unmet and deferred to `S1.0` (Decision 0022) |
+| Overlay/temporal tranche | R1.4 | `E-R1.4-01` through `E-R1.4-06`; `E-R1.4-04` unmet and deferred to `S1.0` (Decision 0022) |
+| Pinned-upstream disposition and React breadth closure | R1.5 | `E-R1.5-01` through `E-R1.5-06`; risk-profile half of `E-R1.5-03` unmet and deferred to `S1.0` (Decision 0022) |
 | React prerelease publication/rollback | R1 exit | `E-R1-EXIT-01` through `E-R1-EXIT-04` |
 | React style inventory, visual/interaction parity, and private theme authoring | R1.6 | `E-R1.6-01` through `E-R1.6-07` |
 | Authoring round trip | G0.5 | `E-G0.5-01` through `E-G0.5-04` |
@@ -1967,7 +2046,10 @@ Roadmap order; none may change another tranche or the 53-set. Each tranche
 freezes its Mux UI-owned public contracts and uses shared proof from the common
 baseline. Each retains focused deterministic proof, risk-selected review,
 applicable manual browser/AT proof before export, packed-consumer validation,
-and failure evidence. R1.5 begins only after R1.1 through R1.4 are complete.
+and failure evidence. The `DisclosureGroup` manual half of `E-R1.1-04`, the
+manual and assistive-technology half of `E-R1.2-03` and `E-R1.3-04`, and
+`E-R1.4-04` are unmet and deferred to `S1.0` under Decision 0022. R1.5 begins
+only after R1.1 through R1.4 are complete for the rc prerelease boundary.
 
 No per-family implementation loop may replace tranche proof with a broad
 untested assertion. Conversely, unchanged shared baseline facts need not be
@@ -1984,7 +2066,9 @@ React bindings, and
 `lucide-react@1.37.0` for the approved existing R1 control affordances plus
   the nine R1.6 affordance roots `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
-and `TextEditor`. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
+and `TextEditor`, and the `Tabs` overflow scroll chevrons, `Disclosure`
+trigger chevron, and `CheckboxField` check and minus admitted by Decision 0011
+amendment 03. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
 `useMove`, with Decision 0018 extending the same edge to SelectNative's
 `useField`; `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
 and `@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`, `@tiptap/react@3.31.4`,
