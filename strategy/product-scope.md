@@ -1,5 +1,5 @@
 ---
-scopeVersion: 12.1.0
+scopeVersion: 12.1.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -79,6 +79,11 @@ lockfile, package, or proof evidence.
 Product Scope `12.1.0` applies Decision 0020: Figma is the named design tool,
 and an export-only slice of the admitted design-tool items lands early inside
 private `@muxui/tokens`. Import and round-trip keep their G3.5 conditions.
+
+Product Scope `12.1.1` applies Decision 0021 as a patch: the remaining 6.0.0,
+6.0.3, and 6.0.4 amendment sections move to the ignored recovery archive, and
+the fixed 53-family registry and breadth rule they carried move unchanged into
+the React `0.1` prerelease boundary.
 
 ## Scope vocabulary
 
@@ -251,13 +256,97 @@ The React-specific component and pattern commitments are
 `SCOPE-COMP-BUTTON-REACT`, `SCOPE-COMP-TEXTFIELD-REACT`,
 `SCOPE-COMP-SWITCH-REACT`, `SCOPE-PATTERN-FORM-REACT`,
 `SCOPE-COMP-SELECT-REACT`, `SCOPE-COMP-TABS-REACT`,
-`SCOPE-COMP-DIALOG-REACT`, and `SCOPE-COMP-TOAST-REACT`. Their complete
-contracts appear in the accepted `5.0.0` amendment below.
+`SCOPE-COMP-DIALOG-REACT`, and `SCOPE-COMP-TOAST-REACT`. Their accepted
+`5.0.0` contracts are preserved in the ignored recovery archive.
 
 Every exported binding remains `experimental` until independently promoted.
 Missing binding-required manual or assistive-technology proof keeps it
 unexported or explicitly unavailable with support unproved; it does not alter
 authored lifecycle/strategy or create an `unsupported` disposition.
+
+#### Fixed 53-family React registry
+
+This is the complete immutable 53-family React Scope registry. It reuses the
+eight earlier React commitments above without renaming or repurposing them;
+the other 45 IDs were added by Product Scope `6.0.0`, whose amendment record
+Decision 0021 moved to the ignored recovery archive.
+
+| Upstream family | Mux UI public family | Immutable Scope ID | Tranche |
+| --- | --- | --- | --- |
+| `Autocomplete` | `Autocomplete` | `SCOPE-COMP-AUTOCOMPLETE-REACT` | R1.2 |
+| `Breadcrumbs` | `Breadcrumbs` | `SCOPE-COMP-BREADCRUMBS-REACT` | R1.1 |
+| `Button` | `Button` | `SCOPE-COMP-BUTTON-REACT` | R1.1 |
+| `Calendar` | `Calendar` | `SCOPE-COMP-CALENDAR-REACT` | R1.3 |
+| `Checkbox` | `Checkbox` | `SCOPE-COMP-CHECKBOX-REACT` | R1.1 |
+| `CheckboxGroup` | `CheckboxGroup` | `SCOPE-COMP-CHECKBOXGROUP-REACT` | R1.2 |
+| `ColorArea` | `ColorArea` | `SCOPE-COMP-COLORAREA-REACT` | R1.3 |
+| `ColorField` | `ColorField` | `SCOPE-COMP-COLORFIELD-REACT` | R1.3 |
+| `ColorPicker` | `ColorPicker` | `SCOPE-COMP-COLORPICKER-REACT` | R1.3 |
+| `ColorSlider` | `ColorSlider` | `SCOPE-COMP-COLORSLIDER-REACT` | R1.3 |
+| `ColorSwatch` | `ColorSwatch` | `SCOPE-COMP-COLORSWATCH-REACT` | R1.3 |
+| `ColorSwatchPicker` | `ColorSwatchPicker` | `SCOPE-COMP-COLORSWATCHPICKER-REACT` | R1.3 |
+| `ColorWheel` | `ColorWheel` | `SCOPE-COMP-COLORWHEEL-REACT` | R1.3 |
+| `ComboBox` | `ComboBox` | `SCOPE-COMP-COMBOBOX-REACT` | R1.3 |
+| `DateField` | `DateField` | `SCOPE-COMP-DATEFIELD-REACT` | R1.2 |
+| `DatePicker` | `DatePicker` | `SCOPE-COMP-DATEPICKER-REACT` | R1.2 |
+| `DateRangePicker` | `DateRangePicker` | `SCOPE-COMP-DATERANGEPICKER-REACT` | R1.2 |
+| `Disclosure` | `Disclosure` | `SCOPE-COMP-DISCLOSURE-REACT` | R1.1 |
+| `DisclosureGroup` | `DisclosureGroup` | `SCOPE-COMP-DISCLOSUREGROUP-REACT` | R1.1 |
+| `DropZone` | `DropZone` | `SCOPE-COMP-DROPZONE-REACT` | R1.4 |
+| `FileTrigger` | `FileTrigger` | `SCOPE-COMP-FILETRIGGER-REACT` | R1.4 |
+| `Form` | `Form` | `SCOPE-PATTERN-FORM-REACT` | R1.2 |
+| `GridList` | `GridList` | `SCOPE-COMP-GRIDLIST-REACT` | R1.3 |
+| `Group` | `Group` | `SCOPE-COMP-GROUP-REACT` | R1.1 |
+| `Link` | `Link` | `SCOPE-COMP-LINK-REACT` | R1.1 |
+| `ListBox` | `ListBox` | `SCOPE-COMP-LISTBOX-REACT` | R1.3 |
+| `Menu` | `Menu` | `SCOPE-COMP-MENU-REACT` | R1.3 |
+| `Meter` | `Meter` | `SCOPE-COMP-METER-REACT` | R1.1 |
+| `Modal` | `Dialog` | `SCOPE-COMP-DIALOG-REACT` | R1.4 |
+| `NumberField` | `NumberField` | `SCOPE-COMP-NUMBERFIELD-REACT` | R1.2 |
+| `Popover` | `Popover` | `SCOPE-COMP-POPOVER-REACT` | R1.4 |
+| `PreviewTrigger` | `PreviewTrigger` | `SCOPE-COMP-PREVIEWTRIGGER-REACT` | R1.4 |
+| `ProgressBar` | `ProgressBar` | `SCOPE-COMP-PROGRESSBAR-REACT` | R1.1 |
+| `RadioGroup` | `RadioGroup` | `SCOPE-COMP-RADIOGROUP-REACT` | R1.3 |
+| `RangeCalendar` | `RangeCalendar` | `SCOPE-COMP-RANGECALENDAR-REACT` | R1.3 |
+| `SearchField` | `SearchField` | `SCOPE-COMP-SEARCHFIELD-REACT` | R1.2 |
+| `Select` | `Select` | `SCOPE-COMP-SELECT-REACT` | R1.3 |
+| `Separator` | `Separator` | `SCOPE-COMP-SEPARATOR-REACT` | R1.1 |
+| `Slider` | `Slider` | `SCOPE-COMP-SLIDER-REACT` | R1.3 |
+| `Switch` | `Switch` | `SCOPE-COMP-SWITCH-REACT` | R1.2 |
+| `Table` | `Table` | `SCOPE-COMP-TABLE-REACT` | R1.3 |
+| `Tabs` | `Tabs` | `SCOPE-COMP-TABS-REACT` | R1.3 |
+| `TagGroup` | `TagGroup` | `SCOPE-COMP-TAGGROUP-REACT` | R1.3 |
+| `TextField` | `TextField` | `SCOPE-COMP-TEXTFIELD-REACT` | R1.2 |
+| `TimeField` | `TimeField` | `SCOPE-COMP-TIMEFIELD-REACT` | R1.2 |
+| `Toast` | `Toast` | `SCOPE-COMP-TOAST-REACT` | R1.4 |
+| `ToggleButton` | `ToggleButton` | `SCOPE-COMP-TOGGLEBUTTON-REACT` | R1.1 |
+| `ToggleButtonGroup` | `ToggleButtonGroup` | `SCOPE-COMP-TOGGLEBUTTONGROUP-REACT` | R1.3 |
+| `TokenField` | `TokenField` | `SCOPE-COMP-TOKENFIELD-REACT` | R1.3 |
+| `Toolbar` | `Toolbar` | `SCOPE-COMP-TOOLBAR-REACT` | R1.3 |
+| `Tooltip` | `Tooltip` | `SCOPE-COMP-TOOLTIP-REACT` | R1.4 |
+| `Tree` | `Tree` | `SCOPE-COMP-TREE-REACT` | R1.3 |
+| `Virtualizer` | `Virtualizer` | `SCOPE-COMP-VIRTUALIZER-REACT` | R1.3 |
+
+Each row is `committed`; its package/platform is `@muxui/react` / `web.react`;
+its activation uses the fixed 53-family table, immutable Stage 1/R1.0
+baseline, Mux UI-owned contract, applicable styling disposition,
+risk-selected deterministic and manual proof, and the unchanged React
+prerelease release boundary. No row commits
+a React Aria public name, raw helper/type export, secondary renderer,
+cross-platform counterpart, stable lifecycle, or independent release.
+
+`SCOPE-REACT-BREADTH-001` requires complete delivery of all 53 exact snapshot
+families rather than disposition-complete applicable coverage with permitted
+exclusions. `SCOPE-METRIC-REACT-COVERAGE`
+measures exact 53-of-53 Mux UI contract/export/proof closure plus complete raw
+disposition and cannot be satisfied by upstream name or raw export count.
+
+Changing the 53-family commitment, family boundary, ID mapping, tranche
+allocation, React Aria identity, public ownership model, package graph,
+styling rule, support boundary, or release boundary requires a new accepted
+decision, a Product Scope major amendment when applicable, affected lock
+reconciliation, and bounded reproof. Removal of a committed family is a major
+scope change.
 
 ### Historical cross-platform `0.1` boundary
 
@@ -761,7 +850,19 @@ accessibility, package, compatibility, integrity, or generation failures.
   `react-aria-components@1.20.0`, and the approved direct internal
   `@internationalized/date@3.12.3` dependency limited to Mux UI value adapters
   in `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-  `RangeCalendar`, plus the R1.6 internal, replaceable supplemental-affordance edges
+  `RangeCalendar`; the approved direct internal, replaceable
+  `lucide-react@1.37.0` dependency (npm integrity
+  `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
+  ISC license with its Feather-derived MIT notice, React peer-compatible with
+  the existing React and React DOM peer boundary) for the existing R1 control
+  affordances: `DatePicker`/`DateRangePicker` calendar triggers;
+  `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and `Tree`
+  chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
+  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, with
+  Breadcrumb separators kept as text, no Search icon, decorative and
+  non-focusable icons that never supply an undocumented accessible name, and
+  no Lucide export, type, name, prop, import path, or public Icon API, catalog,
+  or package; plus the R1.6 internal, replaceable supplemental-affordance edges
   `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
   parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`;
   `motion@13.4.0` for bounded component motion in existing admitted React
@@ -865,7 +966,9 @@ artifacts. Their exact bytes are preserved only in the ignored preflight archive
 they are not current product authority. Current commitments, immutable Scope IDs,
 release boundaries, and non-goals are defined by the current baseline above and
 the active roadmap. No historical record is rewritten or reinterpreted as a
-current product outcome.
+current product outcome. Decision 0021 applies the same archive to the 6.0.0,
+6.0.3, and 6.0.4 sections; their exact bytes are in
+`.migration-archive/20261003-decision-0021/`.
 
 ## Tracker reference contract
 
@@ -910,253 +1013,6 @@ This product scope remains valid only while:
 
 If any statement becomes false, stop the affected scope item, retain the
 failure evidence, and correct the earliest authoritative document or source.
-## Product Scope 6.0.0
-
-The following Product Scope 6.0.x amendment record is retained as historical
-authority. Its references to Decision 0011, the 6.0.x versions, and the
-reset-specific Project reconciliation describe the accepted pre-rename state;
-Product Scope 7.0.0 and Decision 0012 now govern the current Mux UI identity.
-
-Product Scope advances from `5.0.1` to `6.0.0` because this amendment changes
-the committed React breadth from disposition-complete coverage with permitted
-exclusions to all 53 exact family outcomes by React `0.1`.
-
-All historical Scope IDs and their prior bytes remain immutable. The eight
-existing exact outcome IDs are reused without renaming or repurposing:
-
-- `Button` -> `SCOPE-COMP-BUTTON-REACT`;
-- `TextField` -> `SCOPE-COMP-TEXTFIELD-REACT`;
-- `Switch` -> `SCOPE-COMP-SWITCH-REACT`;
-- `Form` -> `SCOPE-PATTERN-FORM-REACT`;
-- `Select` -> `SCOPE-COMP-SELECT-REACT`;
-- `Tabs` -> `SCOPE-COMP-TABS-REACT`;
-- upstream `Modal`, whose Mux UI public family is `Dialog`, ->
-  `SCOPE-COMP-DIALOG-REACT`; and
-- `Toast` -> `SCOPE-COMP-TOAST-REACT`.
-
-The following table is the complete immutable 53-family Scope registry for
-this decision. `new` means Product Scope 6.0.0 adds the ID; `existing` means
-the exact previously committed ID is retained.
-
-| Upstream family | Mux UI public family | Immutable Scope ID | ID treatment | Tranche |
-| --- | --- | --- | --- | --- |
-| `Autocomplete` | `Autocomplete` | `SCOPE-COMP-AUTOCOMPLETE-REACT` | new | R1.2 |
-| `Breadcrumbs` | `Breadcrumbs` | `SCOPE-COMP-BREADCRUMBS-REACT` | new | R1.1 |
-| `Button` | `Button` | `SCOPE-COMP-BUTTON-REACT` | existing | R1.1 |
-| `Calendar` | `Calendar` | `SCOPE-COMP-CALENDAR-REACT` | new | R1.3 |
-| `Checkbox` | `Checkbox` | `SCOPE-COMP-CHECKBOX-REACT` | new | R1.1 |
-| `CheckboxGroup` | `CheckboxGroup` | `SCOPE-COMP-CHECKBOXGROUP-REACT` | new | R1.2 |
-| `ColorArea` | `ColorArea` | `SCOPE-COMP-COLORAREA-REACT` | new | R1.3 |
-| `ColorField` | `ColorField` | `SCOPE-COMP-COLORFIELD-REACT` | new | R1.3 |
-| `ColorPicker` | `ColorPicker` | `SCOPE-COMP-COLORPICKER-REACT` | new | R1.3 |
-| `ColorSlider` | `ColorSlider` | `SCOPE-COMP-COLORSLIDER-REACT` | new | R1.3 |
-| `ColorSwatch` | `ColorSwatch` | `SCOPE-COMP-COLORSWATCH-REACT` | new | R1.3 |
-| `ColorSwatchPicker` | `ColorSwatchPicker` | `SCOPE-COMP-COLORSWATCHPICKER-REACT` | new | R1.3 |
-| `ColorWheel` | `ColorWheel` | `SCOPE-COMP-COLORWHEEL-REACT` | new | R1.3 |
-| `ComboBox` | `ComboBox` | `SCOPE-COMP-COMBOBOX-REACT` | new | R1.3 |
-| `DateField` | `DateField` | `SCOPE-COMP-DATEFIELD-REACT` | new | R1.2 |
-| `DatePicker` | `DatePicker` | `SCOPE-COMP-DATEPICKER-REACT` | new | R1.2 |
-| `DateRangePicker` | `DateRangePicker` | `SCOPE-COMP-DATERANGEPICKER-REACT` | new | R1.2 |
-| `Disclosure` | `Disclosure` | `SCOPE-COMP-DISCLOSURE-REACT` | new | R1.1 |
-| `DisclosureGroup` | `DisclosureGroup` | `SCOPE-COMP-DISCLOSUREGROUP-REACT` | new | R1.1 |
-| `DropZone` | `DropZone` | `SCOPE-COMP-DROPZONE-REACT` | new | R1.4 |
-| `FileTrigger` | `FileTrigger` | `SCOPE-COMP-FILETRIGGER-REACT` | new | R1.4 |
-| `Form` | `Form` | `SCOPE-PATTERN-FORM-REACT` | existing | R1.2 |
-| `GridList` | `GridList` | `SCOPE-COMP-GRIDLIST-REACT` | new | R1.3 |
-| `Group` | `Group` | `SCOPE-COMP-GROUP-REACT` | new | R1.1 |
-| `Link` | `Link` | `SCOPE-COMP-LINK-REACT` | new | R1.1 |
-| `ListBox` | `ListBox` | `SCOPE-COMP-LISTBOX-REACT` | new | R1.3 |
-| `Menu` | `Menu` | `SCOPE-COMP-MENU-REACT` | new | R1.3 |
-| `Meter` | `Meter` | `SCOPE-COMP-METER-REACT` | new | R1.1 |
-| `Modal` | `Dialog` | `SCOPE-COMP-DIALOG-REACT` | existing | R1.4 |
-| `NumberField` | `NumberField` | `SCOPE-COMP-NUMBERFIELD-REACT` | new | R1.2 |
-| `Popover` | `Popover` | `SCOPE-COMP-POPOVER-REACT` | new | R1.4 |
-| `PreviewTrigger` | `PreviewTrigger` | `SCOPE-COMP-PREVIEWTRIGGER-REACT` | new | R1.4 |
-| `ProgressBar` | `ProgressBar` | `SCOPE-COMP-PROGRESSBAR-REACT` | new | R1.1 |
-| `RadioGroup` | `RadioGroup` | `SCOPE-COMP-RADIOGROUP-REACT` | new | R1.3 |
-| `RangeCalendar` | `RangeCalendar` | `SCOPE-COMP-RANGECALENDAR-REACT` | new | R1.3 |
-| `SearchField` | `SearchField` | `SCOPE-COMP-SEARCHFIELD-REACT` | new | R1.2 |
-| `Select` | `Select` | `SCOPE-COMP-SELECT-REACT` | existing | R1.3 |
-| `Separator` | `Separator` | `SCOPE-COMP-SEPARATOR-REACT` | new | R1.1 |
-| `Slider` | `Slider` | `SCOPE-COMP-SLIDER-REACT` | new | R1.3 |
-| `Switch` | `Switch` | `SCOPE-COMP-SWITCH-REACT` | existing | R1.2 |
-| `Table` | `Table` | `SCOPE-COMP-TABLE-REACT` | new | R1.3 |
-| `Tabs` | `Tabs` | `SCOPE-COMP-TABS-REACT` | existing | R1.3 |
-| `TagGroup` | `TagGroup` | `SCOPE-COMP-TAGGROUP-REACT` | new | R1.3 |
-| `TextField` | `TextField` | `SCOPE-COMP-TEXTFIELD-REACT` | existing | R1.2 |
-| `TimeField` | `TimeField` | `SCOPE-COMP-TIMEFIELD-REACT` | new | R1.2 |
-| `Toast` | `Toast` | `SCOPE-COMP-TOAST-REACT` | existing | R1.4 |
-| `ToggleButton` | `ToggleButton` | `SCOPE-COMP-TOGGLEBUTTON-REACT` | new | R1.1 |
-| `ToggleButtonGroup` | `ToggleButtonGroup` | `SCOPE-COMP-TOGGLEBUTTONGROUP-REACT` | new | R1.3 |
-| `TokenField` | `TokenField` | `SCOPE-COMP-TOKENFIELD-REACT` | new | R1.3 |
-| `Toolbar` | `Toolbar` | `SCOPE-COMP-TOOLBAR-REACT` | new | R1.3 |
-| `Tooltip` | `Tooltip` | `SCOPE-COMP-TOOLTIP-REACT` | new | R1.4 |
-| `Tree` | `Tree` | `SCOPE-COMP-TREE-REACT` | new | R1.3 |
-| `Virtualizer` | `Virtualizer` | `SCOPE-COMP-VIRTUALIZER-REACT` | new | R1.3 |
-
-Each row is `committed`; its package/platform is `@muxui/react` / `web.react`;
-its activation uses the fixed 53-family table, immutable Stage 1/R1.0
-baseline, Mux UI-owned contract, applicable styling disposition,
-risk-selected deterministic and manual proof, and the unchanged React
-prerelease release boundary. No row commits
-a React Aria public name, raw helper/type export, secondary renderer,
-cross-platform counterpart, stable lifecycle, or independent release.
-
-The existing `SCOPE-REACT-BREADTH-001` outcome is recorded in the accepted
-6.0.0 authority as
-disposition-complete applicable coverage with permitted exclusions to complete
-delivery of all 53 exact snapshot families. `SCOPE-METRIC-REACT-COVERAGE`
-measures exact 53-of-53 Mux UI contract/export/proof closure plus complete raw
-disposition and cannot be satisfied by upstream name or raw export count.
-Other existing Product Scope commitments, deferred items, admitted items,
-packages, platforms, surfaces, release boundaries, and non-goals retain their
-5.0.1 states unless explicitly changed above.
-## Evidence, reversal, and historical boundary
-
-Historical authority, Scope IDs, Decision 0010 and amendments 01-02, Project
-records, PRs, releases, and retained evidence remain immutable. This amendment
-does not recertify or rewrite them. Their facts may be reused only through an
-explicit current applicability binding.
-
-Before implementation, rejection or reversal is append-only supersession and
-requires no runtime migration. After implementation begins, changing the
-53-family commitment, family boundary, ID mapping, tranche allocation, React
-Aria identity, public ownership model, package graph, styling rule, support
-boundary, or release boundary requires a new accepted decision, Product Scope
-major amendment when applicable, affected lock reconciliation, and bounded
-reproof. Removal of a committed family is a major scope change.
-
-## Project boundary
-
-This authority does not generally update the GitHub Project. Once, after the
-reset is accepted, merged, and verified on the default branch, one reset-
-specific Project reconciliation is explicitly authorized to update the Project
-README to Product Scope `6.0.2`, Decision 0011, and the reset pull request while
-preserving historical locators, and to replace issue #76's obsolete
-continuous-envelope/scope-lock blocker with the already satisfied R1.0 plus
-fixed 53-family scope boundary. Only after that one-time reconciliation may
-standing Project synchronization update Roadmap-proved workflow status and
-pull-request locators. It must preserve scope and authority references,
-evidence meaning, priority, iteration, target dates, blockers, assignee, and
-reviewer decisions for their own explicit owners. Tracker status never changes
-Product Scope or evidence.
-
-## Explicit non-goals
-
-Product Scope 6.0.3 itself performs no repository implementation, dependency
-installation, component work, CSS copy, playground work, evidence capture,
-Project mutation, package publication, release, deployment, support claim,
-stable promotion, React Aria public re-export, raw-export breadth target,
-RSC/client-boundary support, framework-free implementation, React Native
-implementation, RNW support, equivalence claim, public catalog or tooling
-product, Scale port, new theme system, or production change. It does not itself
-authorize repository, Git, Project, package, publication, or release mutations.
-
-It does not rewrite historical evidence or reuse historical Scope IDs for new
-outcomes. It does not allow a count-only completion claim. It does not permit
-an upstream contract to replace a Mux UI-owned public contract.
-
-## Acceptance effect
-
-Acceptance of Decision 0011 and its reviewed materialization authorizes the
-ordinary protected-PR reset and continued bounded R1.1-R1.5 implementation
-within the unchanged product boundary. Npm publication, dist-tag mutation,
-and the final R1-exit PR merge remain separate authorization boundaries.
-
-## Product Scope 6.0.3 temporal adapter clarification
-
-Product Scope advances from `6.0.2` to `6.0.3` as a patch clarification for
-the accepted Decision 0011 amendment 01. It records one direct internal
-runtime dependency of `@muxui/react`: `@internationalized/date@3.12.3`, used
-only by Mux UI value adapters in exactly `DateField`, `DatePicker`,
-`DateRangePicker`, `TimeField`, `Calendar`, and `RangeCalendar`.
-
-The approved exact React target package graph is:
-
-```text
-@muxui/react@0.1.0-alpha.N
-├── dependency: react-aria-components@1.20.0
-├── dependency: @internationalized/date@3.12.3 (direct internal runtime; Mux UI value adapters only in DateField, DatePicker, DateRangePicker, TimeField, Calendar, RangeCalendar)
-├── peer: react >=19.2.0 <20
-└── peer: react-dom >=19.2.0 <20
-```
-
-`@internationalized/date@3.12.3` is already the single resolved `3.12.3`
-instance in the pinned `react-aria-components@1.20.0` closure, so its direct
-declaration adds no installed package or version. Mux UI public contracts remain
-ISO dates `YYYY-MM-DD`, local times `HH:mm[:ss[.fraction]]`, and Mux UI-owned
-`{start,end}` ranges. No `@internationalized/date` or React Aria public type,
-value, import path, export, lifecycle, or ownership path leaks through the
-package; this dependency is internal and replaceable only.
-
-This clarification adds no Scope ID, commitment, family, tranche, platform,
-support/lifecycle claim, public API, package, or release effect. The 53-family
-inventory, all four tranches, existing Scope ID states, React Aria authority,
-deferred tracks, Project boundaries, and npm, dist-tag, production,
-consumer, and final-R1-exit-merge stops remain unchanged. It authorizes no
-implementation, dependency installation, evidence, support claim, publication,
-or Project or consumer mutation. The reset-specific Project reconciliation
-already recorded for Product Scope `6.0.2` remains historical; this
-clarification does not authorize a Project write.
-
-## Product Scope 6.0.4 icon affordance dependency clarification
-
-Product Scope advances from `6.0.3` to `6.0.4` as a patch clarification for
-Decision 0011 amendment 02. Andrew approved `lucide-react` as an internal
-replaceable dependency and then approved the recommended exact pin
-`lucide-react@1.37.0`. The exact direct runtime dependency of `@muxui/react`
-has npm integrity
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
-ISC license with its Feather-derived MIT notice, and React peer compatibility
-with the existing React and React DOM peer boundary.
-
-This is an internal, replaceable dependency. Under the fixed pre-R1.6 baseline,
-it was limited to existing R1 control affordances. Decision 0013 supersedes
-that historical limit for its nine named R1.6 supplemental affordance roots. The
-pre-R1.6 allowed boundary was: `DatePicker`/`DateRangePicker` calendar
-triggers; `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and
-`Tree` chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
-check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close. Breadcrumb
-separators remain text, and no Search icon is added. Mux UI owns all public
-contracts. No Lucide export, type, name, prop, or import path is public; no
-public Icon API, icon catalog, or icon package is added. Under that historical
-baseline, no component or new decorative affordance was added.
-
-The affected existing Scope IDs remain `committed`, with no new Scope IDs and
-no commitment transitions: `SCOPE-COMP-CHECKBOX-REACT`,
-`SCOPE-COMP-SEARCHFIELD-REACT`, `SCOPE-COMP-NUMBERFIELD-REACT`,
-`SCOPE-COMP-DATEPICKER-REACT`, `SCOPE-COMP-DATERANGEPICKER-REACT`,
-`SCOPE-COMP-CALENDAR-REACT`, `SCOPE-COMP-RANGECALENDAR-REACT`,
-`SCOPE-COMP-COMBOBOX-REACT`, `SCOPE-COMP-SELECT-REACT`,
-`SCOPE-COMP-TREE-REACT`, `SCOPE-COMP-TAGGROUP-REACT`,
-`SCOPE-COMP-DIALOG-REACT`, and `SCOPE-COMP-TOAST-REACT`. The existing
-`SCOPE-REACT-BREADTH-001`, `SCOPE-PRODUCT-REACT-PRERELEASE`,
-`SCOPE-API-REACT-ERGONOMICS`, and `SCOPE-API-WEB-HOOKS`, plus related system,
-platform, package, proof, and package-guidance records, retain their existing
-states and boundaries. `SCOPE-COMP-BREADCRUMBS-REACT` is not affected; its
-separators remain text. No other scope item changes.
-
-Mux UI-owned labels, roles, states, relationships, keyboard behavior, and focus
-remain the accessibility contract. These icons are decorative and
-non-focusable unless an existing Mux UI binding explicitly requires another
-semantic; an icon never supplies an undocumented accessible name. The package
-license proof must retain both the Lucide ISC notice and the Feather-derived
-MIT notice.
-
-R1 proof must verify the exact dependency name/version/integrity, Lucide ISC
-notice and Feather-derived MIT notice, React peer compatibility, internal-only
-public-surface exclusion, accessible label/decorative semantics, SSR/hydration,
-tree-shaking, and exact packed-consumer resolution. A dependency-version,
-icon-mapping, geometry, or accessibility change invalidates the affected
-visual contract comparison and requires the linked R1 visual, accessibility,
-SSR/hydration, tree-shaking, and packed-consumer proof to be rerun.
-
-This clarification has no React Native, `web.html`, or React Native Web
-implication and changes no support, lifecycle, compatibility, release,
-publication, or package-publication boundary. It authorizes no npm publication,
-dist-tag mutation, Project or consumer/production mutation, or final R1-exit
-pull-request merge.
-
 ## Product Scope 8.0.0: React parity and private Mux theme authoring
 
 Product Scope `8.0.0` records the bounded prepublication React parity and
@@ -1346,3 +1202,18 @@ proposals, components, Code Connect, additional themes, and pruning keep their
 G3.5 conditions. Andrew authorized applying the export to one Figma file he
 supplied; writes to any other file remain separate actions. Rollback deletes
 the transform and CLI; any Figma file is disposable.
+
+## Product Scope 12.1.1: retired history archive
+
+[Decision 0021](../decisions/0021-retired-strategy-history-archive.md) archives
+the 6.0.0, 6.0.3, and 6.0.4 amendment sections, matching the retired pre-8.0
+statement above. The fixed 53-family registry, the `SCOPE-REACT-BREADTH-001`
+and `SCOPE-METRIC-REACT-COVERAGE` meanings, and the 53-family change rule move
+unchanged into the React `0.1` prerelease boundary. The temporal-adapter
+dependency and the `lucide-react@1.37.0` edge for the existing R1 control
+affordances, with the constraints 6.0.4 stated, are in the React `0.1` release
+acceptance scope above and in Architecture.
+
+This patch adds, removes, or transitions no Scope ID and changes no
+commitment, release boundary, platform, package, public surface, support
+claim, or non-goal.
