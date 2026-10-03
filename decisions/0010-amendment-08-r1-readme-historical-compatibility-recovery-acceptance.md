@@ -1,18 +1,7 @@
 # Acceptance: Decision 0010 amendment 08
 
-- Decision: `core-ui:decision:0010:amendment:08`
-- Parent decision: `core-ui:decision:0010`
-- Repository: `ndrewtran/core-ui`
-- Owner: Andrew / `ndrewtran`
-- Outcome: Accepted
-- Candidate: 12,193 bytes, SHA-256 `23fbb5acb55416a4079fe012b2f9c67b3df6e18ecdd8bbed2da1a1caa311d81a`
-- Pre-acceptance materialization diff: 33,625 bytes, SHA-256 `1ec057376b819ba7362d5d47e4bda7294a58079fae04af154d5d5035f0880e5f`
-- Execution manifest: 9,075 bytes, SHA-256 `d4e996c5a63aa62ba4fda2c11158180a307961a59816946ad9dc081e19fd9aa6`
-- Decision path: `decisions/0010-amendment-08-r1-readme-historical-compatibility-recovery.md`
-- Acceptance path: `decisions/0010-amendment-08-r1-readme-historical-compatibility-recovery-acceptance.md`
-- Approval instruction: “I accept Core UI R1 README historical compatibility recovery candidate v4, SHA-256 23fbb5acb55416a4079fe012b2f9c67b3df6e18ecdd8bbed2da1a1caa311d81a; pre-acceptance materialization diff, SHA-256 1ec057376b819ba7362d5d47e4bda7294a58079fae04af154d5d5035f0880e5f; and execution manifest v4, SHA-256 d4e996c5a63aa62ba4fda2c11158180a307961a59816946ad9dc081e19fd9aa6. I authorize the exact six-path authority materialization and owner acceptance records; its authority issue, protected non-draft PR, and merge after all named deterministic checks and external authority review pass; the exact ten-path PR #92 recovery, protected intermediate merge, postmerge verification, bounded Project README reconciliation, and continuation under the existing R1 continuous-execution envelope. Npm publication and the final R1-exit PR merge remain separate stops.”
-- Human acceptance: Andrew / `ndrewtran`: “I accept Core UI R1 README historical compatibility recovery candidate v4, SHA-256 23fbb5acb55416a4079fe012b2f9c67b3df6e18ecdd8bbed2da1a1caa311d81a; pre-acceptance materialization diff, SHA-256 1ec057376b819ba7362d5d47e4bda7294a58079fae04af154d5d5035f0880e5f; and execution manifest v4, SHA-256 d4e996c5a63aa62ba4fda2c11158180a307961a59816946ad9dc081e19fd9aa6. I authorize the exact six-path authority materialization and owner acceptance records; its authority issue, protected non-draft PR, and merge after all named deterministic checks and external authority review pass; the exact ten-path PR #92 recovery, protected intermediate merge, postmerge verification, bounded Project README reconciliation, and continuation under the existing R1 continuous-execution envelope. Npm publication and the final R1-exit PR merge remain separate stops.”
-- Approval timestamp: Not recorded
-- Protected authority PR/merge: Pending; not claimed by this record
-
-This record claims acceptance only; no issue, PR, checks, review, merge, implementation, Project, publication, or release outcome is claimed.
+- Decision ID: `0010-amendment-08-acceptance`
+- Status: retired
+- Superseded by: [Decision 0021](./0021-retired-strategy-history-archive.md)
+- Reason: Historical acceptance receipt retired with its authority record.
+- Recovery archive: `.migration-archive/20261003-decision-0021/authority-originals/decisions/0010-amendment-08-r1-readme-historical-compatibility-recovery-acceptance.md`
