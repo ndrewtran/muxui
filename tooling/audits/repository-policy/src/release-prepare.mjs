@@ -14,6 +14,7 @@ import {
   deriveCurrentExportSurface,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
+import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packages = await discoverWorkspacePackages(repositoryRoot);
@@ -268,7 +269,7 @@ function assertSourceIdentity(expectedRevision, stage) {
 const sourceDescriptor = parseGeneratedJson(readFileSync(resolve(repositoryRoot, 'packages/react/generated/descriptor.json'), 'utf8'));
 const sourceCurrentContract = parseGeneratedJson(readFileSync(resolve(repositoryRoot, 'packages/react/generated/r1-6-contract.json'), 'utf8'));
 const currentFamilySnapshot = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json'), 'utf8'));
-const supplementalComponents = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-6/supplemental-components.json'), 'utf8')).components;
+const supplementalComponents = readSupplementalMapping(repositoryRoot);
 const historicalExports = sourceDescriptor.historical.bindings.map(({ export: exportName }) => exportName);
 const {
   canonicalHistoricalExports,

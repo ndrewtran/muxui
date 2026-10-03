@@ -75,3 +75,56 @@ test('TagSelect chip removal keeps ComboBox focus and popup behavior independent
     await close();
   }
 });
+
+// The docs example returns plain content from the item render function;
+// fragments are wrapped the same way.
+function TagSelectPlainItemsFixture() {
+  const items = [
+    { id: 'react', label: 'React' },
+    { id: 'css', label: 'CSS' },
+  ];
+  return React.createElement(React.Fragment, null,
+    React.createElement(TagSelect.Root, { label: 'Plain', items, placeholder: 'Add a tag' }, (item) => item.label),
+    React.createElement(TagSelect.Root, { label: 'Fragment', items }, (item) => React.createElement(React.Fragment, null, React.createElement('b', null, '#'), item.label)),
+    React.createElement(TagSelect.Root, { label: 'Static', items }, items.map((item) => React.createElement(TagSelect.Item, { id: item.id, key: item.id }, item.label))));
+}
+
+const plainEntry = `import React from 'react';
+import { hydrateRoot } from 'react-dom/client';
+import { TagSelect } from '/src/supplemental/index.mjs';
+${TagSelectPlainItemsFixture.toString()}
+hydrateRoot(document.getElementById('root'), React.createElement(TagSelectPlainItemsFixture));
+document.documentElement.dataset.ready = 'true';
+`;
+
+const plainHtml = pageShell({ attributes: 'data-muxui-color-scheme="light" data-muxui-motion="full"', head: '<link rel="stylesheet" href="/generated/styles.css">', body: `<div id="root">${renderToString(React.createElement(TagSelectPlainItemsFixture))}</div>`, entry: '/tag-select-plain-entry.mjs' });
+
+test('TagSelect hydrates server markup for plain-content, fragment, and static items', { timeout: 60_000 }, async () => {
+  const { url, close } = await startServer({
+    entries: ['src/supplemental/index.mjs'],
+    pages: { '/tag-select-plain.html': plainHtml },
+    modules: { '/tag-select-plain-entry.mjs': plainEntry },
+  });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const page = await browser.newPage();
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => { if (message.type() === 'error' || message.type() === 'warning') errors.push(message.text()); });
+    page.on('response', (response) => { if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`); });
+    await page.goto(`${url}/tag-select-plain.html`, { waitUntil: 'networkidle' });
+    await page.waitForFunction(() => document.documentElement.dataset.ready === 'true');
+    for (const [index, name] of ['Plain', 'Fragment', 'Static'].entries()) {
+      await page.getByRole('combobox', { name, exact: true }).focus();
+      await page.locator('[role=option]', { hasText: 'CSS' }).click();
+      await page.getByRole('button', { name: 'Remove CSS', exact: true }).nth(index).waitFor();
+      await page.keyboard.press('Escape');
+      await page.locator('.muxui-tag-select__popup').waitFor({ state: 'detached' });
+    }
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});

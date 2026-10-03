@@ -6,20 +6,8 @@ const COMPONENTS_ROOT = 'catalog/components';
 // Canonical component or example records that stay out of the manifest on
 // purpose. Keys are repository-relative record paths; values give the reason.
 export const MANIFEST_EXCLUSIONS = Object.freeze({
-  'catalog/components/lightbox/artifact.json':
-    'No example record yet. Adding one is blocked because the CI planner requires an exact Storybook page owner for example files (MUXUI_CI_IMPACT_STORY_PAGE_MISSING).',
-  'catalog/components/markdown/artifact.json':
-    'No example record yet. Adding one is blocked because the CI planner requires an exact Storybook page owner for example files (MUXUI_CI_IMPACT_STORY_PAGE_MISSING).',
-  'catalog/components/resizable/artifact.json':
-    'No example record yet. Adding one is blocked because the CI planner requires an exact Storybook page owner for example files (MUXUI_CI_IMPACT_STORY_PAGE_MISSING).',
-  'catalog/components/text-editor/artifact.json':
-    'No example record yet. Adding one is blocked because the CI planner requires an exact Storybook page owner for example files (MUXUI_CI_IMPACT_STORY_PAGE_MISSING).',
   'catalog/components/select/examples/react/composition.example.json':
     'Its source declares two executable exports; the docs example contract requires exactly one.',
-  'catalog/components/tag-select/artifact.json':
-    'Server render throws (TagSelect.Root reads an undefined id); excluded until the React runtime is fixed.',
-  'catalog/components/tag-select/examples/react/basic.example.json':
-    'Server render throws (TagSelect.Root reads an undefined id); excluded until the React runtime is fixed.',
 });
 
 async function walk(directory) {

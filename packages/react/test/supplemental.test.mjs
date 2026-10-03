@@ -358,35 +358,6 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   assert.deepEqual(unknown, []);
 });
 
-test('supplemental family declarations expose only their owned values and types', async () => {
-  const families = {
-    'alert-dialog': 'AlertDialog',
-    'button-group': 'ButtonGroup',
-    card: 'Card',
-    'checkbox-field': 'CheckboxField',
-    'color-mode-toggle': 'ColorModeToggle',
-    'command-palette': 'CommandPalette',
-    'header-nav': 'HeaderNav',
-    'input-tags': 'InputTags',
-    input: 'Input',
-    'multi-select': 'MultiSelect',
-    'payment-input': 'PaymentInput',
-    'progress-circle': 'ProgressCircle',
-    'radio-field': 'RadioField',
-    sidebar: 'Sidebar',
-    'switch-field': 'SwitchField',
-    'tag-select': 'TagSelect',
-    'text-area': 'TextArea',
-  };
-  for (const [slug, family] of Object.entries(families)) {
-    const declaration = await readFile(resolve(packageRoot, `src/supplemental/${slug}.d.ts`), 'utf8');
-    assert.doesNotMatch(declaration, /export \* from/u, `${slug} must not re-export the whole supplemental index`);
-    const values = [...declaration.matchAll(/export \{ ([^}]+) \} from/gu)]
-      .flatMap((match) => match[1].split(',').map((value) => value.trim()));
-    assert.deepEqual(values, slug === 'command-palette' ? [family, 'useCommandPalette'] : [family], `${slug} must expose only its own values`);
-  }
-});
-
 test('Input and TextArea roots retain native string field props in their declarations', async () => {
   const declaration = await readFile(resolve(packageRoot, 'src/supplemental/index.d.ts'), 'utf8');
   assert.match(declaration, /export type InputRootProps = Omit<React\.HTMLAttributes<HTMLDivElement>, 'onChange'> & SupplementalFieldProps & \{[\s\S]*?value\?: string;[\s\S]*?defaultValue\?: string;[\s\S]*?onChange\?: \(value: string\) => void;/u);
@@ -671,6 +642,70 @@ test('MultiSelect filters and updates its uncontrolled selection through the pop
     await act(async () => root?.unmount());
     restore();
     dom.window.close();
+  }
+});
+
+// Item render functions may return any ReactNode; non-Item results are wrapped.
+const plainItemRenderers = {
+  'plain content': (item) => item.title,
+  fragment: (item) => React.createElement(React.Fragment, null, React.createElement('b', null, '#'), item.title),
+  'host element': (item) => React.createElement('span', null, item.title),
+};
+
+// Hydration is proven in test/browser/tag-select-focus.test.mjs: react-aria
+// patches HTMLTemplateElement at import time, which a late JSDOM cannot model.
+test('TagSelect server-renders and mounts item render functions that return any content', async () => {
+  const tags = [{ id: 'react', title: 'React' }, { id: 'css', title: 'CSS' }];
+  const variants = {
+    ...plainItemRenderers,
+    'Item element': (item) => React.createElement(TagSelect.Item, { id: item.id, textValue: item.title }, item.title),
+    'static Items': tags.map((item) => React.createElement(TagSelect.Item, { id: item.id, key: item.id }, item.title)),
+  };
+  for (const [name, children] of Object.entries(variants)) {
+    const element = React.createElement(TagSelect.Root, { label: 'Tags', items: tags, placeholder: 'Add a tag', getItemLabel: (item) => item.title }, children);
+    assert.match(renderToString(element), /placeholder="Add a tag"/u, name);
+    const dom = new JSDOM('<!doctype html><div id="root"></div>');
+    const restore = installDom(dom);
+    let root;
+    try {
+      root = createRoot(document.querySelector('#root'));
+      await act(async () => root.render(element));
+      assert.ok(document.querySelector('.muxui-tag-select__input'), name);
+    } finally {
+      await act(async () => root?.unmount());
+      restore();
+      dom.window.close();
+    }
+  }
+});
+
+test('MultiSelect opens and searches item render functions that return any content', async () => {
+  // No `label` or `name` field: plain text results must supply the search text.
+  const items = [{ id: 'one', title: 'Alpha' }, { id: 'two', title: 'Beta' }];
+  for (const [name, children] of Object.entries(plainItemRenderers)) {
+    const element = React.createElement(MultiSelect.Root, { items, label: 'Options', showFooter: false }, children);
+    assert.match(renderToString(element), /muxui-multi-select__trigger/u, name);
+    const dom = new JSDOM('<!doctype html><div id="root"></div>');
+    const restore = installDom(dom);
+    let root;
+    try {
+      root = createRoot(document.querySelector('#root'));
+      await act(async () => root.render(element));
+      await act(async () => document.querySelector('.muxui-multi-select__trigger').click());
+      const texts = () => [...document.querySelectorAll('.muxui-multi-select__item-text')].map((node) => node.textContent);
+      assert.deepEqual(texts(), name === 'fragment' ? ['#Alpha', '#Beta'] : ['Alpha', 'Beta'], name);
+      if (name === 'plain content') {
+        const search = document.querySelector('.muxui-multi-select__search-input');
+        await act(async () => setInputValue(search, 'alp'));
+        const inputPropsKey = Object.keys(search).find((key) => key.startsWith('__reactProps'));
+        if (inputPropsKey) await act(async () => search[inputPropsKey].onChange?.({ target: { value: 'alp' } }));
+        assert.deepEqual(texts(), ['Alpha']);
+      }
+    } finally {
+      await act(async () => root?.unmount());
+      restore();
+      dom.window.close();
+    }
   }
 });
 

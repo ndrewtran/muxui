@@ -42,7 +42,7 @@ import {
 } from '../src/ci-reuse.mjs';
 import { componentTestSelection } from '../src/component-test-selection.mjs';
 import { loadPolicy } from '../src/policy.mjs';
-import { dependencyClosure } from '../src/scoped-verification.mjs';
+import { dependencyClosure, familyRecordsFromContract } from '../src/scoped-verification.mjs';
 import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -217,6 +217,7 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
   assert.deepEqual(selection.testNamesByFile['test/supplemental.test.mjs'], [
     'TagSelect preserves combobox filtering and chip focus/removal keyboard behavior',
     'TagSelect preserves selected-key order for controlled chips and removals',
+    'TagSelect server-renders and mounts item render functions that return any content',
   ]);
 });
 
@@ -705,20 +706,24 @@ test('a failed CI prerequisite stops the run before dependent checks', () => {
 
 test('generation and install commands are marked as CI prerequisites', async () => {
   const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
-  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, false]);
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, false, false]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
   const catalog = await plan(['packages/catalog/src/compiler.mjs']);
   const catalogCommands = executionCommands(catalog, { packages });
+  // Catalog changes also run the tooling dense goldens that pin the catalog digest.
   assert.deepEqual(catalog.generationPackages, [
-    '@muxui/catalog', '@muxui/schema', '@muxui/tokens',
+    '@muxui/catalog', '@muxui/schema', '@muxui/tooling', '@muxui/tokens',
   ]);
   assert.deepEqual(catalogCommands[0].args, [
     '--recursive', '--sort', '--workspace-concurrency=1', '--if-present',
-    '--filter', '@muxui/catalog', '--filter', '@muxui/schema', '--filter', '@muxui/tokens', 'run', 'generate',
+    '--filter', '@muxui/catalog', '--filter', '@muxui/schema', '--filter', '@muxui/tooling', '--filter', '@muxui/tokens', 'run', 'generate',
   ]);
-  assert.deepEqual(catalogCommands[1].args, ['--filter', '@muxui/catalog', 'run', 'check']);
+  assert.deepEqual(catalogCommands.slice(1).map(({ args }) => args), [
+    ['--filter', '@muxui/catalog', 'run', 'check'],
+    ['--filter', '@muxui/tooling', 'run', 'check'],
+  ]);
 
   const policy = await plan(['.github/workflows/ci.yml']);
   const policyCommands = executionCommands(policy, { packages });
@@ -896,7 +901,7 @@ test('mixed component and exact-page changes preserve each distinct proof scope'
 
 test('unknown owners, missing exact page metadata, and empty diffs fail closed', async () => {
   await assert.rejects(plan(['scripts/unowned-change.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING/u);
-  await assert.rejects(plan(['catalog/components/number-field/examples/react/unknown.tsx']), /MUXUI_CI_IMPACT_STORY_PAGE_MISSING/u);
+  await assert.rejects(plan(['catalog/components/not-a-family/examples/react/basic.example.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING/u);
   await assert.rejects(plan([]), /MUXUI_CI_IMPACT_EMPTY/u);
 });
 
@@ -959,10 +964,10 @@ test('a React-test-only group generates the React closure it imports in its own 
   assert.equal(check.args.at(-1), testFile);
 });
 
-test('story-only groups generate Storybook metadata unless this process already prepared it', async () => {
+test('story page groups generate Storybook metadata unless this process already prepared it', async () => {
   const result = await plan([sizingExamplePath]);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'storybook-story']);
+  assert.deepEqual(groupIds(groups), ['checks', 'browser', 'react', 'storybook-story']);
   for (const group of groups) {
     assert.equal(group.commands[0].prerequisite, true);
     assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
@@ -970,7 +975,10 @@ test('story-only groups generate Storybook metadata unless this process already 
 
   const prepared = executionGroups(result, { packages, environment: {}, pageIndex, metadataPrepared: true });
   assert.deepEqual(groupIds(prepared), groupIds(groups));
-  assert.ok(!prepared.flatMap(({ commands }) => commands).some(({ prerequisite }) => prerequisite), 'metadata preparation already generated the closure');
+  // Only the tooling goldens the catalog digest feeds remain to generate.
+  for (const command of prepared.flatMap(({ commands }) => commands).filter(({ prerequisite }) => prerequisite)) {
+    assert.deepEqual(generationFilters(command), ['@muxui/tooling'], 'metadata preparation already generated the React and Storybook closure');
+  }
 });
 
 test('theme proof skips families already covered by component proof', async () => {
@@ -1445,7 +1453,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     assert.equal(result.status, 0, result.stderr);
     const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
     assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
-    assert.deepEqual(delta.groupIds, ['checks', 'browser', 'storybook-story']);
+    assert.deepEqual(delta.groupIds, ['checks', 'browser', 'react', 'storybook-story']);
     assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -1509,4 +1517,320 @@ test('CI generation covers every prerequisite that planned package scripts would
     }
   }
   assert.ok(checked >= 5, `expected prerequisite-preparing scripts in the plans, found ${checked}`);
+});
+
+// Planner gaps: each case is a legitimate change that planning used to reject
+// or under-select.
+
+const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+const generatePath = 'packages/react/src/generate.mjs';
+const contractsPath = 'packages/react/src/r1-contracts.mjs';
+const cardStubPath = 'packages/react/src/supplemental/card.mjs';
+const generatorModuleSources = {
+  [generatePath]: "import { assertContracts } from './r1-contracts.mjs';\nassertContracts();",
+  [contractsPath]: 'export function assertContracts() {}',
+  [supplementalPath]: 'export const MultiSelect = () => null; export const TagSelect = () => null; export const Card = () => null;',
+};
+
+test('deleting an unimported React module runs the React package check', async () => {
+  const stub = "export { Card } from './index.mjs';\n";
+  const result = await plan([cardStubPath], {
+    textSnapshots: { [cardStubPath]: { before: stub, after: null } },
+    moduleSources: { ...generatorModuleSources, [cardStubPath]: { before: stub, after: null } },
+  });
+  assert.deepEqual(result.packageChecks, ['@muxui/react']);
+  assert.deepEqual(result.reactTestFiles, [], 'the package check already runs every React unit test');
+  assert.equal(result.reactPackageFull, false);
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.storyRuns, []);
+
+  // A changed module that nothing imports is still unowned.
+  await assert.rejects(plan([cardStubPath], {
+    textSnapshots: { [cardStubPath]: { before: stub, after: "export { TagSelect } from './index.mjs';\n" } },
+    moduleSources: { ...generatorModuleSources, [cardStubPath]: { before: stub, after: "export { TagSelect } from './index.mjs';\n" } },
+  }), /MUXUI_CI_IMPACT_SOURCE_OWNERSHIP/u);
+});
+
+test('a deleted React module still named outside React source routes to each referencing owner', async () => {
+  const reactTestReferenceSources = await reactTestTexts();
+  const deleted = (path, references) => plan([path], {
+    packages: workspacePackages,
+    reactTestReferenceSources,
+    textSnapshots: { [path]: { before: 'export const Probe = 1;\n', after: null } },
+    moduleSources: { ...generatorModuleSources, [path]: { before: 'export const Probe = 1;\n', after: null } },
+    findReferences: async (needle) => {
+      assert.equal(needle, path.slice('packages/react/'.length));
+      return references;
+    },
+  });
+
+  const commandPalette = await deleted('packages/react/src/supplemental/command-palette.mjs', [
+    'packages/react/test/browser/bento-input-controls.test.mjs',
+    'packages/react/test/command-palette-hook.test.mjs',
+  ]);
+  assert.deepEqual(commandPalette.reactTestFiles, [
+    'test/browser/bento-input-controls.test.mjs',
+    'test/command-palette-hook.test.mjs',
+  ]);
+  assert.deepEqual(commandPalette.packageChecks, ['@muxui/react']);
+
+  const buttonFixture = await deleted('packages/react/src/button-fixture.mjs', ['apps/react-playground/src/main.jsx']);
+  assert.deepEqual(buttonFixture.packageChecks, ['@muxui/react', '@muxui/react-playground']);
+
+  // A reference with no owner route fails instead of being dropped.
+  await assert.rejects(deleted('packages/react/src/button-fixture.mjs', ['scripts/unowned.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING: scripts\/unowned\.mjs/u);
+});
+
+test('modules the React projection compiler imports take the compiler route', async () => {
+  const after = 'export function assertContracts() { return true; }';
+  const result = await plan([contractsPath], {
+    textSnapshots: { [contractsPath]: { before: generatorModuleSources[contractsPath], after } },
+    moduleSources: { ...generatorModuleSources, [contractsPath]: { before: generatorModuleSources[contractsPath], after } },
+  });
+  assert.equal(result.reactPackageFull, true);
+  assert.deepEqual(result.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
+  assert.equal(result.tailwind, true);
+  assert.equal(result.reactProjectionCheck, false);
+});
+
+function nativeLockfile(withRenderer) {
+  return [
+    "lockfileVersion: '9.0'",
+    '',
+    'settings:',
+    '  autoInstallPeers: true',
+    '',
+    'importers:',
+    '',
+    '  packages/react-native:',
+    '    devDependencies:',
+    '      react:',
+    '        specifier: 19.2.8',
+    '        version: 19.2.8',
+    ...(withRenderer ? [
+      '      react-test-renderer:',
+      '        specifier: 19.2.8',
+      '        version: 19.2.8(react@19.2.8)',
+    ] : []),
+    '',
+    'packages:',
+    '',
+    ...(withRenderer ? [
+      '  react-is@19.2.8:',
+      '    resolution: {integrity: sha512-is}',
+      '',
+      '  react-test-renderer@19.2.8:',
+      '    resolution: {integrity: sha512-renderer}',
+      '    peerDependencies:',
+      '      react: ^19.2.8',
+      '',
+    ] : []),
+    '  react@19.2.8:',
+    '    resolution: {integrity: sha512-react}',
+    '',
+    '  scheduler@0.27.0:',
+    '    resolution: {integrity: sha512-scheduler}',
+    '',
+    'snapshots:',
+    '',
+    ...(withRenderer ? [
+      '  react-is@19.2.8: {}',
+      '',
+      '  react-test-renderer@19.2.8(react@19.2.8):',
+      '    dependencies:',
+      '      react: 19.2.8',
+      '      react-is: 19.2.8',
+      '      scheduler: 0.27.0',
+      '',
+    ] : []),
+    '  react@19.2.8:',
+    '    dependencies:',
+    '      scheduler: 0.27.0',
+    '',
+    '  scheduler@0.27.0: {}',
+    '',
+  ].join('\n');
+}
+
+test('records pruned with a removed devDependency route to the importer that dropped it', async () => {
+  const lockfileBefore = nativeLockfile(true);
+  const lockfileAfter = nativeLockfile(false);
+  assert.deepEqual(changedLockfileImporters(lockfileBefore, lockfileAfter), ['packages/react-native']);
+  const result = await plan(['packages/react-native/package.json', 'pnpm-lock.yaml'], {
+    packages: workspacePackages, lockfileBefore, lockfileAfter,
+  });
+  assert.deepEqual(result.packageChecks, ['@muxui/react-native']);
+  assert.equal(result.full, false);
+  assert.deepEqual(result.storyRuns, []);
+
+  // A record removed without a dropped dependency that reached it is unexplained.
+  const unexplained = lockfileAfter.replace('  scheduler@0.27.0: {}\n', '').replace('      scheduler: 0.27.0\n', '');
+  assert.throws(() => changedLockfileImporters(lockfileBefore, unexplained), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING/u);
+  // A removed record something still depends on is unexplained too.
+  const dangling = nativeLockfile(false).replace('  react@19.2.8:\n    dependencies:\n      scheduler: 0.27.0\n',
+    '  react@19.2.8:\n    dependencies:\n      react-is: 19.2.8\n      scheduler: 0.27.0\n');
+  assert.throws(() => changedLockfileImporters(lockfileBefore, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING/u);
+});
+
+test('React examples no Storybook story uses validate the catalog, docs, and family React proof', async () => {
+  const record = await plan(['catalog/components/tree/examples/react/basic.example.json']);
+  assert.equal(record.catalog, true);
+  assert.equal(record.docs, true);
+  assert.deepEqual(record.packageChecks, ['@muxui/tooling']);
+  assert.deepEqual(record.reactFamilies, ['Tree']);
+  assert.deepEqual(record.storyIds, []);
+  assert.deepEqual(record.reactTestFiles, []);
+
+  // Example sources are compiled by the React example type test.
+  const source = await plan(['catalog/components/tree/examples/react/basic.tsx']);
+  assert.deepEqual(source.reactTestFiles, ['test/catalog-examples-types.test.mjs']);
+
+  // A family proven only by its Storybook BrowserProof runs just that page.
+  const proofOnlyIndex = pageIndex.map((page) => page.family === 'NumberField'
+    ? { ...page, stories: [...page.stories, { id: 'muxui-react-r1-2-number-field--browser-proof', exportName: 'BrowserProof', name: 'BrowserProof' }] }
+    : page);
+  const proofOnly = await plan(['catalog/components/number-field/examples/react/basic.example.json'], { pageIndex: proofOnlyIndex });
+  assert.deepEqual(proofOnly.reactBehaviorProofFamilies, ['NumberField']);
+  assert.deepEqual(proofOnly.storyRuns.map(({ proof, storyIds }) => ({ proof, storyIds })), [
+    { proof: 'story', storyIds: ['muxui-react-r1-2-number-field--browser-proof'] },
+  ]);
+
+  // An example a story renders keeps its exact page selection, and docs and
+  // the example type test still read it.
+  const exact = await plan([sizingExamplePath]);
+  assert.deepEqual(exact.storyIds, [sizingStoryId]);
+  assert.deepEqual(exact.reactFamilies, []);
+  assert.equal(exact.docs, true);
+  assert.deepEqual(exact.reactTestFiles, ['test/catalog-examples-types.test.mjs']);
+
+  // Docs render every component record.
+  assert.equal((await plan(['catalog/components/tree/artifact.json'])).docs, true);
+
+  // Docs and the type test read only .tsx sources.
+  await assert.rejects(plan(['catalog/components/tree/examples/react/basic.ts']), /MUXUI_CI_IMPACT_EXAMPLE_SOURCE_UNSUPPORTED/u);
+});
+
+test('generator inputs, package fixtures, and Storybook config each route to their owner', async () => {
+  const route = (path) => plan([path], { packages: workspacePackages });
+
+  const generatorInput = await route('catalog/react-r1-6/supplemental-components.json');
+  assert.equal(generatorInput.reactPackageFull, true);
+  assert.equal(generatorInput.policy, true);
+  assert.deepEqual(generatorInput.packageChecks, []);
+
+  // R1.0 inputs are also read by schema tests and Storybook unit tests.
+  const upstreamExports = await route('catalog/react-r1-0/upstream-exports.json');
+  assert.equal(upstreamExports.reactPackageFull, true);
+  assert.equal(upstreamExports.policy, true);
+  assert.deepEqual(upstreamExports.packageChecks, ['@muxui/schema']);
+  assert.deepEqual(upstreamExports.storyUnitTests, [{
+    file: 'test/storybook.test.mjs',
+    testNamePattern: '^private host and exact Mux UI React family projection$|^every story exposes exactly its canonical Mux UI-owned properties$',
+  }]);
+
+  const capability = await route('catalog/capabilities/query-baseline.json');
+  assert.equal(capability.catalog, true);
+  assert.deepEqual(capability.packageChecks, ['@muxui/tooling']);
+
+  assert.deepEqual((await route('tests/fixtures/g0.5/corpus.json')).packageChecks, ['@muxui/tooling']);
+  assert.deepEqual((await route('tests/fixtures/g1.1/platform-safety-fixtures.json')).packageChecks, ['@muxui/web']);
+  assert.deepEqual((await route('tests/fixtures/g1.2/profile.mjs')).packageChecks, ['@muxui/react-native']);
+  assert.equal((await route('tests/fixtures/g1.2/AGENTS.md')).policy, true);
+
+  const tailwind = await route('tests/fixtures/tailwind-consumer/check.mjs');
+  assert.equal(tailwind.tailwind, true);
+  assert.deepEqual(tailwind.packageChecks, []);
+
+  // main.mjs sets the manager head (fonts, theme CSS) and builds every page.
+  const main = await route('apps/react-storybook/.storybook/main.mjs');
+  assert.equal(main.storyChrome, true);
+  assert.deepEqual(main.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
+  assert.deepEqual(main.storyUnitTests, [{
+    file: 'test/storybook.test.mjs',
+    testNamePattern: '^showcase does not expose React Aria as a public import$',
+  }]);
+  const previewCss = await route('apps/react-storybook/.storybook/preview.css');
+  assert.deepEqual(previewCss.storyUnitTests.map(({ file }) => file), ['test/storybook-colors.test.mjs', 'test/storybook.test.mjs']);
+  assert.equal((await route('apps/react-storybook/.storybook/measure-palette.mjs')).storyUnitTests[0].file, 'test/storybook-colors.test.mjs');
+  assert.equal((await route('apps/react-storybook/.storybook/manager.mjs')).storyChrome, true);
+  assert.equal((await route('apps/react-storybook/.gitignore')).policy, true);
+});
+
+// Plans every tracked path as a no-op edit with the generated React records,
+// a page per family, and real sources; any planner error fails the test.
+test('every tracked path plans without a planner error', async () => {
+  const tracked = spawnSync('git', ['ls-files', '-z'], { cwd: repositoryRoot, encoding: 'utf8' }).stdout.split('\0').filter(Boolean);
+  const text = (path) => readFileSync(resolve(repositoryRoot, path), 'utf8');
+  const generated = (path) => JSON.parse(text(path).split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
+  const realRecords = familyRecordsFromContract(
+    generated('packages/react/generated/r1-6-contract.json'),
+    generated('packages/react/generated/descriptor.json').bindings ?? [],
+  );
+  const familyPages = realRecords.map(({ family, export: name, slug }) => ({
+    family: name ?? family,
+    storyFile: `apps/react-storybook/.storybook/generated/${slug}.stories.mjs`,
+    stories: ['Default', 'BrowserProof'].map((exportName) => ({ id: `${slug}--${exportName.toLowerCase()}`, exportName, name: exportName })),
+  }));
+  const sources = (prefix, keep = () => true) => Object.fromEntries(tracked
+    .filter((path) => path.startsWith(prefix) && keep(path))
+    .map((path) => [path, text(path)]));
+  const moduleSources = Object.fromEntries(Object.entries(sources('packages/react/src/', (path) => path.endsWith('.mjs')))
+    .map(([path, source]) => [path, { before: source, after: source }]));
+  const testTexts = Object.fromEntries(Object.entries(sources('packages/react/test/'))
+    .map(([path, source]) => [path.slice('packages/react/'.length), source]));
+  const failures = [];
+  for (const path of tracked) {
+    await buildPullRequestImpact({
+      ...inputFor([path], {
+        packages: workspacePackages,
+        records: realRecords,
+        pageIndex: familyPages,
+        moduleSources,
+        componentTestSources: Object.fromEntries(Object.entries(testTexts).filter(([file]) => file.endsWith('.test.mjs'))),
+        reactTestReferenceSources: testTexts,
+        compareGeneratorEmissions: async () => ({ storyIds: [], reason: 'unchanged emission' }),
+      }),
+      readBaseText: async (candidate) => text(candidate),
+      readHeadText: async (candidate) => text(candidate),
+      rootPackageBefore: text('package.json'),
+      rootPackageAfter: text('package.json'),
+      reactPackageBefore: text('packages/react/package.json'),
+      reactPackageAfter: text('packages/react/package.json'),
+    }).catch((error) => failures.push(`${path}: ${error.message.slice(0, 200)}`));
+  }
+  assert.deepEqual(failures, []);
+});
+
+async function reactTestTexts() {
+  const files = spawnSync('git', ['ls-files', '-z', 'packages/react/test'], { cwd: repositoryRoot, encoding: 'utf8' }).stdout.split('\0').filter(Boolean);
+  return Object.fromEntries(await Promise.all(files.map(async (file) => [
+    file.slice('packages/react/'.length),
+    await readFile(resolve(repositoryRoot, file), 'utf8'),
+  ])));
+}
+
+test('a shared React test helper reruns the test files that reference it', async () => {
+  const reactTestReferenceSources = await reactTestTexts();
+  const harness = await plan(['packages/react/test/browser/harness.mjs'], {
+    reactTestReferenceSources,
+    textSnapshots: { 'packages/react/test/browser/harness.mjs': { after: 'present' } },
+  });
+  const importers = Object.entries(reactTestReferenceSources)
+    .filter(([file, text]) => file.endsWith('.test.mjs') && /from '\.\/harness\.mjs'/u.test(text))
+    .map(([file]) => file);
+  assert.ok(importers.length > 5, 'harness has browser test importers');
+  for (const file of importers) assert.ok(harness.reactTestFiles.includes(file), `${file} reruns`);
+  assert.ok(!harness.reactTestFiles.includes('test/browser/harness.mjs'));
+
+  // Browser entries are named by path string, and fixtures reach tests through them.
+  const fixture = await plan(['packages/react/test/fixtures/tree-motion-fixture.mjs'], {
+    reactTestReferenceSources,
+    textSnapshots: { 'packages/react/test/fixtures/tree-motion-fixture.mjs': { after: 'present' } },
+  });
+  assert.ok(fixture.reactTestFiles.includes('test/browser/tree-motion.test.mjs'));
+
+  await assert.rejects(plan(['packages/react/test/support/unused.mjs'], {
+    reactTestReferenceSources,
+    textSnapshots: { 'packages/react/test/support/unused.mjs': { after: 'export {};' } },
+  }), /MUXUI_CI_IMPACT_REACT_TEST_OWNER_MISSING/u);
 });
