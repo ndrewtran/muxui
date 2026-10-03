@@ -49,7 +49,7 @@ test('accepted dependency pins retain exact lockfile integrity and unchanged lic
   const editorVersions = [...packageEntries.matchAll(/^  '@tiptap\/[^']+@([^']+)':$/gmu)].map((match) => match[1]);
   assert.equal(editorVersions.length, 32);
   assert.equal(reference.records.filter((entry) => entry.package.startsWith('@tiptap/')).length + reference.transitiveEditorRecords.length, editorVersions.length);
-  assert.deepEqual([...new Set(editorVersions)], ['3.22.3'], 'the entire internal editor closure uses the accepted version');
+  assert.deepEqual([...new Set(editorVersions)], ['3.31.4'], 'the entire internal editor closure uses the accepted version');
   assert.doesNotMatch(lockfile, /(?:@tailwindcss\/|tailwindcss@)/u, 'Tailwind remains outside the Mux workspace lockfile');
 });
 
