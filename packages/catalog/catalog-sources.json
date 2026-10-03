@@ -899,6 +899,22 @@
     },
     {
       "family": "component",
+      "path": "catalog/components/lightbox/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/lightbox/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/markdown/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/markdown/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
       "path": "catalog/components/multi-select/artifact.json"
     },
     {
@@ -935,6 +951,14 @@
     },
     {
       "family": "component",
+      "path": "catalog/components/resizable/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/resizable/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
       "path": "catalog/components/sidebar/artifact.json"
     },
     {
@@ -964,6 +988,14 @@
     {
       "family": "example",
       "path": "catalog/components/text-area/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/text-editor/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/text-editor/examples/react/basic.example.json"
     }
   ]
 }
