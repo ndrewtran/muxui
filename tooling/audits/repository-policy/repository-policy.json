@@ -129,6 +129,7 @@
       "LICENSE",
       "README.md",
       "apps/AGENTS.md",
+      "apps/react-storybook/.gitignore",
       "apps/react-storybook/AGENTS.md",
       "catalog/AGENTS.md",
       "decisions/",
@@ -148,6 +149,29 @@
       "packages/foundation/",
       "packages/tokens/"
     ],
+    "reactCatalogInputReaders": {
+      "catalog/react-r1-0/": {
+        "reactGenerator": true,
+        "policy": true,
+        "packageChecks": ["@muxui/schema"],
+        "storybookUnitTests": [
+          {
+            "file": "test/storybook.test.mjs",
+            "names": [
+              "private host and exact Mux UI React family projection",
+              "every story exposes exactly its canonical Mux UI-owned properties"
+            ]
+          }
+        ]
+      },
+      "catalog/react-r1-5/": { "reactGenerator": true, "policy": true },
+      "catalog/react-r1-6/": { "reactGenerator": true, "policy": true }
+    },
+    "packageFixtureOwners": {
+      "tests/fixtures/g0.5/": "@muxui/tooling",
+      "tests/fixtures/g1.1/": "@muxui/web",
+      "tests/fixtures/g1.2/": "@muxui/react-native"
+    },
     "documentationPrefixes": [
       "apps/docs/",
       "apps/scale/src/"
@@ -169,6 +193,9 @@
     ],
     "reactStorybookSharedPaths": [
       "apps/react-storybook/src/storybook-factory.mjs",
+      "apps/react-storybook/.storybook/main.mjs",
+      "apps/react-storybook/.storybook/measure-palette.mjs",
+      "apps/react-storybook/.storybook/preview.css",
       "apps/react-storybook/.storybook/preview.mjs"
     ],
     "reactStorybookGeneratorPaths": [
@@ -183,6 +210,8 @@
     ],
     "reactStorybookChromePaths": [
       "apps/react-storybook/src/storybook-theme.mjs",
+      "apps/react-storybook/.storybook/main.mjs",
+      "apps/react-storybook/.storybook/manager.mjs",
       "apps/react-storybook/.storybook/theme.mjs"
     ]
   },
