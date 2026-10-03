@@ -1011,6 +1011,17 @@ type, name, prop, or import path, and no public Icon API, catalog, or package,
 may cross the package boundary. Breadcrumb separators are text and no Search
 icon is added.
 
+Lucide icons are decorative and non-focusable unless a Mux UI binding
+explicitly requires a different semantic; an icon never supplies an
+undocumented accessible name, and icon-bearing controls retain their Mux
+UI-owned accessible label and state semantics. Any distributed package
+containing the dependency must preserve both the Lucide ISC and
+Feather-derived MIT license notices. A Lucide version, icon mapping,
+affordance set, geometry, or accessibility-semantic change invalidates the
+affected visual contract comparison and requires the affected visual,
+accessibility, SSR/hydration, tree-shaking, and packed-consumer proof to be
+rerun.
+
 R1.6 additionally admits exact, internal, replaceable runtime dependencies
 needed by the applicable supplemental implementations: `react-aria@3.51.0` for
 `Resizable`'s `useMove` behavior. Decision 0018 extends this same pinned edge
@@ -2294,134 +2305,21 @@ agent snippet is updated manually.
 
 ## Build order
 
-Mux UI should build a thin operability spine before breadth, then prove it
-through difficult renderer slices. These are dependency-based capability gates,
-not calendar phases or one global project status. A workstream may have Gate 2
-catalog resolution while native overlays remain at Gate 1, but no capability
-may consume or advertise a later gate until its own prerequisites pass. Later
-work cannot block an earlier renderer milestone merely because its dashboard,
-hosted service, or evaluation matrix is incomplete. Only violated canonical
-sources, safety boundaries, or required proof may block renderer
-delivery.
-
-### Gate 0: schema and query kernel
-
-- Universal `ArtifactRef` plus the minimum kind-specific component, example,
-  guide, capability, and response schemas
-- Token layers, platform IDs, lifecycle, field ownership, and a minimal typed
-  relation vocabulary
-- One component record sufficient to prove compilation; no broad graph or
-  semantic-search program
-- Minimal schema-aware scaffold, source-linked validation, semantic diff, and
-  revision explanation for that record
-- Catalog compiler and pure `manifest`, `list`, `search`, and `get` query engine
-- Workspace `@muxui/catalog` package format and no-network local resolution
-  protocol
-- CLI JSON, human, and dense renderers with schema and token-budget tests
-- Generation identity and API/CLI parity
-- No public MCP, planner, docs application, project mutation, or migration
-
-This gate is a prerequisite for a large component catalog. It is deliberately
-a thin schema/query kernel, not a documentation platform built ahead of the
-components.
-
-**Exit condition:** one artifact compiles from canonical source through
-deterministic catalog generation and local-only `manifest`, `list`, `search`,
-and `get`; JSON/human/dense output agrees; a clean rebuild has the same digest;
-and incompatible or missing local catalog resolution fails with a typed error.
-The same fixture can be authored and repaired through owner-linked diagnostics
-without touching generated output.
-
-### React-primary component delivery and prerelease
-
-The first public component boundary is a standalone React package, delivered
-through the fixed R1 family allocation rather than a simultaneous renderer matrix:
-
-1. `R1.0` freezes the React Aria Components `1.20.0` substrate, standalone
-   package graph, shared CSS/SSR/hydration/accessibility/compatibility and
-   packed-consumer baseline used by the fixed 53-family allocation.
-2. `R1.1` delivers Button first and then accepted foundation/simple controls.
-3. `R1.2` delivers accepted forms and field controls.
-4. `R1.3` delivers accepted collections and composites.
-5. `R1.4` delivers accepted overlays and temporal interactions.
-6. `R1.5` closes the exact pinned upstream surface and delivers every one of
-   the fixed 53 committed families. Deferral, exclusion, or
-   `not-a-component` dispositions apply only to documented upstream material
-   outside those committed families; they cannot remove a committed family.
-7. `R1 exit` may publish only `@muxui/react@0.1.0-rc.1` under `next` after
-   exact tarball, provenance, registry, rollback, checks, and human publish
-   authorization pass.
-
-The four implementation tranches consume one fixed 53-family allocation and
-the existing immutable Stage 1/R1.0 baseline. They have an implementation
-sequence, deterministic proof closure, and risk-selected review set, but no
-new tranche lock, digest acceptance, or post-proof human evidence-acceptance
-gate. Components may run in parallel after Button begins while consuming the
-same baseline and creating no decision-bearing exception.
-
-Proof is proportional to the exported React contract. Static and low-
-interaction components use deterministic schema/type/render/CSS/accessibility/
-generation/descriptor/packed checks. Interactive controls add focused browser
-keyboard, focus, state, form, and input proof. Composite, collection, overlay,
-temporal, announcement, or destructive behavior adds the manual and assistive-
-technology evidence named by its binding risk profile. Missing required proof
-keeps the binding unexported or explicitly unavailable with support unproved;
-it does not manufacture `unsupported` or alter lifecycle.
-
-Framework-free web and native components are later W1/N1 work. They neither
-block nor inherit React evidence. Cross-platform semantic comparison and
-feature equivalence require a later X1 claim. No `latest` tag or stable `0.1.0`
-release is authorized by this boundary.
-
-**Exit condition:** the exact pinned React Aria surface is disposition-complete,
-every exported React binding passes its exact contract and risk profile, the
-standalone packed package and generated package guidance agree with canonical
-owners, and the accepted React prerelease release manifest correlates all
-package, binding, CSS/token, compatibility, evidence, provenance, advisory,
-exception, and registry identities.
-
-### Gate 2: productization
-
-- Publish the catalog package, compatibility descriptors, install profiles,
-  local resolver, and discovery CLI compatibility policy
-- Consumer-project validation with bounded packed fixtures
-- Docs site as a catalog client
-- React documentation and explorer projections generated from canonical
-  examples; framework-free and native projections remain explicitly
-  unavailable until W1/N1 activation
-- Packed consumer matrices for the enabled React package and surfaces;
-  secondary renderer fixtures remain unavailable until their own tracks
-- Release manifests, versioned catalogs, and compatibility profiles
-- `plan` only after the pattern set supports grounded composition
-- `doctor`, then `init`, only after project detection, dry-run, atomic merge,
-  journaling, change-intent confirmation, and recovery evidence
-- Exception diagnostics and release-metadata projection before any exception
-  can affect a published prerelease or support restriction
-
-**Exit condition:** a clean consumer can install the declared React
-Productization packages and resolve exact local guidance offline; packed React
-fixtures pass on supported profiles; enabled React docs/explorers reproduce
-catalog results; unavailable secondary projections are reported honestly; and
-every enabled validation, planning, doctor, or initialization capability meets
-its manifest and safety gate.
-
-### Gate 3: operational scale, breadth, and integrations
-
-- Expand component and pattern coverage
-- Additional themes and design-tool interchange
-- Read-only hosted MCP
-- Declarative migrations and reviewed codemods; no LLM-generated migration
-  patches
-- Promote agent evaluations to release gates only after stable baselines exist
-- Optional extension trust model
-- Optional higher-order product artifact kinds only after recorded requests
-  prove patterns plus guides insufficient and each kind passes the ontology
-  growth rule
-- Additional framework adapters only when there is demonstrated demand
-
-An agent-to-UI protocol renderer can be added later as another binding or
-integration. It is not the definition of AI-first and should not sit in the
+Mux UI builds a thin operability spine before breadth, then proves it through
+difficult renderer slices. Gates are dependency-based capability gates, not
+calendar phases or one global project status. No capability may consume or
+advertise a later gate until its own prerequisites pass. Later work cannot
+block an earlier renderer milestone merely because its dashboard, hosted
+service, or evaluation matrix is incomplete; only violated canonical sources,
+safety boundaries, or required proof may block renderer delivery. An
+agent-to-UI protocol renderer may be added later as another binding or
+integration; it is not the definition of AI-first and does not sit in the
 kernel.
+
+The [milestone roadmap](./milestone-roadmap.md) owns the sequence, entry and
+exit conditions, deliverables, and evidence for Gate 0, R1, P2, the optional
+G2.4–G2.6 capabilities, and the Gate 3 portfolio. Decision 0021 moved the
+former gate-era build-order bodies to the ignored recovery archive.
 
 ## Non-negotiable invariants
 
@@ -2501,67 +2399,6 @@ cross-renderer equivalence, stable support, and `latest` remain later or
 separately admitted work. The private Scale theme-authoring capability is
 admitted only under the bounded R1.6 milestone below. Npm publication, dist-tag changes, and the final
 R1-exit pull-request merge remain separate exact human stops.
-
-## Historical pre-R1.6 icon affordance dependency boundary
-
-The boundary below records the fixed pre-R1.6 R1 baseline. Decision 0013's
-current allowance for the nine named R1.6 supplemental affordance roots
-supersedes that historical component and affordance limitation; the internal-only,
-no-public-Icon, license, and semantic requirements remain binding.
-
-Decision 0011 amendment 02 accepts `lucide-react@1.37.0` as an exact direct
-internal runtime dependency of `@muxui/react`. Its npm integrity is
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
-its package license is ISC, its included Feather-derived artwork carries the
-MIT notice, and it is React peer-compatible with the existing React and React
-DOM peer boundary. The dependency is internal and replaceable only.
-
-The exact R1 dependency graph is:
-
-```text
-@muxui/react@0.1.0-alpha.N
-├── dependency: react-aria-components@1.20.0
-├── dependency: @internationalized/date@3.12.3 (Mux UI value adapters only)
-├── dependency: lucide-react@1.37.0 (internal control affordances only; ISC + Feather-derived MIT notices; exact npm integrity above)
-├── peer: react >=19.2.0 <20
-└── peer: react-dom >=19.2.0 <20
-```
-
-Under that pre-R1.6 baseline, Lucide was permitted only for these existing R1
-control affordances: the
-`DatePicker`/`DateRangePicker` calendar triggers; `Calendar`/`RangeCalendar`
-previous/next controls; `ComboBox`/`Select` and `Tree` chevrons;
-`SearchField` clear; `NumberField` plus/minus; `Checkbox` check/indeterminate;
-`TagGroup` remove; and `Dialog`/`Toast` close. Breadcrumb separators remain
-text, and no Search icon is added. Mux UI owns every public contract. No Lucide
-export, type, name, prop, or import path may cross the package boundary, and
-there is no public Icon API, icon catalog, or icon package. That baseline added
-no component and no new decorative affordance; Decision 0013 supersedes that
-limitation for its nine named R1.6 supplemental affordance roots.
-
-Accessible names, roles, states, relationships, keyboard behavior, and focus
-remain the Mux UI binding obligations. Icons used in these affordances are
-decorative and non-focusable unless a Mux UI binding explicitly requires a
-different semantic; an icon never supplies an undocumented accessible name.
-Icon-bearing controls retain their Mux UI-owned accessible label and state
-semantics, including the check/indeterminate and close affordances.
-
-R1 proof must assert the exact direct dependency name, version, npm integrity,
-Lucide ISC notice and Feather-derived MIT notice, and React peer compatibility;
-absence of Lucide exports/types/names/props/paths and public Icon surfaces;
-correct tree-shaking of selected affordances; stable SSR and hydration; and
-exact packed-consumer resolution. Any distributed package containing the
-dependency must preserve both the Lucide ISC and Feather-derived MIT license
-notices. A Lucide version, icon
-mapping, affordance set, geometry, or accessibility-semantic change invalidates
-the affected visual contract comparison and requires the affected R1
-visual, accessibility,
-SSR/hydration, tree-shaking, and packed-consumer proof to be rerun.
-
-This boundary has no React Native, `web.html`, or React Native Web implication,
-and changes no support, lifecycle, compatibility, package-publication, or
-release claim. It does not authorize npm publication, a dist-tag mutation, or
-the final R1-exit pull-request merge.
 
 ## Decision 0013: React parity and private Mux theme-authoring boundary
 

@@ -1038,219 +1038,17 @@ current support, parity, publication, or platform claim.
 
 ## Historical Gate 2 — superseded productization sequence
 
-The following G2 bodies are retained as historical planning context. Their
-current React successors are P2.1–P2 exit above; framework-free and native
-portions wait for W1/N1. Optional capabilities retain their independent
-activation conditions.
+Decision 0021 moved the superseded G2.0–G2.3 and G2.7 bodies to the ignored
+recovery archive (`.migration-archive/20261003-decision-0021/`). Their current
+React successors are R1.3 and R1.4 for the React Tabs and Toast outcomes of
+G2.0, and P2.1–P2 exit for G2.1–G2.3 and G2.7; framework-free and native
+portions wait for W1/N1. A later reference to Gate 2 means those successors.
 
-Gate 2 turns the proved renderer/catalog system into installable, locally
-authoritative products. Its workstreams may run in parallel after Gate 1, but
-each capability remains unavailable until its own entry and evidence are
-complete.
-
-### G2.0 Post-`0.1` renderer proof extension: Tabs and Toast
-
-**Objective:** Extend renderer proof into keyboard/layout state and
-systemic/temporal host behavior before broad component expansion.
-
-This milestone is required before broad component breadth, but it does not
-block unrelated Gate 2 packaging, docs, or resolver productization.
-
-**Entry conditions**
-
-- Gate 1 is complete without counting Tabs or Toast as substitute slices.
-- Tabs and Toast each have a bounded concept/binding proposal under existing
-  schemas.
-- The existing foundation and runtime ownership rules are evaluated before new
-  abstractions are admitted.
-
-**Deliverables**
-
-- Tabs across applicable web, React, native, and React Native Web profiles,
-  including keyboard/focus/layout state.
-- Toast across applicable profiles, including provider/host ownership, queue
-  transactions, timers, interruption, announcements, and cleanup.
-- Canonical examples, descriptors, packed fixtures, query projections, and
-  risk-proportionate evidence for both.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G2.0-01` | Tabs proves orientation, keyboard navigation, selection/focus ownership, panels, direction, disabled state, and native disposition. | Cross-profile interaction matrix. |
-| `E-G2.0-02` | Toast proves host/provider ownership, ordering, timers, pause/resume, interruption, announcements, teardown, and concurrent producers. | Systemic/temporal evidence. |
-| `E-G2.0-03` | Any new shared foundation logic is justified by repeated renderer evidence rather than abstraction preference. | Foundation-admission review. |
-
-**Scope controls**
-
-- No broad navigation framework, notification service, persistence layer, or
-  application-level state manager.
-- Failure cannot reopen or weaken the completed Gate 1 target matrix.
-
-**Exit condition:** Tabs and Toast extend proof into their unique risk classes
-without expanding foundation or host ownership beyond demonstrated need.
-
-### G2.1 Publishable packages, compatibility, and release manifests
-
-**Objective:** Package the proved system so consumers can verify the exact
-catalog, renderer, schema, token, export, and evidence tuple they install.
-
-**Entry conditions**
-
-- Gate 1 is complete.
-- Package boundaries match the architecture graph.
-- Version-effect classification is available from semantic diff/change intent.
-
-**Primary ownership**
-
-- All public packages
-- Release-manifest and descriptor compilers
-
-**Deliverables**
-
-- Publishable `@muxui/schema`, `tokens`, `foundation`, `web`, `react`,
-  `react-native`, `catalog`, and `tooling` packages as applicable.
-- Compact renderer descriptors generated after packing from actual exports,
-  binding-spec revisions, lifecycle/strategy, schema/token ranges, token
-  requirement digests, and provenance.
-- Immutable release manifest aggregating package descriptors, catalog/schema/
-  token/query versions, evidence digests, supported profiles, provenance, and
-  active exception digests/restrictions/expiries.
-- SemVer classification for shared intent, binding API, runtime profile, token,
-  implementation-only, and editorial changes.
-- Historical catalog retrieval and compatibility negotiation only for supported
-  published contracts with an actual consumer need.
-- Release preparation that rejects inconsistent binding ranges, missing
-  exports, digest drift, or version effects.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G2.1-01` | Every package installs from its packed artifact and exposes only declared exports, types, styles, assets, and supported engines. | Packed consumer matrix. |
-| `E-G2.1-02` | Descriptor bindings match actual tarball exports and exact binding/token revisions; source-tree-only success fails. | Pack-time descriptor audit. |
-| `E-G2.1-03` | The release manifest verifies every package/catalog/evidence/exception digest and rejects repacked bytes under the same version. | Manifest integrity fixture. |
-| `E-G2.1-04` | Representative compatible, incompatible, editorial, implementation-only, token, and schema changes produce the required version effects. | SemVer classification corpus. |
-| `E-G2.1-05` | Supported published catalogs answer for their supported installed tuples while hosted/latest data remains advisory; obsolete pre-release formats do not require active readers. | Multi-version query matrix. |
-
-**Scope controls**
-
-- Renderer packages do not carry or depend on the catalog at runtime.
-- Descriptors are generated indices, never an authored component registry.
-- Do not publish a package whose supported profile lacks current required
-  evidence.
-- No per-component independent SemVer release train.
-
-**Exit condition:** Packed packages and one verifiable release manifest describe
-the same implemented binding, token, evidence, and compatibility reality.
-
-### G2.2 Consumer validation and production local resolution
-
-**Objective:** Prove that a clean consumer resolves exact offline guidance and
-validates only what the installed renderer graph can implement.
-
-**Entry conditions**
-
-- G2.1 package artifacts and descriptors are available.
-- G0.4 resolver fixtures pass against synthetic graphs.
-- Supported package managers and workspace shapes are declared in the mutable
-  compatibility/evidence profile.
-
-**Primary ownership**
-
-- `@muxui/tooling` local resolver and validator
-- `tests/consumers`
-
-**Deliverables**
-
-- Official installation profiles including renderer packages plus project-local
-  tooling and catalog dependencies.
-- Production resolver over real packed descriptors and package-manager graphs.
-- `muxui validate` for canonical catalog/examples first, then bounded
-  consumer-project analysis with declared language/framework/version support.
-- Project/root detection, installed tuple reporting, drift/integrity diagnosis,
-  and safe inspection/install next commands.
-- Consumer fixtures for HTML/CSS/JS, React, React Native iOS/Android, and
-  supported React Native Web dispositions.
-- False-positive policy, escape-hatch policy, and path confinement for any
-  consumer analysis.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G2.2-01` | A clean consumer installs the declared profile and resolves exact local human/JSON/dense guidance with networking disabled. | Offline install/query fixture. |
-| `E-G2.2-02` | Project-wide discovery filters bindings absent from the installed renderer graph instead of advertising catalog-only availability. | Mixed-version consumer fixture. |
-| `E-G2.2-03` | Every resolver error and precedence rule passes against real packed packages and supported workspace layouts. | Production resolver matrix. |
-| `E-G2.2-04` | Validation emits stable rule IDs, source locations, artifact/platform context, and exact repair commands without parsing prose. | Diagnostic golden corpus. |
-| `E-G2.2-05` | Consumer analysis stays within declared project roots/languages/versions and meets its false-positive budget. | Confinement and supported-syntax corpus. |
-
-**Scope controls**
-
-- No arbitrary consumer AST claim beyond maintained parser/version support.
-- No network fallback, ancestor scan, or hosted mutation.
-- Consumer pattern-tree validation remains unavailable until separately proved
-  by G2.4 or later capability admission.
-
-**Exit condition:** Supported consumers install, resolve, and validate against
-their exact local package graph with bounded diagnostics and no hosted truth
-leakage.
-
-### G2.3 Documentation, explorers, bootstrap, and public local MCP
-
-**Objective:** Productize visual, narrative, static-agent, and installed local
-MCP surfaces as clients of the same catalog/query/example sources.
-
-**Entry conditions**
-
-- G2.1 provides versioned catalog/package artifacts.
-- Gate 1 query parity and canonical examples are complete.
-- No docs-only content owner or manually maintained component inventory exists.
-
-**Primary ownership**
-
-- `apps/docs`
-- `apps/explorer-web`
-- `apps/explorer-native`
-- Generated agent-bootstrap pipeline
-- Installed local MCP adapter
-
-**Deliverables**
-
-- Documentation site rendering catalog responses and canonical guide sources.
-- Web/React and native explorers generated from canonical examples.
-- Version/authority/compatibility context visible on implementation guidance.
-- Small generated `AGENTS.md`/editor/`llms.txt` bootstrap variants teaching the
-  discovery loop and installed version.
-- Optional versioned `llms-full.txt` offline export for tool-less environments.
-- Site/explorer route generation, source pointers, and no-copy audits.
-- Public installed local MCP with `search` and `get`; `plan`, `validate`, and
-  read-only `doctor` appear only when their owning capabilities are complete
-  and declared available.
-- Per-adapter capability policy generated from the command/query registry.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G2.3-01` | Site loaders, local MCP, and API/CLI JSON return the same normalized record revisions, examples, lifecycle, and applicability. | Surface-parity matrix. |
-| `E-G2.3-02` | Explorer source and rendered fixtures resolve canonical example IDs; no copied example body exists. | Example provenance audit. |
-| `E-G2.3-03` | Changing canonical guidance/example data updates all enabled surfaces through generation without manual page edits. | Change-propagation fixture. |
-| `E-G2.3-04` | Bootstrap files remain within size/token budgets and contain routing guidance rather than the component catalog. | Static-context budget report. |
-| `E-G2.3-05` | Hosted or version-mismatched pages are labelled advisory and do not claim installed-project applicability. | Authority-label fixture. |
-
-**Scope controls**
-
-- The website is a client, not the documentation source.
-- Explorer hosts are not runtime package dependencies.
-- Offline full exports never become the default agent path or an authoring
-  source.
-- Local MCP exposes no init, migration, proposal apply, dependency install, or
-  other mutation.
-
-**Exit condition:** Site, explorers, bootstrap files, and enabled local MCP
-tools reproduce canonical catalog/query truth without creating another
-documentation or operation system.
+G2.4–G2.6 remain below because they still define the entry, evidence, and
+scope controls of the admitted optional `plan`, `doctor`/`init`, and
+canonical-proposal capabilities. Each remains unavailable until its own
+evidence passes, and an incomplete one stays disabled without lowering the
+P2 exit release standard.
 
 ### G2.4 Grounded composition planning
 
@@ -1408,50 +1206,6 @@ creating an arbitrary model-driven patch path.
 
 **Exit condition:** Four bounded proposal types produce reviewable, digest-bound
 changes and deterministically reject all unowned or open-ended mutations.
-
-### G2.7 Productization release and Gate 2 exit
-
-**Objective:** Assemble enabled Gate 2 capabilities into one consumer-verifiable
-release without making unavailable capabilities appear complete.
-
-**Entry conditions**
-
-- G2.1, G2.2, and G2.3 are complete.
-- Each of G2.4–G2.6 is either complete and enabled or explicitly unavailable in
-  the manifest; unavailable work cannot be implied by docs or commands.
-- Stable claims have their complete risk/profile evidence.
-
-**Deliverables**
-
-- Versioned productization release manifest and compatibility profile.
-- Capability manifest showing exact API/CLI/MCP/site availability and policy.
-- Release evidence index with retention/disclosure policy and advisory status.
-- Operational-exception diagnostics and release projection.
-- Consumer install, offline guidance, packed renderer, site/explorer, and every
-  enabled operation’s safety evidence.
-- Release/rollback procedure and historical catalog availability.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G2.7-01` | A clean supported consumer installs the release and retrieves exact local guidance offline for its package tuple. | Release-candidate consumer matrix. |
-| `E-G2.7-02` | Docs/explorers and every enabled adapter reproduce catalog results; disabled capabilities are absent or explicitly unavailable. | Capability/surface parity report. |
-| `E-G2.7-03` | Every enabled validation, plan, doctor, init, or canonical proposal operation passes its manifest and safety gate. | Operation readiness index. |
-| `E-G2.7-04` | Stable support has current required manual/automated evidence, digest parity, compatibility review, and no expired exception. | Stable-release evidence report. |
-| `E-G2.7-05` | Rollback restores the prior verifiable package/catalog/manifest tuple without rewriting historical evidence. | Release rollback exercise. |
-
-**Scope controls**
-
-- Gate 2 completion does not require hosted MCP, migrations, additional themes,
-  design-tool interchange, stable model-eval thresholds, extensions, extra
-  frameworks, higher-order kinds, or an agent-to-UI renderer.
-- An incomplete optional G2.4–G2.6 capability remains disabled; it does not
-  lower the package/resolver/docs release standard.
-
-**Exit condition:** Consumers can install, verify, query, and use every enabled
-capability under exact local authority, while disabled capabilities remain
-honestly unavailable.
 
 ## Gate 3 — operational scale, breadth, and integrations
 
@@ -1982,10 +1736,10 @@ valid outcomes and do not make the core product incomplete.
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
 | R1.0 | React package/substrate baseline | Gate 0; accepted Product Scope 6.0.2, Decision 0010 amendments 01–03, and the accepted Stage 1 snapshot through the immutable committed-source route | R1.1–R1.5 |
-| R1.1 | Foundation and simple controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.1 allocation | R1.5, eligible alpha |
-| R1.2 | Forms and field controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.2 allocation | R1.5, eligible alpha |
-| R1.3 | Collections and composites | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.3 allocation | R1.5, eligible alpha |
-| R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
+| R1.1 | Foundation and simple controls | Fixed R1.0 baseline, Product Scope 12.1.1 icon-affordance dependency edge, and the fixed 53-family R1.1 allocation | R1.5, eligible alpha |
+| R1.2 | Forms and field controls | Fixed R1.0 baseline, Product Scope 12.1.1 temporal-adapter/icon-affordance dependency edges, and the fixed 53-family R1.2 allocation | R1.5, eligible alpha |
+| R1.3 | Collections and composites | Fixed R1.0 baseline, Product Scope 12.1.1 temporal-adapter/icon-affordance dependency edges, and the fixed 53-family R1.3 allocation | R1.5, eligible alpha |
+| R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 12.1.1 icon-affordance dependency edge, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
 | R1.5 | React breadth closure | R1.1–R1.4 and the fixed 53-family 53/53 closure | R1.6 |
 | R1.6 | React parity and private Mux theme authoring | R1.5 and Decision 0013 | R1 exit |
 | R1 exit | React prerelease publication | R1.5, R1.6, and exact publish authorization | P2.1; optional W1/N1/S1 activation reviews |
@@ -1998,38 +1752,19 @@ valid outcomes and do not make the core product incomplete.
 | X1.0 | Cross-platform comparison/equivalence | Relevant R1/W1/N1 exits | Exact claimed matrix only |
 | S1.0 | Stable React promotion | Published R1 prerelease, demand, accepted stable lock | Stable React release only |
 
-### Historical milestone register
+### Optional capability register
 
-Completed and superseded G-series rows remain audit locators. They are not
-current successors and do not satisfy R/P/W/N/X/S entry without an exact
-reusable-proof binding.
+Only the optional G2.4–G2.6 and Gate 3 rows remain, with their original
+dependency wording; the historical Gate 1 and Gate 2 sections above name the
+current successors for those references.
+Decision 0021 moved the completed and superseded G0, G1, and other G2 rows to
+the ignored recovery archive; they were audit locators only.
 
-| ID | Historical milestone | Historical hard dependencies | Historical blocks |
+| ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
-| G0.0 | Repository, ownership, and task graph | Architecture authority | G0.1, all repository work |
-| G0.1 | Schema, identity, and revision kernel | G0.0 | G0.2, G0.5, Gate 1 records |
-| G0.2 | Catalog compiler and pure query kernel | G0.1 | G0.3, G0.4, query projections |
-| G0.3 | CLI documentation baseline | G0.2 | Gate 0 exit, later adapters |
-| G0.4 | Project-local catalog package and resolver | G0.2, G0.3 envelopes | Gate 0 exit, G2.2 |
-| G0.5 | Maintainer authoring baseline | G0.0, G0.1, G0.2 | Gate 0 exit, Gate 1 authoring |
-| G1.0 | Tokens, themes, and foundation boundaries | Accepted Phase B Gate 0 correction generation; Phase C Gate 0 correlation before exit | All Gate 1 slices |
-| G1.1 | Framework-free web and React substrate | Phase C Gate 0, corrected G1.0 | Web/React slice cells |
-| G1.2 | React Native substrate and profiles | Phase C Gate 0, corrected G1.0 needs | Native slice cells |
-| G1.3 | Button slice | G1.0–G1.2 | Gate 1 exit, authoring path baseline |
-| G1.4 | TextField slice | G1.0–G1.3 as applicable | Form pattern, Gate 1 exit |
-| G1.5 | Switch slice | G1.0–G1.2 | Gate 1 exit |
-| G1.6 | Dialog slice | G1.1, G1.2, G1.0 overlay needs | Gate 1 exit, Select dependencies |
-| G1.7 | Select slice | G1.1, G1.2, applicable G1.6 ownership | Gate 1 exit |
-| G1.8 | Form pattern and curriculum | G1.3, G1.4, applicable G1.5 | G1.9, G2.4 |
-| G1.9 | Cross-slice proof and `0.1` | G1.0–G1.8 | Gate 1 exit, all Gate 2 work |
-| G2.0 | Tabs and Toast proof extension | Gate 1 | Broad G3.1 breadth only |
-| G2.1 | Packages, compatibility, and releases | Gate 1 | G2.2, G2.3, Gate 2 release |
-| G2.2 | Consumer validation and local resolution | G2.1, G0.4 | G2.5, Gate 2 release |
-| G2.3 | Docs, explorers, static bootstrap, and local MCP | G2.1, Gate 1 parity | Gate 2 release |
 | G2.4 | Grounded composition planning | G1.8, Gate 1 | Public `plan`, G3.11 |
 | G2.5 | Doctor and init | G2.2, Gate 1 change intent | Enabled project writes |
 | G2.6 | Allowlisted canonical proposals | G1.9, G2.1, G2.5 primitives | Enabled maintainer proposals |
-| G2.7 | Productization release | G2.1, G2.2; enabled optional G2 milestones | Gate 2 exit |
 | G3.1 | Component and pattern breadth | Gate 2; G2.0 for comparable risks | Only its admitted families |
 | G3.2 | Migrations and codemods | Gate 2 history, G2.5/G2.6 safety | Public `migrate` |
 | G3.3 | Hosted MCP | Gate 2 query stability | Hosted read-only capability |
@@ -2162,35 +1897,6 @@ for manual accessibility, security, release integrity, and operational
 exception approval. Specific people and mutable schedules belong in project
 tracking, not this long-lived roadmap.
 
-## Recommended first execution sequence
-
-1. Use Product Scope `8.0.0`, Decision 0012, Decision 0013, Decision 0010 amendments 01–03,
-   Decision 0011 amendments 01–02, the accepted Stage 1 snapshot, and the
-   React-primary Architecture/Roadmap authority as the existing R1 baseline.
-   Do not interpret superseded G-series status or historical evidence as
-   current R1 readiness.
-2. Activate R1.0 against exact current token/theme facts and the first Button
-   implementation fixture.
-3. Prove the standalone React Aria/package/CSS/private-playground/
-   SSR/hydration/accessibility/compatibility/packed baseline before Button
-   implementation begins.
-4. Deliver R1.1–R1.4 in Roadmap order against the common fixed 53-family
-   baseline, allowing routine components to run in parallel against the same
-   baseline after Button begins.
-5. Close the fixed React family surface in R1.5 through the exact `53/53`
-   committed-family reconciliation; defer, exclude, and not-a-component are
-   not completion outcomes. Complete R1.6's applicable style inventory, parity,
-   token/theme contract, and private Scale proof, then propose the exact R1
-   exit package.
-6. Publish no npm artifact without a separate exact external-mutation
-   authorization and verified rollback tuple.
-7. Productize catalog/tooling, installed-local guidance, and React docs through
-   P2.1–P2 exit.
-8. Activate W1, N1, X1, or S1 only through their own demand, scope-lock,
-   platform/profile, evidence, and human-decision boundaries.
-9. Admit other capabilities independently. They never become implicit R1
-   prerequisites.
-
 ## Roadmap completion checklist
 
 This roadmap is being followed only while all answers remain “yes”:
@@ -2297,50 +2003,6 @@ registry mutation requires a
 separate exact publication authorization and a final registry/version/dist-tag
 collision and authorization-drift check. This authority publishes nothing.
 
-## Historical pre-R1.6 icon affordance dependency clarification
-
-Product Scope `6.0.4` and Decision 0011 amendment 02 add one exact direct
-internal runtime edge to the existing R1 React graph:
-`lucide-react@1.37.0`, npm integrity
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
-ISC license with its Feather-derived MIT notice, and React peer-compatible with
-the existing React/React DOM peer boundary. It is replaceable and, under the
-pre-R1.6 baseline, was limited to existing control affordances. Decision 0013
-supersedes that historical limit for its nine named R1.6 affordance
-roots.
-
-The pre-R1.6 allowed affordance boundary followed the fixed tranches: R1.1
-`Checkbox` check/indeterminate; R1.2 `SearchField` clear, `NumberField`
-plus/minus, and `DatePicker`/`DateRangePicker` calendar triggers; R1.3
-`Calendar`/`RangeCalendar` previous/next, `ComboBox`/`Select` and `Tree`
-chevrons, and `TagGroup` remove; and R1.4 `Dialog`/`Toast` close. Breadcrumb
-separators remain text and no Search icon is added. Under that historical
-baseline, no new component or decorative affordance was admitted. Mux UI-owned
-labels, states, roles,
-relationships, keyboard behavior, and focus remain binding obligations; these
-icons are decorative/non-focusable unless an existing Mux UI binding requires
-another explicit semantic.
-
-The affected existing Scope IDs remain `committed` with no new IDs or
-commitment transitions: `SCOPE-COMP-CHECKBOX-REACT`,
-`SCOPE-COMP-SEARCHFIELD-REACT`, `SCOPE-COMP-NUMBERFIELD-REACT`,
-`SCOPE-COMP-DATEPICKER-REACT`, `SCOPE-COMP-DATERANGEPICKER-REACT`,
-`SCOPE-COMP-CALENDAR-REACT`, `SCOPE-COMP-RANGECALENDAR-REACT`,
-`SCOPE-COMP-COMBOBOX-REACT`, `SCOPE-COMP-SELECT-REACT`,
-`SCOPE-COMP-TREE-REACT`, `SCOPE-COMP-TAGGROUP-REACT`,
-`SCOPE-COMP-DIALOG-REACT`, and `SCOPE-COMP-TOAST-REACT`. The existing
-`SCOPE-REACT-BREADTH-001`, `SCOPE-PRODUCT-REACT-PRERELEASE`,
-`SCOPE-API-REACT-ERGONOMICS`, and `SCOPE-API-WEB-HOOKS`, plus related system,
-platform, package, proof, and package-guidance records, retain their existing
-states and boundaries. `SCOPE-COMP-BREADCRUMBS-REACT` is not affected; its
-separators remain text.
-
-R1 tranche proof must verify the exact dependency tuple, integrity, Lucide ISC
-notice and Feather-derived MIT notice, React peer compatibility,
-internal-only public-surface exclusion, accessible label/decorative semantics,
-SSR/hydration, tree-shaking, and exact packed-consumer resolution. A
-dependency-version, icon-mapping, geometry, or accessibility change invalidates
-the affected visual comparison and its linked tranche proof. The
-amendment has no React Native, `web.html`, or React Native
-Web implication and does not change support, lifecycle, release, publication,
-or final R1-exit-merge authority.
+The historical pre-R1.6 icon affordance clarification is archived by Decision
+0021; the current Lucide edge, its proof obligations, and its R1.6 roots are
+stated above and in Architecture.
