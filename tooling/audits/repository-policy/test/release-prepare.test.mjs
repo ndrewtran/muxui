@@ -25,10 +25,11 @@ import {
   findModuleSideEffects,
   findPinnedDuplicateVersions,
   findPublicSurfaceLeaks,
-  findVisualContractInvalidations,
   isolatedPackageManagerEnvironment,
   nodeBundledCli,
   readGeneratedOutputNames,
+  readLockedIntegrity,
+  readRetainedEvidence,
 } from '../src/release-proof.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
@@ -426,45 +427,91 @@ function currentVisualInputs() {
   const generatedRoot = join(packageRoot, 'generated');
   const generatedFiles = readdirSync(generatedRoot).sort();
   const lockfile = readFileSync(join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8');
+  const generated = (suffix) => generatedFiles.filter((name) => name.endsWith(suffix))
+    .map((name) => ({ path: `generated/${name}`, bytes: readFileSync(join(generatedRoot, name)) }));
   return {
     tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readFileSync(join(repositoryRoot, 'catalog/tokens/default-theme.json')) },
-    stylesheets: generatedFiles.filter((name) => name.endsWith('.css')).map((name) => ({ path: `generated/${name}`, bytes: readFileSync(join(generatedRoot, name)) })),
-    lucide: {
-      version: manifest.dependencies['lucide-react'],
-      integrity: lockfile.match(/\n {2}lucide-react@1\.37\.0:\n\s+resolution: \{integrity: (sha512-[^}]+)\}/u)[1],
-    },
-    modules: generatedFiles.filter((name) => name.endsWith('.mjs')).map((name) => ({ path: `generated/${name}`, source: readFileSync(join(generatedRoot, name), 'utf8') })),
+    stylesheets: generated('.css'),
+    lucide: { version: manifest.dependencies['lucide-react'], integrity: readLockedIntegrity(lockfile, 'lucide-react', manifest.dependencies['lucide-react']) },
+    modules: generated('.mjs'),
   };
 }
 
-test('a token, stylesheet, or Lucide change invalidates the recorded visual contract', () => {
+// Test helper: names each input whose identity differs between two visual contracts.
+function changedVisualInputs(before, after) {
+  const changed = [];
+  const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+  if (!same(before.inputs.tokens, after.inputs.tokens)) changed.push('tokens');
+  if (!same(before.inputs.stylesheets, after.inputs.stylesheets)) changed.push('stylesheets');
+  for (const key of ['version', 'integrity', 'icons', 'modules']) {
+    if (!same(before.inputs.lucide[key], after.inputs.lucide[key])) changed.push(`lucide.${key}`);
+  }
+  if (before.digest !== after.digest && changed.length === 0) changed.push('digest');
+  return changed;
+}
+
+const replaceModule = (inputs, path, transform) => inputs.modules.map((module) => (module.path === path
+  ? { ...module, bytes: Buffer.from(transform(module.bytes.toString('utf8'))) }
+  : module));
+
+test('lockfile integrity is read for the exact package version', () => {
+  const lockfile = readFileSync(join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8');
+  assert.match(readLockedIntegrity(lockfile, 'lucide-react', '1.37.0'), /^sha512-LPsB4rD1/u);
+  assert.match(readLockedIntegrity(lockfile, '@internationalized/date', '3.12.3'), /^sha512-fuLX/u);
+  assert.equal(readLockedIntegrity(lockfile, 'lucide-react', '1.37'), undefined);
+  assert.equal(readLockedIntegrity(lockfile, 'lucide-react', '0.0.0'), undefined);
+});
+
+test('a token, stylesheet, Lucide version, icon mapping, or icon call-site change moves the visual contract identity', () => {
   const inputs = currentVisualInputs();
-  const recorded = deriveVisualContract(inputs);
-  assert.deepEqual(deriveVisualContract(currentVisualInputs()), recorded, 'unchanged inputs reproduce the identity');
-  assert.deepEqual(findVisualContractInvalidations(recorded, recorded), []);
-  assert.ok(recorded.inputs.lucide.icons['generated/components.mjs'].includes('chevron-down'));
+  const baseline = deriveVisualContract(inputs);
+  assert.equal(baseline.comparison, 'none-recorded', 'the identity records no visual baseline');
+  assert.deepEqual(deriveVisualContract(currentVisualInputs()), baseline, 'unchanged inputs reproduce the identity');
+  assert.ok(baseline.inputs.lucide.icons['generated/components.mjs'].includes('chevron-down'));
+  assert.ok(baseline.inputs.lucide.modules.some(({ path }) => path === 'generated/components.mjs'));
 
   const tokenSource = JSON.parse(inputs.tokenSource.bytes.toString('utf8'));
   tokenSource.tokens['semantic.action.background'].alias = 'semantic.color.color-70';
   const tokenChanged = deriveVisualContract({ ...inputs, tokenSource: { ...inputs.tokenSource, bytes: Buffer.from(JSON.stringify(tokenSource)) } });
-  assert.deepEqual(findVisualContractInvalidations(recorded, tokenChanged), ['tokens']);
+  assert.deepEqual(changedVisualInputs(baseline, tokenChanged), ['tokens']);
 
   const stylesheets = inputs.stylesheets.map((sheet) => (sheet.path === 'generated/styles.css'
     ? { ...sheet, bytes: Buffer.from(sheet.bytes.toString('utf8').replace(/border-radius:\s*[^;]+;/u, 'border-radius: 0;')) }
     : sheet));
   assert.notDeepEqual(stylesheets, inputs.stylesheets, 'the fixture changes stylesheet geometry');
-  assert.deepEqual(findVisualContractInvalidations(recorded, deriveVisualContract({ ...inputs, stylesheets })), ['stylesheet:generated/styles.css']);
+  assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, stylesheets })), ['stylesheets']);
 
-  const lucideChanged = deriveVisualContract({ ...inputs, lucide: { ...inputs.lucide, version: '1.38.0' } });
-  assert.deepEqual(findVisualContractInvalidations(recorded, lucideChanged), ['lucide.version']);
+  assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, lucide: { ...inputs.lucide, version: '1.38.0' } })), ['lucide.version']);
 
-  const modules = inputs.modules.map((module) => (module.path === 'generated/components.mjs'
-    ? { ...module, source: module.source.replaceAll('icons/chevron-down.mjs', 'icons/chevron-up.mjs') }
-    : module));
-  assert.deepEqual(findVisualContractInvalidations(recorded, deriveVisualContract({ ...inputs, modules })), ['lucide.icons']);
+  const remapped = replaceModule(inputs, 'generated/components.mjs', (source) => source.replaceAll('icons/chevron-down.mjs', 'icons/chevron-up.mjs'));
+  assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, modules: remapped })), ['lucide.icons', 'lucide.modules']);
 
+  // Call-site geometry and accessibility semantics live in the importing module bytes.
+  for (const [from, to] of [["size: 12 }", "size: 14 }"], ["'aria-hidden': 'true', focusable: 'false', size: 12", "focusable: 'false', size: 12"]]) {
+    const callSite = replaceModule(inputs, 'generated/components.mjs', (source) => {
+      assert.ok(source.includes(from), from);
+      return source.replace(from, to);
+    });
+    assert.deepEqual(changedVisualInputs(baseline, deriveVisualContract({ ...inputs, modules: callSite })), ['lucide.modules'], to);
+  }
+
+  const barrel = replaceModule(inputs, 'generated/components.mjs', (source) => `import { X } from 'lucide-react';\n${source}`);
+  assert.throws(() => deriveVisualContract({ ...inputs, modules: barrel }), /R1_EXIT_VISUAL_CONTRACT_INVALID: generated\/components\.mjs imports lucide-react;/u);
   assert.throws(() => deriveVisualContract({ ...inputs, lucide: { version: '^1.37.0', integrity: inputs.lucide.integrity } }), /R1_EXIT_VISUAL_CONTRACT_INVALID/u);
   assert.throws(() => deriveVisualContract({ ...inputs, modules: [] }), /R1_EXIT_VISUAL_CONTRACT_INVALID/u);
+});
+
+test('a milestone without a retained evidence index stops the R1 exit', () => {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-retained-evidence-'));
+  try {
+    mkdirSync(join(root, 'tests/evidence/r1.1'), { recursive: true });
+    writeFileSync(join(root, 'tests/evidence/r1.1/index.json'), '{}');
+    assert.deepEqual(readRetainedEvidence(root, ['R1.1']).map(({ milestone, path }) => [milestone, path]), [['R1.1', 'tests/evidence/r1.1/index.json']]);
+    assert.throws(() => readRetainedEvidence(root, ['R1.1', 'R1.2']), /R1_EXIT_RETAINED_EVIDENCE_MISSING: R1\.2 logged evidence has no retained index/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+  assert.equal(readRetainedEvidence(repositoryRoot, ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']).length, 5);
 });
 
 test('the release manifest correlates exact source, lockfile, generated, catalog, binding, and evidence identities', () => {
@@ -496,7 +543,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
     workspacePackages: [{ name: '@muxui/react', version: '0.1.0-alpha.0', private: true }, { name: '@muxui/catalog', version: '2.0.0', private: true }],
     retainedEvidence: [{ milestone: 'R1.5', path: 'tests/evidence/r1.5/index.json', bytes: Buffer.from('{}') }],
     activeExceptions: [],
-    visualContract: { digest, inputs: {} },
+    visualContract: { comparison: 'none-recorded', digest, inputs: {} },
   };
   const correlation = buildReleaseCorrelation(options);
   assert.deepEqual(buildReleaseCorrelation(options), correlation, 'correlation is deterministic');

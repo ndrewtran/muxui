@@ -27,6 +27,8 @@ import {
   isolatedPackageManagerEnvironment,
   nodeBundledCli,
   readGeneratedOutputNames,
+  readLockedIntegrity,
+  readRetainedEvidence,
   summarizeBundleModules,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
@@ -982,17 +984,12 @@ try {
   const readRepositoryFile = (path) => readFileSync(resolve(repositoryRoot, path));
   const lockfileBytes = readRepositoryFile('pnpm-lock.yaml');
   const lucideVersion = packedManifest.dependencies['lucide-react'];
-  const lucideIntegrity = lockfileBytes.toString('utf8')
-    .match(new RegExp(`\\n  lucide-react@${lucideVersion.replaceAll('.', '\\.')}:\\n\\s+resolution: \\{integrity: (sha512-[^}]+)\\}`, 'u'))?.[1];
+  const lucideIntegrity = readLockedIntegrity(lockfileBytes.toString('utf8'), 'lucide-react', lucideVersion);
   const packedGenerated = expectedGeneratedEntries.map((entry) => ({
     path: entry.slice('package/'.length),
     bytes: readArchiveBytes(archive, entry),
   }));
-  const retainedEvidence = retainedEvidenceMilestones.map((milestone) => {
-    const path = `tests/evidence/${milestone.toLowerCase()}/index.json`;
-    if (!existsSync(resolve(repositoryRoot, path))) fail('R1_EXIT_RETAINED_EVIDENCE_MISSING', `${milestone} logged evidence has no retained index at ${path}`);
-    return { milestone, path, bytes: readRepositoryFile(path) };
-  });
+  const retainedEvidence = readRetainedEvidence(repositoryRoot, retainedEvidenceMilestones);
   const sourceTree = spawnSync('git', ['rev-parse', `${sourceRevision}^{tree}`], { cwd: repositoryRoot, encoding: 'utf8' });
   if (sourceTree.status !== 0) fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', sourceTree.stderr);
   const correlation = buildReleaseCorrelation({
@@ -1009,9 +1006,11 @@ try {
       tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readRepositoryFile('catalog/tokens/default-theme.json') },
       stylesheets: packedGenerated.filter(({ path }) => path.endsWith('.css')),
       lucide: { version: lucideVersion, integrity: lucideIntegrity },
-      modules: packedGenerated.filter(({ path }) => path.endsWith('.mjs')).map(({ path, bytes }) => ({ path, source: bytes.toString('utf8') })),
+      modules: packedGenerated.filter(({ path }) => path.endsWith('.mjs')),
     }),
   });
+  // The lockfile, token source, and evidence indexes were read from the worktree; bind them to the commit.
+  assertSourceIdentity(sourceRevision, 'after release correlation');
   console.log(`R1 exit correlation: ${correlation.bindings.length} binding-spec revisions, ${correlation.generatedOutputs.entries.length} generated outputs, ${correlation.evidence.retained.length} retained evidence indexes, visual contract ${correlation.visualContract.digest}`);
 
   const releaseManifest = {

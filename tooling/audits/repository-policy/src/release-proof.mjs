@@ -497,7 +497,8 @@ export function nodeBundledCli(name, execPath = process.execPath) {
 }
 
 const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
-const lucideIconSpecifier = /lucide-react\/dist\/esm\/icons\/([a-z0-9-]+)\.mjs/gu;
+const lucideSpecifier = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s+|\brequire\s*\(\s*)(['"])(lucide-react(?:\/[^'"]*)?)\1/gu;
+const lucideIconModule = /^lucide-react\/dist\/esm\/icons\/([a-z0-9-]+)\.mjs$/u;
 const byPath = (left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
 
 /** Digests each `{ path, bytes }` and the sorted set; any byte or membership change moves the set digest. */
@@ -508,11 +509,20 @@ export function digestFileSet(files, code = 'R1_EXIT_CORRELATION_INVALID') {
   return { digest: digest(canonicalJson(entries)), entries };
 }
 
+/** The pnpm lockfile integrity recorded for one exact `name@version`, or undefined. */
+export function readLockedIntegrity(lockfileText, name, version) {
+  const escape = (value) => value.replace(/[.*+?^${}()|[\]\\/]/gu, '\\$&');
+  const quotedName = `'?${escape(name)}@${escape(version)}'?`;
+  return lockfileText.match(new RegExp(`\\n {2}${quotedName}:\\n\\s+resolution: \\{integrity: (sha512-[^}]+)\\}`, 'u'))?.[1];
+}
+
 /**
- * Decision 0011 amendment 02: a token, stylesheet (geometry), Lucide version,
- * or icon-mapping change invalidates the recorded visual comparison. This
- * identity binds exactly those inputs; `modules` are the packed runtime files
- * whose Lucide imports form the icon mapping.
+ * Identity of the visual-contract inputs named by Decision 0011 amendment 02
+ * section 5: dependency version (Lucide version and integrity), icon mapping
+ * and call-site geometry or accessibility semantics (the full bytes of every
+ * packed module importing Lucide), and styling geometry (tokens and packed
+ * stylesheets). No visual baseline is recorded (`comparison: none-recorded`);
+ * a different identity means any earlier visual comparison no longer applies.
  */
 export function deriveVisualContract({ tokenSource, stylesheets, lucide, modules }) {
   const code = 'R1_EXIT_VISUAL_CONTRACT_INVALID';
@@ -520,34 +530,42 @@ export function deriveVisualContract({ tokenSource, stylesheets, lucide, modules
   if (!/^\d+\.\d+\.\d+$/u.test(lucide?.version ?? '') || !/^sha512-[A-Za-z0-9+/]+=*$/u.test(lucide?.integrity ?? '')) {
     fail(code, 'Lucide requires an exact version and lockfile integrity');
   }
-  const icons = Object.fromEntries(modules
-    .map(({ path, source }) => [path, [...new Set([...source.matchAll(lucideIconSpecifier)].map(([, name]) => name))].sort()])
-    .filter(([, names]) => names.length > 0)
-    .sort(([left], [right]) => (left < right ? -1 : 1)));
-  if (Object.keys(icons).length === 0) fail(code, 'no packed module imports a Lucide affordance');
+  const icons = {};
+  const iconModules = [];
+  for (const { path, bytes } of modules) {
+    const specifiers = [...bytes.toString('utf8').matchAll(lucideSpecifier)].map(([, , specifier]) => specifier);
+    if (specifiers.length === 0) continue;
+    const names = specifiers.map((specifier) => {
+      const name = specifier.match(lucideIconModule)?.[1];
+      // A barrel or unlisted subpath import cannot be mapped to icons.
+      if (!name) fail(code, `${path} imports ${specifier}; only per-icon lucide-react/dist/esm/icons modules can be mapped`);
+      return name;
+    });
+    icons[path] = [...new Set(names)].sort();
+    iconModules.push({ path, bytes });
+  }
+  if (iconModules.length === 0) fail(code, 'no packed module imports a Lucide affordance');
   const inputs = {
     tokens: { path: tokenSource.path, sha256: digest(tokenSource.bytes) },
     stylesheets: digestFileSet(stylesheets, code).entries,
-    lucide: { version: lucide.version, integrity: lucide.integrity, icons },
+    lucide: {
+      version: lucide.version,
+      integrity: lucide.integrity,
+      icons: Object.fromEntries(Object.entries(icons).sort(([left], [right]) => (left < right ? -1 : 1))),
+      modules: digestFileSet(iconModules, code).entries,
+    },
   };
-  return { digest: digest(canonicalJson(inputs)), inputs };
+  return { comparison: 'none-recorded', digest: digest(canonicalJson(inputs)), inputs };
 }
 
-/** Names every recorded visual-contract input that the current identity no longer matches. */
-export function findVisualContractInvalidations(recorded, current) {
-  const changed = [];
-  const same = (left, right) => canonicalJson(left ?? null) === canonicalJson(right ?? null);
-  if (!same(recorded.inputs.tokens, current.inputs.tokens)) changed.push('tokens');
-  const recordedSheets = new Map(recorded.inputs.stylesheets.map(({ path, sha256 }) => [path, sha256]));
-  const currentSheets = new Map(current.inputs.stylesheets.map(({ path, sha256 }) => [path, sha256]));
-  for (const path of [...new Set([...recordedSheets.keys(), ...currentSheets.keys()])].sort()) {
-    if (recordedSheets.get(path) !== currentSheets.get(path)) changed.push(`stylesheet:${path}`);
-  }
-  for (const key of ['version', 'integrity', 'icons']) {
-    if (!same(recorded.inputs.lucide[key], current.inputs.lucide[key])) changed.push(`lucide.${key}`);
-  }
-  if (changed.length === 0 && recorded.digest !== current.digest) changed.push('digest');
-  return changed;
+/** Reads each milestone's retained evidence index; a missing index stops the R1 exit. */
+export function readRetainedEvidence(repositoryRoot, milestones) {
+  return milestones.map((milestone) => {
+    const path = `tests/evidence/${milestone.toLowerCase()}/index.json`;
+    const absolute = join(repositoryRoot, path);
+    if (!existsSync(absolute)) fail('R1_EXIT_RETAINED_EVIDENCE_MISSING', `${milestone} logged evidence has no retained index at ${path}`);
+    return { milestone, path, bytes: readFileSync(absolute) };
+  });
 }
 
 /**

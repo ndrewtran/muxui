@@ -21,7 +21,11 @@ export function hasUnsanitizedEvidenceOutput(text, repositoryRoot) {
   return withoutPublicTokenIds.includes(repositoryRoot)
     || /\/(?:Users|Volumes|home|root|tmp|private(?:\/(?:tmp|var\/folders))?|var\/folders)\//u.test(withoutPublicTokenIds)
     || /(?:^|[\s"'(=])[A-Za-z]:\\(?:Users|Temp)\\/mu.test(withoutPublicTokenIds)
-    || /(?:authorization|api[-_]?key|token)\s*[:=]\s*\S+/iu.test(withoutPublicTokenIds);
+    || /(?:authorization|api[-_]?key|token)\s*[:=]\s*\S+/iu.test(withoutPublicTokenIds)
+    // GitHub token formats, and JSON keys naming a credential (such as
+    // `token`, `github-token`, `apiKey`, or `password`) with a quoted value.
+    || /\bgh[pousr]_[A-Za-z0-9]{20,}|\bgithub_pat_/u.test(withoutPublicTokenIds)
+    || /"[^"]*(?:token|secret|key|password)"\s*:\s*"/iu.test(withoutPublicTokenIds);
 }
 
 function sha256(value) {
