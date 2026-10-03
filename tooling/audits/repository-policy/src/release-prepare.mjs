@@ -1,19 +1,27 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { join, resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, join, posix, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import {
+  assertBundleRetention,
   assertExactArchiveEntries,
   assertExactDependencyGraph,
   assertExactExportList,
   assertPackedFileBoundary,
+  assertNoPublicSurfaceLeaks,
+  assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
+  bundledModulePackage,
+  collectInstalledClosure,
+  createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
   readGeneratedOutputNames,
+  summarizeBundleModules,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
@@ -35,6 +43,8 @@ const expectedPeerDependencies = {
   react: '>=19.2.0 <20',
   'react-dom': '>=19.2.0 <20',
 };
+// Only stylesheets have import-time effects, so bundlers may drop unused JS modules.
+const expectedSideEffects = ['*.css'];
 const expectedCandidatePublishConfig = {
   access: 'public',
   tag: 'next',
@@ -49,6 +59,84 @@ const fixedPackageEntries = Object.freeze([
 
 function fail(code, detail) {
   throw new Error(`${code}: ${detail}`);
+}
+
+const consumerToolRoot = resolve(import.meta.dirname, 'release-consumer');
+// Upstream names the public surface must never expose, alongside the installed runtime closure.
+const requiredUpstreamNames = [
+  'react-aria', 'react-aria-components', 'react-stately', '@react-aria/', '@react-stately/', '@react-types/',
+  'motion', '@tiptap/', 'marked', 'lucide-react', '@internationalized/',
+];
+// Dependency disclosure and historical donor provenance may name upstream packages.
+const allowedGuidanceJsonPaths = {
+  'generated/release.json': ['$.packageDependencies'],
+  'generated/r1-5-closure.json': ['$.upstream', '$.families[].root'],
+  'generated/compatibility.mjs': ['$.reactCompatibility.upstream'],
+};
+
+function tail(value, length = 4000) {
+  const text = String(value ?? '');
+  return text.length > length ? `...${text.slice(-length)}` : text;
+}
+
+function copyConsumerTool(consumer, file) {
+  copyFileSync(join(consumerToolRoot, file), join(consumer, file));
+}
+
+function assertSingleTiptapCore(consumer, label) {
+  const closure = collectInstalledClosure(consumer, '@muxui/react', { excludedNames: Object.keys(expectedPeerDependencies) });
+  const version = assertSingleInstalledVersion(closure, '@tiptap/core', 'R1_EXIT_CONSUMER_TIPTAP_CORE_SKEW');
+  const skewed = [...closure].filter(([name, versions]) => name.startsWith('@tiptap/') && versions.length > 1);
+  if (skewed.length !== 0) {
+    console.log(`${label}: note, other Tiptap packages resolve to several versions: ${skewed.map(([name, versions]) => `${name}@${versions.join('|')}`).join(', ')}`);
+  }
+  return { closure, version };
+}
+
+// Resolves a proof tool pinned by the React package's devDependencies, so release
+// proof adds no dependency and the clean consumers keep only the packed runtime graph.
+function resolvePinnedTool(name) {
+  const requireFromReact = createRequire(join(reactPackageRoot, 'package.json'));
+  const manifestPath = requireFromReact.resolve(`${name}/package.json`);
+  const toolManifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  if (toolManifest.version !== manifest.devDependencies?.[name]) {
+    fail('R1_EXIT_PACK_PROOF_TOOL_UNAVAILABLE', `expected the pinned ${name} ${manifest.devDependencies?.[name]}, found ${toolManifest.version}`);
+  }
+  const entry = toolManifest.exports?.['.'];
+  const relative = typeof entry === 'string' ? entry : entry?.import ?? entry?.default ?? toolManifest.main;
+  return { version: toolManifest.version, url: pathToFileURL(join(dirname(manifestPath), relative)).href };
+}
+
+function exampleImports(source) {
+  const names = [];
+  for (const [, typeOnly, clause, specifier] of source.matchAll(/import\s+(type\s+)?\{([^}]*)\}\s*from\s*['"](@muxui\/react(?:\/[^'"]+)?)['"]/gu)) {
+    if (typeOnly) continue;
+    for (const part of clause.split(',').map((value) => value.trim()).filter(Boolean)) {
+      if (part.startsWith('type ')) continue;
+      names.push(`${specifier}:${part.split(/\s+as\s+/u)[0]}`);
+    }
+  }
+  return names;
+}
+
+// Drops the npm_* script context (and any npm token) that `pnpm release:prepare` exports,
+// so each clean consumer installs with its package manager's own defaults.
+function cleanPackageManagerEnvironment() {
+  return Object.fromEntries(Object.entries(process.env).filter(([name]) => !/^(?:npm_|PNPM_SCRIPT_SRC_DIR$|INIT_CWD$)/iu.test(name)));
+}
+
+function packageManagerCandidates() {
+  const execPath = process.env.npm_execpath ?? '';
+  const pnpm = /pnpm/iu.test(execPath) ? [process.execPath, execPath] : ['pnpm'];
+  return [
+    { name: 'pnpm', command: pnpm },
+    { name: 'npm', command: ['npm'] },
+    { name: 'yarn', command: ['yarn'] },
+  ];
+}
+
+function runPackageManager(command, args, options) {
+  return spawnSync(command[0], [...command.slice(1), ...args], { encoding: 'utf8', stdio: 'pipe', ...options });
 }
 
 function sha256(value) {
@@ -431,10 +519,12 @@ try {
     || stableJson(packedManifest.peerDependencies) !== stableJson(expectedPeerDependencies)
     || stableJson(packedManifest.exports) !== stableJson(manifest.exports)
     || stableJson(packedManifest.files) !== stableJson(manifest.files)
+    || stableJson(manifest.sideEffects) !== stableJson(expectedSideEffects)
+    || stableJson(packedManifest.sideEffects) !== stableJson(expectedSideEffects)
     || packedManifest.scripts?.prepack !== undefined
     || packedManifest.scripts?.prepublishOnly !== undefined
     || stableJson(packedManifest.publishConfig) !== stableJson(expectedCandidatePublishConfig)) {
-    fail('R1_EXIT_PACK_MANIFEST_INVALID', 'name, version, privacy, runtime graph, peers, exports, files, lifecycle, or publish config drifted');
+    fail('R1_EXIT_PACK_MANIFEST_INVALID', 'name, version, privacy, runtime graph, peers, exports, files, side effects, lifecycle, or publish config drifted');
   }
   const packedManifestText = JSON.stringify(packedManifest);
   for (const forbidden of ['workspace:', '@muxui/web']) {
@@ -564,7 +654,7 @@ try {
     stdio: 'pipe',
     env: { ...process.env, npm_config_engine_strict: 'false' },
   });
-  if (install.status !== 0) fail('R1.5_PACK_CONSUMER_INSTALL_FAILED', install.stderr);
+  if (install.status !== 0) fail('R1.5_PACK_CONSUMER_INSTALL_FAILED', tail(install.stderr || install.stdout));
 
   const consumerScript = `
     import { performance } from 'node:perf_hooks';
@@ -660,6 +750,184 @@ try {
     fail('R1.5_PACK_PERFORMANCE_BUDGET_EXCEEDED', JSON.stringify({ measurements, budgets }));
   }
   console.log(`R1.5 packed import ${measurements.packedImportMilliseconds.toFixed(2)}ms / ${budgets.packedImportMilliseconds}ms; SSR ${measurements.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms`);
+
+  // The offline consumer must resolve one editor engine, as the online matrix does.
+  const offlineGraph = assertSingleTiptapCore(consumer, 'R1 exit offline consumer');
+  console.log(`R1 exit offline consumer resolves @tiptap/core ${offlineGraph.version} across ${offlineGraph.closure.size} runtime packages`);
+
+  // Public declaration surface, re-exports, and generated guidance name no upstream package.
+  const upstreamNames = [...requiredUpstreamNames, ...[...offlineGraph.closure.keys()].filter((name) => name !== '@muxui/react')];
+  const generatedEntries = entries.filter((entry) => entry.startsWith('package/generated/'));
+  const publicJsTargets = Object.values(packedManifest.exports)
+    .map((target) => (typeof target === 'string' ? target : target.default))
+    .filter((target) => target.endsWith('.mjs'))
+    .map((target) => `package/${target.slice(2)}`);
+  const guidanceJsonFiles = ['descriptor.json', 'release.json', 'r1-5-closure.json', 'r1-6-contract.json']
+    .map((name) => `generated/${name}`)
+    .map((file) => ({ file, value: parseGeneratedJson(readArchiveFile(archive, `package/${file}`)), allowedJsonPaths: allowedGuidanceJsonPaths[file] }));
+  const guidanceModules = await Promise.all(['compatibility.mjs', 'testing.mjs', 'themes.mjs'].map(async (name) => {
+    const file = `generated/${name}`;
+    return { file, value: { ...(await import(pathToFileURL(join(candidatePackage, file)).href)) }, allowedJsonPaths: allowedGuidanceJsonPaths[file] };
+  }));
+  assertNoPublicSurfaceLeaks({
+    declarations: generatedEntries.filter((entry) => entry.endsWith('.d.ts')).map((entry) => ({ file: entry, text: readArchiveFile(archive, entry) })),
+    entries: publicJsTargets.map((entry) => ({ file: entry, text: readArchiveFile(archive, entry) })),
+    texts: [
+      { file: 'package/README.md', text: readme },
+      { file: 'package/generated/index.mjs', text: publicEntry },
+    ],
+    json: [...guidanceJsonFiles, ...guidanceModules],
+    matcher: createUpstreamNameMatcher(upstreamNames),
+    // Declarations may self-reference the package, as icon-button.d.ts does for ButtonProps.
+    allowedSpecifiers: ['react', 'react-dom', '@muxui/react'],
+  });
+  console.log(`R1 exit public-surface leak scan passed for ${upstreamNames.length} upstream names across ${generatedEntries.filter((entry) => entry.endsWith('.d.ts')).length} declarations, ${publicJsTargets.length} public entries, README, and ${guidanceJsonFiles.length + guidanceModules.length} guidance projections`);
+
+  // SSR every canonical catalog example and fixture on the packed artifact, then hydrate it in jsdom.
+  const { version: viteVersion, url: viteUrl } = resolvePinnedTool('vite');
+  const vite = await import(viteUrl);
+  mkdirSync(join(consumer, 'examples'));
+  const planModules = [];
+  const exampleCoverage = new Set();
+  for (const binding of descriptor.bindings) {
+    const slug = binding.binding.split('#', 1)[0].slice('muxui:component:'.length);
+    const sourceRoot = resolve(repositoryRoot, `catalog/components/${slug}/examples/react`);
+    const files = existsSync(sourceRoot) ? readdirSync(sourceRoot).filter((file) => file.endsWith('.tsx')).sort() : [];
+    if (files.length === 0) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', `${binding.export} has no canonical React example`);
+    for (const file of files) {
+      const sourcePath = join(sourceRoot, file);
+      const source = readFileSync(sourcePath, 'utf8');
+      for (const name of exampleImports(source)) exampleCoverage.add(name);
+      const { code } = await vite.transformWithOxc(source, sourcePath, { lang: 'tsx', jsx: { runtime: 'automatic' } });
+      const output = `examples/${slug}--${file.replace(/\.tsx$/u, '.mjs')}`;
+      writeFileSync(join(consumer, output), code);
+      planModules.push({ file: output });
+    }
+  }
+  for (const file of ['render-examples.mjs', 'hydrate-examples.mjs', 'export-fixtures.mjs']) copyConsumerTool(consumer, file);
+  planModules.push({ file: 'export-fixtures.mjs', components: ['ToastFixture', 'LightboxPartsFixture'] });
+  const componentModules = ['@muxui/react', ...new Set(isolatedExportModules.map((entry) => `@muxui/react/${entry.split(':')[1].slice(2)}`))];
+  writeFileSync(join(consumer, 'ssr-plan.json'), `${JSON.stringify({
+    modules: planModules,
+    exportModules: componentModules,
+    valueChecks: { file: 'export-fixtures.mjs', name: 'checkValueExports' },
+  })}\n`);
+  const serverRender = spawnSync(process.execPath, ['render-examples.mjs', 'ssr-plan.json', 'ssr-result.json'], { cwd: consumer, encoding: 'utf8', stdio: 'pipe' });
+  if (serverRender.status !== 0) fail('R1_EXIT_PACK_SSR_FAILED', tail(serverRender.stderr || serverRender.stdout || `exited with ${serverRender.signal ?? serverRender.status}`));
+  const serverResult = JSON.parse(readFileSync(join(consumer, 'ssr-result.json'), 'utf8'));
+  const covered = new Set([...exampleCoverage, ...serverResult.valueExports, ...serverResult.renders.flatMap(({ covers }) => covers)]);
+  const uncovered = Object.entries(serverResult.exportKeys)
+    .flatMap(([specifier, names]) => names.map((name) => `${specifier}:${name}`))
+    .filter((name) => !covered.has(name));
+  if (uncovered.length !== 0) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', `runtime exports with no SSR example, fixture, or value check: ${uncovered.join(', ')}`);
+  if (!Number.isFinite(serverResult.ssrMilliseconds) || serverResult.ssrMilliseconds > budgets.ssrMilliseconds) {
+    fail('R1.5_PACK_PERFORMANCE_BUDGET_EXCEEDED', JSON.stringify({ exampleSsrMilliseconds: serverResult.ssrMilliseconds, budgets }));
+  }
+  const hydration = spawnSync(process.execPath, ['hydrate-examples.mjs', 'ssr-result.json', 'hydration-result.json', resolvePinnedTool('jsdom').url], { cwd: consumer, encoding: 'utf8', stdio: 'pipe' });
+  if (hydration.status !== 0) fail('R1_EXIT_PACK_HYDRATION_MISMATCH', tail(hydration.stderr || hydration.stdout || `exited with ${hydration.signal ?? hydration.status}`));
+  const hydrationResult = JSON.parse(readFileSync(join(consumer, 'hydration-result.json'), 'utf8'));
+  const consoleNotes = hydrationResult.results.filter(({ consoleErrors }) => consoleErrors.length !== 0);
+  const exportCount = Object.values(serverResult.exportKeys).reduce((sum, names) => sum + names.length, 0);
+  console.log(`R1 exit packed SSR/hydration: ${serverResult.renders.length} renders (${planModules.length - 1} catalog examples plus fixtures) cover ${exportCount} runtime exports across ${componentModules.join(', ')}; SSR ${serverResult.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms; ${hydrationResult.results.length} hydrations without mismatch`);
+  for (const { id, consoleErrors } of consoleNotes) console.log(`R1 exit hydration note ${id}: ${consoleErrors[0]}`);
+
+  // Tree-shaking: a Button-only consumer keeps Button's own package modules and their
+  // installed dependency closure, nothing else; its stylesheet import must survive.
+  const installedPackage = realpathSync(join(consumer, 'node_modules/@muxui/react'));
+  const buttonModules = new Set();
+  const buttonImports = new Set();
+  for (const pending = ['generated/button.mjs']; pending.length !== 0;) {
+    const relative = pending.pop();
+    if (buttonModules.has(relative)) continue;
+    buttonModules.add(relative);
+    for (const [, specifier] of readFileSync(join(installedPackage, relative), 'utf8').matchAll(/^(?:import|export)\b[^;]*?\bfrom\s*['"]([^'"]+)['"]/gmu)) {
+      if (specifier.startsWith('.')) pending.push(posix.join(posix.dirname(relative), specifier));
+      else buttonImports.add(specifier.startsWith('@') ? specifier.split('/').slice(0, 2).join('/') : specifier.split('/')[0]);
+    }
+  }
+  const peerNames = Object.keys(expectedPeerDependencies);
+  const buttonPackages = new Set([...buttonImports].filter((name) => !peerNames.includes(name)).flatMap((name) => [
+    ...collectInstalledClosure(installedPackage, name, { excludedNames: peerNames }).keys(),
+  ]));
+  writeFileSync(join(consumer, 'tree-shaking-entry.mjs'), "import '@muxui/react/styles.css';\nimport { Button } from '@muxui/react';\nexport { Button };\n");
+  let bundle;
+  try {
+    bundle = await vite.build({
+      root: consumer,
+      configFile: false,
+      logLevel: 'silent',
+      build: {
+        write: false,
+        minify: false,
+        lib: { entry: join(consumer, 'tree-shaking-entry.mjs'), formats: ['es'], fileName: 'tree-shaking' },
+        rollupOptions: { external: [/^react(?:\/|$)/u, /^react-dom(?:\/|$)/u] },
+      },
+    });
+  } catch (error) {
+    fail('R1_EXIT_PACK_TREE_SHAKING_FAILED', `bundle failed: ${error.message}`);
+  }
+  const bundleOutput = [bundle].flat().flatMap(({ output }) => output);
+  const bundleModules = bundleOutput
+    .filter(({ type }) => type === 'chunk')
+    .flatMap(({ modules }) => Object.entries(modules))
+    .filter(([, { renderedLength }]) => renderedLength > 0)
+    .map(([id, { renderedLength }]) => ({ id, bytes: renderedLength }));
+  const packageModule = (id) => (bundledModulePackage(id) === '@muxui/react' ? id.replace(/\\/gu, '/').split('/@muxui/react/').at(-1) : null);
+  assertBundleRetention({
+    modules: bundleModules,
+    required: [{ label: '@muxui/react generated/button.mjs', test: (id) => packageModule(id) === 'generated/button.mjs' }],
+    forbidden: [
+      { label: 'Tiptap editor engine', test: (id) => /^(?:@tiptap\/|prosemirror-)/u.test(bundledModulePackage(id) ?? '') },
+      { label: 'Markdown parser', test: (id) => bundledModulePackage(id) === 'marked' },
+      { label: 'Motion runtime', test: (id) => ['motion', 'motion-dom', 'motion-utils', 'framer-motion'].includes(bundledModulePackage(id)) },
+      { label: 'Lucide', test: (id) => bundledModulePackage(id) === 'lucide-react' },
+      { label: 'unrelated @muxui/react modules', test: (id) => packageModule(id) !== null && !buttonModules.has(packageModule(id)) },
+      { label: 'packages outside the Button dependency closure', test: (id) => {
+        const name = bundledModulePackage(id);
+        return name !== null && name !== '@muxui/react' && !buttonPackages.has(name);
+      } },
+    ],
+  });
+  const bundleCss = bundleOutput.filter(({ type, fileName }) => type === 'asset' && fileName.endsWith('.css')).map(({ source }) => String(source)).join('\n');
+  if (!bundleCss.includes('.muxui-button')) fail('R1_EXIT_PACK_TREE_SHAKING_FAILED', 'the @muxui/react/styles.css import did not survive bundling');
+  const bundleBytes = bundleModules.reduce((sum, { bytes }) => sum + bytes, 0);
+  console.log(`R1 exit tree-shaking (vite ${viteVersion}, Button only): ${bundleBytes} rendered JS bytes from ${bundleModules.length} modules; @muxui/react keeps only ${[...buttonModules].join(', ')}; packages: ${summarizeBundleModules(bundleModules, 'consumer').map(([name, bytes]) => `${name} ${bytes}`).join(', ')}; stylesheet ${bundleCss.length} bytes kept`);
+
+  // Online clean-consumer install matrix: each available package manager installs the exact tarball from the public registry.
+  for (const { name, command } of packageManagerCandidates()) {
+    const environment = { ...cleanPackageManagerEnvironment(), npm_config_engine_strict: 'false' };
+    // Probe outside the repository so a Corepack shim ignores the workspace packageManager pin.
+    const probe = runPackageManager(command, ['--version'], { cwd: temp, env: environment });
+    if (probe.status !== 0 || probe.error) {
+      if (name === 'pnpm') fail('R1_EXIT_CONSUMER_MATRIX_UNAVAILABLE', 'pnpm is required for the online consumer matrix');
+      console.log(`R1 exit consumer matrix ${name}: skipped; ${name} is not available (${probe.error?.code ?? tail(probe.stderr || probe.stdout, 200).trim()})`);
+      continue;
+    }
+    const version = probe.stdout.trim();
+    const matrixConsumer = join(temp, `matrix-${name}`);
+    mkdirSync(matrixConsumer);
+    copyFileSync(archive, join(matrixConsumer, candidateArchiveName));
+    writeFileSync(join(matrixConsumer, 'package.json'), `${JSON.stringify({
+      name: `muxui-r1-exit-${name}-consumer`, private: true, type: 'module',
+      dependencies: { '@muxui/react': `file:./${candidateArchiveName}`, react: '19.2.8', 'react-dom': '19.2.8' },
+    }, null, 2)}\n`);
+    let installArgs;
+    if (name === 'pnpm') installArgs = ['install', '--ignore-scripts', '--no-frozen-lockfile', '--registry=https://registry.npmjs.org/'];
+    else if (name === 'npm') installArgs = ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org/'];
+    else if (Number.parseInt(version, 10) >= 2) {
+      writeFileSync(join(matrixConsumer, '.yarnrc.yml'), 'nodeLinker: node-modules\nenableScripts: false\nenableTelemetry: false\nenableImmutableInstalls: false\nnpmRegistryServer: "https://registry.npmjs.org"\n');
+      writeFileSync(join(matrixConsumer, 'yarn.lock'), '');
+      installArgs = ['install'];
+    } else installArgs = ['install', '--ignore-scripts', '--ignore-engines', '--non-interactive', '--registry', 'https://registry.npmjs.org/'];
+    const install = runPackageManager(command, installArgs, { cwd: matrixConsumer, env: environment, timeout: 600_000 });
+    if (install.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_INSTALL_FAILED', `${name} ${version}: ${tail(install.error?.message || install.stderr || install.stdout)}`);
+    copyConsumerTool(matrixConsumer, 'matrix-smoke.mjs');
+    const smoke = spawnSync(process.execPath, ['matrix-smoke.mjs', JSON.stringify(packedManifest.exports)], { cwd: matrixConsumer, encoding: 'utf8', stdio: 'pipe' });
+    if (smoke.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_IMPORT_FAILED', `${name} ${version}: ${tail(smoke.stderr || smoke.stdout)}`);
+    const smokeResult = JSON.parse(smoke.stdout.trim().split('\n').at(-1));
+    const { closure, version: tiptapCore } = assertSingleTiptapCore(matrixConsumer, `R1 exit consumer matrix ${name}`);
+    console.log(`R1 exit consumer matrix ${name} ${version}: online install, ${smokeResult.imported.length} subpaths imported, ${smokeResult.resolved.length} stylesheets resolved, SSR ${smokeResult.rendered.join(' and ')}, one @tiptap/core ${tiptapCore} across ${closure.size} runtime packages`);
+  }
 
   const publishDryRun = spawnSync('npm', ['publish', archive, '--dry-run', '--registry=https://registry.npmjs.org'], {
     cwd: repositoryRoot,

@@ -1,24 +1,43 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 import React from 'react';
+import { act } from 'react';
+import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { resolve } from 'node:path';
+import { createDom } from './support/dom.mjs';
 import {
+  AlertDialog,
   Breadcrumbs,
   Calendar,
   Checkbox,
   ComboBox,
+  CommandPalette,
   DatePicker,
   DateRangePicker,
+  HeaderNav,
+  Lightbox,
+  LightboxBackdrop,
+  LightboxClose,
+  LightboxContent,
+  LightboxNext,
+  LightboxPopup,
+  LightboxPrevious,
+  LightboxTrigger,
+  MultiSelect,
   NumberField,
+  PaymentInput,
   RangeCalendar,
   SearchField,
   Select,
+  Sidebar,
   TagGroup,
+  TagSelect,
   Tree,
 } from '../generated/index.mjs';
+import { TextEditor } from '../generated/text-editor.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const lucideIntegrity = 'sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==';
@@ -30,17 +49,37 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   const lockfile = await readFile(resolve(packageRoot, '../../pnpm-lock.yaml'), 'utf8');
   assert.match(lockfile, new RegExp(`lucide-react@1\\.37\\.0:\\n\\s+resolution: \\{integrity: ${lucideIntegrity.replaceAll('+', '\\+')}\\}`));
 
-  const sourceByFile = await Promise.all(['components.mjs', 'fields.mjs', 'collections.mjs', 'overlays.mjs']
-    .map(async (file) => [file, await readFile(resolve(packageRoot, 'src', file), 'utf8')]));
-  const source = sourceByFile.map(([, content]) => content).join('\n');
-  const iconModules = ['check', 'chevron-down', 'chevron-left', 'chevron-right', 'minus', 'plus', 'x'];
-  for (const icon of iconModules) assert.match(source, new RegExp(`from 'lucide-react/dist/esm/icons/${icon}\\.mjs'`));
-  assert.doesNotMatch(source, /from 'lucide-react\/dist\/esm\/icons\/calendar\.mjs'/u);
-  assert.doesNotMatch(source, /from ['"]lucide-react['"]/u);
+  // Every renderer source importing Lucide, with its exact deep icon modules.
+  // Deep default imports keep unbundled Node consumers off the full icon barrel.
+  const expectedIconsByFile = {
+    'collections.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'x'],
+    'components.mjs': ['check', 'chevron-down', 'minus'],
+    'fields.mjs': ['chevron-left', 'chevron-right', 'minus', 'plus', 'x'],
+    'overlays.mjs': ['x'],
+    'supplemental/index.mjs': ['check', 'chevron-down', 'chevrons-up-down', 'credit-card', 'external-link', 'menu', 'minus', 'search', 'x'],
+    'supplemental/lightbox.mjs': ['chevron-left', 'chevron-right', 'x'],
+    'tabs-motion.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'chevron-up'],
+    'text-editor/index.mjs': ['bold', 'image', 'italic', 'link', 'list', 'sparkles', 'text-align-center', 'text-align-end', 'text-align-start', 'type', 'underline'],
+  };
+  const sourceRoot = resolve(packageRoot, 'src');
+  const sourceFiles = (await readdir(sourceRoot, { recursive: true })).filter((file) => file.endsWith('.mjs') && file !== 'generate.mjs');
+  const actualIconsByFile = {};
+  for (const file of sourceFiles.sort()) {
+    const source = await readFile(resolve(sourceRoot, file), 'utf8');
+    const specifiers = [...source.matchAll(/from ['"](lucide-react[^'"]*)['"]/gu)].map(([, specifier]) => specifier);
+    if (specifiers.length === 0) continue;
+    for (const specifier of specifiers) assert.match(specifier, /^lucide-react\/dist\/esm\/icons\/[a-z0-9-]+\.mjs$/u, `${file} imports ${specifier}`);
+    actualIconsByFile[file] = specifiers.map((specifier) => specifier.slice('lucide-react/dist/esm/icons/'.length, -'.mjs'.length)).sort();
+  }
+  assert.deepEqual(actualIconsByFile, expectedIconsByFile);
 
-  const publicEntry = await readFile(resolve(packageRoot, 'generated/index.mjs'), 'utf8');
-  const publicTypes = await readFile(resolve(packageRoot, 'generated/index.d.ts'), 'utf8');
-  assert.doesNotMatch(`${publicEntry}\n${publicTypes}`, /lucide-react|lucide-[a-z-]+|IconProps/u);
+  const generatedRoot = resolve(packageRoot, 'generated');
+  const generatedFiles = await readdir(generatedRoot);
+  const publicEntry = await readFile(resolve(generatedRoot, 'index.mjs'), 'utf8');
+  for (const file of generatedFiles.filter((name) => name.endsWith('.d.ts'))) {
+    assert.doesNotMatch(await readFile(resolve(generatedRoot, file), 'utf8'), /lucide|\bIconProps\b|LucideProps|LucideIcon/u, file);
+  }
+  assert.doesNotMatch(publicEntry, /lucide-react|lucide-[a-z-]+|IconProps/u);
 
   const lucideManifest = JSON.parse(await readFile(resolve(packageRoot, 'node_modules/lucide-react/package.json'), 'utf8'));
   assert.equal(lucideManifest.version, '1.37.0');
@@ -118,4 +157,104 @@ test('MuxUI affordances render the accepted Lucide glyph mapping as decorative S
   assert.equal(dom.window.document.querySelector('.muxui-breadcrumbs svg'), null);
   assert.equal(dom.window.document.querySelector('.muxui-search-field .lucide-search'), null);
   dom.window.close();
+});
+
+const r16Items = [{ id: 'react', label: 'React' }, { id: 'css', label: 'CSS' }];
+const h = React.createElement;
+// Each R1.6 Lucide root renders every affordance; `open` names triggers to click
+// first. Expected labels come from the owning control; null marks an icon with
+// no interactive ancestor, which must stay decorative beside its text.
+const r16IconCases = [
+  ['AlertDialog', () => h(AlertDialog.Root, { defaultOpen: true }, h(AlertDialog.Trigger, null, 'Delete'), h(AlertDialog.Backdrop, null, h(AlertDialog.Popup, null, h(AlertDialog.Content, null, h(AlertDialog.Title, null, 'Delete?'), h(AlertDialog.Close), h(AlertDialog.Actions, null, h(AlertDialog.Close, null, 'Cancel')))))), [], [
+    ['lucide-x', 'Close'],
+  ]],
+  ['CommandPalette', () => h(CommandPalette.Root, { defaultOpen: true }, h(CommandPalette.Trigger, null, 'Commands'), h(CommandPalette.Backdrop, null, h(CommandPalette.Popup, { 'aria-label': 'Commands' }, h(CommandPalette.Close), h(CommandPalette.Content, null, h(CommandPalette.Chips, null, h(CommandPalette.Chip, null, 'Docs', h(CommandPalette.ChipRemove))), h(CommandPalette.Input, { 'aria-label': 'Search commands' }), h(CommandPalette.ListBox, null, h(CommandPalette.Item, { id: 'docs', title: 'Open docs', textValue: 'Open docs' })))))), [], [
+    ['lucide-x', 'Close'],
+    ['lucide-x', 'Remove chip'],
+  ]],
+  ['HeaderNav', () => h(HeaderNav.Root, null, h(HeaderNav.Logo, { href: '/' }, 'Mux'), h(HeaderNav.MobileTrigger, null, h(HeaderNav.NavButton, { href: '/docs' }, 'Docs'))), ['.muxui-header-nav__mobile-trigger'], [
+    ['lucide-menu', 'Open navigation'],
+    ['lucide-x', 'Close navigation'],
+  ]],
+  ['Sidebar', () => h(Sidebar.Root, null, h(Sidebar.Search), h(Sidebar.NavList, null, h(Sidebar.NavItem, { href: '/docs', items: [{ href: '/docs/a', label: 'A' }] }, 'Docs'), h(Sidebar.NavItem, { href: 'https://example.com', external: true }, 'External')), h(Sidebar.AccountCard, { name: 'Ada', email: 'ada@example.com' }), h(Sidebar.MobileTrigger, null, 'Menu')), ['.muxui-sidebar__mobile-menu-btn'], [
+    ['lucide-search', null],
+    ['lucide-chevron-down', 'Docs'],
+    ['lucide-external-link', 'External'],
+    ['lucide-chevrons-up-down', 'Account options'],
+    ['lucide-menu', 'Open navigation'],
+    ['lucide-x', 'Close navigation'],
+  ]],
+  ['MultiSelect', () => h(MultiSelect.Root, { label: 'Technologies', items: r16Items, showSearch: true, defaultSelectedKeys: new Set(['react']) }, (item) => h(MultiSelect.Item, { id: item.id, textValue: item.label }, item.label)), ['.muxui-multi-select__trigger'], [
+    ['lucide-chevron-down', 'Technologies'],
+    ['lucide-search', null],
+  ]],
+  ['PaymentInput', () => h(PaymentInput.Root, null, h(PaymentInput.Label, null, 'Card number'), h(PaymentInput.Group, null, h(PaymentInput.Input, { inputMode: 'numeric' }), h(PaymentInput.CardIcon))), [], [
+    ['lucide-credit-card', null],
+  ]],
+  ['TagSelect', () => h(TagSelect.Root, { label: 'Tags', items: r16Items, defaultSelectedKeys: new Set(['react', 'css']) }, (item) => item.label), [], [
+    ['lucide-x', 'Remove React'],
+    ['lucide-x', 'Remove CSS'],
+  ]],
+  ['Lightbox', () => h(Lightbox, { items: [{ key: 'a', label: 'A' }, { key: 'b', label: 'B' }], defaultOpen: true }, h(LightboxTrigger, { itemKey: 'a' }, 'Open'), h(LightboxBackdrop, null, h(LightboxPopup, null, h(LightboxContent, { renderContent: () => 'Slide' }), h(LightboxPrevious), h(LightboxNext), h(LightboxClose)))), [], [
+    ['lucide-chevron-left', 'Previous'],
+    ['lucide-chevron-right', 'Next'],
+    ['lucide-x', 'Close'],
+  ]],
+  ['TextEditor', () => h(TextEditor, { label: 'Note', toolbar: 'advanced', floating: true }), [], [
+    ['lucide-bold', 'Bold'],
+    ['lucide-italic', 'Italic'],
+    ['lucide-underline', 'Underline'],
+    ['lucide-type', 'Text color'],
+    ['lucide-link', 'Insert link'],
+    ['lucide-image', 'Insert image'],
+    ['lucide-text-align-start', 'Align left'],
+    ['lucide-text-align-center', 'Align center'],
+    ['lucide-text-align-end', 'Align right'],
+    ['lucide-list', 'Bullet list'],
+    ['lucide-sparkles', 'Generate with AI'],
+  ]],
+];
+
+function controlName(control) {
+  const label = control.getAttribute('aria-label');
+  if (label !== null) return label.trim();
+  const labelledBy = control.getAttribute('aria-labelledby');
+  if (labelledBy) return labelledBy.split(/\s+/u).map((id) => control.ownerDocument.getElementById(id)?.textContent ?? '').join(' ').trim();
+  const clone = control.cloneNode(true);
+  for (const svg of clone.querySelectorAll('svg')) svg.remove();
+  return clone.textContent.trim();
+}
+
+test('R1.6 Lucide roots keep icons decorative and take accessible names from the owning control', async () => {
+  const { restore } = createDom('<div id="root"></div>', { layoutStubs: true });
+  try {
+    for (const [name, fixture, openSelectors, expected] of r16IconCases) {
+      const container = document.createElement('div');
+      document.body.append(container);
+      const root = createRoot(container);
+      try {
+        await act(async () => root.render(h(fixture)));
+        for (const selector of openSelectors) {
+          const trigger = document.querySelector(selector);
+          assert.ok(trigger, `${name} trigger ${selector}`);
+          await act(async () => trigger.click());
+        }
+        const icons = [...document.querySelectorAll('svg.lucide')].map((svg) => {
+          const control = svg.closest('button, summary, a[href], [role="button"], [role="link"], [role="menuitem"], [role="option"], [role="tab"]');
+          assert.equal(svg.getAttribute('aria-hidden'), 'true', `${name} ${svg.getAttribute('class')} is hidden from assistive technology`);
+          assert.equal(svg.hasAttribute('tabindex'), false, `${name} ${svg.getAttribute('class')} is not focusable`);
+          assert.equal(svg.getAttribute('focusable'), 'false', `${name} ${svg.getAttribute('class')} opts out of legacy SVG focus`);
+          return [[...svg.classList].find((className) => className.startsWith('lucide-')), control ? controlName(control) : null];
+        });
+        assert.deepEqual(icons, expected, `${name} icon labels`);
+      } finally {
+        await act(async () => root.unmount());
+        // Tiptap destroys its view on a timer after unmount; let it run while the DOM exists.
+        await new Promise((done) => setTimeout(done, 10));
+        document.body.replaceChildren();
+      }
+    }
+  } finally {
+    restore();
+  }
 });
