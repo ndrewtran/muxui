@@ -370,6 +370,36 @@ test('token changes request compiler and theme contrast proof without behavior o
   ]);
 });
 
+test('foundation guide changes validate the catalog, tooling dense goldens, and docs', async () => {
+  const path = 'catalog/guides/foundations-component-tokens.md';
+  const result = await plan([path]);
+
+  assert.equal(result.catalog && result.docs, true);
+  assert.deepEqual(result.packageChecks, ['@muxui/tooling']);
+  assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling || result.policy, false);
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.storyRuns, []);
+  assert.deepEqual(result.reasons, [
+    `${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`,
+  ]);
+  const groups = executionGroups(result, { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(groups), ['checks', 'browser']);
+  assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
+    ['--filter', '@muxui/catalog', 'run', 'check'],
+    ['--filter', '@muxui/docs', 'run', 'check'],
+    ['--filter', '@muxui/tooling', 'run', 'check'],
+  ]);
+});
+
+test('per-family usage guides take the guide route without selecting their component family', async () => {
+  const result = await plan(['catalog/guides/number-field-usage.md', 'catalog/guides/number-field-usage.json']);
+
+  assert.equal(result.catalog && result.docs, true);
+  assert.deepEqual(result.packageChecks, ['@muxui/tooling']);
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.storyRuns, []);
+});
+
 test('Scale, Starlight docs, and CI policy edits stay in their independent owner scopes', async () => {
   const scale = await plan(['apps/scale/test/browser/theme-builder.test.mjs']);
   assert.equal(scale.scale, true);

@@ -25,7 +25,9 @@ verified named test cases and browser proofs, and every Storybook page in those
 families. A changed authored example or Storybook story export selects only its
 canonical page ID. Theme/token changes run their compiler and projection checks
 with theme color and contrast proofs, without component keyboard suites.
-Documentation-only changes run the documentation owner; Scale-only changes
+Documentation-only changes run the documentation owner. Catalog guide changes
+run the catalog, documentation, and `@muxui/tooling` checks, because guide bytes
+feed the catalog digest that the tooling dense goldens pin. Scale-only changes
 run the theme-authoring checks, and Scale source also runs the documentation
 owner that embeds it. Either route runs the Scale docs browser test, which
 builds the docs site first. Repository-policy, workflow, policy-run fixture, and
