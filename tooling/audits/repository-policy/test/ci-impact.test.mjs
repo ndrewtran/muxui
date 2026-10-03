@@ -17,6 +17,7 @@ import {
   groupMatrix,
   groupPackageDirectories,
   isPolicyOnlyLockfileChange,
+  isWorkspaceWideChange,
   needsStorybookGeneration,
   normalizeCommand,
   parseCliArguments,
@@ -1670,6 +1671,15 @@ test('records pruned with a removed devDependency route to the importer that dro
   const dangling = nativeLockfile(false).replace('  react@19.2.8:\n    dependencies:\n      scheduler: 0.27.0\n',
     '  react@19.2.8:\n    dependencies:\n      react-is: 19.2.8\n      scheduler: 0.27.0\n');
   assert.throws(() => changedLockfileImporters(lockfileBefore, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING/u);
+});
+
+test('workspace-wide inputs skip lockfile importer mapping for override-only settings changes', () => {
+  const lockfileBefore = nativeLockfile(true);
+  const overridden = lockfileBefore.replace('importers:', "overrides:\n  scheduler: 0.27.0\n\nimporters:");
+  assert.throws(() => changedLockfileImporters(lockfileBefore, overridden), /lockfile settings changed/u);
+  assert.equal(isWorkspaceWideChange(['pnpm-workspace.yaml', 'pnpm-lock.yaml'], config), true);
+  assert.equal(isWorkspaceWideChange(['pnpm-lock.yaml'], config), false);
+  assert.equal(isWorkspaceWideChange(['package.json'], config, '{}', '{"devDependencies":{"x":"1.0.0"}}'), true);
 });
 
 test('React examples no Storybook story uses validate the catalog, docs, and family React proof', async () => {
