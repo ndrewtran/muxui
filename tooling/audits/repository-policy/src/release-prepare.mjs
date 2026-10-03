@@ -782,16 +782,13 @@ try {
     },
     rollback: {
       status: 'prepared-not-exercised',
-      trigger: ['published consumer verification failure', 'integrity/provenance mismatch', 'dist-tag drift'],
+      trigger: ['published consumer verification failure', 'integrity/provenance mismatch'],
       steps: [
         `stop further publication and preserve the immutable ${candidateVersion} version and manifest`,
-        `run npm deprecate on @muxui/react@${candidateVersion} with a message naming the failure and its fixed successor`,
+        `with Andrew's separate explicit authorization, run npm deprecate on @muxui/react@${candidateVersion} with a message naming the failure and its fixed successor`,
         `fix forward by publishing a corrected ${fixForwardVersion} to next through a separately authorized publication`,
         `optional, only after ${fixForwardVersion} is verified and with Andrew's separate explicit authorization at the time: re-point latest from the deprecated ${candidateVersion} to ${fixForwardVersion}`,
         'retain the candidate artifact and failed verification for audit; latest is otherwise not claimed or promoted (the registry sets latest on first publish) and stable is not promoted',
-      ],
-      driftOnly: [
-        `if next was moved but the published ${candidateVersion} is fine, re-point next to the verified ${candidateVersion} through a separately authorized dist-tag mutation; do not deprecate`,
       ],
       forbidden: [
         'overwrite or republish the immutable package version',
