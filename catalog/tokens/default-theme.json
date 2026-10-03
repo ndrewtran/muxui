@@ -2448,27 +2448,17 @@
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Edge of a checked or indeterminate invalid Checkbox indicator; the dark scheme keeps the selected-control fill. CheckboxField indicators share this Checkbox role.",
+      "meaning": "Edge of a checked or indeterminate invalid Checkbox indicator in every interaction state and both schemes. CheckboxField indicators share this Checkbox role.",
       "overridePolicy": "theme",
-      "alias": "semantic.feedback.invalid-border",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.action.selection-background"
-        }
-      }
+      "alias": "semantic.feedback.invalid-border"
     },
     "component.checkbox.invalid-border-hover": {
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Edge of a hovered unselected invalid Checkbox indicator; the dark scheme uses the hover edge. CheckboxField indicators share this Checkbox role.",
+      "meaning": "Edge of a hovered unselected invalid Checkbox indicator in both schemes. CheckboxField indicators share this Checkbox role.",
       "overridePolicy": "theme",
-      "alias": "semantic.feedback.invalid-border",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.color.neutral-default-40"
-        }
-      }
+      "alias": "semantic.feedback.invalid-border"
     },
     "component.checkbox.selected-background": {
       "layer": "component",
@@ -2513,27 +2503,17 @@
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Track edge of an unselected invalid Switch.",
+      "meaning": "Track edge of an unselected invalid Switch in every interaction state and both schemes.",
       "overridePolicy": "theme",
-      "alias": "semantic.feedback.invalid",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.feedback.invalid-border"
-        }
-      }
+      "alias": "semantic.feedback.invalid-border"
     },
     "component.switch.selected-invalid-border": {
       "layer": "component",
       "type": "color",
       "unit": "hex",
-      "meaning": "Track edge of a selected invalid Switch; the dark scheme keeps the selected-control fill.",
+      "meaning": "Track edge of a selected invalid Switch in every interaction state and both schemes.",
       "overridePolicy": "theme",
-      "alias": "semantic.feedback.invalid",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.action.selection-background"
-        }
-      }
+      "alias": "semantic.feedback.invalid-border"
     },
     "component.switch.selected-track": {
       "layer": "component",

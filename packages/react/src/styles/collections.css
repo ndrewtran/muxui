@@ -873,8 +873,13 @@
   background-color: var(--muxui-semantic-surface-hover);
 }
 
-.muxui-radio[data-invalid] .muxui-radio-indicator {
-  border-color: var(--muxui-semantic-feedback-invalid);
+/* The invalid edge wins in every state. The hovered selector matches the
+   selected hover rule's specificity, outranks the unselected hover rule, and
+   follows both in source order. :where() names the owning RadioGroup without
+   adding specificity. */
+.muxui-radio[data-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
+.muxui-radio[data-invalid][data-hovered]:not([data-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
+  border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
 .muxui-radio[data-disabled] {
@@ -3051,12 +3056,6 @@
   }
 }
 
-@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-radio[data-invalid] .muxui-radio-indicator {
-    border-color: var(--muxui-semantic-feedback-invalid-border);
-  }
-}
-
 .muxui-color-swatch-picker-item[data-focus-visible],
 .muxui-color-swatch-picker-item:focus-visible {
   box-shadow:
@@ -3222,6 +3221,16 @@
         color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
       );
     }
+  }
+}
+
+/* Keep the invalid edge above the scheme-scoped Radio edges: the rest selector
+   ties the dark selected rule and must stay after it; the hovered selector
+   outranks the dark hover rule. */
+@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
+  :scope .muxui-radio[data-invalid] .muxui-radio-indicator:where(.muxui-radio-group *),
+  :scope .muxui-radio[data-invalid][data-hovered]:not([data-disabled]) .muxui-radio-indicator:where(.muxui-radio-group *) {
+    border-color: var(--muxui-semantic-feedback-invalid-border);
   }
 }
 

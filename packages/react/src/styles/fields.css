@@ -483,12 +483,16 @@
   background-color: var(--muxui-semantic-color-neutral-26);
 }
 
-.muxui-switch[data-invalid]::before {
+/* The invalid edge wins in every state. The unselected hovered selector
+   outranks the unselected hover rule; the selected hovered selector matches the
+   selected hover rule's specificity and follows it in source order. */
+.muxui-switch[data-invalid]::before,
+.muxui-switch[data-invalid][data-hovered]:not([data-disabled], [data-selected])::before {
   border-color: var(--muxui-component-switch-invalid-border);
 }
 
-/* Outranks the selected and invalid rules but yields to selected hover. */
-.muxui-switch[data-invalid][data-selected]::before {
+.muxui-switch[data-invalid][data-selected]::before,
+.muxui-switch[data-invalid][data-selected][data-hovered]::before {
   border-color: var(--muxui-component-switch-selected-invalid-border);
 }
 
