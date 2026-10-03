@@ -442,6 +442,13 @@ async function reactTestSources() {
   return sources;
 }
 
+// Tracked files outside packages/react/src whose text names `needle`.
+async function trackedReferences(needle) {
+  const result = git(['grep', '-l', '-z', '-F', '-e', needle, '--', '.', ':!packages/react/src'], { allowFailure: true });
+  if (result.status > 1) throw new Error(`MUXUI_CI_IMPACT_GIT_FAILED: git grep ${needle} exited ${result.status}`);
+  return result.stdout.toString('utf8').split('\0').filter(Boolean).map(normalizePath).sort();
+}
+
 // Every text file under packages/react/test, keyed `test/...`, for helper scans.
 async function reactTestReferenceTexts() {
   const root = resolve(repositoryRoot, 'packages/react/test');
@@ -591,6 +598,14 @@ function applyPackageImpact(plan, packageName, records) {
   return packageName;
 }
 
+// Applies a workspace package's impact; packages without a dedicated plan
+// flag run their own package check.
+function routePackage(plan, packageName, records) {
+  const description = applyPackageImpact(plan, packageName, records);
+  if (description === packageName) plan.packageChecks.add(packageName);
+  return description;
+}
+
 function routeLockfileImporter(plan, importer, packages, records) {
   const owner = packageByPath(importer, packages);
   if (!owner || owner.path !== importer) {
@@ -601,6 +616,13 @@ function routeLockfileImporter(plan, importer, packages, records) {
     addUnique(plan.packageChecks, owner.name);
   }
   plan.reasons.push(`lockfile importer ${importer} changes ${description}`);
+}
+
+function requirePackage(packages, name, path) {
+  if (!packages.some((item) => item.name === name)) {
+    throw new Error(`MUXUI_CI_IMPACT_OWNER_MISSING: ${path} names unknown owner ${name}`);
+  }
+  return name;
 }
 
 function storybookFamilies(records) {
@@ -804,6 +826,7 @@ export async function buildPullRequestImpact({
   moduleSources,
   componentTestSources = {},
   reactTestReferenceSources = {},
+  findReferences = async () => [],
   compareGeneratorEmissions = compareStorybookGeneratorEmissions,
   rootPackageBefore,
   rootPackageAfter,
@@ -846,8 +869,20 @@ export async function buildPullRequestImpact({
   };
   const missing = [];
   const reactGeneratorPaths = [];
+  // Files outside packages/react/src can name a React module by path (tests,
+  // browser entries, apps, catalog inputs). A deleted module's referencing
+  // files are routed through their own owners as though they changed.
+  const routedPaths = [...changed];
+  for (const path of changed.filter((candidate) => candidate.startsWith('packages/react/src/') && candidate.endsWith('.mjs'))) {
+    if (await readHeadText(path) !== null) continue;
+    for (const reference of await findReferences(path.slice('packages/react/'.length))) {
+      if (routedPaths.includes(reference) || reference.startsWith('packages/react/src/')) continue;
+      routedPaths.push(reference);
+      plan.reasons.push(`${reference} references deleted ${path}; validate its owner`);
+    }
+  }
 
-  for (const path of changed) {
+  for (const path of routedPaths) {
     if (config.fullInputPaths.includes(path)) {
       plan.fullReasons.push(`${path} is a workspace-wide execution input`);
       continue;
@@ -884,20 +919,24 @@ export async function buildPullRequestImpact({
       plan.reasons.push(`${path} changes theme/token inputs; validate compiler, projections, and consumer contrast`);
       continue;
     }
-    // The React projection compiler reads these canonical inputs, and policy
-    // release preparation and its tests read them too.
-    if (matches(path, config.reactGeneratorInputPrefixes)) {
-      plan.policy = true;
-      reactGeneratorPaths.push(path);
-      plan.reasons.push(`${path} is a React projection compiler and release-preparation input`);
+    // Canonical React catalog inputs route to each verified reader: the React
+    // projection compiler, policy release preparation, package tests, and the
+    // Storybook unit tests that read them.
+    const catalogReaders = Object.entries(config.reactCatalogInputReaders ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
+    if (catalogReaders) {
+      if (catalogReaders.reactGenerator) reactGeneratorPaths.push(path);
+      if (catalogReaders.policy) plan.policy = true;
+      for (const name of catalogReaders.packageChecks ?? []) routePackage(plan, requirePackage(packages, name, path), records);
+      for (const { file, names } of catalogReaders.storybookUnitTests ?? []) {
+        plan.storyTooling = true;
+        addStoryUnitTest(plan, { file, testNamePattern: names.map((name) => `^${name}$`).join('|') });
+      }
+      plan.reasons.push(`${path} is a canonical React catalog input; validate its readers`);
       continue;
     }
     const fixtureOwner = Object.entries(config.packageFixtureOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
     if (fixtureOwner) {
-      if (!packages.some(({ name }) => name === fixtureOwner)) {
-        throw new Error(`MUXUI_CI_IMPACT_OWNER_MISSING: ${path} names unknown fixture owner ${fixtureOwner}`);
-      }
-      plan.packageChecks.add(fixtureOwner);
+      routePackage(plan, requirePackage(packages, fixtureOwner, path), records);
       plan.reasons.push(`${path} is a fixture read by ${fixtureOwner} tests`);
       continue;
     }
@@ -973,16 +1012,22 @@ export async function buildPullRequestImpact({
     }
 
     if (path.startsWith('apps/react-storybook/')) {
-      if (config.reactStorybookChromePaths.includes(path)) {
-        plan.storyChrome = true;
-        plan.reasons.push(`${path} changes Storybook manager chrome`);
-      } else if (config.reactStorybookSharedPaths.includes(path)) {
-        storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+      const chrome = config.reactStorybookChromePaths.includes(path);
+      const shared = config.reactStorybookSharedPaths.includes(path);
+      if (chrome || shared) {
+        // A config file can shape both the manager chrome and every page.
+        if (chrome) {
+          plan.storyChrome = true;
+          plan.reasons.push(`${path} changes Storybook manager chrome`);
+        }
+        if (shared) {
+          storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+          plan.reasons.push(`${path} is shared by every Storybook page`);
+        }
         if (storybookUnitRoute(path)) {
           plan.storyTooling = true;
           addStoryUnitRoute(plan, path);
         }
-        plan.reasons.push(`${path} is shared by every Storybook page`);
       } else if (config.reactStorybookGeneratorPaths.includes(path)) {
         plan.storyTooling = true;
         plan.reasons.push(`${path} changes Storybook generation; generated page diffs decide whether page audits are needed`);
@@ -1030,10 +1075,16 @@ export async function buildPullRequestImpact({
         plan.reactFamilies.add(record.family);
         plan.storyFamilies.add(record.export ?? record.family);
         plan.catalog = true;
+        // Docs render every component record.
+        plan.docs = true;
         plan.reasons.push(`${path} changes the canonical component record for ${record.family}`);
-      } else if (/\/examples\/react\/.*\.tsx?$/u.test(path) || /\/examples\/react\/.*\.example\.json$/u.test(path)) {
+      } else if (/\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)) {
         const owners = routeCatalogExample(path, pageIndex);
         plan.catalog = true;
+        // Docs load every React example, and the React example type test
+        // compiles every example source.
+        plan.docs = true;
+        if (path.endsWith('.tsx')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
         if (owners.length > 0) {
           for (const owner of owners) {
             plan.storyIds.add(owner.id);
@@ -1042,13 +1093,12 @@ export async function buildPullRequestImpact({
           plan.reasons.push(`${path} is checked against its canonical Storybook page mapping`);
           continue;
         }
-        // No Storybook story reads this example. Docs render it, and the
-        // React example type test compiles every example source.
         if (!record) throw new Error(`MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING: ${path} names no canonical React component ${parts[2]}`);
-        plan.docs = true;
         plan.reactFamilies.add(record.family);
-        if (path.endsWith('.tsx') || path.endsWith('.ts')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
         plan.reasons.push(`${path} is a React example no Storybook story uses; validate the catalog, docs, and ${record.family} React proof`);
+      } else if (path.includes('/examples/react/')) {
+        // Docs and the example type test read only `.tsx` sources.
+        throw new Error(`MUXUI_CI_IMPACT_EXAMPLE_SOURCE_UNSUPPORTED: ${path}; React examples are .tsx sources with .example.json records`);
       } else {
         plan.catalog = true;
         plan.reasons.push(`${path} is a catalog-owned input`);
@@ -1075,8 +1125,7 @@ export async function buildPullRequestImpact({
     const packageOwner = packageByPath(path, packages);
     if (packageOwner) {
       const { name } = packageOwner;
-      const description = applyPackageImpact(plan, name, records);
-      if (description === name) plan.packageChecks.add(name);
+      routePackage(plan, name, records);
       plan.reasons.push(`${path} is owned by ${name}`);
       continue;
     }
@@ -1127,8 +1176,12 @@ export async function buildPullRequestImpact({
   // The projection compiler and every local module it imports (at base or
   // head) shape every generated family, as do its canonical catalog inputs.
   const generatorModules = new Set([reactGeneratorPath]);
+  const importsBySide = reactSourcePaths.length === 0 ? { before: new Map(), after: new Map() } : {
+    before: localModuleImports(moduleSources, 'before'),
+    after: localModuleImports(moduleSources, 'after'),
+  };
   for (const side of ['before', 'after']) {
-    const imports = localModuleImports(moduleSources, side);
+    const imports = importsBySide[side];
     const queue = [reactGeneratorPath];
     while (queue.length > 0) {
       for (const target of imports.get(queue.shift()) ?? []) {
@@ -1147,7 +1200,7 @@ export async function buildPullRequestImpact({
     plan.tailwind = true;
     plan.reasons.push(`React projection compiler inputs changed (${reactGeneratorPaths.join(', ')}); every canonical React family is affected`);
   }
-  const baseImporters = new Set([...localModuleImports(moduleSources, 'before').values()].flat());
+  const baseImporters = new Set([...importsBySide.before.values()].flat());
   for (const path of reactSourcePaths) {
     if (generatorModules.has(path)) continue;
     const headSource = await readHeadText(path);
@@ -1270,13 +1323,13 @@ export function needsStorybookGeneration(paths, config, {
   const sourceNeedsMetadata = paths.some((path) => path.startsWith('packages/react/src/')
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
     || (path.startsWith('catalog/components/') && (/\/artifact\.json$/u.test(path)
-      || /\/examples\/react\/.*\.(?:tsx?|example\.json)$/u.test(path)))
+      || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))
     || path.startsWith('apps/react-storybook/src/')
     || path.startsWith('apps/react-storybook/test/')
     || path.startsWith('apps/react-storybook/.storybook/')
     || path === 'apps/react-storybook/package.json'
     || matches(path, config.themePrefixes)
-    || matches(path, config.reactGeneratorInputPrefixes)
+    || Object.keys(config.reactCatalogInputReaders ?? {}).some((prefix) => matches(path, [prefix]))
     || config.reactStorybookSharedPaths.includes(path)
     || config.reactStorybookChromePaths.includes(path)
     || config.reactStorybookGeneratorPaths.includes(path)
@@ -1733,7 +1786,13 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
   const moduleSources = reactSourceChanged ? await reactModuleSources(mergeBase) : {};
   // Any route that selects React families (source, CSS, catalog records) needs the test sources.
   const componentTestSources = needsMetadata ? await reactTestSources() : {};
-  const reactTestHelperChanged = changedPaths.some((path) => path.startsWith('packages/react/test/') && !path.endsWith('.test.mjs'));
+  const reactModuleDeleted = (await Promise.all(changedPaths
+    .filter((path) => path.startsWith('packages/react/src/') && path.endsWith('.mjs'))
+    .map(async (path) => await currentText(path) === null))).some(Boolean);
+  // Deleted modules can be referenced from test helpers, so their references
+  // need the same helper scan as a helper change.
+  const reactTestHelperChanged = reactModuleDeleted
+    || changedPaths.some((path) => path.startsWith('packages/react/test/') && !path.endsWith('.test.mjs'));
   const reactTestReferenceSources = reactTestHelperChanged ? await reactTestReferenceTexts() : {};
   const readBaseText = async (path) => textAtRef(mergeBase, path);
   const readHeadText = currentText;
@@ -1748,6 +1807,7 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
     moduleSources,
     componentTestSources,
     reactTestReferenceSources,
+    findReferences: trackedReferences,
     rootPackageBefore,
     rootPackageAfter,
     reactPackageBefore,

@@ -149,11 +149,24 @@
       "packages/foundation/",
       "packages/tokens/"
     ],
-    "reactGeneratorInputPrefixes": [
-      "catalog/react-r1-0/",
-      "catalog/react-r1-5/",
-      "catalog/react-r1-6/"
-    ],
+    "reactCatalogInputReaders": {
+      "catalog/react-r1-0/": {
+        "reactGenerator": true,
+        "policy": true,
+        "packageChecks": ["@muxui/schema"],
+        "storybookUnitTests": [
+          {
+            "file": "test/storybook.test.mjs",
+            "names": [
+              "private host and exact Mux UI React family projection",
+              "every story exposes exactly its canonical Mux UI-owned properties"
+            ]
+          }
+        ]
+      },
+      "catalog/react-r1-5/": { "reactGenerator": true, "policy": true },
+      "catalog/react-r1-6/": { "reactGenerator": true, "policy": true }
+    },
     "packageFixtureOwners": {
       "tests/fixtures/g0.5/": "@muxui/tooling",
       "tests/fixtures/g1.1/": "@muxui/web",
@@ -197,6 +210,7 @@
     ],
     "reactStorybookChromePaths": [
       "apps/react-storybook/src/storybook-theme.mjs",
+      "apps/react-storybook/.storybook/main.mjs",
       "apps/react-storybook/.storybook/manager.mjs",
       "apps/react-storybook/.storybook/theme.mjs"
     ]

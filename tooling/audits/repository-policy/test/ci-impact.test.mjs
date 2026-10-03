@@ -42,7 +42,7 @@ import {
 } from '../src/ci-reuse.mjs';
 import { componentTestSelection } from '../src/component-test-selection.mjs';
 import { loadPolicy } from '../src/policy.mjs';
-import { dependencyClosure } from '../src/scoped-verification.mjs';
+import { dependencyClosure, familyRecordsFromContract } from '../src/scoped-verification.mjs';
 import { discoverWorkspacePackages } from '../src/workspace-packages.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -963,10 +963,10 @@ test('a React-test-only group generates the React closure it imports in its own 
   assert.equal(check.args.at(-1), testFile);
 });
 
-test('story-only groups generate Storybook metadata unless this process already prepared it', async () => {
+test('story page groups generate Storybook metadata unless this process already prepared it', async () => {
   const result = await plan([sizingExamplePath]);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'storybook-story']);
+  assert.deepEqual(groupIds(groups), ['checks', 'browser', 'react', 'storybook-story']);
   for (const group of groups) {
     assert.equal(group.commands[0].prerequisite, true);
     assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
@@ -1452,7 +1452,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     assert.equal(result.status, 0, result.stderr);
     const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
     assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
-    assert.deepEqual(delta.groupIds, ['checks', 'browser', 'storybook-story']);
+    assert.deepEqual(delta.groupIds, ['checks', 'browser', 'react', 'storybook-story']);
     assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
   } finally {
     rmSync(root, { recursive: true, force: true });
@@ -1548,6 +1548,36 @@ test('deleting an unimported React module runs the React package check', async (
     textSnapshots: { [cardStubPath]: { before: stub, after: "export { TagSelect } from './index.mjs';\n" } },
     moduleSources: { ...generatorModuleSources, [cardStubPath]: { before: stub, after: "export { TagSelect } from './index.mjs';\n" } },
   }), /MUXUI_CI_IMPACT_SOURCE_OWNERSHIP/u);
+});
+
+test('a deleted React module still named outside React source routes to each referencing owner', async () => {
+  const reactTestReferenceSources = await reactTestTexts();
+  const deleted = (path, references) => plan([path], {
+    packages: workspacePackages,
+    reactTestReferenceSources,
+    textSnapshots: { [path]: { before: 'export const Probe = 1;\n', after: null } },
+    moduleSources: { ...generatorModuleSources, [path]: { before: 'export const Probe = 1;\n', after: null } },
+    findReferences: async (needle) => {
+      assert.equal(needle, path.slice('packages/react/'.length));
+      return references;
+    },
+  });
+
+  const commandPalette = await deleted('packages/react/src/supplemental/command-palette.mjs', [
+    'packages/react/test/browser/bento-input-controls.test.mjs',
+    'packages/react/test/command-palette-hook.test.mjs',
+  ]);
+  assert.deepEqual(commandPalette.reactTestFiles, [
+    'test/browser/bento-input-controls.test.mjs',
+    'test/command-palette-hook.test.mjs',
+  ]);
+  assert.deepEqual(commandPalette.packageChecks, ['@muxui/react']);
+
+  const buttonFixture = await deleted('packages/react/src/button-fixture.mjs', ['apps/react-playground/src/main.jsx']);
+  assert.deepEqual(buttonFixture.packageChecks, ['@muxui/react', '@muxui/react-playground']);
+
+  // A reference with no owner route fails instead of being dropped.
+  await assert.rejects(deleted('packages/react/src/button-fixture.mjs', ['scripts/unowned.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING: scripts\/unowned\.mjs/u);
 });
 
 test('modules the React projection compiler imports take the compiler route', async () => {
@@ -1664,10 +1694,19 @@ test('React examples no Storybook story uses validate the catalog, docs, and fam
     { proof: 'story', storyIds: ['muxui-react-r1-2-number-field--browser-proof'] },
   ]);
 
-  // An example a story renders keeps its exact page selection.
+  // An example a story renders keeps its exact page selection, and docs and
+  // the example type test still read it.
   const exact = await plan([sizingExamplePath]);
   assert.deepEqual(exact.storyIds, [sizingStoryId]);
   assert.deepEqual(exact.reactFamilies, []);
+  assert.equal(exact.docs, true);
+  assert.deepEqual(exact.reactTestFiles, ['test/catalog-examples-types.test.mjs']);
+
+  // Docs render every component record.
+  assert.equal((await plan(['catalog/components/tree/artifact.json'])).docs, true);
+
+  // Docs and the type test read only .tsx sources.
+  await assert.rejects(plan(['catalog/components/tree/examples/react/basic.ts']), /MUXUI_CI_IMPACT_EXAMPLE_SOURCE_UNSUPPORTED/u);
 });
 
 test('generator inputs, package fixtures, and Storybook config each route to their owner', async () => {
@@ -1676,6 +1715,17 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   const generatorInput = await route('catalog/react-r1-6/supplemental-components.json');
   assert.equal(generatorInput.reactPackageFull, true);
   assert.equal(generatorInput.policy, true);
+  assert.deepEqual(generatorInput.packageChecks, []);
+
+  // R1.0 inputs are also read by schema tests and Storybook unit tests.
+  const upstreamExports = await route('catalog/react-r1-0/upstream-exports.json');
+  assert.equal(upstreamExports.reactPackageFull, true);
+  assert.equal(upstreamExports.policy, true);
+  assert.deepEqual(upstreamExports.packageChecks, ['@muxui/schema']);
+  assert.deepEqual(upstreamExports.storyUnitTests, [{
+    file: 'test/storybook.test.mjs',
+    testNamePattern: '^private host and exact Mux UI React family projection$|^every story exposes exactly its canonical Mux UI-owned properties$',
+  }]);
 
   const capability = await route('catalog/capabilities/query-baseline.json');
   assert.equal(capability.catalog, true);
@@ -1690,7 +1740,9 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   assert.equal(tailwind.tailwind, true);
   assert.deepEqual(tailwind.packageChecks, []);
 
+  // main.mjs sets the manager head (fonts, theme CSS) and builds every page.
   const main = await route('apps/react-storybook/.storybook/main.mjs');
+  assert.equal(main.storyChrome, true);
   assert.deepEqual(main.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
   assert.deepEqual(main.storyUnitTests, [{
     file: 'test/storybook.test.mjs',
@@ -1703,15 +1755,49 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   assert.equal((await route('apps/react-storybook/.gitignore')).policy, true);
 });
 
-test('every tracked path has a CI owner route', async () => {
+// Plans every tracked path as a no-op edit with the generated React records,
+// a page per family, and real sources; any planner error fails the test.
+test('every tracked path plans without a planner error', async () => {
   const tracked = spawnSync('git', ['ls-files', '-z'], { cwd: repositoryRoot, encoding: 'utf8' }).stdout.split('\0').filter(Boolean);
-  const unowned = [];
+  const text = (path) => readFileSync(resolve(repositoryRoot, path), 'utf8');
+  const generated = (path) => JSON.parse(text(path).split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
+  const realRecords = familyRecordsFromContract(
+    generated('packages/react/generated/r1-6-contract.json'),
+    generated('packages/react/generated/descriptor.json').bindings ?? [],
+  );
+  const familyPages = realRecords.map(({ family, export: name, slug }) => ({
+    family: name ?? family,
+    storyFile: `apps/react-storybook/.storybook/generated/${slug}.stories.mjs`,
+    stories: ['Default', 'BrowserProof'].map((exportName) => ({ id: `${slug}--${exportName.toLowerCase()}`, exportName, name: exportName })),
+  }));
+  const sources = (prefix, keep = () => true) => Object.fromEntries(tracked
+    .filter((path) => path.startsWith(prefix) && keep(path))
+    .map((path) => [path, text(path)]));
+  const moduleSources = Object.fromEntries(Object.entries(sources('packages/react/src/', (path) => path.endsWith('.mjs')))
+    .map(([path, source]) => [path, { before: source, after: source }]));
+  const testTexts = Object.fromEntries(Object.entries(sources('packages/react/test/'))
+    .map(([path, source]) => [path.slice('packages/react/'.length), source]));
+  const failures = [];
   for (const path of tracked) {
-    await plan([path], { packages: workspacePackages }).catch((error) => {
-      if (error.message.startsWith('MUXUI_CI_IMPACT_OWNER_MISSING')) unowned.push(path);
-    });
+    await buildPullRequestImpact({
+      ...inputFor([path], {
+        packages: workspacePackages,
+        records: realRecords,
+        pageIndex: familyPages,
+        moduleSources,
+        componentTestSources: Object.fromEntries(Object.entries(testTexts).filter(([file]) => file.endsWith('.test.mjs'))),
+        reactTestReferenceSources: testTexts,
+        compareGeneratorEmissions: async () => ({ storyIds: [], reason: 'unchanged emission' }),
+      }),
+      readBaseText: async (candidate) => text(candidate),
+      readHeadText: async (candidate) => text(candidate),
+      rootPackageBefore: text('package.json'),
+      rootPackageAfter: text('package.json'),
+      reactPackageBefore: text('packages/react/package.json'),
+      reactPackageAfter: text('packages/react/package.json'),
+    }).catch((error) => failures.push(`${path}: ${error.message.slice(0, 200)}`));
   }
-  assert.deepEqual(unowned, []);
+  assert.deepEqual(failures, []);
 });
 
 async function reactTestTexts() {
