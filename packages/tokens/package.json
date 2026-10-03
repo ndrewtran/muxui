@@ -10,6 +10,7 @@
     ".": "./src/index.mjs",
     "./core": "./src/core.mjs",
     "./authoring": "./src/authoring.mjs",
+    "./figma": "./src/figma.mjs",
     "./tailwind": "./src/tailwind.mjs"
   },
   "dependencies": {

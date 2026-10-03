@@ -1,0 +1,40 @@
+/** @type {import('../anatomy.mjs').Anatomy} */
+export default {
+  family: 'button',
+  component: 'Button',
+  name: 'Button',
+  axes: ['variant', 'size'],
+  states: ['rest', 'hover', 'pressed', 'focus-visible', 'disabled'],
+  stateTarget: '.muxui-button',
+  fixture: { children: 'Button' },
+  parts: [
+    {
+      id: 'root',
+      node: 'FRAME',
+      selector: '.muxui-button',
+      bind: ['fill', 'overlay', 'stroke', 'radius', 'padding', 'gap', 'size', 'shadow'],
+      layout: { direction: 'HORIZONTAL', align: 'CENTER', justify: 'CENTER', centerInMinHeight: true },
+    },
+    { id: 'label', parent: 'root', node: 'TEXT', selector: '.muxui-button-content', bind: ['text'] },
+  ],
+  preview: [
+    'variant=primary,size=md,state=rest',
+    'variant=primary,size=md,state=hover',
+    'variant=primary,size=md,state=pressed',
+    'variant=primary,size=md,state=focus-visible',
+    'variant=primary,size=md,state=disabled',
+    'variant=neutral,size=md,state=rest',
+    'variant=ghost,size=md,state=hover',
+    'variant=ghost,size=md,state=focus-visible',
+    'variant=danger,size=md,state=rest',
+    'variant=danger-neutral,size=md,state=rest',
+    'variant=danger-ghost,size=md,state=rest',
+    'variant=inverse,size=md,state=rest',
+    'variant=primary,size=sm,state=rest',
+    'variant=primary,size=lg,state=rest',
+  ],
+  notes: [
+    'The 1px outline with a -1px offset is the button border; it maps to an inside stroke.',
+    'Pending is omitted: its spinner is motion, which Figma component export excludes.',
+  ],
+};

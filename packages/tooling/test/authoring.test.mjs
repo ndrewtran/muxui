@@ -456,6 +456,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
     '@muxui/tooling',
     '@muxui/web',
     '@muxui/repository-policy',
+    '@muxui/figma',
   ]);
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/docs check'));
   assert.ok(closure.requiredChecks.includes('pnpm --filter @muxui/react-playground check'));
@@ -491,6 +492,7 @@ test('E-G0.5-04: affected closure is graph-derived and extends through declared 
     '@muxui/tooling',
     '@muxui/web',
     '@muxui/repository-policy',
+    '@muxui/figma',
   ]);
   assert.throws(
     () => affectedClosure({ context, sourcePaths: ['catalog/components/inferred.json'] }),

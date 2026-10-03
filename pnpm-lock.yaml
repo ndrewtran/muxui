@@ -374,6 +374,30 @@ importers:
         specifier: 3.2.1
         version: 3.2.1
 
+  tooling/generators/figma:
+    dependencies:
+      '@muxui/react':
+        specifier: workspace:*
+        version: link:../../../packages/react
+      '@muxui/schema':
+        specifier: workspace:*
+        version: link:../../../packages/schema
+      '@muxui/tokens':
+        specifier: workspace:*
+        version: link:../../../packages/tokens
+      playwright-core:
+        specifier: 1.62.1
+        version: 1.62.1
+      react:
+        specifier: 19.2.8
+        version: 19.2.8
+      react-dom:
+        specifier: 19.2.8
+        version: 19.2.8(react@19.2.8)
+      vite:
+        specifier: 8.2.1
+        version: 8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.50.0)(yaml@2.9.0)
+
 packages:
 
   '@adobe/css-tools@4.5.0':
