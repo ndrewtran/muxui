@@ -9,6 +9,8 @@ import {
   assertPackedFileBoundary,
   assertStylesheetAssetUrls,
   deriveCurrentExportSurface,
+  deriveExpectedPackageEntries,
+  readGeneratedOutputNames,
 } from '../src/release-proof.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
@@ -165,4 +167,35 @@ test('release proof rejects private archive files and export drift', () => {
     () => assertExactExportList(['Button'], ['Button', 'IconButton'], 'R1.6_PACK_EXPORT_SURFACE_INVALID'),
     /R1\.6_PACK_EXPORT_SURFACE_INVALID/u,
   );
+});
+
+test('release proof derives the exact generated archive set from the React generator outputs', () => {
+  const generatedOutputs = readGeneratedOutputNames(packageRoot);
+  // Decision 0018 and 0019 outputs prove the list tracks the generator rather than a copy.
+  for (const name of ['avatar.mjs', 'image.d.ts', 'select-native.mjs', 'motion.mjs', 'motion-components.mjs', 'tabs-motion.mjs']) {
+    assert.ok(generatedOutputs.includes(name), name);
+  }
+  const generatedOnDisk = packageFiles(join(packageRoot, 'generated'), 'package/generated').sort();
+  assert.deepEqual(generatedOutputs.map((name) => `package/generated/${name}`), generatedOnDisk);
+
+  const fixedEntries = ['package/LICENSE', 'package/NOTICE', 'package/README.md', 'package/package.json'];
+  const expected = deriveExpectedPackageEntries({ generatedOutputs, fixedEntries, trackedEntries: requiredEntries });
+  const packed = [...generatedOnDisk, ...fixedEntries, ...requiredEntries];
+  assert.deepEqual(assertExactArchiveEntries(packed, expected), [...packed].sort());
+
+  const omitted = deriveExpectedPackageEntries({
+    generatedOutputs: generatedOutputs.filter((name) => name !== 'motion.mjs'),
+    fixedEntries,
+    trackedEntries: requiredEntries,
+  });
+  assert.throws(() => assertExactArchiveEntries(packed, omitted), /R1\.5_PACK_CONTENT_INVALID: .*unexpected: package\/generated\/motion\.mjs/u);
+  assert.throws(
+    () => assertExactArchiveEntries(packed.filter((entry) => entry !== 'package/generated/avatar.mjs'), expected),
+    /R1\.5_PACK_CONTENT_INVALID: .*missing: package\/generated\/avatar\.mjs;/u,
+  );
+  assert.throws(
+    () => assertExactArchiveEntries([...packed, 'package/generated/stale.mjs'], expected),
+    /R1\.5_PACK_CONTENT_INVALID: .*unexpected: package\/generated\/stale\.mjs;/u,
+  );
+  assert.throws(() => assertExactArchiveEntries([...packed, packed[0]], expected), /duplicate: /u);
 });
