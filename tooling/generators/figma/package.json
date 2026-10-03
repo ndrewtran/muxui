@@ -1,0 +1,22 @@
+{
+  "name": "@muxui/figma",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.19.0 <25"
+  },
+  "dependencies": {
+    "@muxui/react": "workspace:*",
+    "@muxui/schema": "workspace:*",
+    "@muxui/tokens": "workspace:*",
+    "playwright-core": "1.62.1",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "vite": "8.2.1"
+  },
+  "scripts": {
+    "check": "node --test test/*.test.mjs",
+    "figma:components": "node src/cli.mjs"
+  }
+}

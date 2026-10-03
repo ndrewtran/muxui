@@ -2,7 +2,7 @@
 
 Mux UI is a versioned design-system knowledge graph. Delivery is React-first:
 `@muxui/react` implements 79 component families (the fixed 53 plus 26
-supplemental) under Product Scope 13.0.0. Framework-free web and React Native
+supplemental) under Product Scope 13.1.0. Framework-free web and React Native
 are deferred later tracks. Nothing is published yet, and this repository makes
 no public package or component-support claim.
 

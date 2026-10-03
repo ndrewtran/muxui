@@ -1029,6 +1029,35 @@ Import, round-trip, proposals, components, Code Connect, additional themes,
 and pruning remain G3.5 or later. This addition establishes no milestone
 completion, public package, support, or release claim.
 
+### Post-R1.6 Figma component export addition
+
+Decision 0020 amendment 01 extends the export-only Figma slice to a named set
+of simple controls, delivered in batches; the first batch is Button,
+Checkbox, Switch, TextField, Tabs, and TagGroup. Each later batch first moves
+its component dark overrides into mode-aware tokens. The private, never
+published `@muxui/figma` package in `tooling/generators/figma`
+owns only anatomy mappings and transport: it measures each family's winning
+CSS declarations in a browser across Light/Dark and Comfortable/Compact,
+audits mode consistency, compiles a component spec bound by token ID, and
+applies it through an idempotent Plugin API applier that changes only nodes
+it tagged and deletes only the glyph vectors it replaces.
+Figma content remains a disposable projection; nothing generated is
+committed.
+
+| ID | Required assertion | Retained evidence |
+| --- | --- | --- |
+| `E-FIGMA-COMPONENTS-01` | Compiling the same anatomies, measurements, and token source yields an identical component spec with token export and source digest provenance. | Package determinism test. |
+| `E-FIGMA-COMPONENTS-02` | Every measured part property resolves to the same token or literal in every exported mode; a mode-specific override fails with its family, part, property, and winning rule per mode. | Package mode-audit test and local measurement report. |
+| `E-FIGMA-COMPONENTS-03` | Every painted colour binds to a variable or style; literal, derived, and lossy fields appear in the coverage report with a reason. | Package coverage test and local coverage report. |
+| `E-FIGMA-COMPONENTS-04` | A second applier run over an unchanged spec reports no creates or updates, a changed binding updates in place, and a removed variant is reported as an orphan without deletion. | Applier test against an in-memory Plugin API fake. |
+
+Import, round-trip, proposals, Code Connect, complex families, motion,
+additional themes, and pruning remain G3.5 or later. Andrew's direction
+covers writing the six families' components to file `Z1rFgLTe3lBr0nwm8UvFEx`;
+removing the pilot page, later batches' writes, and any other Figma file need
+his separate, explicit direction. This addition establishes no milestone
+completion, public package, support, or release claim.
+
 ### R1 exit — React prerelease publication
 
 **Entry:** R1.5 complete plus exact tarball, release manifest, provenance,
@@ -1482,9 +1511,11 @@ projection/import-proposal workflow over stable canonical token and artifact
 identities.
 
 **Early export slice:** Decision 0020 landed a Figma token export ahead of
-these entry conditions (see "Post-R1.6 Figma token export addition"). The
-remaining deliverables and entry conditions below still apply to import,
-round-trip, and every other G3.5 capability.
+these entry conditions (see "Post-R1.6 Figma token export addition"), and its
+amendment 01 adds a Figma component export for named simple controls through
+the private `@muxui/figma` adapter (see "Post-R1.6 Figma component
+export addition"). The remaining deliverables and entry conditions below
+still apply to import, round-trip, and every other G3.5 capability.
 
 **Entry conditions**
 
@@ -1910,7 +1941,7 @@ remove or weaken these assertions without changing the architecture.
 | Lifecycle, SemVer, historical retrieval, trust | G0.1 schema rules, R1 experimental prerelease lifecycle/history, P2.1 portfolio version/release, P2.2 installed authority, G3.2 migrations. |
 | Token/theme/fallback/override policy | G0.1–G0.5 establish the canonical contract; R1.0 and R1.6 prove React use and private authoring; later W1/N1 profile proof and G3.5 external design-tool interchange remain separately gated. |
 | React-primary product boundaries | Global guardrails, R1 package-only React prereleases, P2 capability/productization enablement, separately activated W1/N1/X1/S1, independent Gate 3 admission. |
-| Design-tool interoperability | Decision 0020 Figma token export (export only); G3.5 import-proposal and round-trip proof. |
+| Design-tool interoperability | Decision 0020 Figma token export and amendment 01 component export (export only); G3.5 import-proposal and round-trip proof. |
 | Promptable semantics | G3.6 observed-task discovery and bounded activation only. |
 | Agent-safe write paths | R1.5 previews, G2.5 safe consumer operations, G2.6 allowlisted canonical proposals, G3.2 migrations. |
 | Deferred extensions, frameworks, higher-order artifacts, and protocols | G3.7–G3.11 independent milestones. |
@@ -1932,7 +1963,7 @@ and stays absent until that trigger is proved.
 | Canonical proposal writes | G2.6 | Closed operation schema, complete review packet, owner, proof, digest-bound approval. |
 | Migration | G3.2 | A real version-bounded need and a deterministic transform or maintained reviewed codemod. |
 | Private additional themes and local consumer theme editing | R1.6 | Stable canonical token/theme types, complete Mux UI namespace mapping, profile/fallback/accessibility validation, and private authoring round-trip proof. |
-| Design-tool interchange | G3.5 | Stable IDs, observed named workflow, export proof, loss policy, import as proposal. The Figma token export under Decision 0020 is available early and does not satisfy this trigger. |
+| Design-tool interchange | G3.5 | Stable IDs, observed named workflow, export proof, loss policy, import as proposal. The Figma token and component exports under Decision 0020 and its amendment 01 are available early and do not satisfy this trigger. |
 | Promptable semantic fields/relations | After G3.6 admission | Repeated task evidence, stable owner/meaning, deterministic consumer, measurable improvement. |
 | Model evaluations as release gates | G3.4 | Repeated baseline, predeclared threshold, variance policy, failure owner. |
 | Executable extensions or consumer overlays | G3.7 separately | Threat model, demand, namespace/integrity/permission/revocation proof. |
