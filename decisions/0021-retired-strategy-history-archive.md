@@ -35,8 +35,11 @@ Strategy sections:
   milestone register, the "Recommended first execution sequence", and the
   historical pre-R1.6 icon affordance clarification.
 - `strategy/monorepo-architecture.md`: the historical pre-R1.6 icon affordance
-  dependency boundary and the gate-era Build order bodies for Gate 0, React
-  delivery, Gate 2, and Gate 3.
+  dependency boundary, and the Build order bodies: the gate-era Gate 0, Gate 2,
+  and Gate 3 bodies, and the "React-primary component delivery and prerelease"
+  body, which duplicated current R1 text in Architecture and the Roadmap
+  except for the parallel-components rule now kept in the Roadmap's R1 shared
+  tranche contract.
 
 Decision records, all superseded by Decision 0011:
 
@@ -70,6 +73,11 @@ Content that still carries current meaning moves instead of leaving:
 - Architecture keeps the build-order principles, and the Lucide semantics,
   license-notice, and proof-invalidation rules that the archived icon boundary
   declared still binding.
+- Product Scope's React `0.1` release acceptance scope keeps the 6.0.4
+  approval of the `lucide-react@1.37.0` edge for the existing R1 control
+  affordances, with its integrity, notices, and allowed set.
+- The Roadmap's R1 shared tranche contract keeps the rule that components may
+  run in parallel after Button begins.
 
 Product Scope advances from `12.1.0` to `12.1.1` as a patch. No Scope ID is
 added, removed, or transitioned, and no commitment, release boundary,

@@ -647,6 +647,8 @@ review appropriate to the exported behavior. The accepted immutable 53-family
 inventory, Stage 1 snapshot, and R1.0 baseline are the common lock for R1.1
 through R1.4. No further tranche-lock decision or per-component authorization
 is required for those families. Button is the first visible R1.1 component.
+Components may run in parallel after Button begins while consuming the same
+baseline and creating no decision-bearing exception.
 
 The approved R1 package graph includes one resolved
 `@internationalized/date@3.12.3` instance as a direct internal runtime
@@ -1736,10 +1738,10 @@ valid outcomes and do not make the core product incomplete.
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
 | R1.0 | React package/substrate baseline | Gate 0; accepted Product Scope 6.0.2, Decision 0010 amendments 01–03, and the accepted Stage 1 snapshot through the immutable committed-source route | R1.1–R1.5 |
-| R1.1 | Foundation and simple controls | Fixed R1.0 baseline, Product Scope 12.1.1 icon-affordance dependency edge, and the fixed 53-family R1.1 allocation | R1.5, eligible alpha |
-| R1.2 | Forms and field controls | Fixed R1.0 baseline, Product Scope 12.1.1 temporal-adapter/icon-affordance dependency edges, and the fixed 53-family R1.2 allocation | R1.5, eligible alpha |
-| R1.3 | Collections and composites | Fixed R1.0 baseline, Product Scope 12.1.1 temporal-adapter/icon-affordance dependency edges, and the fixed 53-family R1.3 allocation | R1.5, eligible alpha |
-| R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 12.1.1 icon-affordance dependency edge, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
+| R1.1 | Foundation and simple controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.1 allocation | R1.5, eligible alpha |
+| R1.2 | Forms and field controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.2 allocation | R1.5, eligible alpha |
+| R1.3 | Collections and composites | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.3 allocation | R1.5, eligible alpha |
+| R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
 | R1.5 | React breadth closure | R1.1–R1.4 and the fixed 53-family 53/53 closure | R1.6 |
 | R1.6 | React parity and private Mux theme authoring | R1.5 and Decision 0013 | R1 exit |
 | R1 exit | React prerelease publication | R1.5, R1.6, and exact publish authorization | P2.1; optional W1/N1/S1 activation reviews |
@@ -1754,11 +1756,10 @@ valid outcomes and do not make the core product incomplete.
 
 ### Optional capability register
 
-Only the optional G2.4–G2.6 and Gate 3 rows remain, with their original
-dependency wording; the historical Gate 1 and Gate 2 sections above name the
-current successors for those references.
-Decision 0021 moved the completed and superseded G0, G1, and other G2 rows to
-the ignored recovery archive; they were audit locators only.
+These rows remain the current register for the optional G2.4–G2.6 and G3.x
+capabilities, as Product Scope treats them, and keep their original dependency
+wording. Decision 0021 moved the completed and superseded G0, G1, and other G2
+rows, which were audit locators only, to the ignored recovery archive.
 
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |

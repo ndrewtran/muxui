@@ -850,7 +850,19 @@ accessibility, package, compatibility, integrity, or generation failures.
   `react-aria-components@1.20.0`, and the approved direct internal
   `@internationalized/date@3.12.3` dependency limited to Mux UI value adapters
   in `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-  `RangeCalendar`, plus the R1.6 internal, replaceable supplemental-affordance edges
+  `RangeCalendar`; the approved direct internal, replaceable
+  `lucide-react@1.37.0` dependency (npm integrity
+  `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
+  ISC license with its Feather-derived MIT notice, React peer-compatible with
+  the existing React and React DOM peer boundary) for the existing R1 control
+  affordances: `DatePicker`/`DateRangePicker` calendar triggers;
+  `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and `Tree`
+  chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
+  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, with
+  Breadcrumb separators kept as text, no Search icon, decorative and
+  non-focusable icons that never supply an undocumented accessible name, and
+  no Lucide export, type, name, prop, import path, or public Icon API, catalog,
+  or package; plus the R1.6 internal, replaceable supplemental-affordance edges
   `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
   parser boundary, and the eight `@tiptap/*@3.22.3` packages for `TextEditor`;
   `motion@13.4.0` for bounded component motion in existing admitted React
@@ -1197,9 +1209,10 @@ the transform and CLI; any Figma file is disposable.
 the 6.0.0, 6.0.3, and 6.0.4 amendment sections, matching the retired pre-8.0
 statement above. The fixed 53-family registry, the `SCOPE-REACT-BREADTH-001`
 and `SCOPE-METRIC-REACT-COVERAGE` meanings, and the 53-family change rule move
-unchanged into the React `0.1` prerelease boundary; the temporal-adapter and
-Lucide dependency facts remain in Architecture and in the release acceptance
-scope above.
+unchanged into the React `0.1` prerelease boundary. The temporal-adapter
+dependency and the `lucide-react@1.37.0` edge for the existing R1 control
+affordances, with the constraints 6.0.4 stated, are in the React `0.1` release
+acceptance scope above and in Architecture.
 
 This patch adds, removes, or transitions no Scope ID and changes no
 commitment, release boundary, platform, package, public surface, support
