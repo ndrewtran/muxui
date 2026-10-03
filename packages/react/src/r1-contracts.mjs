@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { canonicalJson, validateContractDocument } from '@muxui/schema';
+import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 
 const EXPECTED_UPSTREAM = Object.freeze({
   package: 'react-aria-components',
@@ -107,6 +108,12 @@ export function assertReactR10SourceContracts({ snapshot, upstreamExports, upstr
 const R15_EVIDENCE_IDS = Object.freeze([
   'E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06',
 ]);
+// Decision 0022: R1.5 evidence exists only in PR logs, not retained evidence,
+// and every unmet R1 item is listed against the families it covers.
+const R15_DEFERRED_EVIDENCE = DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-'));
+const isLoggedR15Evidence = (evidence, retention, deferred) => evidence?.status === 'logged-not-retained'
+  && evidence.retention === retention
+  && same(evidence.deferred, deferred);
 
 function r15TrancheEvidence(tranche) {
   const count = tranche === 'R1.3' ? 5 : tranche === 'R1.4' ? 6 : 4;
@@ -227,6 +234,13 @@ export function assertReactR15GeneratedContracts({
       'internal-runtime-support': 158,
       'internal-type-support': 327,
     })
+    || !same(closureRecord.evidence?.ids, R15_EVIDENCE_IDS)
+    || !isLoggedR15Evidence(closureRecord.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
+    || !same(release?.assistiveTechnology?.deferredEvidence, DEFERRED_R1_EVIDENCE)
+    // Each deferred family exists in the tranche its evidence ID names.
+    || !DEFERRED_R1_EVIDENCE.every(({ id, families = [] }) => families.every((name) => closureRecord.families
+      .some((family) => family.export?.name === name && id.startsWith(`E-${family.tranche}-`))))
+    || !isLoggedR15Evidence(release?.historical?.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
     || 'donor' in closureRecord) failR15('FAMILY_GRAPH_INVALID');
 
   const historicalBindings = descriptor?.historical?.bindings;
@@ -311,7 +325,7 @@ export function assertReactR15GeneratedContracts({
       || familyClosure.lifecycle?.strategy !== binding.strategy
       || !same(familyClosure.evidence?.tranche, r15TrancheEvidence(source.tranche))
       || !same(familyClosure.evidence?.final, R15_EVIDENCE_IDS)
-      || familyClosure.evidence?.status !== 'pending'
+      || !isLoggedR15Evidence(familyClosure.evidence, closure.evidenceCapture?.retention, deferredEvidenceForFamily(source.exportName))
       || familyClosure.evidence?.support !== 'unproved; R1.5 React exports only'
       || familyClosure.packed?.binding !== bindingId
       || familyClosure.packed?.export !== source.exportName

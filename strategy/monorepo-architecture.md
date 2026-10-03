@@ -1003,8 +1003,11 @@ DOM peer boundary. Use is limited to `DatePicker`/`DateRangePicker` calendar
 triggers; `Calendar`/`RangeCalendar` previous/next controls;
 `ComboBox`/`Select` and `Tree` chevrons; `SearchField` clear;
 `NumberField` plus/minus; `Checkbox` check/indeterminate; `TagGroup` remove;
-and `Dialog`/`Toast` close. R1.6 also permits the same pinned internal Lucide
-edge for the supplemental affordances in `AlertDialog`, `CommandPalette`, `HeaderNav`,
+and `Dialog`/`Toast` close. Decision 0011 amendment 03 adds the decorative
+`Tabs` overflow scroll chevrons (left, right, up, and down), the `Disclosure`
+trigger chevron, and the `CheckboxField` check and minus. R1.6 also permits
+the same pinned internal Lucide edge for the supplemental affordances in
+`AlertDialog`, `CommandPalette`, `HeaderNav`,
 `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
 `TextEditor`. Mux UI owns all labels and public contracts. No Lucide export,
 type, name, prop, or import path, and no public Icon API, catalog, or package,
@@ -1226,7 +1229,8 @@ The same graph includes the exact direct internal runtime dependency
 `lucide-react@1.37.0` for the existing R1 control affordances and the nine
 approved R1.6 supplemental affordance roots: `AlertDialog`, `CommandPalette`,
 `HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
-and `TextEditor`. Its npm integrity is
+and `TextEditor`, and those admitted by Decision 0011 amendment 03. Its npm
+integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
 the package is ISC with the Feather-derived MIT notice, and React
 peer-compatible. No Lucide export, type, name, prop, import path, or public
@@ -2396,8 +2400,11 @@ reviews that deliver the tranche. Ordinary implementation does not require a
 task-local operation descriptor or a separate human evidence-acceptance gate.
 
 RSC/client-boundary support, framework-free web, React Native, React Native Web,
-cross-renderer equivalence, stable support, and `latest` remain later or
-separately admitted work. The private Scale theme-authoring capability is
+cross-renderer equivalence, stable support, and any `latest` claim or
+promotion remain later or separately admitted work. Under Decision 0023, the
+registry sets `latest` on first publish; apart from a separately authorized
+re-point of `latest` to the fix-forward rc during a rollback, no `latest` is
+claimed or promoted, and no stable `0.1.0` release is authorized. The private Scale theme-authoring capability is
 admitted only under the bounded R1.6 milestone below. Npm publication, dist-tag changes, and the final
 R1-exit pull-request merge remain separate exact human stops.
 

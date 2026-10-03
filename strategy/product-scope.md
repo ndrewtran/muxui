@@ -1,5 +1,5 @@
 ---
-scopeVersion: 12.1.2
+scopeVersion: 13.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -88,6 +88,14 @@ the React `0.1` prerelease boundary.
 Product Scope `12.1.2` applies Decision 0011 amendment 04 as a patch
 clarification: the same eight internal `TextEditor` Tiptap packages move from
 `3.22.3` to exact `3.31.4`, so consumer installs resolve one Tiptap version.
+
+Product Scope `13.0.0` applies Decision 0011 amendment 03, which admits the
+`Tabs` overflow scroll chevrons, the `Disclosure` trigger chevron, and the
+`CheckboxField` check and minus to the existing internal Lucide edge; Decision
+0022, under which `@muxui/react@0.1.0-rc.1` claims no assistive-technology
+support; and Decision 0023, which replaces "no `latest` tag" with "no `latest`
+claim" and makes deprecate and fix forward the rc.1 rollback plan. Decision
+0022 also records unmet R1 evidence as deferred to `S1.0`.
 
 ## Scope vocabulary
 
@@ -242,10 +250,14 @@ hosted services, design-tool integration, or another framework.
 
 The current `0.1` product commitment is a package-only React prerelease. Each
 R1 tranche may publish `@muxui/react@0.1.0-alpha.N` under `next` once its
-breadth closure may propose `0.1.0-rc.1`. No `latest` tag, stable `0.1.0`,
+breadth closure may propose `0.1.0-rc.1`. No `latest` claim, stable `0.1.0`,
 framework-free package, native package/profile, public catalog/tooling/CLI,
 cross-platform equivalence, or secondary-renderer support claim belongs to this
-boundary.
+boundary. Under Decision 0023, the registry points `latest` at the first
+publish, so if an alpha is published first `latest` points at that alpha.
+Apart from a separately authorized re-point of `latest` to the
+fix-forward rc during a rollback, Mux UI neither claims nor promotes it, no
+stable release is promoted, and install guidance uses `@muxui/react@next`.
 
 | Scope ID | Commitment | Product deliverable | Roadmap |
 | --- | --- | --- | --- |
@@ -266,7 +278,13 @@ The React-specific component and pattern commitments are
 Every exported binding remains `experimental` until independently promoted.
 Missing binding-required manual or assistive-technology proof keeps it
 unexported or explicitly unavailable with support unproved; it does not alter
-authored lifecycle/strategy or create an `unsupported` disposition.
+authored lifecycle/strategy or create an `unsupported` disposition. For the
+rc prerelease on `next`, a prerelease amendment (Decision 0022) records the
+unmet `DisclosureGroup` manual half of `E-R1.1-04`, the manual and
+assistive-technology half of `E-R1.2-03` and `E-R1.3-04`, and `E-R1.4-04` as
+deferred to `S1.0`; those bindings are exported with assistive-technology
+support unproved and not claimed. The risk-profile half of `E-R1.5-03` is
+deferred the same way.
 
 #### Fixed 53-family React registry
 
@@ -862,7 +880,9 @@ accessibility, package, compatibility, integrity, or generation failures.
   affordances: `DatePicker`/`DateRangePicker` calendar triggers;
   `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and `Tree`
   chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
-  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, with
+  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, plus
+  the `Tabs` overflow scroll chevrons, `Disclosure` trigger chevron, and
+  `CheckboxField` check and minus admitted by Decision 0011 amendment 03, with
   Breadcrumb separators kept as text, no Search icon, decorative and
   non-focusable icons that never supply an undocumented accessible name, and
   no Lucide export, type, name, prop, import path, or public Icon API, catalog,
@@ -880,7 +900,14 @@ accessibility, package, compatibility, integrity, or generation failures.
 - packed artifacts, not source-tree assumptions, prove exports and
   compatibility;
 - required manual/assistive-technology evidence exists before export for every
-  React binding whose exact risk contract requires it;
+  React binding whose exact risk contract requires it, except that the rc
+  prerelease on `next` may export bindings whose evidence is unmet, as the
+  Decision 0022 prerelease amendment records for R1.1 through R1.4, with
+  assistive-technology support unproved and not claimed; that evidence is a
+  required `S1.0` entry condition;
+- R1.1 through R1.5's logged check and review evidence is captured into
+  retained evidence before the rc.1 cut and before those logs expire around
+  2026-11-23, because a transient log cannot satisfy an exit (Decision 0022);
 - the compatibility/evidence profile states the exact tested environment;
 - generator, privacy, provenance, exception, advisory, performance-baseline,
   and change-intent requirements pass; and
@@ -1245,3 +1272,73 @@ state. Existing Scope IDs retain their states, including
 Tiptap types and editor objects remain outside the Mux UI public API, and the
 existing integrity, license/notice, lockfile, isolation, SSR/hydration, and
 packed-consumer proof obligations apply to the new version.
+
+## Product Scope 13.0.0: rc.1 release rulings
+
+[Decision 0011 amendment 03](../decisions/0011-amendment-03-icon-affordance-additions.md)
+adds the `Tabs` overflow scroll buttons, the `Disclosure` trigger, and the
+`CheckboxField` indicator to the internal `lucide-react@1.37.0` affordance
+boundary. The `Tabs` icons are `chevron-left`, `chevron-right`, `chevron-up`,
+and `chevron-down`; the `Disclosure` icon is `chevron-down`; the
+`CheckboxField` icons are `check` and `minus`. All are decorative and
+non-focusable. Each `Tabs` button takes its accessible name from a Mux-owned
+label, the `Disclosure` trigger from its visible title, and the `CheckboxField`
+input from its wrapping label text. The dependency, its version and
+integrity, its notices, and the public boundary are unchanged.
+`SCOPE-COMP-TABS-REACT` and `SCOPE-COMP-DISCLOSURE-REACT` remain
+`committed`, and `CheckboxField` stays under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`.
+
+[Decision 0022](../decisions/0022-rc1-assistive-technology-non-claim.md)
+records that `@muxui/react@0.1.0-rc.1` on `next` claims no
+assistive-technology support. Every rc.1 binding is exported, and its
+assistive-technology support is unproved and not claimed. R1.1 through R1.4
+closed without some of their manual and assistive-technology evidence: the
+`DisclosureGroup` manual half of `E-R1.1-04` (provisional), the manual and
+assistive-technology half of `E-R1.2-03` and `E-R1.3-04`, and `E-R1.4-04`.
+R1.5 closed without the risk-profile half of `E-R1.5-03`, because no binding
+declares a risk profile. Each is recorded as unmet and deferred to `S1.0`, not
+passed. Those milestone exits and the release-acceptance requirement above
+gain a matching prerelease amendment, not an operational exception; each
+milestone is complete for the rc prerelease boundary on its logged evidence,
+which must be captured into retained evidence before the R1 exit, and each
+deferred item is a required `S1.0` entry condition. R1.1 through R1.5 evidence
+exists only in CI check and review logs, which expire around 2026-11-23 and
+cannot satisfy an exit. Capturing those logs into retained evidence is a
+required R1 exit entry condition and a required step before the rc.1 cut;
+until then the generated records keep R1.5 evidence `logged-not-retained`. The
+compatibility profile and release manifest state the non-claim and every
+deferral. Every existing accessibility check, including axe, keyboard, and
+focus, remains required. Architecture's risk-class table is the basis for also
+requiring every exported component to declare its risk class before `S1.0`.
+
+[Decision 0023](../decisions/0023-rc1-dist-tag-and-rollback.md) corrects a
+rule the registry cannot satisfy. npm sets `latest` on a package's first
+publish and never lets it be deleted. rc.1 is published with `--tag next`;
+if it is the first publish, `latest` will also point at it. Apart from a
+separately authorized re-point of `latest` to the fix-forward rc during a
+rollback, nothing claims or promotes `latest`, and no stable release is
+promoted. Install guidance uses `@muxui/react@next` until a stable release
+moves `latest`. If rc.1 is bad, it is deprecated with a message and a fixed
+prerelease is published as a new exact candidate. Mux UI unpublishes only for
+a security or legal problem, with explicit authorization, inside npm's
+72-hour no-dependents window. `E-R1-EXIT-04` checks that this rollback is
+prepared, not exercised, rather than restoring a prior `next` pointer.
+
+The Tabs, Disclosure, and CheckboxField rulings are patch-level clarifications
+on their own. The `latest` ruling redefines the committed React `0.1` release
+boundary, which said no `latest` tag, and Decision 0022 amends the R1.1
+through R1.5 exit rules and the release-acceptance requirement that manual and
+assistive-technology evidence exist before export. Each of those is a material
+change to a committed release boundary, so the combined effect is major.
+Architecture's Lucide affordance lists and its R1 `latest` statement are
+amended in the same change to match; neither edit adds a scope item.
+`SCOPE-PRODUCT-REACT-PRERELEASE` and every other Scope ID keep their
+commitments; no Scope ID is added or removed, and no package, platform,
+export, lifecycle, or support claim broadens. None of these rulings authorizes
+publication, deprecation, a dist-tag change, an unpublish, or the final
+R1-exit merge.
+
+Tracker migration: the deferred `S1.0` evidence and the capture of R1 PR logs
+into retained evidence will be tracked as follow-up items. This change creates
+no tracker items.

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:fa51b2d96da3426e46ddf48e9e648d334fdc3d97c6f9c60cb3463c67f94ba8ac -->
+<!-- @generated-content-sha256: sha256:541fb74c8fc002c98e4cf23581fc64bb722a370fd15c87fde201d3250d25d186 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -15,15 +15,22 @@ The exact R1 exit candidate is `@muxui/react@0.1.0-rc.1`, for the `next`
 dist-tag on the npm registry. The candidate contains only the standalone
 `web.react` renderer and its internal runtime dependencies. All current
 Mux UI-owned component exports remain experimental; no stable, secondary-renderer,
-or cross-platform support claim is made. Publication, dist-tag mutation, and
+or cross-platform support claim is made. The candidate makes no
+assistive-technology support claim; assistive-technology evidence is required
+before any such claim and before stable promotion. Automated accessibility,
+keyboard, and focus checks still apply. Publication, dist-tag mutation, and
 post-publication verification are separate authorized operations.
+
+Once published, install the prerelease as `@muxui/react@next`. npm also
+points `latest` at the first published version; that is not a stable or
+`latest` support claim.
 
 ## Local tarball usage
 
 Install the versioned local candidate from the package directory:
 
 ```sh
-pnpm add ./muxui-react-0.1.0-alpha.0.tgz
+pnpm add ./muxui-react-0.1.0-rc.1.tgz
 ```
 
 Import the generated MuxUI styles once, then use the React exports:
