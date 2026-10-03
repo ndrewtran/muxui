@@ -15,13 +15,17 @@ import {
   assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
   bundledModulePackage,
+  buildReleaseCorrelation,
   collectInstalledClosure,
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
+  deriveVisualContract,
+  digestFileSet,
   findModuleSideEffects,
   findPinnedDuplicateVersions,
   findPublicSurfaceLeaks,
+  findVisualContractInvalidations,
   isolatedPackageManagerEnvironment,
   nodeBundledCli,
   readGeneratedOutputNames,
@@ -414,4 +418,107 @@ test('pinned duplicate versions are reported for every exact runtime pin', () =>
   assert.deepEqual(findPinnedDuplicateVersions(closure, { '@internationalized/date': '3.12.3', '@tiptap/core': '3.31.4', motion: '^13.4.0' }), [
     { name: '@internationalized/date', pinned: '3.12.3', versions: ['3.12.3', '3.12.4'] },
   ]);
+});
+
+// Real packed-contract inputs: the canonical token source, generated
+// stylesheets, the locked Lucide edge, and generated runtime modules.
+function currentVisualInputs() {
+  const generatedRoot = join(packageRoot, 'generated');
+  const generatedFiles = readdirSync(generatedRoot).sort();
+  const lockfile = readFileSync(join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8');
+  return {
+    tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readFileSync(join(repositoryRoot, 'catalog/tokens/default-theme.json')) },
+    stylesheets: generatedFiles.filter((name) => name.endsWith('.css')).map((name) => ({ path: `generated/${name}`, bytes: readFileSync(join(generatedRoot, name)) })),
+    lucide: {
+      version: manifest.dependencies['lucide-react'],
+      integrity: lockfile.match(/\n {2}lucide-react@1\.37\.0:\n\s+resolution: \{integrity: (sha512-[^}]+)\}/u)[1],
+    },
+    modules: generatedFiles.filter((name) => name.endsWith('.mjs')).map((name) => ({ path: `generated/${name}`, source: readFileSync(join(generatedRoot, name), 'utf8') })),
+  };
+}
+
+test('a token, stylesheet, or Lucide change invalidates the recorded visual contract', () => {
+  const inputs = currentVisualInputs();
+  const recorded = deriveVisualContract(inputs);
+  assert.deepEqual(deriveVisualContract(currentVisualInputs()), recorded, 'unchanged inputs reproduce the identity');
+  assert.deepEqual(findVisualContractInvalidations(recorded, recorded), []);
+  assert.ok(recorded.inputs.lucide.icons['generated/components.mjs'].includes('chevron-down'));
+
+  const tokenSource = JSON.parse(inputs.tokenSource.bytes.toString('utf8'));
+  tokenSource.tokens['semantic.action.background'].alias = 'semantic.color.color-70';
+  const tokenChanged = deriveVisualContract({ ...inputs, tokenSource: { ...inputs.tokenSource, bytes: Buffer.from(JSON.stringify(tokenSource)) } });
+  assert.deepEqual(findVisualContractInvalidations(recorded, tokenChanged), ['tokens']);
+
+  const stylesheets = inputs.stylesheets.map((sheet) => (sheet.path === 'generated/styles.css'
+    ? { ...sheet, bytes: Buffer.from(sheet.bytes.toString('utf8').replace(/border-radius:\s*[^;]+;/u, 'border-radius: 0;')) }
+    : sheet));
+  assert.notDeepEqual(stylesheets, inputs.stylesheets, 'the fixture changes stylesheet geometry');
+  assert.deepEqual(findVisualContractInvalidations(recorded, deriveVisualContract({ ...inputs, stylesheets })), ['stylesheet:generated/styles.css']);
+
+  const lucideChanged = deriveVisualContract({ ...inputs, lucide: { ...inputs.lucide, version: '1.38.0' } });
+  assert.deepEqual(findVisualContractInvalidations(recorded, lucideChanged), ['lucide.version']);
+
+  const modules = inputs.modules.map((module) => (module.path === 'generated/components.mjs'
+    ? { ...module, source: module.source.replaceAll('icons/chevron-down.mjs', 'icons/chevron-up.mjs') }
+    : module));
+  assert.deepEqual(findVisualContractInvalidations(recorded, deriveVisualContract({ ...inputs, modules })), ['lucide.icons']);
+
+  assert.throws(() => deriveVisualContract({ ...inputs, lucide: { version: '^1.37.0', integrity: inputs.lucide.integrity } }), /R1_EXIT_VISUAL_CONTRACT_INVALID/u);
+  assert.throws(() => deriveVisualContract({ ...inputs, modules: [] }), /R1_EXIT_VISUAL_CONTRACT_INVALID/u);
+});
+
+test('the release manifest correlates exact source, lockfile, generated, catalog, binding, and evidence identities', () => {
+  const binding = 'muxui:component:button#web.react';
+  const digest = `sha256:${'a'.repeat(64)}`;
+  const options = {
+    source: { revision: '1'.repeat(40), tree: '2'.repeat(40) },
+    lockfile: { path: 'pnpm-lock.yaml', bytes: Buffer.from('lockfileVersion: 9.0\n') },
+    generated: [{ path: 'generated/index.mjs', bytes: Buffer.from('export {};\n') }, { path: 'generated/styles.css', bytes: Buffer.from('.muxui-button{}\n') }],
+    catalogPackage: {
+      name: '@muxui/catalog',
+      catalogVersion: '2.0.0',
+      catalogDigest: digest,
+      queryApiVersion: '2.0.0',
+      sourceRevision: digest,
+      platformSafetyContract: { digest, version: '1.0.0' },
+      tokenRequirementSets: { [`${binding}:web.react`]: digest },
+      platformSafetyRequirementSets: { [`${binding}:web.react`]: digest },
+    },
+    catalogBundle: {
+      catalogDigest: digest,
+      schemaVersion: '2.1.0',
+      artifacts: [
+        { id: 'muxui:component:button', kind: 'component', bindingSpecRevisions: { 'web.react': digest } },
+        { id: 'muxui:token:default-theme', kind: 'token', contentRevision: digest, record: { tokenContractVersion: '5.0.0' } },
+      ],
+    },
+    bindings: [binding],
+    workspacePackages: [{ name: '@muxui/react', version: '0.1.0-alpha.0', private: true }, { name: '@muxui/catalog', version: '2.0.0', private: true }],
+    retainedEvidence: [{ milestone: 'R1.5', path: 'tests/evidence/r1.5/index.json', bytes: Buffer.from('{}') }],
+    activeExceptions: [],
+    visualContract: { digest, inputs: {} },
+  };
+  const correlation = buildReleaseCorrelation(options);
+  assert.deepEqual(buildReleaseCorrelation(options), correlation, 'correlation is deterministic');
+  assert.deepEqual(correlation.source, options.source);
+  assert.match(correlation.lockfile.sha256, /^sha256:[0-9a-f]{64}$/u);
+  assert.deepEqual(correlation.generatedOutputs, digestFileSet(options.generated));
+  assert.deepEqual(correlation.catalog, {
+    name: '@muxui/catalog', version: '2.0.0', digest, schemaVersion: '2.1.0', queryApiVersion: '2.0.0', sourceRevision: digest,
+    platformSafetyContract: { digest, version: '1.0.0' },
+  });
+  assert.deepEqual(correlation.tokens, { id: 'muxui:token:default-theme', contentRevision: digest, tokenContractVersion: '5.0.0' });
+  assert.deepEqual(correlation.bindings, [{ binding, specRevision: digest, tokenRequirementSet: digest, platformSafetyRequirementSet: digest }]);
+  assert.deepEqual(correlation.packages.map(({ name }) => name), ['@muxui/catalog', '@muxui/react']);
+  assert.deepEqual(correlation.evidence.retained.map(({ milestone }) => milestone), ['R1.5']);
+  assert.deepEqual(correlation.evidence.activeExceptions, []);
+
+  const changedGenerated = buildReleaseCorrelation({ ...options, generated: [options.generated[0], { path: 'generated/styles.css', bytes: Buffer.from('.muxui-button{color:red}\n') }] });
+  assert.notEqual(changedGenerated.generatedOutputs.digest, correlation.generatedOutputs.digest, 'one generated byte moves the output identity');
+
+  const unbound = { ...options.catalogBundle, artifacts: [options.catalogBundle.artifacts[1]] };
+  assert.throws(() => buildReleaseCorrelation({ ...options, catalogBundle: unbound }), /R1_EXIT_CORRELATION_INVALID: .*specRevision/u);
+  assert.throws(() => buildReleaseCorrelation({ ...options, source: { revision: 'HEAD', tree: options.source.tree } }), /R1_EXIT_CORRELATION_INVALID/u);
+  assert.throws(() => buildReleaseCorrelation({ ...options, catalogBundle: { ...options.catalogBundle, catalogDigest: `sha256:${'b'.repeat(64)}` } }), /R1_EXIT_CORRELATION_INVALID/u);
+  assert.throws(() => buildReleaseCorrelation({ ...options, retainedEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
 });

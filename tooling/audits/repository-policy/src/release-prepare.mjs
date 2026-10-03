@@ -16,10 +16,12 @@ import {
   assertSingleInstalledVersion,
   assertStylesheetAssetUrls,
   bundledModulePackage,
+  buildReleaseCorrelation,
   collectInstalledClosure,
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
+  deriveVisualContract,
   findModuleSideEffects,
   findPinnedDuplicateVersions,
   isolatedPackageManagerEnvironment,
@@ -54,6 +56,8 @@ const expectedCandidatePublishConfig = {
   tag: 'next',
   registry: 'https://registry.npmjs.org',
 };
+// Decision 0022: R1.1-R1.5 logged evidence must be retained before the R1 exit.
+const retainedEvidenceMilestones = Object.freeze(['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']);
 const fixedPackageEntries = Object.freeze([
   'package/LICENSE',
   'package/NOTICE',
@@ -660,6 +664,7 @@ try {
   assertIncludes(readme, 'next', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(notice, 'Copyright (c) 2025 Andrew', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Lucide', 'R1.5_PACK_NOTICE_INVALID');
+  assertIncludes(notice, '@internationalized/date', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Copyright (c) 2013-present Cole Bemis', 'R1.5_PACK_NOTICE_INVALID');
   for (const name of currentComponentExports) {
     const slug = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
@@ -974,6 +979,41 @@ try {
   }
   console.log('R1 exit npm publish dry-run passed without lifecycle hooks or registry mutation');
 
+  const readRepositoryFile = (path) => readFileSync(resolve(repositoryRoot, path));
+  const lockfileBytes = readRepositoryFile('pnpm-lock.yaml');
+  const lucideVersion = packedManifest.dependencies['lucide-react'];
+  const lucideIntegrity = lockfileBytes.toString('utf8')
+    .match(new RegExp(`\\n  lucide-react@${lucideVersion.replaceAll('.', '\\.')}:\\n\\s+resolution: \\{integrity: (sha512-[^}]+)\\}`, 'u'))?.[1];
+  const packedGenerated = expectedGeneratedEntries.map((entry) => ({
+    path: entry.slice('package/'.length),
+    bytes: readArchiveBytes(archive, entry),
+  }));
+  const retainedEvidence = retainedEvidenceMilestones.map((milestone) => {
+    const path = `tests/evidence/${milestone.toLowerCase()}/index.json`;
+    if (!existsSync(resolve(repositoryRoot, path))) fail('R1_EXIT_RETAINED_EVIDENCE_MISSING', `${milestone} logged evidence has no retained index at ${path}`);
+    return { milestone, path, bytes: readRepositoryFile(path) };
+  });
+  const sourceTree = spawnSync('git', ['rev-parse', `${sourceRevision}^{tree}`], { cwd: repositoryRoot, encoding: 'utf8' });
+  if (sourceTree.status !== 0) fail('R1_EXIT_SOURCE_IDENTITY_UNAVAILABLE', sourceTree.stderr);
+  const correlation = buildReleaseCorrelation({
+    source: { revision: sourceRevision, tree: sourceTree.stdout.trim() },
+    lockfile: { path: 'pnpm-lock.yaml', bytes: lockfileBytes },
+    generated: packedGenerated,
+    catalogPackage: JSON.parse(readRepositoryFile('packages/catalog/generated/catalog-package.json')),
+    catalogBundle: JSON.parse(readRepositoryFile('packages/catalog/generated/catalog.json')),
+    bindings: release.componentExports.map(({ binding }) => binding),
+    workspacePackages: packages.map(({ name, manifest: packageManifest }) => ({ name, version: packageManifest.version, private: packageManifest.private })),
+    retainedEvidence,
+    activeExceptions: release.exceptions,
+    visualContract: deriveVisualContract({
+      tokenSource: { path: 'catalog/tokens/default-theme.json', bytes: readRepositoryFile('catalog/tokens/default-theme.json') },
+      stylesheets: packedGenerated.filter(({ path }) => path.endsWith('.css')),
+      lucide: { version: lucideVersion, integrity: lucideIntegrity },
+      modules: packedGenerated.filter(({ path }) => path.endsWith('.mjs')).map(({ path, bytes }) => ({ path, source: bytes.toString('utf8') })),
+    }),
+  });
+  console.log(`R1 exit correlation: ${correlation.bindings.length} binding-spec revisions, ${correlation.generatedOutputs.entries.length} generated outputs, ${correlation.evidence.retained.length} retained evidence indexes, visual contract ${correlation.visualContract.digest}`);
+
   const releaseManifest = {
     schema: 'muxui-r1-exit-publication-preparation-v1',
     package: {
@@ -1013,6 +1053,7 @@ try {
       compression: 'gzip',
     },
     files: expectedPackageEntries,
+    correlation,
     consumerVerification: {
       onlineMatrix: matrixResults,
       warnings: {

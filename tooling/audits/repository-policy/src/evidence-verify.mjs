@@ -12,9 +12,11 @@ export class EvidenceIntegrityError extends Error {
 }
 
 export function hasUnsanitizedEvidenceOutput(text, repositoryRoot) {
+  // Public token IDs, including the historical `core:` namespace in retained
+  // logs, are artifact identities rather than credentials.
   const withoutPublicTokenIds = text.replace(
-    /"muxui:token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
-    '"muxui:<public-token-id>"',
+    /"(muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
+    '"$1:<public-token-id>"',
   );
   return withoutPublicTokenIds.includes(repositoryRoot)
     || /\/(?:Users|Volumes|home|root|tmp|private(?:\/(?:tmp|var\/folders))?|var\/folders)\//u.test(withoutPublicTokenIds)

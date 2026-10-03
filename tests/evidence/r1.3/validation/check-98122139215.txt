@@ -1,0 +1,688 @@
+2026-08-26T09:04:09.1013581Z ##[group]Run pnpm check
+2026-08-26T09:04:09.1014025Z pnpm check
+2026-08-26T09:04:09.1063714Z shell: /usr/bin/bash -e {0}
+2026-08-26T09:04:09.1064125Z ##[endgroup]
+2026-08-26T09:04:09.4374034Z 
+2026-08-26T09:04:09.4418024Z > @core-ui/workspace@0.0.0 check <workspace>
+2026-08-26T09:04:09.4428106Z > node tooling/audits/repository-policy/src/run-workspace-task.mjs check --affected
+2026-08-26T09:04:09.4428944Z 
+2026-08-26T09:04:09.6283626Z [workspace-task] check: full graph
+2026-08-26T09:04:09.9630671Z Scope: 10 of 11 workspace projects
+2026-08-26T09:04:09.9688079Z ##[group]@core-ui/foundation@0.0.0 : check packages/foundation
+2026-08-26T09:04:09.9717644Z 
+2026-08-26T09:04:09.9718517Z > @core-ui/foundation@0.0.0 check <workspace>/packages/foundation
+2026-08-26T09:04:09.9719545Z > node --test test/*.test.mjs
+2026-08-26T09:04:09.9720101Z 
+2026-08-26T09:04:10.0734753Z ✔ E-G1.0-05 foundation is semantic plus pure logic with interaction honestly absent (9.831277ms)
+2026-08-26T09:04:10.0871187Z ℹ tests 1
+2026-08-26T09:04:10.0871595Z ℹ suites 0
+2026-08-26T09:04:10.0878008Z ℹ pass 1
+2026-08-26T09:04:10.0898520Z ℹ fail 0
+2026-08-26T09:04:10.0915083Z ℹ cancelled 0
+2026-08-26T09:04:10.0938188Z ℹ skipped 0
+2026-08-26T09:04:10.0949212Z ℹ todo 0
+2026-08-26T09:04:10.0949995Z ℹ duration_ms 76.608085
+2026-08-26T09:04:10.0954467Z ##[endgroup]
+2026-08-26T09:04:10.0960328Z ##[group]@core-ui/schema@0.2.0 : check packages/schema
+2026-08-26T09:04:10.0969610Z 
+2026-08-26T09:04:10.0970397Z > @core-ui/schema@0.2.0 check <workspace>/packages/schema
+2026-08-26T09:04:10.0971629Z > node src/generate.mjs --check && node --test test/*.test.mjs
+2026-08-26T09:04:10.0972432Z 
+2026-08-26T09:04:10.1417950Z [schema] generated types and platform-safety contract match canonical sources
+2026-08-26T09:04:10.3184457Z ✔ E-G0.5-04: schema-owned metadata drives completion, effects, revisions, and owners (42.169774ms)
+2026-08-26T09:04:10.4389165Z ✔ E-G0.5-04: authoring resolves family files only through the canonical schema contract (30.237752ms)
+2026-08-26T09:04:10.4411530Z ✔ E-G0.5-02: revision preimages are the exact inputs hashed by existing digest functions (29.926882ms)
+2026-08-26T09:04:10.4429059Z ✔ E-G0.5-02: every declared revision axis matches its digest preimage membership (12.666865ms)
+2026-08-26T09:04:10.4438739Z ✔ E-G0.5-02: corrected identity and runtime-profile fields change observed spec digests (58.960644ms)
+2026-08-26T09:04:10.4519563Z ✔ E-G0.5-04 negative: a new stable field cannot bypass authoring and ownership coupling (12.883159ms)
+2026-08-26T09:04:10.4921693Z ✔ E-G0.5-04 negative: schema-bearing keywords and references cannot hide authorable fields (40.37022ms)
+2026-08-26T09:04:10.5069361Z ✔ G1.0 token-source v1-to-v2 migration is explicit, deterministic, and idempotent (7.218256ms)
+2026-08-26T09:04:10.5072243Z ✔ G1.0 binding v1-to-v2 migration requires the binding-owned token recipe (3.305044ms)
+2026-08-26T09:04:10.5074983Z ✔ G1.0 unsupported binding migration requires its complete platform-safety declaration (0.789595ms)
+2026-08-26T09:04:10.5076612Z ✔ E-G1.0-07 compiles closed binding-owned requirement sets without behavior claims (6.427147ms)
+2026-08-26T09:04:10.5078197Z ✔ E-G1.0-07 rejects unknown, missing, duplicate, and wrong-profile declarations (8.788449ms)
+2026-08-26T09:04:10.5079248Z ✔ E-G1.0-07 unsupported top-level bindings retain a complete declaration and digest (31.946544ms)
+2026-08-26T09:04:10.5080226Z ✔ E-G1.0-07 rejects consumer weakening and premature fulfillment (1.646396ms)
+2026-08-26T09:04:10.5081045Z ✔ G0.4 resolver codes discriminate closed detail schemas (17.614182ms)
+2026-08-26T09:04:10.7118921Z ✔ E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relations validate (166.513251ms)
+2026-08-26T09:04:10.7148257Z ✔ E-G0.1-01 negative: unknown, duplicate, invalid-relation, and unowned fields fail closed (56.451957ms)
+2026-08-26T09:04:10.7150484Z ✔ E-G0.5-01: discriminated binding branches retain exact required-field diagnostics (1.687203ms)
+2026-08-26T09:04:10.7158700Z ✔ E-G0.1-02: canonical bytes ignore key order and whitespace but preserve meaning (12.85677ms)
+2026-08-26T09:04:10.7160583Z ✔ E-G0.1-03: editorial content and normative binding closure affect the correct revision (38.714769ms)
+2026-08-26T09:04:10.7326266Z ✔ E-G0.1-04: package/source locations remain derived and generated types retain owner linkage (16.726526ms)
+2026-08-26T09:04:10.7329163Z ✔ TALE-TOKEN-B token-source 2.0 to 2.1 migration is explicit, omission-preserving, and idempotent (2.883066ms)
+2026-08-26T09:04:10.7333044Z ✔ TALE-TOKEN-A section-page grammar is closed, typed, and position-safe (9.096946ms)
+2026-08-26T09:04:10.7381682Z ✔ TALE-TOKEN-B page budget profile grammar is closed and internally bounded (4.142389ms)
+2026-08-26T09:04:10.7391536Z ✔ E-G0.1-05: schema evolution and append-only response policy enforce declared effects (1.396168ms)
+2026-08-26T09:04:10.7491920Z ℹ tests 25
+2026-08-26T09:04:10.7492344Z ℹ suites 0
+2026-08-26T09:04:10.7493313Z ℹ pass 25
+2026-08-26T09:04:10.7493676Z ℹ fail 0
+2026-08-26T09:04:10.7494095Z ℹ cancelled 0
+2026-08-26T09:04:10.7494336Z ℹ skipped 0
+2026-08-26T09:04:10.7494554Z ℹ todo 0
+2026-08-26T09:04:10.7494818Z ℹ duration_ms 573.774295
+2026-08-26T09:04:10.7559431Z ##[endgroup]
+2026-08-26T09:04:10.7562346Z ##[group]@core-ui/tokens@2.0.0 : check packages/tokens
+2026-08-26T09:04:10.7569066Z 
+2026-08-26T09:04:10.7569781Z > @core-ui/tokens@2.0.0 check <workspace>/packages/tokens
+2026-08-26T09:04:10.7571698Z > node src/default-theme-identity-migration.mjs --check && node src/tale-token-materialization.mjs --check && node src/generate.mjs --check && node --test test/*.test.mjs
+2026-08-26T09:04:19.0954516Z 
+2026-08-26T09:04:19.0957285Z {"changed":false,"mode":"check","postMigration":{"artifactId":"core:token:default-theme","bytes":548292,"canonicalSha256":"sha256:01982f878f3f4b29bf889fcc0cc9577e1bde3fb69a646f1972e74dd8b9347757","path":"catalog/tokens/default-theme.json","rawSha256":"sha256:cd4aca7d436ce080bed36f1358924bed0c130dacb94455dfb5eb9cf96eabdb8f"},"state":"post-migration"}
+2026-08-26T09:04:27.7944623Z {"changed":false,"mode":"check","state":"materialized"}
+2026-08-26T09:04:27.8793485Z [tokens] Tale occurrence projection matches accepted decision 0003
+2026-08-26T09:04:50.4497349Z ✔ default-theme identity is exact in the retained current source (22456.852253ms)
+2026-08-26T09:04:50.5267817Z ✔ default-theme identity migration rejects both, neither, and near-match states (77.351445ms)
+2026-08-26T09:05:27.2882045Z ✔ R1 React package baseline is checked independently of delivery authority (25.043748ms)
+2026-08-26T09:05:27.2884029Z ✔ TALE-TOKEN-C repository transition restores failed changes and replays idempotently (59257.353609ms)
+2026-08-26T09:05:27.3168415Z ✔ TALE-TOKEN-C materializes the accepted 312-token source and exact crosswalk (378.982441ms)
+2026-08-26T09:05:27.3170584Z ✔ TALE-TOKEN-C applies the accepted default-theme artifact identity without changing tokens (460.405947ms)
+2026-08-26T09:05:27.3172579Z ✔ TALE-TOKEN-C occurrence projection is exact, ordered, and media-free (33.406786ms)
+2026-08-26T09:05:27.3174587Z ✔ TALE-TOKEN-C current source is an independently verified final idempotent result (24388.988681ms)
+2026-08-26T09:05:27.3176370Z ✔ TALE-TOKEN-C rejects base, target, meaning, collision, and final near-match drift (290.45691ms)
+2026-08-26T09:05:27.3178760Z ✔ TALE-TOKEN-C source-crosswalk validation binds coverage, reference targets, groups, and digest (458.208252ms)
+2026-08-26T09:05:27.3180938Z ✔ E-G1.0-01 rejects cycles, reverse layers, incompatible units, and overrides (141.292885ms)
+2026-08-26T09:05:27.3182614Z ✔ E-G1.0-02 web and native transforms retain canonical provenance without cross-target authority (173.474317ms)
+2026-08-26T09:05:27.3184137Z ✔ Decision 0005 changes only renderer source and provenance identity (410.545378ms)
+2026-08-26T09:05:27.3185704Z ✔ E-G1.0-03 missing required tokens fail per profile and exact proved fallbacks diagnose use (380.141308ms)
+2026-08-26T09:05:27.3187896Z ✔ E-G1.0-04 requirement digests track exact semantic closure only (123.289391ms)
+2026-08-26T09:05:27.3189409Z ✔ E-G1.0-06 static mode output works while runtime switching remains unavailable (172.208581ms)
+2026-08-26T09:05:27.3190331Z ℹ tests 16
+2026-08-26T09:05:27.3190743Z ℹ suites 0
+2026-08-26T09:05:27.3191145Z ℹ pass 16
+2026-08-26T09:05:27.3191564Z ℹ fail 0
+2026-08-26T09:05:27.3191974Z ℹ cancelled 0
+2026-08-26T09:05:27.3192439Z ℹ skipped 0
+2026-08-26T09:05:27.3192841Z ℹ todo 0
+2026-08-26T09:05:27.3193293Z ℹ duration_ms 59402.81879
+2026-08-26T09:05:27.3244206Z ##[endgroup]
+2026-08-26T09:05:27.3247594Z ##[group]@core-ui/catalog@2.0.0 : check packages/catalog
+2026-08-26T09:05:27.3257660Z 
+2026-08-26T09:05:27.3258251Z > @core-ui/catalog@2.0.0 check <workspace>/packages/catalog
+2026-08-26T09:05:27.3259224Z > node src/generate.mjs --check && node --test test/*.test.mjs
+2026-08-26T09:05:27.3259566Z 
+2026-08-26T09:05:31.4772037Z [catalog] generated bundle matches packages/catalog/catalog-sources.json: packages/catalog/generated/catalog.mjs
+2026-08-26T09:05:31.4808075Z [catalog] generated bundle matches packages/catalog/catalog-sources.json: packages/catalog/generated/catalog.json
+2026-08-26T09:05:31.4811132Z [catalog] generated bundle matches packages/catalog/catalog-sources.json: packages/catalog/generated/catalog.json.provenance
+2026-08-26T09:05:31.4814018Z [catalog] generated bundle matches packages/catalog/catalog-sources.json: packages/catalog/generated/catalog-package.json
+2026-08-26T09:05:31.4816574Z [catalog] generated bundle matches packages/catalog/catalog-sources.json: packages/catalog/generated/catalog-package.json.provenance
+2026-08-26T09:05:43.8585356Z ✔ E-G0.2-01: declared sources compile to byte-identical ordered bundles (12047.715566ms)
+2026-08-26T09:05:47.7226481Z ✔ E-G0.2-01 negative: generated bundle matches its canonical source manifest (3864.682043ms)
+2026-08-26T09:05:47.7336822Z ✔ R1.3 guide sources preserve Markdown newlines (11.390441ms)
+2026-08-26T09:05:48.2869873Z ✔ R1.3 catalog closure registers and discovers every canonical family (169.444171ms)
+2026-08-26T09:05:48.2872064Z ✔ E-G0.2-02: list, search, and get are deterministic with exact provenance (32.703495ms)
+2026-08-26T09:05:48.2873778Z ✔ E-G0.2-02: graph and revisions remain derived from schema-owned contracts (1.729054ms)
+2026-08-26T09:05:48.2875625Z ✔ E-G0.2-03: pagination is digest- and request-bound (76.031332ms)
+2026-08-26T09:05:48.2879676Z ✔ TALE-TOKEN-B query 2.0 removes inline tokens while retaining historical 1.1 and 1.2 meanings (179.089308ms)
+2026-08-26T09:05:48.2883680Z ✔ TALE-TOKEN-B synthetic crosswalk pages preserve normalized groups without changing v1.2 projection (93.275556ms)
+2026-08-26T09:05:48.7070134Z ✔ TALE-TOKEN-B retains exact Phase A v1.1 and v1.2 responses outside enumerated identities (10.813405ms)
+2026-08-26T09:05:48.7071881Z ✔ TALE-TOKEN-B section cursors fail closed across tampering, versions, selectors, and catalog identities (128.741813ms)
+2026-08-26T09:05:48.7097661Z ✔ TALE-TOKEN-B runtime paging proves budget breaks, oversize errors, continuation, and position bounds (280.333566ms)
+2026-08-26T09:05:49.1111184Z ✔ TALE-TOKEN-B page budget profile binds the exact accepted annex envelope (135.296438ms)
+2026-08-26T09:05:49.1125918Z ✔ TALE-TOKEN-A selected catalog descriptor owns query defaults and support (109.425462ms)
+2026-08-26T09:05:49.1129096Z ✔ E-G0.2-04: search is bounded and retrieval traverses only direct relations (158.155666ms)
+2026-08-26T09:05:49.1130646Z ✔ E-G0.2-04 negative: unsupported selectors and missing artifacts are typed (1.121121ms)
+2026-08-26T09:05:49.1174508Z ✔ E-G0.2-05: query kernel is hermetic and ranking ignores environment state (6.600619ms)
+2026-08-26T09:05:49.1218250Z ✔ E-G0.2-05 negative: compiler uses the declared manifest and rejects duplicates (3.753212ms)
+2026-08-26T09:05:49.1506001Z ✔ E-G0.4 package layout binds package, catalog, API, schema, digest, and source identity (116.523636ms)
+2026-08-26T09:05:49.1507784Z ✔ TALE-TOKEN-A descriptor v1-to-v2 migration is deterministic and idempotent (3.524837ms)
+2026-08-26T09:05:49.1509285Z ✔ E-G0.4 installed-local resolution context is catalog-owned response metadata (478.763296ms)
+2026-08-26T09:05:49.1510207Z ✔ E-G1.0-04 catalog exposes resolved requirement sets matching packed descriptors (155.327422ms)
+2026-08-26T09:05:49.1511064Z ✔ E-G1.0-04 test pack projection binds catalog, descriptors, and release maps (60.949417ms)
+2026-08-26T09:05:49.1512526Z ✔ E-G1.0-04 query validation rejects open fallback and dependency closure facts (200.262452ms)
+2026-08-26T09:05:49.1513540Z ✔ E-G1.0-07 catalog and package expose exact platform-safety set digests (148.719652ms)
+2026-08-26T09:05:49.1514031Z ℹ tests 25
+2026-08-26T09:05:49.1514256Z ℹ suites 0
+2026-08-26T09:05:49.1514470Z ℹ pass 25
+2026-08-26T09:05:49.1514681Z ℹ fail 0
+2026-08-26T09:05:49.1514900Z ℹ cancelled 0
+2026-08-26T09:05:49.1517577Z ℹ skipped 0
+2026-08-26T09:05:49.1537992Z ℹ todo 0
+2026-08-26T09:05:49.1538519Z ℹ duration_ms 17624.566941
+2026-08-26T09:05:49.1569767Z ##[endgroup]
+2026-08-26T09:05:49.1572817Z ##[group]@core-ui/react@0.1.0-alpha.0 : check packages/react
+2026-08-26T09:05:49.1579796Z 
+2026-08-26T09:05:49.1580420Z > @core-ui/react@0.1.0-alpha.0 check <workspace>/packages/react
+2026-08-26T09:05:49.1581362Z > node src/generate.mjs --check && node --test test/*.test.mjs && tsc --noEmit -p test/tsconfig.json
+2026-08-26T09:05:49.1581760Z 
+2026-08-26T09:05:49.4855014Z [react] generated standalone R1.3 collection and color projections from canonical owners
+2026-08-26T09:05:51.4119161Z ✔ R1.1 RAC-backed component slice preserves SSR, hydration, semantics, and interactions (346.945779ms)
+2026-08-26T09:05:51.4209107Z ✔ R1.1 Core labels, checkbox indicator states, and breadcrumb current normalization are accessible (40.536975ms)
+2026-08-26T09:05:52.0070132Z ✔ R1.2 fields preserve Core labels, errors, SSR, hydration, and state callbacks (660.164291ms)
+2026-08-26T09:05:52.0531419Z ✔ R1.2 form controls support controlled callbacks, keyboard-compatible input, and submit/reset (176.038034ms)
+2026-08-26T09:05:52.1600137Z ✔ R1.2 public date contracts are ISO strings and do not expose upstream date types (3.957623ms)
+2026-08-26T09:05:52.6914723Z ✔ R1.2 date ranges own paired FormData names and reset to their default (568.560124ms)
+2026-08-26T09:05:52.8910768Z ✔ R1.2 temporal fields honor cancelled form resets and reset normally (232.31844ms)
+2026-08-26T09:05:52.9577916Z ✔ R1.2 autocomplete is closed on SSR, filters while focused, and selects Core items (61.262293ms)
+2026-08-26T09:05:52.9831735Z ✔ R1.2 autocomplete preserves rich labels for SSR and text filtering (46.049711ms)
+2026-08-26T09:05:52.9981783Z ✔ R1.2 readonly autocomplete only permits viewing suggestions (33.928558ms)
+2026-08-26T09:05:53.0789841Z ✔ R1.2 autocomplete placeholder stays aligned across artifact, types, and runtime (5.508728ms)
+2026-08-26T09:05:53.0791399Z ✔ R1.2 name-required fields reject dangling unnamed runtime instances (3.577414ms)
+2026-08-26T09:05:53.0827501Z ✔ R1.2 fields do not forward unsupported validation props (45.880566ms)
+2026-08-26T09:05:53.0836025Z ✔ R1.2 CheckboxGroup owns option names for required FormData submission (29.608225ms)
+2026-08-26T09:05:59.4746299Z ✔ R1.1 Button owns Core selectors and required token crosswalk (17.057053ms)
+2026-08-26T09:05:59.4748344Z ✔ R1.3 component selectors and donor dispositions stay Core-owned (11.192953ms)
+2026-08-26T09:05:59.4749813Z ✔ R1.2 donor crosswalk is exact, adapted, and dependency-free (4.105118ms)
+2026-08-26T09:05:59.4751610Z ✔ R1.1 Core Button proves SSR, hydration, disabled and pending state (220.102719ms)
+2026-08-26T09:06:01.2055265Z ✔ R1.3 artifact declarations have a generated Core type and runtime surface (64.001964ms)
+2026-08-26T09:06:01.2057875Z ✔ R1.3 temporal adapters preserve ISO values and calendar navigation (623.144673ms)
+2026-08-26T09:06:01.2059436Z ✔ R1.3 color controls expose Core color strings, anatomy, and disabled guards (280.727748ms)
+2026-08-26T09:06:01.2061104Z ✔ R1.3 scalar composites preserve string and numeric callbacks with disabled guards (68.731628ms)
+2026-08-26T09:06:01.2062433Z ✔ R1.3 RadioGroup owns selected indicator and read-only focus semantics (39.465528ms)
+2026-08-26T09:06:01.2064310Z ✔ R1.3 field collections keep unsupported props out of public DOM surfaces (11.996361ms)
+2026-08-26T09:06:01.2065513Z ✔ R1.3 menu, table, and tag actions return normalized Core items (63.300635ms)
+2026-08-26T09:06:01.2067224Z ✔ R1.3 collections keep disabled items inert and preserve composite anatomy (28.830867ms)
+2026-08-26T09:06:01.2068800Z ✔ R1.3 collection items expose keyboard focus-visible state when unselected (92.794987ms)
+2026-08-26T09:06:01.2070317Z ✔ R1.3 Select renders normalized options and submits the selected Core value (117.961359ms)
+2026-08-26T09:06:01.2071748Z ✔ R1.3 TokenField owns uncontrolled reset and repeated form entries (69.436793ms)
+2026-08-26T09:06:01.2073178Z ✔ R1.3 Virtualizer uses RAC ListLayout to render and scroll a bounded window (47.636722ms)
+2026-08-26T09:06:01.2074328Z ✔ R1.3 Tree flattens nested items for keyboard collection semantics (23.514309ms)
+2026-08-26T09:06:01.2383963Z ✔ R1.1 package has an exact standalone substrate identity (8.091516ms)
+2026-08-26T09:06:01.2385063Z ✔ R1.3 is packable but direct publication fails closed (47.796563ms)
+2026-08-26T09:06:01.2386097Z ✔ R1.1 packed package exposes a clean Core component surface (1639.817407ms)
+2026-08-26T09:06:01.2387405Z ✔ R1.2 public surface exports the Core component slice without upstream types (3.453443ms)
+2026-08-26T09:06:01.2388614Z ✔ R1.0 upstream inventory is complete, typed, and classified (87.156561ms)
+2026-08-26T09:06:01.2389844Z ✔ R1.0 upstream and catalog contracts reject complete-surface and shape drift (254.634103ms)
+2026-08-26T09:06:01.2391210Z ✔ R1.2 generated contracts reject missing, unknown, and publication drift (6.189628ms)
+2026-08-26T09:06:01.2392623Z ✔ R1.0 donor inputs are exact, fully crosswalked, licensed, and dependency-free (4.267492ms)
+2026-08-26T09:06:01.2393966Z ✔ R1.0 lockfile binds the accepted React Aria package integrity (1.293333ms)
+2026-08-26T09:06:01.2394831Z ✔ R1.0 binds current reusable token facts and keeps historical proof provenance-only (134.977838ms)
+2026-08-26T09:06:01.2395362Z ℹ tests 41
+2026-08-26T09:06:01.2395593Z ℹ suites 0
+2026-08-26T09:06:01.2395810Z ℹ pass 41
+2026-08-26T09:06:01.2396022Z ℹ fail 0
+2026-08-26T09:06:01.2396239Z ℹ cancelled 0
+2026-08-26T09:06:01.2396465Z ℹ skipped 0
+2026-08-26T09:06:01.2397461Z ℹ todo 0
+2026-08-26T09:06:01.2397741Z ℹ duration_ms 11717.815189
+2026-08-26T09:06:01.6677877Z ##[endgroup]
+2026-08-26T09:06:01.6680206Z ##[group]@core-ui/react-native@1.0.0 : check packages/react-native
+2026-08-26T09:06:01.6688342Z 
+2026-08-26T09:06:01.6689334Z > @core-ui/react-native@1.0.0 check <workspace>/packages/react-native
+2026-08-26T09:06:01.6691413Z > node src/generate.mjs --check && node --test ../../tests/fixtures/g1.2/profile.test.mjs test/contract.test.mjs && jest --config test/jest.config.cjs --runInBand --verbose && tsc --noEmit -p test/tsconfig.json
+2026-08-26T09:06:01.6692629Z 
+2026-08-26T09:06:01.8470272Z [react-native] generated native theme projections match canonical inputs
+2026-08-26T09:06:01.9768718Z ✔ G1.2 native safety fixture is an exact catalog-derived three-profile matrix (1.477356ms)
+2026-08-26T09:06:01.9770793Z ✔ G1.2 native safety fixture rejects unknown root key (0.499481ms)
+2026-08-26T09:06:01.9778412Z ✔ G1.2 native safety fixture rejects missing root key (0.191477ms)
+2026-08-26T09:06:01.9780313Z ✔ G1.2 native safety fixture rejects unknown tuple key (0.247582ms)
+2026-08-26T09:06:01.9781790Z ✔ G1.2 native safety fixture rejects missing tuple key (0.286224ms)
+2026-08-26T09:06:01.9798823Z ✔ G1.2 native safety fixture rejects duplicate tuple (0.186708ms)
+2026-08-26T09:06:01.9800320Z ✔ G1.2 native safety fixture rejects reordered tuple (0.205733ms)
+2026-08-26T09:06:01.9801733Z ✔ G1.2 native safety fixture rejects wrong contract (0.234768ms)
+2026-08-26T09:06:01.9835867Z ✔ G1.2 native safety fixture rejects wrong set digest (0.372675ms)
+2026-08-26T09:06:01.9839551Z ✔ G1.2 native safety fixture rejects wrong validation profile (0.513268ms)
+2026-08-26T09:06:01.9945392Z ✔ E-G1.2-01 package graph and exports exclude web and host accidents (11.79869ms)
+2026-08-26T09:06:01.9976613Z ✔ E-G1.2-01 every public subpath resolves its declared runtime and type surface (3.840885ms)
+2026-08-26T09:06:01.9980428Z ✔ E-G1.2-03 React Native Web remains an explicit unsupported profile (0.664931ms)
+2026-08-26T09:06:02.1098109Z ✔ E-G1.2-04 native Button remains a disabled-only deferred boundary (1.221168ms)
+2026-08-26T09:06:02.1121573Z ✔ E-G1.2-04 native themes are exact @core-ui/tokens projections with no CSS authority (112.181726ms)
+2026-08-26T09:06:02.1123240Z ✔ E-G1.2-05 test-only fixture binds the exact compiled three-profile safety matrix (0.866737ms)
+2026-08-26T09:06:02.1271905Z ℹ tests 16
+2026-08-26T09:06:02.1272390Z ℹ suites 0
+2026-08-26T09:06:02.1272655Z ℹ pass 16
+2026-08-26T09:06:02.1272920Z ℹ fail 0
+2026-08-26T09:06:02.1273197Z ℹ cancelled 0
+2026-08-26T09:06:02.1273459Z ℹ skipped 0
+2026-08-26T09:06:02.1273686Z ℹ todo 0
+2026-08-26T09:06:02.1273957Z ℹ duration_ms 243.963988
+2026-08-26T09:06:03.0348507Z PASS test/native-host.test.js
+2026-08-26T09:06:03.0377824Z   E-G1.2-02 production React Native JavaScript substrate
+2026-08-26T09:06:03.0407946Z     ✓ composes the production view primitive in the Jest native host (3 ms)
+2026-08-26T09:06:03.0437777Z     ✓ composes the production text primitive in the Jest native host (1 ms)
+2026-08-26T09:06:03.0439047Z     ✓ composes the production pressable primitive in the Jest native host (1 ms)
+2026-08-26T09:06:03.0463053Z     ✓ maps accessibility, announcements, focus, and responder ownership (2 ms)
+2026-08-26T09:06:03.0464245Z     ✓ binds every declared accessibility action to a validated handler (10 ms)
+2026-08-26T09:06:03.0465322Z     ✓ observes profile-specific native-module calls without claiming native OS execution (1 ms)
+2026-08-26T09:06:03.0466526Z     ✓ does not expose consumer switches for required native safety adaptations
+2026-08-26T09:06:03.0467123Z 
+2026-08-26T09:06:03.0467419Z Test Suites: 1 passed, 1 total
+2026-08-26T09:06:03.0467928Z Tests:       7 passed, 7 total
+2026-08-26T09:06:03.0468338Z Snapshots:   0 total
+2026-08-26T09:06:03.0468575Z Time:        0.607 s
+2026-08-26T09:06:03.0468813Z Ran all test suites.
+2026-08-26T09:06:03.1638247Z ##[endgroup]
+2026-08-26T09:06:03.1640008Z ##[group]@core-ui/tooling@1.0.0 : check packages/tooling
+2026-08-26T09:06:03.1646476Z 
+2026-08-26T09:06:03.1646872Z > @core-ui/tooling@1.0.0 check <workspace>/packages/tooling
+2026-08-26T09:06:03.1647686Z > node src/generate.mjs --check && node --test test/*.test.mjs
+2026-08-26T09:06:03.1647953Z 
+2026-08-26T09:06:03.3654561Z [tooling] generated surface matches packages/tooling/command-registry.json: packages/tooling/generated/command-surface.mjs
+2026-08-26T09:06:03.3660546Z [tooling] generated surface matches packages/tooling/command-registry.json: packages/tooling/generated/response-types.d.ts
+2026-08-26T09:06:24.6525026Z ✔ E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and repair stay canonical (20829.997791ms)
+2026-08-26T09:06:44.0279718Z ✔ E-G0.5-01 negative: diagnostics require an exact manifest source and source revision (19376.621242ms)
+2026-08-26T09:06:52.4661852Z ✔ E-G0.5-02: semantic golden corpus reports owning fields and exact revision effects (8438.031094ms)
+2026-08-26T09:07:01.6918912Z ✔ E-G0.5-02: sequence diffs preserve one add or remove at every array position (9225.645313ms)
+2026-08-26T09:07:09.7427556Z ✔ E-G0.5-02: revision explainer lists the normalized inputs behind each digest (8050.781283ms)
+2026-08-26T09:07:17.9357980Z ✔ E-G0.5-02: revision explanations distinguish absent and empty containers on every axis (8192.463815ms)
+2026-08-26T09:07:26.2003156Z ✔ E-G0.5-03: autofix is preview-only and denies every product-meaning category (8264.595476ms)
+2026-08-26T09:07:34.4064602Z ✔ E-G0.5-04: affected closure is graph-derived and extends through declared Gate 1 dependents (8205.891374ms)
+2026-08-26T09:07:42.9559723Z ✔ E-G0.5-04: an injected stable field must couple scaffold, diff, diagnostics, and closure (8549.635958ms)
+2026-08-26T09:07:42.9927649Z ✔ E-G0.3-01 programmatic and CLI JSON surfaces return the same responses (11713.048282ms)
+2026-08-26T09:07:42.9929039Z ✔ E-G0.3-02 human, JSON, and dense projections preserve one response object (2.501357ms)
+2026-08-26T09:07:42.9930512Z ✔ TALE-TOKEN-B core get negotiates 1.1/1.2/2.0 and preserves page parity (8365.77078ms)
+2026-08-26T09:07:42.9931954Z ✔ E-G0.3-03 dense outputs round-trip deterministically within every locked budget (15.729646ms)
+2026-08-26T09:07:42.9933110Z ✔ E-G0.3-03 dense golden snapshots remain stable (10.76695ms)
+2026-08-26T09:07:42.9934448Z ✔ E-G0.3-04 registry generates parser, help, completion, manifest, types, and future MCP inputs (1549.672998ms)
+2026-08-26T09:07:42.9935988Z ✔ G0.4 project and cache inputs stay outside query selectors and require an exact pair (0.969018ms)
+2026-08-26T09:07:42.9937654Z ✔ E-G0.3-05 structured errors have stable codes, safe actions, and meaningful exits (4171.109637ms)
+2026-08-26T09:07:42.9939038Z ✔ E-G0.3-05 process boundary keeps JSON singular and diagnostics off stderr (1738.087138ms)
+2026-08-26T09:07:42.9940605Z ✔ E-G0.3-06 bare JSON cold start discovers manifest and retrieves without repository crawling (3310.559286ms)
+2026-08-26T09:07:42.9942165Z ✔ E-G0.4 resolver matrix selects only direct or explicitly addressed catalog authority (87.477583ms)
+2026-08-26T09:07:42.9943658Z ✔ E-G0.4 resolver verifies provenance material instead of trusting fixture flags (3.846946ms)
+2026-08-26T09:07:42.9945591Z ✔ E-G1.0-07 resolver rejects a weakened platform-safety requirement digest (3.470464ms)
+2026-08-26T09:07:42.9946661Z ✔ E-G1.0-04 compatibility rejects one changed native profile digest (7.132696ms)
+2026-08-26T09:07:42.9948499Z ✔ E-G1.0-04 compatibility rejects jointly stale descriptor and release maps (6.613106ms)
+2026-08-26T09:07:42.9950040Z ✔ E-G0.4 explicit cache remains subordinate to manifest and lock authority (10.203574ms)
+2026-08-26T09:07:42.9951632Z ✔ G0.4 production resolver input rejects duplicate or undeclared normalized identities (7.93935ms)
+2026-08-26T09:07:42.9953003Z ✔ E-G0.4 resolver diagnostics are relative and privacy-safe (15.280997ms)
+2026-08-26T09:07:42.9954390Z ✔ E-G0.4 pnpm adapter resolves the selected direct package and drives the CLI (4821.487617ms)
+2026-08-26T09:07:42.9955934Z ✔ TALE-TOKEN-C installed-local selection retains the exact Phase B catalog tuple (4660.396431ms)
+2026-08-26T09:07:42.9958197Z ✔ E-G0.4 CLI requires exact bindings and filters project-wide discovery (2750.453335ms)
+2026-08-26T09:07:42.9959468Z ✔ E-G0.4 pnpm adapter fails closed for missing projects and cache tuples (2390.801686ms)
+2026-08-26T09:07:42.9960835Z ✔ E-G0.4 pnpm adapter translates malformed project JSON into one typed response (17.722842ms)
+2026-08-26T09:07:42.9962192Z ✔ E-G0.4 pnpm adapter admits only an exact verified cache tuple (2969.620151ms)
+2026-08-26T09:07:42.9963598Z ✔ E-G0.4 pnpm adapter normalizes renderer packages into the single resolver (10803.095716ms)
+2026-08-26T09:07:42.9964475Z ℹ tests 34
+2026-08-26T09:07:42.9964844Z ℹ suites 0
+2026-08-26T09:07:42.9965192Z ℹ pass 34
+2026-08-26T09:07:42.9965558Z ℹ fail 0
+2026-08-26T09:07:42.9965936Z ℹ cancelled 0
+2026-08-26T09:07:42.9966322Z ℹ skipped 0
+2026-08-26T09:07:42.9966694Z ℹ todo 0
+2026-08-26T09:07:42.9967394Z ℹ duration_ms 99588.302043
+2026-08-26T09:07:43.0004357Z ##[endgroup]
+2026-08-26T09:07:43.0006691Z ##[group]@core-ui/web@1.0.1 : check packages/web
+2026-08-26T09:07:43.0013714Z 
+2026-08-26T09:07:43.0014228Z > @core-ui/web@1.0.1 check <workspace>/packages/web
+2026-08-26T09:07:43.0015130Z > node src/generate.mjs --check && node --test test/*.test.mjs
+2026-08-26T09:07:43.0015598Z 
+2026-08-26T09:07:43.1716735Z [web] generated surface and CSS identity match canonical bindings
+2026-08-26T09:07:43.2999302Z ✔ E-G1.1-02 canonical examples consume no undocumented topology (13.015919ms)
+2026-08-26T09:07:53.7730149Z ✔ E-G1.1-01 progressive fixture keeps native semantics with JavaScript disabled (10033.294441ms)
+2026-08-26T09:07:54.8113112Z ✔ E-G1.1-06 binds two exact safety sets and proves web-owned browser adaptation (1039.416056ms)
+2026-08-26T09:07:54.8293669Z ✔ E-G1.1-03 vanilla reconnect is idempotent and mixed ownership is rejected (108.079894ms)
+2026-08-26T09:07:54.8295060Z ✔ E-G1.1-03 concurrent roots share listeners and global leases then clean up (26.680488ms)
+2026-08-26T09:07:54.8296390Z ✔ E-G1.1-03 failed setup rolls every resource and root claim back (13.045203ms)
+2026-08-26T09:07:54.8297885Z ✔ E-G1.1-03 resource releases are idempotent before final teardown (10.912806ms)
+2026-08-26T09:07:54.8299248Z ✔ E-G1.1-03 duplicate package module identities share the realm coordinator (17.629919ms)
+2026-08-26T09:07:54.8300649Z ✔ E-G1.1-02 machine-enumerates only binding and token-policy derived hooks (2.42324ms)
+2026-08-26T09:07:54.8301947Z ✔ E-G1.1-02 framework-free web output does not inherit React-only pending (7.057217ms)
+2026-08-26T09:07:54.8302829Z ✔ E-G1.1-02 refuses nonexistent exports and non-component identities (0.818387ms)
+2026-08-26T09:07:54.8303361Z ℹ tests 11
+2026-08-26T09:07:54.8303602Z ℹ suites 0
+2026-08-26T09:07:54.8303838Z ℹ pass 11
+2026-08-26T09:07:54.8304069Z ℹ fail 0
+2026-08-26T09:07:54.8304309Z ℹ cancelled 0
+2026-08-26T09:07:54.8304558Z ℹ skipped 0
+2026-08-26T09:07:54.8304802Z ℹ todo 0
+2026-08-26T09:07:54.8305095Z ℹ duration_ms 11621.199386
+2026-08-26T09:07:54.8358797Z ##[endgroup]
+2026-08-26T09:07:54.8364504Z ##[group]@core-ui/react-playground@0.0.0 : check apps/react-playground
+2026-08-26T09:07:54.8376464Z 
+2026-08-26T09:07:54.8377570Z > @core-ui/react-playground@0.0.0 check <workspace>/apps/react-playground
+2026-08-26T09:07:54.8378515Z > pnpm build && node --test test/*.test.mjs
+2026-08-26T09:07:54.8378853Z 
+2026-08-26T09:07:55.1546968Z 
+2026-08-26T09:07:55.1548427Z > @core-ui/react-playground@0.0.0 build <workspace>/apps/react-playground
+2026-08-26T09:07:55.1549462Z > node scripts/build.mjs
+2026-08-26T09:07:55.1549741Z 
+2026-08-26T09:08:10.4473757Z {"browser":"151.0.7922.137","profiles":["light/standard/full/comfortable/ltr","dark/standard/full/comfortable/ltr","light/more/full/comfortable/ltr","light/standard/reduced/comfortable/ltr","light/standard/full/compact/ltr","light/standard/full/comfortable/rtl"]}
+2026-08-26T09:08:10.5467987Z ✔ R1.3 React component browser and axe matrix (14321.335287ms)
+2026-08-26T09:08:10.6143232Z ✔ private playground exposes the bounded R1.3 React component states (6.608284ms)
+2026-08-26T09:08:10.6146365Z ℹ tests 2
+2026-08-26T09:08:10.6146743Z ℹ suites 0
+2026-08-26T09:08:10.6147617Z ℹ pass 2
+2026-08-26T09:08:10.6148010Z ℹ fail 0
+2026-08-26T09:08:10.6148384Z ℹ cancelled 0
+2026-08-26T09:08:10.6148817Z ℹ skipped 0
+2026-08-26T09:08:10.6168189Z ℹ todo 0
+2026-08-26T09:08:10.6168745Z ℹ duration_ms 14850.714975
+2026-08-26T09:08:10.6237786Z ##[endgroup]
+2026-08-26T09:08:10.6241438Z ##[group]@core-ui/repository-policy@0.0.0 : check tooling/audits/repository-policy
+2026-08-26T09:08:10.6248659Z 
+2026-08-26T09:08:10.6249553Z > @core-ui/repository-policy@0.0.0 check <workspace>/tooling/audits/repository-policy
+2026-08-26T09:08:10.6256698Z > node src/cli.mjs && node src/tale-token-annex-verify.mjs && node --test test/default-theme-g1.0-v2.test.mjs test/default-theme-g1.1-v2.test.mjs test/delivery-workflow-authority.test.mjs test/evidence-integrity.test.mjs test/g1.2-v2.test.mjs test/phase-c-applicability-capture.test.mjs test/phase-c-materialization-capture.test.mjs test/react-aria-stage1-source.test.mjs test/react-r1.0.test.mjs test/repository-policy.test.mjs test/tale-token-annex.test.mjs test/tale-token-phase-a.test.mjs test/tale-token-phase-b.test.mjs test/tale-token-phase-c-v2.test.mjs test/task-graph.test.mjs ../../../tests/evidence/g1.2-profile.test.mjs ../../../tests/fixtures/g1.2/profile.test.mjs ../../../.github/scripts/validate-planning-pr.test.cjs
+2026-08-26T09:08:10.6261996Z 
+2026-08-26T09:08:10.7709026Z [E-G0.0-01] navigation and path audit passed (7 major owners)
+2026-08-26T09:08:10.7710107Z [E-G0.0-03] repository policy passed (39 projections, 46 artifacts, 46 slugs/aliases)
+2026-08-26T09:08:10.8908881Z [TALE-TOKEN-ANNEX] verified 693 occurrences, 41 groups, 430 additions, and 1 exact reuse
+2026-08-26T09:08:10.8910714Z [TALE-TOKEN-ANNEX] candidate crosswalk sha256:e7f2161d9bff67dc83f55e8f2a7c448471cd537a7a7002555ac1d583a5673ce5
+2026-08-26T09:08:10.8912150Z [TALE-TOKEN-ANNEX] human acceptance bound
+2026-08-26T09:08:11.0023112Z ✔ ignores pull requests outside authority sources (2.21941ms)
+2026-08-26T09:08:11.0038388Z ✔ accepts a complete Product Scope authority publication (1.194619ms)
+2026-08-26T09:08:11.0067582Z ✔ rejects an authority change without a label or change record (0.694105ms)
+2026-08-26T09:08:11.0100379Z ✔ protects the executable platform-safety registry as architecture authority (0.229398ms)
+2026-08-26T09:08:11.0114141Z ✔ rejects a planning-control-only change without governance metadata (0.362315ms)
+2026-08-26T09:08:11.0139813Z ✔ rejects incomplete Product Scope change metadata (0.677784ms)
+2026-08-26T09:08:11.0162914Z ✔ routes repository-policy and skill changes through ordinary governance metadata (1.886339ms)
+2026-08-26T09:08:11.0880377Z ✔ G1.2 profile is closed around exactly five proposed assertions and no supersessions (3.848599ms)
+2026-08-26T09:08:11.0893544Z ✔ G1.2 closed profile rejects nested extras, mutated facts, references, and continuity members (0.939412ms)
+2026-08-26T09:08:11.0896490Z ✔ G1.2 root identity is externally bound across source, tree, and timestamp (0.413882ms)
+2026-08-26T09:08:11.0957512Z ✔ G1.2 capture arguments are exact and timestamp-bound (1.100112ms)
+2026-08-26T09:08:11.0961493Z ✔ G1.2 Jest report parsing ignores pnpm stderr appended after the JSON line (1.582542ms)
+2026-08-26T09:08:11.1417191Z ✔ G1.2 transactional materialization verifies only after both roots and leaves no transaction directory (60.269016ms)
+2026-08-26T09:08:11.1683476Z ✔ G1.2 transactional materialization durably syncs both staged trees before publication (28.764487ms)
+2026-08-26T09:08:11.2291425Z ✔ G1.2 transactional materialization rolls both roots back after verification failure and retries cleanly (60.776873ms)
+2026-08-26T09:08:11.2619013Z ✔ G1.2 transactional materialization rolls back an inter-root interruption (29.640931ms)
+2026-08-26T09:08:11.3377793Z ✔ G1.2 transactional materialization rejects reads and recovers after interruption at 0 (77.817508ms)
+2026-08-26T09:08:11.4124861Z ✔ G1.2 transactional materialization rejects reads and recovers after interruption at 1 (73.42602ms)
+2026-08-26T09:08:11.4899429Z ✔ G1.2 transactional materialization rejects reads and recovers after interruption at verification (77.989022ms)
+2026-08-26T09:08:11.5410360Z ✔ G1.2 transactional materialization surfaces rollback-integrity failure while force-cleaning residue (51.892221ms)
+2026-08-26T09:08:11.6162682Z ✔ G1.2 transactional materialization is single-writer and cannot delete the owner result (75.369268ms)
+2026-08-26T09:08:11.6503638Z ✔ G1.2 transactional materialization leaves a stale lock untouched for explicit recovery (34.084447ms)
+2026-08-26T09:08:11.6824128Z ✔ G1.2 PID reuse cannot impersonate a lock owner process incarnation (31.808138ms)
+2026-08-26T09:08:11.7033244Z ✔ G1.2 partial owned-lock creation cleans the path and closes the handle (18.990736ms)
+2026-08-26T09:08:11.7169491Z ✔ G1.2 native safety fixture is an exact catalog-derived three-profile matrix (2.089137ms)
+2026-08-26T09:08:11.7208678Z ✔ G1.2 native safety fixture rejects unknown root key (0.709223ms)
+2026-08-26T09:08:11.7231758Z ✔ G1.2 native safety fixture rejects missing root key (0.233186ms)
+2026-08-26T09:08:11.7258272Z ✔ G1.2 native safety fixture rejects unknown tuple key (0.282066ms)
+2026-08-26T09:08:11.7267971Z ✔ G1.2 native safety fixture rejects missing tuple key (0.369679ms)
+2026-08-26T09:08:11.7269177Z ✔ G1.2 native safety fixture rejects duplicate tuple (0.239567ms)
+2026-08-26T09:08:11.7270553Z ✔ G1.2 native safety fixture rejects reordered tuple (0.284761ms)
+2026-08-26T09:08:11.7271615Z ✔ G1.2 native safety fixture rejects wrong contract (0.308846ms)
+2026-08-26T09:08:11.7272664Z ✔ G1.2 native safety fixture rejects wrong set digest (0.925336ms)
+2026-08-26T09:08:11.7274585Z ✔ G1.2 native safety fixture rejects wrong validation profile (0.792047ms)
+2026-08-26T09:08:11.7305056Z ✔ current G1.0 routing permits absence before capture (1.354206ms)
+2026-08-26T09:08:11.7306440Z ✔ current G1.0 routing rejects partial and duplicate-looking roots (11.953066ms)
+2026-08-26T09:08:11.7307956Z ✔ current G1.1 routing permits absence before capture (1.623588ms)
+2026-08-26T09:08:11.7309208Z ✔ current G1.1 routing rejects partial and duplicate-looking roots (8.591903ms)
+2026-08-26T09:08:16.2301827Z [delivery-authority] Decision 0007 preserved; Decision 0009 amendments 02 and 04 successor negatives rejected; positive candidates accepted
+2026-08-26T09:08:16.2539021Z ✔ test/delivery-workflow-authority.test.mjs (5071.046902ms)
+2026-08-26T09:08:16.2948168Z ✔ authority decision receipts admit exact OWNER association and edit timestamp provenance (3.061751ms)
+2026-08-26T09:08:16.2951407Z ✔ authority decision receipts admit truthful bounded task provenance without a fabricated human timestamp or comment (0.629197ms)
+2026-08-26T09:08:16.2955316Z ✔ evidence output privacy recognizes canonical token IDs without accepting credentials (1.433364ms)
+2026-08-26T09:08:16.2957337Z ✔ evidence verification rejects an in-progress G1.2 publication journal (22.670685ms)
+2026-08-26T09:08:16.2963364Z ✔ G1.2 topology resolves the exact evidence child from direct and synthetic-merge heads (304.56262ms)
+2026-08-26T09:08:16.2965209Z ✔ G1.2 topology rejects an evidence introduction containing unrelated paths (171.034208ms)
+2026-08-26T09:08:16.2968420Z ✔ G1.2 topology rejects roots partially present in the source parent (173.613879ms)
+2026-08-26T09:08:16.2999641Z ✔ G1.2 topology rejects descendant and merge revisions that rewrite either evidence root (306.524848ms)
+2026-08-26T09:08:16.3001379Z ✔ G1.2 topology rejects parallel byte-identical evidence introductions (182.87799ms)
+2026-08-26T09:08:16.3002870Z ✔ content-addressed evidence index verifies canonical records and artifacts (6.501297ms)
+2026-08-26T09:08:16.3004367Z ✔ content-addressed evidence verifies one shared validation result (9.24274ms)
+2026-08-26T09:08:16.3005795Z ✔ applicability manifests ignore platform-specific install directories (92.010616ms)
+2026-08-26T09:08:16.3007813Z ✔ applicability manifests reject a missing path at the recorded source (118.399819ms)
+2026-08-26T09:08:16.3009275Z ✔ content-addressed evidence rejects record-only validation ownership (9.016308ms)
+2026-08-26T09:08:16.3010636Z ✔ content-addressed evidence rejects a changed retained artifact (7.939039ms)
+2026-08-26T09:08:16.3011993Z ✔ append-only recertification preserves a stale historical index (175.939227ms)
+2026-08-26T09:08:16.3013391Z ✔ append-only recertification extends through one digest-linked leaf (159.408834ms)
+2026-08-26T09:08:16.3014697Z ✔ recertification rejects a fork from one predecessor (154.766171ms)
+2026-08-26T09:08:16.3015816Z ✔ recertification rejects a predecessor cycle (128.669539ms)
+2026-08-26T09:08:16.3019285Z ✔ recertification remains an exact historical audit after later worktree change (150.130898ms)
+2026-08-26T09:08:16.3020911Z ✔ retained evidence integrity does not treat later worktree bytes as current proof (63.811797ms)
+2026-08-26T09:08:16.3022267Z ✔ recertification rejects a wrong historical digest (83.122317ms)
+2026-08-26T09:08:16.3023404Z ✔ recertification rejects a stale current manifest (134.864171ms)
+2026-08-26T09:08:16.3024683Z ✔ append-only supersession preserves a superseded historical index (204.739408ms)
+2026-08-26T09:08:16.3026234Z ✔ append-only supersession supersedes one exact terminal recertification (219.929675ms)
+2026-08-26T09:08:16.3028093Z ✔ append-only supersession extends through one digest-linked leaf (170.697614ms)
+2026-08-26T09:08:16.3029677Z ✔ a later Tale continuation uses its own standard authority decision (225.129126ms)
+2026-08-26T09:08:16.3031028Z ✔ Tale authority continuation requires the exact acceptance authorization path (145.371636ms)
+2026-08-26T09:08:16.3031873Z ✔ supersession rejects a wrong historical digest (102.483682ms)
+2026-08-26T09:08:16.3032497Z ✔ supersession rejects a wrong terminal recertification (128.514206ms)
+2026-08-26T09:08:16.3033176Z ✔ supersession cannot supersede an unchanged applicability manifest (94.792973ms)
+2026-08-26T09:08:16.3033964Z ✔ supersession remains an exact historical audit after later worktree change (123.364049ms)
+2026-08-26T09:08:16.3034726Z ✔ supersession rejects unknown top-level and nested manifest fields (383.463215ms)
+2026-08-26T09:08:16.3035467Z ✔ supersession rejects malformed status, owner, and timestamp identities (288.320375ms)
+2026-08-26T09:08:16.3036236Z ✔ supersession rejects malformed or internally inconsistent authorization (185.462143ms)
+2026-08-26T09:08:16.3036854Z ✔ supersession rejects duplicate references (89.277492ms)
+2026-08-26T09:08:16.3038375Z ✔ supersession rejects a reference milestone that differs from its target index (94.409726ms)
+2026-08-26T09:08:16.5264745Z ✔ supersession rejects an unknown target or missing predecessor (232.510226ms)
+2026-08-26T09:08:16.6792504Z ✔ supersession rejects a predecessor from another historical target (153.368181ms)
+2026-08-26T09:08:16.9562032Z ✔ supersession rejects forks and self-referential cycles (276.2396ms)
+2026-08-26T09:08:17.2618996Z ✔ a passing recertification cannot extend a superseded chain (305.073565ms)
+2026-08-26T09:08:17.2810552Z ✔ current G1.2 routing permits absence before capture (1.658694ms)
+2026-08-26T09:08:17.2825716Z ✔ current G1.2 routing rejects partial and duplicate-looking roots (11.898083ms)
+2026-08-26T09:08:36.3209972Z Preparing worktree (detached HEAD ecd722e)
+2026-08-26T09:08:36.3211264Z Preparing worktree (detached HEAD ecd722e)
+2026-08-26T09:08:36.3212886Z ✔ Decision 0006 authority capture is atomic, recoverable, confined, and check-only (24374.411934ms)
+2026-08-26T09:08:36.3312367Z ✔ Phase C publication rolls back every partial seven-directory boundary (273.834737ms)
+2026-08-26T09:08:36.3314000Z ✔ Phase C publication commits all six proof roots and the maintenance root together (27.166384ms)
+2026-08-26T09:08:36.3315478Z ✔ Phase C publication restores all roots when post-publication verification fails (29.991834ms)
+2026-08-26T09:08:36.3317258Z ✔ Phase C publication reports rollback failure and leaves no final evidence roots (49.312703ms)
+2026-08-26T09:08:36.3319427Z ✔ Stage 1 verifier binds immutable source, evaluator, snapshot, envelope, and counts (29.5895ms)
+2026-08-26T09:08:36.3320796Z ✔ Stage 1 verifier rejects moving, malformed, and drifted source selectors (4.602896ms)
+2026-08-26T09:08:36.3322009Z ✔ R1.0 verifier is absent-safe and rejects duplicate-looking roots (9.579832ms)
+2026-08-26T09:08:36.3323019Z ✔ R1.0 verifier rejects an incomplete exact root (19.50368ms)
+2026-08-26T09:08:36.3324109Z ✔ E-G0.0-01: a cold root navigation audit reaches every major owner (196.815738ms)
+2026-08-26T09:08:36.3325296Z ✔ E-G0.0-03: generated output validates against its source and digest (3.379735ms)
+2026-08-26T09:08:36.3326667Z ✔ TALE-TOKEN-C retained installed catalogs remain proof fixtures, not live projections (0.326218ms)
+2026-08-26T09:08:36.3328410Z ✔ TALE-TOKEN-C runtime catalog caches cannot become workspace package owners (4.166682ms)
+2026-08-26T09:08:36.3329782Z ✔ E-G0.0-03 negative: a direct projection edit is rejected with its owner (3.759833ms)
+2026-08-26T09:08:36.3330941Z ✔ G0.4 strict JSON projections use governed digest sidecars (5.397197ms)
+2026-08-26T09:08:36.3331761Z ✔ E-G0.0-03 negative: duplicate aliases fail deterministically (4.231563ms)
+2026-08-26T09:08:36.3332434Z ✔ E-G0.1-04: ArtifactRef grammar is derived from the schema owner (1.381057ms)
+2026-08-26T09:08:36.3333189Z ✔ E-G0.0-04 negative: an untracked non-projection output fails clean generation (0.562419ms)
+2026-08-26T09:08:36.3334248Z ✔ verifies the complete accepted Tale classification annex (156.241034ms)
+2026-08-26T09:08:36.3335062Z ✔ accepts an exact synthetic digest-bound human record (133.635451ms)
+2026-08-26T09:08:36.3336083Z ✔ captures only the exact authenticated owner acceptance comment (4.693074ms)
+2026-08-26T09:08:36.3337561Z ✔ rejects duplicate JSON keys before object validation (4.091462ms)
+2026-08-26T09:08:36.3338475Z ✔ rejects a missing pinned occurrence (25.381404ms)
+2026-08-26T09:08:36.3339240Z ✔ rejects an unknown authored field (20.181455ms)
+2026-08-26T09:08:36.3339999Z ✔ rejects an unknown validation-profile field (1.14206ms)
+2026-08-26T09:08:36.3340458Z ✔ rejects an unclosed disposition (31.13618ms)
+2026-08-26T09:08:36.3340900Z ✔ rejects falsified field ownership (23.918506ms)
+2026-08-26T09:08:36.3341359Z ✔ rejects an unknown query-contract field (67.722733ms)
+2026-08-26T09:08:36.3341817Z ✔ rejects response reinterpretation (56.282788ms)
+2026-08-26T09:08:36.3342295Z ✔ rejects resolver response translation (45.569561ms)
+2026-08-26T09:08:36.3342766Z ✔ rejects resolver precedence changes (36.699873ms)
+2026-08-26T09:08:36.3343235Z ✔ rejects descriptor negotiation removal (39.524886ms)
+2026-08-26T09:08:36.3344051Z ✔ rejects an admitted token on React Native Web (23.00817ms)
+2026-08-26T09:08:36.3345008Z ✔ rejects web identities or owners in the iOS profile (39.244062ms)
+2026-08-26T09:08:36.3345696Z ✔ rejects platform proof claims (38.993766ms)
+2026-08-26T09:08:36.3346177Z ✔ rejects React Native Web inheritance claims (43.727232ms)
+2026-08-26T09:08:36.3347349Z ✔ rejects wrong Boolean types across target, acceptance, and migration contracts (156.568048ms)
+2026-08-26T09:08:36.3348168Z ✔ rejects implicit repeated-name grouping even after digest recomputation (71.136481ms)
+2026-08-26T09:08:36.3348786Z ✔ rejects groups outside bytewise ID order (41.551196ms)
+2026-08-26T09:08:36.3349308Z ✔ rejects a group without explicit mode mapping (44.755336ms)
+2026-08-26T09:08:36.3350008Z ✔ rejects removal of a shared admitted group Core mapping after digest recomputation (47.76199ms)
+2026-08-26T09:08:36.3350822Z ✔ rejects removal of a selector-group Core mapping after digest recomputation (45.784316ms)
+2026-08-26T09:08:36.3351441Z ✔ rejects a changed existing token contract (31.549274ms)
+2026-08-26T09:08:36.3351943Z ✔ rejects an incompatible token type and unit (26.056944ms)
+2026-08-26T09:08:36.3352636Z ✔ rejects a cross-type occurrence mapping after derived values are recomputed (36.617748ms)
+2026-08-26T09:08:36.3353241Z ✔ rejects a wrong same-type Core value (27.501538ms)
+2026-08-26T09:08:36.3353807Z ✔ rejects an ungrouped collapse onto one shared Core token (45.915429ms)
+2026-08-26T09:08:36.3354802Z ✔ rejects CSS timing-function strings as portable tokens (26.130732ms)
+2026-08-26T09:08:36.3355819Z ✔ rejects CSS shadow strings as portable tokens (27.485989ms)
+2026-08-26T09:08:36.3356376Z ✔ rejects a noncanonical page-profile digest (24.551887ms)
+2026-08-26T09:08:36.3357441Z ✔ rejects inconsistent page and cursor positions after digest recomputation (28.06011ms)
+2026-08-26T09:08:36.3358382Z ✔ rejects an understated ArtifactRef envelope bound (29.146647ms)
+2026-08-26T09:08:36.3358970Z ✔ rejects an understated catalog-version envelope bound (28.639341ms)
+2026-08-26T09:08:36.3359552Z ✔ rejects an understated catalog-version lexeme bound (30.629794ms)
+2026-08-26T09:08:36.3360143Z ✔ rejects changed governing and pinned-source identities (69.352871ms)
+2026-08-26T09:08:36.3360817Z ✔ rejects query, page, cursor, and summary semantic reinterpretation (278.636004ms)
+2026-08-26T09:08:36.3361558Z ✔ rejects page budget-field reinterpretation after digest recomputation (54.357961ms)
+2026-08-26T09:08:36.3362262Z ✔ rejects a semantically invalid but continuous version plan (31.450665ms)
+2026-08-26T09:08:36.3362840Z ✔ rejects migration-version reinterpretation (28.817383ms)
+2026-08-26T09:08:36.3363653Z ✔ rejects rollback token-count reinterpretation (33.100025ms)
+2026-08-26T09:08:36.3364474Z ✔ rejects a source-crosswalk digest mismatch (38.011784ms)
+2026-08-26T09:08:36.3365703Z ✔ rejects an authored reason that names an absent Core token after digest recomputation (32.227293ms)
+2026-08-26T09:08:36.3366411Z ✔ rejects a role-oriented reference-name regression (30.554053ms)
+2026-08-26T09:08:36.3367254Z ✔ rejects an acceptance record for different annex bytes (47.451919ms)
+2026-08-26T09:08:36.3367920Z ✔ rejects empty or wrong authenticated acceptance identities (237.78151ms)
+2026-08-26T09:08:36.3368470Z ✔ rejects a non-accepted human outcome (65.223906ms)
+2026-08-26T09:08:36.3369061Z ✔ reports pending when the acceptance record is absent (32.617572ms)
+2026-08-26T09:08:36.3369665Z ✔ repository merge mode accepts the bound human decision (145.170517ms)
+2026-08-26T09:08:36.3370303Z ✔ continuation capture rejects a pre-acceptance source commit (60.729292ms)
+2026-08-26T09:08:36.3371083Z ✔ continuation capture refuses to overwrite its retained output root (160.977799ms)
+2026-08-26T09:08:36.3371803Z ✔ TALE-TOKEN-A profile binds the exact accepted annex (8.225882ms)
+2026-08-26T09:08:36.3372541Z ✔ TALE-TOKEN-A rejects missing or mixed sibling evidence identities (0.998082ms)
+2026-08-26T09:08:36.3373221Z ✔ TALE-TOKEN-B profile binds the exact accepted annex (9.792038ms)
+2026-08-26T09:08:36.3373896Z ✔ TALE-TOKEN-B rejects missing or mixed sibling evidence identities (0.956123ms)
+2026-08-26T09:08:36.3374618Z ✔ TALE-TOKEN-C profile binds the exact accepted identity correction (3.019132ms)
+2026-08-26T09:08:36.3375394Z ✔ TALE-TOKEN-C rejects missing or mixed sibling evidence identities (0.801655ms)
+2026-08-26T09:08:36.3376380Z ✔ TALE-TOKEN-C capture arguments and truthful UTC timestamp fail closed (1.807392ms)
+2026-08-26T09:08:36.3377559Z ✔ Phase C v2 verifier routing admits the complete successor beside legacy evidence (2.570915ms)
+2026-08-26T09:08:36.3378465Z ✔ Phase C v2 verifier routing rejects incomplete or unrecognized successor roots (0.720052ms)
+2026-08-26T09:08:36.3379317Z ✔ E-G0.0-02: affected selection runs a changed package before every dependent (771.690099ms)
+2026-08-26T09:08:36.3379827Z ℹ tests 162
+2026-08-26T09:08:36.3380079Z ℹ suites 0
+2026-08-26T09:08:36.3380318Z ℹ pass 162
+2026-08-26T09:08:36.3380557Z ℹ fail 0
+2026-08-26T09:08:36.3380799Z ℹ cancelled 0
+2026-08-26T09:08:36.3381047Z ℹ skipped 0
+2026-08-26T09:08:36.3381283Z ℹ todo 0
+2026-08-26T09:08:36.3381577Z ℹ duration_ms 25409.765225
+2026-08-26T09:08:36.3420256Z ##[endgroup]
+2026-08-26T09:08:36.3723870Z ##[group]Run pnpm generate:check
+2026-08-26T09:08:36.3724216Z pnpm generate:check
+2026-08-26T09:08:36.3763796Z shell: /usr/bin/bash -e {0}
+2026-08-26T09:08:36.3764081Z ##[endgroup]
+2026-08-26T09:08:36.7437923Z 
+2026-08-26T09:08:36.7438830Z > @core-ui/workspace@0.0.0 generate:check <workspace>
+2026-08-26T09:08:36.7439752Z > node tooling/audits/repository-policy/src/generation-identity.mjs
+2026-08-26T09:08:36.7440174Z 
+2026-08-26T09:08:37.2186285Z Scope: all 11 workspace projects
+2026-08-26T09:08:37.2790342Z Lockfile is up to date, resolution step is skipped
+2026-08-26T09:08:37.3225407Z Progress: resolved 1, reused 0, downloaded 0, added 0
+2026-08-26T09:08:37.4218160Z Packages: +535
+2026-08-26T09:08:37.4219351Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-08-26T09:08:38.3128598Z Progress: resolved 535, reused 535, downloaded 0, added 535, done
+2026-08-26T09:08:38.5631198Z 
+2026-08-26T09:08:38.5631849Z devDependencies:
+2026-08-26T09:08:38.5632487Z + @core-ui/catalog 2.0.0 <- packages/catalog
+2026-08-26T09:08:38.5632795Z 
+2026-08-26T09:08:38.5771813Z Done in 1.6s using pnpm v10.33.0
+2026-08-26T09:08:38.9838449Z [workspace-task] generate: full graph
+2026-08-26T09:08:39.3152840Z Scope: 10 of 11 workspace projects
+2026-08-26T09:08:39.3212671Z ##[group]@core-ui/foundation@0.0.0 : generate packages/foundation
+2026-08-26T09:08:39.3234715Z 
+2026-08-26T09:08:39.3235692Z > @core-ui/foundation@0.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/foundation
+2026-08-26T09:08:39.3237319Z > node -e "console.log('[foundation] no generated package-owned outputs')"
+2026-08-26T09:08:39.3237907Z 
+2026-08-26T09:08:39.3510102Z [foundation] no generated package-owned outputs
+2026-08-26T09:08:39.3553683Z ##[endgroup]
+2026-08-26T09:08:39.3560894Z ##[group]@core-ui/schema@0.2.0 : generate packages/schema
+2026-08-26T09:08:39.3568033Z 
+2026-08-26T09:08:39.3568900Z > @core-ui/schema@0.2.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/schema
+2026-08-26T09:08:39.3569800Z > node src/generate.mjs
+2026-08-26T09:08:39.3570070Z 
+2026-08-26T09:08:39.3971686Z [schema] generated packages/schema/generated/types.d.ts
+2026-08-26T09:08:39.3973856Z [schema] generated packages/schema/generated/platform-safety-contract.mjs
+2026-08-26T09:08:39.4017270Z ##[endgroup]
+2026-08-26T09:08:39.4019874Z ##[group]@core-ui/tokens@2.0.0 : generate packages/tokens
+2026-08-26T09:08:39.4026310Z 
+2026-08-26T09:08:39.4027164Z > @core-ui/tokens@2.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/tokens
+2026-08-26T09:08:39.4027764Z > node src/generate.mjs
+2026-08-26T09:08:39.4027934Z 
+2026-08-26T09:08:39.4841255Z [tokens] Tale occurrence projection matches accepted decision 0003
+2026-08-26T09:08:39.4899655Z ##[endgroup]
+2026-08-26T09:08:39.4902212Z ##[group]@core-ui/catalog@2.0.0 : generate packages/catalog
+2026-08-26T09:08:39.4910391Z 
+2026-08-26T09:08:39.4911455Z > @core-ui/catalog@2.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/catalog
+2026-08-26T09:08:39.4912949Z > node src/generate.mjs
+2026-08-26T09:08:39.4913459Z 
+2026-08-26T09:08:43.7928257Z [catalog] generated packages/catalog/generated/catalog.mjs
+2026-08-26T09:08:43.7943042Z [catalog] generated packages/catalog/generated/catalog.json
+2026-08-26T09:08:43.7947218Z [catalog] generated packages/catalog/generated/catalog.json.provenance
+2026-08-26T09:08:43.7951298Z [catalog] generated packages/catalog/generated/catalog-package.json
+2026-08-26T09:08:43.7955980Z [catalog] generated packages/catalog/generated/catalog-package.json.provenance
+2026-08-26T09:08:43.8101858Z ##[endgroup]
+2026-08-26T09:08:43.8104446Z ##[group]@core-ui/react@0.1.0-alpha.0 : generate packages/react
+2026-08-26T09:08:43.8111413Z 
+2026-08-26T09:08:43.8112323Z > @core-ui/react@0.1.0-alpha.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/react
+2026-08-26T09:08:43.8113071Z > node src/generate.mjs
+2026-08-26T09:08:43.8113259Z 
+2026-08-26T09:08:44.1347916Z [react] generated standalone R1.3 collection and color projections from canonical owners
+2026-08-26T09:08:44.1422323Z ##[endgroup]
+2026-08-26T09:08:44.1424794Z ##[group]@core-ui/react-native@1.0.0 : generate packages/react-native
+2026-08-26T09:08:44.1437894Z 
+2026-08-26T09:08:44.1438860Z > @core-ui/react-native@1.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/react-native
+2026-08-26T09:08:44.1439841Z > node src/generate.mjs
+2026-08-26T09:08:44.1440261Z 
+2026-08-26T09:08:44.3103104Z [react-native] generated native theme projections match canonical inputs
+2026-08-26T09:08:44.3191441Z ##[endgroup]
+2026-08-26T09:08:44.3193545Z ##[group]@core-ui/tooling@1.0.0 : generate packages/tooling
+2026-08-26T09:08:44.3200949Z 
+2026-08-26T09:08:44.3202025Z > @core-ui/tooling@1.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/tooling
+2026-08-26T09:08:44.3202960Z > node src/generate.mjs
+2026-08-26T09:08:44.3203355Z 
+2026-08-26T09:08:44.5394338Z [tooling] generated packages/tooling/generated/command-surface.mjs
+2026-08-26T09:08:44.5402606Z [tooling] generated packages/tooling/generated/response-types.d.ts
+2026-08-26T09:08:44.5486707Z ##[endgroup]
+2026-08-26T09:08:44.5489517Z ##[group]@core-ui/web@1.0.1 : generate packages/web
+2026-08-26T09:08:44.5495235Z 
+2026-08-26T09:08:44.5495788Z > @core-ui/web@1.0.1 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/web
+2026-08-26T09:08:44.5496378Z > node src/generate.mjs
+2026-08-26T09:08:44.5496553Z 
+2026-08-26T09:08:44.7334921Z [web] generated surface and CSS identity match canonical bindings
+2026-08-26T09:08:44.7400632Z ##[endgroup]
+2026-08-26T09:08:44.7405742Z ##[group]@core-ui/repository-policy@0.0.0 : generate tooling/audits/repository-policy
+2026-08-26T09:08:44.7412373Z 
+2026-08-26T09:08:44.7413259Z > @core-ui/repository-policy@0.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/tooling/audits/repository-policy
+2026-08-26T09:08:44.7414191Z > node src/generate.mjs
+2026-08-26T09:08:44.7414470Z 
+2026-08-26T09:08:44.7691478Z Repository-policy package owns no projections; generation is a deterministic no-op.
+2026-08-26T09:08:44.7728548Z ##[endgroup]
+2026-08-26T09:08:45.2065782Z [workspace-task] generate: full graph
+2026-08-26T09:08:45.5345970Z Scope: 10 of 11 workspace projects
+2026-08-26T09:08:45.5401735Z ##[group]@core-ui/foundation@0.0.0 : generate packages/foundation
+2026-08-26T09:08:45.5423599Z 
+2026-08-26T09:08:45.5424581Z > @core-ui/foundation@0.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/foundation
+2026-08-26T09:08:45.5425880Z > node -e "console.log('[foundation] no generated package-owned outputs')"
+2026-08-26T09:08:45.5426444Z 
+2026-08-26T09:08:45.5684192Z [foundation] no generated package-owned outputs
+2026-08-26T09:08:45.5725728Z ##[endgroup]
+2026-08-26T09:08:45.5729424Z ##[group]@core-ui/schema@0.2.0 : generate packages/schema
+2026-08-26T09:08:45.5736077Z 
+2026-08-26T09:08:45.5737077Z > @core-ui/schema@0.2.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/schema
+2026-08-26T09:08:45.5737988Z > node src/generate.mjs
+2026-08-26T09:08:45.5738264Z 
+2026-08-26T09:08:45.6116660Z [schema] generated packages/schema/generated/types.d.ts
+2026-08-26T09:08:45.6118865Z [schema] generated packages/schema/generated/platform-safety-contract.mjs
+2026-08-26T09:08:45.6161468Z ##[endgroup]
+2026-08-26T09:08:45.6164424Z ##[group]@core-ui/tokens@2.0.0 : generate packages/tokens
+2026-08-26T09:08:45.6171197Z 
+2026-08-26T09:08:45.6173568Z > @core-ui/tokens@2.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/tokens
+2026-08-26T09:08:45.6174456Z > node src/generate.mjs
+2026-08-26T09:08:45.6174695Z 
+2026-08-26T09:08:45.6967823Z [tokens] Tale occurrence projection matches accepted decision 0003
+2026-08-26T09:08:45.7025744Z ##[endgroup]
+2026-08-26T09:08:45.7028756Z ##[group]@core-ui/catalog@2.0.0 : generate packages/catalog
+2026-08-26T09:08:45.7035901Z 
+2026-08-26T09:08:45.7036708Z > @core-ui/catalog@2.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/catalog
+2026-08-26T09:08:45.7039420Z > node src/generate.mjs
+2026-08-26T09:08:45.7039725Z 
+2026-08-26T09:08:49.9847900Z [catalog] generated packages/catalog/generated/catalog.mjs
+2026-08-26T09:08:49.9863307Z [catalog] generated packages/catalog/generated/catalog.json
+2026-08-26T09:08:49.9867484Z [catalog] generated packages/catalog/generated/catalog.json.provenance
+2026-08-26T09:08:49.9871942Z [catalog] generated packages/catalog/generated/catalog-package.json
+2026-08-26T09:08:49.9876415Z [catalog] generated packages/catalog/generated/catalog-package.json.provenance
+2026-08-26T09:08:50.0024590Z ##[endgroup]
+2026-08-26T09:08:50.0027501Z ##[group]@core-ui/react@0.1.0-alpha.0 : generate packages/react
+2026-08-26T09:08:50.0039589Z 
+2026-08-26T09:08:50.0040400Z > @core-ui/react@0.1.0-alpha.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/react
+2026-08-26T09:08:50.0041108Z > node src/generate.mjs
+2026-08-26T09:08:50.0041286Z 
+2026-08-26T09:08:50.3393067Z [react] generated standalone R1.3 collection and color projections from canonical owners
+2026-08-26T09:08:50.3473478Z ##[endgroup]
+2026-08-26T09:08:50.3475456Z ##[group]@core-ui/react-native@1.0.0 : generate packages/react-native
+2026-08-26T09:08:50.3483927Z 
+2026-08-26T09:08:50.3484804Z > @core-ui/react-native@1.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/react-native
+2026-08-26T09:08:50.3485445Z > node src/generate.mjs
+2026-08-26T09:08:50.3485599Z 
+2026-08-26T09:08:50.5287942Z [react-native] generated native theme projections match canonical inputs
+2026-08-26T09:08:50.5360446Z ##[endgroup]
+2026-08-26T09:08:50.5362572Z ##[group]@core-ui/tooling@1.0.0 : generate packages/tooling
+2026-08-26T09:08:50.5369261Z 
+2026-08-26T09:08:50.5370319Z > @core-ui/tooling@1.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/tooling
+2026-08-26T09:08:50.5371395Z > node src/generate.mjs
+2026-08-26T09:08:50.5371685Z 
+2026-08-26T09:08:50.7615496Z [tooling] generated packages/tooling/generated/command-surface.mjs
+2026-08-26T09:08:50.7622974Z [tooling] generated packages/tooling/generated/response-types.d.ts
+2026-08-26T09:08:50.7724099Z ##[endgroup]
+2026-08-26T09:08:50.7726004Z ##[group]@core-ui/web@1.0.1 : generate packages/web
+2026-08-26T09:08:50.7732520Z 
+2026-08-26T09:08:50.7733239Z > @core-ui/web@1.0.1 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/packages/web
+2026-08-26T09:08:50.7734188Z > node src/generate.mjs
+2026-08-26T09:08:50.7734504Z 
+2026-08-26T09:08:50.9448520Z [web] generated surface and CSS identity match canonical bindings
+2026-08-26T09:08:50.9551255Z ##[endgroup]
+2026-08-26T09:08:50.9556289Z ##[group]@core-ui/repository-policy@0.0.0 : generate tooling/audits/repository-policy
+2026-08-26T09:08:50.9562589Z 
+2026-08-26T09:08:50.9563570Z > @core-ui/repository-policy@0.0.0 generate <tmp>/core-ui-generation-proof-DWnpUa/checkout/tooling/audits/repository-policy
+2026-08-26T09:08:50.9564240Z > node src/generate.mjs
+2026-08-26T09:08:50.9564400Z 
+2026-08-26T09:08:50.9854552Z Repository-policy package owns no projections; generation is a deterministic no-op.
+2026-08-26T09:08:50.9893637Z ##[endgroup]
+2026-08-26T09:08:51.3259981Z [E-G0.0-04] isolated clean checkout ca75bb5722ec509d1e7e9104ffdbf9a985562aae remained clean after two generation runs (sha256:3e0675660a8c2b211a16be30a410bc6675b3e270d2c59e260ecef48a21ef8a2c)
+2026-08-26T09:08:51.9375030Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

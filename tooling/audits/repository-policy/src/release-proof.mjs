@@ -1,7 +1,9 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, join, posix } from 'node:path';
+import { canonicalJson } from './canonical-json.mjs';
 
 const requiredReleaseRoots = Object.freeze([
   'generated',
@@ -492,4 +494,116 @@ export function nodeBundledCli(name, execPath = process.execPath) {
   const path = join(dirname(execPath), '..', 'lib', 'node_modules', relative);
   if (!existsSync(path)) fail('R1_EXIT_CONSUMER_MATRIX_UNAVAILABLE', `${name} is not bundled with ${execPath}`);
   return path;
+}
+
+const digest = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+const lucideIconSpecifier = /lucide-react\/dist\/esm\/icons\/([a-z0-9-]+)\.mjs/gu;
+const byPath = (left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0);
+
+/** Digests each `{ path, bytes }` and the sorted set; any byte or membership change moves the set digest. */
+export function digestFileSet(files, code = 'R1_EXIT_CORRELATION_INVALID') {
+  const entries = files.map(({ path, bytes }) => ({ path, sha256: digest(bytes) })).sort(byPath);
+  if (entries.length === 0) fail(code, 'a file set must not be empty');
+  if (new Set(entries.map(({ path }) => path)).size !== entries.length) fail(code, 'duplicate file path');
+  return { digest: digest(canonicalJson(entries)), entries };
+}
+
+/**
+ * Decision 0011 amendment 02: a token, stylesheet (geometry), Lucide version,
+ * or icon-mapping change invalidates the recorded visual comparison. This
+ * identity binds exactly those inputs; `modules` are the packed runtime files
+ * whose Lucide imports form the icon mapping.
+ */
+export function deriveVisualContract({ tokenSource, stylesheets, lucide, modules }) {
+  const code = 'R1_EXIT_VISUAL_CONTRACT_INVALID';
+  if (!tokenSource?.path || !tokenSource.bytes?.length) fail(code, 'the canonical token source is required');
+  if (!/^\d+\.\d+\.\d+$/u.test(lucide?.version ?? '') || !/^sha512-[A-Za-z0-9+/]+=*$/u.test(lucide?.integrity ?? '')) {
+    fail(code, 'Lucide requires an exact version and lockfile integrity');
+  }
+  const icons = Object.fromEntries(modules
+    .map(({ path, source }) => [path, [...new Set([...source.matchAll(lucideIconSpecifier)].map(([, name]) => name))].sort()])
+    .filter(([, names]) => names.length > 0)
+    .sort(([left], [right]) => (left < right ? -1 : 1)));
+  if (Object.keys(icons).length === 0) fail(code, 'no packed module imports a Lucide affordance');
+  const inputs = {
+    tokens: { path: tokenSource.path, sha256: digest(tokenSource.bytes) },
+    stylesheets: digestFileSet(stylesheets, code).entries,
+    lucide: { version: lucide.version, integrity: lucide.integrity, icons },
+  };
+  return { digest: digest(canonicalJson(inputs)), inputs };
+}
+
+/** Names every recorded visual-contract input that the current identity no longer matches. */
+export function findVisualContractInvalidations(recorded, current) {
+  const changed = [];
+  const same = (left, right) => canonicalJson(left ?? null) === canonicalJson(right ?? null);
+  if (!same(recorded.inputs.tokens, current.inputs.tokens)) changed.push('tokens');
+  const recordedSheets = new Map(recorded.inputs.stylesheets.map(({ path, sha256 }) => [path, sha256]));
+  const currentSheets = new Map(current.inputs.stylesheets.map(({ path, sha256 }) => [path, sha256]));
+  for (const path of [...new Set([...recordedSheets.keys(), ...currentSheets.keys()])].sort()) {
+    if (recordedSheets.get(path) !== currentSheets.get(path)) changed.push(`stylesheet:${path}`);
+  }
+  for (const key of ['version', 'integrity', 'icons']) {
+    if (!same(recorded.inputs.lucide[key], current.inputs.lucide[key])) changed.push(`lucide.${key}`);
+  }
+  if (changed.length === 0 && recorded.digest !== current.digest) changed.push('digest');
+  return changed;
+}
+
+/**
+ * Architecture release manifest: exact source, lockfile, generated-output,
+ * catalog, token, binding-spec, package, evidence, exception, and visual
+ * contract identities for one candidate. Missing identities fail closed.
+ */
+export function buildReleaseCorrelation({
+  source, lockfile, generated, catalogPackage, catalogBundle, bindings, workspacePackages, retainedEvidence, activeExceptions,
+  visualContract,
+}) {
+  const code = 'R1_EXIT_CORRELATION_INVALID';
+  if (!/^[0-9a-f]{40}$/u.test(source?.revision ?? '') || !/^[0-9a-f]{40}$/u.test(source?.tree ?? '')) {
+    fail(code, 'source revision and tree must be exact Git object IDs');
+  }
+  if (!/^sha256:[0-9a-f]{64}$/u.test(catalogPackage?.catalogDigest ?? '') || catalogPackage.catalogDigest !== catalogBundle?.catalogDigest) {
+    fail(code, 'catalog package and bundle digests must agree');
+  }
+  const token = catalogBundle.artifacts.find(({ kind }) => kind === 'token');
+  if (!token?.record?.tokenContractVersion) fail(code, 'the catalog token source has no contract version');
+  const bindingIdentities = [...bindings].sort().map((binding) => {
+    const [artifactId, profile] = binding.split('#');
+    const artifact = catalogBundle.artifacts.find(({ id }) => id === artifactId);
+    const identity = {
+      binding,
+      specRevision: artifact?.bindingSpecRevisions?.[profile],
+      tokenRequirementSet: catalogPackage.tokenRequirementSets?.[`${binding}:${profile}`],
+      platformSafetyRequirementSet: catalogPackage.platformSafetyRequirementSets?.[`${binding}:${profile}`],
+    };
+    const missing = Object.entries(identity).filter(([, value]) => typeof value !== 'string').map(([key]) => key);
+    if (missing.length !== 0) fail(code, `${binding} has no catalog ${missing.join(', ')}`);
+    return identity;
+  });
+  if (retainedEvidence.length === 0) fail(code, 'retained evidence indexes are required');
+  return {
+    source: { revision: source.revision, tree: source.tree },
+    lockfile: { path: lockfile.path, sha256: digest(lockfile.bytes) },
+    generatedOutputs: digestFileSet(generated, code),
+    catalog: {
+      name: catalogPackage.name,
+      version: catalogPackage.catalogVersion,
+      digest: catalogPackage.catalogDigest,
+      schemaVersion: catalogBundle.schemaVersion,
+      queryApiVersion: catalogPackage.queryApiVersion,
+      sourceRevision: catalogPackage.sourceRevision,
+      platformSafetyContract: catalogPackage.platformSafetyContract,
+    },
+    tokens: { id: token.id, contentRevision: token.contentRevision, tokenContractVersion: token.record.tokenContractVersion },
+    bindings: bindingIdentities,
+    packages: [...workspacePackages]
+      .map(({ name, version, private: isPrivate }) => ({ name, version, private: isPrivate === true }))
+      .sort((left, right) => (left.name < right.name ? -1 : 1)),
+    evidence: {
+      retained: retainedEvidence.map(({ milestone, path, bytes }) => ({ milestone, path, sha256: digest(bytes) })),
+      activeExceptions: activeExceptions.map((exception) => digest(canonicalJson(exception))),
+    },
+    visualContract,
+  };
 }

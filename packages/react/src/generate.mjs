@@ -472,10 +472,10 @@ const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 const candidateVersion = '0.1.0-rc.1';
 // Decision 0023: a bad candidate is fixed forward in the next rc.
 const fixForwardVersion = candidateVersion.replace(/rc\.(\d+)$/u, (_, number) => `rc.${Number(number) + 1}`);
-// Decision 0022: R1.5 evidence exists only in PR #108's check and review logs,
-// which are not retained evidence. Capture is required before they expire.
+// Decision 0022: R1.5's logged check evidence from PR #108 is captured into
+// retained evidence; the closure source names the retained roots.
 const r15EvidenceStatus = {
-  status: 'logged-not-retained',
+  status: 'retained',
   retention: r15ClosureSource.evidenceCapture.retention,
 };
 // Decision 0022: the rc.1 prerelease makes no assistive-technology claim.

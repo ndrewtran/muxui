@@ -38,7 +38,7 @@
     "collection": "default-off",
     "allowed": ["sanitized repository-relative paths", "canonical IDs"],
     "prohibited": ["credentials", "consumer data"],
-    "retention": "protected PR check/review logs"
+    "retention": "retained CI check captures in tests/evidence/r1.1 through tests/evidence/r1.5"
   },
   "exceptions": [],
   "advisories": [],

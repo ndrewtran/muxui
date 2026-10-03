@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput, verifyEvidence } from '../src/evidence-verify.mjs';
+import { DEFERRED_R1_EVIDENCE } from '../../../../packages/react/src/r1-deferred-evidence.mjs';
+
+const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
 function digest(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -14,7 +17,9 @@ function digest(bytes) {
 test('evidence output privacy recognizes public token IDs without accepting credentials', () => {
   const root = '/tmp/muxui-evidence';
   assert.equal(hasUnsanitizedEvidenceOutput('"muxui:token:default-theme"', root), false);
+  assert.equal(hasUnsanitizedEvidenceOutput('"core:token:default-theme"', root), false);
   assert.equal(hasUnsanitizedEvidenceOutput('token=secret-value', root), true);
+  assert.equal(hasUnsanitizedEvidenceOutput('github-token: core:token:default-theme', root), true);
   assert.equal(hasUnsanitizedEvidenceOutput(`${root}/packages/tokens`, root), true);
 });
 
@@ -70,4 +75,37 @@ test('generic evidence verification rejects retired identity options', async () 
     verifyEvidence(process.cwd(), { expectedIdentity: 'retired' }),
     (error) => error?.code === 'EVIDENCE_OPTIONS_UNSUPPORTED',
   );
+});
+
+// Decision 0022: R1.1-R1.5 logged CI evidence is retained before the R1 exit.
+test('R1.1-R1.5 retained CI evidence covers every assertion and stays disclosable', async () => {
+  const assertionCounts = { 'R1.1': 4, 'R1.2': 4, 'R1.3': 5, 'R1.4': 6, 'R1.5': 6 };
+  for (const [milestone, count] of Object.entries(assertionCounts)) {
+    const root = join(repositoryRoot, 'tests/evidence', milestone.toLowerCase());
+    const index = JSON.parse(await readFile(join(root, 'index.json'), 'utf8'));
+    assert.equal(index.milestone, milestone);
+    assert.equal(index.disclosureClass, 'public-sanitized');
+    const expectedIds = Array.from({ length: count }, (_, offset) => `E-${milestone}-${String(offset + 1).padStart(2, '0')}`);
+    assert.deepEqual(index.records.map(({ assertionId }) => assertionId), expectedIds);
+    const verification = JSON.parse(await readFile(join(repositoryRoot, index.validation.path), 'utf8'));
+    for (const { execution, rawLog } of verification.results) {
+      assert.equal(execution.conclusion, 'success');
+      assert.match(execution.executedRevision, /^[0-9a-f]{40}$/u);
+      assert.equal(execution.executedTree, index.sourceTree, 'the executed merge tree is the merged source tree');
+      assert.match(rawLog.sha256, /^sha256:[0-9a-f]{64}$/u);
+      assert.equal(rawLog.retained, false);
+    }
+    for (const { assertionId, path } of index.records) {
+      const record = JSON.parse(await readFile(join(repositoryRoot, path), 'utf8'));
+      const deferred = DEFERRED_R1_EVIDENCE.find(({ id }) => id === assertionId);
+      assert.equal(record.outcome, deferred ? 'partial' : 'pass', assertionId);
+      assert.equal(record.deferred?.deferredTo, deferred?.deferredTo, assertionId);
+    }
+    for (const entry of await readdir(root, { recursive: true, withFileTypes: true })) {
+      if (!entry.isFile()) continue;
+      const text = await readFile(join(entry.parentPath, entry.name), 'utf8');
+      assert.equal(hasUnsanitizedEvidenceOutput(text, repositoryRoot), false, entry.name);
+      assert.doesNotMatch(text, /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/u, `${entry.name} retains no email address`);
+    }
+  }
 });

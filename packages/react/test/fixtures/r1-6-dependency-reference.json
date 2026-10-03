@@ -136,6 +136,16 @@
       }
     },
     {
+      "package": "@internationalized/date",
+      "version": "3.12.3",
+      "owner": "packages/react/package.json",
+      "integrity": "sha512-fuLX+3ZKLsxI73y8b01EG/WjHb6gE6weCqlfawPO27kBWGMh9G1yH6Csv1uU7/cac9H2GHmOMt6CjmuQ1aia4Q==",
+      "license": "Apache-2.0",
+      "licenseFile": "packages/react/licenses/internationalized-date.Apache-2.0.txt",
+      "licenseSha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84",
+      "peerDependencies": {}
+    },
+    {
       "package": "react-aria-components",
       "version": "1.20.0",
       "owner": "packages/react/package.json",
