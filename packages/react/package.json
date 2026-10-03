@@ -40,7 +40,7 @@
   "scripts": {
     "prepack": "pnpm --filter @muxui/catalog... generate && node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
-    "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test --test-concurrency=1 test/*.test.mjs && tsc --noEmit -p test/tsconfig.json",
+    "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test 'test/!(capability-enrichment|catalog-examples-types).test.mjs' && node --test --test-concurrency=1 test/capability-enrichment.test.mjs test/catalog-examples-types.test.mjs && tsc --noEmit -p test/tsconfig.json",
     "check:component": "node ../../tooling/audits/repository-policy/src/run-component-check.mjs",
     "check:browser": "node --test --test-concurrency=1 test/browser/*.test.mjs",
     "check:capability-enrichment:strict": "MUXUI_CAPABILITY_ENRICHMENT_STRICT=1 node --test test/capability-enrichment.test.mjs",

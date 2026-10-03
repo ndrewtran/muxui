@@ -5,7 +5,7 @@ import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { I18nProvider } from 'react-aria-components';
-import { useCommandPalette } from '../src/supplemental/command-palette.mjs';
+import { useCommandPalette } from '../src/supplemental/index.mjs';
 
 const h = React.createElement;
 function snapshot(options, locale = 'en-US') {
