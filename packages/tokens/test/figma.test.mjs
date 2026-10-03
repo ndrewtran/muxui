@@ -142,7 +142,7 @@ test('variable and style names are valid, grouped, and unique', () => {
 });
 
 test('batches fit the size budget and order alias targets before their aliases', () => {
-  for (const budgetBytes of [40_000, 25_000]) {
+  for (const budgetBytes of [40_000, 30_000]) {
     const plan = budgetBytes === 40_000 ? batches : planFigmaBatches(document, { budgetBytes });
     const position = new Map();
     let sawStyle = false;

@@ -1823,7 +1823,7 @@
 
 .muxui-tabs[data-orientation='vertical'] .muxui-tab-list {
   border-bottom: none;
-  border-inline-end: 2px solid var(--muxui-semantic-border-subtle);
+  border-inline-end: 2px solid var(--muxui-component-tabs-vertical-list-border);
 }
 
 .muxui-tab {
@@ -1880,7 +1880,7 @@
 
 .muxui-tab-panel {
   padding: calc(var(--muxui-semantic-layout-inset-large) * 1.414141) 0;
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-component-tabs-panel-foreground);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   line-height: var(--muxui-semantic-typography-prose-line-height);
@@ -1928,8 +1928,8 @@
   outline: 1px solid var(--muxui-semantic-border-strong);
   outline-offset: -1px;
   border-radius: var(--muxui-semantic-shape-pill-radius);
-  background-color: var(--muxui-semantic-surface-subtle);
-  color: var(--muxui-semantic-content-default);
+  background-color: var(--muxui-component-taggroup-tag-background);
+  color: var(--muxui-component-taggroup-tag-foreground);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -1984,7 +1984,7 @@
 .muxui-tag[data-disabled] {
   background-color: var(--muxui-semantic-surface-hover);
   outline-color: var(--muxui-semantic-border-strong);
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-component-taggroup-tag-foreground);
   cursor: not-allowed;
   pointer-events: none;
 }
@@ -2033,7 +2033,7 @@
 }
 
 .muxui-tag-group .muxui-field-label {
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-component-taggroup-label);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -2700,39 +2700,18 @@
   }
 }
 
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+/* Scheme-scoped so an unthemed root keeps the unscoped tab defaults. */
+@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
   :scope .muxui-tab-list {
-    border-color: var(--muxui-semantic-color-neutral-default-92);
+    border-color: var(--muxui-semantic-color-neutral-18);
   }
-}
 
-@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tab-list {
-    border-color: var(--muxui-semantic-color-neutral-default-18);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-tab:not([data-selected], [aria-selected='true']) {
-    color: var(--muxui-semantic-color-neutral-default-50);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tab[aria-selected='true'],
-  :scope .muxui-tab[data-selected='true'] {
-    color: var(--muxui-semantic-color-neutral-default-20);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tab-panel {
-    color: var(--muxui-semantic-color-neutral-default-30);
+    color: var(--muxui-component-tabs-tab-foreground);
   }
 }
 
 @scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tab:not([data-selected], [aria-selected='true']),
   :scope .muxui-table-column {
     color: var(--muxui-semantic-content-muted);
   }
@@ -2914,14 +2893,6 @@
     .muxui-combo-box-option:first-child {
     background-color: var(--muxui-semantic-color-neutral-default-96);
     color: var(--muxui-semantic-content-default);
-  }
-}
-
-/* The light focus ring is the neutral-50 keyline; the MuxUI semantic focus
-   token is the product action color and is intentionally retained elsewhere. */
-@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-focused] {
-    border-color: var(--muxui-semantic-color-neutral-default-50);
   }
 }
 
@@ -3135,74 +3106,6 @@
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-color-swatch {
     border-color: var(--muxui-semantic-color-neutral-default-88);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tabs[data-orientation='vertical'] .muxui-tab-list {
-    border-inline-end-color: var(--muxui-semantic-color-neutral-default-92);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag-group .muxui-field-label {
-    color: var(--muxui-semantic-color-neutral-default-24);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag {
-    border-color: var(--muxui-semantic-color-neutral-default-82);
-    background-color: var(--muxui-semantic-color-neutral-default-96);
-    color: var(--muxui-semantic-color-neutral-default-28);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-hovered] {
-    background-color: var(--muxui-semantic-color-neutral-default-92);
-    border-color: var(--muxui-semantic-color-neutral-default-70);
-  }
-}
-
-/* Keep the calibrated unselected overlay on the opaque tag rest surface. */
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-hovered]:not([data-selected], [data-disabled]) {
-    background-color: var(--muxui-semantic-color-neutral-default-96);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-pressed] {
-    background-color: var(--muxui-semantic-color-neutral-default-88);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-pressed]:not([data-selected], [data-disabled]) {
-    background-color: var(--muxui-semantic-color-neutral-default-96);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-focused] {
-    border-color: var(--muxui-semantic-color-neutral-default-50);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-selected] {
-    background-color: var(--muxui-semantic-action-selection-background);
-    border-color: var(--muxui-semantic-action-selection-background);
-    color: var(--muxui-semantic-action-selection-foreground);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-tag[data-selected][data-hovered] {
-    background-color: var(--muxui-semantic-action-selection-background-hover);
-    border-color: var(--muxui-semantic-action-selection-background-hover);
-    color: var(--muxui-semantic-action-foreground-hover);
   }
 }
 

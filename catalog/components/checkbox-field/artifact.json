@@ -98,7 +98,14 @@
           },
           { "token": "semantic.control.size-sm", "requirement": "required" },
           { "token": "semantic.control.size-md", "requirement": "required" },
-          { "token": "semantic.control.size-lg", "requirement": "required" }
+          { "token": "semantic.control.size-lg", "requirement": "required" },
+          { "token": "component.checkbox.indicator-background", "requirement": "required" },
+          { "token": "component.checkbox.indicator-border", "requirement": "required" },
+          { "token": "component.checkbox.indicator-border-hover", "requirement": "required" },
+          { "token": "component.checkbox.selected-background", "requirement": "required" },
+          { "token": "component.checkbox.selected-foreground", "requirement": "required" },
+          { "token": "component.checkbox.selected-invalid-border", "requirement": "required" },
+          { "token": "component.checkbox.invalid-border-hover", "requirement": "required" }
         ]
       },
       "platformSafety": [
