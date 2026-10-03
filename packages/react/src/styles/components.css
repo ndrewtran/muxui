@@ -18,8 +18,8 @@
 
 .muxui-checkbox { display: inline-flex; align-items: center; gap: var(--muxui-semantic-layout-group-gap); color: var(--muxui-semantic-color-neutral-90); cursor: pointer; }
 .muxui-checkbox-label { line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-checkbox-indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-semantic-border-indicator); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-semantic-surface-raised); color: var(--muxui-semantic-content-on-solid); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
-.muxui-checkbox-indicator[data-selected], .muxui-checkbox-indicator[data-indeterminate] { border-color: var(--muxui-semantic-selection-track); background: var(--muxui-semantic-selection-track); color: var(--muxui-semantic-action-foreground); }
+.muxui-checkbox-indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-component-checkbox-indicator-border); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-component-checkbox-indicator-background); color: var(--muxui-semantic-content-on-solid); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
+.muxui-checkbox-indicator[data-selected], .muxui-checkbox-indicator[data-indeterminate] { border-color: var(--muxui-component-checkbox-selected-background); background: var(--muxui-component-checkbox-selected-background); color: var(--muxui-semantic-action-foreground); }
 .muxui-checkbox input { accent-color: var(--muxui-semantic-selection-track); }
 .muxui-checkbox[data-invalid] .muxui-checkbox-indicator { border-color: var(--muxui-semantic-feedback-invalid); }
 .muxui-checkbox[data-disabled] { color: var(--muxui-semantic-content-default); cursor: not-allowed; }
@@ -44,7 +44,7 @@
   color: var(--muxui-semantic-typography-text-color);
 }
 .muxui-value-label { color: var(--muxui-progress-label-color); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
-.muxui-switch-label { color: var(--muxui-semantic-content-default); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
+.muxui-switch-label { color: var(--muxui-component-switch-label); font-weight: var(--muxui-semantic-typography-control-weight); line-height: var(--muxui-semantic-typography-text-line-height); }
 .muxui-meter-track, .muxui-progress-bar-track { position: relative; inline-size: 100%; min-block-size: 0.5rem; overflow: hidden; border-radius: var(--muxui-semantic-shape-pill-radius); background: var(--muxui-semantic-surface-pressed); }
 .muxui-meter-fill, .muxui-progress-bar-fill { min-block-size: inherit; border-radius: inherit; background: var(--muxui-semantic-selection-track); transition: inline-size var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-interaction-easing); }
 .muxui-progress-bar[data-indeterminate] .muxui-progress-bar-fill {
@@ -303,8 +303,8 @@
   width: 1.125rem;
   height: 1.125rem;
   border-radius: var(--muxui-semantic-shape-indicator-radius);
-  border: 1.5px solid var(--muxui-semantic-border-indicator);
-  background-color: var(--muxui-semantic-surface-raised);
+  border: 1.5px solid var(--muxui-component-checkbox-indicator-border);
+  background-color: var(--muxui-component-checkbox-indicator-background);
   outline: none;
   transition:
     background-color var(--muxui-semantic-motion-interaction-duration) var(--muxui-semantic-motion-interaction-easing),
@@ -324,8 +324,8 @@
 
 .muxui-checkbox[data-selected] .muxui-checkbox-indicator,
 .muxui-checkbox-field__button[data-selected] .muxui-checkbox-field__indicator {
-  background-color: var(--muxui-semantic-selection-track);
-  border-color: var(--muxui-semantic-selection-track);
+  background-color: var(--muxui-component-checkbox-selected-background);
+  border-color: var(--muxui-component-checkbox-selected-background);
 }
 
 .muxui-checkbox[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-indicator,
@@ -336,14 +336,14 @@
 
 .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator,
 .muxui-checkbox-field__button[data-indeterminate] .muxui-checkbox-field__indicator {
-  background-color: var(--muxui-semantic-selection-track);
-  border-color: var(--muxui-semantic-selection-track);
+  background-color: var(--muxui-component-checkbox-selected-background);
+  border-color: var(--muxui-component-checkbox-selected-background);
 }
 
 .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
 .muxui-checkbox-field__button[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
   .muxui-checkbox-field__indicator {
-  border-color: var(--muxui-semantic-border-indicator-hover);
+  border-color: var(--muxui-component-checkbox-indicator-border-hover);
   background-color: var(--muxui-semantic-surface-hover);
 }
 
@@ -361,7 +361,7 @@
 .muxui-checkbox-field__indicator svg {
   width: 0.75rem;
   height: 0.75rem;
-  color: var(--muxui-semantic-action-foreground);
+  color: var(--muxui-component-checkbox-selected-foreground);
   stroke-width: 4;
   display: block;
 }
@@ -595,40 +595,11 @@
   }
 }
 
-/* The pressed dark button recipe uses the reference blue-green value. */
+/* Equal to the primary pressed token in ordinary modes; it still paints the
+   pressed primary fill in dark forced-colors mode, so it stays for now. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
     background-color: var(--muxui-semantic-action-selection-background-pressed);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-button[data-variant='danger-ghost'] {
-    --muxui-button-foreground: var(--muxui-semantic-feedback-invalid);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-checkbox {
-    color: var(--muxui-semantic-color-neutral-default-20);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-checkbox:not(
-    [data-selected],
-    [data-indeterminate],
-    [data-disabled],
-    [data-invalid]
-  ) .muxui-checkbox-indicator,
-  :scope .muxui-checkbox-field__button:not(
-    [data-selected],
-    [data-indeterminate],
-    [data-disabled],
-    [data-invalid]
-  ) .muxui-checkbox-field__indicator {
-    background-color: var(--muxui-semantic-color-neutral-default-98);
-    border-color: var(--muxui-semantic-color-neutral-default-60);
   }
 }
 
@@ -636,6 +607,18 @@
   :scope .muxui-checkbox[data-invalid] .muxui-checkbox-indicator,
   :scope .muxui-checkbox-field[data-invalid] .muxui-checkbox-field__indicator {
     border-color: var(--muxui-semantic-feedback-invalid-border);
+  }
+
+  /* :where() keeps these at the invalid rule's specificity, so selected hover
+     still wins while these outrank the invalid edge by order. */
+  :scope .muxui-checkbox[data-invalid]:where([data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
+  :scope .muxui-checkbox-field[data-invalid] :where([data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator {
+    border-color: var(--muxui-component-checkbox-selected-invalid-border);
+  }
+
+  :scope .muxui-checkbox[data-invalid]:where([data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])) .muxui-checkbox-indicator,
+  :scope .muxui-checkbox-field[data-invalid] :where([data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])) .muxui-checkbox-field__indicator {
+    border-color: var(--muxui-component-checkbox-invalid-border-hover);
   }
 }
 
@@ -1033,7 +1016,7 @@
   --muxui-button-background: transparent;
   --muxui-button-background-hover: color-mix(in srgb, var(--muxui-semantic-action-danger-background) 10%, transparent);
   --muxui-button-background-pressed: color-mix(in srgb, var(--muxui-semantic-action-danger-background) 5%, transparent);
-  --muxui-button-foreground: var(--muxui-semantic-action-danger-foreground);
+  --muxui-button-foreground: var(--muxui-component-button-danger-ghost-foreground);
   --muxui-button-border: transparent;
   --muxui-button-shadow: none;
 }
@@ -1229,13 +1212,6 @@
     0 0 0 1px var(--muxui-focus-ring-outer);
 }
 
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label,
-  :scope .muxui-switch-label {
-    color: var(--muxui-semantic-color-neutral-default-28);
-  }
-}
-
 /* Ordinary dark choice-control recipes use mode-indexed tokens. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-toggle-button {
@@ -1299,65 +1275,20 @@
   }
 }
 
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-checkbox-indicator, .muxui-checkbox-field__indicator) {
-    background-color: var(--muxui-semantic-color-neutral-default-98);
-    border-color: var(--muxui-semantic-color-neutral-default-60);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-checkbox[data-selected] .muxui-checkbox-indicator,
-  :scope .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator,
-  :scope .muxui-checkbox-field__button[data-selected] .muxui-checkbox-field__indicator,
-  :scope .muxui-checkbox-field__button[data-indeterminate] .muxui-checkbox-field__indicator {
-    background-color: var(--muxui-semantic-action-selection-background);
-    border-color: var(--muxui-semantic-action-selection-background);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-checkbox-indicator, .muxui-checkbox-field__indicator) svg {
-    color: var(--muxui-semantic-action-selection-foreground);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
-  :scope .muxui-checkbox-field__button[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
-    .muxui-checkbox-field__indicator {
-    background-color: var(--muxui-semantic-color-neutral-default-94);
-    border-color: var(--muxui-semantic-color-neutral-default-40);
-  }
-}
-
 @media (forced-colors: none) {
   .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
   .muxui-checkbox-field__button[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
     .muxui-checkbox-field__indicator {
-    background-color: var(--muxui-semantic-surface-raised);
+    background-color: var(--muxui-component-checkbox-indicator-background);
     background-image: linear-gradient(
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
     );
   }
-
-  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-checkbox[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
-    :scope .muxui-checkbox-field__button[data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])
-      .muxui-checkbox-field__indicator {
-      background-color: var(--muxui-semantic-color-neutral-default-98);
-      background-image: linear-gradient(
-        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
-        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
-      );
-    }
-  }
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label,
-  :scope .muxui-switch-label {
+  :scope :where(.muxui-checkbox-group, .muxui-radio-group, .muxui-radio-group-field) .muxui-field-label {
     color: var(--muxui-semantic-color-neutral-default-40);
   }
 }

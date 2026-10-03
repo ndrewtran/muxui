@@ -435,7 +435,7 @@
   gap: var(--muxui-semantic-layout-control-gap);
   min-block-size: var(--muxui-control-target-size, var(--muxui-control-size-md));
   padding-inline-start: calc(var(--muxui-component-switch-track-width) + var(--muxui-semantic-layout-inset-tiny));
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-component-switch-label);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-body-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
@@ -469,13 +469,13 @@
 }
 
 .muxui-switch[data-selected]::before {
-  background-color: var(--muxui-semantic-selection-track);
-  border-color: var(--muxui-semantic-selection-track);
+  background-color: var(--muxui-component-switch-selected-track);
+  border-color: var(--muxui-component-switch-selected-track);
 }
 
 .muxui-switch[data-selected][data-hovered]:not([data-disabled])::before {
-  background-color: var(--muxui-semantic-action-background-hover);
-  border-color: var(--muxui-semantic-action-background-hover);
+  background-color: var(--muxui-component-switch-selected-track-hover);
+  border-color: var(--muxui-component-switch-selected-track-hover);
 }
 
 .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
@@ -484,12 +484,17 @@
 }
 
 .muxui-switch[data-invalid]::before {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  border-color: var(--muxui-component-switch-invalid-border);
+}
+
+/* Outranks the selected and invalid rules but yields to selected hover. */
+.muxui-switch[data-invalid][data-selected]::before {
+  border-color: var(--muxui-component-switch-selected-invalid-border);
 }
 
 .muxui-switch[data-disabled] {
   opacity: 0.45;
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-component-switch-label);
   cursor: not-allowed;
 }
 
@@ -523,7 +528,7 @@
 .muxui-switch[data-selected] .muxui-switch-indicator,
 .muxui-switch-indicator[data-selected] {
   --muxui-switch-indicator-x: var(--muxui-component-switch-thumb-travel);
-  background-color: var(--muxui-semantic-action-foreground);
+  background-color: var(--muxui-component-switch-selected-thumb);
 }
 
 .muxui-switch-indicator[data-motion-pressed] {
@@ -591,6 +596,11 @@
   cursor: not-allowed;
   background-color: var(--muxui-semantic-surface-hover);
 }
+
+/* Covers enabled and disabled labels; invalid labels keep the feedback color. */
+:where(.muxui-text-field):not([data-invalid]) .muxui-field-label {
+  color: var(--muxui-component-textfield-label);
+}
 /* MuxUI component source: time-field.css */
 .muxui-time-field {
   display: flex;
@@ -608,7 +618,6 @@
 /* Dark fields use a neutral control surface distinct from the MuxUI canvas. */
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :where(
-    .muxui-text-field,
     .muxui-number-field,
     .muxui-search-field,
     .muxui-autocomplete,
@@ -659,7 +668,6 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-text-field .muxui-field-input:not(:hover, :focus, [data-focused], [data-open], [data-disabled], [data-invalid]),
   :scope .muxui-search-field .muxui-field-input:not(:hover, :focus, [data-focused], [data-open], [data-disabled], [data-invalid]),
   :scope .muxui-autocomplete-search:not([data-disabled], [data-invalid]) .muxui-field-input:not(:hover, :focus, [data-focused], [data-open], [data-disabled], [data-invalid]),
   :scope .muxui-color-field .muxui-field-input:not(:hover, :focus, [data-focused], [data-open], [data-disabled], [data-invalid]) {
@@ -670,8 +678,6 @@
 }
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-text-field .muxui-field-input[data-disabled],
-  :scope .muxui-text-field .muxui-field-input:disabled,
   :scope .muxui-search-field .muxui-field-input[data-disabled],
   :scope .muxui-search-field .muxui-field-input:disabled {
     background-color: var(--muxui-semantic-color-neutral-default-96);
@@ -910,52 +916,6 @@
   border-radius: var(--muxui-semantic-control-radius);
 }
 
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch {
-    color: var(--muxui-semantic-color-neutral-80);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch-label {
-    color: var(--muxui-semantic-color-neutral-80);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch::before {
-    background-color: var(--muxui-semantic-color-neutral-20);
-    border-color: var(--muxui-semantic-color-neutral-30);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch[data-invalid]::before {
-    border-color: var(--muxui-semantic-feedback-invalid-border);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch[data-selected]::before {
-    background-color: var(--muxui-semantic-action-selection-background);
-    border-color: var(--muxui-semantic-action-selection-background);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch[data-selected][data-hovered]:not([data-disabled])::before {
-    background-color: var(--muxui-semantic-action-selection-background-hover);
-    border-color: var(--muxui-semantic-action-selection-background-hover);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
-    background-color: var(--muxui-semantic-color-neutral-26);
-    border-color: var(--muxui-semantic-color-neutral-50);
-  }
-}
-
 @media (forced-colors: none) {
   .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
     background-color: var(--muxui-semantic-color-neutral-20);
@@ -963,29 +923,6 @@
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
       color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
     );
-  }
-
-  @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-    :scope .muxui-switch[data-hovered]:not([data-disabled], [data-selected])::before {
-      background-color: var(--muxui-semantic-color-neutral-20);
-      background-image: linear-gradient(
-        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent),
-        color-mix(in srgb, var(--muxui-semantic-surface-strong) 8%, transparent)
-      );
-    }
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch-indicator {
-    background-color: var(--muxui-semantic-color-neutral-80);
-  }
-}
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-switch[data-selected] .muxui-switch-indicator,
-  :scope .muxui-switch-indicator[data-selected] {
-    background-color: var(--muxui-semantic-action-selection-foreground);
   }
 }
 

@@ -92,7 +92,8 @@
           { "token": "semantic.action.neutral-background-hover", "requirement": "required" },
           { "token": "semantic.action.neutral-background-pressed", "requirement": "required" },
           { "token": "semantic.action.foreground-hover", "requirement": "required" },
-          { "token": "semantic.action.foreground-pressed", "requirement": "required" }
+          { "token": "semantic.action.foreground-pressed", "requirement": "required" },
+          { "token": "component.button.danger-ghost-foreground", "requirement": "required" }
         ]
       },
     "platformSafety": [

@@ -147,18 +147,13 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
       }, mode);
       await page.locator('[data-focus-start]').click();
 
+      // Each state paints one mode-aware token in both schemes.
       const expectedTokens = {
-        selected: mode === 'dark' ? '--muxui-semantic-action-selection-background' : '--muxui-semantic-selection-track',
+        selected: '--muxui-component-checkbox-selected-background',
         selectedHover: '--muxui-semantic-action-background-hover',
-        unchecked: mode === 'dark'
-          ? ['--muxui-semantic-color-neutral-default-98', '--muxui-semantic-color-neutral-default-60']
-          : ['--muxui-semantic-surface-raised', '--muxui-semantic-border-indicator'],
-        uncheckedHover: mode === 'dark'
-          ? ['--muxui-semantic-color-neutral-default-98', '--muxui-semantic-color-neutral-default-40']
-          : ['--muxui-semantic-surface-raised', '--muxui-semantic-border-indicator-hover'],
-        invalid: mode === 'dark'
-          ? ['--muxui-semantic-color-neutral-default-98', '--muxui-semantic-feedback-invalid-border']
-          : ['--muxui-semantic-surface-raised', '--muxui-semantic-feedback-invalid-border'],
+        unchecked: ['--muxui-component-checkbox-indicator-background', '--muxui-component-checkbox-indicator-border'],
+        uncheckedHover: ['--muxui-component-checkbox-indicator-background', '--muxui-component-checkbox-indicator-border-hover'],
+        invalid: ['--muxui-component-checkbox-indicator-background', '--muxui-semantic-feedback-invalid-border'],
       };
       const expectedSelected = await resolvedTokenPaint(page, expectedTokens.selected);
       const expectedSelectedHover = await resolvedTokenPaint(page, expectedTokens.selectedHover);
@@ -280,6 +275,109 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
     assert.equal(forcedField.borderColor, forcedCore.borderColor, 'forced-colors shared indicator border');
     assert.equal(forcedField.backgroundColor, forcedCore.backgroundColor, 'forced-colors shared indicator background');
     await page.screenshot({ path: join(evidenceDir, 'checkbox-focus-forced-colors.png'), fullPage: true });
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await browser?.close();
+    await close();
+  }
+});
+
+test('Checkbox, CheckboxField, and Switch paint selected and invalid combinations from their tokens', { timeout: 120_000 }, async () => {
+  const entry = `import React from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { Checkbox } from '/src/components.mjs';
+    import { Switch } from '/src/fields.mjs';
+    import { CheckboxField } from '/src/supplemental/index.mjs';
+    import '/generated/styles.css';
+    const h = React.createElement;
+    const field = (testId, props) => h(CheckboxField.Root, { 'data-testid': testId, invalid: true, ...props },
+      h(CheckboxField.Button, null, h(CheckboxField.Indicator, null), h('span', null, 'Field')));
+    function App() {
+      return h('main', { 'data-invalid-fixture': true },
+        h(Checkbox, { 'data-testid': 'core-selected', defaultChecked: true, invalid: true }, 'Core selected'),
+        h(Checkbox, { 'data-testid': 'core-unchecked', invalid: true }, 'Core unchecked'),
+        field('field-selected', { defaultChecked: true }),
+        field('field-unchecked', {}),
+        h(Switch, { 'data-testid': 'switch-selected', label: 'Switch selected', defaultSelected: true, invalid: true }),
+        h(Switch, { 'data-testid': 'switch-unchecked', label: 'Switch unchecked', invalid: true }));
+    }
+    createRoot(document.getElementById('root')).render(h(App));`;
+  const html = pageShell({ head: `<style>
+    *, *::before, *::after { transition: none !important; }
+    body { margin: 0; padding: 48px; }
+    main { display: grid; gap: 12px; justify-items: start; }
+  </style>`, body: '<div id="root"></div>', entry: '/checkbox-invalid-states-entry.mjs' });
+  const { url, close } = await startServer({
+    entries: ['src/components.mjs', 'src/fields.mjs', 'src/supplemental/index.mjs'],
+    pages: { '/checkbox-invalid.html': html },
+    modules: { '/checkbox-invalid-states-entry.mjs': entry },
+  });
+  let browser;
+  try {
+    browser = await launchBrowser();
+    const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+    page.setDefaultTimeout(10_000);
+    const errors = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+    await page.goto(`${url}/checkbox-invalid.html`, { waitUntil: 'networkidle' });
+    await page.locator('[data-invalid-fixture]').waitFor();
+    // The Switch root forwards its test id to the outer field wrapper.
+    const parts = {
+      'core-selected': ['[data-testid="core-selected"]', '.muxui-checkbox-indicator'],
+      'core-unchecked': ['[data-testid="core-unchecked"]', '.muxui-checkbox-indicator'],
+      'field-selected': ['[data-testid="field-selected"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
+      'field-unchecked': ['[data-testid="field-unchecked"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
+      'switch-selected': ['[data-testid="switch-selected"] .muxui-switch, [data-testid="switch-selected"].muxui-switch', null],
+      'switch-unchecked': ['[data-testid="switch-unchecked"] .muxui-switch, [data-testid="switch-unchecked"].muxui-switch', null],
+    };
+    const paint = (name) => {
+      const [hostSelector, partSelector] = parts[name];
+      return page.locator(hostSelector).first().evaluate((host, part) => {
+        const node = part ? host.querySelector(part) : host;
+        const style = getComputedStyle(node, part ? null : '::before');
+        const glyph = part ? node.querySelector('svg') : null;
+        return { backgroundColor: style.backgroundColor, borderColor: style.borderColor, glyph: glyph ? getComputedStyle(glyph).color : null };
+      }, partSelector);
+    };
+    const hover = (name) => page.locator(parts[name][0]).first().hover();
+    const token = (name) => resolvedTokenPaint(page, name).then(({ backgroundColor }) => backgroundColor);
+
+    for (const mode of ['light', 'dark']) {
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('[data-invalid-fixture]').waitFor();
+      await page.emulateMedia({ forcedColors: 'none', colorScheme: mode });
+      await page.evaluate((scheme) => document.documentElement.setAttribute('data-muxui-color-scheme', scheme), mode);
+      await page.mouse.move(0, 0);
+
+      const selectedFill = await token('--muxui-component-checkbox-selected-background');
+      const expected = {
+        checkbox: {
+          selected: { backgroundColor: selectedFill, borderColor: await token('--muxui-component-checkbox-selected-invalid-border'), glyph: await token('--muxui-component-checkbox-selected-foreground') },
+          selectedHover: { backgroundColor: await token('--muxui-semantic-action-background-hover'), borderColor: await token('--muxui-semantic-action-background-hover'), glyph: await token('--muxui-semantic-action-foreground-hover') },
+          uncheckedHover: { backgroundColor: await token('--muxui-component-checkbox-indicator-background'), borderColor: await token('--muxui-component-checkbox-invalid-border-hover'), glyph: null },
+        },
+        switch: {
+          selected: { backgroundColor: await token('--muxui-component-switch-selected-track'), borderColor: await token('--muxui-component-switch-selected-invalid-border'), glyph: null },
+          selectedHover: { backgroundColor: await token('--muxui-component-switch-selected-track-hover'), borderColor: await token('--muxui-component-switch-selected-track-hover'), glyph: null },
+          // The unselected hover edge outranks the invalid edge.
+          uncheckedHover: { backgroundColor: await token('--muxui-semantic-color-neutral-20'), borderColor: await token('--muxui-semantic-color-neutral-50'), glyph: null },
+        },
+      };
+
+      for (const [family, selectedPart, uncheckedPart] of [
+        ['checkbox', 'core-selected', 'core-unchecked'],
+        ['checkbox', 'field-selected', 'field-unchecked'],
+        ['switch', 'switch-selected', 'switch-unchecked'],
+      ]) {
+        assert.deepEqual(await paint(selectedPart), expected[family].selected, `${mode} ${selectedPart} selected invalid`);
+        await hover(selectedPart);
+        assert.deepEqual(await paint(selectedPart), expected[family].selectedHover, `${mode} ${selectedPart} selected invalid hover`);
+        await hover(uncheckedPart);
+        assert.deepEqual(await paint(uncheckedPart), expected[family].uncheckedHover, `${mode} ${uncheckedPart} unchecked invalid hover`);
+        await page.mouse.move(0, 0);
+      }
+    }
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();

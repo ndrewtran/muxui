@@ -2294,6 +2294,19 @@
       "overridePolicy": "theme",
       "alias": "semantic.control.radius"
     },
+    "component.button.danger-ghost-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of the danger-ghost Button variant; the dark scheme uses the invalid feedback tone.",
+      "overridePolicy": "theme",
+      "alias": "semantic.action.danger-foreground",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.feedback.invalid"
+        }
+      }
+    },
     "component.disclosuregroup.icon-size": {
       "layer": "component",
       "type": "dimension",
@@ -2389,6 +2402,266 @@
             "color": "#00000000",
             "weight": 0.08
           }
+        }
+      }
+    },
+    "component.checkbox.indicator-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of an unselected Checkbox indicator. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.surface.raised",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-98"
+        }
+      }
+    },
+    "component.checkbox.indicator-border": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Edge of an unselected Checkbox indicator. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.border.indicator",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-60"
+        }
+      }
+    },
+    "component.checkbox.indicator-border-hover": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Edge of a hovered unselected Checkbox indicator. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.border.indicator-hover",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-40"
+        }
+      }
+    },
+    "component.checkbox.selected-invalid-border": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Edge of a checked or indeterminate invalid Checkbox indicator; the dark scheme keeps the selected-control fill. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.feedback.invalid-border",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-background"
+        }
+      }
+    },
+    "component.checkbox.invalid-border-hover": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Edge of a hovered unselected invalid Checkbox indicator; the dark scheme uses the hover edge. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.feedback.invalid-border",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-40"
+        }
+      }
+    },
+    "component.checkbox.selected-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill and edge of a checked or indeterminate Checkbox indicator; the dark scheme uses the selected-control fill. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.selection.track",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-background"
+        }
+      }
+    },
+    "component.checkbox.selected-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Check or dash glyph in a checked or indeterminate Checkbox indicator; the dark scheme uses the selected-control foreground. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.action.foreground",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-foreground"
+        }
+      }
+    },
+    "component.switch.label": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of a Switch. The dark branch keeps the mode-adaptive neutral-80 role, which matches neutral-default-30 only in the dark scheme, so overrides of neutral-80 still reach the label.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.default",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-80"
+        }
+      }
+    },
+    "component.switch.invalid-border": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Track edge of an unselected invalid Switch.",
+      "overridePolicy": "theme",
+      "alias": "semantic.feedback.invalid",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.feedback.invalid-border"
+        }
+      }
+    },
+    "component.switch.selected-invalid-border": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Track edge of a selected invalid Switch; the dark scheme keeps the selected-control fill.",
+      "overridePolicy": "theme",
+      "alias": "semantic.feedback.invalid",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-background"
+        }
+      }
+    },
+    "component.switch.selected-track": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill and edge of a selected Switch track; the dark scheme uses the selected-control fill.",
+      "overridePolicy": "theme",
+      "alias": "semantic.selection.track",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-background"
+        }
+      }
+    },
+    "component.switch.selected-track-hover": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill and edge of a hovered selected Switch track; the dark scheme uses the hovered selected-control fill.",
+      "overridePolicy": "theme",
+      "alias": "semantic.action.background-hover",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-background-hover"
+        }
+      }
+    },
+    "component.switch.selected-thumb": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Thumb of a selected Switch; the dark scheme uses the selected-control foreground.",
+      "overridePolicy": "theme",
+      "alias": "semantic.action.foreground",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.action.selection-foreground"
+        }
+      }
+    },
+    "component.textfield.label": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of a valid TextField.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.default",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-40"
+        }
+      }
+    },
+    "component.tabs.tab-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of unselected tabs.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.muted",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-50"
+        }
+      }
+    },
+    "component.tabs.panel-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text color of tab panel content.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.default",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-30"
+        }
+      }
+    },
+    "component.tabs.vertical-list-border": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Inline-end edge of a vertical tab list.",
+      "overridePolicy": "theme",
+      "alias": "semantic.border.subtle",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-92"
+        }
+      }
+    },
+    "component.taggroup.label": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of a TagGroup.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.default",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-24"
+        }
+      }
+    },
+    "component.taggroup.tag-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Fill of an unselected, enabled tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.surface.subtle",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-96"
+        }
+      }
+    },
+    "component.taggroup.tag-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Text color of an unselected tag.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.default",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-28"
         }
       }
     },
