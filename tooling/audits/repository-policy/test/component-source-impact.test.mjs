@@ -515,6 +515,54 @@ test('selector ownership excludes negative qualifiers and checks bounded versus 
     'a state alternative cannot borrow ownership from another :is() alternative');
 });
 
+test('nested :not/:is/:where state alternatives inherit the anchor while class arguments stay unowned', () => {
+  const records = [{
+    family: 'Autocomplete', export: 'Autocomplete', slug: 'autocomplete', source: collectionsPath, parts: ['root', 'option'],
+  }];
+  const analyze = (selector) => analyzeReactStyleChange({
+    records,
+    sourcePath: 'packages/react/src/styles/test.css',
+    before: `${selector} { color: black; }`,
+    after: `${selector} { color: white; }`,
+  });
+
+  assert.deepEqual(
+    analyze('.muxui-autocomplete-option:where([data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]))').families,
+    ['Autocomplete'],
+  );
+  assert.deepEqual(analyze('.muxui-autocomplete-option:is([data-focused]:not(:disabled, [aria-disabled]))').families, ['Autocomplete']);
+  assert.throws(
+    () => analyze('.muxui-autocomplete-option:where([data-hovered]:not(.some-class))'),
+    /:where\(\) alternative.*no canonical component owner/u,
+  );
+});
+
+test('compound part classes resolve to the only family that declares or names the part', () => {
+  const records = [
+    { family: 'Tabs', export: 'Tabs', slug: 'tabs', source: collectionsPath, parts: ['root', 'list', 'tab', 'panels', 'panel'] },
+    { family: 'Disclosure', export: 'Disclosure', slug: 'disclosure', source: collectionsPath, parts: ['root', 'trigger', 'panel'] },
+    { family: 'ColorPicker', export: 'ColorPicker', slug: 'color-picker', source: collectionsPath, parts: ['root', 'field'] },
+    { family: 'TextField', export: 'TextField', slug: 'text-field', source: collectionsPath, parts: ['root', 'input'] },
+    { family: 'TagGroup', export: 'TagGroup', slug: 'tag-group', source: collectionsPath, parts: ['root', 'tag'] },
+    { family: 'TagSelect', export: 'TagSelect', slug: 'tag-select', source: collectionsPath, parts: ['root', 'tag'] },
+  ];
+  const analyze = (selector) => analyzeReactStyleChange({
+    records,
+    sourcePath: 'packages/react/src/styles/test.css',
+    before: `${selector} { color: black; }`,
+    after: `${selector} { color: white; }`,
+  });
+
+  for (const selector of ['.muxui-tab-list', '.muxui-tab-panel', '.muxui-tab-panels', '.muxui-tab-label', ':scope .muxui-tab-panel']) {
+    assert.deepEqual(analyze(selector).families, ['Tabs'], selector);
+  }
+  assert.deepEqual(analyze('.muxui-tag-group-list').families, ['TagGroup'], 'a slug prefix outranks a shared part prefix');
+  assert.throws(() => analyze('.muxui-tag-chip'), /"muxui-tag-chip" extends part "tag" shared by families TagGroup, TagSelect/u);
+  assert.throws(() => analyze('.muxui-field-input'), /extends part "field" shared by families ColorPicker, TextField/u,
+    'a part named by another family slug is shared vocabulary');
+  assert.throws(() => analyze('.muxui-unknown-widget'), /changed selector "\.muxui-unknown-widget".*no canonical family owner$/u);
+});
+
 test('state-only :is alternatives inherit the anchored owner for the real Autocomplete selector', async () => {
   const sourcePath = 'packages/react/src/styles/fields.css';
   const after = await readFile(path.join(repositoryRoot, sourcePath), 'utf8');
