@@ -77,9 +77,11 @@ test('applier creates, then no-ops, updates a changed binding, and reports a rem
 test('applier refuses protected pages and leaves untagged children in place', async () => {
   const guarded = createFakeFigma(source);
   guarded.pages[1].setSharedPluginData('muxui', 'id', 'page:components');
-  const refused = await applyAll(guarded.figma, planComponentBatches(spec).slice(0, 1));
+  const { result: refused, writes: pageWrites } = await writesDuring(guarded.state, [guarded.pages[1]], () => applyAll(guarded.figma, planComponentBatches(spec).slice(0, 1)));
   assert.match(refused.errors[0].message, /refusing to write to protected page Pilot components/u);
-  assert.deepEqual([refused.created, guarded.pages[1].children], [0, [guarded.untouched]]);
+  assert.deepEqual([refused.created, refused.stamped, pageWrites, guarded.pages[1].children], [0, 0, [0], [guarded.untouched]]);
+  // Refused before adoption: a legacy protected page gets no stamp.
+  assert.equal(guarded.pages[1].getSharedPluginData('muxui', 'node'), '');
 
   const { figma, state, pages } = createFakeFigma(source);
   const plan = planComponentBatches(spec);
@@ -102,6 +104,12 @@ async function writesDuring(state, nodes, run) {
 const STAMP = ['muxui', 'node'];
 const stampOf = (node) => node.getSharedPluginData(...STAMP);
 const tagged = (root) => root.findAll((node) => node.type !== 'INSTANCE' && node.getSharedPluginData('muxui', 'id') !== '' && !(node.parent && node.parent.type === 'INSTANCE'));
+// Every tagged node the applier collects: instances too, but never an instance's sublayers.
+const collected = (root) => root.findAll((node) => {
+  if (node.getSharedPluginData('muxui', 'id') === '') return false;
+  for (let parent = node.parent; parent; parent = parent.parent) if (parent.type === 'INSTANCE') return false;
+  return true;
+});
 
 test('a designer instance of a variant is not owned and stays untouched, even in a preview row', async () => {
   const { figma, state, pages } = createFakeFigma(source);
@@ -187,9 +195,12 @@ test('unstamped legacy nodes are adopted once and stamped; two unstamped nodes w
   const plan = planComponentBatches(spec);
   await applyAll(figma, plan);
   const page = pages[2];
-  const owned = [page, ...tagged(page)];
+  const owned = [page, ...collected(page)];
   for (const node of owned) node.data.delete('muxui/node');
-  assert.ok(owned.every((node) => stampOf(node) === '' || node.type === 'INSTANCE'));
+  // Glyph-part and preview instances are legacy too. Once the run adopts their
+  // main component they read its stamp, which must still count as unstamped.
+  assert.ok(owned.filter((node) => node.type === 'INSTANCE').length > 0);
+  assert.ok(owned.every((node) => stampOf(node) === ''));
 
   const writes = state.writes;
   const migrated = await applyAll(figma, plan);
@@ -201,8 +212,16 @@ test('unstamped legacy nodes are adopted once and stamped; two unstamped nodes w
   const rerun = await applyAll(figma, plan);
   assert.deepEqual([rerun.created, rerun.updated, rerun.stamped, rerun.errors, state.writes], [0, 0, 0, [], after]);
 
-  // A pre-stamp duplicate: both unstamped copies are reported and neither is written.
+  // An unstamped node beside its stamped original is a copy: reported, never written.
   const primary = byTag(page, 'component:button/variant=primary,state=rest');
+  const stray = primary.clone();
+  stray.data.delete('muxui/node');
+  const beside = await writesDuring(state, [primary, stray], () => applyAll(figma, plan));
+  assert.deepEqual([beside.result.created, beside.result.updated, beside.result.stamped, beside.result.errors, beside.writes], [0, 0, 0, [], [0, 0]]);
+  assert.deepEqual([...new Set(beside.result.copies.map(({ node, stamp }) => `${node} ${stamp}`))], [`${stray.id} `]);
+  stray.remove();
+
+  // A pre-stamp duplicate: both unstamped copies are reported and neither is written.
   primary.data.delete('muxui/node');
   const copy = primary.clone();
   const legacy = await writesDuring(state, [primary, copy], () => applyAll(figma, plan));

@@ -138,6 +138,10 @@ export async function applyComponentBatch(figma, payload) {
     return summary;
   }
   page = taggedPages[0] || null;
+  if (page && PROTECTED_PAGES.indexOf(page.name) >= 0) {
+    error(PAGE_ID, 'refusing to write to protected page ' + page.name);
+    return summary;
+  }
   if (page && !stampOf(page)) adopt(page);
   if (!page) {
     var taken = pages.some(function (candidate) { return candidate.name === payload.page; });
@@ -145,10 +149,6 @@ export async function applyComponentBatch(figma, payload) {
     page.name = taken ? payload.page + ' (Mux UI)' : payload.page;
     tag(page, PAGE_ID);
     summary.notices.push('created page ' + page.name + (taken ? ' because an untagged page named ' + payload.page + ' exists' : ''));
-  }
-  if (PROTECTED_PAGES.indexOf(page.name) >= 0) {
-    error(PAGE_ID, 'refusing to write to protected page ' + page.name);
-    return summary;
   }
   if (page.loadAsync) await page.loadAsync();
   // `figma.create*` puts new nodes on the current page, which starts as the
