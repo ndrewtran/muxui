@@ -39,6 +39,8 @@ import {
   TagGroup as AriaTagGroup,
   TagList as AriaTagList,
   Text as AriaText,
+  TextContext as AriaTextContext,
+  DEFAULT_SLOT as ARIA_DEFAULT_SLOT,
   TextArea as AriaTextArea,
   TextField as AriaTextField,
   useFilter,
@@ -87,16 +89,24 @@ function fieldText(slot, className, props, ref) {
 
 const TEXT_VARIANTS = new Set(['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono']);
 const TEXT_SIZES = Object.freeze({
-  display: new Set(['s', 'm', 'l']),
-  heading: new Set(['s', 'm', 'l']),
-  title: new Set(['s', 'm', 'l']),
-  label: new Set(['xs', 's', 'm', 'l']),
-  body: new Set(['xs', 's', 'm', 'l']),
-  expressive: new Set(['xs', 's', 'm', 'l']),
-  mono: new Set(['xs', 's', 'm', 'l']),
+  display: new Set(['sm', 'md', 'lg']),
+  heading: new Set(['sm', 'md', 'lg']),
+  title: new Set(['sm', 'md', 'lg']),
+  label: new Set(['xs', 'sm', 'md', 'lg']),
+  body: new Set(['xs', 'sm', 'md', 'lg']),
+  expressive: new Set(['xs', 'sm', 'md', 'lg']),
+  mono: new Set(['xs', 'sm', 'md', 'lg']),
 });
 const TEXT_COLORS = new Set(['default', 'muted']);
 const TEXT_ELEMENTS = new Set(['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label']);
+
+// An unslotted Text joins a context's default slot (ListBoxItem and MenuItem
+// map it to the item label). Contexts with only named slots, such as field
+// labels and descriptions, would throw, so it opts out of those instead.
+function resolveTextSlot(context, slot) {
+  if (slot !== undefined) return slot;
+  return context?.slots && !(ARIA_DEFAULT_SLOT in context.slots) ? null : undefined;
+}
 
 function normalizeTextOption(value, allowed, option) {
   if (!allowed.has(value)) throw new TypeError(`Text ${option} must be one of: ${[...allowed].join(', ')}.`);
@@ -106,7 +116,7 @@ function normalizeTextOption(value, allowed, option) {
 /** Apply a canonical Mux typography role while keeping the native host and RAC slot contract. */
 export const Text = React.forwardRef(function Text({
   variant = 'body',
-  size = 'm',
+  size = 'md',
   color = 'default',
   as = 'span',
   truncate = false,
@@ -118,9 +128,11 @@ export const Text = React.forwardRef(function Text({
   const resolvedSize = normalizeTextOption(size, TEXT_SIZES[resolvedVariant], 'size');
   const resolvedColor = normalizeTextOption(color, TEXT_COLORS, 'color');
   const resolvedElement = normalizeTextOption(as, TEXT_ELEMENTS, 'as');
+  const textContext = React.useContext(AriaTextContext);
   return h(AriaText, {
     ...props,
     ref,
+    slot: resolveTextSlot(textContext, props.slot),
     elementType: resolvedElement,
     className: cx(
       'muxui-text',

@@ -47,13 +47,22 @@ test('Image requires alt, preserves native media props, and renders Mux styling 
   assert.equal(image.getAttribute('height'), '96');
   assert.equal(image.getAttribute('loading'), 'lazy');
   assert.equal(image.getAttribute('decoding'), 'async');
-  assert.equal(image.className, 'muxui-image muxui-image-radius-md muxui-image--fit-contain consumer-image');
+  assert.equal(image.className, 'muxui-image muxui-image--radius-md muxui-image--fit-contain consumer-image');
+  // Both dimensions keep the declared box so fit applies before and after load.
+  assert.equal(image.style.getPropertyValue('--muxui-image-ratio'), '160 / 96');
 
   const decorative = imageElement(new JSDOM(renderToStaticMarkup(React.createElement(Image, {
     src: '/decorative.svg', alt: '',
   }))).window.document);
   assert.equal(decorative.getAttribute('alt'), '');
   assert.equal(decorative.classList.contains('muxui-image--fit-cover'), true);
+  assert.equal(decorative.getAttribute('style'), null);
+
+  const styled = imageElement(new JSDOM(renderToStaticMarkup(React.createElement(Image, {
+    src: '/wide.svg', alt: '', width: '320', height: 180, style: { aspectRatio: '1', opacity: 0.5 },
+  }))).window.document);
+  assert.equal(styled.style.aspectRatio, '1 / 1', 'caller style wins');
+  assert.equal(styled.style.opacity, '0.5');
 });
 
 test('Image recovers once, forwards errors and refs, and resets recovery for a new source', async () => {
@@ -170,8 +179,20 @@ test('Avatar accepts fragments, treats unavailable sources as fallback, and reje
       React.createElement(Avatar.Fallback, null, 'AX'),
     ),
   ))).window.document;
-  assert.equal(avatarRoot(fragmented).querySelector('.muxui-avatar__image').hidden, false);
-  assert.equal(avatarRoot(fragmented).querySelector('.muxui-avatar__fallback').hidden, true);
+  // Server markup shows the fallback while the image loads; the root carries the alt name.
+  const fragmentedRoot = avatarRoot(fragmented);
+  assert.equal(fragmentedRoot.dataset.imageState, 'loading');
+  assert.equal(fragmentedRoot.querySelector('.muxui-avatar__image').hidden, false);
+  assert.equal(fragmentedRoot.querySelector('.muxui-avatar__image').getAttribute('aria-hidden'), 'true');
+  assert.equal(fragmentedRoot.querySelector('.muxui-avatar__fallback').hidden, false);
+  assert.equal(fragmentedRoot.querySelector('.muxui-avatar__fallback').getAttribute('aria-hidden'), 'true');
+  assert.equal(fragmentedRoot.getAttribute('role'), 'img');
+  assert.equal(fragmentedRoot.getAttribute('aria-label'), 'Alex avatar');
+
+  assert.throws(
+    () => renderToStaticMarkup(React.createElement(Avatar.Root, null, React.createElement(Avatar.Image, { src: '/avatar.svg' }))),
+    /Avatar.Image requires an alt string/u,
+  );
 
   const unavailable = new JSDOM(renderToStaticMarkup(React.createElement(
     Avatar.Root,
@@ -276,8 +297,9 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
     assert.equal(imageRef.current, avatar.querySelector('.muxui-avatar__image'));
     assert.equal(avatar.dataset.imageState, 'loading');
     assert.equal(imageRef.current.hidden, false);
-    assert.equal(avatar.querySelector('.muxui-avatar__fallback').hidden, true);
-    assert.equal(avatar.getAttribute('role'), null);
+    assert.equal(avatar.querySelector('.muxui-avatar__fallback').hidden, false);
+    assert.equal(avatar.getAttribute('role'), 'img');
+    assert.equal(avatar.getAttribute('aria-label'), 'Alex avatar');
 
     await act(async () => { imageRef.current.dispatchEvent(new Event('error', { bubbles: false })); });
     assert.equal(errorCount, 1);
@@ -292,17 +314,15 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
     assert.equal(avatarRoot(document).dataset.imageState, 'loading');
     assert.equal(imageRef.current.getAttribute('src'), '/new-avatar.svg');
     assert.equal(imageRef.current.hidden, false);
-    assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, true);
-    assert.equal(avatarRoot(document).getAttribute('role'), null);
-    assert.equal(avatarRoot(document).getAttribute('aria-label'), null);
+    assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, false);
+    assert.equal(avatarRoot(document).getAttribute('role'), 'img');
+    assert.equal(avatarRoot(document).getAttribute('aria-label'), 'Alex avatar');
 
     await act(async () => { root.render(render('/avatar.svg')); });
     assert.equal(avatarRoot(document).dataset.imageState, 'loading');
     assert.equal(imageRef.current.getAttribute('src'), '/avatar.svg');
     assert.equal(imageRef.current.hidden, false);
-    assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, true);
-    assert.equal(avatarRoot(document).getAttribute('role'), null);
-    assert.equal(avatarRoot(document).getAttribute('aria-label'), null);
+    assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, false);
 
     await act(async () => { root.render(render('/new-avatar.svg')); });
     assert.equal(avatarRoot(document).dataset.imageState, 'loading');
@@ -312,6 +332,12 @@ test('Avatar swaps image and fallback states, forwards refs, and recovers on sou
     await act(async () => { imageRef.current.dispatchEvent(new Event('load', { bubbles: false })); });
     assert.equal(loadCount, 1);
     assert.equal(avatarRoot(document).dataset.imageState, 'loaded');
+    // Once loaded, the image replaces the fallback and names itself.
+    assert.equal(avatarRoot(document).querySelector('.muxui-avatar__fallback').hidden, true);
+    assert.equal(imageRef.current.getAttribute('aria-hidden'), null);
+    assert.equal(imageRef.current.getAttribute('alt'), 'Alex avatar');
+    assert.equal(avatarRoot(document).getAttribute('role'), null);
+    assert.equal(avatarRoot(document).getAttribute('aria-label'), null);
   } finally {
     await act(async () => root?.unmount());
     restore();

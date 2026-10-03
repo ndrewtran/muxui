@@ -103,7 +103,10 @@
           { "token": "semantic.feedback.invalid", "requirement": "required" },
           { "token": "semantic.control.size-sm", "requirement": "required" },
           { "token": "semantic.control.size-md", "requirement": "required" },
-          { "token": "semantic.control.size-lg", "requirement": "required" }
+          { "token": "semantic.control.size-lg", "requirement": "required" },
+          { "token": "semantic.surface.hover", "requirement": "required" },
+          { "token": "component.selectnative.disabled-label", "requirement": "required" },
+          { "token": "component.selectnative.disabled-invalid-label", "requirement": "required" }
         ]
       },
       "platformSafety": [

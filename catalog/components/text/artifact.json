@@ -24,7 +24,7 @@
     "nameRequired": false,
       "obligations": [
         "The as prop selects the native semantic host; caller-supplied role, aria, data, event, and slot props remain on that host.",
-        "Text participates in React Aria description slots inside fields and label and description slots inside collection items; a field's label association remains owned by the field component, while as=label with htmlFor provides native labeling.",
+        "Text participates in React Aria description slots inside fields and label and description slots inside collection items; a field's label association remains owned by the field component, while as=label with htmlFor provides native labeling. Without a slot prop, Text fills a collection item's default label slot and stays out of field label and description contexts, which have only named slots.",
         "Truncation is visual; the complete text remains in the DOM and consumers provide an accessible name when a clipped label needs additional context."
     ]
   },
@@ -47,17 +47,17 @@
         ],
         "defaults": {
           "variant": "body",
-          "size": "m",
+          "size": "md",
           "color": "default",
           "as": "span",
           "truncate": false
         }
       },
       "behavior": [
-        "Composes the existing Mux typography role and size tokens; display, heading, and title use s, m, and l while label, body, expressive, and mono also support xs.",
+        "Composes the existing Mux typography role and size tokens; display, heading, and title use sm, md, and lg while label, body, expressive, and mono also support xs; each size maps internally to the matching typography scale token.",
         "The as prop selects p, span, h1 through h6, div, or label without changing caller-supplied role, aria, data, event, or slot props.",
         "The color prop keeps default role color, or applies the existing muted content role.",
-        "truncate applies single-line overflow clipping and ellipsis; the containing width remains consumer-owned."
+        "truncate applies single-line overflow clipping and ellipsis; block hosts stay block, inline hosts become bottom-aligned inline blocks, and the containing width remains consumer-owned."
       ],
       "accessibility": [
         "The selected native element supplies its normal semantic meaning and caller-supplied role and ARIA attributes are preserved.",

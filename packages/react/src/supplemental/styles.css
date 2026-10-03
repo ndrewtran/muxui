@@ -128,16 +128,18 @@
   display: block;
   max-inline-size: 100%;
   block-size: auto;
+  /* Set from width and height; classes and the style prop can override it. */
+  aspect-ratio: var(--muxui-image-ratio, auto);
 }
 
 .muxui-image--fit-cover { object-fit: cover; }
 .muxui-image--fit-contain { object-fit: contain; }
 .muxui-image--fit-fill { object-fit: fill; }
 .muxui-image--fit-none { object-fit: none; }
-.muxui-image-radius-sm { border-radius: var(--muxui-semantic-shape-radius-s); }
-.muxui-image-radius-md { border-radius: var(--muxui-semantic-shape-option-radius); }
-.muxui-image-radius-lg { border-radius: var(--muxui-semantic-shape-container-radius); }
-.muxui-image-radius-full { border-radius: var(--muxui-semantic-shape-pill-radius); }
+.muxui-image--radius-sm { border-radius: var(--muxui-semantic-shape-radius-s); }
+.muxui-image--radius-md { border-radius: var(--muxui-semantic-shape-option-radius); }
+.muxui-image--radius-lg { border-radius: var(--muxui-semantic-shape-container-radius); }
+.muxui-image--radius-full { border-radius: var(--muxui-semantic-shape-pill-radius); }
 
 /* avatar */
 .muxui-avatar {
@@ -167,7 +169,13 @@
   block-size: 100%;
 }
 
-.muxui-avatar__image { object-fit: cover; }
+/* The image stacks over the fallback: it is unpainted while loading, so the
+   fallback shows, and covers it as soon as it decodes, even before hydration. */
+.muxui-avatar__image {
+  z-index: 1;
+  object-fit: cover;
+}
+
 .muxui-avatar__fallback {
   display: grid;
   place-items: center;
@@ -175,6 +183,9 @@
   text-align: center;
   overflow: hidden;
 }
+
+/* The fallback's own display would otherwise override the hidden attribute. */
+.muxui-avatar__fallback[hidden] { display: none; }
 
 /* button-group */
 .muxui-button-group {

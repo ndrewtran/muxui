@@ -30,9 +30,9 @@
   "accessibility": {
     "nameRequired": false,
     "obligations": [
-      "Avatar.Image accepts an optional alt string; use a meaningful value for informative media and omit it or use alt=\"\" for decorative media.",
-      "Avatar.Fallback accepts arbitrary children and is visible when no image is supplied or when the image fails.",
-      "When an informative image fails, retain its alt text as the fallback name without exposing image and fallback names simultaneously."
+      "Avatar.Image requires an alt string; use a meaningful value for informative media and alt=\"\" for decorative media.",
+      "Avatar.Fallback accepts arbitrary children and is visible when no image is supplied, while the image loads, or when the image fails.",
+      "While an informative image loads or after it fails, retain its alt text as the avatar name without exposing image and fallback names simultaneously."
     ]
   },
   "bindings": {
@@ -64,11 +64,11 @@
       "behavior": [
         "Root, Image, and Fallback are Mux-owned compound parts backed by native span and img hosts; they are not React Aria primitives.",
         "Place Image and Fallback directly under Root or inside a React.Fragment; opaque wrapper components are rejected so image and fallback state cannot diverge.",
-        "A failed image is hidden while arbitrary fallback children become visible; a source or source-set change clears stale failure state.",
-        "Fallback-only composition has no loading animation; unavailable sources use the fallback path, cached native success is reported as loaded, and hydration reconciles native state without replaying callbacks."
+        "Arbitrary fallback children stay visible while the image loads and after it fails; the image is stacked above them and covers them as soon as it decodes, including before hydration, and a source or source-set change returns to the loading fallback. Without JavaScript a failed image may show the browser's broken-image indicator.",
+        "No loading animation is introduced; server markup shows the fallback, unavailable sources use the fallback path, cached native success is reported as loaded, and hydration reconciles native state without replaying callbacks."
       ],
       "accessibility": [
-        "Informative image alt text names the native image while it loads and names the avatar root when its source is unavailable or fails.",
+        "Informative image alt text names the native image once it loads and names the avatar root while it loads, when its source is unavailable, or when it fails.",
         "Decorative alt=\"\" images and their fallback remain out of the accessibility tree unless the caller supplies an explicit root name.",
         "Caller-supplied refs, ARIA attributes, data attributes, and native image callbacks are preserved."
       ],
