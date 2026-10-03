@@ -99,6 +99,14 @@ const BUTTON_SELECT_PROPS = Object.freeze({
   size: ['sm', 'md', 'lg'],
 });
 
+const TEXT_SELECT_PROPS = Object.freeze({
+  variant: ['display', 'heading', 'title', 'label', 'body', 'expressive', 'mono'],
+  // xs exists only for label, body, expressive, and mono; the Text story maps it to sm otherwise.
+  size: ['xs', 'sm', 'md', 'lg'],
+  color: ['default', 'muted'],
+  as: ['p', 'span', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'div', 'label'],
+});
+
 const callbackType = { summary: 'MuxUI callback' };
 
 function inferControl(name, defaults, props, family) {
@@ -106,6 +114,9 @@ function inferControl(name, defaults, props, family) {
   if (name === 'trigger') return { control: false, table: { type: { summary: 'React element' } } };
   if (family === 'Button' && BUTTON_SELECT_PROPS[name]) {
     return { control: { type: 'select' }, options: BUTTON_SELECT_PROPS[name] };
+  }
+  if (family === 'Text' && TEXT_SELECT_PROPS[name]) {
+    return { control: { type: 'select' }, options: TEXT_SELECT_PROPS[name] };
   }
   if (family === 'Tabs' && name === 'variant') {
     return { control: { type: 'select' }, options: ['underline', 'pill', 'overflow', 'segment'] };
@@ -814,7 +825,12 @@ Object.assign(ADAPTERS, {
     e(MuxUI.TextArea.Description, null, 'Optional'),
     e(MuxUI.TextArea.Error, null, args.invalid ? 'Invalid notes' : null),
   ),
-  Text: (args) => e(MuxUI.Text, { ...args }, 'Manage your profile details.'),
+  // Controls cannot filter options by another arg, so xs falls back to sm for
+  // the roles that do not define it instead of throwing.
+  Text: (args) => e(MuxUI.Text, {
+    ...args,
+    size: args.size === 'xs' && ['display', 'heading', 'title'].includes(args.variant) ? 'sm' : args.size,
+  }, 'Manage your profile details.'),
   Resizable: (args) => e(MuxUI.Resizable, { ...args, defaultSizes: args.defaultSizes ?? { main: 60, side: 40 } },
     e(MuxUI.ResizablePanel, { id: 'main' }, 'Main'),
     e(MuxUI.ResizableHandle, { id: 'main-side', before: 'main', after: 'side', 'aria-label': 'Resize panels' }),

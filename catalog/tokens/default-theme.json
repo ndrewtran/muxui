@@ -2583,6 +2583,32 @@
         }
       }
     },
+    "component.selectnative.disabled-label": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of a disabled SelectNative field.",
+      "overridePolicy": "theme",
+      "alias": "semantic.content.default",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-40"
+        }
+      }
+    },
+    "component.selectnative.disabled-invalid-label": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of a disabled, invalid SelectNative field; the dark scheme uses the disabled label tone.",
+      "overridePolicy": "theme",
+      "alias": "semantic.feedback.invalid",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.neutral-default-40"
+        }
+      }
+    },
     "component.tabs.tab-foreground": {
       "layer": "component",
       "type": "color",

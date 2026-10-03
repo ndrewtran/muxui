@@ -330,7 +330,8 @@ test('supplemental declarations and CSS do not leak external API names or select
   const styles = await readFile(resolve(packageRoot, 'src/supplemental/styles.css'), 'utf8');
   assert.doesNotMatch(declaration, /\b(?:isDisabled|isInvalid|isSelected|isOpen|onPress)\b/u);
   assert.doesNotMatch(declaration, /react-aria-components/u);
-  assert.doesNotMatch(styles, /--(?:neutral|color|red|success|space|radius|shadow)-/u);
+  // Custom properties only; BEM modifiers such as muxui-image--radius-md are class names.
+  assert.doesNotMatch(styles, /(?<![\w-])--(?:neutral|color|red|success|space|radius|shadow)-/u);
   assert.match(styles, /--muxui-(?:semantic|reference)-/u);
   assert.doesNotMatch(styles, /--muxui-reference-color-neutral-/u);
   assert.match(styles, /--muxui-semantic-elevation-(?:floating|overlay|modal)/u);
@@ -349,7 +350,7 @@ test('supplemental CSS classifies foundation tokens separately from local compon
   const references = new Set([...styles.matchAll(/var\(--([A-Za-z0-9_-]+)/gu)].map((match) => match[1]));
   const foundations = [...references].filter((name) => /^(?:muxui-semantic|muxui-reference)-/u.test(name));
   const localHooks = [...references].filter((name) => /^muxui-(?:component|focus-ring|field|item|popup|group-label|switch-field)-/u.test(name));
-  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size|muxui-modal-(?:y|scale))$/u.test(name));
+  const runtimeLocals = [...references].filter((name) => /^(?:size|ray-size|offset-diagonal|offset-orthogonal|muxui-control-size-(?:sm|md|lg)|muxui-control-target-size|muxui-modal-(?:y|scale)|muxui-image-ratio)$/u.test(name));
   const unknown = [...references].filter((name) => !foundations.includes(name) && !localHooks.includes(name) && !runtimeLocals.includes(name));
   assert.ok(foundations.some((name) => name.startsWith('muxui-semantic-')));
   assert.ok(foundations.every((name) => name.startsWith('muxui-semantic-')));

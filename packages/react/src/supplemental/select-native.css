@@ -64,6 +64,7 @@
 .muxui-select-native:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+  /* Mode-aware: resolves to neutral-default-96 in the dark scheme. */
   background-color: var(--muxui-semantic-surface-hover);
 }
 
@@ -76,21 +77,12 @@
 .muxui-select-native__description { color: var(--muxui-field-description-color); }
 .muxui-select-native__error { color: var(--muxui-field-error-color); }
 .muxui-select-native-field[data-disabled] > .muxui-select-native__label {
-  color: var(--muxui-semantic-content-default);
+  color: var(--muxui-component-selectnative-disabled-label);
   opacity: 0.45;
 }
 .muxui-select-native-field[data-invalid] > .muxui-select-native__label { color: var(--muxui-semantic-feedback-invalid); }
-
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-select-native[data-disabled],
-  :scope .muxui-select-native:disabled {
-    background-color: var(--muxui-semantic-color-neutral-default-96);
-  }
-
-  :scope .muxui-select-native-field[data-disabled] > .muxui-select-native__label {
-    color: var(--muxui-semantic-color-neutral-default-40);
-  }
-
+.muxui-select-native-field[data-disabled][data-invalid] > .muxui-select-native__label {
+  color: var(--muxui-component-selectnative-disabled-invalid-label);
 }
 
 @media (forced-colors: active) {

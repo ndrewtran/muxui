@@ -342,7 +342,7 @@ export declare const TagSelect: {
 };
 
 export type TextVariant = 'display' | 'heading' | 'title' | 'label' | 'body' | 'expressive' | 'mono';
-export type TextSize = 'xs' | 's' | 'm' | 'l';
+export type TextSize = 'xs' | 'sm' | 'md' | 'lg';
 export type TextColor = 'default' | 'muted';
 export type TextElement = 'p' | 'span' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6' | 'div' | 'label';
 type TextVisualProps =

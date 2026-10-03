@@ -2,7 +2,7 @@ import type * as React from 'react';
 
 export type AvatarSize = 'sm' | 'md' | 'lg';
 export type AvatarRootProps = React.HTMLAttributes<HTMLSpanElement> & { size?: AvatarSize; children?: React.ReactNode };
-export type AvatarImageProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'alt' | 'className'> & { alt?: string; className?: string };
+export type AvatarImageProps = Omit<React.ImgHTMLAttributes<HTMLImageElement>, 'alt' | 'className'> & { /** Required; use an empty string for a decorative avatar. */ alt: string; className?: string };
 export type AvatarFallbackProps = React.HTMLAttributes<HTMLSpanElement>;
 
 export declare const Avatar: {
