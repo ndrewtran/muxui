@@ -99,49 +99,141 @@ async function writesDuring(state, nodes, run) {
   return { result, writes: nodes.map(({ id }, index) => (state.nodeWrites.get(id) ?? 0) - before[index]) };
 }
 
-test('designer instances and duplicated tagged nodes stay untouched, and duplicates are reported', async () => {
+const STAMP = ['muxui', 'node'];
+const stampOf = (node) => node.getSharedPluginData(...STAMP);
+const tagged = (root) => root.findAll((node) => node.type !== 'INSTANCE' && node.getSharedPluginData('muxui', 'id') !== '' && !(node.parent && node.parent.type === 'INSTANCE'));
+
+test('a designer instance of a variant is not owned and stays untouched, even in a preview row', async () => {
   const { figma, state, pages } = createFakeFigma(source);
   const plan = planComponentBatches(spec);
   await applyAll(figma, plan);
   const page = pages[2];
   const set = byTag(page, 'component-set:button');
-  const primary = set.children.find((child) => child.getSharedPluginData('muxui', 'id') === 'component:button/variant=primary,state=rest');
-
-  // An untagged instance of a variant reports the variant's tag but is not owned.
+  const primary = byTag(page, 'component:button/variant=primary,state=rest');
   const designerFrame = figma.createFrame();
   page.appendChild(designerFrame);
   const instance = primary.createInstance();
   designerFrame.appendChild(instance);
   const withInstance = await writesDuring(state, [instance, designerFrame], () => applyAll(figma, plan));
-  assert.deepEqual([withInstance.result.created, withInstance.result.updated, withInstance.result.errors, withInstance.writes], [0, 0, [], [0, 0]]);
+  assert.deepEqual([withInstance.result.created, withInstance.result.updated, withInstance.result.errors, withInstance.result.copies, withInstance.writes], [0, 0, [], [], [0, 0]]);
   assert.deepEqual([instance.parent.id, primary.parent.id], [designerFrame.id, set.id]);
 
-  // A duplicated variant: both copies are reported and neither is written.
-  const copy = primary.clone();
-  const duplicated = await writesDuring(state, [primary, copy, ...primary.children, ...copy.children], () => applyAll(figma, plan));
-  assert.deepEqual([duplicated.result.created, duplicated.result.updated, duplicated.writes.every((count) => count === 0)], [0, 0, true]);
-  // Every batch indexes ownership itself, so each one reports the conflict.
-  assert.deepEqual([...new Set(duplicated.result.errors.map(({ id }) => id))], ['component:button/variant=primary,state=rest']);
-  assert.match(duplicated.result.errors[0].message, new RegExp(`2 nodes carry this tag \\(${primary.id}, ${copy.id}\\)`, 'u'));
-  assert.equal(copy.parent.id, page.id);
-  copy.remove();
+  // In a preview row it reports the variant's tag, but it is neither owned nor an orphan.
+  const row = byTag(page, 'preview:button/Light');
+  row.appendChild(instance);
+  const inRow = await writesDuring(state, [instance], () => applyAll(figma, plan));
+  assert.deepEqual([inRow.result.created, inRow.result.updated, inRow.result.errors, inRow.result.orphans, inRow.writes], [0, 0, [], [], [0]]);
+});
 
-  // A duplicated part inside its variant: reported, and neither copy is written.
+test('a copy carries the stamp under a new ID: reported, never adopted, and the original keeps updating', async () => {
+  const { figma, state, pages, variableId } = createFakeFigma(source);
+  const plan = planComponentBatches(spec);
+  await applyAll(figma, plan);
+  const page = pages[2];
+  const set = byTag(page, 'component-set:button');
+  const id = 'component:button/variant=primary,state=rest';
+  const primary = byTag(page, id);
+  assert.equal(stampOf(primary), primary.id);
+
+  const copy = primary.clone();
+  assert.deepEqual([copy.getSharedPluginData('muxui', 'id'), stampOf(copy), copy.id !== primary.id], [id, primary.id, true]);
+  const copyNodes = [copy, ...copy.findAll(() => true)];
+  const duplicated = await writesDuring(state, copyNodes, () => applyAll(figma, plan));
+  assert.deepEqual([duplicated.result.created, duplicated.result.updated, duplicated.result.errors, duplicated.writes.every((count) => count === 0)], [0, 0, [], true]);
+  // Every batch indexes ownership itself, so each one reports the copy.
+  assert.deepEqual([...new Set(duplicated.result.copies.map(({ id: tag, node, stamp }) => `${tag} ${node} ${stamp}`))], [`${id} ${copy.id} ${primary.id}`]);
+
+  // The original still updates while the copy exists.
+  const changed = structuredClone(spec);
+  changed.families[0].variants[0].node.fills = [{ token: 'semantic.surface.strong' }];
+  const updated = await writesDuring(state, copyNodes, () => applyAll(figma, planComponentBatches(changed)));
+  assert.deepEqual([updated.result.created, updated.result.updated, updated.result.errors, updated.writes.every((count) => count === 0)], [0, 1, [], true]);
+  assert.equal(primary.fills[0].boundVariables.color.id, variableId('semantic.surface.strong'));
+  assert.notEqual(copy.fills[0].boundVariables.color.id, variableId('semantic.surface.strong'));
+
+  // With the original gone, the copy is still not adopted: a fresh variant is created.
+  primary.remove();
+  const replaced = await writesDuring(state, copyNodes, () => applyAll(figma, plan));
+  assert.deepEqual([replaced.result.errors, replaced.writes.every((count) => count === 0), copy.parent.id], [[], true, page.id]);
+  assert.ok(replaced.result.created > 1);
+  const fresh = set.children.find((child) => child.getSharedPluginData('muxui', 'id') === id);
+  assert.deepEqual([fresh.id !== copy.id, stampOf(fresh)], [true, fresh.id]);
+  const settled = await applyAll(figma, plan);
+  assert.deepEqual([settled.created, settled.updated, settled.errors, settled.copies.length > 0], [0, 0, [], true]);
+});
+
+test('a duplicated part and a mismatched stamp are reported and never written', async () => {
+  const { figma, state, pages } = createFakeFigma(source);
+  const plan = planComponentBatches(spec);
+  await applyAll(figma, plan);
+  const primary = byTag(pages[2], 'component:button/variant=primary,state=rest');
   const label = primary.children.find(({ type }) => type === 'TEXT');
   const labelCopy = label.clone();
   primary.appendChild(labelCopy);
   const part = await writesDuring(state, [label, labelCopy], () => applyAll(figma, plan));
-  assert.deepEqual([part.result.created, part.result.updated, part.writes], [0, 0, [0, 0]]);
-  assert.deepEqual([...new Set(part.result.errors.map(({ id, message }) => `${id} ${message.slice(0, message.indexOf(';'))}`))], [
-    `component:button/variant=primary,state=rest/label 2 nodes carry this tag (${label.id}, ${labelCopy.id})`,
-  ]);
+  assert.deepEqual([part.result.created, part.result.updated, part.result.errors, part.writes], [0, 0, [], [0, 0]]);
+  assert.deepEqual([...new Set(part.result.copies.map(({ node }) => node))], [labelCopy.id]);
   labelCopy.remove();
-  const settled = await applyAll(figma, plan);
-  assert.deepEqual([settled.created, settled.updated, settled.errors], [0, 0, []]);
+
+  // A stamp naming another node marks a copy, whatever its origin.
+  label.setSharedPluginData(...STAMP, 'I:999');
+  const mismatched = await writesDuring(state, [label], () => applyAll(figma, plan));
+  assert.deepEqual([mismatched.result.errors, mismatched.writes, label.parent.id], [[], [0], primary.id]);
+  assert.deepEqual([...new Set(mismatched.result.copies.map(({ id, node, stamp }) => `${id} ${node} ${stamp}`))], [`component:button/variant=primary,state=rest/label ${label.id} I:999`]);
+});
+
+test('unstamped legacy nodes are adopted once and stamped; two unstamped nodes with one tag are left alone', async () => {
+  const { figma, state, pages } = createFakeFigma(source);
+  const plan = planComponentBatches(spec);
+  await applyAll(figma, plan);
+  const page = pages[2];
+  const owned = [page, ...tagged(page)];
+  for (const node of owned) node.data.delete('muxui/node');
+  assert.ok(owned.every((node) => stampOf(node) === '' || node.type === 'INSTANCE'));
+
+  const writes = state.writes;
+  const migrated = await applyAll(figma, plan);
+  assert.deepEqual([migrated.created, migrated.updated, migrated.errors, migrated.orphans, migrated.copies, state.removes], [0, 0, [], [], [], 0]);
+  // Only stamps were written: one per legacy node, once.
+  assert.deepEqual([migrated.stamped, state.writes - writes], [owned.length, owned.length]);
+  assert.ok(owned.every((node) => stampOf(node) === node.id));
+  const after = state.writes;
+  const rerun = await applyAll(figma, plan);
+  assert.deepEqual([rerun.created, rerun.updated, rerun.stamped, rerun.errors, state.writes], [0, 0, 0, [], after]);
+
+  // A pre-stamp duplicate: both unstamped copies are reported and neither is written.
+  const primary = byTag(page, 'component:button/variant=primary,state=rest');
+  primary.data.delete('muxui/node');
+  const copy = primary.clone();
+  const legacy = await writesDuring(state, [primary, copy], () => applyAll(figma, plan));
+  assert.deepEqual([legacy.result.created, legacy.result.updated, legacy.result.stamped, legacy.writes], [0, 0, 0, [0, 0]]);
+  assert.match(legacy.result.errors[0].message, new RegExp(`2 nodes carry this tag \\(${primary.id}, ${copy.id}\\)`, 'u'));
+});
+
+test('a duplicated Components page is reported and ignored; two unstamped tagged pages stop the batch', async () => {
+  const { figma, state, pages } = createFakeFigma(source);
+  const plan = planComponentBatches(spec);
+  await applyAll(figma, plan);
+  const page = pages[2];
+  // Figma's Duplicate page copies plugin data onto the new page.
+  const copy = page.clone();
+  assert.deepEqual([pages.length, copy.getSharedPluginData('muxui', 'id'), stampOf(copy)], [4, 'page:components', page.id]);
+  const duplicated = await writesDuring(state, [copy, ...copy.findAll(() => true)], () => applyAll(figma, plan));
+  assert.deepEqual([duplicated.result.created, duplicated.result.updated, duplicated.result.errors, duplicated.writes.every((count) => count === 0)], [0, 0, [], true]);
+  assert.deepEqual([...new Set(duplicated.result.copies.map(({ id, node }) => `${id} ${node}`))], [`page:components ${copy.id}`]);
+
+  // Before stamps the two pages are indistinguishable, so nothing is written.
+  page.data.delete('muxui/node');
+  copy.data.delete('muxui/node');
+  const writes = state.writes;
+  const guarded = await applyAll(figma, plan);
+  assert.deepEqual([guarded.created, guarded.updated, state.writes], [0, 0, writes]);
+  assert.match(guarded.errors[0].message, new RegExp(`2 pages carry this tag \\(${page.id}, ${copy.id}\\)`, 'u'));
 });
 
 test('an untagged Components page is never adopted, and glyph updates tag only imported vectors', async () => {
-  const { figma, pages } = createFakeFigma(source);
+  const fake = createFakeFigma(source);
+  const { figma, pages } = fake;
   const designerPage = figma.createPage();
   designerPage.name = 'Components';
   const plan = planComponentBatches(spec);
@@ -158,8 +250,17 @@ test('an untagged Components page is never adopted, and glyph updates tag only i
   glyph.appendChild(extra);
   const changed = structuredClone(spec);
   changed.glyphs[0].svg = changed.glyphs[0].svg.replace('</svg>', '<path d="M1 1h2"></path></svg>');
+  const replacedVectors = glyph.children.filter((child) => child !== extra).map((child) => child.id);
+  const { state } = fake;
+  const removesBefore = state.removed.length;
   const rerun = await applyAll(figma, planComponentBatches(changed).slice(0, 1));
   assert.deepEqual([rerun.updated, rerun.errors], [1, []]);
+  // Only the replaced vectors and the emptied SVG import frame are removed; the designer's frame stays.
+  const removed = state.removed.slice(removesBefore);
+  assert.deepEqual(removed.filter(({ type }) => type === 'VECTOR').map(({ id }) => id), replacedVectors);
+  assert.deepEqual(removed.filter(({ type }) => type !== 'VECTOR').map(({ type, tag }) => [type, tag]), [['FRAME', '']]);
+  assert.equal(state.removes, replacedVectors.length + 1);
+  assert.ok(glyph.children.includes(extra));
   assert.deepEqual([extra.getSharedPluginData('muxui', 'id'), extra.constraints], ['', undefined]);
   assert.deepEqual(glyph.children.filter((child) => child !== extra).map((child) => [child.getSharedPluginData('muxui', 'id'), child.constraints.horizontal]), [
     ['glyph:lucide-check/vector-0', 'SCALE'],

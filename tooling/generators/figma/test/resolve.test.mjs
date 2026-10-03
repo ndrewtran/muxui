@@ -100,6 +100,23 @@ test('the mode audit treats an unresolved paint and a token as different', () =>
   assert.deepEqual([finding.property, finding.modes['dark+compact']], ['color', '{"kind":"none"} by no declaration']);
 });
 
+test('the mode audit compares computed pixels only where the spec uses them', () => {
+  const byDensity = (value, comfortable, compact) => Object.fromEntries(MODES.map(({ key, density }) => [key, { ...value, computed: density === 'compact' ? compact : comfortable, rule: '.muxui-x' }]));
+  const audit = (properties) => modeInconsistencies([{ family: 'synthetic', modes: MODES.map(({ key }) => key), variants: [{ key: 'state=rest', parts: { root: { properties } } }] }]);
+  // calc() and relative lengths take their computed pixels into Figma.
+  const findings = audit({
+    'padding-top': byDensity({ kind: 'expression', value: 'calc(var(--muxui-semantic-control-size-md) / 4)', tokens: ['semantic.control.size-md'] }, '10px', '8px'),
+    'padding-left': byDensity({ kind: 'literal', value: '0.5em' }, '7px', '6px'),
+  });
+  assert.deepEqual(findings.map(({ property }) => property), ['padding-top', 'padding-left']);
+  assert.match(findings[0].modes['light+compact'], /"computed":"8px"/u);
+  // Keywords hug their content and fixed lengths are declared, so their computed pixels never count.
+  assert.deepEqual(audit({
+    width: byDensity({ kind: 'literal', value: 'fit-content' }, '120px', '96px'),
+    'border-top-width': byDensity({ kind: 'literal', value: '1px' }, '1px', '0.8px'),
+  }), []);
+});
+
 test('border-radius expands to all four corners, logical corners included', () => {
   const element = '.muxui-x { border-radius: 8px 4px 0; } .muxui-x[data-pressed] { border-end-start-radius: 2px; }';
   assert.deepEqual(['top-left', 'top-right', 'bottom-right', 'bottom-left'].map((corner) => resolveCss(`border-${corner}-radius`, element).value), ['8px', '4px', '0', '2px']);

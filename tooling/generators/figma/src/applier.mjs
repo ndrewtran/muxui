@@ -11,11 +11,17 @@
  * effect styles are found by the same key, as the token export tags them.
  *
  * A tag alone does not prove ownership: Figma copies plugin data onto
- * duplicates, and instances report their main component's data. A node is
- * owned only when its type matches its ID prefix, it sits under its tagged
- * owner, and no other eligible node carries the same tag. Instances are owned
- * only as glyph parts or preview cells, whose main component carries another
- * tag. When two eligible nodes share a tag, both are reported and left alone.
+ * duplicates, and instances report their main component's data. Every node
+ * the applier tags is also stamped with its own Figma node ID (`muxui` /
+ * `node`). A copy carries the stamp under a new ID, so it is reported in
+ * `copies` and never adopted or written, even after the original is gone; the
+ * original keeps updating. A node is owned only when its type matches its ID
+ * prefix, it sits under its tagged owner, and its stamp is its own ID.
+ * Instances are owned only as glyph parts or preview cells, whose main
+ * component carries another tag. A tagged node with no stamp predates stamps:
+ * it is adopted and stamped (`stamped`) only when it is the sole eligible node
+ * for its tag; when two unstamped nodes share a tag, both are reported as
+ * errors and left alone.
  *
  * Missing nodes are created, changed nodes are updated in place, and
  * unchanged nodes are left alone. Nothing is deleted except the applier's own
@@ -29,12 +35,13 @@
 export async function applyComponentBatch(figma, payload) {
   var NS = 'muxui';
   var KEY = 'id';
+  var STAMP = 'node';
   var PAGE_ID = 'page:components';
   var PROTECTED_PAGES = ['Pilot components', 'Page 1'];
   var EPSILON = 0.0005;
   // Canvas positions and set sizes round-trip through Figma's float geometry.
   var LAYOUT_EPSILON = 0.01;
-  var summary = { batch: payload.batch, total: payload.total, created: 0, updated: 0, unchanged: 0, updatedIds: [], orphanCount: 0, orphans: [], errorCount: 0, errors: [], notices: [] };
+  var summary = { batch: payload.batch, total: payload.total, created: 0, updated: 0, unchanged: 0, updatedIds: [], stamped: 0, copyCount: 0, copies: [], orphanCount: 0, orphans: [], errorCount: 0, errors: [], notices: [] };
 
   // Repeated subtrees arrive once in `defs` and are referenced as { $: index }.
   function expand(value) {
@@ -50,7 +57,25 @@ export async function applyComponentBatch(figma, payload) {
 
   // Nodes are compared by `id`: Plugin API wrappers need not be identical objects.
   function tagOf(node) { return node.getSharedPluginData(NS, KEY); }
-  function tag(node, id) { node.setSharedPluginData(NS, KEY, id); }
+  function tag(node, id) {
+    node.setSharedPluginData(NS, KEY, id);
+    node.setSharedPluginData(NS, STAMP, node.id);
+  }
+  // The node's own stamp, or '' when it has none. An instance that never set
+  // its own reads its main component's, which is not a stamp of its own.
+  function stampOf(node, main) {
+    var stamp = node.getSharedPluginData(NS, STAMP);
+    return main && stamp === main.id ? '' : stamp;
+  }
+  // Stamp a legacy node adopted under the sole-match rule.
+  function adopt(node) {
+    node.setSharedPluginData(NS, STAMP, node.id);
+    summary.stamped += 1;
+  }
+  function copy(id, node) {
+    summary.copyCount += 1;
+    if (summary.copies.length < 50) summary.copies.push({ id: id, node: node.id, stamp: node.getSharedPluginData(NS, STAMP) });
+  }
   function error(id, message) {
     summary.errorCount += 1;
     if (summary.errors.length < 50) summary.errors.push({ id: id, message: String(message).slice(0, 300) });
@@ -99,12 +124,21 @@ export async function applyComponentBatch(figma, payload) {
   // distinct name instead of adopting it.
   var page = null;
   var pages = figma.root.children;
-  var taggedPages = pages.filter(function (candidate) { return tagOf(candidate) === PAGE_ID; });
+  var taggedPages = pages.filter(function (candidate) {
+    if (tagOf(candidate) !== PAGE_ID) return false;
+    var stamp = stampOf(candidate);
+    if (stamp && stamp !== candidate.id) {
+      copy(PAGE_ID, candidate);
+      return false;
+    }
+    return true;
+  });
   if (taggedPages.length > 1) {
     error(PAGE_ID, taggedPages.length + ' pages carry this tag (' + taggedPages.map(function (candidate) { return candidate.id; }).join(', ') + '); left untouched. Untag the copies and rerun.');
     return summary;
   }
   page = taggedPages[0] || null;
+  if (page && !stampOf(page)) adopt(page);
   if (!page) {
     var taken = pages.some(function (candidate) { return candidate.name === payload.page; });
     page = figma.createPage();
@@ -177,21 +211,35 @@ export async function applyComponentBatch(figma, payload) {
       if (kind.types && kind.types.indexOf(candidate.node.type) < 0) continue;
       if (!kind.types && candidate.node.type === 'INSTANCE') continue;
       if (kind.owner && !candidate.ancestors.some(function (ancestor) { return ancestor.id === kind.owner && acceptedIds.has(ancestor.nodeId); })) continue;
+      var main = null;
       if (candidate.node.type === 'INSTANCE') {
-        var main = await candidate.node.getMainComponentAsync();
+        main = await candidate.node.getMainComponentAsync();
         if (!main || tagOf(main).indexOf(kind.main) !== 0) continue;
       }
-      if (!byTag.has(candidate.id)) byTag.set(candidate.id, []);
-      byTag.get(candidate.id).push(candidate.node);
+      var stamp = stampOf(candidate.node, main);
+      if (stamp && stamp !== candidate.node.id) {
+        copy(candidate.id, candidate.node);
+        continue;
+      }
+      if (!byTag.has(candidate.id)) byTag.set(candidate.id, { stamped: [], legacy: [] });
+      byTag.get(candidate.id)[stamp ? 'stamped' : 'legacy'].push(candidate.node);
     }
     byTag.forEach(function (group, id) {
-      if (group.length === 1) {
-        nodes.set(id, group[0]);
-        acceptedIds.add(group[0].id);
+      // A stamped original wins; an unstamped node beside it is a copy made before stamps.
+      var owner = group.stamped.length === 1 ? group.stamped[0] : null;
+      if (owner) group.legacy.forEach(function (node) { copy(id, node); });
+      else if (!group.stamped.length && group.legacy.length === 1) {
+        owner = group.legacy[0];
+        adopt(owner);
+      }
+      if (owner) {
+        nodes.set(id, owner);
+        acceptedIds.add(owner.id);
         return;
       }
+      var held = group.stamped.length ? group.stamped : group.legacy;
       conflicts.add(id);
-      error(id, group.length + ' nodes carry this tag (' + group.map(function (node) { return node.id; }).join(', ') + '); all are left untouched. Delete or untag the copies and rerun.');
+      error(id, held.length + ' nodes carry this tag (' + held.map(function (node) { return node.id; }).join(', ') + '); all are left untouched. Delete or untag the copies and rerun.');
     });
   }
   // True when `node` is the owned node for its tag, not a copy or an instance.
@@ -763,9 +811,11 @@ export async function applyComponentBatch(figma, payload) {
             for (var w = 0; w < wanted.length; w += 1) row[0].appendChild(nodes.get(wanted[w]));
             rowChanged = true;
           }
+          // A designer's instance reports its main component's tag; it is not an orphan.
           for (var rc = 0; rc < row[0].children.length; rc += 1) {
-            var extra = tagOf(row[0].children[rc]);
-            if (extra && instanceIds.indexOf(extra) < 0) orphan(extra);
+            var extraNode = row[0].children[rc];
+            var extra = tagOf(extraNode);
+            if (extra && instanceIds.indexOf(extra) < 0 && (extraNode.type !== 'INSTANCE' || isOwned(extraNode))) orphan(extra);
           }
           count(row[1], rowChanged, rowId);
         }

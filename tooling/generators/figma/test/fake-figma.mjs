@@ -1,10 +1,12 @@
 /*
  * In-memory model of the Plugin API surface the component applier uses.
  * Every write after setup is counted so a no-op rerun can prove it changed
- * nothing; `removes` counts deletions, which the applier must never make.
+ * nothing; `removes` counts deletions, which the applier must never make
+ * except its own replaced glyph vectors, and `removed` lists each one.
  * `state.nodeWrites` counts writes per node ID, so a test can prove one node
  * was left untouched. Like Figma: `create*` and `clone()` land on the current
- * page (`state.createdOn` records which), clones copy plugin data, instances
+ * page (`state.createdOn` records which), a cloned page is a new page, clones
+ * copy plugin data under a new node ID, instances
  * and their sublayers read their main component's plugin data until they set
  * their own (probed in Figma, October 2026), and resize() fixes both
  * auto-layout axes.
@@ -13,7 +15,7 @@ import assert from 'node:assert/strict';
 
 export function createFakeFigma(source) {
   let nextId = 1;
-  const state = { writes: 0, removes: 0, fonts: new Set(), createdOn: new Set(), nodeWrites: new Map() };
+  const state = { writes: 0, removes: 0, removed: [], fonts: new Set(), createdOn: new Set(), nodeWrites: new Map() };
   const newId = (prefix) => `${prefix}:${nextId++}`;
   const alias = (variable) => ({ type: 'VARIABLE_ALIAS', id: variable.id });
   const node = (type, fields = {}, inherit = null) => {
@@ -48,7 +50,11 @@ export function createFakeFigma(source) {
       getSharedPluginData: (namespace, key) => data.get(`${namespace}/${key}`) ?? (inherit ? inherit.getSharedPluginData(namespace, key) : ''),
       setSharedPluginData: (namespace, key, value) => { write(); data.set(`${namespace}/${key}`, value); },
       appendChild(child) { write(); detach(child); child.parent = proxy; target.children.push(child); },
-      remove() { state.removes += 1; detach(proxy); },
+      remove() {
+        state.removes += 1;
+        state.removed.push({ id: target.id, type: target.type, tag: proxy.getSharedPluginData('muxui', 'id') });
+        detach(proxy);
+      },
       findAll(filter) {
         const found = [];
         const visit = (current) => current.children.forEach((child) => { if (filter(child)) found.push(child); visit(child); });
@@ -83,6 +89,10 @@ export function createFakeFigma(source) {
           return created;
         };
         const duplicate = copy(proxy, null);
+        if (target.type === 'PAGE') {
+          pages.push(duplicate);
+          return duplicate;
+        }
         figma.currentPage.appendChild(duplicate);
         state.createdOn.add(figma.currentPage.name);
         return duplicate;
@@ -127,7 +137,9 @@ export function createFakeFigma(source) {
       frame.parent.appendChild(component);
       while (frame.children.length) component.appendChild(frame.children[0]);
       frame.remove();
-      state.removes -= 1; // Conversion replaces the frame; it is not a deletion of user content.
+      // Conversion replaces the frame; it is not a deletion of user content.
+      state.removes -= 1;
+      state.removed.pop();
       return component;
     },
     combineAsVariants(components, parent) {
@@ -159,11 +171,13 @@ export function createFakeFigma(source) {
 
 const AsyncFunction = (async () => {}).constructor;
 export async function applyAll(figma, plan) {
-  const totals = { created: 0, updated: 0, unchanged: 0, updatedIds: [], errors: [], orphans: [], notices: [] };
+  const totals = { created: 0, updated: 0, unchanged: 0, stamped: 0, updatedIds: [], copies: [], errors: [], orphans: [], notices: [] };
   for (const { script } of plan) {
     const summary = await new AsyncFunction('figma', script)(figma);
     assert.ok(JSON.stringify(summary).length <= 20_000);
-    for (const key of ['created', 'updated', 'unchanged']) totals[key] += summary[key];
+    for (const key of ['created', 'updated', 'unchanged', 'stamped']) totals[key] += summary[key];
+    assert.equal(summary.copyCount, summary.copies.length);
+    totals.copies.push(...summary.copies);
     totals.updatedIds.push(...summary.updatedIds);
     totals.errors.push(...summary.errors);
     totals.orphans.push(...summary.orphans);

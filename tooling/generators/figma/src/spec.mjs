@@ -10,7 +10,7 @@ import { compileTokenGraph } from '@muxui/tokens';
 import { compileFigmaExport } from '@muxui/tokens/figma';
 import { selectorFor } from './anatomy.mjs';
 import { DEFAULT_MODE } from './measure.mjs';
-import { comparable } from './audit.mjs';
+import { comparable, RELATIVE_LENGTH } from './audit.mjs';
 
 export const SPEC_FORMAT = 'muxui-figma-components-v1';
 const ROOT_FONT_SIZE_PX = 16;
@@ -111,7 +111,7 @@ function compileFamily(resolved, measured, tokens) {
       if (measuredValue.kind === 'literal') {
         // Relative lengths use the browser's computed pixels; keywords such as
         // fit-content or auto leave the field to hug its content.
-        const relative = /^-?\d*\.?\d+(?:em|ex|ch|lh)$/u.test(measuredValue.value);
+        const relative = RELATIVE_LENGTH.test(measuredValue.value);
         const px = lengthPx(measuredValue.value) ?? (relative ? lengthPx(measuredValue.computed) : undefined);
         if (px !== undefined) {
           if (px !== 0) note(part, field, 'literal', 'CSS declares a literal length.', `${measuredValue.value}`);

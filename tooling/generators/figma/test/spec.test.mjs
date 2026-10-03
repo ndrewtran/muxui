@@ -103,7 +103,7 @@ test('unresolved text, glyph, and stroke paints are unbound; only backgrounds ma
 });
 
 test('batches fit the byte budget, lead with glyphs, and end with the orphan check and preview', () => {
-  for (const budgetBytes of [40_000, 32_000]) {
+  for (const budgetBytes of [40_000, 34_000]) {
     const plan = planComponentBatches(spec, { budgetBytes });
     const seen = [];
     for (const { bytes, script } of plan) {

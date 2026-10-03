@@ -5,15 +5,27 @@
  * override that swaps tokens per mode fails here with its winning rules.
  */
 
-/** A measured value without diagnostics or browser-computed values, for comparison. */
+/** A literal relative length, which the spec converts through its computed pixels. */
+export const RELATIVE_LENGTH = /^-?\d*\.?\d+(?:em|ex|ch|lh)$/u;
+
+/**
+ * True when the spec takes this value's browser-computed pixels: calc()
+ * expressions and relative lengths. Their computed value must then match
+ * across modes too, or Figma would show the default mode's pixels everywhere.
+ */
+export function usesComputed(measured) {
+  return measured.kind === 'expression' || (measured.kind === 'literal' && RELATIVE_LENGTH.test(measured.value));
+}
+
+/** A measured value without diagnostics, for comparison; computed values count only where the spec uses them. */
 export function comparable(measured) {
   const { rule, via, computed, ...value } = measured;
-  return JSON.stringify(value);
+  return JSON.stringify(usesComputed(measured) ? { ...value, computed } : value);
 }
 
 function describe(measured) {
   const { rule, via, computed, ...value } = measured;
-  const target = value.kind === 'token' ? value.token : JSON.stringify(value);
+  const target = value.kind === 'token' ? value.token : JSON.stringify(usesComputed(measured) ? { ...value, computed } : value);
   const hops = (via ?? []).map((hop) => `${hop.property} from ${hop.rule}`).join(' -> ');
   return `${target} by ${rule ?? 'no declaration'}${hops ? ` via ${hops}` : ''}`;
 }
