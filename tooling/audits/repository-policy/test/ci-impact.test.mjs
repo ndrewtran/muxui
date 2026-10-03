@@ -217,6 +217,7 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
   assert.deepEqual(selection.testNamesByFile['test/supplemental.test.mjs'], [
     'TagSelect preserves combobox filtering and chip focus/removal keyboard behavior',
     'TagSelect preserves selected-key order for controlled chips and removals',
+    'TagSelect server-renders and mounts item render functions that return any content',
   ]);
 });
 

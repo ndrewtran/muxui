@@ -719,6 +719,33 @@ export const PaymentInput = {
   CardIcon: React.forwardRef(function PaymentInputCardIcon({ cardType: suppliedType, className, 'aria-label': _ariaLabel, ...props }, ref) { const contextType = React.useContext(PaymentInputContext); const type = suppliedType ?? contextType; return h('span', { ...props, ref, className: cx('muxui-payment-input__card-icon', className), 'data-card-type': type, 'aria-hidden': true }, h(CreditCardIcon, { size: 16, 'aria-hidden': true })); }),
 };
 
+const defaultItemLabel = (item) => String(item.name ?? item.label ?? item.id);
+
+// react-aria collection render functions must return an item element: its
+// useCachedChildren reads `rendered.props.id`, and fragments or host elements
+// cannot become collection nodes. The public type allows any ReactNode, so
+// wrap everything except a composite element (such as the component's Item).
+// `getTextValue(item, rendered)` names the wrapped item for search/typeahead.
+function useItemRenderer(children, Item, getTextValue) {
+  return React.useMemo(() => {
+    if (typeof children !== 'function') return children;
+    const renderItem = (item) => {
+      const rendered = children(item);
+      const isItemElement = React.isValidElement(rendered) && rendered.type !== React.Fragment && typeof rendered.type !== 'string';
+      return isItemElement ? rendered : h(Item, { id: item.id, textValue: getTextValue(item, rendered) }, rendered);
+    };
+    // react-aria resets its item cache in development when children.toString()
+    // changes (hot reload), so expose the caller's source text.
+    renderItem.toString = () => String(children);
+    return renderItem;
+  }, [children, Item, getTextValue]);
+}
+
+// MultiSelect has no label prop, so plain text content doubles as search text.
+const multiSelectTextValue = (item, rendered) => (
+  typeof rendered === 'string' || typeof rendered === 'number' ? String(rendered) : defaultItemLabel(item)
+);
+
 /* MultiSelect */
 const MultiSelectContext = React.createContext({ size: 'md', close: () => {} });
 export const MultiSelect = /*#__PURE__*/ (() => ({
@@ -734,6 +761,7 @@ export const MultiSelect = /*#__PURE__*/ (() => ({
     const [internalSelected, setInternalSelected] = React.useState(() => normalizeKeys(defaultSelectedKeys));
     const selected = controlled ? normalizeKeys(selectedKeys) : internalSelected;
     const allItems = React.useMemo(() => (items ? Array.from(items) : undefined), [items]);
+    const renderItem = useItemRenderer(children, MultiSelect.Item, multiSelectTextValue);
     const updateSelection = (next) => {
       if (!controlled) setInternalSelected(normalizeKeys(next));
       onSelectionChange?.(next);
@@ -744,7 +772,7 @@ export const MultiSelect = /*#__PURE__*/ (() => ({
     const search = showSearch && h('div', { className: 'muxui-multi-select__search-wrapper' }, h(AriaSearchField, { 'aria-label': 'Search', value: query, onChange: setQuery, autoFocus: true, className: 'muxui-multi-select__search' }, h(SearchIcon, { className: 'muxui-multi-select__search-icon', size: 16, 'aria-hidden': true }), h(AriaInput, { placeholder: 'Search', className: 'muxui-multi-select__search-input' })));
     const empty = h('div', { className: 'muxui-multi-select__empty' }, h('p', { className: 'muxui-multi-select__empty-title' }, emptyStateTitle), h('p', { className: 'muxui-multi-select__empty-description' }, emptyStateDescription), query && h('button', { type: 'button', className: 'muxui-multi-select__empty-clear', onClick: clearSearch }, 'Clear search'));
     const footer = showFooter && h('div', { className: 'muxui-multi-select__footer' }, h('button', { type: 'button', className: 'muxui-multi-select__footer-btn', onClick: onReset }, 'Reset'), h('button', { type: 'button', className: 'muxui-multi-select__footer-btn', onClick: onSelectAll }, 'Select all'));
-    const popup = h(PopoverMotion, { placement: 'bottom', offset: 4, containerPadding: 0, className: cx('muxui-multi-select__popup', resolvedSize !== 'md' && `muxui-multi-select__popup--${resolvedSize}`), 'data-size': resolvedSize, style: { width: popoverWidth || undefined } }, h(AriaDialog, { className: 'muxui-multi-select__dialog' }, h(AriaAutocomplete, { filter: contains, inputValue: query, onInputChange: setQuery }, search, h(AriaListBox, { items: allItems, selectionMode: 'multiple', selectedKeys: controlled ? selected : undefined, defaultSelectedKeys: controlled ? undefined : selected, onSelectionChange: updateSelection, 'aria-label': typeof label === 'string' ? label : 'Options', renderEmptyState: () => empty, className: cx('muxui-multi-select__listbox', resolvedSize !== 'md' && `muxui-multi-select__listbox--${resolvedSize}`), 'data-size': resolvedSize }, children)), footer));
+    const popup = h(PopoverMotion, { placement: 'bottom', offset: 4, containerPadding: 0, className: cx('muxui-multi-select__popup', resolvedSize !== 'md' && `muxui-multi-select__popup--${resolvedSize}`), 'data-size': resolvedSize, style: { width: popoverWidth || undefined } }, h(AriaDialog, { className: 'muxui-multi-select__dialog' }, h(AriaAutocomplete, { filter: contains, inputValue: query, onInputChange: setQuery }, search, h(AriaListBox, { items: allItems, selectionMode: 'multiple', selectedKeys: controlled ? selected : undefined, defaultSelectedKeys: controlled ? undefined : selected, onSelectionChange: updateSelection, 'aria-label': typeof label === 'string' ? label : 'Options', renderEmptyState: () => empty, className: cx('muxui-multi-select__listbox', resolvedSize !== 'md' && `muxui-multi-select__listbox--${resolvedSize}`), 'data-size': resolvedSize }, renderItem)), footer));
     const trigger = h(AriaButton, { ref: triggerRef, isDisabled: disabled, onClick: () => setPopoverWidth(`${triggerRef.current?.getBoundingClientRect().width ?? 0}px`), className: cx('muxui-multi-select__trigger', invalid && 'muxui-multi-select__trigger--invalid'), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? (ariaLabel === undefined && labelId ? labelId : undefined), 'aria-invalid': invalid || undefined, 'aria-required': required || undefined }, h('span', { className: cx('muxui-multi-select__trigger-inner', `muxui-multi-select__trigger-inner--${resolvedSize}`) }, h('span', { className: cx('muxui-multi-select__value', selectedCount ? 'muxui-multi-select__value--selected' : 'muxui-multi-select__value--placeholder') }, selectedCount ? h(React.Fragment, null, selectedCountFormatter?.(selectedCount) ?? `${selectedCount} selected`, supportingText && h('span', { className: 'muxui-multi-select__supporting-text' }, supportingText)) : placeholder), h('span', { className: 'muxui-multi-select__icon', 'aria-hidden': true }, h(ChevronDownIcon, { size: 16 }))));
     const select = h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen }, trigger, popup);
     return h(MultiSelectContext.Provider, { value: { size: resolvedSize, close: () => setOpen(false) } }, h('div', { ...props, ref, className: cx('muxui-multi-select', `muxui-multi-select--${resolvedSize}`, className), 'data-size': resolvedSize, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-multi-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), select, description && !invalid && h('span', { className: 'muxui-multi-select__description' }, description), invalid && errorMessage && h('span', { className: 'muxui-multi-select__error' }, errorMessage)));
@@ -757,7 +785,6 @@ export const MultiSelect = /*#__PURE__*/ (() => ({
 /* TagSelect */
 const TagSelectContext = React.createContext({ size: 'md' });
 const EMPTY_TAG_ITEMS = Object.freeze([]);
-const defaultTagSelectItemLabel = (item) => String(item.name ?? item.label ?? item.id);
 
 function sameTagItems(first, second) {
   return first.length === second.length && first.every((item, index) => item === second[index]);
@@ -795,7 +822,7 @@ function AnimatedTagChip({ item, index, active, size, disabled, label, tagButton
 }
 
 export const TagSelect = /*#__PURE__*/ (() => ({
-  Root: React.forwardRef(function TagSelectRoot({ size = 'md', label, placeholder, description, errorMessage, disabled = false, required = false, invalid = false, items = EMPTY_TAG_ITEMS, children, selectedKeys: controlledKeys, defaultSelectedKeys, onSelectionChange, getItemLabel = defaultTagSelectItemLabel, className, ...props }, ref) {
+  Root: React.forwardRef(function TagSelectRoot({ size = 'md', label, placeholder, description, errorMessage, disabled = false, required = false, invalid = false, items = EMPTY_TAG_ITEMS, children, selectedKeys: controlledKeys, defaultSelectedKeys, onSelectionChange, getItemLabel = defaultItemLabel, className, ...props }, ref) {
     const resolvedSize = normalizeChoiceControlSize(size, 'TagSelect');
     const controlled = controlledKeys !== undefined;
     const [internal, setInternal] = React.useState(() => new Set(defaultSelectedKeys ?? []));
@@ -808,6 +835,7 @@ export const TagSelect = /*#__PURE__*/ (() => ({
     const labelId = React.useId();
     const { contains } = useFilter({ sensitivity: 'base' });
     const resolveLabel = React.useCallback((item) => getItemLabel(item), [getItemLabel]);
+    const renderItem = useItemRenderer(children, TagSelect.Item, resolveLabel);
     const itemsById = React.useMemo(() => {
       const map = new Map();
       for (const item of items) map.set(item.id, item);
@@ -898,7 +926,7 @@ export const TagSelect = /*#__PURE__*/ (() => ({
       layoutKey: layoutVersion,
     }));
     const groupClass = cx('muxui-tag-select__group', `muxui-tag-select__group--${resolvedSize}`, invalid && 'muxui-tag-select__group--invalid');
-    const field = h(AriaComboBox, { inputValue: query, onInputChange: setQuery, onSelectionChange: handleSelectionChange, isDisabled: disabled, 'aria-labelledby': label ? labelId : undefined, 'aria-label': label ? undefined : 'Tags', 'aria-required': required || undefined, 'aria-invalid': invalid || undefined, allowsEmptyCollection: true, menuTrigger: 'focus', onOpenChange: handleOpenChange, className: 'muxui-tag-select__combobox' }, h(AriaGroup, { ref: groupRef, isDisabled: disabled, isInvalid: invalid, className: groupClass }, tagNodes, h(AriaInput, { ref: inputRef, placeholder: selectedItems.length === 0 ? placeholder : '', className: 'muxui-tag-select__input', onKeyDown: handleInputKeyDown })), h(PopoverMotion, { placement: 'bottom start', offset: 4, containerPadding: 0, style: { width: popoverWidth || undefined }, className: 'muxui-tag-select__popup', 'data-size': resolvedSize }, h(AriaListBox, { items: filtered, className: 'muxui-tag-select__listbox', 'data-size': resolvedSize }, children)));
+    const field = h(AriaComboBox, { inputValue: query, onInputChange: setQuery, onSelectionChange: handleSelectionChange, isDisabled: disabled, 'aria-labelledby': label ? labelId : undefined, 'aria-label': label ? undefined : 'Tags', 'aria-required': required || undefined, 'aria-invalid': invalid || undefined, allowsEmptyCollection: true, menuTrigger: 'focus', onOpenChange: handleOpenChange, className: 'muxui-tag-select__combobox' }, h(AriaGroup, { ref: groupRef, isDisabled: disabled, isInvalid: invalid, className: groupClass }, tagNodes, h(AriaInput, { ref: inputRef, placeholder: selectedItems.length === 0 ? placeholder : '', className: 'muxui-tag-select__input', onKeyDown: handleInputKeyDown })), h(PopoverMotion, { placement: 'bottom start', offset: 4, containerPadding: 0, style: { width: popoverWidth || undefined }, className: 'muxui-tag-select__popup', 'data-size': resolvedSize }, h(AriaListBox, { items: filtered, className: 'muxui-tag-select__listbox', 'data-size': resolvedSize }, renderItem)));
     return h(TagSelectContext.Provider, { value: { size: resolvedSize } }, h('div', { ...props, ref, className: cx('muxui-tag-select', className), 'data-size': resolvedSize, 'data-disabled': dataState(disabled), 'data-invalid': dataState(invalid) }, label && h('span', { id: labelId, className: 'muxui-tag-select__label' }, label, required && h('span', { 'aria-hidden': true }, ' *')), field, invalid && errorMessage ? h('span', { className: 'muxui-tag-select__error' }, errorMessage) : description ? h('span', { className: 'muxui-tag-select__description' }, description) : null));
   }),
   Item: React.forwardRef(function TagSelectItem({ disabled = false, className, ...props }, ref) { return h(AriaListBoxItem, { ...props, ref, isDisabled: disabled, className: cx('muxui-tag-select__item', className) }); }),
