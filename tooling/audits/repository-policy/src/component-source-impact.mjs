@@ -513,6 +513,24 @@ function moduleEdges(program, importerPath, sourcePaths) {
   return edges;
 }
 
+/**
+ * Local modules each React source module imports, re-exports, or dynamically
+ * imports on one side (`before` or `after`) of the moduleSources snapshots.
+ */
+export function localModuleImports(moduleSources, side) {
+  const sources = new Map();
+  const entries = moduleSources instanceof Map ? [...moduleSources] : Object.entries(moduleSources ?? {});
+  for (const [sourcePath, value] of entries) {
+    const content = typeof value === 'string' ? value : value?.[side];
+    if (typeof content === 'string') sources.set(normalizedPath(sourcePath), content);
+  }
+  const knownPaths = new Set(sources.keys());
+  return new Map([...sources].map(([modulePath, source]) => [
+    modulePath,
+    sortedUnique(moduleEdges(parseModule(source, modulePath, side), modulePath, knownPaths).map(({ target }) => target)),
+  ]));
+}
+
 function dependencyClosure(binding, index) {
   const reached = new Set();
   const queue = [binding];
