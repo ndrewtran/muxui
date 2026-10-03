@@ -510,18 +510,18 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Interactive action background while hovered.",
+      "meaning": "Interactive action background while hovered; one scale step from the rest background, away from the action label.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.color-50",
+      "alias": "semantic.color.color-70",
       "equivalence": "semantic-equivalence"
     },
     "semantic.action.background-pressed": {
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Interactive action background while pressed.",
+      "meaning": "Interactive action background while pressed; two scale steps from the rest background, away from the action label.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.color-40",
+      "alias": "semantic.color.color-80",
       "equivalence": "semantic-equivalence"
     },
     "semantic.action.neutral-background": {
@@ -576,23 +576,18 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Foreground content on a hovered immediate action.",
+      "meaning": "No component uses this role; it is kept for compatibility.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.color-60-fg",
-      "equivalence": "semantic-equivalence",
-      "modes": {
-        "colorScheme.dark": {
-          "alias": "semantic.color.color-50-fg"
-        }
-      }
+      "alias": "semantic.action.foreground",
+      "equivalence": "semantic-equivalence"
     },
     "semantic.action.foreground-pressed": {
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Foreground content on a pressed immediate action.",
+      "meaning": "No component uses this role; it is kept for compatibility.",
       "overridePolicy": "theme",
-      "alias": "semantic.color.color-40-fg",
+      "alias": "semantic.action.foreground",
       "equivalence": "semantic-equivalence"
     },
     "semantic.action.danger-background": {
@@ -607,17 +602,17 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Destructive action background while hovered.",
+      "meaning": "Destructive action background while hovered; one step darker than the rest background, away from the label.",
       "overridePolicy": "theme",
-      "alias": "reference.color.error-50"
+      "alias": "reference.color.error-70"
     },
     "semantic.action.danger-background-pressed": {
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Destructive action background while pressed.",
+      "meaning": "Destructive action background while pressed; two steps darker than the rest background, away from the label.",
       "overridePolicy": "theme",
-      "alias": "reference.color.error-40"
+      "alias": "reference.color.error-80"
     },
     "semantic.action.danger-background-subtle": {
       "layer": "semantic",
@@ -671,7 +666,7 @@
       "layer": "semantic",
       "type": "color",
       "unit": "hex",
-      "meaning": "Pressed primary action background in the dark scheme.",
+      "meaning": "No component uses this role; it is kept for compatibility.",
       "overridePolicy": "theme",
       "alias": "reference.color.brand-60"
     },
@@ -2307,6 +2302,14 @@
         }
       }
     },
+    "component.button.danger-neutral-foreground": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label color of the danger-neutral Button variant in every state; dark enough to hold contrast on its hover and pressed tints.",
+      "overridePolicy": "theme",
+      "alias": "reference.color.error-80"
+    },
     "component.disclosuregroup.icon-size": {
       "layer": "component",
       "type": "dimension",
@@ -2486,6 +2489,19 @@
         }
       }
     },
+    "component.checkbox.selected-foreground-hover": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Check or dash glyph in a hovered checked Checkbox indicator; color-60-fg in light and color-50-fg in dark, keeping the glyph color it had before the action hover role changed. CheckboxField indicators share this Checkbox role.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-60-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-50-fg"
+        }
+      }
+    },
     "component.switch.label": {
       "layer": "component",
       "type": "color",
@@ -2534,7 +2550,7 @@
       "unit": "hex",
       "meaning": "Fill and edge of a hovered selected Switch track; the dark scheme uses the hovered selected-control fill.",
       "overridePolicy": "theme",
-      "alias": "semantic.action.background-hover",
+      "alias": "semantic.color.color-50",
       "modes": {
         "colorScheme.dark": {
           "alias": "semantic.action.selection-background-hover"
@@ -2616,6 +2632,19 @@
       "modes": {
         "colorScheme.dark": {
           "alias": "semantic.color.neutral-default-24"
+        }
+      }
+    },
+    "component.taggroup.selected-foreground-hover": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Label of a hovered selected Tag; color-60-fg in light and color-50-fg in dark, keeping the label color it had before the action hover role changed.",
+      "overridePolicy": "theme",
+      "alias": "semantic.color.color-60-fg",
+      "modes": {
+        "colorScheme.dark": {
+          "alias": "semantic.color.color-50-fg"
         }
       }
     },

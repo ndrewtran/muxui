@@ -71,10 +71,8 @@ test('migrated families paint mode-aware tokens instead of colour-scheme overrid
   }
   // Figma variables hold one value per mode, so these families must not switch tokens by selector.
   const migrated = /\.muxui-(?:checkbox(?:-indicator|-field(?:__\w+)?)?|switch(?:-label|-indicator)?|text-field|tabs?|tab-(?:list|panels?|label)|tag(?:-group|-list|-remove)?)(?![\w-])|(?<!\.muxui-toolbar > |:not\()\.muxui-button(?![\w-])/u;
-  // Kept deliberately: it only differs from the token in dark forced-colors mode.
-  const allowed = new Set(["dark :scope .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true'])"]);
   const offenders = selectors
     .map(({ scheme, selector }) => `${scheme} ${selector}`)
-    .filter((rule) => migrated.test(rule) && !allowed.has(rule));
+    .filter((rule) => migrated.test(rule));
   assert.deepEqual(offenders, []);
 });

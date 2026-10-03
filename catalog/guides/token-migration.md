@@ -61,7 +61,7 @@ current contract.
 | `semantic.motion.enter-duration`, `content-duration` | Choose the duration role owned by the entering or content component. No generic replacement is provided. |
 | `semantic.layout.navigation-inset-block`, `content-row-min-height` | Move the explicit value to component-owned geometry after identifying the consuming layout. No token replacement is provided. |
 | `semantic.layout.tight-inset` | Use `semantic.layout.inset-tight` for the compact options and transient-control inset. The resolved 4xs spacing value and theme override policy are unchanged. |
-| `semantic.action.selection-pressed` | Use `semantic.action.selection-background-pressed` for the dark-scheme pressed primary-action background. The resolved brand-60 value and theme override policy are unchanged. |
+| `semantic.action.selection-pressed` | Use `semantic.action.background-pressed` for the pressed primary-action background in both schemes. It resolves to `semantic.color.color-80`, two scale steps from the rest fill and away from the label. `semantic.action.selection-background-pressed` remains only for compatibility; no component uses it. |
 | `semantic.shape.micro-radius` | Use `semantic.shape.radius-xs`. The semantic role now resolves to the 4px `reference.dimension.radius-xs` value instead of the former 5.2px spacing alias. |
 | `semantic.shape.compact-radius` | Use `semantic.shape.radius-s`. The semantic role now resolves to the 6px `reference.dimension.radius-s` value instead of the former 7px spacing alias. |
 | `semantic.shape.thumb-radius`, `wheel-radius` | Move the explicit value to component-owned geometry after identifying the consuming control. No token replacement is provided. |

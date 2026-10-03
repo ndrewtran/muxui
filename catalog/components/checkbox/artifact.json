@@ -192,7 +192,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.action.foreground-hover",
+            "token": "component.checkbox.selected-foreground-hover",
             "requirement": "required"
           },
           { "token": "semantic.control.size-sm", "requirement": "required" },

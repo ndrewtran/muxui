@@ -89,7 +89,7 @@
             "requirement": "required"
           },
           {
-            "token": "semantic.action.foreground-hover",
+            "token": "component.checkbox.selected-foreground-hover",
             "requirement": "required"
           },
           {

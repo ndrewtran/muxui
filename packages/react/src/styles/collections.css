@@ -865,7 +865,7 @@
 }
 
 .muxui-radio[data-selected][data-hovered]:not([data-disabled]) .muxui-radio-indicator {
-  border-color: var(--muxui-semantic-action-background-hover);
+  border-color: var(--muxui-semantic-color-color-50);
 }
 
 .muxui-radio[data-hovered]:not([data-disabled], [data-selected]) .muxui-radio-indicator {
@@ -1981,9 +1981,9 @@
 }
 
 .muxui-tag[data-selected][data-hovered] {
-  background-color: var(--muxui-semantic-action-background-hover);
-  outline-color: var(--muxui-semantic-action-background-hover);
-  color: var(--muxui-semantic-action-foreground-hover);
+  background-color: var(--muxui-semantic-color-color-50);
+  outline-color: var(--muxui-semantic-color-color-50);
+  color: var(--muxui-component-taggroup-selected-foreground-hover);
 }
 
 .muxui-tag[data-disabled] {
