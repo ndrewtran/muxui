@@ -2211,7 +2211,11 @@
 
 
 
-.muxui-radio-field[data-invalid] .muxui-radio-field__indicator {
+/* The invalid edge wins in every state. The hovered selector matches the
+   selected hover rule's specificity, outranks the unselected hover rule, and
+   follows both in source order. */
+.muxui-radio-field[data-invalid] .muxui-radio-field__indicator,
+.muxui-radio-field[data-invalid] [data-hovered]:not([data-disabled]) .muxui-radio-field__indicator {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 
@@ -3109,7 +3113,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 
 
-.muxui-switch-field[data-invalid] .muxui-switch-field__button::before {
+/* The invalid edge wins in every state. The hovered selector matches the
+   selected hover rule's specificity, outranks the unselected hover rule, and
+   follows both in source order. */
+.muxui-switch-field[data-invalid] .muxui-switch-field__button::before,
+.muxui-switch-field[data-invalid] .muxui-switch-field__button[data-hovered]::before {
   border-color: var(--muxui-semantic-feedback-invalid-border);
 }
 

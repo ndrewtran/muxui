@@ -282,24 +282,35 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
   }
 });
 
-test('Checkbox, CheckboxField, and Switch paint selected and invalid combinations from their tokens', { timeout: 120_000 }, async () => {
+test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField paint the invalid edge in every state and scheme', { timeout: 180_000 }, async () => {
   const entry = `import React from 'react';
     import { createRoot } from 'react-dom/client';
     import { Checkbox } from '/src/components.mjs';
+    import { RadioGroup } from '/src/collections.mjs';
     import { Switch } from '/src/fields.mjs';
-    import { CheckboxField } from '/src/supplemental/index.mjs';
+    import { CheckboxField, RadioField, SwitchField } from '/src/supplemental/index.mjs';
     import '/generated/styles.css';
     const h = React.createElement;
     const field = (testId, props) => h(CheckboxField.Root, { 'data-testid': testId, invalid: true, ...props },
       h(CheckboxField.Button, null, h(CheckboxField.Indicator, null), h('span', null, 'Field')));
+    const switchField = (testId, props) => h(SwitchField.Root, { 'data-testid': testId, invalid: true, ...props },
+      h(SwitchField.Button, null, h(SwitchField.Thumb), 'Switch field'));
+    const radioField = (value) => h(RadioField.Root, { value, invalid: true },
+      h(RadioField.Button, null, h(RadioField.Indicator, null, h(RadioField.Dot)), value));
     function App() {
       return h('main', { 'data-invalid-fixture': true },
         h(Checkbox, { 'data-testid': 'core-selected', defaultChecked: true, invalid: true }, 'Core selected'),
         h(Checkbox, { 'data-testid': 'core-unchecked', invalid: true }, 'Core unchecked'),
+        h(Checkbox, { 'data-testid': 'core-indeterminate', indeterminate: true, invalid: true }, 'Core indeterminate'),
         field('field-selected', { defaultChecked: true }),
         field('field-unchecked', {}),
+        field('field-indeterminate', { indeterminate: true }),
         h(Switch, { 'data-testid': 'switch-selected', label: 'Switch selected', defaultSelected: true, invalid: true }),
-        h(Switch, { 'data-testid': 'switch-unchecked', label: 'Switch unchecked', invalid: true }));
+        h(Switch, { 'data-testid': 'switch-unchecked', label: 'Switch unchecked', invalid: true }),
+        switchField('switch-field-selected', { defaultChecked: true }),
+        switchField('switch-field-unchecked', {}),
+        h('div', { 'data-testid': 'radio' }, h(RadioGroup, { 'aria-label': 'Radio', invalid: true, defaultValue: 'selected', options: [{ value: 'selected' }, { value: 'unchecked' }] })),
+        h('div', { 'data-testid': 'radio-field' }, h(RadioGroup, { 'aria-label': 'Radio field', invalid: true, defaultValue: 'selected' }, radioField('selected'), radioField('unchecked'))));
     }
     createRoot(document.getElementById('root')).render(h(App));`;
   const html = pageShell({ head: `<style>
@@ -308,75 +319,120 @@ test('Checkbox, CheckboxField, and Switch paint selected and invalid combination
     main { display: grid; gap: 12px; justify-items: start; }
   </style>`, body: '<div id="root"></div>', entry: '/checkbox-invalid-states-entry.mjs' });
   const { url, close } = await startServer({
-    entries: ['src/components.mjs', 'src/fields.mjs', 'src/supplemental/index.mjs'],
+    entries: ['src/components.mjs', 'src/collections.mjs', 'src/fields.mjs', 'src/supplemental/index.mjs'],
     pages: { '/checkbox-invalid.html': html },
     modules: { '/checkbox-invalid-states-entry.mjs': entry },
   });
   let browser;
   try {
     browser = await launchBrowser();
-    const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
+    const page = await browser.newPage({ viewport: { width: 900, height: 900 } });
     page.setDefaultTimeout(10_000);
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
     await page.goto(`${url}/checkbox-invalid.html`, { waitUntil: 'networkidle' });
     await page.locator('[data-invalid-fixture]').waitFor();
+    // Each part is [hovered host, painted descendant]; a null descendant paints the host's ::before.
     // The Switch root forwards its test id to the outer field wrapper.
     const parts = {
       'core-selected': ['[data-testid="core-selected"]', '.muxui-checkbox-indicator'],
       'core-unchecked': ['[data-testid="core-unchecked"]', '.muxui-checkbox-indicator'],
+      'core-indeterminate': ['[data-testid="core-indeterminate"]', '.muxui-checkbox-indicator'],
       'field-selected': ['[data-testid="field-selected"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
       'field-unchecked': ['[data-testid="field-unchecked"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
+      'field-indeterminate': ['[data-testid="field-indeterminate"] .muxui-checkbox-field__button', '.muxui-checkbox-field__indicator'],
       'switch-selected': ['[data-testid="switch-selected"] .muxui-switch, [data-testid="switch-selected"].muxui-switch', null],
       'switch-unchecked': ['[data-testid="switch-unchecked"] .muxui-switch, [data-testid="switch-unchecked"].muxui-switch', null],
+      'switch-field-selected': ['[data-testid="switch-field-selected"] .muxui-switch-field__button', null],
+      'switch-field-unchecked': ['[data-testid="switch-field-unchecked"] .muxui-switch-field__button', null],
+      'radio-selected': ['[data-testid="radio"] .muxui-radio[data-selected]', '.muxui-radio-indicator'],
+      'radio-unchecked': ['[data-testid="radio"] .muxui-radio:not([data-selected])', '.muxui-radio-indicator'],
+      'radio-field-selected': ['[data-testid="radio-field"] .muxui-radio-field__button[data-selected]', '.muxui-radio-field__indicator'],
+      'radio-field-unchecked': ['[data-testid="radio-field"] .muxui-radio-field__button:not([data-selected])', '.muxui-radio-field__indicator'],
     };
-    const paint = (name) => {
-      const [hostSelector, partSelector] = parts[name];
-      return page.locator(hostSelector).first().evaluate((host, part) => {
-        const node = part ? host.querySelector(part) : host;
-        const style = getComputedStyle(node, part ? null : '::before');
-        const glyph = part ? node.querySelector('svg') : null;
-        return { backgroundColor: style.backgroundColor, borderColor: style.borderColor, glyph: glyph ? getComputedStyle(glyph).color : null };
-      }, partSelector);
-    };
-    const hover = (name) => page.locator(parts[name][0]).first().hover();
+    const host = (name) => page.locator(parts[name][0]).first();
+    const paint = (name) => host(name).evaluate((element, part) => {
+      const node = part ? element.querySelector(part) : element;
+      const style = getComputedStyle(node, part ? null : '::before');
+      const glyph = part ? node.querySelector('svg') : null;
+      return {
+        hovered: element.hasAttribute('data-hovered'),
+        backgroundColor: style.backgroundColor,
+        borderColor: style.borderColor,
+        glyph: glyph ? getComputedStyle(glyph).color : null,
+      };
+    }, parts[name][1]);
     const token = (name) => resolvedTokenPaint(page, name).then(({ backgroundColor }) => backgroundColor);
+    const families = [
+      ['checkbox', 'core-selected', 'core-unchecked', 'core-indeterminate'],
+      ['checkbox', 'field-selected', 'field-unchecked', 'field-indeterminate'],
+      ['switch', 'switch-selected', 'switch-unchecked'],
+      ['edge', 'switch-field-selected', 'switch-field-unchecked'],
+      ['edge', 'radio-selected', 'radio-unchecked'],
+      ['edge', 'radio-field-selected', 'radio-field-unchecked'],
+    ];
 
-    for (const mode of ['light', 'dark']) {
+    // null leaves the document without a scheme attribute, so unscoped rules paint.
+    for (const mode of [null, 'light', 'dark']) {
       await page.reload({ waitUntil: 'networkidle' });
       await page.locator('[data-invalid-fixture]').waitFor();
-      await page.emulateMedia({ forcedColors: 'none', colorScheme: mode });
-      await page.evaluate((scheme) => document.documentElement.setAttribute('data-muxui-color-scheme', scheme), mode);
+      await page.emulateMedia({ forcedColors: 'none', colorScheme: mode ?? 'light' });
+      await page.evaluate((scheme) => {
+        if (scheme) document.documentElement.setAttribute('data-muxui-color-scheme', scheme);
+        else document.documentElement.removeAttribute('data-muxui-color-scheme');
+      }, mode);
       await page.mouse.move(0, 0);
 
-      const selectedFill = await token('--muxui-component-checkbox-selected-background');
-      const expected = {
+      // The invalid edge wins over every selected and hover edge in both schemes.
+      // Checkbox and Switch also prove their fills; other families prove the edge only.
+      const invalidEdge = await token('--muxui-semantic-feedback-invalid-border');
+      const checkboxSelected = { backgroundColor: await token('--muxui-component-checkbox-selected-background'), borderColor: invalidEdge, glyph: await token('--muxui-component-checkbox-selected-foreground') };
+      const checkboxUnchecked = { backgroundColor: await token('--muxui-component-checkbox-indicator-background'), borderColor: invalidEdge };
+      const expectedPaint = {
         checkbox: {
-          selected: { backgroundColor: selectedFill, borderColor: await token('--muxui-component-checkbox-selected-invalid-border'), glyph: await token('--muxui-component-checkbox-selected-foreground') },
-          selectedHover: { backgroundColor: await token('--muxui-semantic-action-background-hover'), borderColor: await token('--muxui-semantic-action-background-hover'), glyph: await token('--muxui-semantic-action-foreground-hover') },
-          uncheckedHover: { backgroundColor: await token('--muxui-component-checkbox-indicator-background'), borderColor: await token('--muxui-component-checkbox-invalid-border-hover'), glyph: null },
+          rest: checkboxUnchecked,
+          selected: checkboxSelected,
+          selectedHover: { backgroundColor: await token('--muxui-semantic-action-background-hover'), borderColor: invalidEdge, glyph: await token('--muxui-semantic-action-foreground-hover') },
+          uncheckedHover: { ...checkboxUnchecked, glyph: null },
+          indeterminate: checkboxSelected,
+          indeterminateHover: { borderColor: invalidEdge },
         },
         switch: {
-          selected: { backgroundColor: await token('--muxui-component-switch-selected-track'), borderColor: await token('--muxui-component-switch-selected-invalid-border'), glyph: null },
-          selectedHover: { backgroundColor: await token('--muxui-component-switch-selected-track-hover'), borderColor: await token('--muxui-component-switch-selected-track-hover'), glyph: null },
-          // The unselected hover edge outranks the invalid edge.
-          uncheckedHover: { backgroundColor: await token('--muxui-semantic-color-neutral-20'), borderColor: await token('--muxui-semantic-color-neutral-50'), glyph: null },
+          rest: { backgroundColor: await token('--muxui-semantic-color-neutral-20'), borderColor: invalidEdge },
+          selected: { backgroundColor: await token('--muxui-component-switch-selected-track'), borderColor: invalidEdge, glyph: null },
+          selectedHover: { backgroundColor: await token('--muxui-component-switch-selected-track-hover'), borderColor: invalidEdge, glyph: null },
+          uncheckedHover: { backgroundColor: await token('--muxui-semantic-color-neutral-20'), borderColor: invalidEdge, glyph: null },
         },
+        edge: Object.fromEntries(['rest', 'selected', 'selectedHover', 'uncheckedHover'].map((state) => [state, { borderColor: invalidEdge }])),
       };
 
-      for (const [family, selectedPart, uncheckedPart] of [
-        ['checkbox', 'core-selected', 'core-unchecked'],
-        ['checkbox', 'field-selected', 'field-unchecked'],
-        ['switch', 'switch-selected', 'switch-unchecked'],
-      ]) {
-        assert.deepEqual(await paint(selectedPart), expected[family].selected, `${mode} ${selectedPart} selected invalid`);
-        await hover(selectedPart);
-        assert.deepEqual(await paint(selectedPart), expected[family].selectedHover, `${mode} ${selectedPart} selected invalid hover`);
-        await hover(uncheckedPart);
-        assert.deepEqual(await paint(uncheckedPart), expected[family].uncheckedHover, `${mode} ${uncheckedPart} unchecked invalid hover`);
+      // Collect every state first so one failure reports the full set of mismatches.
+      const actual = {};
+      const expected = {};
+      const record = async (family, part, state) => {
+        const { hovered, ...observed } = await paint(part);
+        const want = expectedPaint[family][state];
+        const label = `${mode ?? 'no-scheme'} ${part} ${state}`;
+        expected[label] = { hovered: state.endsWith('Hover'), ...want };
+        actual[label] = { hovered, ...Object.fromEntries(Object.keys(want).map((key) => [key, observed[key]])) };
+      };
+      for (const [family, selectedPart, uncheckedPart, indeterminatePart] of families) {
+        await record(family, uncheckedPart, 'rest');
+        await record(family, selectedPart, 'selected');
+        await host(selectedPart).hover();
+        await record(family, selectedPart, 'selectedHover');
+        await host(uncheckedPart).hover();
+        await record(family, uncheckedPart, 'uncheckedHover');
         await page.mouse.move(0, 0);
+        if (indeterminatePart) {
+          await record(family, indeterminatePart, 'indeterminate');
+          await host(indeterminatePart).hover();
+          await record(family, indeterminatePart, 'indeterminateHover');
+          await page.mouse.move(0, 0);
+        }
       }
+      assert.deepEqual(actual, expected);
     }
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {

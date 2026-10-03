@@ -21,7 +21,7 @@
 .muxui-checkbox-indicator { display: inline-grid; place-items: center; inline-size: 1.125rem; block-size: 1.125rem; flex: 0 0 auto; border: 1.5px solid var(--muxui-component-checkbox-indicator-border); border-radius: var(--muxui-semantic-shape-indicator-radius); background: var(--muxui-component-checkbox-indicator-background); color: var(--muxui-semantic-content-on-solid); font-size: var(--muxui-semantic-typography-tiny-size); font-weight: var(--muxui-semantic-typography-heading-weight); line-height: 1; }
 .muxui-checkbox-indicator[data-selected], .muxui-checkbox-indicator[data-indeterminate] { border-color: var(--muxui-component-checkbox-selected-background); background: var(--muxui-component-checkbox-selected-background); color: var(--muxui-semantic-action-foreground); }
 .muxui-checkbox input { accent-color: var(--muxui-semantic-selection-track); }
-.muxui-checkbox[data-invalid] .muxui-checkbox-indicator { border-color: var(--muxui-semantic-feedback-invalid); }
+.muxui-checkbox[data-invalid] .muxui-checkbox-indicator { border-color: var(--muxui-semantic-feedback-invalid-border); }
 .muxui-checkbox[data-disabled] { color: var(--muxui-semantic-content-default); cursor: not-allowed; }
 
 .muxui-disclosure-group { overflow: hidden; border: 1px solid var(--muxui-semantic-border-subtle); border-radius: var(--muxui-semantic-shape-container-radius); }
@@ -347,9 +347,24 @@
   background-color: var(--muxui-semantic-surface-hover);
 }
 
+/* The invalid edge wins in every state. The selected hovered selectors match
+   the selected hover rules' specificity and follow them in source order; the
+   unselected hovered selectors outrank the unselected hover rules. */
 .muxui-checkbox[data-invalid] .muxui-checkbox-indicator,
 .muxui-checkbox-field[data-invalid] .muxui-checkbox-field__indicator {
-  border-color: var(--muxui-semantic-feedback-invalid);
+  border-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+.muxui-checkbox[data-invalid]:is([data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
+.muxui-checkbox[data-invalid][data-hovered]:is([data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
+.muxui-checkbox-field[data-invalid] :is([data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator,
+.muxui-checkbox-field[data-invalid] [data-hovered]:is([data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator {
+  border-color: var(--muxui-component-checkbox-selected-invalid-border);
+}
+
+.muxui-checkbox[data-invalid][data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
+.muxui-checkbox-field[data-invalid] [data-hovered]:not([data-disabled], [data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator {
+  border-color: var(--muxui-component-checkbox-invalid-border-hover);
 }
 
 .muxui-checkbox[data-disabled] {
@@ -600,25 +615,6 @@
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
     background-color: var(--muxui-semantic-action-selection-background-pressed);
-  }
-}
-
-@scope ([data-muxui-color-scheme]) to ([data-muxui-color-scheme]) {
-  :scope .muxui-checkbox[data-invalid] .muxui-checkbox-indicator,
-  :scope .muxui-checkbox-field[data-invalid] .muxui-checkbox-field__indicator {
-    border-color: var(--muxui-semantic-feedback-invalid-border);
-  }
-
-  /* :where() keeps these at the invalid rule's specificity, so selected hover
-     still wins while these outrank the invalid edge by order. */
-  :scope .muxui-checkbox[data-invalid]:where([data-selected], [data-indeterminate]) .muxui-checkbox-indicator,
-  :scope .muxui-checkbox-field[data-invalid] :where([data-selected], [data-indeterminate]) .muxui-checkbox-field__indicator {
-    border-color: var(--muxui-component-checkbox-selected-invalid-border);
-  }
-
-  :scope .muxui-checkbox[data-invalid]:where([data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])) .muxui-checkbox-indicator,
-  :scope .muxui-checkbox-field[data-invalid] :where([data-hovered]:not([data-disabled], [data-selected], [data-indeterminate])) .muxui-checkbox-field__indicator {
-    border-color: var(--muxui-component-checkbox-invalid-border-hover);
   }
 }
 
