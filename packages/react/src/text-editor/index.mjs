@@ -5,10 +5,17 @@ import { Image } from '@tiptap/extension-image';
 import { Placeholder } from '@tiptap/extension-placeholder';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { TextStyleKit } from '@tiptap/extension-text-style';
-import {
-  AlignCenter, AlignLeft, AlignRight, Bold, ImageIcon, Italic, Link as LinkIcon, List,
-  Sparkles, Type, Underline,
-} from 'lucide-react';
+import AlignCenter from 'lucide-react/dist/esm/icons/text-align-center.mjs';
+import AlignLeft from 'lucide-react/dist/esm/icons/text-align-start.mjs';
+import AlignRight from 'lucide-react/dist/esm/icons/text-align-end.mjs';
+import Bold from 'lucide-react/dist/esm/icons/bold.mjs';
+import ImageIcon from 'lucide-react/dist/esm/icons/image.mjs';
+import Italic from 'lucide-react/dist/esm/icons/italic.mjs';
+import LinkIcon from 'lucide-react/dist/esm/icons/link.mjs';
+import List from 'lucide-react/dist/esm/icons/list.mjs';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs';
+import Type from 'lucide-react/dist/esm/icons/type.mjs';
+import Underline from 'lucide-react/dist/esm/icons/underline.mjs';
 import {
   ColorField as AriaColorField,
   Dialog as AriaDialog,

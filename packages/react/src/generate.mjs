@@ -6,6 +6,7 @@ import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
 import { assertReactR10SourceContracts, assertReactR15GeneratedContracts } from './r1-contracts.mjs';
+import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 import { readSupplementalMapping } from './supplemental-mapping.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
@@ -453,7 +454,7 @@ const expectedThemePresetCount = tokenSource.theme.scale.standardPresets.length 
 if (new Set(themeIds).size !== themeIds.length || new Set(themeCollection).size !== 2 || themeMetadata.length !== expectedThemePresetCount) {
   throw new Error('MUXUI_REACT_THEME_PRESET_INVENTORY_INVALID');
 }
-const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = deepFreeze(Object.fromEntries(MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
+const themeRuntimeBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const MUXUI_THEME_PRESETS = /*#__PURE__*/ deepFreeze(${canonicalJson(themeMetadata)});\nexport const MUXUI_THEME_PRESETS_BY_ID = /*#__PURE__*/ deepFreeze(/*#__PURE__*/ Object.fromEntries(/*#__PURE__*/ MUXUI_THEME_PRESETS.map((preset) => [preset.id, preset])));\nexport const MUXUI_DEFAULT_THEME_PRESET_ID = 'standard-${tokenSource.theme.scale.defaults.standard}';\n`;
 const themeTypesBody = `export type MuxUIThemeCollection = 'standard' | 'monochrome';
 export type MuxUIStandardThemeId = ${tokenSource.theme.scale.standardPresets.map(({ id }) => `'standard-${id}'`).join(' | ')};
 export type MuxUIMonochromeThemeId = ${tokenSource.theme.scale.monochromePresets.map(({ id }) => `'monochrome-${id}'`).join(' | ')};
@@ -468,6 +469,22 @@ export declare const MUXUI_DEFAULT_THEME_PRESET_ID: MuxUIThemeId;
 const cssBody = `${baseTheme.theme.css.trim()}\n\n${responsiveBlock}\n\n${modeBlocks.join('\n\n')}\n\n[data-muxui-direction='ltr'] { direction: ltr; }\n[data-muxui-direction='rtl'] { direction: rtl; }`;
 const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 
+const candidateVersion = '0.1.0-rc.1';
+// Decision 0023: a bad candidate is fixed forward in the next rc.
+const fixForwardVersion = candidateVersion.replace(/rc\.(\d+)$/u, (_, number) => `rc.${Number(number) + 1}`);
+// Decision 0022: R1.5 evidence exists only in PR #108's check and review logs,
+// which are not retained evidence. Capture is required before they expire.
+const r15EvidenceStatus = {
+  status: 'logged-not-retained',
+  retention: r15ClosureSource.evidenceCapture.retention,
+};
+// Decision 0022: the rc.1 prerelease makes no assistive-technology claim.
+const assistiveTechnologySupport = {
+  claim: 'none',
+  decision: 'muxui:decision:0022',
+  evidenceRequiredBefore: ['any assistive-technology support claim', 'S1.0 stable promotion'],
+  deferredEvidence: DEFERRED_R1_EVIDENCE,
+};
 const compatibility = {
   schema: 'muxui-react-compatibility-v1',
   package: manifest.name,
@@ -484,12 +501,13 @@ const compatibility = {
       browserMatrix: r15ClosureSource.compatibility.browserMatrix,
     },
     notClaimed: ['assistive technology', 'zoom', 'locale', 'browsers outside Google Chrome 151'],
+    assistiveTechnology: assistiveTechnologySupport,
   },
   performance: r15ClosureSource.performance,
   publication: r15ClosureSource.publication,
   support: 'unproved; R1.5 React exports only',
 };
-const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = deepFreeze(${canonicalJson(compatibility)});\n`;
+const compatibilityBody = `function deepFreeze(value) {\n  if (value && typeof value === 'object' && !Object.isFrozen(value)) {\n    Object.freeze(value);\n    for (const child of Object.values(value)) deepFreeze(child);\n  }\n  return value;\n}\nexport const reactCompatibility = /*#__PURE__*/ deepFreeze(${canonicalJson(compatibility)});\n`;
 const indexBody = "export { reactCompatibility } from './compatibility.mjs';\nexport { Button } from './button.mjs';\nexport { Breadcrumbs, Checkbox, Disclosure, DisclosureGroup, Group, Link, Meter, ProgressBar, Separator, ToggleButton, Autocomplete, CheckboxGroup, DateField, DatePicker, DateRangePicker, Form, NumberField, SearchField, Switch, TextField, TimeField } from './components.mjs';\nexport { Calendar, ColorArea, ColorField, ColorPicker, ColorSlider, ColorSwatch, ColorSwatchPicker, ColorWheel, ComboBox, GridList, ListBox, Menu, RadioGroup, RangeCalendar, Select, Slider, Table, Tabs, TagGroup, ToggleButtonGroup, TokenField, Toolbar, Tree, Virtualizer } from './collections.mjs';\nexport { DropZone, FileTrigger, Dialog, Popover, PreviewTrigger, Toast, ToastProvider, useToast, Tooltip } from './overlays.mjs';\n";
 const typesBody = `import type * as React from 'react';
 
@@ -732,15 +750,22 @@ The exact R1 exit candidate is \`@muxui/react@0.1.0-rc.1\`, for the \`next\`
 dist-tag on the npm registry. The candidate contains only the standalone
 \`web.react\` renderer and its internal runtime dependencies. All current
 Mux UI-owned component exports remain experimental; no stable, secondary-renderer,
-or cross-platform support claim is made. Publication, dist-tag mutation, and
+or cross-platform support claim is made. The candidate makes no
+assistive-technology support claim; assistive-technology evidence is required
+before any such claim and before stable promotion. Automated accessibility,
+keyboard, and focus checks still apply. Publication, dist-tag mutation, and
 post-publication verification are separate authorized operations.
+
+Once published, install the prerelease as \`@muxui/react@next\`. npm also
+points \`latest\` at the first published version; that is not a stable or
+\`latest\` support claim.
 
 ## Local tarball usage
 
 Install the versioned local candidate from the package directory:
 
 \`\`\`sh
-pnpm add ./muxui-react-${manifest.version}.tgz
+pnpm add ./muxui-react-${candidateVersion}.tgz
 \`\`\`
 
 Import the generated MuxUI styles once, then use the React exports:
@@ -817,9 +842,14 @@ const releaseRecord = {
   packagePrivate: manifest.private,
   catalog: { status: 'bound', components: componentArtifacts.map((artifact) => ({ component: artifact.id, binding: `${artifact.id}#web.react`, states: artifact.states })) },
   tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: tokenSha256 },
-  evidence: { status: 'pending', ids: ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06'] },
+  evidence: {
+    ...r15EvidenceStatus,
+    ids: ['E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06'],
+    deferred: DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-')),
+  },
   advisories: [], exceptions: [],
   publication: { status: 'disabled', requires: ['explicit external publish authorization'] },
+  assistiveTechnology: assistiveTechnologySupport,
   rollback: { status: 'candidate-branch-only-before-merge' },
   packageDependencies: manifest.dependencies,
   peerDependencies: manifest.peerDependencies,
@@ -827,9 +857,11 @@ const releaseRecord = {
   packageFiles: manifest.files,
   publicationPreparation: {
     schema: 'muxui-r1-exit-publication-preparation-v1',
-    candidateVersion: '0.1.0-rc.1',
+    candidateVersion,
     registry: 'https://registry.npmjs.org',
     distTag: 'next',
+    // Decision 0023: npm sets latest on first publish; Mux UI never claims it.
+    latestDistTag: 'set by the registry on the first publish; not claimed or promoted until a stable release, apart from a separately authorized re-point to the fix-forward rc during a rollback',
     preparationTool: 'tooling/audits/repository-policy/src/release-prepare.mjs',
     publishCommand: 'npm publish <candidate-tarball> --tag next --access public --provenance --registry=https://registry.npmjs.org',
     provenance: 'required-at-publication',
@@ -854,7 +886,7 @@ const releaseRecord = {
       'E-R1-EXIT-03': 'pending-post-publication',
       'E-R1-EXIT-04': 'pending-post-publication',
     },
-    rollback: 'restore the previously verified next pointer through a separately authorized dist-tag mutation; retain the immutable rc.1 version and its manifest',
+    rollback: `prepared, not exercised: deprecate a bad ${candidateVersion} with a message and publish a fixed ${fixForwardVersion} as a new exact candidate, each through separate authorization; with explicit authorization at the time, re-point latest from the deprecated rc to the fixed rc, without stable promotion; unpublish only for a security or legal problem, with explicit authorization, inside npm's 72-hour no-dependents window; retain the immutable ${candidateVersion} version and its manifest`,
   },
 };
 const snapshotByFamily = new Map(familySnapshot.families.map((family) => [family.family, family]));
@@ -917,11 +949,11 @@ const r15ClosureRecord = {
       },
       export: { name: source.exportName, module: '.', kind: 'component' },
       lifecycle: { artifact: artifact.lifecycle, binding: binding.lifecycle, strategy: binding.strategy },
-      evidence: { tranche: r15TrancheEvidence(source.tranche), final: R15_EVIDENCE_IDS, status: 'pending', support: 'unproved; R1.5 React exports only' },
+      evidence: { tranche: r15TrancheEvidence(source.tranche), final: R15_EVIDENCE_IDS, ...r15EvidenceStatus, deferred: deferredEvidenceForFamily(source.exportName), support: 'unproved; R1.5 React exports only' },
       packed: { package: manifest.name, version: manifest.version, private: manifest.private, entry: 'generated/index.mjs', types: 'generated/index.d.ts', styles: 'generated/styles.css', binding: `${artifact.id}#web.react`, export: source.exportName, runtimeProfile: 'web.react', selector: `.muxui-${source.slug}` },
     };
   }),
-  evidence: { status: 'pending', ids: R15_EVIDENCE_IDS, support: 'unproved; R1.5 React exports only' },
+  evidence: { ...r15EvidenceStatus, ids: R15_EVIDENCE_IDS, deferred: DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-')), support: 'unproved; R1.5 React exports only' },
   compatibility: r15ClosureSource.compatibility,
   performance: r15ClosureSource.performance,
   publication: r15ClosureSource.publication,

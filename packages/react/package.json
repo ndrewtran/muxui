@@ -25,6 +25,9 @@
     "package.json",
     "licenses"
   ],
+  "sideEffects": [
+    "*.css"
+  ],
   "exports": {
     ".": {
       "types": "./generated/index.d.ts",

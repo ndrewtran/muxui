@@ -100,16 +100,16 @@ test('generated aliases rebind through combined and nested mode scopes', { timeo
       <section id="default-scope">
         <div id="default-calendar" class="muxui-calendar">Calendar</div>
         <button id="default-button" class="muxui-button">Button</button>
-        <div id="default-title" class="muxui-text--title-l">Title</div>
+        <div id="default-title" class="muxui-text--title-lg">Title</div>
       </section>
       <section id="combined-scope" data-muxui-color-scheme="dark" data-muxui-density="compact" data-muxui-responsive>
         <div id="combined-calendar" class="muxui-calendar">Calendar</div>
         <button id="combined-button" class="muxui-button">Button</button>
-        <div id="combined-title" class="muxui-text--title-l">Title</div>
+        <div id="combined-title" class="muxui-text--title-lg">Title</div>
         <section id="nested-scope" data-muxui-color-scheme="light" data-muxui-density="comfortable" data-muxui-responsive>
           <div id="nested-calendar" class="muxui-calendar">Calendar</div>
           <button id="nested-button" class="muxui-button">Button</button>
-          <div id="nested-title" class="muxui-text--title-l">Title</div>
+          <div id="nested-title" class="muxui-text--title-lg">Title</div>
         </section>
       </section>
     </body></html>`);

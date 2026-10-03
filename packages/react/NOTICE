@@ -30,10 +30,11 @@ google/fonts revision 5e35378e6bda803962ee6fd257e444a7d459660d and are
 licensed under the SIL Open Font License 1.1. The complete license text is
 included at assets/fonts/OFL.txt.
 
-Internal React Aria, Lucide, Tiptap and marked dependencies retain their
-upstream package notices. Unchanged copies of their license texts are also
-included in licenses/. Tiptap and marked are isolated behind the TextEditor
-and Markdown package subpaths. Public Mux interfaces remain Mux-owned.
+Internal React Aria, @internationalized/date, Lucide, Tiptap and marked
+dependencies retain their upstream package notices. Unchanged copies of their
+license texts are also included in licenses/. Tiptap and marked are isolated
+behind the TextEditor and Markdown package subpaths. Public Mux interfaces
+remain Mux-owned.
 
 The internal motion dependency retains notices for its exact package IDs:
 motion@13.4.0, framer-motion@13.4.0, motion-dom@13.3.0, and

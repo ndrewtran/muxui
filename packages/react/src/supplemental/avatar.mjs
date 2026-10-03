@@ -45,7 +45,7 @@ function collectAvatarParts(children, parts = []) {
 }
 
 const AvatarImage = React.forwardRef(function AvatarImage({
-  alt = '',
+  alt,
   src,
   srcSet,
   className,
@@ -56,6 +56,7 @@ const AvatarImage = React.forwardRef(function AvatarImage({
 }, ref) {
   const context = React.useContext(AvatarContext);
   if (!context) throw new Error('Avatar.Image must be used inside Avatar.Root.');
+  if (typeof alt !== 'string') throw new TypeError('Avatar.Image requires an alt string; use alt="" for decorative avatars.');
   const key = imageSourceKey(src, srcSet);
   const sourceAvailable = hasImageSource(src, srcSet);
   const imageRef = React.useRef(null);
@@ -79,12 +80,16 @@ const AvatarImage = React.forwardRef(function AvatarImage({
   };
   return h('img', {
     ...props,
+    // A new element per source: a reused img keeps painting the previous
+    // image over the fallback until the new source decodes.
+    key,
     ref: setImageRef,
     alt,
     src,
     srcSet,
     hidden: Boolean(hidden || unavailable || failed),
-    'aria-hidden': unavailable || failed || context.rootHasName ? true : props['aria-hidden'],
+    // Until it loads, the root carries the name and the image stays unnamed.
+    'aria-hidden': !loaded || context.rootHasName ? true : props['aria-hidden'],
     onLoad: handleLoad,
     onError: handleError,
     className: classNames('muxui-avatar__image', className),
@@ -103,8 +108,8 @@ const AvatarFallback = React.forwardRef(function AvatarFallback({
 }, ref) {
   const context = React.useContext(AvatarContext);
   if (!context) throw new Error('Avatar.Fallback must be used inside Avatar.Root.');
-  const fallbackHidden = context.imageVisible;
-  const decorative = context.imageVisible || context.imageDecorative || context.rootHasName;
+  const fallbackHidden = context.imageLoaded;
+  const decorative = context.imageLoaded || context.imageDecorative || context.rootHasName;
   return h('span', {
     ...props,
     ref,
@@ -137,9 +142,10 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
   const [imageState, setImageState] = React.useState({ key: null, status: null });
   const imageStatus = imageState.key === imageKey ? imageState.status : null;
   const imageFailed = imageAvailable && imageStatus === 'error';
-  const imageVisible = imageAvailable && !imageFailed;
+  // The fallback shows while the image loads, after it fails, or with no source.
+  const imageLoaded = imageAvailable && imageStatus === 'loaded';
   const rootHasName = Boolean(ariaLabel || ariaLabelledby);
-  const recoveryName = hasImage && !imageVisible && imageAlt.trim() && !rootHasName && !ariaHidden ? imageAlt : undefined;
+  const recoveryName = hasImage && !imageLoaded && imageAlt.trim() && !rootHasName && !ariaHidden ? imageAlt : undefined;
   const hasImageRole = !ariaHidden && (rootHasName || recoveryName);
   const markFailure = React.useCallback((key) => {
     setImageState((current) => current.key === key && current.status === 'error'
@@ -162,7 +168,7 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
   const context = React.useMemo(() => ({
     hasImage,
     imageAvailable,
-    imageVisible,
+    imageLoaded,
     imageDecorative,
     failedKey: imageFailed ? imageKey : null,
     loadedKey: imageStatus === 'loaded' ? imageKey : null,
@@ -170,7 +176,7 @@ const AvatarRoot = React.forwardRef(function AvatarRoot({
     markFailure,
     markLoaded,
     reconcileImage,
-  }), [hasImage, imageAvailable, imageVisible, imageDecorative, imageFailed, imageKey, imageStatus, markFailure, markLoaded, reconcileImage, recoveryName, rootHasName]);
+  }), [hasImage, imageAvailable, imageLoaded, imageDecorative, imageFailed, imageKey, imageStatus, markFailure, markLoaded, reconcileImage, recoveryName, rootHasName]);
   return h(AvatarContext.Provider, { value: context }, h('span', {
     ...props,
     ref,

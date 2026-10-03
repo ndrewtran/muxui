@@ -119,6 +119,7 @@ carries its token ID and meaning in its description and
 `codeSyntax.WEB = var(--muxui-…)`. Typography roles become text styles bound
 to font-size and font-weight variables; effect tokens become effect styles.
 Durations, easings, and transitions are listed as unsupported.
+Other workspace tools import the compiler from `@muxui/tokens/figma`.
 
 Run the scripts in order through a Plugin API runner such as the Figma MCP
 `use_figma` tool. Each script is at most 40,000 bytes and self-contained: it

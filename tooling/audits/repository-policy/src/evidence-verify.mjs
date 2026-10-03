@@ -12,14 +12,30 @@ export class EvidenceIntegrityError extends Error {
 }
 
 export function hasUnsanitizedEvidenceOutput(text, repositoryRoot) {
+  // Public token IDs, including the historical `core:` namespace in retained
+  // logs, are artifact identities rather than credentials.
   const withoutPublicTokenIds = text.replace(
-    /"muxui:token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
-    '"muxui:<public-token-id>"',
+    /"(muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
+    '"$1:<public-token-id>"',
+  );
+  // Quoted public identifiers in value position (lowercase segments joined by
+  // `.` or `:`, such as `component.button.background` or `web.html:web.html`)
+  // are not credentials even under a key like `token` or `key`. Keys are never
+  // rewritten, so a key such as `auth.token` is still checked.
+  const withoutPublicIds = withoutPublicTokenIds.replace(
+    /(:\s*)(["'])[a-z0-9]+(?:-[a-z0-9]+)*(?:[.:][a-z0-9]+(?:-[a-z0-9]+)*)+\2/gu,
+    '$1$2<public-id>$2',
   );
   return withoutPublicTokenIds.includes(repositoryRoot)
     || /\/(?:Users|Volumes|home|root|tmp|private(?:\/(?:tmp|var\/folders))?|var\/folders)\//u.test(withoutPublicTokenIds)
     || /(?:^|[\s"'(=])[A-Za-z]:\\(?:Users|Temp)\\/mu.test(withoutPublicTokenIds)
-    || /(?:authorization|api[-_]?key|token)\s*[:=]\s*\S+/iu.test(withoutPublicTokenIds);
+    || /(?:authorization|api[-_]?key|token)\s*[:=]\s*\S+/iu.test(withoutPublicTokenIds)
+    // GitHub, npm, and bearer token formats.
+    || /\bgh[pousr]_[A-Za-z0-9]{20,}|\bgithub_pat_|\bnpm_[A-Za-z0-9]{36}\b|\bBearer\s+\S{8,}/u.test(withoutPublicTokenIds)
+    // A double- or single-quoted key naming a credential (`token`,
+    // `github-token`, `apiKey`, `password`, `Authorization`) with a quoted
+    // value that is not a public identifier.
+    || /(["'])[^"']*(?:token|secret|key|password|authorization|auth|credentials)\1\s*:\s*(["'])(?!<public-id>\2)/iu.test(withoutPublicIds);
 }
 
 function sha256(value) {

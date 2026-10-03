@@ -32,7 +32,7 @@ test('Text preserves native refs and resolves field and collection text-slot IDs
 
     assert.equal(await page.locator('#native-span').evaluate((node) => node.tagName), 'SPAN');
     assert.equal(await page.locator('#native-heading').evaluate((node) => node.tagName), 'H2');
-    assert.equal(await page.locator('#native-heading').getAttribute('class'), 'muxui-text muxui-text--heading-m');
+    assert.equal(await page.locator('#native-heading').getAttribute('class'), 'muxui-text muxui-text--heading-md');
     assert.equal(await page.locator('html').getAttribute('data-text-refs'), 'SPAN:H2');
 
     const computedTypography = await page.evaluate((contracts) => {
@@ -83,6 +83,38 @@ test('Text preserves native refs and resolves field and collection text-slot IDs
     assert.equal(truncated.textOverflow, 'ellipsis');
     assert.equal(truncated.whiteSpace, 'nowrap');
     assert.equal(truncated.scrollWidth > truncated.clientWidth, true, 'truncation clips overflowing content');
+
+    // Block hosts keep block layout and still clip.
+    const block = await page.locator('#truncated-block').evaluate((node) => ({
+      display: getComputedStyle(node).display,
+      textOverflow: getComputedStyle(node).textOverflow,
+      width: node.getBoundingClientRect().width,
+      clips: node.scrollWidth > node.clientWidth,
+    }));
+    assert.deepEqual(block, { display: 'block', textOverflow: 'ellipsis', width: 120, clips: true });
+
+    // An inline truncated span keeps its glyphs on the surrounding text baseline.
+    const inline = await page.evaluate(() => {
+      const glyphs = (id) => {
+        const range = document.createRange();
+        range.selectNodeContents(document.getElementById(id).firstChild);
+        return range.getClientRects()[0];
+      };
+      const reference = glyphs('baseline-reference');
+      const truncatedGlyphs = glyphs('truncated-inline');
+      const node = document.getElementById('truncated-inline');
+      return {
+        display: getComputedStyle(node).display,
+        clips: node.scrollWidth > node.clientWidth,
+        offset: Math.abs(truncatedGlyphs.bottom - reference.bottom),
+      };
+    });
+    assert.equal(inline.display, 'inline-block');
+    assert.equal(inline.clips, true);
+    assert.ok(inline.offset < 0.5, `inline truncation shifts text off the baseline by ${inline.offset}px`);
+
+    // Text without a slot inside a field label renders rather than throwing.
+    assert.equal(await page.locator('.muxui-field-label #label-text').textContent(), '(optional)');
 
     const fieldInput = page.locator('#field-input');
     const fieldDescriptionId = await fieldInput.getAttribute('aria-describedby');

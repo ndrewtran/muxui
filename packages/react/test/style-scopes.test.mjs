@@ -9,6 +9,7 @@ const sourceFiles = [
   '../src/styles/collections.css',
   '../src/styles/overlays.css',
   '../src/supplemental/styles.css',
+  '../src/supplemental/select-native.css',
   '../src/text-editor/text-editor.css',
 ].map((path) => new URL(path, import.meta.url));
 
@@ -70,7 +71,7 @@ test('migrated families paint mode-aware tokens instead of colour-scheme overrid
     assert.ok(selectors.some((rule) => rule.scheme === scheme), `other families still author ${scheme}-scheme rules`);
   }
   // Figma variables hold one value per mode, so these families must not switch tokens by selector.
-  const migrated = /\.muxui-(?:checkbox(?:-indicator|-field(?:__\w+)?)?|switch(?:-label|-indicator)?|text-field|tabs?|tab-(?:list|panels?|label)|tag(?:-group|-list|-remove)?)(?![\w-])|(?<!\.muxui-toolbar > |:not\()\.muxui-button(?![\w-])/u;
+  const migrated = /\.muxui-(?:checkbox(?:-indicator|-field(?:__\w+)?)?|switch(?:-label|-indicator)?|text-field|tabs?|tab-(?:list|panels?|label)|tag(?:-group|-list|-remove)?|select-native(?:-field|__\w+)?)(?![\w-])|(?<!\.muxui-toolbar > |:not\()\.muxui-button(?![\w-])/u;
   const offenders = selectors
     .map(({ scheme, selector }) => `${scheme} ${selector}`)
     .filter((rule) => migrated.test(rule));

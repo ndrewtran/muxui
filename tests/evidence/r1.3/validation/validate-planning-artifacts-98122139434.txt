@@ -1,0 +1,107 @@
+2026-08-26T09:04:04.4090655Z ##[group]Run ruby -e 'require "yaml"; Dir[".github/ISSUE_TEMPLATE/*.{yml,yaml}"].sort.each {
+2026-08-26T09:04:04.4091986Z ruby -e 'require "yaml"; Dir[".github/ISSUE_TEMPLATE/*.{yml,yaml}"].sort.each {
+2026-08-26T09:04:04.4093083Z   |path| YAML.safe_load(File.read(path), permitted_classes: [], aliases: false)
+2026-08-26T09:04:04.4093925Z }'
+2026-08-26T09:04:04.4135846Z shell: /usr/bin/bash -e {0}
+2026-08-26T09:04:04.4136450Z ##[endgroup]
+2026-08-26T09:04:05.2040553Z ##[group]Run test -s strategy/monorepo-architecture.md
+2026-08-26T09:04:05.2042628Z test -s strategy/monorepo-architecture.md
+2026-08-26T09:04:05.2044490Z test -s strategy/milestone-roadmap.md
+2026-08-26T09:04:05.2046235Z test -s strategy/product-scope.md
+2026-08-26T09:04:05.2086417Z shell: /usr/bin/bash -e {0}
+2026-08-26T09:04:05.2087754Z ##[endgroup]
+2026-08-26T09:04:05.2240702Z ##[group]Run node --test .github/scripts/validate-planning-pr.test.cjs
+2026-08-26T09:04:05.2242878Z node --test .github/scripts/validate-planning-pr.test.cjs
+2026-08-26T09:04:05.2280538Z shell: /usr/bin/bash -e {0}
+2026-08-26T09:04:05.2281646Z ##[endgroup]
+2026-08-26T09:04:05.4749066Z TAP version 13
+2026-08-26T09:04:05.5245820Z # Subtest: ignores pull requests outside authority sources
+2026-08-26T09:04:05.5256320Z ok 1 - ignores pull requests outside authority sources
+2026-08-26T09:04:05.5257488Z   ---
+2026-08-26T09:04:05.5258359Z   duration_ms: 2.252573
+2026-08-26T09:04:05.5259161Z   type: 'test'
+2026-08-26T09:04:05.5259853Z   ...
+2026-08-26T09:04:05.5261087Z # Subtest: accepts a complete Product Scope authority publication
+2026-08-26T09:04:05.5262725Z ok 2 - accepts a complete Product Scope authority publication
+2026-08-26T09:04:05.5265528Z   ---
+2026-08-26T09:04:05.5265930Z   duration_ms: 1.429033
+2026-08-26T09:04:05.5266375Z   type: 'test'
+2026-08-26T09:04:05.5266836Z   ...
+2026-08-26T09:04:05.5273824Z # Subtest: rejects an authority change without a label or change record
+2026-08-26T09:04:05.5281664Z ok 3 - rejects an authority change without a label or change record
+2026-08-26T09:04:05.5282728Z   ---
+2026-08-26T09:04:05.5283385Z   duration_ms: 0.354152
+2026-08-26T09:04:05.5284113Z   type: 'test'
+2026-08-26T09:04:05.5285408Z   ...
+2026-08-26T09:04:05.5286505Z # Subtest: protects the executable platform-safety registry as architecture authority
+2026-08-26T09:04:05.5288089Z ok 4 - protects the executable platform-safety registry as architecture authority
+2026-08-26T09:04:05.5289161Z   ---
+2026-08-26T09:04:05.5289861Z   duration_ms: 0.170399
+2026-08-26T09:04:05.5290914Z   type: 'test'
+2026-08-26T09:04:05.5291607Z   ...
+2026-08-26T09:04:05.5292811Z # Subtest: rejects a planning-control-only change without governance metadata
+2026-08-26T09:04:05.5294148Z ok 5 - rejects a planning-control-only change without governance metadata
+2026-08-26T09:04:05.5295227Z   ---
+2026-08-26T09:04:05.5295898Z   duration_ms: 0.257181
+2026-08-26T09:04:05.5296684Z   type: 'test'
+2026-08-26T09:04:05.5297315Z   ...
+2026-08-26T09:04:05.5298175Z # Subtest: rejects incomplete Product Scope change metadata
+2026-08-26T09:04:05.5299791Z ok 6 - rejects incomplete Product Scope change metadata
+2026-08-26T09:04:05.5301040Z   ---
+2026-08-26T09:04:05.5301599Z   duration_ms: 0.551151
+2026-08-26T09:04:05.5302191Z   type: 'test'
+2026-08-26T09:04:05.5302723Z   ...
+2026-08-26T09:04:05.5303586Z # Subtest: routes repository-policy and skill changes through ordinary governance metadata
+2026-08-26T09:04:05.5304912Z ok 7 - routes repository-policy and skill changes through ordinary governance metadata
+2026-08-26T09:04:05.5305872Z   ---
+2026-08-26T09:04:05.5306319Z   duration_ms: 0.313136
+2026-08-26T09:04:05.5306771Z   type: 'test'
+2026-08-26T09:04:05.5307377Z   ...
+2026-08-26T09:04:05.5406740Z 1..7
+2026-08-26T09:04:05.5407023Z # tests 7
+2026-08-26T09:04:05.5407509Z # suites 0
+2026-08-26T09:04:05.5408033Z # pass 7
+2026-08-26T09:04:05.5408568Z # fail 0
+2026-08-26T09:04:05.5409193Z # cancelled 0
+2026-08-26T09:04:05.5409645Z # skipped 0
+2026-08-26T09:04:05.5410446Z # todo 0
+2026-08-26T09:04:05.5411180Z # duration_ms 83.486225
+2026-08-26T09:04:05.5559801Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+2026-08-26T09:04:05.5561831Z ##[group]Run actions/github-script@v7
+2026-08-26T09:04:05.5562113Z with:
+2026-08-26T09:04:05.5564915Z   script: const files = await github.paginate(
+  github.rest.pulls.listFiles,
+  {
+    owner: context.repo.owner,
+    repo: context.repo.repo,
+    pull_number: context.payload.pull_request.number,
+    per_page: 100,
+  },
+);
+
+const { data: pullRequest } = await github.rest.pulls.get({
+  owner: context.repo.owner,
+  repo: context.repo.repo,
+  pull_number: context.payload.pull_request.number,
+});
+const labels = pullRequest.labels.map((label) => label.name);
+const validator = require(
+  `${process.env.GITHUB_WORKSPACE}/.github/scripts/validate-planning-pr.cjs`,
+);
+const errors = validator.validatePlanningPullRequest({
+  files: files.map((file) => file.filename),
+  labels,
+  body: pullRequest.body || '',
+});
+for (const error of errors) {
+  core.setFailed(error);
+}
+
+2026-08-26T09:04:05.5570313Z   <redacted credential input>
+2026-08-26T09:04:05.5570566Z   debug: false
+2026-08-26T09:04:05.5570801Z   user-agent: actions/github-script
+2026-08-26T09:04:05.5571114Z   result-encoding: json
+2026-08-26T09:04:05.5571351Z   retries: 0
+2026-08-26T09:04:05.5571594Z   retry-exempt-status-codes: 400,401,403,404,422
+2026-08-26T09:04:05.5571899Z ##[endgroup]
+2026-08-26T09:04:07.3805873Z Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

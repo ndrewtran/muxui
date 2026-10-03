@@ -15,7 +15,7 @@ const avatar = (
 );
 const fallbackOnly = <Avatar.Root><Avatar.Fallback>WS</Avatar.Fallback></Avatar.Root>;
 const unavailableAvatarImage = <Avatar.Image alt="Workspace avatar" />;
-const decorativeAvatarImage = <Avatar.Image />;
+const decorativeAvatarImage = <Avatar.Image alt="" />;
 void image;
 void decorativeImage;
 void avatar;
@@ -27,6 +27,9 @@ void decorativeAvatarImage;
 // @ts-expect-error Images must declare their accessible or decorative alt text.
 const unnamedImage = <Image src="/logo.svg" />;
 void unnamedImage;
+// @ts-expect-error Avatar images follow the same explicit alt rule as Image.
+const unnamedAvatarImage = <Avatar.Image src="/avatar.svg" />;
+void unnamedAvatarImage;
 
 // Mux owns the finite visual vocabulary for Image and Avatar.
 // @ts-expect-error Image fit values are finite.

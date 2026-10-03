@@ -11,8 +11,8 @@ const nativeHosts = (
       const host: HTMLSpanElement = event.currentTarget;
       void host;
     }}>Body</Text>
-    <Text as="h2" ref={headingRef} variant="heading" size="m" role="note">Heading</Text>
-    <Text as="label" ref={labelRef} htmlFor="name" variant="label" size="s">Name</Text>
+    <Text as="h2" ref={headingRef} variant="heading" size="md" role="note">Heading</Text>
+    <Text as="label" ref={labelRef} htmlFor="name" variant="label" size="sm">Name</Text>
     <Text as="p" title="Source paragraph" color="muted" truncate>Paragraph</Text>
   </>
 );
@@ -21,7 +21,7 @@ void nativeHosts;
 const explicitProps: TextProps<'h3'> = {
   as: 'h3',
   variant: 'title',
-  size: 'l',
+  size: 'lg',
   color: 'muted',
   truncate: true,
   id: 'title',
@@ -35,7 +35,10 @@ void invalidVariant;
 // @ts-expect-error Text sizes do not accept arbitrary strings.
 const invalidSize = <Text size="medium">Body</Text>;
 void invalidSize;
-// @ts-expect-error Display roles only expose canonical s, m, and l size tokens.
+// @ts-expect-error The former type-scale size names are not Text sizes.
+const typeScaleSize = <Text size="m">Body</Text>;
+void typeScaleSize;
+// @ts-expect-error Display roles only expose sm, md, and lg sizes.
 const invalidDisplaySize = <Text variant="heading" size="xs">Heading</Text>;
 void invalidDisplaySize;
 // @ts-expect-error Text hosts are limited to semantic text elements.

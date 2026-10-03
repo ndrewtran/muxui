@@ -1,5 +1,5 @@
 ---
-scopeVersion: 12.1.2
+scopeVersion: 13.1.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -88,6 +88,20 @@ the React `0.1` prerelease boundary.
 Product Scope `12.1.2` applies Decision 0011 amendment 04 as a patch
 clarification: the same eight internal `TextEditor` Tiptap packages move from
 `3.22.3` to exact `3.31.4`, so consumer installs resolve one Tiptap version.
+
+Product Scope `13.0.0` applies Decision 0011 amendment 03, which admits the
+`Tabs` overflow scroll chevrons, the `Disclosure` trigger chevron, and the
+`CheckboxField` check and minus to the existing internal Lucide edge; Decision
+0022, under which `@muxui/react@0.1.0-rc.1` claims no assistive-technology
+support; and Decision 0023, which replaces "no `latest` tag" with "no `latest`
+claim" and makes deprecate and fix forward the rc.1 rollback plan. Decision
+0022 also records unmet R1 evidence as deferred to `S1.0`.
+
+Product Scope `13.1.0` applies Decision 0020 amendment 01: the export-only
+Figma slice extends to components for a named set of simple controls,
+delivered in batches through the private, never published
+`@muxui/figma` adapter. Import and round-trip keep their G3.5
+conditions.
 
 ## Scope vocabulary
 
@@ -242,10 +256,14 @@ hosted services, design-tool integration, or another framework.
 
 The current `0.1` product commitment is a package-only React prerelease. Each
 R1 tranche may publish `@muxui/react@0.1.0-alpha.N` under `next` once its
-breadth closure may propose `0.1.0-rc.1`. No `latest` tag, stable `0.1.0`,
+breadth closure may propose `0.1.0-rc.1`. No `latest` claim, stable `0.1.0`,
 framework-free package, native package/profile, public catalog/tooling/CLI,
 cross-platform equivalence, or secondary-renderer support claim belongs to this
-boundary.
+boundary. Under Decision 0023, the registry points `latest` at the first
+publish, so if an alpha is published first `latest` points at that alpha.
+Apart from a separately authorized re-point of `latest` to the
+fix-forward rc during a rollback, Mux UI neither claims nor promotes it, no
+stable release is promoted, and install guidance uses `@muxui/react@next`.
 
 | Scope ID | Commitment | Product deliverable | Roadmap |
 | --- | --- | --- | --- |
@@ -266,7 +284,13 @@ The React-specific component and pattern commitments are
 Every exported binding remains `experimental` until independently promoted.
 Missing binding-required manual or assistive-technology proof keeps it
 unexported or explicitly unavailable with support unproved; it does not alter
-authored lifecycle/strategy or create an `unsupported` disposition.
+authored lifecycle/strategy or create an `unsupported` disposition. For the
+rc prerelease on `next`, a prerelease amendment (Decision 0022) records the
+unmet `DisclosureGroup` manual half of `E-R1.1-04`, the manual and
+assistive-technology half of `E-R1.2-03` and `E-R1.3-04`, and `E-R1.4-04` as
+deferred to `S1.0`; those bindings are exported with assistive-technology
+support unproved and not claimed. The risk-profile half of `E-R1.5-03` is
+deferred the same way.
 
 #### Fixed 53-family React registry
 
@@ -611,7 +635,7 @@ without truncation.
 | `SCOPE-THEME-ACCESSIBILITY` | `committed` | Observable forced-colors/high-contrast React behavior at R1; native dynamic-color/accessibility mappings activate and are independently fulfilled/evidenced only at N1. Owning bindings satisfy `SCOPE-THEME-PLATFORM-SAFETY`; this item does not own requirement identity or the non-disable rule. | R1 now; N1 later |
 | `SCOPE-THEME-RUNTIME` | `admitted` | Runtime theme switching per explicitly supported/proved profile; complete static output remains mandatory | Productization or capability release |
 | `SCOPE-THEME-ADDITIONAL` | `admitted` | Additional first-party themes and local consumer theme editing through the private Mux UI theme-authoring capability | R1.6 private authoring proof; public or hosted release remains separately admitted |
-| `SCOPE-DESIGN-TOOL` | `admitted` | One named external design-tool interchange profile and proposal-only round-trip; Figma is named, and its export-only token slice is available early under Decision 0020 | Import and round-trip through G3.5; the early export is a private `@muxui/tokens` projection with no release claim; it does not own the private theme-authoring capability |
+| `SCOPE-DESIGN-TOOL` | `admitted` | One named external design-tool interchange profile and proposal-only round-trip; Figma is named, and its export-only token slice (Decision 0020) and simple-control component slice (amendment 01) are available early | Import and round-trip through G3.5; the early exports are private projections from `@muxui/tokens` and `@muxui/figma` with no release claim; they do not own the private theme-authoring capability |
 
 CSS-derived values never become native authority. Consumer themes can assign
 only permitted existing roles and cannot change Mux UI token identity, type,
@@ -728,7 +752,7 @@ explicit no-activation decision without making Mux UI incomplete.
 | `SCOPE-CAP-MIGRATION` | `deferred` | Declarative migrations and reviewed codemods | A real version-bounded supported migration need with retrievable old/new specs and bounded transformation. | G3.2 |
 | `SCOPE-CAP-MCP-HOSTED` | `deferred` | Read-only hosted MCP | Stable query/compatibility policy plus privacy, security, availability, cache isolation, and failure separation. | G3.3 |
 | `SCOPE-CAP-AGENT-GATES` | `admitted` | Promote selected agent evaluations | Repeated baseline, predeclared threshold/variance/retry policy, canonical prompt IDs, and a failure owner. | G3.4 |
-| `SCOPE-CAP-DESIGN-TOOL` | `admitted` | One named external design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. Decision 0020 lands a Figma export-only slice early without satisfying this trigger. Additional themes are governed by `SCOPE-CAP-THEME-AUTHORING-PRIVATE`. | G3.5 (export slice: Decision 0020) |
+| `SCOPE-CAP-DESIGN-TOOL` | `admitted` | One named external design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. Decision 0020 and its amendment 01 land Figma token and component export-only slices early without satisfying this trigger. Additional themes are governed by `SCOPE-CAP-THEME-AUTHORING-PRIVATE`. | G3.5 (export slices: Decision 0020 and amendment 01) |
 | `SCOPE-CAP-THEME-AUTHORING-PRIVATE` | `admitted` | Private `apps/scale` maintainer capability for adding, editing, previewing, importing, exporting, persisting, and round-tripping Mux UI themes | Canonical token/theme ownership, typed override safety, complete theme parity proof, and a disable path that leaves canonical sources authoritative. | R1.6 |
 | `SCOPE-CAP-TAILWIND-CONSUMER` | `admitted` | Optional Tailwind consumer build adapter generated from Mux UI-owned token/theme transforms | Actual consumer compilation proof; Tailwind is a consumer build dependency only and never a Mux UI runtime, peer, or styling-engine dependency. | R1.6 |
 | `SCOPE-CAP-PROMPT-SEMANTICS` | `admitted` | Promptable-semantics discovery | Privacy-safe task corpus and baseline over existing tokens, variants, patterns, decision context, and examples. Activation of any field remains separately admitted. | G3.6 |
@@ -862,7 +886,9 @@ accessibility, package, compatibility, integrity, or generation failures.
   affordances: `DatePicker`/`DateRangePicker` calendar triggers;
   `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and `Tree`
   chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
-  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, with
+  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, plus
+  the `Tabs` overflow scroll chevrons, `Disclosure` trigger chevron, and
+  `CheckboxField` check and minus admitted by Decision 0011 amendment 03, with
   Breadcrumb separators kept as text, no Search icon, decorative and
   non-focusable icons that never supply an undocumented accessible name, and
   no Lucide export, type, name, prop, import path, or public Icon API, catalog,
@@ -880,7 +906,14 @@ accessibility, package, compatibility, integrity, or generation failures.
 - packed artifacts, not source-tree assumptions, prove exports and
   compatibility;
 - required manual/assistive-technology evidence exists before export for every
-  React binding whose exact risk contract requires it;
+  React binding whose exact risk contract requires it, except that the rc
+  prerelease on `next` may export bindings whose evidence is unmet, as the
+  Decision 0022 prerelease amendment records for R1.1 through R1.4, with
+  assistive-technology support unproved and not claimed; that evidence is a
+  required `S1.0` entry condition;
+- R1.1 through R1.5's logged check and review evidence is captured into
+  retained evidence before the rc.1 cut and before those logs expire around
+  2026-11-23, because a transient log cannot satisfy an exit (Decision 0022);
 - the compatibility/evidence profile states the exact tested environment;
 - generator, privacy, provenance, exception, advisory, performance-baseline,
   and change-intent requirements pass; and
@@ -1245,3 +1278,98 @@ state. Existing Scope IDs retain their states, including
 Tiptap types and editor objects remain outside the Mux UI public API, and the
 existing integrity, license/notice, lockfile, isolation, SSR/hydration, and
 packed-consumer proof obligations apply to the new version.
+
+## Product Scope 13.0.0: rc.1 release rulings
+
+[Decision 0011 amendment 03](../decisions/0011-amendment-03-icon-affordance-additions.md)
+adds the `Tabs` overflow scroll buttons, the `Disclosure` trigger, and the
+`CheckboxField` indicator to the internal `lucide-react@1.37.0` affordance
+boundary. The `Tabs` icons are `chevron-left`, `chevron-right`, `chevron-up`,
+and `chevron-down`; the `Disclosure` icon is `chevron-down`; the
+`CheckboxField` icons are `check` and `minus`. All are decorative and
+non-focusable. Each `Tabs` button takes its accessible name from a Mux-owned
+label, the `Disclosure` trigger from its visible title, and the `CheckboxField`
+input from its wrapping label text. The dependency, its version and
+integrity, its notices, and the public boundary are unchanged.
+`SCOPE-COMP-TABS-REACT` and `SCOPE-COMP-DISCLOSURE-REACT` remain
+`committed`, and `CheckboxField` stays under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`.
+
+[Decision 0022](../decisions/0022-rc1-assistive-technology-non-claim.md)
+records that `@muxui/react@0.1.0-rc.1` on `next` claims no
+assistive-technology support. Every rc.1 binding is exported, and its
+assistive-technology support is unproved and not claimed. R1.1 through R1.4
+closed without some of their manual and assistive-technology evidence: the
+`DisclosureGroup` manual half of `E-R1.1-04` (provisional), the manual and
+assistive-technology half of `E-R1.2-03` and `E-R1.3-04`, and `E-R1.4-04`.
+R1.5 closed without the risk-profile half of `E-R1.5-03`, because no binding
+declares a risk profile. Each is recorded as unmet and deferred to `S1.0`, not
+passed. Those milestone exits and the release-acceptance requirement above
+gain a matching prerelease amendment, not an operational exception; each
+milestone is complete for the rc prerelease boundary on its logged evidence,
+which must be captured into retained evidence before the R1 exit, and each
+deferred item is a required `S1.0` entry condition. R1.1 through R1.5 evidence
+exists only in CI check and review logs, which expire around 2026-11-23 and
+cannot satisfy an exit. Capturing those logs into retained evidence is a
+required R1 exit entry condition and a required step before the rc.1 cut;
+until then the generated records keep R1.5 evidence `logged-not-retained`. The
+compatibility profile and release manifest state the non-claim and every
+deferral. Every existing accessibility check, including axe, keyboard, and
+focus, remains required. Architecture's risk-class table is the basis for also
+requiring every exported component to declare its risk class before `S1.0`.
+
+[Decision 0023](../decisions/0023-rc1-dist-tag-and-rollback.md) corrects a
+rule the registry cannot satisfy. npm sets `latest` on a package's first
+publish and never lets it be deleted. rc.1 is published with `--tag next`;
+if it is the first publish, `latest` will also point at it. Apart from a
+separately authorized re-point of `latest` to the fix-forward rc during a
+rollback, nothing claims or promotes `latest`, and no stable release is
+promoted. Install guidance uses `@muxui/react@next` until a stable release
+moves `latest`. If rc.1 is bad, it is deprecated with a message and a fixed
+prerelease is published as a new exact candidate. Mux UI unpublishes only for
+a security or legal problem, with explicit authorization, inside npm's
+72-hour no-dependents window. `E-R1-EXIT-04` checks that this rollback is
+prepared, not exercised, rather than restoring a prior `next` pointer.
+
+The Tabs, Disclosure, and CheckboxField rulings are patch-level clarifications
+on their own. The `latest` ruling redefines the committed React `0.1` release
+boundary, which said no `latest` tag, and Decision 0022 amends the R1.1
+through R1.5 exit rules and the release-acceptance requirement that manual and
+assistive-technology evidence exist before export. Each of those is a material
+change to a committed release boundary, so the combined effect is major.
+Architecture's Lucide affordance lists and its R1 `latest` statement are
+amended in the same change to match; neither edit adds a scope item.
+`SCOPE-PRODUCT-REACT-PRERELEASE` and every other Scope ID keep their
+commitments; no Scope ID is added or removed, and no package, platform,
+export, lifecycle, or support claim broadens. None of these rulings authorizes
+publication, deprecation, a dist-tag change, an unpublish, or the final
+R1-exit merge.
+
+Tracker migration: the deferred `S1.0` evidence and the capture of R1 PR logs
+into retained evidence will be tracked as follow-up items. This change creates
+no tracker items.
+
+## Product Scope 13.1.0: Figma component export
+
+[Decision 0020 amendment 01](../decisions/0020-amendment-01-figma-component-export.md)
+extends the export-only Figma slice of `SCOPE-DESIGN-TOOL` and
+`SCOPE-CAP-DESIGN-TOOL` from tokens to components for a named set of simple
+controls, delivered in batches. The first batch is Button, Checkbox, Switch,
+TextField, Tabs, and TagGroup. The private, never published
+`@muxui/figma` package in `tooling/generators/figma` owns only
+anatomy mappings and transport, the design-tool adapter role G3.5 describes:
+browser measurement, a mode-consistency audit, a deterministic component spec
+bound to the exported variables and styles by token ID, and an idempotent
+applier that changes only nodes it tagged and deletes only the glyph vectors it
+replaces. The Roadmap records the addition and its evidence
+IDs.
+
+This minor revision changes no committed release, platform, public package,
+public surface, support claim, or non-goal. Figma content remains a
+projection under `SCOPE-NONGOAL-001`, and no generated spec is committed.
+Import, round-trip, proposals, Code Connect, complex families, motion,
+additional themes, and pruning keep their G3.5 conditions. Andrew's direction
+covers writing the six families' components to file `Z1rFgLTe3lBr0nwm8UvFEx`;
+removing the pilot page, later batches' writes, and any other Figma file need
+his separate, explicit direction. Rollback deletes the package; any Figma
+Components page is disposable.

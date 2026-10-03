@@ -4,7 +4,9 @@ import { Dialog, Modal, ModalOverlay } from 'react-aria-components';
 import { Button } from '../button.mjs';
 import { IconButton } from './icon-button.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from '../motion.mjs';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.mjs';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.mjs';
+import X from 'lucide-react/dist/esm/icons/x.mjs';
 
 const Context = React.createContext(null);
 const stacks = new WeakMap();

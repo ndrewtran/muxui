@@ -151,3 +151,79 @@ test('SelectNative SSR hydration removes no-description ghost references', async
   }, optionTree()))).window.document.querySelector('select');
   assert.equal(noHelp?.hasAttribute('aria-describedby'), false);
 });
+
+test('SelectNative controlled value follows state and ignores unhandled native changes', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const changes = [];
+  let root;
+  function Controlled({ accept }) {
+    const [value, setValue] = React.useState('inbox');
+    return React.createElement(SelectNative, {
+      label: 'Panel',
+      value,
+      onChange(event) {
+        changes.push(event.currentTarget.value);
+        if (accept) setValue(event.currentTarget.value);
+      },
+    }, optionTree());
+  }
+  try {
+    await act(async () => { root = createRoot(document.querySelector('#root')); root.render(React.createElement(Controlled, { accept: true })); });
+    const select = document.querySelector('select');
+    assert.equal(select.value, 'inbox');
+    select.value = 'research';
+    await act(async () => { select.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.deepEqual(changes, ['research']);
+    assert.equal(select.value, 'research');
+
+    // A controlled owner that rejects the change restores its value.
+    await act(async () => root.render(React.createElement(Controlled, { key: 'reject', accept: false })));
+    const rejecting = document.querySelector('select');
+    rejecting.value = 'research';
+    await act(async () => { rejecting.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.deepEqual(changes, ['research', 'research']);
+    assert.equal(rejecting.value, 'inbox');
+    await act(async () => root.unmount());
+  } finally {
+    restore();
+    dom.window.close();
+  }
+});
+
+test('SelectNative multiple keeps native multi-selection, form data, and reset', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const seen = [];
+  let root;
+  try {
+    const element = React.createElement('form', { id: 'form' },
+      React.createElement(SelectNative, {
+        label: 'Panels',
+        name: 'panels',
+        multiple: true,
+        size: 3,
+        defaultValue: ['inbox'],
+        onChange: (event) => seen.push([...event.currentTarget.selectedOptions].map((option) => option.value)),
+      }, optionTree()));
+    await act(async () => { root = createRoot(document.querySelector('#root')); root.render(element); });
+    const form = document.querySelector('#form');
+    const select = document.querySelector('select');
+    assert.equal(select.multiple, true);
+    assert.equal(select.getAttribute('size'), '3');
+    assert.equal(select.dataset.size, 'md');
+    assert.deepEqual(new FormData(form).getAll('panels'), ['inbox']);
+
+    select.querySelector('option[value="research"]').selected = true;
+    await act(async () => { select.dispatchEvent(new Event('change', { bubbles: true })); });
+    assert.deepEqual(seen, [['inbox', 'research']]);
+    assert.deepEqual(new FormData(form).getAll('panels'), ['inbox', 'research']);
+
+    await act(async () => { form.reset(); });
+    assert.deepEqual(new FormData(form).getAll('panels'), ['inbox']);
+    await act(async () => root.unmount());
+  } finally {
+    restore();
+    dom.window.close();
+  }
+});

@@ -40,6 +40,16 @@ test('SelectNative hydrates as a native form control and preserves browser focus
     assert.equal(await select.getAttribute('aria-labelledby') !== null, true);
     assert.equal(await select.getAttribute('aria-describedby') !== null, true);
 
+    // Keyboard: Tab reaches the native select and type-ahead changes it in place. Arrow
+    // keys open the native picker on macOS instead of changing the value, so the
+    // cross-platform proof uses type-ahead.
+    await page.locator('body').focus();
+    await page.keyboard.press('Tab');
+    assert.equal(await select.evaluate((node) => document.activeElement === node), true);
+    await page.keyboard.press('r');
+    assert.equal(await select.inputValue(), 'research');
+    assert.equal(await page.locator('#last-change').textContent(), 'research');
+
     await select.selectOption('research');
     assert.equal(await page.locator('#selected').textContent(), 'research');
     assert.equal(await page.locator('#last-change').textContent(), 'research');

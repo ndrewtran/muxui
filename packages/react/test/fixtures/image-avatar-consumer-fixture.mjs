@@ -10,6 +10,7 @@ const switchedImage = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/s
 export function ImageAvatarConsumerFixture() {
   const [imageSrc, setImageSrc] = React.useState('/missing-image.svg');
   const [avatarSrc, setAvatarSrc] = React.useState('/missing-avatar.svg');
+  const [slowAvatarSrc, setSlowAvatarSrc] = React.useState('/slow-avatar.svg');
   const [imageErrors, setImageErrors] = React.useState(0);
   const [imageLoads, setImageLoads] = React.useState(0);
   const [avatarErrors, setAvatarErrors] = React.useState(0);
@@ -20,8 +21,12 @@ export function ImageAvatarConsumerFixture() {
       setImageSrc(switchedImage);
       setAvatarSrc(switchedImage);
     };
+    window.__muxuiSlowAvatarSwitch = setSlowAvatarSrc;
     document.documentElement.dataset.imageAvatarReady = 'true';
-    return () => { delete window.__muxuiImageAvatarSwitch; };
+    return () => {
+      delete window.__muxuiImageAvatarSwitch;
+      delete window.__muxuiSlowAvatarSwitch;
+    };
   }, []);
 
   return h('main', { 'data-muxui-image-avatar-consumer': 'true' },
@@ -35,6 +40,23 @@ export function ImageAvatarConsumerFixture() {
         radius: 'sm',
         onError: () => setImageErrors((count) => count + 1),
         onLoad: () => setImageLoads((count) => count + 1),
+      }),
+      // A square source in a 16:9 declared box; the server holds /slow-* until released.
+      h(Image, {
+        id: 'fit-image',
+        src: '/slow-square.svg',
+        alt: 'Square source',
+        width: 320,
+        height: 180,
+        fit: 'cover',
+      }),
+      h(Image, {
+        id: 'class-ratio-image',
+        className: 'consumer-square',
+        src: validImage,
+        alt: '',
+        width: 320,
+        height: 180,
       }),
       h(Image, {
         id: 'cached-image',
@@ -59,6 +81,10 @@ export function ImageAvatarConsumerFixture() {
       h(Avatar.Root, { id: 'cached-avatar', size: 'sm' },
         h(Avatar.Image, { src: validImage, alt: 'Cached avatar' }),
         h(Avatar.Fallback, null, 'CA'),
+      ),
+      h(Avatar.Root, { id: 'slow-avatar', size: 'lg' },
+        h(Avatar.Image, { src: slowAvatarSrc, alt: 'Sam avatar' }),
+        h(Avatar.Fallback, null, 'SA'),
       ),
       h('output', { id: 'avatar-errors' }, avatarErrors),
       h('output', { id: 'avatar-loads' }, avatarLoads),
