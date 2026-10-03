@@ -18,14 +18,23 @@ export function hasUnsanitizedEvidenceOutput(text, repositoryRoot) {
     /"(muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
     '"$1:<public-token-id>"',
   );
+  // Quoted public identifiers (lowercase segments joined by `.` or `:`, such as
+  // `component.button.background` or `web.html:web.html`) are not credentials
+  // even under a key like `token` or `key`.
+  const withoutPublicIds = withoutPublicTokenIds.replace(
+    /(["'])[a-z0-9]+(?:-[a-z0-9]+)*(?:[.:][a-z0-9]+(?:-[a-z0-9]+)*)+\1/gu,
+    '$1<public-id>$1',
+  );
   return withoutPublicTokenIds.includes(repositoryRoot)
     || /\/(?:Users|Volumes|home|root|tmp|private(?:\/(?:tmp|var\/folders))?|var\/folders)\//u.test(withoutPublicTokenIds)
     || /(?:^|[\s"'(=])[A-Za-z]:\\(?:Users|Temp)\\/mu.test(withoutPublicTokenIds)
     || /(?:authorization|api[-_]?key|token)\s*[:=]\s*\S+/iu.test(withoutPublicTokenIds)
-    // GitHub token formats, and JSON keys naming a credential (such as
-    // `token`, `github-token`, `apiKey`, or `password`) with a quoted value.
-    || /\bgh[pousr]_[A-Za-z0-9]{20,}|\bgithub_pat_/u.test(withoutPublicTokenIds)
-    || /"[^"]*(?:token|secret|key|password)"\s*:\s*"/iu.test(withoutPublicTokenIds);
+    // GitHub, npm, and bearer token formats.
+    || /\bgh[pousr]_[A-Za-z0-9]{20,}|\bgithub_pat_|\bnpm_[A-Za-z0-9]{36}\b|\bBearer\s+\S{8,}/u.test(withoutPublicTokenIds)
+    // A double- or single-quoted key naming a credential (`token`,
+    // `github-token`, `apiKey`, `password`, `Authorization`) with a quoted
+    // value that is not a public identifier.
+    || /(["'])[^"']*(?:token|secret|key|password|authorization|auth|credentials)\1\s*:\s*(["'])(?!<public-id>\2)/iu.test(withoutPublicIds);
 }
 
 function sha256(value) {

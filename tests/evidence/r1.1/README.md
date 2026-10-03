@@ -7,9 +7,10 @@ under `validation/`, raw-log digests and execution identity in
 `verification.json`, the pull-request observation under `artifacts/`, and
 one record per roadmap assertion under `records/`.
 
-Each record's `coverage` cites the excerpt lines that evidence it and names
-the parts that rest only on author-reported PR validation; those records are
-`inconclusive` even when another part is deferred. A record is `partial`
+Each record's `coverage` cites the excerpt lines that evidence it, lists in
+`authorReportedOnly` the parts only the PR body states (with its exact line),
+and lists in `noEvidenceFound` the parts neither source mentions. Any such
+part makes the record `inconclusive`, even when another part is deferred. A record is `partial`
 only when every non-deferred part is shown and some part is deferred, and a
 wholly deferred item is `unmet`. This root makes no
 assistive-technology, support, publication, or release claim. Recapture with

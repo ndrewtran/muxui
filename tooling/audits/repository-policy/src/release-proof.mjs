@@ -599,7 +599,7 @@ export function buildReleaseCorrelation({
     if (missing.length !== 0) fail(code, `${binding} has no catalog ${missing.join(', ')}`);
     return identity;
   });
-  if (retainedEvidence.length === 0) fail(code, 'retained evidence indexes are required');
+  if (retainedEvidence.length === 0) fail(code, 'captured CI evidence indexes are required');
   return {
     source: { revision: source.revision, tree: source.tree },
     lockfile: { path: lockfile.path, sha256: digest(lockfile.bytes) },
@@ -619,7 +619,7 @@ export function buildReleaseCorrelation({
       .map(({ name, version, private: isPrivate }) => ({ name, version, private: isPrivate === true }))
       .sort((left, right) => (left.name < right.name ? -1 : 1)),
     evidence: {
-      retained: retainedEvidence.map(({ milestone, path, bytes }) => ({ milestone, path, sha256: digest(bytes) })),
+      capturedCiEvidence: retainedEvidence.map(({ milestone, path, bytes }) => ({ milestone, path, sha256: digest(bytes) })),
       activeExceptions: activeExceptions.map((exception) => digest(canonicalJson(exception))),
     },
     visualContract,

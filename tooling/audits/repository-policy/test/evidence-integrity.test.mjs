@@ -30,12 +30,34 @@ test('evidence output privacy recognizes public token IDs without accepting cred
     '{"apiKey":"value"}',
     '{"client_secret":"value"}',
     '{"password":"value"}',
+    '{"Authorization": "Bearer abc"}',
+    '"authorization":"token abc"',
+    'Bearer eyJhbGciOiJIUzI1NiJ9.payload',
+    `npm_${'a1B2'.repeat(9)}`,
+    "{'token': 'abc'}",
+    '{"credentials":"value"}',
+    '{"token":"Component.Button"}',
   ]) {
     assert.equal(hasUnsanitizedEvidenceOutput(credential, root), true, credential);
   }
   assert.equal(hasUnsanitizedEvidenceOutput('{"tokenId":"muxui:token:default-theme","tokenizer":"word"}', root), false);
   assert.equal(hasUnsanitizedEvidenceOutput('{"artifactId":"core:token:default-theme"}', root), false);
+  assert.equal(hasUnsanitizedEvidenceOutput('{"token":"component.button.background","key":"web.html:web.html"}', root), false);
+  assert.equal(hasUnsanitizedEvidenceOutput("{'key': 'native.react-native:ios'}", root), false);
   assert.equal(hasUnsanitizedEvidenceOutput(`${root}/packages/tokens`, root), true);
+});
+
+// Every retained root must pass the current disclosure check, so a stricter
+// pattern cannot silently start flagging historical public identifiers.
+test('every retained evidence root passes the disclosure check', async () => {
+  const evidenceRoot = join(repositoryRoot, 'tests/evidence');
+  const flagged = [];
+  for (const entry of await readdir(evidenceRoot, { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile() || !/\.(?:json|txt|md)$/u.test(entry.name)) continue;
+    const path = join(entry.parentPath, entry.name);
+    if (hasUnsanitizedEvidenceOutput(await readFile(path, 'utf8'), repositoryRoot)) flagged.push(path.slice(repositoryRoot.length + 1));
+  }
+  assert.deepEqual(flagged, []);
 });
 
 test('content-addressed evidence indexes verify canonical child records', async () => {
@@ -131,7 +153,10 @@ test('R1.1-R1.5 retained CI evidence covers every assertion honestly and stays d
       const deferred = DEFERRED_R1_EVIDENCE.find(({ id }) => id === assertionId);
       const { coverage } = record;
       // A pass rests entirely on retained excerpt lines; anything author-reported is not a pass.
-      const shown = coverage.authorReportedOnly.length === 0 && coverage.evidencedInExcerpt.length > 0;
+      const shown = coverage.authorReportedOnly.length === 0 && coverage.noEvidenceFound.length === 0 && coverage.evidencedInExcerpt.length > 0;
+      for (const { prBodyLine } of coverage.authorReportedOnly) {
+        assert.ok(observation.authorReportedValidation.includes(prBodyLine), `${assertionId} cites a PR-body validation line`);
+      }
       const expected = deferred && !/\bhalf\b/u.test(deferred.part) ? 'unmet'
         : !shown ? 'inconclusive' : deferred ? 'partial' : 'pass';
       assert.equal(record.outcome, expected, assertionId);

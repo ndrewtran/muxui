@@ -1011,7 +1011,7 @@ try {
   });
   // The lockfile, token source, and evidence indexes were read from the worktree; bind them to the commit.
   assertSourceIdentity(sourceRevision, 'after release correlation');
-  console.log(`R1 exit correlation: ${correlation.bindings.length} binding-spec revisions, ${correlation.generatedOutputs.entries.length} generated outputs, ${correlation.evidence.retained.length} retained evidence indexes, visual contract ${correlation.visualContract.digest}`);
+  console.log(`R1 exit correlation: ${correlation.bindings.length} binding-spec revisions, ${correlation.generatedOutputs.entries.length} generated outputs, ${correlation.evidence.capturedCiEvidence.length} captured CI evidence indexes, visual contract ${correlation.visualContract.digest}`);
 
   const releaseManifest = {
     schema: 'muxui-r1-exit-publication-preparation-v1',
