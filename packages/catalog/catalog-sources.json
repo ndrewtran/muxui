@@ -951,6 +951,14 @@
     },
     {
       "family": "component",
+      "path": "catalog/components/tag-select/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/tag-select/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
       "path": "catalog/components/text-area/artifact.json"
     },
     {

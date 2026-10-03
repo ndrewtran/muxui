@@ -16,10 +16,6 @@ export const MANIFEST_EXCLUSIONS = Object.freeze({
     'No example record yet. Adding one is blocked because the CI planner requires an exact Storybook page owner for example files (MUXUI_CI_IMPACT_STORY_PAGE_MISSING).',
   'catalog/components/select/examples/react/composition.example.json':
     'Its source declares two executable exports; the docs example contract requires exactly one.',
-  'catalog/components/tag-select/artifact.json':
-    'Server render throws (TagSelect.Root reads an undefined id); excluded until the React runtime is fixed.',
-  'catalog/components/tag-select/examples/react/basic.example.json':
-    'Server render throws (TagSelect.Root reads an undefined id); excluded until the React runtime is fixed.',
 });
 
 async function walk(directory) {

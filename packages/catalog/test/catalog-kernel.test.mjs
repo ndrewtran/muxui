@@ -200,7 +200,7 @@ test('R1.5 React curriculum selects one preferred generation example for every f
   const components = baseBundle.artifacts
     .filter(({ kind }) => kind === 'component')
     .sort((left, right) => left.id.localeCompare(right.id));
-  assert.equal(components.length, 74);
+  assert.equal(components.length, 75);
   const selected = components.map((component) => {
     const response = getArtifact({
       id: component.id,
@@ -224,7 +224,7 @@ test('R1.5 React curriculum selects one preferred generation example for every f
     assert.equal(example.record.binding.ref, `${component.id}#web.react`, component.id);
     return example.id;
   });
-  assert.equal(new Set(selected).size, 74);
+  assert.equal(new Set(selected).size, 75);
 });
 
 test('examples section orders by authored preference, not artifact ID', () => {
