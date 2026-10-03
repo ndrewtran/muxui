@@ -764,6 +764,40 @@ function partNames(record) {
   return Array.isArray(parts) ? parts.filter((part) => typeof part === 'string') : [];
 }
 
+// A compound class such as `muxui-tab-list` extends a declared part (`tab`)
+// rather than a family slug. The longest declared part prefix wins. Families
+// whose slug contains the part as a word (`field` in `text-field`) share that
+// class vocabulary, so the class is owned only when exactly one family declares
+// or names the part.
+function compoundPartOwners(className, records) {
+  if (!className.startsWith('muxui-')) return { part: null, families: [] };
+  const rest = className.slice('muxui-'.length);
+  let part = null;
+  for (const record of records) {
+    for (const candidate of partNames(record)) {
+      if (!rest.startsWith(`${candidate}-`) && !rest.startsWith(`${candidate}__`)) continue;
+      if (part === null || candidate.length > part.length) part = candidate;
+    }
+  }
+  if (part === null) return { part, families: [] };
+  const families = records.filter((record) => (
+    partNames(record).includes(part) || String(record.slug ?? '').split('-').includes(part)
+  ));
+  return { part, families: sortedUnique(families.map(recordFamily)) };
+}
+
+function ambiguousPartNotes(selector, records) {
+  const notes = new Set();
+  cssTree.walk(selector, (node) => {
+    if (node.type !== 'ClassSelector' || ownersForClass(node.name, records).size > 0) return;
+    const { part, families } = compoundPartOwners(node.name, records);
+    if (families.length > 1) {
+      notes.add(`class "${node.name}" extends part "${part}" shared by families ${families.join(', ')}`);
+    }
+  });
+  return notes.size > 0 ? `; ${[...notes].join('; ')}` : '';
+}
+
 function ownersForClass(className, records) {
   const matches = [];
   for (const record of records) {
@@ -781,7 +815,9 @@ function ownersForClass(className, records) {
 
   if (matches.length === 0) {
     const genericPart = records.filter((record) => partNames(record).includes(className.replace(/^muxui-/u, '')));
-    return new Set(genericPart.map(recordFamily));
+    if (genericPart.length > 0) return new Set(genericPart.map(recordFamily));
+    const compound = compoundPartOwners(className, records);
+    return new Set(compound.families.length === 1 ? compound.families : []);
   }
   const longest = Math.max(...matches.map(({ slugLength }) => slugLength));
   return new Set(matches.filter(({ slugLength }) => slugLength === longest).map(({ family }) => family));
@@ -797,11 +833,23 @@ const stateAttributes = new Set([
   'aria-pressed', 'aria-readonly', 'aria-required', 'aria-selected',
 ]);
 
+function selectorListAlternatives(node) {
+  return node.children?.toArray()
+    .find((child) => child.type === 'SelectorList')?.children.toArray()
+    .filter((child) => child.type === 'Selector') ?? [];
+}
+
 function isStateOnlySelector(selector) {
   const nodes = selector.children?.toArray() ?? [];
   return nodes.length > 0 && nodes.every((node) => {
     if (node.type === 'PseudoClassSelector') {
-      return statePseudoClasses.has(node.name.toLowerCase()) && !node.children;
+      const name = node.name.toLowerCase();
+      // :not()/:is()/:where() are state-only when every argument selector is.
+      if (['not', 'is', 'where'].includes(name)) {
+        const alternatives = selectorListAlternatives(node);
+        return alternatives.length > 0 && alternatives.every(isStateOnlySelector);
+      }
+      return statePseudoClasses.has(name) && !node.children;
     }
     if (node.type === 'AttributeSelector') {
       const name = node.name?.name?.toLowerCase();
@@ -839,9 +887,7 @@ function selectorOwners(selector, records, inherited = []) {
     }
     if (pseudoName !== 'is' && pseudoName !== 'where') continue;
 
-    const alternatives = node.children?.toArray()
-      .find((child) => child.type === 'SelectorList')?.children.toArray()
-      .filter((child) => child.type === 'Selector') ?? [];
+    const alternatives = selectorListAlternatives(node);
     if (alternatives.length === 0) {
       fail('STYLE_OWNERSHIP', `selector pseudo :${pseudoName}() in "${cssTree.generate(selector)}" has no auditable alternatives`);
     }
@@ -852,7 +898,7 @@ function selectorOwners(selector, records, inherited = []) {
           stateFallbackOwners.forEach((family) => owners.add(family));
           continue;
         }
-        fail('STYLE_OWNERSHIP', `selector pseudo :${pseudoName}() alternative "${cssTree.generate(alternative)}" has no canonical component owner`);
+        fail('STYLE_OWNERSHIP', `selector pseudo :${pseudoName}() alternative "${cssTree.generate(alternative)}" has no canonical component owner${ambiguousPartNotes(alternative, records)}`);
       }
       alternativeOwners.forEach((family) => owners.add(family));
     }
@@ -1015,7 +1061,7 @@ export function analyzeReactStyleChange({ records, before = '', after = '', sour
         if (isGlobalSelector(selector)) {
           fail('STYLE_OWNERSHIP', `changed global selector "${selectorText}" in ${sourcePath} requires its shared theme/style owner`);
         }
-        fail('STYLE_OWNERSHIP', `changed selector "${selectorText}" in ${sourcePath} has no canonical family owner`);
+        fail('STYLE_OWNERSHIP', `changed selector "${selectorText}" in ${sourcePath} has no canonical family owner${ambiguousPartNotes(selector, records)}`);
       }
       owners.forEach((family) => affected.add(family));
       selectorsChanged.push(cssTree.generate(selector));
