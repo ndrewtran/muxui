@@ -497,6 +497,15 @@ export function rootPackageWideChanges(before, after) {
     : { full: false, reason: null };
 }
 
+// True when the plan will be full anyway, so lockfile importer mapping is
+// skipped. Full-workspace inputs such as `pnpm-workspace.yaml` overrides may
+// rewrite lockfile settings that no single importer owns.
+export function isWorkspaceWideChange(changedPaths, config, rootPackageBefore, rootPackageAfter) {
+  return changedPaths.some((path) => config.fullInputPaths.includes(path))
+    || (rootPackageBefore !== undefined && rootPackageAfter !== undefined
+      && rootPackageWideChanges(rootPackageBefore, rootPackageAfter).full);
+}
+
 export function storybookPackageWideChanges(before, after) {
   if (before === null || after === null) return { pagesAffected: true, reason: 'Storybook package manifest was added or removed' };
   const oldManifest = parseJson(before, 'base Storybook package.json');
@@ -1765,8 +1774,7 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
   const reactPackageImpact = reactPackageBefore !== undefined && reactPackageAfter !== undefined
     ? reactPackageWideChanges(reactPackageBefore, reactPackageAfter)
     : { pagesAffected: false };
-  const workspaceWideRootChange = rootPackageBefore !== undefined && rootPackageAfter !== undefined
-    && rootPackageWideChanges(rootPackageBefore, rootPackageAfter).full;
+  const workspaceWideRootChange = isWorkspaceWideChange(changedPaths, config, rootPackageBefore, rootPackageAfter);
   const lockfileBefore = changedPaths.includes('pnpm-lock.yaml') ? textAtRef(mergeBase, 'pnpm-lock.yaml') : undefined;
   const lockfileAfter = changedPaths.includes('pnpm-lock.yaml') ? await currentText('pnpm-lock.yaml') : undefined;
   const lockfileImporters = changedPaths.includes('pnpm-lock.yaml') && lockfileBefore !== undefined && lockfileAfter !== undefined && !workspaceWideRootChange
