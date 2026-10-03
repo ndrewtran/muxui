@@ -12,6 +12,8 @@ import {
   assertPackedFileBoundary,
   assertStylesheetAssetUrls,
   deriveCurrentExportSurface,
+  deriveExpectedPackageEntries,
+  readGeneratedOutputNames,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
@@ -22,6 +24,10 @@ const reactVersionPattern = /^0\.1\.0-alpha\.(?:0|[1-9]\d*)$/u;
 const candidateVersion = '0.1.0-rc.1';
 const candidateArchiveName = `muxui-react-${candidateVersion}.tgz`;
 const candidateManifestName = `muxui-react-${candidateVersion}.release-manifest.json`;
+// Rollback fixes forward with the next rc, so later candidates name the right successor.
+const candidateRc = /^(?<base>\d+\.\d+\.\d+)-rc\.(?<rc>\d+)$/u.exec(candidateVersion)?.groups;
+if (!candidateRc) throw new Error(`R1_EXIT_CANDIDATE_VERSION_INVALID: ${candidateVersion} is not an rc version`);
+const fixForwardVersion = `${candidateRc.base}-rc.${Number(candidateRc.rc) + 1}`;
 const preparationToolPath = 'tooling/audits/repository-policy/src/release-prepare.mjs';
 const r15Closure = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
 const documentedSupportingExports = ['ToastProvider', 'useToast', 'useCommandPalette'];
@@ -34,45 +40,6 @@ const expectedCandidatePublishConfig = {
   tag: 'next',
   registry: 'https://registry.npmjs.org',
 };
-const expectedGeneratedEntries = Object.freeze([
-  'package/generated/button.mjs',
-  'package/generated/compatibility.mjs',
-  'package/generated/choice-context.mjs',
-  'package/generated/components.mjs',
-  'package/generated/collections.mjs',
-  'package/generated/descriptor.json',
-  'package/generated/descriptor.json.provenance',
-  'package/generated/fields.mjs',
-  'package/generated/icon-button.d.ts',
-  'package/generated/icon-button.mjs',
-  'package/generated/index.d.ts',
-  'package/generated/index.mjs',
-  'package/generated/lightbox.d.ts',
-  'package/generated/lightbox.mjs',
-  'package/generated/markdown.d.ts',
-  'package/generated/markdown.mjs',
-  'package/generated/overlay-positioning.mjs',
-  'package/generated/overlays.mjs',
-  'package/generated/r1-5-closure.json',
-  'package/generated/r1-5-closure.json.provenance',
-  'package/generated/r1-6-contract.json',
-  'package/generated/r1-6-contract.json.provenance',
-  'package/generated/release.json',
-  'package/generated/release.json.provenance',
-  'package/generated/resizable.d.ts',
-  'package/generated/resizable.mjs',
-  'package/generated/styles.css',
-  'package/generated/supplemental.css',
-  'package/generated/supplemental.d.ts',
-  'package/generated/supplemental.mjs',
-  'package/generated/testing.mjs',
-  'package/generated/text-editor.d.ts',
-  'package/generated/text-editor.mjs',
-  'package/generated/themes.css',
-  'package/generated/themes.d.ts',
-  'package/generated/themes.mjs',
-  'package/generated/toggle-button-context.mjs',
-]);
 const fixedPackageEntries = Object.freeze([
   'package/LICENSE',
   'package/NOTICE',
@@ -112,10 +79,24 @@ function sortedJsonValue(value) {
   return value;
 }
 
+const extractedArchives = new Map();
+
+// Reads members from one full extraction: bsdtar treats member arguments as globs,
+// so bracketed names such as `Inter[opsz,wght].ttf` never match a direct `tar -xO`.
 function readArchiveBytes(archive, path) {
-  const result = spawnSync('tar', ['-xOzf', archive, path]);
-  if (result.status !== 0) fail('R1.5_PACK_CONTENT_MISSING', path);
-  return result.stdout;
+  let root = extractedArchives.get(archive);
+  if (!root) {
+    root = `${archive}-contents`;
+    mkdirSync(root);
+    const result = spawnSync('tar', ['-xzf', archive, '-C', root], { encoding: 'utf8' });
+    if (result.status !== 0) fail('R1.5_PACK_ARCHIVE_MISSING', result.stderr);
+    extractedArchives.set(archive, root);
+  }
+  try {
+    return readFileSync(join(root, path));
+  } catch {
+    return fail('R1.5_PACK_CONTENT_MISSING', path);
+  }
 }
 
 function readArchiveFile(archive, path) {
@@ -331,12 +312,6 @@ const sourceRevision = sourceIdentity.revision;
 const trackedAssetEntries = trackedPackageEntries(sourceRevision, 'packages/react/assets');
 const trackedLicenseEntries = trackedPackageEntries(sourceRevision, 'packages/react/licenses');
 const requiredAssetAndLicenseEntries = [...trackedAssetEntries, ...trackedLicenseEntries];
-const expectedPackageEntries = [
-  ...expectedGeneratedEntries,
-  ...fixedPackageEntries,
-  ...trackedAssetEntries,
-  ...trackedLicenseEntries,
-].sort();
 
 const temp = mkdtempSync(join(tmpdir(), 'muxui-r1-5-release-'));
 try {
@@ -358,6 +333,13 @@ try {
   });
   if (rendererCheck.status !== 0) fail('R1_EXIT_GENERATION_IDENTITY_INVALID', rendererCheck.stderr || rendererCheck.stdout);
   assertSourceIdentity(sourceRevision, 'after renderer generation check');
+  const generatedOutputs = readGeneratedOutputNames(reactPackageRoot);
+  const expectedGeneratedEntries = generatedOutputs.map((name) => `package/generated/${name}`);
+  const expectedPackageEntries = deriveExpectedPackageEntries({
+    generatedOutputs,
+    fixedEntries: fixedPackageEntries,
+    trackedEntries: requiredAssetAndLicenseEntries,
+  });
   assertExactArchiveEntries(sourceEntries, expectedPackageEntries);
   assertPackedFileBoundary({
     entries: sourceEntries,
@@ -760,7 +742,7 @@ try {
         },
         {
           name: 'version collision',
-          command: 'npm view @muxui/react@0.1.0-rc.1 version --registry=https://registry.npmjs.org',
+          command: `npm view @muxui/react@${candidateVersion} version --registry=https://registry.npmjs.org`,
           status: 'pending',
           policy: 'an existing version is a hard stop; never overwrite or republish it',
         },
@@ -768,7 +750,8 @@ try {
           name: 'next dist-tag collision',
           command: 'npm view @muxui/react dist-tags --json --registry=https://registry.npmjs.org',
           status: 'pending',
-          policy: 'record the prior next pointer before any separately authorized mutation',
+          policy: 'for a first publish, expect E404 because the package is absent; any existing next or latest is a hard stop for review',
+          laterPublish: 'only after a prior publication, record the prior next pointer before any separately authorized mutation',
         },
         {
           name: 'publish authorization drift',
@@ -794,19 +777,28 @@ try {
       },
       'E-R1-EXIT-04': {
         status: 'pending-post-publication',
-        assertion: 'requires a separately authorized next dist-tag observation and rollback exercise',
+        assertion: 'next dist-tag observation; rollback prepared, not exercised: verifies next, confirms latest is not claimed, and confirms the fix-forward path is ready',
       },
     },
     rollback: {
       status: 'prepared-not-exercised',
       trigger: ['published consumer verification failure', 'integrity/provenance mismatch', 'dist-tag drift'],
       steps: [
-        'stop further publication and preserve the immutable rc.1 version and manifest',
-        're-read the registry and record the prior verified next pointer',
-        'restore that pointer through a separately authorized dist-tag mutation',
-        'retain the candidate artifact and failed verification for audit; do not mutate latest or stable',
+        `stop further publication and preserve the immutable ${candidateVersion} version and manifest`,
+        `run npm deprecate on @muxui/react@${candidateVersion} with a message naming the failure and its fixed successor`,
+        `fix forward by publishing a corrected ${fixForwardVersion} to next through a separately authorized publication`,
+        `optional, only after ${fixForwardVersion} is verified and with Andrew's separate explicit authorization at the time: re-point latest from the deprecated ${candidateVersion} to ${fixForwardVersion}`,
+        'retain the candidate artifact and failed verification for audit; latest is otherwise not claimed or promoted (the registry sets latest on first publish) and stable is not promoted',
       ],
-      forbidden: ['delete or overwrite the immutable package version', 'mutate latest', 'promote stable support'],
+      driftOnly: [
+        `if next was moved but the published ${candidateVersion} is fine, re-point next to the verified ${candidateVersion} through a separately authorized dist-tag mutation; do not deprecate`,
+      ],
+      forbidden: [
+        'overwrite or republish the immutable package version',
+        'unpublish, except for a security or legal problem inside the npm 72-hour no-dependents window with explicit human authorization',
+        `claim or promote latest, other than the separately authorized fix-forward re-point from ${candidateVersion} to ${fixForwardVersion}; the registry sets latest on first publish`,
+        'promote stable support',
+      ],
     },
   };
   const outputDirectory = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-output-'));
