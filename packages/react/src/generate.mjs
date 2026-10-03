@@ -1155,7 +1155,14 @@ for (const source of [...currentSubpathRecords, ...currentEagerRecords]) {
 }
 const readme = generatedText('packages/react/src/generate.mjs', `${readmeBody}${readmeGuidance}`, '<!--', ' -->');
 
-if (process.argv.includes('--check')) {
+// --list-outputs is a read-only query; pairing it with --check would silently skip the drift check.
+if (process.argv.includes('--list-outputs') && process.argv.includes('--check')) {
+  throw new Error('MUXUI_REACT_GENERATE_ARGS_INVALID: --list-outputs and --check are mutually exclusive');
+}
+if (process.argv.includes('--list-outputs')) {
+  // Release preparation derives the exact packed generated/ file set from this map.
+  console.log(JSON.stringify([...outputs.keys()].sort()));
+} else if (process.argv.includes('--check')) {
   for (const [name, expected] of outputs) {
     if (await readFile(resolve(generatedRoot, name), 'utf8').catch(() => null) !== expected) {
       throw new Error(`MUXUI_REACT_GENERATED_DRIFT: generated/${name}`);
@@ -1170,4 +1177,6 @@ if (process.argv.includes('--check')) {
   await writeFile(resolve(packageRoot, 'README.md'), readme);
 }
 
-console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');
+if (!process.argv.includes('--list-outputs')) {
+  console.log('[react] generated current R1.6 union projection with the retained R1.5 family closure');
+}

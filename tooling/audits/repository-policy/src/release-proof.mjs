@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { posix } from 'node:path';
 
 const requiredReleaseRoots = Object.freeze([
@@ -67,7 +68,10 @@ export function assertExactArchiveEntries(actual, expected, code = 'R1.5_PACK_CO
   const expectedEntries = [...expected].sort();
   if (actualEntries.length !== expectedEntries.length
     || actualEntries.some((entry, index) => entry !== expectedEntries[index])) {
-    fail(code, `expected ${expectedEntries.join(', ')}, received ${actualEntries.join(', ')}`);
+    const missing = expectedEntries.filter((entry) => !actualEntries.includes(entry));
+    const unexpected = actualEntries.filter((entry) => !expectedEntries.includes(entry));
+    const duplicates = actualEntries.filter((entry, index) => entry === actualEntries[index - 1]);
+    fail(code, `archive entries differ from the expected package set; missing: ${missing.join(', ') || 'none'}; unexpected: ${unexpected.join(', ') || 'none'}; duplicate: ${duplicates.join(', ') || 'none'}`);
   }
   return actualEntries;
 }
@@ -119,6 +123,37 @@ export function deriveCurrentExportSurface({ historicalFamilies, supplementalCom
     .filter(({ export: { module } }) => module !== '.')
     .map(({ export: { name, module } }) => `${name}:${module}`);
   return { canonicalHistoricalExports, currentComponentExports, currentRootExports, isolatedExportModules };
+}
+
+// The React generator's output map is the single owner of the packed generated/ file set.
+export function readGeneratedOutputNames(packageRoot) {
+  const result = spawnSync(process.execPath, ['src/generate.mjs', '--list-outputs'], { cwd: packageRoot, encoding: 'utf8' });
+  if (result.status !== 0) fail('R1.5_PACK_GENERATED_OUTPUTS_UNAVAILABLE', result.stderr || result.stdout);
+  let names;
+  try {
+    names = JSON.parse(result.stdout);
+  } catch (error) {
+    fail('R1.5_PACK_GENERATED_OUTPUTS_INVALID', `generator --list-outputs did not print JSON: ${error.message}`);
+  }
+  if (!Array.isArray(names) || names.length === 0) {
+    fail('R1.5_PACK_GENERATED_OUTPUTS_INVALID', 'generator --list-outputs must print a non-empty array');
+  }
+  if (new Set(names).size !== names.length) {
+    fail('R1.5_PACK_GENERATED_OUTPUTS_INVALID', 'generator --list-outputs printed duplicate names');
+  }
+  const invalid = names.filter((name) => typeof name !== 'string' || !/^[a-z0-9][a-z0-9.-]*$/u.test(name));
+  if (invalid.length !== 0) {
+    fail('R1.5_PACK_GENERATED_OUTPUTS_INVALID', `generated output names must be flat lowercase file names: ${invalid.map(String).join(', ')}`);
+  }
+  return names.sort();
+}
+
+export function deriveExpectedPackageEntries({ generatedOutputs, fixedEntries, trackedEntries }) {
+  return [
+    ...generatedOutputs.map((name) => `package/generated/${name}`),
+    ...fixedEntries,
+    ...trackedEntries,
+  ].sort();
 }
 
 export { requiredReleaseRoots };
