@@ -150,7 +150,7 @@ test('Checkbox and CheckboxField share pointer and keyboard focus modality in li
       // Each state paints one mode-aware token in both schemes.
       const expectedTokens = {
         selected: '--muxui-component-checkbox-selected-background',
-        selectedHover: '--muxui-semantic-action-background-hover',
+        selectedHover: '--muxui-semantic-color-color-50',
         unchecked: ['--muxui-component-checkbox-indicator-background', '--muxui-component-checkbox-indicator-border'],
         uncheckedHover: ['--muxui-component-checkbox-indicator-background', '--muxui-component-checkbox-indicator-border-hover'],
         invalid: ['--muxui-component-checkbox-indicator-background', '--muxui-semantic-feedback-invalid-border'],
@@ -393,7 +393,7 @@ test('Checkbox, CheckboxField, Switch, SwitchField, RadioGroup, and RadioField p
         checkbox: {
           rest: checkboxUnchecked,
           selected: checkboxSelected,
-          selectedHover: { backgroundColor: await token('--muxui-semantic-action-background-hover'), borderColor: invalidEdge, glyph: await token('--muxui-semantic-action-foreground-hover') },
+          selectedHover: { backgroundColor: await token('--muxui-semantic-color-color-50'), borderColor: invalidEdge, glyph: await token('--muxui-component-checkbox-selected-foreground-hover') },
           uncheckedHover: { ...checkboxUnchecked, glyph: null },
           indeterminate: checkboxSelected,
           indeterminateHover: { borderColor: invalidEdge },

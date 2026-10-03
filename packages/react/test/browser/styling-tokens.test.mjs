@@ -4,8 +4,9 @@ import { resolve } from 'node:path';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
 import test from 'node:test';
-import { Button, Checkbox } from '../../generated/index.mjs';
+import { Button, Checkbox, FileTrigger, IconButton } from '../../generated/index.mjs';
 import { CheckboxField } from '../../generated/supplemental.mjs';
+import { MUXUI_THEME_PRESETS } from '../../generated/themes.mjs';
 import { launchBrowser } from './harness.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../..');
@@ -201,26 +202,26 @@ test('immediate action labels and selection marks retain contrast in every inter
 
       await action.hover();
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-hover');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground-hover');
+      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
       await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'hover');
 
       await page.mouse.down();
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-pressed');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground-pressed');
+      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
       await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'pressed');
       await page.mouse.up();
       await page.mouse.move(880, 580);
 
       await action.evaluate((element) => element.setAttribute('data-hovered', ''));
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-hover');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground-hover');
+      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
       await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-hovered');
       await action.evaluate((element) => {
         element.removeAttribute('data-hovered');
         element.setAttribute('data-pressed', '');
       });
       await waitForTokenProperty(page, '#action', 'background-color', 'semantic.action.background-pressed');
-      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground-pressed');
+      await waitForTokenProperty(page, '#action .muxui-button-content', 'color', 'semantic.action.foreground');
       await assertTextContrast('#action .muxui-button-content', '#action', 'primary Button', mode, 'data-pressed');
       await action.evaluate((element) => element.removeAttribute('data-pressed'));
 
@@ -239,15 +240,19 @@ test('immediate action labels and selection marks retain contrast in every inter
       await assertTextContrast('.muxui-checkbox-indicator svg', '.muxui-checkbox-indicator', 'selected Checkbox mark', mode, 'hover');
 
       await checkboxFieldButton.evaluate((element) => element.setAttribute('data-hovered', ''));
-      await waitForTokenProperty(page, '.muxui-checkbox-field__indicator svg', 'color', 'semantic.action.foreground-hover');
+      await waitForTokenProperty(page, '.muxui-checkbox-field__indicator svg', 'color', 'component.checkbox.selected-foreground-hover');
       await assertTextContrast('.muxui-checkbox-field__indicator svg', '.muxui-checkbox-field__indicator', 'selected CheckboxField mark', mode, 'hover');
 
       await tag.evaluate((element) => element.setAttribute('data-hovered', ''));
-      await waitForTokenProperty(page, '#selected-tag', 'color', 'semantic.action.foreground-hover');
+      await waitForTokenProperty(page, '#selected-tag', 'color', 'component.taggroup.selected-foreground-hover');
       await assertTextContrast('#selected-tag', '#selected-tag', 'selected TagGroup item', mode, 'hover');
     }
 
-    await page.evaluate(() => document.documentElement.setAttribute('data-reduced-motion', 'true'));
+    await page.evaluate(() => {
+      document.documentElement.setAttribute('data-reduced-motion', 'true');
+      // Dark once painted the pressed primary fill over the forced-colors system colours.
+      document.documentElement.setAttribute('data-muxui-color-scheme', 'dark');
+    });
     await page.emulateMedia({ forcedColors: 'active' });
     await action.hover();
     const systemButtonText = await page.evaluate(() => {
@@ -264,6 +269,19 @@ test('immediate action labels and selection marks retain contrast in every inter
     await page.mouse.down();
     assert.equal(await action.evaluate((element) => getComputedStyle(element).color), systemButtonText,
       'primary Button pressed keeps its forced-colors system foreground');
+    // This markup is not hydrated, so set the React Aria pressed attribute directly.
+    await action.evaluate((element) => element.setAttribute('data-pressed', ''));
+    const systemButtonFace = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.backgroundColor = 'ButtonFace';
+      document.body.append(probe);
+      const color = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return color;
+    });
+    assert.equal(await action.evaluate((element) => getComputedStyle(element).backgroundColor), systemButtonFace,
+      'primary Button pressed keeps its forced-colors system background in the dark scheme');
+    await action.evaluate((element) => element.removeAttribute('data-pressed'));
     await page.mouse.up();
 
     await page.evaluate(() => {
@@ -292,6 +310,100 @@ test('immediate action labels and selection marks retain contrast in every inter
       'selected TagGroup text uses HighlightText while hovered in forced colors');
     assert.equal(await tag.evaluate((element) => getComputedStyle(element).backgroundColor), highlightColors.background,
       'selected TagGroup background uses Highlight while hovered in forced colors');
+  } finally {
+    await browser.close();
+  }
+});
+
+test('Button-family labels keep their rest colour and 4.5:1 contrast while only fills change', { timeout: 120_000 }, async () => {
+  const css = (await Promise.all(['generated/styles.css', 'generated/supplemental.css', 'generated/themes.css']
+    .map((path) => readFile(resolve(packageRoot, path), 'utf8')))).join('\n');
+  const variants = ['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'];
+  const h = React.createElement;
+  const markup = renderToString(h('main', null,
+    ...variants.flatMap((variant) => [
+      h(Button, { key: `button-${variant}`, variant, className: `case-button-${variant}` }, 'Save'),
+      h(IconButton, { key: `icon-${variant}`, variant, className: `case-icon-button-${variant}`, 'aria-label': 'Add' }, '+'),
+    ]),
+    h(FileTrigger, null, 'Upload')));
+  const targets = [...variants.flatMap((variant) => [`.case-button-${variant}`, `.case-icon-button-${variant}`]), '.muxui-file-trigger'];
+  const browser = await launchBrowser();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1200, height: 600 } });
+    await page.setContent(`<!doctype html><html data-muxui-motion="reduced"><head><style>${css}</style></head><body style="margin:0;background:var(--muxui-semantic-surface-canvas)">${markup}</body></html>`);
+    // Label and fill as painted: translucent fills are composited over the canvas.
+    const paint = (selector) => page.locator(selector).evaluate((element) => {
+      const context = Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d', { willReadFrequently: true });
+      const flatten = (layers) => {
+        context.clearRect(0, 0, 1, 1);
+        for (const layer of layers) { context.fillStyle = layer; context.fillRect(0, 0, 1, 1); }
+        const [r, g, b] = context.getImageData(0, 0, 1, 1).data;
+        return `rgb(${r}, ${g}, ${b})`;
+      };
+      const fill = flatten([getComputedStyle(document.body).backgroundColor, getComputedStyle(element).backgroundColor]);
+      return { label: flatten([fill, getComputedStyle(element).color]), fill };
+    });
+    const setState = (selector, attributes) => page.locator(selector).evaluate((element, names) => {
+      for (const name of ['data-hovered', 'data-pressed', 'data-focus-visible']) element.removeAttribute(name);
+      for (const name of names) element.setAttribute(name, '');
+    }, attributes);
+    const focus = async (selector, context) => {
+      await page.keyboard.press('Shift');
+      await page.locator(selector).evaluate((element) => element.focus());
+      assert.equal(await page.locator(selector).evaluate((element) => element.matches(':focus-visible')), true, `${context} keyboard focus`);
+      await setState(selector, ['data-focus-visible']);
+      const value = await paint(selector);
+      await page.locator(selector).evaluate((element) => element.blur());
+      await setState(selector, []);
+      return value;
+    };
+    const verify = (context, rest, states) => {
+      for (const [state, value] of Object.entries({ rest, ...states })) {
+        assert.equal(value.label, rest.label, `${context} ${state} keeps the rest label colour`);
+        const ratio = contrastRatio(value.label, value.fill);
+        assert.ok(ratio >= 4.5, `${context} ${state} label contrast ${ratio.toFixed(2)}:1 (${value.label} on ${value.fill})`);
+      }
+      for (const state of Object.keys(states).filter((name) => name !== 'focus-visible')) {
+        assert.notEqual(states[state].fill, rest.fill, `${context} ${state} changes the fill`);
+      }
+    };
+    const scopes = [undefined, ...MUXUI_THEME_PRESETS.map(({ id }) => id)];
+    assert.equal(scopes.length, 16, 'default theme plus every shipped preset');
+    for (const theme of scopes) {
+      for (const scheme of ['light', 'dark']) {
+        for (const contrast of ['standard', 'more']) {
+          await page.evaluate(([themeId, colorScheme, level]) => {
+            const root = document.documentElement;
+            if (themeId) root.setAttribute('data-muxui-theme', themeId); else root.removeAttribute('data-muxui-theme');
+            root.setAttribute('data-muxui-color-scheme', colorScheme);
+            root.setAttribute('data-muxui-contrast', level);
+          }, [theme, scheme, contrast]);
+          for (const selector of targets) {
+            const context = `${theme ?? 'default'} ${scheme}/${contrast} ${selector}`;
+            await page.mouse.move(1190, 590);
+            const rest = await paint(selector);
+            const states = {};
+            // Pointer states once per mode on the default theme; presets reuse the same selectors.
+            if (!theme) {
+              await page.locator(selector).hover();
+              states.hover = await paint(selector);
+              await page.mouse.down();
+              states.active = await paint(selector);
+              await page.mouse.up();
+              await page.mouse.move(1190, 590);
+            }
+            // Unhydrated markup: apply the React Aria state attributes directly.
+            await setState(selector, ['data-hovered']);
+            states['data-hovered'] = await paint(selector);
+            await setState(selector, ['data-hovered', 'data-pressed']);
+            states['data-pressed'] = await paint(selector);
+            await setState(selector, []);
+            states['focus-visible'] = await focus(selector, context);
+            verify(context, rest, states);
+          }
+        }
+      }
+    }
   } finally {
     await browser.close();
   }

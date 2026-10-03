@@ -91,9 +91,10 @@
           { "token": "semantic.action.neutral-background", "requirement": "required" },
           { "token": "semantic.action.neutral-background-hover", "requirement": "required" },
           { "token": "semantic.action.neutral-background-pressed", "requirement": "required" },
-          { "token": "semantic.action.foreground-hover", "requirement": "required" },
-          { "token": "semantic.action.foreground-pressed", "requirement": "required" },
-          { "token": "component.button.danger-ghost-foreground", "requirement": "required" }
+          { "token": "semantic.action.background-hover", "requirement": "required" },
+          { "token": "semantic.action.background-pressed", "requirement": "required" },
+          { "token": "component.button.danger-ghost-foreground", "requirement": "required" },
+          { "token": "component.button.danger-neutral-foreground", "requirement": "required" }
         ]
       },
     "platformSafety": [

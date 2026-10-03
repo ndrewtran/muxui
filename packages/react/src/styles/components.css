@@ -330,8 +330,8 @@
 
 .muxui-checkbox[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-indicator,
 .muxui-checkbox-field__button[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-field__indicator {
-  background-color: var(--muxui-semantic-action-background-hover);
-  border-color: var(--muxui-semantic-action-background-hover);
+  background-color: var(--muxui-semantic-color-color-50);
+  border-color: var(--muxui-semantic-color-color-50);
 }
 
 .muxui-checkbox[data-indeterminate] .muxui-checkbox-indicator,
@@ -383,7 +383,7 @@
 
 .muxui-checkbox[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-indicator svg,
 .muxui-checkbox-field__button[data-selected][data-hovered]:not([data-disabled]) .muxui-checkbox-field__indicator svg {
-  color: var(--muxui-semantic-action-foreground-hover);
+  color: var(--muxui-component-checkbox-selected-foreground-hover);
 }
 
 .muxui-checkbox.muxui-checkbox--sm .muxui-checkbox-indicator {
@@ -607,14 +607,6 @@
   }
   100% {
     transform: translateX(300%);
-  }
-}
-
-/* Equal to the primary pressed token in ordinary modes; it still paints the
-   pressed primary fill in dark forced-colors mode, so it stays for now. */
-@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
-  :scope .muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
-    background-color: var(--muxui-semantic-action-selection-background-pressed);
   }
 }
 
@@ -1003,7 +995,7 @@
   --muxui-button-background: var(--muxui-semantic-action-danger-background-subtle);
   --muxui-button-background-hover: var(--muxui-semantic-action-danger-background-muted);
   --muxui-button-background-pressed: var(--muxui-semantic-action-danger-background-muted);
-  --muxui-button-foreground: var(--muxui-semantic-action-danger-foreground);
+  --muxui-button-foreground: var(--muxui-component-button-danger-neutral-foreground);
   --muxui-button-border: var(--muxui-semantic-action-danger-border);
   --muxui-button-shadow: none;
 }
@@ -1020,7 +1012,8 @@
 .muxui-button[data-variant='inverse'] {
   --muxui-button-background: var(--muxui-semantic-surface-strong);
   --muxui-button-background-hover: var(--muxui-semantic-surface-emphasis);
-  --muxui-button-background-pressed: var(--muxui-semantic-surface-muted);
+  /* One neutral step past hover; the semantic scale mirrors it in dark. */
+  --muxui-button-background-pressed: var(--muxui-semantic-color-neutral-70);
   --muxui-button-foreground: var(--muxui-semantic-content-on-solid);
   --muxui-button-border: transparent;
   --muxui-button-shadow: none;
@@ -1070,23 +1063,15 @@
   animation: none !important;
 }
 
-/* MuxUI state attributes are the stable styling contract for RAC state. */
+/* MuxUI state attributes are the stable styling contract for RAC state.
+   Interaction states change only fills and overlays; Button labels keep the
+   variant's rest foreground. */
 .muxui-button[data-hovered]:not([data-disabled], [data-pending]) {
   background-color: var(--muxui-button-background-hover, var(--muxui-semantic-action-background-hover));
 }
 
 .muxui-button[data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
   background-color: var(--muxui-button-background-pressed, var(--muxui-semantic-action-background-pressed));
-}
-
-.muxui-button[data-variant='primary']:hover:not([data-disabled], [data-pending]),
-.muxui-button[data-variant='primary'][data-hovered]:not([data-disabled], [data-pending]) {
-  --muxui-button-foreground: var(--muxui-semantic-action-foreground-hover);
-}
-
-.muxui-button[data-variant='primary']:active:not([data-disabled], [data-pending]),
-.muxui-button[data-variant='primary'][data-pressed]:not([data-disabled], [data-pending], [aria-expanded='true']) {
-  --muxui-button-foreground: var(--muxui-semantic-action-foreground-pressed);
 }
 
 .muxui-button[data-pending]::after {
