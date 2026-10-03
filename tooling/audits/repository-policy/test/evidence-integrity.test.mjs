@@ -37,6 +37,9 @@ test('evidence output privacy recognizes public token IDs without accepting cred
     "{'token': 'abc'}",
     '{"credentials":"value"}',
     '{"token":"Component.Button"}',
+    '{"auth.token":"S3cretValue"}',
+    '{"npm.token":"S3cret"}',
+    '{"aws:secret":"AbC123"}',
   ]) {
     assert.equal(hasUnsanitizedEvidenceOutput(credential, root), true, credential);
   }

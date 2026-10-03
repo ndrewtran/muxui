@@ -18,12 +18,13 @@ export function hasUnsanitizedEvidenceOutput(text, repositoryRoot) {
     /"(muxui|core):token:[a-z0-9]+(?:-[a-z0-9]+)*"/gu,
     '"$1:<public-token-id>"',
   );
-  // Quoted public identifiers (lowercase segments joined by `.` or `:`, such as
-  // `component.button.background` or `web.html:web.html`) are not credentials
-  // even under a key like `token` or `key`.
+  // Quoted public identifiers in value position (lowercase segments joined by
+  // `.` or `:`, such as `component.button.background` or `web.html:web.html`)
+  // are not credentials even under a key like `token` or `key`. Keys are never
+  // rewritten, so a key such as `auth.token` is still checked.
   const withoutPublicIds = withoutPublicTokenIds.replace(
-    /(["'])[a-z0-9]+(?:-[a-z0-9]+)*(?:[.:][a-z0-9]+(?:-[a-z0-9]+)*)+\1/gu,
-    '$1<public-id>$1',
+    /(:\s*)(["'])[a-z0-9]+(?:-[a-z0-9]+)*(?:[.:][a-z0-9]+(?:-[a-z0-9]+)*)+\2/gu,
+    '$1$2<public-id>$2',
   );
   return withoutPublicTokenIds.includes(repositoryRoot)
     || /\/(?:Users|Volumes|home|root|tmp|private(?:\/(?:tmp|var\/folders))?|var\/folders)\//u.test(withoutPublicTokenIds)
