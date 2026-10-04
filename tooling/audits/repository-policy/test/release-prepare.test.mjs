@@ -459,7 +459,7 @@ const replaceModule = (inputs, path, transform) => inputs.modules.map((module) =
 test('lockfile integrity is read for the exact package version', () => {
   const lockfile = readFileSync(join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8');
   assert.match(readLockedIntegrity(lockfile, 'lucide-react', '1.37.0'), /^sha512-LPsB4rD1/u);
-  assert.match(readLockedIntegrity(lockfile, '@internationalized/date', '3.12.3'), /^sha512-fuLX/u);
+  assert.match(readLockedIntegrity(lockfile, '@internationalized/date', '3.12.4'), /^sha512-M1dE/u);
   assert.equal(readLockedIntegrity(lockfile, 'lucide-react', '1.37'), undefined);
   assert.equal(readLockedIntegrity(lockfile, 'lucide-react', '0.0.0'), undefined);
 });
