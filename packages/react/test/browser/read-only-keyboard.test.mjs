@@ -8,7 +8,7 @@ function ReadOnlyKeyboardFixture() {
   const h = React.createElement;
   const swatches = [{ id: 'red', color: '#ff0000' }, { id: 'green', color: '#00ff00' }, { id: 'blue', color: '#0000ff' }];
   const cases = [
-    ['slider', h(Slider, { 'aria-label': 'Volume', readOnly: true, defaultValue: 50 })],
+    ['slider', h('form', { id: 'slider-form' }, h(Slider, { 'aria-label': 'Volume', name: 'volume', readOnly: true, defaultValue: 50 }))],
     ['color-slider', h(ColorSlider, { 'aria-label': 'Red', readOnly: true, defaultValue: '#804020' })],
     ['color-area', h(ColorArea, { 'aria-label': 'Color area', readOnly: true, defaultValue: '#804020' })],
     ['color-wheel', h(ColorWheel, { 'aria-label': 'Hue', readOnly: true, defaultValue: 'hsl(30, 100%, 50%)' })],
@@ -66,12 +66,19 @@ test('real browser read-only sliders, colour controls, and pickers release Tab a
         const first = await focusedOption();
         await page.keyboard.press('ArrowRight');
         assert.notEqual(await focusedOption(), first, `${id} arrows still move focus between swatches`);
-        await page.keyboard.press('Enter');
-        await page.keyboard.press(' ');
+        // Selection keys stay blocked with any modifier held.
+        for (const modifier of ['', 'Shift+', 'Alt+', 'Control+', 'Meta+']) {
+          await page.keyboard.press(`${modifier}Enter`);
+          await page.keyboard.press(`${modifier}Space`);
+        }
       } else {
-        for (const key of ['ArrowRight', 'ArrowUp', 'PageUp', 'Home', 'End']) await page.keyboard.press(key);
+        // React Aria adjusts on these keys whatever modifier is held, so all are blocked.
+        for (const modifier of ['', 'Shift+', 'Alt+', 'Control+', 'Meta+']) {
+          for (const key of ['ArrowRight', 'ArrowUp', 'PageUp', 'Home', 'End']) await page.keyboard.press(`${modifier}${key}`);
+        }
       }
       assert.equal(await state(id), initial, `${id} keeps its read-only value`);
+      if (id === 'slider') assert.equal(await page.evaluate(() => new FormData(document.querySelector('#slider-form')).get('volume')), '50', 'read-only FormData stays unchanged');
 
       await page.keyboard.press('Tab');
       assert.match(await focusedClass(), /after/u, `${id} releases Tab`);

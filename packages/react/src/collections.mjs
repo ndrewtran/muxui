@@ -201,14 +201,15 @@ const readOnlyInteractionEvents = [
 ];
 const readOnlyTargetGuards = new WeakMap();
 
-// Read-only controls stay focusable and navigable. Only keys that change the
-// value are blocked; Tab, Escape, and modifier shortcuts always pass through.
+// Read-only controls stay focusable and navigable. Keys that change the value are
+// blocked with any modifier, because React Aria acts on them regardless; Tab and
+// Escape are never blocked.
 const READ_ONLY_ADJUSTMENT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
 // Swatch pickers move focus with arrows, so only the selection keys are blocked.
 const READ_ONLY_SELECTION_KEYS = new Set(['Enter', ' ']);
 
 function readOnlyBlocksKey(event, keys) {
-  return !event.metaKey && !event.ctrlKey && !event.altKey && keys.has(event.key);
+  return keys.has(event.key);
 }
 
 function readOnlyKeyGuard(readOnly, keys = READ_ONLY_ADJUSTMENT_KEYS) {
