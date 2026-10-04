@@ -474,11 +474,12 @@ const COLOR_SPACE_CHANNELS = {
   hsl: ['hue', 'saturation', 'lightness', 'alpha'],
   hsb: ['hue', 'saturation', 'brightness', 'alpha'],
 };
-const COLOR_CHANNELS = new Set(Object.values(COLOR_SPACE_CHANNELS).flat());
 
 // Without colorSpace, React Aria reads the channel from the value's own space.
 function assertColorSliderChannel(channel, colorSpace, color) {
-  if (!COLOR_CHANNELS.has(channel)) throw new TypeError(`ColorSlider channel must be one of: ${[...COLOR_CHANNELS].join(', ')}`);
+  // Computed per call so the module keeps no import-time work.
+  const channels = [...new Set(Object.values(COLOR_SPACE_CHANNELS).flat())];
+  if (!channels.includes(channel)) throw new TypeError(`ColorSlider channel must be one of: ${channels.join(', ')}`);
   if (colorSpace !== undefined && !Object.hasOwn(COLOR_SPACE_CHANNELS, colorSpace)) throw new TypeError('ColorSlider colorSpace must be one of: rgb, hsl, hsb');
   const space = colorSpace ?? color?.getColorSpace();
   if (space && !COLOR_SPACE_CHANNELS[space].includes(channel)) {
