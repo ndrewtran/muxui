@@ -176,3 +176,30 @@ test('a declarative Toast whose onDismiss unmounts it still plays its exit', { t
     await page.close();
   }
 });
+
+test('Toast timers respect a hover that starts during entry and hold while hovered', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('toast');
+  try {
+    await page.waitForFunction(() => window.toastManager);
+    const toast = page.locator('.muxui-toast');
+    await page.mouse.move(10, 690);
+
+    // Hover in and out while the toast is still entering, then hover and hold.
+    await page.evaluate(() => window.toastManager.add('Held', { duration: 1500 }));
+    await page.waitForTimeout(20);
+    await toast.hover({ force: true });
+    await page.waitForTimeout(20);
+    await page.mouse.move(10, 690);
+    await page.waitForTimeout(600);
+    await toast.hover();
+    await page.waitForTimeout(2200);
+    assert.equal(await toast.count(), 1, 'a hovered toast stays open past its duration');
+
+    // Leaving the region resumes the remaining time once.
+    await page.mouse.move(10, 690);
+    await toast.waitFor({ state: 'detached', timeout: 3000 });
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});

@@ -590,6 +590,15 @@ function createAnimatedToastQueue(queue, closingKeys) {
   const skipRetention = new Set();
   const listeners = new Set();
   let suppressRetention = false;
+  // Timers pause while the region is hovered or focused and while a toast
+  // enters. Resume only a stopped timer once neither applies: RAC's Timer
+  // starts a second, unpausable timeout if resumed while running.
+  let regionPaused = false;
+  const entryHolds = new Set();
+  const resumeTimer = (record) => {
+    if (record?.timer && record.timer.timerId == null && !regionPaused && !entryHolds.has(record.key)) record.timer.resume();
+  };
+  const visibleRecord = (key) => queue.visibleToasts.find((toast) => toast.key === key);
   const sameRecords = (first, second) => first.length === second.length && first.every((record, index) => record === second[index]);
   const rebuild = () => {
     const nextSnapshot = [...baseSnapshot];
@@ -650,8 +659,21 @@ function createAnimatedToastQueue(queue, closingKeys) {
       if (!wasVisible) closingKeys.delete(key);
       rebuild();
     },
-    pauseAll: () => queue.pauseAll(),
-    resumeAll: () => queue.resumeAll(),
+    holdTimer(key) {
+      entryHolds.add(key);
+      visibleRecord(key)?.timer?.pause();
+    },
+    releaseTimer(key) {
+      if (entryHolds.delete(key)) resumeTimer(visibleRecord(key));
+    },
+    pauseAll() {
+      regionPaused = true;
+      queue.pauseAll();
+    },
+    resumeAll() {
+      regionPaused = false;
+      queue.visibleToasts.forEach(resumeTimer);
+    },
     clear() {
       suppressRetention = true;
       retained.clear();
@@ -678,37 +700,28 @@ function moveFocusFromExitingToast(node, returnFocus) {
   else active.blur();
 }
 
-function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef, returnFocusRef }) {
+function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, originRef, returnFocusRef }) {
   const value = toast.content;
   const hasTitle = hasRenderableLabel(value.title);
   const nodeRef = React.useRef(null);
   const entryFinishedRef = React.useRef(false);
-  const timerPausedRef = React.useRef(false);
-  const resumeTimer = React.useCallback(() => {
+  const finishEntry = React.useCallback(() => {
     entryFinishedRef.current = true;
-    if (timerPausedRef.current) {
-      toast.timer?.resume();
-      timerPausedRef.current = false;
-    }
-  }, [toast.timer]);
+    queue.releaseTimer(toast.key);
+  }, [queue, toast.key]);
   const lifecycleRef = useMotionLifecycle({
     isOpen: !toast.isExiting,
     placement: placement.startsWith('bottom') ? 'bottom' : 'top',
     triggerRef: originRef,
     property: 'transform',
-    onEntryComplete: resumeTimer,
+    onEntryComplete: finishEntry,
     onExitComplete: () => onExitComplete(toast.key),
   });
   React.useEffect(() => {
     if (toast.isExiting || !toast.timer || entryFinishedRef.current) return undefined;
-    toast.timer.pause();
-    timerPausedRef.current = true;
-    return () => {
-      if (!timerPausedRef.current) return;
-      toast.timer?.resume();
-      timerPausedRef.current = false;
-    };
-  }, [toast.isExiting, toast.timer]);
+    queue.holdTimer(toast.key);
+    return () => queue.releaseTimer(toast.key);
+  }, [queue, toast.isExiting, toast.key, toast.timer]);
   useIsomorphicLayoutEffect(() => {
     if (toast.isExiting && nodeRef.current) moveFocusFromExitingToast(nodeRef.current, returnFocusRef.current);
   }, [toast.isExiting, returnFocusRef]);
@@ -807,7 +820,7 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
   return React.createElement(ToastContext.Provider, { value }, children,
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
     React.createElement(UNSTABLE_ToastRegion, { ref: trackRegionFocus, queue: animatedQueue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
-      ({ toast }) => React.createElement(ToastView, { toast, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose })));
+      ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose })));
 };
 
 export function useToast() {
