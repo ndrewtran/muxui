@@ -159,13 +159,15 @@
         "defaults": {
           "defaultChecked": false,
           "disabled": false,
+          "size": "md",
           "indeterminate": false,
           "invalid": false
         }
       },
       "behavior": [
         "Space toggles selection",
-        "Indeterminate state is exposed as mixed until changed"
+        "Indeterminate state is exposed as mixed until changed",
+        "size defaults to md for a standalone Checkbox; inside a CheckboxGroup an omitted size follows the group, and an explicit size wins."
       ],
       "accessibility": [
         "Expose checkbox role, checked or mixed state, label, disabled, and invalid state"

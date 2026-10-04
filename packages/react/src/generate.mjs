@@ -139,6 +139,7 @@ const expectedCheckboxProps = ['checked', 'defaultChecked', 'disabled', 'size', 
 const expectedCheckboxDefaults = {
   defaultChecked: false,
   disabled: false,
+  size: 'md',
   indeterminate: false,
   invalid: false,
 };
