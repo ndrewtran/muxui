@@ -60,7 +60,7 @@ function fields({ onText, onNumber, onSearch, onDate, onTime, onRange, onSwitch,
     React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] }),
     React.createElement(CheckboxGroup, { label: 'Alerts', name: 'alerts', defaultValue: ['email'], onChange: onGroup },
       React.createElement(Checkbox, { value: 'email' }, 'Email'), React.createElement(Checkbox, { value: 'sms' }, 'SMS')),
-    React.createElement(Switch, { label: 'Enabled', description: 'Apply changes', errorMessage: 'Choose a setting', defaultSelected: false, onChange: onSwitch }),
+    React.createElement(Switch, { label: 'Enabled', description: 'Apply changes', errorMessage: 'Choose a setting', invalid: true, defaultSelected: false, onChange: onSwitch }),
     React.createElement(DateField, { label: 'Birthday', defaultValue: '2026-08-26', onChange: onDate }),
     React.createElement(DatePicker, { label: 'Due date', defaultValue: '2026-08-26', onChange: onDate }),
     React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', defaultValue: { start: '2026-08-26', end: '2026-09-01' }, onChange: onRange }),
@@ -248,6 +248,34 @@ test('SearchField clear control keeps RAC clearing and the MuxUI callback', asyn
   }
 });
 
+test('SearchField Escape clears through onClear and Enter calls onSubmit', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const env = installDom(dom);
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const events = [];
+  try {
+    await act(async () => root.render(React.createElement(SearchField, {
+      label: 'Search',
+      defaultValue: 'MuxUI',
+      onChange: (value) => events.push(['change', value]),
+      onClear: () => events.push(['clear']),
+      onSubmit: (value) => events.push(['submit', value]),
+    })));
+    const input = host.querySelector('.muxui-search-field input');
+    const key = (keyName) => act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, bubbles: true, cancelable: true })));
+    await key('Enter');
+    await key('Escape');
+    assert.equal(input.value, '');
+    await key('Escape');
+    assert.deepEqual(events, [['submit', 'MuxUI'], ['change', ''], ['clear']]);
+  } finally {
+    await act(async () => root.unmount());
+    env();
+    dom.window.close();
+  }
+});
+
 test('TextField keeps standard native input attributes on the input part', () => {
   const markup = renderToString(React.createElement(TextField, {
     label: 'Name',
@@ -385,7 +413,7 @@ test('NumberField steps by keyboard, clamps to bounds, preserves empty input, an
   }
 });
 
-test('R1.2 form controls support controlled callbacks, keyboard-compatible input, and submit/reset', async () => {
+test('R1.2 form controls follow controlled values and submit/reset through FormData', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   const changes = [];
@@ -395,22 +423,35 @@ test('R1.2 form controls support controlled callbacks, keyboard-compatible input
   try {
     const host = document.querySelector('#root');
     root = createRoot(host);
-    await act(async () => root.render(fields({
-      onText: (value) => changes.push(['text', value]),
-      onNumber: (value) => changes.push(['number', value]),
-      onSearch: (value) => changes.push(['search', value]),
-      onSwitch: (value) => changes.push(['switch', value]),
-      onSubmit: (event) => { event.preventDefault(); submits.push([event.type, new dom.window.FormData(event.currentTarget).get('startTime')]); },
-      onReset: (event) => { event.preventDefault(); resets.push(event.type); },
-    })));
-    const textInput = host.querySelector('.muxui-text-field input');
-    textInput.value = 'Updated';
-    await act(async () => textInput.dispatchEvent(new Event('input', { bubbles: true })));
-    await act(async () => host.querySelector('.muxui-switch input').click());
-    await act(async () => host.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    // Typing is proven in the browser; React DOM loaded before jsdom ignores
+    // synthetic input events, so this proves controlled props and toggles.
+    function ControlledForm({ text, quantity, search }) {
+      const [selected, setSelected] = React.useState(false);
+      return React.createElement(Form, {
+        onSubmit: (event) => { event.preventDefault(); submits.push(Object.fromEntries(new dom.window.FormData(event.currentTarget))); },
+        onReset: (event) => { event.preventDefault(); resets.push(event.type); },
+      },
+      React.createElement(TextField, { label: 'Name', name: 'name', value: text, onChange: (value) => changes.push(['text', value]) }),
+      React.createElement(NumberField, { label: 'Quantity', name: 'quantity', value: quantity, onChange: (value) => changes.push(['number', value]) }),
+      React.createElement(SearchField, { label: 'Search', name: 'search', value: search, onChange: (value) => changes.push(['search', value]) }),
+      React.createElement(Switch, { label: 'Enabled', name: 'enabled', selected, onChange: (value) => { changes.push(['switch', value]); setSelected(value); } }),
+      React.createElement('button', { type: 'submit' }, 'Submit'));
+    }
+    await act(async () => root.render(React.createElement(ControlledForm, { text: 'Andrew', quantity: 2, search: 'Mux' })));
+    await act(async () => root.render(React.createElement(ControlledForm, { text: 'Andy', quantity: 3, search: 'UI' })));
+    assert.equal(host.querySelector('.muxui-text-field input').value, 'Andy');
+    assert.equal(host.querySelector('.muxui-number-field input:not([type="hidden"])').value, '3');
+    assert.equal(host.querySelector('.muxui-search-field input').value, 'UI');
+    const switchInput = host.querySelector('.muxui-switch input');
+    await act(async () => switchInput.click());
+    assert.equal(switchInput.checked, true);
+    await act(async () => switchInput.click());
+    assert.equal(switchInput.checked, false);
+    await act(async () => switchInput.click());
+    assert.deepEqual(changes, [['switch', true], ['switch', false], ['switch', true]]);
+    await act(async () => host.querySelector('form').requestSubmit());
     await act(async () => host.querySelector('form').dispatchEvent(new Event('reset', { bubbles: true, cancelable: true })));
-    assert.equal(changes.some(([kind, value]) => kind === 'switch' && value === true), true);
-    assert.deepEqual(submits, [['submit', '09:30']]);
+    assert.deepEqual(submits, [{ name: 'Andy', quantity: '3', search: 'UI', enabled: 'on' }]);
     assert.deepEqual(resets, ['reset']);
     await act(async () => root.unmount());
   } finally {
@@ -773,7 +814,7 @@ test('R1.2 date ranges own paired FormData names and reset to their default', as
     assert.equal(firstRangeDay.textContent, '27');
     assert.equal(firstTimeHour.textContent, '10');
     assert.equal(new dom.window.FormData(form).get('tripStart'), '2026-08-27');
-    assert.equal(new dom.window.FormData(form).get('startTime'), '10:30:00');
+    assert.equal(new dom.window.FormData(form).get('startTime'), '10:30');
     assert.equal(secondRangeDay.textContent, '2');
     assert.equal(unnamedRangeDay.textContent, '2');
     assert.equal(unnamedTimeHour.textContent, '12');
@@ -842,12 +883,12 @@ test('R1.2 temporal fields honor cancelled form resets and reset normally', asyn
     await editSegment(cancelledRangeDay, '27');
     await editSegment(cancelledTimeHour, '10');
     assert.equal(new dom.window.FormData(cancelledForm).get('cancelStart'), '2026-08-27');
-    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30:00');
+    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30');
     const cancelledReset = new Event('reset', { bubbles: true, cancelable: true });
     await act(async () => cancelledForm.dispatchEvent(cancelledReset));
     assert.equal(cancelledReset.defaultPrevented, true);
     assert.equal(new dom.window.FormData(cancelledForm).get('cancelStart'), '2026-08-27');
-    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30:00');
+    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30');
     assert.equal(cancelledRangeDay.textContent, '27');
     assert.equal(cancelledTimeHour.textContent, '10');
 
@@ -870,7 +911,9 @@ test('R1.2 temporal fields honor cancelled form resets and reset normally', asyn
 test('R1.2 autocomplete is closed on SSR, filters while focused, and selects MuxUI items', async () => {
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] }));
   assert.match(server, /type="search"/u);
-  assert.doesNotMatch(server, /role="combobox"/u);
+  assert.match(server, /role="combobox"/u);
+  assert.match(server, /aria-expanded="false"/u);
+  assert.doesNotMatch(server, /aria-controls/u);
   assert.doesNotMatch(server, /muxui-autocomplete-popover|muxui-autocomplete-list/u);
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -1149,7 +1192,7 @@ test('R1.2 fields do not forward unsupported validation props', () => {
   }
 });
 
-test('R1.2 CheckboxGroup owns option names for required FormData submission', async () => {
+test('R1.2 CheckboxGroup owns option names and enforces required FormData submission', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   let root;
@@ -1164,10 +1207,17 @@ test('R1.2 CheckboxGroup owns option names for required FormData submission', as
         React.createElement(React.Fragment, null,
           React.createElement(Checkbox, { value: 'push' }, 'Push'),
           React.createElement(OptionsWrapper, null))))));
-    const formData = new dom.window.FormData(host.querySelector('form'));
+    const form = host.querySelector('form');
+    const formData = new dom.window.FormData(form);
     assert.deepEqual(formData.getAll('alerts'), ['email']);
     assert.deepEqual(formData.getAll('nestedAlerts'), ['push', 'sms']);
     assert.equal(host.querySelector('[role="group"]').getAttribute('data-required'), 'true');
+    assert.equal(form.checkValidity(), true);
+    const email = host.querySelector('input[value="email"]');
+    await act(async () => email.click());
+    assert.equal(email.checked, false);
+    assert.equal(email.required, true, 'options inherit the group required state');
+    assert.equal(form.checkValidity(), false, 'an empty required group blocks submission');
     await act(async () => root.unmount());
   } finally {
     restore();
@@ -1199,6 +1249,333 @@ test('CheckboxGroup keeps invalid error content inside its validation context', 
     assert.equal(group?.getAttribute('data-invalid'), null);
     const remainingDescriptions = input?.getAttribute('aria-describedby')?.split(' ') ?? [];
     assert.equal(remainingDescriptions.some((id) => host.ownerDocument.getElementById(id)?.textContent.includes('A value is required')), false);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+function captureConsoleProblems() {
+  const problems = [];
+  const original = { error: console.error, warn: console.warn };
+  console.error = (...args) => problems.push(args.map(String).join(' '));
+  console.warn = (...args) => problems.push(args.map(String).join(' '));
+  return { problems, restore: () => Object.assign(console, original) };
+}
+
+async function editDateSegment(segment, nextValue) {
+  await act(async () => {
+    segment.focus();
+    segment.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: nextValue }));
+    segment.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: nextValue }));
+  });
+}
+
+// Empties every editable segment; RAC emits null once the whole field is clear.
+async function clearDateSegments(field) {
+  for (const segment of field.querySelectorAll('.muxui-date-segment:not([data-type="literal"])')) {
+    for (let attempt = 0; attempt < 5 && !segment.hasAttribute('data-placeholder'); attempt += 1) {
+      await act(async () => {
+        segment.focus();
+        segment.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+      });
+    }
+  }
+}
+
+test('controlled temporal fields update, clear to null, and submit the controlled value', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const consoleProblems = captureConsoleProblems();
+  const changes = [];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderControlled = ({ date, time, range }) => root.render(React.createElement(Form, null,
+      React.createElement(DateField, { label: 'Date', name: 'date', value: date, onChange: (value) => changes.push(['date', value]) }),
+      React.createElement(DatePicker, { label: 'Due', name: 'due', value: date, onChange: (value) => changes.push(['due', value]) }),
+      React.createElement(TimeField, { label: 'Time', name: 'time', value: time, onChange: (value) => changes.push(['time', value]) }),
+      React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', value: range, onChange: (value) => changes.push(['range', value]) })));
+    const segments = (selector, type) => [...host.querySelectorAll(`${selector} [data-type="${type}"]`)];
+    const formData = () => Object.fromEntries(new dom.window.FormData(host.querySelector('form')));
+
+    await act(async () => renderControlled({ date: '2026-01-02', time: '10:15', range: { start: '2026-01-02', end: '2026-01-05' } }));
+    await act(async () => renderControlled({ date: '2026-03-04', time: '11:45', range: { start: '2026-03-04', end: '2026-03-08' } }));
+    assert.deepEqual(segments('.muxui-date-field', 'day').map((node) => node.textContent), ['4']);
+    assert.deepEqual(segments('.muxui-date-picker', 'day').map((node) => node.textContent), ['4']);
+    assert.deepEqual(segments('.muxui-time-field', 'minute').map((node) => node.textContent), ['45']);
+    assert.deepEqual(segments('.muxui-date-range-picker', 'day').map((node) => node.textContent), ['4', '8']);
+    assert.deepEqual(formData(), { date: '2026-03-04', due: '2026-03-04', time: '11:45', tripStart: '2026-03-04', tripEnd: '2026-03-08' });
+
+    for (const cleared of [{ date: null, time: null, range: null }, { date: '', time: '', range: null }]) {
+      await act(async () => renderControlled({ date: '2026-03-04', time: '11:45', range: { start: '2026-03-04', end: '2026-03-08' } }));
+      await act(async () => renderControlled(cleared));
+      for (const selector of ['.muxui-date-field', '.muxui-date-picker', '.muxui-time-field', '.muxui-date-range-picker']) {
+        for (const segment of host.querySelectorAll(`${selector} .muxui-date-segment:not([data-type="literal"])`)) {
+          assert.equal(segment.hasAttribute('data-placeholder'), true, `${selector} kept a stale ${segment.dataset.type} segment`);
+        }
+      }
+      assert.deepEqual(formData(), { date: '', due: '', time: '', tripStart: '', tripEnd: '' });
+    }
+
+    function StatefulFields() {
+      const [date, setDate] = React.useState('2026-03-04');
+      const [due, setDue] = React.useState('2026-03-04');
+      const [time, setTime] = React.useState('11:45');
+      const [range, setRange] = React.useState({ start: '2026-03-04', end: '2026-03-08' });
+      const track = (kind, set) => (value) => { changes.push([kind, value]); set(value); };
+      return React.createElement(Form, null,
+        React.createElement(DateField, { label: 'Date', name: 'date', value: date, onChange: track('date', setDate) }),
+        React.createElement(DatePicker, { label: 'Due', name: 'due', value: due, onChange: track('due', setDue) }),
+        React.createElement(TimeField, { label: 'Time', name: 'time', value: time, onChange: track('time', setTime) }),
+        React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', value: range, onChange: track('range', setRange) }));
+    }
+    await act(async () => root.render(React.createElement(StatefulFields)));
+    changes.length = 0;
+    for (const selector of ['.muxui-date-field', '.muxui-date-picker', '.muxui-time-field', '.muxui-date-range-picker']) {
+      await clearDateSegments(host.querySelector(selector));
+    }
+    assert.deepEqual(changes.filter(([, value]) => value === null).map(([kind]) => kind), ['date', 'due', 'time', 'range']);
+    assert.equal(changes.some(([, value]) => value === undefined), false);
+    assert.deepEqual(formData(), { date: '', due: '', time: '', tripStart: '', tripEnd: '' });
+    await editDateSegment(segments('.muxui-time-field', 'hour')[0], '9');
+    await editDateSegment(segments('.muxui-time-field', 'minute')[0], '05');
+    assert.equal(formData().time, '09:05');
+    assert.deepEqual(consoleProblems.problems, []);
+  } finally {
+    await act(async () => root?.unmount());
+    consoleProblems.restore();
+    restore();
+    dom.window.close();
+  }
+});
+
+test('Form server errors clear after an edit until new validationErrors arrive', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderForm = (validationErrors) => root.render(React.createElement(Form, { validationBehavior: 'aria', validationErrors },
+      React.createElement(TextField, { label: 'Name', name: 'name', defaultValue: 'Andrew' }),
+      React.createElement(DateField, { label: 'Date', name: 'date', defaultValue: '2026-03-04' }),
+      React.createElement(TimeField, { label: 'Time', name: 'time', defaultValue: '09:30' }),
+      React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', defaultValue: { start: '2026-03-04', end: '2026-03-08' } })));
+    const serverErrors = { name: 'Name taken', date: 'Date taken', time: 'Time taken', tripStart: 'Trip taken' };
+    await act(async () => renderForm(serverErrors));
+    const selectors = ['.muxui-text-field', '.muxui-date-field', '.muxui-time-field', '.muxui-date-range-picker'];
+    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows its server error`);
+
+    const text = host.querySelector('.muxui-text-field input');
+    // RAC clears server errors from the native change event that commits an edit.
+    await act(async () => {
+      text.value = 'Andy';
+      text.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await editDateSegment(host.querySelector('.muxui-date-field [data-type="day"]'), '5');
+    await editDateSegment(host.querySelector('.muxui-time-field [data-type="hour"]'), '10');
+    await editDateSegment(host.querySelector('.muxui-date-range-picker [data-type="day"]'), '5');
+    await act(async () => document.activeElement?.blur());
+    for (const selector of selectors) {
+      assert.equal(host.querySelector(selector).getAttribute('data-invalid'), null, `${selector} kept a dismissed server error`);
+      assert.equal(host.querySelector(`${selector} .muxui-field-error`), null);
+    }
+
+    await act(async () => renderForm({ ...serverErrors }));
+    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows new server errors`);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('CheckboxGroup names its group from a visible label of any node type', async () => {
+  const markup = renderToString(React.createElement(React.Fragment, null,
+    React.createElement(CheckboxGroup, { label: React.createElement('span', null, 'Toppings'), size: 'sm' },
+      React.createElement(Checkbox, { value: 'cheese' }, 'Cheese')),
+    React.createElement(CheckboxGroup, { label: 'Alerts' },
+      React.createElement(Checkbox, { value: 'email' }, 'Email')),
+    React.createElement(CheckboxGroup, { 'aria-label': 'Hidden alerts' },
+      React.createElement(Checkbox, { value: 'sms' }, 'SMS'))));
+  const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
+  const [rich, plain, unlabelled] = dom.window.document.querySelectorAll('[role="group"]');
+  const nameOf = (group) => group.getAttribute('aria-label')
+    ?? group.getAttribute('aria-labelledby').split(' ').map((id) => dom.window.document.getElementById(id)?.textContent).join(' ');
+  assert.equal(nameOf(rich), 'Toppings');
+  assert.equal(nameOf(plain), 'Alerts');
+  assert.equal(nameOf(unlabelled), 'Hidden alerts');
+  assert.equal(rich.getAttribute('data-size'), 'sm');
+  assert.equal(plain.getAttribute('data-size'), 'md');
+  dom.window.close();
+});
+
+test('Autocomplete exposes combobox popup state and submits label-only items as text', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'City', name: 'city', items: [{ label: 'Perth' }, { label: React.createElement('strong', null, 'Hobart') }, {}] }))));
+    const input = host.querySelector('input[role="combobox"]');
+    assert.equal(input.getAttribute('aria-expanded'), 'false');
+    assert.equal(input.hasAttribute('aria-controls'), false);
+    await act(async () => input.focus());
+    assert.equal(input.getAttribute('aria-expanded'), 'true');
+    assert.equal(input.getAttribute('aria-controls'), document.querySelector('.muxui-autocomplete-list').id);
+    const hobart = [...document.querySelectorAll('.muxui-autocomplete-option')].find((option) => option.textContent === 'Hobart');
+    await act(async () => hobart.click());
+    assert.equal(input.getAttribute('aria-expanded'), 'false');
+    assert.equal(new dom.window.FormData(host.querySelector('form')).get('city'), 'Hobart', 'label-only items submit their text, not an index');
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('NumberField leaves the device keyboard mode to React Aria', () => {
+  const markup = renderToString(React.createElement(NumberField, { label: 'Seats', minValue: 0, formatOptions: { maximumFractionDigits: 0 } }));
+  assert.match(markup, /inputMode="numeric"/u);
+  assert.doesNotMatch(markup, /inputMode="decimal"/u);
+});
+
+test('errorMessage alone leaves fields valid and only replaces the shown validation message', () => {
+  const controls = [
+    [TextField, { label: 'Email', name: 'email', defaultValue: 'a@b.co' }],
+    [SearchField, { label: 'Search', name: 'search', defaultValue: 'Mux' }],
+    [NumberField, { label: 'Quantity', name: 'quantity', defaultValue: 2 }],
+    [Switch, { label: 'Enabled', name: 'enabled', defaultSelected: true }],
+    [DateField, { label: 'Date', name: 'date', defaultValue: '2026-03-04' }],
+    [TimeField, { label: 'Time', name: 'time', defaultValue: '09:30' }],
+    [Autocomplete, { label: 'City', name: 'city', defaultValue: 'Melbourne', items: ['Melbourne'] }],
+  ];
+  for (const [Control, props] of controls) {
+    const valid = renderToString(React.createElement(Control, { ...props, errorMessage: 'Custom error' }));
+    assert.doesNotMatch(valid, /data-invalid|Custom error/u, `${Control.displayName} became invalid from errorMessage alone`);
+    const invalid = renderToString(React.createElement(Control, { ...props, errorMessage: 'Custom error', invalid: true }));
+    assert.match(invalid, /data-invalid="true"/u);
+    assert.match(invalid, /Custom error/u);
+  }
+});
+
+test('Autocomplete shows the selected label while FormData, onChange, and reset carry the value', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const changes = [];
+  const countries = [{ label: 'Australia', value: 'AU' }, { label: 'Austria', value: 'AT' }];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderForm = (controlledValue) => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'Country', name: 'country', items: countries, defaultValue: 'AT', onChange: (value) => changes.push(value) }),
+      React.createElement(Autocomplete, { label: 'Controlled', name: 'controlled', items: countries, value: controlledValue })));
+    await act(async () => renderForm('AU'));
+    const [input, controlledInput] = host.querySelectorAll('input[role="combobox"]');
+    const form = host.querySelector('form');
+    assert.equal(input.value, 'Austria');
+    assert.equal(controlledInput.value, 'Australia');
+    assert.deepEqual(new dom.window.FormData(form).getAll('country'), ['AT'], 'only the hidden input carries the name');
+
+    await act(async () => input.focus());
+    await act(async () => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'Country', name: 'country', items: countries, defaultValue: 'AT', onChange: (value) => changes.push(value) }),
+      React.createElement(Autocomplete, { label: 'Controlled', name: 'controlled', items: countries, value: 'Mel' }))));
+    assert.equal(controlledInput.value, 'Mel', 'an unmatched controlled value shows as typed text');
+    // The default label filters the list to Austria; reopen it from an empty query.
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })));
+    const australia = [...document.querySelectorAll('.muxui-autocomplete-option')].find((option) => option.textContent === 'Australia');
+    await act(async () => australia.click());
+    assert.equal(input.value, 'Australia');
+    assert.equal(changes.at(-1), 'AU');
+    assert.equal(new dom.window.FormData(form).get('country'), 'AU');
+
+    await act(async () => form.reset());
+    assert.equal(input.value, 'Austria');
+    assert.equal(new dom.window.FormData(form).get('country'), 'AT');
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('Autocomplete shows name-keyed server errors until a selection', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Form, { validationBehavior: 'aria', validationErrors: { city: 'City is unavailable' } },
+      React.createElement(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'] }))));
+    const field = host.querySelector('.muxui-autocomplete-search');
+    assert.equal(field.getAttribute('data-invalid'), 'true');
+    assert.match(field.querySelector('.muxui-field-error')?.textContent ?? '', /City is unavailable/u);
+    await act(async () => host.querySelector('input[role="combobox"]').focus());
+    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    assert.equal(field.getAttribute('data-invalid'), null);
+    assert.deepEqual(new dom.window.FormData(host.querySelector('form')).getAll('city'), ['Melbourne']);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('TimeField compares, displays, and submits HH:mm:ss values and bounds at minute precision', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    // aria validation shows built-in range errors immediately.
+    await act(async () => root.render(React.createElement(Form, { validationBehavior: 'aria' },
+      React.createElement(TimeField, { label: 'Closing', name: 'closing', defaultValue: '17:00:30', maxValue: '17:00' }),
+      React.createElement(TimeField, { label: 'Opening', name: 'opening', defaultValue: '09:30:15', minValue: '09:30:10' }),
+      React.createElement(TimeField, { label: 'Controlled', name: 'controlled', value: '09:30:15' }),
+      React.createElement(TimeField, { label: 'Late', name: 'late', defaultValue: '17:01', maxValue: '17:00:59' }))));
+    const form = host.querySelector('form');
+    const [closing, opening, controlled, late] = host.querySelectorAll('.muxui-time-field');
+    assert.equal(late.getAttribute('data-invalid'), 'true', 'bounds still apply at minute precision');
+    for (const field of [closing, opening, controlled]) assert.equal(field.getAttribute('data-invalid'), null, `${field.textContent} is out of range`);
+    assert.equal(controlled.querySelector('[data-type="minute"]').textContent, '30');
+    assert.equal(controlled.querySelector('[data-type="second"]'), null);
+    assert.deepEqual(Object.fromEntries(new dom.window.FormData(form)), { closing: '17:00', opening: '09:30', controlled: '09:30', late: '17:01' });
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('Autocomplete resolves a value label when items load after the value', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const countries = [{ label: 'Australia', value: 'AU' }, { label: 'Austria', value: 'AT' }];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderForm = (items) => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'Uncontrolled', name: 'uncontrolled', defaultValue: 'AU', items }),
+      React.createElement(Autocomplete, { label: 'Controlled', name: 'controlled', value: 'AU', items })));
+    await act(async () => renderForm([]));
+    const inputs = [...host.querySelectorAll('input[role="combobox"]')];
+    const formData = () => Object.fromEntries(new dom.window.FormData(host.querySelector('form')));
+    assert.deepEqual(inputs.map((input) => input.value), ['AU', 'AU']);
+    await act(async () => renderForm(countries));
+    assert.deepEqual(inputs.map((input) => input.value), ['Australia', 'Australia']);
+    assert.deepEqual(formData(), { uncontrolled: 'AU', controlled: 'AU' });
   } finally {
     await act(async () => root?.unmount());
     restore();

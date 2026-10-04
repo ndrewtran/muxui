@@ -64,13 +64,13 @@ function RowFixture({ controlled = false, selectionMode = 'single', disabled = f
     selectionMode,
     disabled,
     ...(controlled ? { expandedIds } : { defaultExpandedIds: [] }),
-    ...(selectionMode === 'multiple' ? { defaultSelectedIds: ['row-leaf'] } : {}),
     onExpandedChange: (next) => {
       setExpandedChangeCount((count) => count + 1);
       if (controlled) setExpandedIds(next);
     },
     onSelectionChange: () => setSelectionChangeCount((count) => count + 1),
-    onAction: () => setActionCount((count) => count + 1),
+    // Multiple mode omits an action so a press must start the empty selection.
+    ...(selectionMode === 'multiple' ? {} : { onAction: () => setActionCount((count) => count + 1) }),
   };
   return React.createElement('div', {
     id: 'row-fixture',

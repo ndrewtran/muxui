@@ -19,9 +19,12 @@ import {
   CalendarGridHeader as AriaCalendarGridHeader,
   CalendarHeaderCell as AriaCalendarHeaderCell,
   CalendarHeading as AriaCalendarHeading,
+  CalendarStateContext,
+  RangeCalendarStateContext,
   ColorArea as AriaColorArea,
   ColorField as AriaColorField,
   ColorPicker as AriaColorPicker,
+  ColorPickerStateContext,
   ColorSlider as AriaColorSlider,
   ColorSwatch as AriaColorSwatch,
   ColorSwatchPicker as AriaColorSwatchPicker,
@@ -169,6 +172,11 @@ function dateValue(value, name = 'Calendar') {
   try { return parseDate(value); } catch { throw new TypeError(`${name} values must use YYYY-MM-DD ISO format`); }
 }
 
+// null keeps a controlled value controlled and empty; undefined means uncontrolled.
+function controlledDateValue(value, name) {
+  return value === null ? null : dateValue(value, name);
+}
+
 function serializeDateValue(value) {
   return value ? String(value) : undefined;
 }
@@ -196,10 +204,32 @@ const readOnlyInteractionEvents = [
 ];
 const readOnlyTargetGuards = new WeakMap();
 
+// Read-only controls stay focusable and navigable. Keys that change the value are
+// blocked with any modifier, because React Aria acts on them regardless; Tab and
+// Escape are never blocked.
+const READ_ONLY_ADJUSTMENT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
+// Swatch pickers move focus with arrows, so only the selection keys are blocked.
+const READ_ONLY_SELECTION_KEYS = new Set(['Enter', ' ']);
+
+function readOnlyBlocksKey(event, keys) {
+  return keys.has(event.key);
+}
+
+function readOnlyKeyGuard(readOnly, keys = READ_ONLY_ADJUSTMENT_KEYS) {
+  return (event) => {
+    if (readOnly && readOnlyBlocksKey(event, keys)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+}
+
 function setReadOnlyTargetGuard(target, readOnly) {
   const existingGuard = readOnlyTargetGuards.get(target);
   if (readOnly && !existingGuard) {
+    const keys = target.getAttribute('role') === 'listbox' ? READ_ONLY_SELECTION_KEYS : READ_ONLY_ADJUSTMENT_KEYS;
     const guard = (event) => {
+      if (event.type === 'keydown' && !readOnlyBlocksKey(event, keys)) return;
       event.preventDefault();
       event.stopPropagation();
     };
@@ -247,17 +277,81 @@ function useReadOnlyTargets(forwardedRef, readOnly, selector) {
   return assignRef;
 }
 
-function calendarGrid(cellClass = 'muxui-calendar-cell') {
+const subscribeToNothing = () => () => {};
+const useCalendarLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+// False while hydrating server markup, true afterwards and for client-only mounts.
+function useHydrated() {
+  return React.useSyncExternalStore(subscribeToNothing, () => true, () => false);
+}
+
+function placeholderCell(cellClass, key) {
+  return React.createElement('td', { key, 'aria-hidden': 'true' }, React.createElement('div', { className: cellClass, 'data-muxui-calendar-placeholder': '' }, '\u00a0'));
+}
+
+// Server and client can disagree about today (clock and timezone), so day cells
+// render only on the client. The server snapshot keeps hydration on blank,
+// equally sized placeholder cells; client-only mounts render days at once.
+// reserve keeps the six-week height of a deferred frame so hydration never shifts it.
+function CalendarDays({ cellClass, reserve }) {
+  const hydrated = useHydrated();
+  // The reserve holds only until the first month change, which then animates normally.
+  const calendarState = React.useContext(CalendarStateContext);
+  const rangeState = React.useContext(RangeCalendarStateContext);
+  const state = calendarState ?? rangeState;
+  const month = state ? String(state.visibleRange.start) : '';
+  const [initialMonth] = React.useState(month);
+  const [reserveReleased, setReserveReleased] = React.useState(false);
+  if (reserve !== undefined && !reserveReleased && month !== initialMonth) setReserveReleased(true);
   const grid = React.createElement(CalendarHeightMotion, null, React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
-      (date) => cellClass === 'muxui-calendar-cell'
+      (date) => !hydrated
+        ? placeholderCell(cellClass)
+        : cellClass === 'muxui-calendar-cell'
         ? React.createElement(AriaCalendarCell, { date, className: cellClass },
           (renderProps) => React.createElement(CalendarSelectionCell, renderProps))
         : React.createElement(AriaCalendarCell, { date, className: cellClass, 'data-muxui-date': String(date) })),
   ));
-  return cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
+  const content = cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
+  return reserve === undefined ? content : React.createElement('div', { style: reserveReleased ? undefined : { minHeight: reserve } }, content);
+}
+
+function calendarGrid(cellClass = 'muxui-calendar-cell', reserve) {
+  return React.createElement(CalendarDays, { cellClass, reserve });
+}
+
+// Without value, defaultValue, or focusedValue, React Aria shows the month of
+// today, which server and browser may disagree on. Such calendars hydrate a
+// date-free frame (label, header, blank heading, six blank weeks) and render the
+// real calendar after hydration, keeping the six-week height until the month changes.
+function useDeferredCalendarFrame(anchored) {
+  const deferred = !useHydrated() && !anchored;
+  const gridRef = React.useRef(null);
+  const [reserve, setReserve] = React.useState(undefined);
+  useCalendarLayoutEffect(() => {
+    if (deferred && gridRef.current) setReserve(gridRef.current.getBoundingClientRect().height);
+  }, [deferred]);
+  return { deferred, gridRef, reserve };
+}
+
+// ref receives the frame root, a div like the real calendar root that replaces it.
+function calendarPlaceholderFrame({ ref, className, label, labelId, gridRef, cellClass }) {
+  const icon = (Icon) => React.createElement(Icon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' });
+  const days = Array.from({ length: 7 }, (_, index) => index);
+  return React.createElement('div', { ref, className, 'data-muxui-calendar-placeholder': '' },
+    label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
+    React.createElement('div', { className: 'muxui-calendar-header' },
+      React.createElement(IconButton, { 'aria-label': 'Previous month', disabled: true, className: 'muxui-calendar-previous' }, icon(ChevronLeftIcon)),
+      React.createElement('h2', { className: 'muxui-calendar-heading', 'aria-hidden': 'true' }, '\u00a0'),
+      React.createElement(IconButton, { 'aria-label': 'Next month', disabled: true, className: 'muxui-calendar-next' }, icon(ChevronRightIcon))),
+    React.createElement('div', { ref: gridRef },
+      React.createElement('table', { className: 'muxui-calendar-grid', 'aria-hidden': 'true', cellPadding: 0 },
+        React.createElement('thead', { className: 'muxui-calendar-grid-header' },
+          React.createElement('tr', null, days.map((day) => React.createElement('th', { key: day, className: 'muxui-calendar-header-cell' }, '\u00a0')))),
+        React.createElement('tbody', { className: 'muxui-calendar-grid-body' },
+          Array.from({ length: 6 }, (_, week) => React.createElement('tr', { key: week }, days.map((day) => placeholderCell(cellClass, day))))))));
 }
 
 function calendarHeader() {
@@ -272,7 +366,7 @@ function calendarProps(props, name, labelId) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, name);
   return {
     ...rest,
-    value: dateValue(value, name),
+    value: controlledDateValue(value, name),
     defaultValue: dateValue(defaultValue, name),
     focusedValue: dateValue(focusedValue, name),
     minValue: dateValue(minValue, name),
@@ -281,7 +375,7 @@ function calendarProps(props, name, labelId) {
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
-    isInvalid: invalid,
+    isInvalid: invalid || undefined,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
     className: classNames(`muxui-${name.toLowerCase()}`, className),
@@ -294,11 +388,14 @@ export const Calendar = /*#__PURE__*/ (() => {
   const component = React.forwardRef(function Calendar(props, ref) {
     const { label, description: _description, errorMessage: _errorMessage, ...rest } = props;
     const labelId = React.useId();
-    const calendar = React.createElement(AriaCalendar, calendarProps({ ...rest, label }, 'Calendar', labelId),
+    const ariaProps = calendarProps({ ...rest, label }, 'Calendar', labelId);
+    const frame = useDeferredCalendarFrame(ariaProps.value != null || ariaProps.defaultValue != null || ariaProps.focusedValue != null);
+    if (frame.deferred) return calendarPlaceholderFrame({ ref, className: ariaProps.className, label, labelId, gridRef: frame.gridRef, cellClass: 'muxui-calendar-cell' });
+    const calendar = React.createElement(AriaCalendar, ariaProps,
       () => React.createElement(React.Fragment, null,
         label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
         calendarHeader(),
-        calendarGrid()));
+        calendarGrid('muxui-calendar-cell', frame.reserve)));
     return React.createElement(CalendarSelectionMotion, { rootRef: ref }, calendar);
   });
   component.displayName = 'Calendar';
@@ -313,10 +410,12 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'RangeCalendar');
     const labelId = React.useId();
     const mapRange = (range) => range ? { start: dateValue(range.start, 'RangeCalendar'), end: dateValue(range.end, 'RangeCalendar') } : undefined;
+    const frame = useDeferredCalendarFrame(value != null || defaultValue != null || dateValue(focusedValue, 'RangeCalendar') !== undefined);
+    if (frame.deferred) return calendarPlaceholderFrame({ ref, className: classNames('muxui-range-calendar', className), label, labelId, gridRef: frame.gridRef, cellClass: 'muxui-range-calendar-cell' });
     return React.createElement(AriaRangeCalendar, {
       ...rest,
       ref,
-      value: mapRange(value),
+      value: value === null ? null : mapRange(value),
       defaultValue: mapRange(defaultValue),
       focusedValue: dateValue(focusedValue, 'RangeCalendar'),
       minValue: dateValue(minValue, 'RangeCalendar'),
@@ -325,7 +424,7 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
       isDisabled: disabled,
       isReadOnly: readOnly,
       isRequired: required,
-      isInvalid: invalid,
+      isInvalid: invalid || undefined,
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
       className: classNames('muxui-range-calendar', className),
@@ -334,7 +433,7 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
     },
     label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
     calendarHeader(),
-    calendarGrid('muxui-range-calendar-cell'));
+    calendarGrid('muxui-range-calendar-cell', frame.reserve));
   });
   component.displayName = 'RangeCalendar';
   return component;
@@ -351,7 +450,7 @@ export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, second
   return React.createElement(AriaColorSwatch, {
     ...props, ref, color: primary,
     colorName: colorName?.trim() || (secondary ? `${primary.getColorName(locale)}, ${secondary.getColorName(locale)}` : undefined),
-    isDisabled: effectiveDisabled, 'aria-disabled': effectiveDisabled || undefined,
+    isDisabled: effectiveDisabled,
     'data-disabled': effectiveDisabled || undefined, 'data-readonly': pickerState.readOnly || undefined,
     'data-muxui-color-paint': 'sample',
     'data-shape': shape, 'data-two-tone': secondary ? '' : undefined,
@@ -367,6 +466,9 @@ export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, second
 });
 ColorSwatch.displayName = 'ColorSwatch';
 
+// React Aria reads isInvalid: false as controlled-valid, which hides failed native
+// validation, so these fields pass isInvalid only when invalid is set. errorMessage
+// replaces the shown message and never makes a field invalid by itself.
 export const ColorField = React.forwardRef(function ColorField({ label, description, errorMessage, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, size, name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorField');
   const resolvedSize = normalizeChoiceControlSize(size, 'ColorField');
@@ -374,9 +476,9 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
   return React.createElement(AriaColorField, {
-    ...props, ref, name, value: colorValue(value, 'ColorField'), defaultValue: colorValue(defaultValue, 'ColorField'),
-    onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next?.toString()); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
-    isInvalid: invalid || errorMessage !== undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
+    ...props, ref, name, value: value === null ? null : colorValue(value, 'ColorField'), defaultValue: colorValue(defaultValue, 'ColorField'),
+    onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
+    isInvalid: invalid || undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(AriaInput, { className: 'muxui-field-input' }),
   description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
@@ -384,7 +486,9 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
 });
 ColorField.displayName = 'ColorField';
 
-export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, invalid: _invalid, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+// Colour controls forward no untyped props; upstream props such as onChangeEnd,
+// xChannel, or colorSpace would bypass the Mux UI guards and string values.
+export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorArea');
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
@@ -401,7 +505,6 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
   return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
     label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
     React.createElement(AriaColorArea, {
-      ...props,
       ref: assignAreaRef,
       value: colorValue(value, 'ColorArea'),
       defaultValue: colorValue(defaultValue, 'ColorArea'),
@@ -413,7 +516,7 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
       'data-muxui-color-paint': 'area',
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),
       onTouchStartCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
       onChangeCapture: preventReadOnlyInteraction,
@@ -427,10 +530,33 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
 });
 ColorArea.displayName = 'ColorArea';
 
+const COLOR_SPACE_CHANNELS = {
+  rgb: ['red', 'green', 'blue', 'alpha'],
+  hsl: ['hue', 'saturation', 'lightness', 'alpha'],
+  hsb: ['hue', 'saturation', 'brightness', 'alpha'],
+};
+
+// Without colorSpace, React Aria reads the channel from the value's own space.
+function assertColorSliderChannel(channel, colorSpace, color) {
+  // Computed per call so the module keeps no import-time work.
+  const channels = [...new Set(Object.values(COLOR_SPACE_CHANNELS).flat())];
+  if (!channels.includes(channel)) throw new TypeError(`ColorSlider channel must be one of: ${channels.join(', ')}`);
+  if (colorSpace !== undefined && !Object.hasOwn(COLOR_SPACE_CHANNELS, colorSpace)) throw new TypeError('ColorSlider colorSpace must be one of: rgb, hsl, hsb');
+  const space = colorSpace ?? color?.getColorSpace();
+  if (space && !COLOR_SPACE_CHANNELS[space].includes(channel)) {
+    throw new TypeError(`ColorSlider channel ${channel} is not in the ${space} color space; set colorSpace to ${Object.keys(COLOR_SPACE_CHANNELS).filter((key) => COLOR_SPACE_CHANNELS[key].includes(channel)).join(' or ')}`);
+  }
+}
+
 // Include displayName in the pure initialization so unused sliders shed their motion dependency.
 export const ColorSlider = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+  const component = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
+    const color = colorValue(value, 'ColorSlider');
+    const defaultColor = colorValue(defaultValue, 'ColorSlider');
+    // Inside a ColorPicker, React Aria drives the slider with the picker's colour.
+    const pickerColor = React.useContext(ColorPickerStateContext)?.color;
+    assertColorSliderChannel(channel, colorSpace, pickerColor ?? color ?? defaultColor);
     const pickerState = React.useContext(ColorPickerContext);
     const effectiveDisabled = disabled || pickerState.disabled;
     const effectiveReadOnly = readOnly || pickerState.readOnly;
@@ -441,14 +567,13 @@ export const ColorSlider = /* @__PURE__ */ (() => {
       }
     };
     const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-    return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+    return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly), onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
       React.createElement(AriaColorSlider, {
-        ...props,
         ref: assignSliderRef,
         channel,
         colorSpace,
-        value: colorValue(value, 'ColorSlider'),
-        defaultValue: colorValue(defaultValue, 'ColorSlider'),
+        value: color,
+        defaultValue: defaultColor,
         onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
         isDisabled: effectiveDisabled,
         orientation,
@@ -472,8 +597,8 @@ function assertColorWheelGeometry(outerRadius, innerRadius) {
 }
 
 export const ColorWheel = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function ColorWheel({ value, defaultValue, onChange, disabled = false, readOnly = false, className, outerRadius = 96, innerRadius = 64, label: _label, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
-    accessibleName({ ariaLabel, ariaLabelledby }, 'ColorWheel');
+  const component = React.forwardRef(function ColorWheel({ value, defaultValue, onChange, disabled = false, readOnly = false, className, outerRadius = 96, innerRadius = 64, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+    if (!ariaLabel && !ariaLabelledby) throw new TypeError('ColorWheel requires aria-label or aria-labelledby');
     assertColorWheelGeometry(outerRadius, innerRadius);
     const pickerState = React.useContext(ColorPickerContext);
     const effectiveDisabled = disabled || pickerState.disabled;
@@ -486,7 +611,6 @@ export const ColorWheel = /* @__PURE__ */ (() => {
     };
     const assignWheelRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
     return React.createElement(AriaColorWheel, {
-      ...props,
       ref: assignWheelRef,
       outerRadius,
       innerRadius,
@@ -499,7 +623,7 @@ export const ColorWheel = /* @__PURE__ */ (() => {
       'data-readonly': effectiveReadOnly || undefined,
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),
       onTouchStartCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
       onChangeCapture: preventReadOnlyInteraction,
@@ -514,12 +638,40 @@ export const ColorWheel = /* @__PURE__ */ (() => {
 })();
 
 export const ColorPicker = React.forwardRef(function ColorPicker({ value, defaultValue, onChange, disabled = false, readOnly = false, children, className, ...props }, ref) {
-  return React.createElement('div', { ...props, ref, 'aria-disabled': disabled || undefined, 'data-disabled': disabled || undefined, 'data-readonly': readOnly || undefined, className: classNames('muxui-color-picker', className) }, React.createElement(AriaColorPicker, { value: colorValue(value, 'ColorPicker'), defaultValue: colorValue(defaultValue, 'ColorPicker'), onChange: (next) => { if (!disabled && !readOnly) onChange?.(next.toString()); } }, React.createElement(ColorPickerContext.Provider, { value: { disabled, readOnly } }, children)));
+  // ARIA names and states need a role; a labelled picker is a group, an unlabelled one a plain wrapper.
+  const labelled = Boolean(props['aria-label'] || props['aria-labelledby']);
+  return React.createElement('div', { ...props, ref, role: labelled ? 'group' : undefined, 'aria-disabled': (labelled && disabled) || undefined, 'data-disabled': disabled || undefined, 'data-readonly': readOnly || undefined, className: classNames('muxui-color-picker', className) }, React.createElement(AriaColorPicker, { value: colorValue(value, 'ColorPicker'), defaultValue: colorValue(defaultValue, 'ColorPicker'), onChange: (next) => { if (!disabled && !readOnly) onChange?.(next.toString()); } }, React.createElement(ColorPickerContext.Provider, { value: { disabled, readOnly } }, children)));
 });
 ColorPicker.displayName = 'ColorPicker';
 
-export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, readOnly = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
-  const normalized = normalizeItems(items);
+// React Aria keys swatch options by colour, so each item needs a distinct colour.
+// An explicit item label or textValue becomes the swatch colour name.
+function colorSwatchItems(items) {
+  const seen = new Set();
+  return normalizeItems(items).map((item, index) => {
+    const color = colorValue(item.color ?? item.value, 'ColorSwatchPicker');
+    const key = color?.toString('hexa');
+    if (seen.has(key)) throw new TypeError(`ColorSwatchPicker items must have distinct colors: ${item.id}`);
+    seen.add(key);
+    const source = items[index];
+    const named = source && typeof source === 'object' && (source.textValue !== undefined || source.label !== undefined);
+    return { ...item, color, colorName: named ? item.textValue : undefined };
+  });
+}
+
+// React Aria treats a null swatch value as uncontrolled, so a controlled empty
+// picker selects a transparent black that no item uses.
+function unusedSwatchColor(items) {
+  const used = new Set(items.map((item) => item.color?.toString('hexa')));
+  for (let alpha = 0; alpha < 256; alpha += 1) {
+    const color = parseColor(`#000000${alpha.toString(16).padStart(2, '0')}`);
+    if (!used.has(color.toString('hexa'))) return color;
+  }
+  throw new TypeError('ColorSwatchPicker cannot represent an empty value for these items');
+}
+
+export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+  const normalized = colorSwatchItems(items);
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
@@ -539,7 +691,7 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
       'data-readonly': effectiveReadOnly || undefined,
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly, READ_ONLY_SELECTION_KEYS),
       onTouchStartCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
       onChangeCapture: preventReadOnlyInteraction,
@@ -547,9 +699,8 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
     React.createElement(
       AriaColorSwatchPicker,
       {
-        ...props,
         ref: assignSwatchPickerRef,
-        value: colorValue(value, 'ColorSwatchPicker'),
+        value: value === null ? unusedSwatchColor(normalized) : colorValue(value, 'ColorSwatchPicker'),
         defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'),
         onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
         isDisabled: effectiveDisabled,
@@ -562,16 +713,16 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
         AriaColorSwatchPickerItem,
         {
           key: item.id,
-          color: colorValue(item.color ?? item.value, 'ColorSwatchPicker'),
+          color: item.color,
           id: item.id,
           isDisabled: effectiveDisabled || item.disabled,
           'data-readonly': effectiveReadOnly || undefined,
           className: 'muxui-color-swatch-picker-item',
         },
         React.createElement(AriaColorSwatch, {
-          color: colorValue(item.color ?? item.value, 'ColorSwatchPicker'),
+          color: item.color,
+          colorName: item.colorName,
           isDisabled: effectiveDisabled || item.disabled,
-          'aria-disabled': effectiveDisabled || item.disabled || undefined,
           'data-disabled': effectiveDisabled || item.disabled || undefined,
           'data-muxui-color-paint': 'sample',
           className: 'muxui-color-swatch',
@@ -650,10 +801,14 @@ export const GridList = /*#__PURE__*/ (() => {
       defaultSelectedKeys,
       disabledKeys,
       onSelectionChange,
-      onAction: (key) => {
-        const item = normalized.find((candidate) => candidate.id === String(key));
-        if (!disabled && !item?.disabled) onAction?.(item);
-      },
+      // A RAC action handler turns presses into actions while nothing is
+      // selected, so only consumer actions may suppress press selection.
+      ...(onAction ? {
+        onAction: (key) => {
+          const item = normalized.find((candidate) => candidate.id === String(key));
+          if (!disabled && !item?.disabled) onAction(item);
+        },
+      } : {}),
       isDisabled: disabled,
       'aria-disabled': disabled || undefined,
       className,
@@ -798,8 +953,10 @@ export const ComboBox = /*#__PURE__*/ (() => {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ComboBox');
     const resolvedSize = normalizeChoiceControlSize(size, 'ComboBox');
     const normalized = normalizeItems(items);
-    const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !disabled && !readOnly) onSelect?.(item); };
-    return React.createElement(AriaComboBox, { ...props, ref, items: normalized, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+    const disabledKeys = new Set(normalized.filter((item) => item.disabled).map((item) => item.id));
+    const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !item.disabled && !disabled && !readOnly) onSelect?.(item); };
+    // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
+    return React.createElement(AriaComboBox, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
@@ -807,7 +964,7 @@ export const ComboBox = /*#__PURE__*/ (() => {
           React.createElement(ChevronDownIcon, { className: 'muxui-combo-box-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
       description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
       errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', 'data-size': resolvedSize }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-combo-box-list', 'data-size': resolvedSize }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, className: 'muxui-combo-box-option' }, item.label))),
+      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', 'data-size': resolvedSize }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-combo-box-list', 'data-size': resolvedSize }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined, className: 'muxui-combo-box-option' }, item.label))),
     );
   });
   component.displayName = 'ComboBox';
@@ -850,7 +1007,7 @@ export const Select = /*#__PURE__*/ (() => {
         isOpen: disabled ? false : open, defaultOpen: !disabled && defaultOpen,
         onOpenChange: (next) => { if (!disabled || !next) onOpenChange?.(next); },
         onSelectionChange: handleSelection, isDisabled: disabled, isRequired: required,
-        isInvalid: invalid || errorMessage !== undefined, name, placeholder,
+        isInvalid: invalid || undefined, name, placeholder,
         'data-readonly': readOnly || undefined, className: classNames('muxui-select', className),
         'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
       },
@@ -901,13 +1058,11 @@ export const Select = /*#__PURE__*/ (() => {
 })();
 
 export const RadioGroup = /*#__PURE__*/ (() => {
-  const component = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+  const component = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
     const labelId = React.useId();
-    const primitiveLabel = typeof label === 'string' || typeof label === 'number' || typeof label === 'bigint'
-      ? String(label)
-      : undefined;
-    const generatedLabelledby = ariaLabel === undefined && ariaLabelledby === undefined && primitiveLabel === undefined && label !== undefined && label !== null
+    // The visible label text labels the group, so the two cannot drift apart.
+    const generatedLabelledby = ariaLabel === undefined && ariaLabelledby === undefined && label !== undefined && label !== null
       ? labelId
       : undefined;
     if (orientation !== 'horizontal' && orientation !== 'vertical') {
@@ -922,7 +1077,7 @@ export const RadioGroup = /*#__PURE__*/ (() => {
         React.createElement(RadioMotionIndicator, { renderProps }),
         option.label ?? option.value)))
       : children;
-    const group = React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel ?? (ariaLabelledby === undefined ? primitiveLabel : undefined), 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
+    const group = React.createElement(AriaRadioGroup, { ref, name, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
     const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref }, group);
     const content = label === undefined
       ? motionGroup
@@ -936,7 +1091,7 @@ export const RadioGroup = /*#__PURE__*/ (() => {
 })();
 
 export const Slider = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+  const component = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'Slider');
     const readOnlyRef = useReadOnlyTargets(ref, readOnly, '[role="slider"], input[type="range"]');
     const preventReadOnlyInteraction = React.useCallback((event) => {
@@ -977,12 +1132,12 @@ export const Slider = /* @__PURE__ */ (() => {
       onPointerMoveCapture: preventReadOnlyInteraction,
       onTouchMoveCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(readOnly),
       onChangeCapture: preventReadOnlyInteraction,
       className: classNames('muxui-slider', className),
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(SliderMotionTrack, { orientation, readOnly })));
+    }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(SliderMotionTrack, { orientation, readOnly, name })));
   });
   component.displayName = 'Slider';
   return component;
@@ -1005,13 +1160,15 @@ function normalizeSortDescriptor(value, columns) {
 
 export const Table = React.forwardRef(function Table({ columns = [], rows = [], selectedIds, defaultSelectedIds, onSelectionChange, onRowAction, sortDescriptor, onSortChange, selectionMode = 'none', disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, ...props }, ref) {
   const normalizedRows = normalizeItems(rows);
+  // Cells read the consumer's row, not the normalized copy that injects id, label, and value.
+  const sourceRows = new Map(normalizedRows.map((row, index) => [row.id, rows[index]]));
   const normalizedColumns = normalizeItems(columns);
   const normalizedSortDescriptor = normalizeSortDescriptor(sortDescriptor, normalizedColumns);
   accessibleName({ ariaLabel }, 'Table');
   const disabledKeys = disabled ? new Set(normalizedRows.map((row) => row.id)) : new Set(normalizedRows.filter((row) => row.disabled).map((row) => row.id));
-  return React.createElement(AriaTable, { ...props, ref, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), sortDescriptor: normalizedSortDescriptor, disabledKeys, isDisabled: disabled, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onSortChange: (next) => { if (disabled || !next) return; const descriptor = normalizeSortDescriptor({ column: String(next.column), direction: next.direction }, normalizedColumns); onSortChange?.(descriptor); }, onRowAction: (key) => { const row = normalizedRows.find((item) => item.id === String(key)); if (!disabled && !row?.disabled) onRowAction?.(row); }, 'aria-label': ariaLabel, 'aria-disabled': disabled || undefined, className: classNames('muxui-table', className) },
+  return React.createElement(AriaTable, { ...props, ref, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), sortDescriptor: normalizedSortDescriptor, disabledKeys, isDisabled: disabled, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onSortChange: (next) => { if (disabled || !next) return; const descriptor = normalizeSortDescriptor({ column: String(next.column), direction: next.direction }, normalizedColumns); onSortChange?.(descriptor); }, ...(onRowAction ? { onRowAction: (key) => { const row = normalizedRows.find((item) => item.id === String(key)); if (!disabled && !row?.disabled) onRowAction(row); } } : {}), 'aria-label': ariaLabel, 'aria-disabled': disabled || undefined, className: classNames('muxui-table', className) },
     React.createElement(AriaTableHeader, { columns: normalizedColumns, className: 'muxui-table-header' }, (column) => React.createElement(AriaColumn, { id: column.id, isRowHeader: column.isRowHeader, allowsSorting: column.sortable, className: 'muxui-table-column' }, column.label)),
-    React.createElement(AriaTableBody, { items: normalizedRows, className: 'muxui-table-body' }, (row) => React.createElement(AriaRow, { id: row.id, className: 'muxui-table-row' }, normalizedColumns.map((column) => React.createElement(AriaCell, { key: column.id, className: 'muxui-table-cell' }, row[column.id] ?? row.values?.[column.id] ?? '')))),
+    React.createElement(AriaTableBody, { items: normalizedRows, className: 'muxui-table-body' }, (row) => React.createElement(AriaRow, { id: row.id, className: 'muxui-table-row' }, normalizedColumns.map((column) => React.createElement(AriaCell, { key: column.id, className: 'muxui-table-cell' }, row.values?.[column.id] ?? sourceRows.get(row.id)?.[column.id] ?? '')))),
   );
 });
 Table.displayName = 'Table';
@@ -1022,7 +1179,7 @@ export const Tabs = /*#__PURE__*/ (() => {
     accessibleName({ ariaLabel, ariaLabelledby }, 'Tabs');
     const resolvedSize = normalizeChoiceControlSize(size, 'Tabs');
     const resolvedVariant = normalizeTabsVariant(variant);
-    return React.createElement(AriaTabs, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue ?? normalized[0]?.id, onSelectionChange: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); }, orientation, keyboardActivation, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tabs', className), 'data-size': resolvedSize, 'data-variant': resolvedVariant },
+    return React.createElement(AriaTabs, { ...props, ref, selectedKey: value, defaultSelectedKey: defaultValue ?? (normalized.find((item) => !item.disabled) ?? normalized[0])?.id, onSelectionChange: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onChange?.(String(key)); }, orientation, keyboardActivation, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tabs', className), 'data-size': resolvedSize, 'data-variant': resolvedVariant },
       React.createElement(TabsMotion, { orientation, variant: resolvedVariant, disabled }, React.createElement(AriaTabList, { items: normalized, className: 'muxui-tab-list' }, (item) => React.createElement(AriaTab, { id: item.id, isDisabled: disabled || item.disabled, 'data-disabled': disabled || item.disabled || undefined, 'aria-disabled': disabled || item.disabled || undefined, className: 'muxui-tab' }, React.createElement('span', { className: 'muxui-tab-label' }, item.label)))),
       React.createElement(AriaTabPanels, { items: normalized, className: 'muxui-tab-panels' }, (item) => React.createElement(AriaTabPanel, { id: item.id, className: 'muxui-tab-panel' }, item.panel)),
     );
@@ -1034,7 +1191,7 @@ export const Tabs = /*#__PURE__*/ (() => {
 export const TagGroup = React.forwardRef(function TagGroup({ label, items = [], onRemove, onAction, disabled = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   const normalized = normalizeItems(items);
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'TagGroup');
-  return React.createElement(AriaTagGroup, { ref, onRemove: (keys) => { if (!disabled) onRemove?.([...keys].map(String).map((id) => normalized.find((item) => item.id === id)).filter((item) => item && !item.disabled)); }, onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tag-group', className) }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTagList, { items: normalized, className: 'muxui-tag-list' }, (item) => React.createElement(AriaTag, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, className: 'muxui-tag' }, item.label, onRemove ? React.createElement(IconButton, { slot: 'remove', disabled: disabled || item.disabled, className: 'muxui-tag-remove' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null)));
+  return React.createElement(AriaTagGroup, { ref, ...(onRemove ? { onRemove: (keys) => { if (!disabled) onRemove([...keys].map(String).map((id) => normalized.find((item) => item.id === id)).filter((item) => item && !item.disabled)); } } : {}), onAction: (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, className: classNames('muxui-tag-group', className) }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTagList, { items: normalized, className: 'muxui-tag-list' }, (item) => React.createElement(AriaTag, { id: item.id, textValue: item.textValue, isDisabled: disabled || item.disabled, className: 'muxui-tag' }, item.label, onRemove ? React.createElement(IconButton, { slot: 'remove', disabled: disabled || item.disabled, className: 'muxui-tag-remove' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 12 })) : null)));
 });
 TagGroup.displayName = 'TagGroup';
 
@@ -1069,12 +1226,33 @@ export const ToggleButtonGroup = /*#__PURE__*/ (() => {
   return component;
 })();
 
-function toTokenValue(values = []) {
-  return new TokenFieldValue(values.map((value) => ({ type: 'token', text: String(value), value: String(value) })));
+function toTokenValue(values = [], text = '') {
+  const segments = values.map((value) => ({ type: 'token', text: String(value), value: String(value) }));
+  if (text) segments.push({ type: 'text', text });
+  return new TokenFieldValue(segments);
 }
 
 function tokenValues(fieldValue) {
   return fieldValue.segments.filter((segment) => segment.type === 'token').map((segment) => String(segment.value ?? segment.text));
+}
+
+function draftText(fieldValue) {
+  return fieldValue.segments.filter((segment) => segment.type === 'text').map((segment) => segment.text).join('');
+}
+
+// Enter commits each trimmed text run as a token in place; blank runs are dropped.
+// Duplicate tokens are kept, matching the token array contract.
+function commitDraftText(fieldValue) {
+  const segments = fieldValue.segments.flatMap((segment) => {
+    if (segment.type !== 'text') return [segment];
+    const text = segment.text.trim();
+    return text ? [{ type: 'token', text, value: text }] : [];
+  });
+  return new TokenFieldValue(segments, { caretPosition: { index: segments.length, offset: 0 } });
+}
+
+function sameTokens(left, right) {
+  return left.length === right.length && left.every((token, index) => token === String(right[index]));
 }
 
 function useTokenFieldFormReset(onReset) {
@@ -1102,28 +1280,51 @@ function useTokenFieldFormReset(onReset) {
   }, []);
 }
 
+// The public value is the token array; typed text stays an internal draft beside
+// the tokens until Enter commits it. React Aria ends IME composition whenever the
+// value object changes, so the field value keeps its identity until the tokens or
+// the text change.
 export const TokenField = React.forwardRef(function TokenField({ label, value, defaultValue = [], onChange, disabled = false, readOnly = false, name, placeholder, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'TokenField');
   const controlled = value !== undefined;
   const initialDefaultValueRef = React.useRef(null);
   if (initialDefaultValueRef.current === null) initialDefaultValueRef.current = [...defaultValue];
   const initialDefaultValue = initialDefaultValueRef.current;
-  const [uncontrolledValue, setUncontrolledValue] = React.useState(() => [...initialDefaultValue]);
+  const [fieldValue, setFieldValue] = React.useState(() => toTokenValue(controlled ? value : initialDefaultValue));
   const [resetVersion, setResetVersion] = React.useState(0);
-  const currentValue = controlled ? value : uncontrolledValue;
+  let currentFieldValue = fieldValue;
+  // Controlled tokens that differ from the field (an outside change or a rejected
+  // edit) replace the field tokens and keep the draft text.
+  if (controlled && !sameTokens(tokenValues(fieldValue), value)) {
+    currentFieldValue = toTokenValue(value, draftText(fieldValue));
+    setFieldValue(currentFieldValue);
+  }
+  const currentValue = tokenValues(currentFieldValue);
+  const inputRef = React.useRef(null);
+  const showPlaceholder = Boolean(placeholder) && currentFieldValue.toString() === '';
+  React.useLayoutEffect(() => {
+    if (showPlaceholder) inputRef.current?.setAttribute('aria-placeholder', placeholder);
+    else inputRef.current?.removeAttribute('aria-placeholder');
+  }, [showPlaceholder, placeholder]);
   const resetAnchorRef = useTokenFieldFormReset(() => {
     if (!controlled) {
-      setUncontrolledValue([...initialDefaultValue]);
+      setFieldValue(toTokenValue(initialDefaultValue));
       setResetVersion((version) => version + 1);
     }
   });
   const handleChange = (next) => {
     if (disabled || readOnly) return;
     const nextValue = tokenValues(next);
-    if (!controlled) setUncontrolledValue(nextValue);
-    onChange?.(nextValue);
+    // A controlled consumer that keeps its tokens rejects the change on the next render.
+    setFieldValue(next);
+    if (!sameTokens(nextValue, currentValue)) onChange?.(nextValue);
   };
-  return React.createElement(AriaTokenField, { key: resetVersion, ref, value: toTokenValue(currentValue), onChange: handleChange, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTokenInput, { className: 'muxui-token-input', children: (segment) => segment.type === 'token' ? React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) : null }), React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }), name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null, placeholder ? React.createElement('span', { className: 'muxui-token-placeholder' }, placeholder) : null);
+  // React Aria calls onSubmit for Enter (insertParagraph), never mid-composition.
+  const handleSubmit = () => {
+    if (disabled || readOnly || !draftText(currentFieldValue).trim()) return;
+    handleChange(commitDraftText(currentFieldValue));
+  };
+  return React.createElement(AriaTokenField, { key: resetVersion, ref, value: currentFieldValue, onChange: handleChange, onSubmit: handleSubmit, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTokenInput, { ref: inputRef, className: 'muxui-token-input', children: (segment) => segment.type === 'token' ? React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) : null }), React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }), name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null, showPlaceholder ? React.createElement('span', { className: 'muxui-token-placeholder', 'aria-hidden': 'true' }, placeholder) : null);
 });
 TokenField.displayName = 'TokenField';
 
@@ -1226,7 +1427,7 @@ export const Tree = /*#__PURE__*/ (() => {
       motionControllerRef.current?.beforeExpandedChange();
       if (!disabled) onExpandedChange?.(keyList(keys));
     }, [disabled, onExpandedChange]);
-    const tree = React.createElement(AriaTree, { ...props, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), expandedKeys: expanded, defaultExpandedKeys: defaultExpanded, disabledKeys, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onExpandedChange: handleExpandedChange, onAction: (key) => { const item = findTreeItem(normalized, key); if (!disabled && !item?.disabled) onAction?.(item); }, isDisabled: disabled, className: classNames('muxui-tree', className) }, normalized.map((item) => React.cloneElement(treeItem(item, normalizedExpansionTrigger, disabled), { key: item.id })));
+    const tree = React.createElement(AriaTree, { ...props, selectionMode, selectedKeys: keySet(selectedIds), defaultSelectedKeys: keySet(defaultSelectedIds), expandedKeys: expanded, defaultExpandedKeys: defaultExpanded, disabledKeys, onSelectionChange: (keys) => { if (!disabled) onSelectionChange?.(keyList(keys)); }, onExpandedChange: handleExpandedChange, ...(onAction ? { onAction: (key) => { const item = findTreeItem(normalized, key); if (!disabled && !item?.disabled) onAction(item); } } : {}), isDisabled: disabled, className: classNames('muxui-tree', className) }, normalized.map((item) => React.cloneElement(treeItem(item, normalizedExpansionTrigger, disabled), { key: item.id })));
     return React.createElement(TreeMotion, { rootRef: ref, controllerRef: motionControllerRef }, tree);
   });
   component.displayName = 'Tree';

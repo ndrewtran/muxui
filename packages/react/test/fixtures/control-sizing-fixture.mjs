@@ -181,6 +181,8 @@ function sizedControls(size, timeFieldsMounted) {
       h(Checkbox, { defaultChecked: true, key: 'email', value: 'email' }, 'Email'))),
     control('checkbox-group-md-child', h(CheckboxGroup, { label: 'Override', size: 'sm' },
       h(Checkbox, { defaultChecked: true, key: 'md', size: 'md', value: 'md' }, 'Medium child'))),
+    control('checkbox-group-lg-md-child', h(CheckboxGroup, { label: 'Large override', size: 'lg' },
+      h(Checkbox, { defaultChecked: true, key: 'md', size: 'md', value: 'md' }, 'Medium child'))),
     control('checkbox-field', checkboxField(size)),
     control('radio-group', h(RadioGroup, {
       defaultValue: 'one',

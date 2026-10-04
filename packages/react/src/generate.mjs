@@ -137,7 +137,6 @@ if (!toggleButtonGroupBinding
 }
 const expectedCheckboxProps = ['checked', 'defaultChecked', 'disabled', 'size', 'indeterminate', 'name', 'required', 'value', 'invalid'];
 const expectedCheckboxDefaults = {
-  checked: false,
   defaultChecked: false,
   disabled: false,
   size: 'md',
@@ -153,7 +152,7 @@ const expectedCheckboxGroupDefaults = {
   orientation: 'vertical',
   size: 'md',
 };
-const expectedRadioGroupProps = ['label', 'aria-label', 'aria-labelledby', 'options', 'children', 'value', 'defaultValue', 'disabled', 'readOnly', 'required', 'invalid', 'orientation', 'size'];
+const expectedRadioGroupProps = ['label', 'aria-label', 'aria-labelledby', 'options', 'children', 'value', 'defaultValue', 'disabled', 'readOnly', 'required', 'invalid', 'orientation', 'size', 'name'];
 const expectedRadioGroupDefaults = {
   disabled: false,
   readOnly: false,
@@ -184,7 +183,6 @@ if (!radioGroupBinding
 }
 const expectedAutocompleteProps = ['label', 'description', 'errorMessage', 'aria-label', 'aria-labelledby', 'value', 'defaultValue', 'disabled', 'size', 'readOnly', 'required', 'invalid', 'name', 'items', 'placeholder'];
 const expectedAutocompleteDefaults = {
-  value: '',
   defaultValue: '',
   disabled: false,
   readOnly: false,
@@ -560,7 +558,7 @@ export type MuxUIDateValue = string;
 export type MuxUITimeValue = string;
 export interface MuxUIDateRange { start: MuxUIDateValue; end: MuxUIDateValue; }
 export type ControlSize = 'sm' | 'md' | 'lg';
-export interface FieldValidationProps { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; }
+export interface FieldValidationProps { description?: React.ReactNode; /** Shown only while the field is invalid, through the invalid prop or failed validation, and replaces the built-in message; it never makes the field invalid by itself. */ errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; }
 export type MuxUIAccessibleName =
   | { label: Exclude<React.ReactNode, null | undefined | boolean>; 'aria-label'?: never; 'aria-labelledby'?: never }
   | { label?: never; 'aria-label': string; 'aria-labelledby'?: never }
@@ -579,44 +577,48 @@ export type NumberFieldProps = NamedFieldProps & { value?: number; defaultValue?
 export declare const NumberField: React.ForwardRefExoticComponent<NumberFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type CheckboxGroupProps = NamedFieldProps & { value?: string[]; defaultValue?: string[]; onChange?: (value: string[]) => void; name?: string; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; children?: React.ReactNode; };
 export declare const CheckboxGroup: React.ForwardRefExoticComponent<CheckboxGroupProps & React.RefAttributes<HTMLDivElement>>;
-export type SwitchProps = MuxUIAccessibleName & { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; children?: React.ReactNode; selected?: boolean; defaultSelected?: boolean; onChange?: (selected: boolean) => void; name?: string; value?: string; };
+export type SwitchProps = MuxUIAccessibleName & { description?: React.ReactNode; /** Shown only while the field is invalid, through the invalid prop or failed validation; replaces the built-in message. */ errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; children?: React.ReactNode; selected?: boolean; defaultSelected?: boolean; onChange?: (selected: boolean) => void; name?: string; value?: string; };
 export declare const Switch: React.ForwardRefExoticComponent<SwitchProps & React.RefAttributes<HTMLDivElement>>;
 export type MuxUIValidationErrors = Readonly<Record<string, string | string[]>>;
 export interface FormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement>, 'children' | 'className' | 'onSubmit' | 'onReset'> { children?: React.ReactNode; className?: string; validationBehavior?: 'aria' | 'native'; validationErrors?: MuxUIValidationErrors; onSubmit?: React.FormEventHandler<HTMLFormElement>; onReset?: React.FormEventHandler<HTMLFormElement>; }
 export declare const Form: React.ForwardRefExoticComponent<FormProps & React.RefAttributes<HTMLFormElement>>;
-export type DateFieldProps = NamedFieldProps & { value?: MuxUIDateValue; defaultValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateValue) => void; name?: string; };
+export type DateFieldProps = NamedFieldProps & { value?: MuxUIDateValue | null; defaultValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value: MuxUIDateValue | null) => void; name?: string; };
 export declare const DateField: React.ForwardRefExoticComponent<DateFieldProps & React.RefAttributes<HTMLDivElement>>;
-export type TimeFieldProps = NamedFieldProps & { value?: MuxUITimeValue; defaultValue?: MuxUITimeValue; minValue?: MuxUITimeValue; maxValue?: MuxUITimeValue; onChange?: (value?: MuxUITimeValue) => void; name?: string; size?: ControlSize; };
+/** TimeField works at minute precision: HH:mm:ss values and bounds are accepted, their seconds are ignored, and values submit and emit as HH:mm. */
+export type TimeFieldProps = NamedFieldProps & { value?: MuxUITimeValue | null; defaultValue?: MuxUITimeValue; minValue?: MuxUITimeValue; maxValue?: MuxUITimeValue; onChange?: (value: MuxUITimeValue | null) => void; name?: string; size?: ControlSize; };
 export declare const TimeField: React.ForwardRefExoticComponent<TimeFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type DatePickerProps = DateFieldProps & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; };
 export declare const DatePicker: React.ForwardRefExoticComponent<DatePickerProps & React.RefAttributes<HTMLDivElement>>;
-export type DateRangePickerProps = NamedFieldProps & { value?: MuxUIDateRange; defaultValue?: MuxUIDateRange; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue, anchorDate: MuxUIDateValue | null) => boolean; open?: boolean; defaultOpen?: boolean; onChange?: (value?: MuxUIDateRange) => void; startName?: string; endName?: string; onOpenChange?: (open: boolean) => void; };
+export type DateRangePickerProps = NamedFieldProps & { value?: MuxUIDateRange | null; defaultValue?: MuxUIDateRange; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue, anchorDate: MuxUIDateValue | null) => boolean; open?: boolean; defaultOpen?: boolean; onChange?: (value: MuxUIDateRange | null) => void; startName?: string; endName?: string; onOpenChange?: (open: boolean) => void; };
 export declare const DateRangePicker: React.ForwardRefExoticComponent<DateRangePickerProps & React.RefAttributes<HTMLDivElement>>;
 export interface AutocompleteItem { id?: string; label?: React.ReactNode; value?: string; disabled?: boolean; }
 export interface AutocompleteSelectionItem { id: string; label: React.ReactNode; value: string; }
-export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteItem | string>; value?: string; defaultValue?: string; onChange?: (value: string) => void; onSelect?: (item?: AutocompleteSelectionItem) => void; name?: string; placeholder?: string; size?: 'sm' | 'md' | 'lg'; };
+export type AutocompleteProps = NamedFieldProps & { items?: Array<AutocompleteItem | string>; /** The submitted value; the input shows a matching item's label. */ value?: string; defaultValue?: string; onChange?: (value: string) => void; onSelect?: (item?: AutocompleteSelectionItem) => void; name?: string; placeholder?: string; size?: 'sm' | 'md' | 'lg'; };
 export declare const Autocomplete: React.ForwardRefExoticComponent<AutocompleteProps & React.RefAttributes<HTMLDivElement>>;
 `;
 const collectionsTypes = `
 export type MuxUIColorValue = string;
-export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
+export type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';
+/** Channels must belong to colorSpace, or, when colorSpace is omitted, to the space of an enclosing ColorPicker's color, otherwise value or defaultValue. */
+export type MuxUIColorChannel = 'red' | 'green' | 'blue' | 'hue' | 'saturation' | 'lightness' | 'brightness' | 'alpha';
+export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; /** Consumer data; named Select and ComboBox forms submit the item \`id\`, not \`value\`. */ value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
 export type MuxUISelection = string[] | 'all';
 export type MuxUIItems = Array<MuxUICollectionItem | string>;
-export type CalendarProps = MuxUIAccessibleName & { value?: MuxUIDateValue; defaultValue?: MuxUIDateValue; focusedValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateValue) => void; onFocusChange?: (value?: MuxUIDateValue) => void; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; };
+export type CalendarProps = MuxUIAccessibleName & { value?: MuxUIDateValue | null; defaultValue?: MuxUIDateValue; focusedValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateValue) => void; onFocusChange?: (value?: MuxUIDateValue) => void; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; };
 export declare const Calendar: React.ForwardRefExoticComponent<CalendarProps & React.RefAttributes<HTMLDivElement>>;
-export type RangeCalendarProps = MuxUIAccessibleName & { value?: MuxUIDateRange; defaultValue?: MuxUIDateRange; focusedValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateRange) => void; onFocusChange?: (value?: MuxUIDateValue) => void; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; };
+export type RangeCalendarProps = MuxUIAccessibleName & { value?: MuxUIDateRange | null; defaultValue?: MuxUIDateRange; focusedValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value?: MuxUIDateRange) => void; onFocusChange?: (value?: MuxUIDateValue) => void; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; className?: string; };
 export declare const RangeCalendar: React.ForwardRefExoticComponent<RangeCalendarProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorAreaProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorArea: React.ForwardRefExoticComponent<ColorAreaProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; onChange?: (value: MuxUIColorValue) => void; name?: string; size?: ControlSize; };
+export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; onChange?: (value: MuxUIColorValue | null) => void; name?: string; size?: ControlSize; };
 export declare const ColorField: React.ForwardRefExoticComponent<ColorFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; children?: React.ReactNode; className?: string; };
 export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: string; colorSpace?: string; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
+export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: MuxUIColorChannel; colorSpace?: MuxUIColorSpace; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSlider: React.ForwardRefExoticComponent<ColorSliderProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSwatchProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'color'> & { color: MuxUIColorValue; secondaryColor?: MuxUIColorValue; shape?: 'square' | 'circle'; colorName?: string; disabled?: boolean; };
 export declare const ColorSwatch: React.ForwardRefExoticComponent<ColorSwatchProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
+export type ColorSwatchPickerProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; value?: MuxUIColorValue | null; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwatchPickerProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorWheelProps = MuxUIAriaAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; outerRadius?: number; innerRadius?: number; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorWheel: React.ForwardRefExoticComponent<ColorWheelProps & React.RefAttributes<HTMLDivElement>>;
@@ -652,7 +654,7 @@ export declare const Menu: React.ForwardRefExoticComponent<MenuProps & React.Ref
   Separator: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
 };
 export type RadioOption = { id?: string; value: string; label?: React.ReactNode; disabled?: boolean; };
-export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; onChange?: (value: string) => void; className?: string; };
+export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; name?: string; onChange?: (value: string) => void; className?: string; };
 export declare const RadioGroup: React.ForwardRefExoticComponent<RadioGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type SelectProps = NamedFieldProps & SelectOptions;
 export type SelectOptions = { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; selectedContent?: React.ReactNode; trigger?: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>; placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; children?: React.ReactNode; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
@@ -671,9 +673,9 @@ export declare const Select: React.ForwardRefExoticComponent<SelectProps & React
   Description: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
   Error: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLSpanElement> & React.RefAttributes<HTMLSpanElement>>;
 };
-export type ComboBoxProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; selectedId?: string; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
+export type ComboBoxProps = NamedFieldProps & { /** The full option set, filtered as the user types by a case- and accent-insensitive contains match on each item's text. */ items?: MuxUIItems; value?: string; defaultValue?: string; selectedId?: string; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
 export declare const ComboBox: React.ForwardRefExoticComponent<ComboBoxProps & React.RefAttributes<HTMLDivElement>>;
-export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
+export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; name?: string; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
 export declare const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
 export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }

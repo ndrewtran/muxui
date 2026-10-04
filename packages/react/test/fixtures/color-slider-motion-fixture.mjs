@@ -2,6 +2,9 @@ import React from 'react';
 import { I18nProvider } from 'react-aria-components';
 import { ColorPicker, ColorSlider, ColorWheel } from '../../src/collections.mjs';
 
+// Colour controls admit no id, so each proof target is wrapped in a data-proof element.
+const proof = (name, control) => React.createElement('div', { 'data-proof': name }, control);
+
 export function ColorSliderMotionFixture() {
   const [value, setValue] = React.useState('#406699');
   const [options, setOptions] = React.useState({});
@@ -20,19 +23,18 @@ export function ColorSliderMotionFixture() {
     };
   }, []);
   return React.createElement(React.Fragment, null,
-    React.createElement(ColorSlider, {
-      id: 'controlled', label: 'Red', ref, value, ...options,
+    proof('controlled', React.createElement(ColorSlider, {
+      label: 'Red', ref, value, ...options,
       onChange: (next) => { changes.current.push(next); setValue(next); },
-    }),
-    React.createElement(ColorSlider, { id: 'uncontrolled', label: 'Uncontrolled', defaultValue: '#406699' }),
+    })),
+    proof('uncontrolled', React.createElement(ColorSlider, { label: 'Uncontrolled', defaultValue: '#406699' })),
     React.createElement(I18nProvider, { locale: 'ar' },
-      React.createElement(ColorSlider, { id: 'rtl', 'aria-label': 'RTL red', defaultValue: '#406699' })),
-    React.createElement(ColorSlider, { id: 'vertical', 'aria-label': 'Vertical red', orientation: 'vertical', defaultValue: '#406699' }),
+      proof('rtl', React.createElement(ColorSlider, { 'aria-label': 'RTL red', defaultValue: '#406699' }))),
+    proof('vertical', React.createElement(ColorSlider, { 'aria-label': 'Vertical red', orientation: 'vertical', defaultValue: '#406699' })),
     React.createElement(ColorPicker, { readOnly: true, defaultValue: '#406699' },
-      React.createElement(ColorSlider, { id: 'picker', label: 'Read-only picker' })),
-    React.createElement(ColorSlider, { id: 'disabled', label: 'Disabled', defaultValue: '#406699', disabled: true }),
-    React.createElement(ColorWheel, {
-      id: 'wheel',
+      proof('picker', React.createElement(ColorSlider, { label: 'Read-only picker' }))),
+    proof('disabled', React.createElement(ColorSlider, { label: 'Disabled', defaultValue: '#406699', disabled: true })),
+    proof('wheel', React.createElement(ColorWheel, {
       'aria-label': 'Hue',
       ref: wheelRef,
       outerRadius: 48,
@@ -40,6 +42,6 @@ export function ColorSliderMotionFixture() {
       value: wheelValue,
       ...wheelOptions,
       onChange: (next) => { wheelChanges.current.push(next); setWheelValue(next); },
-    }),
+    })),
   );
 }

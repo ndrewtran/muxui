@@ -2,9 +2,14 @@ import React from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { FocusScope } from 'react-aria/FocusScope';
 import { mergeRefs } from 'react-aria/mergeRefs';
+import { useInteractOutside } from 'react-aria/useInteractOutside';
+// The modality useToastRegion uses; React Aria exports it only from this subpath.
+import { getInteractionModality } from 'react-aria/private/interactions/useFocusVisible';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
+  ButtonContext as AriaButtonContext,
+  DEFAULT_SLOT as ARIA_DEFAULT_SLOT,
   Dialog as AriaDialog,
   DialogContext as AriaDialogContext,
   DialogTrigger as AriaDialogTrigger,
@@ -12,7 +17,9 @@ import {
   FileTrigger as AriaFileTrigger,
   Heading as AriaHeading,
   ModalOverlay as AriaModalOverlay,
+  OverlayTriggerStateContext as AriaOverlayTriggerStateContext,
   Popover as AriaPopover,
+  PopoverContext as AriaPopoverContext,
   Pressable as AriaPressable,
   PreviewTrigger as AriaPreviewTrigger,
   Text as AriaText,
@@ -37,9 +44,19 @@ function classNames(base, className) {
 }
 
 function normalizeMaxVisible(value) {
-  if (value !== undefined && !Number.isFinite(value)) throw new TypeError('Toast maxVisible must be finite');
-  const normalized = value === undefined ? 5 : Math.floor(value);
-  return normalized > 0 ? normalized : 5;
+  const normalized = Math.floor(normalizeNonNegativeFinite(value, 5, 'Toast maxVisible'));
+  if (normalized < 1) throw new TypeError('Toast maxVisible must be at least 1');
+  return normalized;
+}
+
+// setTimeout converts delays above 2^31 - 1 ms to an immediate timeout.
+// 2 ** 31 - 1, the setTimeout maximum, as a literal so the module does no import-time work.
+const MAX_TIMEOUT = 2147483647;
+
+function normalizeToastDuration(value) {
+  const normalized = normalizeNonNegativeFinite(value, 5000, 'Toast duration');
+  if (normalized > MAX_TIMEOUT) throw new TypeError(`Toast duration must not exceed ${MAX_TIMEOUT} ms`);
+  return normalized;
 }
 
 function hasRenderableLabel(value) {
@@ -129,22 +146,16 @@ export const DropZone = React.forwardRef(function DropZone({
     onDrop?.(normalizeDropEvent(event));
   }, [onDrop]);
   const handleActivate = React.useCallback((event) => {
-    // RAC's hidden drop button reports keyboard activation through a native
-    // click; detail=0 excludes ordinary pointer clicks on consumer content.
-    if (event.detail !== 0 || disabledRef.current) return;
+    // RAC's visually hidden drop button is the root's only own control; clicks
+    // from consumer content, such as a nested FileTrigger, are not activation.
+    const dropButton = event.currentTarget.firstElementChild?.firstElementChild;
+    if (event.target !== dropButton || dropButton.tagName !== 'BUTTON' || disabledRef.current) return;
     onActivate?.({ type: 'activate', x: event.clientX ?? 0, y: event.clientY ?? 0 });
   }, [onActivate]);
-  const assignDropZoneRef = React.useCallback((node) => {
-    if (node) {
-      if (disabled) node.setAttribute('aria-disabled', 'true');
-      else node.removeAttribute('aria-disabled');
-    }
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-  }, [disabled, ref]);
+  // RAC sets data-disabled on the role-less root; aria-disabled is not valid there.
   return React.createElement(AriaDropZone, {
     ...props,
-    ref: assignDropZoneRef,
+    ref,
     isDisabled: disabled,
     onDrop: handleDrop,
     onClickCapture: handleActivate,
@@ -187,15 +198,20 @@ export const FileTrigger = React.forwardRef(function FileTrigger({
 
 FileTrigger.displayName = 'FileTrigger';
 
-function DialogContent({ title, description, actions, children, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }) {
+function DialogContent({ title, description, actions, children, ariaLabel, dismissable, explicitClose, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }) {
   const descriptionId = React.useId();
   const describedby = [ariaDescribedby, description !== undefined && description !== null ? descriptionId : undefined].filter(Boolean).join(' ') || undefined;
-  return React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
+  const triggerState = React.useContext(AriaOverlayTriggerStateContext);
+  // RAC routes slot="close" buttons through this state's close; those
+  // explicit actions still close a non-dismissable Dialog.
+  const explicitCloseState = React.useMemo(() => triggerState && { ...triggerState, close: explicitClose }, [triggerState, explicitClose]);
+  const dialog = React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
     hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: classNames('muxui-dialog-title', titleClassName) }, title) : null,
     description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog-description', descriptionClassName) }, description) : null,
     React.createElement('div', { className: classNames('muxui-dialog-content', contentClassName) }, children),
     actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog-actions', actionsClassName) }, actions) : null,
     dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
+  return React.createElement(AriaOverlayTriggerStateContext.Provider, { value: explicitCloseState }, dialog);
 }
 
 function DialogOverlay({ dismissable, backdropClassName, children, state, insideTrigger, originRef }) {
@@ -236,14 +252,24 @@ function DialogOverlay({ dismissable, backdropClassName, children, state, inside
 function useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange }) {
   const controlled = open !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const close = React.useCallback(() => {
+    if (!controlled) setUncontrolledOpen(false);
+    onOpenChange?.(false);
+  }, [controlled, onOpenChange]);
+  // RAC sends Escape, outside press, hidden dismiss buttons, and trigger
+  // toggles here; dismissable false rejects those accidental close requests.
   const handleOpenChange = React.useCallback((nextOpen) => {
-    if (!dismissable && !nextOpen) return;
-    if (!controlled) setUncontrolledOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  }, [controlled, dismissable, onOpenChange]);
+    if (!nextOpen) {
+      if (dismissable) close();
+      return;
+    }
+    if (!controlled) setUncontrolledOpen(true);
+    onOpenChange?.(true);
+  }, [close, controlled, dismissable, onOpenChange]);
   return {
     isOpen: controlled ? open : uncontrolledOpen,
     onOpenChange: handleOpenChange,
+    close,
   };
 }
 
@@ -276,9 +302,9 @@ export const Dialog = /*#__PURE__*/ (() => {
   const hasTrigger = React.isValidElement(trigger);
   const motionOriginRef = React.useRef(null);
   const content = React.createElement(DialogOverlay, { dismissable, backdropClassName, state: triggerState, insideTrigger: hasTrigger, originRef: motionOriginRef },
-    React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
+    React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, explicitClose: triggerState.close, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
   if (hasTrigger) {
-    return React.createElement(AriaDialogTrigger, triggerState, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
+    return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange }, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
   }
   return React.createElement(React.Fragment, null,
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
@@ -288,7 +314,7 @@ export const Dialog = /*#__PURE__*/ (() => {
   return component;
 })();
 
-function PopoverSurface({ modal, children, ...props }) {
+function PopoverSurface({ modal, children, onPointerDownCapture, ...props }) {
   const surfaceRef = React.useRef(null);
   React.useEffect(() => {
     const surface = surfaceRef.current;
@@ -299,14 +325,36 @@ function PopoverSurface({ modal, children, ...props }) {
   // A stable scope releases containment without resetting consumer content.
   // The enclosing RAC Popover remains the focus-restoration owner.
   return React.createElement(FocusScope, { contain: modal },
-    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1 }, children));
+    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDownCapture }, children));
 }
 
-const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, onDismissOutside, explicitClose, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const dialogContext = React.useContext(AriaDialogContext);
+  const triggerRef = React.useContext(AriaPopoverContext)?.triggerRef;
+  const positionerRef = React.useRef(null);
+  const setRef = React.useMemo(() => mergeRefs(positionerRef, ref), [ref]);
+  // RAC never dismisses a non-modal popover on outside press. Presses inside
+  // this popover's React tree, including portaled descendants, are not outside;
+  // trigger presses are left to the trigger's own toggle.
+  const pressedInsideRef = React.useRef(false);
+  // Like RAC Dialog, a slot="close" button in the content closes the popover,
+  // even when dismissable is false; it also stops an enclosing overlay's close
+  // slot from leaking in.
+  const buttonSlots = React.useMemo(() => ({ slots: { [ARIA_DEFAULT_SLOT]: {}, close: { onPress: explicitClose } } }), [explicitClose]);
+  useInteractOutside({
+    ref: positionerRef,
+    isDisabled: !onDismissOutside,
+    onInteractOutsideStart: () => {
+      pressedInsideRef.current = false;
+    },
+    onInteractOutside: (event) => {
+      if (pressedInsideRef.current || triggerRef?.current?.contains(event.target)) return;
+      onDismissOutside?.();
+    },
+  });
   return React.createElement(PopoverMotion, {
     ...props,
-    ref,
+    ref: setRef,
     triggerRef: anchorRef,
     placement: geometry.placement,
     offset: geometry.offset,
@@ -320,11 +368,15 @@ const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ chil
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
   }, React.createElement(PopoverSurface, {
     modal,
+    // Capture phase: RAC's usePress stops pointerdown propagation.
+    onPointerDownCapture: () => {
+      pressedInsideRef.current = true;
+    },
     id: dialogContext?.id,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     className: classNames('muxui-popover', className),
-  }, children));
+  }, React.createElement(AriaButtonContext.Provider, { value: buttonSlots }, children)));
 });
 
 /** RAC Popover owns positioning and dismissal; FocusScope controls optional focus containment. */
@@ -355,17 +407,18 @@ export const Popover = /*#__PURE__*/ React.forwardRef(function Popover({
     containerPadding: 12,
   }, 'Popover');
   const normalizedModal = normalizeBoolean(modal, true, 'Popover modal');
-  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal }, children);
-  return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-overlay-pop-trigger'), content);
-});
-
-const PreviewContent = React.forwardRef(function PreviewContent({ children, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-  return React.createElement(AriaDialog, {
-    ref,
-    className: 'muxui-preview-content',
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledby,
-  }, children);
+  const triggerState = useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange });
+  // Focus stays on the trigger of a non-modal popover, outside RAC's Escape handling.
+  const dismissNonModal = triggerState.isOpen && !normalizedModal && dismissable ? triggerState.close : undefined;
+  const onTriggerKeyDown = (event) => {
+    if (event.key !== 'Escape' || !dismissNonModal) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dismissNonModal();
+  };
+  const dismissibleTrigger = React.cloneElement(trigger, { onKeyDown: composeEventHandlers(trigger.props.onKeyDown, onTriggerKeyDown) });
+  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, onDismissOutside: dismissNonModal, explicitClose: triggerState.close }, children);
+  return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange }, pressableTrigger(dismissibleTrigger, false, 'muxui-overlay-pop-trigger'), content);
 });
 
 function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) {
@@ -429,12 +482,12 @@ function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) 
   };
 }
 
+// Disabling a timed overlay only suppresses the overlay; the consumer's
+// trigger keeps working, so it is never marked disabled.
 function overlayTrigger(trigger, { disabled, className, markPending, clearPending }) {
   if (!React.isValidElement(trigger)) return trigger;
   return React.cloneElement(trigger, {
     className: classNames(trigger.props.className, className),
-    'aria-disabled': disabled ? 'true' : trigger.props['aria-disabled'],
-    'data-disabled': disabled ? 'true' : trigger.props['data-disabled'],
     onPointerEnter: composeEventHandlers(trigger.props.onPointerEnter, disabled ? undefined : markPending),
     onPointerDown: composeEventHandlers(trigger.props.onPointerDown, disabled ? undefined : markPending),
     onMouseEnter: composeEventHandlers(trigger.props.onMouseEnter, disabled ? undefined : markPending),
@@ -498,7 +551,11 @@ export const PreviewTrigger = React.forwardRef(function PreviewTrigger({
     shouldFlip: geometry.shouldFlip,
     containerPadding: geometry.containerPadding,
     className: classNames('muxui-preview-trigger', className),
-  }, React.createElement(PreviewContent, { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, children)));
+    // RAC names its own role="dialog" popover without auto-focusing it, so
+    // focus stays on the trigger until Tab moves into the preview.
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledby,
+  }, React.createElement('div', { className: 'muxui-preview-content' }, children)));
 });
 
 PreviewTrigger.displayName = 'PreviewTrigger';
@@ -595,6 +652,15 @@ function createAnimatedToastQueue(queue, closingKeys) {
   const skipRetention = new Set();
   const listeners = new Set();
   let suppressRetention = false;
+  // Timers pause while the region is hovered or focused and while a toast
+  // enters. Resume only a stopped timer once neither applies: RAC's Timer
+  // starts a second, unpausable timeout if resumed while running.
+  let regionPaused = false;
+  const entryHolds = new Set();
+  const resumeTimer = (record) => {
+    if (record?.timer && record.timer.timerId == null && !regionPaused && !entryHolds.has(record.key)) record.timer.resume();
+  };
+  const visibleRecord = (key) => queue.visibleToasts.find((toast) => toast.key === key);
   const sameRecords = (first, second) => first.length === second.length && first.every((record, index) => record === second[index]);
   const rebuild = () => {
     const nextSnapshot = [...baseSnapshot];
@@ -655,8 +721,21 @@ function createAnimatedToastQueue(queue, closingKeys) {
       if (!wasVisible) closingKeys.delete(key);
       rebuild();
     },
-    pauseAll: () => queue.pauseAll(),
-    resumeAll: () => queue.resumeAll(),
+    holdTimer(key) {
+      entryHolds.add(key);
+      visibleRecord(key)?.timer?.pause();
+    },
+    releaseTimer(key) {
+      if (entryHolds.delete(key)) resumeTimer(visibleRecord(key));
+    },
+    pauseAll() {
+      regionPaused = true;
+      queue.pauseAll();
+    },
+    resumeAll() {
+      regionPaused = false;
+      queue.visibleToasts.forEach(resumeTimer);
+    },
     clear() {
       suppressRetention = true;
       retained.clear();
@@ -669,37 +748,45 @@ function createAnimatedToastQueue(queue, closingKeys) {
   return animatedQueue;
 }
 
-function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef }) {
+// Exiting toasts become inert, which drops focus to the body. Move focus out
+// first: keyboard users go to the next (else previous) toast, pointer users
+// and the last toast return to the element focused before the region.
+function moveFocusFromExitingToast(node, returnFocus) {
+  const active = node.ownerDocument.activeElement;
+  if (!active || !node.contains(active)) return;
+  const region = node.closest('.muxui-toast-region');
+  const remaining = region ? [...region.querySelectorAll('.muxui-toast:not([data-muxui-toast-exiting])')] : [];
+  const next = remaining.find((candidate) => node.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) ?? remaining.at(-1);
+  const target = getInteractionModality() !== 'pointer' && next ? next : returnFocus;
+  if (target?.isConnected) target.focus({ preventScroll: true });
+  else active.blur();
+}
+
+function ToastView({ toast, queue, placement, layoutVersion, onExitComplete, originRef, returnFocusRef }) {
   const value = toast.content;
   const hasTitle = hasRenderableLabel(value.title);
   const nodeRef = React.useRef(null);
   const entryFinishedRef = React.useRef(false);
-  const timerPausedRef = React.useRef(false);
-  const resumeTimer = React.useCallback(() => {
+  const finishEntry = React.useCallback(() => {
     entryFinishedRef.current = true;
-    if (timerPausedRef.current) {
-      toast.timer?.resume();
-      timerPausedRef.current = false;
-    }
-  }, [toast.timer]);
+    queue.releaseTimer(toast.key);
+  }, [queue, toast.key]);
   const lifecycleRef = useMotionLifecycle({
     isOpen: !toast.isExiting,
     placement: placement.startsWith('bottom') ? 'bottom' : 'top',
     triggerRef: originRef,
     property: 'transform',
-    onEntryComplete: resumeTimer,
+    onEntryComplete: finishEntry,
     onExitComplete: () => onExitComplete(toast.key),
   });
   React.useEffect(() => {
     if (toast.isExiting || !toast.timer || entryFinishedRef.current) return undefined;
-    toast.timer.pause();
-    timerPausedRef.current = true;
-    return () => {
-      if (!timerPausedRef.current) return;
-      toast.timer?.resume();
-      timerPausedRef.current = false;
-    };
-  }, [toast.isExiting, toast.timer]);
+    queue.holdTimer(toast.key);
+    return () => queue.releaseTimer(toast.key);
+  }, [queue, toast.isExiting, toast.key, toast.timer]);
+  useIsomorphicLayoutEffect(() => {
+    if (toast.isExiting && nodeRef.current) moveFocusFromExitingToast(nodeRef.current, returnFocusRef.current);
+  }, [toast.isExiting, returnFocusRef]);
   useMotionLayout(nodeRef, layoutVersion, originRef);
   const setRef = React.useCallback((node) => {
     nodeRef.current = node;
@@ -726,6 +813,13 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
   const motionOriginRef = React.useRef(null);
   const [layoutVersion, setLayoutVersion] = React.useState(0);
   React.useEffect(() => animatedQueue.subscribe(() => setLayoutVersion((version) => version + 1)), [animatedQueue]);
+  // The element focused before focus entered the region, for focus restoration.
+  const returnFocusRef = React.useRef(null);
+  const trackRegionFocus = React.useCallback((node) => {
+    node?.addEventListener('focusin', (event) => {
+      if (!node.contains(event.relatedTarget)) returnFocusRef.current = event.relatedTarget;
+    });
+  }, []);
   const callbacksRef = React.useRef(new Map());
   const activeRef = React.useRef(true);
   const teardownRequestedRef = React.useRef(false);
@@ -736,13 +830,11 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     callbacksRef.current.delete(key);
     callback?.();
   }, []);
-  const add = React.useCallback((message, options = {}, allowDuringTeardown = false) => {
-    if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
+  const enqueue = React.useCallback((content, { duration, onDismiss }, allowDuringTeardown) => {
     if (!activeRef.current || (teardownRequestedRef.current && !allowDuringTeardown)) return '';
-    const { duration, onDismiss, ...content } = options;
     let key;
-    key = animatedQueue.add({ ...content, message }, {
-      timeout: duration ?? 5000,
+    key = animatedQueue.add(content, {
+      timeout: duration,
       onClose: () => {
         closingKeysRef.current.add(key);
         notifyDismissed(key);
@@ -751,6 +843,11 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     callbacksRef.current.set(key, onDismiss);
     return key;
   }, [animatedQueue, notifyDismissed]);
+  const add = React.useCallback((message, options = {}) => {
+    if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
+    const { duration, onDismiss, ...content } = options;
+    return enqueue({ ...content, message }, { duration: normalizeToastDuration(duration), onDismiss }, false);
+  }, [enqueue]);
   const remove = React.useCallback((id) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
     animatedQueue.close(id);
@@ -761,7 +858,9 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     if (!settle) callbacksRef.current.delete(id);
     animatedQueue.dispose(id, settle);
   }, [animatedQueue]);
-  const addDeclarative = React.useCallback((message, options = {}) => add(message, options, true), [add]);
+  // Declarative Toasts own a mutable content record; refresh re-renders it in place.
+  const addDeclarative = React.useCallback((content, options) => enqueue(content, options, true), [enqueue]);
+  const refresh = React.useCallback(() => setLayoutVersion((version) => version + 1), []);
   const lifecycleRef = React.useRef(0);
   React.useEffect(() => {
     activeRef.current = true;
@@ -779,11 +878,11 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     };
   }, [queue]);
   const manager = React.useMemo(() => ({ add, remove }), [add, remove]);
-  const value = React.useMemo(() => ({ manager, addDeclarative, dispose }), [addDeclarative, dispose, manager]);
+  const value = React.useMemo(() => ({ manager, addDeclarative, dispose, refresh }), [addDeclarative, dispose, manager, refresh]);
   return React.createElement(ToastContext.Provider, { value }, children,
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
-    React.createElement(UNSTABLE_ToastRegion, { queue: animatedQueue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
-      ({ toast }) => React.createElement(ToastView, { toast, placement, layoutVersion, originRef: motionOriginRef, onExitComplete: animatedQueue.commitClose })));
+    React.createElement(UNSTABLE_ToastRegion, { ref: trackRegionFocus, queue: animatedQueue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
+      ({ toast }) => React.createElement(ToastView, { toast, queue: animatedQueue, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose })));
 };
 
 export function useToast() {
@@ -803,23 +902,37 @@ export const Toast = function Toast({
   const context = React.useContext(ToastContext);
   if (!context) throw new Error('Toast must be used within ToastProvider');
   if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
-  const { addDeclarative: add } = context;
-  const { dispose } = context;
-  const keyRef = React.useRef(null);
+  const normalizedDuration = normalizeToastDuration(duration);
+  const { addDeclarative, dispose, refresh } = context;
+  const contentRef = React.useRef(null);
+  const onDismissRef = React.useRef(onDismiss);
+  // Enqueue once; later renders update the same record in place, so inline
+  // callbacks or JSX never re-announce the toast or reset its timer.
+  useIsomorphicLayoutEffect(() => {
+    onDismissRef.current = onDismiss;
+    const content = contentRef.current;
+    if (!content) {
+      contentRef.current = { message, title, variant, className };
+      return;
+    }
+    if (content.message === message && content.title === title && content.variant === variant && content.className === className) return;
+    Object.assign(content, { message, title, variant, className });
+    refresh();
+  });
   React.useEffect(() => {
-    const key = add(message, {
-      title,
-      variant,
-      duration,
-      className,
-      onDismiss,
+    let dismissed = false;
+    const key = addDeclarative(contentRef.current, {
+      duration: normalizedDuration,
+      onDismiss: () => {
+        dismissed = true;
+        onDismissRef.current?.();
+      },
     });
-    keyRef.current = key;
     return () => queueMicrotask(() => {
-      if (keyRef.current === key) keyRef.current = null;
-      // Declarative lifecycle changes are teardown, not accepted dismissals.
-      dispose(key, false);
+      // An accepted dismissal keeps its exit animation, even if onDismiss
+      // unmounts this Toast. Other declarative teardown is silent.
+      if (!dismissed) dispose(key, false);
     });
-  }, [add, dispose, message, title, variant, duration, onDismiss, className]);
+  }, [addDeclarative, dispose, normalizedDuration]);
   return null;
 };
