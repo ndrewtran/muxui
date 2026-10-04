@@ -127,10 +127,10 @@
 2026-10-04T12:40:36.1039088Z npm error code EOTP
 2026-10-04T12:40:36.1040447Z npm error This operation requires a one-time password.
 2026-10-04T12:40:36.1043626Z npm error Open this URL in your browser to authenticate:
-2026-10-04T12:40:36.1044474Z npm error   https://www.npmjs.com/auth/cli/***
+2026-10-04T12:40:36.1044474Z npm error   <npm-auth-url>
 2026-10-04T12:40:36.1045148Z npm error
 2026-10-04T12:40:36.1067521Z npm error After authenticating, your token can be retrieved from:
-2026-10-04T12:40:36.1069354Z npm error   https://registry.npmjs.org/-/v1/done?authId=***
+2026-10-04T12:40:36.1069354Z npm error   https://registry.npmjs.org/-/v1/done?<npm-auth-url>
 2026-10-04T12:40:36.1070639Z npm error A complete log of this run can be found in: <runner-home>/.npm/_logs/2026-10-04T12_40_33_880Z-debug-0.log
 2026-10-04T12:40:36.1253788Z ##[error]Process completed with exit code 1.
 2026-10-04T12:40:36.1368173Z Cleaning up orphan processes

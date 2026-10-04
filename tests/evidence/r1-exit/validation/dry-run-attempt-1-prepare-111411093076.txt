@@ -1,0 +1,16 @@
+# step: Prepare release candidate (raw lines 203-2334)
+2026-10-04T09:56:17.6484240Z ##[group]Run set -euo pipefail
+2026-10-04T09:56:17.6541917Z shell: /usr/bin/bash -e {0}
+2026-10-04T09:56:17.6542133Z env:
+2026-10-04T09:56:17.6542346Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-04T09:56:17.6542601Z ##[endgroup]
+2026-10-04T10:06:47.2052105Z apps/react-storybook check: ✖ Storybook manager and docs paint only canonical Mux colours in light and dark (133432.270066ms)
+2026-10-04T10:07:09.0387101Z apps/react-storybook check: ✖ failing tests:
+2026-10-04T10:07:09.0389409Z apps/react-storybook check: ✖ Storybook manager and docs paint only canonical Mux colours in light and dark (133432.270066ms)
+2026-10-04T10:07:09.0395741Z apps/react-storybook check:   AssertionError [ERR_ASSERTION]: colour worker coverage must preserve the same state and scope signatures in light and dark
+2026-10-04T10:07:09.0409142Z apps/react-storybook check:   -   '["notification/dismiss-1/focus","manager"]',
+2026-10-04T10:07:09.0410045Z apps/react-storybook check:   -   '["notification/dismiss-1/hover","manager"]',
+2026-10-04T10:07:09.0415961Z apps/react-storybook check:   -   '["status/widget-2/hover","manager"]',
+2026-10-04T10:07:09.1199083Z  ELIFECYCLE  Command failed with exit code 1.
+2026-10-04T10:07:09.1502552Z  ELIFECYCLE  Command failed with exit code 1.
+2026-10-04T10:07:09.1679690Z ##[error]Process completed with exit code 1.

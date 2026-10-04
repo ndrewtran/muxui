@@ -5,7 +5,8 @@ Roadmap "R1 exit — React prerelease publication" requires `E-R1-EXIT-01` to
 from the `npm-publish.yml` dry-run and publish runs and from read-only registry
 observations, captured by `node tests/evidence/capture-r1-exit.mjs`.
 
-- `E-R1-EXIT-01`: the dry run's exact tarball, export, and install tuple.
+- `E-R1-EXIT-01`: the dry run's exact tarball, export, and install tuple,
+  with any failed earlier attempt of the same run disclosed.
 - `E-R1-EXIT-02`: the release manifest and `verify-credentials` run before
   publish; any earlier failed publish attempt; the publish run's preflight and
   publish, with its own read-back recorded as an observation only; and the
@@ -13,8 +14,9 @@ observations, captured by `node tests/evidence/capture-r1-exit.mjs`.
   the source commit and publish run, dist-tags). It stays `partial` until both
   the publish run and the registry read-back are captured.
 - `E-R1-EXIT-03`: a clean consumer installed from the registry's `next`.
-- `E-R1-EXIT-04`: `next` and the observed `latest`, with the release
-  manifest's rollback prepared, not exercised.
+- `E-R1-EXIT-04`: `next` and the observed `latest`, verified to be absent or
+  the candidate while the candidate is the package's only version, with the
+  release manifest's rollback prepared, not exercised.
 
 `artifacts/` holds the sanitized release manifest and the registry observation;
 `validation/` holds sanitized job-log excerpts; `verification.json` binds them
