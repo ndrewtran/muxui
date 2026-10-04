@@ -664,7 +664,21 @@ function createAnimatedToastQueue(queue, closingKeys) {
   return animatedQueue;
 }
 
-function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef }) {
+// Exiting toasts become inert, which drops focus to the body. Move focus out
+// first: keyboard users go to the next (else previous) toast, pointer users
+// and the last toast return to the element focused before the region.
+function moveFocusFromExitingToast(node, returnFocus) {
+  const active = node.ownerDocument.activeElement;
+  if (!active || !node.contains(active)) return;
+  const region = node.closest('.muxui-toast-region');
+  const remaining = region ? [...region.querySelectorAll('.muxui-toast:not([data-muxui-toast-exiting])')] : [];
+  const next = remaining.find((candidate) => node.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) ?? remaining.at(-1);
+  const target = active.matches(':focus-visible') && next ? next : returnFocus;
+  if (target?.isConnected) target.focus({ preventScroll: true });
+  else active.blur();
+}
+
+function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef, returnFocusRef }) {
   const value = toast.content;
   const hasTitle = hasRenderableLabel(value.title);
   const nodeRef = React.useRef(null);
@@ -695,6 +709,9 @@ function ToastView({ toast, placement, layoutVersion, onExitComplete, originRef 
       timerPausedRef.current = false;
     };
   }, [toast.isExiting, toast.timer]);
+  useIsomorphicLayoutEffect(() => {
+    if (toast.isExiting && nodeRef.current) moveFocusFromExitingToast(nodeRef.current, returnFocusRef.current);
+  }, [toast.isExiting, returnFocusRef]);
   useMotionLayout(nodeRef, layoutVersion, originRef);
   const setRef = React.useCallback((node) => {
     nodeRef.current = node;
@@ -721,6 +738,13 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
   const motionOriginRef = React.useRef(null);
   const [layoutVersion, setLayoutVersion] = React.useState(0);
   React.useEffect(() => animatedQueue.subscribe(() => setLayoutVersion((version) => version + 1)), [animatedQueue]);
+  // The element focused before focus entered the region, for focus restoration.
+  const returnFocusRef = React.useRef(null);
+  const trackRegionFocus = React.useCallback((node) => {
+    node?.addEventListener('focusin', (event) => {
+      if (!node.contains(event.relatedTarget)) returnFocusRef.current = event.relatedTarget;
+    });
+  }, []);
   const callbacksRef = React.useRef(new Map());
   const activeRef = React.useRef(true);
   const teardownRequestedRef = React.useRef(false);
@@ -731,12 +755,10 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     callbacksRef.current.delete(key);
     callback?.();
   }, []);
-  const add = React.useCallback((message, options = {}, allowDuringTeardown = false) => {
-    if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
+  const enqueue = React.useCallback((content, { duration, onDismiss }, allowDuringTeardown) => {
     if (!activeRef.current || (teardownRequestedRef.current && !allowDuringTeardown)) return '';
-    const { duration, onDismiss, ...content } = options;
     let key;
-    key = animatedQueue.add({ ...content, message }, {
+    key = animatedQueue.add(content, {
       timeout: duration ?? 5000,
       onClose: () => {
         closingKeysRef.current.add(key);
@@ -746,6 +768,11 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     callbacksRef.current.set(key, onDismiss);
     return key;
   }, [animatedQueue, notifyDismissed]);
+  const add = React.useCallback((message, options = {}) => {
+    if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
+    const { duration, onDismiss, ...content } = options;
+    return enqueue({ ...content, message }, { duration, onDismiss }, false);
+  }, [enqueue]);
   const remove = React.useCallback((id) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
     animatedQueue.close(id);
@@ -756,7 +783,9 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     if (!settle) callbacksRef.current.delete(id);
     animatedQueue.dispose(id, settle);
   }, [animatedQueue]);
-  const addDeclarative = React.useCallback((message, options = {}) => add(message, options, true), [add]);
+  // Declarative Toasts own a mutable content record; refresh re-renders it in place.
+  const addDeclarative = React.useCallback((content, options) => enqueue(content, options, true), [enqueue]);
+  const refresh = React.useCallback(() => setLayoutVersion((version) => version + 1), []);
   const lifecycleRef = React.useRef(0);
   React.useEffect(() => {
     activeRef.current = true;
@@ -774,11 +803,11 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     };
   }, [queue]);
   const manager = React.useMemo(() => ({ add, remove }), [add, remove]);
-  const value = React.useMemo(() => ({ manager, addDeclarative, dispose }), [addDeclarative, dispose, manager]);
+  const value = React.useMemo(() => ({ manager, addDeclarative, dispose, refresh }), [addDeclarative, dispose, manager, refresh]);
   return React.createElement(ToastContext.Provider, { value }, children,
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),
-    React.createElement(UNSTABLE_ToastRegion, { queue: animatedQueue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
-      ({ toast }) => React.createElement(ToastView, { toast, placement, layoutVersion, originRef: motionOriginRef, onExitComplete: animatedQueue.commitClose })));
+    React.createElement(UNSTABLE_ToastRegion, { ref: trackRegionFocus, queue: animatedQueue, placement, className: classNames('muxui-toast-region', className), 'aria-label': 'Notifications', 'data-placement': placement },
+      ({ toast }) => React.createElement(ToastView, { toast, placement, layoutVersion, originRef: motionOriginRef, returnFocusRef, onExitComplete: animatedQueue.commitClose })));
 };
 
 export function useToast() {
@@ -798,23 +827,36 @@ export const Toast = function Toast({
   const context = React.useContext(ToastContext);
   if (!context) throw new Error('Toast must be used within ToastProvider');
   if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
-  const { addDeclarative: add } = context;
-  const { dispose } = context;
-  const keyRef = React.useRef(null);
+  const { addDeclarative, dispose, refresh } = context;
+  const contentRef = React.useRef(null);
+  const onDismissRef = React.useRef(onDismiss);
+  // Enqueue once; later renders update the same record in place, so inline
+  // callbacks or JSX never re-announce the toast or reset its timer.
+  useIsomorphicLayoutEffect(() => {
+    onDismissRef.current = onDismiss;
+    const content = contentRef.current;
+    if (!content) {
+      contentRef.current = { message, title, variant, className };
+      return;
+    }
+    if (content.message === message && content.title === title && content.variant === variant && content.className === className) return;
+    Object.assign(content, { message, title, variant, className });
+    refresh();
+  });
   React.useEffect(() => {
-    const key = add(message, {
-      title,
-      variant,
+    let dismissed = false;
+    const key = addDeclarative(contentRef.current, {
       duration,
-      className,
-      onDismiss,
+      onDismiss: () => {
+        dismissed = true;
+        onDismissRef.current?.();
+      },
     });
-    keyRef.current = key;
     return () => queueMicrotask(() => {
-      if (keyRef.current === key) keyRef.current = null;
-      // Declarative lifecycle changes are teardown, not accepted dismissals.
-      dispose(key, false);
+      // An accepted dismissal keeps its exit animation, even if onDismiss
+      // unmounts this Toast. Other declarative teardown is silent.
+      if (!dismissed) dispose(key, false);
     });
-  }, [add, dispose, message, title, variant, duration, onDismiss, className]);
+  }, [addDeclarative, dispose, duration]);
   return null;
 };

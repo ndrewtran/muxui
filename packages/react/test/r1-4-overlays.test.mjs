@@ -588,3 +588,59 @@ test('Toast keeps one stable MuxUI manager and settles accepted dismissals once'
     env.restore();
   }
 });
+
+test('declarative Toast updates in place across parent renders without re-enqueueing', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const originalSetTimeout = globalThis.setTimeout;
+  let toastTimers = 0;
+  globalThis.setTimeout = (callback, delay, ...args) => {
+    if (delay > 50000) toastTimers += 1;
+    return originalSetTimeout(callback, delay, ...args);
+  };
+  const dismissals = [];
+  let rerender;
+  function Parent() {
+    const [count, setCount] = React.useState(0);
+    rerender = () => setCount((value) => value + 1);
+    // Inline callbacks and JSX get a new identity on every render.
+    return React.createElement(Toast, {
+      message: React.createElement('strong', null, count < 2 ? 'Saved' : 'Saved again'),
+      title: 'Status',
+      duration: 60000,
+      onDismiss: () => dismissals.push(count),
+    });
+  }
+  try {
+    await act(async () => root.render(React.createElement(ToastProvider, null, React.createElement(Parent))));
+    const toast = document.body.querySelector('.muxui-toast');
+    assert.ok(toast);
+    const timersAfterMount = toastTimers;
+    const alert = toast.querySelector('[role="alert"]');
+    const mutations = [];
+    const observer = new MutationObserver((records) => mutations.push(...records));
+    observer.observe(toast, { childList: true, subtree: true, characterData: true });
+    await act(async () => rerender());
+    await act(async () => { await Promise.resolve(); });
+    assert.equal(document.body.querySelector('.muxui-toast'), toast, 'the same toast node stays mounted');
+    assert.equal(toast.querySelector('[role="alert"]'), alert);
+    assert.equal(document.body.querySelectorAll('.muxui-toast').length, 1);
+    assert.deepEqual(mutations.filter((record) => record.type !== 'attributes'), [], 'unchanged content is not re-announced');
+    assert.equal(toastTimers, timersAfterMount, 'the auto-dismiss timer is not reset');
+
+    await act(async () => rerender());
+    await act(async () => { await Promise.resolve(); });
+    observer.disconnect();
+    assert.equal(document.body.querySelector('.muxui-toast'), toast);
+    assert.match(toast.textContent, /Saved again/u, 'new content updates in place');
+    assert.equal(toastTimers, timersAfterMount);
+
+    await act(async () => toast.querySelector('.muxui-toast-dismiss').click());
+    assert.deepEqual(dismissals, [2], 'the latest onDismiss settles once');
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    if (host.isConnected && host.hasChildNodes()) await act(async () => root.unmount());
+    env.restore();
+  }
+});
