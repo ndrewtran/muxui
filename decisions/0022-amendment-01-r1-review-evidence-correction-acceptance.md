@@ -67,10 +67,8 @@ reasoning attached to it is the recommendation he accepted, not his words.
   When asked afterwards, Andrew selected "Accept, document format
   (Recommended)". The recommendation: keep the CSS colour strings the
   callbacks emit for rc.1, document the format in the colour catalog
-  records, and record the finding as accepted by him. Each record states
-  its control's exact format: `rgba()` for hex or RGB values and `hsla()`
-  for HSL or HSB values, with ColorField always `rgba()` and ColorWheel
-  always `hsla()`.
+  records, and record the finding as accepted by him. Each colour catalog
+  record states its control's emitted format.
 
 The four findings are recorded `accepted-unfixed` with Andrew / `ndrewtran`
 as `acceptedBy` in `tests/evidence/r1-retro-review`.

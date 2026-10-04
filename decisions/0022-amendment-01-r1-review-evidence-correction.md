@@ -120,10 +120,10 @@ amendment. It adds no Scope ID and changes no package, platform, support
 claim, or non-goal. The Roadmap's R1 exit entry and Product Scope's
 release-acceptance bullet are reworded to match.
 
-Andrew accepted two known limitations for rc.1, both tracked to `S1.0`: R1.2
-finding L5 (the Autocomplete dismiss fix's blur check is proven only in
-Chromium) and R1.4 finding M7 (focus falls to body when the element that
-opened a Dialog unmounts while it is open).
+Andrew accepted two known limitations for rc.1, both to be tracked as
+`S1.0` items: R1.2 finding L5 (the Autocomplete dismiss fix's blur check is
+proven only in Chromium) and R1.4 finding M7 (focus falls to body when the
+element that opened a Dialog unmounts while it is open).
 
 This amendment does not publish, change a dist-tag, authorize the final
 R1-exit merge, or claim that any check or review passed.
