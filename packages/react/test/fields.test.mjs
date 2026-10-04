@@ -1206,6 +1206,15 @@ test('CheckboxGroup keeps invalid error content inside its validation context', 
   }
 });
 
+// Uses the native setter so React's value tracker sees the edit.
+async function typeInto(input, value) {
+  await act(async () => {
+    input.focus();
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
 function captureConsoleProblems() {
   const problems = [];
   const original = { error: console.error, warn: console.warn };
@@ -1297,6 +1306,45 @@ test('controlled temporal fields update, clear to null, and submit the controlle
   } finally {
     await act(async () => root?.unmount());
     consoleProblems.restore();
+    restore();
+    dom.window.close();
+  }
+});
+
+test('Form server errors clear after an edit until new validationErrors arrive', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderForm = (validationErrors) => root.render(React.createElement(Form, { validationBehavior: 'aria', validationErrors },
+      React.createElement(TextField, { label: 'Name', name: 'name', defaultValue: 'Andrew' }),
+      React.createElement(DateField, { label: 'Date', name: 'date', defaultValue: '2026-03-04' }),
+      React.createElement(TimeField, { label: 'Time', name: 'time', defaultValue: '09:30' }),
+      React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', defaultValue: { start: '2026-03-04', end: '2026-03-08' } })));
+    const serverErrors = { name: 'Name taken', date: 'Date taken', time: 'Time taken', tripStart: 'Trip taken' };
+    await act(async () => renderForm(serverErrors));
+    const selectors = ['.muxui-text-field', '.muxui-date-field', '.muxui-time-field', '.muxui-date-range-picker'];
+    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows its server error`);
+
+    const text = host.querySelector('.muxui-text-field input');
+    await typeInto(text, 'Andy');
+    // Browsers fire change on commit; RAC clears server errors from it.
+    await act(async () => text.dispatchEvent(new Event('change', { bubbles: true })));
+    await editDateSegment(host.querySelector('.muxui-date-field [data-type="day"]'), '5');
+    await editDateSegment(host.querySelector('.muxui-time-field [data-type="hour"]'), '10');
+    await editDateSegment(host.querySelector('.muxui-date-range-picker [data-type="day"]'), '5');
+    await act(async () => document.activeElement?.blur());
+    for (const selector of selectors) {
+      assert.equal(host.querySelector(selector).getAttribute('data-invalid'), null, `${selector} kept a dismissed server error`);
+      assert.equal(host.querySelector(`${selector} .muxui-field-error`), null);
+    }
+
+    await act(async () => renderForm({ ...serverErrors }));
+    for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows new server errors`);
+  } finally {
+    await act(async () => root?.unmount());
     restore();
     dom.window.close();
   }

@@ -294,13 +294,16 @@ function normalizeValidationMessages(value) {
     .map(String);
 }
 
+// Like RAC's server errors, an edit or reset dismisses the current errors
+// until the Form receives a new validationErrors object.
 function useMuxFormValidation(names) {
   const validationErrors = React.useContext(MuxFormValidationContext);
-  const messages = (Array.isArray(names) ? names : [names]).flatMap((name) => {
+  const [dismissedErrors, setDismissedErrors] = React.useState(null);
+  const messages = dismissedErrors === validationErrors ? [] : (Array.isArray(names) ? names : [names]).flatMap((name) => {
     if (!name || !validationErrors || !Object.prototype.hasOwnProperty.call(validationErrors, name)) return [];
     return normalizeValidationMessages(validationErrors[name]);
   });
-  return { isInvalid: messages.length > 0, message: messages.join(' ') };
+  return { isInvalid: messages.length > 0, message: messages.join(' '), dismiss: () => setDismissedErrors(validationErrors) };
 }
 
 function validationProps({ disabled, readOnly, required, invalid, errorMessage }) {
@@ -845,10 +848,12 @@ export const TimeField = React.forwardRef(function TimeField({
   const handleChange = (next) => {
     if (resettingRef.current) return;
     const nextValue = serializeTimeValue(next, granularity);
+    externalValidation.dismiss();
     if (value === undefined) setFormValue(nextValue);
     onChange?.(nextValue);
   };
   const handleReset = () => {
+    externalValidation.dismiss();
     if (value === undefined) setFormValue(serializeTimeValue(parsedDefaultValue, granularity));
   };
   const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
@@ -991,10 +996,12 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
     const handleChange = (next) => {
       if (resettingRef.current) return;
       const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : null;
+      externalValidation.dismiss();
       if (value === undefined) setFormValue(nextValue);
       onChange?.(nextValue);
     };
     const handleReset = () => {
+      externalValidation.dismiss();
       if (value === undefined) setFormValue(defaultValue ?? null);
     };
     const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
