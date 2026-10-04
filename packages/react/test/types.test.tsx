@@ -165,7 +165,11 @@ const fields = (
     <NumberField label="Quantity" defaultValue={2} onChange={(value) => { const amount: number = value; void amount; }} />
     <CheckboxGroup label="Alerts" defaultValue={['email']}><Checkbox value="email">Email</Checkbox></CheckboxGroup>
     <Switch label="Enabled" selected required invalid onChange={(selected) => { const value: boolean = selected; void value; }} />
-    <DateField label="Birthday" value="2026-08-26" onChange={(value) => { const date: string | undefined = value; void date; }} />
+    <DateField label="Birthday" value="2026-08-26" onChange={(value) => { const date: string | null = value; void date; }} />
+    <DateField label="Cleared" value={null} />
+    <DatePicker label="Cleared due" value={null} onChange={(value) => { const date: string | null = value; void date; }} />
+    <TimeField label="Cleared start" value={null} onChange={(value) => { const time: string | null = value; void time; }} />
+    <DateRangePicker label="Cleared trip" value={null} onChange={(value) => { const range: { start: string; end: string } | null = value; void range; }} />
     <DatePicker label="Due" defaultValue="2026-08-26" minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date) => { const value: string = date; void value; return false; }} />
     <DateRangePicker label="Trip" startName="tripStart" endName="tripEnd" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date, anchorDate) => { const value: string = date; const anchor: string | null = anchorDate; void value; void anchor; return false; }} />
     <TimeField label="Start" defaultValue="09:30" minValue="09:00" maxValue="17:00" />

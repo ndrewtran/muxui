@@ -773,7 +773,7 @@ test('R1.2 date ranges own paired FormData names and reset to their default', as
     assert.equal(firstRangeDay.textContent, '27');
     assert.equal(firstTimeHour.textContent, '10');
     assert.equal(new dom.window.FormData(form).get('tripStart'), '2026-08-27');
-    assert.equal(new dom.window.FormData(form).get('startTime'), '10:30:00');
+    assert.equal(new dom.window.FormData(form).get('startTime'), '10:30');
     assert.equal(secondRangeDay.textContent, '2');
     assert.equal(unnamedRangeDay.textContent, '2');
     assert.equal(unnamedTimeHour.textContent, '12');
@@ -842,12 +842,12 @@ test('R1.2 temporal fields honor cancelled form resets and reset normally', asyn
     await editSegment(cancelledRangeDay, '27');
     await editSegment(cancelledTimeHour, '10');
     assert.equal(new dom.window.FormData(cancelledForm).get('cancelStart'), '2026-08-27');
-    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30:00');
+    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30');
     const cancelledReset = new Event('reset', { bubbles: true, cancelable: true });
     await act(async () => cancelledForm.dispatchEvent(cancelledReset));
     assert.equal(cancelledReset.defaultPrevented, true);
     assert.equal(new dom.window.FormData(cancelledForm).get('cancelStart'), '2026-08-27');
-    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30:00');
+    assert.equal(new dom.window.FormData(cancelledForm).get('cancelTime'), '10:30');
     assert.equal(cancelledRangeDay.textContent, '27');
     assert.equal(cancelledTimeHour.textContent, '10');
 
@@ -1201,6 +1201,102 @@ test('CheckboxGroup keeps invalid error content inside its validation context', 
     assert.equal(remainingDescriptions.some((id) => host.ownerDocument.getElementById(id)?.textContent.includes('A value is required')), false);
   } finally {
     await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+function captureConsoleProblems() {
+  const problems = [];
+  const original = { error: console.error, warn: console.warn };
+  console.error = (...args) => problems.push(args.map(String).join(' '));
+  console.warn = (...args) => problems.push(args.map(String).join(' '));
+  return { problems, restore: () => Object.assign(console, original) };
+}
+
+async function editDateSegment(segment, nextValue) {
+  await act(async () => {
+    segment.focus();
+    segment.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: nextValue }));
+    segment.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: nextValue }));
+  });
+}
+
+// Empties every editable segment; RAC emits null once the whole field is clear.
+async function clearDateSegments(field) {
+  for (const segment of field.querySelectorAll('.muxui-date-segment:not([data-type="literal"])')) {
+    for (let attempt = 0; attempt < 5 && !segment.hasAttribute('data-placeholder'); attempt += 1) {
+      await act(async () => {
+        segment.focus();
+        segment.dispatchEvent(new KeyboardEvent('keydown', { key: 'Backspace', bubbles: true, cancelable: true }));
+      });
+    }
+  }
+}
+
+test('controlled temporal fields update, clear to null, and submit the controlled value', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const consoleProblems = captureConsoleProblems();
+  const changes = [];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderControlled = ({ date, time, range }) => root.render(React.createElement(Form, null,
+      React.createElement(DateField, { label: 'Date', name: 'date', value: date, onChange: (value) => changes.push(['date', value]) }),
+      React.createElement(DatePicker, { label: 'Due', name: 'due', value: date, onChange: (value) => changes.push(['due', value]) }),
+      React.createElement(TimeField, { label: 'Time', name: 'time', value: time, onChange: (value) => changes.push(['time', value]) }),
+      React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', value: range, onChange: (value) => changes.push(['range', value]) })));
+    const segments = (selector, type) => [...host.querySelectorAll(`${selector} [data-type="${type}"]`)];
+    const formData = () => Object.fromEntries(new dom.window.FormData(host.querySelector('form')));
+
+    await act(async () => renderControlled({ date: '2026-01-02', time: '10:15', range: { start: '2026-01-02', end: '2026-01-05' } }));
+    await act(async () => renderControlled({ date: '2026-03-04', time: '11:45', range: { start: '2026-03-04', end: '2026-03-08' } }));
+    assert.deepEqual(segments('.muxui-date-field', 'day').map((node) => node.textContent), ['4']);
+    assert.deepEqual(segments('.muxui-date-picker', 'day').map((node) => node.textContent), ['4']);
+    assert.deepEqual(segments('.muxui-time-field', 'minute').map((node) => node.textContent), ['45']);
+    assert.deepEqual(segments('.muxui-date-range-picker', 'day').map((node) => node.textContent), ['4', '8']);
+    assert.deepEqual(formData(), { date: '2026-03-04', due: '2026-03-04', time: '11:45', tripStart: '2026-03-04', tripEnd: '2026-03-08' });
+
+    for (const cleared of [{ date: null, time: null, range: null }, { date: '', time: '', range: null }]) {
+      await act(async () => renderControlled({ date: '2026-03-04', time: '11:45', range: { start: '2026-03-04', end: '2026-03-08' } }));
+      await act(async () => renderControlled(cleared));
+      for (const selector of ['.muxui-date-field', '.muxui-date-picker', '.muxui-time-field', '.muxui-date-range-picker']) {
+        for (const segment of host.querySelectorAll(`${selector} .muxui-date-segment:not([data-type="literal"])`)) {
+          assert.equal(segment.hasAttribute('data-placeholder'), true, `${selector} kept a stale ${segment.dataset.type} segment`);
+        }
+      }
+      assert.deepEqual(formData(), { date: '', due: '', time: '', tripStart: '', tripEnd: '' });
+    }
+
+    function StatefulFields() {
+      const [date, setDate] = React.useState('2026-03-04');
+      const [due, setDue] = React.useState('2026-03-04');
+      const [time, setTime] = React.useState('11:45');
+      const [range, setRange] = React.useState({ start: '2026-03-04', end: '2026-03-08' });
+      const track = (kind, set) => (value) => { changes.push([kind, value]); set(value); };
+      return React.createElement(Form, null,
+        React.createElement(DateField, { label: 'Date', name: 'date', value: date, onChange: track('date', setDate) }),
+        React.createElement(DatePicker, { label: 'Due', name: 'due', value: due, onChange: track('due', setDue) }),
+        React.createElement(TimeField, { label: 'Time', name: 'time', value: time, onChange: track('time', setTime) }),
+        React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', value: range, onChange: track('range', setRange) }));
+    }
+    await act(async () => root.render(React.createElement(StatefulFields)));
+    changes.length = 0;
+    for (const selector of ['.muxui-date-field', '.muxui-date-picker', '.muxui-time-field', '.muxui-date-range-picker']) {
+      await clearDateSegments(host.querySelector(selector));
+    }
+    assert.deepEqual(changes.filter(([, value]) => value === null).map(([kind]) => kind), ['date', 'due', 'time', 'range']);
+    assert.equal(changes.some(([, value]) => value === undefined), false);
+    assert.deepEqual(formData(), { date: '', due: '', time: '', tripStart: '', tripEnd: '' });
+    await editDateSegment(segments('.muxui-time-field', 'hour')[0], '9');
+    await editDateSegment(segments('.muxui-time-field', 'minute')[0], '05');
+    assert.equal(formData().time, '09:05');
+    assert.deepEqual(consoleProblems.problems, []);
+  } finally {
+    await act(async () => root?.unmount());
+    consoleProblems.restore();
     restore();
     dom.window.close();
   }

@@ -345,6 +345,12 @@ function dateRangeOrUndefined(value) {
   return { start: dateOrUndefined(value.start), end: dateOrUndefined(value.end) };
 }
 
+// RAC treats an undefined value as uncontrolled, so a cleared controlled
+// field (null or '') must reach it as null to stay controlled and empty.
+function controlledTemporal(value, parse) {
+  return value === undefined ? undefined : parse(value) ?? null;
+}
+
 function assertTemporalBounds(minValue, maxValue, valueName) {
   if (minValue && maxValue && minValue.compare(maxValue) > 0) {
     throw new TypeError(`Mux UI ${valueName} minValue must be less than or equal to maxValue`);
@@ -374,7 +380,14 @@ function unavailableDateCallback(callback, range = false) {
 }
 
 function serializeDateValue(value) {
-  return value ? String(value) : undefined;
+  return value ? String(value) : null;
+}
+
+// Submit and emit times at the field's precision: HH:mm unless the field
+// edits seconds, so initial and edited values share one format.
+function serializeTimeValue(value, granularity) {
+  if (!value) return null;
+  return String(value).slice(0, granularity === 'second' ? 8 : 5);
 }
 
 function calendarChildren(cellClass = 'muxui-calendar-cell') {
@@ -774,7 +787,7 @@ export const DateField = React.forwardRef(function DateField({
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateField');
   const resolvedSize = normalizeChoiceControlSize(size, 'DateField');
-  const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
+  const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
   return React.createElement(AriaDateField, {
@@ -823,26 +836,25 @@ export const TimeField = React.forwardRef(function TimeField({
   const resolvedSize = normalizeChoiceControlSize(size, 'TimeField');
   const externalValidation = useMuxFormValidation(name);
   const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-  React.useMemo(() => timeOrUndefined(value), [value]);
-  React.useMemo(() => timeOrUndefined(defaultValue), [defaultValue]);
+  const { granularity } = props;
+  const parsedValue = React.useMemo(() => controlledTemporal(value, timeOrUndefined), [value]);
+  const parsedDefaultValue = React.useMemo(() => timeOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = timeBounds(minValue, maxValue);
-  const [formValue, setFormValue] = React.useState(() => value ?? defaultValue ?? '');
+  const [formValue, setFormValue] = React.useState(() => serializeTimeValue(parsedValue ?? parsedDefaultValue, granularity));
   const resettingRef = React.useRef(false);
-  React.useEffect(() => {
-    if (value !== undefined) setFormValue(value);
-  }, [value]);
   const handleChange = (next) => {
     if (resettingRef.current) return;
-    const nextValue = serializeDateValue(next);
-    setFormValue(nextValue ?? '');
+    const nextValue = serializeTimeValue(next, granularity);
+    if (value === undefined) setFormValue(nextValue);
     onChange?.(nextValue);
   };
   const handleReset = () => {
-    if (value === undefined) setFormValue(defaultValue ?? '');
+    if (value === undefined) setFormValue(serializeTimeValue(parsedDefaultValue, granularity));
   };
   const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-  const effectiveValue = value ?? formValue;
-  const effectiveParsedValue = React.useMemo(() => timeOrUndefined(effectiveValue), [effectiveValue]);
+  // Mux owns TimeField state, so RAC always receives a controlled value.
+  const submittedValue = value !== undefined ? serializeTimeValue(parsedValue, granularity) : formValue;
+  const effectiveParsedValue = React.useMemo(() => timeOrUndefined(submittedValue) ?? null, [submittedValue]);
   return React.createElement(AriaTimeField, {
     ...props,
     ref,
@@ -866,7 +878,7 @@ export const TimeField = React.forwardRef(function TimeField({
     input: dateInput(),
     children: React.createElement(React.Fragment, null,
       formResetAnchor(resetInputRef),
-      name ? React.createElement('input', { type: 'hidden', name, value: value ?? formValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+      name ? React.createElement('input', { type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
   }));
 });
 
@@ -902,7 +914,7 @@ export const DatePicker = /*#__PURE__*/ (() => {
   }, ref) {
     assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
     const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
-    const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
+    const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
     const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
     return React.createElement(AriaDatePicker, {
@@ -972,24 +984,23 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
     const triggerRef = React.useRef(null);
     const externalValidation = useMuxFormValidation([startName, endName]);
     const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-    const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
+    const parsedValue = React.useMemo(() => controlledTemporal(value, dateRangeOrUndefined), [value === null, value?.start, value?.end]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
+    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue ?? null);
     const resettingRef = React.useRef(false);
-    React.useEffect(() => {
-      if (value !== undefined) setFormValue(value);
-    }, [value]);
     const handleChange = (next) => {
       if (resettingRef.current) return;
-      const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined;
-      setFormValue(nextValue);
+      const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : null;
+      if (value === undefined) setFormValue(nextValue);
       onChange?.(nextValue);
     };
     const handleReset = () => {
-      if (value === undefined) setFormValue(defaultValue);
+      if (value === undefined) setFormValue(defaultValue ?? null);
     };
     const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-    const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
+    const submittedValue = value !== undefined ? value : formValue;
+    const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue) ?? null, [formValue?.start, formValue?.end]);
+    // Mux owns range state, so RAC always receives a controlled value.
     const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
     return React.createElement(AriaDateRangePicker, {
       ...props,
@@ -1021,8 +1032,8 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
       children: React.createElement(React.Fragment, null,
         rangeDatePopover(triggerRef),
         formResetAnchor(resetInputRef),
-        startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
-        endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+        startName ? React.createElement('input', { type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+        endName ? React.createElement('input', { type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
     }));
   });
   component.displayName = 'DateRangePicker';
