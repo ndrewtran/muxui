@@ -37,9 +37,18 @@ function classNames(base, className) {
 }
 
 function normalizeMaxVisible(value) {
-  if (value !== undefined && !Number.isFinite(value)) throw new TypeError('Toast maxVisible must be finite');
-  const normalized = value === undefined ? 5 : Math.floor(value);
-  return normalized > 0 ? normalized : 5;
+  const normalized = Math.floor(normalizeNonNegativeFinite(value, 5, 'Toast maxVisible'));
+  if (normalized < 1) throw new TypeError('Toast maxVisible must be at least 1');
+  return normalized;
+}
+
+// setTimeout converts delays above 2^31 - 1 ms to an immediate timeout.
+const MAX_TIMEOUT = 2 ** 31 - 1;
+
+function normalizeToastDuration(value) {
+  const normalized = normalizeNonNegativeFinite(value, 5000, 'Toast duration');
+  if (normalized > MAX_TIMEOUT) throw new TypeError(`Toast duration must not exceed ${MAX_TIMEOUT} ms`);
+  return normalized;
 }
 
 function hasRenderableLabel(value) {
@@ -772,7 +781,7 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
     if (!activeRef.current || (teardownRequestedRef.current && !allowDuringTeardown)) return '';
     let key;
     key = animatedQueue.add(content, {
-      timeout: duration ?? 5000,
+      timeout: duration,
       onClose: () => {
         closingKeysRef.current.add(key);
         notifyDismissed(key);
@@ -784,7 +793,7 @@ export const ToastProvider = function ToastProvider({ children, maxVisible = 5, 
   const add = React.useCallback((message, options = {}) => {
     if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
     const { duration, onDismiss, ...content } = options;
-    return enqueue({ ...content, message }, { duration, onDismiss }, false);
+    return enqueue({ ...content, message }, { duration: normalizeToastDuration(duration), onDismiss }, false);
   }, [enqueue]);
   const remove = React.useCallback((id) => {
     if (!activeRef.current || teardownRequestedRef.current) return;
@@ -840,6 +849,7 @@ export const Toast = function Toast({
   const context = React.useContext(ToastContext);
   if (!context) throw new Error('Toast must be used within ToastProvider');
   if (!hasRenderableLabel(message)) throw new Error('Toast requires a message');
+  const normalizedDuration = normalizeToastDuration(duration);
   const { addDeclarative, dispose, refresh } = context;
   const contentRef = React.useRef(null);
   const onDismissRef = React.useRef(onDismiss);
@@ -859,7 +869,7 @@ export const Toast = function Toast({
   React.useEffect(() => {
     let dismissed = false;
     const key = addDeclarative(contentRef.current, {
-      duration,
+      duration: normalizedDuration,
       onDismiss: () => {
         dismissed = true;
         onDismissRef.current?.();
@@ -870,6 +880,6 @@ export const Toast = function Toast({
       // unmounts this Toast. Other declarative teardown is silent.
       if (!dismissed) dispose(key, false);
     });
-  }, [addDeclarative, dispose, duration]);
+  }, [addDeclarative, dispose, normalizedDuration]);
   return null;
 };

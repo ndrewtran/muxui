@@ -433,7 +433,16 @@ test('ToastProvider pauses auto-dismiss timers before clearing on teardown', asy
   }
 });
 
-test('ToastProvider normalizes zero maxVisible so toasts still auto-dismiss', async () => {
+test('Toast rejects maxVisible below one and durations setTimeout cannot honor', async () => {
+  for (const maxVisible of [0, 0.5, -1, Number.NaN, Infinity]) {
+    assert.throws(() => renderToString(React.createElement(ToastProvider, { maxVisible })), TypeError, `maxVisible ${maxVisible}`);
+  }
+  assert.doesNotThrow(() => renderToString(React.createElement(ToastProvider, { maxVisible: 1.5 })));
+  for (const duration of [-1, Number.NaN, Infinity, 2 ** 31]) {
+    assert.throws(() => renderToString(React.createElement(ToastProvider, null, React.createElement(Toast, { message: 'Saved', duration }))), TypeError, `duration ${duration}`);
+  }
+  assert.doesNotThrow(() => renderToString(React.createElement(ToastProvider, null, React.createElement(Toast, { message: 'Saved', duration: 2 ** 31 - 1 }))));
+
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
@@ -444,7 +453,10 @@ test('ToastProvider normalizes zero maxVisible so toasts still auto-dismiss', as
     return null;
   }
   try {
-    await act(async () => root.render(React.createElement(ToastProvider, { maxVisible: 0 }, React.createElement(CaptureManager))));
+    await act(async () => root.render(React.createElement(ToastProvider, { maxVisible: 1 }, React.createElement(CaptureManager))));
+    assert.throws(() => manager.add('Saved', { duration: Infinity }), /Toast duration must be finite/u);
+    assert.throws(() => manager.add('Saved', { duration: 2 ** 31 }), /Toast duration must not exceed/u);
+    assert.equal(document.body.querySelector('.muxui-toast'), null);
     await act(async () => manager.add('Visible toast', { duration: 25, onDismiss: () => { dismissed += 1; } }));
     assert.ok(document.body.querySelector('.muxui-toast'));
     await act(async () => new Promise((resolve) => setTimeout(resolve, 50)));
