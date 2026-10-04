@@ -471,6 +471,94 @@ test('R1.3 scalar composites preserve string and numeric callbacks with disabled
   }
 });
 
+// React DOM loads before jsdom here, so it detects text edits through its
+// keyup value-polling fallback instead of input events.
+function typeInto(input, text) {
+  input.focus();
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, text);
+  input.dispatchEvent(new KeyboardEvent('keyup', { key: text.at(-1), bubbles: true }));
+}
+
+function keyPress(target, key) {
+  target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  target.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
+}
+
+test('R1.3 ComboBox selects, filters, submits, and keeps disabled and read-only items inert', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const items = [{ id: 'red', label: 'Red' }, { id: 'green', label: 'Green', disabled: true }, { id: 'blue', label: 'Blue' }];
+  const options = () => [...document.querySelectorAll('.muxui-combo-box-option')];
+  const option = (label) => options().find((candidate) => candidate.textContent === label);
+  const input = () => container.querySelector('.muxui-combo-box input');
+  const open = async () => act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+  const selections = [];
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(ComboBox, { label: 'Color', name: 'color', items, onSelect: (item) => selections.push(item?.id), onChange: (value) => changes.push(value) })));
+    await open();
+    assert.deepEqual(options().map((candidate) => candidate.textContent), ['Red', 'Green', 'Blue']);
+    assert.equal(option('Green').getAttribute('aria-disabled'), 'true');
+    await act(async () => option('Green').click());
+    assert.deepEqual(selections, []);
+    assert.equal(input().value, '');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['']);
+    await act(async () => option('Blue').click());
+    assert.deepEqual(selections, ['blue']);
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['blue']);
+
+    // Keyboard navigation skips the disabled option.
+    await act(async () => input().focus());
+    const active = () => document.getElementById(input().getAttribute('aria-activedescendant'))?.textContent;
+    await act(async () => keyPress(input(), 'ArrowDown'));
+    await act(async () => keyPress(input(), 'ArrowDown'));
+    assert.equal(active(), 'Red');
+    await act(async () => keyPress(input(), 'ArrowDown'));
+    assert.equal(active(), 'Blue');
+    await act(async () => keyPress(input(), 'ArrowUp'));
+    assert.equal(active(), 'Red');
+    await act(async () => keyPress(input(), 'Enter'));
+    assert.deepEqual(selections, ['blue', 'red']);
+    assert.equal(input().value, 'Red');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['red']);
+
+    // Typing reports the input text and filters the open options.
+    await act(async () => typeInto(input(), 'bl'));
+    assert.equal(changes.at(-1), 'bl');
+    assert.deepEqual(options().map((candidate) => candidate.textContent), ['Blue']);
+    await act(async () => input().blur());
+
+    // Controlled input text and selection follow their props.
+    const controlledChanges = [];
+    const controlledSelections = [];
+    await act(async () => root.render(React.createElement(ComboBox, { key: 'controlled', label: 'Color', name: 'color', items, value: 'Blue', selectedId: 'blue', onSelect: (item) => controlledSelections.push(item?.id), onChange: (value) => controlledChanges.push(value) })));
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['blue']);
+    await act(async () => typeInto(input(), 'Re'));
+    assert.deepEqual(controlledChanges, ['Re']);
+    assert.equal(input().value, 'Blue');
+    await act(async () => input().blur());
+
+    // Read-only keeps the value and blocks selection and text callbacks.
+    const readOnlyCalls = [];
+    await act(async () => root.render(React.createElement(ComboBox, { key: 'read-only', label: 'Color', name: 'color', items, readOnly: true, defaultSelectedId: 'red', onSelect: (item) => readOnlyCalls.push(['select', item?.id]), onChange: (value) => readOnlyCalls.push(['change', value]) })));
+    assert.equal(input().value, 'Red');
+    assert.equal(input().readOnly, true);
+    await open();
+    await act(async () => option('Blue')?.click());
+    await act(async () => typeInto(input(), 'Bl'));
+    assert.deepEqual(readOnlyCalls, []);
+    assert.deepEqual([...new FormData(form).getAll('color')], ['red']);
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('Slider exposes disabled state on its labelled group while preserving thumb semantics', async () => {
   const env = createDom();
   const container = document.querySelector('#root');

@@ -802,8 +802,10 @@ export const ComboBox = /*#__PURE__*/ (() => {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ComboBox');
     const resolvedSize = normalizeChoiceControlSize(size, 'ComboBox');
     const normalized = normalizeItems(items);
-    const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !disabled && !readOnly) onSelect?.(item); };
-    return React.createElement(AriaComboBox, { ...props, ref, items: normalized, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+    const disabledKeys = new Set(normalized.filter((item) => item.disabled).map((item) => item.id));
+    const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !item.disabled && !disabled && !readOnly) onSelect?.(item); };
+    // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
+    return React.createElement(AriaComboBox, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
@@ -811,7 +813,7 @@ export const ComboBox = /*#__PURE__*/ (() => {
           React.createElement(ChevronDownIcon, { className: 'muxui-combo-box-arrow', 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
       description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
       errorMessage !== undefined ? React.createElement(AriaFieldError, { className: 'muxui-field-error' }, errorMessage) : null,
-      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', 'data-size': resolvedSize }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-combo-box-list', 'data-size': resolvedSize }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, className: 'muxui-combo-box-option' }, item.label))),
+      React.createElement(PopoverMotion, { className: 'muxui-combo-box-popover', 'data-size': resolvedSize }, React.createElement(AriaListBox, { items: normalized, className: 'muxui-combo-box-list', 'data-size': resolvedSize }, (item) => React.createElement(AriaListBoxItem, { id: item.id, textValue: item.textValue, isDisabled: item.disabled, 'data-disabled': item.disabled || undefined, 'aria-disabled': item.disabled || undefined, className: 'muxui-combo-box-option' }, item.label))),
     );
   });
   component.displayName = 'ComboBox';
