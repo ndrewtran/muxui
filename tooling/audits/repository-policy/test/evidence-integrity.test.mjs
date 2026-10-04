@@ -236,3 +236,182 @@ test('R1.2-R1.4 retroactive review records match their reports and never overcla
     assert.doesNotMatch(text, /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/u, `${entry.name} retains no email address`);
   }
 });
+
+// Roadmap R1 exit: the E-R1-EXIT capture tool binds the dry run, publish run,
+// and registry to one candidate. Fixtures mirror npm-publish.yml job-log shapes.
+const r1Exit = await import('../../../../tests/evidence/capture-r1-exit.mjs');
+
+function r1ExitFixture() {
+  const head = 'a'.repeat(40);
+  const tree = 'b'.repeat(40);
+  const version = '0.1.0-rc.1';
+  const tarballBytes = Buffer.from('r1 exit fixture tarball');
+  const entries = ['package/package.json', 'package/generated/index.mjs', 'package/generated/styles.css'];
+  const facts = r1Exit.tarballFacts(tarballBytes, entries);
+  const exportsMap = { '.': './generated/index.mjs', './styles.css': './generated/styles.css' };
+  const manifest = {
+    package: { name: '@muxui/react', version, exports: exportsMap, dependencies: {}, peerDependencies: {} },
+    source: { revision: head, preparationTool: { path: 'tooling/audits/repository-policy/src/release-prepare.mjs', sha256: `sha256:${'c'.repeat(64)}` } },
+    correlation: { source: { revision: head, tree } },
+    artifact: { file: `muxui-react-${version}.tgz`, bytes: facts.bytes, sha256: facts.sha256, shasum: facts.shasum, integrity: facts.integrity },
+    files: entries.map((entry) => entry.slice('package/'.length)),
+    consumerVerification: { onlineMatrix: [], warnings: { duplicateDependencyVersions: [] } },
+    publication: { status: 'prepared', distTag: 'next', authorization: 'required-external-human-authorization' },
+    preflight: { checks: [{ name: 'version collision', command: `npm view @muxui/react@${version} version`, status: 'pending' }] },
+    rollback: { status: 'prepared-not-exercised', steps: ['deprecate and fix forward'] },
+  };
+  const at = (index) => `2026-10-04T07:48:${String(index % 60).padStart(2, '0')}.0000000Z`;
+  const log = (lines) => lines.map((line, index) => `${at(index)} ${line}`).join('\n');
+  const script = (line) => `\u001b[36;1m${line}\u001b[0m`;
+  const prepareLog = (mode, expected) => log([
+    'Current runner version: \'2.337.0\'',
+    '##[group]Run actions/checkout@v4',
+    '[command]/usr/bin/git log -1 --format=%H',
+    head,
+    '##[group]Run set -euo pipefail',
+    script('pnpm release:prepare 2>&1 | tee "$RUNNER_TEMP/release-prepare.log"'),
+    '##[endgroup]',
+    'unrelated check output',
+    `R1 exit release preparation passed for ${version}; source @muxui/react remains private and unpublished.`,
+    '##[group]Run set -euo pipefail',
+    script('source_dir=$(sed -n \'s/^R1 exit artifacts written to //p\' "$RUNNER_TEMP/release-prepare.log")'),
+    '##[endgroup]',
+    `Candidate ${version} ${facts.integrity}`,
+    '##[group]Run set -euo pipefail',
+    script('npm publish "$TARBALL" --tag next --provenance --access public --dry-run'),
+    '##[endgroup]',
+    `+ @muxui/react@${version}`,
+    '##[group]Run set -euo pipefail',
+    script('if [ -z "$EXPECTED_SHA512" ]; then'),
+    'env:',
+    `  MODE: ${mode}`,
+    `  EXPECTED_VERSION: ${version}`,
+    `  EXPECTED_SHA512: ${expected}`,
+    '##[endgroup]',
+    '##[group]Run actions/upload-artifact@v4',
+    '##[endgroup]',
+    'Post job cleanup.',
+  ]);
+  const publishLog = (integrity) => log([
+    '##[group]Run set -euo pipefail',
+    script('tarballs=("$RUNNER_TEMP"/npm-candidate/*.tgz)'),
+    '##[endgroup]',
+    '##[group]Run set -euo pipefail',
+    script('publisher=$(npm whoami --registry="$registry")'),
+    'env:',
+    '  NODE_AUTH_TOKEN: ***',
+    '##[endgroup]',
+    'npm whoami: ndrewtran',
+    `@muxui/react@${version}: E404 (no collision)`,
+    '@muxui/react dist-tags: E404 (first publish)',
+    '##[group]Run set -euo pipefail',
+    script('# Stop on publisher drift since the preflight.'),
+    '##[endgroup]',
+    `+ @muxui/react@${version}`,
+    '##[group]Run set -euo pipefail',
+    script('read_back() {'),
+    '##[endgroup]',
+    `dist.integrity: ${integrity}`,
+    'dist.attestations: {',
+    '  "provenance": { "predicateType": "https://slsa.dev/provenance/v1" }',
+    '}',
+    'dist-tags: {',
+    `  "latest": "${version}",`,
+    `  "next": "${version}"`,
+    '}',
+    'Post job cleanup.',
+  ]);
+  const run = (id, overrides = {}) => ({
+    id, name: 'npm publish', path: '.github/workflows/npm-publish.yml', event: 'workflow_dispatch', status: 'completed',
+    conclusion: 'success', head_branch: 'main', head_sha: head, run_attempt: 1, run_started_at: '2026-10-04T07:34:16Z', ...overrides,
+  });
+  const job = (id, name) => ({ id, name, conclusion: 'success', started_at: '2026-10-04T07:34:21Z', completed_at: '2026-10-04T07:48:33Z' });
+  const credentials = {
+    run: run(37130250844, { head_sha: 'd'.repeat(40) }),
+    jobs: [job(3, 'verify-credentials')],
+    log: log(['##[group]Run set -euo pipefail', script('npm whoami'), '##[endgroup]', 'npm whoami:', 'ndrewtran', 'Packages in @muxui visible to this token:', '{}', '##[notice]@muxui/react returned E404, expected before the first publish.', 'Post job cleanup.']),
+  };
+  const artifact = {
+    manifest: { file: `muxui-react-${version}.release-manifest.json`, bytes: Buffer.from(JSON.stringify(manifest)) },
+    tarball: { file: `muxui-react-${version}.tgz`, bytes: tarballBytes, entries, packageJson: { name: '@muxui/react', version, exports: exportsMap } },
+  };
+  const dryRunInput = { run: run(1), jobs: [job(11, 'prepare')], prepareLog: prepareLog('dry-run', ''), artifact, sourceTree: tree, credentials };
+  return { head, tree, version, facts, manifest, artifact, run, job, prepareLog, publishLog, dryRunInput };
+}
+
+const r1ExitCode = (code) => (error) => error?.code === code;
+
+test('R1 exit capture binds the dry run, publish run, and registry to one candidate', () => {
+  const fixture = r1ExitFixture();
+  const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput), manifest: fixture.manifest };
+  assert.equal(dryRun.execution.executedRevision, fixture.head);
+  assert.equal(dryRun.candidate.tarball.integrity, fixture.facts.integrity);
+  assert.equal(dryRun.credentials.observed.npmUser, 'ndrewtran');
+  const excerpt = dryRun.excerpt.text;
+  assert.doesNotMatch(excerpt, /unrelated check output|release:prepare 2>&1/u, 'long-step noise and workflow script lines are not retained');
+  assert.match(excerpt, /R1 exit release preparation passed/u);
+  const publish = r1Exit.bindPublish({ dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.job(22, 'publish')], prepareLog: fixture.prepareLog('publish', fixture.facts.integrity), publishLog: fixture.publishLog(fixture.facts.integrity) });
+  assert.equal(publish.observed.readBack.distTags.next, fixture.version);
+  assert.equal(publish.observed.preflight.version, 'E404 (no collision)');
+  const view = { integrity: fixture.facts.integrity, shasum: fixture.facts.shasum, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } }, distTags: { latest: fixture.version, next: fixture.version } };
+  const consumer = { installedVersion: fixture.version, lockIntegrity: fixture.facts.integrity, smoke: { imported: ['@muxui/react'], resolved: ['@muxui/react/styles.css'], rendered: ['Button'] } };
+  const registry = r1Exit.bindRegistry({ dryRun, view, consumer });
+  const ref = { path: 'tests/evidence/r1-exit/x', sha256: `sha256:${'0'.repeat(64)}` };
+  const verification = { phases: { dryRun, publish: { ...publish, captureTimestamp: 't' }, registry: { ...registry, captureTimestamp: 't' } }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {} };
+  const records = Object.fromEntries(Object.entries(r1Exit.buildRoute(verification, { validation: ref, manifest: ref, registry: ref })).map(([id, text]) => [id, JSON.parse(text)]));
+  assert.deepEqual(Object.keys(records), ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04']);
+  // latest is observed as registry-set, never claimed; rollback is prepared, not exercised.
+  assert.deepEqual(records['E-R1-EXIT-04'].distTags.latest, { observed: fixture.version, setBy: 'the registry on first publish (Decision 0023)', claimed: false, promoted: false });
+  assert.equal(records['E-R1-EXIT-04'].rollback.status, 'prepared-not-exercised');
+  for (const record of Object.values(records)) {
+    assert.ok(record.deferredToS1.every(({ status, deferredTo }) => status === 'unmet' && deferredTo === 'S1.0'));
+    assert.ok(record.nonClaims.some((claim) => claim.includes('No assistive-technology support claim')));
+  }
+  const prePublishOnly = JSON.parse(r1Exit.buildRoute({ ...verification, phases: { dryRun } }, { validation: ref, manifest: ref })['E-R1-EXIT-02']);
+  assert.equal(prePublishOnly.outcome, 'partial', 'the pre-publish half alone is not a pass');
+});
+
+test('R1 exit capture rejects a source.revision, head commit, digest, or branch mismatch', () => {
+  const fixture = r1ExitFixture();
+  const withManifest = (change) => {
+    const manifest = structuredClone(fixture.manifest);
+    change(manifest);
+    return { ...fixture.dryRunInput, artifact: { ...fixture.artifact, manifest: { ...fixture.artifact.manifest, bytes: Buffer.from(JSON.stringify(manifest)) } } };
+  };
+  assert.throws(() => r1Exit.bindDryRun(withManifest((manifest) => { manifest.source.revision = 'e'.repeat(40); })), r1ExitCode('R1_EXIT_SOURCE_REVISION_MISMATCH'));
+  assert.throws(() => r1Exit.bindDryRun(withManifest((manifest) => { manifest.artifact.integrity = 'sha512-other'; })), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  assert.throws(() => r1Exit.bindDryRun({ ...fixture.dryRunInput, run: fixture.run(1, { head_branch: 'ci/npm-publish-rc' }) }), r1ExitCode('R1_EXIT_RUN_NOT_MAIN'));
+
+  const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput), manifest: fixture.manifest };
+  const publish = (overrides) => r1Exit.bindPublish({
+    dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.job(22, 'publish')],
+    prepareLog: fixture.prepareLog('publish', fixture.facts.integrity), publishLog: fixture.publishLog(fixture.facts.integrity), ...overrides,
+  });
+  assert.throws(() => publish({ run: fixture.run(2, { head_sha: 'f'.repeat(40) }) }), r1ExitCode('R1_EXIT_HEAD_SHA_MISMATCH'));
+  assert.throws(() => publish({ publishLog: fixture.publishLog('sha512-registry-has-other-bytes') }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  assert.throws(() => publish({ prepareLog: fixture.prepareLog('publish', 'sha512-other-input') }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  const view = { integrity: 'sha512-other', shasum: fixture.facts.shasum, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } }, distTags: { next: fixture.version } };
+  assert.throws(() => r1Exit.bindRegistry({ dryRun, view, consumer: {} }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+});
+
+test('R1 exit capture fails closed when the npm-candidate artifact is missing', async () => {
+  const fixture = r1ExitFixture();
+  assert.throws(() => r1Exit.bindDryRun({ ...fixture.dryRunInput, artifact: null }), r1ExitCode('R1_EXIT_ARTIFACT_MISSING'));
+  // End to end, an expired or absent download writes nothing.
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-'));
+  try {
+    const out = join(root, 'tests/evidence/r1-exit');
+    const github = {
+      run: (id) => (id === 37130250844 ? fixture.dryRunInput.credentials.run : fixture.run(id)),
+      jobs: (id) => (id === 37130250844 ? fixture.dryRunInput.credentials.jobs : fixture.dryRunInput.jobs),
+      log: (jobId) => (jobId === 3 ? fixture.dryRunInput.credentials.log : fixture.dryRunInput.prepareLog),
+      tree: () => fixture.tree,
+      approvals: () => [],
+      download: () => false,
+    };
+    await assert.rejects(r1Exit.main(['--rehearsal', `--out=${out}`, '--capture-timestamp=2026-10-04T10:00:00Z', '--dry-run-run=1'], github), r1ExitCode('R1_EXIT_ARTIFACT_MISSING'));
+    assert.deepEqual(await readdir(root), [], 'no evidence root is created');
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
