@@ -1161,6 +1161,11 @@ test('showcase does not expose React Aria as a public import', async () => {
   assert.doesNotMatch(preview, /react-aria-components/);
 });
 
+test('manager disables network-dependent What\'s new notifications', async () => {
+  const { default: main } = await import('../.storybook/main.mjs');
+  assert.equal(main.core?.disableWhatsNewNotifications, true);
+});
+
 test('preview exposes the Mux UI theme and direction host contract', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
   const previewCss = await readFile(resolve(appRoot, '.storybook/preview.css'), 'utf8');

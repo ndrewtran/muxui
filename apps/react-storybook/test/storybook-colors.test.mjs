@@ -1499,7 +1499,8 @@ async function runColourWorker({ browser, schemes, workerId }) {
           await statusTrigger.hover();
           await snapshot(scheme, `status/${value}`);
         }
-        const filters = page.locator('#sidebar-bottom-wrapper button');
+        // Scope to the testing widget; the sidebar bottom also hosts notifications.
+        const filters = page.locator('#storybook-testing-module button');
         assert.ok(await filters.count(), 'Status fixtures must render the testing widget');
         for (let index = 0; index < await filters.count(); index += 1) {
           await filters.nth(index).hover(); await snapshot(scheme, `status/widget-${index}/hover`);
@@ -1512,8 +1513,11 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await page.getByText('Server timed out', { exact: true }).waitFor();
       await snapshot(scheme, 'notification/open');
       const dismissals = page.getByRole('button', { name: 'Dismiss notification', exact: true });
-      for (let index = 0; index < await dismissals.count(); index += 1) await hoverAndFocus(scheme, `notification/dismiss-${index}`, dismissals.nth(index));
-      await dismissals.last().click();
+      // Any other notification would make light and dark coverage diverge.
+      assert.equal(await dismissals.count(), 1, `${scheme}: only the server notification may be open: ${
+        JSON.stringify(await page.locator('#sidebar-bottom-wrapper').innerText())}`);
+      await hoverAndFocus(scheme, 'notification/dismiss', dismissals);
+      await dismissals.click();
 
       await page.getByRole('tab', { name: /^Accessibility/u }).click();
       await frame.locator('.muxui-storybook-surface button').first().evaluate((element) => { element.id = 'colour-audit-target'; });
