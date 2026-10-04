@@ -239,7 +239,7 @@ for (const value of argument('accept')) {
 const reviewer = {
   kind: 'retroactive independent review of the current code',
   harness: 'Claude Code',
-  model: 'Anthropic Claude',
+  model: 'Claude Opus 5.5 (claude-opus-5-5)',
   access: 'read-only reviewer agent; no GitHub access; worktree left unchanged',
   independence: 'a different model and harness from the Codex automation that produced the R1 code and pull requests',
 };

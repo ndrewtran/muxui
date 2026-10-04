@@ -3,7 +3,8 @@
 Decision 0022 amendment 01 corrects Decision 0022's premise: pull requests
 #102 and #105 through #108 have no hosted reviews. This root retains the
 retroactive independent reviews of the current code for the R1.2, R1.3, and
-R1.4 families, run on one reviewed commit in four lanes: R1.2 fields, R1.3
+R1.4 families, run by read-only Claude Opus 5.5 (`claude-opus-5-5`) reviewer
+agents in Claude Code on one reviewed commit in four lanes: R1.2 fields, R1.3
 collections, R1.3 pickers, and R1.4 overlays. R1.1 and R1.5 have no review
 here; the amendment records their review as author-reported only.
 
