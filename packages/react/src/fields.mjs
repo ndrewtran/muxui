@@ -306,14 +306,16 @@ function useMuxFormValidation(names) {
   return { isInvalid: messages.length > 0, message: messages.join(' '), dismiss: () => setDismissedErrors(validationErrors) };
 }
 
-function validationProps({ disabled, readOnly, required, invalid, errorMessage }) {
+// errorMessage only customizes the message RAC's FieldError shows while the
+// field is invalid; it never makes the field invalid on its own.
+function validationProps({ disabled, readOnly, required, invalid }) {
   return {
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
-    // Leave invalid uncontrolled when no local error is present so Form's
+    // Leave invalid uncontrolled unless forced so native, custom, and Form's
     // name-keyed server validation can flow through RAC's context.
-    isInvalid: invalid || errorMessage !== undefined ? true : undefined,
+    isInvalid: invalid ? true : undefined,
   };
 }
 
@@ -507,7 +509,7 @@ export const TextField = React.forwardRef(function TextField({
   return React.createElement(AriaTextField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -561,7 +563,7 @@ export const SearchField = React.forwardRef(function SearchField({
   return React.createElement(AriaSearchField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -618,7 +620,7 @@ export const NumberField = React.forwardRef(function NumberField({
   return React.createElement(AriaNumberField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -675,7 +677,7 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
   const group = React.createElement(AriaCheckboxGroup, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -728,7 +730,7 @@ export const Switch = /*#__PURE__*/ (() => {
     return React.createElement(AriaSwitchField, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid }),
       isSelected: selected,
       defaultSelected,
       name,
@@ -803,7 +805,7 @@ export const DateField = React.forwardRef(function DateField({
   return React.createElement(AriaDateField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value: parsedValue,
     defaultValue: parsedDefaultValue,
     minValue: parsedMinValue,
@@ -870,7 +872,7 @@ export const TimeField = React.forwardRef(function TimeField({
   return React.createElement(AriaTimeField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
     value: effectiveParsedValue,
     minValue: parsedMinValue,
     maxValue: parsedMaxValue,
@@ -932,7 +934,7 @@ export const DatePicker = /*#__PURE__*/ (() => {
     return React.createElement(AriaDatePicker, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid }),
       value: parsedValue,
       defaultValue: parsedDefaultValue,
       minValue: parsedMinValue,
@@ -1019,7 +1021,7 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
     return React.createElement(AriaDateRangePicker, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
       value: effectiveValueObject,
       minValue: parsedMinValue,
       maxValue: parsedMaxValue,
@@ -1251,7 +1253,7 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       inputValue: effectiveInputValue,
       onInputChange: handleInputChange,
     }, React.createElement(AriaSearchField, {
-      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid }),
       name,
       className: 'muxui-autocomplete-search',
       'data-part': 'search-field',

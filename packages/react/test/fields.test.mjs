@@ -60,7 +60,7 @@ function fields({ onText, onNumber, onSearch, onDate, onTime, onRange, onSwitch,
     React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] }),
     React.createElement(CheckboxGroup, { label: 'Alerts', name: 'alerts', defaultValue: ['email'], onChange: onGroup },
       React.createElement(Checkbox, { value: 'email' }, 'Email'), React.createElement(Checkbox, { value: 'sms' }, 'SMS')),
-    React.createElement(Switch, { label: 'Enabled', description: 'Apply changes', errorMessage: 'Choose a setting', defaultSelected: false, onChange: onSwitch }),
+    React.createElement(Switch, { label: 'Enabled', description: 'Apply changes', errorMessage: 'Choose a setting', invalid: true, defaultSelected: false, onChange: onSwitch }),
     React.createElement(DateField, { label: 'Birthday', defaultValue: '2026-08-26', onChange: onDate }),
     React.createElement(DatePicker, { label: 'Due date', defaultValue: '2026-08-26', onChange: onDate }),
     React.createElement(DateRangePicker, { label: 'Trip', startName: 'tripStart', endName: 'tripEnd', defaultValue: { start: '2026-08-26', end: '2026-09-01' }, onChange: onRange }),
@@ -1443,4 +1443,23 @@ test('NumberField leaves the device keyboard mode to React Aria', () => {
   const markup = renderToString(React.createElement(NumberField, { label: 'Seats', minValue: 0, formatOptions: { maximumFractionDigits: 0 } }));
   assert.match(markup, /inputMode="numeric"/u);
   assert.doesNotMatch(markup, /inputMode="decimal"/u);
+});
+
+test('errorMessage alone leaves fields valid and only replaces the shown validation message', () => {
+  const controls = [
+    [TextField, { label: 'Email', name: 'email', defaultValue: 'a@b.co' }],
+    [SearchField, { label: 'Search', name: 'search', defaultValue: 'Mux' }],
+    [NumberField, { label: 'Quantity', name: 'quantity', defaultValue: 2 }],
+    [Switch, { label: 'Enabled', name: 'enabled', defaultSelected: true }],
+    [DateField, { label: 'Date', name: 'date', defaultValue: '2026-03-04' }],
+    [TimeField, { label: 'Time', name: 'time', defaultValue: '09:30' }],
+    [Autocomplete, { label: 'City', name: 'city', defaultValue: 'Melbourne', items: ['Melbourne'] }],
+  ];
+  for (const [Control, props] of controls) {
+    const valid = renderToString(React.createElement(Control, { ...props, errorMessage: 'Custom error' }));
+    assert.doesNotMatch(valid, /data-invalid|Custom error/u, `${Control.displayName} became invalid from errorMessage alone`);
+    const invalid = renderToString(React.createElement(Control, { ...props, errorMessage: 'Custom error', invalid: true }));
+    assert.match(invalid, /data-invalid="true"/u);
+    assert.match(invalid, /Custom error/u);
+  }
 });

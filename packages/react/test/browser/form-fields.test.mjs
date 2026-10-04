@@ -47,6 +47,10 @@ const entry = `import React from 'react';
       h(TimeField, { label: 'Time', name: 'time', required: true }),
       h(Switch, { label: 'Accept', name: 'accept', required: true }),
       h('button', { type: 'submit' }, 'Submit')),
+    'error-message': () => h(Form, { onSubmit: submit },
+      h(TextField, { label: 'Email', name: 'email', defaultValue: 'a@b.co', errorMessage: 'Enter your work email' }),
+      h(TextField, { label: 'Name', name: 'name', required: true, errorMessage: 'Tell us your name' }),
+      h('button', { type: 'submit' }, 'Submit')),
   };
   const name = new URLSearchParams(location.search).get('case');
   createRoot(document.getElementById('root')).render(h(cases[name]));
@@ -85,6 +89,7 @@ test('a required CheckboxGroup blocks native submission and shows its error', { 
     await open('checkbox-group');
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), []);
+    await page.locator('.muxui-checkbox-group .muxui-field-error').waitFor();
     assert.equal(await page.locator('.muxui-checkbox-group').getAttribute('data-invalid'), 'true');
     assert.notEqual((await page.locator('.muxui-checkbox-group .muxui-field-error').textContent())?.trim() ?? '', '');
 
@@ -153,8 +158,31 @@ test('required fields block native submission and show their invalid state', { t
     await open('required');
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), []);
+    await page.locator('.muxui-switch-field[data-invalid]').waitFor();
     for (const selector of ['.muxui-text-field', '.muxui-number-field', '.muxui-search-field', '.muxui-autocomplete-search', '.muxui-date-field', '.muxui-time-field', '.muxui-switch-field']) {
       assert.equal(await page.locator(selector).getAttribute('data-invalid'), 'true', `${selector} is not invalid after a blocked submit`);
     }
+  });
+});
+
+test('errorMessage submits while valid and replaces the built-in message when validation fails', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('error-message');
+    const email = page.locator('.muxui-text-field').first();
+    const name = page.locator('.muxui-text-field').nth(1);
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), []);
+    await name.locator('.muxui-field-error').waitFor();
+    assert.equal(await email.getAttribute('data-invalid'), null);
+    assert.equal(await email.locator('.muxui-field-error').count(), 0);
+    assert.equal(await name.getAttribute('data-invalid'), 'true');
+    assert.equal((await name.locator('.muxui-field-error').textContent())?.trim(), 'Tell us your name');
+
+    // Commit the edit first: the error collapses on change and would move the button mid-click.
+    await page.getByRole('textbox', { name: 'Name' }).fill('Andrew');
+    await page.getByRole('textbox', { name: 'Name' }).blur();
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [['submit', { email: 'a@b.co', name: 'Andrew' }]]);
+    assert.equal(await name.locator('.muxui-field-error').count(), 0);
   });
 });

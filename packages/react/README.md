@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:9fe163708f987303e8c3cc05a28a19d3ee9f79e94a9c0ed477e28201133a238c -->
+<!-- @generated-content-sha256: sha256:74d871a14c278ca2ced36cbad0e8c4064b73952bc40ecc62d1b583398aaea9e4 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -214,6 +214,7 @@ Public parts: `root`, `label`, `trigger`, `value`, `popup`, `list`, `option`, `d
 - The forwarded ref resolves to the outer div; inputRef resolves to the native HTMLInputElement for focus and selection.
 - inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props; its className merges with the Mux input class.
 - Root id, value, defaultValue, onChange, name, type, accessible name, validation, disabled, readOnly, and required remain authoritative; inputProps cannot replace them. Root native input attributes take precedence when supplied.
+- errorMessage renders only while the field is invalid, through the invalid prop or failed native, custom, or server validation, and replaces the built-in message.
 
 Public parts: `root`, `label`, `input`, `description`, `error`.
 
@@ -226,6 +227,7 @@ Public parts: `root`, `label`, `input`, `description`, `error`.
 - The forwarded ref resolves to the outer div; inputRef resolves to the native HTMLInputElement for focus and selection.
 - inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props; its className merges with the Mux input class.
 - Root id, value, defaultValue, onChange, name, type, accessible name, validation, disabled, readOnly, and required remain authoritative; inputProps cannot replace them. Root native input attributes take precedence when supplied.
+- errorMessage renders only while the field is invalid, through the invalid prop or failed native, custom, or server validation, and replaces the built-in message.
 
 Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 
