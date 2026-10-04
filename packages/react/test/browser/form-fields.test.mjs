@@ -47,6 +47,10 @@ const entry = `import React from 'react';
       h(TimeField, { label: 'Time', name: 'time', required: true }),
       h(Switch, { label: 'Accept', name: 'accept', required: true }),
       h('button', { type: 'submit' }, 'Submit')),
+    countries: () => h(Form, { onSubmit: submit },
+      h(Autocomplete, { label: 'Country', name: 'country', items: [{ label: 'Australia', value: 'AU' }, { label: 'Austria', value: 'AT' }, { label: 'Belgium', value: 'BE' }], onChange: (value) => log('change', value) }),
+      h('button', { type: 'submit' }, 'Submit'),
+      h('button', { type: 'reset' }, 'Reset')),
     'error-message': () => h(Form, { onSubmit: submit },
       h(TextField, { label: 'Email', name: 'email', defaultValue: 'a@b.co', errorMessage: 'Enter your work email' }),
       h(TextField, { label: 'Name', name: 'name', required: true, errorMessage: 'Tell us your name' }),
@@ -184,5 +188,31 @@ test('errorMessage submits while valid and replaces the built-in message when va
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [['submit', { email: 'a@b.co', name: 'Andrew' }]]);
     assert.equal(await name.locator('.muxui-field-error').count(), 0);
+  });
+});
+
+test('Autocomplete shows the chosen label, submits its value, filters after selection, and resets', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('countries');
+    const input = page.getByRole('combobox', { name: 'Country' });
+    const options = page.locator('.muxui-autocomplete-option');
+    await input.click();
+    await page.keyboard.type('Australia');
+    await options.filter({ hasText: 'Australia' }).click();
+    assert.equal(await input.inputValue(), 'Australia');
+    assert.deepEqual((await events()).at(-1), ['change', 'AU']);
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual((await events()).at(-1), ['submit', { country: 'AU' }]);
+
+    await input.click();
+    await input.press('ControlOrMeta+a');
+    await page.keyboard.type('Aust');
+    assert.deepEqual(await options.allTextContents(), ['Australia', 'Austria']);
+    assert.deepEqual((await events()).at(-1), ['change', 'Aust']);
+    await page.keyboard.press('Escape');
+
+    await page.getByRole('button', { name: 'Reset' }).click();
+    assert.equal(await input.inputValue(), '');
+    assert.equal(await page.locator('input[type="hidden"][name="country"]').inputValue(), '');
   });
 });

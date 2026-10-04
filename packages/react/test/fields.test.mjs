@@ -1463,3 +1463,70 @@ test('errorMessage alone leaves fields valid and only replaces the shown validat
     assert.match(invalid, /Custom error/u);
   }
 });
+
+test('Autocomplete shows the selected label while FormData, onChange, and reset carry the value', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const changes = [];
+  const countries = [{ label: 'Australia', value: 'AU' }, { label: 'Austria', value: 'AT' }];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderForm = (controlledValue) => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'Country', name: 'country', items: countries, defaultValue: 'AT', onChange: (value) => changes.push(value) }),
+      React.createElement(Autocomplete, { label: 'Controlled', name: 'controlled', items: countries, value: controlledValue })));
+    await act(async () => renderForm('AU'));
+    const [input, controlledInput] = host.querySelectorAll('input[role="combobox"]');
+    const form = host.querySelector('form');
+    assert.equal(input.value, 'Austria');
+    assert.equal(controlledInput.value, 'Australia');
+    assert.deepEqual(new dom.window.FormData(form).getAll('country'), ['AT'], 'only the hidden input carries the name');
+
+    await act(async () => input.focus());
+    await act(async () => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'Country', name: 'country', items: countries, defaultValue: 'AT', onChange: (value) => changes.push(value) }),
+      React.createElement(Autocomplete, { label: 'Controlled', name: 'controlled', items: countries, value: 'Mel' }))));
+    assert.equal(controlledInput.value, 'Mel', 'an unmatched controlled value shows as typed text');
+    // The default label filters the list to Austria; reopen it from an empty query.
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    await act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })));
+    const australia = [...document.querySelectorAll('.muxui-autocomplete-option')].find((option) => option.textContent === 'Australia');
+    await act(async () => australia.click());
+    assert.equal(input.value, 'Australia');
+    assert.equal(changes.at(-1), 'AU');
+    assert.equal(new dom.window.FormData(form).get('country'), 'AU');
+
+    await act(async () => form.reset());
+    assert.equal(input.value, 'Austria');
+    assert.equal(new dom.window.FormData(form).get('country'), 'AT');
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
+
+test('Autocomplete shows name-keyed server errors until a selection', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Form, { validationBehavior: 'aria', validationErrors: { city: 'City is unavailable' } },
+      React.createElement(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'] }))));
+    const field = host.querySelector('.muxui-autocomplete-search');
+    assert.equal(field.getAttribute('data-invalid'), 'true');
+    assert.match(field.querySelector('.muxui-field-error')?.textContent ?? '', /City is unavailable/u);
+    await act(async () => host.querySelector('input[role="combobox"]').focus());
+    await act(async () => document.querySelector('.muxui-autocomplete-option').click());
+    assert.equal(field.getAttribute('data-invalid'), null);
+    assert.deepEqual(new dom.window.FormData(host.querySelector('form')).getAll('city'), ['Melbourne']);
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});

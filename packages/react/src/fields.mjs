@@ -1121,17 +1121,36 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Autocomplete');
     const resolvedSize = normalizeAutocompleteSize(size);
     const normalizedItems = React.useMemo(() => normalizeAutocompleteItems(items), [items]);
-    const [inputValue, setInputValue] = React.useState(() => value ?? defaultValue ?? '');
-    React.useEffect(() => {
-      if (value !== undefined) setInputValue(value);
-    }, [value]);
-    const effectiveInputValue = value ?? inputValue;
+    // The input shows a selected item's label while the form and onChange
+    // carry its value; typed text is both the shown and the submitted value.
+    const entryForValue = (nextValue) => {
+      const item = normalizedItems.find((candidate) => String(candidate.value) === nextValue);
+      return item ? { text: autocompleteItemText(item), selected: nextValue } : { text: nextValue, selected: null };
+    };
+    const [storedEntry, setEntry] = React.useState(() => entryForValue(value ?? defaultValue ?? ''));
+    const storedValue = storedEntry.selected ?? storedEntry.text;
+    // A controlled value that differs from the last edit came from outside.
+    const entry = value !== undefined && value !== storedValue ? entryForValue(value) : storedEntry;
+    const submittedValue = entry.selected ?? entry.text;
+    const effectiveInputValue = entry.text;
+    const externalValidation = useMuxFormValidation(name);
+    const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
+    const resettingRef = React.useRef(false);
+    const resetInputRef = useOwningFormReset(() => {
+      externalValidation.dismiss();
+      if (value === undefined) setEntry(entryForValue(defaultValue ?? ''));
+    }, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
     const filteredItems = React.useMemo(() => {
       const query = effectiveInputValue.toLocaleLowerCase();
       return normalizedItems.filter((item) => autocompleteItemText(item).toLocaleLowerCase().includes(query));
     }, [effectiveInputValue, normalizedItems]);
     const [isOpen, setIsOpen] = React.useState(false);
     const inputRef = React.useRef(null);
+    // The visible input finds the owning form, so no extra reset anchor input is needed.
+    const setInputRef = React.useCallback((node) => {
+      inputRef.current = node;
+      resetInputRef(node);
+    }, [resetInputRef]);
     const popoverRef = React.useRef(null);
     // Outside dismissal lets RAC restore this trigger; consume that focus without reopening.
     const pendingFocusRestoreRef = React.useRef(false);
@@ -1210,7 +1229,8 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       if (item) {
         if (item.disabled) return;
         const nextValue = String(item.value);
-        setInputValue(nextValue);
+        externalValidation.dismiss();
+        setEntry({ text: autocompleteItemText(item), selected: nextValue });
         onChange?.(nextValue);
       }
       onSelect?.(item);
@@ -1218,8 +1238,9 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     };
     const handleInputChange = (next) => {
       clearPendingFocusRestore();
-      if (disabled || readOnly) return;
-      if (value === undefined) setInputValue(next);
+      if (disabled || readOnly || resettingRef.current) return;
+      externalValidation.dismiss();
+      setEntry({ text: next, selected: null });
       onChange?.(next);
       setIsOpen(!disabled);
     };
@@ -1253,8 +1274,9 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       inputValue: effectiveInputValue,
       onInputChange: handleInputChange,
     }, React.createElement(AriaSearchField, {
-      ...validationProps({ disabled, readOnly, required, invalid }),
-      name,
+      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
+      // Keep RAC's name private: the hidden input below submits the value.
+      name: undefined,
       className: 'muxui-autocomplete-search',
       'data-part': 'search-field',
       'aria-label': ariaLabel,
@@ -1262,9 +1284,9 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     }, fieldChildren({
       label,
       description,
-      errorMessage,
+      errorMessage: effectiveErrorMessage,
       input: React.createElement(FieldInput, {
-        ref: inputRef,
+        ref: setInputRef,
         className: 'muxui-field-input',
         'data-part': 'input',
         // WAI-ARIA combobox: RAC supplies aria-autocomplete, aria-controls,
@@ -1303,6 +1325,7 @@ export const Autocomplete = /*#__PURE__*/ (() => {
           if (event.key === 'ArrowDown') setIsOpen(!disabled);
         },
       }),
+      children: name ? React.createElement('input', { type: 'hidden', name, value: submittedValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
     })),
     React.createElement(PopoverMotion, {
       ref: setPopoverRef,
