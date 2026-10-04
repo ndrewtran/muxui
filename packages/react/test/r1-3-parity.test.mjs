@@ -470,6 +470,61 @@ test('R1.3 ColorSlider validates channel and colour space pairs with Mux UI erro
   assert.doesNotThrow(() => render({ channel: 'saturation', defaultValue: 'hsl(210, 50%, 40%)' }));
 });
 
+test('R1.3 null keeps date and colour values controlled and empty', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const warnings = [];
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  console.error = (...args) => warnings.push(args.join(' '));
+  const swatches = [{ id: 'red', color: '#ff0000' }, { id: 'green', color: '#00ff00' }];
+  const changes = [];
+  const render = (props) => act(async () => root.render(React.createElement('div', null,
+    React.createElement(Calendar, { 'aria-label': 'Date', value: props.date, focusedValue: '2026-03-15', onChange: (value) => changes.push(['date', value]) }),
+    React.createElement(RangeCalendar, { 'aria-label': 'Range', value: props.range, focusedValue: '2026-03-15', onChange: (value) => changes.push(['range', value]) }),
+    React.createElement(ColorSwatchPicker, { 'aria-label': 'Swatches', value: props.swatch, items: swatches, onChange: (value) => changes.push(['swatch', value]) }),
+    React.createElement(ColorField, { label: 'Colour', value: props.color, onChange: (value) => changes.push(['color', value]) }))));
+  const selected = () => ({
+    date: [...container.querySelectorAll('.muxui-calendar-cell[data-selected="true"]')].map((cell) => cell.textContent),
+    range: [...container.querySelectorAll('.muxui-range-calendar-cell[data-selected="true"]')].map((cell) => cell.textContent),
+    swatch: [...container.querySelectorAll('.muxui-color-swatch-picker [aria-selected="true"]')].length,
+    color: container.querySelector('.muxui-color-field input').value,
+  });
+  const empty = { date: [], range: [], swatch: 0, color: '' };
+  try {
+    await render({ date: null, range: null, swatch: null, color: null });
+    assert.deepEqual(selected(), empty);
+    const day = (selector, label) => [...container.querySelectorAll(selector)].find((cell) => cell.textContent === label);
+    await act(async () => day('.muxui-calendar-cell', '10').click());
+    await act(async () => container.querySelectorAll('.muxui-color-swatch-picker [role="option"]')[1].click());
+    assert.deepEqual(changes, [['date', '2026-03-10'], ['swatch', 'rgba(0, 255, 0, 1)']]);
+    assert.deepEqual(selected(), empty, 'controlled empty values ignore interaction until the owner updates');
+
+    await render({ date: '2026-03-10', range: { start: '2026-03-10', end: '2026-03-11' }, swatch: '#00ff00', color: '#00ff00' });
+    assert.deepEqual(selected(), { date: ['10'], range: ['10', '11'], swatch: 1, color: '#00FF00' });
+
+    // Clearing the field reports null, which the owner feeds back as a controlled empty value.
+    const input = container.querySelector('.muxui-color-field input');
+    await act(async () => input.focus());
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '');
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Backspace', bubbles: true }));
+    });
+    await act(async () => input.blur());
+    assert.deepEqual(changes.at(-1), ['color', null]);
+    await render({ date: null, range: null, swatch: null, color: null });
+    assert.deepEqual(selected(), empty);
+    assert.deepEqual(warnings, []);
+  } finally {
+    console.warn = originalWarn;
+    console.error = originalError;
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 ColorArea associates visible and explicit labels with its interactive controls', async () => {
   const server = new JSDOM(renderToString(React.createElement(ColorArea, { label: 'Saturation' }))).window.document;
   const serverLabel = server.querySelector('.muxui-field-label');

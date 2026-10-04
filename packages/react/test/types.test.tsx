@@ -524,3 +524,21 @@ void invalidIconVariant;
 // @ts-expect-error Icon-only pending content never displays a text label beside the spinner.
 const textLoadingIcon = <IconButton aria-label="Close" showTextWhileLoading><svg /></IconButton>;
 void textLoadingIcon;
+// null is the controlled empty value; ColorField reports null when cleared.
+const controlledEmptyValues = (
+  <>
+    <Calendar label="Date" value={null} />
+    <RangeCalendar label="Trip" value={null} />
+    <ColorSwatchPicker aria-label="Palette" value={null} items={[{ id: 'red', color: '#ff0000' }]} />
+    <ColorField label="Color" value={null} onChange={(value) => { const next: string | null = value; void next; }} />
+  </>
+);
+void controlledEmptyValues;
+const hueSlider = <ColorSlider aria-label="Hue" channel="hue" colorSpace="hsl" defaultValue="#336699" />;
+void hueSlider;
+// @ts-expect-error ColorSlider channels are a closed union.
+const unknownChannel = <ColorSlider aria-label="Chroma" channel="chroma" />;
+void unknownChannel;
+// @ts-expect-error ColorSlider colour spaces are rgb, hsl, or hsb.
+const hexColorSpace = <ColorSlider aria-label="Red" colorSpace="hex" />;
+void hexColorSpace;

@@ -169,6 +169,11 @@ function dateValue(value, name = 'Calendar') {
   try { return parseDate(value); } catch { throw new TypeError(`${name} values must use YYYY-MM-DD ISO format`); }
 }
 
+// null keeps a controlled value controlled and empty; undefined means uncontrolled.
+function controlledDateValue(value, name) {
+  return value === null ? null : dateValue(value, name);
+}
+
 function serializeDateValue(value) {
   return value ? String(value) : undefined;
 }
@@ -293,7 +298,7 @@ function calendarProps(props, name, labelId) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, name);
   return {
     ...rest,
-    value: dateValue(value, name),
+    value: controlledDateValue(value, name),
     defaultValue: dateValue(defaultValue, name),
     focusedValue: dateValue(focusedValue, name),
     minValue: dateValue(minValue, name),
@@ -337,7 +342,7 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
     return React.createElement(AriaRangeCalendar, {
       ...rest,
       ref,
-      value: mapRange(value),
+      value: value === null ? null : mapRange(value),
       defaultValue: mapRange(defaultValue),
       focusedValue: dateValue(focusedValue, 'RangeCalendar'),
       minValue: dateValue(minValue, 'RangeCalendar'),
@@ -395,8 +400,8 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
   const effectiveDisabled = disabled || pickerState.disabled;
   const effectiveReadOnly = readOnly || pickerState.readOnly;
   return React.createElement(AriaColorField, {
-    ...props, ref, name, value: colorValue(value, 'ColorField'), defaultValue: colorValue(defaultValue, 'ColorField'),
-    onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next?.toString()); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
+    ...props, ref, name, value: value === null ? null : colorValue(value, 'ColorField'), defaultValue: colorValue(defaultValue, 'ColorField'),
+    onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
     isInvalid: invalid || errorMessage !== undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(AriaInput, { className: 'muxui-field-input' }),
@@ -573,6 +578,17 @@ function colorSwatchItems(items) {
   });
 }
 
+// React Aria treats a null swatch value as uncontrolled, so a controlled empty
+// picker selects a transparent black that no item uses.
+function unusedSwatchColor(items) {
+  const used = new Set(items.map((item) => item.color?.toString('hexa')));
+  for (let alpha = 0; alpha < 256; alpha += 1) {
+    const color = parseColor(`#000000${alpha.toString(16).padStart(2, '0')}`);
+    if (!used.has(color.toString('hexa'))) return color;
+  }
+  throw new TypeError('ColorSwatchPicker cannot represent an empty value for these items');
+}
+
 export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   const normalized = colorSwatchItems(items);
   const pickerState = React.useContext(ColorPickerContext);
@@ -603,7 +619,7 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
       AriaColorSwatchPicker,
       {
         ref: assignSwatchPickerRef,
-        value: colorValue(value, 'ColorSwatchPicker'),
+        value: value === null ? unusedSwatchColor(normalized) : colorValue(value, 'ColorSwatchPicker'),
         defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'),
         onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
         isDisabled: effectiveDisabled,
