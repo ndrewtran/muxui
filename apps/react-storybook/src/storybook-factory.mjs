@@ -78,7 +78,8 @@ export function eventBindingsForBinding(binding) {
 }
 
 const SELECT_PROPS = Object.freeze({
-  colorSpace: ['hex', 'hsl', 'hsb', 'rgb'],
+  channel: ['red', 'green', 'blue', 'hue', 'saturation', 'lightness', 'brightness', 'alpha'],
+  colorSpace: ['rgb', 'hsl', 'hsb'],
   defaultCamera: ['user', 'environment'],
   method: ['get', 'post'],
   orientation: ['horizontal', 'vertical'],

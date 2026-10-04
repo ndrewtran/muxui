@@ -447,10 +447,30 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
 });
 ColorArea.displayName = 'ColorArea';
 
+const COLOR_SPACE_CHANNELS = {
+  rgb: ['red', 'green', 'blue', 'alpha'],
+  hsl: ['hue', 'saturation', 'lightness', 'alpha'],
+  hsb: ['hue', 'saturation', 'brightness', 'alpha'],
+};
+const COLOR_CHANNELS = new Set(Object.values(COLOR_SPACE_CHANNELS).flat());
+
+// Without colorSpace, React Aria reads the channel from the value's own space.
+function assertColorSliderChannel(channel, colorSpace, color) {
+  if (!COLOR_CHANNELS.has(channel)) throw new TypeError(`ColorSlider channel must be one of: ${[...COLOR_CHANNELS].join(', ')}`);
+  if (colorSpace !== undefined && !Object.hasOwn(COLOR_SPACE_CHANNELS, colorSpace)) throw new TypeError('ColorSlider colorSpace must be one of: rgb, hsl, hsb');
+  const space = colorSpace ?? color?.getColorSpace();
+  if (space && !COLOR_SPACE_CHANNELS[space].includes(channel)) {
+    throw new TypeError(`ColorSlider channel ${channel} is not in the ${space} color space; set colorSpace to ${Object.keys(COLOR_SPACE_CHANNELS).filter((key) => COLOR_SPACE_CHANNELS[key].includes(channel)).join(' or ')}`);
+  }
+}
+
 // Include displayName in the pure initialization so unused sliders shed their motion dependency.
 export const ColorSlider = /* @__PURE__ */ (() => {
   const component = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
+    const color = colorValue(value, 'ColorSlider');
+    const defaultColor = colorValue(defaultValue, 'ColorSlider');
+    assertColorSliderChannel(channel, colorSpace, color ?? defaultColor);
     const pickerState = React.useContext(ColorPickerContext);
     const effectiveDisabled = disabled || pickerState.disabled;
     const effectiveReadOnly = readOnly || pickerState.readOnly;
@@ -466,8 +486,8 @@ export const ColorSlider = /* @__PURE__ */ (() => {
         ref: assignSliderRef,
         channel,
         colorSpace,
-        value: colorValue(value, 'ColorSlider'),
-        defaultValue: colorValue(defaultValue, 'ColorSlider'),
+        value: color,
+        defaultValue: defaultColor,
         onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next.toString()); },
         isDisabled: effectiveDisabled,
         orientation,

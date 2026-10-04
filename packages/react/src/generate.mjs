@@ -599,6 +599,9 @@ export declare const Autocomplete: React.ForwardRefExoticComponent<AutocompleteP
 `;
 const collectionsTypes = `
 export type MuxUIColorValue = string;
+export type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';
+/** Channels must belong to colorSpace, or to the value's own space when colorSpace is omitted. */
+export type MuxUIColorChannel = 'red' | 'green' | 'blue' | 'hue' | 'saturation' | 'lightness' | 'brightness' | 'alpha';
 export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; /** Consumer data; named Select and ComboBox forms submit the item \`id\`, not \`value\`. */ value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
 export type MuxUISelection = string[] | 'all';
 export type MuxUIItems = Array<MuxUICollectionItem | string>;
@@ -612,7 +615,7 @@ export type ColorFieldProps = NamedFieldProps & { value?: MuxUIColorValue; defau
 export declare const ColorField: React.ForwardRefExoticComponent<ColorFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorPickerProps = { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; children?: React.ReactNode; className?: string; };
 export declare const ColorPicker: React.ForwardRefExoticComponent<ColorPickerProps & React.RefAttributes<HTMLDivElement>>;
-export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: string; colorSpace?: string; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
+export type ColorSliderProps = MuxUIAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; channel?: MuxUIColorChannel; colorSpace?: MuxUIColorSpace; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorSlider: React.ForwardRefExoticComponent<ColorSliderProps & React.RefAttributes<HTMLDivElement>>;
 export type ColorSwatchProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'children' | 'color'> & { color: MuxUIColorValue; secondaryColor?: MuxUIColorValue; shape?: 'square' | 'circle'; colorName?: string; disabled?: boolean; };
 export declare const ColorSwatch: React.ForwardRefExoticComponent<ColorSwatchProps & React.RefAttributes<HTMLDivElement>>;

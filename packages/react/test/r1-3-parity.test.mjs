@@ -455,6 +455,21 @@ test('R1.3 colour controls name swatches, reject duplicate colours, and keep ups
   }
 });
 
+test('R1.3 ColorSlider validates channel and colour space pairs with Mux UI errors', () => {
+  const render = (props) => renderToString(React.createElement(ColorSlider, { 'aria-label': 'Channel', ...props }));
+  const rejects = (props, pattern) => assert.throws(() => render(props), (error) => error instanceof TypeError && pattern.test(error.message));
+  rejects({ channel: 'hue', defaultValue: '#336699' }, /channel hue is not in the rgb color space; set colorSpace to hsl or hsb/u);
+  rejects({ channel: 'red', colorSpace: 'hsl', defaultValue: '#336699' }, /channel red is not in the hsl color space/u);
+  rejects({ channel: 'lightness', colorSpace: 'hsb', defaultValue: '#336699' }, /not in the hsb color space/u);
+  rejects({ channel: 'chroma', defaultValue: '#336699' }, /channel must be one of/u);
+  rejects({ channel: 'red', colorSpace: 'hex', defaultValue: '#336699' }, /colorSpace must be one of: rgb, hsl, hsb/u);
+  const hue = new JSDOM(`<!doctype html>${render({ channel: 'hue', colorSpace: 'hsl', defaultValue: '#336699' })}`);
+  assert.equal(hue.window.document.querySelector('input[type="range"]').getAttribute('max'), '360');
+  hue.window.close();
+  assert.doesNotThrow(() => render({ channel: 'alpha', defaultValue: 'hsl(210, 50%, 40%)' }));
+  assert.doesNotThrow(() => render({ channel: 'saturation', defaultValue: 'hsl(210, 50%, 40%)' }));
+});
+
 test('R1.3 ColorArea associates visible and explicit labels with its interactive controls', async () => {
   const server = new JSDOM(renderToString(React.createElement(ColorArea, { label: 'Saturation' }))).window.document;
   const serverLabel = server.querySelector('.muxui-field-label');
