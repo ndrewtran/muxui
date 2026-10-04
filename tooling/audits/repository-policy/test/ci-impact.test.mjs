@@ -1812,8 +1812,11 @@ test('the @internationalized/date pin plans like a React dependency change', asy
   const base = consumerLockfile();
   const pinned = consumerLockfile('3.12.4');
   assert.deepEqual(changedLockfileImporters(base, pinned), ['packages/react']);
-  const reactPackageBefore = await readFile(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8');
-  const reactPackageAfter = reactPackageBefore.replace('"@internationalized/date": "3.12.3"', '"@internationalized/date": "3.12.4"');
+  // Pin each side explicitly so the fixture holds whichever version the repository currently declares.
+  const reactPackage = await readFile(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8');
+  const pinDate = (version) => reactPackage.replace(/"@internationalized\/date": "[^"]+"/u, `"@internationalized/date": "${version}"`);
+  const reactPackageBefore = pinDate('3.12.3');
+  const reactPackageAfter = pinDate('3.12.4');
   assert.notEqual(reactPackageAfter, reactPackageBefore);
   const manifest = { packages: workspacePackages, reactPackageBefore, reactPackageAfter };
   const result = await plan(['packages/react/package.json', 'pnpm-lock.yaml'], { ...manifest, lockfileBefore: base, lockfileAfter: pinned });
