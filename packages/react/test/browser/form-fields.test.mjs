@@ -7,7 +7,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Checkbox } from '/src/components.mjs';
-  import { CheckboxGroup, Form } from '/src/fields.mjs';
+  import { Autocomplete, CheckboxGroup, Form } from '/src/fields.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
   window.events = [];
@@ -21,6 +21,9 @@ const entry = `import React from 'react';
       h(CheckboxGroup, { label: 'Alerts', name: 'alerts', required: true },
         h(Checkbox, { value: 'email' }, 'Email'),
         h(Checkbox, { value: 'sms' }, 'SMS')),
+      h('button', { type: 'submit' }, 'Submit')),
+    autocomplete: () => h(Form, { onSubmit: submit },
+      h(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'], onChange: (value) => log('change', value), onSelect: (item) => log('select', item?.value) }),
       h('button', { type: 'submit' }, 'Submit')),
   };
   const name = new URLSearchParams(location.search).get('case');
@@ -66,5 +69,44 @@ test('a required CheckboxGroup blocks native submission and shows its error', { 
     await page.locator('.muxui-checkbox', { hasText: 'SMS' }).click();
     await page.getByRole('button', { name: 'Submit' }).click();
     assert.deepEqual(await events(), [['submit', { alerts: 'sms' }]]);
+  });
+});
+
+test('Autocomplete Escape and Enter act on the open list before the field and form', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('autocomplete');
+    const input = page.getByRole('combobox', { name: 'City' });
+    const list = page.locator('.muxui-autocomplete-list');
+    await input.click();
+    await page.keyboard.type('Syd');
+    assert.equal(await input.getAttribute('aria-expanded'), 'true');
+    assert.equal(await input.getAttribute('aria-controls'), await list.getAttribute('id'));
+
+    await page.keyboard.press('Escape');
+    await list.waitFor({ state: 'detached' });
+    assert.equal(await input.inputValue(), 'Syd', 'Escape on an open list keeps the text');
+    assert.equal(await input.getAttribute('aria-expanded'), 'false');
+    await page.keyboard.press('Escape');
+    assert.equal(await input.inputValue(), '', 'Escape on a closed list clears the text');
+
+    // Press Enter at once: RAC delays aria-activedescendant while typing but
+    // already selects its first option.
+    await page.keyboard.type('Syd');
+    await page.evaluate(() => { window.events.length = 0; });
+    await page.keyboard.press('Enter');
+    await list.waitFor({ state: 'detached' });
+    assert.equal(await input.inputValue(), 'Sydney');
+    assert.deepEqual(await events(), [['change', 'Sydney'], ['select', 'Sydney']], 'Enter on an active option selects without submitting');
+
+    await page.keyboard.press('Enter');
+    assert.deepEqual((await events()).at(-1), ['submit', { city: 'Sydney' }]);
+
+    await input.fill('');
+    await page.keyboard.type('Mel');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(() => document.querySelector('[role="combobox"]').getAttribute('aria-activedescendant')?.endsWith('Melbourne'));
+    await page.keyboard.press('Enter');
+    assert.equal(await input.inputValue(), 'Melbourne');
+    assert.notDeepEqual((await events()).at(-1), ['submit', { city: 'Mel' }]);
   });
 });

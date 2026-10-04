@@ -870,7 +870,9 @@ test('R1.2 temporal fields honor cancelled form resets and reset normally', asyn
 test('R1.2 autocomplete is closed on SSR, filters while focused, and selects MuxUI items', async () => {
   const server = renderToString(React.createElement(Autocomplete, { label: 'City', items: ['Melbourne', 'Sydney'] }));
   assert.match(server, /type="search"/u);
-  assert.doesNotMatch(server, /role="combobox"/u);
+  assert.match(server, /role="combobox"/u);
+  assert.match(server, /aria-expanded="false"/u);
+  assert.doesNotMatch(server, /aria-controls/u);
   assert.doesNotMatch(server, /muxui-autocomplete-popover|muxui-autocomplete-list/u);
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
@@ -1213,15 +1215,6 @@ test('CheckboxGroup keeps invalid error content inside its validation context', 
   }
 });
 
-// Uses the native setter so React's value tracker sees the edit.
-async function typeInto(input, value) {
-  await act(async () => {
-    input.focus();
-    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value);
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  });
-}
-
 function captureConsoleProblems() {
   const problems = [];
   const original = { error: console.error, warn: console.warn };
@@ -1336,9 +1329,11 @@ test('Form server errors clear after an edit until new validationErrors arrive',
     for (const selector of selectors) assert.equal(host.querySelector(selector).getAttribute('data-invalid'), 'true', `${selector} shows its server error`);
 
     const text = host.querySelector('.muxui-text-field input');
-    await typeInto(text, 'Andy');
-    // Browsers fire change on commit; RAC clears server errors from it.
-    await act(async () => text.dispatchEvent(new Event('change', { bubbles: true })));
+    // RAC clears server errors from the native change event that commits an edit.
+    await act(async () => {
+      text.value = 'Andy';
+      text.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     await editDateSegment(host.querySelector('.muxui-date-field [data-type="day"]'), '5');
     await editDateSegment(host.querySelector('.muxui-time-field [data-type="hour"]'), '10');
     await editDateSegment(host.querySelector('.muxui-date-range-picker [data-type="day"]'), '5');
@@ -1375,4 +1370,30 @@ test('CheckboxGroup names its group from a visible label of any node type', asyn
   assert.equal(rich.getAttribute('data-size'), 'sm');
   assert.equal(plain.getAttribute('data-size'), 'md');
   dom.window.close();
+});
+
+test('Autocomplete exposes combobox popup state and submits label-only items as text', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    await act(async () => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'City', name: 'city', items: [{ label: 'Perth' }, { label: React.createElement('strong', null, 'Hobart') }, {}] }))));
+    const input = host.querySelector('input[role="combobox"]');
+    assert.equal(input.getAttribute('aria-expanded'), 'false');
+    assert.equal(input.hasAttribute('aria-controls'), false);
+    await act(async () => input.focus());
+    assert.equal(input.getAttribute('aria-expanded'), 'true');
+    assert.equal(input.getAttribute('aria-controls'), document.querySelector('.muxui-autocomplete-list').id);
+    const hobart = [...document.querySelectorAll('.muxui-autocomplete-option')].find((option) => option.textContent === 'Hobart');
+    await act(async () => hobart.click());
+    assert.equal(input.getAttribute('aria-expanded'), 'false');
+    assert.equal(new dom.window.FormData(host.querySelector('form')).get('city'), 'Hobart', 'label-only items submit their text, not an index');
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
 });

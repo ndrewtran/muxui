@@ -1063,7 +1063,9 @@ function normalizeAutocompleteItems(items) {
     let suffix = 1;
     while (usedIds.has(id)) id = `${baseId}-${suffix++}`;
     usedIds.add(id);
-    return { ...source, id, label: source.label ?? source.value ?? id, value: source.value ?? id };
+    // A label-only item submits its text rather than its generated index id.
+    const value = source.value ?? (source.id === undefined ? autocompleteNodeText(source.label) || id : id);
+    return { ...source, id, label: source.label ?? source.value ?? id, value };
   });
 }
 
@@ -1257,10 +1259,14 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       label,
       description,
       errorMessage,
-      input: React.createElement(AriaInput, {
+      input: React.createElement(FieldInput, {
         ref: inputRef,
         className: 'muxui-field-input',
         'data-part': 'input',
+        // WAI-ARIA combobox: RAC supplies aria-autocomplete, aria-controls,
+        // and aria-activedescendant; the popup state is Mux-owned.
+        role: 'combobox',
+        'aria-expanded': suggestionsOpen,
         placeholder,
         onPointerDown: () => {
           clearPendingFocusRestore();
@@ -1275,6 +1281,20 @@ export const Autocomplete = /*#__PURE__*/ (() => {
         },
         onKeyDown: (event) => {
           clearPendingFocusRestore();
+          if (event.key === 'Escape' && suggestionsOpen) {
+            // Close the open list without the SearchField shortcut clearing
+            // the text; Escape on a closed list still clears.
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          if (event.key === 'Enter' && suggestionsOpen && popoverRef.current?.querySelector('[role="option"][data-focused]')) {
+            // RAC selects the active option but leaves the browser's implicit
+            // form submission. Cancel only the native default so the synthetic
+            // event still reaches RAC's selection handler through FieldInput.
+            // The option's data-focused leads aria-activedescendant, which RAC
+            // delays while the user types.
+            event.nativeEvent.preventDefault();
+          }
           if (event.key === 'Escape') setIsOpen(false);
           if (event.key === 'ArrowDown') setIsOpen(!disabled);
         },
