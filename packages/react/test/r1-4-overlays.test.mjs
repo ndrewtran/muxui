@@ -432,6 +432,52 @@ test('Popover dismissable false rejects hidden dismiss buttons and trigger toggl
   }
 });
 
+test('Popover dismissable false still closes through a close-slot button in its content', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const { Button: MuxUIButton } = await import('../src/button.mjs');
+  const changes = [];
+  const popover = (props, closeButton = React.createElement(AriaButton, { slot: 'close', id: 'close-action' }, 'Done')) => React.createElement(Popover, {
+    'aria-label': 'Actions',
+    trigger: React.createElement('button', { id: 'popover-trigger' }, 'Open actions'),
+    dismissable: false,
+    onOpenChange: (open) => changes.push(open),
+    ...props,
+  }, React.createElement('button', { id: 'plain-action' }, 'Plain'), closeButton);
+  const pressEscape = () => document.body.querySelector('.muxui-popover').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  try {
+    // Uncontrolled: accidental dismissal is rejected, the close slot closes it.
+    await act(async () => root.render(popover({})));
+    await act(async () => document.querySelector('#popover-trigger').click());
+    await act(async () => pressEscape());
+    await act(async () => document.querySelector('#plain-action').click());
+    assert.ok(document.body.querySelector('.muxui-popover'));
+    assert.deepEqual(changes, [true]);
+    await act(async () => document.querySelector('#close-action').click());
+    assert.deepEqual(changes, [true, false]);
+    assert.equal(document.body.querySelector('.muxui-popover'), null);
+
+    // A MuxUI Button in the close slot works the same way, in non-modal mode too.
+    changes.length = 0;
+    await act(async () => root.render(popover({ key: 'mux', modal: false, defaultOpen: true }, React.createElement(MuxUIButton, { slot: 'close', id: 'close-action' }, 'Done'))));
+    await act(async () => document.querySelector('#close-action').click());
+    assert.deepEqual(changes, [false]);
+    assert.equal(document.body.querySelector('.muxui-popover'), null);
+
+    // Controlled: the owner receives the explicit close request and decides.
+    changes.length = 0;
+    await act(async () => root.render(popover({ key: 'controlled', open: true })));
+    await act(async () => pressEscape());
+    await act(async () => document.querySelector('#close-action').click());
+    assert.deepEqual(changes, [false]);
+    assert.ok(document.body.querySelector('.muxui-popover'), 'a controlled owner keeps it open by not updating open');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.4 overlay geometry accepts only the bounded Mux contract', () => {
   const trigger = React.createElement('button', null, 'Open');
   assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': 'Actions', trigger, offset: Number.NaN }, 'Body')), TypeError);

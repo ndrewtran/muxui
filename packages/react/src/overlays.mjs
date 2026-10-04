@@ -6,6 +6,8 @@ import { useInteractOutside } from 'react-aria/useInteractOutside';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
+  ButtonContext as AriaButtonContext,
+  DEFAULT_SLOT as ARIA_DEFAULT_SLOT,
   Dialog as AriaDialog,
   DialogContext as AriaDialogContext,
   DialogTrigger as AriaDialogTrigger,
@@ -323,7 +325,7 @@ function PopoverSurface({ modal, children, onPointerDown, ...props }) {
     React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDown }, children));
 }
 
-const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, onDismissOutside, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, onDismissOutside, explicitClose, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const dialogContext = React.useContext(AriaDialogContext);
   const triggerRef = React.useContext(AriaPopoverContext)?.triggerRef;
   const positionerRef = React.useRef(null);
@@ -332,6 +334,10 @@ const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ chil
   // this popover's React tree, including portaled descendants, are not outside;
   // trigger presses are left to the trigger's own toggle.
   const pressedInsideRef = React.useRef(false);
+  // Like RAC Dialog, a slot="close" button in the content closes the popover,
+  // even when dismissable is false; it also stops an enclosing overlay's close
+  // slot from leaking in.
+  const buttonSlots = React.useMemo(() => ({ slots: { [ARIA_DEFAULT_SLOT]: {}, close: { onPress: explicitClose } } }), [explicitClose]);
   useInteractOutside({
     ref: positionerRef,
     isDisabled: !onDismissOutside,
@@ -366,7 +372,7 @@ const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ chil
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
     className: classNames('muxui-popover', className),
-  }, children));
+  }, React.createElement(AriaButtonContext.Provider, { value: buttonSlots }, children)));
 });
 
 /** RAC Popover owns positioning and dismissal; FocusScope controls optional focus containment. */
@@ -407,7 +413,7 @@ export const Popover = /*#__PURE__*/ React.forwardRef(function Popover({
     dismissNonModal();
   };
   const dismissibleTrigger = React.cloneElement(trigger, { onKeyDown: composeEventHandlers(trigger.props.onKeyDown, onTriggerKeyDown) });
-  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, onDismissOutside: dismissNonModal }, children);
+  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, onDismissOutside: dismissNonModal, explicitClose: triggerState.close }, children);
   return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange }, pressableTrigger(dismissibleTrigger, false, 'muxui-overlay-pop-trigger'), content);
 });
 
