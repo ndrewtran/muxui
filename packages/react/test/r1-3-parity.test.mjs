@@ -699,6 +699,25 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
     await act(async () => container.querySelector('.muxui-tag-remove').click());
     assert.deepEqual(actions, [['menu', 'edit'], ['table', 'ada'], ['tag', 'one'], ['remove', 'one']]);
 
+    // Without onRemove, tags neither announce nor handle removal.
+    await act(async () => root.render(React.createElement(TagGroup, { label: 'Fixed tags', items: [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }] })));
+    const fixedTag = container.querySelector('.muxui-tag');
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      fixedTag.focus();
+    });
+    assert.equal(document.activeElement, fixedTag);
+    assert.equal(fixedTag.hasAttribute('data-allows-removing'), false);
+    const describedBy = fixedTag.getAttribute('aria-describedby');
+    assert.doesNotMatch(describedBy ? describedBy.split(' ').map((id) => document.getElementById(id)?.textContent ?? '').join(' ') : '', /remove/iu);
+    for (const key of ['Delete', 'Backspace']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      await act(async () => fixedTag.dispatchEvent(event));
+      assert.equal(event.defaultPrevented, false, `${key} is not handled without onRemove`);
+    }
+    assert.equal(container.querySelectorAll('.muxui-tag').length, 2);
+    assert.equal(container.querySelector('.muxui-tag-remove'), null);
+
     const disabledActions = [];
     await act(async () => root.render(React.createElement('div', null,
       React.createElement(Menu, { 'aria-label': 'Disabled actions', disabled: true, items: [{ id: 'edit', label: 'Edit' }], onAction: (item) => disabledActions.push(['menu', item.id]) }),
