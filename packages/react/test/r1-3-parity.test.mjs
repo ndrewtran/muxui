@@ -1175,6 +1175,40 @@ test('R1.3 TokenField keeps typed text beside tokens and reports only token chan
   }
 });
 
+function insertParagraphBeforeInput(node) {
+  collapseSelection(node);
+  return node.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertParagraph', bubbles: true, cancelable: true }));
+}
+
+// Committing a draft is proven in test/browser/token-field-text.test.mjs: in this
+// jsdom setup react-stately's value ref never resets, so caret updates after a
+// commit replay a stale value.
+test('R1.3 TokenField Enter ignores empty drafts and read-only fields', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const values = () => [...new FormData(form).getAll('tags')];
+  const textbox = () => container.querySelector('[role="textbox"]');
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(TokenField, { label: 'Tags', defaultValue: ['alpha'], name: 'tags', onChange: (value) => changes.push(value) })));
+    await act(async () => insertParagraphBeforeInput(textbox()));
+    for (const character of '  ') await act(async () => insertTextBeforeInput(textbox(), character));
+    await act(async () => insertParagraphBeforeInput(textbox()));
+    assert.deepEqual(changes, [], 'Enter with an empty or blank draft does nothing');
+    assert.deepEqual(values(), ['alpha']);
+
+    await act(async () => root.render(React.createElement(TokenField, { key: 'read-only', label: 'Tags', defaultValue: ['fixed'], name: 'tags', readOnly: true, onChange: (value) => changes.push(value) })));
+    await act(async () => insertParagraphBeforeInput(textbox()));
+    assert.deepEqual(values(), ['fixed']);
+    assert.deepEqual(changes, []);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a bounded window', async () => {
   const invalidVirtualizerInputs = [
     [{ itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],

@@ -59,6 +59,19 @@ test('real browser TokenField keeps typed text, reconciles controlled tokens, an
     assert.equal(await field.getAttribute('aria-placeholder'), 'Add tag');
     assert.equal(await page.locator('#form .muxui-token-placeholder').isVisible(), true);
 
+    // Enter commits the trimmed draft as a token; an empty draft does nothing.
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#changes').textContent(), '[]');
+    await page.keyboard.type('  beta ');
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#changes').textContent(), '[],["beta"]');
+    assert.deepEqual(await page.locator('#form .muxui-token').allTextContents(), ['beta']);
+    assert.equal(await text(field), 'beta', 'the draft is cleared');
+    assert.deepEqual(await formTokens(), ['beta']);
+    await page.keyboard.type('gamma');
+    await page.keyboard.press('Enter');
+    assert.deepEqual(await formTokens(), ['beta', 'gamma'], 'the caret stays at the end after a commit');
+
     await controlled.click();
     await page.keyboard.press('End');
     await page.keyboard.type('draft');
@@ -81,6 +94,23 @@ test('real browser TokenField keeps typed text, reconciles controlled tokens, an
     await client.send('Input.insertText', { text: '日本' });
     assert.equal(await page.locator('#controlled').getAttribute('data-ticks'), '2');
     assert.equal(await text(controlled), 'alphagamma日本');
+
+    // An IME consumes Enter to confirm its text: the page sees a composing Enter
+    // keydown and no insertParagraph. CDP cannot route Enter through an IME, so the
+    // composing keydown is dispatched directly while a CDP composition is open.
+    await field.click();
+    await page.keyboard.press('End');
+    await client.send('Input.imeSetComposition', { text: 'に', selectionStart: 1, selectionEnd: 1 });
+    await field.evaluate((node) => {
+      node.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 229, isComposing: true, bubbles: true, cancelable: true }));
+      node.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', isComposing: true, bubbles: true, cancelable: true }));
+    });
+    assert.deepEqual(await formTokens(), ['beta', 'gamma'], 'Enter mid-composition does not commit');
+    await client.send('Input.insertText', { text: '日本' });
+    assert.deepEqual(await formTokens(), ['beta', 'gamma'], 'confirming the composition does not commit');
+    assert.equal(await text(field), 'betagamma日本');
+    await page.keyboard.press('Enter');
+    assert.deepEqual(await formTokens(), ['beta', 'gamma', '日本']);
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await browser?.close();

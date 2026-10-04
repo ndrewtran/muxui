@@ -1164,6 +1164,17 @@ function draftText(fieldValue) {
   return fieldValue.segments.filter((segment) => segment.type === 'text').map((segment) => segment.text).join('');
 }
 
+// Enter commits each trimmed text run as a token in place; blank runs are dropped.
+// Duplicate tokens are kept, matching the token array contract.
+function commitDraftText(fieldValue) {
+  const segments = fieldValue.segments.flatMap((segment) => {
+    if (segment.type !== 'text') return [segment];
+    const text = segment.text.trim();
+    return text ? [{ type: 'token', text, value: text }] : [];
+  });
+  return new TokenFieldValue(segments, { caretPosition: { index: segments.length, offset: 0 } });
+}
+
 function sameTokens(left, right) {
   return left.length === right.length && left.every((token, index) => token === String(right[index]));
 }
@@ -1194,8 +1205,9 @@ function useTokenFieldFormReset(onReset) {
 }
 
 // The public value is the token array; typed text stays an internal draft beside
-// the tokens. React Aria ends IME composition whenever the value object changes,
-// so the field value keeps its identity until the tokens or the text change.
+// the tokens until Enter commits it. React Aria ends IME composition whenever the
+// value object changes, so the field value keeps its identity until the tokens or
+// the text change.
 export const TokenField = React.forwardRef(function TokenField({ label, value, defaultValue = [], onChange, disabled = false, readOnly = false, name, placeholder, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'TokenField');
   const controlled = value !== undefined;
@@ -1231,7 +1243,12 @@ export const TokenField = React.forwardRef(function TokenField({ label, value, d
     setFieldValue(next);
     if (!sameTokens(nextValue, currentValue)) onChange?.(nextValue);
   };
-  return React.createElement(AriaTokenField, { key: resetVersion, ref, value: currentFieldValue, onChange: handleChange, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTokenInput, { ref: inputRef, className: 'muxui-token-input', children: (segment) => segment.type === 'token' ? React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) : null }), React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }), name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null, showPlaceholder ? React.createElement('span', { className: 'muxui-token-placeholder', 'aria-hidden': 'true' }, placeholder) : null);
+  // React Aria calls onSubmit for Enter (insertParagraph), never mid-composition.
+  const handleSubmit = () => {
+    if (disabled || readOnly || !draftText(currentFieldValue).trim()) return;
+    handleChange(commitDraftText(currentFieldValue));
+  };
+  return React.createElement(AriaTokenField, { key: resetVersion, ref, value: currentFieldValue, onChange: handleChange, onSubmit: handleSubmit, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTokenInput, { ref: inputRef, className: 'muxui-token-input', children: (segment) => segment.type === 'token' ? React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) : null }), React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }), name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null, showPlaceholder ? React.createElement('span', { className: 'muxui-token-placeholder', 'aria-hidden': 'true' }, placeholder) : null);
 });
 TokenField.displayName = 'TokenField';
 

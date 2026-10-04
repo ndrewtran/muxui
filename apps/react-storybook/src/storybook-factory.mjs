@@ -1889,12 +1889,10 @@ const BROWSER_PROOF_PLANS = {
     edit('insertText', 'Review');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
     assertBrowser(input.textContent.endsWith('Review'), 'token field keeps typed text');
-    // Typed text is a draft; only the token removal after it reports a change.
-    for (let index = 0; index <= 'Review'.length; index += 1) {
-      edit('deleteContentBackward');
-      await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
-    }
+    // Typed text is a draft; Enter turns it into a token and reports the change.
+    edit('insertParagraph');
     await waitForBrowserEvent(canvasElement, 'change', 'TokenField');
+    assertBrowser([...root.querySelectorAll('.muxui-token')].some((token) => token.textContent === 'Review'), 'Enter turns the draft into a token');
   },
   Toolbar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-toolbar', 'Toolbar');
