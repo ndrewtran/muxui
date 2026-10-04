@@ -269,9 +269,10 @@ function lockRecordDependencies(body) {
 }
 
 // An aliased dependency (`alias: name@1.0.0`) records its target snapshot key
-// as the version; peer suffixes such as `1.0.0(react@19.2.8)` are not aliases.
+// as the version. Peer suffixes such as `1.0.0(react@19.2.8)` and URL versions
+// such as `https://…/x-1.0.0.tgz` or `git+ssh://git@…` are not aliases.
 function lockDependencyKey(name, version) {
-  return /^@?[^@(]+@/u.test(version) ? version : `${name}@${version}`;
+  return /^(@[^/@:]+\/)?[^@/:(]+@/u.test(version) ? version : `${name}@${version}`;
 }
 
 // `name@version(peer…)` snapshot keys share the `name@version` package key.
@@ -280,7 +281,8 @@ function lockPackageKey(snapshot) {
 }
 
 // Snapshot keys each importer transitively reaches. Workspace `link:`
-// dependencies are left to the planner's package dependents; any other
+// dependencies are skipped: a linked workspace is routed exactly as a direct
+// edit to it would be, so its dependents are not planned. Any other
 // dependency without a snapshot record leaves the graph unresolvable.
 function importerReach(sections) {
   const graph = new Map([...sections.snapshotRecords].map(([key, body]) => [unquoteLockKey(key), lockRecordDependencies(body)]));
