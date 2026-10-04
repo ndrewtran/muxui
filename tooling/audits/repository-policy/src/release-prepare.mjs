@@ -11,6 +11,7 @@ import {
   assertExactArchiveEntries,
   assertExactDependencyGraph,
   assertExactExportList,
+  assertInstalledCandidate,
   assertPackedFileBoundary,
   assertNoPublicSurfaceLeaks,
   assertSingleInstalledVersion,
@@ -961,10 +962,7 @@ try {
     }[name];
     const install = runChild(`${name} consumer install`, command[0], [...command.slice(1), ...installArgs], { cwd: matrixConsumer, env: environment, timeout: 600_000 });
     if (install.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_INSTALL_FAILED', `${name} ${version}: ${childOutput(install)}`);
-    const installedManifest = readFileSync(join(matrixConsumer, 'node_modules', '@muxui', 'react', 'package.json'));
-    if (!installedManifest.equals(readArchiveBytes(archive, 'package/package.json'))) {
-      fail('R1_EXIT_CONSUMER_MATRIX_INSTALL_FAILED', `${name} ${version} installed a @muxui/react manifest that differs from the packed candidate`);
-    }
+    assertInstalledCandidate(matrixConsumer, '@muxui/react', join(`${archive}-contents`, 'package'));
     copyConsumerTool(matrixConsumer, 'matrix-smoke.mjs');
     const smoke = runChild(`${name} consumer smoke`, process.execPath, ['matrix-smoke.mjs', JSON.stringify(packedManifest.exports)], { cwd: matrixConsumer });
     if (smoke.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_IMPORT_FAILED', `${name} ${version}: ${childOutput(smoke)}`);
