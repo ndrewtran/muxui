@@ -11,6 +11,7 @@ import {
   assertExactArchiveEntries,
   assertExactDependencyGraph,
   assertExactExportList,
+  assertInstalledCandidate,
   assertPackedFileBoundary,
   assertNoPublicSurfaceLeaks,
   assertSingleInstalledVersion,
@@ -665,7 +666,7 @@ try {
   assertIncludes(readme, 'web.react', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, '@muxui/react@0.1.0-rc.1', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'next', 'R1_EXIT_PACK_GUIDANCE_MISSING');
-  assertIncludes(notice, 'Copyright (c) 2025 Andrew', 'R1.5_PACK_NOTICE_INVALID');
+  assertIncludes(notice, 'Copyright (c) 2026 Andrew', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Lucide', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, '@internationalized/date', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Copyright (c) 2013-present Cole Bemis', 'R1.5_PACK_NOTICE_INVALID');
@@ -955,10 +956,13 @@ try {
     const installArgs = {
       pnpm: ['install', '--ignore-scripts', '--no-frozen-lockfile', '--registry=https://registry.npmjs.org/'],
       npm: ['install', '--ignore-scripts', '--no-audit', '--no-fund', '--registry=https://registry.npmjs.org/'],
-      yarn: ['install', '--ignore-scripts', '--ignore-engines', '--non-interactive', '--no-default-rc', '--registry', 'https://registry.npmjs.org/'],
+      // yarn 1 caches a file: tarball by name and version, so a fresh cache keeps it from
+      // installing an earlier build of the same candidate version.
+      yarn: ['install', '--ignore-scripts', '--ignore-engines', '--non-interactive', '--no-default-rc', '--cache-folder', join(temp, 'yarn-cache'), '--registry', 'https://registry.npmjs.org/'],
     }[name];
     const install = runChild(`${name} consumer install`, command[0], [...command.slice(1), ...installArgs], { cwd: matrixConsumer, env: environment, timeout: 600_000 });
     if (install.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_INSTALL_FAILED', `${name} ${version}: ${childOutput(install)}`);
+    assertInstalledCandidate(matrixConsumer, '@muxui/react', join(`${archive}-contents`, 'package'));
     copyConsumerTool(matrixConsumer, 'matrix-smoke.mjs');
     const smoke = runChild(`${name} consumer smoke`, process.execPath, ['matrix-smoke.mjs', JSON.stringify(packedManifest.exports)], { cwd: matrixConsumer });
     if (smoke.status !== 0) fail('R1_EXIT_CONSUMER_MATRIX_IMPORT_FAILED', `${name} ${version}: ${childOutput(smoke)}`);

@@ -983,11 +983,12 @@ authorities without becoming runtime workspace dependencies or duplicate
 owners.
 
 For Mux UI value adapters, `@muxui/react` is approved to directly use
-`@internationalized/date@3.12.3` as an internal runtime dependency only for
+`@internationalized/date@3.12.4` as an internal runtime dependency only for
 `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-`RangeCalendar`. It is the single resolved `3.12.3` instance already present
-in the pinned `react-aria-components@1.20.0` closure, so the direct declaration
-adds no installed package or version. Mux UI public values remain ISO dates
+`RangeCalendar` (Decision 0011 amendment 05 moved the pin from `3.12.3`). It
+is the single resolved `3.12.4` instance in the pinned
+`react-aria-components@1.20.0` closure, so the direct declaration adds no
+installed package or version. Mux UI public values remain ISO dates
 `YYYY-MM-DD`, local times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}`
 ranges. No `@internationalized/date` or React Aria public type, value, import
 path, export, lifecycle, or ownership path may leak through the package; this
@@ -1181,7 +1182,7 @@ flowchart TD
   canonical["private canonical/build authorities\nschema, tokens, foundation, catalog, tooling"]
   react["@muxui/react@0.1.0-alpha.N\nfirst public component package"]
   aria["react-aria-components@1.20.0\nexact internal runtime dependency"]
-  temporal["@internationalized/date@3.12.3\napproved internal temporal adapter dependency"]
+  temporal["@internationalized/date@3.12.4\napproved internal temporal adapter dependency"]
   lucide["lucide-react@1.37.0\nR1 + R1.6 internal affordances"]
   motion["motion@13.4.0\ninternal component motion"]
   resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
@@ -1213,11 +1214,11 @@ The React-primary prerelease publishes exactly `@muxui/react`. It has no
 runtime dependency on another Mux UI workspace package or `@muxui/web`.
 React and React DOM are peers at `>=19.2.0 <20`; React Aria Components is the
 exact `1.20.0` runtime dependency for the accepted baseline, and
-`@internationalized/date@3.12.3` is the approved direct internal runtime
-dependency for
+`@internationalized/date@3.12.4` is the approved direct internal runtime
+dependency (Decision 0011 amendment 05) for
 Mux UI value adapters in exactly `DateField`, `DatePicker`, `DateRangePicker`,
-`TimeField`, `Calendar`, and `RangeCalendar`. The latter is already the single
-resolved `3.12.3` instance in the React Aria closure, so direct declaration
+`TimeField`, `Calendar`, and `RangeCalendar`. The latter is the single
+resolved `3.12.4` instance in the React Aria closure, so direct declaration
 adds no installed package or version. Mux UI public values remain ISO dates
 `YYYY-MM-DD`, local times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}`
 ranges; neither `@internationalized/date` nor React Aria public type, value,

@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { parse } from 'acorn';
-import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, realpathSync } from 'node:fs';
 import { basename, dirname, join, posix } from 'node:path';
 import { canonicalJson } from './canonical-json.mjs';
 
@@ -457,6 +457,37 @@ export function findModuleSideEffects(source) {
     }
   }
   return findings;
+}
+
+// Relative paths of every file under `root`, skipping nested `node_modules`
+// (npm and yarn may nest unhoisted dependencies inside an installed package).
+function listPackageFiles(root, directory = '') {
+  return readdirSync(join(root, directory), { withFileTypes: true }).flatMap((entry) => {
+    const path = directory ? `${directory}/${entry.name}` : entry.name;
+    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : listPackageFiles(root, path);
+    return [path];
+  }).sort();
+}
+
+/**
+ * Fails with R1_EXIT_CONSUMER_MATRIX_CANDIDATE_MISMATCH unless the `name` package
+ * installed for `consumerRoot` is byte-identical to the extracted candidate in
+ * `candidateRoot` (the archive's `package/` directory), so a cached or stale build
+ * of the same version cannot stand in for the packed candidate.
+ */
+export function assertInstalledCandidate(consumerRoot, name, candidateRoot) {
+  const installed = findInstalledPackage(consumerRoot, name);
+  const mismatch = (details) => fail('R1_EXIT_CONSUMER_MATRIX_CANDIDATE_MISMATCH', JSON.stringify({ package: name, consumer: consumerRoot, ...details }));
+  if (!installed) mismatch({ installed: null });
+  const expected = listPackageFiles(candidateRoot);
+  const actual = new Set(listPackageFiles(installed));
+  const missing = expected.filter((path) => !actual.has(path));
+  const changed = expected.filter((path) => actual.has(path)
+    && !readFileSync(join(candidateRoot, path)).equals(readFileSync(join(installed, path))));
+  const expectedSet = new Set(expected);
+  const added = [...actual].filter((path) => !expectedSet.has(path));
+  if (missing.length || changed.length || added.length) mismatch({ installed, missing, changed, added });
+  return { installed, files: expected.length };
 }
 
 /**
