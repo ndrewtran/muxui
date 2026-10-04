@@ -312,7 +312,7 @@ export const Dialog = /*#__PURE__*/ (() => {
   return component;
 })();
 
-function PopoverSurface({ modal, children, onPointerDown, ...props }) {
+function PopoverSurface({ modal, children, onPointerDownCapture, ...props }) {
   const surfaceRef = React.useRef(null);
   React.useEffect(() => {
     const surface = surfaceRef.current;
@@ -323,7 +323,7 @@ function PopoverSurface({ modal, children, onPointerDown, ...props }) {
   // A stable scope releases containment without resetting consumer content.
   // The enclosing RAC Popover remains the focus-restoration owner.
   return React.createElement(FocusScope, { contain: modal },
-    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDown }, children));
+    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDownCapture }, children));
 }
 
 const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, onDismissOutside, explicitClose, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
@@ -366,7 +366,8 @@ const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ chil
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
   }, React.createElement(PopoverSurface, {
     modal,
-    onPointerDown: () => {
+    // Capture phase: RAC's usePress stops pointerdown propagation.
+    onPointerDownCapture: () => {
       pressedInsideRef.current = true;
     },
     id: dialogContext?.id,

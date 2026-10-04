@@ -6,6 +6,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, useToast } from '/src/overlays.mjs';
+  import { Button } from '/src/button.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
 
@@ -57,7 +58,23 @@ const entry = `import React from 'react';
   window.openChanges = [];
   window.drops = [];
   window.selections = [];
+  function NestedScenario() {
+    return h('div', null,
+      h(Popover, { 'aria-label': 'Outer', modal: false, onOpenChange: (open) => window.openChanges.push(['outer', open]), trigger: h('button', { id: 'outer-trigger' }, 'Outer') },
+        h('p', { id: 'outer-text' }, 'Outer text'),
+        h('button', { id: 'outer-native' }, 'Native'),
+        h(Dialog, { title: 'Nested dialog', trigger: h('button', { id: 'nested-dialog-trigger' }, 'Nested dialog') },
+          h(Button, { id: 'nested-dialog-button' }, 'Dialog action'),
+          h('button', { id: 'nested-dialog-native' }, 'Dialog native'),
+          h('p', { id: 'nested-dialog-text' }, 'Dialog text')),
+        h(Popover, { 'aria-label': 'Nested popover', modal: false, trigger: h('button', { id: 'nested-popover-trigger' }, 'Nested popover') },
+          h(Button, { id: 'nested-popover-button' }, 'Popover action'),
+          h('p', { id: 'nested-popover-text' }, 'Popover text'))),
+      h('button', { id: 'page-button', style: { marginTop: 400 } }, 'Page'));
+  }
+
   const scenarios = {
+    nested: NestedScenario,
     dialog: DialogScenario,
     files: FilesScenario,
     preview: PreviewScenario,
@@ -309,6 +326,46 @@ test('FileTrigger opens from the keyboard and accepts the same file twice', { ti
       await page.waitForFunction((count) => window.selections.length === count, expected);
     }
     assert.deepEqual(await page.evaluate(() => window.selections), [['same.txt'], ['same.txt']]);
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+test('a non-modal Popover stays open for presses inside its nested overlays', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('nested');
+  try {
+    const outer = page.locator('.muxui-popover[aria-label="Outer"]');
+    await page.locator('#outer-trigger').click();
+    await outer.waitFor();
+    for (const selector of ['#outer-text', '#outer-native']) {
+      await page.locator(selector).click();
+      assert.equal(await outer.count(), 1, `pressing ${selector} keeps the outer popover open`);
+    }
+
+    // React Aria Buttons stop pointerdown propagation inside portaled overlays.
+    await page.locator('#nested-dialog-trigger').click();
+    await page.locator('#nested-dialog-button').waitFor();
+    for (const selector of ['#nested-dialog-button', '#nested-dialog-native', '#nested-dialog-text']) {
+      await page.locator(selector).click();
+      assert.equal(await page.locator('#nested-dialog-button').count(), 1, `pressing ${selector} keeps the nested dialog open`);
+      assert.equal(await outer.count(), 1, `pressing ${selector} keeps the outer popover open`);
+    }
+    await page.keyboard.press('Escape');
+    await page.locator('#nested-dialog-button').waitFor({ state: 'detached' });
+    assert.equal(await outer.count(), 1);
+
+    await page.locator('#nested-popover-trigger').click();
+    await page.locator('#nested-popover-button').waitFor();
+    for (const selector of ['#nested-popover-button', '#nested-popover-text']) {
+      await page.locator(selector).click();
+      assert.equal(await page.locator('#nested-popover-button').count(), 1, `pressing ${selector} keeps the nested popover open`);
+      assert.equal(await outer.count(), 1, `pressing ${selector} keeps the outer popover open`);
+    }
+
+    // A genuine outside press still dismisses.
+    await page.locator('#page-button').click();
+    await outer.waitFor({ state: 'detached' });
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await page.close();
