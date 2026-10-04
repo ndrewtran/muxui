@@ -137,10 +137,8 @@ if (!toggleButtonGroupBinding
 }
 const expectedCheckboxProps = ['checked', 'defaultChecked', 'disabled', 'size', 'indeterminate', 'name', 'required', 'value', 'invalid'];
 const expectedCheckboxDefaults = {
-  checked: false,
   defaultChecked: false,
   disabled: false,
-  size: 'md',
   indeterminate: false,
   invalid: false,
 };

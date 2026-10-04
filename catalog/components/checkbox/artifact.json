@@ -157,10 +157,8 @@
           "label"
         ],
         "defaults": {
-          "checked": false,
           "defaultChecked": false,
           "disabled": false,
-          "size": "md",
           "indeterminate": false,
           "invalid": false
         }
