@@ -45,6 +45,19 @@ R1.5's generated evidence status moves from `logged-not-retained` to
 `checks-retained-review-author-reported`, with this amendment as its basis.
 Its review is never described as retained.
 
+## Superseded evidence
+
+Pull request #202's `E-R1.2-02` record (outcome `pass`) cites two tests that
+do not prove its claim: "R1.2 form controls support controlled callbacks,
+keyboard-compatible input, and submit/reset" never renders a controlled
+value, and "R1.2 CheckboxGroup owns option names for required FormData
+submission" checks only an attribute while `required` was not enforced. The
+retained R1.2 review (findings H2 and M7) and pull request #204's replacement
+tests, "R1.2 form controls follow controlled values and submit/reset through
+FormData" and "R1.2 CheckboxGroup owns option names and enforces required
+FormData submission", supersede that record for those parts. #202's record
+is not edited.
+
 ## Unchanged
 
 Everything Decision 0022 defers to `S1.0` stays deferred: the `E-R1.1-04`
