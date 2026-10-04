@@ -1604,19 +1604,23 @@ function waitForBrowserSelected(item, family, timeout = 2_000) {
   });
 }
 
-// The proof harness wires onAction, so React Aria treats a press on an empty
-// selection as the item action. Space then starts the selection, and a press
-// with a selection present replaces or extends it.
+// The proof harness wires onAction, so React Aria treats Enter or a press on an
+// empty selection as the item action. Space then starts the selection, and a
+// press with a selection present replaces or extends it. Enter, unlike a Tree
+// row click, leaves expansion alone.
 function collectionSelectionPlan(family, selector) {
+  const pressKey = (item, key, code) => {
+    for (const type of ['keydown', 'keyup']) item.dispatchEvent(new KeyboardEvent(type, { key, code, bubbles: true, cancelable: true }));
+  };
   return async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, `.muxui-${familySlug(family)}`, family);
     const [first, second] = root.querySelectorAll(selector);
     assertBrowser(first && second, `${selector} collection needs two items`);
-    first.click();
+    first.focus();
+    pressKey(first, 'Enter', 'Enter');
     await waitForBrowserEvent(canvasElement, 'action', family);
     assertBrowser(first.getAttribute('aria-selected') !== 'true', `${family} action must not select`);
-    first.focus();
-    for (const type of ['keydown', 'keyup']) first.dispatchEvent(new KeyboardEvent(type, { key: ' ', code: 'Space', bubbles: true, cancelable: true }));
+    pressKey(first, ' ', 'Space');
     await waitForBrowserEvent(canvasElement, 'selectionChange', family);
     await waitForBrowserSelected(first, family);
     second.click();
