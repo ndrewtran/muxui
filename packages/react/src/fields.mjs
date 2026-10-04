@@ -1129,10 +1129,15 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       const item = normalizedItems.find((candidate) => String(candidate.value) === nextValue);
       return item ? { text: autocompleteItemText(item), selected: nextValue } : { text: nextValue, selected: null };
     };
-    const [storedEntry, setEntry] = React.useState(() => entryForValue(value ?? defaultValue ?? ''));
-    const storedValue = storedEntry.selected ?? storedEntry.text;
+    // Prop-sourced entries resolve their label on every render, so items that
+    // load after the value still show its label. Typed and selected entries
+    // keep their own text.
+    const [storedEntry, setEntry] = React.useState(() => ({ fromProp: value ?? defaultValue ?? '' }));
+    const storedValue = storedEntry.fromProp ?? storedEntry.selected ?? storedEntry.text;
     // A controlled value that differs from the last edit came from outside.
-    const entry = value !== undefined && value !== storedValue ? entryForValue(value) : storedEntry;
+    const entry = value !== undefined && value !== storedValue
+      ? entryForValue(value)
+      : storedEntry.fromProp !== undefined ? entryForValue(storedEntry.fromProp) : storedEntry;
     const submittedValue = entry.selected ?? entry.text;
     const effectiveInputValue = entry.text;
     const externalValidation = useMuxFormValidation(name);
@@ -1140,7 +1145,7 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     const resettingRef = React.useRef(false);
     const resetInputRef = useOwningFormReset(() => {
       externalValidation.dismiss();
-      if (value === undefined) setEntry(entryForValue(defaultValue ?? ''));
+      if (value === undefined) setEntry({ fromProp: defaultValue ?? '' });
     }, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
     const filteredItems = React.useMemo(() => {
       const query = effectiveInputValue.toLocaleLowerCase();

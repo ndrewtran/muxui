@@ -1557,3 +1557,28 @@ test('TimeField compares, displays, and submits HH:mm:ss values and bounds at mi
     dom.window.close();
   }
 });
+
+test('Autocomplete resolves a value label when items load after the value', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  const countries = [{ label: 'Australia', value: 'AU' }, { label: 'Austria', value: 'AT' }];
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    const renderForm = (items) => root.render(React.createElement(Form, null,
+      React.createElement(Autocomplete, { label: 'Uncontrolled', name: 'uncontrolled', defaultValue: 'AU', items }),
+      React.createElement(Autocomplete, { label: 'Controlled', name: 'controlled', value: 'AU', items })));
+    await act(async () => renderForm([]));
+    const inputs = [...host.querySelectorAll('input[role="combobox"]')];
+    const formData = () => Object.fromEntries(new dom.window.FormData(host.querySelector('form')));
+    assert.deepEqual(inputs.map((input) => input.value), ['AU', 'AU']);
+    await act(async () => renderForm(countries));
+    assert.deepEqual(inputs.map((input) => input.value), ['Australia', 'Australia']);
+    assert.deepEqual(formData(), { uncontrolled: 'AU', controlled: 'AU' });
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});
