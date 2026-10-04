@@ -275,28 +275,71 @@ function useReadOnlyTargets(forwardedRef, readOnly, selector) {
 }
 
 const subscribeToNothing = () => () => {};
+const useCalendarLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+// False while hydrating server markup, true afterwards and for client-only mounts.
+function useHydrated() {
+  return React.useSyncExternalStore(subscribeToNothing, () => true, () => false);
+}
+
+function placeholderCell(cellClass, key) {
+  return React.createElement('td', { key, 'aria-hidden': 'true' }, React.createElement('div', { className: cellClass, 'data-muxui-calendar-placeholder': '' }, '\u00a0'));
+}
 
 // Server and client can disagree about today (clock and timezone), so day cells
 // render only on the client. The server snapshot keeps hydration on blank,
 // equally sized placeholder cells; client-only mounts render days at once.
-function CalendarDays({ cellClass }) {
-  const hydrated = React.useSyncExternalStore(subscribeToNothing, () => true, () => false);
+// reserve keeps the six-week height of a deferred frame so hydration never shifts it.
+function CalendarDays({ cellClass, reserve }) {
+  const hydrated = useHydrated();
   const grid = React.createElement(CalendarHeightMotion, null, React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
       (date) => !hydrated
-        ? React.createElement('td', { 'aria-hidden': 'true' }, React.createElement('div', { className: cellClass, 'data-muxui-calendar-placeholder': '' }, '\u00a0'))
+        ? placeholderCell(cellClass)
         : cellClass === 'muxui-calendar-cell'
         ? React.createElement(AriaCalendarCell, { date, className: cellClass },
           (renderProps) => React.createElement(CalendarSelectionCell, renderProps))
         : React.createElement(AriaCalendarCell, { date, className: cellClass, 'data-muxui-date': String(date) })),
   ));
-  return cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
+  const content = cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
+  return reserve === undefined ? content : React.createElement('div', { style: { minHeight: reserve } }, content);
 }
 
-function calendarGrid(cellClass = 'muxui-calendar-cell') {
-  return React.createElement(CalendarDays, { cellClass });
+function calendarGrid(cellClass = 'muxui-calendar-cell', reserve) {
+  return React.createElement(CalendarDays, { cellClass, reserve });
+}
+
+// Without value, defaultValue, or focusedValue, React Aria shows the month of
+// today, which server and browser may disagree on. Such calendars hydrate a
+// date-free frame (label, header, blank heading, six blank weeks) and render the
+// real calendar after hydration, keeping the six-week height as a reserve.
+function useDeferredCalendarFrame(anchored) {
+  const deferred = !useHydrated() && !anchored;
+  const gridRef = React.useRef(null);
+  const [reserve, setReserve] = React.useState(undefined);
+  useCalendarLayoutEffect(() => {
+    if (deferred && gridRef.current) setReserve(gridRef.current.getBoundingClientRect().height);
+  }, [deferred]);
+  return { deferred, gridRef, reserve };
+}
+
+function calendarPlaceholderFrame({ className, label, labelId, gridRef, cellClass }) {
+  const icon = (Icon) => React.createElement(Icon, { className: 'muxui-icon muxui-icon--sm', 'aria-hidden': 'true', focusable: 'false' });
+  const days = Array.from({ length: 7 }, (_, index) => index);
+  return React.createElement('div', { className, 'data-muxui-calendar-placeholder': '' },
+    label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
+    React.createElement('div', { className: 'muxui-calendar-header' },
+      React.createElement(IconButton, { 'aria-label': 'Previous month', disabled: true, className: 'muxui-calendar-previous' }, icon(ChevronLeftIcon)),
+      React.createElement('h2', { className: 'muxui-calendar-heading', 'aria-hidden': 'true' }, '\u00a0'),
+      React.createElement(IconButton, { 'aria-label': 'Next month', disabled: true, className: 'muxui-calendar-next' }, icon(ChevronRightIcon))),
+    React.createElement('div', { ref: gridRef },
+      React.createElement('table', { className: 'muxui-calendar-grid', 'aria-hidden': 'true', cellPadding: 0 },
+        React.createElement('thead', { className: 'muxui-calendar-grid-header' },
+          React.createElement('tr', null, days.map((day) => React.createElement('th', { key: day, className: 'muxui-calendar-header-cell' }, '\u00a0')))),
+        React.createElement('tbody', { className: 'muxui-calendar-grid-body' },
+          Array.from({ length: 6 }, (_, week) => React.createElement('tr', { key: week }, days.map((day) => placeholderCell(cellClass, day))))))));
 }
 
 function calendarHeader() {
@@ -333,11 +376,14 @@ export const Calendar = /*#__PURE__*/ (() => {
   const component = React.forwardRef(function Calendar(props, ref) {
     const { label, description: _description, errorMessage: _errorMessage, ...rest } = props;
     const labelId = React.useId();
-    const calendar = React.createElement(AriaCalendar, calendarProps({ ...rest, label }, 'Calendar', labelId),
+    const ariaProps = calendarProps({ ...rest, label }, 'Calendar', labelId);
+    const frame = useDeferredCalendarFrame(ariaProps.value != null || ariaProps.defaultValue != null || ariaProps.focusedValue != null);
+    if (frame.deferred) return calendarPlaceholderFrame({ className: ariaProps.className, label, labelId, gridRef: frame.gridRef, cellClass: 'muxui-calendar-cell' });
+    const calendar = React.createElement(AriaCalendar, ariaProps,
       () => React.createElement(React.Fragment, null,
         label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
         calendarHeader(),
-        calendarGrid()));
+        calendarGrid('muxui-calendar-cell', frame.reserve)));
     return React.createElement(CalendarSelectionMotion, { rootRef: ref }, calendar);
   });
   component.displayName = 'Calendar';
@@ -352,6 +398,8 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'RangeCalendar');
     const labelId = React.useId();
     const mapRange = (range) => range ? { start: dateValue(range.start, 'RangeCalendar'), end: dateValue(range.end, 'RangeCalendar') } : undefined;
+    const frame = useDeferredCalendarFrame(value != null || defaultValue != null || dateValue(focusedValue, 'RangeCalendar') !== undefined);
+    if (frame.deferred) return calendarPlaceholderFrame({ className: classNames('muxui-range-calendar', className), label, labelId, gridRef: frame.gridRef, cellClass: 'muxui-range-calendar-cell' });
     return React.createElement(AriaRangeCalendar, {
       ...rest,
       ref,
@@ -373,7 +421,7 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
     },
     label !== undefined ? React.createElement(AriaLabel, { id: labelId, className: 'muxui-field-label' }, label) : null,
     calendarHeader(),
-    calendarGrid('muxui-range-calendar-cell'));
+    calendarGrid('muxui-range-calendar-cell', frame.reserve));
   });
   component.displayName = 'RangeCalendar';
   return component;
