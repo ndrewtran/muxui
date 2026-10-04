@@ -413,7 +413,7 @@ test('NumberField steps by keyboard, clamps to bounds, preserves empty input, an
   }
 });
 
-test('R1.2 form controls support controlled callbacks, keyboard-compatible input, and submit/reset', async () => {
+test('R1.2 form controls follow controlled values and submit/reset through FormData', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   const changes = [];
@@ -423,22 +423,35 @@ test('R1.2 form controls support controlled callbacks, keyboard-compatible input
   try {
     const host = document.querySelector('#root');
     root = createRoot(host);
-    await act(async () => root.render(fields({
-      onText: (value) => changes.push(['text', value]),
-      onNumber: (value) => changes.push(['number', value]),
-      onSearch: (value) => changes.push(['search', value]),
-      onSwitch: (value) => changes.push(['switch', value]),
-      onSubmit: (event) => { event.preventDefault(); submits.push([event.type, new dom.window.FormData(event.currentTarget).get('startTime')]); },
-      onReset: (event) => { event.preventDefault(); resets.push(event.type); },
-    })));
-    const textInput = host.querySelector('.muxui-text-field input');
-    textInput.value = 'Updated';
-    await act(async () => textInput.dispatchEvent(new Event('input', { bubbles: true })));
-    await act(async () => host.querySelector('.muxui-switch input').click());
-    await act(async () => host.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    // Typing is proven in the browser; React DOM loaded before jsdom ignores
+    // synthetic input events, so this proves controlled props and toggles.
+    function ControlledForm({ text, quantity, search }) {
+      const [selected, setSelected] = React.useState(false);
+      return React.createElement(Form, {
+        onSubmit: (event) => { event.preventDefault(); submits.push(Object.fromEntries(new dom.window.FormData(event.currentTarget))); },
+        onReset: (event) => { event.preventDefault(); resets.push(event.type); },
+      },
+      React.createElement(TextField, { label: 'Name', name: 'name', value: text, onChange: (value) => changes.push(['text', value]) }),
+      React.createElement(NumberField, { label: 'Quantity', name: 'quantity', value: quantity, onChange: (value) => changes.push(['number', value]) }),
+      React.createElement(SearchField, { label: 'Search', name: 'search', value: search, onChange: (value) => changes.push(['search', value]) }),
+      React.createElement(Switch, { label: 'Enabled', name: 'enabled', selected, onChange: (value) => { changes.push(['switch', value]); setSelected(value); } }),
+      React.createElement('button', { type: 'submit' }, 'Submit'));
+    }
+    await act(async () => root.render(React.createElement(ControlledForm, { text: 'Andrew', quantity: 2, search: 'Mux' })));
+    await act(async () => root.render(React.createElement(ControlledForm, { text: 'Andy', quantity: 3, search: 'UI' })));
+    assert.equal(host.querySelector('.muxui-text-field input').value, 'Andy');
+    assert.equal(host.querySelector('.muxui-number-field input:not([type="hidden"])').value, '3');
+    assert.equal(host.querySelector('.muxui-search-field input').value, 'UI');
+    const switchInput = host.querySelector('.muxui-switch input');
+    await act(async () => switchInput.click());
+    assert.equal(switchInput.checked, true);
+    await act(async () => switchInput.click());
+    assert.equal(switchInput.checked, false);
+    await act(async () => switchInput.click());
+    assert.deepEqual(changes, [['switch', true], ['switch', false], ['switch', true]]);
+    await act(async () => host.querySelector('form').requestSubmit());
     await act(async () => host.querySelector('form').dispatchEvent(new Event('reset', { bubbles: true, cancelable: true })));
-    assert.equal(changes.some(([kind, value]) => kind === 'switch' && value === true), true);
-    assert.deepEqual(submits, [['submit', '09:30']]);
+    assert.deepEqual(submits, [{ name: 'Andy', quantity: '3', search: 'UI', enabled: 'on' }]);
     assert.deepEqual(resets, ['reset']);
     await act(async () => root.unmount());
   } finally {

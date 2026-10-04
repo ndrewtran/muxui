@@ -7,7 +7,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
   import { Checkbox } from '/src/components.mjs';
-  import { Autocomplete, CheckboxGroup, Form } from '/src/fields.mjs';
+  import { Autocomplete, CheckboxGroup, DateField, Form, NumberField, SearchField, Switch, TextField, TimeField } from '/src/fields.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
   window.events = [];
@@ -24,6 +24,28 @@ const entry = `import React from 'react';
       h('button', { type: 'submit' }, 'Submit')),
     autocomplete: () => h(Form, { onSubmit: submit },
       h(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne', 'Sydney'], onChange: (value) => log('change', value), onSelect: (item) => log('select', item?.value) }),
+      h('button', { type: 'submit' }, 'Submit')),
+    controlled: function Controlled() {
+      const [text, setText] = React.useState('Andrew');
+      const [quantity, setQuantity] = React.useState(2);
+      const [search, setSearch] = React.useState('');
+      const [enabled, setEnabled] = React.useState(false);
+      return h(Form, { onSubmit: submit },
+        h(TextField, { label: 'Name', name: 'name', value: text, onChange: setText }),
+        h(NumberField, { label: 'Quantity', name: 'quantity', value: quantity, onChange: setQuantity }),
+        h(SearchField, { label: 'Search', name: 'search', value: search, onChange: setSearch }),
+        h(Switch, { label: 'Enabled', name: 'enabled', selected: enabled, onChange: setEnabled }),
+        h('output', { 'data-state': true }, JSON.stringify({ text, quantity, search, enabled })),
+        h('button', { type: 'submit' }, 'Submit'));
+    },
+    required: () => h(Form, { onSubmit: submit },
+      h(TextField, { label: 'Name', name: 'name', required: true }),
+      h(NumberField, { label: 'Quantity', name: 'quantity', required: true }),
+      h(SearchField, { label: 'Search', name: 'search', required: true }),
+      h(Autocomplete, { label: 'City', name: 'city', items: ['Melbourne'], required: true }),
+      h(DateField, { label: 'Date', name: 'date', required: true }),
+      h(TimeField, { label: 'Time', name: 'time', required: true }),
+      h(Switch, { label: 'Accept', name: 'accept', required: true }),
       h('button', { type: 'submit' }, 'Submit')),
   };
   const name = new URLSearchParams(location.search).get('case');
@@ -108,5 +130,31 @@ test('Autocomplete Escape and Enter act on the open list before the field and fo
     await page.keyboard.press('Enter');
     assert.equal(await input.inputValue(), 'Melbourne');
     assert.notDeepEqual((await events()).at(-1), ['submit', { city: 'Mel' }]);
+  });
+});
+
+test('controlled text, number, search, and switch fields follow typing and submit their values', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('controlled');
+    const state = () => page.locator('[data-state]').textContent().then(JSON.parse);
+    await page.getByRole('textbox', { name: 'Name' }).fill('Andy');
+    await page.getByRole('textbox', { name: 'Quantity' }).fill('5');
+    await page.getByRole('textbox', { name: 'Quantity' }).blur();
+    await page.getByRole('searchbox', { name: 'Search' }).fill('mux');
+    await page.locator('.muxui-switch').click();
+    assert.deepEqual(await state(), { text: 'Andy', quantity: 5, search: 'mux', enabled: true });
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), [['submit', { name: 'Andy', quantity: '5', search: 'mux', enabled: 'on' }]]);
+  });
+});
+
+test('required fields block native submission and show their invalid state', { timeout: 90_000 }, async () => {
+  await withPage(async ({ page, open, events }) => {
+    await open('required');
+    await page.getByRole('button', { name: 'Submit' }).click();
+    assert.deepEqual(await events(), []);
+    for (const selector of ['.muxui-text-field', '.muxui-number-field', '.muxui-search-field', '.muxui-autocomplete-search', '.muxui-date-field', '.muxui-time-field', '.muxui-switch-field']) {
+      assert.equal(await page.locator(selector).getAttribute('data-invalid'), 'true', `${selector} is not invalid after a blocked submit`);
+    }
   });
 });
