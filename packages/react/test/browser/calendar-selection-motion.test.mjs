@@ -86,7 +86,9 @@ test('Calendar selection circle travels within a month, resets across dates/page
   let browser;
   try {
     const staticMarkup = renderToString(fixture());
-    assert.match(staticMarkup, /class="muxui-calendar-selection"/u, 'SSR paints the selected circle before effects');
+    // Day cells, and so the selected circle, render only after hydration.
+    assert.doesNotMatch(staticMarkup, /class="muxui-calendar-selection"/u, 'SSR renders blank day placeholders');
+    assert.match(staticMarkup, /data-muxui-calendar-placeholder/u);
     browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1100, height: 900 }, locale: 'en-US', reducedMotion: 'no-preference' });
     page.setDefaultTimeout(5000);

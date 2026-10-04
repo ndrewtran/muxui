@@ -70,7 +70,7 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
       assert.doesNotMatch(typeSurface, /\b(?:description|errorMessage)\??\s*:/u, `${name} must not expose unsupported validation messaging`);
     }
     const rejectedProps = {
-      RadioGroup: ['description', 'errorMessage', 'name'],
+      RadioGroup: ['description', 'errorMessage'],
       TagGroup: ['description', 'errorMessage', 'readOnly', 'required', 'invalid'],
       TokenField: ['description', 'errorMessage', 'required', 'invalid'],
     }[name];
@@ -400,6 +400,136 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
   }
 });
 
+test('R1.3 colour controls name swatches, reject duplicate colours, and keep upstream props private', async () => {
+  const swatchMarkup = renderToString(React.createElement(ColorSwatchPicker, {
+    'aria-label': 'Brand', items: [{ id: 'red', color: '#ff0000', label: 'Brand red' }, { id: 'blue', color: '#0000ff' }, { id: 'green', color: '#00ff00', textValue: 'Leaf' }],
+  }));
+  const swatchDom = new JSDOM(`<!doctype html>${swatchMarkup}`);
+  const swatchNames = [...swatchDom.window.document.querySelectorAll('.muxui-color-swatch')].map((swatch) => swatch.getAttribute('aria-label'));
+  assert.equal(swatchNames[0], 'Brand red');
+  assert.notEqual(swatchNames[1], 'blue', 'an unlabelled item keeps the colour name');
+  assert.match(swatchNames[1], /blue/iu);
+  assert.equal(swatchNames[2], 'Leaf');
+  swatchDom.window.close();
+  assert.throws(() => renderToString(React.createElement(ColorSwatchPicker, {
+    'aria-label': 'Duplicates', items: [{ id: 'one', color: '#ff0000' }, { id: 'two', color: 'rgb(255, 0, 0)' }],
+  })), (error) => error instanceof TypeError && /distinct colors: two/u.test(error.message));
+  assert.throws(() => renderToString(React.createElement(ColorWheel, { label: 'Hue' })), (error) => error instanceof TypeError && error.message === 'ColorWheel requires aria-label or aria-labelledby');
+
+  // Upstream-only props such as xChannel and colorSpace are not forwarded.
+  const areaMarkup = renderToString(React.createElement(ColorArea, { 'aria-label': 'Area', defaultValue: '#ff8000', xChannel: 'blue', yChannel: 'red', colorSpace: 'hsl' }));
+  const plainAreaMarkup = renderToString(React.createElement(ColorArea, { 'aria-label': 'Area', defaultValue: '#ff8000' }));
+  const areaValues = (markup) => [...new JSDOM(`<!doctype html>${markup}`).window.document.querySelectorAll('input[type="range"]')].map((input) => input.getAttribute('aria-valuetext'));
+  assert.deepEqual(areaValues(areaMarkup), areaValues(plainAreaMarkup));
+
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const changes = [];
+  const upstreamEnds = [];
+  try {
+    await act(async () => root.render(React.createElement(ColorSlider, { 'aria-label': 'Red', defaultValue: '#800000', onChange: (value) => changes.push(value), onChangeEnd: (value) => upstreamEnds.push(value) })));
+    const input = container.querySelector('input[type="range"]');
+    await act(async () => input.focus());
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    });
+    assert.equal(changes.length, 1);
+    assert.deepEqual(upstreamEnds, []);
+
+    await act(async () => root.render(React.createElement('div', null,
+      React.createElement(ColorPicker, { 'aria-label': 'Brand colour', disabled: true, defaultValue: '#ff0000' }, React.createElement(ColorSwatch, { color: '#ff0000' })),
+      React.createElement(ColorPicker, { disabled: true, defaultValue: '#ff0000' }, React.createElement(ColorSwatch, { color: '#ff0000' })))));
+    const [labelledPicker, plainPicker] = container.querySelectorAll('.muxui-color-picker');
+    assert.equal(labelledPicker.getAttribute('role'), 'group');
+    assert.equal(labelledPicker.getAttribute('aria-label'), 'Brand colour');
+    assert.equal(labelledPicker.getAttribute('aria-disabled'), 'true');
+    assert.equal(plainPicker.hasAttribute('role'), false);
+    assert.equal(plainPicker.hasAttribute('aria-disabled'), false);
+    assert.equal(plainPicker.getAttribute('data-disabled'), 'true');
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 ColorSlider validates channel and colour space pairs with Mux UI errors', () => {
+  const render = (props) => renderToString(React.createElement(ColorSlider, { 'aria-label': 'Channel', ...props }));
+  const rejects = (props, pattern) => assert.throws(() => render(props), (error) => error instanceof TypeError && pattern.test(error.message));
+  rejects({ channel: 'hue', defaultValue: '#336699' }, /channel hue is not in the rgb color space; set colorSpace to hsl or hsb/u);
+  rejects({ channel: 'red', colorSpace: 'hsl', defaultValue: '#336699' }, /channel red is not in the hsl color space/u);
+  rejects({ channel: 'lightness', colorSpace: 'hsb', defaultValue: '#336699' }, /not in the hsb color space/u);
+  rejects({ channel: 'chroma', defaultValue: '#336699' }, /channel must be one of/u);
+  rejects({ channel: 'red', colorSpace: 'hex', defaultValue: '#336699' }, /colorSpace must be one of: rgb, hsl, hsb/u);
+  const hue = new JSDOM(`<!doctype html>${render({ channel: 'hue', colorSpace: 'hsl', defaultValue: '#336699' })}`);
+  assert.equal(hue.window.document.querySelector('input[type="range"]').getAttribute('max'), '360');
+  hue.window.close();
+  assert.doesNotThrow(() => render({ channel: 'alpha', defaultValue: 'hsl(210, 50%, 40%)' }));
+  // A nested slider is validated against the picker's colour.
+  const nested = (sliderProps, pickerValue = '#336699') => renderToString(React.createElement(ColorPicker, { defaultValue: pickerValue }, React.createElement(ColorSlider, { 'aria-label': 'Nested', ...sliderProps })));
+  assert.throws(() => nested({ channel: 'hue' }), (error) => error instanceof TypeError && /channel hue is not in the rgb color space/u.test(error.message));
+  assert.doesNotThrow(() => nested({ channel: 'hue', colorSpace: 'hsl' }));
+  assert.doesNotThrow(() => nested({ channel: 'hue' }, 'hsl(210, 50%, 40%)'));
+  assert.doesNotThrow(() => render({ channel: 'saturation', defaultValue: 'hsl(210, 50%, 40%)' }));
+});
+
+test('R1.3 null keeps date and colour values controlled and empty', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const warnings = [];
+  const originalWarn = console.warn;
+  const originalError = console.error;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  console.error = (...args) => warnings.push(args.join(' '));
+  const swatches = [{ id: 'red', color: '#ff0000' }, { id: 'green', color: '#00ff00' }];
+  const changes = [];
+  const render = (props) => act(async () => root.render(React.createElement('div', null,
+    React.createElement(Calendar, { 'aria-label': 'Date', value: props.date, focusedValue: '2026-03-15', onChange: (value) => changes.push(['date', value]) }),
+    React.createElement(RangeCalendar, { 'aria-label': 'Range', value: props.range, focusedValue: '2026-03-15', onChange: (value) => changes.push(['range', value]) }),
+    React.createElement(ColorSwatchPicker, { 'aria-label': 'Swatches', value: props.swatch, items: swatches, onChange: (value) => changes.push(['swatch', value]) }),
+    React.createElement(ColorField, { label: 'Colour', value: props.color, onChange: (value) => changes.push(['color', value]) }))));
+  const selected = () => ({
+    date: [...container.querySelectorAll('.muxui-calendar-cell[data-selected="true"]')].map((cell) => cell.textContent),
+    range: [...container.querySelectorAll('.muxui-range-calendar-cell[data-selected="true"]')].map((cell) => cell.textContent),
+    swatch: [...container.querySelectorAll('.muxui-color-swatch-picker [aria-selected="true"]')].length,
+    color: container.querySelector('.muxui-color-field input').value,
+  });
+  const empty = { date: [], range: [], swatch: 0, color: '' };
+  try {
+    await render({ date: null, range: null, swatch: null, color: null });
+    assert.deepEqual(selected(), empty);
+    const day = (selector, label) => [...container.querySelectorAll(selector)].find((cell) => cell.textContent === label);
+    await act(async () => day('.muxui-calendar-cell', '10').click());
+    await act(async () => container.querySelectorAll('.muxui-color-swatch-picker [role="option"]')[1].click());
+    assert.deepEqual(changes, [['date', '2026-03-10'], ['swatch', 'rgba(0, 255, 0, 1)']]);
+    assert.deepEqual(selected(), empty, 'controlled empty values ignore interaction until the owner updates');
+
+    await render({ date: '2026-03-10', range: { start: '2026-03-10', end: '2026-03-11' }, swatch: '#00ff00', color: '#00ff00' });
+    assert.deepEqual(selected(), { date: ['10'], range: ['10', '11'], swatch: 1, color: '#00FF00' });
+
+    // Clearing the field reports null, which the owner feeds back as a controlled empty value.
+    const input = container.querySelector('.muxui-color-field input');
+    await act(async () => input.focus());
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, '');
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Backspace', bubbles: true }));
+    });
+    await act(async () => input.blur());
+    assert.deepEqual(changes.at(-1), ['color', null]);
+    await render({ date: null, range: null, swatch: null, color: null });
+    assert.deepEqual(selected(), empty);
+    assert.deepEqual(warnings, []);
+  } finally {
+    console.warn = originalWarn;
+    console.error = originalError;
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 ColorArea associates visible and explicit labels with its interactive controls', async () => {
   const server = new JSDOM(renderToString(React.createElement(ColorArea, { label: 'Saturation' }))).window.document;
   const serverLabel = server.querySelector('.muxui-field-label');
@@ -466,6 +596,123 @@ test('R1.3 scalar composites preserve string and numeric callbacks with disabled
     assert.equal(disabledSlider.disabled, true);
   } finally {
     document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+// React DOM loads before jsdom here, so it detects text edits through its
+// keyup value-polling fallback instead of input events.
+function typeInto(input, text) {
+  input.focus();
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, text);
+  input.dispatchEvent(new KeyboardEvent('keyup', { key: text.at(-1), bubbles: true }));
+}
+
+function keyPress(target, key) {
+  target.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }));
+  target.dispatchEvent(new KeyboardEvent('keyup', { key, bubbles: true, cancelable: true }));
+}
+
+test('R1.3 ComboBox selects, filters, submits, and keeps disabled and read-only items inert', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  // Named forms submit the item id, not item.value.
+  const items = [{ id: 'red', label: 'Red' }, { id: 'green', label: 'Green', disabled: true }, { id: 'blue', label: 'Blue', value: 'b' }];
+  const options = () => [...document.querySelectorAll('.muxui-combo-box-option')];
+  const option = (label) => options().find((candidate) => candidate.textContent === label);
+  const input = () => container.querySelector('.muxui-combo-box input');
+  const open = async () => act(async () => container.querySelector('.muxui-combo-box-trigger').click());
+  const selections = [];
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(ComboBox, { label: 'Color', name: 'color', items, onSelect: (item) => selections.push(item?.id), onChange: (value) => changes.push(value) })));
+    await open();
+    assert.deepEqual(options().map((candidate) => candidate.textContent), ['Red', 'Green', 'Blue']);
+    assert.equal(option('Green').getAttribute('aria-disabled'), 'true');
+    await act(async () => option('Green').click());
+    assert.deepEqual(selections, []);
+    assert.equal(input().value, '');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['']);
+    await act(async () => option('Blue').click());
+    assert.deepEqual(selections, ['blue']);
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['blue']);
+
+    // Keyboard navigation skips the disabled option.
+    await act(async () => input().focus());
+    const active = () => document.getElementById(input().getAttribute('aria-activedescendant'))?.textContent;
+    await act(async () => keyPress(input(), 'ArrowDown'));
+    await act(async () => keyPress(input(), 'ArrowDown'));
+    assert.equal(active(), 'Red');
+    await act(async () => keyPress(input(), 'ArrowDown'));
+    assert.equal(active(), 'Blue');
+    await act(async () => keyPress(input(), 'ArrowUp'));
+    assert.equal(active(), 'Red');
+    await act(async () => keyPress(input(), 'Enter'));
+    assert.deepEqual(selections, ['blue', 'red']);
+    assert.equal(input().value, 'Red');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['red']);
+
+    // Typing reports the input text and filters the open options.
+    await act(async () => typeInto(input(), 'bl'));
+    assert.equal(changes.at(-1), 'bl');
+    assert.deepEqual(options().map((candidate) => candidate.textContent), ['Blue']);
+    await act(async () => input().blur());
+
+    // Controlled input text and selection follow their props.
+    const controlledChanges = [];
+    const controlledSelections = [];
+    await act(async () => root.render(React.createElement(ComboBox, { key: 'controlled', label: 'Color', name: 'color', items, value: 'Blue', selectedId: 'blue', onSelect: (item) => controlledSelections.push(item?.id), onChange: (value) => controlledChanges.push(value) })));
+    assert.equal(input().value, 'Blue');
+    assert.deepEqual([...new FormData(form).getAll('color')], ['blue']);
+    await act(async () => typeInto(input(), 'Re'));
+    assert.deepEqual(controlledChanges, ['Re']);
+    assert.equal(input().value, 'Blue');
+    await act(async () => input().blur());
+
+    // Read-only keeps the value and blocks selection and text callbacks.
+    const readOnlyCalls = [];
+    await act(async () => root.render(React.createElement(ComboBox, { key: 'read-only', label: 'Color', name: 'color', items, readOnly: true, defaultSelectedId: 'red', onSelect: (item) => readOnlyCalls.push(['select', item?.id]), onChange: (value) => readOnlyCalls.push(['change', value]) })));
+    assert.equal(input().value, 'Red');
+    assert.equal(input().readOnly, true);
+    await open();
+    await act(async () => option('Blue')?.click());
+    await act(async () => typeInto(input(), 'Bl'));
+    assert.deepEqual(readOnlyCalls, []);
+    assert.deepEqual([...new FormData(form).getAll('color')], ['red']);
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 errorMessage shows only while Select, ComboBox, or ColorField is invalid', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const errors = () => [...container.querySelectorAll('.muxui-field-error')].map((node) => node.textContent);
+  const fields = (props) => React.createElement(React.Fragment, null,
+    React.createElement(Select, { label: 'Select', name: 'select', items: [{ id: 'red', label: 'Red' }], errorMessage: 'Pick a colour', ...props.select }),
+    React.createElement(ComboBox, { label: 'Combo', name: 'combo', items: [{ id: 'red', label: 'Red' }], errorMessage: 'Pick a city', ...props.combo }),
+    React.createElement(ColorField, { label: 'Colour', name: 'colour', errorMessage: 'Enter a colour', ...props.color }));
+  try {
+    // A valid value with errorMessage alone submits and shows no error.
+    await act(async () => root.render(fields({ select: { defaultValue: 'red' }, combo: { defaultSelectedId: 'red' }, color: { defaultValue: '#ff0000' } })));
+    assert.equal(form.checkValidity(), true);
+    assert.deepEqual(errors(), []);
+    assert.equal(container.querySelectorAll('[data-invalid]').length, 0);
+
+    // The failed required direction is proven in test/browser/field-error-message.test.mjs;
+    // native invalid events do not commit React Aria validation in this jsdom setup.
+    // invalid still shows the message without a validation failure.
+    await act(async () => root.render(fields({ select: { key: 'i', invalid: true, defaultValue: 'red' }, combo: { key: 'i', invalid: true }, color: { key: 'i', invalid: true } })));
+    assert.equal(errors().length, 3);
+  } finally {
     await act(async () => root.unmount());
     env.restore();
   }
@@ -565,13 +812,43 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
   }
 });
 
+test('R1.3 named RadioGroup and Slider submit their values and restore defaults on reset', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const entries = () => [...new FormData(form).entries()];
+  try {
+    await act(async () => root.render(React.createElement(React.Fragment, null,
+      React.createElement(RadioGroup, { label: 'Plan', name: 'plan', defaultValue: 'basic', options: [{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' }] }),
+      React.createElement(Slider, { label: 'Volume', name: 'volume', defaultValue: 40 }),
+    )));
+    assert.deepEqual(entries(), [['plan', 'basic'], ['volume', '40']]);
+    await act(async () => container.querySelector('input[type="radio"][value="pro"]').click());
+    const slider = container.querySelector('input[type="range"]');
+    await act(async () => slider.focus());
+    await act(async () => {
+      slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true, cancelable: true }));
+      slider.dispatchEvent(new KeyboardEvent('keyup', { key: 'PageUp', bubbles: true, cancelable: true }));
+    });
+    assert.deepEqual(entries(), [['plan', 'pro'], ['volume', '50']]);
+    await act(async () => form.reset());
+    assert.deepEqual(entries(), [['plan', 'basic'], ['volume', '40']]);
+    assert.equal(container.querySelector('input[type="radio"][value="basic"]').checked, true);
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 field collections keep unsupported props out of public DOM surfaces', () => {
   const radio = renderToString(React.createElement(RadioGroup, {
     label: 'Plan', options: [{ value: 'pro', label: 'Pro' }],
-    description: 'RADIO_DESCRIPTION', errorMessage: 'RADIO_ERROR', name: 'RADIO_NAME', 'data-leak': 'RADIO_LEAK',
+    description: 'RADIO_DESCRIPTION', errorMessage: 'RADIO_ERROR', 'data-leak': 'RADIO_LEAK',
   }));
   assert.match(radio, /muxui-radio-group/u);
-  assert.doesNotMatch(radio, /RADIO_(?:DESCRIPTION|ERROR|NAME|LEAK)/u);
+  assert.doesNotMatch(radio, /RADIO_(?:DESCRIPTION|ERROR|LEAK)/u);
 
   const tag = renderToString(React.createElement(TagGroup, {
     label: 'Tags', items: [{ id: 'one', label: 'One' }],
@@ -610,6 +887,25 @@ test('R1.3 menu, table, and tag actions return normalized MuxUI items', async ()
     await act(async () => container.querySelector('.muxui-tag').click());
     await act(async () => container.querySelector('.muxui-tag-remove').click());
     assert.deepEqual(actions, [['menu', 'edit'], ['table', 'ada'], ['tag', 'one'], ['remove', 'one']]);
+
+    // Without onRemove, tags neither announce nor handle removal.
+    await act(async () => root.render(React.createElement(TagGroup, { label: 'Fixed tags', items: [{ id: 'one', label: 'One' }, { id: 'two', label: 'Two' }] })));
+    const fixedTag = container.querySelector('.muxui-tag');
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+      fixedTag.focus();
+    });
+    assert.equal(document.activeElement, fixedTag);
+    assert.equal(fixedTag.hasAttribute('data-allows-removing'), false);
+    const describedBy = fixedTag.getAttribute('aria-describedby');
+    assert.doesNotMatch(describedBy ? describedBy.split(' ').map((id) => document.getElementById(id)?.textContent ?? '').join(' ') : '', /remove/iu);
+    for (const key of ['Delete', 'Backspace']) {
+      const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+      await act(async () => fixedTag.dispatchEvent(event));
+      assert.equal(event.defaultPrevented, false, `${key} is not handled without onRemove`);
+    }
+    assert.equal(container.querySelectorAll('.muxui-tag').length, 2);
+    assert.equal(container.querySelector('.muxui-tag-remove'), null);
 
     const disabledActions = [];
     await act(async () => root.render(React.createElement('div', null,
@@ -837,6 +1133,87 @@ test('R1.3 TokenField owns uncontrolled reset and repeated form entries', async 
   }
 });
 
+function insertTextBeforeInput(node, data) {
+  collapseSelection(node);
+  return node.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data, bubbles: true, cancelable: true }));
+}
+
+test('R1.3 TokenField keeps typed text beside tokens and reports only token changes', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const values = () => [...new FormData(form).getAll('tags')];
+  const textbox = () => container.querySelector('[role="textbox"]');
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(TokenField, { label: 'Tags', defaultValue: ['alpha'], name: 'tags', placeholder: 'Add tag', onChange: (value) => changes.push(value) })));
+    assert.equal(textbox().hasAttribute('aria-placeholder'), false);
+    assert.equal(container.querySelector('.muxui-token-placeholder'), null);
+    for (const character of 'beta') await act(async () => insertTextBeforeInput(textbox(), character));
+    assert.match(textbox().textContent, /alpha.*beta$/u);
+    assert.deepEqual(changes, [], 'text edits do not change the token array');
+    assert.deepEqual(values(), ['alpha']);
+    for (let index = 0; index < 4; index += 1) await act(async () => deleteBeforeInput(textbox()));
+    await act(async () => deleteBeforeInput(textbox()));
+    assert.deepEqual(changes, [[]]);
+    assert.deepEqual(values(), []);
+    assert.equal(textbox().getAttribute('aria-placeholder'), 'Add tag');
+    assert.equal(container.querySelector('.muxui-token-placeholder')?.textContent, 'Add tag');
+    await act(async () => insertTextBeforeInput(textbox(), 'x'));
+    assert.equal(textbox().hasAttribute('aria-placeholder'), false);
+    assert.equal(container.querySelector('.muxui-token-placeholder'), null);
+
+    // A controlled re-render with an equal token array keeps the field value and
+    // its draft text. Outside token changes and rejected edits are proven in the
+    // browser, because react-stately binds its ref-reset effect at import time,
+    // before this jsdom window exists.
+    const renderControlled = (value) => root.render(React.createElement(TokenField, { key: 'controlled', label: 'Tags', value, name: 'tags' }));
+    await act(async () => renderControlled(['alpha']));
+    await act(async () => insertTextBeforeInput(textbox(), 'draft'));
+    await act(async () => renderControlled(['alpha']));
+    assert.match(textbox().textContent, /alpha.*draft$/u);
+    assert.deepEqual(values(), ['alpha']);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+function insertParagraphBeforeInput(node) {
+  collapseSelection(node);
+  return node.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertParagraph', bubbles: true, cancelable: true }));
+}
+
+// Committing a draft is proven in test/browser/token-field-text.test.mjs: in this
+// jsdom setup react-stately's value ref never resets, so caret updates after a
+// commit replay a stale value.
+test('R1.3 TokenField Enter ignores empty drafts and read-only fields', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const values = () => [...new FormData(form).getAll('tags')];
+  const textbox = () => container.querySelector('[role="textbox"]');
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(TokenField, { label: 'Tags', defaultValue: ['alpha'], name: 'tags', onChange: (value) => changes.push(value) })));
+    await act(async () => insertParagraphBeforeInput(textbox()));
+    for (const character of '  ') await act(async () => insertTextBeforeInput(textbox(), character));
+    await act(async () => insertParagraphBeforeInput(textbox()));
+    assert.deepEqual(changes, [], 'Enter with an empty or blank draft does nothing');
+    assert.deepEqual(values(), ['alpha']);
+
+    await act(async () => root.render(React.createElement(TokenField, { key: 'read-only', label: 'Tags', defaultValue: ['fixed'], name: 'tags', readOnly: true, onChange: (value) => changes.push(value) })));
+    await act(async () => insertParagraphBeforeInput(textbox()));
+    assert.deepEqual(values(), ['fixed']);
+    assert.deepEqual(changes, []);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a bounded window', async () => {
   const invalidVirtualizerInputs = [
     [{ itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],
@@ -879,6 +1256,56 @@ test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a boun
     await act(async () => viewport.dispatchEvent(new Event('scroll', { bubbles: true })));
     assert.deepEqual([...container.querySelectorAll('[role="option"]')].map((node) => node.textContent), ['Item 18', 'Item 19', 'Item 20', 'Item 21', 'Item 22', 'Item 23', 'Item 24']);
     assert.deepEqual(scrolls, [800]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 GridList, Tree, and Table select on press and Enter while nothing is selected', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const items = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }];
+  const families = [
+    ['grid', (props) => React.createElement(GridList, { 'aria-label': 'Grid', items, ...props }), '[role="grid"] [role="row"]'],
+    ['tree', (props) => React.createElement(Tree, { 'aria-label': 'Tree', items, ...props }), '[role="treegrid"] [role="row"]'],
+    ['table', (props) => React.createElement(Table, { 'aria-label': 'Table', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], ...props }), '.muxui-table-row'],
+  ];
+  const pressEnter = (row) => {
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    row.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, cancelable: true }));
+  };
+  try {
+    for (const [family, render, selector] of families) {
+      for (const selectionMode of ['single', 'multiple']) {
+        for (const input of ['click', 'Enter']) {
+          const changes = [];
+          await act(async () => root.render(React.createElement('div', { key: `${family}-${selectionMode}-${input}` }, render({ selectionMode, onSelectionChange: (ids) => changes.push(ids) }))));
+          const [first, second] = container.querySelectorAll(selector);
+          await act(async () => {
+            if (input === 'click') first.click();
+            else { first.focus(); pressEnter(first); }
+          });
+          assert.deepEqual(changes, [['a']], `${family} ${selectionMode} ${input} selects from an empty selection`);
+          assert.equal(first.getAttribute('aria-selected'), 'true');
+          await act(async () => {
+            if (input === 'click') second.click();
+            else { second.focus(); pressEnter(second); }
+          });
+          assert.deepEqual(changes.at(-1), selectionMode === 'single' ? ['b'] : ['a', 'b'], `${family} ${selectionMode} ${input} extends or replaces the selection`);
+        }
+      }
+      const actions = [];
+      const changes = [];
+      const actionProp = family === 'table' ? 'onRowAction' : 'onAction';
+      await act(async () => root.render(React.createElement('div', { key: `${family}-action` }, render({ selectionMode: 'single', onSelectionChange: (ids) => changes.push(ids), [actionProp]: (item) => actions.push(item.id) }))));
+      const first = container.querySelector(selector);
+      await act(async () => first.click());
+      await act(async () => { first.focus(); pressEnter(first); });
+      assert.deepEqual(actions, ['a', 'a'], `${family} consumer actions still run on press and Enter`);
+      assert.deepEqual(changes, []);
+    }
   } finally {
     await act(async () => root.unmount());
     env.restore();
@@ -1015,6 +1442,16 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
     assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => row.textContent), ['Ada10', 'Bob2']);
     assert.deepEqual(Object.keys(sortCalls[0]).sort(), ['column', 'direction']);
 
+    const reservedColumns = [{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'value', label: 'Value' }, { id: 'label', label: 'Label' }, { id: 'id', label: 'ID' }, { id: 'key', label: 'Key' }];
+    await act(async () => root.render(React.createElement(Table, {
+      'aria-label': 'Reserved columns', columns: reservedColumns,
+      rows: [{ id: 'r1', values: { name: 'Ada', value: '42', label: 'Primary', id: 'A-1', key: 'k1' } }, { id: 'r2', name: 'Bob', value: '7' }],
+    })));
+    assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => [...row.querySelectorAll('.muxui-table-cell')].map((cell) => cell.textContent)), [
+      ['Ada', '42', 'Primary', 'A-1', 'k1'],
+      ['Bob', '7', '', 'r2', ''],
+    ]);
+
     const tabItems = [{ id: 'one', label: 'One', panel: 'One panel' }, { id: 'two', label: 'Two', panel: 'Two panel' }];
     const automatic = [];
     await act(async () => root.render(React.createElement(Tabs, { 'aria-label': 'Sections', items: tabItems, onChange: (id) => automatic.push(id) })));
@@ -1032,6 +1469,12 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
     const manualSecond = container.querySelectorAll('[role="tab"]')[1];
     await act(async () => manualSecond.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
     assert.deepEqual(manual, ['two']);
+
+    await act(async () => root.render(React.createElement(Tabs, { key: 'disabled-first', 'aria-label': 'Sections', items: [{ ...tabItems[0], disabled: true }, tabItems[1]] })));
+    const [disabledFirst, enabledSecond] = container.querySelectorAll('[role="tab"]');
+    assert.equal(disabledFirst.getAttribute('aria-selected'), 'false');
+    assert.equal(enabledSecond.getAttribute('aria-selected'), 'true');
+    assert.equal(container.querySelector('[role="tabpanel"]').textContent, 'Two panel');
   } finally {
     await act(async () => root.unmount());
     env.restore();

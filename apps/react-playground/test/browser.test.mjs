@@ -384,13 +384,12 @@ test('R1.4 React component browser and axe matrix', async () => {
         await popover.waitFor({ state: 'detached' });
 
         const previewTrigger = profile.locator('[data-r1-4-control="preview-trigger"]');
-        // PreviewTrigger opens its non-modal inner dialog on focus, so observe
-        // the successful keyboard Tab through the resulting preview instead of
-        // expecting focus to remain on the trigger.
+        // PreviewTrigger opens on keyboard focus while focus stays on the trigger.
         await popoverTrigger.focus();
         await page.keyboard.press('Tab');
         const preview = page.locator('[data-r1-4-overlay="preview"]');
         await preview.waitFor({ state: 'visible' });
+        if (!await previewTrigger.evaluate((node) => node === document.activeElement)) throw new Error('PreviewTrigger must keep focus on its trigger when the preview opens');
         await page.keyboard.press('Escape');
         await preview.waitFor({ state: 'detached' });
 

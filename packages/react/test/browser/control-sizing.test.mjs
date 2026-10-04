@@ -26,7 +26,9 @@ const sizedTargets = Object.freeze({
   'color-field': { selector: '.muxui-field-input' },
   checkbox: { selector: '.muxui-checkbox' },
   'checkbox-group': { selector: '.muxui-checkbox' },
+  // An explicit md checkbox keeps md inside sm and lg groups.
   'checkbox-group-md-child': { expectedHeight: sizes.md, selector: '.muxui-checkbox' },
+  'checkbox-group-lg-md-child': { expectedHeight: sizes.md, selector: '.muxui-checkbox' },
   'checkbox-field': { selector: '.muxui-checkbox-field__button' },
   'radio-group': { selector: '.muxui-radio' },
   'radio-field': { selector: '.muxui-radio-field__button' },

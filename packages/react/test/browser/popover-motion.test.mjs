@@ -110,6 +110,40 @@ test('field and collection popovers use the shared placement-aware Motion lifecy
     await page.keyboard.press('Escape');
     await page.locator(autocompletePopup).waitFor({ state: 'detached' });
 
+    // RAC closes non-modal lists on scroll, which removes the outside
+    // pointerdown guard before a click that scrolled its target into view.
+    // Clicking inert content during that exit moves focus to the body, so RAC
+    // restores it to the input on unmount; that restoration must not reopen.
+    await page.evaluate(() => document.documentElement.style.setProperty('--muxui-semantic-motion-dismiss-transition-duration', '800ms'));
+    await page.keyboard.press('ArrowDown');
+    await waitForSettled(page, autocompletePopup);
+    // A virtually focused option makes the list RAC's active focus scope.
+    await page.keyboard.press('ArrowDown');
+    assert.ok(await autocompleteInput.getAttribute('aria-activedescendant'), 'Autocomplete ArrowDown activates an option');
+    await page.evaluate(() => document.dispatchEvent(new Event('scroll')));
+    await page.locator(`${autocompletePopup}[data-exiting]`).waitFor();
+    await page.mouse.click(4, 4);
+    await page.locator(autocompletePopup).waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.activeElement?.matches('.muxui-autocomplete .muxui-field-input'));
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(await page.locator(autocompletePopup).count(), 0, 'focus restored after a scroll dismissal keeps Autocomplete closed');
+    await page.evaluate(() => document.documentElement.style.removeProperty('--muxui-semantic-motion-dismiss-transition-duration'));
+    const twoFrames = () => page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await autocompleteInput.evaluate((node) => node.blur());
+    await twoFrames();
+    await autocompleteInput.focus();
+    await page.locator(autocompletePopup).waitFor();
+
+    // Without an active option the list is not RAC's active focus scope, so no
+    // restoration follows a blur; the unused guard must expire with the list.
+    await autocompleteInput.evaluate((node) => node.blur());
+    await page.locator(autocompletePopup).waitFor({ state: 'detached' });
+    await twoFrames();
+    await autocompleteInput.focus();
+    await page.locator(autocompletePopup).waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator(autocompletePopup).waitFor({ state: 'detached' });
+
     await page.evaluate(() => {
       document.documentElement.style.setProperty('--muxui-semantic-motion-reveal-duration', '1200ms');
       document.documentElement.setAttribute('data-muxui-motion', 'full');

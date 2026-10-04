@@ -87,7 +87,7 @@ export const Checkbox = React.forwardRef(function Checkbox({
   indeterminate = false,
   invalid = false,
   name,
-  required = false,
+  required,
   value,
   className,
   onChange,
@@ -105,7 +105,8 @@ export const Checkbox = React.forwardRef(function Checkbox({
     isDisabled: disabled,
     isIndeterminate: indeterminate,
     isInvalid: invalid,
-    isRequired: required,
+    // Undefined lets a checkbox inherit its CheckboxGroup's required state.
+    ...(required === undefined ? {} : { isRequired: required }),
     name,
     value,
     onChange,

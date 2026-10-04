@@ -172,14 +172,17 @@ test('choice controls expose compact size variants through direct and group APIs
   }, React.createElement(RadioField.Root, null))), /mutually exclusive/u);
 });
 
-test('RadioGroup labels preserve primitive names and reference visual ReactNode labels', async () => {
+test('RadioGroup labels reference the visible primitive or ReactNode label', async () => {
   const primitiveMarkup = renderToString(React.createElement(RadioGroup, {
     label: 'Plan', options: [{ value: 'basic', label: 'Basic' }],
   }));
   const primitiveDom = new JSDOM(`<!doctype html><div id="root">${primitiveMarkup}</div>`);
   const primitiveGroup = primitiveDom.window.document.querySelector('[role="radiogroup"]');
-  assert.equal(primitiveGroup?.getAttribute('aria-label'), 'Plan');
-  assert.equal(primitiveGroup?.hasAttribute('aria-labelledby'), false);
+  const primitiveLabel = primitiveDom.window.document.querySelector('.muxui-field-label');
+  assert.equal(primitiveGroup?.hasAttribute('aria-label'), false);
+  assert.ok(primitiveGroup?.getAttribute('aria-labelledby'));
+  assert.equal(primitiveLabel?.id, primitiveGroup?.getAttribute('aria-labelledby'));
+  assert.equal(primitiveLabel?.textContent, 'Plan');
   primitiveDom.window.close();
 
   const visualLabel = React.createElement(React.Fragment, null,

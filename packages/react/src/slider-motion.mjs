@@ -85,7 +85,7 @@ function SliderMotionThumb({ isDragging, isDisabled, orientation, readOnly, trac
 }
 
 /** Keep React Aria's track, input, hit target, and positioning as the sole slider engine. */
-export function SliderMotionTrack({ orientation, readOnly }) {
+export function SliderMotionTrack({ orientation, readOnly, name }) {
   const trackRef = React.useRef(null);
   const thumbRef = React.useRef(null);
   return React.createElement(LazyMotion, { features: domAnimation, strict: true },
@@ -93,6 +93,8 @@ export function SliderMotionTrack({ orientation, readOnly }) {
       React.createElement(SliderFill, { className: 'muxui-slider-fill' }),
       React.createElement(SliderThumb, {
         ref: thumbRef,
+        // The thumb owns the native range input, so it carries the form name.
+        name,
         className: 'muxui-slider-thumb',
         'data-readonly': readOnly || undefined,
       }, (renderProps) => React.createElement(SliderMotionThumb, { ...renderProps, orientation, readOnly, trackRef, thumbRef })),

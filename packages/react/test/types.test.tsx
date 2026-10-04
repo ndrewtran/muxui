@@ -165,7 +165,11 @@ const fields = (
     <NumberField label="Quantity" defaultValue={2} onChange={(value) => { const amount: number = value; void amount; }} />
     <CheckboxGroup label="Alerts" defaultValue={['email']}><Checkbox value="email">Email</Checkbox></CheckboxGroup>
     <Switch label="Enabled" selected required invalid onChange={(selected) => { const value: boolean = selected; void value; }} />
-    <DateField label="Birthday" value="2026-08-26" onChange={(value) => { const date: string | undefined = value; void date; }} />
+    <DateField label="Birthday" value="2026-08-26" onChange={(value) => { const date: string | null = value; void date; }} />
+    <DateField label="Cleared" value={null} />
+    <DatePicker label="Cleared due" value={null} onChange={(value) => { const date: string | null = value; void date; }} />
+    <TimeField label="Cleared start" value={null} onChange={(value) => { const time: string | null = value; void time; }} />
+    <DateRangePicker label="Cleared trip" value={null} onChange={(value) => { const range: { start: string; end: string } | null = value; void range; }} />
     <DatePicker label="Due" defaultValue="2026-08-26" minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date) => { const value: string = date; void value; return false; }} />
     <DateRangePicker label="Trip" startName="tripStart" endName="tripEnd" defaultValue={{ start: '2026-08-26', end: '2026-09-01' }} minValue="2026-01-01" maxValue="2026-12-31" open={false} defaultOpen={false} unavailableDateMatcher={(date, anchorDate) => { const value: string = date; const anchor: string | null = anchorDate; void value; void anchor; return false; }} />
     <TimeField label="Start" defaultValue="09:30" minValue="09:00" maxValue="17:00" />
@@ -383,9 +387,10 @@ void radioGroupDescription;
 // @ts-expect-error RadioGroup does not expose generic field errors.
 const radioGroupErrorMessage = <RadioGroup label="Plan" errorMessage="Unsupported" />;
 void radioGroupErrorMessage;
-// @ts-expect-error RadioGroup does not expose a generic field name.
-const radioGroupName = <RadioGroup label="Plan" name="unsupported" />;
+const radioGroupName = <RadioGroup label="Plan" name="plan" />;
 void radioGroupName;
+const sliderName = <Slider label="Volume" name="volume" />;
+void sliderName;
 // @ts-expect-error RadioField.Root requires a stable value for RadioGroup selection identity.
 const radioFieldWithoutValue = <RadioField.Root><RadioField.Button>Missing value</RadioField.Button></RadioField.Root>;
 void radioFieldWithoutValue;
@@ -523,3 +528,21 @@ void invalidIconVariant;
 // @ts-expect-error Icon-only pending content never displays a text label beside the spinner.
 const textLoadingIcon = <IconButton aria-label="Close" showTextWhileLoading><svg /></IconButton>;
 void textLoadingIcon;
+// null is the controlled empty value; ColorField reports null when cleared.
+const controlledEmptyValues = (
+  <>
+    <Calendar label="Date" value={null} />
+    <RangeCalendar label="Trip" value={null} />
+    <ColorSwatchPicker aria-label="Palette" value={null} items={[{ id: 'red', color: '#ff0000' }]} />
+    <ColorField label="Color" value={null} onChange={(value) => { const next: string | null = value; void next; }} />
+  </>
+);
+void controlledEmptyValues;
+const hueSlider = <ColorSlider aria-label="Hue" channel="hue" colorSpace="hsl" defaultValue="#336699" />;
+void hueSlider;
+// @ts-expect-error ColorSlider channels are a closed union.
+const unknownChannel = <ColorSlider aria-label="Chroma" channel="chroma" />;
+void unknownChannel;
+// @ts-expect-error ColorSlider colour spaces are rgb, hsl, or hsb.
+const hexColorSpace = <ColorSlider aria-label="Red" colorSpace="hex" />;
+void hexColorSpace;

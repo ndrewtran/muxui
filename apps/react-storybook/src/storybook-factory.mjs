@@ -78,7 +78,8 @@ export function eventBindingsForBinding(binding) {
 }
 
 const SELECT_PROPS = Object.freeze({
-  colorSpace: ['hex', 'hsl', 'hsb', 'rgb'],
+  channel: ['red', 'green', 'blue', 'hue', 'saturation', 'lightness', 'brightness', 'alpha'],
+  colorSpace: ['rgb', 'hsl', 'hsb'],
   defaultCamera: ['user', 'environment'],
   method: ['get', 'post'],
   orientation: ['horizontal', 'vertical'],
@@ -1328,6 +1329,8 @@ function anatomyArgsForBinding(record, sourceArgs) {
   const props = new Set(record.binding.api.props);
   if (props.has('description')) args.description = 'Additional context';
   if (props.has('errorMessage')) args.errorMessage = 'A value is required';
+  // errorMessage renders only while invalid, so the anatomy shows the error part through invalid.
+  if (props.has('errorMessage') && props.has('invalid')) args.invalid = true;
   if (record.family === 'ColorSwatchPicker') args.defaultValue = '#ff0000';
   if (record.family === 'ListBox') {
     args.children = e(MuxUI.ListBox.Section, { title: 'Options' },
@@ -1591,14 +1594,39 @@ function rangeChangePlan(family, selector) {
   };
 }
 
-function collectionSelectionPlan(family, selector, channel = 'selectionChange') {
+function waitForBrowserSelected(item, family, timeout = 2_000) {
+  const deadline = Date.now() + timeout;
+  return new Promise((resolvePromise, reject) => {
+    const check = () => {
+      if (item.getAttribute('aria-selected') === 'true') return resolvePromise();
+      if (Date.now() >= deadline) return reject(new Error(`${family} selection state did not update`));
+      return setTimeout(check, 20);
+    };
+    check();
+  });
+}
+
+// The proof harness wires onAction, so React Aria treats Enter or a press on an
+// empty selection as the item action. Space then starts the selection, and a
+// press with a selection present replaces or extends it. Enter, unlike a Tree
+// row click, leaves expansion alone.
+function collectionSelectionPlan(family, selector) {
+  const pressKey = (item, key, code) => {
+    for (const type of ['keydown', 'keyup']) item.dispatchEvent(new KeyboardEvent(type, { key, code, bubbles: true, cancelable: true }));
+  };
   return async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, `.muxui-${familySlug(family)}`, family);
-    const item = root.querySelector(selector);
-    assertBrowser(item, `${selector} collection item is missing`);
-    item.click();
-    await waitForBrowserEvent(canvasElement, channel, family);
-    assertBrowser(item.getAttribute('aria-selected') === 'true' || channel === 'action', `${family} selection state did not update`);
+    const [first, second] = root.querySelectorAll(selector);
+    assertBrowser(first && second, `${selector} collection needs two items`);
+    first.focus();
+    pressKey(first, 'Enter', 'Enter');
+    await waitForBrowserEvent(canvasElement, 'action', family);
+    assertBrowser(first.getAttribute('aria-selected') !== 'true', `${family} action must not select`);
+    pressKey(first, ' ', 'Space');
+    await waitForBrowserEvent(canvasElement, 'selectionChange', family);
+    await waitForBrowserSelected(first, family);
+    second.click();
+    await waitForBrowserSelected(second, family);
   };
 }
 
@@ -1819,8 +1847,8 @@ const BROWSER_PROOF_PLANS = {
     await waitForBrowserEvent(canvasElement, 'select', 'ComboBox');
     assertBrowser(input.value.length > 0, 'combo box selection populates the input');
   },
-  GridList: collectionSelectionPlan('GridList', '.muxui-grid-list-item', 'action'),
-  ListBox: collectionSelectionPlan('ListBox', '.muxui-list-box-item', 'action'),
+  GridList: collectionSelectionPlan('GridList', '.muxui-grid-list-item'),
+  ListBox: collectionSelectionPlan('ListBox', '.muxui-list-box-item'),
   Menu: activationPlan('Menu', '.muxui-menu-item', 'action'),
   RadioGroup: activationPlan('RadioGroup', '.muxui-radio', 'change'),
   RangeCalendar: async ({ canvasElement }) => {
@@ -1850,18 +1878,28 @@ const BROWSER_PROOF_PLANS = {
     assertBrowser(input, 'token field input');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
     input.focus();
-    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: 'Review' }));
-    input.textContent = 'Review';
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'Review' }));
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+    const edit = (inputType, data) => {
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      range.collapse(false);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType, data }));
+    };
+    edit('insertText', 'Review');
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
+    assertBrowser(input.textContent.endsWith('Review'), 'token field keeps typed text');
+    // Typed text is a draft; Enter turns it into a token and reports the change.
+    edit('insertParagraph');
     await waitForBrowserEvent(canvasElement, 'change', 'TokenField');
+    assertBrowser([...root.querySelectorAll('.muxui-token')].some((token) => token.textContent === 'Review'), 'Enter turns the draft into a token');
   },
   Toolbar: async ({ canvasElement }) => {
     const root = browserProofElement(canvasElement, '.muxui-toolbar', 'Toolbar');
     assertBrowser(root.getAttribute('role') === 'toolbar', 'toolbar role');
     assertBrowser(root.querySelector('button, [role="button"]'), 'toolbar control');
   },
-  Tree: collectionSelectionPlan('Tree', '.muxui-tree-item', 'action'),
+  Tree: collectionSelectionPlan('Tree', '.muxui-tree-item'),
   Virtualizer: async ({ canvasElement }) => {
     const virtualizer = browserProofElement(canvasElement, '.muxui-virtualizer', 'Virtualizer');
     const item = virtualizer.querySelector('.muxui-virtualizer-item');

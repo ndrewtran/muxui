@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
@@ -30,6 +31,7 @@ import {
   readGeneratedOutputNames,
   readLockedIntegrity,
   readRetainedEvidence,
+  readRetainedReviewEvidence,
 } from '../src/release-proof.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
@@ -512,6 +514,58 @@ test('a milestone without a retained evidence index stops the R1 exit', () => {
     rmSync(root, { recursive: true, force: true });
   }
   assert.equal(readRetainedEvidence(repositoryRoot, ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']).length, 5);
+  assert.deepEqual(readRetainedReviewEvidence(repositoryRoot).map(({ milestones, path }) => [milestones, path]), [[['R1.2', 'R1.3', 'R1.4'], 'tests/evidence/r1-retro-review/index.json']]);
+  assert.throws(() => readRetainedReviewEvidence(repositoryRoot, 'tests/evidence/missing/index.json'), /R1_EXIT_RETAINED_REVIEW_MISSING/u);
+});
+
+test('retained review evidence fails closed on its authority, lanes, digests, and resolutions', () => {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-retained-review-'));
+  const lanes = ['r1.2-fields', 'r1.3a-collections', 'r1.3b-pickers', 'r1.4-overlays'];
+  const sha = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
+  const fixed = { id: 'H1', resolution: { status: 'fixed', fixCommit: 'a'.repeat(40) } };
+  const accepted = { id: 'L3', resolution: { status: 'accepted-unfixed', fixCommit: null, reason: 'no change', acceptedBy: 'Andrew / ndrewtran' } };
+  // Writes the four lanes (the first with `findings`) and an index; `index` overrides fields.
+  const write = ({ findings = [fixed, accepted], index = {}, tamper = false } = {}) => {
+    mkdirSync(join(root, 'tests/evidence/r1-retro-review/records'), { recursive: true });
+    const records = lanes.map((lane, offset) => {
+      const path = `tests/evidence/r1-retro-review/records/${lane}.json`;
+      const bytes = JSON.stringify({ findings: offset === 0 ? findings : [fixed] });
+      writeFileSync(join(root, path), bytes);
+      return { reviewId: lane, path, sha256: sha(tamper && offset === 0 ? `${bytes} ` : bytes) };
+    });
+    writeFileSync(join(root, 'tests/evidence/r1-retro-review/index.json'), JSON.stringify({
+      authority: 'muxui:decision:0022:amendment:01', milestones: ['R1.2', 'R1.3', 'R1.4'], records, ...index,
+    }));
+  };
+  try {
+    mkdirSync(join(root, 'decisions'), { recursive: true });
+    writeFileSync(join(root, 'decisions/0022-rc1-assistive-technology-non-claim.md'), '# Decision 0022\n\n- Decision owner: Andrew / `ndrewtran`\n');
+    write();
+    assert.equal(readRetainedReviewEvidence(root).length, 1);
+    write({ index: { authority: 'muxui:decision:0022' } });
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_AUTHORITY_INVALID/u);
+    write({ index: { milestones: undefined } });
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_MILESTONES_INVALID/u);
+    write({ index: { records: [] } });
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_LANES_INVALID/u);
+    write({ index: { records: undefined } });
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_LANES_INVALID/u);
+    write({ tamper: true });
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_DIGEST_MISMATCH/u);
+    write({ findings: [fixed, { id: 'M2', resolution: { status: 'pending', fixCommit: null } }] });
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_PENDING: .*M2/u);
+    for (const resolution of [
+      { status: 'fixed', fixCommit: 'abc1234' },
+      { status: 'accepted-unfixed', fixCommit: null, reason: '', acceptedBy: 'Andrew / ndrewtran' },
+      { status: 'accepted-unfixed', fixCommit: null, reason: 'no change', acceptedBy: 'root agent' },
+      { status: 'declined', fixCommit: null },
+    ]) {
+      write({ findings: [fixed, { id: 'L1', resolution }] });
+      assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_RESOLUTION_INVALID: .*L1/u, JSON.stringify(resolution));
+    }
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('the release manifest correlates exact source, lockfile, generated, catalog, binding, and evidence identities', () => {
@@ -542,6 +596,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
     bindings: [binding],
     workspacePackages: [{ name: '@muxui/react', version: '0.1.0-alpha.0', private: true }, { name: '@muxui/catalog', version: '2.0.0', private: true }],
     retainedEvidence: [{ milestone: 'R1.5', path: 'tests/evidence/r1.5/index.json', bytes: Buffer.from('{}') }],
+    reviewEvidence: [{ milestones: ['R1.2', 'R1.3', 'R1.4'], path: 'tests/evidence/r1-retro-review/index.json', bytes: Buffer.from('{}') }],
     activeExceptions: [],
     visualContract: { comparison: 'none-recorded', digest, inputs: {} },
   };
@@ -558,6 +613,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.deepEqual(correlation.bindings, [{ binding, specRevision: digest, tokenRequirementSet: digest, platformSafetyRequirementSet: digest }]);
   assert.deepEqual(correlation.packages.map(({ name }) => name), ['@muxui/catalog', '@muxui/react']);
   assert.deepEqual(correlation.evidence.capturedCiEvidence.map(({ milestone }) => milestone), ['R1.5']);
+  assert.deepEqual(correlation.evidence.retainedReviewEvidence.map(({ path }) => path), ['tests/evidence/r1-retro-review/index.json']);
   assert.deepEqual(correlation.evidence.activeExceptions, []);
 
   const changedGenerated = buildReleaseCorrelation({ ...options, generated: [options.generated[0], { path: 'generated/styles.css', bytes: Buffer.from('.muxui-button{color:red}\n') }] });
@@ -568,4 +624,5 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.throws(() => buildReleaseCorrelation({ ...options, source: { revision: 'HEAD', tree: options.source.tree } }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, catalogBundle: { ...options.catalogBundle, catalogDigest: `sha256:${'b'.repeat(64)}` } }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, retainedEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
+  assert.throws(() => buildReleaseCorrelation({ ...options, reviewEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
 });

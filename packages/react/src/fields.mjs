@@ -294,23 +294,28 @@ function normalizeValidationMessages(value) {
     .map(String);
 }
 
+// Like RAC's server errors, an edit or reset dismisses the current errors
+// until the Form receives a new validationErrors object.
 function useMuxFormValidation(names) {
   const validationErrors = React.useContext(MuxFormValidationContext);
-  const messages = (Array.isArray(names) ? names : [names]).flatMap((name) => {
+  const [dismissedErrors, setDismissedErrors] = React.useState(null);
+  const messages = dismissedErrors === validationErrors ? [] : (Array.isArray(names) ? names : [names]).flatMap((name) => {
     if (!name || !validationErrors || !Object.prototype.hasOwnProperty.call(validationErrors, name)) return [];
     return normalizeValidationMessages(validationErrors[name]);
   });
-  return { isInvalid: messages.length > 0, message: messages.join(' ') };
+  return { isInvalid: messages.length > 0, message: messages.join(' '), dismiss: () => setDismissedErrors(validationErrors) };
 }
 
-function validationProps({ disabled, readOnly, required, invalid, errorMessage }) {
+// errorMessage only customizes the message RAC's FieldError shows while the
+// field is invalid; it never makes the field invalid on its own.
+function validationProps({ disabled, readOnly, required, invalid }) {
   return {
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
-    // Leave invalid uncontrolled when no local error is present so Form's
+    // Leave invalid uncontrolled unless forced so native, custom, and Form's
     // name-keyed server validation can flow through RAC's context.
-    isInvalid: invalid || errorMessage !== undefined ? true : undefined,
+    isInvalid: invalid ? true : undefined,
   };
 }
 
@@ -325,15 +330,20 @@ function dateOrUndefined(value) {
   }
 }
 
+// TimeField works at minute precision: HH:mm:ss input is accepted (as
+// database time columns produce) and its seconds are dropped, so values,
+// bounds, display, and submission all compare at the same precision.
 function timeOrUndefined(value) {
   if (value === undefined || value === null || value === '') return undefined;
   const message = 'Mux UI time values must use HH:mm[:ss[.fraction]] ISO format';
   if (typeof value !== 'string' || !ISO_TIME_PATTERN.test(value)) throw new TypeError(message);
+  let time;
   try {
-    return parseTime(value);
+    time = parseTime(value);
   } catch {
     throw new TypeError(message);
   }
+  return time.set({ second: 0, millisecond: 0 });
 }
 
 function dateRangeOrUndefined(value) {
@@ -343,6 +353,12 @@ function dateRangeOrUndefined(value) {
     throw new TypeError(message);
   }
   return { start: dateOrUndefined(value.start), end: dateOrUndefined(value.end) };
+}
+
+// RAC treats an undefined value as uncontrolled, so a cleared controlled
+// field (null or '') must reach it as null to stay controlled and empty.
+function controlledTemporal(value, parse) {
+  return value === undefined ? undefined : parse(value) ?? null;
 }
 
 function assertTemporalBounds(minValue, maxValue, valueName) {
@@ -374,7 +390,12 @@ function unavailableDateCallback(callback, range = false) {
 }
 
 function serializeDateValue(value) {
-  return value ? String(value) : undefined;
+  return value ? String(value) : null;
+}
+
+// Submit and emit times at TimeField's minute precision as HH:mm.
+function serializeTimeValue(value) {
+  return value ? String(value).slice(0, 5) : null;
 }
 
 function calendarChildren(cellClass = 'muxui-calendar-cell') {
@@ -491,7 +512,7 @@ export const TextField = React.forwardRef(function TextField({
   return React.createElement(AriaTextField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -545,11 +566,13 @@ export const SearchField = React.forwardRef(function SearchField({
   return React.createElement(AriaSearchField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
     onSubmit,
+    // RAC fires onClear for both Escape and the clear button.
+    onClear,
     name,
     className: classNames('muxui-search-field', className),
     'data-size': resolvedSize,
@@ -566,7 +589,7 @@ export const SearchField = React.forwardRef(function SearchField({
           ref: inputRef,
         }),
       }),
-      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search', onActivate: onClear }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
+      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
   }));
 });
 
@@ -600,7 +623,7 @@ export const NumberField = React.forwardRef(function NumberField({
   return React.createElement(AriaNumberField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -619,7 +642,7 @@ export const NumberField = React.forwardRef(function NumberField({
     errorMessage,
     input: React.createElement(AriaGroup, { className: 'muxui-number-control' },
       React.createElement(IconButton, { slot: 'decrement', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-decrement' }, React.createElement(MinusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })),
-      React.createElement(AriaInput, { className: 'muxui-field-input', inputMode: 'decimal' }),
+      React.createElement(AriaInput, { className: 'muxui-field-input' }),
       React.createElement(IconButton, { slot: 'increment', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-increment' }, React.createElement(PlusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
   }));
 });
@@ -652,10 +675,12 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     throw new TypeError('CheckboxGroup orientation must be horizontal or vertical');
   }
   const resolvedSize = normalizeChoiceControlSize(size, 'CheckboxGroup');
+  const labelId = React.useId();
+  const hasLabel = label !== undefined && label !== null;
   const group = React.createElement(AriaCheckboxGroup, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value,
     defaultValue,
     onChange,
@@ -664,11 +689,14 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     name,
     className: classNames('muxui-checkbox-group', className),
     'data-orientation': orientation,
-    'aria-label': ariaLabel ?? (typeof label === 'string' ? label : undefined),
-    'aria-labelledby': ariaLabelledby,
+    'data-size': resolvedSize,
+    'aria-label': ariaLabel,
+    // The visible label sits outside the options' flex layout, so name the
+    // group by id rather than through RAC's label slot.
+    'aria-labelledby': ariaLabelledby ?? (hasLabel ? labelId : undefined),
   }, children, fieldDescription(description), fieldError(errorMessage));
   const field = React.createElement('div', { className: 'muxui-checkbox-group-field' },
-    fieldLabel(label),
+    hasLabel ? React.createElement(AriaLabel, { id: labelId, elementType: 'span', className: 'muxui-field-label' }, label) : null,
     group,
   );
   return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, field);
@@ -705,7 +733,7 @@ export const Switch = /*#__PURE__*/ (() => {
     return React.createElement(AriaSwitchField, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid }),
       isSelected: selected,
       defaultSelected,
       name,
@@ -774,13 +802,13 @@ export const DateField = React.forwardRef(function DateField({
 }, ref) {
   assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DateField');
   const resolvedSize = normalizeChoiceControlSize(size, 'DateField');
-  const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
+  const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
   const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
   return React.createElement(AriaDateField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid }),
     value: parsedValue,
     defaultValue: parsedDefaultValue,
     minValue: parsedMinValue,
@@ -823,30 +851,30 @@ export const TimeField = React.forwardRef(function TimeField({
   const resolvedSize = normalizeChoiceControlSize(size, 'TimeField');
   const externalValidation = useMuxFormValidation(name);
   const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-  React.useMemo(() => timeOrUndefined(value), [value]);
-  React.useMemo(() => timeOrUndefined(defaultValue), [defaultValue]);
+  const parsedValue = React.useMemo(() => controlledTemporal(value, timeOrUndefined), [value]);
+  const parsedDefaultValue = React.useMemo(() => timeOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = timeBounds(minValue, maxValue);
-  const [formValue, setFormValue] = React.useState(() => value ?? defaultValue ?? '');
+  const [formValue, setFormValue] = React.useState(() => serializeTimeValue(parsedValue ?? parsedDefaultValue));
   const resettingRef = React.useRef(false);
-  React.useEffect(() => {
-    if (value !== undefined) setFormValue(value);
-  }, [value]);
   const handleChange = (next) => {
     if (resettingRef.current) return;
-    const nextValue = serializeDateValue(next);
-    setFormValue(nextValue ?? '');
+    const nextValue = serializeTimeValue(next);
+    externalValidation.dismiss();
+    if (value === undefined) setFormValue(nextValue);
     onChange?.(nextValue);
   };
   const handleReset = () => {
-    if (value === undefined) setFormValue(defaultValue ?? '');
+    externalValidation.dismiss();
+    if (value === undefined) setFormValue(serializeTimeValue(parsedDefaultValue));
   };
   const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-  const effectiveValue = value ?? formValue;
-  const effectiveParsedValue = React.useMemo(() => timeOrUndefined(effectiveValue), [effectiveValue]);
+  // Mux owns TimeField state, so RAC always receives a controlled value.
+  const submittedValue = value !== undefined ? serializeTimeValue(parsedValue) : formValue;
+  const effectiveParsedValue = React.useMemo(() => timeOrUndefined(submittedValue) ?? null, [submittedValue]);
   return React.createElement(AriaTimeField, {
     ...props,
     ref,
-    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
+    ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
     value: effectiveParsedValue,
     minValue: parsedMinValue,
     maxValue: parsedMaxValue,
@@ -866,7 +894,7 @@ export const TimeField = React.forwardRef(function TimeField({
     input: dateInput(),
     children: React.createElement(React.Fragment, null,
       formResetAnchor(resetInputRef),
-      name ? React.createElement('input', { type: 'hidden', name, value: value ?? formValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+      name ? React.createElement('input', { type: 'hidden', name, value: submittedValue ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
   }));
 });
 
@@ -902,13 +930,13 @@ export const DatePicker = /*#__PURE__*/ (() => {
   }, ref) {
     assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'DatePicker');
     const resolvedSize = normalizeChoiceControlSize(size, 'DatePicker');
-    const parsedValue = React.useMemo(() => dateOrUndefined(value), [value]);
+    const parsedValue = React.useMemo(() => controlledTemporal(value, dateOrUndefined), [value]);
     const parsedDefaultValue = React.useMemo(() => dateOrUndefined(defaultValue), [defaultValue]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
     return React.createElement(AriaDatePicker, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid }),
       value: parsedValue,
       defaultValue: parsedDefaultValue,
       minValue: parsedMinValue,
@@ -972,29 +1000,30 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
     const triggerRef = React.useRef(null);
     const externalValidation = useMuxFormValidation([startName, endName]);
     const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-    const parsedValue = React.useMemo(() => dateRangeOrUndefined(value), [value?.start, value?.end]);
+    const parsedValue = React.useMemo(() => controlledTemporal(value, dateRangeOrUndefined), [value === null, value?.start, value?.end]);
     const { minValue: parsedMinValue, maxValue: parsedMaxValue } = dateBounds(minValue, maxValue);
-    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue);
+    const [formValue, setFormValue] = React.useState(() => value ?? defaultValue ?? null);
     const resettingRef = React.useRef(false);
-    React.useEffect(() => {
-      if (value !== undefined) setFormValue(value);
-    }, [value]);
     const handleChange = (next) => {
       if (resettingRef.current) return;
-      const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : undefined;
-      setFormValue(nextValue);
+      const nextValue = next ? { start: serializeDateValue(next.start), end: serializeDateValue(next.end) } : null;
+      externalValidation.dismiss();
+      if (value === undefined) setFormValue(nextValue);
       onChange?.(nextValue);
     };
     const handleReset = () => {
-      if (value === undefined) setFormValue(defaultValue);
+      externalValidation.dismiss();
+      if (value === undefined) setFormValue(defaultValue ?? null);
     };
     const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
-    const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue), [formValue?.start, formValue?.end]);
+    const submittedValue = value !== undefined ? value : formValue;
+    const parsedFormValue = React.useMemo(() => dateRangeOrUndefined(formValue) ?? null, [formValue?.start, formValue?.end]);
+    // Mux owns range state, so RAC always receives a controlled value.
     const effectiveValueObject = value !== undefined ? parsedValue : parsedFormValue;
     return React.createElement(AriaDateRangePicker, {
       ...props,
       ref,
-      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid, errorMessage: effectiveErrorMessage }),
+      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
       value: effectiveValueObject,
       minValue: parsedMinValue,
       maxValue: parsedMaxValue,
@@ -1021,8 +1050,8 @@ export const DateRangePicker = /*#__PURE__*/ (() => {
       children: React.createElement(React.Fragment, null,
         rangeDatePopover(triggerRef),
         formResetAnchor(resetInputRef),
-        startName ? React.createElement('input', { type: 'hidden', name: startName, value: value?.start ?? formValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
-        endName ? React.createElement('input', { type: 'hidden', name: endName, value: value?.end ?? formValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
+        startName ? React.createElement('input', { type: 'hidden', name: startName, value: submittedValue?.start ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
+        endName ? React.createElement('input', { type: 'hidden', name: endName, value: submittedValue?.end ?? '', disabled, readOnly: true, 'aria-hidden': 'true' }) : null),
     }));
   });
   component.displayName = 'DateRangePicker';
@@ -1040,7 +1069,9 @@ function normalizeAutocompleteItems(items) {
     let suffix = 1;
     while (usedIds.has(id)) id = `${baseId}-${suffix++}`;
     usedIds.add(id);
-    return { ...source, id, label: source.label ?? source.value ?? id, value: source.value ?? id };
+    // A label-only item submits its text rather than its generated index id.
+    const value = source.value ?? (source.id === undefined ? autocompleteNodeText(source.label) || id : id);
+    return { ...source, id, label: source.label ?? source.value ?? id, value };
   });
 }
 
@@ -1092,29 +1123,71 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     assertAccessibleName({ label, ariaLabel, ariaLabelledby }, 'Autocomplete');
     const resolvedSize = normalizeAutocompleteSize(size);
     const normalizedItems = React.useMemo(() => normalizeAutocompleteItems(items), [items]);
-    const [inputValue, setInputValue] = React.useState(() => value ?? defaultValue ?? '');
-    React.useEffect(() => {
-      if (value !== undefined) setInputValue(value);
-    }, [value]);
-    const effectiveInputValue = value ?? inputValue;
+    // The input shows a selected item's label while the form and onChange
+    // carry its value; typed text is both the shown and the submitted value.
+    const entryForValue = (nextValue) => {
+      const item = normalizedItems.find((candidate) => String(candidate.value) === nextValue);
+      return item ? { text: autocompleteItemText(item), selected: nextValue } : { text: nextValue, selected: null };
+    };
+    // Prop-sourced entries resolve their label on every render, so items that
+    // load after the value still show its label. Typed and selected entries
+    // keep their own text.
+    const [storedEntry, setEntry] = React.useState(() => ({ fromProp: value ?? defaultValue ?? '' }));
+    const storedValue = storedEntry.fromProp ?? storedEntry.selected ?? storedEntry.text;
+    // A controlled value that differs from the last edit came from outside.
+    const entry = value !== undefined && value !== storedValue
+      ? entryForValue(value)
+      : storedEntry.fromProp !== undefined ? entryForValue(storedEntry.fromProp) : storedEntry;
+    const submittedValue = entry.selected ?? entry.text;
+    const effectiveInputValue = entry.text;
+    const externalValidation = useMuxFormValidation(name);
+    const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
+    const resettingRef = React.useRef(false);
+    const resetInputRef = useOwningFormReset(() => {
+      externalValidation.dismiss();
+      if (value === undefined) setEntry({ fromProp: defaultValue ?? '' });
+    }, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
     const filteredItems = React.useMemo(() => {
       const query = effectiveInputValue.toLocaleLowerCase();
       return normalizedItems.filter((item) => autocompleteItemText(item).toLocaleLowerCase().includes(query));
     }, [effectiveInputValue, normalizedItems]);
     const [isOpen, setIsOpen] = React.useState(false);
     const inputRef = React.useRef(null);
+    // The visible input finds the owning form, so no extra reset anchor input is needed.
+    const setInputRef = React.useCallback((node) => {
+      inputRef.current = node;
+      resetInputRef(node);
+    }, [resetInputRef]);
     const popoverRef = React.useRef(null);
     // Outside dismissal lets RAC restore this trigger; consume that focus without reopening.
     const pendingFocusRestoreRef = React.useRef(false);
     const pendingFocusRestoreCleanupRef = React.useRef(null);
+    const pendingFocusRestoreExpiryRef = React.useRef(0);
     const clearPendingFocusRestore = () => {
       pendingFocusRestoreRef.current = false;
+      if (pendingFocusRestoreExpiryRef.current) cancelAnimationFrame(pendingFocusRestoreExpiryRef.current);
+      pendingFocusRestoreExpiryRef.current = 0;
       pendingFocusRestoreCleanupRef.current?.();
       pendingFocusRestoreCleanupRef.current = null;
+    };
+    // RAC restores trigger focus one frame after the popover's FocusScope
+    // unmounts, and only when the list was its active scope. Expire the guard
+    // two frames after the list is gone so an unused guard cannot swallow a
+    // later legitimate focus. After a virtual (screen reader) interaction RAC
+    // defers its restore until page transitions end, which can outlast this.
+    const expirePendingFocusRestore = () => {
+      if (!pendingFocusRestoreRef.current) return;
+      cancelAnimationFrame(pendingFocusRestoreExpiryRef.current);
+      pendingFocusRestoreExpiryRef.current = requestAnimationFrame(() => {
+        pendingFocusRestoreExpiryRef.current = requestAnimationFrame(() => {
+          if (!popoverRef.current?.isConnected) clearPendingFocusRestore();
+        });
+      });
     };
     const armPendingFocusRestore = () => {
       clearPendingFocusRestore();
       pendingFocusRestoreRef.current = true;
+      if (!popoverRef.current?.isConnected) expirePendingFocusRestore();
       const handleFocusIn = (event) => {
         const target = event.target;
         const externalFocus = target
@@ -1136,6 +1209,12 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       };
     };
     React.useEffect(() => () => clearPendingFocusRestore(), []);
+    // Stable so PopoverMotion only sees null when the list actually detaches;
+    // the guard helpers read refs alone, so the first-render closures suffice.
+    const setPopoverRef = React.useCallback((node) => {
+      popoverRef.current = node;
+      if (!node) expirePendingFocusRestore();
+    }, []);
     const suggestionsOpen = isOpen && filteredItems.length > 0;
     const portalContainer = autocompletePortalContainer(inputRef.current);
     React.useEffect(() => {
@@ -1157,7 +1236,8 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       if (item) {
         if (item.disabled) return;
         const nextValue = String(item.value);
-        setInputValue(nextValue);
+        externalValidation.dismiss();
+        setEntry({ text: autocompleteItemText(item), selected: nextValue });
         onChange?.(nextValue);
       }
       onSelect?.(item);
@@ -1165,8 +1245,9 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     };
     const handleInputChange = (next) => {
       clearPendingFocusRestore();
-      if (disabled || readOnly) return;
-      if (value === undefined) setInputValue(next);
+      if (disabled || readOnly || resettingRef.current) return;
+      externalValidation.dismiss();
+      setEntry({ text: next, selected: null });
       onChange?.(next);
       setIsOpen(!disabled);
     };
@@ -1181,6 +1262,14 @@ export const Autocomplete = /*#__PURE__*/ (() => {
         if (outside) {
           if (relatedTarget && relatedTarget !== document.body && relatedTarget !== document.documentElement) {
             clearPendingFocusRestore();
+          } else if (event.target === inputRef.current && document.activeElement === document.body && popoverRef.current?.isConnected) {
+            // Focus fell to the body while the list is mounted (open or exiting),
+            // so RAC may restore it to this input on unmount. This also covers
+            // closes the pointerdown guard never saw, such as RAC's close on
+            // scroll. Chromium reports the body as active during every element
+            // blur; the check only excludes window and tab switches, which keep
+            // the input active.
+            armPendingFocusRestore();
           }
           setIsOpen(false);
         }
@@ -1192,8 +1281,9 @@ export const Autocomplete = /*#__PURE__*/ (() => {
       inputValue: effectiveInputValue,
       onInputChange: handleInputChange,
     }, React.createElement(AriaSearchField, {
-      ...validationProps({ disabled, readOnly, required, invalid, errorMessage }),
-      name,
+      ...validationProps({ disabled, readOnly, required, invalid: invalid || externalValidation.isInvalid }),
+      // Keep RAC's name private: the hidden input below submits the value.
+      name: undefined,
       className: 'muxui-autocomplete-search',
       'data-part': 'search-field',
       'aria-label': ariaLabel,
@@ -1201,11 +1291,15 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     }, fieldChildren({
       label,
       description,
-      errorMessage,
-      input: React.createElement(AriaInput, {
-        ref: inputRef,
+      errorMessage: effectiveErrorMessage,
+      input: React.createElement(FieldInput, {
+        ref: setInputRef,
         className: 'muxui-field-input',
         'data-part': 'input',
+        // WAI-ARIA combobox: RAC supplies aria-autocomplete, aria-controls,
+        // and aria-activedescendant; the popup state is Mux-owned.
+        role: 'combobox',
+        'aria-expanded': suggestionsOpen,
         placeholder,
         onPointerDown: () => {
           clearPendingFocusRestore();
@@ -1220,13 +1314,28 @@ export const Autocomplete = /*#__PURE__*/ (() => {
         },
         onKeyDown: (event) => {
           clearPendingFocusRestore();
+          if (event.key === 'Escape' && suggestionsOpen) {
+            // Close the open list without the SearchField shortcut clearing
+            // the text; Escape on a closed list still clears.
+            event.preventDefault();
+            event.stopPropagation();
+          }
+          if (event.key === 'Enter' && suggestionsOpen && popoverRef.current?.querySelector('[role="option"][data-focused]')) {
+            // RAC selects the active option but leaves the browser's implicit
+            // form submission. Cancel only the native default so the synthetic
+            // event still reaches RAC's selection handler through FieldInput.
+            // The option's data-focused leads aria-activedescendant, which RAC
+            // delays while the user types.
+            event.nativeEvent.preventDefault();
+          }
           if (event.key === 'Escape') setIsOpen(false);
           if (event.key === 'ArrowDown') setIsOpen(!disabled);
         },
       }),
+      children: name ? React.createElement('input', { type: 'hidden', name, value: submittedValue, disabled, readOnly: true, 'aria-hidden': 'true' }) : null,
     })),
     React.createElement(PopoverMotion, {
-      ref: popoverRef,
+      ref: setPopoverRef,
       isOpen: suggestionsOpen,
       onOpenChange: setIsOpen,
       isNonModal: true,

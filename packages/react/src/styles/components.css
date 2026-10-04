@@ -292,6 +292,8 @@
   user-select: none;
 }
 
+/* Explicit md keeps a checkbox at md inside a sized CheckboxGroup. */
+.muxui-checkbox[data-size='md'] { --muxui-control-target-size: var(--muxui-control-size-md); }
 .muxui-checkbox[data-size='sm'] { --muxui-control-target-size: var(--muxui-control-size-sm); }
 .muxui-checkbox[data-size='lg'] { --muxui-control-target-size: var(--muxui-control-size-lg); }
 

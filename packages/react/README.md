@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:541fb74c8fc002c98e4cf23581fc64bb722a370fd15c87fde201d3250d25d186 -->
+<!-- @generated-content-sha256: sha256:74d871a14c278ca2ced36cbad0e8c4064b73952bc40ecc62d1b583398aaea9e4 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -131,7 +131,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
 | RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, readOnly, value |
-| RadioGroup | experimental | . | .muxui-radio-group | label, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size |
+| RadioGroup | experimental | . | .muxui-radio-group | label, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, unavailableDateMatcher, minValue, maxValue, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, id, inputRef, inputProps |
@@ -139,7 +139,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, aria-label, aria-labelledby, aria-describedby, id, value, defaultValue, onChange, name, form, autoComplete, disabled, required, invalid, multiple, size, children |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | hideBorder, href, current, external, items, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss |
-| Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation |
+| Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, aria-label, aria-labelledby, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
 | Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |
@@ -200,6 +200,8 @@ Public parts: `root`, `section`, `header`, `item`.
 - Popup geometry uses finite offset/crossOffset, nonnegative finite containerPadding, and logical placement such as bottom-start or end-top. Existing bottom-start and 8px defaults are preserved. Popup-specific props override root geometry; anchorRef positions against a consumer-owned element, and modal=false keeps outside content accessible.
 - Mux selectors are .muxui-select, .muxui-select-label, .muxui-select-trigger, .muxui-select-value, .muxui-select-popover, .muxui-select-list, .muxui-select-option, .muxui-select-description, and .muxui-select-error. Root states include data-open, data-disabled, data-readonly, and data-invalid; options expose data-selected, data-disabled, data-focused, and data-focus-visible.
 - Root, Popup, List, and Item refs target divs; Trigger targets a button; Label, Value, Description, and Error target spans. Error renders only while invalid.
+- Named forms submit the selected item id, not item.value.
+- errorMessage is shown only while the field is invalid, through the invalid prop or failed validation, and replaces the default message; it never makes the field invalid by itself.
 
 Public parts: `root`, `label`, `trigger`, `value`, `popup`, `list`, `option`, `description`, `error`.
 
@@ -212,6 +214,7 @@ Public parts: `root`, `label`, `trigger`, `value`, `popup`, `list`, `option`, `d
 - The forwarded ref resolves to the outer div; inputRef resolves to the native HTMLInputElement for focus and selection.
 - inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props; its className merges with the Mux input class.
 - Root id, value, defaultValue, onChange, name, type, accessible name, validation, disabled, readOnly, and required remain authoritative; inputProps cannot replace them. Root native input attributes take precedence when supplied.
+- errorMessage renders only while the field is invalid, through the invalid prop or failed native, custom, or server validation, and replaces the built-in message.
 
 Public parts: `root`, `label`, `input`, `description`, `error`.
 
@@ -224,6 +227,7 @@ Public parts: `root`, `label`, `input`, `description`, `error`.
 - The forwarded ref resolves to the outer div; inputRef resolves to the native HTMLInputElement for focus and selection.
 - inputProps accepts native input keyboard, paste, focus, blur, selection, composition, and styling props; its className merges with the Mux input class.
 - Root id, value, defaultValue, onChange, name, type, accessible name, validation, disabled, readOnly, and required remain authoritative; inputProps cannot replace them. Root native input attributes take precedence when supplied.
+- errorMessage renders only while the field is invalid, through the invalid prop or failed native, custom, or server validation, and replaces the built-in message.
 
 Public parts: `root`, `label`, `input`, `clear`, `description`, `error`.
 
@@ -253,6 +257,7 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 - Use modal false for non-blocking content without focus containment, outside-content exclusion, or scroll locking; modal remains true by default.
 - Preserve muxui-popover-positioner and muxui-popover selectors, data-placement and transition states; expose data-modal on the positioner for consumer styling.
 - Changing modal while open retains the existing content, uncontrolled values, and child state; entering modal mode focuses the dialog surface when focus is outside it.
+- When dismissable, a non-modal popover also closes on outside press and on Escape while focus is on the trigger. dismissable false rejects accidental dismissal by Escape, outside press, the hidden dismiss buttons, or trigger toggle; an explicit slot="close" button in the content still requests close, which closes an uncontrolled Popover and calls onOpenChange(false) for a controlled owner.
 
 Public parts: `trigger`, `root`, `content`.
 
@@ -264,6 +269,7 @@ Public parts: `trigger`, `root`, `content`.
 - Validate finite offset and crossOffset, boolean shouldFlip, and nonnegative finite containerPadding while retaining existing geometry defaults.
 - Optionally position relative to an existing DOM element through anchorRef while keeping the required trigger as the hover, focus, and descriptive relationship owner.
 - Preserve muxui-tooltip and data-placement, data-entering, and data-exiting selectors for consumer styling.
+- disabled suppresses opening and closes an open overlay without adding aria-disabled or data-disabled to the trigger, which stays operable.
 
 Public parts: `trigger`, `tooltip`.
 
@@ -273,7 +279,7 @@ Public parts: `trigger`, `tooltip`.
 - Use DialogTrigger when a trigger is supplied and let ModalOverlay own controlled or uncontrolled state otherwise.
 - Render optional description and actions with stable muxui-dialog-description and muxui-dialog-actions selectors.
 - Keep Mux UI part classes when applying consumer backdrop, panel, title, description, content, actions, and close classes; preserve default styling unless the consumer overrides it.
-- With dismissable false, reject Escape, outside press, and trigger-toggle close requests; controlled owners may still close by setting open false.
+- With dismissable false, reject accidental dismissal by Escape, outside press, or trigger toggle; an explicit slot="close" button in the content or actions still requests close, which closes an uncontrolled Dialog and calls onOpenChange(false) for a controlled owner.
 
 Public parts: `backdrop`, `root`, `title`, `description`, `content`, `actions`, `close`.
 
