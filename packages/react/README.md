@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:5723dfbb5398159febd88cf94b0403ce7f1e5608a7b9befff2aeb6be9fc60ca1 -->
+<!-- @generated-content-sha256: sha256:3824db8f44de390139575466efde16e12f9ae5c5679bfd9811c9a3a429de2425 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -275,7 +275,7 @@ Public parts: `trigger`, `tooltip`.
 - Use DialogTrigger when a trigger is supplied and let ModalOverlay own controlled or uncontrolled state otherwise.
 - Render optional description and actions with stable muxui-dialog-description and muxui-dialog-actions selectors.
 - Keep Mux UI part classes when applying consumer backdrop, panel, title, description, content, actions, and close classes; preserve default styling unless the consumer overrides it.
-- With dismissable false, reject Escape, outside press, and trigger-toggle close requests; controlled owners may still close by setting open false.
+- With dismissable false, reject accidental dismissal by Escape, outside press, or trigger toggle; an explicit slot="close" button in the content or actions still requests close, which closes an uncontrolled Dialog and calls onOpenChange(false) for a controlled owner.
 
 Public parts: `backdrop`, `root`, `title`, `description`, `content`, `actions`, `close`.
 

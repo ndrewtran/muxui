@@ -12,6 +12,7 @@ import {
   FileTrigger as AriaFileTrigger,
   Heading as AriaHeading,
   ModalOverlay as AriaModalOverlay,
+  OverlayTriggerStateContext as AriaOverlayTriggerStateContext,
   Popover as AriaPopover,
   Pressable as AriaPressable,
   PreviewTrigger as AriaPreviewTrigger,
@@ -196,15 +197,20 @@ export const FileTrigger = React.forwardRef(function FileTrigger({
 
 FileTrigger.displayName = 'FileTrigger';
 
-function DialogContent({ title, description, actions, children, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }) {
+function DialogContent({ title, description, actions, children, ariaLabel, dismissable, explicitClose, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }) {
   const descriptionId = React.useId();
   const describedby = [ariaDescribedby, description !== undefined && description !== null ? descriptionId : undefined].filter(Boolean).join(' ') || undefined;
-  return React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
+  const triggerState = React.useContext(AriaOverlayTriggerStateContext);
+  // RAC routes slot="close" buttons through this state's close; those
+  // explicit actions still close a non-dismissable Dialog.
+  const explicitCloseState = React.useMemo(() => triggerState && { ...triggerState, close: explicitClose }, [triggerState, explicitClose]);
+  const dialog = React.createElement(AriaDialog, { ...props, ref: contentRef, className: classNames(classNames('muxui-dialog', className), panelClassName), 'aria-label': ariaLabel, 'aria-describedby': describedby },
     hasRenderableLabel(title) ? React.createElement(AriaHeading, { slot: 'title', className: classNames('muxui-dialog-title', titleClassName) }, title) : null,
     description !== undefined && description !== null ? React.createElement('p', { id: descriptionId, className: classNames('muxui-dialog-description', descriptionClassName) }, description) : null,
     React.createElement('div', { className: classNames('muxui-dialog-content', contentClassName) }, children),
     actions !== undefined && actions !== null ? React.createElement('div', { className: classNames('muxui-dialog-actions', actionsClassName) }, actions) : null,
     dismissable ? React.createElement(IconButton, { slot: 'close', size: 'sm', className: classNames('muxui-dialog-close', closeClassName), 'aria-label': 'Close dialog' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })) : null);
+  return React.createElement(AriaOverlayTriggerStateContext.Provider, { value: explicitCloseState }, dialog);
 }
 
 function DialogOverlay({ dismissable, backdropClassName, children, state, insideTrigger, originRef }) {
@@ -245,14 +251,24 @@ function DialogOverlay({ dismissable, backdropClassName, children, state, inside
 function useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange }) {
   const controlled = open !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState(defaultOpen);
+  const close = React.useCallback(() => {
+    if (!controlled) setUncontrolledOpen(false);
+    onOpenChange?.(false);
+  }, [controlled, onOpenChange]);
+  // RAC sends Escape, outside press, hidden dismiss buttons, and trigger
+  // toggles here; dismissable false rejects those accidental close requests.
   const handleOpenChange = React.useCallback((nextOpen) => {
-    if (!dismissable && !nextOpen) return;
-    if (!controlled) setUncontrolledOpen(nextOpen);
-    onOpenChange?.(nextOpen);
-  }, [controlled, dismissable, onOpenChange]);
+    if (!nextOpen) {
+      if (dismissable) close();
+      return;
+    }
+    if (!controlled) setUncontrolledOpen(true);
+    onOpenChange?.(true);
+  }, [close, controlled, dismissable, onOpenChange]);
   return {
     isOpen: controlled ? open : uncontrolledOpen,
     onOpenChange: handleOpenChange,
+    close,
   };
 }
 
@@ -285,9 +301,9 @@ export const Dialog = /*#__PURE__*/ (() => {
   const hasTrigger = React.isValidElement(trigger);
   const motionOriginRef = React.useRef(null);
   const content = React.createElement(DialogOverlay, { dismissable, backdropClassName, state: triggerState, insideTrigger: hasTrigger, originRef: motionOriginRef },
-    React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
+    React.createElement(DialogContent, { ...props, contentRef: ref, title, description, actions, ariaLabel, dismissable, explicitClose: triggerState.close, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName }, children));
   if (hasTrigger) {
-    return React.createElement(AriaDialogTrigger, triggerState, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
+    return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange }, pressableTrigger(trigger, false, 'muxui-dialog-trigger'), content);
   }
   return React.createElement(React.Fragment, null,
     React.createElement('span', { ref: motionOriginRef, hidden: true, 'aria-hidden': 'true' }),

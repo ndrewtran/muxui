@@ -10,7 +10,7 @@ import { createDom } from './support/dom.mjs';
 const installDom = (markup) => createDom(markup, { globals: ['File', 'Blob', 'FileReader'], layoutStubs: true });
 
 const moduleEnvironment = installDom();
-const { UNSTABLE_ToastQueue } = await import('react-aria-components');
+const { Button: AriaButton, UNSTABLE_ToastQueue } = await import('react-aria-components');
 const {
   Dialog,
   DropZone,
@@ -173,6 +173,55 @@ test('Dialog dismissable false rejects trigger toggles after opening', async () 
     await act(async () => trigger.click());
     assert.ok(document.body.querySelector('.muxui-dialog'));
     assert.deepEqual(changes, [true]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('Dialog dismissable false still closes through explicit close actions', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const changes = [];
+  const dialog = (props) => React.createElement(Dialog, {
+    title: 'Confirm',
+    dismissable: false,
+    onOpenChange: (open) => changes.push(open),
+    actions: React.createElement(AriaButton, { slot: 'close', id: 'close-action' }, 'OK'),
+    ...props,
+  }, 'Dialog body');
+  const pressEscape = () => document.body.querySelector('.muxui-dialog').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  try {
+    // Uncontrolled with a trigger: Escape and the trigger toggle are rejected,
+    // but the close-slot action closes it.
+    await act(async () => root.render(dialog({ trigger: React.createElement('button', { id: 'dialog-trigger' }, 'Open') })));
+    await act(async () => document.querySelector('#dialog-trigger').click());
+    assert.ok(document.body.querySelector('.muxui-dialog'));
+    await act(async () => pressEscape());
+    await act(async () => document.querySelector('#dialog-trigger').click());
+    assert.ok(document.body.querySelector('.muxui-dialog'));
+    assert.deepEqual(changes, [true]);
+    await act(async () => document.querySelector('#close-action').click());
+    assert.deepEqual(changes, [true, false]);
+    assert.equal(document.body.querySelector('[role="dialog"]'), null);
+
+    // Uncontrolled without a trigger.
+    changes.length = 0;
+    await act(async () => root.render(dialog({ key: 'standalone', defaultOpen: true })));
+    await act(async () => pressEscape());
+    assert.ok(document.body.querySelector('.muxui-dialog'));
+    await act(async () => document.querySelector('#close-action').click());
+    assert.deepEqual(changes, [false]);
+    assert.equal(document.body.querySelector('[role="dialog"]'), null);
+
+    // Controlled: the owner receives the explicit close request and decides.
+    changes.length = 0;
+    await act(async () => root.render(dialog({ key: 'controlled', open: true })));
+    await act(async () => pressEscape());
+    await act(async () => document.querySelector('#close-action').click());
+    assert.deepEqual(changes, [false]);
+    assert.ok(document.body.querySelector('.muxui-dialog'), 'a controlled owner keeps it open by not updating open');
   } finally {
     await act(async () => root.unmount());
     env.restore();
