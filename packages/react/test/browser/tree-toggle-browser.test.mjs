@@ -79,13 +79,13 @@ function RowFixture({ controlled = false, selectionMode = 'single', disabled = f
     selectionMode,
     disabled,
     ...(controlled ? { expandedIds } : { defaultExpandedIds: [] }),
-    ...(selectionMode === 'multiple' ? { defaultSelectedIds: ['row-leaf'] } : {}),
     onExpandedChange: (next) => {
       setExpandedChangeCount((count) => count + 1);
       if (controlled) setExpandedIds(next);
     },
     onSelectionChange: () => setSelectionChangeCount((count) => count + 1),
-    onAction: () => setActionCount((count) => count + 1),
+    // Multiple mode omits an action so a press must start the empty selection.
+    ...(selectionMode === 'multiple' ? {} : { onAction: () => setActionCount((count) => count + 1) }),
   };
   return React.createElement('div', {
     id: 'row-fixture',
@@ -290,7 +290,8 @@ test('real browser expands Tree from the visible caret and preserves disabled be
     await multipleParent.locator('.muxui-tree-item-label').click();
     await multipleTree.locator('[data-key="row-child"]').waitFor();
     assert.equal(await multipleParent.getAttribute('data-expanded'), 'true');
-    assert.notEqual(await page.locator('#row-fixture').getAttribute('data-selection-change-count'), '0');
+    assert.equal(await multipleParent.getAttribute('aria-selected'), 'true');
+    assert.equal(await page.locator('#row-fixture').getAttribute('data-selection-change-count'), '1');
 
     await page.goto(`${fixtureUrl}?mode=row-none`, { waitUntil: 'networkidle' });
     const noneTree = page.locator('.muxui-tree');

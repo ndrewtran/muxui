@@ -885,6 +885,56 @@ test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a boun
   }
 });
 
+test('R1.3 GridList, Tree, and Table select on press and Enter while nothing is selected', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const items = [{ id: 'a', label: 'A' }, { id: 'b', label: 'B' }];
+  const families = [
+    ['grid', (props) => React.createElement(GridList, { 'aria-label': 'Grid', items, ...props }), '[role="grid"] [role="row"]'],
+    ['tree', (props) => React.createElement(Tree, { 'aria-label': 'Tree', items, ...props }), '[role="treegrid"] [role="row"]'],
+    ['table', (props) => React.createElement(Table, { 'aria-label': 'Table', columns: [{ id: 'name', label: 'Name', isRowHeader: true }], rows: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], ...props }), '.muxui-table-row'],
+  ];
+  const pressEnter = (row) => {
+    row.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+    row.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, cancelable: true }));
+  };
+  try {
+    for (const [family, render, selector] of families) {
+      for (const selectionMode of ['single', 'multiple']) {
+        for (const input of ['click', 'Enter']) {
+          const changes = [];
+          await act(async () => root.render(React.createElement('div', { key: `${family}-${selectionMode}-${input}` }, render({ selectionMode, onSelectionChange: (ids) => changes.push(ids) }))));
+          const [first, second] = container.querySelectorAll(selector);
+          await act(async () => {
+            if (input === 'click') first.click();
+            else { first.focus(); pressEnter(first); }
+          });
+          assert.deepEqual(changes, [['a']], `${family} ${selectionMode} ${input} selects from an empty selection`);
+          assert.equal(first.getAttribute('aria-selected'), 'true');
+          await act(async () => {
+            if (input === 'click') second.click();
+            else { second.focus(); pressEnter(second); }
+          });
+          assert.deepEqual(changes.at(-1), selectionMode === 'single' ? ['b'] : ['a', 'b'], `${family} ${selectionMode} ${input} extends or replaces the selection`);
+        }
+      }
+      const actions = [];
+      const changes = [];
+      const actionProp = family === 'table' ? 'onRowAction' : 'onAction';
+      await act(async () => root.render(React.createElement('div', { key: `${family}-action` }, render({ selectionMode: 'single', onSelectionChange: (ids) => changes.push(ids), [actionProp]: (item) => actions.push(item.id) }))));
+      const first = container.querySelector(selector);
+      await act(async () => first.click());
+      await act(async () => { first.focus(); pressEnter(first); });
+      assert.deepEqual(actions, ['a', 'a'], `${family} consumer actions still run on press and Enter`);
+      assert.deepEqual(changes, []);
+    }
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 Tree flattens nested items for keyboard collection semantics', async () => {
   const env = createDom();
   const container = document.querySelector('#root');
