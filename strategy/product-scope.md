@@ -1,5 +1,5 @@
 ---
-scopeVersion: 14.0.0
+scopeVersion: 14.0.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -109,6 +109,11 @@ evidence is the retained retroactive review of R1.2 through R1.4 and, by
 Andrew's accepted exception, author-reported review for R1.1 and R1.5, which
 is not proof. Changing what satisfies a committed release-acceptance
 condition is major.
+
+Product Scope `14.0.1` applies Decision 0011 amendment 05 as a patch
+clarification: the internal temporal-adapter dependency moves from exact
+`@internationalized/date@3.12.3` to exact `3.12.4`, so fresh npm, pnpm, and
+yarn consumer installs resolve one version.
 
 ## Scope vocabulary
 
@@ -883,7 +888,8 @@ accessibility, package, compatibility, integrity, or generation failures.
   until a bounded Mux UI decision resolves it;
 - the standalone `@muxui/react` tarball has exact React/React DOM peers,
   `react-aria-components@1.20.0`, and the approved direct internal
-  `@internationalized/date@3.12.3` dependency limited to Mux UI value adapters
+  `@internationalized/date@3.12.4` dependency (Decision 0011 amendment 05)
+  limited to Mux UI value adapters
   in `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
   `RangeCalendar`; the approved direct internal, replaceable
   `lucide-react@1.37.0` dependency (npm integrity
@@ -1417,3 +1423,23 @@ falls to body when a Dialog's opener unmounts), will be tracked as `S1.0`
 items; no tracker items are created by this change. 13.0.0's follow-up to
 capture the R1 pull-request logs into retained evidence is satisfied by
 pull request #202.
+
+## Product Scope 14.0.1: temporal adapter exact pin
+
+[Decision 0011 amendment 05](../decisions/0011-amendment-05-internationalized-date-exact-pin.md)
+moves the internal temporal-adapter dependency of `@muxui/react` from exact
+`@internationalized/date@3.12.3` to exact `3.12.4`. React Aria and React
+Stately declare `^3.12.3`, so once `3.12.4` became npm's latest, a fresh yarn 1
+consumer install resolved both `3.12.3` and `3.12.4`. Pinning `3.12.4`
+restores one resolved instance for npm, pnpm, and yarn. A later patch release
+can reintroduce a yarn 1 duplicate; the packed-consumer install matrix records
+it as a warning, and re-pinning needs another accepted amendment.
+
+This patch changes no dependency set, six-family adapter limit, component or
+family, public API or value format, package or platform commitment,
+support/lifecycle claim, release boundary, or milestone state. Existing Scope
+IDs retain their states, including `SCOPE-PKG-REACT` and
+`SCOPE-PROOF-PACKAGE`; no new Scope ID or commitment transition is created.
+The license text is unchanged at `3.12.4`, and the existing integrity,
+license/notice, lockfile, leakage, and packed-consumer proof obligations apply
+to the new version.

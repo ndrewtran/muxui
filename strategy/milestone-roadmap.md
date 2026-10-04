@@ -651,8 +651,8 @@ Components may run in parallel after Button begins while consuming the same
 baseline and creating no decision-bearing exception.
 
 The approved R1 package graph includes one resolved
-`@internationalized/date@3.12.3` instance as a direct internal runtime
-dependency of `@muxui/react`, used only for Mux UI value adapters in
+`@internationalized/date@3.12.4` instance (Decision 0011 amendment 05) as a
+direct internal runtime dependency of `@muxui/react`, used only for Mux UI value adapters in
 `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`,
 and `RangeCalendar`. Public values remain ISO dates `YYYY-MM-DD`, local
 times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}` ranges. No
@@ -2095,8 +2095,8 @@ affected tranche.
 
 R1 exit remains an exact prerelease of only `@muxui/react` under `next`, with
 the already-authorized React/React DOM peer boundary and exact internal runtime
-dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.3`
-limited to the six named value-adapter families above, and
+dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.4`
+(Decision 0011 amendment 05) limited to the six named value-adapter families above, and
 `motion@13.4.0` for bounded Mux-owned component motion in existing admitted
 React bindings, and
 `lucide-react@1.37.0` for the approved existing R1 control affordances plus

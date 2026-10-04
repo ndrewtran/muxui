@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { execFile } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -11,6 +11,7 @@ import {
   assertExactArchiveEntries,
   assertExactDependencyGraph,
   assertExactExportList,
+  assertInstalledCandidate,
   assertNoPublicSurfaceLeaks,
   assertPackedFileBoundary,
   assertSingleInstalledVersion,
@@ -412,6 +413,42 @@ test('clean-consumer installs send no host registry auth', async () => {
   }
 });
 
+test('a matrix consumer must install the exact packed candidate', () => {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-installed-candidate-'));
+  try {
+    const candidate = join(root, 'contents', 'package');
+    const consumer = join(root, 'consumer');
+    const installed = join(consumer, 'node_modules', '@muxui', 'react');
+    for (const directory of [candidate, installed]) {
+      mkdirSync(join(directory, 'generated'), { recursive: true });
+      writeFileSync(join(directory, 'package.json'), '{"name":"@muxui/react"}\n');
+      writeFileSync(join(directory, 'NOTICE'), 'Copyright (c) 2026 Andrew\n');
+      writeFileSync(join(directory, 'generated', 'index.mjs'), 'export {};\n');
+    }
+    // An unhoisted dependency nested by the package manager is not candidate content.
+    mkdirSync(join(installed, 'node_modules', 'nested'), { recursive: true });
+    writeFileSync(join(installed, 'node_modules', 'nested', 'package.json'), '{}\n');
+    assert.deepEqual(assertInstalledCandidate(consumer, '@muxui/react', candidate), { installed: realpathSync(installed), files: 3 });
+
+    writeFileSync(join(installed, 'NOTICE'), 'Copyright (c) 2025 Andrew\n');
+    assert.throws(() => assertInstalledCandidate(consumer, '@muxui/react', candidate), (error) => {
+      assert.match(error.message, /^R1_EXIT_CONSUMER_MATRIX_CANDIDATE_MISMATCH: /u);
+      const details = JSON.parse(error.message.slice(error.message.indexOf('{')));
+      assert.deepEqual([details.missing, details.changed, details.added], [[], ['NOTICE'], []]);
+      return true;
+    });
+
+    rmSync(join(consumer, 'node_modules'), { recursive: true });
+    assert.throws(() => assertInstalledCandidate(consumer, '@muxui/react', candidate), (error) => {
+      assert.match(error.message, /^R1_EXIT_CONSUMER_MATRIX_CANDIDATE_MISMATCH: /u);
+      assert.equal(JSON.parse(error.message.slice(error.message.indexOf('{'))).installed, null);
+      return true;
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('pinned duplicate versions are reported for every exact runtime pin', () => {
   const closure = new Map([
     ['@internationalized/date', ['3.12.3', '3.12.4']],
@@ -459,7 +496,7 @@ const replaceModule = (inputs, path, transform) => inputs.modules.map((module) =
 test('lockfile integrity is read for the exact package version', () => {
   const lockfile = readFileSync(join(repositoryRoot, 'pnpm-lock.yaml'), 'utf8');
   assert.match(readLockedIntegrity(lockfile, 'lucide-react', '1.37.0'), /^sha512-LPsB4rD1/u);
-  assert.match(readLockedIntegrity(lockfile, '@internationalized/date', '3.12.3'), /^sha512-fuLX/u);
+  assert.match(readLockedIntegrity(lockfile, '@internationalized/date', '3.12.4'), /^sha512-M1dE/u);
   assert.equal(readLockedIntegrity(lockfile, 'lucide-react', '1.37'), undefined);
   assert.equal(readLockedIntegrity(lockfile, 'lucide-react', '0.0.0'), undefined);
 });
