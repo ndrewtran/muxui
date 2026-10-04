@@ -1077,12 +1077,22 @@ export const ToggleButtonGroup = /*#__PURE__*/ (() => {
   return component;
 })();
 
-function toTokenValue(values = []) {
-  return new TokenFieldValue(values.map((value) => ({ type: 'token', text: String(value), value: String(value) })));
+function toTokenValue(values = [], text = '') {
+  const segments = values.map((value) => ({ type: 'token', text: String(value), value: String(value) }));
+  if (text) segments.push({ type: 'text', text });
+  return new TokenFieldValue(segments);
 }
 
 function tokenValues(fieldValue) {
   return fieldValue.segments.filter((segment) => segment.type === 'token').map((segment) => String(segment.value ?? segment.text));
+}
+
+function draftText(fieldValue) {
+  return fieldValue.segments.filter((segment) => segment.type === 'text').map((segment) => segment.text).join('');
+}
+
+function sameTokens(left, right) {
+  return left.length === right.length && left.every((token, index) => token === String(right[index]));
 }
 
 function useTokenFieldFormReset(onReset) {
@@ -1110,28 +1120,45 @@ function useTokenFieldFormReset(onReset) {
   }, []);
 }
 
+// The public value is the token array; typed text stays an internal draft beside
+// the tokens. React Aria ends IME composition whenever the value object changes,
+// so the field value keeps its identity until the tokens or the text change.
 export const TokenField = React.forwardRef(function TokenField({ label, value, defaultValue = [], onChange, disabled = false, readOnly = false, name, placeholder, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'TokenField');
   const controlled = value !== undefined;
   const initialDefaultValueRef = React.useRef(null);
   if (initialDefaultValueRef.current === null) initialDefaultValueRef.current = [...defaultValue];
   const initialDefaultValue = initialDefaultValueRef.current;
-  const [uncontrolledValue, setUncontrolledValue] = React.useState(() => [...initialDefaultValue]);
+  const [fieldValue, setFieldValue] = React.useState(() => toTokenValue(controlled ? value : initialDefaultValue));
   const [resetVersion, setResetVersion] = React.useState(0);
-  const currentValue = controlled ? value : uncontrolledValue;
+  let currentFieldValue = fieldValue;
+  // Controlled tokens that differ from the field (an outside change or a rejected
+  // edit) replace the field tokens and keep the draft text.
+  if (controlled && !sameTokens(tokenValues(fieldValue), value)) {
+    currentFieldValue = toTokenValue(value, draftText(fieldValue));
+    setFieldValue(currentFieldValue);
+  }
+  const currentValue = tokenValues(currentFieldValue);
+  const inputRef = React.useRef(null);
+  const showPlaceholder = Boolean(placeholder) && currentFieldValue.toString() === '';
+  React.useLayoutEffect(() => {
+    if (showPlaceholder) inputRef.current?.setAttribute('aria-placeholder', placeholder);
+    else inputRef.current?.removeAttribute('aria-placeholder');
+  }, [showPlaceholder, placeholder]);
   const resetAnchorRef = useTokenFieldFormReset(() => {
     if (!controlled) {
-      setUncontrolledValue([...initialDefaultValue]);
+      setFieldValue(toTokenValue(initialDefaultValue));
       setResetVersion((version) => version + 1);
     }
   });
   const handleChange = (next) => {
     if (disabled || readOnly) return;
     const nextValue = tokenValues(next);
-    if (!controlled) setUncontrolledValue(nextValue);
-    onChange?.(nextValue);
+    // A controlled consumer that keeps its tokens rejects the change on the next render.
+    setFieldValue(next);
+    if (!sameTokens(nextValue, currentValue)) onChange?.(nextValue);
   };
-  return React.createElement(AriaTokenField, { key: resetVersion, ref, value: toTokenValue(currentValue), onChange: handleChange, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTokenInput, { className: 'muxui-token-input', children: (segment) => segment.type === 'token' ? React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) : null }), React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }), name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null, placeholder ? React.createElement('span', { className: 'muxui-token-placeholder' }, placeholder) : null);
+  return React.createElement(AriaTokenField, { key: resetVersion, ref, value: currentFieldValue, onChange: handleChange, isDisabled: disabled, isReadOnly: readOnly, className: classNames('muxui-token-field', className), 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaTokenInput, { ref: inputRef, className: 'muxui-token-input', children: (segment) => segment.type === 'token' ? React.createElement(AriaToken, { className: 'muxui-token' }, segment.text) : null }), React.createElement('input', { ref: resetAnchorRef, type: 'hidden', disabled: true, tabIndex: -1, 'aria-hidden': 'true' }), name ? currentValue.map((token, index) => React.createElement('input', { key: `${token}-${index}`, type: 'hidden', name, value: token, disabled, 'aria-hidden': 'true' })) : null, showPlaceholder ? React.createElement('span', { className: 'muxui-token-placeholder', 'aria-hidden': 'true' }, placeholder) : null);
 });
 TokenField.displayName = 'TokenField';
 

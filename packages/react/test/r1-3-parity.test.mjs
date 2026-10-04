@@ -944,6 +944,53 @@ test('R1.3 TokenField owns uncontrolled reset and repeated form entries', async 
   }
 });
 
+function insertTextBeforeInput(node, data) {
+  collapseSelection(node);
+  return node.dispatchEvent(new InputEvent('beforeinput', { inputType: 'insertText', data, bubbles: true, cancelable: true }));
+}
+
+test('R1.3 TokenField keeps typed text beside tokens and reports only token changes', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const values = () => [...new FormData(form).getAll('tags')];
+  const textbox = () => container.querySelector('[role="textbox"]');
+  const changes = [];
+  try {
+    await act(async () => root.render(React.createElement(TokenField, { label: 'Tags', defaultValue: ['alpha'], name: 'tags', placeholder: 'Add tag', onChange: (value) => changes.push(value) })));
+    assert.equal(textbox().hasAttribute('aria-placeholder'), false);
+    assert.equal(container.querySelector('.muxui-token-placeholder'), null);
+    for (const character of 'beta') await act(async () => insertTextBeforeInput(textbox(), character));
+    assert.match(textbox().textContent, /alpha.*beta$/u);
+    assert.deepEqual(changes, [], 'text edits do not change the token array');
+    assert.deepEqual(values(), ['alpha']);
+    for (let index = 0; index < 4; index += 1) await act(async () => deleteBeforeInput(textbox()));
+    await act(async () => deleteBeforeInput(textbox()));
+    assert.deepEqual(changes, [[]]);
+    assert.deepEqual(values(), []);
+    assert.equal(textbox().getAttribute('aria-placeholder'), 'Add tag');
+    assert.equal(container.querySelector('.muxui-token-placeholder')?.textContent, 'Add tag');
+    await act(async () => insertTextBeforeInput(textbox(), 'x'));
+    assert.equal(textbox().hasAttribute('aria-placeholder'), false);
+    assert.equal(container.querySelector('.muxui-token-placeholder'), null);
+
+    // A controlled re-render with an equal token array keeps the field value and
+    // its draft text. Outside token changes and rejected edits are proven in the
+    // browser, because react-stately binds its ref-reset effect at import time,
+    // before this jsdom window exists.
+    const renderControlled = (value) => root.render(React.createElement(TokenField, { key: 'controlled', label: 'Tags', value, name: 'tags' }));
+    await act(async () => renderControlled(['alpha']));
+    await act(async () => insertTextBeforeInput(textbox(), 'draft'));
+    await act(async () => renderControlled(['alpha']));
+    assert.match(textbox().textContent, /alpha.*draft$/u);
+    assert.deepEqual(values(), ['alpha']);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 Virtualizer uses fixed row-count overscan to render and scroll a bounded window', async () => {
   const invalidVirtualizerInputs = [
     [{ itemHeight: 0 }, /Virtualizer itemHeight must be a finite number greater than 0/u],

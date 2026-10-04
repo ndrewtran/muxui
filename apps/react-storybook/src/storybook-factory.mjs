@@ -1871,10 +1871,22 @@ const BROWSER_PROOF_PLANS = {
     assertBrowser(input, 'token field input');
     await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
     input.focus();
-    input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType: 'insertText', data: 'Review' }));
-    input.textContent = 'Review';
-    input.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'Review' }));
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true }));
+    const edit = (inputType, data) => {
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      range.collapse(false);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      input.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, inputType, data }));
+    };
+    edit('insertText', 'Review');
+    await new Promise((resolvePromise) => setTimeout(resolvePromise, 50));
+    assertBrowser(input.textContent.endsWith('Review'), 'token field keeps typed text');
+    // Typed text is a draft; only the token removal after it reports a change.
+    for (let index = 0; index <= 'Review'.length; index += 1) {
+      edit('deleteContentBackward');
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 20));
+    }
     await waitForBrowserEvent(canvasElement, 'change', 'TokenField');
   },
   Toolbar: async ({ canvasElement }) => {
