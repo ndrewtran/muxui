@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:4801937a98f3c56e0c68da53452bfadd43442994f1e6a186bfac57763d678922 -->
+<!-- @generated-content-sha256: sha256:8383c5c2e46f078e0b6a1c8a2ee395e4f741292b4cf8c81d31ce25392b11825e -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -131,7 +131,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | ProgressBar | experimental | . | .muxui-progress-bar | value, minValue, maxValue, label |
 | ProgressCircle | experimental | . | .muxui-progress-circle | value, minValue, maxValue, size, label |
 | RadioField | experimental | . | .muxui-radio-field | size, disabled, invalid, required, readOnly, value |
-| RadioGroup | experimental | . | .muxui-radio-group | label, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size |
+| RadioGroup | experimental | . | .muxui-radio-group | label, aria-label, aria-labelledby, options, children, value, defaultValue, disabled, readOnly, required, invalid, orientation, size, name |
 | RangeCalendar | experimental | . | .muxui-range-calendar | label, aria-label, aria-labelledby, value, defaultValue, focusedValue, unavailableDateMatcher, minValue, maxValue, disabled, readOnly, required, invalid |
 | Resizable | experimental | . | .muxui-resizable | sizes, defaultSizes, orientation, disabled, readOnly |
 | SearchField | experimental | . | .muxui-search-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, id, inputRef, inputProps |
@@ -139,7 +139,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, aria-label, aria-labelledby, aria-describedby, id, value, defaultValue, onChange, name, form, autoComplete, disabled, required, invalid, multiple, size, children |
 | Separator | experimental | . | .muxui-separator | orientation |
 | Sidebar | experimental | . | .muxui-sidebar | hideBorder, href, current, external, items, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss |
-| Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation |
+| Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, aria-label, aria-labelledby, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |
 | Table | experimental | . | .muxui-table | aria-label, columns, rows, selectedIds, defaultSelectedIds, sortDescriptor, disabled, selectionMode |

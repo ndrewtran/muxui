@@ -153,7 +153,7 @@ const expectedCheckboxGroupDefaults = {
   orientation: 'vertical',
   size: 'md',
 };
-const expectedRadioGroupProps = ['label', 'aria-label', 'aria-labelledby', 'options', 'children', 'value', 'defaultValue', 'disabled', 'readOnly', 'required', 'invalid', 'orientation', 'size'];
+const expectedRadioGroupProps = ['label', 'aria-label', 'aria-labelledby', 'options', 'children', 'value', 'defaultValue', 'disabled', 'readOnly', 'required', 'invalid', 'orientation', 'size', 'name'];
 const expectedRadioGroupDefaults = {
   disabled: false,
   readOnly: false,
@@ -655,7 +655,7 @@ export declare const Menu: React.ForwardRefExoticComponent<MenuProps & React.Ref
   Separator: React.ForwardRefExoticComponent<React.HTMLAttributes<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
 };
 export type RadioOption = { id?: string; value: string; label?: React.ReactNode; disabled?: boolean; };
-export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; onChange?: (value: string) => void; className?: string; };
+export type RadioGroupProps = MuxUIAccessibleName & { options?: RadioOption[]; children?: React.ReactNode; value?: string; defaultValue?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; orientation?: 'vertical' | 'horizontal'; size?: 'sm' | 'md' | 'lg'; name?: string; onChange?: (value: string) => void; className?: string; };
 export declare const RadioGroup: React.ForwardRefExoticComponent<RadioGroupProps & React.RefAttributes<HTMLDivElement>>;
 export type SelectProps = NamedFieldProps & SelectOptions;
 export type SelectOptions = { items?: MuxUIItems; value?: string; defaultValue?: string; open?: boolean; defaultOpen?: boolean; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; selectedContent?: React.ReactNode; trigger?: React.ReactElement<React.ButtonHTMLAttributes<HTMLButtonElement> & React.RefAttributes<HTMLButtonElement>, 'button'>; placement?: MuxUIPlacement; offset?: number; crossOffset?: number; shouldFlip?: boolean; containerPadding?: number; anchorRef?: React.RefObject<Element | null>; modal?: boolean; children?: React.ReactNode; onChange?: (value?: string) => void; onOpenChange?: (open: boolean) => void; };
@@ -676,7 +676,7 @@ export declare const Select: React.ForwardRefExoticComponent<SelectProps & React
 };
 export type ComboBoxProps = NamedFieldProps & { items?: MuxUIItems; value?: string; defaultValue?: string; selectedId?: string; defaultSelectedId?: string; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; name?: string; placeholder?: string; onChange?: (value: string) => void; onSelect?: (item?: MuxUICollectionItem) => void; };
 export declare const ComboBox: React.ForwardRefExoticComponent<ComboBoxProps & React.RefAttributes<HTMLDivElement>>;
-export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
+export type SliderProps = MuxUIAccessibleName & { value?: number; defaultValue?: number; min?: number; max?: number; step?: number; disabled?: boolean; readOnly?: boolean; orientation?: 'horizontal' | 'vertical'; name?: string; onChange?: (value: number) => void; onChangeEnd?: (value: number) => void; className?: string; };
 export declare const Slider: React.ForwardRefExoticComponent<SliderProps & React.RefAttributes<HTMLDivElement>>;
 export interface MuxUITableColumn extends MuxUICollectionItem { isRowHeader?: boolean; sortable?: boolean; }
 export interface MuxUITableRow extends MuxUICollectionItem { values?: Record<string, React.ReactNode>; }

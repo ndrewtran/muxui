@@ -70,7 +70,7 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
       assert.doesNotMatch(typeSurface, /\b(?:description|errorMessage)\??\s*:/u, `${name} must not expose unsupported validation messaging`);
     }
     const rejectedProps = {
-      RadioGroup: ['description', 'errorMessage', 'name'],
+      RadioGroup: ['description', 'errorMessage'],
       TagGroup: ['description', 'errorMessage', 'readOnly', 'required', 'invalid'],
       TokenField: ['description', 'errorMessage', 'required', 'invalid'],
     }[name];
@@ -724,13 +724,43 @@ test('R1.3 RadioGroup owns selected indicator and read-only focus semantics', as
   }
 });
 
+test('R1.3 named RadioGroup and Slider submit their values and restore defaults on reset', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const entries = () => [...new FormData(form).entries()];
+  try {
+    await act(async () => root.render(React.createElement(React.Fragment, null,
+      React.createElement(RadioGroup, { label: 'Plan', name: 'plan', defaultValue: 'basic', options: [{ value: 'basic', label: 'Basic' }, { value: 'pro', label: 'Pro' }] }),
+      React.createElement(Slider, { label: 'Volume', name: 'volume', defaultValue: 40 }),
+    )));
+    assert.deepEqual(entries(), [['plan', 'basic'], ['volume', '40']]);
+    await act(async () => container.querySelector('input[type="radio"][value="pro"]').click());
+    const slider = container.querySelector('input[type="range"]');
+    await act(async () => slider.focus());
+    await act(async () => {
+      slider.dispatchEvent(new KeyboardEvent('keydown', { key: 'PageUp', bubbles: true, cancelable: true }));
+      slider.dispatchEvent(new KeyboardEvent('keyup', { key: 'PageUp', bubbles: true, cancelable: true }));
+    });
+    assert.deepEqual(entries(), [['plan', 'pro'], ['volume', '50']]);
+    await act(async () => form.reset());
+    assert.deepEqual(entries(), [['plan', 'basic'], ['volume', '40']]);
+    assert.equal(container.querySelector('input[type="radio"][value="basic"]').checked, true);
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 field collections keep unsupported props out of public DOM surfaces', () => {
   const radio = renderToString(React.createElement(RadioGroup, {
     label: 'Plan', options: [{ value: 'pro', label: 'Pro' }],
-    description: 'RADIO_DESCRIPTION', errorMessage: 'RADIO_ERROR', name: 'RADIO_NAME', 'data-leak': 'RADIO_LEAK',
+    description: 'RADIO_DESCRIPTION', errorMessage: 'RADIO_ERROR', 'data-leak': 'RADIO_LEAK',
   }));
   assert.match(radio, /muxui-radio-group/u);
-  assert.doesNotMatch(radio, /RADIO_(?:DESCRIPTION|ERROR|NAME|LEAK)/u);
+  assert.doesNotMatch(radio, /RADIO_(?:DESCRIPTION|ERROR|LEAK)/u);
 
   const tag = renderToString(React.createElement(TagGroup, {
     label: 'Tags', items: [{ id: 'one', label: 'One' }],

@@ -383,9 +383,10 @@ void radioGroupDescription;
 // @ts-expect-error RadioGroup does not expose generic field errors.
 const radioGroupErrorMessage = <RadioGroup label="Plan" errorMessage="Unsupported" />;
 void radioGroupErrorMessage;
-// @ts-expect-error RadioGroup does not expose a generic field name.
-const radioGroupName = <RadioGroup label="Plan" name="unsupported" />;
+const radioGroupName = <RadioGroup label="Plan" name="plan" />;
 void radioGroupName;
+const sliderName = <Slider label="Volume" name="volume" />;
+void sliderName;
 // @ts-expect-error RadioField.Root requires a stable value for RadioGroup selection identity.
 const radioFieldWithoutValue = <RadioField.Root><RadioField.Button>Missing value</RadioField.Button></RadioField.Root>;
 void radioFieldWithoutValue;

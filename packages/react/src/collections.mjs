@@ -961,7 +961,7 @@ export const Select = /*#__PURE__*/ (() => {
 })();
 
 export const RadioGroup = /*#__PURE__*/ (() => {
-  const component = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+  const component = React.forwardRef(function RadioGroup({ label, options = [], children, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, orientation = 'vertical', size = 'md', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'RadioGroup');
     const labelId = React.useId();
     // The visible label text labels the group, so the two cannot drift apart.
@@ -980,7 +980,7 @@ export const RadioGroup = /*#__PURE__*/ (() => {
         React.createElement(RadioMotionIndicator, { renderProps }),
         option.label ?? option.value)))
       : children;
-    const group = React.createElement(AriaRadioGroup, { ref, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
+    const group = React.createElement(AriaRadioGroup, { ref, name, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
     const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref }, group);
     const content = label === undefined
       ? motionGroup
@@ -994,7 +994,7 @@ export const RadioGroup = /*#__PURE__*/ (() => {
 })();
 
 export const Slider = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+  const component = React.forwardRef(function Slider({ label, value, defaultValue, onChange, onChangeEnd, min = 0, max = 100, step = 1, disabled = false, readOnly = false, orientation = 'horizontal', name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'Slider');
     const readOnlyRef = useReadOnlyTargets(ref, readOnly, '[role="slider"], input[type="range"]');
     const preventReadOnlyInteraction = React.useCallback((event) => {
@@ -1040,7 +1040,7 @@ export const Slider = /* @__PURE__ */ (() => {
       className: classNames('muxui-slider', className),
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby,
-    }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(SliderMotionTrack, { orientation, readOnly })));
+    }, React.createElement('div', { className: 'muxui-slider-header' }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null, React.createElement(AriaOutput, { className: 'muxui-slider-output' })), React.createElement('div', { className: 'muxui-slider-control' }, React.createElement(SliderMotionTrack, { orientation, readOnly, name })));
   });
   component.displayName = 'Slider';
   return component;
