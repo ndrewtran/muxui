@@ -62,14 +62,17 @@ test('compatibility and publication boundaries remain explicit', async () => {
     ['E-R1.5-03', 'risk-profile half', 'unmet', 'S1.0', undefined],
   ]);
   const r15Deferred = [assistiveTechnology.deferredEvidence.at(-1)];
-  assert.equal(release.historical.evidence.status, 'logged-not-retained');
+  // Decision 0022 amendment 01: checks retained, review author-reported only.
+  assert.equal(release.historical.evidence.status, 'checks-retained-review-author-reported');
+  assert.equal(release.historical.evidence.basis, 'muxui:decision:0022:amendment:01');
+  assert.equal(release.historical.evidence.retention, 'tests/evidence/r1.5 retained check evidence');
   assert.deepEqual(release.historical.evidence.deferred, r15Deferred);
   const closure = await generatedJson('r1-5-closure.json');
-  assert.equal(closure.evidence.status, 'logged-not-retained');
+  assert.equal(closure.evidence.status, 'checks-retained-review-author-reported');
   assert.deepEqual(closure.evidence.deferred, r15Deferred);
   for (const family of closure.families) {
     const { evidence } = family;
-    assert.equal(evidence.status, 'logged-not-retained');
+    assert.equal(evidence.status, 'checks-retained-review-author-reported');
     assert.equal(evidence.retention, release.historical.evidence.retention);
     // Every unmet tranche item covering this family is listed, never hidden under the status.
     const expected = assistiveTechnology.deferredEvidence

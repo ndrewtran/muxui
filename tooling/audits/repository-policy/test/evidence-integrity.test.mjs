@@ -178,3 +178,61 @@ test('R1.1-R1.5 retained CI evidence covers every assertion honestly and stays d
     }
   }
 });
+
+// Decision 0022 amendment 01: the retained R1.2-R1.4 retroactive reviews.
+test('R1.2-R1.4 retroactive review records match their reports and never overclaim', async () => {
+  const root = 'tests/evidence/r1-retro-review';
+  const index = JSON.parse(await readFile(join(repositoryRoot, root, 'index.json'), 'utf8'));
+  assert.equal(index.authority, 'muxui:decision:0022:amendment:01');
+  assert.deepEqual(index.milestones, ['R1.2', 'R1.3', 'R1.4']);
+  assert.equal(index.disclosureClass, 'public-sanitized');
+  assert.deepEqual(index.records.map(({ reviewId }) => reviewId), ['r1.2-fields', 'r1.3a-collections', 'r1.3b-pickers', 'r1.4-overlays']);
+  const verification = JSON.parse(await readFile(join(repositoryRoot, index.validation.path), 'utf8'));
+  assert.ok(verification.reports.every(({ report }) => report.retained === false && /^sha256:[0-9a-f]{64}$/u.test(report.sha256)));
+  for (const { reviewId, path } of index.records) {
+    const record = JSON.parse(await readFile(join(repositoryRoot, path), 'utf8'));
+    assert.equal(record.reviewedRevision, index.sourceRevision);
+    assert.equal(record.reviewedTree, index.sourceTree);
+    assert.equal(record.executedRevision, record.reviewedRevision);
+    assert.equal(record.executedTree, record.reviewedTree);
+    assert.equal(record.manualAndAssistiveTechnology.status, 'unmet');
+    assert.equal(record.manualAndAssistiveTechnology.deferredTo, 'S1.0');
+    assert.equal(record.originalPullRequest.hostedReviews, 0, `${reviewId} reviews a pull request that had no hosted review`);
+    // Each finding is a report heading under its severity section, and no report finding is left out.
+    const report = await readFile(join(repositoryRoot, record.artifact.path), 'utf8');
+    const sectionOf = (id) => {
+      const at = report.indexOf(`**${id}.`);
+      assert.ok(at >= 0, `${reviewId} ${id} is in its report`);
+      return [...report.slice(0, at).matchAll(/^### (High|Medium|Low)$/gmu)].at(-1)?.[1].toLowerCase();
+    };
+    assert.deepEqual(
+      [...new Set([...report.matchAll(/\*\*([HMLF]\d+)\./gu)].map(([, id]) => id))].sort(),
+      record.findings.map(({ id }) => id).sort(),
+      reviewId,
+    );
+    const counts = { high: 0, medium: 0, low: 0 };
+    for (const { id, severity, families, resolution } of record.findings) {
+      assert.equal(sectionOf(id), severity, `${reviewId} ${id}`);
+      counts[severity] += 1;
+      assert.ok(families.length > 0 && families.every((family) => record.families.some((entry) => entry.family === family)));
+      // Decision 0022 amendment 01: every finding is resolved before the review evidence counts.
+      assert.notEqual(resolution.status, 'pending', `${reviewId} ${id} is resolved`);
+      if (resolution.status === 'fixed') assert.match(resolution.fixCommit, /^[0-9a-f]{40}$/u);
+      else assert.ok(resolution.status === 'accepted-unfixed' && resolution.reason && resolution.acceptedBy, `${reviewId} ${id} records its reason and who accepted it`);
+    }
+    assert.deepEqual(record.severityCounts, counts);
+    // A family is clear only when no finding names it; a lane with findings is never a pass.
+    for (const { family, verdict, findings } of record.families) {
+      const named = record.findings.filter(({ families }) => families.includes(family)).map(({ id }) => id);
+      assert.deepEqual(findings, named, `${reviewId} ${family}`);
+      assert.equal(verdict, named.length === 0 ? 'clear' : 'findings', `${reviewId} ${family}`);
+    }
+    assert.equal(record.outcome, record.findings.length === 0 ? 'clear' : 'findings');
+  }
+  for (const entry of await readdir(join(repositoryRoot, root), { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile()) continue;
+    const text = await readFile(join(entry.parentPath, entry.name), 'utf8');
+    assert.equal(hasUnsanitizedEvidenceOutput(text, repositoryRoot), false, entry.name);
+    assert.doesNotMatch(text, /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.[A-Za-z]{2,}/u, `${entry.name} retains no email address`);
+  }
+});
