@@ -273,17 +273,29 @@ function useReadOnlyTargets(forwardedRef, readOnly, selector) {
   return assignRef;
 }
 
-function calendarGrid(cellClass = 'muxui-calendar-cell') {
+const subscribeToNothing = () => () => {};
+
+// Server and client can disagree about today (clock and timezone), so day cells
+// render only on the client. The server snapshot keeps hydration on blank,
+// equally sized placeholder cells; client-only mounts render days at once.
+function CalendarDays({ cellClass }) {
+  const hydrated = React.useSyncExternalStore(subscribeToNothing, () => true, () => false);
   const grid = React.createElement(CalendarHeightMotion, null, React.createElement(AriaCalendarGrid, { className: 'muxui-calendar-grid' },
     React.createElement(AriaCalendarGridHeader, { className: 'muxui-calendar-grid-header' },
       (day) => React.createElement(AriaCalendarHeaderCell, { className: 'muxui-calendar-header-cell' }, day)),
     React.createElement(AriaCalendarGridBody, { className: 'muxui-calendar-grid-body' },
-      (date) => cellClass === 'muxui-calendar-cell'
+      (date) => !hydrated
+        ? React.createElement('td', { 'aria-hidden': 'true' }, React.createElement('div', { className: cellClass, 'data-muxui-calendar-placeholder': '' }, '\u00a0'))
+        : cellClass === 'muxui-calendar-cell'
         ? React.createElement(AriaCalendarCell, { date, className: cellClass },
           (renderProps) => React.createElement(CalendarSelectionCell, renderProps))
         : React.createElement(AriaCalendarCell, { date, className: cellClass, 'data-muxui-date': String(date) })),
   ));
   return cellClass === 'muxui-range-calendar-cell' ? React.createElement(RangeSelectionMotion, null, grid) : grid;
+}
+
+function calendarGrid(cellClass = 'muxui-calendar-cell') {
+  return React.createElement(CalendarDays, { cellClass });
 }
 
 function calendarHeader() {
