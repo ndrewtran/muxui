@@ -1,5 +1,5 @@
 ---
-scopeVersion: 13.1.0
+scopeVersion: 13.1.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -102,6 +102,11 @@ Figma slice extends to components for a named set of simple controls,
 delivered in batches through the private, never published
 `@muxui/figma` adapter. Import and round-trip keep their G3.5
 conditions.
+
+Product Scope `13.1.1` applies Decision 0022 amendment 01 as a patch
+clarification: the R1 pull requests have no hosted review logs, so the
+release-acceptance review evidence is the retained retroactive review of
+R1.2 through R1.4 and author-reported review for R1.1 and R1.5.
 
 ## Scope vocabulary
 
@@ -911,9 +916,12 @@ accessibility, package, compatibility, integrity, or generation failures.
   Decision 0022 prerelease amendment records for R1.1 through R1.4, with
   assistive-technology support unproved and not claimed; that evidence is a
   required `S1.0` entry condition;
-- R1.1 through R1.5's logged check and review evidence is captured into
-  retained evidence before the rc.1 cut and before those logs expire around
+- R1.1 through R1.5's logged check evidence is captured into retained
+  evidence before the rc.1 cut and before those logs expire around
   2026-11-23, because a transient log cannot satisfy an exit (Decision 0022);
+  their review evidence is the retained retroactive review of R1.2 through
+  R1.4, with every finding resolved, and author-reported review for R1.1 and
+  R1.5, which is not proof (Decision 0022 amendment 01);
 - the compatibility/evidence profile states the exact tested environment;
 - generator, privacy, provenance, exception, advisory, performance-baseline,
   and change-intent requirements pass; and
@@ -1373,3 +1381,26 @@ covers writing the six families' components to file `Z1rFgLTe3lBr0nwm8UvFEx`;
 removing the pilot page, later batches' writes, and any other Figma file need
 his separate, explicit direction. Rollback deletes the package; any Figma
 Components page is disposable.
+
+## Product Scope 13.1.1: R1 review evidence correction
+
+[Decision 0022 amendment 01](../decisions/0022-amendment-01-r1-review-evidence-correction.md)
+corrects the 13.0.0 statement that R1.1 through R1.5 evidence exists in CI
+check and review logs. The check logs are retained under `tests/evidence`.
+Pull requests #102 and #105 through #108 have no hosted reviews; four
+descriptions claim a local review that was not retained, and #105 claims
+none. The release-acceptance review evidence is therefore the retained
+retroactive review of the current R1.2, R1.3, and R1.4 code under
+`tests/evidence/r1-retro-review`, with every finding resolved by a merged fix
+or an accepted reason, and author-reported review for R1.1 and R1.5, which
+Andrew accepted for the rc boundary and which is not proof. The generated
+records mark R1.5 evidence `checks-retained-review-author-reported`.
+
+This patch changes how an existing condition is evidenced. It adds, removes,
+or transitions no Scope ID and changes no commitment, release boundary,
+platform, package, public surface, support claim, or non-goal. Every `S1.0`
+deferral recorded under 13.0.0 stays deferred, and rc.1 still claims no
+assistive-technology support.
+
+Tracker migration: the fixes for the review findings land in a separate pull
+request. This change creates no tracker items.
