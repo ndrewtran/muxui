@@ -5,6 +5,7 @@ import { mergeRefs } from 'react-aria/mergeRefs';
 import { useInteractOutside } from 'react-aria/useInteractOutside';
 // The modality useToastRegion uses; React Aria exports it only from this subpath.
 import { getInteractionModality } from 'react-aria/private/interactions/useFocusVisible';
+import { isFocusable } from 'react-aria/private/utils/isFocusable';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
@@ -198,10 +199,41 @@ export const FileTrigger = React.forwardRef(function FileTrigger({
 
 FileTrigger.displayName = 'FileTrigger';
 
+// React Aria restores focus to the element focused when an overlay opened, one
+// frame after the overlay unmounts; if that opener has left the DOM, focus
+// falls to the body. Record the opener's ancestors on open, while they are
+// still connected, so the nearest one that remains connected and focusable can
+// take focus instead. With none, focus stays on the body. Call this from a
+// component inside the overlay's FocusScope: React runs unmount cleanups
+// parent first, so this frame runs after React Aria's own restore frame.
+function useOpenerFocusFallback() {
+  const [opener] = React.useState(() => {
+    const element = typeof document === 'undefined' ? null : document.activeElement;
+    if (!element || element === element.ownerDocument.body) return null;
+    const ancestors = [];
+    for (let node = element.parentElement; node && node !== element.ownerDocument.body; node = node.parentElement) ancestors.push(node);
+    return { element, ancestors };
+  });
+  useIsomorphicLayoutEffect(() => {
+    if (!opener) return undefined;
+    return () => {
+      const { element, ancestors } = opener;
+      const ownerDocument = element.ownerDocument;
+      ownerDocument.defaultView?.requestAnimationFrame(() => {
+        // Leave a connected opener, and any focus React Aria or the app placed, alone.
+        const active = ownerDocument.activeElement;
+        if (element.isConnected || (active && active !== ownerDocument.body)) return;
+        ancestors.find((node) => node.isConnected && isFocusable(node))?.focus({ preventScroll: true });
+      });
+    };
+  }, [opener]);
+}
+
 function DialogContent({ title, description, actions, children, ariaLabel, dismissable, explicitClose, className, panelClassName, titleClassName, descriptionClassName, contentClassName, actionsClassName, closeClassName, contentRef, 'aria-describedby': ariaDescribedby, ...props }) {
   const descriptionId = React.useId();
   const describedby = [ariaDescribedby, description !== undefined && description !== null ? descriptionId : undefined].filter(Boolean).join(' ') || undefined;
   const triggerState = React.useContext(AriaOverlayTriggerStateContext);
+  useOpenerFocusFallback();
   // RAC routes slot="close" buttons through this state's close; those
   // explicit actions still close a non-dismissable Dialog.
   const explicitCloseState = React.useMemo(() => triggerState && { ...triggerState, close: explicitClose }, [triggerState, explicitClose]);
@@ -316,6 +348,7 @@ export const Dialog = /*#__PURE__*/ (() => {
 
 function PopoverSurface({ modal, children, onPointerDownCapture, ...props }) {
   const surfaceRef = React.useRef(null);
+  useOpenerFocusFallback();
   React.useEffect(() => {
     const surface = surfaceRef.current;
     if (modal && surface && !surface.contains(surface.ownerDocument.activeElement)) {
