@@ -198,21 +198,47 @@ export function changedLockfileImporters(before, after) {
   }
   const importerKeys = new Set([...oldSections.importerRecords.keys(), ...newSections.importerRecords.keys()]);
   const changedImporters = [...importerKeys].filter((key) => oldSections.importerRecords.get(key) !== newSections.importerRecords.get(key));
-  if (changedImporters.length === 0) {
+  const changedRecords = (sectionName) => [...oldSections[sectionName]]
+    .filter(([key, value]) => newSections[sectionName].has(key) && newSections[sectionName].get(key) !== value);
+  const changedSnapshots = changedRecords('snapshotRecords');
+  const removedSnapshots = [...oldSections.snapshotRecords.keys()].filter((key) => !newSections.snapshotRecords.has(key));
+  // Each changed or removed record plans every importer that reaches it, as if
+  // that importer changed: removals in the base graph, changes in either graph.
+  const records = [
+    ...changedSnapshots.map(([key]) => ({ key: unquoteLockKey(key), graphs: [oldSections, newSections] })),
+    ...changedRecords('packageRecords').map(([key]) => ({ key: unquoteLockKey(key), graphs: [oldSections, newSections], isPackage: true })),
+    ...removedSnapshots.map((key) => ({ key: unquoteLockKey(key), graphs: [oldSections] })),
+  ];
+  const consumers = new Set(changedImporters.map(unquoteLockKey));
+  const reaches = new Map();
+  const unmapped = [];
+  for (const { key, graphs, isPackage } of records) {
+    let mapped = false;
+    for (const sections of graphs) {
+      if (!reaches.has(sections)) reaches.set(sections, importerReach(sections));
+      for (const [importer, reached] of reaches.get(sections)) {
+        const consumes = isPackage ? [...reached].some((snapshot) => lockPackageKey(snapshot) === key) : reached.has(key);
+        if (!consumes) continue;
+        consumers.add(importer);
+        mapped = true;
+      }
+    }
+    if (!mapped) unmapped.push(key);
+  }
+  if (unmapped.length > 0) {
+    throw new Error(`MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: changed or removed lockfile records reach no workspace importer: ${[...new Set(unmapped)].sort().join(', ')}; identify their consumers explicitly`);
+  }
+  if (consumers.size === 0) {
     throw new Error('MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: dependency resolutions changed without an importer change; map the changed resolution to its consumers');
   }
-  for (const sectionName of ['packageRecords', 'snapshotRecords']) {
-    const oldRecords = oldSections[sectionName];
-    const newRecords = newSections[sectionName];
-    const changedExisting = [...oldRecords].some(([key, value]) => newRecords.has(key) && newRecords.get(key) !== value);
-    if (changedExisting) {
-      throw new Error(`MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: existing ${sectionName === 'packageRecords' ? 'package' : 'snapshot'} resolutions changed; resolve all importers that consume those resolutions`);
-    }
+  const droppedFrom = [
+    ...changedImporters.map((key) => [oldSections.importerRecords.get(key), newSections.importerRecords.get(key)]),
+    ...changedSnapshots.map(([key, body]) => [body, newSections.snapshotRecords.get(key)]),
+  ];
+  if (!removedResolutionsAreExplained(oldSections, newSections, droppedFrom)) {
+    throw new Error('MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: existing package resolutions were removed that no dropped importer or snapshot dependency exclusively reached; resolve all importers that consume those resolutions');
   }
-  if (!removedResolutionsAreExplained(oldSections, newSections, changedImporters)) {
-    throw new Error('MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: existing package resolutions were removed that no dropped importer dependency exclusively reached; resolve all importers that consume those resolutions');
-  }
-  return changedImporters.map(unquoteLockKey).sort();
+  return [...consumers].sort();
 }
 
 function unquoteLockKey(key) {
@@ -235,25 +261,60 @@ function lockRecordDependencies(body) {
     const inline = line.match(/^ {6}([^ ].*?):\s+(\S.*)$/u);
     const nested = line.match(/^ {6}([^ ].*?):\s*$/u);
     const version = line.match(/^ {8}version:\s+(\S.*)$/u);
-    if (inline) dependencies.push(`${unquoteLockKey(inline[1])}@${unquoteLockKey(inline[2])}`);
+    if (inline) dependencies.push(lockDependencyKey(unquoteLockKey(inline[1]), unquoteLockKey(inline[2])));
     else if (nested) name = unquoteLockKey(nested[1]);
-    else if (version && name) dependencies.push(`${name}@${unquoteLockKey(version[1])}`);
+    else if (version && name) dependencies.push(lockDependencyKey(name, unquoteLockKey(version[1])));
   }
   return dependencies.filter((key) => !/@link:/u.test(key));
 }
 
+// An aliased dependency (`alias: name@1.0.0`) records its target snapshot key
+// as the version. Peer suffixes such as `1.0.0(react@19.2.8)` and URL versions
+// such as `https://…/x-1.0.0.tgz` or `git+ssh://git@…` are not aliases.
+function lockDependencyKey(name, version) {
+  return /^(@[^/@:]+\/)?[^@/:(]+@/u.test(version) ? version : `${name}@${version}`;
+}
+
+// `name@version(peer…)` snapshot keys share the `name@version` package key.
+function lockPackageKey(snapshot) {
+  return snapshot.replace(/\(.*$/u, '');
+}
+
+// Snapshot keys each importer transitively reaches. Workspace `link:`
+// dependencies are skipped: a linked workspace is routed exactly as a direct
+// edit to it would be, so its dependents are not planned. Any other
+// dependency without a snapshot record leaves the graph unresolvable.
+function importerReach(sections) {
+  const graph = new Map([...sections.snapshotRecords].map(([key, body]) => [unquoteLockKey(key), lockRecordDependencies(body)]));
+  return new Map([...sections.importerRecords].map(([importer, body]) => {
+    const reached = new Set();
+    const queue = lockRecordDependencies(body);
+    while (queue.length > 0) {
+      const key = queue.pop();
+      if (reached.has(key)) continue;
+      if (!graph.has(key)) {
+        throw new Error(`MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer ${unquoteLockKey(importer)} reaches ${key}, which has no snapshot record; resolve the lockfile graph before mapping its consumers`);
+      }
+      reached.add(key);
+      queue.push(...graph.get(key));
+    }
+    return [unquoteLockKey(importer), reached];
+  }));
+}
+
 // A dependency removal prunes the records only that dependency reached. Every
-// removed snapshot must be reachable from a dependency a changed importer
-// dropped, its package record must go with its last snapshot, and nothing
-// left in the lockfile may still reference a removed snapshot.
-function removedResolutionsAreExplained(oldSections, newSections, changedImporters) {
+// removed snapshot must be reachable from a dependency a changed importer or
+// snapshot dropped (`droppedFrom` holds their base and head bodies), its
+// package record must go with its last snapshot, and nothing left in the
+// lockfile may still reference a removed snapshot.
+function removedResolutionsAreExplained(oldSections, newSections, droppedFrom) {
   const removedSnapshots = [...oldSections.snapshotRecords.keys()].filter((key) => !newSections.snapshotRecords.has(key)).map(unquoteLockKey);
   const removedPackages = [...oldSections.packageRecords.keys()].filter((key) => !newSections.packageRecords.has(key)).map(unquoteLockKey);
   if (removedSnapshots.length === 0 && removedPackages.length === 0) return true;
   const oldGraph = new Map([...oldSections.snapshotRecords].map(([key, body]) => [unquoteLockKey(key), lockRecordDependencies(body)]));
-  const queue = changedImporters.flatMap((importer) => {
-    const remaining = new Set(lockRecordDependencies(newSections.importerRecords.get(importer) ?? ''));
-    return lockRecordDependencies(oldSections.importerRecords.get(importer) ?? '').filter((key) => !remaining.has(key));
+  const queue = droppedFrom.flatMap(([before, after]) => {
+    const remaining = new Set(lockRecordDependencies(after ?? ''));
+    return lockRecordDependencies(before ?? '').filter((key) => !remaining.has(key));
   });
   const reachable = new Set();
   while (queue.length > 0) {
@@ -263,9 +324,8 @@ function removedResolutionsAreExplained(oldSections, newSections, changedImporte
     queue.push(...oldGraph.get(key));
   }
   if (removedSnapshots.some((key) => !reachable.has(key))) return false;
-  const packageKey = (snapshot) => snapshot.replace(/\(.*$/u, '');
-  const remainingPackages = new Set([...newSections.snapshotRecords.keys()].map((key) => packageKey(unquoteLockKey(key))));
-  const removedPackageKeys = new Set(removedSnapshots.map(packageKey));
+  const remainingPackages = new Set([...newSections.snapshotRecords.keys()].map((key) => lockPackageKey(unquoteLockKey(key))));
+  const removedPackageKeys = new Set(removedSnapshots.map(lockPackageKey));
   if (removedPackages.some((key) => !removedPackageKeys.has(key) || remainingPackages.has(key))) return false;
   const removed = new Set(removedSnapshots);
   const stillReferenced = [...newSections.importerRecords.values(), ...newSections.snapshotRecords.values()]
