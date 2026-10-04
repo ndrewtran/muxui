@@ -413,9 +413,9 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
 });
 ColorField.displayName = 'ColorField';
 
-// Colour controls forward only id from their untyped props; upstream props such as
-// onChangeEnd, xChannel, or colorSpace would bypass the Mux UI guards and string values.
-export const ColorArea = React.forwardRef(function ColorArea({ id, label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+// Colour controls forward no untyped props; upstream props such as onChangeEnd,
+// xChannel, or colorSpace would bypass the Mux UI guards and string values.
+export const ColorArea = React.forwardRef(function ColorArea({ label, value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorArea');
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
@@ -432,7 +432,6 @@ export const ColorArea = React.forwardRef(function ColorArea({ id, label, value,
   return React.createElement('div', { className: 'muxui-color-area-field', 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, 'aria-disabled': effectiveDisabled || undefined, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
     label !== undefined ? React.createElement('span', { id: labelId, className: 'muxui-field-label' }, label) : null,
     React.createElement(AriaColorArea, {
-      id,
       ref: assignAreaRef,
       value: colorValue(value, 'ColorArea'),
       defaultValue: colorValue(defaultValue, 'ColorArea'),
@@ -477,7 +476,7 @@ function assertColorSliderChannel(channel, colorSpace, color) {
 
 // Include displayName in the pure initialization so unused sliders shed their motion dependency.
 export const ColorSlider = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function ColorSlider({ id, label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+  const component = React.forwardRef(function ColorSlider({ label, value, defaultValue, onChange, channel = 'red', colorSpace, disabled = false, readOnly = false, orientation = 'horizontal', className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
     const color = colorValue(value, 'ColorSlider');
     const defaultColor = colorValue(defaultValue, 'ColorSlider');
@@ -494,7 +493,6 @@ export const ColorSlider = /* @__PURE__ */ (() => {
     const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
     return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly), onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
       React.createElement(AriaColorSlider, {
-        id,
         ref: assignSliderRef,
         channel,
         colorSpace,
@@ -523,7 +521,7 @@ function assertColorWheelGeometry(outerRadius, innerRadius) {
 }
 
 export const ColorWheel = /* @__PURE__ */ (() => {
-  const component = React.forwardRef(function ColorWheel({ id, value, defaultValue, onChange, disabled = false, readOnly = false, className, outerRadius = 96, innerRadius = 64, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+  const component = React.forwardRef(function ColorWheel({ value, defaultValue, onChange, disabled = false, readOnly = false, className, outerRadius = 96, innerRadius = 64, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
     if (!ariaLabel && !ariaLabelledby) throw new TypeError('ColorWheel requires aria-label or aria-labelledby');
     assertColorWheelGeometry(outerRadius, innerRadius);
     const pickerState = React.useContext(ColorPickerContext);
@@ -537,7 +535,6 @@ export const ColorWheel = /* @__PURE__ */ (() => {
     };
     const assignWheelRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
     return React.createElement(AriaColorWheel, {
-      id,
       ref: assignWheelRef,
       outerRadius,
       innerRadius,
@@ -597,7 +594,7 @@ function unusedSwatchColor(items) {
   throw new TypeError('ColorSwatchPicker cannot represent an empty value for these items');
 }
 
-export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ id, items = [], value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
+export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ items = [], value, defaultValue, onChange, disabled = false, readOnly = false, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
   const normalized = colorSwatchItems(items);
   const pickerState = React.useContext(ColorPickerContext);
   const effectiveDisabled = disabled || pickerState.disabled;
@@ -626,7 +623,6 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
     React.createElement(
       AriaColorSwatchPicker,
       {
-        id,
         ref: assignSwatchPickerRef,
         value: value === null ? unusedSwatchColor(normalized) : colorValue(value, 'ColorSwatchPicker'),
         defaultValue: colorValue(defaultValue, 'ColorSwatchPicker'),
