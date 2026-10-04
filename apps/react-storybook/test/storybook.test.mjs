@@ -690,7 +690,6 @@ test('unsupported state coverage is explicit while supported state args remain o
     ['Form', 'submitting'],
     ['Form', 'invalid'],
     ['Slider', 'selected'],
-    ['TokenField', 'invalid'],
   ];
   for (const [family, state] of unsupportedStates) {
     const binding = byFamily.get(family);
@@ -1084,15 +1083,9 @@ test('lifecycle state coverage drives observable Mux UI transitions', async () =
             const visibleAgain = presence.findIndex((visible, index) => index > removedAfterVisible && visible);
             assert.ok(firstVisible >= 0 && removedAfterVisible >= 0 && visibleAgain >= 0,
               `${family}/${state} RAC queue close/reopen (${presence.join(',')})`);
-          } else if (family === 'PreviewTrigger') {
-            // RAC intentionally skips exit animations while preview warmup/cooldown
-            // swaps are active, so its observable contract is removal and reopen.
-            const firstVisible = presence.findIndex(Boolean);
-            const removedAfterVisible = presence.findIndex((visible, index) => index > firstVisible && !visible);
-            const visibleAgain = presence.findIndex((visible, index) => index > removedAfterVisible && visible);
-            assert.ok(firstVisible >= 0 && removedAfterVisible >= 0 && visibleAgain >= 0,
-              `${family}/${state} RAC preview close/reopen (${presence.join(',')})`);
           } else {
+            // PreviewTrigger's marked element is React Aria's popover itself, so it
+            // shares the generic data-exiting transition.
             assert.equal(
               racRecords.some(({ marker: recordMarker, attributeName }) => recordMarker.includes(marker)
                 && attributeName === 'data-exiting'),
