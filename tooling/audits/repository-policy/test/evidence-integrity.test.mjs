@@ -292,9 +292,14 @@ function r1ExitFixture() {
     '##[endgroup]',
     'Post job cleanup.',
   ]);
-  const publishLog = (integrity) => log([
+  const abbreviated = `${facts.integrity.slice(0, 20)}[...]${facts.integrity.slice(-15)}`;
+  // `outcome`: 'passed' read-back, 'propagation' (registry still empty), or 'eotp' (nothing published).
+  const publishLog = ({ input = facts.integrity, readBack = facts.integrity, outcome = 'passed' } = {}) => log([
     '##[group]Run set -euo pipefail',
     script('tarballs=("$RUNNER_TEMP"/npm-candidate/*.tgz)'),
+    'env:',
+    `  EXPECTED_VERSION: ${version}`,
+    `  EXPECTED_SHA512: ${input}`,
     '##[endgroup]',
     '##[group]Run set -euo pipefail',
     script('publisher=$(npm whoami --registry="$registry")'),
@@ -307,25 +312,46 @@ function r1ExitFixture() {
     '##[group]Run set -euo pipefail',
     script('# Stop on publisher drift since the preflight.'),
     '##[endgroup]',
-    `+ @muxui/react@${version}`,
-    '##[group]Run set -euo pipefail',
-    script('read_back() {'),
-    '##[endgroup]',
-    `dist.integrity: ${integrity}`,
-    'dist.attestations: {',
-    '  "provenance": { "predicateType": "https://slsa.dev/provenance/v1" }',
-    '}',
-    'dist-tags: {',
-    `  "latest": "${version}",`,
-    `  "next": "${version}"`,
-    '}',
+    `npm notice shasum: ${facts.shasum}`,
+    `npm notice integrity: ${abbreviated}`,
+    'npm notice publish Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=7',
+    ...(outcome === 'eotp' ? ['npm error code EOTP', '##[error]Process completed with exit code 1.'] : [
+      `+ @muxui/react@${version}`,
+      '##[group]Run set -euo pipefail',
+      script('read_back() {'),
+      '##[endgroup]',
+      ...(outcome === 'propagation' ? [
+        `Waiting for npm view @muxui/react@${version} dist.integrity (attempt 1)`,
+        'dist.integrity: missing',
+        `##[error]Registry has nothing; expected ${facts.integrity}.`,
+      ] : [
+        `dist.integrity: ${readBack}`,
+        'dist.attestations: {',
+        '  "provenance": { "predicateType": "https://slsa.dev/provenance/v1" }',
+        '}',
+        'dist-tags: {',
+        `  "latest": "${version}",`,
+        `  "next": "${version}"`,
+        '}',
+      ]),
+    ]),
     'Post job cleanup.',
   ]);
   const run = (id, overrides = {}) => ({
     id, name: 'npm publish', path: '.github/workflows/npm-publish.yml', event: 'workflow_dispatch', status: 'completed',
     conclusion: 'success', head_branch: 'main', head_sha: head, run_attempt: 1, run_started_at: '2026-10-04T07:34:16Z', ...overrides,
   });
-  const job = (id, name) => ({ id, name, conclusion: 'success', started_at: '2026-10-04T07:34:21Z', completed_at: '2026-10-04T07:48:33Z' });
+  const job = (id, name, steps = []) => ({ id, name, conclusion: 'success', started_at: '2026-10-04T07:34:21Z', completed_at: '2026-10-04T07:48:33Z', steps });
+  const step = (name, conclusion = 'success') => ({ name, conclusion, completed_at: '2026-10-04T13:05:34Z' });
+  const publishJob = (id, outcome = 'passed') => ({
+    ...job(id, 'publish', [
+      step('Re-verify candidate'),
+      step('Registry preflight (read-only)'),
+      step('Publish to next', outcome === 'eotp' ? 'failure' : 'success'),
+      step('Read back registry state', { passed: 'success', propagation: 'failure', eotp: 'skipped' }[outcome]),
+    ]),
+    conclusion: outcome === 'passed' ? 'success' : 'failure',
+  });
   const credentials = {
     run: run(37130250844, { head_sha: 'd'.repeat(40) }),
     jobs: [job(3, 'verify-credentials')],
@@ -336,10 +362,32 @@ function r1ExitFixture() {
     tarball: { file: `muxui-react-${version}.tgz`, bytes: tarballBytes, entries, packageJson: { name: '@muxui/react', version, exports: exportsMap } },
   };
   const dryRunInput = { run: run(1), jobs: [job(11, 'prepare')], prepareLog: prepareLog('dry-run', ''), artifact, sourceTree: tree, credentials };
-  return { head, tree, version, facts, manifest, artifact, run, job, prepareLog, publishLog, dryRunInput };
+  // The registry's attestation document: a DSSE-wrapped SLSA v1 statement.
+  const attestationDocument = ({ commit = head, path = '.github/workflows/npm-publish.yml', runId = 2 } = {}) => ({
+    attestations: [{
+      predicateType: 'https://slsa.dev/provenance/v1',
+      bundle: { dsseEnvelope: { payload: Buffer.from(JSON.stringify({
+        subject: [{ name: `pkg:npm/%40muxui/react@${version}`, digest: { sha512: Buffer.from(facts.integrity.slice(7), 'base64').toString('hex') } }],
+        predicate: {
+          buildDefinition: { externalParameters: { workflow: { ref: 'refs/heads/main', repository: 'https://github.com/ndrewtran/muxui', path } }, resolvedDependencies: [{ digest: { gitCommit: commit } }] },
+          runDetails: { builder: { id: 'https://github.com/actions/runner/github-hosted' }, metadata: { invocationId: `https://github.com/ndrewtran/muxui/actions/runs/${runId}/attempts/1` } },
+        },
+      })).toString('base64') } },
+    }],
+  });
+  const view = { integrity: facts.integrity, shasum: facts.shasum, attestations: { url: 'https://registry.example/attestations', provenance: { predicateType: 'https://slsa.dev/provenance/v1' } }, distTags: { latest: version, next: version } };
+  const consumer = { installedVersion: version, lockIntegrity: facts.integrity, smoke: { imported: ['@muxui/react'], resolved: ['@muxui/react/styles.css'], rendered: ['Button'] } };
+  return { head, tree, version, facts, manifest, artifact, run, job, publishJob, prepareLog, publishLog, dryRunInput, attestationDocument, view, consumer };
 }
 
 const r1ExitCode = (code) => (error) => error?.code === code;
+
+function r1ExitPublish(fixture, dryRun, overrides = {}) {
+  return r1Exit.bindPublish({
+    dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.publishJob(22)],
+    prepareLog: fixture.prepareLog('publish', fixture.facts.integrity), publishLog: fixture.publishLog(), ...overrides,
+  });
+}
 
 test('R1 exit capture binds the dry run, publish run, and registry to one candidate', () => {
   const fixture = r1ExitFixture();
@@ -350,16 +398,19 @@ test('R1 exit capture binds the dry run, publish run, and registry to one candid
   const excerpt = dryRun.excerpt.text;
   assert.doesNotMatch(excerpt, /unrelated check output|release:prepare 2>&1/u, 'long-step noise and workflow script lines are not retained');
   assert.match(excerpt, /R1 exit release preparation passed/u);
-  const publish = r1Exit.bindPublish({ dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.job(22, 'publish')], prepareLog: fixture.prepareLog('publish', fixture.facts.integrity), publishLog: fixture.publishLog(fixture.facts.integrity) });
-  assert.equal(publish.observed.readBack.distTags.next, fixture.version);
+  const approvals = [{ state: 'approved', user: { login: 'ndrewtran' }, environments: [{ name: 'npm-publish' }], comment: '' }];
+  const publish = r1ExitPublish(fixture, dryRun, { approvals, approvalMethod: 'web UI' });
+  assert.equal(publish.observed.workflowReadBack.status, 'passed');
   assert.equal(publish.observed.preflight.version, 'E404 (no collision)');
-  const view = { integrity: fixture.facts.integrity, shasum: fixture.facts.shasum, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } }, distTags: { latest: fixture.version, next: fixture.version } };
-  const consumer = { installedVersion: fixture.version, lockIntegrity: fixture.facts.integrity, smoke: { imported: ['@muxui/react'], resolved: ['@muxui/react/styles.css'], rendered: ['Button'] } };
-  const registry = r1Exit.bindRegistry({ dryRun, view, consumer });
+  assert.deepEqual(publish.approvals[0].method.value, 'web UI');
+  const registry = r1Exit.bindRegistry({ dryRun, view: fixture.view, attestations: fixture.attestationDocument(), consumer: fixture.consumer, publishRunId: 2 });
+  assert.equal(registry.provenance.slsa.gitCommit, fixture.head);
   const ref = { path: 'tests/evidence/r1-exit/x', sha256: `sha256:${'0'.repeat(64)}` };
-  const verification = { phases: { dryRun, publish: { ...publish, captureTimestamp: 't' }, registry: { ...registry, captureTimestamp: 't' } }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {} };
+  const phase = (value) => ({ ...value, captureTimestamp: 't', proofTool: {} });
+  const verification = { phases: { dryRun: phase(dryRun), publish: phase(publish), registry: phase(registry) }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {} };
   const records = Object.fromEntries(Object.entries(r1Exit.buildRoute(verification, { validation: ref, manifest: ref, registry: ref })).map(([id, text]) => [id, JSON.parse(text)]));
   assert.deepEqual(Object.keys(records), ['E-R1-EXIT-01', 'E-R1-EXIT-02', 'E-R1-EXIT-03', 'E-R1-EXIT-04']);
+  assert.equal(records['E-R1-EXIT-02'].outcome, 'pass');
   // latest is observed as registry-set, never claimed; rollback is prepared, not exercised.
   assert.deepEqual(records['E-R1-EXIT-04'].distTags.latest, { observed: fixture.version, setBy: 'the registry on first publish (Decision 0023)', claimed: false, promoted: false });
   assert.equal(records['E-R1-EXIT-04'].rollback.status, 'prepared-not-exercised');
@@ -367,11 +418,35 @@ test('R1 exit capture binds the dry run, publish run, and registry to one candid
     assert.ok(record.deferredToS1.every(({ status, deferredTo }) => status === 'unmet' && deferredTo === 'S1.0'));
     assert.ok(record.nonClaims.some((claim) => claim.includes('No assistive-technology support claim')));
   }
-  const prePublishOnly = JSON.parse(r1Exit.buildRoute({ ...verification, phases: { dryRun } }, { validation: ref, manifest: ref })['E-R1-EXIT-02']);
-  assert.equal(prePublishOnly.outcome, 'partial', 'the pre-publish half alone is not a pass');
+  // Without the registry read-back, E-R1-EXIT-02 is not a pass, even after publish.
+  for (const phases of [{ dryRun: phase(dryRun) }, { dryRun: phase(dryRun), publish: phase(publish) }]) {
+    assert.equal(JSON.parse(r1Exit.buildRoute({ ...verification, phases }, { validation: ref, manifest: ref })['E-R1-EXIT-02']).outcome, 'partial');
+  }
 });
 
-test('R1 exit capture rejects a source.revision, head commit, digest, or branch mismatch', () => {
+test('R1 exit capture records a read-back that failed on registry propagation and a prior attempt that published nothing', () => {
+  const fixture = r1ExitFixture();
+  const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput), manifest: fixture.manifest };
+  const publish = r1ExitPublish(fixture, dryRun, {
+    run: fixture.run(2, { conclusion: 'failure' }),
+    jobs: [fixture.job(21, 'prepare'), fixture.publishJob(22, 'propagation')],
+    publishLog: fixture.publishLog({ outcome: 'propagation' }),
+  });
+  assert.equal(publish.observed.workflowReadBack.status, 'failed-registry-propagation');
+  assert.equal(publish.observed.published, '@muxui/react@0.1.0-rc.1');
+  // Any other read-back failure is not accepted.
+  assert.throws(() => r1ExitPublish(fixture, dryRun, {
+    run: fixture.run(2, { conclusion: 'failure' }),
+    jobs: [fixture.job(21, 'prepare'), fixture.publishJob(22, 'propagation')],
+  }), r1ExitCode('R1_EXIT_RUN_INVALID'));
+  const prior = r1Exit.bindPriorPublish({ dryRun, run: fixture.run(3, { conclusion: 'failure' }), jobs: [fixture.job(31, 'prepare'), fixture.publishJob(32, 'eotp')], publishLog: fixture.publishLog({ outcome: 'eotp' }) });
+  assert.equal(prior.observed.published, false);
+  assert.equal(prior.observed.failedStep.errorCode, 'EOTP');
+  assert.equal(prior.observed.orphanTransparencyLog, 'https://search.sigstore.dev/?logIndex=7');
+  assert.throws(() => r1Exit.bindPriorPublish({ dryRun, run: fixture.run(3), jobs: [fixture.job(31, 'prepare'), fixture.publishJob(32)], publishLog: fixture.publishLog() }), r1ExitCode('R1_EXIT_PRIOR_ATTEMPT_INVALID'));
+});
+
+test('R1 exit capture rejects a source.revision, head commit, digest, provenance, or branch mismatch', () => {
   const fixture = r1ExitFixture();
   const withManifest = (change) => {
     const manifest = structuredClone(fixture.manifest);
@@ -383,15 +458,15 @@ test('R1 exit capture rejects a source.revision, head commit, digest, or branch 
   assert.throws(() => r1Exit.bindDryRun({ ...fixture.dryRunInput, run: fixture.run(1, { head_branch: 'ci/npm-publish-rc' }) }), r1ExitCode('R1_EXIT_RUN_NOT_MAIN'));
 
   const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput), manifest: fixture.manifest };
-  const publish = (overrides) => r1Exit.bindPublish({
-    dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.job(22, 'publish')],
-    prepareLog: fixture.prepareLog('publish', fixture.facts.integrity), publishLog: fixture.publishLog(fixture.facts.integrity), ...overrides,
-  });
-  assert.throws(() => publish({ run: fixture.run(2, { head_sha: 'f'.repeat(40) }) }), r1ExitCode('R1_EXIT_HEAD_SHA_MISMATCH'));
-  assert.throws(() => publish({ publishLog: fixture.publishLog('sha512-registry-has-other-bytes') }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
-  assert.throws(() => publish({ prepareLog: fixture.prepareLog('publish', 'sha512-other-input') }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
-  const view = { integrity: 'sha512-other', shasum: fixture.facts.shasum, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } }, distTags: { next: fixture.version } };
-  assert.throws(() => r1Exit.bindRegistry({ dryRun, view, consumer: {} }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  assert.throws(() => r1ExitPublish(fixture, dryRun, { run: fixture.run(2, { head_sha: 'f'.repeat(40) }) }), r1ExitCode('R1_EXIT_HEAD_SHA_MISMATCH'));
+  assert.throws(() => r1ExitPublish(fixture, dryRun, { publishLog: fixture.publishLog({ input: 'sha512-other-input' }) }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  assert.throws(() => r1ExitPublish(fixture, dryRun, { prepareLog: fixture.prepareLog('publish', 'sha512-other-input').replace(fixture.facts.integrity, 'sha512-other') }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  const registry = (overrides) => r1Exit.bindRegistry({ dryRun, view: fixture.view, attestations: fixture.attestationDocument(), consumer: fixture.consumer, publishRunId: 2, ...overrides });
+  assert.throws(() => registry({ view: { ...fixture.view, integrity: 'sha512-other' } }), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'));
+  assert.throws(() => registry({ attestations: fixture.attestationDocument({ commit: 'f'.repeat(40) }) }), r1ExitCode('R1_EXIT_PROVENANCE_MISMATCH'));
+  assert.throws(() => registry({ attestations: fixture.attestationDocument({ path: '.github/workflows/other.yml' }) }), r1ExitCode('R1_EXIT_PROVENANCE_MISMATCH'));
+  assert.throws(() => registry({ attestations: fixture.attestationDocument({ runId: 9 }) }), r1ExitCode('R1_EXIT_PROVENANCE_MISMATCH'));
+  assert.throws(() => registry({ view: { ...fixture.view, distTags: { latest: fixture.version } } }), r1ExitCode('R1_EXIT_NEXT_MISMATCH'));
 });
 
 test('R1 exit capture fails closed when the npm-candidate artifact is missing', async () => {
