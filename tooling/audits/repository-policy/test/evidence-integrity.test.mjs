@@ -193,6 +193,8 @@ test('R1.2-R1.4 retroactive review records match their reports and never overcla
     const record = JSON.parse(await readFile(join(repositoryRoot, path), 'utf8'));
     assert.equal(record.reviewedRevision, index.sourceRevision);
     assert.equal(record.reviewedTree, index.sourceTree);
+    assert.equal(record.executedRevision, record.reviewedRevision);
+    assert.equal(record.executedTree, record.reviewedTree);
     assert.equal(record.manualAndAssistiveTechnology.status, 'unmet');
     assert.equal(record.manualAndAssistiveTechnology.deferredTo, 'S1.0');
     assert.equal(record.originalPullRequest.hostedReviews, 0, `${reviewId} reviews a pull request that had no hosted review`);
@@ -213,9 +215,10 @@ test('R1.2-R1.4 retroactive review records match their reports and never overcla
       assert.equal(sectionOf(id), severity, `${reviewId} ${id}`);
       counts[severity] += 1;
       assert.ok(families.length > 0 && families.every((family) => record.families.some((entry) => entry.family === family)));
-      if (resolution.status === 'pending') assert.equal(resolution.fixCommit, null);
-      else if (resolution.status === 'fixed') assert.match(resolution.fixCommit, /^[0-9a-f]{40}$/u);
-      else assert.ok(resolution.status === 'accepted-unfixed' && resolution.reason, `${reviewId} ${id} has a known resolution`);
+      // Decision 0022 amendment 01: every finding is resolved before the review evidence counts.
+      assert.notEqual(resolution.status, 'pending', `${reviewId} ${id} is resolved`);
+      if (resolution.status === 'fixed') assert.match(resolution.fixCommit, /^[0-9a-f]{40}$/u);
+      else assert.ok(resolution.status === 'accepted-unfixed' && resolution.reason && resolution.acceptedBy, `${reviewId} ${id} records its reason and who accepted it`);
     }
     assert.deepEqual(record.severityCounts, counts);
     // A family is clear only when no finding names it; a lane with findings is never a pass.

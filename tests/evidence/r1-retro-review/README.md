@@ -23,6 +23,9 @@ makes no support, publication, or release claim.
 
 Each finding starts `pending`. Record merged fixes with
 `node tests/evidence/capture-r1-retro-review.mjs --resolve=<lane>/<id>[,...]=<commit>`,
-or an unfixed finding with `--accept=<lane>/<id>=<reason>`; the tool rewrites
+or an unfixed finding with `--accept=<lane>/<id>=<reason> --accepted-by=<decision owner>`
+(optionally `--tracked-to=S1.0`); only Andrew, the decision owner, accepts a
+finding. `fixed` means a fix merged in pull request #204 with tests that fail
+without it; nobody re-reviewed the code after merge. The tool rewrites
 only the records and this index, and fails if a retained artifact changed.
 Report bytes are never edited.

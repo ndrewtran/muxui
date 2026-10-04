@@ -517,6 +517,33 @@ test('a milestone without a retained evidence index stops the R1 exit', () => {
   assert.throws(() => readRetainedReviewEvidence(repositoryRoot, 'tests/evidence/missing/index.json'), /R1_EXIT_RETAINED_REVIEW_MISSING/u);
 });
 
+test('retained review evidence fails closed on a wrong authority, milestone set, or pending finding', () => {
+  const root = mkdtempSync(join(tmpdir(), 'muxui-retained-review-'));
+  const writeIndex = (index, findings) => {
+    mkdirSync(join(root, 'tests/evidence/r1-retro-review/records'), { recursive: true });
+    writeFileSync(join(root, 'tests/evidence/r1-retro-review/records/lane.json'), JSON.stringify({ findings }));
+    writeFileSync(join(root, 'tests/evidence/r1-retro-review/index.json'), JSON.stringify({
+      authority: 'muxui:decision:0022:amendment:01',
+      milestones: ['R1.2', 'R1.3', 'R1.4'],
+      records: [{ path: 'tests/evidence/r1-retro-review/records/lane.json' }],
+      ...index,
+    }));
+  };
+  const fixed = { id: 'H1', resolution: { status: 'fixed', fixCommit: 'a'.repeat(40) } };
+  try {
+    writeIndex({}, [fixed]);
+    assert.equal(readRetainedReviewEvidence(root).length, 1);
+    writeIndex({ authority: 'muxui:decision:0022' }, [fixed]);
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_AUTHORITY_INVALID/u);
+    writeIndex({ milestones: undefined }, [fixed]);
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_MILESTONES_INVALID/u);
+    writeIndex({}, [fixed, { id: 'M2', resolution: { status: 'pending', fixCommit: null } }]);
+    assert.throws(() => readRetainedReviewEvidence(root), /R1_EXIT_RETAINED_REVIEW_PENDING: .*M2/u);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('the release manifest correlates exact source, lockfile, generated, catalog, binding, and evidence identities', () => {
   const binding = 'muxui:component:button#web.react';
   const digest = `sha256:${'a'.repeat(64)}`;

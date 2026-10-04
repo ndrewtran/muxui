@@ -568,16 +568,31 @@ export function readRetainedEvidence(repositoryRoot, milestones) {
   });
 }
 
+const retainedReviewMilestones = Object.freeze(['R1.2', 'R1.3', 'R1.4']);
+
 /**
  * Reads the retained R1.2-R1.4 retroactive review index (Decision 0022
- * amendment 01); a missing index stops the R1 exit. R1.1 and R1.5 review is
- * author-reported only and has no retained index.
+ * amendment 01). The R1 exit stops when the index is missing, names another
+ * authority or milestone set, or any finding is still pending. R1.1 and R1.5
+ * review is author-reported only and has no retained index.
  */
 export function readRetainedReviewEvidence(repositoryRoot, path = 'tests/evidence/r1-retro-review/index.json') {
   const absolute = join(repositoryRoot, path);
   if (!existsSync(absolute)) fail('R1_EXIT_RETAINED_REVIEW_MISSING', `retroactive review evidence has no retained index at ${path}`);
   const bytes = readFileSync(absolute);
-  return [{ milestones: JSON.parse(bytes.toString('utf8')).milestones, path, bytes }];
+  const index = JSON.parse(bytes.toString('utf8'));
+  if (index.authority !== 'muxui:decision:0022:amendment:01') {
+    fail('R1_EXIT_RETAINED_REVIEW_AUTHORITY_INVALID', `${path} names authority ${index.authority}`);
+  }
+  if (!Array.isArray(index.milestones) || index.milestones.join() !== retainedReviewMilestones.join()) {
+    fail('R1_EXIT_RETAINED_REVIEW_MILESTONES_INVALID', `${path} must cover ${retainedReviewMilestones.join(', ')}`);
+  }
+  for (const record of index.records ?? []) {
+    const { findings = [] } = JSON.parse(readFileSync(join(repositoryRoot, record.path), 'utf8'));
+    const pending = findings.filter(({ resolution }) => (resolution?.status ?? 'pending') === 'pending').map(({ id }) => id);
+    if (pending.length !== 0) fail('R1_EXIT_RETAINED_REVIEW_PENDING', `${record.path} has unresolved findings: ${pending.join(', ')}`);
+  }
+  return [{ milestones: index.milestones, path, bytes }];
 }
 
 /**

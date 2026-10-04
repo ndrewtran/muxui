@@ -6,7 +6,8 @@
 // Record fix commits once the fixes are merged (repeatable; refs are
 // `<lane>/<finding>`, `<lane>/*`, or `*`, comma-separated):
 //   node tests/evidence/capture-r1-retro-review.mjs --resolve=r1.2-fields/H1,r1.2-fields/H2=<commit>
-//   node tests/evidence/capture-r1-retro-review.mjs --accept=r1.4-overlays/L5="<reason it stays unfixed>"
+//   node tests/evidence/capture-r1-retro-review.mjs --accept=r1.4-overlays/L5="<reason it stays unfixed>" --accepted-by="<decision owner>" [--tracked-to=S1.0]
+// Only the decision owner (Decision 0022 amendment 01) may accept a finding.
 // Without --reports, the retained artifacts are reused and must still match
 // their recorded digests; only records and the index are rewritten, and every
 // earlier resolution is preserved.
@@ -229,11 +230,16 @@ for (const value of argument('resolve')) {
   }
   for (const ref of expandRefs(value.slice(0, separator))) resolutions.set(ref, { status: 'fixed', fixCommit: commit });
 }
+const acceptedBy = argument('accepted-by')[0]?.trim();
+const trackedTo = argument('tracked-to')[0]?.trim();
+if (argument('accept').length !== 0 && !acceptedBy) throw new Error('R1_RETRO_ACCEPT_INVALID: --accept needs --accepted-by=<decision owner>');
 for (const value of argument('accept')) {
   const separator = value.indexOf('=');
   const reason = value.slice(separator + 1).trim();
   if (separator < 0 || reason === '') throw new Error(`R1_RETRO_ACCEPT_INVALID: ${value} needs <refs>=<reason>`);
-  for (const ref of expandRefs(value.slice(0, separator))) resolutions.set(ref, { status: 'accepted-unfixed', fixCommit: null, reason });
+  for (const ref of expandRefs(value.slice(0, separator))) {
+    resolutions.set(ref, { status: 'accepted-unfixed', fixCommit: null, reason, acceptedBy, ...(trackedTo ? { trackedTo } : {}) });
+  }
 }
 
 const reviewer = {
@@ -243,7 +249,7 @@ const reviewer = {
   access: 'read-only reviewer agent; no GitHub access; worktree left unchanged',
   independence: 'a different model and harness from the Codex automation that produced the R1 code and pull requests',
 };
-const claimBoundary = 'findings is not a pass. clear means the reviewer found nothing within the stated lenses, files, tests, and probes; it is not proof of correctness. Manual and assistive-technology testing remains unmet and deferred to S1.0 (Decision 0022). This is not a hosted review of the original pull request, which had none.';
+const claimBoundary = 'findings is not a pass. clear means the reviewer found nothing within the stated lenses, files, tests, and probes; it is not proof of correctness. A fixed resolution means a fix merged in pull request #204 with tests that fail without it; independent reviewers verified those tests on the pull-request branch before merge, and nobody re-reviewed the code after merge. An accepted-unfixed resolution is the decision owner\'s acceptance, not a fix. Manual and assistive-technology testing remains unmet and deferred to S1.0 (Decision 0022). This is not a hosted review of the original pull request, which had none.';
 
 const records = [];
 for (const { lane, milestone, pullRequest, families, counts, findings, reportTable, notChecked } of lanes) {
@@ -267,6 +273,9 @@ for (const { lane, milestone, pullRequest, families, counts, findings, reportTab
     claimBoundary,
     reviewedRevision,
     reviewedTree,
+    // The reviewers read and ran the reviewed commit itself.
+    executedRevision: reviewedRevision,
+    executedTree: reviewedTree,
     reviewer,
     lenses,
     families: families.map((family) => {
