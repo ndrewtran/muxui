@@ -22,6 +22,7 @@ import {
   ColorArea as AriaColorArea,
   ColorField as AriaColorField,
   ColorPicker as AriaColorPicker,
+  ColorPickerStateContext,
   ColorSlider as AriaColorSlider,
   ColorSwatch as AriaColorSwatch,
   ColorSwatchPicker as AriaColorSwatchPicker,
@@ -542,7 +543,9 @@ export const ColorSlider = /* @__PURE__ */ (() => {
     accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorSlider');
     const color = colorValue(value, 'ColorSlider');
     const defaultColor = colorValue(defaultValue, 'ColorSlider');
-    assertColorSliderChannel(channel, colorSpace, color ?? defaultColor);
+    // Inside a ColorPicker, React Aria drives the slider with the picker's colour.
+    const pickerColor = React.useContext(ColorPickerStateContext)?.color;
+    assertColorSliderChannel(channel, colorSpace, pickerColor ?? color ?? defaultColor);
     const pickerState = React.useContext(ColorPickerContext);
     const effectiveDisabled = disabled || pickerState.disabled;
     const effectiveReadOnly = readOnly || pickerState.readOnly;

@@ -467,6 +467,11 @@ test('R1.3 ColorSlider validates channel and colour space pairs with Mux UI erro
   assert.equal(hue.window.document.querySelector('input[type="range"]').getAttribute('max'), '360');
   hue.window.close();
   assert.doesNotThrow(() => render({ channel: 'alpha', defaultValue: 'hsl(210, 50%, 40%)' }));
+  // A nested slider is validated against the picker's colour.
+  const nested = (sliderProps, pickerValue = '#336699') => renderToString(React.createElement(ColorPicker, { defaultValue: pickerValue }, React.createElement(ColorSlider, { 'aria-label': 'Nested', ...sliderProps })));
+  assert.throws(() => nested({ channel: 'hue' }), (error) => error instanceof TypeError && /channel hue is not in the rgb color space/u.test(error.message));
+  assert.doesNotThrow(() => nested({ channel: 'hue', colorSpace: 'hsl' }));
+  assert.doesNotThrow(() => nested({ channel: 'hue' }, 'hsl(210, 50%, 40%)'));
   assert.doesNotThrow(() => render({ channel: 'saturation', defaultValue: 'hsl(210, 50%, 40%)' }));
 });
 

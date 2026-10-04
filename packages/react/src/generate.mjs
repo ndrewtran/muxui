@@ -599,7 +599,7 @@ export declare const Autocomplete: React.ForwardRefExoticComponent<AutocompleteP
 const collectionsTypes = `
 export type MuxUIColorValue = string;
 export type MuxUIColorSpace = 'rgb' | 'hsl' | 'hsb';
-/** Channels must belong to colorSpace, or to the value's own space when colorSpace is omitted. */
+/** Channels must belong to colorSpace, or, when colorSpace is omitted, to the space of an enclosing ColorPicker's color, otherwise value or defaultValue. */
 export type MuxUIColorChannel = 'red' | 'green' | 'blue' | 'hue' | 'saturation' | 'lightness' | 'brightness' | 'alpha';
 export interface MuxUICollectionItem { id?: string; key?: string; label?: React.ReactNode; /** Consumer data; named Select and ComboBox forms submit the item \`id\`, not \`value\`. */ value?: string; textValue?: string; disabled?: boolean; [key: string]: unknown; }
 export type MuxUISelection = string[] | 'all';
