@@ -668,6 +668,8 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     throw new TypeError('CheckboxGroup orientation must be horizontal or vertical');
   }
   const resolvedSize = normalizeChoiceControlSize(size, 'CheckboxGroup');
+  const labelId = React.useId();
+  const hasLabel = label !== undefined && label !== null;
   const group = React.createElement(AriaCheckboxGroup, {
     ...props,
     ref,
@@ -680,11 +682,14 @@ export const CheckboxGroup = React.forwardRef(function CheckboxGroup({
     name,
     className: classNames('muxui-checkbox-group', className),
     'data-orientation': orientation,
-    'aria-label': ariaLabel ?? (typeof label === 'string' ? label : undefined),
-    'aria-labelledby': ariaLabelledby,
+    'data-size': resolvedSize,
+    'aria-label': ariaLabel,
+    // The visible label sits outside the options' flex layout, so name the
+    // group by id rather than through RAC's label slot.
+    'aria-labelledby': ariaLabelledby ?? (hasLabel ? labelId : undefined),
   }, children, fieldDescription(description), fieldError(errorMessage));
   const field = React.createElement('div', { className: 'muxui-checkbox-group-field' },
-    fieldLabel(label),
+    hasLabel ? React.createElement(AriaLabel, { id: labelId, elementType: 'span', className: 'muxui-field-label' }, label) : null,
     group,
   );
   return React.createElement(ChoiceControlSizeContext.Provider, { value: resolvedSize }, field);

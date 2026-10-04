@@ -1149,7 +1149,7 @@ test('R1.2 fields do not forward unsupported validation props', () => {
   }
 });
 
-test('R1.2 CheckboxGroup owns option names for required FormData submission', async () => {
+test('R1.2 CheckboxGroup owns option names and enforces required FormData submission', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);
   let root;
@@ -1164,10 +1164,17 @@ test('R1.2 CheckboxGroup owns option names for required FormData submission', as
         React.createElement(React.Fragment, null,
           React.createElement(Checkbox, { value: 'push' }, 'Push'),
           React.createElement(OptionsWrapper, null))))));
-    const formData = new dom.window.FormData(host.querySelector('form'));
+    const form = host.querySelector('form');
+    const formData = new dom.window.FormData(form);
     assert.deepEqual(formData.getAll('alerts'), ['email']);
     assert.deepEqual(formData.getAll('nestedAlerts'), ['push', 'sms']);
     assert.equal(host.querySelector('[role="group"]').getAttribute('data-required'), 'true');
+    assert.equal(form.checkValidity(), true);
+    const email = host.querySelector('input[value="email"]');
+    await act(async () => email.click());
+    assert.equal(email.checked, false);
+    assert.equal(email.required, true, 'options inherit the group required state');
+    assert.equal(form.checkValidity(), false, 'an empty required group blocks submission');
     await act(async () => root.unmount());
   } finally {
     restore();
@@ -1348,4 +1355,24 @@ test('Form server errors clear after an edit until new validationErrors arrive',
     restore();
     dom.window.close();
   }
+});
+
+test('CheckboxGroup names its group from a visible label of any node type', async () => {
+  const markup = renderToString(React.createElement(React.Fragment, null,
+    React.createElement(CheckboxGroup, { label: React.createElement('span', null, 'Toppings'), size: 'sm' },
+      React.createElement(Checkbox, { value: 'cheese' }, 'Cheese')),
+    React.createElement(CheckboxGroup, { label: 'Alerts' },
+      React.createElement(Checkbox, { value: 'email' }, 'Email')),
+    React.createElement(CheckboxGroup, { 'aria-label': 'Hidden alerts' },
+      React.createElement(Checkbox, { value: 'sms' }, 'SMS'))));
+  const dom = new JSDOM(`<!doctype html><div id="root">${markup}</div>`);
+  const [rich, plain, unlabelled] = dom.window.document.querySelectorAll('[role="group"]');
+  const nameOf = (group) => group.getAttribute('aria-label')
+    ?? group.getAttribute('aria-labelledby').split(' ').map((id) => dom.window.document.getElementById(id)?.textContent).join(' ');
+  assert.equal(nameOf(rich), 'Toppings');
+  assert.equal(nameOf(plain), 'Alerts');
+  assert.equal(nameOf(unlabelled), 'Hidden alerts');
+  assert.equal(rich.getAttribute('data-size'), 'sm');
+  assert.equal(plain.getAttribute('data-size'), 'md');
+  dom.window.close();
 });
