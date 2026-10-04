@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:8383c5c2e46f078e0b6a1c8a2ee395e4f741292b4cf8c81d31ce25392b11825e -->
+<!-- @generated-content-sha256: sha256:5723dfbb5398159febd88cf94b0403ce7f1e5608a7b9befff2aeb6be9fc60ca1 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -201,6 +201,7 @@ Public parts: `root`, `section`, `header`, `item`.
 - Mux selectors are .muxui-select, .muxui-select-label, .muxui-select-trigger, .muxui-select-value, .muxui-select-popover, .muxui-select-list, .muxui-select-option, .muxui-select-description, and .muxui-select-error. Root states include data-open, data-disabled, data-readonly, and data-invalid; options expose data-selected, data-disabled, data-focused, and data-focus-visible.
 - Root, Popup, List, and Item refs target divs; Trigger targets a button; Label, Value, Description, and Error target spans. Error renders only while invalid.
 - Named forms submit the selected item id, not item.value.
+- errorMessage is shown only while the field is invalid, through the invalid prop or failed validation, and replaces the default message; it never makes the field invalid by itself.
 
 Public parts: `root`, `label`, `trigger`, `value`, `popup`, `list`, `option`, `description`, `error`.
 

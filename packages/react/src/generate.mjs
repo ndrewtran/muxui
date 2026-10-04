@@ -560,7 +560,7 @@ export type MuxUIDateValue = string;
 export type MuxUITimeValue = string;
 export interface MuxUIDateRange { start: MuxUIDateValue; end: MuxUIDateValue; }
 export type ControlSize = 'sm' | 'md' | 'lg';
-export interface FieldValidationProps { description?: React.ReactNode; errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; }
+export interface FieldValidationProps { description?: React.ReactNode; /** Shown only while the field is invalid (\`invalid\` or failed validation); it never makes the field invalid by itself. */ errorMessage?: React.ReactNode; disabled?: boolean; readOnly?: boolean; required?: boolean; invalid?: boolean; size?: ControlSize; className?: string; }
 export type MuxUIAccessibleName =
   | { label: Exclude<React.ReactNode, null | undefined | boolean>; 'aria-label'?: never; 'aria-labelledby'?: never }
   | { label?: never; 'aria-label': string; 'aria-labelledby'?: never }

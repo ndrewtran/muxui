@@ -1329,6 +1329,8 @@ function anatomyArgsForBinding(record, sourceArgs) {
   const props = new Set(record.binding.api.props);
   if (props.has('description')) args.description = 'Additional context';
   if (props.has('errorMessage')) args.errorMessage = 'A value is required';
+  // errorMessage renders only while invalid, so the anatomy shows the error part through invalid.
+  if (props.has('errorMessage') && props.has('invalid')) args.invalid = true;
   if (record.family === 'ColorSwatchPicker') args.defaultValue = '#ff0000';
   if (record.family === 'ListBox') {
     args.children = e(MuxUI.ListBox.Section, { title: 'Options' },

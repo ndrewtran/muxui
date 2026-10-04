@@ -685,6 +685,34 @@ test('R1.3 ComboBox selects, filters, submits, and keeps disabled and read-only 
   }
 });
 
+test('R1.3 errorMessage shows only while Select, ComboBox, or ColorField is invalid', async () => {
+  const env = createDom('<form id="form"><div id="root"></div></form>');
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const form = document.querySelector('#form');
+  const errors = () => [...container.querySelectorAll('.muxui-field-error')].map((node) => node.textContent);
+  const fields = (props) => React.createElement(React.Fragment, null,
+    React.createElement(Select, { label: 'Select', name: 'select', items: [{ id: 'red', label: 'Red' }], errorMessage: 'Pick a colour', ...props.select }),
+    React.createElement(ComboBox, { label: 'Combo', name: 'combo', items: [{ id: 'red', label: 'Red' }], errorMessage: 'Pick a city', ...props.combo }),
+    React.createElement(ColorField, { label: 'Colour', name: 'colour', errorMessage: 'Enter a colour', ...props.color }));
+  try {
+    // A valid value with errorMessage alone submits and shows no error.
+    await act(async () => root.render(fields({ select: { defaultValue: 'red' }, combo: { defaultSelectedId: 'red' }, color: { defaultValue: '#ff0000' } })));
+    assert.equal(form.checkValidity(), true);
+    assert.deepEqual(errors(), []);
+    assert.equal(container.querySelectorAll('[data-invalid]').length, 0);
+
+    // The failed required direction is proven in test/browser/field-error-message.test.mjs;
+    // native invalid events do not commit React Aria validation in this jsdom setup.
+    // invalid still shows the message without a validation failure.
+    await act(async () => root.render(fields({ select: { key: 'i', invalid: true, defaultValue: 'red' }, combo: { key: 'i', invalid: true }, color: { key: 'i', invalid: true } })));
+    assert.equal(errors().length, 3);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('Slider exposes disabled state on its labelled group while preserving thumb semantics', async () => {
   const env = createDom();
   const container = document.querySelector('#root');

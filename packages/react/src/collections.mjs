@@ -307,7 +307,7 @@ function calendarProps(props, name, labelId) {
     isDisabled: disabled,
     isReadOnly: readOnly,
     isRequired: required,
-    isInvalid: invalid,
+    isInvalid: invalid || undefined,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
     className: classNames(`muxui-${name.toLowerCase()}`, className),
@@ -351,7 +351,7 @@ export const RangeCalendar = /*#__PURE__*/ (() => {
       isDisabled: disabled,
       isReadOnly: readOnly,
       isRequired: required,
-      isInvalid: invalid,
+      isInvalid: invalid || undefined,
       'aria-label': ariaLabel,
       'aria-labelledby': ariaLabelledby ?? (label !== undefined ? labelId : undefined),
       className: classNames('muxui-range-calendar', className),
@@ -393,6 +393,9 @@ export const ColorSwatch = React.forwardRef(function ColorSwatch({ color, second
 });
 ColorSwatch.displayName = 'ColorSwatch';
 
+// React Aria reads isInvalid: false as controlled-valid, which hides failed native
+// validation, so these fields pass isInvalid only when invalid is set. errorMessage
+// replaces the shown message and never makes a field invalid by itself.
 export const ColorField = React.forwardRef(function ColorField({ label, description, errorMessage, value, defaultValue, onChange, disabled = false, readOnly = false, required = false, invalid = false, size, name, className, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   accessibleName({ label, ariaLabel, ariaLabelledby }, 'ColorField');
   const resolvedSize = normalizeChoiceControlSize(size, 'ColorField');
@@ -402,7 +405,7 @@ export const ColorField = React.forwardRef(function ColorField({ label, descript
   return React.createElement(AriaColorField, {
     ...props, ref, name, value: value === null ? null : colorValue(value, 'ColorField'), defaultValue: colorValue(defaultValue, 'ColorField'),
     onChange: (next) => { if (!effectiveDisabled && !effectiveReadOnly) onChange?.(next ? next.toString() : null); }, isDisabled: effectiveDisabled, isReadOnly: effectiveReadOnly, isRequired: required,
-    isInvalid: invalid || errorMessage !== undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
+    isInvalid: invalid || undefined, className: classNames('muxui-color-field', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
   }, label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
   React.createElement(AriaInput, { className: 'muxui-field-input' }),
   description !== undefined ? React.createElement(AriaText, { slot: 'description', className: 'muxui-field-description' }, description) : null,
@@ -881,7 +884,7 @@ export const ComboBox = /*#__PURE__*/ (() => {
     const disabledKeys = new Set(normalized.filter((item) => item.disabled).map((item) => item.id));
     const handleSelection = (key) => { const item = normalized.find((candidate) => candidate.id === String(key)); if (item && !item.disabled && !disabled && !readOnly) onSelect?.(item); };
     // defaultItems lets React Aria filter options by the typed text; items would mean consumer-filtered.
-    return React.createElement(AriaComboBox, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || errorMessage !== undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
+    return React.createElement(AriaComboBox, { ...props, ref, defaultItems: normalized, disabledKeys, ...(value === undefined ? {} : { inputValue: value }), defaultInputValue: defaultValue, selectedKey: selectedId, defaultSelectedKey: defaultSelectedId, onInputChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, onSelectionChange: handleSelection, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, name, className: classNames('muxui-combo-box', className), 'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby },
       label !== undefined ? React.createElement(AriaLabel, { className: 'muxui-field-label' }, label) : null,
       React.createElement(AriaGroup, { className: 'muxui-combo-control' },
         React.createElement(AriaInput, { className: 'muxui-field-input', placeholder }),
@@ -932,7 +935,7 @@ export const Select = /*#__PURE__*/ (() => {
         isOpen: disabled ? false : open, defaultOpen: !disabled && defaultOpen,
         onOpenChange: (next) => { if (!disabled || !next) onOpenChange?.(next); },
         onSelectionChange: handleSelection, isDisabled: disabled, isRequired: required,
-        isInvalid: invalid || errorMessage !== undefined, name, placeholder,
+        isInvalid: invalid || undefined, name, placeholder,
         'data-readonly': readOnly || undefined, className: classNames('muxui-select', className),
         'data-size': resolvedSize, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby,
       },
@@ -1002,7 +1005,7 @@ export const RadioGroup = /*#__PURE__*/ (() => {
         React.createElement(RadioMotionIndicator, { renderProps }),
         option.label ?? option.value)))
       : children;
-    const group = React.createElement(AriaRadioGroup, { ref, name, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
+    const group = React.createElement(AriaRadioGroup, { ref, name, value, defaultValue, onChange: (next) => { if (!disabled && !readOnly) onChange?.(next); }, isDisabled: disabled, isReadOnly: readOnly, isRequired: required, isInvalid: invalid || undefined, orientation, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby ?? generatedLabelledby, 'data-orientation': orientation, 'data-size': resolvedSize, className: classNames('muxui-radio-group', className) }, radioContent);
     const motionGroup = React.createElement(RadioGroupMotion, { rootRef: ref }, group);
     const content = label === undefined
       ? motionGroup
