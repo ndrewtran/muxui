@@ -470,11 +470,13 @@ const fullCssBody = `${cssBody}\n\n${authoredCss}`;
 const candidateVersion = '0.1.0-rc.1';
 // Decision 0023: a bad candidate is fixed forward in the next rc.
 const fixForwardVersion = candidateVersion.replace(/rc\.(\d+)$/u, (_, number) => `rc.${Number(number) + 1}`);
-// Decision 0022: R1.5 evidence exists only in PR #108's check and review logs,
-// which are not retained evidence. Capture is required before they expire.
+// Decision 0022 amendment 01: PR #108's check evidence is retained under
+// tests/evidence/r1.5; its review is author-reported only (PR #108 had no
+// hosted review), accepted for the rc boundary and not proof.
 const r15EvidenceStatus = {
-  status: 'logged-not-retained',
+  status: 'checks-retained-review-author-reported',
   retention: r15ClosureSource.evidenceCapture.retention,
+  basis: 'muxui:decision:0022:amendment:01',
 };
 // Decision 0022: the rc.1 prerelease makes no assistive-technology claim.
 const assistiveTechnologySupport = {

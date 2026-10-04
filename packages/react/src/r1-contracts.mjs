@@ -108,10 +108,11 @@ export function assertReactR10SourceContracts({ snapshot, upstreamExports, upstr
 const R15_EVIDENCE_IDS = Object.freeze([
   'E-R1.5-01', 'E-R1.5-02', 'E-R1.5-03', 'E-R1.5-04', 'E-R1.5-05', 'E-R1.5-06',
 ]);
-// Decision 0022: R1.5 evidence exists only in PR logs, not retained evidence,
-// and every unmet R1 item is listed against the families it covers.
+// Decision 0022 amendment 01: R1.5 checks are retained and its review is
+// author-reported only; every unmet R1 item is listed against the families it covers.
 const R15_DEFERRED_EVIDENCE = DEFERRED_R1_EVIDENCE.filter(({ id }) => id.startsWith('E-R1.5-'));
-const isLoggedR15Evidence = (evidence, retention, deferred) => evidence?.status === 'logged-not-retained'
+const isR15EvidenceStatus = (evidence, retention, deferred) => evidence?.status === 'checks-retained-review-author-reported'
+  && evidence.basis === 'muxui:decision:0022:amendment:01'
   && evidence.retention === retention
   && same(evidence.deferred, deferred);
 
@@ -181,7 +182,7 @@ export function assertReactR15GeneratedContracts({
     || closure.evidenceCapture?.collection !== 'default-off'
     || !same(closure.evidenceCapture?.allowed, ['sanitized repository-relative paths', 'canonical IDs'])
     || !same(closure.evidenceCapture?.prohibited, ['credentials', 'consumer data'])
-    || closure.evidenceCapture?.retention !== 'protected PR check/review logs'
+    || closure.evidenceCapture?.retention !== 'tests/evidence/r1.5 retained check evidence'
     || !same(closure.exceptions, [])
     || !same(closure.advisories, [])
     || closure.publication?.candidateVersion !== '0.1.0-rc.1'
@@ -235,12 +236,12 @@ export function assertReactR15GeneratedContracts({
       'internal-type-support': 327,
     })
     || !same(closureRecord.evidence?.ids, R15_EVIDENCE_IDS)
-    || !isLoggedR15Evidence(closureRecord.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
+    || !isR15EvidenceStatus(closureRecord.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
     || !same(release?.assistiveTechnology?.deferredEvidence, DEFERRED_R1_EVIDENCE)
     // Each deferred family exists in the tranche its evidence ID names.
     || !DEFERRED_R1_EVIDENCE.every(({ id, families = [] }) => families.every((name) => closureRecord.families
       .some((family) => family.export?.name === name && id.startsWith(`E-${family.tranche}-`))))
-    || !isLoggedR15Evidence(release?.historical?.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
+    || !isR15EvidenceStatus(release?.historical?.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
     || 'donor' in closureRecord) failR15('FAMILY_GRAPH_INVALID');
 
   const historicalBindings = descriptor?.historical?.bindings;
@@ -325,7 +326,7 @@ export function assertReactR15GeneratedContracts({
       || familyClosure.lifecycle?.strategy !== binding.strategy
       || !same(familyClosure.evidence?.tranche, r15TrancheEvidence(source.tranche))
       || !same(familyClosure.evidence?.final, R15_EVIDENCE_IDS)
-      || !isLoggedR15Evidence(familyClosure.evidence, closure.evidenceCapture?.retention, deferredEvidenceForFamily(source.exportName))
+      || !isR15EvidenceStatus(familyClosure.evidence, closure.evidenceCapture?.retention, deferredEvidenceForFamily(source.exportName))
       || familyClosure.evidence?.support !== 'unproved; R1.5 React exports only'
       || familyClosure.packed?.binding !== bindingId
       || familyClosure.packed?.export !== source.exportName
