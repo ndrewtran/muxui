@@ -248,6 +248,34 @@ test('SearchField clear control keeps RAC clearing and the MuxUI callback', asyn
   }
 });
 
+test('SearchField Escape clears through onClear and Enter calls onSubmit', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const env = installDom(dom);
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const events = [];
+  try {
+    await act(async () => root.render(React.createElement(SearchField, {
+      label: 'Search',
+      defaultValue: 'MuxUI',
+      onChange: (value) => events.push(['change', value]),
+      onClear: () => events.push(['clear']),
+      onSubmit: (value) => events.push(['submit', value]),
+    })));
+    const input = host.querySelector('.muxui-search-field input');
+    const key = (keyName) => act(async () => input.dispatchEvent(new KeyboardEvent('keydown', { key: keyName, bubbles: true, cancelable: true })));
+    await key('Enter');
+    await key('Escape');
+    assert.equal(input.value, '');
+    await key('Escape');
+    assert.deepEqual(events, [['submit', 'MuxUI'], ['change', ''], ['clear']]);
+  } finally {
+    await act(async () => root.unmount());
+    env();
+    dom.window.close();
+  }
+});
+
 test('TextField keeps standard native input attributes on the input part', () => {
   const markup = renderToString(React.createElement(TextField, {
     label: 'Name',

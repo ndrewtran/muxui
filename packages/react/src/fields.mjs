@@ -566,6 +566,8 @@ export const SearchField = React.forwardRef(function SearchField({
     defaultValue,
     onChange,
     onSubmit,
+    // RAC fires onClear for both Escape and the clear button.
+    onClear,
     name,
     className: classNames('muxui-search-field', className),
     'data-size': resolvedSize,
@@ -582,7 +584,7 @@ export const SearchField = React.forwardRef(function SearchField({
           ref: inputRef,
         }),
       }),
-      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search', onActivate: onClear }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
+      React.createElement(IconButton, { slot: 'clear', type: 'button', className: 'muxui-search-clear', 'aria-label': 'Clear search' }, React.createElement(XIcon, { 'aria-hidden': 'true', focusable: 'false', size: 14 }))),
   }));
 });
 
