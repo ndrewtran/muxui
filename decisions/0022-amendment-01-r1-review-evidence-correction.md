@@ -15,8 +15,11 @@ exist: pull requests #102, #105, #106, #107, and #108 have no hosted reviews
 or review comments, as each retained pull-request observation records. Four
 of those descriptions (#102, #106, #107, and #108) claim a local independent
 frozen-diff review that was never retained, and #105 claims no review. Where
-Decision 0022 states that review logs exist, read this amendment instead.
-Decision 0022's text is not rewritten.
+Decision 0022 states that review logs exist, read this amendment instead,
+including its table cells "Browser and axe matrix, plus review" for
+`E-R1.3-04` and "Package tests, release preparation, Chrome 151 interaction
+and axe matrix, independent review" for `E-R1.4-04`: neither review was
+hosted or retained. Decision 0022's text is not rewritten.
 
 ## Decision
 
@@ -39,7 +42,17 @@ and scope, renderer behaviour, catalog and generation, proof, and release
 integrity. Every lane reported findings, including high-severity defects. A
 `findings` verdict is not a pass. The review condition for R1.2 through R1.4
 is met only when every retained finding records its resolution: a merged fix
-commit from the separate fixes pull request, or an explicit accepted reason.
+commit from the separate fixes pull request (#204), or an explicit reason
+accepted by Andrew, the decision owner. Only the decision owner may accept a
+finding unfixed, and each accepted finding records who accepted it.
+
+The two author-reported reviews the retroactive reviews could check, #106 and
+#107 ("no actionable findings"), were contradicted: the R1.3 and R1.4 lanes
+found 38 findings, 8 of them high, across those families. "Author-reported,
+not proof" therefore carries evidence, and R1.1 and R1.5 are accepted on
+claims of the same form. That acceptance of an unretained author claim is
+Andrew's explicit exception, for R1.1 and R1.5 only, to the rule that a
+transient log cannot satisfy an exit.
 
 R1.5's generated evidence status moves from `logged-not-retained` to
 `checks-retained-review-author-reported`, with this amendment as its basis.
@@ -47,16 +60,42 @@ Its review is never described as retained.
 
 ## Superseded evidence
 
-Pull request #202's `E-R1.2-02` record (outcome `pass`) cites two tests that
-do not prove its claim: "R1.2 form controls support controlled callbacks,
-keyboard-compatible input, and submit/reset" never renders a controlled
-value, and "R1.2 CheckboxGroup owns option names for required FormData
-submission" checks only an attribute while `required` was not enforced. The
-retained R1.2 review (findings H2 and M7) and pull request #204's replacement
-tests, "R1.2 form controls follow controlled values and submit/reset through
-FormData" and "R1.2 CheckboxGroup owns option names and enforces required
-FormData submission", supersede that record for those parts. #202's record
-is not edited.
+Any pull request #202 record with outcome `pass` that a retained review
+finding contradicts is superseded for the contradicted part by that finding
+and the fix that resolved it. #202's records are not edited. The main ones:
+
+- `E-R1.2-02` cites two tests that do not prove its claim: "R1.2 form
+  controls support controlled callbacks, keyboard-compatible input, and
+  submit/reset" never renders a controlled value, and "R1.2 CheckboxGroup
+  owns option names for required FormData submission" checks only an
+  attribute while `required` was not enforced. Superseded by R1.2 findings H2
+  and M7 and #204's "R1.2 form controls follow controlled values and
+  submit/reset through FormData" and "R1.2 CheckboxGroup owns option names
+  and enforces required FormData submission".
+- `E-R1.3-03` (selection, form, and composition behavior). Superseded by R1.3
+  collections findings H1, H2, and H3 and pickers findings F2 and F3, and
+  #204's "R1.3 GridList, Tree, and Table select on press and Enter while
+  nothing is selected", "R1.3 TokenField keeps typed text beside tokens and
+  reports only token changes", "R1.3 ComboBox selects, filters, submits, and
+  keeps disabled and read-only items inert", and "R1.3 named RadioGroup and
+  Slider submit their values and restore defaults on reset".
+- `E-R1.4-02` (overlay, focus, and dismissal behavior). Superseded by R1.4
+  findings H1, M1, M2, and M6, and #204's "PreviewTrigger leaves focus in
+  place when its preview opens and lets Tab move in", "nonmodal Popover
+  dismisses on outside press and trigger Escape only when dismissable",
+  "Popover dismissable false rejects hidden dismiss buttons and trigger
+  toggles", and "Dialog dismissable false still closes through explicit close
+  actions".
+- `E-R1.4-03` (temporal, announcement, and concurrency behavior). Superseded
+  by R1.4 findings H2, H3, and L4, and #204's "keyboard Toast dismissal moves
+  focus to the next toast, then back to the page", "declarative Toast updates
+  in place across parent renders without re-enqueueing", and "Toast rejects
+  maxVisible below one and durations setTimeout cannot honor". The behavior
+  its cited test "ToastProvider normalizes zero maxVisible so toasts still
+  auto-dismiss" proved was reversed: `maxVisible` below one now throws.
+
+The replacement tests ran in #204's CI. They are not themselves retained
+evidence.
 
 ## Unchanged
 
@@ -70,12 +109,18 @@ support, and every existing accessibility check stays required.
 
 ## Authority effect
 
-This corrects how an existing exit condition is evidenced. It adds no Scope
-ID, changes no commitment, release boundary, package, platform, support
-claim, or non-goal, and makes no milestone complete that its exit does not
-already allow. Product Scope records it as the `13.1.1` patch clarification;
-the Roadmap's R1 exit entry and Product Scope's release-acceptance bullet are
-reworded to match.
+This materially changes what satisfies a committed release-acceptance
+condition, because the R1.1 and R1.5 reviews now count as author-reported,
+which is not proof. Product Scope therefore records it under the `14.0.0`
+major version, following 13.0.0's treatment of Decision 0022's exit-rule
+amendment. It adds no Scope ID and changes no package, platform, support
+claim, or non-goal. The Roadmap's R1 exit entry and Product Scope's
+release-acceptance bullet are reworded to match.
+
+Andrew accepted two known limitations for rc.1, both tracked to `S1.0`: R1.2
+finding L5 (the Autocomplete dismiss fix's blur check is proven only in
+Chromium) and R1.4 finding M7 (focus falls to body when the element that
+opened a Dialog unmounts while it is open).
 
 This amendment does not publish, change a dist-tag, authorize the final
 R1-exit merge, or claim that any check or review passed.

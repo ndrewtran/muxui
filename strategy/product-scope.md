@@ -1,5 +1,5 @@
 ---
-scopeVersion: 13.1.1
+scopeVersion: 14.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -103,10 +103,12 @@ delivered in batches through the private, never published
 `@muxui/figma` adapter. Import and round-trip keep their G3.5
 conditions.
 
-Product Scope `13.1.1` applies Decision 0022 amendment 01 as a patch
-clarification: the R1 pull requests have no hosted review logs, so the
-release-acceptance review evidence is the retained retroactive review of
-R1.2 through R1.4 and author-reported review for R1.1 and R1.5.
+Product Scope `14.0.0` applies Decision 0022 amendment 01: the R1 pull
+requests have no hosted review logs, so the release-acceptance review
+evidence is the retained retroactive review of R1.2 through R1.4 and, by
+Andrew's accepted exception, author-reported review for R1.1 and R1.5, which
+is not proof. Changing what satisfies a committed release-acceptance
+condition is major.
 
 ## Scope vocabulary
 
@@ -921,7 +923,9 @@ accessibility, package, compatibility, integrity, or generation failures.
   2026-11-23, because a transient log cannot satisfy an exit (Decision 0022);
   their review evidence is the retained retroactive review of R1.2 through
   R1.4, with every finding resolved, and author-reported review for R1.1 and
-  R1.5, which is not proof (Decision 0022 amendment 01);
+  R1.5, which is not proof; accepting that unretained author claim for R1.1
+  and R1.5 is Andrew's explicit exception to the transient-log rule for those
+  two milestones (Decision 0022 amendment 01);
 - the compatibility/evidence profile states the exact tested environment;
 - generator, privacy, provenance, exception, advisory, performance-baseline,
   and change-intent requirements pass; and
@@ -1382,7 +1386,7 @@ removing the pilot page, later batches' writes, and any other Figma file need
 his separate, explicit direction. Rollback deletes the package; any Figma
 Components page is disposable.
 
-## Product Scope 13.1.1: R1 review evidence correction
+## Product Scope 14.0.0: R1 review evidence correction
 
 [Decision 0022 amendment 01](../decisions/0022-amendment-01-r1-review-evidence-correction.md)
 corrects the 13.0.0 statement that R1.1 through R1.5 evidence exists in CI
@@ -1393,14 +1397,21 @@ none. The release-acceptance review evidence is therefore the retained
 retroactive review of the current R1.2, R1.3, and R1.4 code under
 `tests/evidence/r1-retro-review`, with every finding resolved by a merged fix
 or an accepted reason, and author-reported review for R1.1 and R1.5, which
-Andrew accepted for the rc boundary and which is not proof. The generated
+Andrew accepted for the rc boundary and which is not proof. Accepting that
+unretained author claim is Andrew's explicit exception, for R1.1 and R1.5
+only, to the rule that a transient log cannot satisfy an exit. The generated
 records mark R1.5 evidence `checks-retained-review-author-reported`.
 
-This patch changes how an existing condition is evidenced. It adds, removes,
-or transitions no Scope ID and changes no commitment, release boundary,
-platform, package, public surface, support claim, or non-goal. Every `S1.0`
-deferral recorded under 13.0.0 stays deferred, and rc.1 still claims no
-assistive-technology support.
+This materially changes what satisfies a committed release-acceptance
+condition: the R1.1 and R1.5 reviews now count as author-reported, which is
+not proof. As with 13.0.0's amendment of the R1.1 through R1.5 exit rules,
+the effect is major. No Scope ID is added, removed, or transitioned, and no
+package, platform, public surface, support claim, or non-goal changes. Every
+`S1.0` deferral recorded under 13.0.0 stays deferred, and rc.1 still claims
+no assistive-technology support.
 
-Tracker migration: the fixes for the review findings land in a separate pull
-request. This change creates no tracker items.
+Tracker migration: the fixes for the review findings landed in pull request
+#204. Two known limitations Andrew accepted for rc.1, R1.2 finding L5
+(Autocomplete dismiss proven only in Chromium) and R1.4 finding M7 (focus
+falls to body when a Dialog's opener unmounts), are `S1.0` follow-ups. This
+change creates no tracker items.
