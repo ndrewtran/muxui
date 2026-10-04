@@ -478,12 +478,12 @@ function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) 
   };
 }
 
+// Disabling a timed overlay only suppresses the overlay; the consumer's
+// trigger keeps working, so it is never marked disabled.
 function overlayTrigger(trigger, { disabled, className, markPending, clearPending }) {
   if (!React.isValidElement(trigger)) return trigger;
   return React.cloneElement(trigger, {
     className: classNames(trigger.props.className, className),
-    'aria-disabled': disabled ? 'true' : trigger.props['aria-disabled'],
-    'data-disabled': disabled ? 'true' : trigger.props['data-disabled'],
     onPointerEnter: composeEventHandlers(trigger.props.onPointerEnter, disabled ? undefined : markPending),
     onPointerDown: composeEventHandlers(trigger.props.onPointerDown, disabled ? undefined : markPending),
     onMouseEnter: composeEventHandlers(trigger.props.onMouseEnter, disabled ? undefined : markPending),

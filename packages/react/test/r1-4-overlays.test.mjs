@@ -429,8 +429,8 @@ test('timed overlays mask and cancel disabled interactions without disabling tri
     const disabledTrigger = document.querySelector('#preview-trigger');
     assert.equal(document.activeElement, disabledTrigger);
     assert.equal(disabledTrigger.disabled, false);
-    assert.equal(disabledTrigger.getAttribute('aria-disabled'), 'true');
-    assert.equal(disabledTrigger.getAttribute('data-disabled'), 'true');
+    assert.equal(disabledTrigger.hasAttribute('aria-disabled'), false, 'the working trigger is not announced as disabled');
+    assert.equal(disabledTrigger.hasAttribute('data-disabled'), false);
     act(() => disabledTrigger.focus());
     assert.equal(document.activeElement, disabledTrigger);
 
@@ -472,7 +472,8 @@ test('timed overlays mask and cancel disabled interactions without disabling tri
     assert.equal(document.activeElement, tooltipTrigger);
     await act(async () => root.render(tooltip(true)));
     assert.equal(document.activeElement, document.querySelector('#tooltip-trigger'));
-    assert.equal(document.querySelector('#tooltip-trigger').getAttribute('aria-disabled'), 'true');
+    assert.equal(document.querySelector('#tooltip-trigger').hasAttribute('aria-disabled'), false);
+    assert.equal(document.querySelector('#tooltip-trigger').hasAttribute('data-disabled'), false);
     assert.equal(document.querySelector('#tooltip-trigger').disabled, false);
     assert.deepEqual(tooltipChanges, [true, false]);
   } finally {

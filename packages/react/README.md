@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:22194b43178fe85f771677d78dd669bd82a6fe187251706a61bb84052db0d5ca -->
+<!-- @generated-content-sha256: sha256:94080e428bbd8c9debffb69472ce5e2e464da633c6dd7e2c474150e62609669b -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -267,6 +267,7 @@ Public parts: `trigger`, `root`, `content`.
 - Validate finite offset and crossOffset, boolean shouldFlip, and nonnegative finite containerPadding while retaining existing geometry defaults.
 - Optionally position relative to an existing DOM element through anchorRef while keeping the required trigger as the hover, focus, and descriptive relationship owner.
 - Preserve muxui-tooltip and data-placement, data-entering, and data-exiting selectors for consumer styling.
+- disabled suppresses opening and closes an open overlay without adding aria-disabled or data-disabled to the trigger, which stays operable.
 
 Public parts: `trigger`, `tooltip`.
 
