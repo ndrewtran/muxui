@@ -1665,12 +1665,132 @@ test('records pruned with a removed devDependency route to the importer that dro
   assert.deepEqual(result.storyRuns, []);
 
   // A record removed without a dropped dependency that reached it is unexplained.
-  const unexplained = lockfileAfter.replace('  scheduler@0.27.0: {}\n', '').replace('      scheduler: 0.27.0\n', '');
-  assert.throws(() => changedLockfileImporters(lockfileBefore, unexplained), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING/u);
+  const orphaned = lockfileBefore.replace('  scheduler@0.27.0: {}\n', '  scheduler@0.27.0: {}\n\n  orphan@1.0.0: {}\n');
+  assert.throws(() => changedLockfileImporters(orphaned, lockfileAfter), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: .*orphan@1\.0\.0/u);
   // A removed record something still depends on is unexplained too.
   const dangling = nativeLockfile(false).replace('  react@19.2.8:\n    dependencies:\n      scheduler: 0.27.0\n',
     '  react@19.2.8:\n    dependencies:\n      react-is: 19.2.8\n      scheduler: 0.27.0\n');
   assert.throws(() => changedLockfileImporters(lockfileBefore, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING/u);
+});
+
+// Trimmed from the pnpm-lock.yaml diff of the @internationalized/date
+// 3.12.3 to 3.12.4 pin: React reaches the date package directly and through
+// react-aria; React Native shares only react and scheduler with it.
+function consumerLockfile(date = '3.12.3') {
+  return [
+    "lockfileVersion: '9.0'",
+    '',
+    'settings:',
+    '  autoInstallPeers: true',
+    '',
+    'importers:',
+    '',
+    '  packages/react:',
+    '    dependencies:',
+    "      '@internationalized/date':",
+    `        specifier: ${date}`,
+    `        version: ${date}`,
+    '      react-aria:',
+    '        specifier: 3.51.0',
+    '        version: 3.51.0(react@19.2.8)',
+    '      string-width-cjs:',
+    '        specifier: npm:string-width@4.2.3',
+    '        version: string-width@4.2.3',
+    '    devDependencies:',
+    "      '@muxui/catalog':",
+    '        specifier: workspace:*',
+    '        version: link:../catalog',
+    '',
+    '  packages/react-native:',
+    '    devDependencies:',
+    '      react:',
+    '        specifier: 19.2.8',
+    '        version: 19.2.8',
+    '',
+    'packages:',
+    '',
+    `  '@internationalized/date@${date}':`,
+    `    resolution: {integrity: sha512-date-${date}}`,
+    '',
+    "  '@swc/helpers@0.5.23':",
+    '    resolution: {integrity: sha512-helpers}',
+    '',
+    '  react-aria@3.51.0:',
+    '    resolution: {integrity: sha512-aria}',
+    '',
+    '  react@19.2.8:',
+    '    resolution: {integrity: sha512-react}',
+    '',
+    '  scheduler@0.27.0:',
+    '    resolution: {integrity: sha512-scheduler}',
+    '',
+    '  string-width@4.2.3:',
+    '    resolution: {integrity: sha512-width}',
+    '',
+    'snapshots:',
+    '',
+    `  '@internationalized/date@${date}':`,
+    '    dependencies:',
+    "      '@swc/helpers': 0.5.23",
+    '',
+    "  '@swc/helpers@0.5.23': {}",
+    '',
+    '  react-aria@3.51.0(react@19.2.8):',
+    '    dependencies:',
+    `      '@internationalized/date': ${date}`,
+    '      react: 19.2.8',
+    '',
+    '  react@19.2.8:',
+    '    dependencies:',
+    '      scheduler: 0.27.0',
+    '',
+    '  scheduler@0.27.0: {}',
+    '',
+    '  string-width@4.2.3: {}',
+    '',
+    '  orphan@1.0.0: {}',
+    '',
+  ].join('\n');
+}
+
+test('changed lockfile resolutions route to every importer that reaches them', () => {
+  const base = consumerLockfile();
+  // A transitive snapshot only React reaches plans only React.
+  const aria = base.replace("      '@internationalized/date': 3.12.3\n      react: 19.2.8\n", "      '@internationalized/date': 3.12.3\n      '@swc/helpers': 0.5.23\n      react: 19.2.8\n");
+  assert.notEqual(aria, base);
+  assert.deepEqual(changedLockfileImporters(base, aria), ['packages/react']);
+  // A snapshot or package record shared through react plans both importers.
+  const scheduler = base.replace('  scheduler@0.27.0: {}', "  scheduler@0.27.0:\n    dependencies:\n      '@swc/helpers': 0.5.23");
+  assert.deepEqual(changedLockfileImporters(base, scheduler), ['packages/react', 'packages/react-native']);
+  const integrity = base.replace('sha512-scheduler', 'sha512-scheduler-repacked');
+  assert.deepEqual(changedLockfileImporters(base, integrity), ['packages/react', 'packages/react-native']);
+});
+
+test('changed lockfile records no importer reaches fail closed with their names', () => {
+  const base = consumerLockfile();
+  const orphan = base.replace('  orphan@1.0.0: {}', '  orphan@1.0.0:\n    optional: true');
+  assert.throws(() => changedLockfileImporters(base, orphan), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: changed or removed lockfile records reach no workspace importer: orphan@1\.0\.0;/u);
+  // A dependency without a snapshot record leaves the graph unresolvable.
+  const dangling = base.replace('      scheduler: 0.27.0\n', '      scheduler: 0.27.0\n      missing: 1.0.0\n');
+  assert.throws(() => changedLockfileImporters(base, dangling), /MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer packages\/(react|react-native) reaches missing@1\.0\.0/u);
+});
+
+test('the @internationalized/date pin plans like a React dependency change', async () => {
+  const base = consumerLockfile();
+  const pinned = consumerLockfile('3.12.4');
+  assert.deepEqual(changedLockfileImporters(base, pinned), ['packages/react']);
+  const reactPackageBefore = await readFile(resolve(repositoryRoot, 'packages/react/package.json'), 'utf8');
+  const reactPackageAfter = reactPackageBefore.replace('"@internationalized/date": "3.12.3"', '"@internationalized/date": "3.12.4"');
+  assert.notEqual(reactPackageAfter, reactPackageBefore);
+  const manifest = { packages: workspacePackages, reactPackageBefore, reactPackageAfter };
+  const result = await plan(['packages/react/package.json', 'pnpm-lock.yaml'], { ...manifest, lockfileBefore: base, lockfileAfter: pinned });
+  const expected = await plan(['packages/react/package.json'], manifest);
+  assert.equal(result.full, false);
+  assert.equal(result.reactPackageFull, true);
+  assert.deepEqual(
+    executionGroups(result, { packages: workspacePackages, environment: {}, pageIndex }),
+    executionGroups(expected, { packages: workspacePackages, environment: {}, pageIndex }),
+  );
 });
 
 test('workspace-wide inputs skip lockfile importer mapping for override-only settings changes', () => {
