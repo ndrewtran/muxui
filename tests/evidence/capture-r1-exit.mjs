@@ -75,6 +75,7 @@ export const sanitizationRules = [
   'a credential-named input or env line becomes <redacted credential input>',
   'workflow script lines echoed in a step header are omitted; the script is the workflow file at the run head revision',
   'the output label "visible to this token", with its colon, becomes "visible to this npm credential" so the disclosure check does not read it as a credential value',
+  'npm one-time-password URLs (https://www.npmjs.com/auth/cli/<id>) and authId=<id> parameters become <npm-auth-url>',
 ];
 export function sanitize(line) {
   return line
@@ -85,7 +86,9 @@ export function sanitize(line) {
     .replace(/\/home\/runner\b/gu, '<runner-home>')
     .replace(/(^|[\s'"(=])\/tmp\//gu, '$1<tmp>/')
     .replace(/^(\S+\s+)[A-Za-z_-]*(?:token|authorization|api[-_]?key)\s*[:=].*$/iu, '$1<redacted credential input>')
-    .replaceAll('visible to this token:', 'visible to this npm credential:');
+    .replaceAll('visible to this token:', 'visible to this npm credential:')
+    .replace(/https:\/\/www\.npmjs\.com\/auth\/cli\/\S+/gu, '<npm-auth-url>')
+    .replace(/authId=\S+/gu, '<npm-auth-url>');
 }
 // Step-header script lines are the workflow's own `run:` text, echoed in cyan.
 const scriptLine = (line) => content(line).startsWith('\u001b[36;1m');
@@ -124,20 +127,25 @@ export function sanitizeManifest(value, pointer = '', rewrites = []) {
  * `##[group]Run` line whose script header contains `marker`; `filter` keeps the
  * header plus matching lines only (for long steps).
  */
-export function stepExcerpt(lines, steps) {
+// The [start, end) raw-line range of the step whose script header contains `marker`.
+export function findStep(lines, name, marker) {
   const starts = lines.flatMap((line, index) => (line.includes('##[group]Run ') ? [index] : []));
+  // A step's header runs to its first ##[endgroup], never into the next step.
+  const start = starts.find((index, position) => {
+    const headerEnd = lines.findIndex((line, at) => at > index && line.includes('##[endgroup]'));
+    const limit = Math.min(headerEnd < 0 ? index : headerEnd, (starts[position + 1] ?? lines.length) - 1);
+    return lines.slice(index, limit + 1).some((line) => line.includes(marker));
+  });
+  if (start === undefined) fail('R1_EXIT_EXCERPT_MISSING', `step "${name}"`);
+  const next = lines.findIndex((line, index) => index > start && (line.includes('##[group]Run ') || line.includes('Post job cleanup.')));
+  return [start, next < 0 ? lines.length : next];
+}
+
+export function stepExcerpt(lines, steps) {
   const output = [];
   const ranges = [];
   for (const { name, marker, filter } of steps) {
-    // A step's header runs to its first ##[endgroup], never into the next step.
-    const start = starts.find((index, position) => {
-      const headerEnd = lines.findIndex((line, at) => at > index && line.includes('##[endgroup]'));
-      const limit = Math.min(headerEnd < 0 ? index : headerEnd, (starts[position + 1] ?? lines.length) - 1);
-      return lines.slice(index, limit + 1).some((line) => line.includes(marker));
-    });
-    if (start === undefined) fail('R1_EXIT_EXCERPT_MISSING', `step "${name}"`);
-    const next = lines.findIndex((line, index) => index > start && (line.includes('##[group]Run ') || line.includes('Post job cleanup.')));
-    const end = next < 0 ? lines.length : next;
+    const [start, end] = findStep(lines, name, marker);
     const headerEnd = lines.findIndex((line, index) => index > start && line.includes('##[endgroup]'));
     const kept = lines.slice(start, end)
       .filter((line, offset) => !scriptLine(line) && (!filter || start + offset <= headerEnd || filter.test(content(line))));
@@ -287,12 +295,42 @@ export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, creden
   };
 }
 
+// Failing-test names, assertion messages, diff lines, and errors from a failed prepare step.
+const failureLine = /✖|AssertionError|check: {3}[-+] {3}'|##\[error\]|ELIFECYCLE/u;
+
+/**
+ * Binds an earlier, failed attempt of the dry run (same run, same commit), so the
+ * retry is disclosed: its conclusion, failing steps, failing tests, and log digest.
+ */
+export function bindPriorDryRunAttempt({ dryRun, attempt, jobs, prepareLog }) {
+  if (attempt.id !== dryRun.execution.runId || attempt.run_attempt >= dryRun.execution.runAttempt || attempt.head_sha !== dryRun.execution.headRevision) {
+    fail('R1_EXIT_PRIOR_ATTEMPT_INVALID', `attempt ${attempt.run_attempt} is not an earlier attempt of run ${dryRun.execution.runId} at ${dryRun.execution.headRevision}`);
+  }
+  if (attempt.conclusion === 'success') fail('R1_EXIT_PRIOR_ATTEMPT_INVALID', `attempt ${attempt.run_attempt} succeeded`);
+  const prepare = jobs.find((job) => job.name === 'prepare');
+  const lines = prepareLog.split('\n');
+  const failedSteps = jobs.flatMap((job) => (job.steps ?? []).filter((step) => step.conclusion === 'failure').map((step) => ({ job: job.name, step: step.name, completedAt: step.completed_at })));
+  const failingTests = [...new Set(lines.map((line) => content(line).match(/✖ (?!failing tests:)(.+?) \(\d[\d.]*ms\)$/u)?.[1]).filter(Boolean))];
+  const prepareFailed = failedSteps.some(({ step }) => step === 'Prepare release candidate');
+  return {
+    execution: { repository, workflowPath: attempt.path, runId: attempt.id, runAttempt: attempt.run_attempt, headRevision: attempt.head_sha, startedAt: attempt.run_started_at, conclusion: attempt.conclusion },
+    prepareJob: prepare ? { jobId: prepare.id, conclusion: prepare.conclusion } : null,
+    failedSteps,
+    failingTests: failingTests.map((name) => sanitize(name)),
+    rawLog: prepareLog ? rawLog(prepareLog) : { status: 'unavailable' },
+    excerpt: prepareLog && prepareFailed ? stepExcerpt(lines, [{ name: 'Prepare release candidate', marker: 'pnpm release:prepare', filter: failureLine }]) : null,
+  };
+}
+
 // The mode=verify-credentials run: read-only npm identity and first-publish state.
 export function bindCredentials({ run, jobs, log }) {
   if (run.path !== workflowPath || run.conclusion !== 'success' || run.head_branch !== 'main') fail('R1_EXIT_CREDENTIALS_RUN_INVALID', `run ${run.id}`);
   const job = successfulJob(jobs, 'verify-credentials', run.id);
   const lines = log.split('\n').map(content);
-  const after = (label) => lines.slice(lines.indexOf(label) + 1).find((line) => !line.startsWith('npm warn')) ?? null;
+  const after = (label) => {
+    const at = lines.indexOf(label);
+    return at < 0 ? null : lines.slice(at + 1).find((line) => !line.startsWith('npm warn')) ?? null;
+  };
   if (!lines.includes('npm whoami:')) fail('R1_EXIT_CREDENTIALS_RUN_INVALID', `run ${run.id} printed no npm identity`);
   const excerpt = stepExcerpt(log.split('\n'), [{ name: 'Verify npm credentials (read-only)', marker: 'npm whoami' }]);
   return {
@@ -380,7 +418,7 @@ export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approva
   const attempt = bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal });
   const prepareLines = prepareLog.split('\n');
   if (envValue(prepareLines, 'MODE') !== 'publish') fail('R1_EXIT_RUN_INVALID', `run ${run.id} is not mode=publish`);
-  executedRevision(prepareLines, attempt.execution.headRevision, `run ${run.id} prepare`);
+  const executed = executedRevision(prepareLines, attempt.execution.headRevision, `run ${run.id} prepare`);
   const { integrity } = dryRun.candidate.tarball;
   const { version } = dryRun.candidate;
   const candidate = valueAfter(prepareLines, /^Candidate \S+ (sha512-\S+)$/u);
@@ -391,30 +429,33 @@ export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approva
     fail('R1_EXIT_TUPLE_MISMATCH', `run ${run.id} did not publish ${packageName}@${version}`);
   }
   const readBackStep = stepOf(publishJob, 'Read back registry state');
+  // Only the read-back step's own lines count.
+  const [readStart, readEnd] = findStep(lines, 'Read back registry state', 'read_back()');
+  const readLines = lines.slice(readStart, readEnd);
   let workflowReadBack;
   if (readBackStep?.conclusion === 'success') {
-    const attestations = jsonAfter(lines, 'dist.attestations: ');
+    const attestations = jsonAfter(readLines, 'dist.attestations: ');
     workflowReadBack = {
       status: 'passed',
       completedAt: readBackStep.completed_at,
-      integrity: valueAfter(lines, /^dist\.integrity: (\S+)$/u),
+      integrity: valueAfter(readLines, /^dist\.integrity: (\S+)$/u),
       provenancePredicateType: attestations?.provenance?.predicateType ?? null,
-      distTags: jsonAfter(lines, 'dist-tags: ') ?? null,
+      distTags: jsonAfter(readLines, 'dist-tags: ') ?? null,
     };
   } else if (readBackStep?.conclusion === 'failure'
-    && lines.some((line) => content(line) === 'dist.integrity: missing')
-    && lines.some((line) => content(line) === `##[error]Registry has nothing; expected ${integrity}.`)) {
+    && readLines.some((line) => content(line) === 'dist.integrity: missing')
+    && readLines.some((line) => content(line) === `##[error]Registry has nothing; expected ${integrity}.`)) {
     workflowReadBack = {
       status: 'failed-registry-propagation',
       completedAt: readBackStep.completed_at,
       error: `Registry has nothing; expected ${integrity}.`,
-      retries: lines.filter((line) => /^Waiting for npm view /u.test(content(line))).length,
+      retries: readLines.filter((line) => /^Waiting for npm view /u.test(content(line))).length,
     };
   } else {
     fail('R1_EXIT_RUN_INVALID', `run ${run.id} read-back neither passed nor failed on registry propagation`);
   }
   return {
-    execution: attempt.execution,
+    execution: { ...attempt.execution, executedRevision: executed, executedTree: dryRun.execution.executedTree },
     environment: environmentFrom(lines),
     approvals: approvalFacts(approvals, approvalMethod),
     rawLogs: { prepare: rawLog(prepareLog), publish: rawLog(publishLog) },
@@ -422,7 +463,7 @@ export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approva
     observed: {
       ...attempt.observed,
       published: `${packageName}@${version}`,
-      publishedAt: stepOf(publishJob, 'Publish to next').completed_at,
+      publishStepCompletedAt: stepOf(publishJob, 'Publish to next').completed_at,
       // An observation of the workflow, not registry proof (see --registry).
       workflowReadBack,
     },
@@ -494,6 +535,10 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
   if (!provenanceType.test(view.attestations?.provenance?.predicateType ?? '')) fail('R1_EXIT_PROVENANCE_MISSING', `${packageName}@${version}`);
   const provenance = bindAttestations(attestations, { dryRun, publishRunId });
   if (view.distTags?.next !== version) fail('R1_EXIT_NEXT_MISMATCH', `next points at ${view.distTags?.next}; the verified rc is ${version}`);
+  // Decision 0023: on a first publish the registry sets latest to the only version.
+  if (view.distTags.latest !== undefined && view.distTags.latest !== version) fail('R1_EXIT_LATEST_UNEXPECTED', `latest points at ${view.distTags.latest}; the verified rc is ${version}`);
+  if (canonicalJson(view.versions) !== canonicalJson([version])) fail('R1_EXIT_VERSIONS_UNEXPECTED', `the package has versions ${JSON.stringify(view.versions)}; expected only ${version}`);
+  if (!view.time?.created || !view.time?.[version]) fail('R1_EXIT_VERSIONS_UNEXPECTED', 'the package document has no creation or version time');
   if (consumer.installedVersion !== version || consumer.lockIntegrity !== tarball.integrity) {
     fail('R1_EXIT_CONSUMER_MISMATCH', `the clean consumer installed ${consumer.installedVersion} (${consumer.lockIntegrity}) from next`);
   }
@@ -566,6 +611,8 @@ export function buildRoute(verification, refs) {
     },
     artifact: manifest,
     excerpt: refs.dryRunExcerpt,
+    // Failed earlier attempts of this dry run, disclosed as observations.
+    priorAttempts: (dryRun.priorAttempts ?? []).map((attempt) => ({ ...attempt, excerpt: refs.retained?.[`dryRunAttempt${attempt.execution.runAttempt}`] ?? null })),
   });
   records['E-R1-EXIT-02'] = record(verification, refs, 'E-R1-EXIT-02', {
     evidenceKind: 'retained-npm-registry-provenance-integrity',
@@ -600,6 +647,7 @@ export function buildRoute(verification, refs) {
         attestations: observed.view.attestations,
         provenance: observed.provenance,
         distTags: observed.view.distTags,
+        registryPublishedAt: observed.view.time[dryRun.candidate.version],
         artifact: refs.registry,
       }
       : { status: 'pending-registry-read-back' },
@@ -626,7 +674,11 @@ export function buildRoute(verification, refs) {
         next: { observed: next, verifiedRc: dryRun.candidate.version },
         latest: {
           observed: latest ?? null,
+          // Verified by bindRegistry: latest is absent or the candidate, and the
+          // package's only version is the candidate, created by this publish.
           setBy: 'the registry on first publish (Decision 0023)',
+          basis: { versions: observed.view.versions, packageCreated: observed.view.time.created, versionPublished: observed.view.time[dryRun.candidate.version] },
+          // No step in npm-publish.yml sets, claims, or promotes a dist-tag.
           claimed: false,
           promoted: false,
         },
@@ -647,7 +699,8 @@ Roadmap "R1 exit — React prerelease publication" requires \`E-R1-EXIT-01\` to
 from the \`npm-publish.yml\` dry-run and publish runs and from read-only registry
 observations, captured by \`node ${captureTool}\`.
 
-- \`E-R1-EXIT-01\`: the dry run's exact tarball, export, and install tuple.
+- \`E-R1-EXIT-01\`: the dry run's exact tarball, export, and install tuple,
+  with any failed earlier attempt of the same run disclosed.
 - \`E-R1-EXIT-02\`: the release manifest and \`verify-credentials\` run before
   publish; any earlier failed publish attempt; the publish run's preflight and
   publish, with its own read-back recorded as an observation only; and the
@@ -655,8 +708,9 @@ observations, captured by \`node ${captureTool}\`.
   the source commit and publish run, dist-tags). It stays \`partial\` until both
   the publish run and the registry read-back are captured.
 - \`E-R1-EXIT-03\`: a clean consumer installed from the registry's \`next\`.
-- \`E-R1-EXIT-04\`: \`next\` and the observed \`latest\`, with the release
-  manifest's rollback prepared, not exercised.
+- \`E-R1-EXIT-04\`: \`next\` and the observed \`latest\`, verified to be absent or
+  the candidate while the candidate is the package's only version, with the
+  release manifest's rollback prepared, not exercised.
 
 \`artifacts/\` holds the sanitized release manifest and the registry observation;
 \`validation/\` holds sanitized job-log excerpts; \`verification.json\` binds them
@@ -683,6 +737,8 @@ function createGitHub() {
     approvals: (id) => json(`repos/${repository}/actions/runs/${id}/approvals`),
     log: (jobId) => gh('api', '--allow-escape-sequences', `repos/${repository}/actions/jobs/${jobId}/logs`),
     tree: (sha) => json(`repos/${repository}/git/commits/${sha}`).tree.sha,
+    attempt: (id, number) => json(`repos/${repository}/actions/runs/${id}/attempts/${number}`),
+    attemptJobs: (id, number) => json(`repos/${repository}/actions/runs/${id}/attempts/${number}/jobs?per_page=100`).jobs,
     download(runId, directory) {
       const result = spawnSync('gh', ['run', 'download', String(runId), '--repo', repository, '--name', 'npm-candidate', '--dir', directory], { encoding: 'utf8' });
       return result.status === 0;
@@ -739,11 +795,19 @@ async function observeView(dryRun, waitSeconds) {
     try {
       const view = withIsolatedNpm(({ npm }) => {
         const dist = JSON.parse(npm('npm view dist', ['view', `${packageName}@${dryRun.candidate.version}`, 'dist.integrity', 'dist.shasum', 'dist.attestations', '--json']));
+        // npm may wrap the package document in a one-element array.
+        const documents = [].concat(JSON.parse(npm('npm view package', ['view', packageName, 'versions', 'time', 'dist-tags', '--json'])));
+        if (documents.length !== 1) fail('R1_EXIT_VERSIONS_UNEXPECTED', `npm view returned ${documents.length} package documents`);
+        const [packument] = documents;
+        const { version } = dryRun.candidate;
         return {
           integrity: dist['dist.integrity'],
           shasum: dist['dist.shasum'],
           attestations: dist['dist.attestations'],
-          distTags: JSON.parse(npm('npm view dist-tags', ['view', packageName, 'dist-tags', '--json'])),
+          distTags: packument['dist-tags'],
+          versions: [].concat(packument.versions ?? []),
+          // created and the version's own time; `modified` changes and is not kept.
+          time: { created: packument.time?.created, [version]: packument.time?.[version] },
         };
       });
       const response = await fetch(view.attestations?.url ?? 'about:blank');
@@ -914,6 +978,16 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
           proofTool: verification.proofTool,
           credentials: { ...credentials, excerpt: credentials.excerpt.ranges },
         };
+        // Earlier attempts of the same dry run are disclosed, not hidden by the retry.
+        drop(...Object.keys(verification.retained).filter((key) => key.startsWith('dryRunAttempt')));
+        verification.phases.dryRun.priorAttempts = [];
+        for (let number = 1; number < bound.execution.runAttempt; number += 1) {
+          const attemptJobs = github.attemptJobs(runId, number);
+          const attemptPrepare = attemptJobs.find((job) => job.name === 'prepare');
+          const prior = bindPriorDryRunAttempt({ dryRun: bound, attempt: github.attempt(runId, number), jobs: attemptJobs, prepareLog: attemptPrepare ? github.log(attemptPrepare.id) : '' });
+          if (prior.excerpt) retain(`dryRunAttempt${number}`, `${route}/validation/dry-run-attempt-${number}-prepare-${prior.prepareJob.jobId}.txt`, prior.excerpt.text);
+          verification.phases.dryRun.priorAttempts.push({ ...prior, excerpt: prior.excerpt?.ranges ?? null });
+        }
         verification.sourceRevision = bound.execution.headRevision;
         verification.sourceTree = bound.execution.executedTree;
         // A new dry run invalidates later phases bound to the previous candidate.
@@ -953,6 +1027,8 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
       }
     } else {
       const dryRun = capturedDryRun();
+      // The SLSA invocation is bound to the captured publish run.
+      if (!verification.phases.publish && !options.rehearsal) fail('R1_EXIT_PHASE_ORDER', 'capture --publish-run before --registry');
       const { view, attestations } = await observeView(dryRun, options.registryWait);
       const bound = bindRegistry({ dryRun, view, attestations, consumer: observeConsumer(dryRun.manifest), publishRunId: verification.phases.publish?.execution.runId });
       retain('registry', `${route}/artifacts/registry-observation.json`, canonicalJson({
@@ -977,6 +1053,7 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
     publishExcerpts: retained.publishExcerpt ? [retained.publishPrepareExcerpt, retained.publishExcerpt] : [],
     priorPublishExcerpt: retained.priorPublishExcerpt,
     registry: retained.registry,
+    retained,
   };
   const routeView = { ...verification, phases: { ...verification.phases, dryRun: capturedDryRun() } };
   const built = buildRoute(routeView, refs);
