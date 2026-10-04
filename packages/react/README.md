@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:3824db8f44de390139575466efde16e12f9ae5c5679bfd9811c9a3a429de2425 -->
+<!-- @generated-content-sha256: sha256:22194b43178fe85f771677d78dd669bd82a6fe187251706a61bb84052db0d5ca -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -255,6 +255,7 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 - Use modal false for non-blocking content without focus containment, outside-content exclusion, or scroll locking; modal remains true by default.
 - Preserve muxui-popover-positioner and muxui-popover selectors, data-placement and transition states; expose data-modal on the positioner for consumer styling.
 - Changing modal while open retains the existing content, uncontrolled values, and child state; entering modal mode focuses the dialog surface when focus is outside it.
+- When dismissable, a non-modal popover also closes on outside press and on Escape while focus is on the trigger; dismissable false rejects Escape, outside press, the hidden dismiss buttons, and trigger toggles, so only a controlled owner closes it.
 
 Public parts: `trigger`, `root`, `content`.
 

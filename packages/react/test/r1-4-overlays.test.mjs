@@ -360,6 +360,40 @@ test('Popover dismissable false prevents Escape and outside-press dismissal', as
   }
 });
 
+test('Popover dismissable false rejects hidden dismiss buttons and trigger toggles', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const changes = [];
+  const popover = (props) => React.createElement(Popover, {
+    'aria-label': 'Actions',
+    trigger: React.createElement('button', { id: 'popover-trigger' }, 'Open actions'),
+    dismissable: false,
+    onOpenChange: (open) => changes.push(open),
+    ...props,
+  }, 'Popover body');
+  try {
+    await act(async () => root.render(popover({ defaultOpen: true })));
+    const dismissButtons = [...document.body.querySelectorAll('.muxui-popover-positioner button')].filter((button) => button.getAttribute('aria-label') === 'Dismiss');
+    assert.equal(dismissButtons.length, 2, 'RAC renders its visually hidden dismiss buttons');
+    for (const button of dismissButtons) await act(async () => button.click());
+    assert.ok(document.body.querySelector('.muxui-popover'));
+    assert.deepEqual(changes, []);
+
+    await act(async () => root.render(popover({ key: 'non-modal', modal: false })));
+    const trigger = document.querySelector('#popover-trigger');
+    await act(async () => trigger.click());
+    assert.ok(document.body.querySelector('.muxui-popover'));
+    await act(async () => trigger.click());
+    await act(async () => trigger.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })));
+    assert.ok(document.body.querySelector('.muxui-popover'));
+    assert.deepEqual(changes, [true]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.4 overlay geometry accepts only the bounded Mux contract', () => {
   const trigger = React.createElement('button', null, 'Open');
   assert.throws(() => renderToString(React.createElement(Popover, { 'aria-label': 'Actions', trigger, offset: Number.NaN }, 'Body')), TypeError);

@@ -243,6 +243,50 @@ test('nonmodal Popover preserves outside interaction and respects dismissal poli
   });
 });
 
+test('nonmodal Popover dismisses on outside press and trigger Escape only when dismissable', { timeout: 60_000 }, async () => {
+  await withFixture(async (page) => {
+    const popup = page.locator('.muxui-popover-positioner');
+    const triggerFocused = () => page.locator('#trigger').evaluate((node) => document.activeElement === node);
+    await configure(page, { kind: 'popover', placement: 'bottom', modal: false });
+
+    // Focus stays on the trigger, so RAC's own blur and Escape handling never run.
+    await page.locator('#trigger').click();
+    await popup.waitFor();
+    assert.equal(await triggerFocused(), true);
+    await page.mouse.click(700, 600);
+    await popup.waitFor({ state: 'detached' });
+    assert.deepEqual(await page.evaluate(() => window.openChanges), [true, false]);
+
+    await page.locator('#trigger').click();
+    await popup.waitFor();
+    await page.keyboard.press('Escape');
+    await popup.waitFor({ state: 'detached' });
+    assert.equal(await triggerFocused(), true);
+
+    // A trigger press still toggles once rather than closing and reopening.
+    await page.locator('#trigger').click();
+    await popup.waitFor();
+    await page.locator('#trigger').click();
+    await popup.waitFor({ state: 'detached' });
+    assert.deepEqual(await page.evaluate(() => window.openChanges), [true, false, true, false, true, false]);
+
+    // Pressing inside the content keeps it open.
+    await page.locator('#trigger').click();
+    await page.locator('#inside').click();
+    assert.equal(await popup.count(), 1);
+
+    await configure(page, { kind: 'popover', placement: 'bottom', modal: false, dismissable: false });
+    await page.locator('#trigger').click();
+    await popup.waitFor();
+    await page.mouse.click(700, 600);
+    await page.locator('#trigger').focus();
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(100);
+    assert.equal(await popup.count(), 1);
+    assert.deepEqual(await page.evaluate(() => window.openChanges), [true]);
+  });
+});
+
 test('Popover modality changes preserve consumer state and DOM identity while containment changes', { timeout: 60_000 }, async () => {
   await withFixture(async (page) => {
     await configure(page, { kind: 'popover', stateful: true, dismissable: false });

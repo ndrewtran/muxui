@@ -2,6 +2,7 @@ import React from 'react';
 import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { FocusScope } from 'react-aria/FocusScope';
 import { mergeRefs } from 'react-aria/mergeRefs';
+import { useInteractOutside } from 'react-aria/useInteractOutside';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
@@ -14,6 +15,7 @@ import {
   ModalOverlay as AriaModalOverlay,
   OverlayTriggerStateContext as AriaOverlayTriggerStateContext,
   Popover as AriaPopover,
+  PopoverContext as AriaPopoverContext,
   Pressable as AriaPressable,
   PreviewTrigger as AriaPreviewTrigger,
   Text as AriaText,
@@ -313,7 +315,7 @@ export const Dialog = /*#__PURE__*/ (() => {
   return component;
 })();
 
-function PopoverSurface({ modal, children, ...props }) {
+function PopoverSurface({ modal, children, onPointerDown, ...props }) {
   const surfaceRef = React.useRef(null);
   React.useEffect(() => {
     const surface = surfaceRef.current;
@@ -324,14 +326,32 @@ function PopoverSurface({ modal, children, ...props }) {
   // A stable scope releases containment without resetting consumer content.
   // The enclosing RAC Popover remains the focus-restoration owner.
   return React.createElement(FocusScope, { contain: modal },
-    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1 }, children));
+    React.createElement('section', { ...props, ref: surfaceRef, role: 'dialog', tabIndex: -1, onPointerDown }, children));
 }
 
-const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
+const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ children, className, geometry, dismissable, anchorRef, modal = true, onDismissOutside, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, ...props }, ref) {
   const dialogContext = React.useContext(AriaDialogContext);
+  const triggerRef = React.useContext(AriaPopoverContext)?.triggerRef;
+  const positionerRef = React.useRef(null);
+  const setRef = React.useMemo(() => mergeRefs(positionerRef, ref), [ref]);
+  // RAC never dismisses a non-modal popover on outside press. Presses inside
+  // this popover's React tree, including portaled descendants, are not outside;
+  // trigger presses are left to the trigger's own toggle.
+  const pressedInsideRef = React.useRef(false);
+  useInteractOutside({
+    ref: positionerRef,
+    isDisabled: !onDismissOutside,
+    onInteractOutsideStart: () => {
+      pressedInsideRef.current = false;
+    },
+    onInteractOutside: (event) => {
+      if (pressedInsideRef.current || triggerRef?.current?.contains(event.target)) return;
+      onDismissOutside?.();
+    },
+  });
   return React.createElement(PopoverMotion, {
     ...props,
-    ref,
+    ref: setRef,
     triggerRef: anchorRef,
     placement: geometry.placement,
     offset: geometry.offset,
@@ -345,6 +365,9 @@ const PopupContent = /*#__PURE__*/ React.forwardRef(function PopupContent({ chil
     shouldCloseOnInteractOutside: dismissable ? undefined : () => false,
   }, React.createElement(PopoverSurface, {
     modal,
+    onPointerDown: () => {
+      pressedInsideRef.current = true;
+    },
     id: dialogContext?.id,
     'aria-label': ariaLabel,
     'aria-labelledby': ariaLabelledby,
@@ -380,8 +403,18 @@ export const Popover = /*#__PURE__*/ React.forwardRef(function Popover({
     containerPadding: 12,
   }, 'Popover');
   const normalizedModal = normalizeBoolean(modal, true, 'Popover modal');
-  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal }, children);
-  return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-overlay-pop-trigger'), content);
+  const triggerState = useDialogTriggerState({ open, defaultOpen, dismissable, onOpenChange });
+  // Focus stays on the trigger of a non-modal popover, outside RAC's Escape handling.
+  const dismissNonModal = triggerState.isOpen && !normalizedModal && dismissable ? triggerState.close : undefined;
+  const onTriggerKeyDown = (event) => {
+    if (event.key !== 'Escape' || !dismissNonModal) return;
+    event.preventDefault();
+    event.stopPropagation();
+    dismissNonModal();
+  };
+  const dismissibleTrigger = React.cloneElement(trigger, { onKeyDown: composeEventHandlers(trigger.props.onKeyDown, onTriggerKeyDown) });
+  const content = React.createElement(PopupContent, { ...props, ref, geometry, className, dismissable, anchorRef, modal: normalizedModal, onDismissOutside: dismissNonModal }, children);
+  return React.createElement(AriaDialogTrigger, { isOpen: triggerState.isOpen, onOpenChange: triggerState.onOpenChange }, pressableTrigger(dismissibleTrigger, false, 'muxui-overlay-pop-trigger'), content);
 });
 
 function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) {
