@@ -31,6 +31,7 @@ import {
   shardStoryRun,
   storyShardPageBudget,
   validateScopedEntrypoints,
+  workspaceDependentRoutes,
 } from '../src/ci-impact.mjs';
 import {
   affectedReason,
@@ -102,7 +103,7 @@ const pageIndex = [
 const packages = [
   { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
-  { name: '@muxui/react', path: 'packages/react', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
+  { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
   { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
   { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && check' } } },
@@ -709,24 +710,32 @@ test('a failed CI prerequisite stops the run before dependent checks', () => {
 
 test('generation and install commands are marked as CI prerequisites', async () => {
   const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
-  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, false, false]);
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, false, false, false, false, false]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
   const catalog = await plan(['packages/catalog/src/compiler.mjs']);
   const catalogCommands = executionCommands(catalog, { packages });
-  // Catalog changes also run the tooling dense goldens that pin the catalog digest.
+  // Catalog changes also run the tooling dense goldens that pin the catalog
+  // digest, plan docs (a runtime dependent) as if it changed, and run only the
+  // React package check for its devDependency on the catalog.
   assert.deepEqual(catalog.generationPackages, [
-    '@muxui/catalog', '@muxui/schema', '@muxui/tooling', '@muxui/tokens',
+    '@muxui/catalog', '@muxui/react', '@muxui/schema', '@muxui/tooling', '@muxui/tokens',
   ]);
   assert.deepEqual(catalogCommands[0].args, [
     '--recursive', '--sort', '--workspace-concurrency=1', '--if-present',
-    '--filter', '@muxui/catalog', '--filter', '@muxui/schema', '--filter', '@muxui/tooling', '--filter', '@muxui/tokens', 'run', 'generate',
+    '--filter', '@muxui/catalog', '--filter', '@muxui/react', '--filter', '@muxui/schema', '--filter', '@muxui/tooling', '--filter', '@muxui/tokens',
+    'run', 'generate',
   ]);
   assert.deepEqual(catalogCommands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/catalog', 'run', 'check'],
+    ['--filter', '@muxui/docs', 'run', 'check'],
+    ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
+    ['--filter', '@muxui/react', 'run', 'check'],
     ['--filter', '@muxui/tooling', 'run', 'check'],
   ]);
+  assert.equal(catalog.reactPackageFull, false);
+  assert.deepEqual(catalog.storyRuns, []);
 
   const policy = await plan(['.github/workflows/ci.yml']);
   const policyCommands = executionCommands(policy, { packages });
@@ -936,18 +945,26 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
   const result = await plan([collectionsPath, '.github/workflows/ci.yml'], treeRuntimeChange);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'react', 'storybook-component']);
+  // Docs and Scale depend on React at runtime, so they run whole (with their
+  // browser checks) while React and Storybook keep the Tree family scope.
+  assert.deepEqual(groupIds(groups), ['checks', 'browser', 'react', 'storybook-component']);
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
   for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
+    ['--filter', '@muxui/docs', 'run', 'check'],
+    ['--filter', '@muxui/scale', 'run', 'check'],
     ['--filter', '@muxui/react-storybook', 'run', 'generate:check'],
   ]);
-  assert.ok(groups[1].commands.some(({ args }) => args.includes('check:component')));
-  assert.equal(groups[2].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
+  assert.deepEqual(groups[1].commands.slice(1).map(({ args }) => args), [
+    ['--filter', '@muxui/scale', 'run', 'check:browser'],
+    ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
+  ]);
+  assert.ok(groups[2].commands.some(({ args }) => args.includes('check:component')));
+  assert.equal(groups[3].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
   assert.deepEqual(groupMatrix(groups).map(({ id, kind }) => [id, kind]), [
-    ['checks', 'checks'], ['react', 'react'], ['storybook-component', 'storybook'],
+    ['checks', 'checks'], ['browser', 'browser'], ['react', 'react'], ['storybook-component', 'storybook'],
   ]);
 
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
@@ -1626,10 +1643,11 @@ test('a deleted React module still named outside React source routes to each ref
     'test/browser/bento-input-controls.test.mjs',
     'test/command-palette-hook.test.mjs',
   ]);
-  assert.deepEqual(commandPalette.packageChecks, ['@muxui/react']);
+  // The React runtime dependents (Figma, the playground) run whole too.
+  assert.deepEqual(commandPalette.packageChecks, ['@muxui/figma', '@muxui/react', '@muxui/react-playground']);
 
   const buttonFixture = await deleted('packages/react/src/button-fixture.mjs', ['apps/react-playground/src/main.jsx']);
-  assert.deepEqual(buttonFixture.packageChecks, ['@muxui/react', '@muxui/react-playground']);
+  assert.deepEqual(buttonFixture.packageChecks, ['@muxui/figma', '@muxui/react', '@muxui/react-playground']);
 
   // A reference with no owner route fails instead of being dropped.
   await assert.rejects(deleted('packages/react/src/button-fixture.mjs', ['scripts/unowned.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING: scripts\/unowned\.mjs/u);
@@ -2052,4 +2070,82 @@ test('a shared React test helper reruns the test files that reference it', async
     reactTestReferenceSources,
     textSnapshots: { 'packages/react/test/support/unused.mjs': { after: 'export {};' } },
   }), /MUXUI_CI_IMPACT_REACT_TEST_OWNER_MISSING/u);
+});
+
+
+test('a family-scoped React change runs its runtime workspace dependents whole and keeps the family scope', async () => {
+  // Playground, docs, and Scale each declare "@muxui/react": "workspace:*" in dependencies.
+  for (const name of ['@muxui/react-playground', '@muxui/docs', '@muxui/scale']) {
+    assert.equal(workspacePackages.find((item) => item.name === name).manifest.dependencies['@muxui/react'], 'workspace:*', name);
+  }
+  // Tree is moved into fields.mjs here because the fixture has focused Tree tests.
+  const fieldsBefore = `export const NumberField = () => null;\n${treeBefore}`;
+  const fieldsAfter = `export const NumberField = () => null;\n${treeAfter}`;
+  const result = await plan([fieldsPath], {
+    packages: workspacePackages,
+    records: records.map((record) => record.family === 'Tree' ? { ...record, source: fieldsPath } : record),
+    textSnapshots: { [fieldsPath]: { before: fieldsBefore, after: fieldsAfter } },
+    moduleSources: { ...cssModuleSources, [fieldsPath]: { before: fieldsBefore, after: fieldsAfter } },
+  });
+  assert.ok(result.packageChecks.includes('@muxui/react-playground'));
+  assert.equal(result.docs && result.scale, true);
+  assert.equal(result.reactPackageFull, false);
+  assert.deepEqual(result.reactFamilies, ['Tree']);
+  assert.deepEqual(result.storyRuns.map(({ proof, families }) => ({ proof, families })), [{ proof: 'component', families: ['Tree'] }]);
+});
+
+test('a dependent-only change never plans the workspaces it depends on', async () => {
+  const result = await plan(['apps/react-playground/src/main.jsx'], { packages: workspacePackages });
+  assert.deepEqual(result.packageChecks, ['@muxui/react-playground']);
+  assert.equal(result.reactPackageFull || result.reactProjectionCheck || result.docs || result.scale, false);
+  assert.deepEqual(result.reactFamilies, []);
+  assert.deepEqual(result.storyRuns, []);
+});
+
+const linkedPackage = (name, manifest = {}) => ({ name: `@fixture/${name}`, path: `packages/${name}`, manifest: { scripts: { check: 'check' }, ...manifest } });
+
+test('runtime workspace dependents plan transitively; devDependency dependents run only their package check', async () => {
+  const linked = [
+    linkedPackage('a', { dependencies: { '@fixture/b': 'workspace:*' } }),
+    linkedPackage('b', { peerDependencies: { '@fixture/c': 'link:../c' } }),
+    linkedPackage('c'),
+    linkedPackage('d', { devDependencies: { '@fixture/c': 'workspace:^' } }),
+    linkedPackage('e', { dependencies: { '@fixture/d': 'workspace:*' } }),
+    // A registry spec is not a workspace link.
+    linkedPackage('f', { dependencies: { '@fixture/c': '1.0.0' } }),
+    // Both edge kinds reach g: the runtime edge wins.
+    linkedPackage('g', { devDependencies: { '@fixture/c': 'workspace:*' }, dependencies: { '@fixture/b': 'workspace:*' } }),
+  ];
+  assert.deepEqual(workspaceDependentRoutes(linked, ['@fixture/c']), [
+    { name: '@fixture/a', via: '@fixture/b', scope: 'package' },
+    { name: '@fixture/b', via: '@fixture/c', scope: 'package' },
+    { name: '@fixture/d', via: '@fixture/c', scope: 'check' },
+    { name: '@fixture/g', via: '@fixture/b', scope: 'package' },
+  ]);
+  const result = await plan(['packages/c/src/index.mjs'], { packages: linked });
+  assert.deepEqual(result.packageChecks, ['@fixture/a', '@fixture/b', '@fixture/c', '@fixture/d', '@fixture/g']);
+  assert.deepEqual(workspaceDependentRoutes(linked, ['@fixture/a']), []);
+});
+
+test('a devDependency on a changed package runs only the dependent package check', async () => {
+  const result = await plan(['packages/catalog/src/compiler.mjs'], { packages: workspacePackages });
+  assert.ok(result.packageChecks.includes('@muxui/react'));
+  assert.equal(result.reactPackageFull, false);
+  assert.deepEqual(result.storyRuns, []);
+  // React's runtime dependents are not reached through its devDependency edge.
+  assert.ok(!result.packageChecks.includes('@muxui/react-playground'));
+  assert.equal(result.scale, false);
+});
+
+test('a workspace dependency cycle plans each member once without looping', async () => {
+  const cycle = [
+    linkedPackage('x', { dependencies: { '@fixture/y': 'workspace:*' } }),
+    linkedPackage('y', { dependencies: { '@fixture/x': 'workspace:*' } }),
+  ];
+  assert.deepEqual(workspaceDependentRoutes(cycle, ['@fixture/x']), [
+    { name: '@fixture/x', via: '@fixture/y', scope: 'package' },
+    { name: '@fixture/y', via: '@fixture/x', scope: 'package' },
+  ]);
+  const result = await plan(['packages/x/index.mjs'], { packages: cycle });
+  assert.deepEqual(result.packageChecks, ['@fixture/x', '@fixture/y']);
 });
