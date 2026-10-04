@@ -73,7 +73,7 @@ test('R1.4 families are SSR and hydration safe and reject missing accessible con
   }
 });
 
-test('PreviewTrigger keeps naming on one non-modal inner dialog and cleans up its portal', async () => {
+test('PreviewTrigger names RAC\'s own non-modal dialog popover and cleans up its portal', async () => {
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
@@ -93,10 +93,13 @@ test('PreviewTrigger keeps naming on one non-modal inner dialog and cleans up it
     assert.equal(outer.classList.contains('custom-preview'), true);
     const dialogs = document.body.querySelectorAll('[role="dialog"]');
     assert.equal(dialogs.length, 1);
-    assert.equal(dialogs[0].classList.contains('muxui-preview-content'), true);
-    assert.equal(dialogs[0].getAttribute('aria-label'), 'Preview details');
-    assert.equal(outer.hasAttribute('aria-label'), false);
-    assert.equal(dialogs[0].hasAttribute('aria-modal'), false);
+    assert.equal(dialogs[0], outer);
+    assert.equal(outer.getAttribute('aria-label'), 'Preview details');
+    assert.equal(outer.hasAttribute('aria-modal'), false);
+    const content = outer.querySelector('.muxui-preview-content');
+    assert.ok(content);
+    assert.equal(content.hasAttribute('role'), false);
+    assert.equal(content.textContent, 'Preview body');
     assert.equal(document.body.querySelector('[data-testid="underlay"]'), null);
 
     await act(async () => root.render(React.createElement(PreviewTrigger, {
@@ -104,10 +107,10 @@ test('PreviewTrigger keeps naming on one non-modal inner dialog and cleans up it
       defaultOpen: true,
       trigger: React.createElement('button', null, 'Show preview'),
     }, React.createElement('h2', { id: 'preview-heading' }, 'Preview heading'))));
-    const labelledDialog = document.body.querySelector('.muxui-preview-content');
+    const labelledDialog = document.body.querySelector('[role="dialog"]');
+    assert.equal(labelledDialog.classList.contains('muxui-preview-trigger'), true);
     assert.equal(labelledDialog.getAttribute('aria-labelledby'), 'preview-heading');
     assert.equal(labelledDialog.hasAttribute('aria-label'), false);
-    assert.equal(document.body.querySelector('.muxui-preview-trigger').hasAttribute('aria-labelledby'), false);
 
     await act(async () => root.unmount());
     assert.equal(document.body.querySelector('.muxui-preview-trigger'), null);

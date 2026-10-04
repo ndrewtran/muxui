@@ -359,15 +359,6 @@ export const Popover = /*#__PURE__*/ React.forwardRef(function Popover({
   return React.createElement(AriaDialogTrigger, { isOpen: open, defaultOpen, onOpenChange }, pressableTrigger(trigger, false, 'muxui-overlay-pop-trigger'), content);
 });
 
-const PreviewContent = React.forwardRef(function PreviewContent({ children, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, ref) {
-  return React.createElement(AriaDialog, {
-    ref,
-    className: 'muxui-preview-content',
-    'aria-label': ariaLabel,
-    'aria-labelledby': ariaLabelledby,
-  }, children);
-});
-
 function useDisabledTimedOverlay({ disabled, open, defaultOpen, onOpenChange }) {
   const controlled = open !== undefined;
   const disabledRef = React.useRef(disabled);
@@ -498,7 +489,11 @@ export const PreviewTrigger = React.forwardRef(function PreviewTrigger({
     shouldFlip: geometry.shouldFlip,
     containerPadding: geometry.containerPadding,
     className: classNames('muxui-preview-trigger', className),
-  }, React.createElement(PreviewContent, { 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby }, children)));
+    // RAC names its own role="dialog" popover without auto-focusing it, so
+    // focus stays on the trigger until Tab moves into the preview.
+    'aria-label': ariaLabel,
+    'aria-labelledby': ariaLabelledby,
+  }, React.createElement('div', { className: 'muxui-preview-content' }, children)));
 });
 
 PreviewTrigger.displayName = 'PreviewTrigger';
