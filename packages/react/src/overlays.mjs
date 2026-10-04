@@ -48,7 +48,8 @@ function normalizeMaxVisible(value) {
 }
 
 // setTimeout converts delays above 2^31 - 1 ms to an immediate timeout.
-const MAX_TIMEOUT = 2 ** 31 - 1;
+// 2 ** 31 - 1, the setTimeout maximum, as a literal so the module does no import-time work.
+const MAX_TIMEOUT = 2147483647;
 
 function normalizeToastDuration(value) {
   const normalized = normalizeNonNegativeFinite(value, 5000, 'Toast duration');
