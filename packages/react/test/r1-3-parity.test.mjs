@@ -1153,6 +1153,16 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
     assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => row.textContent), ['Ada10', 'Bob2']);
     assert.deepEqual(Object.keys(sortCalls[0]).sort(), ['column', 'direction']);
 
+    const reservedColumns = [{ id: 'name', label: 'Name', isRowHeader: true }, { id: 'value', label: 'Value' }, { id: 'label', label: 'Label' }, { id: 'id', label: 'ID' }, { id: 'key', label: 'Key' }];
+    await act(async () => root.render(React.createElement(Table, {
+      'aria-label': 'Reserved columns', columns: reservedColumns,
+      rows: [{ id: 'r1', values: { name: 'Ada', value: '42', label: 'Primary', id: 'A-1', key: 'k1' } }, { id: 'r2', name: 'Bob', value: '7' }],
+    })));
+    assert.deepEqual([...container.querySelectorAll('.muxui-table-row')].map((row) => [...row.querySelectorAll('.muxui-table-cell')].map((cell) => cell.textContent)), [
+      ['Ada', '42', 'Primary', 'A-1', 'k1'],
+      ['Bob', '7', '', 'r2', ''],
+    ]);
+
     const tabItems = [{ id: 'one', label: 'One', panel: 'One panel' }, { id: 'two', label: 'Two', panel: 'Two panel' }];
     const automatic = [];
     await act(async () => root.render(React.createElement(Tabs, { 'aria-label': 'Sections', items: tabItems, onChange: (id) => automatic.push(id) })));
@@ -1170,6 +1180,12 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
     const manualSecond = container.querySelectorAll('[role="tab"]')[1];
     await act(async () => manualSecond.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })));
     assert.deepEqual(manual, ['two']);
+
+    await act(async () => root.render(React.createElement(Tabs, { key: 'disabled-first', 'aria-label': 'Sections', items: [{ ...tabItems[0], disabled: true }, tabItems[1]] })));
+    const [disabledFirst, enabledSecond] = container.querySelectorAll('[role="tab"]');
+    assert.equal(disabledFirst.getAttribute('aria-selected'), 'false');
+    assert.equal(enabledSecond.getAttribute('aria-selected'), 'true');
+    assert.equal(container.querySelector('[role="tabpanel"]').textContent, 'Two panel');
   } finally {
     await act(async () => root.unmount());
     env.restore();
