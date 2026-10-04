@@ -569,12 +569,24 @@ export function readRetainedEvidence(repositoryRoot, milestones) {
 }
 
 /**
+ * Reads the retained R1.2-R1.4 retroactive review index (Decision 0022
+ * amendment 01); a missing index stops the R1 exit. R1.1 and R1.5 review is
+ * author-reported only and has no retained index.
+ */
+export function readRetainedReviewEvidence(repositoryRoot, path = 'tests/evidence/r1-retro-review/index.json') {
+  const absolute = join(repositoryRoot, path);
+  if (!existsSync(absolute)) fail('R1_EXIT_RETAINED_REVIEW_MISSING', `retroactive review evidence has no retained index at ${path}`);
+  const bytes = readFileSync(absolute);
+  return [{ milestones: JSON.parse(bytes.toString('utf8')).milestones, path, bytes }];
+}
+
+/**
  * Architecture release manifest: exact source, lockfile, generated-output,
  * catalog, token, binding-spec, package, evidence, exception, and visual
  * contract identities for one candidate. Missing identities fail closed.
  */
 export function buildReleaseCorrelation({
-  source, lockfile, generated, catalogPackage, catalogBundle, bindings, workspacePackages, retainedEvidence, activeExceptions,
+  source, lockfile, generated, catalogPackage, catalogBundle, bindings, workspacePackages, retainedEvidence, reviewEvidence, activeExceptions,
   visualContract,
 }) {
   const code = 'R1_EXIT_CORRELATION_INVALID';
@@ -600,6 +612,7 @@ export function buildReleaseCorrelation({
     return identity;
   });
   if (retainedEvidence.length === 0) fail(code, 'captured CI evidence indexes are required');
+  if (!reviewEvidence?.length) fail(code, 'retained review evidence indexes are required');
   return {
     source: { revision: source.revision, tree: source.tree },
     lockfile: { path: lockfile.path, sha256: digest(lockfile.bytes) },
@@ -620,6 +633,7 @@ export function buildReleaseCorrelation({
       .sort((left, right) => (left.name < right.name ? -1 : 1)),
     evidence: {
       capturedCiEvidence: retainedEvidence.map(({ milestone, path, bytes }) => ({ milestone, path, sha256: digest(bytes) })),
+      retainedReviewEvidence: reviewEvidence.map(({ milestones, path, bytes }) => ({ milestones, path, sha256: digest(bytes) })),
       activeExceptions: activeExceptions.map((exception) => digest(canonicalJson(exception))),
     },
     visualContract,

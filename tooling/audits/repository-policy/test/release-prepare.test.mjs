@@ -30,6 +30,7 @@ import {
   readGeneratedOutputNames,
   readLockedIntegrity,
   readRetainedEvidence,
+  readRetainedReviewEvidence,
 } from '../src/release-proof.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
@@ -512,6 +513,8 @@ test('a milestone without a retained evidence index stops the R1 exit', () => {
     rmSync(root, { recursive: true, force: true });
   }
   assert.equal(readRetainedEvidence(repositoryRoot, ['R1.1', 'R1.2', 'R1.3', 'R1.4', 'R1.5']).length, 5);
+  assert.deepEqual(readRetainedReviewEvidence(repositoryRoot).map(({ milestones, path }) => [milestones, path]), [[['R1.2', 'R1.3', 'R1.4'], 'tests/evidence/r1-retro-review/index.json']]);
+  assert.throws(() => readRetainedReviewEvidence(repositoryRoot, 'tests/evidence/missing/index.json'), /R1_EXIT_RETAINED_REVIEW_MISSING/u);
 });
 
 test('the release manifest correlates exact source, lockfile, generated, catalog, binding, and evidence identities', () => {
@@ -542,6 +545,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
     bindings: [binding],
     workspacePackages: [{ name: '@muxui/react', version: '0.1.0-alpha.0', private: true }, { name: '@muxui/catalog', version: '2.0.0', private: true }],
     retainedEvidence: [{ milestone: 'R1.5', path: 'tests/evidence/r1.5/index.json', bytes: Buffer.from('{}') }],
+    reviewEvidence: [{ milestones: ['R1.2', 'R1.3', 'R1.4'], path: 'tests/evidence/r1-retro-review/index.json', bytes: Buffer.from('{}') }],
     activeExceptions: [],
     visualContract: { comparison: 'none-recorded', digest, inputs: {} },
   };
@@ -558,6 +562,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.deepEqual(correlation.bindings, [{ binding, specRevision: digest, tokenRequirementSet: digest, platformSafetyRequirementSet: digest }]);
   assert.deepEqual(correlation.packages.map(({ name }) => name), ['@muxui/catalog', '@muxui/react']);
   assert.deepEqual(correlation.evidence.capturedCiEvidence.map(({ milestone }) => milestone), ['R1.5']);
+  assert.deepEqual(correlation.evidence.retainedReviewEvidence.map(({ path }) => path), ['tests/evidence/r1-retro-review/index.json']);
   assert.deepEqual(correlation.evidence.activeExceptions, []);
 
   const changedGenerated = buildReleaseCorrelation({ ...options, generated: [options.generated[0], { path: 'generated/styles.css', bytes: Buffer.from('.muxui-button{color:red}\n') }] });
@@ -568,4 +573,5 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.throws(() => buildReleaseCorrelation({ ...options, source: { revision: 'HEAD', tree: options.source.tree } }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, catalogBundle: { ...options.catalogBundle, catalogDigest: `sha256:${'b'.repeat(64)}` } }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, retainedEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
+  assert.throws(() => buildReleaseCorrelation({ ...options, reviewEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
 });
