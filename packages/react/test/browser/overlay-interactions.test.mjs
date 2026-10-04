@@ -371,3 +371,29 @@ test('a non-modal Popover stays open for presses inside its nested overlays', { 
     await page.close();
   }
 });
+
+test('a pointer Toast dismissal returns focus to the page so timers keep running', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('toast');
+  try {
+    await page.waitForFunction(() => window.toastManager);
+    await page.evaluate(() => {
+      window.toastManager.add('Remaining', { duration: 1500 });
+      window.toastManager.add('Dismissed', { duration: 60_000 });
+    });
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-toast').length === 2);
+    // Tab onto Dismissed's dismiss button, then press it with the mouse.
+    await page.locator('#before').focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Tab');
+    const dismiss = page.locator('.muxui-toast-dismiss').first();
+    assert.equal(await dismiss.evaluate((node) => node === document.activeElement), true);
+    await dismiss.click();
+    await page.waitForFunction(() => document.activeElement?.id === 'before');
+    await page.mouse.move(10, 690);
+    await page.locator('.muxui-toast').first().waitFor({ state: 'detached', timeout: 4000 });
+    await page.waitForFunction(() => document.querySelectorAll('.muxui-toast').length === 0, null, { timeout: 4000 });
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});

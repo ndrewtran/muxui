@@ -3,6 +3,8 @@ import XIcon from 'lucide-react/dist/esm/icons/x.mjs';
 import { FocusScope } from 'react-aria/FocusScope';
 import { mergeRefs } from 'react-aria/mergeRefs';
 import { useInteractOutside } from 'react-aria/useInteractOutside';
+// The modality useToastRegion uses; React Aria exports it only from this subpath.
+import { getInteractionModality } from 'react-aria/private/interactions/useFocusVisible';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
@@ -755,7 +757,7 @@ function moveFocusFromExitingToast(node, returnFocus) {
   const region = node.closest('.muxui-toast-region');
   const remaining = region ? [...region.querySelectorAll('.muxui-toast:not([data-muxui-toast-exiting])')] : [];
   const next = remaining.find((candidate) => node.compareDocumentPosition(candidate) & Node.DOCUMENT_POSITION_FOLLOWING) ?? remaining.at(-1);
-  const target = active.matches(':focus-visible') && next ? next : returnFocus;
+  const target = getInteractionModality() !== 'pointer' && next ? next : returnFocus;
   if (target?.isConnected) target.focus({ preventScroll: true });
   else active.blur();
 }
