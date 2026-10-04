@@ -1425,3 +1425,9 @@ test('Autocomplete exposes combobox popup state and submits label-only items as 
     dom.window.close();
   }
 });
+
+test('NumberField leaves the device keyboard mode to React Aria', () => {
+  const markup = renderToString(React.createElement(NumberField, { label: 'Seats', minValue: 0, formatOptions: { maximumFractionDigits: 0 } }));
+  assert.match(markup, /inputMode="numeric"/u);
+  assert.doesNotMatch(markup, /inputMode="decimal"/u);
+});

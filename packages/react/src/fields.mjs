@@ -637,7 +637,7 @@ export const NumberField = React.forwardRef(function NumberField({
     errorMessage,
     input: React.createElement(AriaGroup, { className: 'muxui-number-control' },
       React.createElement(IconButton, { slot: 'decrement', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-decrement' }, React.createElement(MinusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 })),
-      React.createElement(AriaInput, { className: 'muxui-field-input', inputMode: 'decimal' }),
+      React.createElement(AriaInput, { className: 'muxui-field-input' }),
       React.createElement(IconButton, { slot: 'increment', type: 'button', className: 'muxui-number-stepper muxui-number-stepper-increment' }, React.createElement(PlusIcon, { 'aria-hidden': 'true', focusable: 'false', size: 16 }))),
   }));
 });
