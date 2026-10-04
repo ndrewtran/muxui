@@ -196,10 +196,31 @@ const readOnlyInteractionEvents = [
 ];
 const readOnlyTargetGuards = new WeakMap();
 
+// Read-only controls stay focusable and navigable. Only keys that change the
+// value are blocked; Tab, Escape, and modifier shortcuts always pass through.
+const READ_ONLY_ADJUSTMENT_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End']);
+// Swatch pickers move focus with arrows, so only the selection keys are blocked.
+const READ_ONLY_SELECTION_KEYS = new Set(['Enter', ' ']);
+
+function readOnlyBlocksKey(event, keys) {
+  return !event.metaKey && !event.ctrlKey && !event.altKey && keys.has(event.key);
+}
+
+function readOnlyKeyGuard(readOnly, keys = READ_ONLY_ADJUSTMENT_KEYS) {
+  return (event) => {
+    if (readOnly && readOnlyBlocksKey(event, keys)) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+}
+
 function setReadOnlyTargetGuard(target, readOnly) {
   const existingGuard = readOnlyTargetGuards.get(target);
   if (readOnly && !existingGuard) {
+    const keys = target.getAttribute('role') === 'listbox' ? READ_ONLY_SELECTION_KEYS : READ_ONLY_ADJUSTMENT_KEYS;
     const guard = (event) => {
+      if (event.type === 'keydown' && !readOnlyBlocksKey(event, keys)) return;
       event.preventDefault();
       event.stopPropagation();
     };
@@ -413,7 +434,7 @@ export const ColorArea = React.forwardRef(function ColorArea({ label, value, def
       'data-muxui-color-paint': 'area',
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),
       onTouchStartCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
       onChangeCapture: preventReadOnlyInteraction,
@@ -441,7 +462,7 @@ export const ColorSlider = /* @__PURE__ */ (() => {
       }
     };
     const assignSliderRef = useReadOnlyTargets(ref, effectiveReadOnly, '[role="slider"], input[type="range"]');
-    return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: preventReadOnlyInteraction, onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
+    return React.createElement('div', { 'aria-disabled': effectiveDisabled || undefined, 'data-disabled': effectiveDisabled || undefined, 'data-readonly': effectiveReadOnly || undefined, onPointerDownCapture: preventReadOnlyInteraction, onMouseDownCapture: preventReadOnlyInteraction, onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly), onTouchStartCapture: preventReadOnlyInteraction, onClickCapture: preventReadOnlyInteraction, onChangeCapture: preventReadOnlyInteraction },
       React.createElement(AriaColorSlider, {
         ...props,
         ref: assignSliderRef,
@@ -499,7 +520,7 @@ export const ColorWheel = /* @__PURE__ */ (() => {
       'data-readonly': effectiveReadOnly || undefined,
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly),
       onTouchStartCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
       onChangeCapture: preventReadOnlyInteraction,
@@ -539,7 +560,7 @@ export const ColorSwatchPicker = React.forwardRef(function ColorSwatchPicker({ i
       'data-readonly': effectiveReadOnly || undefined,
       onPointerDownCapture: preventReadOnlyInteraction,
       onMouseDownCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(effectiveReadOnly, READ_ONLY_SELECTION_KEYS),
       onTouchStartCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
       onChangeCapture: preventReadOnlyInteraction,
@@ -983,7 +1004,7 @@ export const Slider = /* @__PURE__ */ (() => {
       onPointerMoveCapture: preventReadOnlyInteraction,
       onTouchMoveCapture: preventReadOnlyInteraction,
       onClickCapture: preventReadOnlyInteraction,
-      onKeyDownCapture: preventReadOnlyInteraction,
+      onKeyDownCapture: readOnlyKeyGuard(readOnly),
       onChangeCapture: preventReadOnlyInteraction,
       className: classNames('muxui-slider', className),
       'aria-label': ariaLabel,
