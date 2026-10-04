@@ -489,7 +489,8 @@ test('R1.3 ComboBox selects, filters, submits, and keeps disabled and read-only 
   const container = document.querySelector('#root');
   const root = createRoot(container);
   const form = document.querySelector('#form');
-  const items = [{ id: 'red', label: 'Red' }, { id: 'green', label: 'Green', disabled: true }, { id: 'blue', label: 'Blue' }];
+  // Named forms submit the item id, not item.value.
+  const items = [{ id: 'red', label: 'Red' }, { id: 'green', label: 'Green', disabled: true }, { id: 'blue', label: 'Blue', value: 'b' }];
   const options = () => [...document.querySelectorAll('.muxui-combo-box-option')];
   const option = (label) => options().find((candidate) => candidate.textContent === label);
   const input = () => container.querySelector('.muxui-combo-box input');

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:541fb74c8fc002c98e4cf23581fc64bb722a370fd15c87fde201d3250d25d186 -->
+<!-- @generated-content-sha256: sha256:4801937a98f3c56e0c68da53452bfadd43442994f1e6a186bfac57763d678922 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -200,6 +200,7 @@ Public parts: `root`, `section`, `header`, `item`.
 - Popup geometry uses finite offset/crossOffset, nonnegative finite containerPadding, and logical placement such as bottom-start or end-top. Existing bottom-start and 8px defaults are preserved. Popup-specific props override root geometry; anchorRef positions against a consumer-owned element, and modal=false keeps outside content accessible.
 - Mux selectors are .muxui-select, .muxui-select-label, .muxui-select-trigger, .muxui-select-value, .muxui-select-popover, .muxui-select-list, .muxui-select-option, .muxui-select-description, and .muxui-select-error. Root states include data-open, data-disabled, data-readonly, and data-invalid; options expose data-selected, data-disabled, data-focused, and data-focus-visible.
 - Root, Popup, List, and Item refs target divs; Trigger targets a button; Label, Value, Description, and Error target spans. Error renders only while invalid.
+- Named forms submit the selected item id, not item.value.
 
 Public parts: `root`, `label`, `trigger`, `value`, `popup`, `list`, `option`, `description`, `error`.
 
