@@ -7,8 +7,11 @@ observations, captured by `node tests/evidence/capture-r1-exit.mjs`.
 
 - `E-R1-EXIT-01`: the dry run's exact tarball, export, and install tuple.
 - `E-R1-EXIT-02`: the release manifest and `verify-credentials` run before
-  publish, then the publish run's preflight, publish, and read-back. It stays
-  `partial` until the publish run is captured.
+  publish; any earlier failed publish attempt; the publish run's preflight and
+  publish, with its own read-back recorded as an observation only; and the
+  read-back proof from the registry (integrity, shasum, SLSA provenance bound to
+  the source commit and publish run, dist-tags). It stays `partial` until both
+  the publish run and the registry read-back are captured.
 - `E-R1-EXIT-03`: a clean consumer installed from the registry's `next`.
 - `E-R1-EXIT-04`: `next` and the observed `latest`, with the release
   manifest's rollback prepared, not exercised.

@@ -1,0 +1,138 @@
+# step: Registry preflight (read-only) (raw lines 102-153)
+2026-10-04T12:40:32.1071965Z ##[group]Run set -euo pipefail
+2026-10-04T12:40:32.1151494Z shell: /usr/bin/bash -e {0}
+2026-10-04T12:40:32.1151762Z env:
+2026-10-04T12:40:32.1152027Z   NPM_CONFIG_USERCONFIG: <runner-temp>
+2026-10-04T12:40:32.1152662Z   <redacted credential input>
+2026-10-04T12:40:32.1152904Z   VERSION: 0.1.0-rc.1
+2026-10-04T12:40:32.1153136Z ##[endgroup]
+2026-10-04T12:40:32.2800622Z npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-10-04T12:40:32.5114107Z npm whoami: ndrewtran
+2026-10-04T12:40:32.8956609Z Packages in @muxui visible to this npm credential: npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-10-04T12:40:32.8958015Z {}
+2026-10-04T12:40:33.2776842Z @muxui/react@0.1.0-rc.1: E404 (no collision)
+2026-10-04T12:40:33.5546019Z @muxui/react dist-tags: E404 (first publish)
+# step: Publish to next (raw lines 154-285)
+2026-10-04T12:40:33.5579647Z ##[group]Run set -euo pipefail
+2026-10-04T12:40:33.5649191Z shell: /usr/bin/bash -e {0}
+2026-10-04T12:40:33.5649445Z env:
+2026-10-04T12:40:33.5649710Z   NPM_CONFIG_USERCONFIG: <runner-temp>
+2026-10-04T12:40:33.5650255Z   <redacted credential input>
+2026-10-04T12:40:33.5650657Z   TARBALL: <runner-temp>/muxui-react-0.1.0-rc.1.tgz
+2026-10-04T12:40:33.5651054Z   PUBLISHER: ndrewtran
+2026-10-04T12:40:33.5651288Z   npm_config_engine_strict: false
+2026-10-04T12:40:33.5651549Z ##[endgroup]
+2026-10-04T12:40:33.7052789Z npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-10-04T12:40:34.0948194Z npm warn Unknown user config "always-auth". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+2026-10-04T12:40:34.3806942Z npm notice
+2026-10-04T12:40:34.3912437Z npm notice 📦  @muxui/react@0.1.0-rc.1
+2026-10-04T12:40:34.3913315Z npm notice Tarball Contents
+2026-10-04T12:40:34.3913878Z npm notice 1.1kB LICENSE
+2026-10-04T12:40:34.3914351Z npm notice 5.3kB NOTICE
+2026-10-04T12:40:34.3914831Z npm notice 34.0kB README.md
+2026-10-04T12:40:34.3915567Z npm notice 906.6kB assets/fonts/Inter-Italic[opsz,wght].ttf
+2026-10-04T12:40:34.3916465Z npm notice 876.6kB assets/fonts/Inter[opsz,wght].ttf
+2026-10-04T12:40:34.3917218Z npm notice 4.4kB assets/fonts/OFL.txt
+2026-10-04T12:40:34.3918070Z npm notice 278.7kB assets/fonts/PlayfairDisplay-Italic[wght].ttf
+2026-10-04T12:40:34.3919313Z npm notice 300.7kB assets/fonts/PlayfairDisplay[wght].ttf
+2026-10-04T12:40:34.3920262Z npm notice 196.8kB assets/fonts/RobotoMono-Italic[wght].ttf
+2026-10-04T12:40:34.3921228Z npm notice 183.7kB assets/fonts/RobotoMono[wght].ttf
+2026-10-04T12:40:34.3921967Z npm notice 981B generated/avatar.d.ts
+2026-10-04T12:40:34.3922599Z npm notice 7.5kB generated/avatar.mjs
+2026-10-04T12:40:34.3923210Z npm notice 3.5kB generated/button.mjs
+2026-10-04T12:40:34.3923949Z npm notice 3.1kB generated/calendar-height-motion.mjs
+2026-10-04T12:40:34.3924806Z npm notice 5.1kB generated/calendar-selection-motion.mjs
+2026-10-04T12:40:34.3925602Z npm notice 608B generated/choice-context.mjs
+2026-10-04T12:40:34.3926299Z npm notice 92.4kB generated/collections.mjs
+2026-10-04T12:40:34.3927062Z npm notice 7.0kB generated/color-slider-motion.mjs
+2026-10-04T12:40:34.3927863Z npm notice 4.0kB generated/color-wheel-motion.mjs
+2026-10-04T12:40:34.3928614Z npm notice 3.0kB generated/compatibility.mjs
+2026-10-04T12:40:34.3929621Z npm notice 12.6kB generated/components.mjs
+2026-10-04T12:40:34.3930409Z npm notice 5.9kB generated/date-popover-motion.mjs
+2026-10-04T12:40:34.3931194Z npm notice 88.0kB generated/descriptor.json
+2026-10-04T12:40:34.3931984Z npm notice 289B generated/descriptor.json.provenance
+2026-10-04T12:40:34.3932806Z npm notice 10.2kB generated/dialog-motion.mjs
+2026-10-04T12:40:34.3933503Z npm notice 54.0kB generated/fields.mjs
+2026-10-04T12:40:34.3934272Z npm notice 18.7kB generated/grid-list-motion.mjs
+2026-10-04T12:40:34.3935005Z npm notice 688B generated/icon-button.d.ts
+2026-10-04T12:40:34.3935685Z npm notice 1.4kB generated/icon-button.mjs
+2026-10-04T12:40:34.3936359Z npm notice 674B generated/image.d.ts
+2026-10-04T12:40:34.3937518Z npm notice 4.0kB generated/image.mjs
+2026-10-04T12:40:34.3938241Z npm notice 35.1kB generated/index.d.ts
+2026-10-04T12:40:34.3939183Z npm notice 1.2kB generated/index.mjs
+2026-10-04T12:40:34.3939848Z npm notice 3.0kB generated/lightbox.d.ts
+2026-10-04T12:40:34.3940517Z npm notice 29.6kB generated/lightbox.mjs
+2026-10-04T12:40:34.3941223Z npm notice 7.4kB generated/listbox-motion.mjs
+2026-10-04T12:40:34.3942247Z npm notice 535B generated/markdown.d.ts
+2026-10-04T12:40:34.3942898Z npm notice 8.7kB generated/markdown.mjs
+2026-10-04T12:40:34.3943577Z npm notice 9.2kB generated/menu-motion.mjs
+2026-10-04T12:40:34.3944327Z npm notice 23.9kB generated/motion-components.mjs
+2026-10-04T12:40:34.3945043Z npm notice 6.8kB generated/motion.mjs
+2026-10-04T12:40:34.3945787Z npm notice 1.9kB generated/overlay-positioning.mjs
+2026-10-04T12:40:34.3946530Z npm notice 42.0kB generated/overlays.mjs
+2026-10-04T12:40:34.3947220Z npm notice 3.2kB generated/popover-motion.mjs
+2026-10-04T12:40:34.3947984Z npm notice 91.2kB generated/r1-5-closure.json
+2026-10-04T12:40:34.3949098Z npm notice 291B generated/r1-5-closure.json.provenance
+2026-10-04T12:40:34.3949923Z npm notice 50.1kB generated/r1-6-contract.json
+2026-10-04T12:40:34.3950760Z npm notice 292B generated/r1-6-contract.json.provenance
+2026-10-04T12:40:34.3951546Z npm notice 5.3kB generated/radio-motion.mjs
+2026-10-04T12:40:34.3952352Z npm notice 14.0kB generated/range-selection-motion.mjs
+2026-10-04T12:40:34.3953097Z npm notice 62.5kB generated/release.json
+2026-10-04T12:40:34.3953808Z npm notice 286B generated/release.json.provenance
+2026-10-04T12:40:34.3954529Z npm notice 1.3kB generated/resizable.d.ts
+2026-10-04T12:40:34.3955181Z npm notice 18.0kB generated/resizable.mjs
+2026-10-04T12:40:34.3955828Z npm notice 829B generated/select-native.d.ts
+2026-10-04T12:40:34.3956501Z npm notice 4.3kB generated/select-native.mjs
+2026-10-04T12:40:34.3957196Z npm notice 4.9kB generated/slider-motion.mjs
+2026-10-04T12:40:34.3957851Z npm notice 745.2kB generated/styles.css
+2026-10-04T12:40:34.3958525Z npm notice 106.9kB generated/supplemental.css
+2026-10-04T12:40:34.3959521Z npm notice 27.0kB generated/supplemental.d.ts
+2026-10-04T12:40:34.3960270Z npm notice 80.0kB generated/supplemental.mjs
+2026-10-04T12:40:34.3960962Z npm notice 21.6kB generated/tabs-motion.mjs
+2026-10-04T12:40:34.3961631Z npm notice 305B generated/testing.mjs
+2026-10-04T12:40:34.3962250Z npm notice 4.6kB generated/text-editor.d.ts
+2026-10-04T12:40:34.3962888Z npm notice 34.1kB generated/text-editor.mjs
+2026-10-04T12:40:34.3963491Z npm notice 779.0kB generated/themes.css
+2026-10-04T12:40:34.3964116Z npm notice 1.3kB generated/themes.d.ts
+2026-10-04T12:40:34.3964740Z npm notice 3.8kB generated/themes.mjs
+2026-10-04T12:40:34.3965432Z npm notice 627B generated/toggle-button-context.mjs
+2026-10-04T12:40:34.3966285Z npm notice 13.7kB generated/toggle-button-group-motion.mjs
+2026-10-04T12:40:34.3967042Z npm notice 17.5kB generated/tree-motion.mjs
+2026-10-04T12:40:34.3967752Z npm notice 1.1kB licenses/framer-motion.MIT.txt
+2026-10-04T12:40:34.3968647Z npm notice 11.3kB licenses/internationalized-date.Apache-2.0.txt
+2026-10-04T12:40:34.3969823Z npm notice 3.2kB licenses/lucide.ISC-MIT.txt
+2026-10-04T12:40:34.3970513Z npm notice 2.9kB licenses/marked.MIT.txt
+2026-10-04T12:40:34.3971245Z npm notice 1.1kB licenses/motion-dom.MIT.txt
+2026-10-04T12:40:34.3971933Z npm notice 1.1kB licenses/motion-utils.MIT.txt
+2026-10-04T12:40:34.3972612Z npm notice 1.1kB licenses/motion.MIT.txt
+2026-10-04T12:40:34.3973436Z npm notice 11.3kB licenses/react-aria-components.Apache-2.0.txt
+2026-10-04T12:40:34.3974320Z npm notice 11.3kB licenses/react-aria.Apache-2.0.txt
+2026-10-04T12:40:34.3975032Z npm notice 1.1kB licenses/tiptap.MIT.txt
+2026-10-04T12:40:34.3975634Z npm notice 645B licenses/tslib.0BSD.txt
+2026-10-04T12:40:34.3976243Z npm notice 3.5kB package.json
+2026-10-04T12:40:34.3976811Z npm notice Tarball Details
+2026-10-04T12:40:34.3977327Z npm notice name: @muxui/react
+2026-10-04T12:40:34.3977873Z npm notice version: 0.1.0-rc.1
+2026-10-04T12:40:34.3979165Z npm notice filename: muxui-react-0.1.0-rc.1.tgz
+2026-10-04T12:40:34.3980001Z npm notice package size: 1.8 MB
+2026-10-04T12:40:34.3980573Z npm notice unpacked size: 5.4 MB
+2026-10-04T12:40:34.3981351Z npm notice shasum: e0dcac0f1d1ecd3ea0da76ed8520473c7690dba5
+2026-10-04T12:40:34.3982333Z npm notice integrity: sha512-J7MB0roUffNcw[...]HVZwzoCYgefJQ==
+2026-10-04T12:40:34.3983058Z npm notice total files: 83
+2026-10-04T12:40:34.3983784Z npm notice
+2026-10-04T12:40:35.0683142Z npm notice npm tokens that bypass 2FA are being restricted for account changes and direct publishing. Learn how to prepare: https://gh.io/npm-gat-bypass2fa-deprecation
+2026-10-04T12:40:35.1590303Z npm notice Publishing to https://registry.npmjs.org/ with tag next and public access
+2026-10-04T12:40:35.8999721Z npm notice publish Signed provenance statement with source and build information from GitHub Actions
+2026-10-04T12:40:35.9001515Z npm notice publish Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=3077703756
+2026-10-04T12:40:36.1039088Z npm error code EOTP
+2026-10-04T12:40:36.1040447Z npm error This operation requires a one-time password.
+2026-10-04T12:40:36.1043626Z npm error Open this URL in your browser to authenticate:
+2026-10-04T12:40:36.1044474Z npm error   https://www.npmjs.com/auth/cli/***
+2026-10-04T12:40:36.1045148Z npm error
+2026-10-04T12:40:36.1067521Z npm error After authenticating, your token can be retrieved from:
+2026-10-04T12:40:36.1069354Z npm error   https://registry.npmjs.org/-/v1/done?authId=***
+2026-10-04T12:40:36.1070639Z npm error A complete log of this run can be found in: <runner-home>/.npm/_logs/2026-10-04T12_40_33_880Z-debug-0.log
+2026-10-04T12:40:36.1253788Z ##[error]Process completed with exit code 1.
+2026-10-04T12:40:36.1368173Z Cleaning up orphan processes
+2026-10-04T12:40:36.1669204Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+
