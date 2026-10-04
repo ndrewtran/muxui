@@ -184,7 +184,6 @@ if (!radioGroupBinding
 }
 const expectedAutocompleteProps = ['label', 'description', 'errorMessage', 'aria-label', 'aria-labelledby', 'value', 'defaultValue', 'disabled', 'size', 'readOnly', 'required', 'invalid', 'name', 'items', 'placeholder'];
 const expectedAutocompleteDefaults = {
-  value: '',
   defaultValue: '',
   disabled: false,
   readOnly: false,
