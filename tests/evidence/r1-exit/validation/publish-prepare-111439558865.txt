@@ -1,0 +1,27 @@
+# step: Prepare release candidate (raw lines 203-2390)
+2026-10-04T12:49:33.4133741Z ##[group]Run set -euo pipefail
+2026-10-04T12:49:33.4197999Z shell: /usr/bin/bash -e {0}
+2026-10-04T12:49:33.4198261Z env:
+2026-10-04T12:49:33.4198521Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-04T12:49:33.4198847Z ##[endgroup]
+2026-10-04T13:03:58.7930162Z [E-G0.0-04] independent clean checkouts 8c6ae2f8d92acf22822270907e5380efeb1111bc generated identical projections with clean worktrees (sha256:ea978a96151738c4a75f9617e0355c597648c86286b3b1bf32e0c83e48eedaef)
+2026-10-04T13:04:16.7603830Z R1.5 packed import 609.27ms / 2000ms; SSR 129.80ms / 1000ms
+2026-10-04T13:04:16.7794091Z R1 exit offline consumer resolves @tiptap/core 3.31.4 across 77 runtime packages
+2026-10-04T13:04:16.8727228Z R1 exit public-surface leak scan passed for 87 upstream names across 11 declarations, 6 public entries, README, and 7 guidance projections
+2026-10-04T13:04:17.0240898Z R1 exit side-effect scan passed for 39 packed JS modules
+2026-10-04T13:04:21.6675997Z R1 exit packed SSR/hydration: 98 renders (95 catalog examples plus fixtures) cover 100 runtime exports across @muxui/react, @muxui/react/markdown, @muxui/react/text-editor; SSR 535.99ms / 1000ms; 98 hydrations without mismatch
+2026-10-04T13:04:22.0589837Z R1 exit tree-shaking (vite 8.2.1, Button only): 114190 rendered JS bytes from 44 modules; @muxui/react keeps only generated/button.mjs; packages: react-aria 101260, react-aria-components 8600, @muxui/react 3384, clsx 615, react-stately 331; stylesheet 4401143 bytes kept
+2026-10-04T13:04:25.3512820Z R1 exit consumer matrix pnpm 10.33.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 77 runtime packages
+2026-10-04T13:04:35.5770748Z R1 exit consumer matrix npm 11.17.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 77 runtime packages
+2026-10-04T13:04:48.0528008Z R1 exit consumer matrix yarn 1.22.22: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 74 runtime packages
+2026-10-04T13:04:48.7573523Z R1 exit npm publish dry-run passed without lifecycle hooks or registry mutation
+2026-10-04T13:04:48.8055887Z R1 exit correlation: 79 binding-spec revisions, 61 generated outputs, 5 captured CI evidence indexes, 1 retained review evidence index, visual contract sha256:77a75ffb845d1485900cd95fa28f9ed91c3be1412dc505389813335cad24c182
+2026-10-04T13:04:48.8116222Z R1 exit artifacts written to <tmp>/muxui-r1-exit-output-vxKC6w
+2026-10-04T13:04:51.4824777Z R1 exit release preparation passed for 0.1.0-rc.1; source @muxui/react remains private and unpublished.
+# step: Collect candidate (raw lines 2391-2427)
+2026-10-04T13:04:51.5385359Z ##[group]Run set -euo pipefail
+2026-10-04T13:04:51.5459516Z shell: /usr/bin/bash -e {0}
+2026-10-04T13:04:51.5459768Z env:
+2026-10-04T13:04:51.5460016Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-04T13:04:51.5460333Z ##[endgroup]
+2026-10-04T13:04:51.6046852Z Candidate 0.1.0-rc.1 sha512-J7MB0roUffNcwygIxEO1KmTR0vW5Eh5IY1naCOahJjDsYMlR/OIp1QGzHs2zWCP/DQo4dDUnTHVZwzoCYgefJQ==
