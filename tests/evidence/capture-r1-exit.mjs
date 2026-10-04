@@ -1,7 +1,8 @@
 // Roadmap "R1 exit — React prerelease publication": retain E-R1-EXIT-01 to 04
 // for the exact @muxui/react candidate published through
 // .github/workflows/npm-publish.yml. Each phase is separate and re-runnable;
-// every run rewrites the records, index, and README from verification.json.
+// every run rebuilds the records, index, and README from verification.json in
+// memory and replaces the route atomically, or leaves it untouched on failure.
 //
 //   node tests/evidence/capture-r1-exit.mjs --capture-timestamp=<ISO-8601 UTC> <phase>...
 //
@@ -23,9 +24,9 @@
 // Hosted artifacts expire after 3 days and logs after 90; capture promptly.
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput } from '../../tooling/audits/repository-policy/src/evidence-verify.mjs';
@@ -902,16 +903,121 @@ function proofToolIdentity(rehearsal) {
   return { path: captureTool, sha256: sha256(bytes), revision, tree: git('rev-parse', `${revision}^{tree}`) };
 }
 
+const verificationRelative = `${route}/verification.json`;
+
+/**
+ * Builds verification.json, the records, README, and index in memory from
+ * `verification`. `read(relative)` returns a route file's current or staged
+ * text. Returns the staged files (null removes a file); writes nothing.
+ */
+export function assembleRoute(verification, read) {
+  const files = new Map();
+  const write = (relative, text) => {
+    assertDisclosable(text, relative);
+    files.set(relative, text);
+    return { path: relative, sha256: sha256(text) };
+  };
+  const assembled = {
+    ...verification,
+    captureProcedure: `node ${captureTool} --capture-timestamp=<ISO-8601 UTC> [--dry-run-run=<id>] [--publish-run=<id>] [--prior-publish-run=<id>] [--approval-method=<id>=<method>] [--registry [--registry-wait=<s>]]`,
+    sanitizationRules,
+  };
+  const validation = write(verificationRelative, canonicalJson(assembled));
+  const { retained, phases } = assembled;
+  if (!phases.dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
+  const refs = {
+    validation,
+    manifest: retained.manifest,
+    dryRunExcerpt: retained.dryRunExcerpt,
+    credentialsExcerpt: retained.credentialsExcerpt,
+    publishExcerpts: retained.publishExcerpt ? [retained.publishPrepareExcerpt, retained.publishExcerpt] : [],
+    priorPublishExcerpt: retained.priorPublishExcerpt,
+    registry: retained.registry,
+    retained,
+  };
+  const manifest = JSON.parse(read(retained.manifest.path));
+  const built = buildRoute({ ...assembled, phases: { ...phases, dryRun: { ...phases.dryRun, manifest } } }, refs);
+  const records = Object.entries(built).map(([assertionId, text]) => ({ assertionId, ...write(`${route}/records/${assertionId}.json`, text) }));
+  for (const stale of ['E-R1-EXIT-03', 'E-R1-EXIT-04'].filter((id) => !built[id])) files.set(`${route}/records/${stale}.json`, null);
+  write(`${route}/README.md`, readme(assembled));
+  write(`${route}/index.json`, canonicalJson({
+    schema: 'muxui-evidence-index-v1',
+    milestone: 'R1 exit',
+    authority,
+    sourceRevision: assembled.sourceRevision,
+    sourceTree: assembled.sourceTree,
+    artifacts: Object.values(retained).sort((left, right) => (left.path < right.path ? -1 : 1)),
+    records,
+    validation,
+    disclosureClass: 'public-sanitized',
+    owner: 'ndrewtran',
+    ...(assembled.rehearsal ? { rehearsal: assembled.rehearsal } : {}),
+    // The evidence head is the commit that retains this root; it is created after capture.
+    evidenceHead: { status: 'not-applicable', reason: 'the index digest is the content address; the retaining commit follows capture' },
+    retentionPolicy: 'Content-addressed Git records retained in default-branch history; hosted logs and artifacts expire and are bound by digest',
+  }));
+  return { files, records: records.map(({ assertionId }) => assertionId) };
+}
+
+// Every digest the staged index names must match the bytes about to be written.
+function assertStagedDigests(read) {
+  const index = JSON.parse(read(`${route}/index.json`));
+  for (const ref of [...index.artifacts, ...index.records, index.validation]) {
+    if (sha256(read(ref.path)) !== ref.sha256) fail('R1_EXIT_DIGEST_INCONSISTENT', `${ref.path} does not match its staged digest`);
+  }
+}
+
+/**
+ * Replaces `out` with its staged state: copies the current route into a temp
+ * sibling, applies `files` there, then renames it into place. Any failure
+ * before the rename leaves `out` untouched.
+ */
+function commitRoute(out, files) {
+  const parent = dirname(out);
+  mkdirSync(parent, { recursive: true });
+  const staging = mkdtempSync(join(parent, `.${basename(out)}.staging-`));
+  const previous = `${staging}.previous`;
+  try {
+    if (existsSync(out)) cpSync(out, staging, { recursive: true });
+    for (const [relative, text] of files) {
+      const target = join(staging, relative.slice(route.length + 1));
+      if (text === null) rmSync(target, { force: true });
+      else {
+        mkdirSync(dirname(target), { recursive: true });
+        writeFileSync(target, text);
+      }
+    }
+    // A directory cannot be renamed over a non-empty one: move the old route
+    // aside, move the staged route in, and restore the old one if that fails.
+    const replacing = existsSync(out);
+    if (replacing) renameSync(out, previous);
+    try {
+      renameSync(staging, out);
+    } catch (error) {
+      if (replacing) renameSync(previous, out);
+      throw error;
+    }
+    rmSync(previous, { recursive: true, force: true });
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
+}
+
 export async function main(argv = process.argv.slice(2), github = createGitHub()) {
   const options = parseArguments(argv);
   const routePath = (relative) => join(options.out, relative.slice(route.length + 1));
+  // Phase output is staged here and written only by commitRoute (null removes a file).
+  const staged = new Map();
+  const read = (relative) => {
+    if (!staged.has(relative)) return readFileSync(routePath(relative), 'utf8');
+    if (staged.get(relative) === null) fail('R1_EXIT_RETAINED_CHANGED', `${relative} was dropped by this capture`);
+    return staged.get(relative);
+  };
   const write = (relative, text) => {
     assertDisclosable(text, relative);
-    mkdirSync(dirname(routePath(relative)), { recursive: true });
-    writeFileSync(routePath(relative), text);
-    return { path: relative, sha256: sha256(readFileSync(routePath(relative))) };
+    staged.set(relative, text);
+    return { path: relative, sha256: sha256(text) };
   };
-  const verificationRelative = `${route}/verification.json`;
   const verification = existsSync(routePath(verificationRelative))
     ? JSON.parse(readFileSync(routePath(verificationRelative), 'utf8'))
     : { schema: 'muxui-evidence-validation-v1', phases: {} };
@@ -923,7 +1029,7 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
   // Retained files are keyed; replacing or dropping one removes its old file.
   const drop = (...keys) => {
     for (const key of keys) {
-      if (verification.retained[key]) rmSync(routePath(verification.retained[key].path), { force: true });
+      if (verification.retained[key]) staged.set(verification.retained[key].path, null);
       delete verification.retained[key];
     }
   };
@@ -935,7 +1041,7 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
   const capturedDryRun = () => {
     const { dryRun } = verification.phases;
     if (!dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
-    return { ...dryRun, manifest: JSON.parse(readFileSync(routePath(verification.retained.manifest.path), 'utf8')) };
+    return { ...dryRun, manifest: JSON.parse(read(verification.retained.manifest.path)) };
   };
   // Each phase keeps the identity of the tool that captured it; a capture made
   // before per-phase identities inherits the route's earlier tool identity.
@@ -1041,42 +1147,11 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
     }
   }
 
-  verification.captureProcedure = `node ${captureTool} --capture-timestamp=<ISO-8601 UTC> [--dry-run-run=<id>] [--publish-run=<id>] [--prior-publish-run=<id>] [--approval-method=<id>=<method>] [--registry [--registry-wait=<s>]]`;
-  verification.sanitizationRules = sanitizationRules;
-  const validation = write(verificationRelative, canonicalJson(verification));
-  const { retained } = verification;
-  const refs = {
-    validation,
-    manifest: retained.manifest,
-    dryRunExcerpt: retained.dryRunExcerpt,
-    credentialsExcerpt: retained.credentialsExcerpt,
-    publishExcerpts: retained.publishExcerpt ? [retained.publishPrepareExcerpt, retained.publishExcerpt] : [],
-    priorPublishExcerpt: retained.priorPublishExcerpt,
-    registry: retained.registry,
-    retained,
-  };
-  const routeView = { ...verification, phases: { ...verification.phases, dryRun: capturedDryRun() } };
-  const built = buildRoute(routeView, refs);
-  const records = Object.entries(built).map(([assertionId, text]) => ({ assertionId, ...write(`${route}/records/${assertionId}.json`, text) }));
-  for (const stale of ['E-R1-EXIT-03', 'E-R1-EXIT-04'].filter((id) => !built[id])) rmSync(routePath(`${route}/records/${stale}.json`), { force: true });
-  write(`${route}/README.md`, readme(verification));
-  write(`${route}/index.json`, canonicalJson({
-    schema: 'muxui-evidence-index-v1',
-    milestone: 'R1 exit',
-    authority,
-    sourceRevision: verification.sourceRevision,
-    sourceTree: verification.sourceTree,
-    artifacts: Object.values(retained).sort((left, right) => (left.path < right.path ? -1 : 1)),
-    records,
-    validation,
-    disclosureClass: 'public-sanitized',
-    owner: 'ndrewtran',
-    ...(verification.rehearsal ? { rehearsal: verification.rehearsal } : {}),
-    // The evidence head is the commit that retains this root; it is created after capture.
-    evidenceHead: { status: 'not-applicable', reason: 'the index digest is the content address; the retaining commit follows capture' },
-    retentionPolicy: 'Content-addressed Git records retained in default-branch history; hosted logs and artifacts expire and are bound by digest',
-  }));
-  return { records: records.map(({ assertionId }) => assertionId), out: options.out };
+  const { files, records } = assembleRoute(verification, read);
+  for (const [relative, text] of files) staged.set(relative, text);
+  assertStagedDigests(read);
+  commitRoute(options.out, staged);
+  return { records, out: options.out };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

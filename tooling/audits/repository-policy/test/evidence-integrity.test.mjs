@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -534,4 +535,89 @@ test('R1 exit capture discloses a failed earlier dry-run attempt and masks npm a
   assert.equal(r1Exit.sanitize(line(`https://www.npmjs.com/auth/cli/${id}`)), line('<npm-auth-url>'));
   assert.equal(r1Exit.sanitize(line(`https://registry.npmjs.org/-/v1/done?authId=${id}`)), line('https://registry.npmjs.org/-/v1/done?<npm-auth-url>'));
   assert.ok(r1Exit.sanitizationRules.some((rule) => rule.includes('<npm-auth-url>')));
+});
+
+test('R1 exit capture rebuilds the committed route byte for byte from its verification.json', async () => {
+  const read = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
+  const { files } = r1Exit.assembleRoute(JSON.parse(read(`${r1Exit.route}/verification.json`)), read);
+  assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', 'records/E-R1-EXIT-01.json', 'records/E-R1-EXIT-02.json', 'records/E-R1-EXIT-03.json', 'records/E-R1-EXIT-04.json', 'verification.json'].map((file) => `${r1Exit.route}/${file}`));
+  for (const [relative, text] of files) assert.equal(text, read(relative), relative);
+});
+
+// A rehearsal route holding a captured dry run, written as the tool would.
+async function seedR1ExitRoute(out, fixture) {
+  const bound = r1Exit.bindDryRun(fixture.dryRunInput);
+  const files = new Map();
+  const retain = (relative, text) => {
+    files.set(relative, text);
+    return { path: relative, sha256: digest(text) };
+  };
+  const { excerpt, credentials, manifest, ...rest } = bound;
+  const { value, rewrites } = r1Exit.sanitizeManifest(manifest);
+  const route = r1Exit.route;
+  const verification = {
+    schema: 'muxui-evidence-validation-v1',
+    phases: { dryRun: { ...rest, captureTimestamp: '2026-10-04T10:00:00Z', excerpt: excerpt.ranges, manifestSanitization: rewrites, proofTool: {}, credentials: { ...credentials, excerpt: credentials.excerpt.ranges }, priorAttempts: [] } },
+    retained: {
+      manifest: retain(`${route}/artifacts/release-manifest.json`, canonicalJson(value)),
+      dryRunExcerpt: retain(`${route}/validation/dry-run-prepare-11.txt`, excerpt.text),
+      credentialsExcerpt: retain(`${route}/validation/verify-credentials-3.txt`, credentials.excerpt.text),
+    },
+    sourceRevision: fixture.head,
+    sourceTree: fixture.tree,
+    proofTool: {},
+    rehearsal: { status: 'rehearsal', note: 'development capture; not release evidence' },
+  };
+  for (const [relative, text] of r1Exit.assembleRoute(verification, (relative) => files.get(relative)).files) files.set(relative, text);
+  for (const [relative, text] of files) {
+    if (text === null) continue;
+    const target = join(out, relative.slice(route.length + 1));
+    await mkdir(resolve(target, '..'), { recursive: true });
+    await writeFile(target, text);
+  }
+}
+
+async function snapshotTree(directory) {
+  const entries = await readdir(directory, { recursive: true, withFileTypes: true });
+  const files = entries.filter((entry) => entry.isFile()).map((entry) => join(entry.parentPath, entry.name));
+  return Object.fromEntries(await Promise.all(files.sort().map(async (file) => [file.slice(directory.length), await readFile(file, 'utf8')])));
+}
+
+test('R1 exit capture replaces the route atomically and leaves it unchanged when the rebuild fails', async () => {
+  const fixture = r1ExitFixture();
+  const github = {
+    run: (id) => fixture.run(id),
+    jobs: () => [fixture.job(21, 'prepare'), fixture.publishJob(22)],
+    log: (jobId) => (jobId === 21 ? fixture.prepareLog('publish', fixture.facts.integrity) : fixture.publishLog()),
+    approvals: () => [],
+  };
+  const argv = (out) => ['--rehearsal', `--out=${out}`, '--capture-timestamp=2026-10-04T14:00:00Z', '--publish-run=2'];
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-'));
+  try {
+    const out = join(root, 'r1-exit');
+    await seedR1ExitRoute(out, fixture);
+    // An older capture whose dry run lacks a field the rebuild needs: the
+    // publish phase binds, then the rebuild throws.
+    const verificationPath = join(out, 'verification.json');
+    const stale = JSON.parse(await readFile(verificationPath, 'utf8'));
+    delete stale.phases.dryRun.credentials;
+    await writeFile(verificationPath, canonicalJson(stale));
+    const before = await snapshotTree(out);
+    await assert.rejects(r1Exit.main(argv(out), github), TypeError);
+    assert.deepEqual(await snapshotTree(out), before, 'the route is byte-identical after a failed rebuild');
+    assert.deepEqual(await readdir(root), ['r1-exit'], 'no staging directory is left behind');
+
+    await rm(out, { recursive: true });
+    await seedR1ExitRoute(out, fixture);
+    await r1Exit.main(argv(out), github);
+    assert.deepEqual(await readdir(root), ['r1-exit'], 'the staged route replaced the old one in place');
+    const index = JSON.parse(await readFile(join(out, 'index.json'), 'utf8'));
+    for (const ref of [...index.artifacts, ...index.records, index.validation]) {
+      assert.equal(digest(await readFile(join(out, ref.path.slice(r1Exit.route.length + 1)))), ref.sha256, ref.path);
+    }
+    assert.ok(index.artifacts.some(({ path }) => path.endsWith('/validation/publish-22.txt')));
+    assert.equal(JSON.parse(await readFile(join(out, 'records/E-R1-EXIT-02.json'), 'utf8')).postPublication.execution.runId, 2);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
