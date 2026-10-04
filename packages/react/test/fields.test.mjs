@@ -1530,3 +1530,30 @@ test('Autocomplete shows name-keyed server errors until a selection', async () =
     dom.window.close();
   }
 });
+
+test('TimeField compares, displays, and submits HH:mm:ss values and bounds at minute precision', async () => {
+  const dom = new JSDOM('<!doctype html><div id="root"></div>');
+  const restore = installDom(dom);
+  let root;
+  try {
+    const host = document.querySelector('#root');
+    root = createRoot(host);
+    // aria validation shows built-in range errors immediately.
+    await act(async () => root.render(React.createElement(Form, { validationBehavior: 'aria' },
+      React.createElement(TimeField, { label: 'Closing', name: 'closing', defaultValue: '17:00:30', maxValue: '17:00' }),
+      React.createElement(TimeField, { label: 'Opening', name: 'opening', defaultValue: '09:30:15', minValue: '09:30:10' }),
+      React.createElement(TimeField, { label: 'Controlled', name: 'controlled', value: '09:30:15' }),
+      React.createElement(TimeField, { label: 'Late', name: 'late', defaultValue: '17:01', maxValue: '17:00:59' }))));
+    const form = host.querySelector('form');
+    const [closing, opening, controlled, late] = host.querySelectorAll('.muxui-time-field');
+    assert.equal(late.getAttribute('data-invalid'), 'true', 'bounds still apply at minute precision');
+    for (const field of [closing, opening, controlled]) assert.equal(field.getAttribute('data-invalid'), null, `${field.textContent} is out of range`);
+    assert.equal(controlled.querySelector('[data-type="minute"]').textContent, '30');
+    assert.equal(controlled.querySelector('[data-type="second"]'), null);
+    assert.deepEqual(Object.fromEntries(new dom.window.FormData(form)), { closing: '17:00', opening: '09:30', controlled: '09:30', late: '17:01' });
+  } finally {
+    await act(async () => root?.unmount());
+    restore();
+    dom.window.close();
+  }
+});

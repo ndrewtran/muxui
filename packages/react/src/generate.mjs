@@ -585,6 +585,7 @@ export interface FormProps extends Omit<React.FormHTMLAttributes<HTMLFormElement
 export declare const Form: React.ForwardRefExoticComponent<FormProps & React.RefAttributes<HTMLFormElement>>;
 export type DateFieldProps = NamedFieldProps & { value?: MuxUIDateValue | null; defaultValue?: MuxUIDateValue; minValue?: MuxUIDateValue; maxValue?: MuxUIDateValue; unavailableDateMatcher?: (date: MuxUIDateValue) => boolean; onChange?: (value: MuxUIDateValue | null) => void; name?: string; };
 export declare const DateField: React.ForwardRefExoticComponent<DateFieldProps & React.RefAttributes<HTMLDivElement>>;
+/** TimeField works at minute precision: HH:mm:ss values and bounds are accepted, their seconds are ignored, and values submit and emit as HH:mm. */
 export type TimeFieldProps = NamedFieldProps & { value?: MuxUITimeValue | null; defaultValue?: MuxUITimeValue; minValue?: MuxUITimeValue; maxValue?: MuxUITimeValue; onChange?: (value: MuxUITimeValue | null) => void; name?: string; size?: ControlSize; };
 export declare const TimeField: React.ForwardRefExoticComponent<TimeFieldProps & React.RefAttributes<HTMLDivElement>>;
 export type DatePickerProps = DateFieldProps & { open?: boolean; defaultOpen?: boolean; onOpenChange?: (open: boolean) => void; };

@@ -330,15 +330,20 @@ function dateOrUndefined(value) {
   }
 }
 
+// TimeField works at minute precision: HH:mm:ss input is accepted (as
+// database time columns produce) and its seconds are dropped, so values,
+// bounds, display, and submission all compare at the same precision.
 function timeOrUndefined(value) {
   if (value === undefined || value === null || value === '') return undefined;
   const message = 'Mux UI time values must use HH:mm[:ss[.fraction]] ISO format';
   if (typeof value !== 'string' || !ISO_TIME_PATTERN.test(value)) throw new TypeError(message);
+  let time;
   try {
-    return parseTime(value);
+    time = parseTime(value);
   } catch {
     throw new TypeError(message);
   }
+  return time.set({ second: 0, millisecond: 0 });
 }
 
 function dateRangeOrUndefined(value) {
@@ -388,11 +393,9 @@ function serializeDateValue(value) {
   return value ? String(value) : null;
 }
 
-// Submit and emit times at the field's precision: HH:mm unless the field
-// edits seconds, so initial and edited values share one format.
-function serializeTimeValue(value, granularity) {
-  if (!value) return null;
-  return String(value).slice(0, granularity === 'second' ? 8 : 5);
+// Submit and emit times at TimeField's minute precision as HH:mm.
+function serializeTimeValue(value) {
+  return value ? String(value).slice(0, 5) : null;
 }
 
 function calendarChildren(cellClass = 'muxui-calendar-cell') {
@@ -848,26 +851,25 @@ export const TimeField = React.forwardRef(function TimeField({
   const resolvedSize = normalizeChoiceControlSize(size, 'TimeField');
   const externalValidation = useMuxFormValidation(name);
   const effectiveErrorMessage = errorMessage !== undefined ? errorMessage : externalValidation.message || undefined;
-  const { granularity } = props;
   const parsedValue = React.useMemo(() => controlledTemporal(value, timeOrUndefined), [value]);
   const parsedDefaultValue = React.useMemo(() => timeOrUndefined(defaultValue), [defaultValue]);
   const { minValue: parsedMinValue, maxValue: parsedMaxValue } = timeBounds(minValue, maxValue);
-  const [formValue, setFormValue] = React.useState(() => serializeTimeValue(parsedValue ?? parsedDefaultValue, granularity));
+  const [formValue, setFormValue] = React.useState(() => serializeTimeValue(parsedValue ?? parsedDefaultValue));
   const resettingRef = React.useRef(false);
   const handleChange = (next) => {
     if (resettingRef.current) return;
-    const nextValue = serializeTimeValue(next, granularity);
+    const nextValue = serializeTimeValue(next);
     externalValidation.dismiss();
     if (value === undefined) setFormValue(nextValue);
     onChange?.(nextValue);
   };
   const handleReset = () => {
     externalValidation.dismiss();
-    if (value === undefined) setFormValue(serializeTimeValue(parsedDefaultValue, granularity));
+    if (value === undefined) setFormValue(serializeTimeValue(parsedDefaultValue));
   };
   const resetInputRef = useOwningFormReset(handleReset, () => { resettingRef.current = true; }, () => { resettingRef.current = false; });
   // Mux owns TimeField state, so RAC always receives a controlled value.
-  const submittedValue = value !== undefined ? serializeTimeValue(parsedValue, granularity) : formValue;
+  const submittedValue = value !== undefined ? serializeTimeValue(parsedValue) : formValue;
   const effectiveParsedValue = React.useMemo(() => timeOrUndefined(submittedValue) ?? null, [submittedValue]);
   return React.createElement(AriaTimeField, {
     ...props,
