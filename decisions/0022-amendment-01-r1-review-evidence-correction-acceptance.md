@@ -32,34 +32,48 @@ Andrew answered:
 
 This accepts the recommendation: the four parts above, the retained review
 evidence, the author-reported treatment of R1.1 and R1.5 review, and the
-Roadmap and Product Scope changes that apply it. It keeps every `S1.0`
-deferral and authorizes no publication, dist-tag change, or final R1-exit
-merge.
+Roadmap and Product Scope changes that apply it. The Product Scope version
+was a separate, later selection, recorded below. This answer keeps every
+`S1.0` deferral and authorizes no publication, dist-tag change, or final
+R1-exit merge.
 
-## Later rulings
+## Later selections
 
-On 4 October 2026, after the reviews and fixes, Andrew ruled:
+Each item below quotes the option Andrew selected on 4 October 2026. Any
+reasoning attached to it is the recommendation he accepted, not his words.
 
-- **Version.** Product Scope moves to `14.0.0`, a major version, because the
-  amendment materially changes what satisfies a committed release-acceptance
-  condition: the R1.1 and R1.5 reviews count as author-reported, which is not
-  proof. This follows the 13.0.0 precedent for amending the R1.1 through R1.5
-  exit rules. Accepting those unretained author claims is his explicit
-  exception, for R1.1 and R1.5 only, to the rule that a transient log cannot
-  satisfy an exit.
-- **R1.3 collections finding L3.** A read-only `Select` stays browsable; no
-  change.
-- **R1.3 pickers finding F10.** The colour callback string format is
-  unchanged.
-- **R1.2 finding L5.** Accepted for rc.1 as a known limitation and tracked to
-  `S1.0`: the Autocomplete dismiss fix's blur check is proven only in
-  Chromium.
-- **R1.4 finding M7.** Accepted for rc.1 as a known limitation and tracked to
-  `S1.0`: focus falls to body when the element that opened a Dialog unmounts
-  while it is open, with no Mux UI fallback target.
+- **R1.3 collections finding L3.** While the fixes were built, asked how a
+  read-only `Select` should behave, Andrew selected "Keep it browsable
+  (Recommended)". The finding is accepted unfixed.
+- **Version.** Andrew selected "Major, 14.0.0 (Recommended)". The
+  recommendation's reasoning: the amendment materially changes what
+  satisfies a committed release-acceptance condition, because the R1.1 and
+  R1.5 reviews count as author-reported, which is not proof; it follows the
+  13.0.0 precedent for amending the R1.1 through R1.5 exit rules; and
+  accepting those unretained author claims is an explicit exception, for
+  R1.1 and R1.5 only, to the rule that a transient log cannot satisfy an
+  exit.
+- **R1.2 finding L5 and R1.4 finding M7.** Andrew selected "Accept both,
+  track to S1.0 (Recommended)". The recommendation: accept them for rc.1 as
+  known limitations, L5 being that the Autocomplete dismiss fix's blur check
+  is proven only in Chromium and M7 that focus falls to body when the element
+  that opened a Dialog unmounts while it is open, and track both to `S1.0`.
+- **Merge.** For the fixes and evidence pull requests, Andrew said:
 
-The four findings are recorded `accepted-unfixed` with Andrew as
-`acceptedBy` in `tests/evidence/r1-retro-review`.
+  > merge when green
+
+- **R1.3 pickers finding F10.** The root agent first left the colour
+  callback string format unchanged as its own call, without asking Andrew.
+  When asked afterwards, Andrew selected "Accept, document format
+  (Recommended)". The recommendation: keep the CSS colour strings the
+  callbacks emit for rc.1, document the format in the colour catalog
+  records, and record the finding as accepted by him. Each record states
+  its control's exact format: `rgba()` for hex or RGB values and `hsla()`
+  for HSL or HSB values, with ColorField always `rgba()` and ColorWheel
+  always `hsla()`.
+
+The four findings are recorded `accepted-unfixed` with Andrew / `ndrewtran`
+as `acceptedBy` in `tests/evidence/r1-retro-review`.
 
 This record does not claim that any check or review passed, that a finding
 was fixed, that a pull request was opened or merged, or that a package was

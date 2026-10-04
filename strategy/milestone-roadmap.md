@@ -1070,8 +1070,9 @@ expire around 2026-11-23 (Decision 0022). No hosted review logs exist, so
 Decision 0022 amendment 01 meets the review half with the retained
 retroactive reviews of R1.2 through R1.4, each finding resolved, and accepts
 R1.1 and R1.5 review as author-reported only, which is not proof. That
-acceptance of an unretained author claim is Andrew's explicit exception to the
-transient-log rule for R1.1 and R1.5 only. The generated records mark R1.5 evidence `checks-retained-review-author-reported`.
+acceptance of an unretained author claim is Andrew's accepted exception to the
+transient-log rule for R1.1 and R1.5 only. The generated records mark R1.5
+evidence `checks-retained-review-author-reported`.
 
 **Evidence:** `E-R1-EXIT-01` exact tarball/export/install tuple;
 `E-R1-EXIT-02` registry/provenance/integrity; `E-R1-EXIT-03` published clean-

@@ -924,7 +924,7 @@ accessibility, package, compatibility, integrity, or generation failures.
   their review evidence is the retained retroactive review of R1.2 through
   R1.4, with every finding resolved, and author-reported review for R1.1 and
   R1.5, which is not proof; accepting that unretained author claim for R1.1
-  and R1.5 is Andrew's explicit exception to the transient-log rule for those
+  and R1.5 is Andrew's accepted exception to the transient-log rule for those
   two milestones (Decision 0022 amendment 01);
 - the compatibility/evidence profile states the exact tested environment;
 - generator, privacy, provenance, exception, advisory, performance-baseline,
@@ -1398,7 +1398,7 @@ retroactive review of the current R1.2, R1.3, and R1.4 code under
 `tests/evidence/r1-retro-review`, with every finding resolved by a merged fix
 or an accepted reason, and author-reported review for R1.1 and R1.5, which
 Andrew accepted for the rc boundary and which is not proof. Accepting that
-unretained author claim is Andrew's explicit exception, for R1.1 and R1.5
+unretained author claim is Andrew's accepted exception, for R1.1 and R1.5
 only, to the rule that a transient log cannot satisfy an exit. The generated
 records mark R1.5 evidence `checks-retained-review-author-reported`.
 
@@ -1413,5 +1413,7 @@ no assistive-technology support.
 Tracker migration: the fixes for the review findings landed in pull request
 #204. Two known limitations Andrew accepted for rc.1, R1.2 finding L5
 (Autocomplete dismiss proven only in Chromium) and R1.4 finding M7 (focus
-falls to body when a Dialog's opener unmounts), are `S1.0` follow-ups. This
-change creates no tracker items.
+falls to body when a Dialog's opener unmounts), will be tracked as `S1.0`
+items; no tracker items are created by this change. 13.0.0's follow-up to
+capture the R1 pull-request logs into retained evidence is satisfied by
+pull request #202.

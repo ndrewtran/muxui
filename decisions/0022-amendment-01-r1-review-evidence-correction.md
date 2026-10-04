@@ -46,13 +46,16 @@ commit from the separate fixes pull request (#204), or an explicit reason
 accepted by Andrew, the decision owner. Only the decision owner may accept a
 finding unfixed, and each accepted finding records who accepted it.
 
-The two author-reported reviews the retroactive reviews could check, #106 and
-#107 ("no actionable findings"), were contradicted: the R1.3 and R1.4 lanes
-found 38 findings, 8 of them high, across those families. "Author-reported,
-not proof" therefore carries evidence, and R1.1 and R1.5 are accepted on
-claims of the same form. That acceptance of an unretained author claim is
-Andrew's explicit exception, for R1.1 and R1.5 only, to the rule that a
-transient log cannot satisfy an exit.
+PR #106's author-reported review ("no actionable findings") is contradicted
+at its own head, `bfd07018`: the R1.3 collections lane found its high
+findings H1, H2, and H3, and medium findings M1 and M2, present there.
+Separately, the current code at `81e4c7bc`, about 60 renderer commits after
+#107 merged, had 38 findings, 8 of them high, in the #106 and #107 families;
+whether the rest existed at those pull requests' heads was not checked. The
+one author-reported review claim that could be checked was therefore wrong,
+and R1.1 and R1.5 are accepted on claims of the same form. That acceptance
+of an unretained author claim is an explicit exception, for R1.1 and R1.5
+only, to the rule that a transient log cannot satisfy an exit.
 
 R1.5's generated evidence status moves from `logged-not-retained` to
 `checks-retained-review-author-reported`, with this amendment as its basis.
