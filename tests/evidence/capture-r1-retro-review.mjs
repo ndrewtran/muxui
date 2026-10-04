@@ -249,7 +249,7 @@ const reviewer = {
   access: 'read-only reviewer agent; no GitHub access; worktree left unchanged',
   independence: 'a different model and harness from the Codex automation that produced the R1 code and pull requests',
 };
-const claimBoundary = 'findings is not a pass. clear means the reviewer found nothing within the stated lenses, files, tests, and probes; it is not proof of correctness. A fixed resolution means a fix merged in pull request #204 with tests that fail without it; independent reviewers verified those tests on the pull-request branch before merge, and nobody re-reviewed the code after merge. An accepted-unfixed resolution is the decision owner\'s acceptance, not a fix. Manual and assistive-technology testing remains unmet and deferred to S1.0 (Decision 0022). This is not a hosted review of the original pull request, which had none.';
+const claimBoundary = 'findings is not a pass. clear means the reviewer found nothing within the stated lenses, files, tests, and probes; it is not proof of correctness. A fixed resolution means a fix merged in pull request #204 with tests that fail without the fix, as reported in #204 and not retained evidence; independent reviewers checked those tests on the pull-request branch before merge, and nobody re-reviewed the code after merge. An accepted-unfixed resolution is the decision owner\'s acceptance, not a fix. Manual and assistive-technology testing remains unmet and deferred to S1.0 (Decision 0022). This is not a hosted review of the original pull request, which had none.';
 
 const records = [];
 for (const { lane, milestone, pullRequest, families, counts, findings, reportTable, notChecked } of lanes) {
@@ -273,9 +273,14 @@ for (const { lane, milestone, pullRequest, families, counts, findings, reportTab
     claimBoundary,
     reviewedRevision,
     reviewedTree,
-    // The reviewers read and ran the reviewed commit itself.
     executedRevision: reviewedRevision,
     executedTree: reviewedTree,
+    executedIdentityBasis: 'declared equal to the reviewed revision and tree because the reviewers ran their tests and probes there; not observed separately',
+    // tests/evidence/README.md step 3: owner-declared N/A for the proof-tool commit and tree.
+    proofToolRevision: {
+      status: 'not-applicable',
+      reason: 'the capture tool is committed together with this evidence, so no earlier commit holds the exact tool; proofTool.sha256 binds its bytes',
+    },
     reviewer,
     lenses,
     families: families.map((family) => {

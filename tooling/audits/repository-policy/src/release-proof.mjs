@@ -569,12 +569,23 @@ export function readRetainedEvidence(repositoryRoot, milestones) {
 }
 
 const retainedReviewMilestones = Object.freeze(['R1.2', 'R1.3', 'R1.4']);
+const retainedReviewLanes = Object.freeze(['r1.2-fields', 'r1.3a-collections', 'r1.3b-pickers', 'r1.4-overlays']);
+
+/** Decision 0022's recorded decision owner, the only person who may accept a finding unfixed. */
+function decisionOwner(repositoryRoot) {
+  const text = readFileSync(join(repositoryRoot, 'decisions/0022-rc1-assistive-technology-non-claim.md'), 'utf8');
+  const owner = text.match(/^- Decision owner: (.+)$/mu)?.[1].replaceAll('`', '').trim();
+  if (!owner) fail('R1_EXIT_RETAINED_REVIEW_OWNER_UNKNOWN', 'Decision 0022 records no decision owner');
+  return owner;
+}
 
 /**
  * Reads the retained R1.2-R1.4 retroactive review index (Decision 0022
- * amendment 01). The R1 exit stops when the index is missing, names another
- * authority or milestone set, or any finding is still pending. R1.1 and R1.5
- * review is author-reported only and has no retained index.
+ * amendment 01). The R1 exit stops unless the index names the amendment and
+ * the three milestones, holds exactly the four lane records with matching
+ * digests, and every finding is fixed by an exact commit or accepted unfixed
+ * by the decision owner with a reason. R1.1 and R1.5 review is
+ * author-reported only and has no retained index.
  */
 export function readRetainedReviewEvidence(repositoryRoot, path = 'tests/evidence/r1-retro-review/index.json') {
   const absolute = join(repositoryRoot, path);
@@ -587,10 +598,27 @@ export function readRetainedReviewEvidence(repositoryRoot, path = 'tests/evidenc
   if (!Array.isArray(index.milestones) || index.milestones.join() !== retainedReviewMilestones.join()) {
     fail('R1_EXIT_RETAINED_REVIEW_MILESTONES_INVALID', `${path} must cover ${retainedReviewMilestones.join(', ')}`);
   }
-  for (const record of index.records ?? []) {
-    const { findings = [] } = JSON.parse(readFileSync(join(repositoryRoot, record.path), 'utf8'));
-    const pending = findings.filter(({ resolution }) => (resolution?.status ?? 'pending') === 'pending').map(({ id }) => id);
-    if (pending.length !== 0) fail('R1_EXIT_RETAINED_REVIEW_PENDING', `${record.path} has unresolved findings: ${pending.join(', ')}`);
+  const records = Array.isArray(index.records) ? index.records : [];
+  if (records.map(({ reviewId }) => reviewId).join() !== retainedReviewLanes.join()) {
+    fail('R1_EXIT_RETAINED_REVIEW_LANES_INVALID', `${path} must hold exactly the lanes ${retainedReviewLanes.join(', ')}`);
+  }
+  const owner = decisionOwner(repositoryRoot);
+  for (const record of records) {
+    const recordBytes = existsSync(join(repositoryRoot, record.path ?? '')) ? readFileSync(join(repositoryRoot, record.path)) : null;
+    if (!recordBytes || digest(recordBytes) !== record.sha256) {
+      fail('R1_EXIT_RETAINED_REVIEW_DIGEST_MISMATCH', `${record.path} does not match its indexed sha256`);
+    }
+    const { findings } = JSON.parse(recordBytes.toString('utf8'));
+    if (!Array.isArray(findings)) fail('R1_EXIT_RETAINED_REVIEW_LANES_INVALID', `${record.path} has no findings list`);
+    for (const { id, resolution } of findings) {
+      if (resolution?.status === 'pending') fail('R1_EXIT_RETAINED_REVIEW_PENDING', `${record.path} has unresolved finding ${id}`);
+      const fixed = resolution?.status === 'fixed' && /^[0-9a-f]{40}$/u.test(resolution.fixCommit ?? '');
+      const accepted = resolution?.status === 'accepted-unfixed' && typeof resolution.reason === 'string' && resolution.reason.trim() !== ''
+        && resolution.acceptedBy === owner;
+      if (!fixed && !accepted) {
+        fail('R1_EXIT_RETAINED_REVIEW_RESOLUTION_INVALID', `${record.path} finding ${id} needs a fixed 40-character commit or a reason accepted by ${owner}`);
+      }
+    }
   }
   return [{ milestones: index.milestones, path, bytes }];
 }
