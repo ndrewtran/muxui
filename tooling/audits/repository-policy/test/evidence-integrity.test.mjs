@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -607,10 +607,23 @@ test('R1 exit capture replaces the route atomically and leaves it unchanged when
     assert.deepEqual(await snapshotTree(out), before, 'the route is byte-identical after a failed rebuild');
     assert.deepEqual(await readdir(root), ['r1-exit'], 'no staging directory is left behind');
 
+    // A write that fails inside the staging directory: a directory already
+    // occupies the path of a staged excerpt.
     await rm(out, { recursive: true });
     await seedR1ExitRoute(out, fixture);
+    await mkdir(join(out, 'validation/publish-22.txt'));
+    await writeFile(join(out, 'validation/publish-22.txt/occupant'), 'x');
+    const occupied = await snapshotTree(out);
+    await assert.rejects(r1Exit.main(argv(out), github), { code: 'EISDIR' });
+    assert.deepEqual(await snapshotTree(out), occupied, 'the route is byte-identical after a failed staging write');
+    assert.deepEqual(await readdir(root), ['r1-exit'], 'no staging or previous directory is left behind');
+
+    await rm(out, { recursive: true });
+    await seedR1ExitRoute(out, fixture);
+    await chmod(out, 0o750);
     await r1Exit.main(argv(out), github);
     assert.deepEqual(await readdir(root), ['r1-exit'], 'the staged route replaced the old one in place');
+    assert.equal((await stat(out)).mode & 0o777, 0o750, 'the route keeps its directory mode');
     const index = JSON.parse(await readFile(join(out, 'index.json'), 'utf8'));
     for (const ref of [...index.artifacts, ...index.records, index.validation]) {
       assert.equal(digest(await readFile(join(out, ref.path.slice(r1Exit.route.length + 1)))), ref.sha256, ref.path);

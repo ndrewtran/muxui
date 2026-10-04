@@ -24,7 +24,7 @@
 // Hosted artifacts expire after 3 days and logs after 90; capture promptly.
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -54,8 +54,8 @@ const consumerSmoke = 'tooling/audits/repository-policy/src/release-consumer/mat
 const authority = 'strategy/milestone-roadmap.md: R1 exit — React prerelease publication';
 
 export class R1ExitCaptureError extends Error {
-  constructor(code, message) {
-    super(`${code}: ${message}`);
+  constructor(code, message, options) {
+    super(`${code}: ${message}`, options);
     this.code = code;
   }
 }
@@ -978,7 +978,8 @@ function commitRoute(out, files) {
   const staging = mkdtempSync(join(parent, `.${basename(out)}.staging-`));
   const previous = `${staging}.previous`;
   try {
-    if (existsSync(out)) cpSync(out, staging, { recursive: true });
+    const replacing = existsSync(out);
+    if (replacing) cpSync(out, staging, { recursive: true });
     for (const [relative, text] of files) {
       const target = join(staging, relative.slice(route.length + 1));
       if (text === null) rmSync(target, { force: true });
@@ -987,17 +988,27 @@ function commitRoute(out, files) {
         writeFileSync(target, text);
       }
     }
+    // mkdtemp creates 0700; keep the old route's mode.
+    chmodSync(staging, replacing ? statSync(out).mode & 0o777 : 0o755);
     // A directory cannot be renamed over a non-empty one: move the old route
     // aside, move the staged route in, and restore the old one if that fails.
-    const replacing = existsSync(out);
     if (replacing) renameSync(out, previous);
     try {
       renameSync(staging, out);
     } catch (error) {
-      if (replacing) renameSync(previous, out);
+      if (!replacing) throw error;
+      try {
+        renameSync(previous, out);
+      } catch {
+        throw new R1ExitCaptureError('R1_EXIT_ROUTE_STRANDED', `the previous route is at ${previous}; move it back to ${out}`, { cause: error });
+      }
       throw error;
     }
-    rmSync(previous, { recursive: true, force: true });
+    try {
+      rmSync(previous, { recursive: true, force: true });
+    } catch (error) {
+      console.warn(`[r1-exit] could not remove ${previous}: ${error.message}`);
+    }
   } finally {
     rmSync(staging, { recursive: true, force: true });
   }
