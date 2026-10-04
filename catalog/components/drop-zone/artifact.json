@@ -20,8 +20,8 @@
         "parts": ["root", "content"],
         "defaults": { "disabled": false }
       },
-      "behavior": ["Delegate pointer, keyboard, and clipboard drop semantics to the RAC DropZone and translate its DropEvent to the Core drop item facade.", "Do not read browser globals during SSR."],
-      "accessibility": ["Expose RAC's keyboard drop affordance alongside pointer and clipboard input.", "Expose disabled and visible-focus state and preserve the consumer-provided accessible name."],
+      "behavior": ["Delegate pointer, keyboard, and clipboard drop semantics to the RAC DropZone and translate its DropEvent to the Core drop item facade.", "Do not read browser globals during SSR.", "Report onActivate only for activation of RAC's drop button, not for clicks from nested consumer controls such as a FileTrigger."],
+      "accessibility": ["Expose RAC's keyboard drop affordance alongside pointer and clipboard input.", "Expose disabled state on RAC's drop button and visible-focus state, and preserve the consumer-provided accessible name; the role-less root carries data-disabled for styling only."],
       "tokenRecipe": { "source": "muxui:token:default-theme", "requirements": [
         { "token": "semantic.control.radius", "requirement": "required" },
         { "token": "semantic.control.padding-inline", "requirement": "required" },

@@ -306,7 +306,7 @@ test('DropZone and FileTrigger normalize browser inputs to Mux UI-owned values',
   }
 });
 
-test('DropZone mirrors disabled state on its public root for assistive technology', async () => {
+test('DropZone marks disabled state for styling only, without aria-disabled on its role-less root', async () => {
   const env = installDom();
   const host = document.querySelector('#root');
   const root = createRoot(host);
@@ -316,14 +316,52 @@ test('DropZone mirrors disabled state on its public root for assistive technolog
     const dropZone = host.querySelector('.muxui-drop-zone');
     assert.ok(dropZone);
     assert.equal(dropZone.getAttribute('data-disabled'), 'true');
-    assert.equal(dropZone.getAttribute('aria-disabled'), 'true');
+    assert.equal(dropZone.hasAttribute('aria-disabled'), false);
     const dropButton = dropZone.querySelector('button');
     await act(async () => dropButton.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })));
     assert.deepEqual(activations, []);
 
     await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload' }, 'Drop here')));
     assert.equal(dropZone.getAttribute('data-disabled'), null);
-    assert.equal(dropZone.getAttribute('aria-disabled'), null);
+    assert.equal(dropZone.hasAttribute('aria-disabled'), false);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('DropZone activates only from its own drop button, not from a nested FileTrigger', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  const activations = [];
+  try {
+    await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload', onActivate: (event) => activations.push(event) },
+      'Drop here or ',
+      React.createElement(FileTrigger, { onSelect: () => {} }, React.createElement('button', { id: 'browse' }, 'Browse')))));
+    const browse = host.querySelector('#browse');
+    const input = host.querySelector('input[type="file"]');
+    let pickerOpens = 0;
+    input.addEventListener('click', () => { pickerOpens += 1; });
+
+    // Keyboard press: the button click and FileTrigger's programmatic input click.
+    await act(async () => browse.focus());
+    await act(async () => {
+      browse.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }));
+      browse.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', bubbles: true, cancelable: true }));
+    });
+    // Mouse press.
+    await act(async () => {
+      browse.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse', detail: 1 }));
+      browse.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, button: 0, pointerId: 1, pointerType: 'mouse', detail: 1 }));
+      browse.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1 }));
+    });
+    assert.equal(pickerOpens, 2, 'both presses open the file picker');
+    assert.deepEqual(activations, []);
+
+    const dropButton = host.querySelector('.muxui-drop-zone > :first-child > button');
+    await act(async () => dropButton.dispatchEvent(new MouseEvent('click', { bubbles: true, detail: 0 })));
+    assert.equal(activations.length, 1);
   } finally {
     await act(async () => root.unmount());
     env.restore();

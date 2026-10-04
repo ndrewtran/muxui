@@ -30,7 +30,7 @@
   color: var(--muxui-semantic-selection-track);
 }
 
-.muxui-drop-zone:not([data-disabled], [aria-disabled='true'], [data-drop-target]) {
+.muxui-drop-zone:not([data-disabled], [data-drop-target]) {
   color: var(--muxui-semantic-content-muted);
 }
 

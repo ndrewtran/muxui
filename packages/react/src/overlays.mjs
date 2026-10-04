@@ -141,22 +141,16 @@ export const DropZone = React.forwardRef(function DropZone({
     onDrop?.(normalizeDropEvent(event));
   }, [onDrop]);
   const handleActivate = React.useCallback((event) => {
-    // RAC's hidden drop button reports keyboard activation through a native
-    // click; detail=0 excludes ordinary pointer clicks on consumer content.
-    if (event.detail !== 0 || disabledRef.current) return;
+    // RAC's visually hidden drop button is the root's only own control; clicks
+    // from consumer content, such as a nested FileTrigger, are not activation.
+    const dropButton = event.currentTarget.firstElementChild?.firstElementChild;
+    if (event.target !== dropButton || dropButton.tagName !== 'BUTTON' || disabledRef.current) return;
     onActivate?.({ type: 'activate', x: event.clientX ?? 0, y: event.clientY ?? 0 });
   }, [onActivate]);
-  const assignDropZoneRef = React.useCallback((node) => {
-    if (node) {
-      if (disabled) node.setAttribute('aria-disabled', 'true');
-      else node.removeAttribute('aria-disabled');
-    }
-    if (typeof ref === 'function') ref(node);
-    else if (ref) ref.current = node;
-  }, [disabled, ref]);
+  // RAC sets data-disabled on the role-less root; aria-disabled is not valid there.
   return React.createElement(AriaDropZone, {
     ...props,
-    ref: assignDropZoneRef,
+    ref,
     isDisabled: disabled,
     onDrop: handleDrop,
     onClickCapture: handleActivate,
