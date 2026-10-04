@@ -400,6 +400,61 @@ test('R1.3 color controls expose Mux UI color strings, anatomy, and disabled gua
   }
 });
 
+test('R1.3 colour controls name swatches, reject duplicate colours, and keep upstream props private', async () => {
+  const swatchMarkup = renderToString(React.createElement(ColorSwatchPicker, {
+    'aria-label': 'Brand', items: [{ id: 'red', color: '#ff0000', label: 'Brand red' }, { id: 'blue', color: '#0000ff' }, { id: 'green', color: '#00ff00', textValue: 'Leaf' }],
+  }));
+  const swatchDom = new JSDOM(`<!doctype html>${swatchMarkup}`);
+  const swatchNames = [...swatchDom.window.document.querySelectorAll('.muxui-color-swatch')].map((swatch) => swatch.getAttribute('aria-label'));
+  assert.equal(swatchNames[0], 'Brand red');
+  assert.notEqual(swatchNames[1], 'blue', 'an unlabelled item keeps the colour name');
+  assert.match(swatchNames[1], /blue/iu);
+  assert.equal(swatchNames[2], 'Leaf');
+  swatchDom.window.close();
+  assert.throws(() => renderToString(React.createElement(ColorSwatchPicker, {
+    'aria-label': 'Duplicates', items: [{ id: 'one', color: '#ff0000' }, { id: 'two', color: 'rgb(255, 0, 0)' }],
+  })), (error) => error instanceof TypeError && /distinct colors: two/u.test(error.message));
+  assert.throws(() => renderToString(React.createElement(ColorWheel, { label: 'Hue' })), (error) => error instanceof TypeError && error.message === 'ColorWheel requires aria-label or aria-labelledby');
+
+  // Upstream-only props such as xChannel and colorSpace are not forwarded.
+  const areaMarkup = renderToString(React.createElement(ColorArea, { 'aria-label': 'Area', defaultValue: '#ff8000', xChannel: 'blue', yChannel: 'red', colorSpace: 'hsl' }));
+  const plainAreaMarkup = renderToString(React.createElement(ColorArea, { 'aria-label': 'Area', defaultValue: '#ff8000' }));
+  const areaValues = (markup) => [...new JSDOM(`<!doctype html>${markup}`).window.document.querySelectorAll('input[type="range"]')].map((input) => input.getAttribute('aria-valuetext'));
+  assert.deepEqual(areaValues(areaMarkup), areaValues(plainAreaMarkup));
+
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const changes = [];
+  const upstreamEnds = [];
+  try {
+    await act(async () => root.render(React.createElement(ColorSlider, { 'aria-label': 'Red', defaultValue: '#800000', onChange: (value) => changes.push(value), onChangeEnd: (value) => upstreamEnds.push(value) })));
+    const input = container.querySelector('input[type="range"]');
+    await act(async () => input.focus());
+    await act(async () => {
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true, cancelable: true }));
+    });
+    assert.equal(changes.length, 1);
+    assert.deepEqual(upstreamEnds, []);
+
+    await act(async () => root.render(React.createElement('div', null,
+      React.createElement(ColorPicker, { 'aria-label': 'Brand colour', disabled: true, defaultValue: '#ff0000' }, React.createElement(ColorSwatch, { color: '#ff0000' })),
+      React.createElement(ColorPicker, { disabled: true, defaultValue: '#ff0000' }, React.createElement(ColorSwatch, { color: '#ff0000' })))));
+    const [labelledPicker, plainPicker] = container.querySelectorAll('.muxui-color-picker');
+    assert.equal(labelledPicker.getAttribute('role'), 'group');
+    assert.equal(labelledPicker.getAttribute('aria-label'), 'Brand colour');
+    assert.equal(labelledPicker.getAttribute('aria-disabled'), 'true');
+    assert.equal(plainPicker.hasAttribute('role'), false);
+    assert.equal(plainPicker.hasAttribute('aria-disabled'), false);
+    assert.equal(plainPicker.getAttribute('data-disabled'), 'true');
+  } finally {
+    document.activeElement?.blur();
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('R1.3 ColorArea associates visible and explicit labels with its interactive controls', async () => {
   const server = new JSDOM(renderToString(React.createElement(ColorArea, { label: 'Saturation' }))).window.document;
   const serverLabel = server.querySelector('.muxui-field-label');
