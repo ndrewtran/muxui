@@ -5,7 +5,7 @@ import { launchBrowser, pageShell, startServer } from './harness.mjs';
 // One client-rendered fixture per scenario, selected by `?scenario=`.
 const entry = `import React from 'react';
   import { createRoot } from 'react-dom/client';
-  import { PreviewTrigger, Toast, ToastProvider, useToast } from '/src/overlays.mjs';
+  import { Dialog, DropZone, FileTrigger, Popover, PreviewTrigger, Toast, ToastProvider, useToast } from '/src/overlays.mjs';
   import '/generated/styles.css';
   const h = React.createElement;
 
@@ -35,7 +35,31 @@ const entry = `import React from 'react';
     return shown ? h(Toast, { message: 'Saved', duration: 60_000, onDismiss: () => setShown(false) }) : h('p', { id: 'unmounted' }, 'Unmounted');
   }
 
+  function DialogScenario() {
+    const record = (name) => (open) => window.openChanges.push([name, open]);
+    return h('div', null,
+      h(Dialog, { title: 'Settings', onOpenChange: record('dialog'), trigger: h('button', { id: 'dialog-trigger' }, 'Open dialog') },
+        h(Popover, { 'aria-label': 'Modal options', onOpenChange: record('modal-popover'), trigger: h('button', { id: 'modal-popover-trigger' }, 'Modal options') },
+          h('button', { id: 'modal-popover-inside' }, 'Inside')),
+        h(Popover, { 'aria-label': 'Inline options', modal: false, onOpenChange: record('inline-popover'), trigger: h('button', { id: 'inline-popover-trigger' }, 'Inline options') },
+          h('button', { id: 'inline-popover-inside' }, 'Inside'))),
+      h('div', { id: 'tall', style: { height: 3000 } }, 'Tall page'));
+  }
+
+  function FilesScenario() {
+    return h('div', null,
+      h(DropZone, { 'aria-label': 'Upload', style: { width: 300, height: 120 }, onDrop: (event) => {
+        Promise.all(event.items.map((item) => item.getText('text/plain'))).then((texts) => window.drops.push(texts));
+      } }, 'Drop files here'),
+      h(FileTrigger, { onSelect: (files) => window.selections.push(files.map((file) => file.name)) }, h('button', { id: 'browse' }, 'Browse')));
+  }
+
+  window.openChanges = [];
+  window.drops = [];
+  window.selections = [];
   const scenarios = {
+    dialog: DialogScenario,
+    files: FilesScenario,
     preview: PreviewScenario,
     toast: ToastScenario,
     declarative: () => h(ToastProvider, null, h(DeclarativeToast)),
@@ -198,6 +222,93 @@ test('Toast timers respect a hover that starts during entry and hold while hover
     // Leaving the region resumes the remaining time once.
     await page.mouse.move(10, 690);
     await toast.waitFor({ state: 'detached', timeout: 3000 });
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+test('Dialog locks scroll, dismisses on backdrop press, and closes nested overlays first on Escape', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('dialog');
+  try {
+    const dialog = page.locator('.muxui-dialog');
+    const changes = () => page.evaluate(() => window.openChanges.splice(0));
+    await page.locator('#dialog-trigger').click();
+    await dialog.waitFor({ state: 'visible' });
+    assert.equal(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'hidden', 'page scroll is locked');
+    await page.mouse.wheel(0, 600);
+    await page.waitForTimeout(100);
+    assert.equal(await page.evaluate(() => window.scrollY), 0);
+
+    // A modal Popover inside the Dialog closes first, then the Dialog.
+    await page.locator('#modal-popover-trigger').click();
+    await page.locator('#modal-popover-inside').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('#modal-popover-inside').waitFor({ state: 'detached' });
+    assert.equal(await dialog.count(), 1);
+    await page.waitForFunction(() => document.activeElement?.id === 'modal-popover-trigger');
+
+    // So does a non-modal Popover whose trigger keeps focus.
+    await page.locator('#inline-popover-trigger').click();
+    await page.locator('#inline-popover-inside').waitFor();
+    await page.keyboard.press('Escape');
+    await page.locator('#inline-popover-inside').waitFor({ state: 'detached' });
+    assert.equal(await dialog.count(), 1);
+    assert.deepEqual(await changes(), [['dialog', true], ['modal-popover', true], ['modal-popover', false], ['inline-popover', true], ['inline-popover', false]]);
+
+    await page.keyboard.press('Escape');
+    await dialog.waitFor({ state: 'detached' });
+    await page.waitForFunction(() => document.activeElement?.id === 'dialog-trigger');
+    assert.notEqual(await page.evaluate(() => getComputedStyle(document.documentElement).overflow), 'hidden', 'scroll lock is released');
+
+    // Pressing the backdrop dismisses the Dialog.
+    await page.locator('#dialog-trigger').click();
+    await dialog.waitFor({ state: 'visible' });
+    await page.mouse.click(10, 10);
+    await dialog.waitFor({ state: 'detached' });
+    assert.deepEqual(await changes(), [['dialog', false], ['dialog', true], ['dialog', false]]);
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+// Synthetic file drags have no filesystem entry, which React Aria skips, so
+// this drives the drag lifecycle with text; native file drags stay manual.
+test('DropZone exposes its drop target state during a drag and reports the drop', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('files');
+  try {
+    const dropZone = page.locator('.muxui-drop-zone');
+    const dataTransfer = await page.evaluateHandle(() => {
+      const transfer = new DataTransfer();
+      transfer.setData('text/plain', 'Dragged text');
+      return transfer;
+    });
+    await dropZone.dispatchEvent('dragenter', { dataTransfer });
+    await dropZone.dispatchEvent('dragover', { dataTransfer });
+    await page.waitForFunction(() => document.querySelector('.muxui-drop-zone')?.hasAttribute('data-drop-target'));
+    await dropZone.dispatchEvent('drop', { dataTransfer });
+    await page.waitForFunction(() => window.drops.length === 1);
+    assert.deepEqual(await page.evaluate(() => window.drops), [['Dragged text']]);
+    assert.equal(await dropZone.getAttribute('data-drop-target'), null);
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+test('FileTrigger opens from the keyboard and accepts the same file twice', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('files');
+  try {
+    const file = { name: 'same.txt', mimeType: 'text/plain', buffer: Buffer.from('same') };
+    await page.locator('#browse').focus();
+    for (const expected of [1, 2]) {
+      const chooser = page.waitForEvent('filechooser');
+      await page.keyboard.press(expected === 1 ? 'Enter' : 'Space');
+      await (await chooser).setFiles(file);
+      await page.waitForFunction((count) => window.selections.length === count, expected);
+    }
+    assert.deepEqual(await page.evaluate(() => window.selections), [['same.txt'], ['same.txt']]);
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await page.close();
