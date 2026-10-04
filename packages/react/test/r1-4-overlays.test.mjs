@@ -330,6 +330,27 @@ test('DropZone marks disabled state for styling only, without aria-disabled on i
   }
 });
 
+// DropZone's onActivate identifies RAC's drop button by this structure.
+test('React Aria DropZone keeps its hidden drop button as the root\'s first grandchild', async () => {
+  const env = installDom();
+  const host = document.querySelector('#root');
+  const root = createRoot(host);
+  try {
+    await act(async () => root.render(React.createElement(DropZone, { 'aria-label': 'Upload' }, React.createElement('button', { id: 'consumer' }, 'Browse'))));
+    const dropZone = host.querySelector('.muxui-drop-zone');
+    const wrapper = dropZone.firstElementChild;
+    const dropButton = wrapper?.firstElementChild;
+    const message = 'React Aria DropZone no longer renders <root><VisuallyHidden><button/></VisuallyHidden>...</root>; update DropZone\'s onActivate target check in src/overlays.mjs';
+    assert.equal(dropButton?.tagName, 'BUTTON', message);
+    assert.equal(wrapper.childElementCount, 1, message);
+    assert.equal(wrapper.contains(host.querySelector('#consumer')), false, message);
+    assert.equal(dropButton.getAttribute('aria-label'), 'Upload', message);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
 test('DropZone activates only from its own drop button, not from a nested FileTrigger', async () => {
   const env = installDom();
   const host = document.querySelector('#root');
