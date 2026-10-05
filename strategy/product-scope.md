@@ -1,5 +1,5 @@
 ---
-scopeVersion: 14.0.1
+scopeVersion: 14.0.2
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -114,6 +114,11 @@ Product Scope `14.0.1` applies Decision 0011 amendment 05 as a patch
 clarification: the internal temporal-adapter dependency moves from exact
 `@internationalized/date@3.12.3` to exact `3.12.4`, so fresh npm, pnpm, and
 yarn consumer installs resolve one version.
+
+Product Scope `14.0.2` applies accepted Decision 0023 as a patch
+clarification: the `SCOPE-PRODUCT-REACT-PRERELEASE` row now names the
+fix-forward `0.1.0-rc.N+1` that Decision 0023 and the Roadmap R1 exit already
+admit, so the row agrees with the rest of the authority chain.
 
 ## Scope vocabulary
 
@@ -283,7 +288,7 @@ stable release is promoted, and install guidance uses `@muxui/react@next`.
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, Mux UI-owned styling and tranche delivery. | R1.0–R1.5 |
 | `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
 | `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports outside the historical fixed 53-family table: the exact R1.6 React Aria inventory plus explicitly named post-R1.6 admissions in Decisions 0014, 0017, and 0018, including native-backed Image and Avatar. Each admission requires its declared proof and the single current supplemental mapping. | R1.6, named post-R1.6 additions, and R1 exit |
-| `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`. | R1 tranche exits and R1 exit |
+| `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`, or a fix-forward `0.1.0-rc.N+1` that replaces a deprecated rc under Decision 0023. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
 
 The React-specific component and pattern commitments are
@@ -1443,3 +1448,33 @@ IDs retain their states, including `SCOPE-PKG-REACT` and
 The license text is unchanged at `3.12.4`, and the existing integrity,
 license/notice, lockfile, leakage, and packed-consumer proof obligations apply
 to the new version.
+
+## Product Scope 14.0.2: fix-forward rc in the prerelease row
+
+[Decision 0023](../decisions/0023-rc1-dist-tag-and-rollback.md) makes
+deprecate and fix forward the rc.1 rollback plan: a bad rc.1 is deprecated and
+a fixed `0.1.0-rc.2` is published as a new exact candidate. 13.0.0 applied
+that decision, and the Roadmap R1 exit already admits "a fix-forward rc that
+replaces" rc.1. The `SCOPE-PRODUCT-REACT-PRERELEASE` row alone still named only
+the `alpha.N`/`rc.1` tarball. It now reads: exact
+`@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under
+`next`, or a fix-forward `0.1.0-rc.N+1` that replaces a deprecated rc under
+Decision 0023.
+
+This patch brings one row into line with text 13.0.0 already accepted, and the
+major version 13.0.0 took for redefining the React `0.1` release boundary
+already covers the fix-forward. It changes no Scope ID, commitment state,
+release boundary, package, platform, public surface, support claim, or
+non-goal. `SCOPE-PRODUCT-REACT-PRERELEASE` stays `committed`, and no Scope ID
+is added, removed, or transitioned. Nothing about `latest`, a stable `0.1.0`
+release, or another package is admitted. A fix-forward rc remains a new exact
+candidate with its own release preparation, `E-R1-EXIT-01` through
+`E-R1-EXIT-03` evidence, and publish authorization; every publish,
+deprecation, dist-tag change, and unpublish still needs its own explicit
+authorization.
+
+No decision record is added. Decision 0023 already admits the fix-forward, and
+decisions are append-only.
+
+Tracker migration: none. No open work changes, and this change creates no
+tracker items.
