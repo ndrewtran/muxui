@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -241,11 +243,9 @@ test('R1.2-R1.4 retroactive review records match their reports and never overcla
 // and registry to one candidate. Fixtures mirror npm-publish.yml job-log shapes.
 const r1Exit = await import('../../../../tests/evidence/capture-r1-exit.mjs');
 
-function r1ExitFixture() {
+function r1ExitFixture({ version = '0.1.0-rc.1', tarballBytes = Buffer.from('r1 exit fixture tarball') } = {}) {
   const head = 'a'.repeat(40);
   const tree = 'b'.repeat(40);
-  const version = '0.1.0-rc.1';
-  const tarballBytes = Buffer.from('r1 exit fixture tarball');
   const entries = ['package/package.json', 'package/generated/index.mjs', 'package/generated/styles.css'];
   const facts = r1Exit.tarballFacts(tarballBytes, entries);
   const exportsMap = { '.': './generated/index.mjs', './styles.css': './generated/styles.css' };
@@ -388,7 +388,51 @@ function r1ExitFixture() {
     time: { created: '2026-10-04T13:05:33.464Z', [version]: '2026-10-04T13:05:33.917Z' },
   };
   const consumer = { installedVersion: version, lockIntegrity: facts.integrity, smoke: { imported: ['@muxui/react'], resolved: ['@muxui/react/styles.css'], rendered: ['Button'] } };
-  return { head, tree, version, facts, manifest, artifact, run, job, publishJob, prepareLog, publishLog, dryRunInput, attestationDocument, view, consumer };
+  // The trusted-publishing workflow's publish job: npm-publication.mjs output.
+  // `outcome`: 'passed', 'propagation' (bounded read-back timed out), or
+  // 'no-recheck' (the drift recheck printed nothing).
+  const oidcPublishLog = ({ outcome = 'passed', prior = '0.1.0-rc.1' } = {}) => log([
+    '##[group]Run set -euo pipefail',
+    script('tarballs=("$RUNNER_TEMP"/npm-candidate/*.tgz)'),
+    'env:',
+    `  EXPECTED_VERSION: ${version}`,
+    `  EXPECTED_SHA512: ${facts.integrity}`,
+    '##[endgroup]',
+    '##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs preflight',
+    script('node tooling/audits/repository-policy/src/npm-publication.mjs preflight'),
+    'shell: /usr/bin/bash -e {0}',
+    'env:',
+    `  VERSION: ${version}`,
+    '##[endgroup]',
+    `@muxui/react@${version}: 404 (no collision)`,
+    `@muxui/react dist-tags latest=${prior} next=${prior}`,
+    '##[group]Run set -euo pipefail',
+    script('# Stop on registry drift since the preflight.'),
+    script('node tooling/audits/repository-policy/src/npm-publication.mjs recheck'),
+    'env:',
+    '  PRE_KIND: later',
+    '##[endgroup]',
+    ...(outcome === 'no-recheck' ? [] : [`No drift since the preflight: @muxui/react dist-tags latest=${prior} next=${prior}`]),
+    `npm notice shasum: ${facts.shasum}`,
+    `npm notice integrity: ${abbreviated}`,
+    'npm notice publish Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=8',
+    `+ @muxui/react@${version}`,
+    '##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs read-back',
+    script('node tooling/audits/repository-policy/src/npm-publication.mjs read-back'),
+    'env:',
+    `  VERSION: ${version}`,
+    '##[endgroup]',
+    ...(outcome === 'propagation' ? [
+      `Waiting for @muxui/react dist-tags next=${version} (attempt 1 of 41)`,
+      `##[error]@muxui/react dist-tags next=${version} did not appear after 41 attempts.`,
+    ] : [
+      `dist.integrity: ${facts.integrity}`,
+      'provenance: https://slsa.dev/provenance/v1',
+      `dist-tags: {"latest":"${prior}","next":"${version}"}`,
+    ]),
+    'Post job cleanup.',
+  ]);
+  return { head, tree, version, facts, entries, exportsMap, manifest, artifact, run, job, publishJob, prepareLog, publishLog, oidcPublishLog, dryRunInput, attestationDocument, view, consumer };
 }
 
 const r1ExitCode = (code) => (error) => error?.code === code;
@@ -534,4 +578,228 @@ test('R1 exit capture discloses a failed earlier dry-run attempt and masks npm a
   assert.equal(r1Exit.sanitize(line(`https://www.npmjs.com/auth/cli/${id}`)), line('<npm-auth-url>'));
   assert.equal(r1Exit.sanitize(line(`https://registry.npmjs.org/-/v1/done?authId=${id}`)), line('https://registry.npmjs.org/-/v1/done?<npm-auth-url>'));
   assert.ok(r1Exit.sanitizationRules.some((rule) => rule.includes('<npm-auth-url>')));
+});
+
+test('R1 exit capture rebuilds the committed route byte for byte from its verification.json', async () => {
+  const read = (relative) => readFileSync(join(repositoryRoot, relative), 'utf8');
+  const { files } = r1Exit.assembleRoute(JSON.parse(read(`${r1Exit.route}/verification.json`)), read);
+  assert.deepEqual([...files.keys()].sort(), ['README.md', 'index.json', 'records/E-R1-EXIT-01.json', 'records/E-R1-EXIT-02.json', 'records/E-R1-EXIT-03.json', 'records/E-R1-EXIT-04.json', 'verification.json'].map((file) => `${r1Exit.route}/${file}`));
+  for (const [relative, text] of files) assert.equal(text, read(relative), relative);
+});
+
+// A rehearsal route holding a captured dry run, written as the tool would.
+async function seedR1ExitRoute(out, fixture) {
+  const bound = r1Exit.bindDryRun(fixture.dryRunInput);
+  const files = new Map();
+  const retain = (relative, text) => {
+    files.set(relative, text);
+    return { path: relative, sha256: digest(text) };
+  };
+  const { excerpt, credentials, manifest, ...rest } = bound;
+  const { value, rewrites } = r1Exit.sanitizeManifest(manifest);
+  const route = r1Exit.route;
+  const verification = {
+    schema: 'muxui-evidence-validation-v1',
+    phases: { dryRun: { ...rest, captureTimestamp: '2026-10-04T10:00:00Z', excerpt: excerpt.ranges, manifestSanitization: rewrites, proofTool: {}, credentials: { ...credentials, excerpt: credentials.excerpt.ranges }, priorAttempts: [] } },
+    retained: {
+      manifest: retain(`${route}/artifacts/release-manifest.json`, canonicalJson(value)),
+      dryRunExcerpt: retain(`${route}/validation/dry-run-prepare-11.txt`, excerpt.text),
+      credentialsExcerpt: retain(`${route}/validation/verify-credentials-3.txt`, credentials.excerpt.text),
+    },
+    sourceRevision: fixture.head,
+    sourceTree: fixture.tree,
+    proofTool: {},
+    rehearsal: { status: 'rehearsal', note: 'development capture; not release evidence' },
+  };
+  for (const [relative, text] of r1Exit.assembleRoute(verification, (relative) => files.get(relative)).files) files.set(relative, text);
+  for (const [relative, text] of files) {
+    if (text === null) continue;
+    const target = join(out, relative.slice(route.length + 1));
+    await mkdir(resolve(target, '..'), { recursive: true });
+    await writeFile(target, text);
+  }
+}
+
+async function snapshotTree(directory) {
+  const entries = await readdir(directory, { recursive: true, withFileTypes: true });
+  const files = entries.filter((entry) => entry.isFile()).map((entry) => join(entry.parentPath, entry.name));
+  return Object.fromEntries(await Promise.all(files.sort().map(async (file) => [file.slice(directory.length), await readFile(file, 'utf8')])));
+}
+
+test('R1 exit capture replaces the route atomically and leaves it unchanged when the rebuild fails', async () => {
+  const fixture = r1ExitFixture();
+  const github = {
+    run: (id) => fixture.run(id),
+    jobs: () => [fixture.job(21, 'prepare'), fixture.publishJob(22)],
+    log: (jobId) => (jobId === 21 ? fixture.prepareLog('publish', fixture.facts.integrity) : fixture.publishLog()),
+    approvals: () => [],
+  };
+  const argv = (out) => ['--rehearsal', `--out=${out}`, '--capture-timestamp=2026-10-04T14:00:00Z', '--publish-run=2'];
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-'));
+  try {
+    const out = join(root, 'r1-exit');
+    await seedR1ExitRoute(out, fixture);
+    // An older capture whose dry run holds a field the rebuild cannot read: the
+    // publish phase binds, then the rebuild throws.
+    const verificationPath = join(out, 'verification.json');
+    const stale = JSON.parse(await readFile(verificationPath, 'utf8'));
+    stale.phases.dryRun.priorAttempts = {};
+    await writeFile(verificationPath, canonicalJson(stale));
+    const before = await snapshotTree(out);
+    await assert.rejects(r1Exit.main(argv(out), github), TypeError);
+    assert.deepEqual(await snapshotTree(out), before, 'the route is byte-identical after a failed rebuild');
+    assert.deepEqual(await readdir(root), ['r1-exit'], 'no staging directory is left behind');
+
+    // A write that fails inside the staging directory: a directory already
+    // occupies the path of a staged excerpt.
+    await rm(out, { recursive: true });
+    await seedR1ExitRoute(out, fixture);
+    await mkdir(join(out, 'validation/publish-22.txt'));
+    await writeFile(join(out, 'validation/publish-22.txt/occupant'), 'x');
+    const occupied = await snapshotTree(out);
+    await assert.rejects(r1Exit.main(argv(out), github), { code: 'EISDIR' });
+    assert.deepEqual(await snapshotTree(out), occupied, 'the route is byte-identical after a failed staging write');
+    assert.deepEqual(await readdir(root), ['r1-exit'], 'no staging or previous directory is left behind');
+
+    await rm(out, { recursive: true });
+    await seedR1ExitRoute(out, fixture);
+    await chmod(out, 0o750);
+    await r1Exit.main(argv(out), github);
+    assert.deepEqual(await readdir(root), ['r1-exit'], 'the staged route replaced the old one in place');
+    assert.equal((await stat(out)).mode & 0o777, 0o750, 'the route keeps its directory mode');
+    const index = JSON.parse(await readFile(join(out, 'index.json'), 'utf8'));
+    for (const ref of [...index.artifacts, ...index.records, index.validation]) {
+      assert.equal(digest(await readFile(join(out, ref.path.slice(r1Exit.route.length + 1)))), ref.sha256, ref.path);
+    }
+    assert.ok(index.artifacts.some(({ path }) => path.endsWith('/validation/publish-22.txt')));
+    assert.equal(JSON.parse(await readFile(join(out, 'records/E-R1-EXIT-02.json'), 'utf8')).postPublication.execution.runId, 2);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// Trusted-publishing workflow: a fix-forward rc binds from npm-publication.mjs
+// output, with latest unchanged, into its own route.
+test('R1 exit capture binds a trusted-publishing fix-forward rc with latest unchanged', () => {
+  const fixture = r1ExitFixture({ version: '0.1.0-rc.2' });
+  const dryRun = { ...r1Exit.bindDryRun({ ...fixture.dryRunInput, credentials: undefined }), manifest: fixture.manifest };
+  assert.equal(dryRun.credentials, undefined, 'no verify-credentials run under trusted publishing');
+  const publishInput = { dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.publishJob(22)], prepareLog: fixture.prepareLog('publish', fixture.facts.integrity) };
+  const publish = r1Exit.bindPublish({ ...publishInput, publishLog: fixture.oidcPublishLog() });
+  assert.deepEqual(publish.observed.preflight, {
+    version: '404 (no collision)', kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1',
+    recheck: 'No drift since the preflight: @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.1',
+  });
+  assert.deepEqual(publish.observed.workflowReadBack, {
+    status: 'passed', completedAt: '2026-10-04T13:05:34Z', integrity: fixture.facts.integrity,
+    provenancePredicateType: 'https://slsa.dev/provenance/v1', distTags: { latest: '0.1.0-rc.1', next: '0.1.0-rc.2' },
+  });
+  assert.match(publish.excerpts.publish.text, /# step: Read back registry state/u);
+  assert.doesNotMatch(publish.excerpts.publish.text, /Stop on registry drift/u, 'workflow script lines are not retained');
+
+  const timedOut = r1Exit.bindPublish({
+    ...publishInput,
+    run: fixture.run(2, { conclusion: 'failure' }),
+    jobs: [fixture.job(21, 'prepare'), fixture.publishJob(22, 'propagation')],
+    publishLog: fixture.oidcPublishLog({ outcome: 'propagation' }),
+  });
+  assert.equal(timedOut.observed.workflowReadBack.status, 'failed-registry-propagation');
+  assert.equal(timedOut.observed.workflowReadBack.retries, 1);
+  assert.throws(() => r1Exit.bindPublish({ ...publishInput, publishLog: fixture.oidcPublishLog({ outcome: 'no-recheck' }) }), r1ExitCode('R1_EXIT_RUN_INVALID'));
+
+  const prior = { kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1' };
+  const view = { ...fixture.view, distTags: { latest: '0.1.0-rc.1', next: '0.1.0-rc.2' }, versions: ['0.1.0-rc.1', '0.1.0-rc.2'] };
+  const bindRegistry = (overrides) => r1Exit.bindRegistry({ dryRun, view, attestations: fixture.attestationDocument(), consumer: fixture.consumer, publishRunId: 2, prior, ...overrides });
+  const registry = bindRegistry();
+  assert.deepEqual(registry.prior, prior);
+  assert.throws(() => bindRegistry({ view: { ...view, distTags: { latest: '0.1.0-rc.2', next: '0.1.0-rc.2' } } }), r1ExitCode('R1_EXIT_LATEST_UNEXPECTED'));
+  assert.throws(() => bindRegistry({ view: { ...view, distTags: { ...view.distTags, beta: '0.1.0-rc.2' } } }), r1ExitCode('R1_EXIT_LATEST_UNEXPECTED'));
+  assert.throws(() => bindRegistry({ view: { ...view, versions: ['0.1.0-rc.2'] } }), r1ExitCode('R1_EXIT_VERSIONS_UNEXPECTED'));
+  assert.throws(() => bindRegistry({ prior: { kind: 'first' } }), r1ExitCode('R1_EXIT_LATEST_UNEXPECTED'), 'a first-publish expectation rejects a moved latest');
+
+  const ref = { path: 'tests/evidence/r1-exit-0.1.0-rc.2/x', sha256: `sha256:${'0'.repeat(64)}` };
+  const phase = (value) => ({ ...value, captureTimestamp: 't', proofTool: {} });
+  const verification = { phases: { dryRun: phase(dryRun), publish: phase(publish), registry: phase(registry) }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {} };
+  const records = Object.fromEntries(Object.entries(r1Exit.buildRoute(verification, { validation: ref, manifest: ref, registry: ref })).map(([id, text]) => [id, JSON.parse(text)]));
+  assert.equal(records['E-R1-EXIT-02'].outcome, 'pass');
+  assert.equal(records['E-R1-EXIT-02'].prePublication.verifyCredentials, undefined);
+  assert.equal(records['E-R1-EXIT-04'].distTags.latest.observed, '0.1.0-rc.1');
+  assert.match(records['E-R1-EXIT-04'].distTags.latest.setBy, /^unchanged by this publish/u);
+  assert.equal(records['E-R1-EXIT-04'].distTags.latest.claimed, false);
+  assert.ok(records['E-R1-EXIT-01'].nonClaims.some((claim) => claim.includes('0.1.0-rc.2 claims none')));
+});
+
+test('R1 exit capture routes each candidate version to its own evidence root', async () => {
+  assert.equal(r1Exit.routeFor('0.1.0-rc.1'), 'tests/evidence/r1-exit');
+  assert.equal(r1Exit.route, 'tests/evidence/r1-exit');
+  assert.equal(r1Exit.routeFor('0.1.0-rc.2'), 'tests/evidence/r1-exit-0.1.0-rc.2');
+  for (const invalid of ['0.1.0-rc.0', '../r1-exit', '0.1.0']) assert.throws(() => r1Exit.routeFor(invalid), r1ExitCode('R1_EXIT_ARGUMENT_INVALID'));
+
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-route-'));
+  try {
+    // A real npm-candidate artifact for 0.1.0-rc.2, as gh run download leaves it.
+    const version = '0.1.0-rc.2';
+    const exportsMap = { '.': './generated/index.mjs', './styles.css': './generated/styles.css' };
+    const packageRoot = join(root, 'pack/package');
+    await mkdir(join(packageRoot, 'generated'), { recursive: true });
+    await writeFile(join(packageRoot, 'package.json'), JSON.stringify({ name: '@muxui/react', version, exports: exportsMap }));
+    await writeFile(join(packageRoot, 'generated/index.mjs'), 'export {};\n');
+    await writeFile(join(packageRoot, 'generated/styles.css'), '\n');
+    execFileSync('tar', ['-czf', join(root, 'candidate.tgz'), '-C', join(root, 'pack'), 'package']);
+    const fixture = r1ExitFixture({ version, tarballBytes: await readFile(join(root, 'candidate.tgz')) });
+    const requested = [];
+    const github = {
+      run: (id) => {
+        requested.push(id);
+        return fixture.run(id);
+      },
+      jobs: () => fixture.dryRunInput.jobs,
+      log: () => fixture.dryRunInput.prepareLog,
+      tree: () => fixture.tree,
+      approvals: () => [],
+      download: (_runId, directory) => {
+        copyFileSync(join(root, 'candidate.tgz'), join(directory, `muxui-react-${version}.tgz`));
+        writeFileSync(join(directory, `muxui-react-${version}.release-manifest.json`), fixture.artifact.manifest.bytes);
+        return true;
+      },
+    };
+    const argv = (out, requestedVersion) => ['--rehearsal', `--out=${out}`, `--version=${requestedVersion}`, '--capture-timestamp=2026-10-05T10:00:00Z', '--dry-run-run=1'];
+
+    const mismatch = join(root, 'out-mismatch');
+    await assert.rejects(r1Exit.main(argv(mismatch, '0.1.0-rc.3'), github), r1ExitCode('R1_EXIT_VERSION_MISMATCH'));
+    await assert.rejects(readdir(mismatch), { code: 'ENOENT' }, 'a version mismatch writes nothing');
+
+    const out = join(root, 'out');
+    await r1Exit.main(argv(out, version), github);
+    assert.deepEqual([...new Set(requested)], [1], 'no verify-credentials run is fetched for a fix-forward rc');
+    const index = JSON.parse(await readFile(join(out, 'index.json'), 'utf8'));
+    assert.ok([...index.artifacts, ...index.records, index.validation].every(({ path }) => path.startsWith('tests/evidence/r1-exit-0.1.0-rc.2/')));
+    assert.ok(!index.artifacts.some(({ path }) => path.includes('verify-credentials')));
+    const verification = JSON.parse(await readFile(join(out, 'verification.json'), 'utf8'));
+    assert.match(verification.captureProcedure, /--version=0\.1\.0-rc\.2 /u);
+    assert.match(await readFile(join(out, 'README.md'), 'utf8'), /^# R1 exit retained publication evidence for 0\.1\.0-rc\.2\n/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('R1 exit capture refuses a route or existing capture that belongs to another candidate version', async () => {
+  const fixture = r1ExitFixture();
+  const unused = new Proxy({}, { get: () => () => assert.fail('no hosted read before the version guard') });
+  const timestamp = '--capture-timestamp=2026-10-05T10:00:00Z';
+  // --out naming another version's route, including rc.1's committed route.
+  for (const [version, out] of [['0.1.0-rc.2', 'tests/evidence/r1-exit'], ['0.1.0-rc.1', 'tests/evidence/r1-exit-0.1.0-rc.2'], ['0.1.0-rc.3', 'tests/evidence/r1-exit-0.1.0-rc.2']]) {
+    await assert.rejects(r1Exit.main([`--version=${version}`, `--out=${join(repositoryRoot, out)}`, timestamp, '--registry'], unused), r1ExitCode('R1_EXIT_VERSION_MISMATCH'), `${version} into ${out}`);
+  }
+  // An existing capture of rc.1 cannot be continued as rc.2, and stays unchanged.
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-guard-'));
+  try {
+    const out = join(root, 'r1-exit');
+    await seedR1ExitRoute(out, fixture);
+    const before = await snapshotTree(out);
+    await assert.rejects(r1Exit.main(['--rehearsal', `--out=${out}`, '--version=0.1.0-rc.2', timestamp, '--publish-run=2'], unused), r1ExitCode('R1_EXIT_VERSION_MISMATCH'));
+    assert.deepEqual(await snapshotTree(out), before);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

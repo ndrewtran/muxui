@@ -33,6 +33,7 @@ import {
   readLockedIntegrity,
   readRetainedEvidence,
   readRetainedReviewEvidence,
+  replaceVersions,
 } from '../src/release-proof.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
@@ -662,4 +663,187 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.throws(() => buildReleaseCorrelation({ ...options, catalogBundle: { ...options.catalogBundle, catalogDigest: `sha256:${'b'.repeat(64)}` } }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, retainedEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, reviewEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
+});
+
+// npm-publish.yml: candidate version rule, preflight, and propagation-tolerant read-back.
+const npmPublication = await import('../src/npm-publication.mjs');
+
+test('candidate versions are 0.1.0-rc.N with N >= 1, and fix forward to rc.N+1', () => {
+  assert.equal(npmPublication.parseCandidateVersion('0.1.0-rc.1'), 1);
+  assert.equal(npmPublication.parseCandidateVersion('0.1.0-rc.12'), 12);
+  assert.equal(npmPublication.fixForwardVersion('0.1.0-rc.2'), '0.1.0-rc.3');
+  for (const invalid of ['0.1.0-rc.0', '0.1.0-rc.01', '0.1.0', '0.1.0-alpha.3', '0.2.0-rc.1', ' 0.1.0-rc.2', '0.1.0-rc.2\n', '', undefined]) {
+    assert.throws(() => npmPublication.parseCandidateVersion(invalid), /not an admitted candidate version/u, String(invalid));
+  }
+  assert.equal(npmPublication.meetsMinimumNpm('11.17.0'), true);
+  assert.equal(npmPublication.meetsMinimumNpm('11.5.1'), true);
+  assert.equal(npmPublication.meetsMinimumNpm('11.5.0'), false);
+  assert.equal(npmPublication.meetsMinimumNpm('10.9.9'), false);
+  assert.equal(npmPublication.meetsMinimumNpm('12.0.0'), true);
+});
+
+const publishedRc1 = { 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.1' }, versions: { '0.1.0-rc.1': {} } };
+
+test('the registry preflight admits a first rc.1, or rc.N+1 over next=rc.N', () => {
+  const classify = (version, versionStatus, packument) => npmPublication.classifyPreflight({ version, versionStatus, packument });
+  assert.deepEqual(classify('0.1.0-rc.1', 404, null), { kind: 'first', latest: '', next: '' });
+  assert.deepEqual(classify('0.1.0-rc.2', 404, publishedRc1), { kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1' });
+  assert.throws(() => classify('0.1.0-rc.2', 404, null), /only 0\.1\.0-rc\.1 can be a first publish/u);
+  assert.throws(() => classify('0.1.0-rc.1', 200, publishedRc1), /already on the registry/u);
+  assert.throws(() => classify('0.1.0-rc.1', 404, publishedRc1), /listed in the packument/u);
+  assert.throws(() => classify('0.1.0-rc.2', 500, publishedRc1), /HTTP 500/u);
+  assert.throws(() => classify('0.1.0-rc.2', 404, { ...publishedRc1, 'dist-tags': { ...publishedRc1['dist-tags'], beta: '0.1.0-rc.1' } }), /exactly latest and next/u);
+  assert.throws(() => classify('0.1.0-rc.2', 404, { ...publishedRc1, 'dist-tags': { latest: '0.1.0-rc.1' } }), /exactly latest and next/u);
+  const rc3 = { 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.3' }, versions: { '0.1.0-rc.1': {}, '0.1.0-rc.3': {} } };
+  assert.throws(() => classify('0.1.0-rc.2', 404, rc3), /must be the fix-forward of next/u);
+  // Only rc.N+1 over next=rc.N: skipping an rc stops for a decision.
+  assert.throws(() => classify('0.1.0-rc.3', 404, publishedRc1), /must be the fix-forward of next \(rc\.N\+1\); next points at 0\.1\.0-rc\.1/u);
+  assert.throws(() => classify('0.1.0-rc.2', 404, { ...publishedRc1, 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.0' } }), /not a published version/u);
+  assert.throws(() => npmPublication.assertNoDrift({ kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1' }, { kind: 'later', latest: '0.1.0-rc.2', next: '0.1.0-rc.1' }), /latest changed since the preflight/u);
+});
+
+// A scripted registry: each URL serves its responses in order, repeating the last.
+function scriptedRegistry(routes) {
+  const calls = [];
+  const fetch = async (url) => {
+    calls.push(url);
+    const queue = routes[url];
+    assert.ok(queue, `unexpected fetch ${url}`);
+    const { status, body = null } = queue.length > 1 ? queue.shift() : queue[0];
+    return { status, json: async () => body };
+  };
+  return { calls, io: { fetch, sleep: async () => {}, log: () => {}, intervalMs: 0 } };
+}
+
+test('the read-back waits out registry propagation, then requires next and an unchanged latest', async () => {
+  const integrity = 'sha512-candidate';
+  const versionDocument = { dist: { integrity, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } } } };
+  const versionUrl = 'https://registry.npmjs.org/@muxui/react/0.1.0-rc.2';
+  const packageUrl = 'https://registry.npmjs.org/@muxui/react';
+  const recorded = { kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1' };
+  const published = { 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.2' } };
+  const readBack = (routes, options = {}) => {
+    const registry = scriptedRegistry(routes);
+    return { registry, result: npmPublication.readBack({ version: '0.1.0-rc.2', expectedIntegrity: integrity, recorded }, { ...registry.io, ...options }) };
+  };
+
+  // The version document 404s, then the packument is stale (old next) before it updates.
+  const { registry, result } = readBack({
+    [versionUrl]: [{ status: 404 }, { status: 503 }, { status: 200, body: versionDocument }],
+    [packageUrl]: [{ status: 200, body: publishedRc1 }, { status: 200, body: publishedRc1 }, { status: 200, body: published }],
+  });
+  assert.deepEqual(await result, { integrity, predicateType: 'https://slsa.dev/provenance/v1', distTags: published['dist-tags'] });
+  assert.deepEqual(registry.calls, [versionUrl, versionUrl, versionUrl, packageUrl, packageUrl, packageUrl]);
+
+  await assert.rejects(readBack({ [versionUrl]: [{ status: 404 }] }, { versionAttempts: 3 }).result, /did not appear after 3 attempts/u);
+  await assert.rejects(readBack({
+    [versionUrl]: [{ status: 200, body: versionDocument }],
+    [packageUrl]: [{ status: 200, body: publishedRc1 }],
+  }, { tagAttempts: 4 }).result, /dist-tags next=0\.1\.0-rc\.2 did not appear after 4 attempts/u);
+  await assert.rejects(readBack({ [versionUrl]: [{ status: 200, body: { dist: { ...versionDocument.dist, integrity: 'sha512-other' } } }] }).result, /has sha512-other/u);
+  await assert.rejects(readBack({ [versionUrl]: [{ status: 200, body: { dist: { integrity } } }] }).result, /no SLSA provenance/u);
+  // latest moving, or next moving elsewhere, is drift and stops without waiting.
+  for (const tags of [{ latest: '0.1.0-rc.2', next: '0.1.0-rc.2' }, { latest: '0.1.0-rc.1', next: '0.1.0-rc.9' }, { ...published['dist-tags'], beta: '0.1.0-rc.2' }]) {
+    const drift = readBack({ [versionUrl]: [{ status: 200, body: versionDocument }], [packageUrl]: [{ status: 200, body: { 'dist-tags': tags } }] });
+    await assert.rejects(drift.result, /Any dist-tag drift stops for a decision/u);
+    assert.equal(drift.registry.calls.filter((url) => url === packageUrl).length, 1);
+  }
+  await assert.rejects(readBack({ [versionUrl]: [{ status: 200, body: versionDocument }], [packageUrl]: [{ status: 404 }] }).result, /404 after publishing over an existing package/u);
+});
+
+test('the read-back times out each request and retries thrown requests and 429 within its budget', async () => {
+  const integrity = 'sha512-candidate';
+  const versionDocument = { dist: { integrity, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } } } };
+  const published = { 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.2' } };
+  const signals = [];
+  const responses = [
+    new Error('fetch failed'),
+    { status: 429 },
+    { status: 200, body: versionDocument },
+    Object.assign(new Error('The operation was aborted due to timeout'), { name: 'TimeoutError' }),
+    { status: 503 },
+    { status: 200, body: published },
+  ];
+  const logged = [];
+  const fetch = async (_url, { signal }) => {
+    signals.push(signal);
+    const next = responses.shift();
+    if (next instanceof Error) throw next;
+    return { status: next.status, json: async () => next.body ?? null };
+  };
+  const recorded = { kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1' };
+  const result = await npmPublication.readBack({ version: '0.1.0-rc.2', expectedIntegrity: integrity, recorded }, { fetch, sleep: async () => {}, log: (line) => logged.push(line), intervalMs: 0 });
+  assert.deepEqual(result.distTags, published['dist-tags']);
+  assert.equal(signals.length, 6);
+  assert.ok(signals.every((signal) => signal instanceof AbortSignal), 'every request carries a timeout signal');
+  assert.equal(logged.filter((line) => line.startsWith('Request to ')).length, 2);
+
+  // Thrown requests still count against the attempt budget.
+  const failing = async () => {
+    throw new Error('fetch failed');
+  };
+  await assert.rejects(npmPublication.readBack({ version: '0.1.0-rc.2', expectedIntegrity: integrity, recorded }, { fetch: failing, sleep: async () => {}, log: () => {}, intervalMs: 0, versionAttempts: 3 }), /did not appear after 3 attempts/u);
+  // The preflight does not retry: a failed request fails closed.
+  await assert.rejects(npmPublication.preflight('0.1.0-rc.2', { fetch: failing }), /fetch failed/u);
+});
+
+test('version rewrites apply in one pass at version boundaries', () => {
+  const rewrites = new Map([['0.1.0-rc.1', '0.1.0-rc.2'], ['0.1.0-rc.2', '0.1.0-rc.3']]);
+  assert.equal(
+    replaceVersions('deprecate 0.1.0-rc.1, publish 0.1.0-rc.2, keep 0.1.0-rc.10 and 10.1.0-rc.1; pnpm add ./muxui-react-0.1.0-rc.1.tgz', rewrites),
+    'deprecate 0.1.0-rc.2, publish 0.1.0-rc.3, keep 0.1.0-rc.10 and 10.1.0-rc.1; pnpm add ./muxui-react-0.1.0-rc.2.tgz',
+  );
+  assert.equal(replaceVersions('"version":"0.1.0-alpha.0"', new Map([['0.1.0-alpha.0', '0.1.0-rc.2']])), '"version":"0.1.0-rc.2"');
+  const identity = new Map([['0.1.0-rc.1', '0.1.0-rc.1'], ['0.1.0-rc.2', '0.1.0-rc.2']]);
+  assert.equal(replaceVersions('0.1.0-rc.1 then 0.1.0-rc.2', identity), '0.1.0-rc.1 then 0.1.0-rc.2');
+});
+
+test('the npm publication CLI reads its environment and writes step outputs and the summary', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'muxui-npm-publication-'));
+  try {
+    const output = join(directory, 'output');
+    const summary = join(directory, 'summary');
+    writeFileSync(output, '');
+    writeFileSync(summary, '');
+    const integrity = 'sha512-candidate';
+    const { io } = scriptedRegistry({
+      'https://registry.npmjs.org/@muxui/react/0.1.0-rc.2': [{ status: 404 }, { status: 404 }, { status: 200, body: { dist: { integrity, attestations: { provenance: { predicateType: 'https://slsa.dev/provenance/v1' } } } } }],
+      'https://registry.npmjs.org/@muxui/react': [{ status: 200, body: publishedRc1 }, { status: 200, body: publishedRc1 }, { status: 200, body: { 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.2' } } }],
+    });
+    const lines = [];
+    const run = (command, environment) => npmPublication.main(command, { GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary, VERSION: '0.1.0-rc.2', ...environment }, { ...io, log: (line) => lines.push(line) });
+
+    await run('preflight');
+    assert.equal(readFileSync(output, 'utf8'), 'kind=later\nlatest=0.1.0-rc.1\nnext=0.1.0-rc.1\n');
+    assert.deepEqual(lines.splice(0), ['@muxui/react@0.1.0-rc.2: 404 (no collision)', '@muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.1']);
+
+    const recorded = { PRE_KIND: 'later', PRE_LATEST: '0.1.0-rc.1', PRE_NEXT: '0.1.0-rc.1' };
+    await run('recheck', recorded);
+    assert.deepEqual(lines.splice(0), ['No drift since the preflight: @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.1']);
+
+    await run('read-back', { ...recorded, EXPECTED_SHA512: integrity });
+    assert.deepEqual(lines.splice(0), [
+      `dist.integrity: ${integrity}`,
+      'provenance: https://slsa.dev/provenance/v1',
+      'dist-tags: {"latest":"0.1.0-rc.1","next":"0.1.0-rc.2"}',
+    ]);
+    assert.match(readFileSync(summary, 'utf8'), /^### Published @muxui\/react@0\.1\.0-rc\.2\n/u);
+
+    // A missing or unknown PRE_KIND means the preflight output never reached this step.
+    assert.deepEqual(npmPublication.recordedFromEnvironment({ PRE_KIND: 'first' }), { kind: 'first', latest: '', next: '' });
+    for (const kind of [undefined, '', 'later ']) assert.throws(() => npmPublication.recordedFromEnvironment({ PRE_KIND: kind }), /PRE_KIND must be first or later/u);
+    await assert.rejects(run('unknown'), /Expected validate-version/u);
+    // Without GITHUB_OUTPUT, outputs are skipped rather than written elsewhere.
+    npmPublication.writeOutputs({}, { kind: 'first' });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test('a first publish read-back accepts the registry setting latest to the new version', () => {
+  const recorded = { kind: 'first', latest: '', next: '' };
+  const judge = (packument) => npmPublication.judgeDistTags({ version: '0.1.0-rc.1', recorded, packument });
+  assert.equal(judge(null), 'wait');
+  assert.equal(judge(publishedRc1), 'done');
+  assert.throws(() => judge({ 'dist-tags': { latest: '0.1.0-rc.1' } }), /drift/u);
 });

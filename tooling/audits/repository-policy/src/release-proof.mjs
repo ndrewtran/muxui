@@ -713,3 +713,13 @@ export function buildReleaseCorrelation({
     visualContract,
   };
 }
+
+/**
+ * Applies every version rewrite in one pass, so a rewrite never feeds another
+ * (rc.1 -> rc.2 and rc.2 -> rc.3 together). A version never matches inside a
+ * longer one (`rc.1` inside `rc.10`, or `0.1.0` inside `10.1.0`).
+ */
+export function replaceVersions(text, rewrites) {
+  const pattern = new RegExp(`(?<![\\d.])(?:${[...rewrites.keys()].map((key) => key.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('|')})(?!\\d)`, 'gu');
+  return text.replace(pattern, (match) => rewrites.get(match));
+}

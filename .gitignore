@@ -20,3 +20,6 @@ build/
 # link to `.agents/skills` is tracked.
 /.claude/*
 !/.claude/skills
+
+# Temp directories the R1 exit capture renames into place; a crash may leave one.
+/tests/evidence/.*.staging-*
