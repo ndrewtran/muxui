@@ -139,6 +139,15 @@ jobs:
         if: matrix.group.reusedFrom == ''
         run: pnpm install --frozen-lockfile
 
+      # Proof environment: a group that runs a cross-engine React browser test
+      # (one calling the harness's browserEngines()) installs Playwright's
+      # Firefox and WebKit with their system libraries. Other groups use Chrome.
+      - name: Install Playwright Firefox and WebKit
+        if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
+        env:
+          BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
+        run: pnpm --filter @muxui/react exec playwright-core install --with-deps $BROWSER_ENGINES
+
       - name: Run ${{ matrix.group.id }} checks
         if: matrix.group.reusedFrom == ''
         env:

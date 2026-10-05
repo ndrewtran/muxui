@@ -14,6 +14,7 @@ import {
   executionGroups,
   executionMode,
   fullWorkspacePlan,
+  groupBrowserEngines,
   groupMatrix,
   groupPackageDirectories,
   isPolicyOnlyLockfileChange,
@@ -951,6 +952,23 @@ test('scoped plans split into independent groups that each repeat the generation
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
   assert.deepEqual(groupIds(tokens), ['checks', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
   assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
+});
+
+test('only groups that run a cross-engine browser test request Firefox and WebKit', async () => {
+  assert.equal(groupBrowserEngines([{ env: {} }, { env: { MUXUI_BROWSER_ENGINES: 'chromium,webkit,firefox' } }]), 'firefox webkit');
+  assert.equal(groupBrowserEngines([{ env: { MUXUI_BROWSER_ENGINES: 'chromium' } }]), '');
+
+  const full = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} }));
+  assert.deepEqual(full.filter(({ browserEngines }) => browserEngines).map(({ id, browserEngines }) => [id, browserEngines]), [['browser', 'firefox webkit']]);
+
+  const tree = executionGroups(await plan([collectionsPath], treeRuntimeChange), { packages, environment: {}, pageIndex });
+  assert.ok(tree.every(({ browserEngines }) => browserEngines === ''), 'Tree proof stays Chrome-only');
+
+  const testFile = 'test/browser/autocomplete-dismissal.test.mjs';
+  const dismissal = executionGroups(await plan([`packages/react/${testFile}`]), { packages, environment: {}, pageIndex });
+  const react = dismissal.find(({ id }) => id === 'react');
+  assert.equal(react.browserEngines, 'firefox webkit');
+  assert.equal(react.commands.find(({ args }) => args.includes(testFile) || args.includes('check:component')).env.MUXUI_BROWSER_ENGINES, 'chromium,firefox,webkit');
 });
 
 const generationFilters = (command) => command.args.filter((_, index) => command.args[index - 1] === '--filter');
