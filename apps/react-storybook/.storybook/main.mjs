@@ -27,6 +27,11 @@ export default {
   staticDirs: [reactAssets],
   managerHead: (head) => `${head}<style id="muxui-storybook-fonts">${muxuiFontCss}</style><style id="muxui-storybook-theme">${managerThemeCss()}</style>`,
   previewHead: (head) => `${head}${muxuiPreviewColorSchemeBootstrap}<style id="muxui-storybook-preview-theme">${previewThemeCss()}</style>`,
+  core: {
+    // The What's new notification depends on a live storybook.js.org fetch
+    // and a shared dismissal cache, so it appears nondeterministically.
+    disableWhatsNewNotifications: true,
+  },
   framework: {
     name: '@storybook/react-vite',
     options: {},
