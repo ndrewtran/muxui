@@ -1,31 +1,41 @@
 // Roadmap "R1 exit — React prerelease publication": retain E-R1-EXIT-01 to 04
 // for the exact @muxui/react candidate published through
 // .github/workflows/npm-publish.yml. Each phase is separate and re-runnable;
-// every run rewrites the records, index, and README from verification.json.
+// every run rebuilds the records, index, and README from verification.json in
+// memory and replaces the route atomically, or leaves it untouched on failure.
 //
-//   node tests/evidence/capture-r1-exit.mjs --capture-timestamp=<ISO-8601 UTC> <phase>...
+//   node tests/evidence/capture-r1-exit.mjs [--version=<0.1.0-rc.N>] --capture-timestamp=<ISO-8601 UTC> <phase>...
+//
+// --version picks the candidate and its route (default 0.1.0-rc.1). rc.1 is
+// retained at tests/evidence/r1-exit; a Decision 0023 fix-forward rc gets its own
+// tests/evidence/r1-exit-<version>, and never rewrites an earlier rc's route.
 //
 // Phases, in release order:
 //   --dry-run-run=<id>  the mode=dry-run run on main: execution identity,
-//                       sanitized prepare-job excerpts, the npm-candidate
-//                       artifact (manifest retained, tarball digested only), and
-//                       the pre-publish verify-credentials run. Writes E-R1-EXIT-01
-//                       and the pre-publish half of E-R1-EXIT-02.
+//                       sanitized prepare-job excerpts, and the npm-candidate
+//                       artifact (manifest retained, tarball digested only).
+//                       For rc.1 it also binds the pre-publish verify-credentials
+//                       run. Writes E-R1-EXIT-01 and the pre-publish half of
+//                       E-R1-EXIT-02.
 //   --publish-run=<id>  the mode=publish run: same head commit and digest as the
 //                       dry run, preflight, publish, and registry read-back.
 //                       Completes E-R1-EXIT-02.
 //   --registry          read-only registry observations plus a clean consumer
 //                       installed from the registry. Writes E-R1-EXIT-03 and 04.
 //
-// Options: --out=<dir> writes the route elsewhere (default tests/evidence/r1-exit).
+// Two npm-publish.yml formats are parsed: the token workflow that published
+// rc.1 (shell preflight and read-back, npm whoami) and the trusted-publishing
+// workflow (npm-publication.mjs preflight, recheck, and read-back output).
+//
+// Options: --out=<dir> writes the route elsewhere (default: the version's route).
 // --rehearsal accepts a non-main run and an uncommitted tool for development
 // captures, marks every record as a rehearsal, and refuses the default route.
 // Hosted artifacts expire after 3 days and logs after 90; capture promptly.
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput } from '../../tooling/audits/repository-policy/src/evidence-verify.mjs';
@@ -35,16 +45,27 @@ import {
   findPinnedDuplicateVersions,
   isolatedPackageManagerEnvironment,
 } from '../../tooling/audits/repository-policy/src/release-proof.mjs';
+import { parseCandidateVersion } from '../../tooling/audits/repository-policy/src/npm-publication.mjs';
 import { DEFERRED_R1_EVIDENCE } from '../../packages/react/src/r1-deferred-evidence.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const repository = 'ndrewtran/muxui';
 const captureTool = 'tests/evidence/capture-r1-exit.mjs';
-export const route = 'tests/evidence/r1-exit';
+// rc.1, the first publish, keeps the original route; each fix-forward rc has its own.
+const firstVersion = '0.1.0-rc.1';
+export function routeFor(version) {
+  try {
+    parseCandidateVersion(version);
+  } catch (error) {
+    fail('R1_EXIT_ARGUMENT_INVALID', error.message);
+  }
+  return version === firstVersion ? 'tests/evidence/r1-exit' : `tests/evidence/r1-exit-${version}`;
+}
 const workflowPath = '.github/workflows/npm-publish.yml';
 const registry = 'https://registry.npmjs.org/';
 const packageName = '@muxui/react';
-// The read-only mode=verify-credentials run on main before the publish.
+// The read-only mode=verify-credentials run on main before the rc.1 publish; the
+// trusted-publishing workflow has no credentials run.
 const verifyCredentialsRunId = 37130250844;
 // Consumer React pins mirror release-prepare.mjs's online consumer matrix.
 const consumerReact = '19.2.8';
@@ -53,14 +74,15 @@ const consumerSmoke = 'tooling/audits/repository-policy/src/release-consumer/mat
 const authority = 'strategy/milestone-roadmap.md: R1 exit — React prerelease publication';
 
 export class R1ExitCaptureError extends Error {
-  constructor(code, message) {
-    super(`${code}: ${message}`);
+  constructor(code, message, options) {
+    super(`${code}: ${message}`, options);
     this.code = code;
   }
 }
 const fail = (code, message) => {
   throw new R1ExitCaptureError(code, message);
 };
+export const route = routeFor(firstVersion);
 
 const sha256 = (value) => `sha256:${createHash('sha256').update(value).digest('hex')}`;
 const emailPattern = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/u;
@@ -247,7 +269,7 @@ const prepareSteps = [
 
 /**
  * Binds the mode=dry-run run, its prepare-job log, the npm-candidate artifact,
- * and the verify-credentials run. Pure: every input is already fetched.
+ * and, for rc.1, the verify-credentials run. Pure: every input is already fetched.
  */
 export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, credentials, rehearsal = false }) {
   const execution = assertRun(run, { mode: 'dry-run', rehearsal });
@@ -291,7 +313,7 @@ export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, creden
       manifest: { file: artifact.manifest.file, bytes: artifact.manifest.bytes.length, sha256: sha256(artifact.manifest.bytes) },
     },
     manifest,
-    credentials: bindCredentials(credentials),
+    ...(credentials ? { credentials: bindCredentials(credentials) } : {}),
   };
 }
 
@@ -345,14 +367,51 @@ export function bindCredentials({ run, jobs, log }) {
   };
 }
 
-const publishSteps = [
-  { name: 'Re-verify candidate', marker: 'npm-candidate/*.tgz' },
-  { name: 'Registry preflight (read-only)', marker: 'publisher=$(npm whoami' },
-  { name: 'Publish to next', marker: 'Stop on publisher drift' },
-  { name: 'Read back registry state', marker: 'read_back()' },
-];
+// Step markers per npm-publish.yml format: `token` published rc.1 with
+// NODE_AUTH_TOKEN and shell checks; `oidc` runs npm-publication.mjs.
+const publishStepsByFormat = {
+  token: [
+    { name: 'Re-verify candidate', marker: 'npm-candidate/*.tgz' },
+    { name: 'Registry preflight (read-only)', marker: 'publisher=$(npm whoami' },
+    { name: 'Publish to next', marker: 'Stop on publisher drift' },
+    { name: 'Read back registry state', marker: 'read_back()' },
+  ],
+  oidc: [
+    { name: 'Re-verify candidate', marker: 'npm-candidate/*.tgz' },
+    { name: 'Registry preflight (read-only)', marker: 'npm-publication.mjs preflight' },
+    { name: 'Publish to next', marker: 'npm-publication.mjs recheck' },
+    { name: 'Read back registry state', marker: 'npm-publication.mjs read-back' },
+  ],
+};
+// The format is read from the step headers the workflow echoed.
+export function publishFormat(lines) {
+  return lines.some((line) => line.includes('##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs preflight')) ? 'oidc' : 'token';
+}
+
+// The read-only preflight each format printed.
+function preflightObservation(lines, format) {
+  if (format === 'token') {
+    return {
+      publisher: valueAfter(lines, /^npm whoami: (\S+)$/u),
+      version: valueAfter(lines, /^@muxui\/react@\S+: (E404 \(no collision\))$/u),
+      distTags: valueAfter(lines, /^@muxui\/react dist-tags: (E404 \(first publish\))$/u),
+    };
+  }
+  const [, latest = '', next = ''] = lines.map((line) => content(line).match(/^@muxui\/react dist-tags latest=(\S+) next=(\S+)$/u)).find(Boolean) ?? [];
+  const first = lines.some((line) => content(line).startsWith('@muxui/react absent (first publish'));
+  const version = valueAfter(lines, /^@muxui\/react@\S+: (404 \(no collision\))$/u);
+  if (!version || (!first && !latest)) fail('R1_EXIT_RUN_INVALID', 'the registry preflight printed no version or dist-tag state');
+  return {
+    version,
+    kind: first ? 'first' : 'later',
+    ...(first ? {} : { latest, next }),
+    recheck: valueAfter(lines, /^(No drift since the preflight: .+)$/u),
+  };
+}
 
 const stepOf = (job, name) => job?.steps?.find((step) => step.name === name);
+// npm-publication.mjs read-back's bounded-retry timeout, as GitHub prints ::error.
+const propagationTimeout = /^##\[error\]@muxui\/react(?:@\S+| dist-tags next=\S+) did not appear after \d+ attempts\.$/u;
 const provenanceType = /^https:\/\/slsa\.dev\/provenance\//u;
 
 // Approval facts from the approvals API, plus how the approval was submitted,
@@ -380,6 +439,7 @@ function bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal }) {
     if (stepOf(publishJob, name)?.conclusion !== 'success') fail('R1_EXIT_RUN_INVALID', `run ${run.id} step "${name}" did not succeed`);
   }
   const lines = publishLog.split('\n');
+  const format = publishFormat(lines);
   const { integrity, shasum } = dryRun.candidate.tarball;
   const { version } = dryRun.candidate;
   if (envValue(lines, 'EXPECTED_SHA512') !== integrity) fail('R1_EXIT_DIGEST_MISMATCH', `run ${run.id} tarball-sha512 input differs from the dry-run digest ${integrity}`);
@@ -393,14 +453,11 @@ function bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal }) {
   return {
     execution: { ...execution, prepare, publish: { jobId: publishJob.id, job: publishJob.name, conclusion: publishJob.conclusion, startedAt: publishJob.started_at, completedAt: publishJob.completed_at } },
     lines,
+    format,
     observed: {
       inputDigest: integrity,
       shasum,
-      preflight: {
-        publisher: valueAfter(lines, /^npm whoami: (\S+)$/u),
-        version: valueAfter(lines, /^@muxui\/react@\S+: (E404 \(no collision\))$/u),
-        distTags: valueAfter(lines, /^@muxui\/react dist-tags: (E404 \(first publish\))$/u),
-      },
+      preflight: preflightObservation(lines, format),
       packed: { shasum: valueAfter(lines, /^npm notice shasum: (\S+)$/u), integrity: notice },
       transparencyLog: valueAfter(lines, /transparency log: (\S+)$/u),
     },
@@ -428,21 +485,33 @@ export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approva
   if (stepOf(publishJob, 'Publish to next')?.conclusion !== 'success' || !lines.some((line) => content(line) === `+ ${packageName}@${version}`)) {
     fail('R1_EXIT_TUPLE_MISMATCH', `run ${run.id} did not publish ${packageName}@${version}`);
   }
+  const { format } = attempt;
+  if (format === 'oidc' && !attempt.observed.preflight.recheck) fail('R1_EXIT_RUN_INVALID', `run ${run.id} published without the pre-publish drift recheck`);
   const readBackStep = stepOf(publishJob, 'Read back registry state');
+  const publishSteps = publishStepsByFormat[format];
   // Only the read-back step's own lines count.
-  const [readStart, readEnd] = findStep(lines, 'Read back registry state', 'read_back()');
+  const [readStart, readEnd] = findStep(lines, 'Read back registry state', publishSteps[3].marker);
   const readLines = lines.slice(readStart, readEnd);
   let workflowReadBack;
   if (readBackStep?.conclusion === 'success') {
-    const attestations = jsonAfter(readLines, 'dist.attestations: ');
+    const attestations = format === 'token' ? jsonAfter(readLines, 'dist.attestations: ') : null;
     workflowReadBack = {
       status: 'passed',
       completedAt: readBackStep.completed_at,
       integrity: valueAfter(readLines, /^dist\.integrity: (\S+)$/u),
-      provenancePredicateType: attestations?.provenance?.predicateType ?? null,
+      provenancePredicateType: format === 'token' ? attestations?.provenance?.predicateType ?? null : valueAfter(readLines, /^provenance: (\S+)$/u),
       distTags: jsonAfter(readLines, 'dist-tags: ') ?? null,
     };
-  } else if (readBackStep?.conclusion === 'failure'
+  } else if (format === 'oidc' && readBackStep?.conclusion === 'failure'
+    && readLines.some((line) => propagationTimeout.test(content(line)))) {
+    // The bounded read-back ran out of time; the --registry phase is the proof.
+    workflowReadBack = {
+      status: 'failed-registry-propagation',
+      completedAt: readBackStep.completed_at,
+      error: content(readLines.find((line) => propagationTimeout.test(content(line)))).replace(/^##\[error\]/u, ''),
+      retries: readLines.filter((line) => /^Waiting for /u.test(content(line))).length,
+    };
+  } else if (format === 'token' && readBackStep?.conclusion === 'failure'
     && readLines.some((line) => content(line) === 'dist.integrity: missing')
     && readLines.some((line) => content(line) === `##[error]Registry has nothing; expected ${integrity}.`)) {
     workflowReadBack = {
@@ -478,7 +547,7 @@ export function bindPriorPublish({ dryRun, run, jobs, publishLog, approvals = []
   const attempt = bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal });
   const publishJob = jobs.find((job) => job.name === 'publish');
   const step = stepOf(publishJob, 'Publish to next');
-  const { lines } = attempt;
+  const { lines, format } = attempt;
   if (step?.conclusion !== 'failure' || lines.some((line) => content(line).startsWith(`+ ${packageName}@`))) {
     fail('R1_EXIT_PRIOR_ATTEMPT_INVALID', `run ${run.id} is not a failed publish attempt that published nothing`);
   }
@@ -486,7 +555,7 @@ export function bindPriorPublish({ dryRun, run, jobs, publishLog, approvals = []
     execution: attempt.execution,
     approvals: approvalFacts(approvals, approvalMethod),
     rawLog: rawLog(publishLog),
-    excerpt: stepExcerpt(lines, publishSteps.slice(1, 3)),
+    excerpt: stepExcerpt(lines, publishStepsByFormat[format].slice(1, 3)),
     observed: {
       ...attempt.observed,
       published: false,
@@ -526,8 +595,13 @@ export function bindAttestations(document, { dryRun, publishRunId }) {
   };
 }
 
-/** Binds read-only registry observations and the clean consumer to the dry-run candidate. */
-export function bindRegistry({ dryRun, view, attestations, consumer, publishRunId }) {
+/**
+ * Binds read-only registry observations and the clean consumer to the dry-run
+ * candidate. `prior` is the publish run's preflight: a first publish expects the
+ * candidate to be the only version (the registry sets latest); a later publish
+ * expects latest unchanged and the prior next still published.
+ */
+export function bindRegistry({ dryRun, view, attestations, consumer, publishRunId, prior = { kind: 'first' } }) {
   const { version, tarball } = dryRun.candidate;
   if (view.integrity !== tarball.integrity || view.shasum !== tarball.shasum) {
     fail('R1_EXIT_DIGEST_MISMATCH', `registry ${packageName}@${version} has ${view.integrity} / ${view.shasum}; the dry run produced ${tarball.integrity} / ${tarball.shasum}`);
@@ -535,9 +609,19 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
   if (!provenanceType.test(view.attestations?.provenance?.predicateType ?? '')) fail('R1_EXIT_PROVENANCE_MISSING', `${packageName}@${version}`);
   const provenance = bindAttestations(attestations, { dryRun, publishRunId });
   if (view.distTags?.next !== version) fail('R1_EXIT_NEXT_MISMATCH', `next points at ${view.distTags?.next}; the verified rc is ${version}`);
-  // Decision 0023: on a first publish the registry sets latest to the only version.
-  if (view.distTags.latest !== undefined && view.distTags.latest !== version) fail('R1_EXIT_LATEST_UNEXPECTED', `latest points at ${view.distTags.latest}; the verified rc is ${version}`);
-  if (canonicalJson(view.versions) !== canonicalJson([version])) fail('R1_EXIT_VERSIONS_UNEXPECTED', `the package has versions ${JSON.stringify(view.versions)}; expected only ${version}`);
+  if (prior.kind === 'later') {
+    // Decision 0023: a fix-forward publish moves next only; latest stays where the preflight recorded it.
+    if (Object.keys(view.distTags).sort().join(',') !== 'latest,next' || view.distTags.latest !== prior.latest) {
+      fail('R1_EXIT_LATEST_UNEXPECTED', `dist-tags are ${JSON.stringify(view.distTags)}; expected next=${version} and latest unchanged at ${prior.latest}`);
+    }
+    for (const expected of new Set([version, prior.latest, prior.next])) {
+      if (!view.versions.includes(expected)) fail('R1_EXIT_VERSIONS_UNEXPECTED', `the package has versions ${JSON.stringify(view.versions)}; ${expected} is missing`);
+    }
+  } else {
+    // Decision 0023: on a first publish the registry sets latest to the only version.
+    if (view.distTags.latest !== undefined && view.distTags.latest !== version) fail('R1_EXIT_LATEST_UNEXPECTED', `latest points at ${view.distTags.latest}; the verified rc is ${version}`);
+    if (canonicalJson(view.versions) !== canonicalJson([version])) fail('R1_EXIT_VERSIONS_UNEXPECTED', `the package has versions ${JSON.stringify(view.versions)}; expected only ${version}`);
+  }
   if (!view.time?.created || !view.time?.[version]) fail('R1_EXIT_VERSIONS_UNEXPECTED', 'the package document has no creation or version time');
   if (consumer.installedVersion !== version || consumer.lockIntegrity !== tarball.integrity) {
     fail('R1_EXIT_CONSUMER_MISMATCH', `the clean consumer installed ${consumer.installedVersion} (${consumer.lockIntegrity}) from next`);
@@ -548,18 +632,25 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
     || !consumer.smoke.resolved.includes(`${packageName}/styles.css`) || !consumer.smoke.rendered.includes('Button')) {
     fail('R1_EXIT_CONSUMER_MISMATCH', 'the clean consumer did not import every subpath, resolve styles.css, and render Button');
   }
-  return { view, provenance, consumer };
+  return { view, provenance, consumer, ...(prior.kind === 'later' ? { prior } : {}) };
 }
 
 // ---------------------------------------------------------------------------
 // Route assembly: records, index, and README derive only from verification.json.
 
-const nonClaims = [
-  'No assistive-technology support claim; rc.1 claims none (Decision 0022).',
-  'latest is set by the registry on first publish; it is observed here, not claimed or promoted (Decision 0023).',
-  'No stable release, framework-free, native, React Native Web, parity, or equivalence claim.',
-  'Completion of the R1 exit is not claimed here; merging the final R1-exit pull request is Andrew\'s separate stop.',
-];
+// rc.1's wording is retained byte for byte; a fix-forward rc names itself.
+function nonClaimsFor(version) {
+  return [
+    version === firstVersion
+      ? 'No assistive-technology support claim; rc.1 claims none (Decision 0022).'
+      : `No assistive-technology support claim; ${version} claims none (Decision 0022).`,
+    version === firstVersion
+      ? 'latest is set by the registry on first publish; it is observed here, not claimed or promoted (Decision 0023).'
+      : 'latest is not moved by this publish; it is observed unchanged, not claimed or promoted (Decision 0023).',
+    'No stable release, framework-free, native, React Native Web, parity, or equivalence claim.',
+    'Completion of the R1 exit is not claimed here; merging the final R1-exit pull request is Andrew\'s separate stop.',
+  ];
+}
 const deferred = DEFERRED_R1_EVIDENCE.map(({ id, part, status, deferredTo, provisional }) => ({ id, part, status, deferredTo, ...(provisional ? { provisional } : {}) }));
 
 function record(verification, refs, assertionId, body) {
@@ -574,7 +665,7 @@ function record(verification, refs, assertionId, body) {
     candidate: { name: dryRun.candidate.name, version: dryRun.candidate.version, integrity: dryRun.candidate.tarball.integrity },
     sourceRevision: verification.sourceRevision,
     sourceTree: verification.sourceTree,
-    nonClaims,
+    nonClaims: nonClaimsFor(dryRun.candidate.version),
     deferredToS1: deferred,
     validation: refs.validation,
     activeExceptionRefs: [],
@@ -630,7 +721,8 @@ export function buildRoute(verification, refs) {
         publication: dryRun.manifest.publication,
         preflightChecks: dryRun.manifest.preflight.checks.map(({ name, command, status }) => ({ name, command, status })),
       },
-      verifyCredentials: { execution: dryRun.credentials.execution, observed: dryRun.credentials.observed, excerpt: refs.credentialsExcerpt },
+      // rc.1 only; under trusted publishing the publish run's own preflight is the pre-publish registry check.
+      ...(dryRun.credentials ? { verifyCredentials: { execution: dryRun.credentials.execution, observed: dryRun.credentials.observed, excerpt: refs.credentialsExcerpt } } : {}),
     },
     priorPublishAttempts: priorPublish
       ? [{ captureTimestamp: priorPublish.captureTimestamp, execution: priorPublish.execution, environmentApprovals: priorPublish.approvals, observed: priorPublish.observed, excerpt: refs.priorPublishExcerpt }]
@@ -664,6 +756,25 @@ export function buildRoute(verification, refs) {
       artifact: refs.registry,
     });
     const { latest, next } = observed.view.distTags;
+    const latestRecord = observed.prior
+      ? {
+        observed: latest,
+        // Verified by bindRegistry against the publish run's preflight.
+        setBy: 'unchanged by this publish; recorded by the publish run preflight (Decision 0023)',
+        basis: { preflight: observed.prior, versions: observed.view.versions, versionPublished: observed.view.time[dryRun.candidate.version] },
+        claimed: false,
+        promoted: false,
+      }
+      : {
+        observed: latest ?? null,
+        // Verified by bindRegistry: latest is absent or the candidate, and the
+        // package's only version is the candidate, created by this publish.
+        setBy: 'the registry on first publish (Decision 0023)',
+        basis: { versions: observed.view.versions, packageCreated: observed.view.time.created, versionPublished: observed.view.time[dryRun.candidate.version] },
+        // No step in npm-publish.yml sets, claims, or promotes a dist-tag.
+        claimed: false,
+        promoted: false,
+      };
     records['E-R1-EXIT-04'] = record(verification, refs, 'E-R1-EXIT-04', {
       evidenceKind: 'retained-dist-tag-observation',
       claim: 'dist-tag verification with rollback prepared, not exercised',
@@ -672,16 +783,7 @@ export function buildRoute(verification, refs) {
       captureTimestamp: observed.captureTimestamp,
       distTags: {
         next: { observed: next, verifiedRc: dryRun.candidate.version },
-        latest: {
-          observed: latest ?? null,
-          // Verified by bindRegistry: latest is absent or the candidate, and the
-          // package's only version is the candidate, created by this publish.
-          setBy: 'the registry on first publish (Decision 0023)',
-          basis: { versions: observed.view.versions, packageCreated: observed.view.time.created, versionPublished: observed.view.time[dryRun.candidate.version] },
-          // No step in npm-publish.yml sets, claims, or promotes a dist-tag.
-          claimed: false,
-          promoted: false,
-        },
+        latest: latestRecord,
         all: observed.view.distTags,
       },
       rollback: { ...dryRun.manifest.rollback, status: 'prepared-not-exercised' },
@@ -692,6 +794,8 @@ export function buildRoute(verification, refs) {
 }
 
 function readme(verification) {
+  const { version } = verification.phases.dryRun.candidate;
+  if (version !== firstVersion) return fixForwardReadme(verification, version);
   return `# R1 exit retained publication evidence
 
 Roadmap "R1 exit — React prerelease publication" requires \`E-R1-EXIT-01\` to
@@ -722,6 +826,44 @@ not claimed or promoted (Decision 0023). rc.1 makes no assistive-technology
 claim (Decision 0022), and every item Decision 0022 defers to \`S1.0\` stays
 unmet. These records do not claim the R1 exit is complete; merging the final
 R1-exit pull request is Andrew's separate stop.${verification.rehearsal ? '\n\nThis capture is a rehearsal and is not release evidence.' : ''}
+`;
+}
+
+function fixForwardReadme(verification, version) {
+  return `# R1 exit retained publication evidence for ${version}
+
+Decision 0023 fixes a bad rc forward with a new exact candidate, which needs its
+own \`E-R1-EXIT-01\` to \`E-R1-EXIT-03\` evidence; the Roadmap R1 exit and
+\`E-R1-EXIT-04\` then apply to it. This root retains them for
+\`@muxui/react@${version}\` from the \`npm-publish.yml\` dry-run and publish runs
+(npm trusted publishing) and from read-only registry observations, captured by
+\`node ${captureTool} --version=${version}\`. Earlier candidates keep their own
+roots, which this capture never rewrites.
+
+- \`E-R1-EXIT-01\`: the dry run's exact tarball, export, and install tuple,
+  with any failed earlier attempt of the same run disclosed.
+- \`E-R1-EXIT-02\`: the release manifest; any earlier failed publish attempt;
+  the publish run's read-only preflight (version absent, prior \`latest\` and
+  \`next\` recorded), drift recheck, and publish, with its own read-back
+  recorded as an observation only; and the read-back proof from the registry
+  (integrity, shasum, SLSA provenance bound to the source commit and publish
+  run, dist-tags). It stays \`partial\` until both the publish run and the
+  registry read-back are captured.
+- \`E-R1-EXIT-03\`: a clean consumer installed from the registry's \`next\`.
+- \`E-R1-EXIT-04\`: \`next\` is the candidate and \`latest\` is unchanged from
+  the publish run's preflight, with the release manifest's rollback prepared,
+  not exercised.
+
+\`artifacts/\` holds the sanitized release manifest and the registry observation;
+\`validation/\` holds sanitized job-log excerpts; \`verification.json\` binds them
+to the unsanitized log, tarball, and manifest digests. The tarball is not
+retained; its sha512, sha256, shasum, size, and file count are.
+
+\`latest\` is not moved by this publish and is recorded as observed, not claimed
+or promoted (Decision 0023). ${version} makes no assistive-technology claim
+(Decision 0022), and every item Decision 0022 defers to \`S1.0\` stays unmet.
+These records do not claim the R1 exit is complete; merging the final R1-exit
+pull request is Andrew's separate stop.${verification.rehearsal ? '\n\nThis capture is a rehearsal and is not release evidence.' : ''}
 `;
 }
 
@@ -860,7 +1002,7 @@ export function observeConsumer(manifest, spec = `${packageName}@next`) {
 // Writing.
 
 function parseArguments(argv) {
-  const options = { phases: [], approvalMethods: {}, registryWait: 600 };
+  const options = { phases: [], approvalMethods: {}, registryWait: 600, version: firstVersion };
   for (let index = 0; index < argv.length; index += 1) {
     const [flag, inline] = argv[index].split(/=(.*)/su);
     const value = () => inline ?? argv[++index];
@@ -876,6 +1018,7 @@ function parseArguments(argv) {
       options.approvalMethods[runId] = method;
     }
     else if (flag === '--capture-timestamp') options.captureTimestamp = value();
+    else if (flag === '--version') options.version = value();
     else if (flag === '--out') options.out = resolve(value());
     else if (flag === '--rehearsal') options.rehearsal = true;
     else fail('R1_EXIT_ARGUMENT_INVALID', `unknown argument ${argv[index]}`);
@@ -885,7 +1028,14 @@ function parseArguments(argv) {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(options.captureTimestamp ?? '')) {
     fail('R1_EXIT_CAPTURE_TIMESTAMP_REQUIRED', 'pass --capture-timestamp=YYYY-MM-DDTHH:MM:SSZ');
   }
-  options.out ??= join(repositoryRoot, route);
+  options.route = routeFor(options.version);
+  options.out ??= join(repositoryRoot, options.route);
+  // --out may not point at the route of another candidate version.
+  const outRoute = relative(repositoryRoot, options.out).split(sep).join('/');
+  const outVersion = outRoute === route ? firstVersion : outRoute.match(/^tests\/evidence\/r1-exit-([^/]+)$/u)?.[1];
+  if (outVersion !== undefined && outVersion !== options.version) {
+    fail('R1_EXIT_VERSION_MISMATCH', `--out ${outRoute} is the route for ${outVersion}; --version is ${options.version}`);
+  }
   if (options.rehearsal && `${options.out}/`.startsWith(join(repositoryRoot, 'tests/evidence/'))) fail('R1_EXIT_REHEARSAL_ROUTE', 'a rehearsal writes only to --out outside tests/evidence');
   return options;
 }
@@ -902,19 +1052,145 @@ function proofToolIdentity(rehearsal) {
   return { path: captureTool, sha256: sha256(bytes), revision, tree: git('rev-parse', `${revision}^{tree}`) };
 }
 
-export async function main(argv = process.argv.slice(2), github = createGitHub()) {
-  const options = parseArguments(argv);
-  const routePath = (relative) => join(options.out, relative.slice(route.length + 1));
+const verificationPath = (root) => `${root}/verification.json`;
+
+/**
+ * Builds verification.json, the records, README, and index in memory from
+ * `verification`. `read(relative)` returns a route file's current or staged
+ * text. Returns the staged files (null removes a file); writes nothing.
+ */
+export function assembleRoute(verification, read) {
+  if (!verification.phases?.dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
+  const { version } = verification.phases.dryRun.candidate;
+  const route = routeFor(version);
+  const files = new Map();
   const write = (relative, text) => {
     assertDisclosable(text, relative);
-    mkdirSync(dirname(routePath(relative)), { recursive: true });
-    writeFileSync(routePath(relative), text);
-    return { path: relative, sha256: sha256(readFileSync(routePath(relative))) };
+    files.set(relative, text);
+    return { path: relative, sha256: sha256(text) };
   };
-  const verificationRelative = `${route}/verification.json`;
+  const assembled = {
+    ...verification,
+    captureProcedure: `node ${captureTool}${version === firstVersion ? '' : ` --version=${version}`} --capture-timestamp=<ISO-8601 UTC> [--dry-run-run=<id>] [--publish-run=<id>] [--prior-publish-run=<id>] [--approval-method=<id>=<method>] [--registry [--registry-wait=<s>]]`,
+    sanitizationRules,
+  };
+  const validation = write(verificationPath(route), canonicalJson(assembled));
+  const { retained, phases } = assembled;
+  if (!phases.dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
+  const refs = {
+    validation,
+    manifest: retained.manifest,
+    dryRunExcerpt: retained.dryRunExcerpt,
+    credentialsExcerpt: retained.credentialsExcerpt,
+    publishExcerpts: retained.publishExcerpt ? [retained.publishPrepareExcerpt, retained.publishExcerpt] : [],
+    priorPublishExcerpt: retained.priorPublishExcerpt,
+    registry: retained.registry,
+    retained,
+  };
+  const manifest = JSON.parse(read(retained.manifest.path));
+  const built = buildRoute({ ...assembled, phases: { ...phases, dryRun: { ...phases.dryRun, manifest } } }, refs);
+  const records = Object.entries(built).map(([assertionId, text]) => ({ assertionId, ...write(`${route}/records/${assertionId}.json`, text) }));
+  for (const stale of ['E-R1-EXIT-03', 'E-R1-EXIT-04'].filter((id) => !built[id])) files.set(`${route}/records/${stale}.json`, null);
+  write(`${route}/README.md`, readme(assembled));
+  write(`${route}/index.json`, canonicalJson({
+    schema: 'muxui-evidence-index-v1',
+    milestone: 'R1 exit',
+    authority,
+    sourceRevision: assembled.sourceRevision,
+    sourceTree: assembled.sourceTree,
+    artifacts: Object.values(retained).sort((left, right) => (left.path < right.path ? -1 : 1)),
+    records,
+    validation,
+    disclosureClass: 'public-sanitized',
+    owner: 'ndrewtran',
+    ...(assembled.rehearsal ? { rehearsal: assembled.rehearsal } : {}),
+    // The evidence head is the commit that retains this root; it is created after capture.
+    evidenceHead: { status: 'not-applicable', reason: 'the index digest is the content address; the retaining commit follows capture' },
+    retentionPolicy: 'Content-addressed Git records retained in default-branch history; hosted logs and artifacts expire and are bound by digest',
+  }));
+  return { files, records: records.map(({ assertionId }) => assertionId) };
+}
+
+// Every digest the staged index names must match the bytes about to be written.
+function assertStagedDigests(read, route) {
+  const index = JSON.parse(read(`${route}/index.json`));
+  for (const ref of [...index.artifacts, ...index.records, index.validation]) {
+    if (sha256(read(ref.path)) !== ref.sha256) fail('R1_EXIT_DIGEST_INCONSISTENT', `${ref.path} does not match its staged digest`);
+  }
+}
+
+/**
+ * Replaces `out` with its staged state: copies the current route into a temp
+ * sibling, applies `files` there, then renames it into place. Any failure
+ * before the rename leaves `out` untouched.
+ */
+function commitRoute(out, files, route) {
+  const parent = dirname(out);
+  mkdirSync(parent, { recursive: true });
+  const staging = mkdtempSync(join(parent, `.${basename(out)}.staging-`));
+  const previous = `${staging}.previous`;
+  try {
+    const replacing = existsSync(out);
+    if (replacing) cpSync(out, staging, { recursive: true });
+    for (const [relative, text] of files) {
+      const target = join(staging, relative.slice(route.length + 1));
+      if (text === null) rmSync(target, { force: true });
+      else {
+        mkdirSync(dirname(target), { recursive: true });
+        writeFileSync(target, text);
+      }
+    }
+    // mkdtemp creates 0700; keep the old route's mode.
+    chmodSync(staging, replacing ? statSync(out).mode & 0o777 : 0o755);
+    // A directory cannot be renamed over a non-empty one: move the old route
+    // aside, move the staged route in, and restore the old one if that fails.
+    if (replacing) renameSync(out, previous);
+    try {
+      renameSync(staging, out);
+    } catch (error) {
+      if (!replacing) throw error;
+      try {
+        renameSync(previous, out);
+      } catch {
+        throw new R1ExitCaptureError('R1_EXIT_ROUTE_STRANDED', `the previous route is at ${previous}; move it back to ${out}`, { cause: error });
+      }
+      throw error;
+    }
+    try {
+      rmSync(previous, { recursive: true, force: true });
+    } catch (error) {
+      console.warn(`[r1-exit] could not remove ${previous}: ${error.message}`);
+    }
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
+  }
+}
+
+export async function main(argv = process.argv.slice(2), github = createGitHub()) {
+  const options = parseArguments(argv);
+  const { route } = options;
+  const verificationRelative = verificationPath(route);
+  const routePath = (relative) => join(options.out, relative.slice(route.length + 1));
+  // Phase output is staged here and written only by commitRoute (null removes a file).
+  const staged = new Map();
+  const read = (relative) => {
+    if (!staged.has(relative)) return readFileSync(routePath(relative), 'utf8');
+    if (staged.get(relative) === null) fail('R1_EXIT_RETAINED_CHANGED', `${relative} was dropped by this capture`);
+    return staged.get(relative);
+  };
+  const write = (relative, text) => {
+    assertDisclosable(text, relative);
+    staged.set(relative, text);
+    return { path: relative, sha256: sha256(text) };
+  };
   const verification = existsSync(routePath(verificationRelative))
     ? JSON.parse(readFileSync(routePath(verificationRelative), 'utf8'))
     : { schema: 'muxui-evidence-validation-v1', phases: {} };
+  // An existing capture belongs to one candidate version.
+  const capturedVersion = verification.phases.dryRun?.candidate?.version;
+  if (capturedVersion !== undefined && capturedVersion !== options.version) {
+    fail('R1_EXIT_VERSION_MISMATCH', `${options.out} holds the ${capturedVersion} capture; --version is ${options.version}`);
+  }
   // Retained artifacts and excerpts must still match their recorded digests.
   for (const ref of Object.values(verification.retained ?? {})) {
     if (sha256(readFileSync(routePath(ref.path))) !== ref.sha256) fail('R1_EXIT_RETAINED_CHANGED', `${ref.path} no longer matches its capture digest`);
@@ -923,7 +1199,7 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
   // Retained files are keyed; replacing or dropping one removes its old file.
   const drop = (...keys) => {
     for (const key of keys) {
-      if (verification.retained[key]) rmSync(routePath(verification.retained[key].path), { force: true });
+      if (verification.retained[key]) staged.set(verification.retained[key].path, null);
       delete verification.retained[key];
     }
   };
@@ -935,7 +1211,7 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
   const capturedDryRun = () => {
     const { dryRun } = verification.phases;
     if (!dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
-    return { ...dryRun, manifest: JSON.parse(readFileSync(routePath(verification.retained.manifest.path), 'utf8')) };
+    return { ...dryRun, manifest: JSON.parse(read(verification.retained.manifest.path)) };
   };
   // Each phase keeps the identity of the tool that captured it; a capture made
   // before per-phase identities inherits the route's earlier tool identity.
@@ -949,9 +1225,13 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
       const run = github.run(runId);
       const jobs = github.jobs(runId);
       const prepare = jobs.find((job) => job.name === 'prepare');
-      const credentialsRun = github.run(verifyCredentialsRunId);
-      const credentialsJobs = github.jobs(verifyCredentialsRunId);
-      const credentialsJob = credentialsJobs.find((job) => job.name === 'verify-credentials');
+      // Only rc.1 had a token and a verify-credentials run.
+      let credentials;
+      if (options.version === firstVersion) {
+        const credentialsJobs = github.jobs(verifyCredentialsRunId);
+        const credentialsJob = credentialsJobs.find((job) => job.name === 'verify-credentials');
+        credentials = { run: github.run(verifyCredentialsRunId), jobs: credentialsJobs, log: credentialsJob ? github.log(credentialsJob.id) : '' };
+      }
       const download = mkdtempSync(join(tmpdir(), 'muxui-r1-exit-candidate-'));
       try {
         const artifact = github.download(runId, download) ? readCandidate(download) : null;
@@ -961,22 +1241,25 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
           prepareLog: prepare ? github.log(prepare.id) : '',
           artifact,
           sourceTree: github.tree(run.head_sha),
-          credentials: { run: credentialsRun, jobs: credentialsJobs, log: credentialsJob ? github.log(credentialsJob.id) : '' },
+          credentials,
           rehearsal: options.rehearsal,
         });
+        if (bound.candidate.version !== options.version) {
+          fail('R1_EXIT_VERSION_MISMATCH', `run ${runId} prepared ${bound.candidate.version}; --version is ${options.version}`);
+        }
         const { value, rewrites } = sanitizeManifest(bound.manifest);
         retain('manifest', `${route}/artifacts/release-manifest.json`, canonicalJson(value));
         retain('dryRunExcerpt', `${route}/validation/dry-run-prepare-${bound.execution.jobId}.txt`, bound.excerpt.text);
-        retain('credentialsExcerpt', `${route}/validation/verify-credentials-${bound.credentials.execution.jobId}.txt`, bound.credentials.excerpt.text);
+        if (bound.credentials) retain('credentialsExcerpt', `${route}/validation/verify-credentials-${bound.credentials.execution.jobId}.txt`, bound.credentials.excerpt.text);
         // The manifest itself lives only in the retained, sanitized artifact.
-        const { excerpt, credentials, manifest: _manifest, ...rest } = bound;
+        const { excerpt, credentials: boundCredentials, manifest: _manifest, ...rest } = bound;
         verification.phases.dryRun = {
           ...rest,
           captureTimestamp: options.captureTimestamp,
           excerpt: excerpt.ranges,
           manifestSanitization: rewrites,
           proofTool: verification.proofTool,
-          credentials: { ...credentials, excerpt: credentials.excerpt.ranges },
+          ...(boundCredentials ? { credentials: { ...boundCredentials, excerpt: boundCredentials.excerpt.ranges } } : {}),
         };
         // Earlier attempts of the same dry run are disclosed, not hidden by the retry.
         drop(...Object.keys(verification.retained).filter((key) => key.startsWith('dryRunAttempt')));
@@ -1030,7 +1313,9 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
       // The SLSA invocation is bound to the captured publish run.
       if (!verification.phases.publish && !options.rehearsal) fail('R1_EXIT_PHASE_ORDER', 'capture --publish-run before --registry');
       const { view, attestations } = await observeView(dryRun, options.registryWait);
-      const bound = bindRegistry({ dryRun, view, attestations, consumer: observeConsumer(dryRun.manifest), publishRunId: verification.phases.publish?.execution.runId });
+      const preflight = verification.phases.publish?.observed.preflight;
+      const prior = preflight?.kind === 'later' ? { kind: 'later', latest: preflight.latest, next: preflight.next } : { kind: 'first' };
+      const bound = bindRegistry({ dryRun, view, attestations, consumer: observeConsumer(dryRun.manifest), publishRunId: verification.phases.publish?.execution.runId, prior });
       retain('registry', `${route}/artifacts/registry-observation.json`, canonicalJson({
         schema: 'muxui-r1-exit-registry-observation-v1',
         registry,
@@ -1041,42 +1326,11 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
     }
   }
 
-  verification.captureProcedure = `node ${captureTool} --capture-timestamp=<ISO-8601 UTC> [--dry-run-run=<id>] [--publish-run=<id>] [--prior-publish-run=<id>] [--approval-method=<id>=<method>] [--registry [--registry-wait=<s>]]`;
-  verification.sanitizationRules = sanitizationRules;
-  const validation = write(verificationRelative, canonicalJson(verification));
-  const { retained } = verification;
-  const refs = {
-    validation,
-    manifest: retained.manifest,
-    dryRunExcerpt: retained.dryRunExcerpt,
-    credentialsExcerpt: retained.credentialsExcerpt,
-    publishExcerpts: retained.publishExcerpt ? [retained.publishPrepareExcerpt, retained.publishExcerpt] : [],
-    priorPublishExcerpt: retained.priorPublishExcerpt,
-    registry: retained.registry,
-    retained,
-  };
-  const routeView = { ...verification, phases: { ...verification.phases, dryRun: capturedDryRun() } };
-  const built = buildRoute(routeView, refs);
-  const records = Object.entries(built).map(([assertionId, text]) => ({ assertionId, ...write(`${route}/records/${assertionId}.json`, text) }));
-  for (const stale of ['E-R1-EXIT-03', 'E-R1-EXIT-04'].filter((id) => !built[id])) rmSync(routePath(`${route}/records/${stale}.json`), { force: true });
-  write(`${route}/README.md`, readme(verification));
-  write(`${route}/index.json`, canonicalJson({
-    schema: 'muxui-evidence-index-v1',
-    milestone: 'R1 exit',
-    authority,
-    sourceRevision: verification.sourceRevision,
-    sourceTree: verification.sourceTree,
-    artifacts: Object.values(retained).sort((left, right) => (left.path < right.path ? -1 : 1)),
-    records,
-    validation,
-    disclosureClass: 'public-sanitized',
-    owner: 'ndrewtran',
-    ...(verification.rehearsal ? { rehearsal: verification.rehearsal } : {}),
-    // The evidence head is the commit that retains this root; it is created after capture.
-    evidenceHead: { status: 'not-applicable', reason: 'the index digest is the content address; the retaining commit follows capture' },
-    retentionPolicy: 'Content-addressed Git records retained in default-branch history; hosted logs and artifacts expire and are bound by digest',
-  }));
-  return { records: records.map(({ assertionId }) => assertionId), out: options.out };
+  const { files, records } = assembleRoute(verification, read);
+  for (const [relative, text] of files) staged.set(relative, text);
+  assertStagedDigests(read, route);
+  commitRoute(options.out, staged, route);
+  return { records, out: options.out };
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
