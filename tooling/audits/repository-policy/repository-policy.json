@@ -176,7 +176,9 @@
       "catalog/capabilities/": "@muxui/catalog",
       "catalog/components/": "@muxui/catalog",
       "catalog/guides/": "@muxui/catalog",
-      "catalog/tokens/": "@muxui/tokens"
+      "catalog/tokens/": "@muxui/tokens",
+      "packages/catalog/catalog-sources.json": "@muxui/catalog",
+      "packages/tooling/command-registry.json": "@muxui/tooling"
     },
     "documentationPrefixes": [
       "apps/docs/",

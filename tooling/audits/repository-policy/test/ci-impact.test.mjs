@@ -1940,7 +1940,9 @@ test('React examples no Storybook story uses validate the catalog, docs, and fam
   const record = await plan(['catalog/components/tree/examples/react/basic.example.json']);
   assert.equal(record.catalog, true);
   assert.equal(record.docs, true);
-  assert.deepEqual(record.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  // The selected React family changes React output, so React's runtime
+  // dependents (Figma, the playground) run too.
+  assert.deepEqual(record.packageChecks, ['@muxui/figma', '@muxui/react-native', '@muxui/react-playground', '@muxui/tooling', '@muxui/web']);
   assert.deepEqual(record.reactFamilies, ['Tree']);
   assert.deepEqual(record.storyIds, []);
   assert.deepEqual(record.reactTestFiles, []);
@@ -1980,13 +1982,15 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   const generatorInput = await route('catalog/react-r1-6/supplemental-components.json');
   assert.equal(generatorInput.reactPackageFull, true);
   assert.equal(generatorInput.policy, true);
-  assert.deepEqual(generatorInput.packageChecks, []);
+  // Every React family changes, so React's runtime dependents run too.
+  assert.equal(generatorInput.docs && generatorInput.scale, true);
+  assert.deepEqual(generatorInput.packageChecks, ['@muxui/figma', '@muxui/react-playground']);
 
   // R1.0 inputs are also read by schema tests and Storybook unit tests.
   const upstreamExports = await route('catalog/react-r1-0/upstream-exports.json');
   assert.equal(upstreamExports.reactPackageFull, true);
   assert.equal(upstreamExports.policy, true);
-  assert.deepEqual(upstreamExports.packageChecks, ['@muxui/schema']);
+  assert.deepEqual(upstreamExports.packageChecks, ['@muxui/figma', '@muxui/react-playground', '@muxui/schema']);
   assert.deepEqual(upstreamExports.storyUnitTests, [{
     file: 'test/storybook.test.mjs',
     testNamePattern: '^private host and exact Mux UI React family projection$|^every story exposes exactly its canonical Mux UI-owned properties$',
@@ -2227,4 +2231,54 @@ test('catalog edits run the React Native and Web package checks but not the Reac
     assert.equal(result.reactPackageFull, false, path);
     for (const name of ['@muxui/react-native', '@muxui/web']) assert.ok(result.packageChecks.includes(name), `${path} ${name}`);
   }
+});
+
+const reactRuntimeDependentsPlanned = (result) => result.docs && result.scale
+  && ['@muxui/figma', '@muxui/react-playground'].every((name) => result.packageChecks.includes(name));
+
+test('canonical React inputs that change React output plan React runtime dependents', async () => {
+  const generatorInput = await plan(['catalog/react-r1-6/supplemental-components.json'], { packages: workspacePackages });
+  assert.equal(generatorInput.reactPackageFull, true);
+  assert.ok(reactRuntimeDependentsPlanned(generatorInput));
+
+  const autocompleteRecord = { family: 'Autocomplete', export: 'Autocomplete', slug: 'autocomplete', source: fieldsPath, parts: ['root'] };
+  const artifact = await plan(['catalog/components/autocomplete/artifact.json'], {
+    packages: workspacePackages,
+    records: [...records, autocompleteRecord],
+    componentTestSources: {
+      ...componentTestSources,
+      'test/browser/autocomplete-dismissal.test.mjs': readFileSync(resolve(repositoryRoot, 'packages/react/test/browser/autocomplete-dismissal.test.mjs'), 'utf8'),
+    },
+    pageIndex: [...pageIndex, {
+      family: 'Autocomplete',
+      storyFile: 'apps/react-storybook/.storybook/generated/autocomplete.stories.mjs',
+      stories: [{ id: 'autocomplete--browser-proof', exportName: 'BrowserProof', name: 'BrowserProof' }],
+    }],
+  });
+  assert.deepEqual(artifact.reactFamilies, ['Autocomplete']);
+  assert.equal(artifact.reactPackageFull, false);
+  assert.ok(reactRuntimeDependentsPlanned(artifact));
+});
+
+test('generator inputs outside src plan their package dependents', async () => {
+  const catalogSources = await plan(['packages/catalog/catalog-sources.json'], { packages: workspacePackages });
+  assert.equal(catalogSources.docs && catalogSources.policy, true);
+  assert.ok(catalogSources.packageChecks.includes('@muxui/tooling'));
+
+  const commandRegistry = await plan(['packages/tooling/command-registry.json'], { packages: workspacePackages });
+  // Docs depends on tooling only as a devDependency; policy depends on it at runtime.
+  assert.ok(commandRegistry.packageChecks.includes('@muxui/docs'));
+  assert.equal(commandRegistry.policy, true);
+});
+
+test('a manifest bin change is a runtime boundary change', async () => {
+  const before = JSON.stringify({ name: '@muxui/tooling', bin: { muxui: './bin/muxui.mjs' } });
+  const after = JSON.stringify({ name: '@muxui/tooling', bin: { muxui: './bin/muxui-cli.mjs' } });
+  assert.equal(reactPackageWideChanges(before, after).pagesAffected, true);
+  const path = 'packages/tooling/package.json';
+  const changed = await plan([path], { packages: workspacePackages, textSnapshots: { [path]: { before, after } } });
+  assert.equal(changed.policy, true);
+  const scriptsOnly = JSON.stringify({ name: '@muxui/tooling', bin: { muxui: './bin/muxui.mjs' }, scripts: { check: 'new' } });
+  const unchanged = await plan([path], { packages: workspacePackages, textSnapshots: { [path]: { before, after: scriptsOnly } } });
+  assert.equal(unchanged.policy, false);
 });

@@ -590,7 +590,7 @@ export function reactPackageWideChanges(before, after) {
   const newManifest = parseJson(after, 'React package.json');
   const runtimeFields = [
     'name', 'type', 'exports', 'imports', 'main', 'module', 'types', 'typings',
-    'browser', 'files', 'sideEffects', 'dependencies', 'peerDependencies', 'optionalDependencies',
+    'browser', 'bin', 'files', 'sideEffects', 'dependencies', 'peerDependencies', 'optionalDependencies',
   ];
   const changed = runtimeFields.filter((field) => (
     JSON.stringify(oldManifest[field] ?? null) !== JSON.stringify(newManifest[field] ?? null)
@@ -710,10 +710,10 @@ function shippedPath(file, manifest) {
 // package that reads them (`packageSourceOwners`). Inside a package only
 // shipped paths count; tests, guidance, notices, and licenses need only the
 // package's own check.
-// Known limits: unexported generator inputs (such as
-// packages/catalog/catalog-sources.json and packages/tooling/command-registry.json)
-// plan no dependents although they shape generated exports, and
-// packages/react/README.md plans no dependents although docs renders it.
+// Unexported generator inputs a package ships through its generated output
+// (such as packages/catalog/catalog-sources.json) are listed in
+// `packageSourceOwners` too. Known limit: packages/react/README.md plans no
+// dependents although docs renders it.
 function dependentFacingPackage(path, packages, config) {
   const sourceOwner = Object.entries(config.packageSourceOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
   if (sourceOwner) return { name: sourceOwner, manifest: false };
@@ -1422,7 +1422,12 @@ export async function buildPullRequestImpact({
 
   // A React source change reaches dependents only when its analysis found a
   // family, theme, or package-wide impact.
-  const reactSourceImpact = plan.reactFamilies.size > 0 || plan.themeFamilies.size > 0 || plan.reactPackageFull;
+  // React output changed when the analysis selected React families or theme
+  // families, or a projection compiler input changed. A React source change
+  // without that impact (a comment) and unshipped React files (advisory docs)
+  // reach no dependents.
+  const reactOutputChanged = plan.reactFamilies.size > 0 || plan.themeFamilies.size > 0 || reactGeneratorPaths.length > 0;
+  if (reactOutputChanged) changedPackages.add('@muxui/react');
   for (const path of routedPaths) {
     const owner = dependentFacingPackage(path, packages, config);
     if (!owner) continue;
@@ -1433,7 +1438,7 @@ export async function buildPullRequestImpact({
       // The runtime package boundary fields apply to every workspace manifest.
       if (!reactPackageWideChanges(before, after).pagesAffected) continue;
     }
-    if (path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path) && !reactSourceImpact) continue;
+    if (path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path)) continue;
     changedPackages.add(owner.name);
   }
   for (const { name, via, scope } of workspaceDependentRoutes(packages, [...changedPackages].sort())) {
