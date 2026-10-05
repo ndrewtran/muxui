@@ -31,6 +31,7 @@ import {
   readLockedIntegrity,
   readRetainedEvidence,
   readRetainedReviewEvidence,
+  replaceVersions,
   summarizeBundleModules,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
@@ -248,13 +249,6 @@ function equalSet(actual, expected) {
 
 function assertIncludes(value, expected, code) {
   if (!value.includes(expected)) fail(code, expected);
-}
-
-// Applies every version rewrite in one pass, so a rewrite never feeds another
-// (rc.1 -> rc.2 and rc.2 -> rc.3 together); `rc.1` never matches inside `rc.10`.
-function replaceVersions(text, rewrites) {
-  const pattern = new RegExp(`(?:${[...rewrites.keys()].map((key) => key.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('|')})(?!\\d)`, 'gu');
-  return text.replace(pattern, (match) => rewrites.get(match));
 }
 
 function rewriteGeneratedVersion(source, rewrites) {
@@ -1127,7 +1121,7 @@ try {
           name: 'next dist-tag collision',
           command: 'GET https://registry.npmjs.org/@muxui/react (dist-tags)',
           status: 'pending',
-          policy: `a first publish expects the package to be absent and must be ${sourceCandidateVersion}; otherwise the dist-tags must be exactly latest and next, next must point at an earlier published rc, and latest is recorded unchanged; any other dist-tag state is a hard stop for review`,
+          policy: `a first publish expects the package to be absent and must be ${sourceCandidateVersion}; otherwise the dist-tags must be exactly latest and next, next must be the published rc.N that this rc.N+1 candidate fixes forward, and latest is recorded unchanged; any other dist-tag state is a hard stop for review`,
           laterPublish: 'record the prior next and latest pointers; after publication next must be the candidate and latest unchanged',
         },
         {

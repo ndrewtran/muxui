@@ -62,8 +62,9 @@ export function meetsMinimumNpm(version, minimum = MINIMUM_NPM) {
  * when the package is absent (404).
  *
  * - first: the package is absent, so this must be rc.1 (today's first publish).
- * - later: `latest` is recorded as-is, `next` must be an existing earlier rc,
- *   and no other dist-tag may exist.
+ * - later: `latest` is recorded as-is, `next` must be a published rc whose
+ *   fix-forward is exactly this version (rc.N+1, Decision 0023), and no other
+ *   dist-tag may exist.
  */
 export function classifyPreflight({ version, versionStatus, packument }) {
   const rc = parseCandidateVersion(version);
@@ -87,8 +88,8 @@ export function classifyPreflight({ version, versionStatus, packument }) {
   const { latest, next } = tags;
   if (!versions.includes(latest)) stop('Dist-tag drift', `latest points at ${latest}, which is not a published version.`);
   if (!versions.includes(next)) stop('Dist-tag drift', `next points at ${next}, which is not a published version.`);
-  if (!candidatePattern.test(next) || parseCandidateVersion(next) >= rc) {
-    stop('Dist-tag drift', `next must point at an earlier published rc than ${version}; it points at ${next}.`);
+  if (!candidatePattern.test(next) || parseCandidateVersion(next) + 1 !== rc) {
+    stop('Not the fix-forward', `${version} must be the fix-forward of next (rc.N+1); next points at ${next}. Anything else stops for a decision.`);
   }
   return { kind: 'later', latest, next };
 }
@@ -136,10 +137,28 @@ export function judgeVersionDocument({ version, expectedIntegrity, document }) {
 
 const packageUrl = (version) => `${REGISTRY}/${PACKAGE_NAME}${version ? `/${version}` : ''}`;
 
-/** GETs a registry document: { status, body } with body null unless 200. */
+const fetchTimeoutMs = 30_000;
+
+/** GETs a registry document: { status, body } with body null unless 200. Each request times out. */
 export async function readRegistry(url, { fetch = globalThis.fetch } = {}) {
-  const response = await fetch(url, { headers: { accept: 'application/json', 'cache-control': 'no-cache' } });
+  const response = await fetch(url, {
+    headers: { accept: 'application/json', 'cache-control': 'no-cache' },
+    signal: AbortSignal.timeout(fetchTimeoutMs),
+  });
   return { status: response.status, body: response.status === 200 ? await response.json() : null };
+}
+
+// Rate limits, server errors, and failed or timed-out requests are transient.
+const transient = (status) => status === 429 || status >= 500;
+
+/** Like readRegistry, but a thrown request becomes { status: 0 } so polling retries it. */
+async function readRegistryForPoll(url, io) {
+  try {
+    return await readRegistry(url, io);
+  } catch (error) {
+    (io.log ?? console.log)(`Request to ${url} failed: ${error.message}`);
+    return { status: 0, body: null };
+  }
 }
 
 async function readPackument(io) {
@@ -183,15 +202,15 @@ export async function readBack({ version, expectedIntegrity, recorded }, {
   ...io
 } = {}) {
   const versionResult = await poll(`${PACKAGE_NAME}@${version}`, async () => {
-    const { status, body } = await readRegistry(packageUrl(version), io);
+    const { status, body } = await readRegistryForPoll(packageUrl(version), io);
     if (status === 200) return judgeVersionDocument({ version, expectedIntegrity, document: body });
-    if (status === 404 || status >= 500) return undefined;
+    if (status === 0 || status === 404 || transient(status)) return undefined;
     stop('Registry read failed', `Unexpected HTTP ${status} reading ${PACKAGE_NAME}@${version}.`);
   }, { attempts: versionAttempts, intervalMs, ...io });
 
   const distTags = await poll(`${PACKAGE_NAME} dist-tags next=${version}`, async () => {
-    const { status, body } = await readRegistry(packageUrl(), io);
-    if (status >= 500) return undefined;
+    const { status, body } = await readRegistryForPoll(packageUrl(), io);
+    if (status === 0 || transient(status)) return undefined;
     if (status !== 200 && status !== 404) stop('Registry read failed', `Unexpected HTTP ${status} reading ${PACKAGE_NAME}.`);
     const packument = status === 404 ? null : body;
     return judgeDistTags({ version, recorded, packument }) === 'done' ? packument['dist-tags'] : undefined;
@@ -200,13 +219,13 @@ export async function readBack({ version, expectedIntegrity, recorded }, {
   return { ...versionResult, distTags };
 }
 
-function recordedFromEnvironment(environment) {
+export function recordedFromEnvironment(environment) {
   const kind = environment.PRE_KIND;
   if (kind !== 'first' && kind !== 'later') stop('Preflight missing', `PRE_KIND must be first or later, not ${JSON.stringify(kind)}.`);
   return { kind, latest: environment.PRE_LATEST ?? '', next: environment.PRE_NEXT ?? '' };
 }
 
-function writeOutputs(environment, values) {
+export function writeOutputs(environment, values) {
   const lines = Object.entries(values).map(([key, value]) => `${key}=${value}\n`).join('');
   if (environment.GITHUB_OUTPUT) appendFileSync(environment.GITHUB_OUTPUT, lines);
 }
@@ -219,38 +238,39 @@ const describe = (state) => state.kind === 'first'
   ? `${PACKAGE_NAME} absent (first publish; the registry will set latest)`
   : `${PACKAGE_NAME} dist-tags latest=${state.latest} next=${state.next}`;
 
-export async function main(command, environment = process.env) {
+export async function main(command, environment = process.env, io = {}) {
   const version = environment.VERSION;
+  const log = io.log ?? console.log;
   switch (command) {
     case 'validate-version':
       parseCandidateVersion(version);
-      console.log(`${version} is an admitted candidate version; fix forward to ${fixForwardVersion(version)}.`);
+      log(`${version} is an admitted candidate version; fix forward to ${fixForwardVersion(version)}.`);
       return;
     case 'check-npm': {
       const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();
       if (!meetsMinimumNpm(npmVersion)) stop('npm too old', `Trusted publishing needs npm ${MINIMUM_NPM} or later; found ${npmVersion}.`);
-      console.log(`npm ${npmVersion} supports trusted publishing (>= ${MINIMUM_NPM}).`);
+      log(`npm ${npmVersion} supports trusted publishing (>= ${MINIMUM_NPM}).`);
       return;
     }
     case 'preflight': {
-      const state = await preflight(version);
-      console.log(`${PACKAGE_NAME}@${version}: 404 (no collision)`);
-      console.log(describe(state));
+      const state = await preflight(version, io);
+      log(`${PACKAGE_NAME}@${version}: 404 (no collision)`);
+      log(describe(state));
       writeOutputs(environment, { kind: state.kind, latest: state.latest, next: state.next });
       return;
     }
     case 'recheck': {
       const recorded = recordedFromEnvironment(environment);
-      assertNoDrift(recorded, await preflight(version));
-      console.log(`No drift since the preflight: ${describe(recorded)}`);
+      assertNoDrift(recorded, await preflight(version, io));
+      log(`No drift since the preflight: ${describe(recorded)}`);
       return;
     }
     case 'read-back': {
       const recorded = recordedFromEnvironment(environment);
-      const result = await readBack({ version, expectedIntegrity: environment.EXPECTED_SHA512, recorded });
-      console.log(`dist.integrity: ${result.integrity}`);
-      console.log(`provenance: ${result.predicateType}`);
-      console.log(`dist-tags: ${JSON.stringify(result.distTags)}`);
+      const result = await readBack({ version, expectedIntegrity: environment.EXPECTED_SHA512, recorded }, io);
+      log(`dist.integrity: ${result.integrity}`);
+      log(`provenance: ${result.predicateType}`);
+      log(`dist-tags: ${JSON.stringify(result.distTags)}`);
       writeSummary(environment, [
         `### Published ${PACKAGE_NAME}@${version}`,
         '',
