@@ -73,18 +73,24 @@ const entry = `import React from 'react';
       h('button', { id: 'page-button', style: { marginTop: 400 } }, 'Page'));
   }
 
-  // A list whose row buttons open one controlled Dialog; ?focusable=0 drops the
-  // list's tabIndex so the opener has no focusable ancestor.
-  function RowsScenario() {
+  const params = new URLSearchParams(location.search);
+
+  // A list whose row buttons open one controlled Dialog. ?focusable=0 drops the
+  // list's tabIndex so the opener has no focusable ancestor; ?deleteOnOpen=1
+  // removes the opener's row in the same update that opens the Dialog.
+  function RowsDialog({ listId = 'rows' }) {
     const [rows, setRows] = React.useState([1, 2, 3]);
     const [openRow, setOpenRow] = React.useState(null);
-    const focusable = new URLSearchParams(location.search).get('focusable') !== '0';
+    const remove = (target) => setRows((current) => current.filter((row) => row !== target));
     return h('div', null,
-      h('ul', { id: 'rows', 'aria-label': 'Rows', tabIndex: focusable ? -1 : undefined },
+      h('ul', { id: listId, 'aria-label': 'Rows', tabIndex: params.get('focusable') === '0' ? undefined : -1 },
         rows.map((row) => h('li', { key: row, id: 'row-' + row },
-          h('button', { id: 'edit-' + row, onClick: () => setOpenRow(row) }, 'Edit row ' + row)))),
-      h(Dialog, { title: 'Edit row', open: openRow !== null, onOpenChange: (open) => { if (!open) setOpenRow(null); } },
-        h('button', { id: 'delete-row', onClick: () => setRows((current) => current.filter((row) => row !== openRow)) }, 'Delete row')));
+          h('button', { id: 'edit-' + row, onClick: () => {
+            setOpenRow(row);
+            if (params.get('deleteOnOpen') === '1') remove(row);
+          } }, 'Edit row ' + row)))),
+      h(Dialog, { title: 'Edit row', className: 'rows-dialog', open: openRow !== null, onOpenChange: (open) => { if (!open) setOpenRow(null); } },
+        h('button', { id: 'delete-row', onClick: () => remove(openRow) }, 'Delete row')));
   }
 
   // A modal Popover inside each row; deleting the row unmounts its Popover too.
@@ -96,9 +102,25 @@ const entry = `import React from 'react';
           h('button', { id: 'delete-row', onClick: () => setRows((current) => current.filter((item) => item !== row)) }, 'Delete row')))));
   }
 
+  // A modal Popover that stays mounted while its trigger is removed, then closes.
+  function RemovableTrigger({ removed, ...props }) {
+    return removed ? null : h(Button, props, 'Actions');
+  }
+  function PopoverTriggerRemovedScenario() {
+    const [removed, setRemoved] = React.useState(false);
+    return h('ul', { id: 'rows', 'aria-label': 'Rows', tabIndex: -1 },
+      h('li', { id: 'row-1' },
+        h(Popover, { 'aria-label': 'Row actions', trigger: h(RemovableTrigger, { id: 'actions-1', removed }) },
+          h('button', { id: 'remove-trigger', onClick: () => setRemoved(true) }, 'Remove trigger'))));
+  }
+
   const scenarios = {
-    rows: RowsScenario,
+    rows: () => h(RowsDialog),
+    'nested-popover-rows': () => h('div', null,
+      h(Popover, { 'aria-label': 'Row list', modal: false, trigger: h('button', { id: 'pop-trigger' }, 'Rows') }, h(RowsDialog, { listId: 'pop-rows' }))),
+    'nested-dialog-rows': () => h(Dialog, { title: 'Outer', trigger: h('button', { id: 'outer-trigger' }, 'Outer') }, h(RowsDialog, { listId: 'outer-rows' })),
     'popover-rows': PopoverRowsScenario,
+    'popover-trigger-removed': PopoverTriggerRemovedScenario,
     nested: NestedScenario,
     dialog: DialogScenario,
     files: FilesScenario,
@@ -106,8 +128,8 @@ const entry = `import React from 'react';
     toast: ToastScenario,
     declarative: () => h(ToastProvider, null, h(DeclarativeToast)),
   };
-  const Scenario = scenarios[new URLSearchParams(location.search).get('scenario')];
-  createRoot(document.getElementById('root')).render(h(Scenario));
+  const Scenario = scenarios[params.get('scenario')];
+  createRoot(document.getElementById('root')).render(params.get('strict') === '1' ? h(React.StrictMode, null, h(Scenario)) : h(Scenario));
   document.documentElement.dataset.ready = 'true';`;
 
 let server;
@@ -315,11 +337,12 @@ test('Dialog locks scroll, dismisses on backdrop press, and closes nested overla
   }
 });
 
-// After its exit, a closed overlay restores focus one frame after unmount;
-// wait two more frames so any opener fallback has run before asserting.
+// React Aria restores focus one frame after a closed overlay unmounts, or after
+// running transitions under a virtual cursor; let both settle before asserting.
 async function settledActiveId(page, overlay) {
   await overlay.waitFor({ state: 'detached' });
   await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)))));
+  await page.waitForTimeout(250);
   return activeId(page);
 }
 
@@ -331,36 +354,45 @@ async function deleteOpenerRow(page, dialog) {
   assert.equal(await activeId(page), 'delete-row', 'the Dialog keeps focus while its opener is removed');
 }
 
-test('Escape moves focus to the opener\'s nearest focusable ancestor when the opener was removed', { timeout: 60_000 }, async () => {
-  const { page, errors } = await openScenario('rows');
-  try {
-    const dialog = page.locator('.muxui-dialog');
-    await deleteOpenerRow(page, dialog);
-    await page.keyboard.press('Escape');
-    assert.equal(await settledActiveId(page, dialog), 'rows');
-    assert.deepEqual(errors, [], errors.join('\n'));
-  } finally {
-    await page.close();
-  }
-});
+// Each case removes the opener of a rows Dialog, closes it one way, and expects focus on `expected`.
+const removedOpenerCases = [
+  ['Escape', 'rows', 'rows', (page) => page.keyboard.press('Escape')],
+  ['the close button', 'rows', 'rows', (page) => page.locator('.rows-dialog .muxui-dialog-close').click()],
+  ['a backdrop press', 'rows', 'rows', (page) => page.mouse.click(10, 10)],
+  ['Escape with no focusable ancestor', 'rows&focusable=0', 'BODY', (page) => page.keyboard.press('Escape')],
+  // A nested Dialog's opener sits inside a still-open outer Dialog, whose own
+  // opener is inert while it is open, so React Aria cannot restore focus.
+  ['Escape inside an outer Dialog', 'nested-dialog-rows', 'outer-rows', (page) => page.keyboard.press('Escape')],
+  // React Aria restores to the enclosing non-modal Popover's trigger, so the
+  // fallback must not pre-empt it, for virtual or keyboard input alike.
+  ['a virtual click inside a non-modal Popover', 'nested-popover-rows', 'pop-trigger', (page) => page.locator('.rows-dialog .muxui-dialog-close').evaluate((node) => node.click())],
+  ['a keyboard close inside a non-modal Popover', 'nested-popover-rows', 'pop-trigger', async (page) => {
+    await page.locator('.rows-dialog .muxui-dialog-close').focus();
+    await page.keyboard.press('Enter');
+  }],
+];
 
-test('the close button moves focus to the opener\'s nearest focusable ancestor when the opener was removed', { timeout: 60_000 }, async () => {
-  const { page, errors } = await openScenario('rows');
-  try {
-    const dialog = page.locator('.muxui-dialog');
-    await deleteOpenerRow(page, dialog);
-    await page.locator('.muxui-dialog-close').click();
-    assert.equal(await settledActiveId(page, dialog), 'rows');
-    assert.deepEqual(errors, [], errors.join('\n'));
-  } finally {
-    await page.close();
-  }
-});
+for (const [close, scenario, expected, closeDialog] of removedOpenerCases) {
+  test(`${close} after the opener was removed moves focus to ${expected}`, { timeout: 60_000 }, async () => {
+    const { page, errors } = await openScenario(scenario);
+    try {
+      if (scenario.startsWith('nested-dialog')) await page.locator('#outer-trigger').click();
+      if (scenario.startsWith('nested-popover')) await page.locator('#pop-trigger').click();
+      const dialog = page.locator('.rows-dialog');
+      await deleteOpenerRow(page, dialog);
+      await closeDialog(page);
+      assert.equal(await settledActiveId(page, dialog), expected);
+      assert.deepEqual(errors, [], errors.join('\n'));
+    } finally {
+      await page.close();
+    }
+  });
+}
 
 test('a Dialog whose opener still exists restores focus to the opener', { timeout: 60_000 }, async () => {
   const { page, errors } = await openScenario('rows');
   try {
-    const dialog = page.locator('.muxui-dialog');
+    const dialog = page.locator('.rows-dialog');
     await page.locator('#edit-2').click();
     await dialog.waitFor({ state: 'visible' });
     await page.keyboard.press('Escape');
@@ -371,13 +403,17 @@ test('a Dialog whose opener still exists restores focus to the opener', { timeou
   }
 });
 
-test('a removed opener with no focusable ancestor leaves focus on the body', { timeout: 60_000 }, async () => {
-  const { page, errors } = await openScenario('rows&focusable=0');
+test('in StrictMode, an opener removed as the Dialog opens keeps focus in the Dialog until it closes', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('rows&strict=1&deleteOnOpen=1');
   try {
-    const dialog = page.locator('.muxui-dialog');
-    await deleteOpenerRow(page, dialog);
+    const dialog = page.locator('.rows-dialog');
+    await page.locator('#edit-2').click();
+    await dialog.waitFor({ state: 'visible' });
+    await page.locator('#row-2').waitFor({ state: 'detached' });
+    await page.waitForTimeout(250);
+    assert.equal(await dialog.evaluate((node) => node.contains(document.activeElement)), true, 'focus stays in the open Dialog');
     await page.keyboard.press('Escape');
-    assert.equal(await settledActiveId(page, dialog), 'BODY');
+    assert.equal(await settledActiveId(page, dialog), 'rows');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {
     await page.close();
@@ -391,6 +427,23 @@ test('a Popover unmounted with its opener\'s row moves focus to the nearest focu
     await page.locator('#actions-2').click();
     await page.locator('#delete-row').focus();
     await page.locator('#delete-row').press('Enter');
+    assert.equal(await settledActiveId(page, popover), 'rows');
+    assert.deepEqual(errors, [], errors.join('\n'));
+  } finally {
+    await page.close();
+  }
+});
+
+test('a Popover that closes after its trigger was removed moves focus to the nearest focusable ancestor', { timeout: 60_000 }, async () => {
+  const { page, errors } = await openScenario('popover-trigger-removed');
+  try {
+    const popover = page.locator('.muxui-popover');
+    await page.locator('#actions-1').click();
+    await page.locator('#remove-trigger').click();
+    await page.locator('#actions-1').waitFor({ state: 'detached' });
+    assert.equal(await popover.count(), 1, 'the Popover stays open without its trigger');
+    await page.locator('#remove-trigger').focus();
+    await page.keyboard.press('Escape');
     assert.equal(await settledActiveId(page, popover), 'rows');
     assert.deepEqual(errors, [], errors.join('\n'));
   } finally {

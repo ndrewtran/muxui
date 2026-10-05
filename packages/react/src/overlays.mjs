@@ -6,6 +6,7 @@ import { useInteractOutside } from 'react-aria/useInteractOutside';
 // The modality useToastRegion uses; React Aria exports it only from this subpath.
 import { getInteractionModality } from 'react-aria/private/interactions/useFocusVisible';
 import { isFocusable } from 'react-aria/private/utils/isFocusable';
+import { runAfterTransition } from 'react-aria/private/utils/runAfterTransition';
 import { Button as MuxUIButton } from './button.mjs';
 import { overlayGeometry, normalizeBoolean, normalizeNonNegativeFinite } from './overlay-positioning.mjs';
 import {
@@ -219,11 +220,17 @@ function useOpenerFocusFallback() {
     return () => {
       const { element, ancestors } = opener;
       const ownerDocument = element.ownerDocument;
-      ownerDocument.defaultView?.requestAnimationFrame(() => {
+      const fallback = () => {
         // Leave a connected opener, and any focus React Aria or the app placed, alone.
         const active = ownerDocument.activeElement;
         if (element.isConnected || (active && active !== ownerDocument.body)) return;
         ancestors.find((node) => node.isConnected && isFocusable(node))?.focus({ preventScroll: true });
+      };
+      ownerDocument.defaultView?.requestAnimationFrame(() => {
+        // Under a virtual cursor React Aria defers its restore until running
+        // transitions end; queueing here keeps the fallback behind it.
+        if (getInteractionModality() === 'virtual') runAfterTransition(fallback);
+        else fallback();
       });
     };
   }, [opener]);

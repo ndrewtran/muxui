@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:ddd087bad5baed0fa1869b7a99c97ff1bd0a31b123a989b61152058a1ad16d83 -->
+<!-- @generated-content-sha256: sha256:9dbb3cf5fb32dc261a242f95913c749e7bd1cb2de13eed7d88c3fea4ecd7e7f2 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -250,7 +250,7 @@ Public parts: `root`, `trigger`, `backdrop`, `popup`, `title`, `description`, `c
 ### Popover
 
 - Delegate portal mounting, anchor positioning, outside-content exclusion, focus restoration, and topmost dismissal to RAC Popover; use a stable React Aria FocusScope for optional modal focus containment.
-- If the element focused when the Popover opened has left the DOM when the Popover closes or unmounts, move focus to the nearest ancestor recorded at opening that is still connected and focusable, after React Aria's own restore frame; with no such ancestor, focus stays on the document body.
+- If the element focused when the Popover opened has left the DOM when the Popover closes or unmounts, and focus is otherwise on the document body, move focus to the nearest ancestor recorded at opening that is still connected and focusable; with no such ancestor, focus stays on the document body.
 - Require a focusable trigger and toggle controlled or uncontrolled state through RAC DialogTrigger.
 - Support logical placements top, bottom, start, end, top-start, top-end, bottom-start, bottom-end, start-top, start-bottom, end-top, and end-bottom; resolve start and end through the current locale direction.
 - Validate finite offset and crossOffset, boolean shouldFlip, and nonnegative finite containerPadding while retaining existing geometry defaults.
@@ -277,7 +277,7 @@ Public parts: `trigger`, `tooltip`.
 ### Dialog
 
 - Delegate portal mounting, inert outside content, scroll locking, topmost dismissal, and focus restoration to RAC Modal and ModalOverlay.
-- If the element focused when the Dialog opened has left the DOM when the Dialog closes or unmounts, move focus to the nearest ancestor recorded at opening that is still connected and focusable, after React Aria's own restore frame; with no such ancestor, focus stays on the document body.
+- If the element focused when the Dialog opened has left the DOM when the Dialog closes or unmounts, and focus is otherwise on the document body, move focus to the nearest ancestor recorded at opening that is still connected and focusable; with no such ancestor, focus stays on the document body.
 - Use DialogTrigger when a trigger is supplied and let ModalOverlay own controlled or uncontrolled state otherwise.
 - Render optional description and actions with stable muxui-dialog-description and muxui-dialog-actions selectors.
 - Keep Mux UI part classes when applying consumer backdrop, panel, title, description, content, actions, and close classes; preserve default styling unless the consumer overrides it.
