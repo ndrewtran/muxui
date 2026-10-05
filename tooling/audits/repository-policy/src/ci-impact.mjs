@@ -688,19 +688,44 @@ function routeLockfileImporter(plan, importer, packages, records) {
   return owner.name;
 }
 
-// The workspace package a changed path changes for its dependents. Proof code
-// under a package's `test/` directory and React manifest edits outside its
-// runtime boundary change nothing a dependent consumes.
-function changedWorkspacePackage(path, packages, reactPackagePagesAffected) {
-  const owner = packageByPath(path, packages);
-  if (!owner || path.startsWith(`${owner.path}/test/`)) return null;
-  if (path === 'packages/react/package.json' && !reactPackagePagesAffected) return null;
-  return owner.name;
+// Package-relative paths a dependent can consume: `src/`, plus the manifest
+// `files` entries and `exports`, `main`, and `bin` targets.
+function shippedPath(file, manifest) {
+  if (file.startsWith('src/')) return true;
+  const targets = [];
+  const collect = (value) => {
+    if (typeof value === 'string') targets.push(value);
+    else if (value && typeof value === 'object') Object.values(value).forEach(collect);
+  };
+  [manifest.exports, manifest.main, manifest.bin].forEach(collect);
+  return [...(manifest.files ?? []), ...targets].some((entry) => {
+    const target = entry.replace(/^\.\//u, '').replace(/\*.*$/u, '');
+    return target.endsWith('/') ? file.startsWith(target) : file === target || file.startsWith(`${target}/`);
+  });
 }
 
-// Direct dependents whose proof the upstream package's own route already
-// scopes: React source and CSS ownership select the Storybook families, and
-// token routes plan the React theme and Storybook theme and chrome proofs.
+// The workspace package whose dependents a changed path can affect, with
+// `manifest: true` for its package.json (dependents are affected only when a
+// runtime field changes). Canonical sources outside any package belong to the
+// package that reads them (`packageSourceOwners`). Inside a package only
+// shipped paths count; tests, guidance, notices, and licenses need only the
+// package's own check.
+function dependentFacingPackage(path, packages, config) {
+  const sourceOwner = Object.entries(config.packageSourceOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
+  if (sourceOwner) return { name: sourceOwner, manifest: false };
+  const owner = packageByPath(path, packages);
+  if (!owner) return null;
+  const file = path.slice(owner.path.length + 1);
+  if (file === 'package.json') return { name: owner.name, manifest: true };
+  if (/^(?:README|AGENTS|NOTICE|LICENSE)(?:\.|$)/iu.test(file.split('/').at(-1)) || file.startsWith('licenses/')) return null;
+  return shippedPath(file, owner.manifest) ? { name: owner.name, manifest: false } : null;
+}
+
+// Direct dependents whose proof a changed package's own route already scopes:
+// React source and CSS ownership select the Storybook families, and token
+// routes plan the React theme and Storybook theme and chrome proofs. An edge
+// is scoped when either its upstream or the originally changed package lists
+// the dependent, so tokens -> catalog -> React keeps React at its theme proof.
 const scopedDependents = {
   '@muxui/react': ['@muxui/react-storybook'],
   '@muxui/tokens': ['@muxui/react', '@muxui/react-storybook'],
@@ -713,24 +738,25 @@ const linkSpec = /^(?:workspace|link):/u;
 // `peerDependencies`) plans the dependent as if it changed (`scope: 'package'`)
 // and passes the change on transitively. A devDependency-only edge plans just
 // the dependent's own package check (`scope: 'check'`) and stops there; a
-// runtime edge wins when both reach a dependent. Edges in `scopedDependents`
-// plan nothing extra but a scoped runtime edge still passes the change on.
+// runtime edge wins when both reach a dependent. Scoped edges plan nothing
+// extra, but a scoped runtime edge still passes the change on.
 export function workspaceDependentRoutes(packages, changedNames) {
   const routes = new Map();
-  const reached = new Set(changedNames);
-  const queue = [...reached];
+  const reached = new Set(changedNames.map((name) => `${name}\0${name}`));
+  const queue = changedNames.map((name) => ({ upstream: name, origin: name }));
   while (queue.length > 0) {
-    const upstream = queue.shift();
+    const { upstream, origin } = queue.shift();
     for (const { name, manifest } of packages) {
       const runtime = ['dependencies', 'peerDependencies'].some((field) => linkSpec.test(manifest[field]?.[upstream] ?? ''));
       if (!runtime && !linkSpec.test(manifest.devDependencies?.[upstream] ?? '')) continue;
-      if (!scopedDependents[upstream]?.includes(name)) {
+      if (![upstream, origin].some((source) => scopedDependents[source]?.includes(name))) {
         if (runtime && routes.get(name)?.scope !== 'package') routes.set(name, { via: upstream, scope: 'package' });
         else if (!routes.has(name)) routes.set(name, { via: upstream, scope: 'check' });
       }
-      if (!runtime || reached.has(name)) continue;
-      reached.add(name);
-      queue.push(name);
+      const key = `${origin}\0${name}`;
+      if (!runtime || reached.has(key)) continue;
+      reached.add(key);
+      queue.push({ upstream: name, origin });
     }
   }
   return [...routes].map(([name, route]) => ({ name, ...route })).sort((left, right) => left.name.localeCompare(right.name));
@@ -987,7 +1013,6 @@ export async function buildPullRequestImpact({
   };
   const missing = [];
   const reactGeneratorPaths = [];
-  let reactPackagePagesAffected = false;
   // Files outside packages/react/src can name a React module by path (tests,
   // browser entries, apps, catalog inputs). A deleted module's referencing
   // files are routed through their own owners as though they changed.
@@ -1097,7 +1122,6 @@ export async function buildPullRequestImpact({
     if (path === 'packages/react/package.json') {
       requireScopedEntrypoint(plan, packages, 'react');
       const impact = reactPackageWideChanges(reactPackageBefore, reactPackageAfter);
-      reactPackagePagesAffected = impact.pagesAffected;
       if (impact.pagesAffected) {
         plan.reactPackageFull = true;
         storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
@@ -1275,9 +1299,7 @@ export async function buildPullRequestImpact({
       plan.reasons.push(`full workspace proof: ${impact.reason}`);
     }
   }
-  const changedPackages = new Set(routedPaths
-    .map((path) => changedWorkspacePackage(path, packages, reactPackagePagesAffected))
-    .filter(Boolean));
+  const changedPackages = new Set();
   if (changed.includes('pnpm-lock.yaml') && lockfileBefore !== undefined && lockfileAfter !== undefined) {
     if (isPolicyOnlyLockfileChange(lockfileBefore, lockfileAfter)) {
       plan.policy = true;
@@ -1286,15 +1308,6 @@ export async function buildPullRequestImpact({
       for (const importer of changedLockfileImporters(lockfileBefore, lockfileAfter)) {
         changedPackages.add(routeLockfileImporter(plan, importer, packages, records));
       }
-    }
-  }
-  for (const { name, via, scope } of workspaceDependentRoutes(packages, [...changedPackages].sort())) {
-    if (scope === 'package') {
-      routePackage(plan, name, records);
-      plan.reasons.push(`${name} depends on changed ${via} through a workspace link; plan it as if it changed`);
-    } else {
-      plan.packageChecks.add(name);
-      plan.reasons.push(`${name} has a workspace devDependency on changed ${via}; run its package check`);
     }
   }
 
@@ -1399,6 +1412,32 @@ export async function buildPullRequestImpact({
     }
   }
 
+  // A React source change reaches dependents only when its analysis found a
+  // family, theme, or package-wide impact.
+  const reactSourceImpact = plan.reactFamilies.size > 0 || plan.themeFamilies.size > 0 || plan.reactPackageFull;
+  for (const path of routedPaths) {
+    const owner = dependentFacingPackage(path, packages, config);
+    if (!owner) continue;
+    if (owner.manifest) {
+      const [before, after] = path === 'packages/react/package.json' && reactPackageBefore !== undefined
+        ? [reactPackageBefore, reactPackageAfter]
+        : [await readBaseText(path), await readHeadText(path)];
+      // The runtime package boundary fields apply to every workspace manifest.
+      if (!reactPackageWideChanges(before, after).pagesAffected) continue;
+    }
+    if (path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path) && !reactSourceImpact) continue;
+    changedPackages.add(owner.name);
+  }
+  for (const { name, via, scope } of workspaceDependentRoutes(packages, [...changedPackages].sort())) {
+    if (scope === 'package') {
+      routePackage(plan, name, records);
+      plan.reasons.push(`${name} depends on changed ${via} through a workspace link; plan it as if it changed`);
+    } else {
+      plan.packageChecks.add(name);
+      plan.reasons.push(`${name} has a workspace devDependency on changed ${via}; run its package check`);
+    }
+  }
+
   plan.reactFamilies = [...plan.reactFamilies].sort();
   plan.storyFamilies = [...plan.storyFamilies].sort();
   plan.storyIds = [...plan.storyIds].sort();
@@ -1475,7 +1514,7 @@ export function needsStorybookGeneration(paths, config, {
   if (importerOwners.some((name) => metadataOwners.includes(name))) return true;
   // A dependent routed as if it changed reads the same records.
   const changedPackages = [
-    ...paths.map((path) => changedWorkspacePackage(path, packages, reactPackagePagesAffected)).filter(Boolean),
+    ...paths.map((path) => dependentFacingPackage(path, packages, config)?.name).filter(Boolean),
     ...importerOwners,
   ];
   return workspaceDependentRoutes(packages, [...new Set(changedPackages)])

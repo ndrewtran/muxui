@@ -172,6 +172,12 @@
       "tests/fixtures/g1.1/": "@muxui/web",
       "tests/fixtures/g1.2/": "@muxui/react-native"
     },
+    "packageSourceOwners": {
+      "catalog/capabilities/": "@muxui/catalog",
+      "catalog/components/": "@muxui/catalog",
+      "catalog/guides/": "@muxui/catalog",
+      "catalog/tokens/": "@muxui/tokens"
+    },
     "documentationPrefixes": [
       "apps/docs/",
       "apps/scale/src/"
