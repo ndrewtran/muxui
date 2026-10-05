@@ -16,6 +16,7 @@ const SOURCE_ROUTES = Object.freeze({
 });
 
 const FAMILY_ROUTES = Object.freeze({
+  Autocomplete: ['test/browser/autocomplete-dismissal.test.mjs'],
   Avatar: ['test/image-avatar.test.mjs'],
   ColorPicker: ['test/color-swatch.test.mjs'],
   ColorSwatch: ['test/color-swatch.test.mjs'],
@@ -46,6 +47,11 @@ const FAMILY_TEST_NAMES = Object.freeze({
     ],
   },
 });
+
+// The test files a family routes to directly, without its shared source group.
+export function familyRouteFiles(family) {
+  return [...new Set([...(FAMILY_ROUTES[family] ?? []), ...Object.keys(FAMILY_TEST_NAMES[family] ?? {})])];
+}
 
 function sourceRoute(record) {
   const source = record.source ?? '';
