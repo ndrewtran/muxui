@@ -35,7 +35,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { chmodSync, copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { basename, dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput } from '../../tooling/audits/repository-policy/src/evidence-verify.mjs';
@@ -1030,6 +1030,12 @@ function parseArguments(argv) {
   }
   options.route = routeFor(options.version);
   options.out ??= join(repositoryRoot, options.route);
+  // --out may not point at the route of another candidate version.
+  const outRoute = relative(repositoryRoot, options.out).split(sep).join('/');
+  const outVersion = outRoute === route ? firstVersion : outRoute.match(/^tests\/evidence\/r1-exit-([^/]+)$/u)?.[1];
+  if (outVersion !== undefined && outVersion !== options.version) {
+    fail('R1_EXIT_VERSION_MISMATCH', `--out ${outRoute} is the route for ${outVersion}; --version is ${options.version}`);
+  }
   if (options.rehearsal && `${options.out}/`.startsWith(join(repositoryRoot, 'tests/evidence/'))) fail('R1_EXIT_REHEARSAL_ROUTE', 'a rehearsal writes only to --out outside tests/evidence');
   return options;
 }
@@ -1180,6 +1186,11 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
   const verification = existsSync(routePath(verificationRelative))
     ? JSON.parse(readFileSync(routePath(verificationRelative), 'utf8'))
     : { schema: 'muxui-evidence-validation-v1', phases: {} };
+  // An existing capture belongs to one candidate version.
+  const capturedVersion = verification.phases.dryRun?.candidate?.version;
+  if (capturedVersion !== undefined && capturedVersion !== options.version) {
+    fail('R1_EXIT_VERSION_MISMATCH', `${options.out} holds the ${capturedVersion} capture; --version is ${options.version}`);
+  }
   // Retained artifacts and excerpts must still match their recorded digests.
   for (const ref of Object.values(verification.retained ?? {})) {
     if (sha256(readFileSync(routePath(ref.path))) !== ref.sha256) fail('R1_EXIT_RETAINED_CHANGED', `${ref.path} no longer matches its capture digest`);

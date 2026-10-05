@@ -782,3 +782,24 @@ test('R1 exit capture routes each candidate version to its own evidence root', a
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test('R1 exit capture refuses a route or existing capture that belongs to another candidate version', async () => {
+  const fixture = r1ExitFixture();
+  const unused = new Proxy({}, { get: () => () => assert.fail('no hosted read before the version guard') });
+  const timestamp = '--capture-timestamp=2026-10-05T10:00:00Z';
+  // --out naming another version's route, including rc.1's committed route.
+  for (const [version, out] of [['0.1.0-rc.2', 'tests/evidence/r1-exit'], ['0.1.0-rc.1', 'tests/evidence/r1-exit-0.1.0-rc.2'], ['0.1.0-rc.3', 'tests/evidence/r1-exit-0.1.0-rc.2']]) {
+    await assert.rejects(r1Exit.main([`--version=${version}`, `--out=${join(repositoryRoot, out)}`, timestamp, '--registry'], unused), r1ExitCode('R1_EXIT_VERSION_MISMATCH'), `${version} into ${out}`);
+  }
+  // An existing capture of rc.1 cannot be continued as rc.2, and stays unchanged.
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-guard-'));
+  try {
+    const out = join(root, 'r1-exit');
+    await seedR1ExitRoute(out, fixture);
+    const before = await snapshotTree(out);
+    await assert.rejects(r1Exit.main(['--rehearsal', `--out=${out}`, '--version=0.1.0-rc.2', timestamp, '--publish-run=2'], unused), r1ExitCode('R1_EXIT_VERSION_MISMATCH'));
+    assert.deepEqual(await snapshotTree(out), before);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
