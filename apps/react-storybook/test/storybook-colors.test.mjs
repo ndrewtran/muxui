@@ -20,6 +20,27 @@ import { backgroundOptions, buildTheme, managerThemeCss, previewThemeCss } from 
 import { projectMeasurePalette } from '../.storybook/measure-palette.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
+// Preloaded into the audited `storybook dev` process with `node --import`.
+// Storybook fetches What's new data server-side, so browser routing cannot
+// intercept it. A fixed unread post keeps the Settings highlight dot and the
+// What's new settings tab present, and colour audited, in every scheme.
+function installWhatsNewFixture() {
+  const whatsNewUrl = 'https://storybook.js.org/whats-new/v1';
+  const post = {
+    title: 'Storybook colour audit fixture',
+    url: 'https://storybook.js.org/blog/',
+    blogUrl: 'https://storybook.js.org/blog/',
+    publishedAt: '2026-01-01T00:00:00.000Z',
+    excerpt: 'Storybook colour audit fixture',
+    blogExcerpt: 'Storybook colour audit fixture',
+  };
+  const networkFetch = globalThis.fetch;
+  globalThis.fetch = (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    return url === whatsNewUrl ? Promise.resolve(Response.json(post)) : networkFetch(input, init);
+  };
+}
+const storybookNetworkFixture = `data:text/javascript,${encodeURIComponent(`(${installWhatsNewFixture})();`)}`;
 const graphs = Object.fromEntries(['light', 'dark'].map((colorScheme) => [
   colorScheme, compilePureTokenGraph(defaultTheme, { modes: { colorScheme } }).tokens,
 ]));
@@ -219,7 +240,11 @@ async function startStorybook(signal) {
   const { port } = reservation.address();
   await new Promise((done) => reservation.close(done));
   const child = spawn('pnpm', ['exec', 'storybook', 'dev', '--ci', '--host', '127.0.0.1', '--port', String(port)], {
-    cwd: appRoot, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, BROWSER: 'none' },
+    cwd: appRoot, stdio: ['ignore', 'pipe', 'pipe'], env: {
+      ...process.env,
+      BROWSER: 'none',
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ''} --import=${storybookNetworkFixture}`.trim(),
+    },
   });
   let output = '';
   for (const stream of [child.stdout, child.stderr]) stream.on('data', (chunk) => { output = (output + chunk).slice(-12000); });
@@ -1064,6 +1089,34 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await page.goto(`${server.url}/?path=/story/${story}&globals=colorScheme:${scheme}${globals}`, { waitUntil: 'domcontentloaded' });
       await page.locator('#storybook-sidebar-region').waitFor();
       await page.frameLocator('#storybook-preview-iframe').locator('.muxui-storybook-surface').waitFor();
+      await waitForWhatsNewFixture();
+    }
+    // What's new data arrives asynchronously after each manager load. Wait for
+    // the fixed unread post's Settings highlight dot so it is audited in every
+    // scheme. Storybook 10.5.10 shows the dot despite disableWhatsNewNotifications.
+    async function waitForWhatsNewFixture() {
+      await page.waitForFunction(() => {
+        const settings = document.querySelector('#storybook-sidebar-region [aria-label="Settings"]');
+        return settings && getComputedStyle(settings, '::after').content !== 'none';
+      });
+    }
+    // Wait until a moving or expanding element keeps the same box for a few frames.
+    async function waitForSettledBox(locator) {
+      await locator.waitFor({ state: 'visible' });
+      await locator.evaluate(async (element) => {
+        const deadline = performance.now() + 5000;
+        let previous = '';
+        let stableFrames = 0;
+        while (performance.now() < deadline) {
+          await new Promise(requestAnimationFrame);
+          const { x, y, width, height } = element.getBoundingClientRect();
+          const current = `${x},${y},${width},${height}`;
+          stableFrames = width > 0 && height > 0 && current === previous ? stableFrames + 1 : 0;
+          if (stableFrames >= 3) return;
+          previous = current;
+        }
+        throw new Error('element did not settle within 5s');
+      });
     }
     async function resetOnboardingChecklist(page) {
       await page.evaluate(() => {
@@ -1218,9 +1271,18 @@ async function runColourWorker({ browser, schemes, workerId }) {
       await onboardingAction.waitFor({ state: 'attached' });
       const disclosure = onboarding.locator('#checklist-module-collapse-toggle');
       await disclosure.waitFor();
-      if (await disclosure.getAttribute('aria-label') === 'Expand onboarding guide') await disclosure.click();
-      await onboardingAction.locator('..').hover();
+      // The action only expands while its row is hovered or focus-visible, and
+      // the row can still be animating, so reveal and settle it before each use.
+      async function revealOnboardingAction() {
+        if (await disclosure.getAttribute('aria-label') === 'Expand onboarding guide') await disclosure.click();
+        const row = onboardingAction.locator('..');
+        await waitForSettledBox(row);
+        await row.hover();
+        await waitForSettledBox(onboardingAction);
+      }
+      await revealOnboardingAction();
       await hoverAndFocus(scheme, 'onboarding/action', onboardingAction);
+      await revealOnboardingAction();
       await onboardingAction.hover();
       await page.mouse.down();
       await snapshot(scheme, 'onboarding/action/pressed');
