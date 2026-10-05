@@ -37,7 +37,7 @@ const engines = { chromium, firefox, webkit };
  * `pnpm --filter @muxui/react exec playwright-core install firefox webkit`.
  */
 export function browserEngines() {
-  const names = (process.env.MUXUI_BROWSER_ENGINES || 'chromium').split(',').map((name) => name.trim());
+  const names = (process.env.MUXUI_BROWSER_ENGINES || 'chromium').split(',').map((name) => name.trim()).filter(Boolean);
   const unknown = names.filter((name) => !Object.hasOwn(engines, name));
   if (unknown.length > 0) throw new Error(`MUXUI_BROWSER_ENGINES has unknown engines: ${unknown.join(', ')}`);
   return [...new Set(names)];

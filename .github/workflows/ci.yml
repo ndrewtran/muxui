@@ -142,6 +142,20 @@ jobs:
       # Proof environment: a group that runs a cross-engine React browser test
       # (one calling the harness's browserEngines()) installs Playwright's
       # Firefox and WebKit with their system libraries. Other groups use Chrome.
+      # The browser builds are cached per playwright-core version; the system
+      # libraries install every time.
+      - name: Read playwright-core version
+        id: playwright
+        if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
+        run: echo "version=$(node -p "require('./packages/react/package.json').devDependencies['playwright-core']")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Playwright browsers
+        if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+
       - name: Install Playwright Firefox and WebKit
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
         env:

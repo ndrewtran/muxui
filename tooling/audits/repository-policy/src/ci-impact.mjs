@@ -1510,12 +1510,36 @@ export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageB
 // workflow installs those engines only for their groups (see groupBrowserEngines).
 const crossEngineEnvironment = { MUXUI_BROWSER_ENGINES: 'chromium,firefox,webkit' };
 
-function runsInEveryEngine(testFile) {
+// True when the source calls browserEngines(); a mention in a comment or
+// string does not opt in.
+export function callsBrowserEngines(source) {
+  let ast;
   try {
-    return readFileSync(resolve(repositoryRoot, 'packages/react', testFile), 'utf8').includes('browserEngines(');
+    ast = parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
   } catch {
     return false;
   }
+  const visit = (node) => {
+    if (!node || typeof node !== 'object') return false;
+    if (Array.isArray(node)) return node.some(visit);
+    if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'browserEngines') return true;
+    return Object.entries(node).some(([key, value]) => !['start', 'end', 'loc', 'range'].includes(key) && typeof value === 'object' && visit(value));
+  };
+  return visit(ast);
+}
+
+// Reads the planner's React test sources (paths relative to packages/react),
+// falling back to the checkout for plans that loaded none.
+function runsInEveryEngine(testFile, testSources = {}) {
+  let source = testSources[testFile];
+  if (source === undefined) {
+    try {
+      source = readFileSync(resolve(repositoryRoot, 'packages/react', testFile), 'utf8');
+    } catch {
+      return false;
+    }
+  }
+  return callsBrowserEngines(source);
 }
 
 // The Playwright-managed engines a group's commands need, space-separated for
@@ -1574,7 +1598,7 @@ function fullPlannedCommands(environment) {
 }
 
 function plannedCommands(plan, {
-  packages = [], metadataPrepared = false, environment = process.env, pageIndex = [],
+  packages = [], metadataPrepared = false, environment = process.env, pageIndex = [], testSources = {},
 } = {}) {
   const planned = [];
   const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
@@ -1622,7 +1646,7 @@ function plannedCommands(plan, {
       MUXUI_COMPONENT_FAMILIES: plan.reactFamilies.join(','),
       MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE: '0',
       ...(plan.reactBehaviorProofFamilies.length ? { MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES: plan.reactBehaviorProofFamilies.join(',') } : {}),
-      ...(plan.reactFamilies.some((family) => familyRouteFiles(family).some(runsInEveryEngine)) ? crossEngineEnvironment : {}),
+      ...(plan.reactFamilies.some((family) => familyRouteFiles(family).some((file) => runsInEveryEngine(file, testSources))) ? crossEngineEnvironment : {}),
     };
     add('react', scopedEntrypointArgs('react', packages), {
       env,
@@ -1632,7 +1656,7 @@ function plannedCommands(plan, {
   if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add);
   for (const testFile of plan.reactTestFiles) {
     add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile], {
-      env: runsInEveryEngine(testFile) ? crossEngineEnvironment : {},
+      env: runsInEveryEngine(testFile, testSources) ? crossEngineEnvironment : {},
     });
   }
   for (const packageName of plan.packageChecks) add('checks', ['--filter', packageName, 'run', 'check']);
@@ -1908,7 +1932,7 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
     lockfileBefore,
     lockfileAfter,
   });
-  return { plan, packages, pageIndex, metadataPrepared };
+  return { plan, packages, pageIndex, metadataPrepared, testSources: componentTestSources };
 }
 
 async function pullRequestPlan({ preview, includeWorktree, environment }) {
@@ -2028,8 +2052,8 @@ export async function runCiImpact({
       metadataPrepared: false,
     }
     : await pullRequestPlan({ preview: !mode.prepareMetadata, includeWorktree, environment });
-  const { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared } = context;
-  const options = { packages, metadataPrepared, environment, pageIndex };
+  const { plan, packages, pageIndex, baseRef, mergeBase, metadataPrepared, testSources } = context;
+  const options = { packages, metadataPrepared, environment, pageIndex, testSources };
   const groups = executionGroups(plan, options);
   const report = planReport(plan, { baseRef, mergeBase, metadataPrepared, groups });
   const reuse = reuseRecord ? await writeReuse({ plan, full, groups, packages, reuseRecord, reuseClient, environment }) : [];

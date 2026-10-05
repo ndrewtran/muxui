@@ -38,6 +38,7 @@ function instrumentGuard() {
   const isGuard = (fn) => typeof fn === 'function' && Function.prototype.toString.call(fn).includes('PendingFocusRestore');
   const frames = new Set();
   const listeners = new Set();
+  let scheduled = 0;
   const requestFrame = window.requestAnimationFrame.bind(window);
   const cancelFrame = window.cancelAnimationFrame.bind(window);
   window.requestAnimationFrame = (callback) => {
@@ -47,6 +48,7 @@ function instrumentGuard() {
       callback(time);
     });
     frames.add(id);
+    scheduled += 1;
     return id;
   };
   window.cancelAnimationFrame = (id) => {
@@ -63,6 +65,8 @@ function instrumentGuard() {
     return removeEventListener.call(this, type, listener, options);
   };
   window.__guard = () => ({ frames: frames.size, listeners: listeners.size });
+  // Cumulative, so a frame that already ran still counts.
+  window.__guardFramesScheduled = () => scheduled;
 }
 
 const idle = { frames: 0, listeners: 0 };
@@ -162,8 +166,9 @@ for (const engine of browserEngines()) {
         await open({ activate: true });
         await tab.evaluate(() => document.dispatchEvent(new Event('scroll')));
         await tab.locator('.muxui-autocomplete-popover[data-exiting]').waitFor();
+        const scheduledBefore = await tab.evaluate(() => window.__guardFramesScheduled());
         await tab.mouse.click(4, 4);
-        assert.deepEqual(await guard(), { frames: 1, listeners: 0 }, 'the blur schedules the focus check');
+        assert.ok(await tab.evaluate(() => window.__guardFramesScheduled()) > scheduledBefore, 'the blur schedules the focus check');
         await inputActive();
         await staysClosed('restored focus after a scroll close keeps the list closed');
       });
@@ -241,6 +246,7 @@ for (const engine of browserEngines()) {
         await slowExit();
         await open({ activate: true });
         await tab.mouse.click(4, 4);
+        // The 800 ms exit keeps the list connected, so the guard cannot expire yet.
         assert.deepEqual(await guard(), armed, 'an outside click arms the guard');
         await input.evaluate((node) => node.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true })));
         assert.deepEqual(await guard(), idle, 'clear releases an armed guard');

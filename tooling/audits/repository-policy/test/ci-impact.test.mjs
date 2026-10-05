@@ -7,6 +7,7 @@ import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import {
   buildPullRequestImpact,
+  callsBrowserEngines,
   changedLockfileImporters,
   executeCommand,
   executeCommands,
@@ -969,6 +970,40 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
   const react = dismissal.find(({ id }) => id === 'react');
   assert.equal(react.browserEngines, 'firefox webkit');
   assert.equal(react.commands.find(({ args }) => args.includes(testFile) || args.includes('check:component')).env.MUXUI_BROWSER_ENGINES, 'chromium,firefox,webkit');
+});
+
+test('a browserEngines() call opts a test in; a mention does not', () => {
+  assert.equal(callsBrowserEngines("import { browserEngines } from './harness.mjs';\nfor (const engine of browserEngines()) {}"), true);
+  assert.equal(callsBrowserEngines('// browserEngines() runs every engine\nconst note = "browserEngines()";'), false);
+});
+
+test('an Autocomplete runtime change runs its component check in every engine', async () => {
+  const dismissalTest = 'test/browser/autocomplete-dismissal.test.mjs';
+  const testSources = {
+    ...componentTestSources,
+    [dismissalTest]: await readFile(resolve(repositoryRoot, 'packages/react', dismissalTest), 'utf8'),
+  };
+  const before = 'export const NumberField = () => null; export const Autocomplete = () => null;';
+  const after = 'export const NumberField = () => null; export const Autocomplete = () => 1;';
+  const autocompletePage = {
+    family: 'Autocomplete',
+    storyFile: 'apps/react-storybook/.storybook/generated/autocomplete.stories.mjs',
+    stories: [{ id: 'muxui-react-r1-2-autocomplete--default', exportName: 'Default', name: 'Default' }],
+  };
+  const result = await plan([fieldsPath], {
+    records: [...records, { family: 'Autocomplete', export: 'Autocomplete', slug: 'autocomplete', source: fieldsPath, parts: ['root', 'input'] }],
+    pageIndex: [...pageIndex, autocompletePage],
+    componentTestSources: testSources,
+    textSnapshots: { [fieldsPath]: { before, after } },
+    moduleSources: { ...cssModuleSources, [fieldsPath]: { before, after } },
+  });
+  assert.deepEqual(result.reactFamilies, ['Autocomplete']);
+  const react = executionGroups(result, { packages, environment: {}, pageIndex: [...pageIndex, autocompletePage], testSources })
+    .find(({ id }) => id === 'react');
+  assert.equal(react.browserEngines, 'firefox webkit');
+  const componentCheck = react.commands.find(({ args }) => args.includes('check:component'));
+  assert.equal(componentCheck.env.MUXUI_COMPONENT_FAMILIES, 'Autocomplete');
+  assert.equal(componentCheck.env.MUXUI_BROWSER_ENGINES, 'chromium,firefox,webkit');
 });
 
 const generationFilters = (command) => command.args.filter((_, index) => command.args[index - 1] === '--filter');
