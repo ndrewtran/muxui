@@ -4,7 +4,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 
 // Cross-engine proof for Autocomplete's dismissal focus guard. Engines differ
 // during blur: Firefox reports a focused iframe as active, Chromium and WebKit
-// the body; WebKit does not focus a clicked button. Runs in every engine named
+// the body; macOS WebKit does not focus a clicked button. Runs in every engine named
 // by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const entry = `
@@ -218,19 +218,27 @@ for (const engine of browserEngines()) {
         await reopens('focus after another control took focus reopens the list');
       });
 
-      // WebKit does not focus a clicked button, so the click acts like one on
-      // inert content: RAC restores focus to the input and the list stays closed.
+      // Engines differ on whether a clicked button takes focus: Chromium,
+      // Firefox, and Linux WebKit focus it; macOS WebKit does not, so the click
+      // acts like one on inert content and RAC restores focus to the input.
+      // Either way the list stays closed and focus never strands on the body.
       await scenario('an outside button click keeps the list closed', async () => {
         await open({ activate: true });
         await tab.locator('#outside-button').click();
+        const settled = () => tab.evaluate(() => {
+          const node = document.activeElement;
+          return node?.id === 'outside-button' || node?.matches('.muxui-autocomplete input');
+        });
+        await tab.waitForFunction(() => {
+          const node = document.activeElement;
+          return node?.id === 'outside-button' || node?.matches('.muxui-autocomplete input');
+        }, undefined, { timeout: 3000 }).catch(() => assert.fail('focus settles on the button or the input, not the body'));
         await staysClosed('a button click keeps the list closed');
-        if (engine === 'webkit') {
-          await inputActive();
-          await frames();
-          assert.equal(await popover.count(), 0, 'restored focus after a WebKit button click keeps the list closed');
-        } else {
-          assert.equal(await active(), 'outside-button');
+        assert.ok(await settled(), 'focus stays on the button or the input');
+        if (await active() === 'outside-button') {
           await reopens('focus after a focused button reopens the list');
+        } else {
+          assert.equal(await input.getAttribute('aria-expanded'), 'false', 'restored focus after a button click keeps the list closed');
         }
       });
 
