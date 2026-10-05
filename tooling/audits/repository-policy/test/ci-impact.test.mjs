@@ -392,9 +392,9 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
 
   assert.equal(result.catalog && result.docs, true);
   // Guides belong to @muxui/catalog: tooling and policy depend on it at
-  // runtime, while React, React Native, and Web devDependencies run their
-  // package checks only.
-  assert.deepEqual(result.packageChecks, ['@muxui/react', '@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  // runtime, while React Native and Web devDependencies run their package
+  // checks only. React's catalog devDependency is scoped.
+  assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
   assert.equal(result.policy, true);
   assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling, false);
   assert.deepEqual(result.reactFamilies, []);
@@ -406,7 +406,6 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
-    ['--filter', '@muxui/react', 'run', 'check'],
     ['--filter', '@muxui/react-native', 'run', 'check'],
     ['--filter', '@muxui/tooling', 'run', 'check'],
     ['--filter', '@muxui/web', 'run', 'check'],
@@ -417,7 +416,7 @@ test('per-family usage guides take the guide route without selecting their compo
   const result = await plan(['catalog/guides/number-field-usage.md', 'catalog/guides/number-field-usage.json']);
 
   assert.equal(result.catalog && result.docs, true);
-  assert.deepEqual(result.packageChecks, ['@muxui/react', '@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
   assert.deepEqual(result.reactFamilies, []);
   assert.deepEqual(result.storyRuns, []);
 });
@@ -727,7 +726,7 @@ test('a failed CI prerequisite stops the run before dependent checks', () => {
 
 test('generation and install commands are marked as CI prerequisites', async () => {
   const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
-  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(8).fill(false)]);
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(7).fill(false)]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
@@ -735,8 +734,9 @@ test('clean owner checks schedule only their generation dependencies before chec
   const catalogCommands = executionCommands(catalog, { packages });
   // Catalog changes also run the tooling dense goldens that pin the catalog
   // digest, plan its runtime dependents (docs, tooling, and policy through
-  // tooling) as if they changed, and run only the package checks of React,
-  // React Native, and Web, which depend on the catalog as a devDependency.
+  // tooling) as if they changed, and run only the package checks of React
+  // Native and Web, which depend on the catalog as a devDependency. React's
+  // catalog devDependency is scoped: React never imports @muxui/catalog.
   // This matches the real `ci-impact.mjs --preview` for this change.
   assert.deepEqual(catalog.generationPackages, [
     '@muxui/catalog', '@muxui/foundation', '@muxui/react', '@muxui/react-native', '@muxui/repository-policy',
@@ -752,7 +752,6 @@ test('clean owner checks schedule only their generation dependencies before chec
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
-    ['--filter', '@muxui/react', 'run', 'check'],
     ['--filter', '@muxui/react-native', 'run', 'check'],
     ['--filter', '@muxui/tooling', 'run', 'check'],
     ['--filter', '@muxui/web', 'run', 'check'],
@@ -1941,7 +1940,7 @@ test('React examples no Storybook story uses validate the catalog, docs, and fam
   const record = await plan(['catalog/components/tree/examples/react/basic.example.json']);
   assert.equal(record.catalog, true);
   assert.equal(record.docs, true);
-  assert.deepEqual(record.packageChecks, ['@muxui/react', '@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(record.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
   assert.deepEqual(record.reactFamilies, ['Tree']);
   assert.deepEqual(record.storyIds, []);
   assert.deepEqual(record.reactTestFiles, []);
@@ -1995,7 +1994,7 @@ test('generator inputs, package fixtures, and Storybook config each route to the
 
   const capability = await route('catalog/capabilities/query-baseline.json');
   assert.equal(capability.catalog, true);
-  assert.deepEqual(capability.packageChecks, ['@muxui/react', '@muxui/react-native', '@muxui/tooling', '@muxui/web']);
+  assert.deepEqual(capability.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web']);
 
   assert.deepEqual((await route('tests/fixtures/g0.5/corpus.json')).packageChecks, ['@muxui/tooling']);
   assert.deepEqual((await route('tests/fixtures/g1.1/platform-safety-fixtures.json')).packageChecks, ['@muxui/web']);
@@ -2156,13 +2155,14 @@ test('runtime workspace dependents plan transitively; devDependency dependents r
 });
 
 test('a devDependency on a changed package runs only the dependent package check', async () => {
-  const result = await plan(['packages/catalog/src/compiler.mjs'], { packages: workspacePackages });
+  // React depends on the schema only as a devDependency.
+  const result = await plan(['packages/schema/src/validation.mjs'], { packages: workspacePackages });
   assert.ok(result.packageChecks.includes('@muxui/react'));
   assert.equal(result.reactPackageFull, false);
-  assert.deepEqual(result.storyRuns, []);
+  assert.deepEqual(result.reactFamilies, []);
+  assert.ok(!result.storyRuns.some(({ proof }) => proof === 'component'));
   // React's runtime dependents are not reached through its devDependency edge.
   assert.ok(!result.packageChecks.includes('@muxui/react-playground'));
-  assert.equal(result.scale, false);
 });
 
 test('a workspace dependency cycle plans each member once without looping', async () => {
@@ -2217,4 +2217,14 @@ test('a React lockfile importer change plans the React runtime dependents', asyn
   assert.equal(result.reactPackageFull, true);
   assert.ok(result.packageChecks.includes('@muxui/react-playground'));
   assert.equal(result.docs && result.scale, true);
+});
+
+test('catalog edits run the React Native and Web package checks but not the React package check', async () => {
+  for (const path of ['catalog/guides/accessibility.md', 'packages/catalog/src/compiler.mjs']) {
+    const result = await plan([path], { packages: workspacePackages });
+    const commands = executionCommands(result, { packages: workspacePackages }).map(({ args }) => args.join(' '));
+    assert.ok(!commands.includes('--filter @muxui/react run check'), path);
+    assert.equal(result.reactPackageFull, false, path);
+    for (const name of ['@muxui/react-native', '@muxui/web']) assert.ok(result.packageChecks.includes(name), `${path} ${name}`);
+  }
 });

@@ -710,6 +710,10 @@ function shippedPath(file, manifest) {
 // package that reads them (`packageSourceOwners`). Inside a package only
 // shipped paths count; tests, guidance, notices, and licenses need only the
 // package's own check.
+// Known limits: unexported generator inputs (such as
+// packages/catalog/catalog-sources.json and packages/tooling/command-registry.json)
+// plan no dependents although they shape generated exports, and
+// packages/react/README.md plans no dependents although docs renders it.
 function dependentFacingPackage(path, packages, config) {
   const sourceOwner = Object.entries(config.packageSourceOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
   if (sourceOwner) return { name: sourceOwner, manifest: false };
@@ -726,7 +730,11 @@ function dependentFacingPackage(path, packages, config) {
 // routes plan the React theme and Storybook theme and chrome proofs. An edge
 // is scoped when either its upstream or the originally changed package lists
 // the dependent, so tokens -> catalog -> React keeps React at its theme proof.
+// React's catalog devDependency serves only its prepack script: React source
+// and tests never import @muxui/catalog, and the React catalog and component
+// routes already plan the canonical inputs React reads directly.
 const scopedDependents = {
+  '@muxui/catalog': ['@muxui/react'],
   '@muxui/react': ['@muxui/react-storybook'],
   '@muxui/tokens': ['@muxui/react', '@muxui/react-storybook'],
 };
