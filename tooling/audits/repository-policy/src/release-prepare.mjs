@@ -31,23 +31,37 @@ import {
   readLockedIntegrity,
   readRetainedEvidence,
   readRetainedReviewEvidence,
+  replaceVersions,
   summarizeBundleModules,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
+import { fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packages = await discoverWorkspacePackages(repositoryRoot);
 const reactVersionPattern = /^0\.1\.0-alpha\.(?:0|[1-9]\d*)$/u;
-const candidateVersion = '0.1.0-rc.1';
+// The candidate version is an input (the npm-publish workflow's version), so a
+// Decision 0023 fix-forward rc is prepared without changing the source tree.
+const candidateVersion = process.env.MUXUI_RELEASE_CANDIDATE_VERSION || '0.1.0-rc.1';
+try {
+  parseCandidateVersion(candidateVersion);
+} catch (error) {
+  throw new Error(`R1_EXIT_CANDIDATE_VERSION_INVALID: ${error.message}`);
+}
 const candidateArchiveName = `muxui-react-${candidateVersion}.tgz`;
 const candidateManifestName = `muxui-react-${candidateVersion}.release-manifest.json`;
 // Rollback fixes forward with the next rc, so later candidates name the right successor.
-const candidateRc = /^(?<base>\d+\.\d+\.\d+)-rc\.(?<rc>\d+)$/u.exec(candidateVersion)?.groups;
-if (!candidateRc) throw new Error(`R1_EXIT_CANDIDATE_VERSION_INVALID: ${candidateVersion} is not an rc version`);
-const fixForwardVersion = `${candidateRc.base}-rc.${Number(candidateRc.rc) + 1}`;
+const fixForwardCandidate = fixForwardVersion(candidateVersion);
 const preparationToolPath = 'tooling/audits/repository-policy/src/release-prepare.mjs';
 const r15Closure = JSON.parse(readFileSync(resolve(repositoryRoot, 'catalog/react-r1-5/closure.json'), 'utf8'));
+// The generator declares the source candidate (catalog closure) and its fix-forward;
+// the packed copy rewrites both to the input candidate and its fix-forward.
+const sourceCandidateVersion = r15Closure.publication.candidateVersion;
+const candidateVersionRewrites = new Map([
+  [sourceCandidateVersion, candidateVersion],
+  [fixForwardVersion(sourceCandidateVersion), fixForwardCandidate],
+]);
 const documentedSupportingExports = ['ToastProvider', 'useToast', 'useCommandPalette'];
 const expectedPeerDependencies = {
   react: '>=19.2.0 <20',
@@ -237,21 +251,21 @@ function assertIncludes(value, expected, code) {
   if (!value.includes(expected)) fail(code, expected);
 }
 
-function rewriteGeneratedVersion(source, fromVersion, toVersion) {
+function rewriteGeneratedVersion(source, rewrites) {
   const lines = source.split('\n');
   if (source.startsWith('/* @generated-from:')) {
-    const body = lines.slice(3).join('\n').replaceAll(fromVersion, toVersion);
+    const body = replaceVersions(lines.slice(3).join('\n'), rewrites);
     const digest = sha256(` */\n${body}`);
     lines[1] = lines[1].replace(/sha256:[0-9a-f]+/u, `sha256:${digest}`);
     return `${lines.slice(0, 3).join('\n')}\n${body}`;
   }
   if (source.startsWith('// @generated-from:') || source.startsWith('<!-- @generated-from:')) {
-    const body = lines.slice(2).join('\n').replaceAll(fromVersion, toVersion);
+    const body = replaceVersions(lines.slice(2).join('\n'), rewrites);
     const digest = sha256(body);
     lines[1] = lines[1].replace(/sha256:[0-9a-f]+/u, `sha256:${digest}`);
     return `${lines.slice(0, 2).join('\n')}\n${body}`;
   }
-  return source.replaceAll(fromVersion, toVersion);
+  return replaceVersions(source, rewrites);
 }
 
 function rewriteGeneratedBody(source, transform) {
@@ -267,12 +281,12 @@ function rewriteGeneratedJson(source, transform) {
   return rewriteGeneratedBody(source, (body) => `${JSON.stringify(transform(JSON.parse(body)))}\n`);
 }
 
-function rewriteProvenance(source, target, fromVersion, toVersion) {
+function rewriteProvenance(source, target, rewrites) {
   const lines = source.split('\n');
   const body = lines.slice(2).join('\n');
   const declaration = JSON.parse(body);
   declaration.sha256 = `sha256:${sha256(target)}`;
-  const rewrittenBody = JSON.stringify(declaration).replaceAll(fromVersion, toVersion) + '\n';
+  const rewrittenBody = replaceVersions(JSON.stringify(declaration), rewrites) + '\n';
   lines[1] = lines[1].replace(/sha256:[0-9a-f]+/u, `sha256:${sha256(rewrittenBody)}`);
   return `${lines.slice(0, 2).join('\n')}\n${rewrittenBody}`;
 }
@@ -479,12 +493,17 @@ try {
   delete candidateManifest.scripts.prepublishOnly;
   candidateManifest.publishConfig = expectedCandidatePublishConfig;
   writeFileSync(join(candidatePackage, 'package.json'), `${JSON.stringify(sortedJsonValue(candidateManifest), null, 2)}\n`);
+  // The source alpha becomes the candidate; the generator's declared candidate
+  // and fix-forward become the input candidate and its fix-forward.
+  const versionRewrites = new Map([[manifest.version, candidateVersion], ...candidateVersionRewrites]);
+  const readmePath = join(candidatePackage, 'README.md');
+  writeFileSync(readmePath, rewriteGeneratedVersion(readFileSync(readmePath, 'utf8'), candidateVersionRewrites));
   for (const entry of expectedGeneratedEntries) {
     const relative = entry.slice('package/'.length);
     if (relative.endsWith('.provenance')) continue;
     const path = join(candidatePackage, relative);
     const original = readFileSync(path, 'utf8');
-    let rewritten = rewriteGeneratedVersion(original, manifest.version, candidateVersion);
+    let rewritten = rewriteGeneratedVersion(original, versionRewrites);
     if (relative === 'generated/release.json') {
       const releaseValue = JSON.parse(rewritten);
       rewritten = `${JSON.stringify({
@@ -511,8 +530,8 @@ try {
       }));
     } else if (relative === 'generated/compatibility.mjs') {
       rewritten = rewriteGeneratedBody(rewritten, (body) => {
-        const publication = '"publication":{"candidateVersion":"0.1.0-rc.1","private":true,"requires":["explicit external publish authorization"],"status":"disabled"}';
-        const preparedPublication = '"publication":{"candidateVersion":"0.1.0-rc.1","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}';
+        const publication = `"publication":{"candidateVersion":"${candidateVersion}","private":true,"requires":["explicit external publish authorization"],"status":"disabled"}`;
+        const preparedPublication = `"publication":{"candidateVersion":"${candidateVersion}","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}`;
         const prepared = body.replace(publication, preparedPublication);
         if (prepared === body) fail('R1_EXIT_PACK_RELEASE_METADATA_INVALID', 'compatibility publication metadata was not transformed');
         return prepared;
@@ -525,7 +544,7 @@ try {
     const path = join(candidatePackage, relative);
     const target = readFileSync(join(candidatePackage, relative.replace(/\.provenance$/u, '')), 'utf8');
     const original = readFileSync(path, 'utf8');
-    writeFileSync(path, rewriteProvenance(original, target, manifest.version, candidateVersion));
+    writeFileSync(path, rewriteProvenance(original, target, versionRewrites));
   }
   const archive = join(temp, candidateArchiveName);
   const archiveBytes = deterministicArchive(candidatePackage);
@@ -621,7 +640,7 @@ try {
   }
   assertIncludes(
     compatibility,
-    '"publication":{"candidateVersion":"0.1.0-rc.1","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}',
+    `"publication":{"candidateVersion":"${candidateVersion}","private":false,"requires":["explicit external publish authorization"],"status":"prepared","mutationPerformed":false}`,
     'R1_EXIT_PACK_RELEASE_METADATA_INVALID',
   );
   const metadataFailures = [
@@ -664,7 +683,8 @@ try {
   });
   for (const name of [...currentComponentExports, ...documentedSupportingExports]) assertIncludes(readme, name, 'R1.5_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'web.react', 'R1_EXIT_PACK_GUIDANCE_MISSING');
-  assertIncludes(readme, '@muxui/react@0.1.0-rc.1', 'R1_EXIT_PACK_GUIDANCE_MISSING');
+  assertIncludes(readme, `@muxui/react@${candidateVersion}`, 'R1_EXIT_PACK_GUIDANCE_MISSING');
+  assertIncludes(readme, `./muxui-react-${candidateVersion}.tgz`, 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(readme, 'next', 'R1_EXIT_PACK_GUIDANCE_MISSING');
   assertIncludes(notice, 'Copyright (c) 2026 Andrew', 'R1.5_PACK_NOTICE_INVALID');
   assertIncludes(notice, 'Lucide', 'R1.5_PACK_NOTICE_INVALID');
@@ -1087,28 +1107,28 @@ try {
       checks: [
         {
           name: 'namespace ownership',
-          command: 'npm whoami --registry=https://registry.npmjs.org',
+          command: 'npm trusted publishing: OIDC from .github/workflows/npm-publish.yml in the npm-publish environment',
           status: 'pending',
-          policy: 'the authenticated publisher must be authorized for @muxui/react',
+          policy: 'only the trusted publisher configured for @muxui/react can publish; there is no long-lived token, and a mismatched workflow, environment, or repository fails authentication before any write',
         },
         {
           name: 'version collision',
-          command: `npm view @muxui/react@${candidateVersion} version --registry=https://registry.npmjs.org`,
+          command: `GET https://registry.npmjs.org/@muxui/react/${candidateVersion}`,
           status: 'pending',
           policy: 'an existing version is a hard stop; never overwrite or republish it',
         },
         {
           name: 'next dist-tag collision',
-          command: 'npm view @muxui/react dist-tags --json --registry=https://registry.npmjs.org',
+          command: 'GET https://registry.npmjs.org/@muxui/react (dist-tags)',
           status: 'pending',
-          policy: 'for a first publish, expect E404 because the package is absent; any existing next or latest is a hard stop for review',
-          laterPublish: 'only after a prior publication, record the prior next pointer before any separately authorized mutation',
+          policy: `a first publish expects the package to be absent and must be ${sourceCandidateVersion}; otherwise the dist-tags must be exactly latest and next, next must be the published rc.N that this rc.N+1 candidate fixes forward, and latest is recorded unchanged; any other dist-tag state is a hard stop for review`,
+          laterPublish: 'record the prior next and latest pointers; after publication next must be the candidate and latest unchanged',
         },
         {
           name: 'publish authorization drift',
-          command: 'npm whoami --registry=https://registry.npmjs.org',
+          command: 'GET https://registry.npmjs.org/@muxui/react (dist-tags), immediately before npm publish',
           status: 'pending',
-          policy: 'recheck identity immediately before npm publish and stop on drift',
+          policy: 'npm-publish environment approval gates the publish job; recheck the recorded registry state immediately before npm publish and stop on drift',
         },
       ],
       mutationPerformed: false,
@@ -1137,14 +1157,14 @@ try {
       steps: [
         `stop further publication and preserve the immutable ${candidateVersion} version and manifest`,
         `with Andrew's separate explicit authorization, run npm deprecate on @muxui/react@${candidateVersion} with a message naming the failure and its fixed successor`,
-        `fix forward by publishing a corrected ${fixForwardVersion} to next through a separately authorized publication`,
-        `optional, only after ${fixForwardVersion} is verified and with Andrew's separate explicit authorization at the time: re-point latest from the deprecated ${candidateVersion} to ${fixForwardVersion}`,
+        `fix forward by publishing a corrected ${fixForwardCandidate} to next through a separately authorized publication`,
+        `optional, only after ${fixForwardCandidate} is verified and with Andrew's separate explicit authorization at the time: re-point latest from the deprecated ${candidateVersion} to ${fixForwardCandidate}`,
         'retain the candidate artifact and failed verification for audit; latest is otherwise not claimed or promoted (the registry sets latest on first publish) and stable is not promoted',
       ],
       forbidden: [
         'overwrite or republish the immutable package version',
         'unpublish, except for a security or legal problem inside the npm 72-hour no-dependents window with explicit human authorization',
-        `claim or promote latest, other than the separately authorized fix-forward re-point from ${candidateVersion} to ${fixForwardVersion}; the registry sets latest on first publish`,
+        `claim or promote latest, other than the separately authorized fix-forward re-point from ${candidateVersion} to ${fixForwardCandidate}; the registry sets latest on first publish`,
         'promote stable support',
       ],
     },

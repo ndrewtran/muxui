@@ -1162,11 +1162,12 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     // Outside dismissal lets RAC restore this trigger; consume that focus without reopening.
     const pendingFocusRestoreRef = React.useRef(false);
     const pendingFocusRestoreCleanupRef = React.useRef(null);
-    const pendingFocusRestoreExpiryRef = React.useRef(0);
+    // The guard's one pending frame: the post-blur focus check or the expiry.
+    const pendingFocusRestoreFrameRef = React.useRef(0);
     const clearPendingFocusRestore = () => {
       pendingFocusRestoreRef.current = false;
-      if (pendingFocusRestoreExpiryRef.current) cancelAnimationFrame(pendingFocusRestoreExpiryRef.current);
-      pendingFocusRestoreExpiryRef.current = 0;
+      if (pendingFocusRestoreFrameRef.current) cancelAnimationFrame(pendingFocusRestoreFrameRef.current);
+      pendingFocusRestoreFrameRef.current = 0;
       pendingFocusRestoreCleanupRef.current?.();
       pendingFocusRestoreCleanupRef.current = null;
     };
@@ -1177,9 +1178,9 @@ export const Autocomplete = /*#__PURE__*/ (() => {
     // defers its restore until page transitions end, which can outlast this.
     const expirePendingFocusRestore = () => {
       if (!pendingFocusRestoreRef.current) return;
-      cancelAnimationFrame(pendingFocusRestoreExpiryRef.current);
-      pendingFocusRestoreExpiryRef.current = requestAnimationFrame(() => {
-        pendingFocusRestoreExpiryRef.current = requestAnimationFrame(() => {
+      cancelAnimationFrame(pendingFocusRestoreFrameRef.current);
+      pendingFocusRestoreFrameRef.current = requestAnimationFrame(() => {
+        pendingFocusRestoreFrameRef.current = requestAnimationFrame(() => {
           if (!popoverRef.current?.isConnected) clearPendingFocusRestore();
         });
       });
@@ -1262,14 +1263,22 @@ export const Autocomplete = /*#__PURE__*/ (() => {
         if (outside) {
           if (relatedTarget && relatedTarget !== document.body && relatedTarget !== document.documentElement) {
             clearPendingFocusRestore();
-          } else if (event.target === inputRef.current && document.activeElement === document.body && popoverRef.current?.isConnected) {
-            // Focus fell to the body while the list is mounted (open or exiting),
-            // so RAC may restore it to this input on unmount. This also covers
-            // closes the pointerdown guard never saw, such as RAC's close on
-            // scroll. Chromium reports the body as active during every element
-            // blur; the check only excludes window and tab switches, which keep
-            // the input active.
-            armPendingFocusRestore();
+          } else if (event.target === inputRef.current && popoverRef.current?.isConnected && !pendingFocusRestoreRef.current) {
+            // Focus left for no element while the list is mounted (open or
+            // exiting). If it settles on the body, RAC may restore it to this
+            // input on unmount, so arm the guard. This also covers closes the
+            // pointerdown guard never saw, such as RAC's close on scroll.
+            // Engines disagree on the active element during blur (Firefox
+            // reports a focused iframe, Chromium and WebKit the body), so decide
+            // one frame later. RAC requests its restore frame at unmount, after
+            // this blur, so this check runs first. Window and tab switches keep
+            // the input active, and an iframe or a same-task refocus never
+            // leaves the body active, so none of them arm the guard.
+            cancelAnimationFrame(pendingFocusRestoreFrameRef.current);
+            pendingFocusRestoreFrameRef.current = requestAnimationFrame(() => {
+              pendingFocusRestoreFrameRef.current = 0;
+              if (document.activeElement === document.body) armPendingFocusRestore();
+            });
           }
           setIsOpen(false);
         }

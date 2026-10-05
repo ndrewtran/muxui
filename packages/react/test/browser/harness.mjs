@@ -1,7 +1,7 @@
 import { access, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { chromium } from 'playwright-core';
+import { chromium, firefox, webkit } from 'playwright-core';
 import { createServer } from 'vite';
 
 export const packageRoot = resolve(import.meta.dirname, '../..');
@@ -28,8 +28,25 @@ export async function chromePath() {
   throw new Error('Install Chrome or set MUXUI_CHROME_EXECUTABLE for browser verification.');
 }
 
-export async function launchBrowser() {
-  return chromium.launch({ executablePath: await chromePath(), headless: true });
+const engines = { chromium, firefox, webkit };
+
+/**
+ * The engines an opt-in cross-engine test runs in: `MUXUI_BROWSER_ENGINES`
+ * (comma-separated `chromium`, `firefox`, `webkit`), else Chromium alone.
+ * Firefox and WebKit use Playwright's managed builds; install them with
+ * `pnpm --filter @muxui/react exec playwright-core install firefox webkit`.
+ */
+export function browserEngines() {
+  const names = (process.env.MUXUI_BROWSER_ENGINES || 'chromium').split(',').map((name) => name.trim()).filter(Boolean);
+  const unknown = names.filter((name) => !Object.hasOwn(engines, name));
+  if (unknown.length > 0) throw new Error(`MUXUI_BROWSER_ENGINES has unknown engines: ${unknown.join(', ')}`);
+  return [...new Set(names)];
+}
+
+/** Launches headless Chrome, or Playwright's managed Firefox or WebKit build. */
+export async function launchBrowser(engine = 'chromium') {
+  if (engine === 'chromium') return chromium.launch({ executablePath: await chromePath(), headless: true });
+  return engines[engine].launch({ headless: true });
 }
 
 // The union of bare dependencies the browser fixtures import.
