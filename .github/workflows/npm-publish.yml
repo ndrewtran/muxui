@@ -1,25 +1,30 @@
 name: npm publish
 
-# Manual npm publication of the exact @muxui/react release candidate. It never
-# runs on push or merge.
+# Manual npm publication of an exact @muxui/react release candidate. It never
+# runs on push or merge. The version input must be 0.1.0-rc.N (Roadmap R1 exit:
+# rc.1 or a Decision 0023 fix-forward rc).
 #
-# - mode=dry-run (default): `prepare` runs `pnpm release:prepare` on the
-#   dispatched commit, reports the candidate version and tarball-sha512,
-#   rehearses `npm publish --dry-run`, and uploads the tarball and release
-#   manifest. No environment or secret, so no approval. tarball-sha512 may be
-#   empty here; when given it must match.
+# - mode=dry-run (default): `prepare` runs `pnpm release:prepare` for the input
+#   version on the dispatched commit, reports the candidate version and
+#   tarball-sha512, rehearses `npm publish --dry-run`, and uploads the tarball
+#   and release manifest. No environment or secret, so no approval.
+#   tarball-sha512 may be empty here; when given it must match.
 # - mode=publish (main only): after `prepare` reports and checks the
 #   candidate, the single `publish` job waits for Andrew's npm-publish
 #   environment approval. It re-verifies the uploaded tarball, runs the
-#   read-only registry preflight, publishes to `next` with provenance, and
-#   reads back integrity, dist-tags, and the provenance attestation.
-# - mode=verify-credentials (main only): read-only NPM_TOKEN check in the
-#   npm-publish environment; also needs Andrew's approval.
+#   read-only registry preflight, publishes to `next` through npm trusted
+#   publishing (OIDC, no token), and reads back integrity, provenance, and
+#   dist-tags.
+# - mode=registry-preflight: the publish preflight alone, read-only against
+#   the public registry, with no environment, credentials, or approval.
 #
-# Publish mode is first-publish-only: an existing next or latest dist-tag is a
-# hard stop, so rc.2 needs a later workflow change under Decision 0023. The
-# registry sets `latest` on the first publish; nothing here claims or moves a
-# dist-tag, and no deprecate, unpublish, or owner command runs anywhere.
+# Preflight: the version must be absent from the registry. A first publish
+# (package absent) must be rc.1. Otherwise the dist-tags must be exactly
+# latest and next, the version must be next's fix-forward (next = rc.N, the
+# version rc.N+1), and latest is recorded; after publishing, next must be the
+# candidate and latest unchanged. Any other state stops for a decision. The registry sets `latest` on
+# a first publish; nothing here claims or moves a dist-tag, and no deprecate,
+# unpublish, dist-tag, or owner command runs anywhere.
 #
 # Record `tarball-sha512` from a dry run of this workflow, not a local run. The
 # archive is byte-stable across Linux runners, but Node's gzip header stores
@@ -29,7 +34,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Expected candidate version, e.g. 0.1.0-rc.1
+        description: Expected candidate version, 0.1.0-rc.N (e.g. 0.1.0-rc.2)
         required: true
         type: string
       tarball-sha512:
@@ -38,68 +43,43 @@ on:
         type: string
         default: ''
       mode:
-        description: dry-run prepares and checks only; publish also publishes after approval
+        description: dry-run prepares and checks only; publish also publishes after approval; registry-preflight only reads the public registry
         required: true
         type: choice
-        options: [dry-run, publish, verify-credentials]
+        options: [dry-run, publish, registry-preflight]
         default: dry-run
 
 permissions:
   contents: read
 
 jobs:
-  verify-credentials:
-    if: inputs.mode == 'verify-credentials' && github.ref == 'refs/heads/main'
+  # Read-only public registry state for the version input: what the publish
+  # preflight would accept or stop on. Trusted publishing has no stored
+  # credential to verify; OIDC is exchanged only inside the publish job.
+  registry-preflight:
+    if: inputs.mode == 'registry-preflight'
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    environment: npm-publish
     steps:
-      # Checked out only so setup-node can read .node-version.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           persist-credentials: false
+          sparse-checkout: |
+            .node-version
+            tooling/audits/repository-policy/src/npm-publication.mjs
+          sparse-checkout-cone-mode: false
 
-      # registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .node-version
-          registry-url: https://registry.npmjs.org
 
-      - name: Verify npm credentials (read-only)
+      - name: Registry preflight (read-only)
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::error title=Missing NPM_TOKEN::The npm-publish environment has no NPM_TOKEN secret."
-            exit 1
-          fi
-
-          echo "npm whoami:"
-          npm whoami
-
-          echo "Packages in @muxui visible to this token:"
-          packages=$(npm access list packages @muxui --json 2>&1) || {
-            echo "$packages"
-            echo "::error title=npm access failed::Could not list @muxui packages."
-            exit 1
-          }
-          # An empty result is expected before the first publish.
-          if [ -z "$packages" ]; then echo "(none)"; else echo "$packages"; fi
-
-          echo "@muxui/react dist-tags:"
-          if tags=$(npm view @muxui/react dist-tags --json 2>&1); then
-            echo "$tags"
-          elif grep -q 'code E404' <<<"$tags"; then
-            echo "::notice title=Not yet published::@muxui/react returned E404, expected before the first publish."
-          else
-            echo "$tags"
-            echo "::error title=npm view failed::Unexpected error reading @muxui/react dist-tags."
-            exit 1
-          fi
+          VERSION: ${{ inputs.version }}
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs preflight
 
   prepare:
-    if: inputs.mode != 'verify-credentials'
+    if: inputs.mode == 'dry-run' || inputs.mode == 'publish'
     runs-on: ubuntu-latest
     # release:prepare runs the full check graph (stages in parallel), then packs.
     timeout-minutes: 90
@@ -114,14 +94,20 @@ jobs:
           echo "::error title=Publish needs main::mode=publish only runs from refs/heads/main, not $REF."
           exit 1
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
         with:
           fetch-depth: 0
           persist-credentials: false
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version-file: .node-version
+
+      # Fails in seconds, before the long release preparation.
+      - name: Validate version input
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs validate-version
 
       - name: Record Node version
         id: node
@@ -135,7 +121,7 @@ jobs:
           echo "PNPM_STORE=$(pnpm store path --silent)" >> "$GITHUB_ENV"
 
       - name: Restore pnpm store
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ${{ env.PNPM_STORE }}
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
@@ -146,6 +132,8 @@ jobs:
 
       # Browser checks use the runner's preinstalled Chrome, as in ci.yml.
       - name: Prepare release candidate
+        env:
+          MUXUI_RELEASE_CANDIDATE_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
           pnpm release:prepare 2>&1 | tee "$RUNNER_TEMP/release-prepare.log"
@@ -226,7 +214,7 @@ jobs:
           exit "$failed"
 
       - name: Upload candidate
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: npm-candidate
           path: ${{ runner.temp }}/npm-candidate
@@ -237,22 +225,41 @@ jobs:
     if: inputs.mode == 'publish' && github.ref == 'refs/heads/main'
     needs: prepare
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The read-back allows about 5 minutes for the version and 10 for dist-tags.
+    timeout-minutes: 30
     environment: npm-publish
     permissions:
       contents: read
-      # npm provenance signs with the workflow's OIDC identity.
+      # npm trusted publishing exchanges this OIDC identity for a short-lived
+      # publish token, and provenance is signed with it. No other job has it.
       id-token: write
     # Never run two publishes at once, and never cancel one mid-flight.
     concurrency:
       group: npm-publish
       cancel-in-progress: false
     steps:
-      # No checkout: this job only handles the uploaded candidate.
+      # Only the read-only registry check script; the candidate comes from the
+      # uploaded artifact.
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+          sparse-checkout: tooling/audits/repository-policy/src/npm-publication.mjs
+          sparse-checkout-cone-mode: false
+
+      # No registry-url, so no .npmrc and no _authToken placeholder: npm >= 11.5.1
+      # exchanges the GitHub OIDC identity for a short-lived token scoped to
+      # @muxui/react and holds it in memory for this command only (its CLI config
+      # layer, never written to a file). If the exchange fails, npm has no token
+      # and stops with ENEEDAUTH before signing provenance, so nothing reaches the
+      # transparency log. --registry and the candidate's publishConfig pin the
+      # registry.
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ needs.prepare.outputs.node-version }}
-          registry-url: https://registry.npmjs.org
+
+      # Node 24.19.0 bundles npm 11.17.0; this fails closed if that ever regresses.
+      - name: Require trusted-publishing npm
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs check-npm
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
@@ -284,118 +291,37 @@ jobs:
           fi
           echo "tarball=$tarball" >> "$GITHUB_OUTPUT"
 
-      # Read-only. A first publish expects E404 for both the version and the
-      # package; any existing version, next, or latest is a hard stop.
+      # Read-only public registry reads. Records the dist-tags the publish and
+      # read-back must preserve.
       - name: Registry preflight (read-only)
         id: preflight
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ inputs.version }}
-        run: |
-          set -euo pipefail
-          registry=https://registry.npmjs.org
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "::error title=Missing NPM_TOKEN::The npm-publish environment has no NPM_TOKEN secret."
-            exit 1
-          fi
-          publisher=$(npm whoami --registry="$registry")
-          echo "npm whoami: $publisher"
-          echo "publisher=$publisher" >> "$GITHUB_OUTPUT"
-
-          packages=$(npm access list packages @muxui --json --registry="$registry" 2>&1) || {
-            echo "$packages"
-            echo "::error title=npm access failed::Could not list @muxui packages."
-            exit 1
-          }
-          # An empty result is expected before the first publish.
-          echo "Packages in @muxui visible to this token: ${packages:-(none)}"
-
-          if out=$(npm view "@muxui/react@$VERSION" version --registry="$registry" 2>&1); then
-            echo "$out"
-            echo "::error title=Version exists::npm view @muxui/react@$VERSION did not return E404; never overwrite or republish."
-            exit 1
-          elif ! grep -q 'code E404' <<<"$out"; then
-            echo "$out"
-            echo "::error title=npm view failed::Unexpected error reading @muxui/react@$VERSION."
-            exit 1
-          fi
-          echo "@muxui/react@$VERSION: E404 (no collision)"
-
-          if tags=$(npm view @muxui/react dist-tags --json --registry="$registry" 2>&1); then
-            echo "$tags"
-            echo "::error title=Package exists::@muxui/react already has dist-tags; an existing next or latest is a hard stop for review."
-            exit 1
-          elif ! grep -q 'code E404' <<<"$tags"; then
-            echo "$tags"
-            echo "::error title=npm view failed::Unexpected error reading @muxui/react dist-tags."
-            exit 1
-          fi
-          echo "@muxui/react dist-tags: E404 (first publish)"
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs preflight
 
       - name: Publish to next
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ inputs.version }}
           TARBALL: ${{ steps.candidate.outputs.tarball }}
-          PUBLISHER: ${{ steps.preflight.outputs.publisher }}
+          PRE_KIND: ${{ steps.preflight.outputs.kind }}
+          PRE_LATEST: ${{ steps.preflight.outputs.latest }}
+          PRE_NEXT: ${{ steps.preflight.outputs.next }}
           npm_config_engine_strict: 'false'
         run: |
           set -euo pipefail
-          # Stop on publisher drift since the preflight.
-          if [ "$(npm whoami --registry=https://registry.npmjs.org)" != "$PUBLISHER" ]; then
-            echo "::error title=Publisher drift::npm whoami changed since the preflight."
-            exit 1
-          fi
+          # Stop on registry drift since the preflight.
+          node tooling/audits/repository-policy/src/npm-publication.mjs recheck
           cd "$RUNNER_TEMP"
           npm publish "$TARBALL" --tag next --provenance --access public \
             --registry=https://registry.npmjs.org
 
-      # Read-only. The registry can lag briefly after a publish, so each read retries.
+      # Read-only. The version document is read first; the packument's dist-tags
+      # can stay CDN-cached for minutes after a publish, so both reads retry.
       - name: Read back registry state
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           VERSION: ${{ inputs.version }}
           EXPECTED_SHA512: ${{ inputs.tarball-sha512 }}
-        run: |
-          set -euo pipefail
-          # Prints the first non-empty `npm view` result, or returns 1 after 10 tries.
-          read_back() {
-            local out attempt
-            for attempt in 1 2 3 4 5 6 7 8 9 10; do
-              if out=$(npm view "$@" --registry=https://registry.npmjs.org 2>/dev/null) && [ -n "$out" ]; then
-                printf '%s\n' "$out"
-                return 0
-              fi
-              echo "Waiting for npm view $* (attempt $attempt)" >&2
-              sleep 15
-            done
-            return 1
-          }
-
-          integrity=$(read_back "@muxui/react@$VERSION" dist.integrity) || integrity=
-          echo "dist.integrity: ${integrity:-missing}"
-          if [ "$integrity" != "$EXPECTED_SHA512" ]; then
-            echo "::error title=Registry integrity mismatch::Registry has ${integrity:-nothing}; expected $EXPECTED_SHA512."
-            exit 1
-          fi
-
-          attestations=$(read_back "@muxui/react@$VERSION" dist.attestations --json) || attestations=
-          echo "dist.attestations: ${attestations:-missing}"
-          if ! jq -e '.provenance.predicateType | test("^https://slsa\\.dev/provenance/")' <<<"${attestations:-null}" >/dev/null 2>&1; then
-            echo "::error title=Provenance missing::@muxui/react@$VERSION has no SLSA provenance attestation."
-            exit 1
-          fi
-
-          tags=$(read_back @muxui/react dist-tags --json) || tags=
-          echo "dist-tags: ${tags:-missing}"
-          if [ "$(jq -r '.next // empty' <<<"${tags:-null}")" != "$VERSION" ]; then
-            echo "::error title=next mismatch::next does not point to $VERSION."
-            exit 1
-          fi
-
-          {
-            echo "### Published @muxui/react@$VERSION"
-            echo
-            echo "- dist.integrity: \`$integrity\`"
-            echo "- provenance: \`$(jq -r .provenance.predicateType <<<"$attestations")\`"
-            echo "- dist-tags: \`$(jq -c . <<<"$tags")\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+          PRE_KIND: ${{ steps.preflight.outputs.kind }}
+          PRE_LATEST: ${{ steps.preflight.outputs.latest }}
+          PRE_NEXT: ${{ steps.preflight.outputs.next }}
+        run: node tooling/audits/repository-policy/src/npm-publication.mjs read-back
