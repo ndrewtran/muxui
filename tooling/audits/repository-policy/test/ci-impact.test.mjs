@@ -2451,6 +2451,14 @@ test('a catalog source manifest change that adds or removes a pattern plans Stor
   assert.equal(needsStorybookGeneration([path], config, { patternManifestChanged: false }), false);
 });
 
+test('the Block naming helper and its test route to the unit tests that read them', async () => {
+  const helper = await plan(['apps/react-storybook/src/block-pages.mjs']);
+  assert.equal(helper.storyTooling, true);
+  assert.deepEqual(helper.storyUnitTests.map(({ file }) => file), ['test/block-pages.test.mjs', 'test/storybook-family-selection.test.mjs']);
+  const unit = await plan(['apps/react-storybook/test/block-pages.test.mjs']);
+  assert.deepEqual(unit.storyUnitTests, [{ file: 'test/block-pages.test.mjs' }]);
+});
+
 test('catalog fixtures plan both the catalog and the tooling tests that read them', async () => {
   // packages/tooling/test/pattern-cli.test.mjs compiles the same poster-grid fixture as the catalog tests.
   for (const path of [

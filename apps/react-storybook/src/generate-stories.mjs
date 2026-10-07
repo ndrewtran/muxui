@@ -4,6 +4,7 @@ import { generatedText, loadPolicy } from '../../../tooling/audits/repository-po
 import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import { transformWithOxc } from 'vite';
+import { blockStoryExports, selectionKeyOwners } from './block-pages.mjs';
 import { adapterNames } from './storybook-factory.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -259,10 +260,6 @@ function categoryLabel(category) {
   return `${words[0].toUpperCase()}${words.slice(1)}`;
 }
 
-function pascalCase(slug) {
-  return slug.split('-').map((word) => `${word[0].toUpperCase()}${word.slice(1)}`).join('');
-}
-
 // Groups the variants by pattern and fails when a variant cannot become a page.
 const blockPages = [];
 for (const [index, variant] of patternVariants.entries()) {
@@ -282,14 +279,9 @@ for (const [index, variant] of patternVariants.entries()) {
   if (exportsFound.length !== 1) {
     fail(`${variant.source} must export exactly one component to become a Storybook page, found ${exportsFound.length}`);
   }
-  const exportName = pascalCase(variant.variantSlug);
-  if (page.variants.some((other) => other.exportName === exportName)) {
-    fail(`${variant.patternId} has two variants that both emit the story export ${exportName}`);
-  }
   page.variants.push({
     ...variant,
     importName: exportsFound[0],
-    exportName,
     helperName: `block-${variant.patternSlug}-${variant.variantSlug}.example.mjs`,
     transformedCode: blockHelperTransforms[index],
   });
@@ -297,6 +289,21 @@ for (const [index, variant] of patternVariants.entries()) {
 for (const page of blockPages) {
   if (names.includes(page.family)) fail(`pattern ${page.pattern} is named ${page.family}, which is a component family`);
   if (blockPages.some((other) => other !== page && other.family === page.family)) fail(`two patterns are named ${page.family}`);
+  try {
+    const exportNames = blockStoryExports(page.pattern, page.variants);
+    page.variants.forEach((variant, index) => { variant.exportName = exportNames[index]; });
+  } catch (error) {
+    fail(error.message);
+  }
+}
+// A scoped run resolves a page group by its lowercased name or slug, so a block cannot share either with a component or another block.
+try {
+  selectionKeyOwners([
+    ...records.map(({ family }) => ({ family, slug: familySlug(family) })),
+    ...blockPages.map(({ family, slug }) => ({ family, slug })),
+  ]);
+} catch (error) {
+  fail(`pattern selection key collision: ${error.message}`);
 }
 
 const blockStoryId = (page) => `muxui-block-${page.slug}`;

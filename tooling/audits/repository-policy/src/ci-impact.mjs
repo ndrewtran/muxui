@@ -824,6 +824,11 @@ function storybookUnitRoute(path) {
   if (file === 'test/storybook-family-selection.mjs' || file === 'test/storybook-family-selection.test.mjs') {
     return { file: 'test/storybook-family-selection.test.mjs' };
   }
+  // The Block naming rules the generator and the family selection both use.
+  if (file === 'src/block-pages.mjs') {
+    return [{ file: 'test/block-pages.test.mjs' }, { file: 'test/storybook-family-selection.test.mjs' }];
+  }
+  if (file === 'test/block-pages.test.mjs') return { file: 'test/block-pages.test.mjs' };
   if (file === 'test/storybook-colors-report.mjs' || file === 'test/storybook-colors-report.test.mjs') {
     return { file: 'test/storybook-colors-report.test.mjs' };
   }

@@ -1,8 +1,5 @@
 import manifest from '../.storybook/generated/manifest.mjs';
-
-function slugForFamily(family) {
-  return family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-}
+import { selectionKeyOwners, slugForFamily } from '../src/block-pages.mjs';
 
 // A Block (pattern) page group is selected like a family, by its pattern name or slug.
 const records = [
@@ -12,10 +9,8 @@ const records = [
   })),
   ...(manifest.patterns ?? []).map(({ family, slug }) => ({ family, slug })),
 ];
-const byKey = new Map(records.flatMap((record) => [
-  [record.family.toLowerCase(), record],
-  [record.slug, record],
-]));
+// A key two groups share would let one shadow the other, so a collision throws here too.
+const byKey = selectionKeyOwners(records);
 
 export function selectedStorybookFamilies(environment = process.env) {
   const raw = environment.MUXUI_STORYBOOK_FAMILIES

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import manifest from '../.storybook/generated/manifest.mjs';
+import * as block from '../src/block-pages.mjs';
 import {
   filterStorybookEntries,
   selectedStorybookFamilies,
@@ -76,4 +77,15 @@ test('Storybook family selectors resolve a Block page group by pattern name or s
       );
     });
   }
+});
+
+test('Storybook family selection rejects a block whose slug shadows a component family', () => {
+  const { selectionKeyOwners, slugForFamily } = block;
+  const records = manifest.families.map(({ family }) => ({ family, slug: slugForFamily(family) }));
+  assert.doesNotThrow(() => selectionKeyOwners([...records, ...manifest.patterns]));
+  const [shadowed] = records;
+  assert.throws(
+    () => selectionKeyOwners([...records, { family: 'Shadow block', slug: shadowed.slug }]),
+    new RegExp(`"${shadowed.slug}" selects both ${shadowed.family} and Shadow block`, 'u'),
+  );
 });

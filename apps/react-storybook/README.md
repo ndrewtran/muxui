@@ -21,7 +21,10 @@ A Block page group is listed in the manifest's `patterns` and `pageIndex`, not
 in `families`. The scoped audits select it like a family, by pattern name or
 slug (`MUXUI_STORYBOOK_FAMILIES="Poster grid"` or `poster-grid`), and run light
 and dark axe and colour proof on every variant page. The full audit lists the
-Block pages for those page-level audits too.
+Block pages for those page-level audits too. A variant slug that starts with a
+digit emits a `Variant`-prefixed story export (`2-column` becomes
+`Variant2Column`), and generation fails when a pattern's name or slug is also a
+component family's or another pattern's selection key.
 
 ```sh
 pnpm --filter @muxui/react-storybook storybook
