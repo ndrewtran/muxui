@@ -42,9 +42,10 @@ test('a pattern variant the manifest does not declare fails closed', async () =>
   }
 });
 
-test('E-BL1-03: the poster grid variants pass packed SSR and hydration in a clean consumer', { timeout: 300_000 }, async () => {
-  const results = await provePatternVariants({ patterns: ['poster-grid'] });
-  assert.deepEqual(results.map(({ id }) => id), ['muxui:example:poster-grid-css-grid', 'muxui:example:poster-grid-virtualized']);
-  assert.ok(results.every(({ markupBytes }) => markupBytes > 0));
+// The packed SSR and hydration proof (E-BL1-03) installs a clean consumer, so it
+// stays out of this hermetic check. Run it with
+// `pnpm --filter @muxui/repository-policy run proof:pattern-variants`; release
+// preparation also renders every variant from the packed package.
+test('the packed variant proof fails closed before packing when no variant is selected', async () => {
   await assert.rejects(provePatternVariants({ patterns: ['no-such-pattern'] }), /MUXUI_PATTERN_VARIANT_PROOF_EMPTY: no variant belongs to no-such-pattern/u);
 });
