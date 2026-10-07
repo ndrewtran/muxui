@@ -2273,9 +2273,9 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: var(--muxui-semantic-color-neutral-100);
-  color: var(--muxui-semantic-color-neutral-10);
-  border-right: 1px solid var(--muxui-semantic-color-neutral-90);
+  background: var(--muxui-semantic-color-neutral-10);
+  color: var(--muxui-semantic-color-neutral-100);
+  border-right: 1px solid var(--muxui-semantic-color-neutral-20);
 }
 
 .muxui-sidebar--no-border {
@@ -2304,7 +2304,7 @@
   left: 0.625rem;
   width: 1rem;
   height: 1rem;
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   pointer-events: none;
 }
 
@@ -2317,15 +2317,15 @@
   padding-inline-start: var(--muxui-semantic-layout-navigation-search-inset);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
-  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-88) inset;
-  background: var(--muxui-semantic-color-neutral-100);
+  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
+  background: var(--muxui-semantic-color-neutral-10);
   font-size: var(--muxui-semantic-typography-small-size);
-  color: var(--muxui-semantic-color-neutral-10);
+  color: var(--muxui-semantic-color-neutral-100);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
 }
 
 .muxui-sidebar__search-input::placeholder {
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
 }
 
 .muxui-sidebar__search-input:focus {
@@ -2338,7 +2338,7 @@
 .muxui-sidebar__divider {
   height: 1px;
   border: none;
-  background: var(--muxui-semantic-color-neutral-90);
+  background: var(--muxui-semantic-color-neutral-20);
   margin: var(--muxui-semantic-layout-control-gap) 0;
 }
 
@@ -2372,7 +2372,7 @@
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-label-weight);
-  color: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-90);
   text-decoration: none;
   transition:
     background var(--muxui-semantic-motion-state-duration),
@@ -2383,13 +2383,13 @@
 }
 
 .muxui-sidebar__nav-link:hover {
-  background: var(--muxui-semantic-color-neutral-96);
-  color: var(--muxui-semantic-color-neutral-10);
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 .muxui-sidebar__nav-link--current {
-  background: var(--muxui-semantic-color-neutral-94);
-  color: var(--muxui-semantic-color-neutral-10);
+  background: var(--muxui-semantic-color-neutral-16);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 .muxui-sidebar__nav-link:focus-visible {
@@ -2412,12 +2412,12 @@
   width: 1.25rem;
   height: 1.25rem;
   flex-shrink: 0;
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
 }
 
 .muxui-sidebar__nav-link:hover .muxui-sidebar__nav-icon,
 .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
-  color: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-90);
 }
 
 
@@ -2435,7 +2435,7 @@
   margin-left: auto;
   font-size: var(--muxui-semantic-typography-tiny-size);
   font-weight: var(--muxui-semantic-typography-control-weight);
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
 }
 
 
@@ -2443,14 +2443,14 @@
 .muxui-sidebar__nav-external {
   width: 0.875rem;
   height: 0.875rem;
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   flex-shrink: 0;
 }
 
 .muxui-sidebar__nav-chevron {
   width: 1rem;
   height: 1rem;
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   transition: transform var(--muxui-semantic-motion-state-duration);
   flex-shrink: 0;
   margin-left: auto;
@@ -2485,7 +2485,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   inline-size: var(--muxui-control-size-md);
   block-size: var(--muxui-control-size-md);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   text-decoration: none;
   transition:
     background var(--muxui-semantic-motion-state-duration),
@@ -2494,13 +2494,13 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 }
 
 .muxui-sidebar__nav-btn:hover {
-  background: var(--muxui-semantic-color-neutral-96);
-  color: var(--muxui-semantic-color-neutral-20);
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+  color: var(--muxui-semantic-color-neutral-90);
 }
 
 .muxui-sidebar__nav-btn--current {
-  background: var(--muxui-semantic-color-neutral-94);
-  color: var(--muxui-semantic-color-neutral-10);
+  background: var(--muxui-semantic-color-neutral-16);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 .muxui-sidebar__nav-btn-icon {
@@ -2517,7 +2517,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   gap: var(--muxui-semantic-layout-control-gap);
   border-radius: var(--muxui-semantic-shape-navigation-surface-radius);
   padding: var(--muxui-semantic-layout-inset-small);
-  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-88) inset;
+  box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
   position: relative;
   margin: var(--muxui-semantic-layout-action-gap) var(--muxui-semantic-layout-section-gap) var(--muxui-semantic-layout-section-gap);
 }
@@ -2538,8 +2538,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 50%;
-  background: var(--muxui-semantic-color-color-90);
-  color: var(--muxui-semantic-color-color-90-fg);
+  background: var(--muxui-semantic-color-color-20);
+  color: var(--muxui-semantic-color-color-20-fg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2554,7 +2554,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   width: 0.625rem;
   height: 0.625rem;
   border-radius: 50%;
-  border: 2px solid var(--muxui-semantic-color-neutral-100);
+  border: 2px solid var(--muxui-semantic-color-neutral-10);
 }
 
 .muxui-sidebar__account-status--online {
@@ -2562,7 +2562,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 }
 
 .muxui-sidebar__account-status--offline {
-  background: var(--muxui-semantic-color-neutral-40);
+  background: var(--muxui-semantic-color-neutral-70);
 }
 
 .muxui-sidebar__account-info {
@@ -2573,7 +2573,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-sidebar__account-name {
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-label-weight);
-  color: var(--muxui-semantic-color-neutral-10);
+  color: var(--muxui-semantic-color-neutral-100);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2581,7 +2581,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-sidebar__account-email {
   font-size: var(--muxui-semantic-typography-tiny-size);
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2602,14 +2602,28 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   cursor: pointer;
   padding: 0;
 }
 
-.muxui-sidebar__account-trigger:hover {
-  background: var(--muxui-semantic-color-neutral-96);
-  color: var(--muxui-semantic-color-neutral-20);
+/* Match the shared Button state specificity for the enabled account action. */
+.muxui-sidebar__account-trigger:hover,
+.muxui-sidebar__account-trigger:hover:not([data-disabled], [data-pending]) {
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+@media (forced-colors: active) {
+  .muxui-sidebar__account-trigger {
+    /* Keep system colours above the scoped light and dark palette rules. */
+    background: ButtonFace !important;
+    color: ButtonText !important;
+  }
+
+  .muxui-sidebar__account-trigger[data-disabled] {
+    color: GrayText !important;
+  }
 }
 
 .muxui-sidebar__account-trigger-icon {
@@ -2627,9 +2641,9 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-sidebar__account-menu {
   min-width: 16.5rem;
   border-radius: var(--muxui-semantic-shape-feature-card-radius);
-  background: var(--muxui-semantic-color-neutral-98);
+  background: var(--muxui-semantic-color-neutral-12);
   box-shadow: 0 4px 24px var(--muxui-component-sidebar-shadow-color);
-  border: 1px solid var(--muxui-semantic-color-neutral-90);
+  border: 1px solid var(--muxui-semantic-color-neutral-20);
   overflow: hidden;
 }
 
@@ -2638,20 +2652,20 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-sidebar__feature-card {
   border-radius: var(--muxui-semantic-shape-navigation-surface-radius);
   padding: var(--muxui-semantic-layout-inset-large);
-  background: var(--muxui-semantic-color-neutral-98);
-  border: 1px solid var(--muxui-semantic-color-neutral-90);
+  background: var(--muxui-semantic-color-neutral-12);
+  border: 1px solid var(--muxui-semantic-color-neutral-20);
   margin: 0 var(--muxui-semantic-layout-section-gap) var(--muxui-semantic-layout-action-gap);
 }
 
 .muxui-sidebar__feature-card-title {
   font-size: var(--muxui-semantic-typography-small-size);
   font-weight: var(--muxui-semantic-typography-label-weight);
-  color: var(--muxui-semantic-color-neutral-10);
+  color: var(--muxui-semantic-color-neutral-100);
 }
 
 .muxui-sidebar__feature-card-description {
   font-size: var(--muxui-semantic-typography-tiny-size);
-  color: var(--muxui-semantic-color-neutral-40);
+  color: var(--muxui-semantic-color-neutral-70);
   margin-top: var(--muxui-semantic-layout-description-gap);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
 }
@@ -2664,11 +2678,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   padding-inline: var(--muxui-semantic-layout-navigation-inset-inline);
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: 0;
-  outline: 1px solid var(--muxui-semantic-color-neutral-88);
+  outline: 1px solid var(--muxui-semantic-color-neutral-22);
   outline-offset: -1px;
   background: transparent;
   font-size: var(--muxui-semantic-typography-tiny-size);
-  color: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-90);
   cursor: pointer;
   transition:
     background var(--muxui-semantic-motion-state-duration),
@@ -2676,7 +2690,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 }
 
 .muxui-sidebar__feature-card-dismiss:hover {
-  background: var(--muxui-semantic-color-neutral-96);
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
 }
 
 
@@ -2687,8 +2701,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   justify-content: space-between;
   height: 3.5rem;
   padding: 0 var(--muxui-semantic-layout-inset-large);
-  border-bottom: 1px solid var(--muxui-semantic-color-neutral-90);
-  background: var(--muxui-semantic-color-neutral-100);
+  border-bottom: 1px solid var(--muxui-semantic-color-neutral-20);
+  background: var(--muxui-semantic-color-neutral-10);
 }
 
 .muxui-sidebar__mobile-logo {
@@ -2705,13 +2719,13 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
-  color: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-90);
   cursor: pointer;
   padding: 0;
 }
 
 .muxui-sidebar__mobile-menu-btn:hover {
-  background: var(--muxui-semantic-color-neutral-96);
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
 }
 
 .muxui-sidebar__mobile-menu-btn .muxui-icon-button-icon,
@@ -2734,7 +2748,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   width: 17.5rem;
   max-width: 90vw;
   height: 100%;
-  background: var(--muxui-semantic-color-neutral-100);
+  background: var(--muxui-semantic-color-neutral-10);
   box-shadow: 4px 0 24px var(--muxui-component-sidebar-shadow-color);
   display: flex;
   flex-direction: column;
@@ -2745,7 +2759,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: flex;
   flex-direction: column;
   height: 100%;
-  color: var(--muxui-semantic-content-on-solid);
+  color: var(--muxui-semantic-content-default);
   outline: none;
 }
 
@@ -2764,13 +2778,13 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   border-radius: var(--muxui-semantic-shape-navigation-radius);
   border: none;
   background: transparent;
-  color: var(--muxui-semantic-color-neutral-20);
+  color: var(--muxui-semantic-color-neutral-90);
   cursor: pointer;
   padding: 0;
 }
 
 .muxui-sidebar__mobile-close-btn:hover {
-  background: var(--muxui-semantic-color-neutral-96);
+  background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
 }
 
 
@@ -2780,6 +2794,41 @@ details[open] > summary .muxui-sidebar__nav-chevron {
     background: var(--muxui-semantic-color-neutral-14);
     border-color: var(--muxui-semantic-color-neutral-22);
     color: var(--muxui-semantic-color-neutral-100);
+  }
+
+  :scope :is(
+    .muxui-sidebar__search-icon,
+    .muxui-sidebar__nav-icon,
+    .muxui-sidebar__nav-badge,
+    .muxui-sidebar__nav-external,
+    .muxui-sidebar__nav-chevron
+  ) {
+    color: var(--muxui-semantic-color-neutral-40);
+  }
+
+  :scope .muxui-sidebar__search-input::placeholder {
+    color: var(--muxui-semantic-color-neutral-40);
+  }
+
+  :scope .muxui-sidebar__divider {
+    background: var(--muxui-semantic-color-neutral-90);
+  }
+
+  :scope .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover .muxui-sidebar__nav-icon,
+  :scope .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
+    color: var(--muxui-semantic-color-neutral-20);
+  }
+
+  :scope .muxui-sidebar__account-status {
+    border-color: var(--muxui-semantic-color-neutral-100);
+  }
+
+  :scope .muxui-sidebar__account-status--offline {
+    background: var(--muxui-semantic-color-neutral-40);
+  }
+
+  :scope .muxui-sidebar__feature-card-dismiss {
+    outline-color: var(--muxui-semantic-color-neutral-88);
   }
 }
 
@@ -2925,6 +2974,19 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   }
 }
 
+@scope ([data-muxui-color-scheme='light']) to ([data-muxui-color-scheme]) {
+  :scope :is(
+    .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover,
+    .muxui-sidebar__nav-btn:not(.muxui-sidebar__nav-btn--current):hover,
+    .muxui-sidebar__account-trigger:hover,
+    .muxui-sidebar__feature-card-dismiss:hover,
+    .muxui-sidebar__mobile-menu-btn:hover,
+    .muxui-sidebar__mobile-close-btn:hover
+  ) {
+    background: color-mix(in srgb, var(--muxui-semantic-color-neutral-100) 4%, transparent);
+  }
+}
+
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope :is(
     .muxui-header-nav__nav-btn:not(.muxui-header-nav__nav-btn--current):hover,
@@ -2977,6 +3039,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   .muxui-sidebar__nav-link--current:hover,
   .muxui-sidebar__nav-btn--current:hover {
     background-color: var(--muxui-semantic-color-neutral-94);
+  }
+
+  .muxui-sidebar__nav-link--current:hover,
+  .muxui-sidebar__nav-btn--current:hover {
+    background-color: var(--muxui-semantic-color-neutral-16);
   }
 
   @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
