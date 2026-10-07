@@ -814,6 +814,23 @@ test('E-BL1-02: pattern records diagnose at their field owners through canonical
   }).diagnostics[0].ruleId, 'authoring.source.declared-owner');
 });
 
+// The schema test for an unknown field asserts that no field-level owner resolves; this is the owner the diagnostic names.
+test('E-BL1-01: an unknown pattern field is diagnosed at the pattern contract through the family fallback', async () => {
+  const { list } = await fixture();
+  const context = await stagedContext();
+  const [{ record, recordPath }] = list;
+  const [unknown] = diagnoseCanonicalSource({
+    context,
+    family: 'pattern',
+    record: { ...record, layout: 'grid' },
+    recordPath,
+  }).diagnostics;
+  assert.equal(unknown.details.source.path, '$/layout');
+  assert.match(unknown.message, /is an unknown field/u);
+  assert.equal(unknown.details.owner.name, 'pattern-contract');
+  assert.equal(unknown.details.owner.schemaPointer, '#');
+});
+
 test('E-BL1-02: an authored derived field is diagnosed at its reserved owner, not the family contract', async () => {
   const { list } = await fixture();
   const context = await stagedContext();
