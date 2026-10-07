@@ -323,7 +323,7 @@ test('E-G0.4 CLI requires exact bindings and filters project-wide discovery', ()
   assert.equal(discovery.exitCode, 0);
   const response = JSON.parse(discovery.stdout);
   assert.equal(response.meta.authority, 'installed-local');
-  assert.deepEqual(response.meta.resolution.targetPackages, { '@muxui/catalog': '2.0.0' });
+  assert.deepEqual(response.meta.resolution.targetPackages, { '@muxui/catalog': '2.1.0' });
   assert.equal(response.data.items.some(({ id }) => id === 'muxui:component:button'), false);
   assert.equal(response.data.items.some(({ id }) => id === 'muxui:example:button-basic-react'), false);
 });
@@ -458,7 +458,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
     await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), "packages:\n  - catalog\n  - renderer\n");
     await writeJson(join(catalogRoot, 'package.json'), {
       name: '@muxui/catalog',
-      version: '2.0.0',
+      version: '2.1.0',
       private: true,
       muxUi: { catalogPackage: './generated/catalog-package.json' },
     });
@@ -509,8 +509,8 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
     const identity = {
       schema: 'muxui-catalog-package-v2',
       name: '@muxui/catalog',
-      version: '2.0.0',
-      catalogVersion: '2.0.0',
+      version: '2.1.0',
+      catalogVersion: '2.1.0',
       catalogDigest: bundle.catalogDigest,
       queryApiVersion: bundle.apiVersion,
       supportedQueryApiVersions: ['2.1.0'],
@@ -532,13 +532,13 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
       releaseManifest: {
         id: descriptor.releaseProvenance,
         releaseVersion: '1.0.1',
-        schemaVersion: '2.1.0',
+        schemaVersion: '2.2.0',
         queryApiVersion: '2.1.0',
         tokenContractVersion: '2.0.0',
         sourceRevision: bundle.sourceRevision,
         catalog: {
-          id: `@muxui/catalog@2.0.0:${bundle.catalogDigest}`,
-          version: '2.0.0',
+          id: `@muxui/catalog@2.1.0:${bundle.catalogDigest}`,
+          version: '2.1.0',
           digest: bundle.catalogDigest,
         },
         bindings: [{

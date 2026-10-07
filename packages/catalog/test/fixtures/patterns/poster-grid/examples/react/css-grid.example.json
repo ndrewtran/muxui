@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0.0","id":"muxui:example:poster-grid-css","kind":"example","name":"CSS grid","summary":"GridList grid layout.","lifecycle":"experimental","complexity":"representative","prerequisites":[],"source":"packages/catalog/test/fixtures/patterns/poster-grid/examples/react/css-grid.tsx"}

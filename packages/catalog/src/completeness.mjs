@@ -1,9 +1,10 @@
-import { readdir } from 'node:fs/promises';
+import { readdir, stat } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
 
 const COMPONENTS_ROOT = 'catalog/components';
+const PATTERNS_ROOT = 'catalog/patterns';
 
-// Canonical component or example records that stay out of the manifest on
+// Canonical component, pattern, or example records that stay out of the manifest on
 // purpose. Keys are repository-relative record paths; values give the reason.
 export const MANIFEST_EXCLUSIONS = Object.freeze({
   'catalog/components/select/examples/react/composition.example.json':
@@ -23,11 +24,15 @@ async function walk(directory) {
 }
 
 /**
- * Lists every canonical component artifact and example record on disk.
- * The manifest stays the declared inventory; this only audits it.
+ * Lists every canonical component and pattern artifact and example record on
+ * disk. The manifest stays the declared inventory; this only audits it.
+ * `catalog/patterns` is audited only when it exists.
  */
-export async function canonicalComponentRecords(repositoryRoot) {
-  const files = await walk(join(repositoryRoot, COMPONENTS_ROOT));
+export async function canonicalCatalogRecords(repositoryRoot) {
+  const roots = [COMPONENTS_ROOT];
+  const patterns = await stat(join(repositoryRoot, PATTERNS_ROOT)).catch(() => null);
+  if (patterns?.isDirectory()) roots.push(PATTERNS_ROOT);
+  const files = (await Promise.all(roots.map((root) => walk(join(repositoryRoot, root))))).flat();
   return files
     .map((file) => relative(repositoryRoot, file).split(sep).join('/'))
     .filter((path) => {
@@ -39,7 +44,7 @@ export async function canonicalComponentRecords(repositoryRoot) {
 }
 
 /**
- * Fails when a canonical component or example record is neither listed in
+ * Fails when a canonical component, pattern, or example record is neither listed in
  * the source manifest nor explicitly excluded with a reason, or when an
  * exclusion is stale (listed, absent on disk, or missing its reason).
  */
@@ -49,7 +54,7 @@ export async function assertManifestCompleteness({
   exclusions = MANIFEST_EXCLUSIONS,
 }) {
   const listed = new Set(manifest.records.map(({ path }) => path));
-  const onDisk = await canonicalComponentRecords(repositoryRoot);
+  const onDisk = await canonicalCatalogRecords(repositoryRoot);
   const present = new Set(onDisk);
   const stale = Object.entries(exclusions)
     .filter(([path, reason]) => (

@@ -1,0 +1,1 @@
+{"schemaVersion":"1.0.0","id":"muxui:example:poster-grid-virtualized","kind":"example","name":"Virtualized grid","summary":"Virtualizer over a GridList.","lifecycle":"experimental","complexity":"advanced","prerequisites":[],"source":"packages/catalog/test/fixtures/patterns/poster-grid/examples/react/virtualized.tsx"}
