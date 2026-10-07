@@ -2233,6 +2233,36 @@ test('catalog edits run the React Native and Web package checks but not the Reac
   }
 });
 
+test('pattern sources route to the catalog, tooling goldens, and docs without a React family', async () => {
+  const directory = 'catalog/patterns/poster-grid';
+  const inputs = [
+    `${directory}/artifact.json`,
+    `${directory}/examples/react/css-grid.example.json`,
+    `${directory}/examples/react/css-grid.tsx`,
+    `${directory}/assets/mark.svg`,
+  ];
+  for (const path of inputs) {
+    const result = await plan([path]);
+    assert.equal(result.catalog && result.docs, true, path);
+    // Patterns belong to @muxui/catalog, like guides: its dependents run their own checks.
+    assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web'], path);
+    assert.deepEqual(result.reactFamilies, [], path);
+    assert.deepEqual(result.storyRuns, [], path);
+    assert.deepEqual(result.storyIds, [], path);
+    assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling, false, path);
+    assert.equal(
+      result.reasons[0],
+      `${path} is a canonical pattern input; validate the catalog, its dense goldens, and the docs that render it`,
+    );
+    // Only a variant source joins the React example type test.
+    assert.deepEqual(result.reactTestFiles, path.endsWith('.tsx') ? ['test/catalog-examples-types.test.mjs'] : [], path);
+  }
+  const commands = executionCommands(await plan([inputs[0]], { packages: workspacePackages }), { packages: workspacePackages })
+    .map(({ args }) => args.join(' '));
+  assert.ok(commands.includes('--filter @muxui/catalog run check'));
+  assert.ok(commands.includes('--filter @muxui/tooling run check'));
+});
+
 const reactRuntimeDependentsPlanned = (result) => result.docs && result.scale
   && ['@muxui/figma', '@muxui/react-playground'].every((name) => result.packageChecks.includes(name));
 

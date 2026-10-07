@@ -1258,6 +1258,19 @@ export async function buildPullRequestImpact({
       continue;
     }
 
+    // Pattern records, variant example records, their sources, and assets
+    // compile into the catalog (the digest pinned by @muxui/tooling dense
+    // goldens). Docs projects them and follows from the catalog's dependents.
+    // A pattern names no component family, so no React family or Storybook
+    // page route applies. Variant `.tsx` sources join the React example type
+    // test.
+    if (path.startsWith('catalog/patterns/')) {
+      plan.catalog = true;
+      if (path.endsWith('.tsx')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
+      plan.reasons.push(`${path} is a canonical pattern input; validate the catalog, its dense goldens, and the docs that render it`);
+      continue;
+    }
+
     // Guide bytes feed the catalog digest pinned by @muxui/tooling dense
     // goldens, and docs renders every guide. No renderer or Storybook page
     // reads guides, so per-family usage guides need no family route.
