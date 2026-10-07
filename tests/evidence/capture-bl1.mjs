@@ -476,7 +476,7 @@ async function retainReview({ id, flag, artifactPath, previousKey, required }) {
   const reviewer = /\*\*Reviewer:\*\*\s*(.+)/u.exec(text)?.[1]?.trim();
   if (!reviewer) throw new Error(`${id}: the review record does not name its reviewer`);
   const objectExists = spawnSync('git', ['cat-file', '-e', `${record.reviewedRevision}^{commit}`], { cwd: repositoryRoot }).status === 0;
-  const verdict = /^##+ (?:Overall )?[Vv]erdict[^\n]*\n([\s\S]*?)(?=\n##+ |(?![\s\S]))/mu.exec(text)?.[1]?.trim();
+  const verdict = /^##+ (?:Overall verdict|Verdict)[ \t]*\n([\s\S]*?)(?=\n##+ |(?![\s\S]))/mu.exec(text)?.[1]?.trim();
   return {
     artifact: { path: artifactPath, sha256: sha256(text) },
     raw: record.raw,
