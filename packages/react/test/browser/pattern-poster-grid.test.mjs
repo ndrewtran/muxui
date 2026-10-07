@@ -94,7 +94,8 @@ for (const engine of browserEngines()) {
                 return rows.filter((row) => Math.abs(row.getBoundingClientRect().top - top) < 2).length === 4;
               }, undefined, { message: 'the grid settles on four columns', report: () => document.querySelectorAll('[role="row"]').length, timeout: 10_000 });
             };
-            const row = (card) => tab.locator(`[role="row"]:has-text("#${card} ")`);
+            // `has-text` trims its text, so "#1 " would also match cards 10 to 19; a pattern keeps the space.
+            const row = (card) => tab.locator('[role="row"]').filter({ hasText: new RegExp(`#${card} `, 'u') });
             const events = () => tab.evaluate(() => window.__events);
             const selected = () => tab.evaluate(() => window.__selected());
             const expectFocus = (expected, message = 'focus') => pollUntil(tab, (value) => window.__focus() === value, expected, {
@@ -125,6 +126,18 @@ for (const engine of browserEngines()) {
               assert.deepEqual(ring, expected, message);
             };
 
+            // A nested control's painted ring, as the focus-visible tokens set it.
+            const paintOf = (control) => control.evaluate((node) => {
+              const styles = getComputedStyle(node);
+              return { outline: styles.outlineStyle === 'none' ? 'none' : `${styles.outlineWidth} ${styles.outlineStyle} ${styles.outlineColor}`, boxShadow: styles.boxShadow };
+            });
+            // The focused nested control shows a focus-visible ring inside the grid and clear of every clipping ancestor.
+            const expectControlRing = async (control, name) => {
+              const { painted, ...ring } = await tab.evaluate(measureFocusRing);
+              assert.deepEqual(ring, { focusVisible: true, insideRoot: true, clippedBy: [] }, `${name} shows an unclipped focus-visible ring`);
+              return paintOf(control);
+            };
+
             await open();
             assert.equal(await tab.locator('[role="grid"]').getAttribute('aria-multiselectable'), 'true', 'cards select in multiples');
             assert.equal(await tab.locator('[role="grid"]').getAttribute('aria-label'), 'Posters');
@@ -150,38 +163,52 @@ for (const engine of browserEngines()) {
             // Tab walks a card's nested controls in both directions, and moving focus presses nothing.
             await open();
             await enter();
-            await press([['Tab', '1:link'], ['Tab', '1:button']]);
-            // The nested controls show their own focus indicator.
-            assert.equal(await tab.evaluate(() => {
-              const styles = getComputedStyle(document.activeElement);
-              return styles.outlineStyle !== 'none' || styles.boxShadow !== 'none';
-            }), true, 'the focused Save button paints a focus indicator');
+            const details = row(1).locator('a');
+            const save = row(1).locator('button');
+            await press([['Tab', '1:link']]);
+            const detailsRing = await expectControlRing(details, 'Details');
+            await press([['Tab', '1:button']]);
+            const saveRing = await expectControlRing(save, 'Save');
             await press([['Tab', 'after']]);
+            // A ring that only exists while the control has focus differs from its resting paint.
+            assert.notDeepEqual(await paintOf(details), detailsRing, 'Details paints its ring only while focused');
+            assert.notDeepEqual(await paintOf(save), saveRing, 'Save paints its ring only while focused');
             await enter();
             await press([['Tab', '1:link'], ['Tab', '1:button'], ['Shift+Tab', '1:link'], ['Shift+Tab', '1'], ['Shift+Tab', 'before']]);
             assert.deepEqual(await events(), [], 'moving focus never presses a control');
             assert.deepEqual(await selected(), []);
 
-            // A nested action never selects, by keyboard or pointer.
+            // A nested action runs only its own control, by keyboard or pointer, and never selects.
+            // The log holds every click that reached a nested control, newest last.
             await open();
             await enter();
             await press([['Tab', '1:link']]);
             await tab.keyboard.press('Enter');
             // The Details link keeps its placeholder href, so pressing it only moves the fragment.
             await pollUntil(tab, () => /^#(?:poster-)?1$/u.test(location.hash), undefined, { message: 'Enter on Details follows its link', report: () => location.hash });
+            assert.deepEqual(await events(), [['a', 1]], 'Enter on Details clicks only that link');
             assert.deepEqual(await selected(), [], 'Enter on a nested link leaves selection unchanged');
             await press([['Tab', '1:button']]);
             await tab.keyboard.press('Enter');
-            await tab.keyboard.press('Space');
+            assert.deepEqual(await events(), [['a', 1], ['button', 1]], 'Enter on Save clicks only that button');
+            // React Aria runs a button's Space press itself and cancels the native click, so Space
+            // leaves no click in the log in every engine. The button, never its card, is the one pressed.
+            await tab.keyboard.down('Space');
+            await pollUntil(tab, () => document.activeElement.hasAttribute('data-pressed') && !document.activeElement.closest('[role="row"]').hasAttribute('data-pressed'), undefined, {
+              message: 'Space presses the Save button and not its card',
+              report: () => ({ button: document.activeElement.hasAttribute('data-pressed'), card: document.activeElement.closest('[role="row"]').hasAttribute('data-pressed') }),
+            });
+            await tab.keyboard.up('Space');
+            await pollUntil(tab, () => !document.activeElement.hasAttribute('data-pressed'), undefined, { message: 'the Save button releases after Space', report: () => document.activeElement.outerHTML.slice(0, 120) });
+            assert.deepEqual(await events(), [['a', 1], ['button', 1]], 'Space on Save adds no click');
             assert.deepEqual(await selected(), [], 'Enter and Space on a nested button leave selection unchanged');
             await row(2).locator('button').click();
             await row(2).locator('a').click();
             assert.deepEqual(
-              (await events()).filter(([, card]) => card === 2),
-              [['button', 2], ['a', 2]],
-              'a pointer press runs only the pressed control',
+              await events(),
+              [['a', 1], ['button', 1], ['button', 2], ['a', 2]],
+              'a pointer press runs only the pressed control, and no other card ran an action',
             );
-            assert.equal((await events()).every(([, card]) => card === 1 || card === 2), true, 'no other card ran an action');
             assert.deepEqual(await selected(), [], 'nested actions leave selection unchanged');
             await pollUntil(tab, () => /^#(?:poster-)?2$/u.test(location.hash), undefined, { message: 'the pointer press on Details follows its link', report: () => location.hash });
 
