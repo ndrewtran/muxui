@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
+import { authoredPatternReference } from './authored-pattern-reference.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsRoot = resolve(repositoryRoot, 'apps/docs');
@@ -169,8 +170,8 @@ const docsSourceFiles = readdirSync(resolve(docsRoot, 'src'), { recursive: true 
 for (const file of docsSourceFiles) {
 	const text = readFileSync(resolve(docsRoot, 'src', file), 'utf8');
 	for (const { id } of blockPatterns) {
-		const slug = id.slice(id.lastIndexOf(':') + 1);
-		assert(!text.includes(id) && !text.includes(slug), `The docs source ${file} authors the pattern ${id}; Blocks data must come from the catalog.`);
+		const reference = authoredPatternReference(text, id);
+		assert(reference === null, `The docs source ${file} authors the pattern ${id} as ${reference}; Blocks data must come from the catalog.`);
 	}
 }
 for (const route of ['index.astro', '[pattern]/index.astro', '[pattern]/[variant]/index.astro', '[pattern]/[variant]/preview.astro', 'filter-index.json.ts']) {
