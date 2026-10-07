@@ -244,10 +244,11 @@ function runMuxui(args) {
   return { exitCode: result.status, stdout: result.stdout };
 }
 
-/** Whether the working tree is `head` with nothing changed outside the evidence root, so the live CLI is the CLI at `head`. */
-function checkedOutAt(head) {
-  if (resolveRevision('HEAD') !== head) return false;
-  return lines(git('status', '--porcelain=v1', '--untracked-files=all')).every((line) => line.slice(3).startsWith(`${evidenceRoot}/`));
+/** Why the live CLI is not the CLI at `head`, or null when the working tree is `head` with nothing changed outside the evidence root. */
+function notCheckedOutAt(head) {
+  if (resolveRevision('HEAD') !== head) return 'head is not the checked-out revision';
+  const changed = lines(git('status', '--porcelain=v1', '--untracked-files=all')).filter((line) => !line.slice(3).startsWith(`${evidenceRoot}/`));
+  return changed.length === 0 ? null : `the working tree has changes outside the evidence root: ${changed.map((line) => line.slice(3)).join(', ')}`;
 }
 
 // ---- The checks. Each is `{ id, legs, claim, run(context) -> { legs, observations, claim? } }`. ----
@@ -489,8 +490,9 @@ const checks = [
       };
       const observations = { registryCommands: commands, capabilities, unavailableDeclared, problems };
       // The live CLI is the CLI at `head` only when the checked-out tree is `head`.
-      if (!checkedOutAt(headRevision)) {
-        return { legs: { ...staticLegs, liveCliProbes: null }, observations: { ...observations, liveCli: { run: false, reason: 'head is not the clean checked-out revision' } } };
+      const notLive = notCheckedOutAt(headRevision);
+      if (notLive !== null) {
+        return { legs: { ...staticLegs, liveCliProbes: null }, observations: { ...observations, liveCli: { run: false, reason: notLive } } };
       }
       const manifest = JSON.parse(runMuxui(['manifest', '--detail', 'full', '--json']).stdout);
       const liveCommands = manifest.data.cli.commands.map(({ name }) => name);
