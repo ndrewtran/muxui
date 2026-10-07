@@ -78,6 +78,7 @@ consistently:
 | --- | --- |
 | `ArtifactRef` | Immutable logical identity in the form `muxui:<kind>:<slug>`; it is neither a version nor a content digest. |
 | Concept record | Canonical shared semantics, lifecycle, guidance, relations, and platform dispositions for a component or pattern. |
+| Block | The public product name for a `pattern` artifact, shown in the Blocks showcase (Decision 0026). It is a display name only: there is no `block` kind, ID prefix, schema, or relation. |
 | Binding spec | Platform-specific Mux UI API, behavior, accessibility obligations, strategy, examples, and proof requirements. |
 | Decision context | Bounded rationale attached to an existing concept, pattern, or guide: the problem, constraints, preferred approach, alternatives, and trade-offs. It explains owned facts but is not a second source of product behavior. |
 | Guidance impact | `normative` content enters a binding-spec compatibility closure; `editorial` content may explain an already-owned fact but cannot define implementation behavior. |
@@ -534,6 +535,45 @@ pattern validation is a later static-analysis capability with its own manifest,
 version support, diagnostics, escape hatches, and false-positive budget; it is
 not implied by `PatternRecord` validation.
 
+**Staged fields (Decision 0026).** The first delivered `PatternRecord` schema,
+enabled with the Blocks showcase slice, requires identity, name, summary,
+lifecycle, keywords, a category from a closed enum in two groups (application
+and marketing), intent, platforms, participants, variants, accessibility notes,
+and unsupported cases. Composition relations,
+invariants, and the closed parameter schema are defined by the schema but
+optional, and the compiler validates whatever a record declares. `plan` and any
+other pattern-derived claim require them, so the planner never selects a
+pattern that omits them. Pitfall and alternative references, decision context,
+and preconditions are not part of this delivery and arrive later as optional
+fields. This stages the list above; it narrows nothing else.
+
+**Variants (Decision 0026).** A pattern's executable examples are its variants.
+Each variant is exactly one `ExampleRecord`, and an `ExampleRecord` has exactly
+one owner: a component binding or one pattern variant, never both. A variant's
+`example-of` edge targets the pattern, is authored once on the pattern's
+`variants` list, is `normative`, and enters the pattern revision closure with
+the example's record and source bytes, which is how a variant declares its
+applicable pattern revision. A component's examples are only those
+bound to it, and its "used in" view is derived from pattern participant
+references. The compiler rejects a pattern with no variants, a missing or
+duplicate variant example, an unknown participant, and a variant example that
+imports a Mux component the pattern does not declare as a participant, the
+narrow structural check this section already allows. Decision 0026 records the
+ontology-budget justification for extending the `example-of` target set.
+
+**Bounded blocks (Decision 0026).** A block, whether an application composition
+or a marketing page section, is a bounded composition under this section. It
+covers one page region, has no routing, no business state, and no data
+fetching, and is composed only of admitted Mux components plus plain layout
+markup (`section`, `div`, headings, and lists styled with semantic tokens).
+Anything that needs a new reusable component waits for that component's own
+family admission, and a block never introduces one implicitly. This is how a
+block stays inside the v1 exclusion of page-archetype, journey, and flow kinds
+below. Block placeholder copy and imagery are demonstration material, never
+Mux UI product truth. Copy is generic and Mux-authored. Imagery is Mux-authored
+SVG or CSS, or an asset with a recorded license and disclosure. A block carries
+no third-party brand logo or mark and no real person's name or likeness.
+
 ### Narrative guides remain portable
 
 Not every useful explanation belongs in JSON. Cross-cutting material such as
@@ -827,6 +867,17 @@ fork the operation's implementation.
 The website is a catalog client, not a documentation authority. A component
 page is a rendering of `artifact.detail`; it does not maintain a second prop
 table, example, or pitfall list.
+
+**Blocks projection (Decision 0026).** The private docs application may render
+pattern records as a Blocks section with its own master-detail layout: a rail
+to browse by category, block, and variant, to search, and to filter by
+participant component, beside one large preview that can also show the exact
+variant example source. It is a catalog client over pattern records and variant
+examples, and the query engine answers its search and filter with the same
+responses as the CLI. It owns no block, pattern, example, search, or prose
+fact, and its preview loads the canonical executable example rather than a
+copy. It is unpublished. It is not the public documentation or explorer, which
+remain P2.3, and it satisfies none of their proof.
 
 `AGENTS.md`, `CLAUDE.md`, editor rules, and `llms.txt` are small generated
 bootstrap files. They teach the discovery loop and record the installed Mux UI

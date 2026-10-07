@@ -1,5 +1,5 @@
 ---
-scopeVersion: 14.0.2
+scopeVersion: 15.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -119,6 +119,16 @@ Product Scope `14.0.2` applies accepted Decision 0023 as a patch
 clarification: the `SCOPE-PRODUCT-REACT-PRERELEASE` row now names the
 fix-forward `0.1.0-rc.N+1` that Decision 0023 and the Roadmap R1 exit already
 admit, so the row agrees with the rest of the authority chain.
+
+Product Scope `15.0.0` applies Decision 0026: it admits the private Blocks
+showcase as `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE`, delivered by the new Roadmap
+slice `BL1`, for bounded application compositions and bounded marketing page
+sections. "Block" is the public name for a `pattern` artifact, so the committed
+`SCOPE-KIND-PATTERN` gains its first delivery reference, and the first pattern
+schema stages the v1 field list. `SCOPE-NONGOAL-008` now states that block
+placeholder copy and imagery are demonstration material, not product truth, and
+that statement is the major effect. The showcase sits outside the React `0.1`
+and Productization boundaries.
 
 ## Scope vocabulary
 
@@ -244,7 +254,7 @@ scraping prose or guessing unsupported APIs.
 | `SCOPE-NONGOAL-005` | `rejected` | Generated projections repaired directly or accepted as independent authoring inputs. |
 | `SCOPE-NONGOAL-006` | `rejected` | Arbitrary LLM-generated repository, consumer-project, migration, or design-tool patches. |
 | `SCOPE-NONGOAL-007` | `rejected` | A universal prompt-only design-intent object, free-standing interpretation graph, or model-selected example ranking. |
-| `SCOPE-NONGOAL-008` | `rejected` | Application-owned routes, navigation flows, business state, analytics, product content, or screen-specific logic represented as Mux UI truth. |
+| `SCOPE-NONGOAL-008` | `rejected` | Application-owned routes, navigation flows, business state, analytics, product content, or screen-specific logic represented as Mux UI truth. Block placeholder copy and imagery under Decision 0026 are demonstration material, not Mux UI product truth. |
 | `SCOPE-NONGOAL-009` | `rejected` | A static full-catalog context file as the primary agent interface. |
 | `SCOPE-NONGOAL-010` | `rejected` | Multi-framework abstraction before a second demanded framework binding proves repeated shape. |
 | `SCOPE-NONGOAL-011` | `rejected` | Hosted execution of consumer code, project mutation, migration, extensions, or local-filesystem diagnostics. |
@@ -486,6 +496,9 @@ surface.
 | `SCOPE-PRODUCT-006` | `admitted` | Four allowlisted agent-safe canonical proposal operations. | G2.6 |
 | `SCOPE-PRODUCT-007` | `committed` | Productization release manifest, capability manifest, evidence index, install/rollback proof, and honest disabled-capability reporting. | P2 exit |
 
+The private Blocks showcase (`SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE`, BL1) is not
+part of this boundary and satisfies none of these rows.
+
 ## Platform scope
 
 | Scope ID | Commitment | Platform/binding | Product commitment |
@@ -530,7 +543,7 @@ preventing those refinements from becoming undocumented product API.
 | Scope ID | Commitment | Kind | Initial product scope |
 | --- | --- | --- | --- |
 | `SCOPE-KIND-COMPONENT` | `committed` | `component` | Shared concept semantics plus explicit platform binding specs and runtime-profile dispositions. |
-| `SCOPE-KIND-PATTERN` | `committed` | `pattern` | Bounded composition with roles, relations, parameters, constraints, examples, alternatives, pitfalls, and unsupported cases. |
+| `SCOPE-KIND-PATTERN` | `committed` | `pattern` | Bounded composition with roles, relations, parameters, constraints, examples, alternatives, pitfalls, and unsupported cases. First delivered, `experimental`, by BL1 under Decision 0026, with relations, invariants, and the parameter schema optional until G2.4. |
 | `SCOPE-KIND-TOKEN` | `committed` | `token` | Addressable token sets and values with typed layers, modes, aliases, requirements, transforms, fallbacks, override policies, and optional source-crosswalk provenance owned by the canonical token source. |
 | `SCOPE-KIND-FOUNDATION` | `committed` | `foundation` | Shared semantics, pure logic, and only evidence-backed optional portable interaction. |
 | `SCOPE-KIND-GUIDE` | `committed` | `guide` | Portable Markdown guidance with strict identity/frontmatter and optional bounded decision context. |
@@ -765,13 +778,14 @@ explicit no-activation decision without making Mux UI incomplete.
 
 | Scope ID | State | Capability | Activation trigger | Roadmap |
 | --- | --- | --- | --- | --- |
-| `SCOPE-CAP-BREADTH` | `admitted` | Deliberate component and pattern breadth | Gate 2 plus Tabs/Toast for comparable risk; every candidate has observed workflow demand, owner, platform disposition, risk class, and proof path. | G3.1 |
+| `SCOPE-CAP-BREADTH` | `admitted` | Deliberate component and pattern breadth | Gate 2 plus Tabs/Toast for comparable risk; every candidate has observed workflow demand, owner, platform disposition, risk class, and proof path. Blocks inside the Decision 0026 boundary are ordinary protected-PR delivery under BL1 and do not use this trigger. All other component and pattern breadth keeps it. | G3.1 |
 | `SCOPE-CAP-MIGRATION` | `deferred` | Declarative migrations and reviewed codemods | A real version-bounded supported migration need with retrievable old/new specs and bounded transformation. | G3.2 |
 | `SCOPE-CAP-MCP-HOSTED` | `deferred` | Read-only hosted MCP | Stable query/compatibility policy plus privacy, security, availability, cache isolation, and failure separation. | G3.3 |
 | `SCOPE-CAP-AGENT-GATES` | `admitted` | Promote selected agent evaluations | Repeated baseline, predeclared threshold/variance/retry policy, canonical prompt IDs, and a failure owner. | G3.4 |
 | `SCOPE-CAP-DESIGN-TOOL` | `admitted` | One named external design-tool interchange | Stable identities across a real release, observed workflow, export proof, loss policy, and proposal-only imports. Decision 0020 and its amendment 01 land Figma token and component export-only slices early without satisfying this trigger. Additional themes are governed by `SCOPE-CAP-THEME-AUTHORING-PRIVATE`. | G3.5 (export slices: Decision 0020 and amendment 01) |
 | `SCOPE-CAP-THEME-AUTHORING-PRIVATE` | `admitted` | Private `apps/scale` maintainer capability for adding, editing, previewing, importing, exporting, persisting, and round-tripping Mux UI themes | Canonical token/theme ownership, typed override safety, complete theme parity proof, and a disable path that leaves canonical sources authoritative. | R1.6 |
 | `SCOPE-CAP-TAILWIND-CONSUMER` | `admitted` | Optional Tailwind consumer build adapter generated from Mux UI-owned token/theme transforms | Actual consumer compilation proof; Tailwind is a consumer build dependency only and never a Mux UI runtime, peer, or styling-engine dependency. | R1.6 |
+| `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE` | `admitted` | Private Blocks showcase: the first `pattern` records with executable variants, for bounded application compositions and bounded marketing page sections, and a Blocks section in the private docs app | R1 exit complete and Decision 0026 merged. React only, copy and paste only, unpublished. Page templates, journeys, and flows stay excluded. Public deployment, install or registry commands, `plan`, and non-React blocks are separate admissions. | BL1 |
 | `SCOPE-CAP-PROMPT-SEMANTICS` | `admitted` | Promptable-semantics discovery | Privacy-safe task corpus and baseline over existing tokens, variants, patterns, decision context, and examples. Activation of any field remains separately admitted. | G3.6 |
 | `SCOPE-CAP-EXTENSIONS` | `deferred` | Extension or consumer-overlay trust model | Observed demand plus threat model, namespace, integrity, permission, confinement, timeout, revocation, and compatibility proof. | G3.7 |
 | `SCOPE-CAP-HIGHER-ORDER` | `deferred` | Page, flow, journey, or other higher-order artifact kind | Repeated unsupported design-system-owned workflows prove patterns/guides insufficient and full ontology admission passes. | G3.8 |
@@ -818,6 +832,7 @@ Raw component count is never a scope objective.
 | Public catalog/tooling packages, descriptors, CLI, compatibility, releases, and historical catalogs for React | P2.1 |
 | React consumer installation, local authority, and bounded validation | P2.2 |
 | React site, explorer, static bootstrap, guides, and public installed-local MCP | P2.3 |
+| Private Blocks showcase over pattern records | BL1, independent of P2.1 through P2.3 and satisfying none of their evidence |
 | Framework-free web and native products | W1 and N1 only after separate activation |
 | Cross-platform comparison/equivalence and stable React promotion | X1 and S1 only after separate activation |
 | Grounded composition planning | G2.4 when enabled |
@@ -1478,3 +1493,75 @@ decisions are append-only.
 
 Tracker migration: none. No open work changes, and this change creates no
 tracker items.
+
+## Product Scope 15.0.0: Blocks showcase admission
+
+[Decision 0026](../decisions/0026-blocks-showcase-admission.md) admits a private
+Blocks showcase and the first `pattern` records. This section is the
+product-scope change-control record.
+
+1. **Observed workflow and outcome.** Andrew wants a showcase and
+   copy-and-paste resource for components and for reusable compositions,
+   including application compositions and marketing page sections, like
+   Tailwind Plus UI Blocks. The poster grid composition was cut from the
+   GridList and Virtualizer guides because component documentation shows core
+   usage only. Outcome: a bounded composition of admitted components can be
+   browsed, previewed, and copied from its exact executable source.
+2. **Affected Scope IDs and transitions.** `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE`
+   is added as `admitted`. `SCOPE-KIND-PATTERN` stays `committed`; its row gains
+   a delivery reference. `SCOPE-NONGOAL-008` stays `rejected`; its row gains the
+   statement that block placeholder copy and imagery are demonstration
+   material, not Mux UI product truth. `SCOPE-CAP-BREADTH` stays `admitted`; its
+   trigger text records that blocks inside the Decision 0026 boundary are
+   delivered under BL1 and do not use it. No ID is removed, split, replaced, or
+   transitioned. `SCOPE-GUIDE-COMPOSITION`, `SCOPE-SURFACE-API`,
+   `SCOPE-SURFACE-CLI`, `SCOPE-SURFACE-SITE`, `SCOPE-CMD-LIST`,
+   `SCOPE-CMD-SEARCH`, and `SCOPE-CMD-GET` are realized for the `pattern` kind
+   without change, and `SCOPE-NONGOAL-012` keeps its workflow-value
+   requirement. Not claimed: `SCOPE-PRODUCT-003`,
+   `SCOPE-SURFACE-EXPLORER-WEB`, `SCOPE-PRODUCT-004`, `SCOPE-CMD-PLAN`,
+   `SCOPE-CAP-CONSUMER-PATTERN`, and `SCOPE-CMD-INIT`.
+3. **Architecture compatibility.** Architecture already makes `pattern` an
+   addressable kind and keeps the website a catalog client. It is amended to
+   define "Block", to stage the first `PatternRecord` fields, to add variant
+   ownership, the bounded-block test and content rules, and the Blocks
+   projection. A block stays inside Architecture's v1 exclusion of
+   page-archetype, journey, and flow kinds by the bounded-block test. Decision
+   0026 records the ontology-budget justification for adding `pattern` to the
+   `example-of` target set. One owner per fact, the generated-output rule, and
+   the Roadmap's non-waivable rules are unchanged.
+4. **Roadmap coverage.** BL1 and `E-BL1-01` through `E-BL1-11`. BL1 is added to
+   the milestone register and dependency map, with R1 exit as its only hard
+   dependency, and G3.1 records that blocks inside the boundary are delivered
+   under BL1.
+5. **Platform, package, version, migration, authoring, proof, privacy,
+   security, and rollback effects.** Platform: `web.react` only. Packages: no
+   new package and no `@muxui/react` change. Version: schema and catalog minor,
+   and `@muxui/catalog` and `@muxui/tooling` minor where their surface grows.
+   Migration: none, because existing sources stay valid. Authoring: scaffold,
+   semantic diff, revision explainer, affected closure, and diagnostics cover
+   patterns. Proof: the eleven BL1 assertions, with page-width visual evidence
+   for marketing blocks, a content-rules check, and no assistive-technology
+   claim (Decision 0022). Privacy and security: previews run repository-owned
+   example code only, the section collects no analytics or consumer data, and
+   block content follows the content rules (generic Mux-authored copy, no
+   third-party brand marks, no real names or likenesses, licensed and disclosed
+   assets only). Rollback: delete the pattern records, the Blocks section, and
+   the pattern kind's support.
+6. **Release scope additions and removals.** None added to or removed from the
+   React `0.1` or Productization boundaries. The showcase belongs to neither,
+   and nothing is published, retagged, or deployed.
+7. **Tracker migration.** No existing item changes. A `decision` item for the
+   authority change and a `milestone` item for BL1 are needed and are not
+   created by this change.
+
+The effect is major under "Scope-version effects", which lists redefining a
+non-goal. The statement on `SCOPE-NONGOAL-008` gives block demonstration content
+a reading the non-goal did not state before. It is arguably a clarification,
+but the change cannot show that the non-goal's meaning is unchanged, so this
+change takes the conservative route. Without that statement the change would
+be minor: it adds an `admitted` item and stages the first delivery of a
+committed kind, with no change to a committed outcome, platform, release
+boundary, package, or public surface. The showcase stays private and
+unpublished, and `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE` stays `admitted`; a public
+deployment would be a separate admission with a new Scope ID.

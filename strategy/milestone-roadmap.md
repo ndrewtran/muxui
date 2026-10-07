@@ -224,6 +224,7 @@ flowchart TD
   n1["N1 React Native, later"]
   x1["X1 cross-platform claims, later"]
   s1["S1 stable React promotion, later"]
+  bl1["BL1 Blocks showcase, private"]
   optional["Other independently admitted capabilities"]
 
   g00 --> g01 --> g02 --> g03
@@ -250,6 +251,7 @@ flowchart TD
   w1 -. relevant exits .-> x1
   n1 -. relevant exits .-> x1
   r1exit -. stabilization demand .-> s1
+  r1exit --> bl1
   p2exit --> optional
 ```
 
@@ -1120,6 +1122,9 @@ publication authorization or change the final R1-exit merge stop.
   `E-P2.3-01…05`.
 - `P2 exit` completes React Productization without claiming another renderer.
   Evidence: `E-P2-EXIT-01…05`.
+- `BL1` delivers the private Blocks showcase after R1 exit, independently of
+  P2.1 through P2.3 and without satisfying any of their evidence (Decision
+  0026). Evidence: `E-BL1-01…11`.
 - `W1.0` activates framework-free web only after R1 exit, observed demand, an
   accepted exact lock, and explicit human activation. `W1.1…W1 exit` own its
   independent component/release proof.
@@ -1138,6 +1143,137 @@ publication authorization or change the final R1-exit merge stop.
   makes the declared class the basis of promotion evidence, every exported
   component also declares its risk class and passes the manual and
   assistive-technology evidence that class requires.
+
+### BL1 Blocks showcase
+
+[Decision 0026](../decisions/0026-blocks-showcase-admission.md) admits this
+slice under `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE`. It is a separately named
+slice, not a P2.x milestone. It may start once Decision 0026 merges, and it
+satisfies and claims none of P2.3 exit, G2.4, or `SCOPE-CMD-PLAN`.
+
+**Objective:** Deliver the first `pattern` records and a private Blocks
+showcase, so a bounded composition of admitted components, application or
+marketing, can be browsed, previewed in isolation, and copied from its exact
+executable source, without a second registry or any public claim. The slice
+serves the React renderer: each variant example is an acceptance fixture that
+exercises admitted components in composition, and the poster grid is the
+fixture for GridList grid layout and Virtualizer grid mode.
+
+**Entry conditions**
+
+- R1 exit is complete, with `E-R1-EXIT-01` through `E-R1-EXIT-04` retained.
+- Decision 0026 and Product Scope `15.0.0` are accepted and merged.
+- The activation packet is recorded per "Milestone activation and review
+  packet".
+- The poster grid waits for GridList grid layout and Virtualizer grid mode to
+  merge. No other seed block waits for it.
+
+**Primary ownership**
+
+- `@muxui/schema`: the pattern schema, its closed category enum and groups,
+  field ownership, and the relation registry (`example-of` target `pattern`,
+  owned by `pattern.variants`).
+- `@muxui/catalog`: compiler support, pure `list`, `search`, and `get` over
+  patterns, and the derived participant and "used in" views.
+- `@muxui/tooling`: the CLI adapter and pattern authoring support.
+- `catalog/patterns/<slug>/`: pattern records, variant example records, example
+  sources, and the license and disclosure record for any asset that is not
+  Mux-authored.
+- `apps/docs` (Blocks section) and `apps/react-storybook` (generated variant
+  stories): projections that own no fact.
+- `@muxui/react`: unchanged.
+
+**Deliverables**
+
+- The `pattern` schema with the staged v1 fields (Architecture, "Patterns are
+  bounded composition specifications"), the closed category enum in two groups
+  (Application: Collections, Forms, Feedback, Conversation, Navigation;
+  Marketing: Hero, Features, Pricing, Call to action, Testimonials, FAQ, Stats,
+  Logo cloud, Newsletter, Footer), the `catalog/patterns/` source convention,
+  and catalog compiler support for the four negative paths: an unknown
+  participant, a variant example importing a Mux component that is not a
+  declared participant, a missing or duplicate variant example, and a pattern
+  with no variants. The capability manifest reports `pattern` as an enabled
+  kind only with this support.
+- Pattern authoring support: a scaffold that creates only canonical inputs,
+  semantic diff, revision explainer, affected closure, and source-linked
+  diagnostics that cover patterns and their variant examples.
+- `list`, `search`, and `get` accept `pattern` through the API and CLI human,
+  JSON, and dense output, including a component participant filter. A pattern
+  `get` returns its participants, its variants, and the same example source the
+  site shows. A component `get` returns the derived "used in" view.
+- The existing example typecheck, packed render and hydration, and generated
+  Storybook stories enumerate variant examples.
+- The content-rules check over variant example sources and assets.
+- The Blocks section in `apps/docs`, with its own full-width master-detail
+  layout as Andrew picked: a left rail with category, block, and variant,
+  search, and a "uses component" filter, and one large isolated preview with
+  width presets, a drag handle, a theme switch, and Preview, Code, and Split
+  views. The Code view shows the exact example source with copy. The preview
+  loads the canonical example. Component pages keep only component-bound
+  examples and gain "Used in blocks".
+- Seed blocks: the poster grid (CSS-grid and virtualized variants), a marketing
+  hero, and a marketing pricing section, plus optionally one application block
+  named in the activation packet. Each uses only admitted components.
+- The catalog regression baseline recorded with the seed set.
+- The BL1 evidence index.
+
+**Block growth.** After the seed set, a further block inside the Decision 0026
+boundary that uses admitted components and existing categories is ordinary
+protected-PR delivery under BL1. It carries `E-BL1-03` through `E-BL1-08` for
+its variants, `E-BL1-10` for its content, and `E-BL1-11`, and it needs no
+further decision. A new category, an unadmitted component, or a boundary change
+still needs a decision.
+
+**Acceptance evidence**
+
+| ID | Required assertion | Retained evidence |
+| --- | --- | --- |
+| `E-BL1-01` | The pattern schema is closed and a valid record compiles. Each negative fixture fails with a diagnostic that names the earliest owner: an unknown field, a category outside the enum, an unknown participant, a variant example importing an undeclared Mux component, a missing variant example, a duplicate variant example, and a pattern with no variants. | Schema and compiler positive and negative fixtures. |
+| `E-BL1-02` | The pattern kind has authoring support: a scaffold round-trips through validation and compilation, and semantic diff, revision explainer, affected closure, and source-linked diagnostics cover patterns and variant examples. | Authoring fixtures. |
+| `E-BL1-03` | Every variant example typechecks against the packed `@muxui/react` declarations and passes packed SSR and hydration. | Packed-consumer proof per variant. |
+| `E-BL1-04` | Every variant example passes light and dark axe and colour audits through generated Storybook stories, and every interactive block passes keyboard, focus, and state browser checks. | Storybook audit reports and browser tests. |
+| `E-BL1-05` | Every enabled pattern appears in the Blocks rail and opens its block, each preview loads its canonical example, and the Code view equals the example source bytes. | Docs check report. |
+| `E-BL1-06` | Each variant is captured at every width preset in light and dark. Each marketing variant is also captured at every page-width preset, narrowest to widest, in light and dark, with no horizontal overflow at any preset. | Retained visual captures and overflow report. |
+| `E-BL1-07` | The API, CLI JSON, human, and dense output, and the site loader return the same normalized response for pattern `list`, `search`, and `get`, for the participant filter, and for the derived "used in" view, and component pages list only component-bound examples. | Surface-parity matrix. |
+| `E-BL1-08` | Repeated generation leaves the worktree unchanged, and the catalog digest changes only for the added sources. | Generation identity digest. |
+| `E-BL1-09` | `@muxui/react` has no API, export, or version change. Nothing is published, retagged, or deployed. No assistive-technology support claim is made (Decision 0022). `plan`, install, registry, and consumer scaffold are absent or explicitly unavailable. | Platform, release, and negative-boundary audit. |
+| `E-BL1-10` | Variant example sources and assets contain no external URL or remote asset and no literal colour value, and every asset that is not Mux-authored has a recorded license and disclosure. An independent review of each block's content finds no third-party brand logo or mark, no real person's name or likeness, and only generic Mux-authored copy. | Content scan report and content review record. |
+| `E-BL1-11` | A catalog regression report is recorded for the seed set as the baseline. Each block added later keeps discovery precision, search results, and dense budgets within thresholds fixed before measurement, and states its workflow value in its pattern record. | Catalog regression report. |
+
+**Scope controls**
+
+- React only: no `web.html`, native, or other-framework blocks.
+- Copy and paste only: no install command, registry, consumer scaffold, or
+  project write. Those stay with G3.11 and G2.5.
+- Bounded compositions only. A block covers one page region, has no routing, no
+  business state, and no data fetching, and is composed only of admitted Mux
+  components plus plain layout markup. Page templates, journeys, flows, and
+  application-owned content stay excluded under Architecture's v1 boundaries
+  and G3.8.
+- Block placeholder copy and imagery are demonstration material, not product
+  truth, and follow the content rules in Decision 0026.
+- No new component, family, token, or dependency. A block that needs an
+  unadmitted component waits for that component's own admission and merge, and
+  agentic blocks wait for their components.
+- Blocks inside the Decision 0026 boundary are delivered under BL1, outside
+  G3.1. All other component and pattern breadth stays with G3.1.
+  `SCOPE-NONGOAL-012` still bars block count as a goal.
+- `muxui plan` stays unavailable. A pattern that omits relations, invariants,
+  or the parameter schema is never selected by the G2.4 planner, and BL1
+  patterns neither satisfy nor lower G2.4's entry conditions.
+- The docs site stays private and unpublished. Public deployment, hosting, and
+  any claim on `SCOPE-PRODUCT-003` or `SCOPE-SURFACE-EXPLORER-WEB` are
+  separate decisions, and BL1 evidence never satisfies `E-P2.3-01…05`.
+- The Blocks section owns no block, pattern, example, search, or prose fact and
+  is not a second registry (`SCOPE-NONGOAL-003`).
+- Disabling the Blocks section or the pattern kind leaves every component
+  record, example, and guide unchanged.
+
+**Exit condition:** The pattern kind compiles and is retrievable through the
+API, CLI, and private Blocks section with surface parity, and the poster grid,
+the marketing hero, and the marketing pricing section pass `E-BL1-01` through
+`E-BL1-11` with every claim above left unmade.
 
 ## Historical Gate 1 — superseded cross-platform sequence
 
@@ -1368,6 +1504,9 @@ have proved the reusable authoring, renderer, and evidence paths.
   wrappers or aliases.
 - Product-specific workflows stay in applications unless a bounded reusable
   pattern satisfies ontology admission.
+- Blocks inside the Decision 0026 boundary are delivered under BL1 as ordinary
+  protected-PR work and are outside this milestone's queue. All other
+  component and pattern breadth stays here.
 
 **Exit condition:** Catalog breadth grows through proved user workflows without
 weakening ownership, renderer priority, retrieval quality, or evidence.
@@ -1860,11 +1999,12 @@ valid outcomes and do not make the core product incomplete.
 | R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
 | R1.5 | React breadth closure | R1.1–R1.4 and the fixed 53-family 53/53 closure | R1.6 |
 | R1.6 | React parity and private Mux theme authoring | R1.5 and Decision 0013 | R1 exit |
-| R1 exit | React prerelease publication | R1.5, R1.6, and exact publish authorization | P2.1; optional W1/N1/S1 activation reviews |
+| R1 exit | React prerelease publication | R1.5, R1.6, and exact publish authorization | P2.1; BL1; optional W1/N1/S1 activation reviews |
 | P2.1 | React packages, catalog, CLI, compatibility | R1 exit and accepted public package graph | P2.2, P2.3, P2 exit |
 | P2.2 | React consumer validation/local authority | P2.1 | P2.3, P2 exit |
 | P2.3 | React docs, explorer, bootstrap, local MCP | P2.2 | P2 exit |
 | P2 exit | React Productization | P2.1–P2.3 plus each enabled optional P2 capability | Later capabilities |
+| BL1 | Blocks showcase (private) | R1 exit; Decision 0026 and Product Scope 15.0.0 merged | Nothing; not an entry or exit condition of P2.1 through P2 exit |
 | W1.0 | Framework-free web activation | R1 exit, demand, accepted lock, explicit activation | W1 tranches |
 | N1.0 | React Native activation | R1 exit, demand, accepted platform/profile lock, explicit activation | N1 tranches |
 | X1.0 | Cross-platform comparison/equivalence | Relevant R1/W1/N1 exits | Exact claimed matrix only |
@@ -1931,7 +2071,7 @@ remove or weaken these assertions without changing the architecture.
 | Canonical artifact graph and one owner per fact | G0.1 schemas/ownership, G0.2 graph/compiler, G0.5 authoring, all slice deliverables. |
 | Content versus binding-spec revision | G0.1 closure proof, G0.5 explainers, R1 tranche examples, P2.1 release/version effects. |
 | Deterministic example curriculum | R1 tranche examples and preferences, R1.5 enabled-surface parity, G2.4 planning. |
-| Bounded patterns and portable guides | R1.2 Form pattern, G2.4 planner, P2.3 guide/site projection, G3.8 admission boundary. |
+| Bounded patterns and portable guides | R1.2 Form pattern, BL1 pattern kind and private Blocks projection, G2.4 planner, P2.3 guide/site projection, G3.8 admission boundary. |
 | Ontology growth budget | Global scope admission, G3.6 discovery, G3.7–G3.11 per-capability entry controls. |
 | CLI as documentation | G0.3 private baseline, P2.1/P2.2 public installed-local guidance, P2.3 site/bootstrap projection. R1 tarball guidance is narrower and generated. |
 | One query engine and thin adapters | G0.2 kernel, G0.3 private CLI, P2.1/P2.2 public query/CLI, P2.3 site/MCP, G3.3 hosted MCP. |

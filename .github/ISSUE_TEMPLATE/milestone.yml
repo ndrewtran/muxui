@@ -22,6 +22,7 @@ body:
         - N1.0
         - X1.0
         - S1.0
+        - BL1
     validations:
       required: true
   - type: textarea
