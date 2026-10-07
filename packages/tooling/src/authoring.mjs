@@ -13,17 +13,24 @@ import {
   contentRevision,
   contentRevisionPreimage,
   parseJsonStrict,
+  patternRevision,
+  patternRevisionPreimage,
   resolveAuthoringField,
   validateFamily,
 } from '@muxui/schema';
 import {
   discoverWorkspacePackages,
 } from '../../../tooling/audits/repository-policy/src/workspace-packages.mjs';
-import { compileCatalog } from '@muxui/catalog/compiler';
+import { CatalogSourceError, compileCatalog } from '@muxui/catalog/compiler';
+import { CANONICAL_IMPORT_FORM, scanReactImports } from '@muxui/catalog/pattern-imports';
 
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
 const EFFECT_ORDER = Object.freeze({ editorial: 0, compatible: 1, incompatible: 2 });
 const DERIVED_COMPONENT_FIELDS = new Set(['schemaVersion', 'id', 'kind']);
+// `variants` come from the scaffold's variant list; a variant's `source` is its
+// path, and it never carries a `binding` (the pattern owns it).
+const DERIVED_PATTERN_FIELDS = new Set(['schemaVersion', 'id', 'kind', 'variants']);
+const DERIVED_EXAMPLE_FIELDS = new Set(['schemaVersion', 'id', 'kind', 'source', 'binding']);
 
 export class AuthoringPolicyError extends Error {
   constructor(ruleId, message, details = {}) {
@@ -77,14 +84,18 @@ function deepFreeze(value) {
   return value;
 }
 
-export function scaffoldComponent({ slug, recordPath, decisions, authoring = {} } = {}) {
+function assertSlug(slug, field) {
   if (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(slug)) {
     throw new AuthoringPolicyError(
       'authoring.scaffold.slug',
-      'slug must use the canonical lower-kebab convention',
-      { field: 'slug' },
+      `${field} must use the canonical lower-kebab convention`,
+      { field },
     );
   }
+}
+
+export function scaffoldComponent({ slug, recordPath, decisions, authoring = {} } = {}) {
+  assertSlug(slug, 'slug');
   assertRelativePath(recordPath, 'recordPath');
   if (!recordPath.endsWith('.json')) {
     throw new AuthoringPolicyError(
@@ -126,6 +137,152 @@ export function scaffoldComponent({ slug, recordPath, decisions, authoring = {} 
     recordPath,
     record,
     writeSet: [{ path: recordPath, bytes }],
+  });
+}
+
+/** Top-level decision fields of a family schema: which are allowed and which are required. */
+function decisionFields(family, authoring, derived) {
+  const fields = authoringMetadata(family, authoring).filter(({ schema, schemaPointer }) => (
+    schema === `${family}.schema.json`
+    && schemaPointer.startsWith('#/properties/')
+    && schemaPointer.split('/').length === 3
+  )).filter(({ field }) => !derived.has(field));
+  return {
+    allowed: new Set(fields.map(({ field }) => field)),
+    required: fields.filter(({ completion }) => completion.required).map(({ field }) => field),
+  };
+}
+
+function assertDecisions(value, { required }) {
+  for (const field of required) {
+    if (!Object.hasOwn(value, field)) {
+      throw new AuthoringPolicyError(
+        'authoring.scaffold.decision-required',
+        `the caller must supply ${field}`,
+        { field },
+      );
+    }
+  }
+  return value;
+}
+
+/** Variant sources are bundled as exact bytes and import-checked by the compiler. */
+function assertVariantSource(slug, sourceText) {
+  const fail = (ruleId, message, details = {}) => {
+    throw new AuthoringPolicyError(ruleId, `variant ${slug} ${message}`, { variant: slug, ...details });
+  };
+  if (typeof sourceText !== 'string' || sourceText.trim().length === 0) {
+    fail('authoring.scaffold.source-required', 'needs its source text');
+  }
+  if (sourceText.includes('\r')) {
+    fail('authoring.scaffold.source-newline', 'source must use LF newlines');
+  }
+  const [violation] = scanReactImports(sourceText).violations;
+  if (violation) {
+    fail(
+      'authoring.scaffold.source-import',
+      `source line ${violation.line} ${violation.message}; canonical import form: ${CANONICAL_IMPORT_FORM}`,
+      { line: violation.line, canonicalImportForm: CANONICAL_IMPORT_FORM },
+    );
+  }
+}
+
+/**
+ * Previews a pattern and its variant examples as canonical inputs under
+ * `catalog/patterns/<slug>/`. The caller supplies every decision: the pattern
+ * `decisions` (all pattern fields except `variants`) and, per variant, a
+ * `slug`, its `sourceText`, and the example fields (name, summary, lifecycle,
+ * complexity, prerequisites). The write set holds only records and sources;
+ * `manifestEntries` previews the `catalog-sources.json` lines to add. Nothing
+ * is written, and consumer files are never produced.
+ *
+ * The scaffold checks schema shape and import form only. It does not check that
+ * imported components are declared participants, that participants exist, or
+ * that an id is free; the catalog is not consulted. Those fail at compile, and
+ * `diagnoseCompileFailure` maps them to source-linked diagnostics.
+ */
+export function scaffoldPattern({ slug, decisions, variants, authoring = {} } = {}) {
+  assertSlug(slug, 'slug');
+  const patternFields = decisionFields('pattern', authoring, DERIVED_PATTERN_FIELDS);
+  assertExactKeys(decisions, patternFields.allowed, 'authoring.scaffold.decisions');
+  assertDecisions(decisions, patternFields);
+  if (!Array.isArray(variants) || variants.length === 0) {
+    throw new AuthoringPolicyError(
+      'authoring.scaffold.variants-required',
+      'a pattern needs at least one variant',
+      { field: 'variants' },
+    );
+  }
+  const exampleFields = decisionFields('example', authoring, DERIVED_EXAMPLE_FIELDS);
+  const directory = `catalog/patterns/${slug}`;
+  const examples = [];
+  for (const [index, variant] of variants.entries()) {
+    if (isObject(variant) && Object.hasOwn(variant, 'binding')) {
+      throw new AuthoringPolicyError(
+        'authoring.scaffold.variant-binding',
+        'a variant example is owned by its pattern and cannot declare a component binding',
+        { field: `variants/${index}/binding` },
+      );
+    }
+    assertExactKeys(
+      variant,
+      new Set(['slug', 'sourceText', ...exampleFields.allowed]),
+      'authoring.scaffold.variants',
+    );
+    assertSlug(variant.slug, `variants/${index}/slug`);
+    if (examples.some(({ slug: seen }) => seen === variant.slug)) {
+      throw new AuthoringPolicyError(
+        'authoring.scaffold.variant-duplicate',
+        `variant ${variant.slug} is declared more than once`,
+        { field: `variants/${index}/slug` },
+      );
+    }
+    assertDecisions(variant, exampleFields);
+    assertVariantSource(variant.slug, variant.sourceText);
+    const { slug: variantSlug, sourceText, ...exampleDecisions } = variant;
+    const base = `${directory}/examples/react/${variantSlug}`;
+    const record = {
+      schemaVersion: '1.0.0',
+      id: `muxui:example:${slug}-${variantSlug}`,
+      kind: 'example',
+      ...structuredClone(exampleDecisions),
+      source: `${base}.tsx`,
+    };
+    validateFamily('example', record, authoring);
+    examples.push({ slug: variantSlug, recordPath: `${base}.example.json`, record, sourceText });
+  }
+  const recordPath = `${directory}/artifact.json`;
+  const record = {
+    schemaVersion: '1.0.0',
+    id: `muxui:pattern:${slug}`,
+    kind: 'pattern',
+    ...structuredClone(decisions),
+    variants: examples.map((example) => ({ example: example.record.id })),
+  };
+  validateFamily('pattern', record, authoring);
+  const writeSet = [
+    { path: recordPath, bytes: `${canonicalJson(record)}\n` },
+    ...examples.flatMap((example) => [
+      { path: example.recordPath, bytes: `${canonicalJson(example.record)}\n` },
+      { path: example.record.source, bytes: example.sourceText },
+    ]),
+  ].sort((left, right) => compareText(left.path, right.path));
+  return deepFreeze({
+    mode: 'preview-only',
+    family: 'pattern',
+    recordPath,
+    record,
+    examples: examples.map(({ recordPath: path, record: example }) => ({
+      recordPath: path,
+      record: example,
+    })),
+    manifestEntries: [
+      { family: 'pattern', path: recordPath },
+      ...examples
+        .map(({ recordPath: path }) => ({ family: 'example', path }))
+        .sort((left, right) => compareText(left.path, right.path)),
+    ],
+    writeSet,
   });
 }
 
@@ -245,23 +402,39 @@ function sourceEntry(context, recordPath, family) {
   ));
 }
 
-function sourceDiagnostic(ruleId, message, { record, recordPath, path = '$', owner = null }) {
+function sourceDiagnostic(ruleId, message, {
+  record,
+  recordPath,
+  path = '$',
+  owner = null,
+  code = 'MUXUI_SCHEMA_INVALID',
+  link = {},
+  command = 'pnpm --filter @muxui/schema check',
+  extra = {},
+}) {
   return {
-    code: 'MUXUI_SCHEMA_INVALID',
+    code,
     ruleId,
     message,
     retryable: false,
     details: {
       artifactId: typeof record?.id === 'string' ? record.id : null,
-      source: { record: recordPath, path },
+      source: { record: recordPath, path, ...link },
       owner,
+      ...extra,
     },
-    nextCommand: {
-      command: 'pnpm --filter @muxui/schema check',
-      effect: 'read-only',
-      requiresConfirmation: false,
-    },
+    nextCommand: { command, effect: 'read-only', requiresConfirmation: false },
   };
+}
+
+/** The earliest editable owner of a field; families without authoring metadata fall back to their contract. */
+function fieldOwner(family, path, authoring) {
+  try {
+    const field = resolveAuthoringField(family, path, authoring);
+    return { name: field.owner, schema: field.schema, schemaPointer: field.schemaPointer };
+  } catch {
+    return { name: `${family}-contract`, schema: `${family}.schema.json`, schemaPointer: '#' };
+  }
 }
 
 export function diagnoseCanonicalSource({
@@ -287,26 +460,98 @@ export function diagnoseCanonicalSource({
     return deepFreeze({ valid: true, diagnostics: [] });
   } catch (error) {
     if (!(error instanceof SchemaValidationError)) throw error;
-    const diagnostics = error.issues.map(({ path, message }) => {
-      let owner = null;
-      try {
-        const field = resolveAuthoringField(family, path, authoring);
-        owner = {
-          name: field.owner,
-          schema: field.schema,
-          schemaPointer: field.schemaPointer,
-        };
-      } catch {
-        owner = { name: `${family}-contract`, schema: `${family}.schema.json`, schemaPointer: '#' };
-      }
-      return sourceDiagnostic(
-        'authoring.source.schema-invalid',
-        `The canonical source is invalid: ${message}`,
-        { record, recordPath, path, owner },
-      );
-    });
+    const diagnostics = error.issues.map(({ path, message }) => sourceDiagnostic(
+      'authoring.source.schema-invalid',
+      `The canonical source is invalid: ${message}`,
+      { record, recordPath, path, owner: fieldOwner(family, path, authoring) },
+    ));
     return deepFreeze({ valid: false, diagnostics });
   }
+}
+
+/**
+ * Maps a failed catalog compile to source-linked diagnostics. `records` are
+ * the parsed manifest entries, `{ family, path, record }` in manifest order.
+ * Graph and import issues name their record by `artifactId`. The compiler's
+ * per-file schema errors name nobody, so each is attributed to the first entry
+ * that fails with the same issue, which is the entry the compile stopped at.
+ * A duplicated id is the exception: the validator stops at the later
+ * declaration, so that record is the one named, and the diagnostic also
+ * references the earlier one in `details.duplicateOf`. Import issues also link
+ * the variant source file and line, and quote the canonical import form. A
+ * variant source with CRLF newlines links the variant's example record and
+ * source file. Any other non-schema failure is rethrown.
+ */
+export function diagnoseCompileFailure({ error, records = [], authoring = {} } = {}) {
+  const newline = error instanceof CatalogSourceError && error.reason === 'source-newline';
+  if (!newline && !(error instanceof SchemaValidationError)) throw error;
+  for (const [index, { path }] of records.entries()) {
+    assertRelativePath(path, `records/${index}/path`);
+  }
+  if (newline) {
+    const entry = records.find(({ family, record }) => family === 'example' && record.source === error.path);
+    return deepFreeze({
+      valid: false,
+      diagnostics: [sourceDiagnostic(
+        'authoring.compile.source-newline',
+        `${error.path} must use LF newlines: variant sources are bundled as exact bytes, so convert its CRLF line endings to LF`,
+        {
+          record: entry?.record ?? null,
+          recordPath: entry?.path ?? null,
+          path: '$/source',
+          owner: entry ? fieldOwner('example', '$/source', authoring) : null,
+          code: error.code,
+          link: { file: error.path },
+          command: 'pnpm --filter @muxui/catalog check',
+        },
+      )],
+    });
+  }
+  const issuesOf = (entry) => {
+    try {
+      validateFamily(entry.family, entry.record, authoring);
+      return [];
+    } catch (failure) {
+      if (!(failure instanceof SchemaValidationError)) throw failure;
+      return failure.issues;
+    }
+  };
+  const duplicate = error.code === 'MUXUI_ARTIFACT_ID_INVALID';
+  const diagnostics = error.issues.map((issue) => {
+    const declared = issue.artifactId === undefined
+      ? []
+      : records.filter(({ record }) => record.id === issue.artifactId);
+    const [first, second] = declared;
+    const entry = issue.artifactId === undefined
+      ? records.find((candidate) => issuesOf(candidate).some(({ path, message }) => (
+        path === issue.path && message === issue.message
+      )))
+      : duplicate ? second : first;
+    const earlier = duplicate && entry ? first : undefined;
+    const imported = issue.source !== undefined;
+    const ruleId = imported
+      ? 'authoring.compile.import-invalid'
+      : error.code === 'MUXUI_SCHEMA_INVALID'
+        ? 'authoring.compile.schema-invalid'
+        : 'authoring.compile.graph-invalid';
+    const message = imported
+      ? `${issue.message}. Canonical import form: ${CANONICAL_IMPORT_FORM}`
+      : `${error.code === 'MUXUI_SCHEMA_INVALID' ? 'The canonical source is invalid' : 'The catalog graph is invalid'}: ${issue.message}${earlier ? `; first declared in ${earlier.path}` : ''}`;
+    return sourceDiagnostic(ruleId, message, {
+      record: entry?.record ?? { id: issue.artifactId },
+      recordPath: entry?.path ?? null,
+      path: issue.path,
+      owner: entry ? fieldOwner(entry.family, issue.path, authoring) : null,
+      code: error.code,
+      link: imported ? { file: issue.source, line: issue.line } : {},
+      command: 'pnpm --filter @muxui/catalog check',
+      extra: {
+        ...(imported ? { canonicalImportForm: CANONICAL_IMPORT_FORM } : {}),
+        ...(earlier ? { duplicateOf: { artifactId: earlier.record.id, record: earlier.path } } : {}),
+      },
+    });
+  });
+  return deepFreeze({ valid: false, diagnostics });
 }
 
 function normalizedInputRows(value, path = '$', rows = []) {
@@ -332,6 +577,27 @@ function revisionAxis(name, preimage) {
     digest: canonicalDigest(preimage),
     normalizedInputs: normalizedInputRows(normalized),
   };
+}
+
+/** The inputs `patternRevision` folds: the pattern and each variant example with its exact source. */
+function patternRevisionInput({ record, examples = [], exampleSources = {}, authoring = {} }) {
+  for (const { example: id } of record.variants) {
+    if (!examples.some((candidate) => candidate.id === id)) {
+      throw new AuthoringPolicyError(
+        'authoring.revision.variant-missing',
+        `the revision context lacks the record of variant ${id}`,
+        { id },
+      );
+    }
+    if (typeof exampleSources[id] !== 'string') {
+      throw new AuthoringPolicyError(
+        'authoring.revision.variant-source-missing',
+        `the revision context lacks the source text of variant ${id}`,
+        { id },
+      );
+    }
+  }
+  return { pattern: record, examples, exampleSources, ...authoring };
 }
 
 export function explainRevisions({
@@ -380,6 +646,12 @@ export function explainRevisions({
           .map(([, value]) => value),
       ...authoring,
     })));
+  }
+  if (family === 'pattern') {
+    axes.push(revisionAxis(
+      'patternRevision',
+      patternRevisionPreimage(patternRevisionInput({ record, examples, exampleSources, authoring })),
+    ));
   }
   return deepFreeze({ family, artifactId: record.id ?? null, bindingId: bindingId ?? null, axes });
 }
@@ -483,6 +755,31 @@ function componentRevisionDelta(record, context, authoring) {
   return { content, bindings };
 }
 
+/** A revision context may carry per-side overrides, so a source-byte edit can differ across the diff. */
+function sideContext(revisionContext, side) {
+  return { ...revisionContext, ...revisionContext[side] };
+}
+
+function exampleSourceBytes(context, record) {
+  const bytes = context.exampleSources?.[record.id];
+  if (typeof bytes !== 'string') {
+    throw new AuthoringPolicyError(
+      'authoring.revision.source-missing',
+      `the revision context lacks the source text of ${record.id}`,
+      { id: record.id },
+    );
+  }
+  return bytes;
+}
+
+/**
+ * Classifies the field-level changes between two valid records of one family
+ * and reports the revisions they move. Components read `examples`, token and
+ * safety sets from `revisionContext`. Patterns read every variant's `examples`
+ * record and `exampleSources` text, and an example reads its own
+ * `exampleSources` entry. `revisionContext.before` and `.after` override the
+ * shared context per side, so a source-byte edit can differ across the diff.
+ */
 export function semanticDiff({
   family = 'component',
   before,
@@ -544,14 +841,23 @@ export function semanticDiff({
       ),
     };
   } else {
-    revisions = {
-      contentRevision: {
-        before: contentRevision(family, before, authoring),
-        after: contentRevision(family, after, authoring),
-        changed: contentRevision(family, before, authoring)
-          !== contentRevision(family, after, authoring),
-      },
-    };
+    const contentOf = (record, side) => contentRevision(family, record, {
+      ...(family === 'example'
+        ? { sourceBytes: exampleSourceBytes(sideContext(revisionContext, side), record) }
+        : {}),
+      ...authoring,
+    });
+    const content = { before: contentOf(before, 'before'), after: contentOf(after, 'after') };
+    revisions = { contentRevision: { ...content, changed: content.before !== content.after } };
+    if (family === 'pattern') {
+      const patternOf = (record, side) => patternRevision(patternRevisionInput({
+        record,
+        ...sideContext(revisionContext, side),
+        authoring,
+      }));
+      const pattern = { before: patternOf(before, 'before'), after: patternOf(after, 'after') };
+      revisions.patternRevision = { ...pattern, changed: pattern.before !== pattern.after };
+    }
   }
   return deepFreeze({
     family,
@@ -626,8 +932,8 @@ export function previewAutofix({
 }
 
 function schemaSources(authoring = {}) {
-  return new Set(authoringMetadata('component', authoring)
-    .concat(authoringMetadata('binding', authoring))
+  return new Set(['binding', 'component', 'example', 'pattern']
+    .flatMap((family) => authoringMetadata(family, authoring))
     .map(({ schema }) => `packages/schema/schemas/${schema}`));
 }
 
@@ -680,12 +986,40 @@ function artifactIdFromEndpoint(endpoint, ids) {
   return ids.has(concept) ? concept : null;
 }
 
-function relatedArtifactIds(bundle, initialIds) {
+/**
+ * Pattern participants are references, not relation edges, so the closure
+ * derives them from the pattern records. The link is directional: a component
+ * change reaches the patterns that use it, but a pattern change never reaches
+ * its participants.
+ *
+ * The closure is a conservative over-approximation: it never misses a pattern
+ * that uses a changed component, but it also reaches patterns that do not.
+ * It is transitive through relation edges, and every real binding `uses`
+ * muxui:token:default-theme, so a component change reaches the other
+ * components on that token and the patterns that use them.
+ */
+function participantLinks(bundle) {
+  return bundle.artifacts
+    .filter(({ kind }) => kind === 'pattern')
+    .flatMap(({ id, record }) => record.participants.map(({ role, component }) => ({
+      pattern: id,
+      role,
+      component,
+    })));
+}
+
+function relatedArtifactIds(bundle, initialIds, links) {
   const known = new Set(bundle.artifacts.map(({ id }) => id));
   const affected = new Set(initialIds);
   let changed = true;
   while (changed) {
     changed = false;
+    for (const { pattern, component } of links) {
+      if (affected.has(component) && !affected.has(pattern)) {
+        affected.add(pattern);
+        changed = true;
+      }
+    }
     for (const edge of bundle.relations) {
       const source = artifactIdFromEndpoint(edge.source, known);
       const target = artifactIdFromEndpoint(edge.target, known);
@@ -750,7 +1084,8 @@ export function affectedClosure({
       );
     }
   }
-  const relatedIds = relatedArtifactIds(context.catalogBundle, initialIds);
+  const links = participantLinks(context.catalogBundle);
+  const relatedIds = relatedArtifactIds(context.catalogBundle, initialIds, links);
   const relatedArtifacts = context.catalogBundle.artifacts.filter(({ id }) => relatedIds.has(id));
   const canonicalSources = new Set(sourcePaths);
   for (const artifact of relatedArtifacts) {
@@ -798,6 +1133,10 @@ export function affectedClosure({
       relatedIds.has(artifactIdFromEndpoint(source, knownIds))
       || relatedIds.has(artifactIdFromEndpoint(target, knownIds))
     )),
+    // Every participant of each affected pattern. A participant may lie outside
+    // `artifacts`: it is a reference the pattern keeps, and the closure never
+    // flows from a pattern to its participants.
+    participantLinks: links.filter(({ pattern }) => relatedIds.has(pattern)),
     projections: [...projections].sort(compareText),
     packages: packages.map(({ name, path }) => ({ name, path })),
     requiredChecks,

@@ -10,6 +10,7 @@ import {
   sha256Digest,
 } from '@muxui/schema';
 import { catalogJson } from '../generated/catalog.mjs';
+import { CatalogSourceError } from '../src/compiler.mjs';
 import { assertManifestCompleteness } from '../src/completeness.mjs';
 import {
   createCatalogApi,
@@ -149,6 +150,11 @@ test('E-BL1-01 negative: variant sources must use LF newlines so the bundle keep
     edit: (files) => files.set(cssPath, files.get(cssPath).replaceAll('\n', '\r\n')),
   });
   assert.match(error.message, /MUXUI_CATALOG_SOURCE_INVALID: fixture\/examples\/react\/css-grid\.tsx must use LF newlines/u);
+  // Authoring tools link the failure by its structured shape, not the message.
+  assert.ok(error instanceof CatalogSourceError);
+  assert.equal(error.code, 'MUXUI_CATALOG_SOURCE_INVALID');
+  assert.equal(error.reason, 'source-newline');
+  assert.equal(error.path, 'fixture/examples/react/css-grid.tsx');
 });
 
 const components = baseBundle.artifacts

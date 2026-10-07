@@ -9,6 +9,7 @@
   "exports": {
     ".": "./src/index.mjs",
     "./compiler": "./src/compiler.mjs",
+    "./pattern-imports": "./src/pattern-imports.mjs",
     "./bundle": "./generated/catalog.mjs",
     "./catalog.json": "./generated/catalog.json",
     "./catalog-package.json": "./generated/catalog-package.json",

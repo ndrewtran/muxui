@@ -96,12 +96,14 @@ test('E-BL1-01 negative: the closed schema names the earliest owner for each rec
       mutate: (record) => { record.group = 'application'; },
       path: '$/group',
       message: /derived or proved and cannot be authored/u,
+      owner: 'pattern-category-groups',
     },
     {
       label: 'authored patternRevision',
       mutate: (record) => { record.patternRevision = 'sha256:0'; },
       path: '$/patternRevision',
       message: /derived or proved and cannot be authored/u,
+      owner: 'pattern-revision-compiler',
     },
     {
       label: 'lifecycle beyond experimental',
@@ -165,10 +167,9 @@ test('E-BL1-01 negative: the closed schema names the earliest owner for each rec
   for (const { label, mutate, path, message, owner } of cases) {
     const error = patternFailure(mutate);
     assertIssue(error, { code: 'MUXUI_SCHEMA_INVALID', artifactId: patternId, path, message });
-    // Fields declared by the schema resolve through authoring metadata. An
-    // unknown or reserved field has no property, so it takes the error path;
-    // owner resolution for reserved fields arrives with authoring support.
-    if (['unknown field', 'authored group', 'authored patternRevision'].includes(label)) {
+    // Declared fields resolve through authoring metadata and reserved fields through
+    // their reserved row; an unknown field has no owner to resolve.
+    if (label === 'unknown field') {
       assert.throws(() => ownerOf(path), SchemaValidationError, label);
     } else {
       assert.equal(ownerOf(path), owner, label);

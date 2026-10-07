@@ -1,12 +1,13 @@
 import { canonicalDigest } from './canonical.mjs';
 import {
+  familyFiles,
   loadFamilySchema,
   resolveSchemaReference,
 } from './contracts.mjs';
 import { loadFieldOwnershipRegistry } from './field-ownership.mjs';
 import { SchemaValidationError } from './validation.mjs';
 
-const AUTHORING_FAMILIES = Object.freeze(['binding', 'component', 'pattern']);
+const AUTHORING_FAMILIES = Object.freeze(['binding', 'component', 'example', 'pattern']);
 const EFFECTS = new Set(['editorial', 'compatible', 'incompatible']);
 const OPERATIONS = Object.freeze(['add', 'remove', 'replace']);
 const REVISION_AXES = new Set(['content', 'binding-content', 'binding-spec', 'pattern-spec']);
@@ -295,6 +296,37 @@ function ownerFor(fileName, schemaPointer, ownership) {
   return field.owner;
 }
 
+/**
+ * Authored source may not carry a reserved derived or proved field, and such a
+ * field has no schema property. Where the validator forbids one (a record
+ * root, a component binding, or a runtime profile), its owner is the reserved
+ * row's owner. A row may narrow itself to `families`.
+ */
+function reservedResolution(family, field, current, ownership) {
+  const refs = [current.schema?.$ref, ...(current.schema?.allOf ?? []).map((part) => part.$ref)];
+  const forbiddenHere = current.pointer === '#'
+    || refs.some((ref) => [familyFiles.binding, '#/$defs/runtimeProfile'].includes(ref));
+  if (!forbiddenHere) return null;
+  const reserved = (ownership ?? loadFieldOwnershipRegistry()).reservedFields ?? [];
+  const index = reserved.findIndex((entry) => (
+    entry.name === field && (entry.families === undefined || entry.families.includes(family))
+  ));
+  if (index === -1) return null;
+  return {
+    family,
+    field,
+    schema: 'field-ownership.json',
+    schemaPointer: `#/reservedFields/${index}`,
+    owner: reserved[index].owner,
+    reserved: reserved[index].class,
+    completion: { required: false },
+    // Never authorable: any presence is a rejection, and no revision axis folds it.
+    effects: Object.fromEntries(OPERATIONS.map((operation) => [operation, 'incompatible'])),
+    revisionAxes: [],
+    autofixes: [],
+  };
+}
+
 export function resolveAuthoringField(family, path, { schemas, ownership } = {}) {
   validateAuthoringMetadata({ schemas, ownership });
   const { fileName, schema } = loadFamilySchema(family, schemas);
@@ -318,7 +350,10 @@ export function resolveAuthoringField(family, path, { schemas, ownership } = {})
       segment,
       schemas,
     );
-    if (!property) break;
+    if (!property) {
+      resolved = reservedResolution(family, segment, current, ownership) ?? resolved;
+      break;
+    }
     const authoring = normalizeAnnotation(
       property.schema['x-muxui-authoring'],
       `${property.pointer}/x-muxui-authoring`,

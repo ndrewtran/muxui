@@ -120,9 +120,47 @@ test('E-G0.5-02: every declared revision axis matches its digest preimage member
     }).pattern),
     'variants',
   ]);
+  // An example enters a revision as its whole-record content revision, so a field is in a
+  // preimage when the record that preimage folds carries it. A bound example folds into the
+  // binding spec only when normative, and a variant folds into its pattern; neither carries
+  // the other's fields, so the per-field annotation may over-claim but must never under-claim.
+  const sourceBytes = '<Button disabled={false}>Save</Button>\n';
+  const bound = example();
+  const variant = variantExample();
+  const revisionOf = (record) => contentRevision('example', record, { sourceBytes });
+  const [normative] = bindingSpecRevisionPreimage({
+    component: component(),
+    bindingId: 'web.react',
+    examples: [bound],
+    exampleSources: { [bound.id]: sourceBytes },
+    tokenSources: [tokenSource()],
+  }).normativeExamples;
+  const [listed] = patternRevisionPreimage({
+    pattern: specifiedPattern(),
+    examples: [variant],
+    exampleSources: { [variant.id]: sourceBytes },
+  }).variants;
+  const exampleFolds = {
+    content: Object.keys(contentRevisionPreimage('example', bound, { sourceBytes }).record),
+    'binding-spec': normative.revision === revisionOf(bound) ? Object.keys(bound) : [],
+    'pattern-spec': listed.revision === revisionOf(variant) ? Object.keys(variant) : [],
+  };
   const declarations = validateAuthoringMetadata();
 
-  for (const declaration of declarations) {
+  for (const declaration of declarations.filter(({ family }) => family === 'example')) {
+    const field = firstProperty(declaration.schemaPointer);
+    for (const [axis, fields] of Object.entries(exampleFolds)) {
+      if (fields.includes(field)) {
+        assert.ok(declaration.revisionAxes.includes(axis), `example${declaration.schemaPointer} omits ${axis}`);
+      }
+    }
+    assert.ok(
+      declaration.revisionAxes.every((axis) => Object.hasOwn(exampleFolds, axis)),
+      `example${declaration.schemaPointer} declares an axis no example folds into`,
+    );
+  }
+
+  for (const declaration of declarations.filter(({ family }) => family !== 'example')) {
     let expected;
     if (declaration.schema === 'pattern.schema.json') {
       expected = [
