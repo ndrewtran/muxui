@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:marketing-hero",
+  "kind": "pattern",
+  "name": "Marketing hero",
+  "summary": "A split hero with a headline, supporting text, two actions, and a product visual.",
+  "lifecycle": "experimental",
+  "keywords": ["hero", "landing", "marketing", "headline", "split", "banner"],
+  "platforms": ["web.react"],
+  "category": "hero",
+  "intent": {
+    "useWhen": [
+      "Opening a landing page with a headline and a primary action",
+      "Showing a product visual beside the message"
+    ],
+    "avoidWhen": [
+      "The page needs navigation or header chrome",
+      "There is no visual to show beside the text"
+    ]
+  },
+  "participants": [
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:marketing-hero-split" }],
+  "accessibility": [
+    "The section is named by its h1; keep one h1 per page and set the heading level to your page outline.",
+    "Both actions are Buttons that trigger an action; wire them with onActivate, or use a Link where an action only navigates.",
+    "The visual is decorative and hidden from assistive technology; give an informative visual a text alternative.",
+    "Below 40rem of container width the layout is one column and the text stays first in reading order."
+  ],
+  "unsupported": [
+    "Background media, video, or full-bleed images",
+    "Navigation or header chrome",
+    "Real product imagery: the visual is a placeholder illustration",
+    "An outlined button: Mux Button has no outlined variant, so the second action uses neutral"
+  ],
+  "workflowValue": "Replaces hand-building a two-column hero: the container query keeps the text before the visual on narrow containers and lets both actions share one row, so you swap the copy and the illustration and keep the layout."
+}

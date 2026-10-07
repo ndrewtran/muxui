@@ -192,7 +192,7 @@ async function compileSeed({ edit = () => {} } = {}) {
       await writeFile(join(root, path), text);
     }
     const manifest = JSON.parse(await readFile(join(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
-    manifest.records = manifest.records.filter(({ path }) => MINIMAL_SOURCES.test(path) || path.startsWith('catalog/patterns/'));
+    manifest.records = manifest.records.filter(({ path }) => MINIMAL_SOURCES.test(path) || path.startsWith(`${directory}/`));
     await writeFile(join(root, 'catalog-sources.json'), JSON.stringify(manifest));
     return await compileCatalog({ repositoryRoot: root, sourceManifestPath: 'catalog-sources.json' });
   } catch (error) {

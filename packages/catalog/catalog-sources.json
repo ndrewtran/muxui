@@ -1008,6 +1008,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/poster-grid/examples/react/virtualized.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/marketing-hero/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/marketing-hero/examples/react/split.example.json"
     }
   ]
 }

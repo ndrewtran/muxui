@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:marketing-hero-split",
+  "kind": "example",
+  "name": "Split",
+  "summary": "A two-column hero that stacks to one column, text first, below 40rem.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/marketing-hero/examples/react/split.tsx"
+}
