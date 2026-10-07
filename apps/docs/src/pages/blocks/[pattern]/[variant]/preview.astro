@@ -48,6 +48,7 @@ assertExampleSource(variant.sourcePath);
 	</head>
 	<body>
 		<main class="preview" data-block-group={block.group}>
+			<h1 class="preview-heading">{block.name}, {variant.name}</h1>
 			<ExampleHost source={variant.sourcePath} client:load />
 		</main>
 	</body>

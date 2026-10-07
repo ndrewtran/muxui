@@ -31,11 +31,15 @@ let filterIndexRequest: Promise<void> | null = null;
 
 function loadFilterIndex(): Promise<void> {
 	filterIndexRequest ??= fetch(FILTER_INDEX_URL)
-		.then((response) => response.json())
+		.then((response) => {
+			if (!response.ok) throw new Error(`${FILTER_INDEX_URL} returned ${response.status}.`);
+			return response.json();
+		})
 		.then((data: unknown) => {
 			if (!isFilterIndex(data)) throw new Error('The block filter index is invalid.');
 			filterIndex = data;
 		})
+		// The next filter change retries.
 		.catch(() => { filterIndexRequest = null; });
 	return filterIndexRequest;
 }
@@ -64,7 +68,10 @@ function applyFilters() {
 	const filter = { query: queryInput.value, uses: usesSelect.value };
 	const active = filter.query.trim() !== '' || filter.uses !== '';
 	if (active && filterIndex === null) {
-		void loadFilterIndex().then(() => { if (filterIndex !== null) applyFilters(); });
+		void loadFilterIndex().then(() => {
+			if (filterIndex !== null) applyFilters();
+			else countOutput.textContent = 'Filters are unavailable. Change the filter to try again.';
+		});
 		return;
 	}
 	const matched = filterIndex === null ? null : matchingBlocks(filterIndex, filter);

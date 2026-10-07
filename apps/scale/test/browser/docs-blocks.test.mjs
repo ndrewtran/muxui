@@ -11,14 +11,16 @@ import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 import test from 'node:test';
 import { chromium } from 'playwright-core';
+import { pageWidths, toolbarPresets } from '../../../docs/src/lib/block-presets.ts';
 import { chromeExecutable } from './chrome.mjs';
 
 const docsRoot = resolve(import.meta.dirname, '../../../docs/dist');
 const captureDir = process.env.MUXUI_BLOCKS_CAPTURE_DIR;
 const mimeTypes = { '.css': 'text/css', '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json', '.svg': 'image/svg+xml', '.ttf': 'font/ttf', '.woff2': 'font/woff2' };
-// Page widths a marketing section meets on a real page, narrowest to widest. The toolbar presets are read from the page.
-const PAGE_WIDTHS = [360, 768, 1024, 1280, 1920];
+// The toolbar presets and the marketing page widths come from the one module the toolbar reads.
 const THEMES = ['light', 'dark'];
+// The old header's theme picker overshot its content box by its own 8px inline margin; a phone header may not do worse.
+const OLD_HEADER_OVERFLOW = 8;
 
 function staticDocsServer() {
 	return createServer(async (request, response) => {
@@ -101,6 +103,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 			assert.equal(await page.locator('[data-blocks-detail] h1').textContent(), variant.name);
 			assert.equal(await page.evaluate(() => window.__sameDocument), true, `${variant.href} swapped in place`);
 			assert.deepEqual(await page.locator('.blocks-rail [aria-current="page"]').evaluateAll((links) => links.map((link) => link.getAttribute('href'))), [variant.href]);
+			assert.equal(await page.locator('[data-blocks-detail] [aria-current]').count(), 0, 'only the rail link marks the current page');
 			assert.equal(await page.locator('[data-iframe]').getAttribute('src'), `${variant.href}preview/`);
 			assert.notEqual((await page.locator('[data-iframe]').getAttribute('title')).trim(), '');
 		}
@@ -111,7 +114,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 
 		// Width presets set the preview's logical width; the readout and aria-pressed follow.
 		const presets = await page.locator('[data-width-group] button[data-width]:not([data-width="full"])').evaluateAll((buttons) => buttons.map((button) => Number(button.dataset.width)));
-		assert.deepEqual(presets, [360, 768, 1280]);
+		assert.deepEqual(presets, toolbarPresets.map(({ width }) => width));
 		const frameWidth = () => page.locator('[data-iframe]').evaluate((frame) => frame.contentWindow.innerWidth);
 		for (const width of presets) {
 			await page.locator(`[data-width-group] button[data-width="${width}"]`).click();
@@ -165,8 +168,12 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		assert.equal(await page.locator('[data-frame]').isVisible(), false);
 		assert.equal(await page.locator('[data-code]').isVisible(), true);
 		assert.equal(await page.locator('.blocks-width').evaluate((node) => node.inert), true, 'width controls rest while only code shows');
+		for (const control of ['.blocks-width', '[data-theme-group]']) {
+			assert.ok(Number(await page.locator(control).evaluate((node) => getComputedStyle(node).opacity)) < 1, `${control} dims while inert`);
+		}
 		await page.getByRole('button', { name: 'Split', exact: true }).click();
 		assert.equal(await page.locator('[data-frame]').isVisible() && await page.locator('[data-code]').isVisible(), true);
+		assert.equal(await page.locator('.blocks-width').evaluate((node) => getComputedStyle(node).opacity), '1', 'width controls are not dimmed while the preview shows');
 		await page.getByRole('button', { name: 'Preview', exact: true }).click();
 		assert.equal(await page.locator('[data-code]').isVisible(), false);
 
@@ -233,6 +240,96 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 	});
 });
 
+/** Opens the first variant the built rail lists. */
+async function openFirstVariant(page, origin) {
+	await page.goto(`${origin}/blocks/`);
+	const [first] = await railVariants(page);
+	await page.goto(`${origin}${first.href}`);
+	return first;
+}
+
+test('Copy returns to its label after clicks inside the confirmation', async () => {
+	await withSite(async ({ page, origin }) => {
+		await openFirstVariant(page, origin);
+		await page.getByRole('button', { name: 'Split', exact: true }).click();
+		const copy = page.locator('[data-copy]');
+		await copy.click();
+		await copy.click();
+		assert.equal(await copy.textContent(), 'Copied');
+		// The first click's timer must not leave a second "Copied" to stick.
+		await page.waitForTimeout(2200);
+		assert.equal(await copy.textContent(), 'Copy');
+	});
+});
+
+test('a filter index that fails to load shows a status, and the next change retries', async () => {
+	await withSite(async ({ page, origin }) => {
+		await page.route('**/blocks/filter-index.json', (route) => route.abort());
+		await page.goto(`${origin}/blocks/`);
+		const search = page.getByRole('searchbox', { name: 'Search blocks' });
+		const status = page.locator('[data-blocks-count]');
+		await search.fill('poster');
+		await page.waitForFunction(() => /unavailable/u.test(document.querySelector('[data-blocks-count]').textContent), null, { timeout: 5000 });
+		assert.equal(await status.isVisible(), true, 'the status is visible');
+		assert.equal(await page.locator('.blocks-rail li[data-block]:not([hidden])').count() > 0, true, 'blocks stay listed');
+		await page.unroute('**/blocks/filter-index.json');
+		await search.fill('poster ');
+		await page.waitForFunction(() => /^\d+ of \d+ block/u.test(document.querySelector('[data-blocks-count]').textContent));
+	});
+});
+
+/** The header's controls against the end of its content box, and whether any touches the menu button. */
+const headerFit = (page) => page.evaluate(() => {
+	const header = document.querySelector('header.header, header.blocks-header');
+	const box = header.getBoundingClientRect();
+	const innerRight = box.right - parseFloat(getComputedStyle(header).paddingRight);
+	const shown = (element) => {
+		const rect = element?.getBoundingClientRect();
+		return rect && rect.width > 0 && rect.height > 0 ? rect : null;
+	};
+	const controls = [...header.querySelectorAll('.mux-site-title, .mux-site-nav a, starlight-theme-select select')].map(shown).filter(Boolean);
+	const menu = shown(document.querySelector('.sl-menu-button'));
+	return {
+		controls: controls.length,
+		overflow: Math.max(...controls.map((rect) => rect.right - innerRight)),
+		hasMenu: menu !== null,
+		touchesMenu: menu !== null && controls.some((rect) => rect.right > menu.left && rect.left < menu.right),
+		actionsGap: innerRight - header.querySelector('.mux-header-actions').getBoundingClientRect().right,
+		searchShown: shown(header.querySelector('.mux-header-search')) !== null,
+		pageOverflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+	};
+});
+
+test('the Blocks header keeps its actions at the end, with search shown or hidden', async () => {
+	await withSite(async ({ page, origin }) => {
+		for (const [width, searchShown] of [[1440, true], [480, false]]) {
+			await page.setViewportSize({ width, height: 800 });
+			await page.goto(`${origin}/blocks/`);
+			const fit = await headerFit(page);
+			assert.equal(fit.searchShown, searchShown, `search at ${width}px`);
+			assert.ok(Math.abs(fit.actionsGap) <= 1, `the actions end ${fit.actionsGap}px from the header's end at ${width}px`);
+		}
+	});
+});
+
+test('the site header fits a phone on Starlight docs pages and Blocks pages', async () => {
+	await withSite(async ({ page, origin }) => {
+		for (const route of ['/installation/', '/blocks/']) {
+			for (const width of [320, 360]) {
+				await page.setViewportSize({ width, height: 800 });
+				await page.goto(`${origin}${route}`);
+				const fit = await headerFit(page);
+				const name = `${route} at ${width}px`;
+				assert.equal(fit.hasMenu, route === '/installation/', `${name} shows the menu button only with a sidebar`);
+				assert.ok(fit.controls >= 3, `${name} shows the title and nav`);
+				assert.equal(fit.touchesMenu, false, `${name}: a header control overlaps the menu button`);
+				assert.ok(Math.round(fit.overflow) <= OLD_HEADER_OVERFLOW, `${name}: the header overflows by ${fit.overflow}px, more than the old ${OLD_HEADER_OVERFLOW}px`);
+				assert.ok(fit.pageOverflow <= 0, `${name}: the page scrolls sideways by ${fit.pageOverflow}px`);
+			}
+		}
+	});
+});
+
 test('E-BL1-06: every variant fits every width preset, light and dark, and marketing variants fit every page width', { timeout: 600_000 }, async () => {
 	await withSite(async ({ page, origin }) => {
 		if (captureDir) await mkdir(captureDir, { recursive: true });
@@ -270,7 +367,7 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 			// A marketing section is judged as a page: the standalone preview at each page width.
 			if (variant.group === 'marketing') {
 				for (const theme of THEMES) {
-					for (const width of PAGE_WIDTHS) {
+					for (const width of pageWidths) {
 						await page.setViewportSize({ width, height: 900 });
 						await page.goto(`${origin}${variant.href}preview/?theme=${theme}`);
 						await page.waitForFunction(() => document.querySelector('astro-island') !== null && document.querySelector('astro-island[ssr]') === null);
@@ -285,6 +382,6 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 			}
 		}
 		assert.ok(report.length >= variants.length * THEMES.length * 4, 'every variant was measured at every preset in both themes');
-		if (captureDir) await writeFile(join(captureDir, 'overflow-report.json'), `${JSON.stringify({ pageWidths: PAGE_WIDTHS, measurements: report }, null, 2)}\n`);
+		if (captureDir) await writeFile(join(captureDir, 'overflow-report.json'), `${JSON.stringify({ pageWidths, measurements: report }, null, 2)}\n`);
 	});
 });

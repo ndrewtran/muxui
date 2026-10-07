@@ -77,8 +77,11 @@ const { search = false, titleHref } = Astro.props;
 		margin-inline-start: auto;
 	}
 
-	.mux-header-search + .mux-header-actions {
-		margin-inline-start: 0;
+	/* Search centres between the title and the actions; on a phone it is hidden and the actions stay at the end. */
+	@media (width > 40rem) {
+		.mux-header-search + .mux-header-actions {
+			margin-inline-start: 0;
+		}
 	}
 
 	.mux-header-package {
@@ -103,6 +106,15 @@ const { search = false, titleHref } = Astro.props;
 	@media (max-width: 30rem) {
 		.mux-header-actions :global(starlight-theme-select label) {
 			--sl-select-width: 0px !important;
+		}
+	}
+
+	/* Starlight reserves the end of the header for its menu button, and the title and nav fill the
+	   rest. Below this width the picker would overlap the button, so it rests in the mobile menu
+	   footer, which carries the same picker. */
+	@media (max-width: 24rem) {
+		:global([data-has-sidebar]) .mux-header-actions :global(starlight-theme-select) {
+			display: none;
 		}
 	}
 </style>

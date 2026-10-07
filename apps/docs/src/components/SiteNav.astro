@@ -76,4 +76,9 @@ const links: readonly { section: Section; label: string; href: string }[] = [
 		.mux-site-nav li:first-child { display: none; }
 		.mux-site-nav a { padding-inline: var(--muxui-reference-dimension-space-3xs); }
 	}
+
+	/* The narrowest phones (320px) need a little more room for the title, the nav, and the theme picker. */
+	@media (max-width: 22rem) {
+		.mux-site-nav a { padding-inline: var(--muxui-reference-dimension-space-4xs); }
+	}
 </style>

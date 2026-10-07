@@ -4,9 +4,10 @@
 //
 // Every enabled pattern appears in the rail and opens its block, each preview
 // route loads its canonical example, the Code view equals the example source
-// bytes, and component pages list only component-bound examples while showing
-// "Used in blocks" from the derived usedIn view.
-import { existsSync, readFileSync } from 'node:fs';
+// bytes, every built /blocks/ page is noindex, and component pages list only
+// component-bound examples while showing "Used in blocks" from the derived
+// usedIn view.
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parseFragment } from 'parse5';
@@ -59,7 +60,6 @@ function find(root, predicate, message) {
 	return match;
 }
 
-const hasAttribute = (name, value) => (node) => attributeValue(node, name) === value;
 const patterns = allItems('listArtifacts', { kind: 'pattern' });
 assert(patterns.length === blocks.length, `The Blocks section has ${blocks.length} blocks, but the catalog enables ${patterns.length} patterns.`);
 
@@ -93,6 +93,25 @@ function checkRail(root, route) {
 	return tree;
 }
 
+// The section is unpublished: every built page under /blocks/ must say noindex, whatever its route.
+const builtBlockRoutes = readdirSync(resolve(docsDist, 'blocks'), { recursive: true })
+	.filter((file) => file === 'index.html' || file.endsWith('/index.html'))
+	.map((file) => `${blocksPath}${file.slice(0, -'index.html'.length)}`);
+const expectedBlockRoutes = [
+	blocksPath,
+	...blocks.flatMap((block) => [blockPath(block), ...block.variants.flatMap((variant) => [variantPath(block, variant), previewPath(block, variant)])]),
+];
+assert(
+	expectedBlockRoutes.every((route) => builtBlockRoutes.includes(route)),
+	`The built Blocks routes are missing ${expectedBlockRoutes.filter((route) => !builtBlockRoutes.includes(route)).join(', ')}.`,
+);
+for (const route of builtBlockRoutes) {
+	assert(
+		elements(builtPage(route)).some((node) => node.tagName === 'meta' && attributeValue(node, 'name') === 'robots' && attributeValue(node, 'content') === 'noindex'),
+		`${route} is not marked noindex.`,
+	);
+}
+
 const gallery = builtPage(blocksPath);
 checkRail(gallery, blocksPath);
 const cards = elements(gallery).filter((node) => node.tagName === 'li' && attributeValue(node, 'data-variants') !== undefined);
@@ -102,7 +121,10 @@ for (const block of blocks) {
 	assert(card !== undefined, `The gallery has no card for ${block.id}.`);
 	const parts = elements(card);
 	assert(parts.some((node) => node.tagName === 'a' && attributeValue(node, 'href') === variantPath(block, block.variants[0])), `The ${block.id} card does not open its block.`);
-	assert(parts.some((node) => node.tagName === 'iframe' && attributeValue(node, 'src') === previewPath(block, block.variants[0])), `The ${block.id} thumbnail is not its preview route.`);
+	const thumbnail = parts.find((node) => node.tagName === 'iframe');
+	assert(thumbnail !== undefined && attributeValue(thumbnail, 'src') === previewPath(block, block.variants[0]), `The ${block.id} thumbnail is not its preview route.`);
+	// Lazy thumbnails keep the gallery's load cost from growing with every block.
+	assert(attributeValue(thumbnail, 'loading') === 'lazy', `The ${block.id} thumbnail does not load lazily.`);
 }
 
 let variantCount = 0;
@@ -125,6 +147,7 @@ for (const pattern of patterns) {
 		const parts = elements(detail);
 		const h1 = parts.find((node) => node.tagName === 'h1');
 		assert(h1 !== undefined && textContent(h1) === example.name, `${route} heading is not the variant name.`);
+		assert(attributeValue(h1, 'aria-current') === undefined, `${route} marks its heading as the current page; only the rail link is current.`);
 		const crumbs = parts.filter((node) => node.tagName === 'li').map(textContent);
 		assert(crumbs.includes(block.name) && crumbs.includes(block.categoryLabel), `${route} breadcrumb does not name its category and block.`);
 
@@ -151,6 +174,12 @@ for (const pattern of patterns) {
 		const useLinks = elements(uses).filter((node) => node.tagName === 'a').map((node) => attributeValue(node, 'href'));
 		assert(useLinks.join() === record.participants.map(({ component }) => `/components/${tail(component)}/`).join(), `${route} participant links differ from the pattern.`);
 		for (const href of useLinks) assert(existsSync(resolve(docsDist, href.replace(/^\//u, ''), 'index.html')), `${route} links to a missing component page ${href}.`);
+		// Each participant's role and requirement are visible text, not only a hover title.
+		const useItems = elements(uses).filter((node) => node.tagName === 'li');
+		for (const [position, participant] of record.participants.entries()) {
+			const text = textContent(useItems[position]).replace(/\s+/gu, ' ');
+			assert(text.includes(`(${participant.role}${participant.requirement === 'optional' ? ', optional' : ''})`), `${route} does not show the ${participant.component} role inline.`);
+		}
 		const notes = parts.find((node) => node.tagName === 'ul' && classNames(node).has('blocks-notes'));
 		assert(elements(notes).filter((node) => node.tagName === 'li').map(textContent).join('\n') === record.accessibility.join('\n'), `${route} accessibility notes differ from the pattern.`);
 
@@ -159,7 +188,8 @@ for (const pattern of patterns) {
 		const island = find(preview, (node) => node.tagName === 'astro-island', `${previewPath(block, variant)} has no example island.`);
 		const props = attributeValue(island, 'props') ?? '';
 		assert(attributeValue(island, 'component-url')?.includes('ExampleHost') && props.includes(`"${example.source.content}"`), `${previewPath(block, variant)} does not load ${example.source.content}.`);
-		assert(elements(preview).some((node) => node.tagName === 'meta' && attributeValue(node, 'name') === 'robots' && attributeValue(node, 'content') === 'noindex'), `${previewPath(block, variant)} is not marked noindex.`);
+		const previewHeading = elements(preview).find((node) => node.tagName === 'h1');
+		assert(previewHeading !== undefined && textContent(previewHeading) === `${block.name}, ${variant.name}`, `${previewPath(block, variant)} has no heading naming its block and variant.`);
 		assert(elements(preview).every((node) => attributeValue(node, 'data-pagefind-body') === undefined), `${previewPath(block, variant)} must not join the docs search index.`);
 		variantCount += 1;
 	}

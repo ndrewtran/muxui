@@ -465,6 +465,7 @@
 }
 
 .blocks-tools[inert],
+.blocks-width[inert],
 .blocks-seg[inert] {
 	opacity: 0.45;
 }
@@ -642,7 +643,7 @@
 	gap: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-xs);
 }
 
-.blocks-optional {
+.blocks-role {
 	color: var(--muxui-semantic-content-muted);
 	font-size: var(--muxui-semantic-typography-text-xs-font-size);
 }

@@ -2,6 +2,7 @@
 import { Code } from 'astro:components';
 import type { Block, BlockVariant } from '../../lib/blocks.ts';
 import { previewPath, variantPath } from '../../lib/block-paths.ts';
+import { toolbarPresets } from '../../lib/block-presets.ts';
 import { muxCodeTheme, muxTokenPathTransformer } from '../code-theme.ts';
 
 interface Props {
@@ -10,8 +11,6 @@ interface Props {
 }
 
 const { block, variant } = Astro.props;
-// Width presets live here, the one place the toolbar and the browser checks read them from.
-const presets = [{ key: 'S', width: 360 }, { key: 'M', width: 768 }, { key: 'L', width: 1280 }];
 const fileName = variant.sourcePath.slice(variant.sourcePath.lastIndexOf('/') + 1);
 const lineCount = variant.code.trimEnd().split('\n').length;
 // Astro's Shiki helper removes one terminal newline, so add it back to keep the exact bytes.
@@ -26,7 +25,7 @@ const previewTitle = `${block.name}, ${variant.name} preview`;
 				<ol class="blocks-crumbs">
 					<li>{block.categoryLabel}</li>
 					<li><a href={variantPath(block, block.variants[0])} data-blocks-link>{block.name}</a></li>
-					<li><h1 aria-current="page">{variant.name}</h1></li>
+					<li><h1>{variant.name}</h1></li>
 				</ol>
 			</nav>
 			<p class="blocks-summary">{block.summary}</p>
@@ -34,7 +33,7 @@ const previewTitle = `${block.name}, ${variant.name} preview`;
 		<div class="blocks-tools">
 			<div class="blocks-width">
 				<div class="blocks-seg" role="group" aria-label="Preview width" data-width-group>
-					{presets.map(({ key, width }) => (
+					{toolbarPresets.map(({ key, width }) => (
 						<button type="button" data-width={width} aria-pressed="false" title={`${width} px`}>{key}<span class="blocks-px">{width}</span></button>
 					))}
 					<button type="button" data-width="full" aria-pressed="true" title="Fill the available width">Full</button>
@@ -93,8 +92,8 @@ const previewTitle = `${block.name}, ${variant.name} preview`;
 			<ul class="blocks-inline">
 				{block.participants.map((participant) => (
 					<li>
-						<a href={participant.href} title={`Role: ${participant.role}`}>{participant.name}</a>
-						{participant.requirement === 'optional' && <span class="blocks-optional"> optional</span>}
+						<a href={participant.href}>{participant.name}</a>
+						<span class="blocks-role">({participant.role}{participant.requirement === 'optional' ? ', optional' : ''})</span>
 					</li>
 				))}
 			</ul>

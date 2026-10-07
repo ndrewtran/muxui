@@ -160,13 +160,16 @@ export function initDetail(root: HTMLElement): () => void {
 	}, { signal });
 
 	const copy = part(root, '[data-copy]');
+	// The resting label is read once: a click during the 1.5s confirmation must not mistake "Copied" for it.
+	const copyLabel = copy.textContent ?? 'Copy';
+	let restoreCopyLabel: number | undefined;
 	copy.addEventListener('click', async () => {
 		// The rendered code's text is the exact example source, so it is what is copied.
 		const copied = await copyText(part(root, '[data-code-body] code').textContent ?? '');
-		const label = copy.textContent;
 		copy.textContent = copied ? 'Copied' : 'Copy failed';
 		announce(copied ? 'Code copied to clipboard' : 'Copy failed');
-		window.setTimeout(() => { copy.textContent = label; }, 1500);
+		window.clearTimeout(restoreCopyLabel);
+		restoreCopyLabel = window.setTimeout(() => { copy.textContent = copyLabel; }, 1500);
 	}, { signal });
 
 	iframe.addEventListener('load', () => setFrameTheme(iframe, effectiveTheme()), { signal });
@@ -184,6 +187,7 @@ export function initDetail(root: HTMLElement): () => void {
 	layout();
 	return () => {
 		abort.abort();
+		window.clearTimeout(restoreCopyLabel);
 		observer.disconnect();
 		stopSiteTheme();
 	};
