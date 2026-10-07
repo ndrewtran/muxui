@@ -17,5 +17,7 @@ content rules (`packages/catalog/src/pattern-imports.mjs` and
 reference, no literal colour, an `<asset>.license.json` beside any asset
 (dotfiles but `.DS_Store` included), and a local `src`, `href`, `url()`, or
 `srcSet` path only to a licensed asset inside the pattern directory (`#fragment`
-and `data:` references are fine). `scaffoldPattern` runs the remote and colour
-rules with the same rule IDs.
+and `data:` references are fine; `action` and `formAction` count only as
+attributes, so a data field named `action` is fine, and `poster` counts as a
+property only when its value looks like a path). `scaffoldPattern` runs the
+remote and colour rules with the same rule IDs.

@@ -1008,6 +1008,30 @@
     {
       "family": "example",
       "path": "catalog/patterns/poster-grid/examples/react/virtualized.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/marketing-hero/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/marketing-hero/examples/react/split.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/pricing-plans/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/pricing-plans/examples/react/columns.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/account-settings/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/account-settings/examples/react/sections.example.json"
     }
   ]
 }

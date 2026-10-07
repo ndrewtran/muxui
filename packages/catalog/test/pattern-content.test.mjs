@@ -192,7 +192,7 @@ async function compileSeed({ edit = () => {} } = {}) {
       await writeFile(join(root, path), text);
     }
     const manifest = JSON.parse(await readFile(join(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
-    manifest.records = manifest.records.filter(({ path }) => MINIMAL_SOURCES.test(path) || path.startsWith('catalog/patterns/'));
+    manifest.records = manifest.records.filter(({ path }) => MINIMAL_SOURCES.test(path) || path.startsWith(`${directory}/`));
     await writeFile(join(root, 'catalog-sources.json'), JSON.stringify(manifest));
     return await compileCatalog({ repositoryRoot: root, sourceManifestPath: 'catalog-sources.json' });
   } catch (error) {
@@ -322,6 +322,15 @@ test('E-BL1-10: a local reference must resolve to a licensed asset inside the pa
     'a value that starts with a placeholder': '<img src={`${base}/a.png`} alt="" />',
     'a token in url()': '.art { background-image: url(var(--muxui-semantic-mark)); }',
     'an expression': '<img src={posterSrc} alt="" />',
+    // `action`, `formAction`, and `poster` are ordinary words in data: only attribute syntax counts.
+    'an object property named action': "const plans = [{ name: 'Starter', action: 'Start free' }];",
+    'object properties named formAction and poster': "const row = { formAction: 'Save', poster: 'Sample Title' };",
+    'variables named action and poster': "const action = 'Save';\nlet poster = 'Sample Title';",
+    'an assigned member named action': "plan.action = 'Save';",
+    'a destructured default named action': "const { action = 'Save' } = props;",
+    'a parameter default named action': "const Row = ({ title, action = 'Save' }) => title;\nconst Plain = (action = 'Save') => action;",
+    'a poster property that is a word': "const row = { poster: 'Sample Title', 'poster': 'Another Title' };",
+    'a poster variable that is a word': "const poster = 'Sample Title';",
   };
   for (const [name, text] of Object.entries(accepted)) assert.deepEqual(localReferences(text), [], name);
   const rejected = {
@@ -344,6 +353,22 @@ test('E-BL1-10: a local reference must resolve to a licensed asset inside the pa
     'a local @import': '@import "theme.css";',
     'an xlink href': '<use xlinkHref="sprite.svg#a" />',
     'a poster': '<video poster="poster.png" />',
+    'an action attribute': '<form action="/x"></form>',
+    'a single-quoted action attribute': "<form action='/x'></form>",
+    'an action expression string': "<form action={'/x'}></form>",
+    'a double-quoted action expression string': '<form action={"/x"}></form>',
+    'an action attribute with spaces around the equals sign': '<form action = "/x"></form>',
+    'a formAction attribute': '<button formAction="/x" />',
+    'a url() in a style object': "<div style={{ backgroundImage: 'url(/x.png)' }} />",
+    'an action attribute after a spread': '<form {...props} action="/x"></form>',
+    'a poster property with a path': "const row = { poster: 'posters/a.png' };",
+    'a poster property passed to createElement': "createElement('video', { poster: './a.png' });",
+    'a poster property with an image extension': "const row = { poster: 'a.png' };",
+    'a poster property with a slash and no extension': "const row = { poster: 'posters/cover' };",
+    'a poster property that starts with a dot': "const row = { poster: '.cover' };",
+    'a quoted poster key with a path': 'const row = { "poster": "posters/a.png" };',
+    'a poster member assignment with a path': "video.poster = 'posters/a.png';",
+    'a poster variable with a path': "const poster = 'posters/a.png';",
   };
   for (const [name, text] of Object.entries(rejected)) assert.deepEqual(localReferences(text), [1], name);
   // A reference resolves from the file that holds it: an asset's neighbour is found by its own name.

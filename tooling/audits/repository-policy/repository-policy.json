@@ -185,7 +185,10 @@
       "packages/tooling/command-registry.json": "@muxui/tooling"
     },
     "patternBrowserTests": {
-      "poster-grid": "test/browser/pattern-poster-grid.test.mjs"
+      "account-settings": "test/browser/pattern-account-settings.test.mjs",
+      "marketing-hero": "test/browser/pattern-marketing-hero.test.mjs",
+      "poster-grid": "test/browser/pattern-poster-grid.test.mjs",
+      "pricing-plans": "test/browser/pattern-pricing-plans.test.mjs"
     },
     "documentationPrefixes": [
       "apps/docs/",
