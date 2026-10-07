@@ -1,0 +1,34 @@
+✔ E-BL1-01: the fixture pattern compiles with derived group, revision, and exact variant source (2317.519ms)
+✔ E-BL1-01 negative: a variant importing an undeclared component names pattern.participants and its source (49.605625ms)
+✔ E-BL1-01 negative: a non-canonical @muxui/react reference fails the compile closed (43.369292ms)
+✔ E-BL1-01 negative: graph and record errors surface from the compile with their owners (116.230375ms)
+✔ E-BL1-01 negative: variant sources must use LF newlines so the bundle keeps exact bytes (50.853208ms)
+✔ E-BL1-01: the import scanner accepts only the canonical static named import (0.299583ms)
+✔ E-BL1-01: the import scanner raises no false positives after the header (0.119417ms)
+✔ E-BL1-01 negative: every other @muxui/react reference fails closed with a source-linked issue (0.390833ms)
+✔ E-BL1-01 negative: every import must sit in the leading header (0.1505ms)
+✔ E-BL1-01 negative: the header admits only react, react/jsx-runtime, and @muxui/react (0.234125ms)
+✔ E-BL1-01 negative: the rest of the source is scanned raw, so hidden code still fails (0.242709ms)
+✔ E-BL1-01: the manifest completeness audit lists unlisted pattern records (3.364417ms)
+✔ E-BL1-01 negative: the bundle rejects altered variant source, group, or pattern revision (203.100584ms)
+✔ E-BL1-07: list, search, and get serve patterns, variants, and the derived uses views (51.570708ms)
+✔ E-BL1-07: patterns and variants need every required participant binding installed (138.967625ms)
+✔ E-BL1-07: usedIn follows the requested platform (232.327041ms)
+✔ E-BL1-07: a pattern serves accessibility notes, and api is null like every non-component kind (47.976042ms)
+✔ E-BL1-07: usedIn comes from the same function as --uses, and component pages list only bound examples (98.351959ms)
+✔ E-BL1-07: the real catalog serves the shipped poster grid and its derived uses views (3.139417ms)
+✔ E-BL1-08: compiles are byte-identical and listing the fixture changes only the added sources and digests (4657.475208ms)
+✔ E-BL1-01: a valid pattern and its variant example validate and derive one example-of edge (9.915083ms)
+✔ E-BL1-01 negative: the closed schema names the earliest owner for each record error (24.900291ms)
+✔ E-BL1-01 negative: the artifact graph names the pattern field that owns each error (12.857459ms)
+✔ E-BL1-01: example-of rows exclude each other and name their owners (0.192458ms)
+✔ E-BL1-01: the category-group map owns the derived group for every category (0.349375ms)
+✔ E-BL1-01: patternRevision follows normative fields and variant bytes, not editorial fields (1.19125ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 8156.866459
