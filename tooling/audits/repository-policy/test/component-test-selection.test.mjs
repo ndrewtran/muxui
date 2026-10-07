@@ -24,6 +24,7 @@ const records = [
 ];
 const availableFiles = (await testFiles(resolve(packageRoot, 'test'))).map((file) => `test/${file}`);
 const buttonFixture = await readFile(resolve(packageRoot, 'test/fixture.test.mjs'), 'utf8');
+const parity = await readFile(resolve(packageRoot, 'test/r1-3-parity.test.mjs'), 'utf8');
 
 test('default component routing retains shared source and integrity coverage', () => {
   const selected = selectComponentTestFiles([records[0]], availableFiles);
@@ -58,6 +59,36 @@ test('focused Tree and TagSelect retain only their named shared-source behavior 
     'TagSelect preserves combobox filtering and chip focus/removal keyboard behavior',
     'TagSelect preserves selected-key order for controlled chips and removals',
   ]);
+});
+
+test('GridList routes to its cross-engine layout proof and its collection cases in both modes', () => {
+  const record = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: 'packages/react/src/collections.mjs' };
+  const layoutProof = 'test/browser/grid-list-layout.test.mjs';
+  assert.ok(selectComponentTestFiles([record], availableFiles).includes(layoutProof));
+  assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
+
+  const focused = componentTestSelection([record], availableFiles, {
+    includeSharedSource: false,
+    testSources: { 'test/r1-3-parity.test.mjs': parity },
+  });
+  assert.ok(focused.files.includes(layoutProof));
+  assert.ok(focused.testNamesByFile['test/r1-3-parity.test.mjs'].includes('R1.3 GridList layout and orientation reach the root and reject unsupported values'));
+});
+
+test('Virtualizer routes to its cross-engine grid proof and its named R1.3 cases in both modes', () => {
+  const record = { family: 'Virtualizer', export: 'Virtualizer', slug: 'virtualizer', source: 'packages/react/src/collections.mjs' };
+  const gridProof = 'test/browser/virtualizer-grid.test.mjs';
+  assert.ok(selectComponentTestFiles([record], availableFiles).includes(gridProof));
+  assert.ok(selectComponentTestFiles([record], availableFiles).includes('test/r1-3-parity.test.mjs'));
+
+  const focused = componentTestSelection([record], availableFiles, {
+    includeSharedSource: false,
+    testSources: { 'test/r1-3-parity.test.mjs': parity },
+  });
+  assert.ok(focused.files.includes(gridProof));
+  for (const name of ['R1.3 Virtualizer grid layout validates its options, child, and ref', 'R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server']) {
+    assert.ok(focused.testNamesByFile['test/r1-3-parity.test.mjs'].includes(name), name);
+  }
 });
 
 test('focused Button routing keeps its existing named family cases instead of the whole fixture group', () => {

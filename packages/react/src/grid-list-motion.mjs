@@ -112,8 +112,15 @@ function observeGridListHover(root) {
     layer.style.opacity = '0';
   };
 
+  // An idle layer keeps no box: its last geometry would otherwise widen the
+  // root's scrollable overflow after the grid reflows.
+  const park = () => {
+    currentTarget = null;
+    Object.assign(layer.style, { left: '0px', top: '0px', width: '0px', height: '0px', transform: 'none' });
+  };
+
   const onTransitionEnd = (event) => {
-    if (event.target === layer && event.propertyName === 'opacity' && !visibleRow) currentTarget = null;
+    if (event.target === layer && event.propertyName === 'opacity' && !visibleRow) park();
   };
 
   const show = (row, immediate = false) => {
@@ -231,7 +238,7 @@ function observeGridListHover(root) {
       visibleRow = null;
       stop();
       layer.style.opacity = '0';
-      currentTarget = null;
+      park();
     } else {
       root.setAttribute(READY_ATTRIBUTE, 'true');
       if (pointerRow && isHoverable(root, pointerRow)) show(pointerRow, true);

@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:9dbb3cf5fb32dc261a242f95913c749e7bd1cb2de13eed7d88c3fea4ecd7e7f2 -->
+<!-- @generated-content-sha256: sha256:f1893c4b294bc3e107bc95feceb4c4e47e9f36a32314b5a48899a5508d6a70ce -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -110,7 +110,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | DropZone | experimental | . | .muxui-drop-zone | children, disabled, onDrop, onActivate, className, aria-label, aria-labelledby |
 | FileTrigger | experimental | . | .muxui-file-trigger | children, acceptedFileTypes, allowsMultiple, acceptDirectory, defaultCamera, disabled, onSelect, className |
 | Form | experimental | . | .muxui-form | validationBehavior, validationErrors, method, action, onSubmit, onReset |
-| GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode |
+| GridList | experimental | . | .muxui-grid-list | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, disabled, selectionMode, children, layout, orientation, style |
 | Group | experimental | . | .muxui-group | disabled, invalid, readOnly, role, aria-label |
 | HeaderNav | experimental | . | .muxui-header-nav | href, current, aria-label |
 | IconButton | experimental | . | .muxui-icon-button | aria-label, aria-labelledby, disabled, pending, variant, size |
@@ -158,7 +158,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Toolbar | experimental | . | .muxui-toolbar | aria-label, aria-labelledby, orientation |
 | Tooltip | experimental | . | .muxui-tooltip | content, trigger, delay, closeDelay, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, open, defaultOpen, disabled, onOpenChange, className |
 | Tree | experimental | . | .muxui-tree | aria-label, aria-labelledby, items, selectedIds, defaultSelectedIds, expandedIds, defaultExpandedIds, disabled, selectionMode, expansionTrigger |
-| Virtualizer | experimental | . | .muxui-virtualizer | aria-label, items, height, itemHeight, overscan, disabled |
+| Virtualizer | experimental | . | .muxui-virtualizer | aria-label, items, height, itemHeight, overscan, disabled, layout, children, minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns |
 
 ## Composition and native input contracts
 
@@ -189,6 +189,33 @@ Public parts: `root`, `trigger`, `popup`, `list`, `item`, `section`, `header`, `
 - Root and Item refs target divs; Section and Header refs target section/header elements.
 
 Public parts: `root`, `section`, `header`, `item`.
+
+### GridList
+
+- Arrow keys move between items.
+- Controlled and uncontrolled Core key selections are supported.
+- With onAction set and selectionMode multiple, a click or Enter on an item runs the action while nothing is selected, so pointer users start a selection with Space or a selection affordance in the item content.
+- GridList.Item composes static items with a stable string id; supply textValue for rich children so typeahead and the item name stay unambiguous. When children are present, items is ignored.
+- Root disabled state disables every GridList.Item and suppresses selection and action callbacks. A child disabled=false cannot re-enable an item under a disabled root. Data-backed onAction returns the normalized item; compound onAction returns identity fields id, key, and value.
+- In the default vertical stack, Up and Down arrows move between items and Left and Right arrows reach controls nested in the focused item. With layout=grid or orientation=horizontal, arrow keys move between items by their rendered positions, mirrored in right-to-left, and Tab and Shift+Tab move through the nested controls of the focused item. layout=grid lays items out in auto-fill columns of at least 10rem whose content wraps; orientation=horizontal scrolls along the inline axis. The default column tracks have no specificity, so a plain class or inline style on the GridList sets grid-template-columns whatever the stylesheet order.
+- Nested links and buttons run only their own action and never change selection or run onAction.
+- A nested Button follows its GridList.Item through its context, so a disabled item disables it. A nested Link does not, so pass disabled to it as well as to its GridList.Item.
+- Mux selectors are .muxui-grid-list and .muxui-grid-list-item. Root states include data-layout, data-orientation, and data-focus-visible; items expose data-selected, data-disabled, data-hovered, data-focused, and data-focus-visible. Root and Item refs target divs.
+- Inside a Virtualizer with layout=grid, a GridList must use layout=grid and the vertical orientation. It carries data-muxui-virtualized, mounts only the visible rows, renders each row inside positioned wrapper elements instead of as a direct child, and takes no padding because the layout spaces its items from the GridList CSS gap. Its own column-gap and row-gap set that spacing; see Virtualizer.
+
+Public parts: `root`, `item`.
+
+### Virtualizer
+
+- Only a bounded visible window plus overscan is mounted.
+- Scroll geometry preserves the full collection extent.
+- layout=grid wraps one GridList that has layout=grid and the vertical orientation: Virtualizer layout=grid around GridList layout=grid. The Virtualizer renders no element and takes no ref; the GridList is the scroll region and keeps its name, selection, keyboard, and nested-control behavior. Grid mode takes none of aria-label, aria-labelledby, items, height, itemHeight, disabled, onScroll, className, or style; set them on the GridList, and a prop passed to the Virtualizer throws a TypeError that names it. The stack layout likewise throws for minItemWidth, maxItemWidth, estimatedItemHeight, and maxColumns.
+- Grid columns are clamp(floor(width / (minItemWidth + column gap)), 1, maxColumns) for the GridList inner width. maxColumns only caps the count, so a narrow container shows fewer columns, and a container narrower than minItemWidth shows one column that fits it. Grid defaults are minItemWidth 200, maxItemWidth unbounded so items stretch to fill their columns, estimatedItemHeight 200, maxColumns unbounded, and overscan 2. A maxItemWidth below the column width stops items growing and centers the grid, keeping the gap.
+- Grid rows size to their measured content, so titles and nested actions are never clipped and items in a row share its height. estimatedItemHeight is a plain estimate for every row that has not mounted yet, the same whatever the item width, so it sets the scrollbar extent until rows are measured; each mounted row then takes its measured content height and is measured again when the width changes or its content grows. Content that shrinks without a width change or item update keeps the row height until the next one.
+- Grid spacing is the CSS gap on the GridList: the layout content gap token by default, overridden with column-gap and row-gap in an inline style or in a class loaded after the Mux UI stylesheet. The resolved pixel gap is read on mount, when the GridList resizes, and on window resize, so fluid gap tokens work; a gap that is not a pixel length counts as 0. The gap separates items and also insets the first and last rows and columns from the GridList edges, so the GridList takes no padding.
+- Grid overscan counts whole rows mounted above and below the viewport, and the focused item stays mounted wherever it is scrolled. Give the GridList a block size to make it a bounded scroller, or leave it unbounded so the page or an ancestor scrolls it. Arrow keys follow rendered positions, mirrored in right-to-left, and Home, End, PageUp, and PageDown reach items that are not mounted yet and bring the focused item fully into view.
+
+Public parts: `root`, `viewport`, `item`.
 
 ### Select
 

@@ -21,6 +21,7 @@ const FAMILY_ROUTES = Object.freeze({
   ColorPicker: ['test/color-swatch.test.mjs'],
   ColorSwatch: ['test/color-swatch.test.mjs'],
   CommandPalette: ['test/command-palette-hook.test.mjs'],
+  GridList: ['test/browser/grid-list-layout.test.mjs'],
   IconButton: ['test/icon-button.test.mjs'],
   Image: ['test/image-avatar.test.mjs'],
   Lightbox: ['test/heavy-components.test.mjs'],
@@ -32,6 +33,7 @@ const FAMILY_ROUTES = Object.freeze({
   TextEditor: ['test/heavy-components.test.mjs'],
   TagSelect: ['test/browser/tag-select-focus.test.mjs'],
   Tree: ['test/browser/tree-toggle-browser.test.mjs'],
+  Virtualizer: ['test/browser/virtualizer-grid.test.mjs'],
 });
 
 const FAMILY_TEST_NAMES = Object.freeze({

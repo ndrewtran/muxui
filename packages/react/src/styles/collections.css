@@ -494,6 +494,96 @@
   outline-offset: -2px;
 }
 
+/* Layouts: stack is the default list; grid fills auto-fill columns. Horizontal
+   orientation scrolls along the inline axis. Items in a grid or horizontal root
+   draw an inset focus ring so no ancestor overflow can clip it. */
+.muxui-grid-list[data-layout='stack'][data-orientation='horizontal'] {
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.muxui-grid-list[data-layout='stack'][data-orientation='horizontal'] > .muxui-grid-list-item {
+  flex: 0 0 auto;
+}
+
+.muxui-grid-list[data-layout='grid'] {
+  display: grid;
+  padding: var(--muxui-semantic-layout-inset-tight);
+  overflow: visible;
+}
+
+/* Default column tracks. No specificity, so any plain class sets its own tracks
+   without matching selectors or stylesheet order. */
+:where(.muxui-grid-list[data-layout='grid']) {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 10rem), 1fr));
+}
+
+/* The one spacing owner. Its specificity is one class, so a consumer class
+   overrides it only when it loads after this stylesheet; an inline style always
+   does. Only the column tracks above have no specificity. */
+.muxui-grid-list:where([data-layout='grid']) {
+  gap: var(--muxui-semantic-layout-content-gap);
+}
+
+.muxui-grid-list[data-layout='grid'][data-orientation='horizontal'] {
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(10rem, 1fr);
+  grid-template-columns: none;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item,
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item {
+  flex-direction: column;
+  align-items: stretch;
+  min-inline-size: 0;
+  border-radius: var(--muxui-semantic-shape-radius-xs);
+  overflow-wrap: anywhere;
+}
+
+.muxui-grid-list:where([data-layout='grid'], [data-orientation='horizontal']) > .muxui-grid-list-item[data-focus-visible],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-focus-visible] {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: -2px;
+  box-shadow: inset 0 0 0 4px var(--muxui-semantic-focus-inner);
+}
+
+/* Grid items select with a tint and an inset ring rather than the stack's solid
+   fill, so default text and nested links and buttons keep their own colors and
+   contrast. A focused selected item shows the focus ring, its halo, then the
+   selection ring. */
+.muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected] {
+  background-color: var(--muxui-semantic-selection-background);
+  color: var(--muxui-semantic-content-strong);
+  box-shadow: inset 0 0 0 2px var(--muxui-semantic-selection-track);
+}
+
+.muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected][data-focus-visible],
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected][data-focus-visible] {
+  box-shadow:
+    inset 0 0 0 4px var(--muxui-semantic-focus-inner),
+    inset 0 0 0 6px var(--muxui-semantic-selection-track);
+}
+
+/* Inside a grid Virtualizer the layout owns spacing: the root's CSS gap is the
+   space between items and at the edges, so the root takes no padding. RAC wraps
+   each row in boxes it positions and measures; rows fill the wrapper so items in
+   one row share its height, and measure as their content when the wrapper resets. */
+.muxui-grid-list[data-layout='grid'][data-muxui-virtualized] {
+  display: block;
+  padding: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item {
+  box-sizing: border-box;
+  min-block-size: 100%;
+}
+
 .muxui-grid-list[data-muxui-grid-list-motion-ready] {
   position: relative;
   isolation: isolate;
@@ -521,15 +611,22 @@
   display: block;
 }
 
-.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item,
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item {
   position: relative;
   isolation: isolate;
   z-index: 1;
 }
 
-.muxui-grid-list[data-muxui-grid-list-ripple-ready] > .muxui-grid-list-item {
+.muxui-grid-list[data-muxui-grid-list-ripple-ready] > .muxui-grid-list-item,
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-ripple-ready] .muxui-grid-list-item {
   position: relative;
   isolation: isolate;
+}
+
+/* RAC's row wrappers are stacking contexts, so the hover layer goes beneath them. */
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] > .muxui-grid-list-hover {
+  z-index: -1;
 }
 
 .muxui-grid-list-ripple-host {
@@ -577,6 +674,22 @@
   background-image: none;
 }
 
+.muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
+  [data-selected],
+  [aria-selected='true'],
+  [data-disabled],
+  [aria-disabled='true'],
+  [data-dragging],
+  [data-drop-target],
+  [data-pressed],
+  [aria-pressed='true'],
+  [data-focus-visible],
+  :focus-visible
+) {
+  background-color: transparent;
+  background-image: none;
+}
+
 .muxui-grid-list[data-muxui-grid-list-motion-reduced] > .muxui-grid-list-hover {
   transition: none;
 }
@@ -607,6 +720,54 @@
     :focus-visible
   ) {
     background: Canvas;
+  }
+
+  .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
+    [data-selected],
+    [aria-selected='true'],
+    [data-disabled],
+    [aria-disabled='true'],
+    [data-dragging],
+    [data-drop-target],
+    [data-pressed],
+    [aria-pressed='true'],
+    [data-focus-visible],
+    :focus-visible
+  ) {
+    background: Canvas;
+  }
+
+  .muxui-grid-list:where([data-layout='grid'], [data-orientation='horizontal']) > .muxui-grid-list-item[data-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-focus-visible] {
+    outline-color: Highlight;
+    box-shadow: none;
+  }
+
+  .muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected] {
+    background: Highlight;
+    color: HighlightText;
+    box-shadow: none;
+  }
+
+  .muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected][data-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected][data-focus-visible] {
+    outline-color: HighlightText;
+    box-shadow: none;
+  }
+
+  /* LinkText is only guaranteed legible on Canvas, so nested links follow the selected text color. */
+  .muxui-grid-list[data-layout='grid'] > .muxui-grid-list-item[data-selected] a,
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-selected] a {
+    color: HighlightText;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .muxui-grid-list:where([data-layout='grid'], [data-orientation='horizontal']) > .muxui-grid-list-item[data-focus-visible],
+  .muxui-grid-list[data-muxui-virtualized] .muxui-grid-list-item[data-focus-visible] {
+    outline-width: 3px;
+    outline-offset: -3px;
   }
 }
 /* MuxUI component source: list-box.css */
@@ -2772,6 +2933,23 @@
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-grid-list[data-muxui-grid-list-motion-ready] > .muxui-grid-list-item:not(
+    [data-selected],
+    [aria-selected='true'],
+    [data-disabled],
+    [aria-disabled='true'],
+    [data-dragging],
+    [data-drop-target],
+    [data-pressed],
+    [aria-pressed='true'],
+    [data-focus-visible],
+    :focus-visible
+  ) {
+    background-color: transparent;
+    background-image: none;
+  }
+}
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-grid-list[data-muxui-virtualized][data-muxui-grid-list-motion-ready] .muxui-grid-list-item:not(
     [data-selected],
     [aria-selected='true'],
     [data-disabled],

@@ -7985,14 +7985,14 @@
         },
         "advancedCapabilities": {
           "status": "assessed",
-          "summary": "Defer drag-and-drop, async collection loading, custom layout delegates, and render-prop item composition.",
+          "summary": "Defer drag-and-drop, async collection loading, custom layout delegates, and render-prop item composition; layout selects the stack or grid arrangement.",
           "decisions": [
             {
-              "capability": "DnD, custom layouts, and render-prop items",
+              "capability": "DnD, custom layout delegates, and render-prop items",
               "disposition": "defer",
               "rationale": "These surfaces alter collection ownership and need independent keyboard, focus, and lifecycle proof.",
               "workflowRationale": "Consumers can use normalized local item records while advanced collections remain unclaimed.",
-              "proposedMuxSemantics": "Keep fixed grid-list semantics and no DnD/layout/render-prop API.",
+              "proposedMuxSemantics": "Keep grid-list semantics with a layout prop that selects the stack or grid arrangement; no DnD, custom layout delegate, or render-prop API.",
               "portability": "Deferred: portability and testing cost are high.",
               "apiCost": "None now.",
               "testingCost": "Deferred proof must cover drag targets, async invalidation, layout measurement, and item lifecycle.",
@@ -11438,7 +11438,7 @@
         },
         "controlledAndUncontrolledState": {
           "status": "assessed",
-          "summary": "Adapt item/height/itemHeight ownership to finite Mux values; no dynamic measurement contract.",
+          "summary": "Adapt item/height/itemHeight ownership to finite Mux values; stack mode has no dynamic measurement contract, and grid mode measures its rows internally.",
           "decisions": [
             {
               "capability": "items and fixed geometry ownership",
@@ -11578,14 +11578,14 @@
         },
         "explicitOmissions": {
           "status": "assessed",
-          "summary": "Omit custom layouts, dynamic measurement, renderItem customization, and raw virtualizer state objects.",
+          "summary": "Omit custom layout delegates, renderItem customization, and raw virtualizer state objects; row measurement exists only inside grid mode.",
           "decisions": [
             {
-              "capability": "custom layouts, dynamic measurement, renderItem, and raw state",
+              "capability": "custom layout delegates, renderItem, and raw state",
               "disposition": "omit",
-              "rationale": "The fixed ListLayout contract is the portability boundary and avoids arbitrary measurement APIs.",
+              "rationale": "The fixed ListLayout and Mux grid layout contracts are the portability boundary and avoid arbitrary layout and measurement APIs.",
               "workflowRationale": "Consumers should supply items and fixed geometry, not replace layout or row rendering internals.",
-              "proposedMuxSemantics": "Expose only fixed Mux items/geometry/overscan/onScroll and Mux hooks.",
+              "proposedMuxSemantics": "Expose only Mux items, fixed or grid geometry, overscan, onScroll, and Mux hooks.",
               "portability": "High: omission keeps the virtualizer finite.",
               "apiCost": "None: no custom layout API.",
               "testingCost": "Prove negative public types and no custom layout/render forwarding.",
@@ -11594,7 +11594,7 @@
                 "packages/react/test/types.test.tsx"
               ],
               "proofRequirements": [
-                "Verify custom layouts, dynamic measurement, renderItem, and upstream state APIs remain absent."
+                "Verify custom layout delegates, renderItem, and upstream state APIs remain absent."
               ],
               "evidenceRefKeys": [
                 "mux",
