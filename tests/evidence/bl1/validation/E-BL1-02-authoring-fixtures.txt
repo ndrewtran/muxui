@@ -1,0 +1,26 @@
+✔ E-BL1-02: a scaffold emits only canonical inputs under catalog/patterns and previews the manifest (6.529ms)
+✔ E-BL1-02: a scaffold round-trips through schema validation, compile, and get (2909.345ms)
+✔ E-BL1-02 negative: a scaffold refuses missing decisions, unowned fields, and non-canonical sources (30.756125ms)
+✔ E-BL1-02: semantic diff separates editorial, compatible, and incompatible pattern edits (9.147875ms)
+✔ E-BL1-02: change intent previews a pattern edit with its variants and checks (5.188917ms)
+✔ E-BL1-02: a variant source edit moves only patternRevision and that example's contentRevision (214.818584ms)
+✔ E-BL1-02: affected closure reaches a pattern from a variant source, its schema, and its components (27.544167ms)
+✔ E-BL1-02: an orphan example is diagnosed at its owner, now resolvable (52.314459ms)
+✔ E-BL1-02: an undeclared import is diagnosed with its file, line, and the canonical form (152.288583ms)
+✔ E-BL1-02: an unknown participant is diagnosed at the participant component (50.70725ms)
+✔ E-BL1-02: a duplicate variant is diagnosed through the manifest entry the compiler stopped at (12.320542ms)
+✔ E-BL1-02: a colliding variant id is attributed to the later declaration and references the earlier one (143.789416ms)
+✔ E-BL1-02: a hand-edited CRLF variant is diagnosed at its example record and source file (52.122166ms)
+✔ E-BL1-02: pattern records diagnose at their field owners through canonical source diagnosis (1.621ms)
+✔ E-BL1-02: an authored derived field is diagnosed at its reserved owner, not the family contract (16.667833ms)
+✔ E-BL1-02: every pattern and example path reports its own revision members, never the generic fallback (10.984833ms)
+✔ E-BL1-02: an injected stable pattern field must couple scaffold, diff, diagnostics, and closure (9.929166ms)
+✔ E-BL1-02: an injected required example field must couple variant decisions to the example schema (8.799417ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3876.206

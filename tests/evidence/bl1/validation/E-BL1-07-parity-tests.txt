@@ -1,0 +1,19 @@
+✔ list pattern: the loader returns the API items in order (1.419083ms)
+✔ get pattern: the loader returns the record fields and the exact variant sources (4.298125ms)
+✔ ordering and labels come from the schema category groups, not the app (0.278958ms)
+✔ participant filter: list --uses matches the loader and the rail index (13.034417ms)
+✔ rail filter: the shipped index answers every query as the API does (540.627416ms)
+✔ rail filter over several blocks: any-term, the 16-term cap, the 256-character limit, and uses (2875.131166ms)
+✔ usedIn: component pages carry the derived view, and list only component-bound examples (79.265917ms)
+✔ --uses parses on list and search only, and the registry owns it (3.173708ms)
+✔ E-BL1-07: pattern list, search, and get keep one response across JSON, human, and dense (2740.766ms)
+✔ E-BL1-07: the --uses matrix and pattern pages stay inside the dense budgets (5.189917ms)
+✔ E-BL1-07: the real catalog lists the shipped poster grid and rejects bad --uses (2647.823583ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5566.628834

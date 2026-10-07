@@ -803,3 +803,64 @@ test('R1 exit capture refuses a route or existing capture that belongs to anothe
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// BL1 close-out: the retained evidence covers E-BL1-01 to E-BL1-11 at one source revision, keeps its
+// disclosures, and cites only excerpts and captures the index retains.
+test('BL1 retained evidence covers every assertion at one source revision and keeps its disclosures', async () => {
+  const read = async (path) => JSON.parse(await readFile(join(repositoryRoot, path), 'utf8'));
+  const index = await read('tests/evidence/bl1/index.json');
+  assert.equal(index.milestone, 'BL1');
+  assert.equal(index.disclosureClass, 'public-sanitized');
+  const ids = Array.from({ length: 11 }, (_, offset) => `E-BL1-${String(offset + 1).padStart(2, '0')}`);
+  assert.deepEqual(index.records.map(({ assertionId }) => assertionId), ids);
+  const retained = new Map(index.artifacts.map(({ path, sha256 }) => [path, sha256]));
+  const verification = await read(index.validation.path);
+  assert.equal(verification.sourceRevision, index.sourceRevision);
+  assert.equal(verification.sourceTree, index.sourceTree);
+  // Every excerpt an artifact cites is retained at the cited digest.
+  const excerpts = (value) => (Array.isArray(value) ? value.flatMap(excerpts)
+    : value && typeof value === 'object' ? [...(value.excerpt ? [value.excerpt] : []), ...Object.values(value).flatMap(excerpts)] : []);
+
+  const artifacts = {};
+  for (const { assertionId, path } of index.records) {
+    const record = await read(path);
+    assert.equal(record.outcome, 'pass', assertionId);
+    assert.equal(record.sourceRevision, index.sourceRevision, assertionId);
+    assert.equal(record.sourceTree, index.sourceTree, assertionId);
+    assert.equal(record.executedRevision, record.sourceRevision, assertionId);
+    assert.deepEqual(record.proofTool, verification.proofTool, assertionId);
+    assert.ok(record.nonClaims.some((claim) => /^No assistive-technology support claim/u.test(claim)), `${assertionId} states the assistive-technology non-claim`);
+    artifacts[assertionId] = await read(record.artifact.path);
+    assert.equal(artifacts[assertionId].assertionId, assertionId);
+    assert.equal(artifacts[assertionId].sourceRevision, index.sourceRevision, assertionId);
+    for (const excerpt of excerpts(artifacts[assertionId])) assert.equal(retained.get(excerpt.path), excerpt.sha256, `${assertionId} cites ${excerpt.path}`);
+  }
+
+  // E-BL1-06: every capture is retained at its digest, and none overflows.
+  const visual = artifacts['E-BL1-06'].observations;
+  assert.deepEqual(visual.expected.pageWidths, [360, 768, 1024, 1280, 1920]);
+  assert.deepEqual(visual.expected.toolbarPresets, ['360', '768', '1280', 'full']);
+  assert.equal(visual.captures.length, visual.expected.variants * 2 * 4 + visual.expected.marketingVariants.length * 2 * 5);
+  assert.equal(visual.overflowReport.measurements, visual.captures.length);
+  assert.ok(visual.captures.every(({ overflowX, path, sha256 }) => overflowX === false && retained.get(path) === sha256));
+
+  // E-BL1-09: the audit passed and rejects the range that did change @muxui/react.
+  const boundary = artifacts['E-BL1-09'].observations;
+  assert.equal(boundary.audit.pass, true);
+  assert.ok(boundary.negativeControl.failedChecks.includes('react-source-files'));
+
+  // E-BL1-10: the scan found nothing, and the retained review passes with its advisories disclosed.
+  const content = artifacts['E-BL1-10'].observations;
+  assert.deepEqual(content.scan.failures, []);
+  assert.equal(retained.get(content.review.artifact.path), content.review.artifact.sha256);
+  assert.equal(content.review.verdict, 'pass');
+  assert.equal(content.review.advisories.length, 3);
+
+  // E-BL1-11: the revised expectations and the known weaknesses stay on the record.
+  const baseline = artifacts['E-BL1-11'].observations;
+  const thresholds = await read(baseline.thresholds.path);
+  assert.equal(thresholds.provenance.revisedAfterFirstMeasurement.length, 9);
+  assert.equal(thresholds.discovery.queries.length, 21);
+  assert.deepEqual(baseline.knownDiscoveryWeaknesses.map(({ query }) => query).sort(), ['billing toggle', 'collections', 'split hero']);
+  assert.match((await read(index.records.find(({ assertionId }) => assertionId === 'E-BL1-11').path)).claim, /9 of 21 discovery expectations were revised/u);
+});
