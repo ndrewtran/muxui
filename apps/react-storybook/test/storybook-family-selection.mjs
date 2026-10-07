@@ -4,10 +4,14 @@ function slugForFamily(family) {
   return family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
 }
 
-const records = manifest.families.map((record) => ({
-  ...record,
-  slug: slugForFamily(record.family),
-}));
+// A Block (pattern) page group is selected like a family, by its pattern name or slug.
+const records = [
+  ...manifest.families.map((record) => ({
+    ...record,
+    slug: slugForFamily(record.family),
+  })),
+  ...(manifest.patterns ?? []).map(({ family, slug }) => ({ family, slug })),
+];
 const byKey = new Map(records.flatMap((record) => [
   [record.family.toLowerCase(), record],
   [record.slug, record],

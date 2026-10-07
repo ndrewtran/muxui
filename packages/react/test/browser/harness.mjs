@@ -80,10 +80,12 @@ export function pageShell({ attributes = '', head = '', bodyAttributes = '', bod
  * - `middleware`: an extra connect handler that runs before `pages`.
  * - `aliasReact`: resolves React from this package at the repository root, for
  *   virtual modules whose React imports no scanned entry reveals.
+ * - `alias`: extra module aliases, such as `@muxui/react` for a catalog source
+ *   that imports the package by its public name.
  *
  * Each server gets its own dependency cache, removed by `close()`.
  */
-export async function startServer({ root = 'package', entries, pages = {}, modules = {}, middleware, aliasReact = false } = {}) {
+export async function startServer({ root = 'package', entries, pages = {}, modules = {}, middleware, aliasReact = false, alias = {} } = {}) {
   const cacheDir = await mkdtemp(join(tmpdir(), 'muxui-browser-vite-'));
   const moduleIds = new Map(Object.keys(modules).map((path) => [path, resolve(import.meta.dirname, `.${path}`)]));
   const moduleSources = new Map(Object.entries(modules).map(([path, source]) => [moduleIds.get(path), source]));
@@ -93,9 +95,9 @@ export async function startServer({ root = 'package', entries, pages = {}, modul
     cacheDir,
     logLevel: 'error',
     // Dedupe resolves React from the root, which only the package root can do.
-    resolve: root === 'package' ? { dedupe: ['react', 'react-dom'] } : aliasReact ? {
-      alias: { react: resolve(packageRoot, 'node_modules/react'), 'react-dom': resolve(packageRoot, 'node_modules/react-dom') },
-    } : {},
+    resolve: root === 'package' ? { dedupe: ['react', 'react-dom'], alias } : aliasReact ? {
+      alias: { react: resolve(packageRoot, 'node_modules/react'), 'react-dom': resolve(packageRoot, 'node_modules/react-dom'), ...alias },
+    } : { alias },
     // Pre-bundle only where the list resolves to this package's React; elsewhere a
     // stray copy would duplicate React, so those servers rely on `entries` scanning.
     optimizeDeps: { entries, include: root === 'package' || aliasReact ? optimizeDepsInclude : undefined },

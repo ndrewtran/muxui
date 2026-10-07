@@ -956,7 +956,9 @@ function expectedSelectedPageCoverage(stories, schemes) {
 test('selected Mux UI React Storybook pages are axe-clean in light and dark', {
   timeout: pageScopedAuditTimeout(),
   skip: (() => {
-    const { proof } = resolveStorybookPageSelection();
+    const { proof, pages } = resolveStorybookPageSelection();
+    // The full audit lists only the Block pages here; its family test covers the rest.
+    if (proof === 'full') return pages.length > 0 ? false : 'the catalog has no Block pages';
     return ['story', 'component'].includes(proof) ? false : `not part of ${proof} proof`;
   })(),
 }, async (t) => {
@@ -1222,7 +1224,10 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
 
   try {
     throwIfAborted(t.signal);
-    const selectedFamilies = selectedStorybookFamilies();
+    // Block (pattern) pages have no Default, States, or BrowserProof stories; the page-level audit covers them.
+    const blockFamilies = new Set((manifest.patterns ?? []).map(({ family }) => family));
+    const selectedFamilies = selectedStorybookFamilies()?.filter((family) => !blockFamilies.has(family)) ?? null;
+    if (selectedFamilies?.length === 0) return t.skip('every selected family is a Block, covered by the selected-page audit');
     const focused = selectedFamilies !== null;
     const executablePath = await findBrowser();
     throwIfAborted(t.signal);
@@ -1251,7 +1256,7 @@ test('all Mux UI React Storybook families are axe-clean in light and dark', {
       return response.json();
     });
     throwIfAborted(t.signal);
-    const stories = Object.values(index.entries).filter(({ type }) => type === 'story');
+    const stories = Object.values(index.entries).filter(({ type, title }) => type === 'story' && !blockFamilies.has(storyFamily({ title })));
     const familyFilter = focused ? new Set(selectedFamilies) : null;
     const isSelected = (story) => !familyFilter || familyFilter.has(storyFamily(story));
     const defaults = stories.filter((story) => story.name === 'Default' && isSelected(story));

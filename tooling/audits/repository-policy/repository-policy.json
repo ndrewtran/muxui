@@ -184,6 +184,9 @@
       "packages/catalog/catalog-sources.json": "@muxui/catalog",
       "packages/tooling/command-registry.json": "@muxui/tooling"
     },
+    "patternBrowserTests": {
+      "poster-grid": "test/browser/pattern-poster-grid.test.mjs"
+    },
     "documentationPrefixes": [
       "apps/docs/",
       "apps/scale/src/"

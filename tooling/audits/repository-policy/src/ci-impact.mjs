@@ -1263,12 +1263,27 @@ export async function buildPullRequestImpact({
     // Pattern records, variant example records, their sources, and assets
     // compile into the catalog (the digest pinned by @muxui/tooling dense
     // goldens). Docs projects them and follows from the catalog's dependents.
-    // A pattern names no component family, so no React family or Storybook
-    // page route applies. The React example type test walks only
-    // catalog/components, so a variant source joins no React test yet.
+    // A pattern names no component family, so no React family route applies.
+    // A variant source joins the packed React example type test and its exact
+    // generated Storybook page; any other pattern input (record, example
+    // record, asset) can change every page of that pattern, because the page
+    // title, story names, and rendered source come from them. An interactive
+    // pattern also runs its declared browser test.
     if (path.startsWith('catalog/patterns/')) {
       plan.catalog = true;
-      plan.reasons.push(`${path} is a canonical pattern input; validate the catalog, its dense goldens, and the docs that render it`);
+      const slug = path.split('/')[2];
+      if (path.endsWith('.tsx')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
+      const inPattern = ({ source }) => slug !== undefined && source?.startsWith(`catalog/patterns/${slug}/`);
+      const owners = path.endsWith('.tsx')
+        ? routeCatalogExample(path, pageIndex)
+        : pageIndex.flatMap((page) => page.stories.filter(inPattern).map((story) => ({ family: page.family, id: story.id })));
+      for (const owner of owners) {
+        plan.storyIds.add(owner.id);
+        plan.storyIdFamilies.set(owner.id, owner.family);
+      }
+      const browserTest = slug === undefined ? undefined : config.patternBrowserTests?.[slug];
+      if (browserTest) plan.reactTestFiles.add(browserTest);
+      plan.reasons.push(`${path} is a canonical pattern input; validate the catalog, its dense goldens, the docs that render it, and its Storybook pages${browserTest ? ` and ${browserTest}` : ''}`);
       continue;
     }
 
@@ -1524,6 +1539,8 @@ export function needsStorybookGeneration(paths, config, {
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
     || (path.startsWith('catalog/components/') && (/\/artifact\.json$/u.test(path)
       || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))
+    // Pattern pages are generated Storybook pages; routing needs the page index.
+    || path.startsWith('catalog/patterns/')
     || path.startsWith('apps/react-storybook/src/')
     || path.startsWith('apps/react-storybook/test/')
     || path.startsWith('apps/react-storybook/.storybook/')

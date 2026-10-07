@@ -93,7 +93,9 @@ function createColourAuditResources(signal) {
 test('selected Storybook pages paint only canonical Mux colours in light and dark', {
   timeout: pageColourAuditTimeout(resolveStorybookPageSelection()),
   skip: (() => {
-    const { proof } = resolveStorybookPageSelection();
+    const { proof, pages } = resolveStorybookPageSelection();
+    // The full audit lists only the Block pages here.
+    if (proof === 'full') return pages.length > 0 ? false : 'the catalog has no Block pages';
     return ['story', 'component', 'theme'].includes(proof) ? false : `not part of ${proof} proof`;
   })(),
 }, async (t) => {

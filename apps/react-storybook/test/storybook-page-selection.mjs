@@ -26,8 +26,11 @@ function flattenPageIndex(families = pageIndex) {
   })));
 }
 
+// Block (pattern) pages are the generated pages that belong to no component family.
+const blockFamilies = new Set((manifest.patterns ?? []).map(({ family }) => family));
+
 function selectionLabel({ proof, families, pages }) {
-  if (proof === 'full') return 'full package audit';
+  if (proof === 'full') return `Block pages of the full package audit: ${pages.map(({ id }) => id).join(', ') || 'none'}`;
   if (proof === 'theme') {
     const scope = families.length ? families.join(', ') : 'all consumer families';
     return `theme colour and contrast proof for ${scope} (${pages.length} pages)`;
@@ -114,8 +117,14 @@ export function resolveStorybookPageSelection(environment = process.env) {
     if (familySelection !== null || requestedIds !== null) {
       throw new Error('MUXUI_STORYBOOK_CHROME_FILTER_UNEXPECTED: chrome proof does not select stories');
     }
-  } else if (proof === 'full' && (familySelection !== null || requestedIds !== null)) {
-    throw new Error('MUXUI_STORYBOOK_FULL_FILTER_UNEXPECTED: full package proof does not accept page filters');
+  } else if (proof === 'full') {
+    if (familySelection !== null || requestedIds !== null) {
+      throw new Error('MUXUI_STORYBOOK_FULL_FILTER_UNEXPECTED: full package proof does not accept page filters');
+    }
+    // The full audit walks every component family itself; it lists only the Block pages
+    // for the page-level axe and colour audits, which no family test covers.
+    pages = allPages.filter(({ family }) => blockFamilies.has(family));
+    families = [...new Set(pages.map(({ family }) => family))];
   }
 
   return { proof, families, pages, label: selectionLabel({ proof, families, pages }) };
