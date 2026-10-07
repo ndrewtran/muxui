@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:account-settings",
+  "kind": "pattern",
+  "name": "Account settings",
+  "summary": "A settings form with Profile and Notifications sections and a Cancel and Save bar.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "settings",
+    "form",
+    "profile",
+    "notifications",
+    "preferences",
+    "account",
+    "switch",
+    "fields"
+  ],
+  "platforms": ["web.react"],
+  "category": "forms",
+  "intent": {
+    "useWhen": [
+      "Editing grouped account preferences on one page",
+      "Showing unsaved changes next to Cancel and Save"
+    ],
+    "avoidWhen": [
+      "The form is one short group of fields",
+      "Saving needs server validation or a multi-step review"
+    ]
+  },
+  "participants": [
+    {
+      "role": "form",
+      "component": "muxui:component:form",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "field",
+      "component": "muxui:component:text-field",
+      "requirement": "required"
+    },
+    {
+      "role": "choice",
+      "component": "muxui:component:select",
+      "requirement": "required"
+    },
+    {
+      "role": "toggle",
+      "component": "muxui:component:switch",
+      "requirement": "required"
+    },
+    {
+      "role": "rule",
+      "component": "muxui:component:separator",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:account-settings-sections" }],
+  "accessibility": [
+    "The Form is named by the Settings h1 and each section by its own heading; set the levels to your page outline.",
+    "Every field has a visible label, and its description is associated with the input.",
+    "The save bar status is a status region that announces Unsaved changes and Saved.",
+    "Enter in a text field runs the Save handler, and Cancel restores the last saved values.",
+    "The save bar is sticky and can cover a focused field near the bottom edge; add scroll padding to your page if needed.",
+    "Below 40rem of container width the label column stacks above its fields."
+  ],
+  "unsupported": [
+    "Submitting, fetching, or persisting: Save only marks the local state as saved",
+    "Server validation and error summaries",
+    "Navigation guards for unsaved changes",
+    "Tabbed or multi-page settings"
+  ],
+  "workflowValue": "Replaces laying out a settings page by hand: the label column and two-column fields collapse by container width, and the dirty, saved, and cancel logic is one small state pair, so you rename the fields and keep the section layout and save bar."
+}

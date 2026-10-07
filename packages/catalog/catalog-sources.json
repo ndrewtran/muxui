@@ -1024,6 +1024,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/pricing-plans/examples/react/columns.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/account-settings/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/account-settings/examples/react/sections.example.json"
     }
   ]
 }

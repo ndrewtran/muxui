@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:account-settings-sections",
+  "kind": "example",
+  "name": "Sections",
+  "summary": "Labelled Profile and Notifications sections with a sticky Cancel and Save bar.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/account-settings/examples/react/sections.tsx"
+}
