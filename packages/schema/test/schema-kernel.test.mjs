@@ -13,6 +13,7 @@ import {
   canonicalJson,
   classifySchemaChange,
   contentRevision,
+  loadFieldOwnershipRegistry,
   negotiateSchemaVersion,
   parseArtifactRef,
   parseJsonStrict,
@@ -30,6 +31,7 @@ import {
   component,
   example,
   guide,
+  pattern,
   tokenSource,
 } from './fixtures.mjs';
 import { loadJsonDocument } from '../src/contracts.mjs';
@@ -777,7 +779,9 @@ test('field ownership rules reject orphan, duplicate, missing, unclassed, and au
       && error.message.includes('component.schema.json#/properties/undeclaredOwner'),
   );
 
-  for (const { name } of ownership.reservedFields) {
+  for (const { name, families } of ownership.reservedFields) {
+    // A family-scoped reserved field is authored-checked in its own family (pattern.test.mjs).
+    if (families !== undefined) continue;
     const record = component();
     record[name] = 'authored';
     assert.ok(
@@ -787,6 +791,37 @@ test('field ownership rules reject orphan, duplicate, missing, unclassed, and au
       name,
     );
   }
+  reject((registry) => {
+    registry.reservedFields.find(({ name }) => name === 'group').families = ['pattern', 'guide'];
+  }, 'reserved scope widened');
+  reject((registry) => {
+    delete registry.reservedFields.find(({ name }) => name === 'group').families;
+  }, 'reserved scope dropped');
+});
+
+test('pattern-scoped reserved fields stay authorable in another family', () => {
+  const scoped = loadFieldOwnershipRegistry().reservedFields.filter(({ families }) => families !== undefined);
+  assert.deepEqual(scoped.map(({ name }) => name), ['group', 'patternRevision']);
+  assert.ok(scoped.every(({ families }) => families.length === 1 && families[0] === 'pattern'));
+  // `group` is not declared by the guide schema, so a family that declares it must stay valid.
+  const guideSchema = structuredClone(loadJsonDocument('guide.schema.json'));
+  guideSchema.properties.group = { type: 'string' };
+  const schemas = { 'guide.schema.json': guideSchema };
+  for (const { name } of scoped) {
+    guideSchema.properties[name] = { type: 'string' };
+    assert.equal(validateFamily('guide', { ...guide(), [name]: 'x' }, { schemas }).kind, 'guide', name);
+    // Contrast: the same field is still reserved in the pattern family.
+    assert.ok(
+      validationIssues('pattern', { ...pattern(), [name]: 'x' }).some((issue) => (
+        issue.path === `$/${name}` && issue.message === 'is derived or proved and cannot be authored'
+      )),
+      name,
+    );
+  }
+  // Unscoped reserved fields keep applying to every family.
+  assert.ok(validationIssues('pattern', { ...pattern(), contentRevision: 'x' }).some((issue) => (
+    issue.path === '$/contentRevision' && issue.message === 'is derived or proved and cannot be authored'
+  )));
 });
 
 test('E-G0.1-04: package/source locations remain derived and generated types retain owner linkage', async () => {

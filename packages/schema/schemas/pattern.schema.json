@@ -30,7 +30,8 @@
       "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"], "autofixes": ["trim-outer-whitespace"] }
     },
     "lifecycle": {
-      "enum": ["experimental", "stable", "deprecated", "removed"],
+      "description": "Every BL1 pattern is experimental (Decision 0026); widening this enum is a deliberate schema change.",
+      "enum": ["experimental"],
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
     },
     "keywords": {

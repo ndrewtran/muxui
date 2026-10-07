@@ -118,7 +118,8 @@ export function bindingSpecRevision(input) {
 /**
  * The normative pattern fields plus each variant example's content revision
  * (record and source bytes), in authored variant order. Editorial fields
- * (name, summary, keywords, category, workflowValue) stay out.
+ * (name, summary, keywords, category, workflowValue) stay out. Absent
+ * `relations`, `invariants`, and `parameters` normalize to empty values.
  */
 export function patternRevisionPreimage({
   pattern,
@@ -140,11 +141,6 @@ export function patternRevisionPreimage({
       }),
     };
   });
-  const optional = Object.fromEntries(
-    ['relations', 'invariants', 'parameters']
-      .filter((field) => pattern[field] !== undefined)
-      .map((field) => [field, pattern[field]]),
-  );
   return {
     pattern: {
       id: pattern.id,
@@ -154,7 +150,10 @@ export function patternRevisionPreimage({
       participants: pattern.participants,
       accessibility: pattern.accessibility,
       unsupported: pattern.unsupported,
-      ...optional,
+      // An absent optional field and an empty one say the same thing, so they digest alike.
+      relations: pattern.relations ?? [],
+      invariants: pattern.invariants ?? [],
+      parameters: pattern.parameters ?? {},
     },
     variants,
   };

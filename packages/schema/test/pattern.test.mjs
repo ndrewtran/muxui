@@ -4,7 +4,6 @@ import {
   PATTERN_CATEGORY_GROUPS,
   SchemaValidationError,
   contentRevision,
-  loadFieldOwnershipRegistry,
   patternGroup,
   patternRevision,
   relationEdges,
@@ -78,17 +77,12 @@ test('E-BL1-01: a valid pattern and its variant example validate and derive one 
 });
 
 test('E-BL1-01 negative: the closed schema names the earliest owner for each record error', () => {
-  const ownership = loadFieldOwnershipRegistry();
-  const familyOwner = ownership.governedSchemas
-    .find(({ file }) => file === 'pattern.schema.json').owner;
-  const reservedOwner = (name) => ownership.reservedFields.find((field) => field.name === name).owner;
   const cases = [
     {
       label: 'unknown field',
       mutate: (record) => { record.layout = 'grid'; },
       path: '$/layout',
       message: /is an unknown field/u,
-      owner: familyOwner,
     },
     {
       label: 'category outside the enum',
@@ -102,14 +96,19 @@ test('E-BL1-01 negative: the closed schema names the earliest owner for each rec
       mutate: (record) => { record.group = 'application'; },
       path: '$/group',
       message: /derived or proved and cannot be authored/u,
-      owner: reservedOwner('group'),
     },
     {
       label: 'authored patternRevision',
       mutate: (record) => { record.patternRevision = 'sha256:0'; },
       path: '$/patternRevision',
       message: /derived or proved and cannot be authored/u,
-      owner: reservedOwner('patternRevision'),
+    },
+    {
+      label: 'lifecycle beyond experimental',
+      mutate: (record) => { record.lifecycle = 'stable'; },
+      path: '$/lifecycle',
+      message: /must be one of experimental/u,
+      owner: 'pattern-contract',
     },
     {
       label: 'no variants',
@@ -166,11 +165,11 @@ test('E-BL1-01 negative: the closed schema names the earliest owner for each rec
   for (const { label, mutate, path, message, owner } of cases) {
     const error = patternFailure(mutate);
     assertIssue(error, { code: 'MUXUI_SCHEMA_INVALID', artifactId: patternId, path, message });
-    // Fields declared by the schema resolve through authoring metadata; an
-    // unknown or reserved field has no property, so it names the family or reserved owner.
+    // Fields declared by the schema resolve through authoring metadata. An
+    // unknown or reserved field has no property, so it takes the error path;
+    // owner resolution for reserved fields arrives with authoring support.
     if (['unknown field', 'authored group', 'authored patternRevision'].includes(label)) {
       assert.throws(() => ownerOf(path), SchemaValidationError, label);
-      assert.ok(owner, label);
     } else {
       assert.equal(ownerOf(path), owner, label);
     }
@@ -267,6 +266,11 @@ test('E-BL1-01: example-of rows exclude each other and name their owners', () =>
       { target: 'pattern', owner: 'pattern.variants', minimum: 0, maximum: 1, exclusiveWith: ['binding'] },
     ],
   );
+  // `minimum: 0` must not read as "orphans allowed": each row says who enforces exactly one owner.
+  for (const { description } of rows) {
+    assert.match(description, /not an orphan allowance/u);
+    assert.match(description, /validateCatalogRecords/u);
+  }
 });
 
 test('E-BL1-01: the category-group map owns the derived group for every category', () => {
@@ -306,14 +310,18 @@ test('E-BL1-01: patternRevision follows normative fields and variant bytes, not 
     (record) => { record.accessibility = ['Announce selection changes.']; },
     (record) => { record.unsupported = []; },
     (record) => { record.intent.useWhen = ['Browsing posters']; },
-    (record) => { record.lifecycle = 'stable'; },
     (record) => { record.relations = [{ type: 'contains', source: 'list', target: 'action' }]; },
+    (record) => { record.invariants = [{ role: 'list', rule: 'exactly-one' }]; },
+    (record) => { record.parameters = { selectable: { type: 'boolean', default: false } }; },
   ];
   for (const mutate of normative) {
     const record = pattern();
     mutate(record);
     assert.notEqual(patternRevision(input(record)), baseline);
   }
+  // An absent optional field and an empty one are the same pattern.
+  const emptied = { ...pattern(), relations: [], invariants: [], parameters: {} };
+  assert.equal(patternRevision(input(emptied)), baseline);
   assert.notEqual(patternRevision(input(pattern(), `${variantSource}// edited\n`)), baseline);
   const renamedVariant = { ...variantExample(), summary: 'Edited variant summary.' };
   assert.notEqual(patternRevision(input(pattern(), variantSource, [renamedVariant])), baseline);

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://muxui.dev/schema/example.schema.json",
   "title": "Mux UI example",
-  "description": "An example binds one component binding or is listed as one pattern variant; the catalog graph requires exactly one owner.",
+  "description": "An example binds one component binding or is listed as one pattern variant; validateCatalogRecords (graph validation) requires exactly one owner.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "id", "kind", "name", "summary", "lifecycle", "complexity", "prerequisites", "source"],

@@ -252,9 +252,10 @@ function semanticIssues(family, value, ownership) {
   });
   if (['binding', 'capability', 'component', 'example', 'guide', 'pattern', 'token-source'].includes(family)) {
     const ownershipRegistry = ownership ?? loadFieldOwnershipRegistry();
+    // A reserved field with `families` is reserved only in those families.
     const forbidden = new Set(
       [...ownershipRegistry.fields, ...(ownershipRegistry.reservedFields ?? [])]
-        .filter((field) => field.forbiddenInAuthoredSource)
+        .filter((field) => field.forbiddenInAuthoredSource && (field.families?.includes(family) ?? true))
         .map((field) => field.name),
     );
     const sourceContexts = [{ object: value, path: '$' }];
@@ -818,10 +819,11 @@ export function validateFieldOwnershipRegistry(
       || field.forbiddenInAuthoredSource !== true
       || field.class !== authored?.class
       || field.owner !== authored?.owner
+      || JSON.stringify(field.families ?? null) !== JSON.stringify(authored?.families ?? null)
     ) {
       throw ownershipError(
         `$/reservedFields/${field.name}`,
-        'must match one authored reserved class, owner, and authored-source prohibition',
+        'must match one authored reserved class, owner, family scope, and authored-source prohibition',
       );
     }
     reservedNames.add(field.name);
