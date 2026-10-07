@@ -804,18 +804,218 @@ test('R1 exit capture refuses a route or existing capture that belongs to anothe
   }
 });
 
-// BL1 close-out: the E-BL1-09 boundary audit can fail. Each control runs one check over history known to
-// break it, or gives a predicate an input it must reject, and the check must reject it. A check with no
-// control proves nothing, so every check needs one. This needs the full git history, which CI fetches.
-test('the BL1 boundary audit rejects every negative control and has a control for every check', async () => {
-  const { checkIds, checksWithoutControl, negativeControls, runNegativeControls } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+// BL1 close-out: the E-BL1-09 boundary audit can fail. Each control runs one check over history known to break it, or
+// gives a predicate an input it must reject, and names the legs of the check that must fail; the other legs must hold.
+// A leg with no control proves nothing, so every leg needs one. This needs the full git history, which CI fetches.
+test('the BL1 boundary audit fails exactly the legs each negative control names, and every leg has a control', async () => {
+  const { checkIds, checkLegs, checksWithoutControl, legsWithoutControl, negativeControls, runNegativeControls } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
   assert.deepEqual(checksWithoutControl(), [], 'every audit check has a negative control');
-  assert.ok(negativeControls.every(({ check }) => checkIds.includes(check)), 'every control names an audit check');
+  assert.deepEqual(legsWithoutControl(), {}, 'every leg of every check has a negative control');
+  assert.ok(negativeControls.every(({ check, failingLegs }) => checkIds.includes(check) && failingLegs.every((leg) => checkLegs[check].includes(leg))), 'every control names a real check and legs');
   const results = runNegativeControls();
   assert.deepEqual(results.map(({ id }) => id), negativeControls.map(({ id }) => id));
-  for (const { id, rejected, accepted } of results) {
+  for (const { id, rejected, accepted, expectedFailingLegs, failingLegs } of results) {
+    assert.deepEqual(failingLegs, expectedFailingLegs, `${id}: exactly the named legs fail`);
     assert.equal(rejected, true, `${id}: the check rejects its control`);
     // A function control also names an input the check must accept, so a predicate that rejects everything fails here.
     if (accepted !== null) assert.equal(accepted, true, `${id}: the check accepts the shipped input`);
+  }
+});
+
+test('the BL1 close-out scope check is skipped only for a growth capture, and the page widths match the amendment', async () => {
+  const { auditBoundary } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const only = ['closeout-scope', 'react-package-manifest'];
+  assert.deepEqual(auditBoundary({ offline: true, only }).checks.map(({ id }) => id), ['react-package-manifest', 'closeout-scope']);
+  assert.deepEqual(auditBoundary({ offline: true, only, closeoutBase: null }).checks.map(({ id }) => id), ['react-package-manifest']);
+  // The capture takes the page widths from the accepted amendment and refuses a docs module that disagrees.
+  const { pageWidths } = await import('../../../../apps/docs/src/lib/block-presets.ts');
+  const amendment = await readFile(join(repositoryRoot, 'decisions/0026-amendment-01-page-width-presets.md'), 'utf8');
+  const widths = [...(/page-width presets are \*\*([^*]+)\*\*/u.exec(amendment)?.[1] ?? '').matchAll(/\d+/gu)].map(([width]) => Number(width));
+  assert.deepEqual(widths, [360, 768, 1024, 1280, 1920]);
+  assert.deepEqual([...pageWidths], widths);
+});
+
+// BL1 close-out: the capture's refusals and carry-forwards, on throwaway repositories.
+const gitIn = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd, encoding: 'utf8' }).trim();
+
+async function commitFiles(cwd, files, message) {
+  for (const [path, text] of Object.entries(files)) {
+    await mkdir(join(cwd, path, '..'), { recursive: true });
+    await writeFile(join(cwd, path), text);
+  }
+  gitIn(cwd, 'add', '-A');
+  gitIn(cwd, 'commit', '-q', '-m', message);
+  return gitIn(cwd, 'rev-parse', 'HEAD');
+}
+
+/** A repository with main at `source` (origin/main points there), `reviewed` before it, and `branch` off main, not in main. */
+async function reviewRepository() {
+  const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-support-'));
+  gitIn(cwd, 'init', '-q', '-b', 'main');
+  const reviewed = await commitFiles(cwd, { 'tests/evidence/capture-bl1.mjs': 'v1\n', 'a.txt': 'a\n' }, 'reviewed');
+  const source = await commitFiles(cwd, { 'tests/evidence/capture-bl1.mjs': 'v2\n', 'b.txt': 'b\n' }, 'source');
+  gitIn(cwd, 'update-ref', 'refs/remotes/origin/main', source);
+  gitIn(cwd, 'checkout', '-q', '-b', 'feature');
+  const branch = await commitFiles(cwd, { 'c.txt': 'c\n' }, 'branch only');
+  gitIn(cwd, 'checkout', '-q', 'main');
+  return { cwd, reviewed, source, branch, sourceTree: gitIn(cwd, 'rev-parse', `${source}^{tree}`) };
+}
+
+test('the BL1 capture refuses a source revision that is not in main\'s history', async () => {
+  const { assertDurableSource } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const { cwd, reviewed, source, branch } = await reviewRepository();
+  try {
+    assertDurableSource({ cwd, revision: source });
+    assertDurableSource({ cwd, revision: reviewed });
+    assert.throws(() => assertDurableSource({ cwd, revision: branch }), /EVIDENCE_SOURCE_NOT_DURABLE/u);
+    // With no main to compare, it fails closed rather than passing.
+    gitIn(cwd, 'update-ref', '-d', 'refs/remotes/origin/main');
+    assert.throws(() => assertDurableSource({ cwd, revision: source }), /EVIDENCE_SOURCE_NOT_DURABLE/u);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test('a BL1 review is retained with its own revision and tree, compared with the source, and reused only while its digest holds', async () => {
+  const { retainReview } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const { cwd, reviewed, source, branch, sourceTree } = await reviewRepository();
+  const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-support-out-'));
+  const root = 'tests/evidence/bl1';
+  const artifactPath = `${root}/artifacts/E-BL1-09-exit-review.md`;
+  const record = (revision, extra = '') => `# Review\n\n**Reviewer:** an independent reviewer, not the author.\n**Revision:** \`${revision.slice(0, 8)}\`\n${extra}Trailing spaces stay.  \n\n## Verdict\n\nholds\n`;
+  const write = async (name, text) => {
+    await writeFile(join(outputRoot, name), text);
+    return join(outputRoot, name);
+  };
+  const base = { cwd, outputRoot, root, id: 'E-BL1-09', artifactPath, previousKey: 'exitReview', sourceRevision: source, sourceTree, proofToolPaths: ['tests/evidence/capture-bl1.mjs', 'tests/evidence/proof.mjs'] };
+  try {
+    // A review of an earlier revision: its tree differs, and the tool that changed since is named.
+    const input = await write('review.md', record(reviewed, `Local path ${cwd}/x and /Users/someone/y.\n`));
+    const earlier = await retainReview({ ...base, required: true, input, reviewedRevision: reviewed });
+    assert.equal(earlier.reviewedRevisionDiffersFromSource, true);
+    assert.equal(earlier.reviewedRevisionInMainHistory, true);
+    assert.equal(earlier.reviewedTree, gitIn(cwd, 'rev-parse', `${reviewed}^{tree}`));
+    assert.equal(earlier.comparison.equalTrees, false);
+    assert.deepEqual(earlier.comparison.changedPaths, ['b.txt', 'tests/evidence/capture-bl1.mjs']);
+    assert.deepEqual(earlier.comparison.proofToolsChangedSinceReviewed, ['tests/evidence/capture-bl1.mjs']);
+    // Only local paths change, and each kind is counted; every other byte, including trailing spaces, is kept.
+    assert.deepEqual(earlier.sanitization.replacements, { repositoryRoot: 1, temporary: 0, home: 1 });
+    assert.ok(earlier.text.includes('Local path <repo>/x and <home>/y.'));
+    assert.ok(earlier.text.includes('Trailing spaces stay.  \n'));
+    assert.equal(earlier.reviewer, 'an independent reviewer, not the author.');
+    assert.equal(earlier.verdictText, 'holds');
+
+    // A review of the source revision itself compares equal, and a revision only on a branch is not in main's history.
+    const same = await retainReview({ ...base, required: true, input: await write('same.md', record(source)), reviewedRevision: source });
+    assert.deepEqual([same.reviewedRevisionDiffersFromSource, same.comparison.equalTrees, same.comparison.proofToolsChangedSinceReviewed], [false, true, []]);
+    const onBranch = await retainReview({ ...base, required: true, input: await write('branch.md', record(branch)), reviewedRevision: branch });
+    assert.equal(onBranch.reviewedRevisionInMainHistory, false);
+    // A revision this repository does not hold cannot be compared, and says so.
+    const absent = 'f'.repeat(40);
+    const unknown = await retainReview({ ...base, required: true, input: await write('absent.md', record(absent)), reviewedRevision: absent });
+    assert.deepEqual([unknown.reviewedTree, unknown.comparison, unknown.reviewedRevisionInMainHistory], [null, null, false]);
+
+    // Refusals: a short revision, a record that does not name its revision, and one that names no reviewer.
+    await assert.rejects(retainReview({ ...base, required: true, input, reviewedRevision: reviewed.slice(0, 8) }), /full 40-character revision/u);
+    await assert.rejects(retainReview({ ...base, required: true, input: await write('other.md', record(source)), reviewedRevision: reviewed }), /does not name the revision/u);
+    await assert.rejects(retainReview({ ...base, required: true, input: await write('anon.md', `no reviewer\n${reviewed.slice(0, 8)}\n`), reviewedRevision: reviewed }), /does not name its reviewer/u);
+
+    // Absent: required throws, optional returns null. Present: the retained review is reused until its bytes change.
+    await assert.rejects(retainReview({ ...base, required: true }), /required and none is retained/u);
+    assert.equal(await retainReview({ ...base, required: false }), null);
+    await mkdir(join(outputRoot, root, 'artifacts'), { recursive: true });
+    await writeFile(join(outputRoot, artifactPath), earlier.text);
+    const { text: _text, ...retained } = earlier;
+    await writeFile(join(outputRoot, root, 'artifacts/E-BL1-09.json'), JSON.stringify({ observations: { exitReview: retained } }));
+    const reused = await retainReview({ ...base, required: true });
+    assert.equal(reused.artifact.sha256, earlier.artifact.sha256);
+    assert.equal(reused.reviewedRevision, reviewed);
+    assert.deepEqual(reused.comparison, earlier.comparison);
+    await writeFile(join(outputRoot, artifactPath), `${earlier.text}tampered`);
+    await assert.rejects(retainReview({ ...base, required: true }), /no longer matches its recorded digest/u);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+    await rm(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('a BL1 capture that replaces an earlier one keeps it in the tree and names it, and a rerun carries the reference forward', async () => {
+  const { archiveSupersededCapture, supersededFiles } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-supersede-'));
+  const root = 'tests/evidence/bl1';
+  const revisionA = 'a'.repeat(40);
+  const revisionB = 'b'.repeat(40);
+  const revisionC = 'c'.repeat(40);
+  const put = async (path, text) => {
+    await mkdir(join(outputRoot, path, '..'), { recursive: true });
+    await writeFile(join(outputRoot, path), text);
+    return Buffer.from(text);
+  };
+  /** Writes a capture of two records at `revision`, each with its artifact and an excerpt, as the capture tool lays it out. */
+  async function writeCapture(revision, supersedes = new Map()) {
+    const bytes = {};
+    for (const id of ['E-BL1-08', 'E-BL1-11']) {
+      const artifact = await put(`${root}/artifacts/${id}.json`, JSON.stringify({ assertionId: id, revision }));
+      await put(`${root}/validation/${id}.txt`, `excerpt ${id} ${revision}\n`);
+      bytes[id] = await put(`${root}/records/${id}.json`, JSON.stringify({ assertionId: id, sourceRevision: revision, artifact: { path: `${root}/artifacts/${id}.json`, sha256: digest(artifact) }, ...(supersedes.has(id) ? { supersedes: supersedes.get(id) } : {}) }));
+    }
+    await put(`${root}/index.json`, JSON.stringify({ sourceRevision: revision }));
+    await put(`${root}/verification.json`, JSON.stringify({ sourceRevision: revision }));
+    return bytes;
+  }
+  try {
+    // Nothing on disk: nothing to supersede.
+    assert.equal((await archiveSupersededCapture({ outputRoot, root, sourceRevision: revisionA })).size, 0);
+
+    // Capture B replaces capture A: A is copied byte for byte, and each new record names its predecessor.
+    const bytesA = await writeCapture(revisionA);
+    const first = await archiveSupersededCapture({ outputRoot, root, sourceRevision: revisionB });
+    const archiveA = `${root}/superseded/${'a'.repeat(12)}`;
+    assert.deepEqual(first.get('E-BL1-08'), { path: `${archiveA}/records/E-BL1-08.json`, sha256: digest(bytesA['E-BL1-08']), sourceRevision: revisionA });
+    assert.deepEqual(await readFile(join(outputRoot, first.get('E-BL1-11').path)), bytesA['E-BL1-11']);
+    const archived = (await supersededFiles({ outputRoot, root })).map(({ path }) => path);
+    assert.deepEqual(archived, [
+      'artifacts/E-BL1-08.json', 'artifacts/E-BL1-11.json', 'index.json', 'records/E-BL1-08.json', 'records/E-BL1-11.json',
+      'validation/E-BL1-08.txt', 'validation/E-BL1-11.txt', 'verification.json',
+    ].map((path) => `${archiveA}/${path}`));
+    assert.ok((await supersededFiles({ outputRoot, root })).every(({ sha256 }) => /^sha256:[0-9a-f]{64}$/u.test(sha256)));
+
+    // The tool then replaces the records at B; a rerun at B copies nothing and carries the references forward.
+    const bytesB = await writeCapture(revisionB, first);
+    const rerun = await archiveSupersededCapture({ outputRoot, root, sourceRevision: revisionB });
+    assert.deepEqual([...rerun], [...first]);
+    assert.equal((await supersededFiles({ outputRoot, root })).length, 8, 'a rerun archives nothing new');
+
+    // Capture C replaces B: B is archived with its own reference to A, so the chain stays walkable.
+    const second = await archiveSupersededCapture({ outputRoot, root, sourceRevision: revisionC });
+    assert.equal(second.get('E-BL1-08').path, `${root}/superseded/${'b'.repeat(12)}/records/E-BL1-08.json`);
+    assert.equal(second.get('E-BL1-08').sha256, digest(bytesB['E-BL1-08']));
+    assert.deepEqual(JSON.parse(await readFile(join(outputRoot, second.get('E-BL1-08').path), 'utf8')).supersedes, first.get('E-BL1-08'));
+    assert.equal((await supersededFiles({ outputRoot, root })).length, 16);
+    // The records on disk are still B's, so a second archive of B is refused rather than overwritten.
+    await assert.rejects(archiveSupersededCapture({ outputRoot, root, sourceRevision: revisionC }), /BL1_SUPERSEDE_EXISTS/u);
+  } finally {
+    await rm(outputRoot, { recursive: true, force: true });
+  }
+
+  // An earlier capture that does not verify, or that binds two revisions, is not archived.
+  for (const [label, damage, pattern] of [
+    ['an artifact that no longer matches its record', { 'E-BL1-08': { artifact: 'changed' } }, /BL1_SUPERSEDE_UNVERIFIED/u],
+    ['records that bind two revisions', { 'E-BL1-11': { revision: revisionC } }, /BL1_SUPERSEDE_MIXED/u],
+  ]) {
+    const directory = await mkdtemp(join(tmpdir(), 'muxui-bl1-supersede-'));
+    try {
+      for (const id of ['E-BL1-08', 'E-BL1-11']) {
+        const artifact = JSON.stringify({ id });
+        await mkdir(join(directory, root, 'artifacts'), { recursive: true });
+        await mkdir(join(directory, root, 'records'), { recursive: true });
+        await writeFile(join(directory, root, `artifacts/${id}.json`), damage[id]?.artifact ?? artifact);
+        await writeFile(join(directory, root, `records/${id}.json`), JSON.stringify({ assertionId: id, sourceRevision: damage[id]?.revision ?? revisionA, artifact: { path: `${root}/artifacts/${id}.json`, sha256: digest(Buffer.from(artifact)) } }));
+      }
+      await assert.rejects(archiveSupersededCapture({ outputRoot: directory, root, sourceRevision: revisionB }), pattern, label);
+      assert.equal((await supersededFiles({ outputRoot: directory, root })).length, 0, `${label}: nothing was archived`);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 });

@@ -20,10 +20,22 @@ this file.
 
 Both bind source revision `be6f7c41`, a commit from a pull request branch that a
 squash merge removed from main's history, so neither can be fetched from main.
-They stay byte for byte as they are, because evidence is append-only. The
-close-out capture supersedes them: it recaptures both from a main commit, and
-each new record carries `supersedes` with the path, digest, and source revision
-of the record it replaces. Git history keeps the old bytes.
+Until the close-out capture is retained they stay byte for byte as they are.
+
+The close-out capture supersedes them without deleting them, because evidence is
+append-only. The new records are written at the same paths, so before that the
+tool copies the whole earlier capture (index, validation summary, records,
+artifacts, excerpts, and captures) byte for byte under
+`tests/evidence/bl1/superseded/<revision>/`, after checking each earlier artifact
+still matches the digest its record names. Every copied file is listed with its
+digest in the new index's `artifacts`, so `evidence-verify` checks them, and each
+new record carries `supersedes` with the copied predecessor's path, digest, and
+source revision. A rerun of the capture at the same revision copies nothing new and
+carries each `supersedes` forward; a later capture archives the capture it
+replaces the same way, so the chain stays walkable. The index's `supersessions`
+list is not used: Architecture defines it as an `EvidenceApplicabilitySupersession`
+certificate that closes an applicability chain after an accepted authority change,
+which a recapture is not.
 
 ## The close-out capture
 
@@ -36,10 +48,16 @@ index binds a single source revision and tree.
   and refuses any other, because a squash merge orphans a branch commit and every
   record would bind a commit nobody can fetch. This is why the tools and the
   amendment land first and the evidence is captured from the merged main commit
-  in a follow-up pull request, the pattern the R1 exit used.
+  in a follow-up pull request, the pattern the R1 exit used. Fetch first so
+  `origin/main` is current.
+- The page widths come from the accepted amendment: the capture parses the list from
+  `decisions/0026-amendment-01-page-width-presets.md` and fails unless
+  `apps/docs/src/lib/block-presets.ts` agrees.
+- A close-out capture needs both independent reviews (see below).
 - `--rehearsal=<dir>` runs every proof and writes the evidence under `<dir>`
-  instead, skipping the main-history check, so the tool can be exercised before a
-  merge. A rehearsal is never retained.
+  instead, skipping the main-history check and the exit review requirement, so the
+  tool can be exercised before a merge. A rehearsal is never retained.
+- `--growth` is for a capture after a block is added (see "Adding a block").
 - It refuses to write when any proof fails, retains a sanitized excerpt of every
   command's output (the raw output's digest is in the artifact, the raw output is
   not retained), binds each proof tool by commit, tree, and bytes, and verifies the
@@ -60,9 +78,10 @@ index binds a single source revision and tree.
 | `E-BL1-11` | `regression.mjs` against `regression-thresholds.json` |
 
 The other files here are the proof tools the capture binds: `proof-run.mjs`
-(runs, sanitizes, and parses a command), `surface-parity.mjs`,
-`boundary-audit.mjs`, `content-scan.mjs`, `variant-typecheck.mjs`, and
-`regression.mjs`.
+(runs, sanitizes, and parses a command), `capture-support.mjs` (the main-history
+guard, the review slots, and the supersession archive, which
+`evidence-integrity.test.mjs` exercises), `surface-parity.mjs`, `boundary-audit.mjs`,
+`content-scan.mjs`, `variant-typecheck.mjs`, and `regression.mjs`.
 
 ## The boundary audit
 
@@ -83,15 +102,19 @@ the claim to "no deployment configuration added", and the record says which.
   prints the note only when the change is in the range. The pre-BL1 base is therefore
   not the package the BL1 records ran against: BL1 evidence validates the package
   after #227.
-- **Negative controls.** A check that cannot fail proves nothing, so each check has a
-  control: a range or head from this repository's history that breaks it (#207 for
-  the manifest and dependencies, `aab51163` for the version and private flag, #201
-  for the stylesheet names, #213 for workflows, #222 for source files and catalog
-  records), or a synthetic input a predicate must reject and accept (registry,
-  deployments, assistive-technology claims, CLI surface). The close-out scope check
-  fails when no change exists, so it cannot pass vacuously. The evidence integrity
-  test asserts every control and that every check has one, and the capture retains
-  the results.
+- **Negative controls.** A check that cannot fail proves nothing, so each check is
+  split into legs, its independent conditions, and each leg has a control that fails
+  exactly that leg: a range or head from this repository's history that breaks it
+  (#207 for the manifest and dependencies, `aab51163` for the version and private
+  flag, #149 and #201 for the stylesheet names, #213 for workflows, #222 for source
+  files and catalog records), or a synthetic input a predicate must reject on that
+  leg alone and accept when it is good (registry fields, deployments, each
+  assistive-technology claim pattern, the CLI surface, package manifests, Astro
+  settings). The close-out scope check fails when no change exists, so it cannot pass
+  vacuously. The evidence integrity test asserts that exactly the named legs fail and
+  that no leg lacks a control, and the capture retains the results. The controls
+  exercise the predicates and the git comparisons; they do not exercise the live
+  `npm`, `gh`, and CLI reads themselves.
 - **Heuristics.** The assistive-technology claim scan reads added lines in catalog
   records, docs and Storybook sources, package sources and readmes, and the root
   readme, and flags claim-shaped wording. It is a heuristic and cannot prove a claim
@@ -101,21 +124,26 @@ the claim to "no deployment configuration added", and the record says which.
 
 Reviews are inputs the capture retains, never proofs. `--content-review` retains the
 `E-BL1-10` content review and `--exit-review` the independent review of the
-`E-BL1-09` audit and the exit claim, each with the full revision the reviewer read.
-A review is retained as the reviewer wrote it except for local paths, with the digest
-of the original, and it names its own reviewed revision and tree. A review's reviewed
-revision can differ from the capture's source revision, and each retained review
-says whether its reviewed revision is in main's history. The content review is also
-refused if `catalog/patterns` differs from the tree it read. A review is independent
-of the authoring agents only: it records its reviewer's model, and two reviews by
-the same model are not independent of each other.
+`E-BL1-09` audit and the exit claim, each with the full revision the reviewer read; a
+close-out capture needs both. A review is retained as the reviewer wrote it except
+for local paths (the repository root, temporary directories, and home directories are
+rewritten, and each kind is counted), with the digest of the original. It names its
+own reviewed revision and tree. A review's reviewed revision can differ from the
+capture's source revision, and each retained review records how: whether its
+revision is in main's history, whether its tree equals the source tree, which paths
+changed between them, and which proof tools differ at the source revision, so a
+reader can see whether the tools that ran are the tools that were reviewed. The
+content review is also refused if `catalog/patterns` differs from the tree it read.
+A review is independent of the authoring agents only: it records its reviewer, and
+two reviews by the same model are not independent of each other.
 
 ## Known limits
 
-- `E-BL1-01`: an unknown field's diagnostic names the field path, not an owner,
-  because no owner resolves for an undeclared field. The Roadmap wording "names the
-  earliest owner" is met for seven of the eight negative cases, and the record says
-  so.
+- `E-BL1-01`: all eight negative cases name an owner, but an unknown field's owner
+  is the family contract `pattern-contract`, reached through the diagnostic fallback
+  at the schema root, not a field-level owner: the schema test asserts that no
+  field-level owner resolves for an undeclared field, and an authoring test asserts
+  the fallback. The record states both.
 - `E-BL1-03`: the virtualized poster grid renders an empty shell on the server by
   design (a Virtualizer mounts rows from a measured scroller). Its rows are proved
   after a measured hydration, bounded to some rows and fewer than its 1,000 cards, and
@@ -139,13 +167,20 @@ the same model are not independent of each other.
 
 ## Adding a block
 
-A block added later adds its search queries to `regression-thresholds.json` (and its
-id to `seedSet`) before it is measured, needs its own independent content review,
-and then re-runs the capture from a main commit, because the index pins the
-thresholds digest. Raising a threshold is a deliberate edit to
-`regression-thresholds.json`, not to a record. A pattern whose id and name carry a
-component word can outrank that component and fail the component search rule, so name
-a block for what it shows, not for a component.
+The Roadmap gives a block added later `E-BL1-03` through `E-BL1-08`, `E-BL1-10`, and
+`E-BL1-11`, not `E-BL1-09`, so the close-out scope check and the exit review do not
+apply to it. Its close-out scope would fail by design, because a new block changes
+`catalog/patterns/` and the catalog sources, which the close-out may not. Capture it
+with `--growth`: that skips the close-out scope check and the exit review, records
+`scope: growth` in `verification.json` and in the `E-BL1-09` artifact, and keeps every
+other check, including the rest of the boundary audit, which must still pass. The
+block adds its search queries to `regression-thresholds.json` (and its id to
+`seedSet`) before it is measured, needs its own independent content review, and then
+re-runs the capture from a main commit, because the index pins the thresholds digest;
+the capture archives the capture it replaces under `superseded/`. Raising a threshold
+is a deliberate edit to `regression-thresholds.json`, not to a record. A pattern whose
+id and name carry a component word can outrank that component and fail the component
+search rule, so name a block for what it shows, not for a component.
 `packages/tooling/test/pattern-regression.test.mjs` runs `regression.mjs` on every
 `@muxui/tooling` check, so each block added later is held to the same thresholds.
 

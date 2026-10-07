@@ -4,7 +4,7 @@
 //   node tests/evidence/capture-bl1.mjs [--capture-timestamp=<ISO-8601 UTC>]
 //     [--content-review=<record> --content-review-revision=<sha>]
 //     [--exit-review=<record> --exit-review-revision=<sha>]
-//     [--rehearsal=<dir>]
+//     [--growth] [--rehearsal=<dir>]
 //
 // Run it from a committed revision that is in origin/main's history, with a clean worktree
 // (only tests/evidence/bl1 may differ). It refuses a revision outside main's history, because
@@ -20,17 +20,22 @@
 //   E-BL1-05  docs check (check-blocks)             E-BL1-11  catalog regression baseline
 //   E-BL1-06  width-preset captures and overflow
 //
-// Independent reviews are inputs, not proofs. `--content-review` retains the E-BL1-10 content
-// review and `--exit-review` the independent review of the E-BL1-09 audit and the exit claim;
-// each takes the full 40-character revision the reviewer read. A review is retained as the
-// reviewer wrote it except for local paths, with the digest of the original, and names its own
-// reviewed revision and tree, which can differ from the capture's source revision. A later
-// capture without the flag reuses the retained review, which must still match its digest.
-// The content review is also refused if catalog/patterns differs from the tree it read.
-// `--rehearsal=<dir>` runs every proof and writes the evidence under <dir> instead of the
-// repository, skipping the main-history check, so the tool can be exercised before a merge.
-// A proof tool is bound by its bytes and by the last commit that changed it, and must already
-// be committed.
+// Independent reviews are inputs, not proofs (see capture-support.mjs). `--content-review`
+// retains the E-BL1-10 content review and `--exit-review` the independent review of the
+// E-BL1-09 audit and the exit claim; each takes the full 40-character revision the reviewer
+// read. A review is retained as the reviewer wrote it except for local paths, with the digest of
+// the original, and names its own reviewed revision and tree, which can differ from the
+// capture's source revision; the record says how they differ. A later capture without the flag
+// reuses the retained review, which must still match its digest. The content review is refused
+// if catalog/patterns differs from the tree it read, and a close-out capture needs both reviews.
+// `--growth` is for a capture after a block is added: the Roadmap gives a later block only
+// E-BL1-03 to E-BL1-08, E-BL1-10, and E-BL1-11, so it skips the close-out scope check and the
+// exit review, and records that it did. `--rehearsal=<dir>` runs every proof and writes the
+// evidence under <dir> instead of the repository, skipping the main-history check and the exit
+// review, so the tool can be exercised before a merge. When a capture replaces an earlier one,
+// the earlier capture is kept byte for byte under tests/evidence/bl1/superseded/ and each new
+// record names its predecessor. A proof tool is bound by its bytes and by the last commit that
+// changed it, and must already be committed.
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
@@ -41,9 +46,10 @@ import { canonicalJson } from '../../tooling/audits/repository-policy/src/canoni
 import { hasUnsanitizedEvidenceOutput, verifyEvidence } from '../../tooling/audits/repository-policy/src/evidence-verify.mjs';
 import { patternVariantExamples } from '../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { pageWidths, toolbarPresets } from '../../apps/docs/src/lib/block-presets.ts';
-import { auditBoundary, checksWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
+import { auditBoundary, checksWithoutControl, legsWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
 import { scanBlockContent } from './bl1/content-scan.mjs';
-import { parseTestReport, runProof, sanitizeOutput, sanitizationRules } from './bl1/proof-run.mjs';
+import { archiveSupersededCapture, assertDurableSource, isAncestor as isAncestorIn, retainReview, supersededFiles } from './bl1/capture-support.mjs';
+import { parseTestReport, runProof, sanitizationRules } from './bl1/proof-run.mjs';
 import {
   compileBundle,
   isPatternSource,
@@ -58,7 +64,7 @@ import { createCatalogApi } from '../../packages/catalog/src/index.mjs';
 
 const root = 'tests/evidence/bl1';
 const captureTool = 'tests/evidence/capture-bl1.mjs';
-const helperTools = ['regression.mjs', 'proof-run.mjs', 'boundary-audit.mjs', 'content-scan.mjs', 'surface-parity.mjs', 'variant-typecheck.mjs'].map((name) => `${root}/${name}`);
+const helperTools = ['regression.mjs', 'proof-run.mjs', 'capture-support.mjs', 'boundary-audit.mjs', 'content-scan.mjs', 'surface-parity.mjs', 'variant-typecheck.mjs'].map((name) => `${root}/${name}`);
 const authority = 'strategy/milestone-roadmap.md: BL1 Blocks showcase (Decision 0026)';
 const pageWidthDecision = 'decisions/0026-amendment-01-page-width-presets.md';
 // The catalog digest with no pattern entries must equal the one the tooling golden pinned at #225, the last
@@ -71,11 +77,12 @@ const digestChain = [['b53a05ab55f12696aaf443ffdefb832b4ad2380b', null, 'the pre
 const option = (name) => process.argv.find((argument) => argument.startsWith(`--${name}=`))?.slice(name.length + 3);
 const captureTimestamp = option('capture-timestamp') ?? new Date().toISOString().replace(/\.\d{3}Z$/u, 'Z');
 const rehearsal = option('rehearsal');
+const growth = process.argv.includes('--growth');
 const outputRoot = rehearsal === undefined ? repositoryRoot : resolve(rehearsal);
 const command = (executable, args) => execFileSync(executable, args, { cwd: repositoryRoot, encoding: 'utf8' }).trim();
 const sha256 = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 const tail = (id) => id.slice(id.lastIndexOf(':') + 1);
-const isAncestor = (ancestor, descendant) => spawnSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], { cwd: repositoryRoot }).status === 0;
+const isAncestor = (ancestor, descendant) => isAncestorIn(repositoryRoot, ancestor, descendant);
 
 const inRoot = (line) => line.slice(3).startsWith(`${root}/`);
 const dirty = command('git', ['status', '--porcelain=v1', '--untracked-files=all']).split('\n').filter(Boolean).filter((line) => !inRoot(line));
@@ -84,9 +91,7 @@ if (dirty.length > 0) throw new Error(`EVIDENCE_DIRTY_WORKTREE: commit the imple
 const sourceRevision = command('git', ['rev-parse', 'HEAD']);
 const sourceTree = command('git', ['rev-parse', 'HEAD^{tree}']);
 const sourceRevisionInMainHistory = isAncestor('HEAD', 'origin/main');
-if (rehearsal === undefined && !sourceRevisionInMainHistory) {
-  throw new Error(`EVIDENCE_SOURCE_NOT_DURABLE: ${sourceRevision} is not in origin/main's history. Merge the tools first, fetch, and capture from the merged main commit, or rehearse with --rehearsal=<dir>.`);
-}
+if (rehearsal === undefined) assertDurableSource({ cwd: repositoryRoot, revision: sourceRevision });
 
 function chromeVersion() {
   for (const candidate of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']) {
@@ -108,6 +113,13 @@ const environment = {
   pnpm: command('pnpm', ['--version']),
   runnerOs: `macOS ${command('sw_vers', ['-productVersion'])}`,
 };
+
+// The page widths come from the accepted amendment, and the docs module the capture reads must agree with it.
+const amendmentText = await readFile(join(repositoryRoot, pageWidthDecision), 'utf8');
+const amendmentWidths = [...(/page-width presets are \*\*([^*]+)\*\*/u.exec(amendmentText)?.[1] ?? '').matchAll(/\d+/gu)].map(([width]) => Number(width));
+if (amendmentWidths.length === 0 || canonicalJson(amendmentWidths) !== canonicalJson([...pageWidths])) {
+  throw new Error(`BL1_PAGE_WIDTHS: apps/docs/src/lib/block-presets.ts has ${pageWidths.join(', ')}, but ${pageWidthDecision} fixes ${amendmentWidths.join(', ') || 'no list'}`);
+}
 
 // ---- Proof runner: every command runs once, must exit 0, and leaves a sanitized excerpt. ----
 const excerpts = [];
@@ -212,6 +224,9 @@ const positiveFixtures = [
   'E-BL1-01: the fixture pattern compiles with derived group, revision, and exact variant source',
 ];
 requirePassed(schemaTests, [closedSchema, artifactGraph, undeclaredImport, ...positiveFixtures]);
+// The authoring tests also hold the unknown-field owner assertion, so they run before the negatives are assembled.
+const authoringFile = 'packages/tooling/test/pattern-authoring.test.mjs';
+const authoringTests = prove('E-BL1-02-authoring-fixtures', { command: process.execPath, args: ['--test', authoringFile] }, { observed: ['authoring-fixtures'] });
 
 /** The source of one named test, up to the next top-level test. */
 function testSource(source, file, title) {
@@ -244,7 +259,7 @@ const fromCase = (negative, label, cases, block, ownerFor) => {
   return { negative, test: block === closedBlock ? closedSchema : artifactGraph, file: schemaFile, case: label, code: codeOf(block), path: found.path, messagePattern: found.message, ...ownerFor(found) };
 };
 const ownerOfClosed = (found) => (found.owner === null
-  ? { owner: null, ownerNote: unknownFieldHasNoOwner ? 'the test asserts that no owner resolves for the undeclared path, so the diagnostic names the path only' : 'no owner is asserted' }
+  ? { owner: null, ownerNote: unknownFieldHasNoOwner ? 'the schema test asserts that no field-level owner resolves for the undeclared path' : 'no owner is asserted' }
   : { owner: found.owner });
 const ownerOfGraph = () => ({ owner: graphOwner });
 const importCase = {
@@ -258,8 +273,27 @@ const importCase = {
   owner: /resolveAuthoringField\('pattern', issue\.path\)\.owner, '([^']+)'/u.exec(importBlock)?.[1] ?? null,
 };
 if (Object.values(importCase).some((value) => value === undefined)) throw new Error('BL1_FIXTURE_MISSING: the undeclared-import test no longer asserts a code, path, and message');
+// An unknown field has no field-level owner, so canonical source diagnosis names the family contract through its fallback.
+const unknownFieldTitle = 'E-BL1-01: an unknown pattern field is diagnosed at the pattern contract through the family fallback';
+requirePassed(authoringTests, [unknownFieldTitle]);
+const unknownBlock = testSource(await readFile(join(repositoryRoot, authoringFile), 'utf8'), authoringFile, unknownFieldTitle);
+const unknownFieldDiagnosis = {
+  path: /source\.path, '([^']+)'/u.exec(unknownBlock)?.[1],
+  owner: /owner\.name, '([^']+)'/u.exec(unknownBlock)?.[1],
+  schemaPointer: /owner\.schemaPointer, '([^']+)'/u.exec(unknownBlock)?.[1],
+  message: /assert\.match\(unknown\.message, \/(.*)\/u\)/u.exec(unknownBlock)?.[1],
+};
+if (Object.values(unknownFieldDiagnosis).some((value) => value === undefined)) throw new Error('BL1_FIXTURE_MISSING: the unknown-field authoring test no longer asserts a path, message, and owner');
+const unknownField = fromCase('an unknown field', 'unknown field', closedCases, closedBlock, ownerOfClosed);
+if (unknownField.path !== unknownFieldDiagnosis.path) throw new Error('BL1_FIXTURE_MISSING: the schema and authoring tests disagree on the unknown field path');
 const requiredNegatives = [
-  fromCase('an unknown field', 'unknown field', closedCases, closedBlock, ownerOfClosed),
+  {
+    ...unknownField,
+    schemaLevelOwner: null,
+    owner: unknownFieldDiagnosis.owner,
+    ownerNote: `the schema diagnostic names the path only; canonical source diagnosis (diagnoseCanonicalSource) names ${unknownFieldDiagnosis.owner} at schema pointer ${unknownFieldDiagnosis.schemaPointer} through the family-contract fallback, because no field-level owner resolves for an undeclared field`,
+    ownerProof: { file: authoringFile, test: unknownFieldTitle, proof: authoringTests.ref },
+  },
   fromCase('a category outside the enum', 'category outside the enum', closedCases, closedBlock, ownerOfClosed),
   fromCase('an unknown participant', 'unknown participant', graphCases, graphBlock, ownerOfGraph),
   importCase,
@@ -269,10 +303,9 @@ const requiredNegatives = [
   fromCase('a pattern with no variants', 'no variants', closedCases, closedBlock, ownerOfClosed),
 ].map((entry) => ({ ...entry, outcome: 'pass' }));
 const namingOwner = requiredNegatives.filter(({ owner }) => owner !== null);
-const namingNoOwner = requiredNegatives.filter(({ owner }) => owner === null);
+const fallbackOwners = requiredNegatives.filter(({ ownerProof }) => ownerProof !== undefined);
 
 // ---- E-BL1-02: authoring support. ----
-const authoringTests = prove('E-BL1-02-authoring-fixtures', { command: process.execPath, args: ['--test', 'packages/tooling/test/pattern-authoring.test.mjs'] }, { observed: ['authoring-fixtures'] });
 const authoringCapabilities = [
   ['scaffold round-trips through validation and compilation', /scaffold/u],
   ['semantic diff covers patterns and variant examples', /semantic diff/u],
@@ -433,66 +466,43 @@ if (matrix.patterns.length !== patterns.length || matrix.variants.length !== var
 if (matrix.cli.revision !== sourceRevision || !matrix.cli.cleanOutsideEvidenceRoot) throw new Error('E-BL1-07: the CLI the matrix spawned is not the CLI at the source revision');
 
 // ---- E-BL1-09: platform, release, and negative-boundary audit, and its independent review. ----
-const boundary = auditBoundary({ base: preBl1Base, head: 'HEAD' });
+const boundary = auditBoundary({ base: preBl1Base, head: 'HEAD', ...(growth ? { closeoutBase: null } : {}) });
 if (!boundary.pass) throw new Error(`E-BL1-09: ${boundary.checks.filter(({ pass }) => !pass).map(({ id }) => id).join(', ')} failed`);
+const closeoutScope = boundary.checks.some(({ id }) => id === 'closeout-scope')
+  ? { run: true }
+  : { run: false, reason: 'a growth capture follows a block added after the close-out, which changes files the close-out scope forbids' };
 const liveCli = boundary.checks.find(({ id }) => id === 'plan-install-registry-scaffold-unavailable').observations.liveCli;
 if (!liveCli.run) throw new Error(`E-BL1-09: the live CLI check did not run: ${liveCli.reason}`);
 const controls = runNegativeControls();
 const uncovered = checksWithoutControl();
+const uncoveredLegs = legsWithoutControl();
 const unsound = controls.filter(({ rejected, accepted }) => !rejected || accepted === false);
-if (unsound.length > 0 || uncovered.length > 0) {
-  throw new Error(`E-BL1-09: negative controls failed: ${unsound.map(({ id }) => id).join(', ')}${uncovered.length > 0 ? `; no control for ${uncovered.join(', ')}` : ''}`);
+if (unsound.length > 0 || uncovered.length > 0 || Object.keys(uncoveredLegs).length > 0) {
+  throw new Error(`E-BL1-09: negative controls failed: ${unsound.map(({ id }) => id).join(', ')}${uncovered.length > 0 ? `; no control for ${uncovered.join(', ')}` : ''}${Object.keys(uncoveredLegs).length > 0 ? `; legs with no control: ${JSON.stringify(uncoveredLegs)}` : ''}`);
 }
 const checkOf = (id) => boundary.checks.find((check) => check.id === id);
 const reactSource = checkOf('react-source-files').observations;
 const deployment = checkOf('no-deployment');
 const registryClaim = checkOf('registry-unchanged');
 
-// ---- Independent reviews: retained as inputs, never as proof. ----
-/** Retains one independent review record, or reuses the one already retained. Returns null when there is none. */
-async function retainReview({ id, flag, artifactPath, previousKey, required }) {
-  const input = option(flag);
-  const reviewedRevision = option(`${flag}-revision`);
-  let text;
-  let record;
-  if (input !== undefined) {
-    if (!/^[0-9a-f]{40}$/u.test(reviewedRevision ?? '')) throw new Error(`${id}: --${flag}-revision must name the full 40-character revision the reviewer read`);
-    const raw = await readFile(input, 'utf8');
-    text = sanitizeOutput(raw);
-    if (hasUnsanitizedEvidenceOutput(text, repositoryRoot)) throw new Error(`${id}: the review record is not disclosable after sanitization`);
-    record = { raw: { bytes: Buffer.byteLength(raw), retained: false, sha256: sha256(raw) }, pathReplacements: raw.split(repositoryRoot).length - 1, reviewedRevision };
-  } else {
-    const previousPath = join(outputRoot, root, `artifacts/${id}.json`);
-    const previous = existsSync(previousPath) ? JSON.parse(await readFile(previousPath, 'utf8')).observations[previousKey] : undefined;
-    if (previous === undefined || previous === null) {
-      if (required) throw new Error(`${id}: pass --${flag}=<record> and --${flag}-revision=<sha>; no review is retained yet`);
-      return null;
-    }
-    text = await readFile(join(outputRoot, previous.artifact.path), 'utf8');
-    if (sha256(text) !== previous.artifact.sha256) throw new Error(`${id}: the retained review no longer matches its recorded digest`);
-    record = { raw: previous.raw, pathReplacements: previous.sanitization.pathReplacements, reviewedRevision: previous.reviewedRevision };
-  }
-  if (!text.includes(record.reviewedRevision.slice(0, 8))) throw new Error(`${id}: the review record does not name the revision ${record.reviewedRevision.slice(0, 8)} it is retained for`);
-  const reviewer = /\*\*Reviewer:\*\*\s*(.+)/u.exec(text)?.[1]?.trim();
-  if (!reviewer) throw new Error(`${id}: the review record does not name its reviewer`);
-  const objectExists = spawnSync('git', ['cat-file', '-e', `${record.reviewedRevision}^{commit}`], { cwd: repositoryRoot }).status === 0;
-  const verdict = /^##+ (?:Overall verdict|Verdict)[ \t]*\n([\s\S]*?)(?=\n##+ |(?![\s\S]))/mu.exec(text)?.[1]?.trim();
-  return {
-    artifact: { path: artifactPath, sha256: sha256(text) },
-    raw: record.raw,
-    sanitization: { rule: 'the record is retained as the reviewer wrote it except that the repository root path is rewritten to <repo> so no local path enters evidence', pathReplacements: record.pathReplacements },
-    reviewer,
-    reviewedRevision: record.reviewedRevision,
-    reviewedRevisionDiffersFromSource: record.reviewedRevision !== sourceRevision,
-    reviewedRevisionInMainHistory: objectExists && isAncestor(record.reviewedRevision, 'origin/main'),
-    reviewedTree: objectExists ? command('git', ['rev-parse', `${record.reviewedRevision}^{tree}`]) : null,
-    verdictText: verdict ?? null,
-    advisoryLines: text.split('\n').filter((line) => /\badvisory\b/iu.test(line)).map((line) => line.trim().slice(0, 400)),
-    text,
-  };
-}
-const contentReview = await retainReview({ id: 'E-BL1-10', flag: 'content-review', artifactPath: `${root}/artifacts/E-BL1-10-content-review.md`, previousKey: 'review', required: true });
-const exitReview = await retainReview({ id: 'E-BL1-09', flag: 'exit-review', artifactPath: `${root}/artifacts/E-BL1-09-exit-review.md`, previousKey: 'exitReview', required: false });
+// ---- Independent reviews: retained as inputs, never as proof (see capture-support.mjs). ----
+const reviewSlot = (id, flag, artifactPath, previousKey, required) => retainReview({
+  cwd: repositoryRoot,
+  outputRoot,
+  root,
+  id,
+  input: option(flag),
+  reviewedRevision: option(`${flag}-revision`),
+  artifactPath,
+  previousKey,
+  required,
+  sourceRevision,
+  sourceTree,
+  proofToolPaths: [captureTool, ...helperTools],
+});
+const contentReview = await reviewSlot('E-BL1-10', 'content-review', `${root}/artifacts/E-BL1-10-content-review.md`, 'review', true);
+// The exit review covers the close-out claim, so a close-out capture needs it; a growth capture or a rehearsal may go without.
+const exitReview = await reviewSlot('E-BL1-09', 'exit-review', `${root}/artifacts/E-BL1-09-exit-review.md`, 'exitReview', rehearsal === undefined && !growth);
 
 // ---- E-BL1-10: the content scan and the content review. ----
 const contentTests = prove('E-BL1-10-content-rule-tests', {
@@ -531,7 +541,7 @@ const boundaryClaim = [
 const artifacts = {
   'E-BL1-01': {
     evidenceKind: 'pattern-schema-and-compiler-fixtures',
-    claim: `The pattern schema is closed and a valid record compiles. The ${requiredNegatives.length} required negative fixtures each fail with a coded diagnostic at the failing field's path; ${namingOwner.length} resolve to the owner of that field, and ${namingNoOwner.map(({ negative }) => negative).join(', ') || 'none'} ${namingNoOwner.length === 1 ? 'names' : 'name'} the path only, because no owner resolves for an undeclared field.`,
+    claim: `The pattern schema is closed and a valid record compiles. The ${requiredNegatives.length} required negative fixtures each fail with a coded diagnostic at the failing field's path, and ${namingOwner.length} of ${requiredNegatives.length} name an owner: ${namingOwner.length - fallbackOwners.length} the field-level owner, and ${fallbackOwners.map(({ negative }) => negative).join(', ') || 'none'} the family-contract owner through the diagnostic fallback, because no field-level owner resolves for an undeclared field.`,
     observations: {
       proof: schemaTests.ref,
       testFiles: [schemaFile, catalogFile],
@@ -658,10 +668,12 @@ const artifacts = {
     observations: {
       tool: `${root}/boundary-audit.mjs`,
       audit: boundary,
+      closeoutScope,
       negativeControls: {
-        description: 'Each check is run over history known to break it, or a predicate is given a synthetic input it must reject; every control must reject. The integrity test asserts each one.',
+        description: 'Each check is run over history known to break it, or a predicate is given a synthetic input it must reject. A control names the legs of the check it must fail, and the other legs must hold. The integrity test asserts each one.',
         results: controls,
         checksWithoutControl: uncovered,
+        legsWithoutControl: uncoveredLegs,
       },
       exitReview: exitReview === null ? null : reviewObservation(exitReview),
     },
@@ -696,15 +708,9 @@ const artifacts = {
   },
 };
 
-// A later capture replaces an earlier one in place; each new record names the record it supersedes, and git history keeps the old bytes.
-const superseded = new Map();
-for (const assertionId of Object.keys(artifacts)) {
-  const previousPath = join(outputRoot, root, `records/${assertionId}.json`);
-  if (!existsSync(previousPath)) continue;
-  const bytes = await readFile(previousPath);
-  const { sourceRevision: previousRevision } = JSON.parse(bytes);
-  if (previousRevision !== sourceRevision) superseded.set(assertionId, { path: `${root}/records/${assertionId}.json`, sha256: sha256(bytes), sourceRevision: previousRevision });
-}
+// A later capture replaces an earlier one at the same paths, so the earlier capture is first copied byte for byte under
+// superseded/ and each new record names its predecessor; a rerun at the same revision carries the existing references forward.
+const supersedes = await archiveSupersededCapture({ outputRoot, root, sourceRevision });
 for (const directory of ['artifacts', 'records', 'validation', 'captures']) await rm(join(outputRoot, root, directory), { recursive: true, force: true });
 for (const directory of ['artifacts', 'records', 'validation', 'captures']) await mkdir(join(outputRoot, root, directory), { recursive: true });
 async function write(path, value) {
@@ -729,7 +735,7 @@ const reviewFlags = [
   option('content-review') === undefined ? '' : ' --content-review=<independent content review record> --content-review-revision=<sha>',
   option('exit-review') === undefined ? '' : ' --exit-review=<independent exit review record> --exit-review-revision=<sha>',
 ].join('');
-const captureProcedure = `node ${captureTool} --capture-timestamp=${captureTimestamp}${reviewFlags}`;
+const captureProcedure = `node ${captureTool} --capture-timestamp=${captureTimestamp}${reviewFlags}${growth ? ' --growth' : ''}`;
 
 const validationRefs = [];
 for (const { path, text } of excerpts) validationRefs.push(await write(path, text));
@@ -757,6 +763,7 @@ const validation = await write(`${root}/verification.json`, {
   results: validationResults,
   sanitizationRules,
   schema: 'muxui-evidence-validation-v1',
+  scope: growth ? 'growth' : 'close-out',
   sourceRevision,
   sourceRevisionInMainHistory,
   sourceTree,
@@ -769,13 +776,14 @@ const nonClaims = [
   'These records prove the BL1 assertions for the shipped blocks at this source revision. They do not set a milestone status; that is tracker state outside the repository.',
 ];
 const extraNonClaims = {
-  'E-BL1-01': namingNoOwner.map(({ negative }) => `The ${negative} fixture's diagnostic names the field path, not an owner: no owner resolves for an undeclared field, so the Roadmap wording "names the earliest owner" is met for ${namingOwner.length} of ${requiredNegatives.length} negatives.`),
+  'E-BL1-01': fallbackOwners.map(({ negative, owner }) => `For ${negative}, the owner is the family contract ${owner} reached through the diagnostic fallback, not a field-level owner; the schema diagnostic itself names the path only.`),
   'E-BL1-03': ['The virtualized poster grid renders an empty shell on the server by design; its rows are proved after a measured hydration, and by the browser test (E-BL1-04).'],
   'E-BL1-06': ['The captures judge horizontal overflow and give a visual record; they are not a pixel-regression baseline and not a responsive-support claim for any consumer page.'],
   'E-BL1-07': ['The site comparison covers the fields the loaders read, and rail search is compared as a set of blocks, not by rank.'],
   'E-BL1-09': [
     ...(reactSource.nonBl1Changes === undefined ? [] : [`The pre-BL1 base is not the package these records ran against: ${reactSource.nonBl1Changes[0].commit} (#227, not a BL1 pull request) changed the shipped Sidebar styles before the last BL1 merge, so the packed package is not byte-identical to the pre-BL1 one.`]),
     ...(deployment.observations.observed ? [] : ['Deployments were not observed; the claim is only that no deployment configuration was added.']),
+    ...(exitReview?.comparison?.proofToolsChangedSinceReviewed.length > 0 ? [`The exit review read the tools at ${exitReview.reviewedRevision.slice(0, 8)}; ${exitReview.comparison.proofToolsChangedSinceReviewed.length} proof tools differ at the source revision (${exitReview.comparison.proofToolsChangedSinceReviewed.join(', ')}), so it is not a review of them as they ran.`] : []),
     'The assistive-technology scan is a heuristic over added lines and cannot prove the absence of a claim.',
   ],
   'E-BL1-10': ['The independent review is a read of the block sources and rules at the reviewed revision, advisory input to the human acceptance, and not a legal clearance of any brand, likeness, or license.'],
@@ -812,7 +820,7 @@ for (const [assertionId, { evidenceKind, claim }] of Object.entries(artifacts)) 
       sourceRevision,
       sourceRevisionInMainHistory,
       sourceTree,
-      ...(superseded.has(assertionId) ? { supersedes: superseded.get(assertionId) } : {}),
+      ...(supersedes.has(assertionId) ? { supersedes: supersedes.get(assertionId) } : {}),
       validation,
     }),
   });
@@ -821,6 +829,7 @@ await write(`${root}/index.json`, {
   artifacts: [
     { path: thresholdsPath, sha256: artifacts['E-BL1-11'].observations.thresholds.sha256 },
     ...reviewRefs,
+    ...await supersededFiles({ outputRoot, root }),
     ...Object.values(artifactRefs),
     ...validationRefs,
     ...captureRefs,

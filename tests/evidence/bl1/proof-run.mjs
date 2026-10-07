@@ -31,6 +31,26 @@ export function sanitizeOutput(text) {
     .replace(/[ \t]+$/gmu, '');
 }
 
+const temporaryPaths = /\/(?:private\/)?(?:var\/folders|tmp)\/[^\s'")]+/gu;
+const homePaths = /\/Users\/[^/\s'")]+/gu;
+
+/**
+ * Rewrites local paths only (the repository root, temporary directories, home directories) and
+ * counts each kind, keeping every other byte, for a record that is retained as it was written.
+ */
+export function sanitizePaths(text, root = repositoryRoot) {
+  const counts = { repositoryRoot: 0, temporary: 0, home: 0 };
+  let output = text;
+  for (const candidate of new Set([root, realpathSync(root)])) {
+    counts.repositoryRoot += output.split(candidate).length - 1;
+    output = output.replaceAll(candidate, '<repo>');
+  }
+  output = output
+    .replace(temporaryPaths, () => { counts.temporary += 1; return '<tmp>'; })
+    .replace(homePaths, () => { counts.home += 1; return '<home>'; });
+  return { text: output, counts };
+}
+
 /**
  * Runs `command` from `cwd` (relative to the repository root) and returns its exit code,
  * the display form of the command, the raw output digest, and the sanitized output.
