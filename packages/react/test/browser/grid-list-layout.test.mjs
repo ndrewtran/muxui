@@ -222,7 +222,9 @@ for (const engine of browserEngines()) {
         });
       }
 
-      await t.test('in forced colors a selected grid card uses Highlight, and its focus ring and nested link use HighlightText', async () => {
+      // WebKit has no forced-colors mode, and Playwright's emulation does not force
+      // system colors in Linux WebKit, so only engines that implement it run this.
+      await t.test('in forced colors a selected grid card uses Highlight, and its focus ring and nested link use HighlightText', { skip: engine === 'webkit' && 'WebKit has no forced-colors mode' }, async () => {
         const selector = '[role="row"][aria-selected="true"]';
         await ltr.open();
         await ltr.tab.emulateMedia({ forcedColors: 'active' });
