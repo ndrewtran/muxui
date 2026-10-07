@@ -1,23 +1,54 @@
 /**
  * Dependency-free, fail-closed import check for system-owned pattern variant
- * examples (Decision 0026). A variant may reference `@muxui/react` only as
+ * examples (Decision 0026).
+ *
+ * Every import sits in the leading header: imports, comments, and blank lines
+ * before the first other statement. A header import may name only `react`,
+ * `react/jsx-runtime`, and `@muxui/react`, and `@muxui/react` only as
  *
  *   import { A, B as C, type D } from '@muxui/react';
  *
  * (possibly multi-line). `type` specifiers and `import type` are ignored.
- * Every other reference fails: default, namespace, side-effect, subpath, and
- * dynamic imports, `export ... from`, and any other string naming the package.
+ * Relative specifiers, every other package, and every other `@muxui/react`
+ * form (default, namespace, side-effect, subpath) fail.
  *
- * A small tokenizer drops comments and string contents before imports are
- * matched. It does not parse JSX, regular expressions, or escape sequences:
- * an unpaired quote in JSX text is read as a literal character, and a `//` in
- * JSX text starts a comment to the end of its line. Imported names are matched
- * by export name against component records, so sub-parts, hooks, and types are
- * unmapped, and use is not checked.
+ * Only the header is tokenized. A small tokenizer cannot read the rest of a
+ * file (JSX text, regular expressions, and escapes defeat it, and `//` in JSX
+ * text would hide code), so the rest is scanned raw and fails closed on
+ * anything that could pull in a module: a dynamic import, `require(`, a
+ * line-leading `import` or `export ... from`, an escaped `@`, and any
+ * occurrence of `@muxui`, even in a comment or string.
+ *
+ * Limits: imported names are matched by export name against component
+ * records. Names that belong to no component record, such as the hook
+ * `useToast`, the provider `ToastProvider`, sub-parts, and types, are not
+ * checked against `pattern.participants`, and use is not checked. Mid-line
+ * statements the raw rules cannot tell from prose are not detected.
  */
 
-const REACT_PACKAGE = /^@muxui\/react(?:\/|$)/u;
-const WORD = /[\p{L}_$][\p{L}\p{N}_$]*|[0-9][\w.]*/uy;
+const ALLOWED_SPECIFIERS = new Set(['react', 'react/jsx-runtime', '@muxui/react']);
+const IDENTIFIER = /[\p{L}_$][\p{L}\p{N}_$]*/uy;
+const NAME = '[\\p{L}_$][\\p{L}\\p{N}_$]*';
+// A statement start: a line start, or after `;` or `}`. Keeps prose such as
+// "please import your photos" and member calls such as `a.import(` out.
+const STATEMENT_START = '(?<=(?:^|[;}])\\s*)';
+const NOT_MEMBER = '(?<![\\p{L}\\p{N}_$.])';
+
+/** Raw rules for the source after the header, most specific first; one violation per line. */
+const BODY_RULES = [
+  [new RegExp(`${NOT_MEMBER}import\\s*\\(`, 'gu'), 'a dynamic import, which cannot be checked'],
+  [new RegExp(`${NOT_MEMBER}require\\s*\\(`, 'gu'), 'a require call, which cannot be checked'],
+  [
+    new RegExp(`${STATEMENT_START}export\\s*(?:type\\s*)?(?:\\*(?:\\s*as\\s+${NAME})?|\\{[^}]*\\})\\s*from\\s*['"]`, 'gmu'),
+    'an export ... from, which re-exports another module',
+  ],
+  [
+    new RegExp(`${STATEMENT_START}import(?:\\s*[{*'"]|\\s+type\\s*[{*]|\\s+(?:type\\s+)?${NAME}\\s*(?:,|=|\\bfrom\\b))`, 'gmu'),
+    'an import after the leading import header',
+  ],
+  [/\\x40|\\u0040|\\u\{0*40\}/gu, "an escaped '@', which could hide a package name"],
+  [/@muxui/gu, "a raw '@muxui' reference after the import header"],
+];
 
 class ScanError extends Error {
   constructor(message, line) {
@@ -26,98 +57,78 @@ class ScanError extends Error {
   }
 }
 
-/** Splits source into word, punct, and string tokens, skipping comments and whitespace. */
-function tokenize(source) {
-  const tokens = [];
-  let index = 0;
-  let line = 1;
-  const fail = (message) => { throw new ScanError(message, line); };
-  const push = (kind, value) => tokens.push({ kind, value, line });
-
-  function quoted(quote) {
-    for (let end = index + 1; end < source.length && source[end] !== '\n'; end += 1) {
-      if (source[end] === '\\') end += 1;
-      else if (source[end] === quote) {
-        push('string', source.slice(index + 1, end));
-        index = end + 1;
-        return;
-      }
-    }
-    // A quote with no partner on its line is JSX text, not a string.
-    push('punct', quote);
-    index += 1;
-  }
-
-  function template() {
-    let text = '';
-    index += 1;
-    while (index < source.length) {
-      const character = source[index];
-      if (character === '`') {
-        index += 1;
-        push('string', text);
-        return;
-      }
-      if (character === '$' && source[index + 1] === '{') {
-        index += 2;
-        text += '\0';
-        code(true);
-        continue;
-      }
-      if (character === '\\') {
-        text += character;
-        index += 1;
-      }
-      if (source[index] === '\n') line += 1;
-      text += source[index] ?? '';
-      index += 1;
-    }
-    fail('unterminated template literal');
-  }
-
-  function code(substitution) {
-    let depth = 0;
-    while (index < source.length) {
-      const character = source[index];
-      const pair = source.slice(index, index + 2);
-      if (character === '\n') {
-        line += 1;
-        index += 1;
-      } else if (/\s/u.test(character)) {
-        index += 1;
-      } else if (pair === '//') {
-        const end = source.indexOf('\n', index);
-        index = end === -1 ? source.length : end;
-      } else if (pair === '/*') {
-        const end = source.indexOf('*/', index + 2);
-        if (end === -1) fail('unterminated block comment');
-        line += source.slice(index, end).split('\n').length - 1;
-        index = end + 2;
-      } else if (character === '"' || character === "'") {
-        quoted(character);
-      } else if (character === '`') {
-        template();
-      } else if (substitution && character === '}' && depth === 0) {
-        index += 1;
-        return;
-      } else {
-        if (substitution && character === '{') depth += 1;
-        if (substitution && character === '}') depth -= 1;
-        WORD.lastIndex = index;
-        const word = WORD.exec(source);
-        push(word ? 'word' : 'punct', word ? word[0] : character);
-        index += word ? word[0].length : 1;
-      }
-    }
-    if (substitution) fail('unterminated template substitution');
-  }
-
-  code(false);
-  return tokens;
-}
-
+const lineAt = (source, offset) => source.slice(0, offset).split('\n').length;
 const isPunct = (token, value) => token?.kind === 'punct' && token.value === value;
 const isWord = (token, value) => token?.kind === 'word' && token.value === value;
+
+/** Reads the token at or after `from`, skipping whitespace and comments; null at the end. */
+function nextToken(source, from) {
+  let index = from;
+  for (;;) {
+    while (/\s/u.test(source[index] ?? '')) index += 1;
+    if (source.startsWith('//', index)) {
+      const end = source.indexOf('\n', index);
+      index = end === -1 ? source.length : end;
+    } else if (source.startsWith('/*', index)) {
+      const end = source.indexOf('*/', index + 2);
+      if (end === -1) throw new ScanError('unterminated block comment', lineAt(source, index));
+      index = end + 2;
+    } else {
+      break;
+    }
+  }
+  if (index >= source.length) return null;
+  const character = source[index];
+  const token = (kind, value, end) => ({ kind, value, end, line: lineAt(source, index), start: index });
+  if (character === '"' || character === "'") {
+    for (let end = index + 1; end < source.length && source[end] !== '\n'; end += 1) {
+      if (source[end] === '\\') end += 1;
+      else if (source[end] === character) return token('string', source.slice(index + 1, end), end + 1);
+    }
+    // A quote with no partner on its line is not a string; it reads as punctuation.
+  } else {
+    IDENTIFIER.lastIndex = index;
+    const word = IDENTIFIER.exec(source);
+    if (word) return token('word', word[0], index + word[0].length);
+  }
+  return token('punct', character, index + 1);
+}
+
+/**
+ * Reads the leading imports. Returns each with its clause tokens (up to the
+ * specifier) and specifier string token, plus the offset where the header ends.
+ */
+function readHeader(source) {
+  const imports = [];
+  let position = 0;
+  for (;;) {
+    const keyword = nextToken(source, position);
+    // Any other statement ends the header, including `import(` and `import.meta`.
+    const after = isWord(keyword, 'import') ? nextToken(source, keyword.end) : null;
+    if (!isWord(keyword, 'import') || isPunct(after, '(') || isPunct(after, '.')) {
+      return { imports, end: keyword?.start ?? source.length };
+    }
+    const clause = [];
+    let depth = 0;
+    let cursor = keyword.end;
+    let terminator;
+    for (;;) {
+      terminator = nextToken(source, cursor);
+      if (terminator === null || isPunct(terminator, ';') || (terminator.kind === 'string' && depth === 0)) break;
+      if (isPunct(terminator, '{')) depth += 1;
+      else if (isPunct(terminator, '}')) depth -= 1;
+      clause.push(terminator);
+      cursor = terminator.end;
+    }
+    const specifier = terminator?.kind === 'string' ? terminator : undefined;
+    imports.push({ line: keyword.line, clause, specifier });
+    position = terminator?.end ?? source.length;
+    if (specifier !== undefined) {
+      const semicolon = nextToken(source, position);
+      if (isPunct(semicolon, ';')) position = semicolon.end;
+    }
+  }
+}
 
 /** Reads the specifiers between `{` and `}`; returns names and any shape violation. */
 function namedSpecifiers(clause) {
@@ -145,74 +156,68 @@ function namedSpecifiers(clause) {
   return { names };
 }
 
+/** Checks one header import and returns the names it takes from `@muxui/react`. */
+function checkHeaderImport({ line, clause, specifier }, violate) {
+  if (specifier === undefined) {
+    violate(line, 'an unreadable import');
+    return [];
+  }
+  const target = specifier.value;
+  if (!ALLOWED_SPECIFIERS.has(target)) {
+    violate(line, target.startsWith('@muxui/react/')
+      ? `a subpath import of '${target}'`
+      : `an import of '${target}', outside the allowed react, react/jsx-runtime, and @muxui/react`);
+    return [];
+  }
+  if (clause.length === 0) {
+    if (target === '@muxui/react') violate(line, "a side-effect import of '@muxui/react'");
+    return [];
+  }
+  if (!isWord(clause.at(-1), 'from')) {
+    violate(line, `an unreadable import of '${target}'`);
+    return [];
+  }
+  if (target !== '@muxui/react') return [];
+  const words = clause.slice(0, -1);
+  // `import type { A }` and `import type A` are type-only; `import type from` is a default import.
+  if (isWord(words[0], 'type') && words[1] !== undefined && !isPunct(words[1], ',')) return [];
+  if (!isPunct(words[0], '{') || !isPunct(words.at(-1), '}')) {
+    violate(line, `a ${words.some((token) => isPunct(token, '*')) ? 'namespace' : 'default'} import of '@muxui/react'`);
+    return [];
+  }
+  const result = namedSpecifiers(words);
+  if (result.violation) violate(line, `${result.violation} from '@muxui/react'`);
+  return result.violation ? [] : result.names;
+}
+
 /**
  * Scans one source. Returns the names imported from `@muxui/react` and every
  * violation of the canonical form, each with its 1-based line.
  */
 export function scanReactImports(source) {
-  let tokens;
+  let header;
   try {
-    tokens = tokenize(source);
+    header = readHeader(source);
   } catch (error) {
     if (!(error instanceof ScanError)) throw error;
     return { imported: [], violations: [{ line: error.line, message: `cannot be scanned (${error.message})` }] };
   }
-  const imported = [];
   const violations = [];
-  const handled = new Set();
   const violate = (line, what) => violations.push({ line, message: `has ${what}` });
+  const imported = header.imports.flatMap((statement) => checkHeaderImport(statement, violate));
 
-  for (const [start, token] of tokens.entries()) {
-    if (!isWord(token, 'import')) continue;
-    const next = tokens[start + 1];
-    if (isPunct(next, '(')) {
-      violate(token.line, 'a dynamic import, which cannot be checked');
-      if (tokens[start + 2]?.kind === 'string') handled.add(start + 2);
-      continue;
-    }
-    if (isPunct(next, '.')) continue; // import.meta
-    const typeOnly = isWord(next, 'type')
-      && tokens[start + 2] !== undefined
-      && !isWord(tokens[start + 2], 'from')
-      && !isPunct(tokens[start + 2], ',');
-    const clauseStart = start + (typeOnly ? 2 : 1);
-    let depth = 0;
-    let end = clauseStart;
-    for (; end < tokens.length; end += 1) {
-      const current = tokens[end];
-      if (isPunct(current, '{')) depth += 1;
-      else if (isPunct(current, '}')) depth -= 1;
-      else if (isPunct(current, ';') || (current.kind === 'string' && depth === 0)) break;
-    }
-    const specifier = tokens[end];
-    if (specifier?.kind !== 'string' || !REACT_PACKAGE.test(specifier.value)) continue;
-    handled.add(end);
-    const clause = tokens.slice(clauseStart, end - 1);
-    if (end === clauseStart) {
-      violate(token.line, "a side-effect import of '@muxui/react'");
-    } else if (!isWord(tokens[end - 1], 'from')) {
-      violate(token.line, "an unreadable import of '@muxui/react'");
-    } else if (specifier.value !== '@muxui/react') {
-      violate(token.line, `a subpath import of '${specifier.value}'`);
-    } else if (typeOnly) {
-      continue;
-    } else if (!isPunct(clause[0], '{') || !isPunct(clause.at(-1), '}')) {
-      violate(token.line, `a ${clause.some((item) => isPunct(item, '*')) ? 'namespace' : 'default'} import of '@muxui/react'`);
-    } else {
-      const result = namedSpecifiers(clause);
-      if (result.violation) violate(token.line, `${result.violation} from '@muxui/react'`);
-      else imported.push(...result.names);
+  const body = source.slice(header.end);
+  const reported = new Set();
+  for (const [pattern, what] of BODY_RULES) {
+    for (const match of body.matchAll(pattern)) {
+      const first = lineAt(source, header.end + match.index);
+      const last = lineAt(source, header.end + match.index + match[0].length);
+      if (reported.has(first)) continue;
+      for (let line = first; line <= last; line += 1) reported.add(line);
+      violate(first, what);
     }
   }
-
-  for (const [index, token] of tokens.entries()) {
-    if (token.kind !== 'string' || !REACT_PACKAGE.test(token.value) || handled.has(index)) continue;
-    const previous = tokens[index - 1]?.value;
-    violate(token.line, previous === 'from'
-      ? "an export ... from '@muxui/react'"
-      : previous === '(' ? "a call naming '@muxui/react', such as require" : "a string naming '@muxui/react'");
-  }
-  return { imported, violations };
+  return { imported, violations: violations.sort((left, right) => left.line - right.line) };
 }
 
 /**
@@ -238,7 +243,7 @@ export function patternImportIssues({ pattern, components, variants }) {
       report(
         source,
         line,
-        `${message}; a variant may import @muxui/react only as a static named import, and pattern.participants must declare each component it imports`,
+        `${message}; a variant keeps its imports in a leading header, imports only react, react/jsx-runtime, and @muxui/react, takes @muxui/react as a static named import, and pattern.participants must declare each component it imports (names no component record maps, such as useToast and ToastProvider, are not checked)`,
       );
     }
     for (const { name, line } of imported) {

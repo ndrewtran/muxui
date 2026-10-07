@@ -1,11 +1,11 @@
-// import { Dialog } from '@muxui/react' is only a comment, like this string:
-const note = "import { Popover } from '@muxui/react'";
-
+// import { Dialog } from '@muxui/react' is only a comment: header comments are skipped.
 import {
   GridList,
   Virtualizer,
   type GridListProps,
 } from '@muxui/react';
+
+const note = 'Posters';
 
 const posters = Array.from({ length: 100 }, (_, index) => ({
   id: String(index + 1),

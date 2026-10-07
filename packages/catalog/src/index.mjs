@@ -594,6 +594,9 @@ function appliesToPlatform(artifact, platform) {
   return platform === null || artifact.platforms.length === 0 || artifact.platforms.includes(platform);
 }
 
+// A purpose filter selects component-bound examples by their binding's
+// `purposes`. A pattern variant has no binding and so no purposes: it is a
+// complete, system-owned source, so every purpose passes it through.
 function appliesToPurpose(artifact, purpose) {
   return purpose === null
     || artifact.kind !== 'example'
@@ -635,11 +638,15 @@ function selectedSection(bundle, artifact, request) {
   const selectedBinding = bindingForPlatform(record, request.platform);
   if (request.section === 'source') return artifact.source;
   if (request.section === 'api') {
+    // Only components own an API. Every other kind, patterns included (their
+    // participants' components own it), returns null, as an unavailable section does.
     if (record.kind !== 'component') return null;
     if (selectedBinding) return selectedBinding;
     return Object.fromEntries(Object.entries(record.bindings).map(([id, binding]) => [id, binding.api ?? null]));
   }
   if (request.section === 'accessibility') {
+    // A pattern's notes are its concept; it has no binding-level accessibility.
+    if (record.kind === 'pattern') return { concept: record.accessibility, binding: null };
     return record.kind === 'component'
       ? { concept: record.accessibility, binding: selectedBinding?.binding.accessibility ?? null }
       : null;
@@ -844,6 +851,21 @@ export function createCatalogApi(inputBundle, options = {}) {
     : new Set(options.availableBindings);
   const artifactsById = new Map(bundle.artifacts.map((artifact) => [artifact.id, artifact]));
   const indexById = new Map(bundle.searchIndex.map((entry) => [entry.id, entry]));
+  // The compile guarantees each binding-less example is exactly one pattern's variant.
+  const variantOwners = new Map(bundle.artifacts.flatMap((artifact) => (
+    artifact.kind === 'pattern'
+      ? artifact.record.variants.map(({ example }) => [example, artifact])
+      : []
+  )));
+
+  // Patterns declare only web.react, and graph validation gives every participant
+  // a web.react binding, so a pattern is installed when each required participant's
+  // web.react binding is. Optional participants never hide it.
+  function patternInstalled(pattern) {
+    return pattern.record.participants.every(({ component, requirement }) => (
+      requirement !== 'required' || availableBindings.has(`${component}#web.react`)
+    ));
+  }
 
   function implementationAvailable(artifact, platform) {
     if (availableBindings === null || platform === null) return true;
@@ -851,17 +873,29 @@ export function createCatalogApi(inputBundle, options = {}) {
       const selected = bindingForPlatform(artifact.record, platform);
       return selected === null || availableBindings.has(`${artifact.id}#${selected.bindingId}`);
     }
+    if (artifact.kind === 'pattern') return patternInstalled(artifact);
     if (artifact.kind === 'example') {
-      return artifact.record.binding === undefined
-        || availableBindings.has(artifact.record.binding.ref);
+      // A variant is available exactly when its pattern is.
+      if (artifact.record.binding === undefined) {
+        const owner = variantOwners.get(artifact.id);
+        return owner !== undefined && patternInstalled(owner);
+      }
+      return availableBindings.has(artifact.record.binding.ref);
     }
     return true;
   }
 
-  /** The patterns whose participants reference a component, with the roles it plays. */
-  function patternsUsing(componentId) {
+  /**
+   * The patterns whose participants reference a component, with the roles it
+   * plays, as they appear under `platform` (the same view `list` and `search` give).
+   */
+  function patternsUsing(componentId, platform) {
     return bundle.artifacts.flatMap((artifact) => {
-      if (artifact.kind !== 'pattern') return [];
+      if (
+        artifact.kind !== 'pattern'
+        || !appliesToPlatform(artifact, platform)
+        || !implementationAvailable(artifact, platform)
+      ) return [];
       const roles = artifact.record.participants
         .filter(({ component }) => component === componentId)
         .map(({ role, requirement }) => ({ role, requirement }));
@@ -896,7 +930,7 @@ export function createCatalogApi(inputBundle, options = {}) {
         normalized.queryApiVersion,
       ) };
     }
-    return { ids: new Set(patternsUsing(normalized.uses).map(({ id }) => id)) };
+    return { ids: new Set(patternsUsing(normalized.uses, normalized.platform).map(({ id }) => id)) };
   }
 
   function getManifest(request) {
@@ -1119,7 +1153,7 @@ export function createCatalogApi(inputBundle, options = {}) {
           } : {}),
         },
         relations,
-        ...(artifact.kind === 'component' ? { usedIn: patternsUsing(artifact.id) } : {}),
+        ...(artifact.kind === 'component' ? { usedIn: patternsUsing(artifact.id, normalized.platform) } : {}),
       };
     } else if (artifact.kind === 'pattern') {
       data = {
@@ -1168,7 +1202,7 @@ export function createCatalogApi(inputBundle, options = {}) {
           source: artifact.source,
         },
         relations,
-        ...(artifact.kind === 'component' ? { usedIn: patternsUsing(artifact.id) } : {}),
+        ...(artifact.kind === 'component' ? { usedIn: patternsUsing(artifact.id, normalized.platform) } : {}),
       };
     }
     const revisions = {

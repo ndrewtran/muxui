@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import { createCatalogApi } from '@muxui/catalog';
-import { compileCatalog } from '@muxui/catalog/compiler';
 import { commandRegistry, helpByCommand } from '../generated/command-surface.mjs';
 import {
   countTokens,
@@ -19,33 +16,12 @@ import {
   tokenBudgetFor,
 } from '../src/index.mjs';
 import { buildCommandProjections } from '../src/registry.mjs';
+import { compileFixtureBundle } from './pattern-fixture.mjs';
 
-const repositoryRoot = resolve(import.meta.dirname, '../../..');
-const fixtureDirectory = 'packages/catalog/test/fixtures/patterns/poster-grid';
 const patternId = 'muxui:pattern:poster-grid';
 const variantIds = ['muxui:example:poster-grid-css', 'muxui:example:poster-grid-virtualized'];
 
-/** The real catalog plus the catalog package's test-only poster-grid pattern. */
-async function compileFixtureApi() {
-  const manifest = JSON.parse(await readFile(
-    join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
-    'utf8',
-  ));
-  manifest.records.push(
-    { family: 'pattern', path: `${fixtureDirectory}/artifact.json` },
-    { family: 'example', path: `${fixtureDirectory}/examples/react/css-grid.example.json` },
-    { family: 'example', path: `${fixtureDirectory}/examples/react/virtualized.example.json` },
-  );
-  const directory = await mkdtemp(join(tmpdir(), 'muxui-pattern-cli-'));
-  try {
-    const sourceManifestPath = join(directory, 'catalog-sources.json');
-    await writeFile(sourceManifestPath, JSON.stringify(manifest));
-    const { bundle } = await compileCatalog({ repositoryRoot, sourceManifestPath });
-    return createCatalogApi(bundle);
-  } finally {
-    await rm(directory, { recursive: true, force: true });
-  }
-}
+const compileFixtureApi = async () => createCatalogApi(await compileFixtureBundle());
 
 let shared;
 const fixtureApi = () => (shared ??= compileFixtureApi());

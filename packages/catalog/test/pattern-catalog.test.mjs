@@ -161,6 +161,9 @@ const issuesFor = (text) => patternImportIssues({
   variants: [{ source: 'variant.tsx', text }],
 });
 
+const header = "import { GridList } from '@muxui/react';\n";
+const messageOf = (issues) => issues.map(({ message }) => message.replace(/;.*$/su, ''));
+
 test('E-BL1-01: the import scanner accepts only the canonical static named import', () => {
   const accepted = [
     ['named', "import { GridList } from '@muxui/react';", ['GridList']],
@@ -168,9 +171,11 @@ test('E-BL1-01: the import scanner accepts only the canonical static named impor
     ['multi-line with a trailing comma', "import {\n  GridList,\n  type GridListProps,\n  Virtualizer,\n} from '@muxui/react'", ['GridList', 'Virtualizer']],
     ['import type is ignored', "import type { Button } from '@muxui/react';", []],
     ['type specifier is ignored', "import { type Button, type Dialog as D, GridList } from '@muxui/react';", ['GridList']],
-    ['comments and strings are skipped', "// import { Button } from '@muxui/react'\n/* import { Dialog } from '@muxui/react' */\nconst a = \"import { Popover } from '@muxui/react'\";\nconst b = `import { Menu } from '@muxui/react' ${a}`;", []],
-    ['other modules are ignored', "import React from 'react';\nimport { x } from '@muxui/react-native';\nimport './styles.css';", []],
-    ['an unpaired JSX apostrophe is text', "import { GridList } from '@muxui/react';\nexport const x = <p>Don't</p>;", ['GridList']],
+    ['header comments and blank lines are skipped', "// import { Button } from '@muxui/react'\n\n/* import { Dialog } from '@muxui/react' */\nimport { GridList } from '@muxui/react';", ['GridList']],
+    ['react and its jsx runtime are allowed in any form', "import React, { useState } from 'react';\nimport * as Runtime from 'react/jsx-runtime';\nimport type { ReactNode } from 'react';", []],
+    ['an unpaired JSX apostrophe is text', `${header}export const x = <p>Don't</p>;`, ['GridList']],
+    // Unmapped export names stay unchecked: they belong to no component record.
+    ['unmapped exports', "import { GridListItem, useDragAndDrop, useToast, ToastProvider } from '@muxui/react';", ['GridListItem', 'useDragAndDrop', 'useToast', 'ToastProvider']],
   ];
   for (const [label, text, names] of accepted) {
     const scan = scanReactImports(text);
@@ -178,6 +183,23 @@ test('E-BL1-01: the import scanner accepts only the canonical static named impor
     assert.deepEqual(scan.imported.map(({ name }) => name), names, label);
   }
   assert.equal(scanReactImports("\n\nimport { GridList } from '@muxui/react';").imported[0].line, 3);
+});
+
+test('E-BL1-01: the import scanner raises no false positives after the header', () => {
+  const clean = [
+    ['a member import call', `${header}const m = loader.import('./x');\nconst n = loader?.import(1);`],
+    ['a member require call', `${header}const m = loader.require('./x');`],
+    ['the bare word import in JSX text', `${header}export const x = <p>Please import your photos, then export them.</p>;`],
+    ['import opening a wrapped JSX text line', `${header}export const x = (\n  <p>\n    import your photos\n    export them\n  </p>\n);`],
+    ['import.meta', `${header}const url = import.meta.url;`],
+    ['an email address in JSX text', `${header}export const x = <a>you@example.com</a>;`],
+    ['a // inside JSX text', `${header}export const x = <p>http://example.com</p>;`],
+    ['words that only contain import, require, or export', `${header}const important = 1, required = 2, exports = 3;\nimportant(); required(); exports.x = 1;`],
+    ['a local export', `${header}const a = 1;\nexport { a };\nexport default a;`],
+  ];
+  for (const [label, text] of clean) {
+    assert.deepEqual(scanReactImports(text).violations, [], label);
+  }
 });
 
 test('E-BL1-01 negative: every other @muxui/react reference fails closed with a source-linked issue', () => {
@@ -192,11 +214,10 @@ test('E-BL1-01 negative: every other @muxui/react reference fails closed with a 
     ['dynamic import of another module', "const m = import('./other');", /dynamic import/u],
     ['export named from', "export { GridList } from '@muxui/react';", /export \.\.\. from/u],
     ['export all from', "export * from '@muxui/react';", /export \.\.\. from/u],
-    ['require call', "const m = require('@muxui/react');", /call naming/u],
+    ['require call', "const m = require('@muxui/react');", /require call/u],
     ['import-equals', "import m = require('@muxui/react');", /unreadable import/u],
-    ['string naming the package', "const name = '@muxui/react';", /string naming/u],
+    ['string naming the package', "const name = '@muxui/react';", /raw '@muxui' reference/u],
     ['string specifier name', "import { 'GridList' as G } from '@muxui/react';", /unsupported import specifier/u],
-    ['unterminated template', 'const t = `open', /cannot be scanned/u],
     ['unterminated comment', '/* open', /cannot be scanned/u],
   ];
   for (const [label, text, message] of rejected) {
@@ -215,8 +236,80 @@ test('E-BL1-01 negative: every other @muxui/react reference fails closed with a 
   assert.deepEqual(issuesFor("import { GridList as G } from '@muxui/react';"), []);
   const [aliased] = issuesFor("import { Button as B } from '@muxui/react';");
   assert.match(aliased.message, /imports Button, which pattern\.participants does not declare/u);
-  // Sub-parts, hooks, and types are not component records and stay unmapped.
-  assert.deepEqual(issuesFor("import { GridListItem, useDragAndDrop } from '@muxui/react';"), []);
+  // Names no component record maps are unchecked, and the diagnostic says so.
+  assert.deepEqual(issuesFor("import { useToast, ToastProvider } from '@muxui/react';"), []);
+  const [violation] = issuesFor("import * as Mux from '@muxui/react';");
+  assert.match(violation.message, /useToast and ToastProvider, are not checked/u);
+});
+
+test('E-BL1-01 negative: every import must sit in the leading header', () => {
+  for (const [label, text, line] of [
+    ['after a statement', `const a = 1;\n${header}`, 2],
+    ['of a non-@muxui module', `${header}const a = 1;\nimport x from 'react';`, 3],
+    ['in the middle of a line', `${header}const a = 1; import x from 'react';`, 2],
+    ['after a closing brace', `${header}function f() {}\nimport x from 'react';`, 3],
+    ['as a side effect', `${header}const a = 1;\nimport './styles.css';`, 3],
+    ['as a type', `${header}const a = 1;\nimport type { T } from './types';`, 3],
+  ]) {
+    const issues = issuesFor(text);
+    assert.equal(issues.length, 1, `${label}: ${JSON.stringify(issues)}`);
+    assert.match(issues[0].message, /an import after the leading import header/u, label);
+    assert.equal(issues[0].line, line, label);
+  }
+  // A header may span comments and blank lines but ends at the first other statement.
+  assert.deepEqual(issuesFor(`/** doc */\n\n// note\n${header}\n/* more */\nimport React from 'react';\n\nconst a = 1;`), []);
+});
+
+test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, and @muxui/react', () => {
+  for (const [label, text, message] of [
+    ['relative specifier', "import { a } from './a';", "an import of './a'"],
+    ['parent specifier', "import { a } from '../a';", "an import of '../a'"],
+    ['side-effect stylesheet', "import './styles.css';", "an import of './styles.css'"],
+    ['relative type import', "import type { A } from './types';", "an import of './types'"],
+    ['another package', "import { debounce } from 'lodash';", "an import of 'lodash'"],
+    ['another @muxui package', "import { token } from '@muxui/tokens';", "an import of '@muxui/tokens'"],
+    ['a lookalike @muxui package', "import { x } from '@muxui/react-native';", "an import of '@muxui/react-native'"],
+    ['a react subpath', "import { x } from 'react/jsx-dev-runtime';", "an import of 'react/jsx-dev-runtime'"],
+    ['a @muxui/react subpath', "import { x } from '@muxui/react/text-editor';", "a subpath import of '@muxui/react/text-editor'"],
+  ]) {
+    const issues = issuesFor(text);
+    assert.equal(issues.length, 1, `${label}: ${JSON.stringify(issues)}`);
+    assert.ok(messageOf(issues)[0].includes(message), `${label}: ${issues[0].message}`);
+    assert.match(issues[0].message, /outside the allowed react|subpath import/u, label);
+  }
+});
+
+test('E-BL1-01 negative: the rest of the source is scanned raw, so hidden code still fails', () => {
+  for (const [label, text, message, line] of [
+    // `//` inside JSX text would hide the import from a tokenizer.
+    ['JSX text hiding an import', "const a = <p>http://x</p>; import { Button } from '@muxui/react';", /import after the leading import header/u, 1],
+    ['the same hiding on a later line', `${header}const a = <p>http://x</p>; import { Button } from '@muxui/react';`, /import after the leading import header/u, 2],
+    ['JSX text hiding a package name', "const a = <p>http://x</p>; const m = load('@muxui/react');", /raw '@muxui' reference/u, 1],
+    ['a hidden non-@muxui import', "const a = <p>http://x</p>; import x from 'lodash';", /import after the leading import header/u, 1],
+    ['@muxui in a body comment', `${header}const a = 1;\n// see @muxui/react\n`, /raw '@muxui' reference/u, 3],
+    ['@muxui in a body string', `${header}const a = '@muxui/react';`, /raw '@muxui' reference/u, 2],
+    ['@muxui in a template', `${header}const a = \`@muxui/react\`;`, /raw '@muxui' reference/u, 2],
+    ['a hex escaped @', `${header}const a = '\\x40muxui/react';`, /escaped '@'/u, 2],
+    ['a unicode escaped @', `${header}const a = '\\u0040muxui/react';`, /escaped '@'/u, 2],
+    ['a braced unicode escaped @', `${header}const a = '\\u{40}muxui/react';`, /escaped '@'/u, 2],
+    ['require of a relative module', `${header}const a = require('./x');`, /require call/u, 2],
+    ['require with a space', `${header}const a = require ('x');`, /require call/u, 2],
+    ['a hidden dynamic import', `${header}const a = <p>http://x</p>; const m = import('./x');`, /dynamic import/u, 2],
+    ['line-leading export * from', `${header}export * from './x';`, /export \.\.\. from/u, 2],
+    ['line-leading export * as from', `${header}export * as ns from './x';`, /export \.\.\. from/u, 2],
+    ['line-leading export type from', `${header}export type { T } from './x';`, /export \.\.\. from/u, 2],
+    ['export from after a statement end', `${header}const a = 1; export { a } from './x';`, /export \.\.\. from/u, 2],
+  ]) {
+    const issues = issuesFor(text);
+    assert.equal(issues.length, 1, `${label}: ${JSON.stringify(issues)}`);
+    assert.match(issues[0].message, message, label);
+    assert.equal(issues[0].line, line, label);
+  }
+  // A multi-line re-export is one issue at its first line, not one per line.
+  const multiline = issuesFor(`${header}export {\n  a,\n  b,\n} from '@muxui/react';`);
+  assert.equal(multiline.length, 1);
+  assert.equal(multiline[0].line, 2);
+  assert.match(multiline[0].message, /export \.\.\. from/u);
 });
 
 test('E-BL1-01: the manifest completeness audit lists unlisted pattern records', async () => {
@@ -348,6 +441,73 @@ test('E-BL1-07: list, search, and get serve patterns, variants, and the derived 
   assert.deepEqual(variant.data.relations, [{ type: 'example-of', source: cssId, target: patternId }]);
   assert.deepEqual(variant.data.artifact.platforms, ['web.react']);
   assert.ok(api.listArtifacts({ kind: 'example', purpose: 'generation', limit: 100 }).data.items.some(({ id }) => id === cssId));
+});
+
+test('E-BL1-07: patterns and variants need every required participant binding installed', async () => {
+  const { bundle } = await fixtureCatalog();
+  const platform = 'web.react';
+  const grid = 'muxui:component:grid-list#web.react';
+  const scroller = 'muxui:component:virtualizer#web.react';
+  const present = (api, id, options = {}) => api.getArtifact({ id, platform, ...options }).type !== 'error';
+  const patternVisibleIn = (api) => {
+    const listed = api.listArtifacts({ kind: 'pattern', platform }).data.items.some(({ id }) => id === patternId);
+    const searched = api.searchArtifacts({ query: 'poster', platform, detail: 'brief', limit: 100 })
+      .data.items.some(({ id }) => id === patternId);
+    const used = api.listArtifacts({ uses: 'muxui:component:virtualizer', platform })
+      .data.items.some(({ id }) => id === patternId);
+    const served = present(api, patternId);
+    const examples = present(api, patternId, { section: 'examples' });
+    const variants = [cssId, virtualizedId].map((id) => present(api, id));
+    // Every surface agrees: the pattern and its variants appear or hide together.
+    const surfaces = new Set([listed, searched, used, served, examples, ...variants]);
+    assert.equal(surfaces.size, 1, JSON.stringify({ listed, searched, used, served, examples, variants }));
+    return listed;
+  };
+
+  // The required `list` participant installed: optional ones never hide the pattern.
+  assert.equal(patternVisibleIn(createCatalogApi(bundle, { availableBindings: [grid, scroller] })), true);
+  assert.equal(patternVisibleIn(createCatalogApi(bundle, { availableBindings: [grid] })), true);
+  // The tuple lacks a required participant's binding: the pattern and variants hide.
+  const lacking = createCatalogApi(bundle, { availableBindings: [scroller, 'muxui:component:button#web.react'] });
+  assert.equal(patternVisibleIn(lacking), false);
+  const error = lacking.getArtifact({ id: patternId, section: 'examples', platform });
+  assert.equal(error.error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
+  assert.equal(lacking.getArtifact({ id: cssId, platform }).error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
+  // `usedIn` and `--uses` hide it too, and the component page itself stays.
+  assert.deepEqual(lacking.getArtifact({ id: 'muxui:component:virtualizer', platform }).data.usedIn, []);
+  assert.equal(lacking.getArtifact({ id: 'muxui:component:virtualizer', platform }).type, 'artifact.detail');
+  // Gating follows platform, like components: with no platform nothing is filtered.
+  assert.equal(present(lacking, patternId, { platform: null }), true);
+});
+
+test('E-BL1-07: usedIn follows the requested platform', async () => {
+  const withButton = await compileFixtureCatalog({
+    minimal: true,
+    edit: (files) => {
+      const record = JSON.parse(files.get('artifact.json'));
+      record.participants.push({ role: 'action', component: 'muxui:component:button', requirement: 'optional' });
+      files.set('artifact.json', JSON.stringify(record));
+    },
+  });
+  const api = createCatalogApi(withButton.bundle);
+  const usedIn = (platform) => api.getArtifact({ id: 'muxui:component:button', platform }).data.usedIn.map(({ id }) => id);
+  const uses = (platform) => api.listArtifacts({ uses: 'muxui:component:button', platform }).data.items.map(({ id }) => id);
+  // Button supports web.html and web.react; the pattern is web.react only.
+  assert.deepEqual(usedIn(null), [patternId]);
+  assert.deepEqual(usedIn('web.react'), [patternId]);
+  assert.deepEqual(usedIn('web.html'), []);
+  // `list --uses` is the same view.
+  assert.deepEqual(uses('web.react'), usedIn('web.react'));
+  assert.deepEqual(uses('web.html'), usedIn('web.html'));
+});
+
+test('E-BL1-07: a pattern serves accessibility notes, and api is null like every non-component kind', async () => {
+  const api = await fixtureApi();
+  const accessibility = api.getArtifact({ id: patternId, section: 'accessibility' });
+  assert.deepEqual(accessibility.data.value, { concept: patternRecord.accessibility, binding: null });
+  // A section a kind does not own is null, never an error.
+  assert.equal(api.getArtifact({ id: patternId, section: 'api' }).data.value, null);
+  assert.equal(api.getArtifact({ id: cssId, section: 'api' }).data.value, null);
 });
 
 test('E-BL1-07: usedIn comes from the same function as --uses, and component pages list only bound examples', async () => {

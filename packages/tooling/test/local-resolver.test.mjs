@@ -12,6 +12,7 @@ import {
 } from '../src/local-resolver.mjs';
 import { resolvePnpmProjectCatalog } from '../src/pnpm-adapter.mjs';
 import { runCli } from '../src/cli.mjs';
+import { compileFixtureBundle } from './pattern-fixture.mjs';
 
 const repositoryRoot = resolvePath(import.meta.dirname, '../../..');
 
@@ -74,6 +75,147 @@ async function writeProjection(path, canonicalPath, value) {
     `${path}.provenance`,
     `// @generated-from: synthetic-g0.4-adapter-fixture\n// @generated-content-sha256: ${sha256(body)}\n${body}`,
   );
+}
+
+const tokenDigest = 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+const safetyDigest = 'sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+
+/** The renderer descriptor and catalog identity for a renderer that installs `installed` (web.react binding refs). */
+function rendererDocuments(bundle, installed) {
+  const descriptor = {
+    id: 'renderer-react-compatible',
+    descriptorVersion: '1.0.0',
+    package: '@muxui/react',
+    version: '1.0.1',
+    bindingSchemaRange: '^2.0.0',
+    tokenContractRange: '^2.0.0',
+    releaseProvenance: `muxui-release:1.0.1:${bundle.sourceRevision}`,
+    bindings: Object.fromEntries(installed.map((binding) => {
+      const [id, bindingId] = binding.split('#');
+      return [binding, {
+        specRevision: bundle.artifacts.find((artifact) => artifact.id === id).bindingSpecRevisions[bindingId],
+        export: `@muxui/react/${id.split(':').at(-1)}`,
+        lifecycle: 'experimental',
+        strategy: 'direct',
+        tokenRequirementSetDigests: { 'web.react': tokenDigest },
+        platformSafetyRequirementSetDigests: { 'web.react': safetyDigest },
+      }];
+    })),
+  };
+  const identity = {
+    schema: 'muxui-catalog-package-v2',
+    name: '@muxui/catalog',
+    version: '2.1.0',
+    catalogVersion: '2.1.0',
+    catalogDigest: bundle.catalogDigest,
+    queryApiVersion: bundle.apiVersion,
+    supportedQueryApiVersions: ['2.1.0'],
+    schemaRange: '^2.0.0',
+    sourceRevision: bundle.sourceRevision,
+    provenance: { kind: 'source-revision', value: bundle.sourceRevision },
+    tokenRequirementSets: Object.fromEntries(installed.map((binding) => [`${binding}:web.react`, tokenDigest])),
+    platformSafetyContract: {
+      version: bundle.platformSafetyContract.contractVersion,
+      digest: bundle.platformSafetyContractDigest,
+    },
+    platformSafetyRequirementSets: Object.fromEntries(installed.map((binding) => [`${binding}:web.react`, safetyDigest])),
+    releaseManifest: {
+      id: descriptor.releaseProvenance,
+      releaseVersion: '1.0.1',
+      schemaVersion: '2.2.0',
+      queryApiVersion: '2.1.0',
+      tokenContractVersion: '2.0.0',
+      sourceRevision: bundle.sourceRevision,
+      catalog: {
+        id: `@muxui/catalog@2.1.0:${bundle.catalogDigest}`,
+        version: '2.1.0',
+        digest: bundle.catalogDigest,
+      },
+      bindings: installed.map((binding) => ({
+        descriptor: descriptor.id,
+        binding,
+        package: '@muxui/react',
+        version: '1.0.1',
+        export: descriptor.bindings[binding].export,
+        specRevision: descriptor.bindings[binding].specRevision,
+        tokenRequirementSetDigests: descriptor.bindings[binding].tokenRequirementSetDigests,
+        platformSafetyRequirementSetDigests: descriptor.bindings[binding].platformSafetyRequirementSetDigests,
+      })),
+    },
+    bundle: './catalog.json',
+  };
+  return { descriptor, identity };
+}
+
+/**
+ * Writes a pnpm project under `fixtureRoot` whose catalog package holds `bundle`
+ * (`writeBundle` copies its files) and whose renderer package can install any of
+ * `bindings`. `installed` is the subset the renderer descriptor and release
+ * provide. The returned `descriptor` and `identity` stay mutable: change them,
+ * `write()` them back, or `install(list)` a different subset.
+ */
+async function createRendererProject(fixtureRoot, { bundle, writeBundle, bindings, installed = bindings }) {
+  const catalogRoot = join(fixtureRoot, 'catalog');
+  const rendererRoot = join(fixtureRoot, 'renderer');
+  const generatedCatalog = join(catalogRoot, 'generated');
+  const generatedRenderer = join(rendererRoot, 'generated');
+  await mkdir(generatedCatalog, { recursive: true });
+  await mkdir(generatedRenderer, { recursive: true });
+  await writeJson(join(fixtureRoot, 'package.json'), {
+    name: 'g0-4-pnpm-fixture',
+    version: '1.0.0',
+    private: true,
+    packageManager: 'pnpm@10.33.0',
+    dependencies: {
+      '@muxui/catalog': 'workspace:*',
+      '@muxui/react': 'workspace:*',
+    },
+  });
+  await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), "packages:\n  - catalog\n  - renderer\n");
+  await writeJson(join(catalogRoot, 'package.json'), {
+    name: '@muxui/catalog',
+    version: '2.1.0',
+    private: true,
+    muxUi: { catalogPackage: './generated/catalog-package.json' },
+  });
+  await writeJson(join(rendererRoot, 'package.json'), {
+    name: '@muxui/react',
+    version: '1.0.1',
+    private: true,
+    exports: Object.fromEntries(bindings.map((binding) => {
+      const slug = binding.split('#')[0].split(':').at(-1);
+      return [`./${slug}`, `./${slug}.mjs`];
+    })),
+    muxUi: { rendererDescriptor: './generated/renderer-descriptor.json' },
+  });
+  await writeBundle(generatedCatalog);
+  const project = {
+    path: relative(process.cwd(), fixtureRoot).split('\\').join('/'),
+    ...rendererDocuments(bundle, installed),
+    async write() {
+      await writeProjection(
+        join(generatedCatalog, 'catalog-package.json'),
+        'packages/catalog/generated/catalog-package.json',
+        project.identity,
+      );
+      await writeProjection(
+        join(generatedRenderer, 'renderer-descriptor.json'),
+        'packages/react/generated/renderer-descriptor.json',
+        project.descriptor,
+      );
+    },
+    async install(list) {
+      Object.assign(project, rendererDocuments(bundle, list));
+      await project.write();
+    },
+  };
+  await project.write();
+  const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
+    cwd: fixtureRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(install.status, 0, install.stderr);
+  return project;
 }
 
 test('E-G0.4 resolver matrix selects only direct or explicitly addressed catalog authority', async () => {
@@ -437,140 +579,28 @@ test('E-G0.4 pnpm adapter admits only an exact verified cache tuple', async () =
 test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver', async () => {
   await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
   const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.g0-4-pnpm-fixture-'));
-  const catalogRoot = join(fixtureRoot, 'catalog');
-  const rendererRoot = join(fixtureRoot, 'renderer');
-  const generatedCatalog = join(catalogRoot, 'generated');
-  const generatedRenderer = join(rendererRoot, 'generated');
   const binding = 'muxui:component:button#web.react';
   try {
-    await mkdir(generatedCatalog, { recursive: true });
-    await mkdir(generatedRenderer, { recursive: true });
-    await writeJson(join(fixtureRoot, 'package.json'), {
-      name: 'g0-4-pnpm-fixture',
-      version: '1.0.0',
-      private: true,
-      packageManager: 'pnpm@10.33.0',
-      dependencies: {
-        '@muxui/catalog': 'workspace:*',
-        '@muxui/react': 'workspace:*',
-      },
-    });
-    await writeFile(join(fixtureRoot, 'pnpm-workspace.yaml'), "packages:\n  - catalog\n  - renderer\n");
-    await writeJson(join(catalogRoot, 'package.json'), {
-      name: '@muxui/catalog',
-      version: '2.1.0',
-      private: true,
-      muxUi: { catalogPackage: './generated/catalog-package.json' },
-    });
-    await writeJson(join(rendererRoot, 'package.json'), {
-      name: '@muxui/react',
-      version: '1.0.1',
-      private: true,
-      exports: { './button': './button.mjs' },
-      muxUi: { rendererDescriptor: './generated/renderer-descriptor.json' },
-    });
     const sourceCatalogRoot = resolvePath(import.meta.dirname, '../../catalog');
     const bundle = JSON.parse(await readFile(
       join(sourceCatalogRoot, 'generated/catalog.json'),
       'utf8',
     ));
-    await cp(
-      join(sourceCatalogRoot, 'generated/catalog.json'),
-      join(generatedCatalog, 'catalog.json'),
-    );
-    await cp(
-      join(sourceCatalogRoot, 'generated/catalog.json.provenance'),
-      join(generatedCatalog, 'catalog.json.provenance'),
-    );
-    const descriptor = {
-      id: 'renderer-react-compatible',
-      descriptorVersion: '1.0.0',
-      package: '@muxui/react',
-      version: '1.0.1',
-      bindingSchemaRange: '^2.0.0',
-      tokenContractRange: '^2.0.0',
-      releaseProvenance: `muxui-release:1.0.1:${bundle.sourceRevision}`,
-      bindings: {
-        [binding]: {
-          specRevision: bundle.artifacts.find(({ id }) => id === 'muxui:component:button')
-            .bindingSpecRevisions['web.react'],
-          export: '@muxui/react/button',
-          lifecycle: 'experimental',
-          strategy: 'direct',
-          tokenRequirementSetDigests: {
-            'web.react': 'sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-          },
-          platformSafetyRequirementSetDigests: {
-            'web.react': 'sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
-          },
-        },
+    const fixture = await createRendererProject(fixtureRoot, {
+      bundle,
+      bindings: [binding],
+      writeBundle: async (generatedCatalog) => {
+        await cp(
+          join(sourceCatalogRoot, 'generated/catalog.json'),
+          join(generatedCatalog, 'catalog.json'),
+        );
+        await cp(
+          join(sourceCatalogRoot, 'generated/catalog.json.provenance'),
+          join(generatedCatalog, 'catalog.json.provenance'),
+        );
       },
-    };
-    const identity = {
-      schema: 'muxui-catalog-package-v2',
-      name: '@muxui/catalog',
-      version: '2.1.0',
-      catalogVersion: '2.1.0',
-      catalogDigest: bundle.catalogDigest,
-      queryApiVersion: bundle.apiVersion,
-      supportedQueryApiVersions: ['2.1.0'],
-      schemaRange: '^2.0.0',
-      sourceRevision: bundle.sourceRevision,
-      provenance: { kind: 'source-revision', value: bundle.sourceRevision },
-      tokenRequirementSets: {
-        [`${binding}:web.react`]: descriptor.bindings[binding]
-          .tokenRequirementSetDigests['web.react'],
-      },
-      platformSafetyContract: {
-        version: bundle.platformSafetyContract.contractVersion,
-        digest: bundle.platformSafetyContractDigest,
-      },
-      platformSafetyRequirementSets: {
-        [`${binding}:web.react`]: descriptor.bindings[binding]
-          .platformSafetyRequirementSetDigests['web.react'],
-      },
-      releaseManifest: {
-        id: descriptor.releaseProvenance,
-        releaseVersion: '1.0.1',
-        schemaVersion: '2.2.0',
-        queryApiVersion: '2.1.0',
-        tokenContractVersion: '2.0.0',
-        sourceRevision: bundle.sourceRevision,
-        catalog: {
-          id: `@muxui/catalog@2.1.0:${bundle.catalogDigest}`,
-          version: '2.1.0',
-          digest: bundle.catalogDigest,
-        },
-        bindings: [{
-          descriptor: descriptor.id,
-          binding,
-          package: '@muxui/react',
-          version: '1.0.1',
-          export: descriptor.bindings[binding].export,
-          specRevision: descriptor.bindings[binding].specRevision,
-          tokenRequirementSetDigests: descriptor.bindings[binding].tokenRequirementSetDigests,
-          platformSafetyRequirementSetDigests:
-            descriptor.bindings[binding].platformSafetyRequirementSetDigests,
-        }],
-      },
-      bundle: './catalog.json',
-    };
-    await writeProjection(
-      join(generatedCatalog, 'catalog-package.json'),
-      'packages/catalog/generated/catalog-package.json',
-      identity,
-    );
-    await writeProjection(
-      join(generatedRenderer, 'renderer-descriptor.json'),
-      'packages/react/generated/renderer-descriptor.json',
-      descriptor,
-    );
-    const install = spawnSync('pnpm', ['install', '--offline', '--ignore-scripts'], {
-      cwd: fixtureRoot,
-      encoding: 'utf8',
     });
-    assert.equal(install.status, 0, install.stderr);
-    const project = relative(process.cwd(), fixtureRoot).split('\\').join('/');
+    const { descriptor, identity, path: project } = fixture;
     const resolved = resolvePnpmProjectCatalog({ project, bindings: [binding] });
     assert.equal(resolved.type, 'success');
     const response = resolved.api.getArtifact({
@@ -592,11 +622,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
     );
 
     descriptor.bindings[binding].export = '@muxui/react/unsafe-drift';
-    await writeProjection(
-      join(generatedRenderer, 'renderer-descriptor.json'),
-      'packages/react/generated/renderer-descriptor.json',
-      descriptor,
-    );
+    await fixture.write();
     const incompatible = resolvePnpmProjectCatalog({ project, bindings: [binding] });
     assert.equal(incompatible.type, 'error');
     assert.equal(incompatible.error.code, 'MUXUI_CATALOG_INCOMPATIBLE');
@@ -607,20 +633,76 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
     assert.equal(cliIncompatible.exitCode, 16);
 
     descriptor.bindings[binding].export = '@muxui/react/button';
-    await writeProjection(
-      join(generatedRenderer, 'renderer-descriptor.json'),
-      'packages/react/generated/renderer-descriptor.json',
-      descriptor,
-    );
     identity.schema = 'muxui-catalog-package-v2-unknown';
-    await writeProjection(
-      join(generatedCatalog, 'catalog-package.json'),
-      'packages/catalog/generated/catalog-package.json',
-      identity,
-    );
+    await fixture.write();
     const unknownIdentity = resolvePnpmProjectCatalog({ project, bindings: [binding] });
     assert.equal(unknownIdentity.type, 'error');
     assert.equal(unknownIdentity.error.code, 'MUXUI_CATALOG_INTEGRITY_MISMATCH');
+  } finally {
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+test('E-BL1-07 an installed tuple that lacks a required participant binding hides the pattern and its variants', async () => {
+  await mkdir(join(process.cwd(), 'fixtures'), { recursive: true });
+  const fixtureRoot = await mkdtemp(join(process.cwd(), 'fixtures/.bl1-pnpm-fixture-'));
+  const [patternId, cssId, virtualizedId] = [
+    'muxui:pattern:poster-grid',
+    'muxui:example:poster-grid-css',
+    'muxui:example:poster-grid-virtualized',
+  ];
+  const bindings = ['button', 'grid-list', 'virtualizer'].map((slug) => `muxui:component:${slug}#web.react`);
+  const [button, grid] = bindings;
+  try {
+    const bundle = await compileFixtureBundle();
+    const fixture = await createRendererProject(fixtureRoot, {
+      bundle,
+      bindings,
+      installed: [button],
+      writeBundle: (generatedCatalog) => writeProjection(
+        join(generatedCatalog, 'catalog.json'),
+        'packages/catalog/generated/catalog.json',
+        bundle,
+      ),
+    });
+    // `list` and `search` filter project-wide discovery to the bindings the renderer provides.
+    const discover = () => {
+      const resolved = resolvePnpmProjectCatalog({
+        project: fixture.path, platform: 'web.react', filterBindings: true,
+      });
+      assert.equal(resolved.type, 'success');
+      const { api } = resolved;
+      return {
+        listed: api.listArtifacts({ kind: 'pattern', platform: 'web.react' }).data.items.map(({ id }) => id),
+        searched: api.searchArtifacts({ query: 'poster', platform: 'web.react', limit: 100 }).data.items.map(({ id }) => id),
+        examples: api.getArtifact({ id: patternId, section: 'examples', platform: 'web.react' }),
+        variants: [cssId, virtualizedId].map((id) => api.getArtifact({ id, platform: 'web.react' }).type),
+      };
+    };
+
+    // The renderer lacks grid-list, a required participant.
+    const lacking = discover();
+    assert.deepEqual(lacking.listed, []);
+    assert.deepEqual(lacking.searched.filter((id) => [patternId, cssId, virtualizedId].includes(id)), []);
+    assert.equal(lacking.examples.error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
+    assert.deepEqual(lacking.variants, ['error', 'error']);
+    assert.deepEqual(
+      JSON.parse(runCli(['list', 'pattern', '--project', fixture.path, '--platform', 'web.react', '--json']).stdout).data.items,
+      [],
+    );
+
+    // With grid-list installed the pattern and both variants appear; optional virtualizer is not needed.
+    await fixture.install([button, grid]);
+    const installed = discover();
+    assert.deepEqual(installed.listed, [patternId]);
+    assert.ok(installed.searched.includes(patternId));
+    assert.deepEqual(installed.examples.data.value.map(({ id }) => id), [cssId, virtualizedId]);
+    assert.deepEqual(installed.variants, ['artifact.detail', 'artifact.detail']);
+    assert.deepEqual(
+      JSON.parse(runCli(['list', 'pattern', '--project', fixture.path, '--platform', 'web.react', '--json']).stdout)
+        .data.items.map(({ id }) => id),
+      [patternId],
+    );
   } finally {
     await rm(fixtureRoot, { recursive: true, force: true });
   }
