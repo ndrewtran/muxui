@@ -1,5 +1,5 @@
 ---
-scopeVersion: 15.0.0
+scopeVersion: 15.0.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -129,6 +129,11 @@ schema stages the v1 field list. `SCOPE-NONGOAL-008` now states that block
 placeholder copy and imagery are demonstration material, not product truth, and
 that statement is the major effect. The showcase sits outside the React `0.1`
 and Productization boundaries.
+
+Product Scope `15.0.1` applies Decision 0026 item 10 as a patch clarification:
+token-source retrieval now names query API `2.1.0`, the additive minor that the
+pattern kind's new response members take, so the line agrees with the query
+surface.
 
 ## Scope vocabulary
 
@@ -631,7 +636,7 @@ example-purpose, limit, and cursor selectors. JSON writes one value to stdout;
 diagnostics and progress use stderr. Dense output is deterministic,
 section-selectable, token-budgeted, and round-trippable to the response object.
 
-Token-source retrieval currently supports query API `2.0.0` only. Full and
+Token-source retrieval currently supports query API `2.1.0` only. Full and
 compact token summaries expose counts, digests, provenance, and available-section
 metadata; complete populations use bounded `tokens` and `source-crosswalk`
 sections. `@muxui/schema` owns the current request/response and
@@ -1565,3 +1570,16 @@ committed kind, with no change to a committed outcome, platform, release
 boundary, package, or public surface. The showcase stays private and
 unpublished, and `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE` stays `admitted`; a public
 deployment would be a separate admission with a new Scope ID.
+
+## Product Scope 15.0.1: query API 2.1.0
+
+[Decision 0026](../decisions/0026-blocks-showcase-admission.md) item 10 gives
+the pattern kind's new response members an additive query API minor, so the
+query API moves from `2.0.0` to `2.1.0`, and the Architecture names `2.1.0` as
+the supported pre-release query API. The token-source retrieval line here still
+named `2.0.0` only. It now names `2.1.0`.
+
+This patch brings one line into line with an accepted decision. It changes no
+Scope ID, commitment state, release boundary, package, platform, public
+surface, support claim, or non-goal, and no Scope ID is added, removed, or
+transitioned.

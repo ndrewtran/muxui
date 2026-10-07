@@ -39,7 +39,7 @@ test('E-G0.4 package layout binds package, catalog, API, schema, digest, and sou
   assert.equal(identity.catalogDigest, canonicalDigest(preimage));
   assert.equal(identity.catalogDigest, bundle.catalogDigest);
   assert.equal(identity.queryApiVersion, bundle.apiVersion);
-  assert.deepEqual(identity.supportedQueryApiVersions, ['2.0.0']);
+  assert.deepEqual(identity.supportedQueryApiVersions, ['2.1.0']);
   assert.deepEqual(identity.supportedQueryApiVersions, bundle.supportedQueryApiVersions);
   assert.equal(identity.releaseManifest.queryApiVersion, identity.queryApiVersion);
   assert.equal(identity.schemaRange, '^2.0.0');

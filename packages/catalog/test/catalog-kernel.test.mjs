@@ -383,26 +383,26 @@ test('E-G0.2-03: pagination is digest- and request-bound', () => {
 
 test('catalog query returns bounded token summaries and sections', () => {
   const api = createCatalogApi(baseBundle);
-  const v20 = api.getArtifact({
+  const v21 = api.getArtifact({
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     detail: 'full',
   });
-  assert.equal(v20.apiVersion, '2.0.0');
-  assert.deepEqual(v20.warnings, []);
-  assert.equal(Object.hasOwn(v20.data.artifact, 'tokens'), false);
-  assert.equal(v20.data.artifact.tokenCount, Object.keys(baseBundle.artifacts.find(({ kind }) => kind === 'token').record.tokens).length);
+  assert.equal(v21.apiVersion, '2.1.0');
+  assert.deepEqual(v21.warnings, []);
+  assert.equal(Object.hasOwn(v21.data.artifact, 'tokens'), false);
+  assert.equal(v21.data.artifact.tokenCount, Object.keys(baseBundle.artifacts.find(({ kind }) => kind === 'token').record.tokens).length);
   assert.equal(
-    v20.data.artifact.sourceCrosswalkDigest,
+    v21.data.artifact.sourceCrosswalkDigest,
     null,
   );
-  assert.deepEqual(v20.data.artifact.availableSections, ['tokens']);
-  for (const response of [v20]) {
+  assert.deepEqual(v21.data.artifact.availableSections, ['tokens']);
+  for (const response of [v21]) {
     assert.equal(Object.hasOwn(response.data.artifact, 'sourceCrosswalk'), false);
     assert.equal(Object.hasOwn(response.data.artifact, 'extensions'), false);
   }
-  validateFamily('query-envelope', v20);
-  for (const queryApiVersion of ['2.0.0']) {
+  validateFamily('query-envelope', v21);
+  for (const queryApiVersion of ['2.1.0']) {
     assert.equal(api.getArtifact({
       id: 'muxui:token:default-theme', queryApiVersion, detail: 'full',
     }).data.artifact.id, 'muxui:token:default-theme');
@@ -418,7 +418,7 @@ test('catalog query returns bounded token summaries and sections', () => {
     (value) => { value.data.artifact.sourceCrosswalk = {}; },
     (value) => { value.data.artifact.unownedSummary = true; },
   ]) {
-    const invalid = structuredClone(v20);
+    const invalid = structuredClone(v21);
     mutate(invalid);
     assert.throws(() => validateFamily('query-envelope', invalid), /MUXUI_SCHEMA_INVALID/u);
   }
@@ -429,7 +429,7 @@ test('catalog query returns bounded token summaries and sections', () => {
     (value) => { value.tokenSourceContentRevision = `sha256:${'0'.repeat(64)}`; },
     (value) => { value.availableSections = ['source-crosswalk', 'tokens']; },
   ]) {
-    const invalid = structuredClone(v20.data.artifact);
+    const invalid = structuredClone(v21.data.artifact);
     mutate(invalid);
     assert.throws(
       () => validateTokenDetailSummary({ responseArtifact: invalid, selectedArtifact: selectedTokenArtifact }),
@@ -439,7 +439,7 @@ test('catalog query returns bounded token summaries and sections', () => {
 
   const first = api.getArtifact({
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     section: 'tokens',
     limit: 1,
   });
@@ -457,7 +457,7 @@ test('catalog query returns bounded token summaries and sections', () => {
 
   const second = api.getArtifact({
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     section: 'tokens',
     limit: 1,
     cursor: first.page.nextCursor,
@@ -467,7 +467,7 @@ test('catalog query returns bounded token summaries and sections', () => {
 
   const currentCrosswalk = api.getArtifact({
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     section: 'source-crosswalk',
   });
   assert.deepEqual(currentCrosswalk.entries, {
@@ -519,7 +519,7 @@ test('catalog query returns bounded token summaries and sections', () => {
   });
   const availableCrosswalk = futureApi.getArtifact({
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     section: 'source-crosswalk',
   });
   assert.equal(availableCrosswalk.entries.status, 'available');
@@ -535,7 +535,7 @@ test('catalog query returns bounded token summaries and sections', () => {
   });
   assert.deepEqual(omittedApi.getArtifact({
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     section: 'source-crosswalk',
   }).entries, {
     status: 'absent',
@@ -591,7 +591,7 @@ test('synthetic crosswalk pages preserve normalized groups', () => {
   const api = createCatalogApi({ ...bundle, catalogDigest: canonicalDigest(bundle) });
   const summary = api.getArtifact({
     id: artifact.id,
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     detail: 'full',
   });
   assert.equal(summary.data.artifact.sourceCrosswalkDigest, artifact.sourceCrosswalkDigest);
@@ -601,7 +601,7 @@ test('synthetic crosswalk pages preserve normalized groups', () => {
   do {
     const page = api.getArtifact({
       id: artifact.id,
-      queryApiVersion: '2.0.0',
+      queryApiVersion: '2.1.0',
       section: 'source-crosswalk',
       limit: 1,
       cursor,
@@ -645,7 +645,7 @@ test('section cursors fail closed across tampering, versions, selectors, and cat
   const api = createCatalogApi(baseBundle);
   const request = {
     id: 'muxui:token:default-theme',
-    queryApiVersion: '2.0.0',
+    queryApiVersion: '2.1.0',
     section: 'tokens',
     limit: 1,
   };
@@ -694,7 +694,7 @@ test('runtime paging proves budget breaks, oversize errors, continuation, and po
   let cursor = null;
   do {
     const page = api.getArtifact({
-      id: 'muxui:token:default-theme', queryApiVersion: '2.0.0',
+      id: 'muxui:token:default-theme', queryApiVersion: '2.1.0',
       section: 'source-crosswalk', limit: 100, cursor,
     });
     assert.equal(page.responseType, 'artifact.detail.section-page');
@@ -713,7 +713,7 @@ test('runtime paging proves budget breaks, oversize errors, continuation, and po
     rejectEntry(1, { reason: 'x '.repeat(1024).trim(), value: 'y '.repeat(1024).trim() }),
   ]));
   assert.equal(oversizeApi.getArtifact({
-    id: 'muxui:token:default-theme', queryApiVersion: '2.0.0',
+    id: 'muxui:token:default-theme', queryApiVersion: '2.1.0',
     section: 'source-crosswalk', limit: 1,
   }).error.code, 'MUXUI_QUERY_PAGE_ENTRY_TOO_LARGE');
 
@@ -721,7 +721,7 @@ test('runtime paging proves budget breaks, oversize errors, continuation, and po
   envelopeBundle.catalogVersion = `1.0.0+${'a'.repeat(65)}`;
   const envelopeApi = createCatalogApi(withCatalogDigest(envelopeBundle));
   assert.equal(envelopeApi.getArtifact({
-    id: 'muxui:token:default-theme', queryApiVersion: '2.0.0',
+    id: 'muxui:token:default-theme', queryApiVersion: '2.1.0',
     section: 'source-crosswalk', limit: 1,
   }).error.code, 'MUXUI_QUERY_PAGE_ENVELOPE_TOO_LARGE');
 
@@ -731,7 +731,7 @@ test('runtime paging proves budget breaks, oversize errors, continuation, and po
     [rejectEntry(1), rejectEntry(2)], { pageBudgetProfile: overflowProfile },
   ));
   assert.equal(overflowApi.getArtifact({
-    id: 'muxui:token:default-theme', queryApiVersion: '2.0.0',
+    id: 'muxui:token:default-theme', queryApiVersion: '2.1.0',
     section: 'source-crosswalk', limit: 1,
   }).error.code, 'MUXUI_CURSOR_INVALID');
 
@@ -741,11 +741,11 @@ test('runtime paging proves budget breaks, oversize errors, continuation, and po
     [rejectEntry(1), rejectEntry(2)], { pageBudgetProfile: terminalProfile },
   ));
   const first = terminalApi.getArtifact({
-    id: 'muxui:token:default-theme', queryApiVersion: '2.0.0',
+    id: 'muxui:token:default-theme', queryApiVersion: '2.1.0',
     section: 'source-crosswalk', limit: 1,
   });
   const terminal = terminalApi.getArtifact({
-    id: 'muxui:token:default-theme', queryApiVersion: '2.0.0',
+    id: 'muxui:token:default-theme', queryApiVersion: '2.1.0',
     section: 'source-crosswalk', limit: 1, cursor: first.page.nextCursor,
   });
   assert.equal(terminal.page.remaining, 0);
@@ -754,7 +754,7 @@ test('runtime paging proves budget breaks, oversize errors, continuation, and po
 
 test('catalog descriptors and query requests require the current API version', () => {
   const api = createCatalogApi(baseBundle);
-  assert.equal(api.getManifest().apiVersion, '2.0.0');
+  assert.equal(api.getManifest().apiVersion, '2.1.0');
   assert.equal(api.getArtifact({ id: 'muxui:token:default-theme', queryApiVersion: '99.0.0' }).error.code, 'MUXUI_QUERY_INVALID');
   for (const response of [
     api.listArtifacts({ kind: 'not-a-kind' }),
@@ -765,7 +765,7 @@ test('catalog descriptors and query requests require the current API version', (
     api.getArtifact({ id: 'muxui:token:default-theme', cursor: 'not-a-cursor' }),
   ]) {
     assert.equal(response.type, 'error');
-    assert.equal(response.apiVersion, '2.0.0');
+    assert.equal(response.apiVersion, '2.1.0');
   }
   const inconsistentPreimage = { ...preimage(baseBundle), supportedQueryApiVersions: ['99.0.0'] };
   assert.throws(() => createCatalogApi({

@@ -21,8 +21,8 @@ export const QUERY_SELECTORS = Object.freeze(
   ),
 );
 export const SCHEMA_VERSION = '2.1.0';
-export const API_VERSION = '2.0.0';
-export const QUERY_SCHEMA_VERSION = '2.0.0';
+export const API_VERSION = '2.1.0';
+export const QUERY_SCHEMA_VERSION = '2.1.0';
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
 
 export function parseArtifactRef(value, { requireEnabledRecordKind = false } = {}) {

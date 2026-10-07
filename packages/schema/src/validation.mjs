@@ -49,7 +49,7 @@ function decodeSectionCursor(value) {
   if (
     !isObject(payload)
     || canonicalJson(Object.keys(payload).sort()) !== canonicalJson(keys)
-    || payload.queryApiVersion !== '2.0.0'
+    || payload.queryApiVersion !== '2.1.0'
     || !/^sha256:[a-f0-9]{64}$/u.test(payload.catalogDigest)
     || !/^sha256:[a-f0-9]{64}$/u.test(payload.tokenSourceContentRevision)
     || !['tokens', 'source-crosswalk'].includes(payload.section)
@@ -417,7 +417,7 @@ function semanticIssues(family, value, ownership) {
       if (Object.hasOwn(artifact, 'sourceCrosswalk')) {
         issues.push({ path: '$/data/artifact/sourceCrosswalk', message: 'authored crosswalk is sectional-only' });
       }
-      if (value.apiVersion === '2.0.0' && value.meta?.detail !== 'brief') {
+      if (value.apiVersion === '2.1.0' && value.meta?.detail !== 'brief') {
         const exactFields = value.meta?.detail === 'compact'
           ? [
             'availableSections', 'contentRevision', 'id', 'kind', 'lifecycle', 'name',
@@ -433,7 +433,7 @@ function semanticIssues(family, value, ownership) {
         if (canonicalJson(Object.keys(artifact).sort()) !== canonicalJson(exactFields)) {
           issues.push({
             path: '$/data/artifact',
-            message: `must contain exactly the closed query API 2.0 ${value.meta?.detail} token fields`,
+            message: `must contain exactly the closed query API 2.1 ${value.meta?.detail} token fields`,
           });
         }
         const requiredSummary = [
@@ -444,11 +444,11 @@ function semanticIssues(family, value, ownership) {
         ];
         for (const field of requiredSummary) {
           if (!Object.hasOwn(artifact, field)) {
-            issues.push({ path: `$/data/artifact/${field}`, message: 'is required by query API 2.0 token summary' });
+            issues.push({ path: `$/data/artifact/${field}`, message: 'is required by query API 2.1 token summary' });
           }
         }
         if (Object.hasOwn(artifact, 'tokens')) {
-          issues.push({ path: '$/data/artifact/tokens', message: 'query API 2.0 requires sectional token retrieval' });
+          issues.push({ path: '$/data/artifact/tokens', message: 'query API 2.1 requires sectional token retrieval' });
         }
         const expectedSections = artifact.sourceCrosswalkDigest === null
           ? ['tokens']
@@ -520,7 +520,7 @@ function semanticIssues(family, value, ownership) {
         }
         for (const [index, item] of items.entries()) {
           const path = `$/entries/items/${index}`;
-          if (meta.queryApiVersion === '2.0.0') {
+          if (meta.queryApiVersion === '2.1.0') {
             if ((item.groupId === undefined) !== (item.group === undefined)) {
               issues.push({ path, message: 'v2 group detail must be present exactly when groupId is present' });
             }
@@ -551,9 +551,9 @@ function semanticIssues(family, value, ownership) {
     }
     if (
       entries?.status === 'absent'
-      && meta?.queryApiVersion === '2.0.0'
+      && meta?.queryApiVersion === '2.1.0'
       && entries.reason !== 'token-source-omits-source-crosswalk'
-    ) issues.push({ path: '$/entries/reason', message: 'query API 2.0 requires schema-2.1 omitted absence' });
+    ) issues.push({ path: '$/entries/reason', message: 'query API 2.1 requires schema-2.1 omitted absence' });
     if (page && entries) {
       if (page.returned !== entries.items?.length) {
         issues.push({ path: '$/page/returned', message: 'must equal entries.items length' });
@@ -607,7 +607,7 @@ function semanticIssues(family, value, ownership) {
   }
   if (family === 'token-section-page-budget-profile') {
     const expectedProfileId = {
-      '2.0.0': 'muxui-token-section-page-budget-2-0-0',
+      '2.1.0': 'muxui-token-section-page-budget-2-1-0',
     }[value.queryApiVersion];
     if (expectedProfileId !== value.id) {
       issues.push({ path: '$/id', message: 'must identify the exact queryApiVersion budget profile' });

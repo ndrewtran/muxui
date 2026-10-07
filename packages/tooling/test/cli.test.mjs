@@ -123,10 +123,10 @@ test('E-G0.3-02 human, JSON, and dense projections preserve one response object'
 
 test('muxui get uses the current API and round-trips bounded pages', () => {
   const parsed = parseCliArguments([
-    'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0',
+    'get', 'muxui:token:default-theme', '--query-api-version', '2.1.0',
     '--section', 'tokens', '--limit', '1', '--json',
   ]);
-  assert.equal(parsed.request.queryApiVersion, '2.0.0');
+  assert.equal(parsed.request.queryApiVersion, '2.1.0');
   assert.equal(parsed.request.limit, 1);
   assert.equal(parsed.request.section, 'tokens');
 
@@ -140,7 +140,7 @@ test('muxui get uses the current API and round-trips bounded pages', () => {
   assert.ok(countTokens(renderDense(page)) <= 2048);
 
   const sourceCrosswalk = jsonResult([
-    'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0',
+    'get', 'muxui:token:default-theme', '--query-api-version', '2.1.0',
     '--section', 'source-crosswalk',
   ]);
   assert.deepEqual(sourceCrosswalk.entries, {
@@ -151,27 +151,27 @@ test('muxui get uses the current API and round-trips bounded pages', () => {
   });
 
   for (const args of [
-    ['get', 'muxui:component:missing', '--query-api-version', '2.0.0', '--json'],
+    ['get', 'muxui:component:missing', '--query-api-version', '2.1.0', '--json'],
     [
-      'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0',
+      'get', 'muxui:token:default-theme', '--query-api-version', '2.1.0',
       '--cursor', 'not-a-cursor', '--json',
     ],
   ]) {
     const error = JSON.parse(runCli(args).stdout);
     assert.equal(error.type, 'error');
-    assert.equal(error.apiVersion, '2.0.0');
+    assert.equal(error.apiVersion, '2.1.0');
   }
 
   const current = runCli([
-    'get', 'muxui:token:default-theme', '--query-api-version', '2.0.0', '--json',
+    'get', 'muxui:token:default-theme', '--query-api-version', '2.1.0', '--json',
   ]);
   assert.equal(current.exitCode, 0);
   const currentResponse = JSON.parse(current.stdout);
-  assert.equal(currentResponse.apiVersion, '2.0.0');
+  assert.equal(currentResponse.apiVersion, '2.1.0');
   assert.equal(Object.hasOwn(currentResponse.data.artifact, 'tokens'), false);
   assert.deepEqual(currentResponse.data.artifact.availableSections, ['tokens']);
   const removedCurrentIdentity = runCli([
-    'get', 'muxui:token:button-minimum', '--query-api-version', '2.0.0', '--json',
+    'get', 'muxui:token:button-minimum', '--query-api-version', '2.1.0', '--json',
   ]);
   assert.equal(removedCurrentIdentity.exitCode, 4);
   assert.equal(JSON.parse(removedCurrentIdentity.stdout).error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
@@ -348,7 +348,7 @@ test('E-G0.3-05 structured errors have stable codes, safe actions, and meaningfu
     assert.equal(response.error.nextCommand.requiresConfirmation, false);
   }
   assert.throws(() => assertSafeDiagnostics({
-    apiVersion: '2.0.0',
+    apiVersion: '2.1.0',
     type: 'error',
     error: {
       code: 'MUXUI_QUERY_INVALID',

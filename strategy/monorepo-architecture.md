@@ -2058,7 +2058,7 @@ tools never rewrite source records silently while reading or querying them.
 Deprecated fields remain readable for their declared compatibility window and
 cannot be repurposed with new meaning.
 
-The current pre-release query surface supports only query API `2.0.0`.
+The current pre-release query surface supports only query API `2.1.0`.
 `@muxui/schema` owns its request/response grammar; `@muxui/catalog` owns
 current response semantics and bounded page selection. Token summaries expose
 counts, digests, provenance, and available sections; complete entries are
