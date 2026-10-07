@@ -15,8 +15,11 @@ slices land. Today it holds:
   precision for a fixed query set, component search stability, and dense
   budgets for pattern `list`, `search`, `get`, and `get --section examples` are
   measured against `regression-thresholds.json`, which was committed before the
-  capture. Its `fixedBeforeMeasurement` field records the three expectations a
-  first measurement corrected before the baseline was captured.
+  capture. Seven of its nine discovery expectations were revised after a first
+  measurement and before capture, so they were not all fixed before measuring;
+  its `provenance` field names them and the reasons. The query "collections"
+  ranks the Poster grid third, a known discovery weakness the record states
+  rather than passes.
 
 `regression.mjs` is the measurement. `packages/tooling/test/pattern-regression.test.mjs`
 runs it on every `@muxui/tooling` check, so each block added later is held to the

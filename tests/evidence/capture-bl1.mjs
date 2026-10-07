@@ -6,10 +6,12 @@
 // Run it from the exact committed implementation revision with a clean worktree
 // (only tests/evidence/bl1 may differ). It compiles the catalog twice, compares
 // it with the catalog the BL1-A2 goldens pin, measures the baseline against the
-// thresholds fixed before measurement (tests/evidence/bl1/regression-thresholds.json),
+// thresholds committed before capture (tests/evidence/bl1/regression-thresholds.json,
+// whose provenance names the expectations revised after a first measurement),
 // runs `pnpm generate:check`, and rewrites the artifacts, records, validation
 // summary, and index below tests/evidence/bl1. It refuses to write when a
-// threshold fails. The other E-BL1 assertions join this root as their slices land.
+// threshold fails or a proof tool differs from HEAD. The other E-BL1 assertions
+// join this root as their slices land.
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -78,12 +80,20 @@ const identityOutput = execFileSync('pnpm', ['generate:check'], { cwd: repositor
 const identity = /independent clean checkouts ([0-9a-f]{40}) generated identical projections with clean worktrees \((sha256:[0-9a-f]{64})\)/u.exec(identityOutput);
 if (!identity || identity[1] !== sourceRevision) throw new Error('E-BL1-08: pnpm generate:check did not report identical generation at the source revision');
 
-// E-BL1-11: the baseline for the seed set, held to the thresholds fixed before measurement.
+// E-BL1-11: the baseline for the seed set, held to the thresholds committed before capture.
 const thresholds = await loadThresholds();
 const api = createCatalogApi(first.bundle);
 const measured = measureRegression({ api, baselineApi: createCatalogApi(withoutPatterns.bundle), thresholds });
 const failures = regressionFailures(measured, thresholds);
 if (failures.length > 0) throw new Error(`E-BL1-11: the seed set breaks its thresholds:\n${failures.join('\n')}`);
+// A query the pattern ranks below first stays visible as a weakness, not a pass.
+const knownDiscoveryWeaknesses = thresholds.discovery.queries.filter(({ knownWeakness }) => knownWeakness !== undefined).map(({ query, expectedId, knownWeakness }) => ({
+  query,
+  expectedId,
+  rank: measured.discovery.queries.find((candidate) => candidate.query === query).rank,
+  weakness: knownWeakness,
+}));
+const weaknessSummary = knownDiscoveryWeaknesses.map(({ query, rank }) => `the query "${query}" ranks the pattern at ${rank}, not first`).join('; ');
 
 const artifacts = {
   'E-BL1-08': {
@@ -110,11 +120,12 @@ const artifacts = {
   },
   'E-BL1-11': {
     evidenceKind: 'catalog-regression-baseline',
-    claim: 'The seed set holds discovery precision, component search stability, and dense budgets within thresholds fixed before measurement.',
+    claim: `The seed set stays within the regression thresholds committed before capture, after ${thresholds.provenance.revisedAfterFirstMeasurement.length} of ${thresholds.discovery.queries.length} discovery expectations were revised following a first measurement. Known discovery weakness: ${weaknessSummary}.`,
     observations: {
       seedSet: thresholds.seedSet,
       thresholds: { path: thresholdsPath, sha256: sha256(await readFile(join(repositoryRoot, thresholdsPath))) },
       measured,
+      knownDiscoveryWeaknesses,
       failures,
     },
   },
@@ -129,8 +140,16 @@ async function write(path, value) {
   return { path, sha256: sha256(text) };
 }
 
-const proofTool = { path: captureTool, sha256: sha256(await readFile(join(repositoryRoot, captureTool))) };
-const regressionTool = { path: `${root}/regression.mjs`, sha256: sha256(await readFile(join(repositoryRoot, root, 'regression.mjs'))) };
+// A proof tool is bound by its bytes and by the last commit that changed it; it must already be committed.
+async function proofToolIdentity(path) {
+  const bytes = await readFile(join(repositoryRoot, path));
+  const committed = execFileSync('git', ['show', `HEAD:${path}`], { cwd: repositoryRoot, encoding: 'buffer' });
+  if (!committed.equals(bytes)) throw new Error(`EVIDENCE_PROOF_TOOL_UNCOMMITTED: ${path} must match HEAD`);
+  const revision = command('git', ['log', '-1', '--format=%H', '--', path]);
+  return { path, revision, sha256: sha256(bytes), tree: command('git', ['rev-parse', `${revision}^{tree}`]) };
+}
+const proofTool = await proofToolIdentity(captureTool);
+const regressionTool = await proofToolIdentity(`${root}/regression.mjs`);
 const captureProcedure = `node ${captureTool} --capture-timestamp=${captureTimestamp}`;
 const artifactRefs = {};
 for (const [assertionId, { evidenceKind, claim, observations }] of Object.entries(artifacts)) {
@@ -159,6 +178,9 @@ const nonClaims = [
   'Only E-BL1-08 and E-BL1-11 are recorded here; the other BL1 assertions join this root as their slices land.',
   'No assistive-technology support claim (Decision 0022), no publication, and no deployment.',
 ];
+const extraNonClaims = {
+  'E-BL1-11': [`No claim that discovery by category term works: ${weaknessSummary}, a known weakness this baseline records and does not pass as a first-ranked result.`],
+};
 const retentionPolicy = 'Content-addressed Git records retained in default-branch history';
 const records = [];
 for (const [assertionId, { evidenceKind, claim }] of Object.entries(artifacts)) {
@@ -181,14 +203,10 @@ for (const [assertionId, { evidenceKind, claim }] of Object.entries(artifacts)) 
       executedTree: sourceTree,
       expiry: 'Retained as the BL1 baseline for the seed set at this commit; a later block adds its own measurement against the same thresholds rather than editing this record',
       milestone: 'BL1',
-      nonClaims,
+      nonClaims: [...nonClaims, ...(extraNonClaims[assertionId] ?? [])],
       outcome: 'pass',
       owner: 'ndrewtran',
       proofTool,
-      proofToolRevision: {
-        reason: 'the capture tool is committed together with this evidence, so no earlier commit holds the exact tool; proofTool.sha256 binds its bytes',
-        status: 'not-applicable',
-      },
       retentionPolicy,
       schema: 'muxui-evidence-record-v1',
       sourceRevision,

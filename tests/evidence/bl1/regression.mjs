@@ -2,8 +2,9 @@
 //
 // `measureRegression` reads discovery precision, component search stability, and
 // dense budgets from a catalog API; `regressionFailures` compares them with
-// `regression-thresholds.json`, which was fixed before the baseline was
-// captured. `tests/evidence/capture-bl1.mjs` records the baseline, and
+// `regression-thresholds.json`, which was committed before the baseline was
+// captured (its provenance names the expectations revised after a first
+// measurement). `tests/evidence/capture-bl1.mjs` records the baseline, and
 // `packages/tooling/test/pattern-regression.test.mjs` holds every later block to
 // the same thresholds.
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
