@@ -24,7 +24,8 @@
       "properties": {
         "conceptContent": { "$ref": "#/$defs/digest" },
         "bindingContent": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
-        "bindingSpec": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] }
+        "bindingSpec": { "anyOf": [{ "$ref": "#/$defs/digest" }, { "type": "null" }] },
+        "patternRevision": { "$ref": "#/$defs/digest" }
       }
     },
     "detailRevisionSet": {
@@ -549,7 +550,7 @@
         "artifact": {
           "type": "object",
           "additionalProperties": true,
-          "propertyNames": { "enum": ["accessibility", "anatomy", "availability", "availableOn", "availableSections", "binding", "bindingSpecRevisions", "bindings", "complexity", "contentRevision", "id", "intent", "keywords", "kind", "lifecycle", "name", "platformSafetyRequirementSetDigests", "platformSafetyRequirementSets", "platforms", "policy", "prerequisites", "schemaVersion", "source", "sourceCrosswalkDigest", "states", "summary", "theme", "tokenContractVersion", "tokenCount", "tokenRequirementSetDigests", "tokenRequirementSets", "tokenSourceContentRevision"] },
+          "propertyNames": { "enum": ["accessibility", "anatomy", "availability", "availableOn", "availableSections", "binding", "bindingSpecRevisions", "bindings", "category", "complexity", "contentRevision", "group", "id", "intent", "invariants", "keywords", "kind", "lifecycle", "name", "parameters", "participants", "patternRevision", "platformSafetyRequirementSetDigests", "platformSafetyRequirementSets", "platforms", "policy", "prerequisites", "relations", "schemaVersion", "source", "sourceCrosswalkDigest", "states", "summary", "theme", "tokenContractVersion", "tokenCount", "tokenRequirementSetDigests", "tokenRequirementSets", "tokenSourceContentRevision", "unsupported", "variants", "workflowValue"] },
           "required": ["id", "kind", "source"],
           "properties": {
             "id": { "$ref": "artifact-ref.schema.json" },
@@ -566,6 +567,30 @@
           }
         },
         "relations": { "type": "array", "items": { "$ref": "#/$defs/relation" } },
+        "usedIn": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "roles"],
+            "properties": {
+              "id": { "$ref": "pattern.schema.json#/properties/id" },
+              "roles": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["role", "requirement"],
+                  "properties": {
+                    "role": { "$ref": "pattern.schema.json#/properties/participants/items/properties/role" },
+                    "requirement": { "$ref": "pattern.schema.json#/properties/participants/items/properties/requirement" }
+                  }
+                }
+              }
+            }
+          }
+        },
         "section": { "type": "string" },
         "value": true
       }

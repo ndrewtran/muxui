@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:poster-grid",
+  "kind": "pattern",
+  "name": "Poster grid",
+  "summary": "A scrollable grid of poster tiles with selection.",
+  "lifecycle": "experimental",
+  "keywords": ["grid", "gallery"],
+  "platforms": ["web.react"],
+  "category": "collections",
+  "intent": {
+    "useWhen": ["Browsing many image-led items"],
+    "avoidWhen": ["Rows need sortable columns"]
+  },
+  "participants": [
+    { "role": "list", "component": "muxui:component:grid-list", "requirement": "required" },
+    { "role": "scroller", "component": "muxui:component:virtualizer", "requirement": "optional" }
+  ],
+  "variants": [
+    { "example": "muxui:example:poster-grid-css" },
+    { "example": "muxui:example:poster-grid-virtualized" }
+  ],
+  "accessibility": ["Tiles expose grid semantics and a visible focus ring."],
+  "unsupported": ["Drag reordering"],
+  "workflowValue": "Replaces hand-assembling GridList and Virtualizer layout props."
+}

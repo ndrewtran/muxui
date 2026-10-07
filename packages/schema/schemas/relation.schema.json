@@ -2,6 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://muxui.dev/schema/relation.schema.json",
   "title": "G0.1 minimal relation registry",
+  "description": "The two example-of rows are alternatives: every example has exactly one owner, a component binding or one pattern variant, and validateCatalogRecords enforces that count (see each row's description).",
   "schemaVersion": "1.0.0",
   "type": "object",
   "additionalProperties": false,
@@ -10,8 +11,8 @@
     "schemaVersion": { "const": "1.0.0" },
     "relations": {
       "type": "array",
-      "minItems": 4,
-      "maxItems": 4,
+      "minItems": 5,
+      "maxItems": 5,
       "uniqueItems": true,
       "items": {
         "type": "object",
@@ -20,19 +21,22 @@
         "properties": {
           "type": { "enum": ["implemented-by", "example-of", "uses", "available-on"] },
           "source": { "enum": ["component", "example", "binding", "capability"] },
-          "target": { "enum": ["binding", "token", "surface-or-platform"] },
-          "owner": { "enum": ["component.binding", "binding-example-relation", "binding.tokenSources", "capability.availableOn"] },
+          "target": { "enum": ["binding", "pattern", "token", "surface-or-platform"] },
+          "owner": { "enum": ["component.binding", "binding-example-relation", "pattern.variants", "binding.tokenSources", "capability.availableOn"] },
           "minimum": { "type": "integer", "minimum": 0 },
           "maximum": { "anyOf": [{ "type": "integer", "minimum": 1 }, { "const": "many" }] },
           "guidanceImpact": { "const": "normative" },
-          "consumer": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+          "consumer": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+          "exclusiveWith": { "type": "array", "minItems": 1, "items": { "enum": ["binding", "pattern"] }, "uniqueItems": true },
+          "description": { "type": "string", "minLength": 1 }
         }
       }
     }
   },
   "x-muxui-registry": [
     { "type": "implemented-by", "source": "component", "target": "binding", "owner": "component.binding", "minimum": 1, "maximum": "many", "guidanceImpact": "normative", "consumer": ["schema-validation", "spec-revision"] },
-    { "type": "example-of", "source": "example", "target": "binding", "owner": "binding-example-relation", "minimum": 1, "maximum": 1, "guidanceImpact": "normative", "consumer": ["example-selection", "spec-revision"] },
+    { "type": "example-of", "source": "example", "target": "binding", "owner": "binding-example-relation", "minimum": 0, "maximum": 1, "guidanceImpact": "normative", "consumer": ["example-selection", "spec-revision"], "exclusiveWith": ["pattern"], "description": "Minimum 0 is not an orphan allowance: this row and the pattern.variants row are alternatives, and validateCatalogRecords (packages/schema/src/validation.mjs) enforces exactly one owner per example, rejecting zero and two." },
+    { "type": "example-of", "source": "example", "target": "pattern", "owner": "pattern.variants", "minimum": 0, "maximum": 1, "guidanceImpact": "normative", "consumer": ["example-selection", "pattern-revision"], "exclusiveWith": ["binding"], "description": "Minimum 0 is not an orphan allowance: this row and the binding row are alternatives, and validateCatalogRecords (packages/schema/src/validation.mjs) enforces exactly one owner per example, rejecting zero and two." },
     { "type": "uses", "source": "binding", "target": "token", "owner": "binding.tokenSources", "minimum": 0, "maximum": "many", "guidanceImpact": "normative", "consumer": ["schema-validation", "spec-revision"] },
     { "type": "available-on", "source": "capability", "target": "surface-or-platform", "owner": "capability.availableOn", "minimum": 1, "maximum": "many", "guidanceImpact": "normative", "consumer": ["capability-validation"] }
   ]

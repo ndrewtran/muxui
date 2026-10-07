@@ -23,6 +23,7 @@ export const familyFiles = Object.freeze({
   diagnostic: 'diagnostic.schema.json',
   example: 'example.schema.json',
   guide: 'guide.schema.json',
+  pattern: 'pattern.schema.json',
   'query-envelope': 'query-envelope.schema.json',
   'section-page': 'section-page.schema.json',
   'token-section-page-budget-profile': 'token-section-page-budget-profile.schema.json',

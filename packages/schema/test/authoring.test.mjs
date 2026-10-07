@@ -14,10 +14,17 @@ import {
   contentRevision,
   contentRevisionPreimage,
   loadFieldOwnershipRegistry,
+  patternRevisionPreimage,
   resolveAuthoringField,
   validateAuthoringMetadata,
 } from '../src/index.mjs';
-import { component, example, tokenSource } from './fixtures.mjs';
+import {
+  component,
+  example,
+  specifiedPattern,
+  tokenSource,
+  variantExample,
+} from './fixtures.mjs';
 
 async function schemaDocument(name) {
   return JSON.parse(await readFile(
@@ -103,11 +110,26 @@ test('E-G0.5-02: every declared revision axis matches its digest preimage member
   });
   const componentSpecFields = new Set(Object.keys(preimage.component));
   const bindingSpecFields = new Set(Object.keys(preimage.binding));
+  // The specified pattern carries every optional field, so the preimage lists them all.
+  // `variants` enter as the ordered example revisions beside the pattern fields.
+  const patternSpecFields = new Set([
+    ...Object.keys(patternRevisionPreimage({
+      pattern: specifiedPattern(),
+      examples: [variantExample()],
+      exampleSources: { [variantExample().id]: '<GridList />\n' },
+    }).pattern),
+    'variants',
+  ]);
   const declarations = validateAuthoringMetadata();
 
   for (const declaration of declarations) {
     let expected;
-    if (declaration.schema === 'component.schema.json') {
+    if (declaration.schema === 'pattern.schema.json') {
+      expected = [
+        'content',
+        ...(patternSpecFields.has(firstProperty(declaration.schemaPointer)) ? ['pattern-spec'] : []),
+      ];
+    } else if (declaration.schema === 'component.schema.json') {
       const field = firstProperty(declaration.schemaPointer);
       expected = [
         'content',

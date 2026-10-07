@@ -6,10 +6,10 @@ import {
 import { loadFieldOwnershipRegistry } from './field-ownership.mjs';
 import { SchemaValidationError } from './validation.mjs';
 
-const AUTHORING_FAMILIES = Object.freeze(['binding', 'component']);
+const AUTHORING_FAMILIES = Object.freeze(['binding', 'component', 'pattern']);
 const EFFECTS = new Set(['editorial', 'compatible', 'incompatible']);
 const OPERATIONS = Object.freeze(['add', 'remove', 'replace']);
-const REVISION_AXES = new Set(['content', 'binding-content', 'binding-spec']);
+const REVISION_AXES = new Set(['content', 'binding-content', 'binding-spec', 'pattern-spec']);
 const AUTOFIXES = new Set(['trim-outer-whitespace']);
 
 function isObject(value) {

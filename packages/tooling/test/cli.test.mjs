@@ -40,8 +40,8 @@ import { resolvePnpmProjectCatalog } from '../src/pnpm-adapter.mjs';
 const details = ['brief', 'compact', 'full'];
 const commandCases = {
   manifest: (detail) => ({ args: ['manifest', '--detail', detail], request: { detail } }),
-  list: (detail) => ({ args: ['list', '--detail', detail], request: { detail, limit: 20, platform: null, purpose: null, cursor: null, kind: null } }),
-  search: (detail) => ({ args: ['search', 'button', '--detail', detail], request: { detail, limit: 20, platform: null, purpose: null, cursor: null, query: 'button' } }),
+  list: (detail) => ({ args: ['list', '--detail', detail], request: { detail, limit: 20, platform: null, purpose: null, cursor: null, uses: null, kind: null } }),
+  search: (detail) => ({ args: ['search', 'button', '--detail', detail], request: { detail, limit: 20, platform: null, purpose: null, cursor: null, uses: null, query: 'button' } }),
   get: (detail) => ({ args: ['get', 'muxui:component:button', '--detail', detail], request: { detail, platform: null, purpose: null, section: null, 'id-or-alias': 'muxui:component:button' } }),
 };
 

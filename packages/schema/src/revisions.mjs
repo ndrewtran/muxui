@@ -44,7 +44,7 @@ export function bindingSpecRevisionPreimage({
   const bindingRef = `${component.id}#${bindingId}`;
   const normativeExamples = examples
     .filter((example) => (
-      example.binding.ref === bindingRef
+      example.binding?.ref === bindingRef
       && example.binding.guidanceImpact === 'normative'
     ))
     .map((example) => ({
@@ -113,4 +113,52 @@ export function bindingSpecRevisionPreimage({
 
 export function bindingSpecRevision(input) {
   return canonicalDigest(bindingSpecRevisionPreimage(input));
+}
+
+/**
+ * The normative pattern fields plus each variant example's content revision
+ * (record and source bytes), in authored variant order. Editorial fields
+ * (name, summary, keywords, category, workflowValue) stay out. Absent
+ * `relations`, `invariants`, and `parameters` normalize to empty values.
+ */
+export function patternRevisionPreimage({
+  pattern,
+  examples = [],
+  exampleSources = {},
+  schemas,
+  ownership,
+}) {
+  validateFamily('pattern', pattern, { schemas, ownership });
+  const variants = pattern.variants.map(({ example: id }) => {
+    const example = examples.find((candidate) => candidate.id === id);
+    if (!example) throw new Error(`MUXUI_RELATION_INVALID: missing variant example ${id}`);
+    return {
+      id,
+      revision: contentRevision('example', example, {
+        sourceBytes: exampleSources[id],
+        schemas,
+        ownership,
+      }),
+    };
+  });
+  return {
+    pattern: {
+      id: pattern.id,
+      lifecycle: pattern.lifecycle,
+      platforms: pattern.platforms,
+      intent: pattern.intent,
+      participants: pattern.participants,
+      accessibility: pattern.accessibility,
+      unsupported: pattern.unsupported,
+      // An absent optional field and an empty one say the same thing, so they digest alike.
+      relations: pattern.relations ?? [],
+      invariants: pattern.invariants ?? [],
+      parameters: pattern.parameters ?? {},
+    },
+    variants,
+  };
+}
+
+export function patternRevision(input) {
+  return canonicalDigest(patternRevisionPreimage(input));
 }

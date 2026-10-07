@@ -1086,10 +1086,12 @@ export async function buildPullRequestImpact({
       plan.reasons.push(`${path} is a canonical React catalog input; validate its readers`);
       continue;
     }
+    // A fixture is read by one package, or by several when its value is a list.
     const fixtureOwner = Object.entries(config.packageFixtureOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
     if (fixtureOwner) {
-      routePackage(plan, requirePackage(packages, fixtureOwner, path), records);
-      plan.reasons.push(`${path} is a fixture read by ${fixtureOwner} tests`);
+      const owners = [fixtureOwner].flat();
+      for (const owner of owners) routePackage(plan, requirePackage(packages, owner, path), records);
+      plan.reasons.push(`${path} is a fixture read by ${owners.join(' and ')} tests`);
       continue;
     }
     if (path.startsWith(`${tailwindFixture}/`)) {
@@ -1255,6 +1257,18 @@ export async function buildPullRequestImpact({
         plan.catalog = true;
         plan.reasons.push(`${path} is a catalog-owned input`);
       }
+      continue;
+    }
+
+    // Pattern records, variant example records, their sources, and assets
+    // compile into the catalog (the digest pinned by @muxui/tooling dense
+    // goldens). Docs projects them and follows from the catalog's dependents.
+    // A pattern names no component family, so no React family or Storybook
+    // page route applies. The React example type test walks only
+    // catalog/components, so a variant source joins no React test yet.
+    if (path.startsWith('catalog/patterns/')) {
+      plan.catalog = true;
+      plan.reasons.push(`${path} is a canonical pattern input; validate the catalog, its dense goldens, and the docs that render it`);
       continue;
     }
 

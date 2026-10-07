@@ -105,6 +105,12 @@
       "default": null
     },
     {
+      "name": "uses",
+      "flag": "--uses",
+      "type": "string",
+      "default": null
+    },
+    {
       "name": "query-api-version",
       "flag": "--query-api-version",
       "requestKey": "queryApiVersion",
@@ -131,8 +137,8 @@
       "arguments": [
         { "name": "kind", "required": false, "type": "artifact-kind" }
       ],
-      "options": ["platform", "detail", "purpose", "limit", "cursor", "json", "dense", "help", "project", "catalog-version", "catalog-digest"],
-      "examples": ["muxui list component --platform web.react --json", "muxui list --detail brief --dense"],
+      "options": ["platform", "detail", "purpose", "limit", "cursor", "uses", "json", "dense", "help", "project", "catalog-version", "catalog-digest"],
+      "examples": ["muxui list component --platform web.react --json", "muxui list pattern --uses muxui:component:button --dense", "muxui list --detail brief --dense"],
       "budgetFixture": { "limit": 1 },
       "tokenBudgets": { "brief": 256, "compact": 512, "full": 1024 }
     },
@@ -143,8 +149,8 @@
       "arguments": [
         { "name": "query", "required": true, "type": "string" }
       ],
-      "options": ["platform", "detail", "purpose", "limit", "cursor", "json", "dense", "help", "project", "catalog-version", "catalog-digest"],
-      "examples": ["muxui search button --platform web.react --json", "muxui search action --detail brief --dense"],
+      "options": ["platform", "detail", "purpose", "limit", "cursor", "uses", "json", "dense", "help", "project", "catalog-version", "catalog-digest"],
+      "examples": ["muxui search button --platform web.react --json", "muxui search grid --uses muxui:component:grid-list --dense", "muxui search action --detail brief --dense"],
       "budgetFixture": { "query": "button", "limit": 1 },
       "tokenBudgets": { "brief": 384, "compact": 768, "full": 1536 }
     },

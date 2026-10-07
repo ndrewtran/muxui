@@ -250,11 +250,12 @@ function semanticIssues(family, value, ownership) {
       }
     }
   });
-  if (['binding', 'capability', 'component', 'example', 'guide', 'token-source'].includes(family)) {
+  if (['binding', 'capability', 'component', 'example', 'guide', 'pattern', 'token-source'].includes(family)) {
     const ownershipRegistry = ownership ?? loadFieldOwnershipRegistry();
+    // A reserved field with `families` is reserved only in those families.
     const forbidden = new Set(
       [...ownershipRegistry.fields, ...(ownershipRegistry.reservedFields ?? [])]
-        .filter((field) => field.forbiddenInAuthoredSource)
+        .filter((field) => field.forbiddenInAuthoredSource && (field.families?.includes(family) ?? true))
         .map((field) => field.name),
     );
     const sourceContexts = [{ object: value, path: '$' }];
@@ -673,6 +674,40 @@ function semanticIssues(family, value, ownership) {
       }
     }
   }
+  if (family === 'pattern') {
+    const entries = (field) => (Array.isArray(value[field]) ? value[field] : [])
+      .map((item, index) => [item, index])
+      .filter(([item]) => isObject(item));
+    const roles = new Set();
+    for (const [participant, index] of entries('participants')) {
+      if (roles.has(participant.role)) {
+        issues.push({ path: `$/participants/${index}/role`, message: `${participant.role} is declared more than once` });
+      }
+      roles.add(participant.role);
+    }
+    const requireRole = (path, role) => {
+      if (!roles.has(role)) issues.push({ path, message: `${role} is not a declared participant role` });
+    };
+    for (const [relation, index] of entries('relations')) {
+      requireRole(`$/relations/${index}/source`, relation.source);
+      requireRole(`$/relations/${index}/target`, relation.target);
+    }
+    for (const [invariant, index] of entries('invariants')) {
+      requireRole(`$/invariants/${index}/role`, invariant.role);
+    }
+    for (const [name, parameter] of Object.entries(isObject(value.parameters) ? value.parameters : {})) {
+      if (parameter?.type === 'enum' && Array.isArray(parameter.values) && !parameter.values.includes(parameter.default)) {
+        issues.push({ path: `$/parameters/${name}/default`, message: 'must be one of the declared values' });
+      }
+    }
+    const listed = new Set();
+    for (const [variant, index] of entries('variants')) {
+      if (listed.has(variant.example)) {
+        issues.push({ path: `$/variants/${index}/example`, message: `${variant.example} is listed more than once` });
+      }
+      listed.add(variant.example);
+    }
+  }
   if (family === 'token-source') {
     for (const [tokenId, definition] of Object.entries(value.tokens ?? {})) {
       const declaredLayer = tokenId.split('.')[0];
@@ -784,10 +819,11 @@ export function validateFieldOwnershipRegistry(
       || field.forbiddenInAuthoredSource !== true
       || field.class !== authored?.class
       || field.owner !== authored?.owner
+      || JSON.stringify(field.families ?? null) !== JSON.stringify(authored?.families ?? null)
     ) {
       throw ownershipError(
         `$/reservedFields/${field.name}`,
-        'must match one authored reserved class, owner, and authored-source prohibition',
+        'must match one authored reserved class, owner, family scope, and authored-source prohibition',
       );
     }
     reservedNames.add(field.name);
@@ -853,6 +889,7 @@ const kindFamilies = Object.freeze({
   component: 'component',
   example: 'example',
   guide: 'guide',
+  pattern: 'pattern',
   token: 'token-source',
 });
 
@@ -868,7 +905,14 @@ export function relationEdges(records) {
         }
       }
     } else if (record.kind === 'example') {
-      edges.push({ type: 'example-of', source: record.id, target: record.binding.ref });
+      if (record.binding !== undefined) {
+        edges.push({ type: 'example-of', source: record.id, target: record.binding.ref });
+      }
+    } else if (record.kind === 'pattern') {
+      // A variant's edge is authored once, on the pattern's `variants`.
+      for (const { example } of record.variants) {
+        edges.push({ type: 'example-of', source: example, target: record.id });
+      }
     } else if (record.kind === 'capability') {
       for (const target of record.availableOn) {
         edges.push({ type: 'available-on', source: record.id, target });
@@ -891,10 +935,18 @@ export function validateCatalogRecords(records, { schemas, ownership } = {}) {
         { path: '$/kind', message: `${record.kind} record behavior is unavailable in G0.1` },
       ]);
     }
-    validateFamily(family, record, { schemas, ownership });
+    try {
+      validateFamily(family, record, { schemas, ownership });
+    } catch (error) {
+      if (!(error instanceof SchemaValidationError)) throw error;
+      throw new SchemaValidationError(error.code, error.issues.map((issue) => ({
+        ...issue,
+        artifactId: record.id,
+      })));
+    }
     if (ids.has(record.id)) {
       throw new SchemaValidationError('MUXUI_ARTIFACT_ID_INVALID', [
-        { path: '$/id', message: `${record.id} is duplicated` },
+        { artifactId: record.id, path: '$/id', message: `${record.id} is duplicated` },
       ]);
     }
     ids.set(record.id, record);
@@ -907,14 +959,12 @@ export function validateCatalogRecords(records, { schemas, ownership } = {}) {
     }
   }
   const issues = [];
+  const report = (artifactId, path, message) => issues.push({ artifactId, path, message });
   for (const record of records) {
     if (record.kind === 'example') {
       for (const prerequisite of record.prerequisites) {
         if (!ids.has(prerequisite)) {
-          issues.push({
-            path: '$/prerequisites',
-            message: `${prerequisite} does not exist`,
-          });
+          report(record.id, '$/prerequisites', `${prerequisite} does not exist`);
         }
       }
     }
@@ -926,28 +976,25 @@ export function validateCatalogRecords(records, { schemas, ownership } = {}) {
         ].filter(Boolean);
         for (const alternative of alternatives) {
           if (!ids.has(alternative)) {
-            issues.push({
-              path: `$/bindings/${bindingId}/alternative`,
-              message: `${alternative} does not exist`,
-            });
+            report(record.id, `$/bindings/${bindingId}/alternative`, `${alternative} does not exist`);
           }
         }
       }
     }
   }
   for (const edge of relationEdges(records)) {
+    if (edge.type === 'example-of' && ids.get(edge.target)?.kind === 'pattern') {
+      continue; // Variant ownership is checked from the pattern records below.
+    }
     if (edge.type === 'implemented-by' && !bindingRefs.has(edge.target)) {
-      issues.push({ path: '$/relations', message: `${edge.target} does not exist` });
+      report(edge.source, '$/relations', `${edge.target} does not exist`);
     } else if (edge.type === 'example-of' && !bindingRefs.has(edge.target)) {
-      issues.push({ path: '$/binding/ref', message: `${edge.target} does not exist` });
+      report(edge.source, '$/binding/ref', `${edge.target} does not exist`);
     } else if (edge.type === 'example-of') {
       const example = ids.get(edge.source);
       const binding = bindingRefs.get(edge.target);
       if (binding.strategy === 'unsupported') {
-        issues.push({
-          path: '$/binding/ref',
-          message: `${edge.target} is unsupported and cannot own an example`,
-        });
+        report(edge.source, '$/binding/ref', `${edge.target} is unsupported and cannot own an example`);
       }
       const targetProfiles = binding.runtimeProfiles ?? {};
       for (const runtimeProfileId of example.binding.runtimeProfiles ?? []) {
@@ -955,14 +1002,50 @@ export function validateCatalogRecords(records, { schemas, ownership } = {}) {
           ? targetProfiles[runtimeProfileId]
           : undefined;
         if (!runtimeProfile || runtimeProfile.strategy === 'unsupported') {
-          issues.push({
-            path: '$/binding/runtimeProfiles',
-            message: `${runtimeProfileId} is not supported by ${edge.target}`,
-          });
+          report(edge.source, '$/binding/runtimeProfiles', `${runtimeProfileId} is not supported by ${edge.target}`);
         }
       }
     } else if (edge.type === 'uses' && !ids.has(edge.target)) {
-      issues.push({ path: '$/tokenRecipe/source', message: `${edge.target} does not exist` });
+      report(edge.source.split('#')[0], '$/tokenRecipe/source', `${edge.target} does not exist`);
+    }
+  }
+
+  // Every participant must be a component with an implemented web.react
+  // binding, and every example has exactly one owner: its component binding
+  // or one pattern variant listing.
+  const listings = new Map();
+  for (const pattern of records.filter(({ kind }) => kind === 'pattern')) {
+    for (const [index, participant] of pattern.participants.entries()) {
+      const component = ids.get(participant.component);
+      const path = `$/participants/${index}/component`;
+      if (component?.kind !== 'component') {
+        report(pattern.id, path, `${participant.component} does not exist`);
+      } else if ((component.bindings['web.react']?.strategy ?? 'unsupported') === 'unsupported') {
+        report(pattern.id, path, `${participant.component} has no implemented web.react binding`);
+      }
+    }
+    for (const [index, { example }] of pattern.variants.entries()) {
+      const path = `$/variants/${index}/example`;
+      if (ids.get(example)?.kind !== 'example') {
+        report(pattern.id, path, `${example} does not exist`);
+      } else {
+        listings.set(example, [...(listings.get(example) ?? []), { pattern: pattern.id, path }]);
+      }
+    }
+  }
+  for (const example of records.filter(({ kind }) => kind === 'example')) {
+    const listed = listings.get(example.id) ?? [];
+    const bound = example.binding === undefined ? 0 : 1;
+    if (bound + listed.length === 0) {
+      report(example.id, '$/binding', 'has no owner: bind it to a component or list it in one pattern\'s variants');
+    } else if (bound === 1 && listed.length > 0) {
+      for (const { pattern, path } of listed) {
+        report(pattern, path, `${example.id} has two owners: it is bound to a component and listed as a pattern variant`);
+      }
+    } else if (listed.length > 1) {
+      for (const { pattern, path } of listed.slice(1)) {
+        report(pattern, path, `${example.id} is already a variant of ${listed[0].pattern}`);
+      }
     }
   }
   if (issues.length > 0) throw new SchemaValidationError('MUXUI_RELATION_INVALID', issues);

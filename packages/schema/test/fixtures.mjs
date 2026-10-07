@@ -215,6 +215,67 @@ export function capability() {
   };
 }
 
+/** A second web.react component, so a pattern can compose two participants. */
+export function gridList() {
+  return { ...component(), id: 'muxui:component:grid-list', name: 'GridList' };
+}
+
+/** A binding-less example: it is owned by the pattern that lists it as a variant. */
+export function variantExample(slug = 'poster-grid-css') {
+  const { binding: _binding, ...record } = example();
+  return {
+    ...record,
+    id: `muxui:example:${slug}`,
+    name: 'CSS grid',
+    summary: 'GridList grid layout.',
+    complexity: 'representative',
+    source: `catalog/patterns/poster-grid/examples/react/${slug}.tsx`,
+  };
+}
+
+export function pattern() {
+  return {
+    schemaVersion: '1.0.0',
+    id: 'muxui:pattern:poster-grid',
+    kind: 'pattern',
+    name: 'Poster grid',
+    summary: 'A scrollable grid of poster tiles with selection.',
+    lifecycle: 'experimental',
+    keywords: ['grid', 'gallery'],
+    platforms: ['web.react'],
+    category: 'collections',
+    intent: {
+      useWhen: ['Browsing many image-led items'],
+      avoidWhen: ['Rows need sortable columns'],
+    },
+    participants: [
+      { role: 'list', component: 'muxui:component:grid-list', requirement: 'required' },
+      { role: 'action', component: 'muxui:component:button', requirement: 'optional' },
+    ],
+    variants: [{ example: 'muxui:example:poster-grid-css' }],
+    accessibility: ['Tiles expose grid semantics and a visible focus ring.'],
+    unsupported: ['Drag reordering'],
+    workflowValue: 'Replaces hand-assembling GridList layout props.',
+  };
+}
+
+/** Provisional relations, invariants, and parameters (experimental, owned by G2.4). */
+export function specifiedPattern() {
+  return {
+    ...pattern(),
+    relations: [{ type: 'contains', source: 'list', target: 'action' }],
+    invariants: [{ role: 'list', rule: 'exactly-one' }],
+    parameters: {
+      density: { type: 'enum', values: ['comfortable', 'compact'], default: 'comfortable' },
+      selectable: { type: 'boolean', default: false },
+    },
+  };
+}
+
+export function patternRecords() {
+  return [component(), gridList(), variantExample(), pattern(), tokenSource()];
+}
+
 export function allRecords() {
   return [component(), example(), guide(), capability(), tokenSource()];
 }

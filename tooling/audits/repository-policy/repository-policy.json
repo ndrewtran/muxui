@@ -94,6 +94,7 @@
     ".agents/": ["@muxui/repository-policy"],
     ".claude/": ["@muxui/repository-policy"],
     ".github/": ["@muxui/repository-policy"],
+    ".gitattributes": ["@muxui/repository-policy"],
     ".gitignore": ["@muxui/repository-policy"],
     "AGENTS.md": ["@muxui/repository-policy"],
     "LICENSE": ["@muxui/repository-policy"],
@@ -124,6 +125,7 @@
       ".agents/",
       ".claude/",
       ".github/",
+      ".gitattributes",
       ".gitignore",
       "AGENTS.md",
       "LICENSE",
@@ -168,6 +170,7 @@
       "catalog/react-r1-6/": { "reactGenerator": true, "policy": true }
     },
     "packageFixtureOwners": {
+      "packages/catalog/test/fixtures/": ["@muxui/catalog", "@muxui/tooling"],
       "tests/fixtures/g0.5/": "@muxui/tooling",
       "tests/fixtures/g1.1/": "@muxui/web",
       "tests/fixtures/g1.2/": "@muxui/react-native"
@@ -176,6 +179,7 @@
       "catalog/capabilities/": "@muxui/catalog",
       "catalog/components/": "@muxui/catalog",
       "catalog/guides/": "@muxui/catalog",
+      "catalog/patterns/": "@muxui/catalog",
       "catalog/tokens/": "@muxui/tokens",
       "packages/catalog/catalog-sources.json": "@muxui/catalog",
       "packages/tooling/command-registry.json": "@muxui/tooling"

@@ -13,7 +13,7 @@ const BASELINE_GLOBAL_OPTIONS = [
 ];
 const OUTPUT_OPTIONS = ['dense', 'help', 'json'];
 const RESOLUTION_OPTIONS = ['catalog-digest', 'catalog-version', 'project'];
-const BASELINE_SELECTORS = ['cursor', 'detail', 'limit', 'platform', 'purpose', 'query-api-version', 'section'];
+const BASELINE_SELECTORS = ['cursor', 'detail', 'limit', 'platform', 'purpose', 'query-api-version', 'section', 'uses'];
 const UNAVAILABLE_COMMANDS = ['doctor', 'init', 'migrate', 'plan', 'validate'];
 const DETAILS = ['brief', 'compact', 'full'];
 const CATALOG_MANIFEST = getManifest({ detail: 'full' });
@@ -102,7 +102,7 @@ export function validateCommandRegistry(registry) {
     canonicalJson(registry.selectors.map(({ name }) => name).sort(compareText))
       === canonicalJson(BASELINE_SELECTORS),
     'CLI_OPTION_SURFACE_DRIFT',
-    'selectors must be exactly cursor, detail, limit, platform, purpose, query-api-version, and section',
+    'selectors must be exactly cursor, detail, limit, platform, purpose, query-api-version, section, and uses',
   );
 
   for (const option of registry.globalOptions) {

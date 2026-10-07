@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://muxui.dev/schema/pattern.schema.json",
+  "title": "Mux UI pattern (public name: block)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "kind", "name", "summary", "lifecycle", "keywords", "platforms", "category", "intent", "participants", "variants", "accessibility", "unsupported", "workflowValue"],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0.0",
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content"] }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^muxui:pattern:[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+    },
+    "kind": {
+      "const": "pattern",
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content"] }
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"], "autofixes": ["trim-outer-whitespace"] }
+    },
+    "summary": {
+      "type": "string",
+      "minLength": 1,
+      "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"], "autofixes": ["trim-outer-whitespace"] }
+    },
+    "lifecycle": {
+      "description": "Every BL1 pattern is experimental (Decision 0026); widening this enum is a deliberate schema change.",
+      "enum": ["experimental"],
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+    },
+    "keywords": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"] }
+    },
+    "platforms": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "enum": ["web.react"] },
+      "uniqueItems": true,
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+    },
+    "category": {
+      "enum": ["collections", "forms", "feedback", "conversation", "navigation", "hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"],
+      "x-muxui-category-groups": {
+        "application": ["collections", "forms", "feedback", "conversation", "navigation"],
+        "marketing": ["hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"]
+      },
+      "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"] }
+    },
+    "intent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["useWhen", "avoidWhen"],
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },
+      "properties": {
+        "useWhen": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+        },
+        "avoidWhen": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+        }
+      }
+    },
+    "participants": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "x-muxui-authoring": {
+        "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+        "revisionAxes": ["content", "pattern-spec"]
+      },
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "component", "requirement"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          },
+          "component": {
+            "type": "string",
+            "pattern": "^muxui:component:[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          },
+          "requirement": {
+            "enum": ["required", "optional"],
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          }
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "minItems": 1,
+      "x-muxui-authoring": {
+        "effects": { "add": "compatible", "remove": "incompatible", "replace": "incompatible" },
+        "revisionAxes": ["content", "pattern-spec"]
+      },
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["example"],
+        "properties": {
+          "example": {
+            "type": "string",
+            "pattern": "^muxui:example:[a-z0-9]+(?:-[a-z0-9]+)*$",
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+    },
+    "unsupported": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true,
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+    },
+    "workflowValue": {
+      "type": "string",
+      "minLength": 1,
+      "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"], "autofixes": ["trim-outer-whitespace"] }
+    },
+    "relations": {
+      "description": "Experimental (Decision 0026): provisional shape owned by G2.4; it may change before the planner consumes it.",
+      "type": "array",
+      "uniqueItems": true,
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["type", "source", "target"],
+        "properties": {
+          "type": {
+            "enum": ["contains", "requires"],
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          }
+        }
+      }
+    },
+    "invariants": {
+      "description": "Experimental (Decision 0026): provisional shape owned by G2.4; it may change before the planner consumes it.",
+      "type": "array",
+      "uniqueItems": true,
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["role", "rule"],
+        "properties": {
+          "role": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          },
+          "rule": {
+            "enum": ["exactly-one", "at-least-one", "at-most-one"],
+            "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "description": "Experimental (Decision 0026): provisional shape owned by G2.4; it may change before the planner consumes it.",
+      "type": "object",
+      "propertyNames": { "pattern": "^[a-z][a-zA-Z0-9]*$" },
+      "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "values", "default"],
+            "properties": {
+              "type": {
+                "const": "enum",
+                "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+              },
+              "values": {
+                "type": "array",
+                "minItems": 2,
+                "items": { "type": "string", "minLength": 1 },
+                "uniqueItems": true,
+                "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+              },
+              "default": {
+                "type": "string",
+                "minLength": 1,
+                "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["type", "default"],
+            "properties": {
+              "type": {
+                "const": "boolean",
+                "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+              },
+              "default": {
+                "type": "boolean",
+                "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

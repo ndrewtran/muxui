@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import {
   QUERY_API_VERSIONS,
   SCHEMA_VERSION,
+  SchemaValidationError,
   bindingContentRevision,
   bindingSpecRevision,
   canonicalDigest,
@@ -10,11 +11,14 @@ import {
   compilePlatformSafetyRequirementSets,
   contentRevision,
   parseJsonStrict,
+  patternGroup,
+  patternRevision,
   sha256Digest,
   validateCatalogRecords,
   validateFamily,
 } from '@muxui/schema';
 import { compileTokenRequirementSet, validateSourceCrosswalk } from '@muxui/tokens';
+import { patternImportIssues } from './pattern-imports.mjs';
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
 
 function compareText(left, right) {
@@ -83,7 +87,7 @@ function validateSourceManifest(manifest) {
       entry === null
       || typeof entry !== 'object'
       || Array.isArray(entry)
-      || !['capability', 'component', 'example', 'guide', 'token-source'].includes(entry.family)
+      || !['capability', 'component', 'example', 'guide', 'pattern', 'token-source'].includes(entry.family)
       || Object.keys(entry).some((key) => !['baselineOccurrencesPath', 'family', 'path'].includes(key))
     ) {
       throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: invalid records/${index}`);
@@ -119,7 +123,7 @@ function validateSourceManifest(manifest) {
 export function assertExamplePreferences(records) {
   const claimed = new Map();
   for (const record of records) {
-    if (record.kind !== 'example' || !record.binding.purposes.includes('generation')) continue;
+    if (record.kind !== 'example' || !record.binding?.purposes.includes('generation')) continue;
     const key = `${record.binding.ref}\0${record.binding.preference}`;
     const other = claimed.get(key);
     if (other !== undefined) {
@@ -156,6 +160,12 @@ function collectSearchFields(record, relations) {
   for (const keyword of record.keywords ?? []) fields.push(['keyword', keyword]);
   for (const value of record.intent?.useWhen ?? []) fields.push(['intent.useWhen', value]);
   for (const value of record.intent?.avoidWhen ?? []) fields.push(['intent.avoidWhen', value]);
+  if (record.kind === 'pattern') {
+    fields.push(['category', record.category]);
+    for (const { role, component } of record.participants) {
+      fields.push(['participant.role', role], ['participant.component', component]);
+    }
+  }
   for (const relation of relations) {
     if (relation.source === record.id || relation.target === record.id) {
       fields.push(['relation', `${relation.type} ${relation.source} ${relation.target}`]);
@@ -175,7 +185,7 @@ function collectSearchFields(record, relations) {
   return sortByKeys(terms, ['term', 'field', 'value']);
 }
 
-function recordPlatforms(record) {
+function recordPlatforms(record, variantOwners) {
   if (record.kind === 'component') {
     const platforms = Object.entries(record.bindings)
       .filter(([, binding]) => binding.strategy !== 'unsupported')
@@ -188,10 +198,12 @@ function recordPlatforms(record) {
     return platforms.sort(compareText);
   }
   if (record.kind === 'example') {
+    // A variant example has no binding; its platforms are its pattern's.
+    if (record.binding === undefined) return [...variantOwners.get(record.id).platforms].sort(compareText);
     return [record.binding.ref.split('#')[1], ...(record.binding.runtimeProfiles ?? [])]
       .sort(compareText);
   }
-  if (record.kind === 'guide') return [...record.platforms].sort(compareText);
+  if (record.kind === 'guide' || record.kind === 'pattern') return [...record.platforms].sort(compareText);
   return [];
 }
 
@@ -292,6 +304,27 @@ export async function compileCatalog({
       .filter(({ record }) => record.kind === 'example')
       .map(({ record, sourceBytes }) => [record.id, sourceBytes]),
   );
+  const patterns = records.filter(({ kind }) => kind === 'pattern');
+  // The graph check guarantees every binding-less example is one pattern's variant.
+  const variantOwners = new Map(patterns.flatMap((pattern) => (
+    pattern.variants.map(({ example }) => [example, pattern])
+  )));
+  for (const id of variantOwners.keys()) {
+    const record = examples.find((example) => example.id === id);
+    // The bundle carries variant source text in canonical JSON, which folds CR newlines.
+    if (exampleSources[id].includes('\r')) {
+      throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: ${record.source} must use LF newlines`);
+    }
+  }
+  const importIssues = patterns.flatMap((pattern) => patternImportIssues({
+    pattern,
+    components: records.filter(({ kind }) => kind === 'component'),
+    variants: pattern.variants.map(({ example }) => ({
+      source: examples.find(({ id }) => id === example).source,
+      text: exampleSources[example],
+    })),
+  }));
+  if (importIssues.length > 0) throw new SchemaValidationError('MUXUI_RELATION_INVALID', importIssues);
 
   const artifacts = loaded.map(({ entry, record, sourceBytes }) => {
     const revision = contentRevision(entry.family, record, { sourceBytes });
@@ -330,10 +363,10 @@ export async function compileCatalog({
           .map(([bindingId]) => [bindingId, bindingSpecRevision({
             component: record,
             bindingId,
-            examples: examples.filter((example) => example.binding.ref.startsWith(`${record.id}#`)),
+            examples: examples.filter((example) => example.binding?.ref.startsWith(`${record.id}#`)),
             exampleSources: Object.fromEntries(
               examples
-                .filter((example) => example.binding.ref.startsWith(`${record.id}#`))
+                .filter((example) => example.binding?.ref.startsWith(`${record.id}#`))
                 .map((example) => [example.id, exampleSources[example.id]]),
             ),
             tokenSources: tokens,
@@ -358,7 +391,7 @@ export async function compileCatalog({
       name: record.name,
       summary: record.summary,
       lifecycle: record.lifecycle,
-      platforms: recordPlatforms(record),
+      platforms: recordPlatforms(record, variantOwners),
       contentRevision: revision,
       bindingContentRevisions,
       bindingSpecRevisions,
@@ -369,6 +402,12 @@ export async function compileCatalog({
           ? null
           : canonicalDigest(record.sourceCrosswalk),
       } : {}),
+      ...(record.kind === 'pattern' ? {
+        group: patternGroup(record.category),
+        patternRevision: patternRevision({ pattern: record, examples, exampleSources }),
+      } : {}),
+      // Variant examples carry their exact source so `get` can return it.
+      ...(variantOwners.has(record.id) ? { sourceText: sourceBytes } : {}),
       source: {
         record: entry.path,
         ...(record.source === undefined ? {} : {

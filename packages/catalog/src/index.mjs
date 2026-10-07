@@ -2,6 +2,7 @@ import {
   API_VERSION,
   ARTIFACT_KINDS,
   ARTIFACT_REF_PATTERN,
+  ENABLED_RECORD_KINDS,
   QUERY_ENVELOPE_SCHEMA_ID,
   QUERY_RESPONSE_TYPES,
   QUERY_SCHEMA_VERSION,
@@ -10,6 +11,8 @@ import {
   canonicalDigest,
   canonicalJson,
   parseJsonStrict,
+  patternGroup,
+  patternRevision,
   sha256Digest,
   validateCatalogRecords,
   validateFamily,
@@ -28,12 +31,12 @@ const OPERATIONS = {
   },
   listArtifacts: {
     available: true,
-    requestKeys: ['cursor', 'detail', 'kind', 'limit', 'platform', 'purpose'],
+    requestKeys: ['cursor', 'detail', 'kind', 'limit', 'platform', 'purpose', 'uses'],
     responseType: 'artifact.list',
   },
   searchArtifacts: {
     available: true,
-    requestKeys: ['cursor', 'detail', 'limit', 'platform', 'purpose', 'query'],
+    requestKeys: ['cursor', 'detail', 'limit', 'platform', 'purpose', 'query', 'uses'],
     responseType: 'artifact.search',
   },
   getArtifact: {
@@ -90,6 +93,29 @@ function assertBundle(bundle) {
       : canonicalDigest(artifact.record.sourceCrosswalk);
     if (artifact.sourceCrosswalkDigest !== expectedCrosswalkDigest) {
       throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: token crosswalk digest does not match its sole canonical field');
+    }
+  }
+  const examples = bundle.artifacts.filter(({ kind }) => kind === 'example');
+  for (const artifact of examples) {
+    if (
+      artifact.sourceText !== undefined
+      && sha256Digest(artifact.sourceText) !== artifact.source.contentDigest
+    ) {
+      throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: variant source text does not match its content digest');
+    }
+  }
+  for (const artifact of bundle.artifacts) {
+    if (artifact.kind !== 'pattern') continue;
+    const expectedRevision = patternRevision({
+      pattern: artifact.record,
+      examples: examples.map(({ record }) => record),
+      exampleSources: Object.fromEntries(examples.map(({ id, sourceText }) => [id, sourceText])),
+    });
+    if (
+      artifact.group !== patternGroup(artifact.record.category)
+      || artifact.patternRevision !== expectedRevision
+    ) {
+      throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: pattern group or revision does not match its canonical record');
     }
   }
   validateFamily('token-section-page-budget-profile', bundle.pageBudgetProfile);
@@ -544,6 +570,10 @@ function summary(artifact, detail = 'compact') {
     platforms: artifact.platforms,
     source: artifact.source,
   };
+  if (artifact.kind === 'pattern') {
+    brief.category = artifact.record.category;
+    brief.group = artifact.group;
+  }
   if (detail === 'brief') return brief;
   return {
     ...brief,
@@ -564,9 +594,13 @@ function appliesToPlatform(artifact, platform) {
   return platform === null || artifact.platforms.length === 0 || artifact.platforms.includes(platform);
 }
 
+// A purpose filter selects component-bound examples by their binding's
+// `purposes`. A pattern variant has no binding and so no purposes: it is a
+// complete, system-owned source, so every purpose passes it through.
 function appliesToPurpose(artifact, purpose) {
   return purpose === null
     || artifact.kind !== 'example'
+    || artifact.record.binding === undefined
     || artifact.record.binding.purposes.includes(purpose);
 }
 
@@ -604,11 +638,15 @@ function selectedSection(bundle, artifact, request) {
   const selectedBinding = bindingForPlatform(record, request.platform);
   if (request.section === 'source') return artifact.source;
   if (request.section === 'api') {
+    // Only components own an API. Every other kind, patterns included (their
+    // participants' components own it), returns null, as an unavailable section does.
     if (record.kind !== 'component') return null;
     if (selectedBinding) return selectedBinding;
     return Object.fromEntries(Object.entries(record.bindings).map(([id, binding]) => [id, binding.api ?? null]));
   }
   if (request.section === 'accessibility') {
+    // A pattern's notes are its concept; it has no binding-level accessibility.
+    if (record.kind === 'pattern') return { concept: record.accessibility, binding: null };
     return record.kind === 'component'
       ? { concept: record.accessibility, binding: selectedBinding?.binding.accessibility ?? null }
       : null;
@@ -638,6 +676,13 @@ function selectedSection(bundle, artifact, request) {
     return { summary: record.summary, intent: record.intent ?? null };
   }
   if (request.section === 'decision-context') return null;
+  if (request.section === 'examples' && record.kind === 'pattern') {
+    // Variants keep their authored order and carry the exact source bytes.
+    return record.variants.map(({ example }) => {
+      const variant = bundle.artifacts.find(({ id }) => id === example);
+      return { ...summary(variant, request.detail), code: variant.sourceText };
+    });
+  }
   if (request.section === 'examples') {
     const prefix = `${artifact.id}#`;
     const selectedRef = selectedBinding === null
@@ -646,7 +691,7 @@ function selectedSection(bundle, artifact, request) {
     return bundle.artifacts
       .filter(({ kind, record: candidate }) => (
         kind === 'example'
-        && candidate.binding.ref.startsWith(prefix)
+        && candidate.binding?.ref.startsWith(prefix)
         && (selectedRef === null || candidate.binding.ref === selectedRef)
         && (
           selectedBinding?.runtimeProfileId == null
@@ -806,6 +851,21 @@ export function createCatalogApi(inputBundle, options = {}) {
     : new Set(options.availableBindings);
   const artifactsById = new Map(bundle.artifacts.map((artifact) => [artifact.id, artifact]));
   const indexById = new Map(bundle.searchIndex.map((entry) => [entry.id, entry]));
+  // The compile guarantees each binding-less example is exactly one pattern's variant.
+  const variantOwners = new Map(bundle.artifacts.flatMap((artifact) => (
+    artifact.kind === 'pattern'
+      ? artifact.record.variants.map(({ example }) => [example, artifact])
+      : []
+  )));
+
+  // Patterns declare only web.react, and graph validation gives every participant
+  // a web.react binding, so a pattern is installed when each required participant's
+  // web.react binding is. Optional participants never hide it.
+  function patternInstalled(pattern) {
+    return pattern.record.participants.every(({ component, requirement }) => (
+      requirement !== 'required' || availableBindings.has(`${component}#web.react`)
+    ));
+  }
 
   function implementationAvailable(artifact, platform) {
     if (availableBindings === null || platform === null) return true;
@@ -813,8 +873,64 @@ export function createCatalogApi(inputBundle, options = {}) {
       const selected = bindingForPlatform(artifact.record, platform);
       return selected === null || availableBindings.has(`${artifact.id}#${selected.bindingId}`);
     }
-    if (artifact.kind === 'example') return availableBindings.has(artifact.record.binding.ref);
+    if (artifact.kind === 'pattern') return patternInstalled(artifact);
+    if (artifact.kind === 'example') {
+      // A variant is available exactly when its pattern is.
+      if (artifact.record.binding === undefined) {
+        const owner = variantOwners.get(artifact.id);
+        return owner !== undefined && patternInstalled(owner);
+      }
+      return availableBindings.has(artifact.record.binding.ref);
+    }
     return true;
+  }
+
+  /**
+   * The patterns whose participants reference a component, with the roles it
+   * plays, as they appear under `platform` (the same view `list` and `search` give).
+   */
+  function patternsUsing(componentId, platform) {
+    return bundle.artifacts.flatMap((artifact) => {
+      if (
+        artifact.kind !== 'pattern'
+        || !appliesToPlatform(artifact, platform)
+        || !implementationAvailable(artifact, platform)
+      ) return [];
+      const roles = artifact.record.participants
+        .filter(({ component }) => component === componentId)
+        .map(({ role, requirement }) => ({ role, requirement }));
+      return roles.length === 0 ? [] : [{ id: artifact.id, roles }];
+    });
+  }
+
+  /** Resolves the `uses` selector shared by list and search into pattern IDs. */
+  function resolveUses(normalized, operation) {
+    if (normalized.uses === null) return { ids: null };
+    if (
+      typeof normalized.uses !== 'string'
+      || !new RegExp(ARTIFACT_REF_PATTERN).test(normalized.uses)
+      || !normalized.uses.startsWith('muxui:component:')
+    ) {
+      return { error: queryError(
+        'MUXUI_QUERY_INVALID',
+        `query.${operation}.uses`,
+        `${operation} uses must be a component ArtifactRef.`,
+        { uses: normalized.uses },
+        false,
+        normalized.queryApiVersion,
+      ) };
+    }
+    if (!artifactsById.has(normalized.uses)) {
+      return { error: queryError(
+        'MUXUI_ARTIFACT_NOT_FOUND',
+        'artifact.resolve.exists',
+        `No artifact matched ${JSON.stringify(normalized.uses)}.`,
+        { id: normalized.uses, platform: normalized.platform },
+        true,
+        normalized.queryApiVersion,
+      ) };
+    }
+    return { ids: new Set(patternsUsing(normalized.uses, normalized.platform).map(({ id }) => id)) };
   }
 
   function getManifest(request) {
@@ -829,7 +945,8 @@ export function createCatalogApi(inputBundle, options = {}) {
       operations: OPERATIONS,
       responseTypes: QUERY_RESPONSE_TYPES,
       selectors: QUERY_SELECTORS,
-      artifactKinds: [...new Set(bundle.artifacts.map(({ kind }) => kind))].sort(compareText),
+      // Enabled kinds, so a kind with no records yet (pattern) is still discoverable.
+      artifactKinds: [...ENABLED_RECORD_KINDS].sort(compareText),
       platforms: QUERY_SELECTORS.platform,
       capabilities: bundle.artifacts
         .filter(({ kind }) => kind === 'capability')
@@ -854,9 +971,12 @@ export function createCatalogApi(inputBundle, options = {}) {
         normalized.queryApiVersion,
       );
     }
+    const uses = resolveUses(normalized, 'list');
+    if (uses.error) return uses.error;
     const values = bundle.artifacts
       .filter((artifact) => (
         (normalized.kind === null || artifact.kind === normalized.kind)
+        && (uses.ids === null || uses.ids.has(artifact.id))
         && appliesToPlatform(artifact, normalized.platform)
         && implementationAvailable(artifact, normalized.platform)
         && appliesToPurpose(artifact, normalized.purpose)
@@ -902,10 +1022,13 @@ export function createCatalogApi(inputBundle, options = {}) {
         normalized.queryApiVersion,
       );
     }
+    const uses = resolveUses(normalized, 'search');
+    if (uses.error) return uses.error;
     const matches = [];
     for (const artifact of bundle.artifacts) {
       if (
-        !appliesToPlatform(artifact, normalized.platform)
+        (uses.ids !== null && !uses.ids.has(artifact.id))
+        || !appliesToPlatform(artifact, normalized.platform)
         || !implementationAvailable(artifact, normalized.platform)
         || !appliesToPurpose(artifact, normalized.purpose)
       ) {
@@ -1021,6 +1144,25 @@ export function createCatalogApi(inputBundle, options = {}) {
           ...(normalized.queryApiVersion === '2.1.0' && artifact.kind === 'token'
             ? tokenSectionSummary(artifact)
             : {}),
+          ...(artifact.kind === 'pattern' ? {
+            participants: artifact.record.participants,
+            variants: artifact.record.variants.map(({ example }) => ({
+              id: example,
+              name: artifactsById.get(example).name,
+            })),
+          } : {}),
+        },
+        relations,
+        ...(artifact.kind === 'component' ? { usedIn: patternsUsing(artifact.id, normalized.platform) } : {}),
+      };
+    } else if (artifact.kind === 'pattern') {
+      data = {
+        artifact: {
+          ...artifact.record,
+          group: artifact.group,
+          contentRevision: artifact.contentRevision,
+          patternRevision: artifact.patternRevision,
+          source: artifact.source,
         },
         relations,
       };
@@ -1060,6 +1202,7 @@ export function createCatalogApi(inputBundle, options = {}) {
           source: artifact.source,
         },
         relations,
+        ...(artifact.kind === 'component' ? { usedIn: patternsUsing(artifact.id, normalized.platform) } : {}),
       };
     }
     const revisions = {
@@ -1070,6 +1213,7 @@ export function createCatalogApi(inputBundle, options = {}) {
       bindingSpec: selectedBinding?.bindingId
         ? (artifact.bindingSpecRevisions[selectedBinding.bindingId] ?? null)
         : null,
+      ...(artifact.patternRevision === undefined ? {} : { patternRevision: artifact.patternRevision }),
     };
     const meta = baseMeta(bundle, resolutionContext, normalized, revisions);
     const response = success(

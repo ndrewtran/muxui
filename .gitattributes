@@ -1,0 +1,3 @@
+# The compiler rejects CR in variant sources and hashes their exact bytes.
+catalog/patterns/** text eol=lf
+packages/catalog/test/fixtures/patterns/** text eol=lf
