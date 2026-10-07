@@ -196,7 +196,7 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
   const bindingContent = bindingContentRevision(component().bindings['web.react']);
   assert.match(bindingContent, /^sha256:[a-f0-9]{64}$/);
   validateFamily('query-envelope', {
-    apiVersion: '2.0.0',
+    apiVersion: '2.1.0',
     type: 'artifact.detail',
     data: {
       artifact: {
@@ -206,7 +206,7 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
       },
     },
     meta: {
-      schemaVersion: '2.0.0',
+      schemaVersion: '2.1.0',
       authority: 'advisory',
       revisions: {
         conceptContent: `sha256:${'1'.repeat(64)}`,
@@ -801,10 +801,10 @@ test('E-G0.1-04: package/source locations remain derived and generated types ret
 
 test('section-page grammar is closed, typed, and position-safe', () => {
   const page = {
-    schemaVersion: '2.0.0',
+    schemaVersion: '2.1.0',
     responseType: 'artifact.detail.section-page',
     meta: {
-      queryApiVersion: '2.0.0',
+      queryApiVersion: '2.1.0',
       catalogVersion: '0.1.0',
       catalogDigest: `sha256:${'a'.repeat(64)}`,
       tokenSourceContentRevision: `sha256:${'b'.repeat(64)}`,

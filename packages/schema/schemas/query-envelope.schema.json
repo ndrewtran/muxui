@@ -78,7 +78,7 @@
         "nextCursor"
       ],
       "properties": {
-        "schemaVersion": { "enum": ["2.0.0"] },
+        "schemaVersion": { "enum": ["2.1.0"] },
         "authority": { "enum": ["installed-local", "advisory"] },
         "revisions": { "$ref": "#/$defs/revisionSet" },
         "muxuiVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
@@ -575,7 +575,7 @@
       "additionalProperties": true,
       "required": ["apiVersion", "type", "data", "meta", "warnings"],
       "properties": {
-        "apiVersion": { "enum": ["2.0.0"] },
+        "apiVersion": { "enum": ["2.1.0"] },
         "type": { "enum": ["catalog.manifest", "artifact.list", "artifact.search", "artifact.detail"] },
         "data": { "type": "object" },
         "meta": { "$ref": "#/$defs/responseMeta" },
@@ -617,7 +617,7 @@
       "additionalProperties": true,
       "required": ["apiVersion", "type", "error"],
       "properties": {
-        "apiVersion": { "enum": ["2.0.0"] },
+        "apiVersion": { "enum": ["2.1.0"] },
         "type": { "const": "error" },
         "error": { "$ref": "diagnostic.schema.json" }
       }

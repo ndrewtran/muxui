@@ -22,8 +22,8 @@
       "version": "1.0.0",
       "catalogVersion": "1.0.0",
       "catalogDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "queryApiVersion": "2.0.0",
-      "supportedQueryApiVersions": ["1.1.0", "1.2.0", "2.0.0"],
+      "queryApiVersion": "2.1.0",
+      "supportedQueryApiVersions": ["1.1.0", "1.2.0", "2.1.0"],
       "schemaRange": "^2.0.0",
       "sourceRevision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "provenance": {
@@ -49,8 +49,8 @@
       "version": "1.1.0",
       "catalogVersion": "1.1.0",
       "catalogDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "queryApiVersion": "2.0.0",
-      "supportedQueryApiVersions": ["2.0.0"],
+      "queryApiVersion": "2.1.0",
+      "supportedQueryApiVersions": ["2.1.0"],
       "schemaRange": "^3.0.0",
       "sourceRevision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "provenance": {
@@ -145,7 +145,7 @@
       "id": "release-compatible",
       "releaseVersion": "1.0.0",
       "schemaVersion": "2.1.0",
-      "queryApiVersion": "2.0.0",
+      "queryApiVersion": "2.1.0",
       "tokenContractVersion": "1.1.0",
       "sourceRevision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
       "catalog": {
@@ -191,7 +191,7 @@
       "id": "release-newer",
       "releaseVersion": "1.1.0",
       "schemaVersion": "3.0.0",
-      "queryApiVersion": "2.0.0",
+      "queryApiVersion": "2.1.0",
       "tokenContractVersion": "2.0.0",
       "sourceRevision": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
       "catalog": {

@@ -4,9 +4,9 @@
   "commandRegistryPath": "packages/tooling/command-registry.json",
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",
-  "queryApiVersion": "2.0.0",
+  "queryApiVersion": "2.1.0",
   "supportedQueryApiVersions": [
-    "2.0.0"
+    "2.1.0"
   ],
   "records": [
     {

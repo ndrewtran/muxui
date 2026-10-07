@@ -513,7 +513,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
       catalogVersion: '2.0.0',
       catalogDigest: bundle.catalogDigest,
       queryApiVersion: bundle.apiVersion,
-      supportedQueryApiVersions: ['2.0.0'],
+      supportedQueryApiVersions: ['2.1.0'],
       schemaRange: '^2.0.0',
       sourceRevision: bundle.sourceRevision,
       provenance: { kind: 'source-revision', value: bundle.sourceRevision },
@@ -533,7 +533,7 @@ test('E-G0.4 pnpm adapter normalizes renderer packages into the single resolver'
         id: descriptor.releaseProvenance,
         releaseVersion: '1.0.1',
         schemaVersion: '2.1.0',
-        queryApiVersion: '2.0.0',
+        queryApiVersion: '2.1.0',
         tokenContractVersion: '2.0.0',
         sourceRevision: bundle.sourceRevision,
         catalog: {

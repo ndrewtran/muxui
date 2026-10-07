@@ -617,7 +617,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
       name: '@muxui/catalog',
       catalogVersion: '2.0.0',
       catalogDigest: digest,
-      queryApiVersion: '2.0.0',
+      queryApiVersion: '2.1.0',
       sourceRevision: digest,
       platformSafetyContract: { digest, version: '1.0.0' },
       tokenRequirementSets: { [`${binding}:web.react`]: digest },
@@ -644,7 +644,7 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.match(correlation.lockfile.sha256, /^sha256:[0-9a-f]{64}$/u);
   assert.deepEqual(correlation.generatedOutputs, digestFileSet(options.generated));
   assert.deepEqual(correlation.catalog, {
-    name: '@muxui/catalog', version: '2.0.0', digest, schemaVersion: '2.1.0', queryApiVersion: '2.0.0', sourceRevision: digest,
+    name: '@muxui/catalog', version: '2.0.0', digest, schemaVersion: '2.1.0', queryApiVersion: '2.1.0', sourceRevision: digest,
     platformSafetyContract: { digest, version: '1.0.0' },
   });
   assert.deepEqual(correlation.tokens, { id: 'muxui:token:default-theme', contentRevision: digest, tokenContractVersion: '5.0.0' });

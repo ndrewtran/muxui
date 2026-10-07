@@ -337,7 +337,7 @@ export function validateResolverFixtureCorpus(corpus) {
     }
     if (
       graph.request.queryApiVersion !== undefined
-      && !['1.1.0', '1.2.0', '2.0.0'].includes(graph.request.queryApiVersion)
+      && !['1.1.0', '1.2.0', '2.1.0'].includes(graph.request.queryApiVersion)
     ) {
       fail(`${graph.id} request queryApiVersion is not admitted`);
     }

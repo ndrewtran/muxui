@@ -126,14 +126,14 @@
     }
   },
   "properties": {
-    "schemaVersion": { "enum": ["2.0.0"] },
+    "schemaVersion": { "enum": ["2.1.0"] },
     "responseType": { "const": "artifact.detail.section-page" },
     "meta": {
       "type": "object",
       "additionalProperties": false,
       "required": ["queryApiVersion", "catalogVersion", "catalogDigest", "tokenSourceContentRevision", "artifactId", "section", "selectorDigest"],
       "properties": {
-        "queryApiVersion": { "enum": ["2.0.0"] },
+        "queryApiVersion": { "enum": ["2.1.0"] },
         "catalogVersion": { "type": "string", "minLength": 5, "maxLength": 64 },
         "catalogDigest": { "$ref": "#/$defs/digest" },
         "tokenSourceContentRevision": { "$ref": "#/$defs/digest" },
