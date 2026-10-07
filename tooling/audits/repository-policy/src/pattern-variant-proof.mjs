@@ -7,7 +7,9 @@
 // consumer, compiles every variant source (or the named patterns') as
 // `release-prepare.mjs` compiles its catalog examples, then runs the same
 // consumer tools: `render-examples.mjs` server-renders each variant and
-// `hydrate-examples.mjs` hydrates the markup in jsdom and fails on a mismatch.
+// `hydrate-examples.mjs` hydrates the markup in jsdom, under a measured layout so a
+// virtualized variant mounts its rows, and fails on a mismatch. A variant must also
+// render the rows `pattern-variant-markup.mjs` expects, so an empty shell cannot pass.
 // That is the pattern share of the R1 exit SSR and hydration proof, without
 // the rest of `pnpm release:prepare` (full checks, the release candidate
 // archive, the registry matrix, and a clean worktree). It never publishes.
@@ -15,6 +17,7 @@ import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSy
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { assertPatternVariantMarkup } from './pattern-variant-markup.mjs';
 import { patternVariantExamples } from './pattern-variants.mjs';
 import { resolvePinnedTool } from './pinned-tool.mjs';
 
@@ -37,7 +40,7 @@ function run(label, command, args, options) {
 
 /**
  * Proves each variant in a packed clean consumer and returns one result per
- * variant: its server markup length and its hydration outcome. Throws on the
+ * variant: its server markup length, its row counts, and its hydration outcome. Throws on the
  * first failed stage with that stage's output.
  */
 export async function provePatternVariants({ patterns = [] } = {}) {
@@ -78,7 +81,7 @@ export async function provePatternVariants({ patterns = [] } = {}) {
       modules.push({ file, variant });
     }
     for (const tool of ['render-examples.mjs', 'hydrate-examples.mjs']) copyFileSync(join(consumerToolRoot, tool), join(consumer, tool));
-    writeFileSync(join(consumer, 'ssr-plan.json'), `${JSON.stringify({ modules: modules.map(({ file }) => ({ file })), exportModules: [] })}\n`);
+    writeFileSync(join(consumer, 'ssr-plan.json'), `${JSON.stringify({ modules: modules.map(({ file }) => ({ file, measuredLayout: true })), exportModules: [] })}\n`);
     // Server and client both use React's development build, which reports mismatches and provides act.
     const env = { ...process.env, NODE_ENV: 'development' };
     run('packed SSR render', process.execPath, ['render-examples.mjs', 'ssr-plan.json', 'ssr-result.json'], { cwd: consumer, env });
@@ -89,14 +92,13 @@ export async function provePatternVariants({ patterns = [] } = {}) {
     return modules.map(({ file, variant }) => {
       const render = renders.find((candidate) => candidate.file === file);
       const hydration = results.find((candidate) => candidate.id === render?.id);
-      // A variant that rendered nothing from the packed package would pass hydration vacuously.
-      if (!render || !render.html.includes('class="muxui-')) {
-        fail('MUXUI_PATTERN_VARIANT_PROOF_EMPTY', `${variant.variantId} rendered no Mux UI markup from the packed package`);
-      }
+      if (!render) fail('MUXUI_PATTERN_VARIANT_PROOF_EMPTY', `${variant.variantId} has no server render`);
       if (!hydration || hydration.hydrationErrors.length > 0) {
         fail('MUXUI_PATTERN_VARIANT_PROOF_HYDRATION', `${variant.variantId}: ${hydration?.hydrationErrors[0] ?? 'no hydration result'}`);
       }
-      return { id: variant.variantId, source: variant.source, markupBytes: render.html.length, consoleErrors: hydration.consoleErrors };
+      // A variant that rendered nothing would hydrate without a mismatch, so require real markup and rows.
+      assertPatternVariantMarkup({ variantId: variant.variantId, html: render.html, serverRows: hydration.serverRows, hydratedRows: hydration.hydratedRows, fail });
+      return { id: variant.variantId, source: variant.source, markupBytes: render.html.length, serverRows: hydration.serverRows, hydratedRows: hydration.hydratedRows, consoleErrors: hydration.consoleErrors };
     });
   } finally {
     rmSync(temp, { recursive: true, force: true });
@@ -115,8 +117,8 @@ if (process.argv[1] === import.meta.filename) {
   }
   try {
     const results = await provePatternVariants({ patterns });
-    for (const { id, markupBytes, consoleErrors } of results) {
-      console.log(`[E-BL1-03] ${id}: packed SSR ${markupBytes} bytes, hydrated without mismatch${consoleErrors.length > 0 ? ` (console: ${consoleErrors[0]})` : ''}`);
+    for (const { id, markupBytes, serverRows, hydratedRows, consoleErrors } of results) {
+      console.log(`[E-BL1-03] ${id}: packed SSR ${markupBytes} bytes with ${serverRows} rows, hydrated without mismatch to ${hydratedRows} rows${consoleErrors.length > 0 ? ` (console: ${consoleErrors[0]})` : ''}`);
     }
     console.log(`[E-BL1-03] ${results.length} pattern variants passed packed SSR and hydration`);
   } catch (error) {

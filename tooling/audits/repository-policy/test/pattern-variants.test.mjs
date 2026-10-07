@@ -3,7 +3,8 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
-import { patternVariantExamples } from '../src/pattern-variants.mjs';
+import { changedPatternSlugs, patternParticipants, patternVariantExamples } from '../src/pattern-variants.mjs';
+import { assertPatternVariantMarkup, expectedRowVariantIds } from '../src/pattern-variant-markup.mjs';
 import { provePatternVariants } from '../src/pattern-variant-proof.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -48,4 +49,52 @@ test('a pattern variant the manifest does not declare fails closed', async () =>
 // preparation also renders every variant from the packed package.
 test('the packed variant proof fails closed before packing when no variant is selected', async () => {
   await assert.rejects(provePatternVariants({ patterns: ['no-such-pattern'] }), /MUXUI_PATTERN_VARIANT_PROOF_EMPTY: no variant belongs to no-such-pattern/u);
+});
+
+const cssGrid = 'muxui:example:poster-grid-css-grid';
+const virtualized = 'muxui:example:poster-grid-virtualized';
+const markup = '<div class="muxui-grid-list" role="grid"></div>';
+const failure = (code, detail) => { throw new Error(`${code}: ${detail}`); };
+const check = (variantId, counts, html = markup) => assertPatternVariantMarkup({ variantId, html, fail: failure, ...counts });
+
+test('a variant that server-renders no row cannot pass the packed proof', () => {
+  assert.doesNotThrow(() => check(cssGrid, { serverRows: 12, hydratedRows: 12 }));
+  assert.throws(() => check(cssGrid, { serverRows: 0, hydratedRows: 0 }), /MUXUI_PATTERN_VARIANT_PROOF_EMPTY: .*rendered 0 role="row" elements for serverRows, expected 12/u);
+  assert.throws(() => check(cssGrid, { serverRows: 12, hydratedRows: 11 }), /for hydratedRows, expected 12/u);
+});
+
+test('the virtualized variant must mount some rows, and only a window of them, after a measured hydration', () => {
+  assert.doesNotThrow(() => check(virtualized, { serverRows: 0, hydratedRows: 12 }));
+  assert.throws(() => check(virtualized, { serverRows: 0, hydratedRows: 0 }), /for hydratedRows, expected 1 to 999/u);
+  assert.throws(() => check(virtualized, { serverRows: 0, hydratedRows: 1000 }), /for hydratedRows, expected 1 to 999/u);
+});
+
+test('every variant needs Mux UI server markup, with or without a row expectation', () => {
+  assert.throws(() => check('muxui:example:other-block', { serverRows: 0, hydratedRows: 0 }, '<div></div>'), /rendered no Mux UI markup/u);
+  assert.doesNotThrow(() => check('muxui:example:other-block', { serverRows: 0, hydratedRows: 0 }));
+});
+
+test('row expectations name variants the catalog declares', async () => {
+  const declared = (await patternVariantExamples(repositoryRoot)).map(({ variantId }) => variantId);
+  for (const id of expectedRowVariantIds) assert.ok(declared.includes(id), `${id} is not a declared pattern variant`);
+});
+
+test('pattern participants name the component slugs each pattern record declares', async () => {
+  const patterns = await patternParticipants(repositoryRoot);
+  assert.deepEqual(patterns.find(({ slug }) => slug === 'poster-grid'), {
+    slug: 'poster-grid',
+    components: ['grid-list', 'virtualizer', 'image', 'text', 'link', 'button'],
+  });
+  // A repository without a source manifest declares no pattern.
+  assert.deepEqual(await patternParticipants(tmpdir(), 'no-such-manifest.json'), []);
+});
+
+test('only entries under catalog/patterns change a pattern', () => {
+  const manifest = (...paths) => JSON.stringify({ records: paths.map((path) => ({ family: 'x', path })) });
+  const poster = 'catalog/patterns/poster-grid/artifact.json';
+  assert.deepEqual(changedPatternSlugs(manifest('a.json'), manifest('a.json', poster)), ['poster-grid']);
+  assert.deepEqual(changedPatternSlugs(manifest('a.json', poster), manifest('a.json')), ['poster-grid']);
+  assert.deepEqual(changedPatternSlugs(manifest(poster), manifest(poster)), []);
+  assert.deepEqual(changedPatternSlugs(manifest('a.json'), manifest('a.json', 'b.json')), []);
+  assert.deepEqual(changedPatternSlugs(undefined, manifest('catalog/patterns/hero/artifact.json', poster)), ['hero', 'poster-grid']);
 });

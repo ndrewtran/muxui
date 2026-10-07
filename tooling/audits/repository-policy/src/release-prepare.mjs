@@ -34,6 +34,7 @@ import {
   summarizeBundleModules,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
+import { assertPatternVariantMarkup } from './pattern-variant-markup.mjs';
 import { patternVariantExamples } from './pattern-variants.mjs';
 import { resolvePinnedTool as resolvePinnedToolIn } from './pinned-tool.mjs';
 import { fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
@@ -843,12 +844,12 @@ try {
   // Pattern ("block") variants render in the same packed consumer (E-BL1-03).
   const variants = await patternVariantExamples(repositoryRoot);
   if (variants.length === 0) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', 'the catalog declares no pattern variant example');
+  // Variants stay out of exampleCoverage: a runtime export needs its own component example.
   for (const variant of variants) {
-    for (const name of exampleImports(variant.text)) exampleCoverage.add(name);
     const { code } = await vite.transformWithOxc(variant.text, resolve(repositoryRoot, variant.source), { lang: 'tsx', jsx: { runtime: 'automatic' } });
     const output = `examples/pattern-${variant.patternSlug}--${variant.variantSlug}.mjs`;
     writeFileSync(join(consumer, output), code);
-    planModules.push({ file: output });
+    planModules.push({ file: output, measuredLayout: true });
   }
   for (const file of ['render-examples.mjs', 'hydrate-examples.mjs', 'export-fixtures.mjs']) copyConsumerTool(consumer, file);
   planModules.push({ file: 'export-fixtures.mjs', components: ['ToastFixture', 'LightboxPartsFixture'] });
@@ -876,6 +877,14 @@ try {
   if (hydration.status === 3) fail('R1_EXIT_PACK_HYDRATION_MISMATCH', childOutput(hydration));
   if (hydration.status !== 0) fail('R1_EXIT_PACK_HYDRATION_SCRIPT_FAILED', childOutput(hydration));
   const hydrationResult = JSON.parse(readFileSync(join(consumer, 'hydration-result.json'), 'utf8'));
+  // A variant that rendered nothing hydrates without a mismatch, so require the markup and rows it expects.
+  for (const variant of variants) {
+    const file = `examples/pattern-${variant.patternSlug}--${variant.variantSlug}.mjs`;
+    const render = serverResult.renders.find((candidate) => candidate.file === file);
+    const hydrated = hydrationResult.results.find(({ id }) => id === render?.id);
+    if (!render || !hydrated) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', `${variant.variantId} has no packed render or hydration result`);
+    assertPatternVariantMarkup({ variantId: variant.variantId, html: render.html, serverRows: hydrated.serverRows, hydratedRows: hydrated.hydratedRows, fail: (_code, detail) => fail('R1_EXIT_PACK_SSR_VARIANT_EMPTY', detail) });
+  }
   const consoleNotes = hydrationResult.results.filter(({ consoleErrors }) => consoleErrors.length !== 0);
   const exportCount = Object.values(serverResult.exportKeys).reduce((sum, names) => sum + names.length, 0);
   console.log(`R1 exit packed SSR/hydration: ${serverResult.renders.length} renders (${planModules.length - 1 - variants.length} component examples, ${variants.length} pattern variants, plus fixtures) cover ${exportCount} runtime exports across ${componentModules.join(', ')}; SSR ${serverResult.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms; ${hydrationResult.results.length} hydrations without mismatch`);

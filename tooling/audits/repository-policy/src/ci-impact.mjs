@@ -11,6 +11,7 @@ import { compareStorybookGeneratorEmissions } from './storybook-generator-impact
 import { dependencyClosure, familyRecordsFromContract } from './scoped-verification.mjs';
 import { componentTestSelection, familyRouteFiles } from './component-test-selection.mjs';
 import { loadPolicy, normalizePath } from './policy.mjs';
+import { changedPatternSlugs, patternParticipants } from './pattern-variants.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 
 const repositoryRoot = resolve(process.env.MUXUI_TASK_REPOSITORY_ROOT ?? resolve(import.meta.dirname, '../../../..'));
@@ -19,6 +20,7 @@ const reactDescriptorPath = 'packages/react/generated/descriptor.json';
 const storybookManifestPath = 'apps/react-storybook/.storybook/generated/manifest.mjs';
 const motionBoundaryTestFile = 'test/motion-package-boundary.test.mjs';
 const catalogExampleTypesTestFile = 'test/catalog-examples-types.test.mjs';
+const patternManifestPath = 'packages/catalog/catalog-sources.json';
 const reactGeneratorPath = 'packages/react/src/generate.mjs';
 const tailwindFixture = 'tests/fixtures/tailwind-consumer';
 
@@ -967,11 +969,23 @@ function refreshStoryRuns(plan, pageIndex) {
   return plan;
 }
 
+// Plans every generated Block page whose variants live in the pattern's directory.
+function addPatternPages(plan, slug, pageIndex) {
+  for (const page of pageIndex) {
+    for (const story of page.stories) {
+      if (!story.source?.startsWith(`catalog/patterns/${slug}/`)) continue;
+      plan.storyIds.add(story.id);
+      plan.storyIdFamilies.set(story.id, page.family);
+    }
+  }
+}
+
 export async function buildPullRequestImpact({
   changedPaths,
   config,
   records,
   pageIndex,
+  patterns = [],
   packages,
   readBaseText,
   readHeadText,
@@ -1085,6 +1099,20 @@ export async function buildPullRequestImpact({
       }
       plan.reasons.push(`${path} is a canonical React catalog input; validate its readers`);
       continue;
+    }
+    // An added or removed pattern entry changes the generated Block pages: plan
+    // Storybook generation, the new pattern's pages, and its proofs. The
+    // manifest is then routed as the fixture it is.
+    if (path === patternManifestPath) {
+      const slugs = changedPatternSlugs(await readBaseText(path), await readHeadText(path));
+      for (const slug of slugs) {
+        plan.storyTooling = true;
+        plan.reactTestFiles.add(catalogExampleTypesTestFile);
+        addPatternPages(plan, slug, pageIndex);
+        const browserTest = config.patternBrowserTests?.[slug];
+        if (browserTest) plan.reactTestFiles.add(browserTest);
+      }
+      if (slugs.length > 0) plan.reasons.push(`${path} adds or removes entries of ${slugs.join(', ')}; validate the generated Block pages and the pattern proofs`);
     }
     // A fixture is read by one package, or by several when its value is a list.
     const fixtureOwner = Object.entries(config.packageFixtureOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
@@ -1273,13 +1301,13 @@ export async function buildPullRequestImpact({
       plan.catalog = true;
       const slug = path.split('/')[2];
       if (path.endsWith('.tsx')) plan.reactTestFiles.add(catalogExampleTypesTestFile);
-      const inPattern = ({ source }) => slug !== undefined && source?.startsWith(`catalog/patterns/${slug}/`);
-      const owners = path.endsWith('.tsx')
-        ? routeCatalogExample(path, pageIndex)
-        : pageIndex.flatMap((page) => page.stories.filter(inPattern).map((story) => ({ family: page.family, id: story.id })));
-      for (const owner of owners) {
-        plan.storyIds.add(owner.id);
-        plan.storyIdFamilies.set(owner.id, owner.family);
+      if (path.endsWith('.tsx')) {
+        for (const owner of routeCatalogExample(path, pageIndex)) {
+          plan.storyIds.add(owner.id);
+          plan.storyIdFamilies.set(owner.id, owner.family);
+        }
+      } else if (slug !== undefined) {
+        addPatternPages(plan, slug, pageIndex);
       }
       const browserTest = slug === undefined ? undefined : config.patternBrowserTests?.[slug];
       if (browserTest) plan.reactTestFiles.add(browserTest);
@@ -1384,6 +1412,8 @@ export async function buildPullRequestImpact({
     plan.tailwind = true;
     plan.reasons.push(`React projection compiler inputs changed (${reactGeneratorPaths.join(', ')}); every canonical React family is affected`);
   }
+  // Families whose component source or CSS changed: the patterns that use them are replanned below.
+  const changedSourceFamilies = new Set();
   const baseImporters = new Set([...importsBySide.before.values()].flat());
   for (const path of reactSourcePaths) {
     if (generatorModules.has(path)) continue;
@@ -1400,6 +1430,7 @@ export async function buildPullRequestImpact({
     const impact = analyzeReactSourceChange({ before, after, sourcePath: path, records, moduleSources });
     impact.families.forEach((family) => {
       plan.reactFamilies.add(family);
+      changedSourceFamilies.add(family);
       plan.storyFamilies.add(storybookFamilyFor(records, family));
     });
     if (impact.families.length > 0) plan.reasons.push(impact.reason ?? `${path} changed exported ${impact.families.join(', ')}`);
@@ -1418,6 +1449,7 @@ export async function buildPullRequestImpact({
     const after = await readHeadText(path);
     const impact = analyzeReactStyleChange({ before: before ?? '', after: after ?? '', records, sourcePath: path, moduleSources });
     impact.families.forEach((family) => {
+      changedSourceFamilies.add(family);
       if (impact.theme) plan.themeFamilies.add(family);
       else {
         plan.reactFamilies.add(family);
@@ -1429,6 +1461,23 @@ export async function buildPullRequestImpact({
       plan.reactTheme = true;
     }
     if (impact.families.length > 0) plan.reasons.push(impact.reason ?? `${path} changed CSS for ${impact.families.join(', ')}`);
+  }
+
+  // A participant's source change reaches the patterns that use it: their Block
+  // pages, the packed example type test, and the browser test the pattern
+  // declares. A compiler or package-wide change reaches every pattern. A full
+  // React check already runs those tests, so only the pages are added then.
+  const changedComponentSlugs = new Set(records.filter(({ family }) => changedSourceFamilies.has(family)).map(({ slug }) => slug));
+  for (const { slug, components } of patterns) {
+    const changedComponents = plan.reactPackageFull ? components : components.filter((component) => changedComponentSlugs.has(component));
+    if (changedComponents.length === 0) continue;
+    addPatternPages(plan, slug, pageIndex);
+    const browserTest = config.patternBrowserTests?.[slug];
+    if (!plan.reactPackageFull) {
+      plan.reactTestFiles.add(catalogExampleTypesTestFile);
+      if (browserTest) plan.reactTestFiles.add(browserTest);
+    }
+    plan.reasons.push(`${slug} uses changed ${changedComponents.join(', ')}; validate its Block pages${plan.reactPackageFull ? '' : `, the packed example type test${browserTest ? `, and ${browserTest}` : ''}`}`);
   }
 
   for (const path of changed) {
@@ -1533,7 +1582,7 @@ export async function buildPullRequestImpact({
 }
 
 export function needsStorybookGeneration(paths, config, {
-  packages = [], lockfileImporters = [], reactPackagePagesAffected = false,
+  packages = [], lockfileImporters = [], reactPackagePagesAffected = false, patternManifestChanged = false,
 } = {}) {
   const sourceNeedsMetadata = paths.some((path) => path.startsWith('packages/react/src/')
     || (path === 'packages/react/package.json' && reactPackagePagesAffected)
@@ -1541,6 +1590,7 @@ export function needsStorybookGeneration(paths, config, {
       || /\/examples\/react\/[^/]+\.(?:tsx|example\.json)$/u.test(path)))
     // Pattern pages are generated Storybook pages; routing needs the page index.
     || path.startsWith('catalog/patterns/')
+    || (path === patternManifestPath && patternManifestChanged)
     || path.startsWith('apps/react-storybook/src/')
     || path.startsWith('apps/react-storybook/test/')
     || path.startsWith('apps/react-storybook/.storybook/')
@@ -2044,15 +2094,19 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
     && !isPolicyOnlyLockfileChange(lockfileBefore, lockfileAfter)
     ? changedLockfileImporters(lockfileBefore, lockfileAfter)
     : [];
+  const patternManifestChanged = changedPaths.includes(patternManifestPath)
+    && changedPatternSlugs(textAtRef(mergeBase, patternManifestPath), await currentText(patternManifestPath)).length > 0;
   const needsMetadata = needsStorybookGeneration(changedPaths, config, {
     packages,
     lockfileImporters,
     reactPackagePagesAffected: reactPackageImpact.pagesAffected,
+    patternManifestChanged,
   });
   const metadataPrepared = await prepareStorybookMetadata({ needsMetadata, preview });
 
   const records = needsMetadata ? await generatedReactRecords() : [];
   const pageIndex = needsMetadata ? await generatedStoryIndex() : [];
+  const patterns = needsMetadata ? await patternParticipants(repositoryRoot) : [];
   const reactSourceChanged = changedPaths.some((path) => path.startsWith('packages/react/src/') && /\.(?:mjs|css)$/u.test(path));
   const moduleSources = reactSourceChanged ? await reactModuleSources(mergeBase) : {};
   // Any route that selects React families (source, CSS, catalog records) needs the test sources.
@@ -2072,6 +2126,7 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
     config,
     records,
     pageIndex,
+    patterns,
     packages,
     readBaseText,
     readHeadText,

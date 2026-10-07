@@ -42,3 +42,41 @@ export async function patternVariantExamples(repositoryRoot, manifestPath = 'pac
   }
   return variants;
 }
+
+/**
+ * Lists each pattern the catalog source manifest declares with the component
+ * slugs its participants name, in manifest order. CI impact planning derives
+ * its pattern routes from this: a changed participant component plans the
+ * patterns that use it.
+ */
+export async function patternParticipants(repositoryRoot, manifestPath = 'packages/catalog/catalog-sources.json') {
+  const source = await readFile(resolve(repositoryRoot, manifestPath), 'utf8').catch((error) => {
+    // A repository with no source manifest declares no pattern.
+    if (error.code === 'ENOENT') return null;
+    throw error;
+  });
+  if (source === null) return [];
+  const manifest = JSON.parse(source);
+  const patterns = [];
+  for (const { family, path } of manifest.records) {
+    if (family !== 'pattern') continue;
+    const pattern = JSON.parse(await readFile(resolve(repositoryRoot, path), 'utf8'));
+    patterns.push({
+      slug: pattern.id.slice('muxui:pattern:'.length),
+      components: pattern.participants.map(({ component }) => component.slice('muxui:component:'.length)),
+    });
+  }
+  return patterns;
+}
+
+/**
+ * The slugs of patterns whose catalog source manifest entries differ between two
+ * manifest texts (either may be missing): an added or removed pattern record,
+ * variant example, or asset reference changes the generated Block pages.
+ */
+export function changedPatternSlugs(beforeText, afterText) {
+  const entries = (text) => new Set(text ? JSON.parse(text).records.map(({ path }) => path).filter((path) => path.startsWith('catalog/patterns/')) : []);
+  const [before, after] = [entries(beforeText), entries(afterText)];
+  const changed = [...before].filter((path) => !after.has(path)).concat([...after].filter((path) => !before.has(path)));
+  return [...new Set(changed.map((path) => path.split('/')[2]))].sort();
+}
