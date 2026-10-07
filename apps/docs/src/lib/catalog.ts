@@ -64,6 +64,7 @@ export interface CatalogExample {
 interface CatalogModule {
 	getArtifact(request: Record<string, unknown>): unknown;
 	listArtifacts(request: Record<string, unknown>): unknown;
+	searchArtifacts(request: Record<string, unknown>): unknown;
 }
 
 interface CatalogListResponse {
@@ -74,19 +75,27 @@ interface CatalogListResponse {
 
 interface CatalogDetailResponse {
 	type: 'artifact.detail';
-	data: { artifact?: unknown; relations?: readonly unknown[]; value?: readonly unknown[] };
+	data: { artifact?: unknown; relations?: readonly unknown[]; value?: readonly unknown[]; usedIn?: readonly unknown[] };
+}
+
+/** A block that references a component as a participant, from the derived `usedIn` view. */
+export interface CatalogUsedIn {
+	/** The pattern ArtifactRef. */
+	id: string;
+	roles: readonly { role: string; requirement: string }[];
 }
 
 const loadedCatalog: unknown = createRequire(import.meta.url)('@muxui/catalog');
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function isCatalogModule(value: unknown): value is CatalogModule {
 	return isRecord(value)
 		&& typeof value.getArtifact === 'function'
-		&& typeof value.listArtifacts === 'function';
+		&& typeof value.listArtifacts === 'function'
+		&& typeof value.searchArtifacts === 'function';
 }
 
 if (!isCatalogModule(loadedCatalog)) {
@@ -94,6 +103,8 @@ if (!isCatalogModule(loadedCatalog)) {
 }
 
 const catalog = loadedCatalog;
+/** The canonical query API. The Blocks loader reads patterns through it, never around it. */
+export const catalogApi: CatalogModule = catalog;
 
 function isCanonicalRepositoryRoot(candidate: string): boolean {
 	return existsSync(resolve(candidate, 'catalog'))
@@ -115,14 +126,14 @@ if (!repositoryRoot) {
 }
 export const canonicalRepositoryRoot = repositoryRoot;
 
-function requiredString(value: unknown, field: string): string {
+export function requiredString(value: unknown, field: string): string {
 	if (typeof value !== 'string' || value.length === 0) {
 		throw new Error(`Canonical catalog response is missing ${field}.`);
 	}
 	return value;
 }
 
-function stringArray(value: unknown, field: string): readonly string[] {
+export function stringArray(value: unknown, field: string): readonly string[] {
 	if (!Array.isArray(value) || value.some((item) => typeof item !== 'string')) {
 		throw new Error(`Canonical catalog response has an invalid ${field}.`);
 	}
@@ -234,8 +245,12 @@ function detailResponse(value: unknown): CatalogDetailResponse {
 	}
 	const relations = value.data.relations;
 	const examples = value.data.value;
+	const usedIn = value.data.usedIn;
 	if (relations !== undefined && !Array.isArray(relations)) {
 		throw new Error('Mux UI docs received invalid artifact relations.');
+	}
+	if (usedIn !== undefined && !Array.isArray(usedIn)) {
+		throw new Error('Mux UI docs received an invalid used-in view.');
 	}
 	if (examples !== undefined && !Array.isArray(examples)) {
 		throw new Error('Mux UI docs received invalid artifact examples.');
@@ -246,8 +261,25 @@ function detailResponse(value: unknown): CatalogDetailResponse {
 			artifact: value.data.artifact,
 			relations,
 			value: examples,
+			usedIn,
 		},
 	};
+}
+
+function readUsedIn(value: unknown): CatalogUsedIn {
+	if (!isRecord(value) || !Array.isArray(value.roles)) {
+		throw new Error('Canonical catalog returned an invalid used-in entry.');
+	}
+	return Object.freeze({
+		id: requiredString(value.id, 'usedIn.id'),
+		roles: Object.freeze(value.roles.map((role) => {
+			if (!isRecord(role)) throw new Error('Canonical catalog returned an invalid used-in role.');
+			return Object.freeze({
+				role: requiredString(role.role, 'usedIn.role'),
+				requirement: requiredString(role.requirement, 'usedIn.requirement'),
+			});
+		})),
+	});
 }
 
 function readBinding(value: unknown): CatalogBinding {
@@ -370,6 +402,8 @@ export interface ComponentPage {
 	relations: readonly unknown[];
 	examples: readonly CatalogExample[];
 	guides: readonly CatalogGuide[];
+	/** The blocks that use this component, derived by the catalog query engine. */
+	usedIn: readonly CatalogUsedIn[];
 }
 
 export function getComponentPage(slug: string): ComponentPage | null {
@@ -396,5 +430,6 @@ export function getComponentPage(slug: string): ComponentPage | null {
 		relations: Object.freeze([...(detail.data.relations ?? [])]),
 		examples: Object.freeze(exampleItems.map(readExampleSummary)),
 		guides: guidesForComponent(summary),
+		usedIn: Object.freeze((detail.data.usedIn ?? []).map(readUsedIn)),
 	});
 }
