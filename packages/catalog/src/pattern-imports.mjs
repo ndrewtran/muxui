@@ -15,23 +15,26 @@
  * Only the header is tokenized. A small tokenizer cannot read the rest of a
  * file (JSX text, regular expressions, and escapes defeat it, and `//` in JSX
  * text would hide code), so the rest is scanned raw and fails closed on
- * anything that could pull in a module: a dynamic import, `require(`, a
- * line-leading `import` or `export ... from`, an escaped `@`, and any
- * occurrence of `@muxui`, even in a comment or string.
+ * anything that could pull in a module: a dynamic import, `require(`, an
+ * `import` or `export ... from` that starts a statement (at a line start or
+ * after `;`, `}`, or a block comment), an escaped `@`, and any occurrence of
+ * `@muxui`, even in a comment or string. `a.import(` and the word "import" in
+ * JSX text pass.
  *
  * Limits: imported names are matched by export name against component
  * records. Names that belong to no component record, such as the hook
  * `useToast`, the provider `ToastProvider`, sub-parts, and types, are not
- * checked against `pattern.participants`, and use is not checked. Mid-line
- * statements the raw rules cannot tell from prose are not detected.
+ * checked against `pattern.participants`, and use is not checked. An `import`
+ * inside a template literal or a comment that starts a line is flagged (fail
+ * closed); a statement start the rules do not list is not detected.
  */
 
 const ALLOWED_SPECIFIERS = new Set(['react', 'react/jsx-runtime', '@muxui/react']);
 const IDENTIFIER = /[\p{L}_$][\p{L}\p{N}_$]*/uy;
 const NAME = '[\\p{L}_$][\\p{L}\\p{N}_$]*';
-// A statement start: a line start, or after `;` or `}`. Keeps prose such as
-// "please import your photos" and member calls such as `a.import(` out.
-const STATEMENT_START = '(?<=(?:^|[;}])\\s*)';
+// A statement start: a line start, or after `;`, `}`, or a block comment. Keeps
+// prose such as "please import your photos" and member calls such as `a.import(` out.
+const STATEMENT_START = '(?<=(?:^|[;}]|\\*/)\\s*)';
 const NOT_MEMBER = '(?<![\\p{L}\\p{N}_$.])';
 
 /** Raw rules for the source after the header, most specific first; one violation per line. */

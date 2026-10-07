@@ -248,6 +248,7 @@ test('E-BL1-01 negative: every import must sit in the leading header', () => {
     ['of a non-@muxui module', `${header}const a = 1;\nimport x from 'react';`, 3],
     ['in the middle of a line', `${header}const a = 1; import x from 'react';`, 2],
     ['after a closing brace', `${header}function f() {}\nimport x from 'react';`, 3],
+    ['after a block comment', `${header}const a = 1; /* note */ import x from 'react';`, 2],
     ['as a side effect', `${header}const a = 1;\nimport './styles.css';`, 3],
     ['as a type', `${header}const a = 1;\nimport type { T } from './types';`, 3],
   ]) {
