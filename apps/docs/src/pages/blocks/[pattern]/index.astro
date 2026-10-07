@@ -1,0 +1,16 @@
+---
+import BlockPage from '../../../components/blocks/BlockPage.astro';
+import { blocks } from '../../../lib/blocks.ts';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+	return blocks.map((block) => ({ params: { pattern: block.slug }, props: { slug: block.slug } }));
+}
+
+// A block's own address opens its first variant; the variant pages hold the content.
+const block = blocks.find(({ slug }) => slug === Astro.props.slug);
+if (!block) throw new Error(`Missing block ${Astro.props.slug}.`);
+---
+
+<BlockPage block={block} variant={block.variants[0]} />

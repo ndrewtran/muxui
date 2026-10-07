@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { parseFragment } from 'parse5';
 import { FOUNDATION_PAGES } from '../src/lib/foundations.ts';
+import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsDist = process.argv[2] === undefined
@@ -31,32 +32,6 @@ function listComponents() {
 		cursor = response.meta.nextCursor ?? undefined;
 	} while (cursor !== undefined);
 	return components;
-}
-
-function classNames(node) {
-	return new Set((node.attrs?.find(({ name }) => name === 'class')?.value ?? '').split(/\s+/u).filter(Boolean));
-}
-
-function elements(node) {
-	const descendants = [];
-	for (const child of node.childNodes ?? []) {
-		if (child.tagName !== undefined) {
-			descendants.push(child, ...elements(child));
-		}
-	}
-	return descendants;
-}
-
-function textContent(node) {
-	return (node.childNodes ?? []).map((child) => {
-		if (child.nodeName === '#text') return child.value;
-		if (child.nodeName === '#comment') return '';
-		return textContent(child);
-	}).join('');
-}
-
-function attributeValue(node, name) {
-	return node.attrs?.find(({ name: attributeName }) => attributeName === name)?.value;
 }
 
 function renderedSourceBlocks(html) {

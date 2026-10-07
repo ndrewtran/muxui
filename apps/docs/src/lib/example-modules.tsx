@@ -2,13 +2,18 @@ import type { ComponentType } from 'react';
 
 type ExampleModule = Record<string, unknown>;
 
+// Component examples and Block variants share one executable-source contract.
 const exampleSourceTexts = import.meta.glob<string>(
-	'../../../../catalog/components/*/examples/react/*.tsx',
+	[
+		'../../../../catalog/components/*/examples/react/*.tsx',
+		'../../../../catalog/patterns/*/examples/react/*.tsx',
+	],
 	{ eager: true, query: '?raw', import: 'default' },
 );
-const exampleLoaders = import.meta.glob<ExampleModule>(
+const exampleLoaders = import.meta.glob<ExampleModule>([
 	'../../../../catalog/components/*/examples/react/*.tsx',
-);
+	'../../../../catalog/patterns/*/examples/react/*.tsx',
+]);
 
 function isComponent(value: unknown): value is ComponentType {
   return typeof value === 'function';

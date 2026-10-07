@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import StarlightPage from '@astrojs/starlight/components/StarlightPage.astro';
 import { canonicalRepositoryRoot, componentSummaries, getComponentPage } from '../../lib/catalog.ts';
+import { resolveUsedIn } from '../../lib/blocks.ts';
+import { variantPath } from '../../lib/block-paths.ts';
 import { assertExampleSource } from '../../lib/example-modules.tsx';
 import DemoPanel from '../../components/DemoPanel.astro';
 import ExampleHost from '../../components/ExampleHost.tsx';
@@ -32,6 +34,8 @@ const basicExample = examples[0];
 if (!basicExample) throw new Error(`Mux UI docs received no basic React example for ${summary.id}.`);
 const basicSource = basicExample.source.content;
 const basicDemoId = `${summary.id.replaceAll(':', '-')}-basic`;
+// The blocks that use this component, from the usedIn view the catalog derives. Block variants are never listed as component examples.
+const usedInBlocks = resolveUsedIn(page.usedIn);
 
 for (const example of examples) {
 	assertExampleSource(example.source.content);
@@ -54,6 +58,7 @@ const headings = [
 		text: example.name,
 		slug: `example-${index}-${slugify(example.name)}`,
 	})),
+	...(usedInBlocks.length > 0 ? [{ depth: 2, text: 'Used in blocks', slug: 'used-in-blocks' }] : []),
 	{ depth: 2, text: 'API reference', slug: 'api-reference' },
 	{ depth: 3, text: 'Props', slug: 'api-props' },
 	{ depth: 3, text: 'Events', slug: 'api-events' },
@@ -111,6 +116,20 @@ const headings = [
 			);
 		}) : <p>No additional named examples are declared for this component yet.</p>}
 	</section>
+
+	{usedInBlocks.length > 0 && (
+		<section id="used-in-blocks" class="docs-section">
+			<h2>Used in blocks</h2>
+			<ul>
+				{usedInBlocks.map(({ block, roles }) => (
+					<li>
+						<a href={variantPath(block, block.variants[0])}>{block.name}</a>
+						<span class="used-in-roles">{roles.map(({ role, requirement }) => requirement === 'optional' ? `${role} (optional)` : role).join(', ')}</span>
+					</li>
+				))}
+			</ul>
+		</section>
+	)}
 
 	<section id="api-reference" class="docs-section">
 		<h2>API reference</h2>

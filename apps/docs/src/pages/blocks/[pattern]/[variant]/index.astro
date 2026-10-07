@@ -1,0 +1,19 @@
+---
+import BlockPage from '../../../../components/blocks/BlockPage.astro';
+import { blocks } from '../../../../lib/blocks.ts';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+	return blocks.flatMap((block) => block.variants.map((variant) => ({
+		params: { pattern: block.slug, variant: variant.slug },
+		props: { block: block.slug },
+	})));
+}
+
+const block = blocks.find(({ slug }) => slug === Astro.props.block);
+const variant = block?.variants.find(({ slug }) => slug === Astro.params.variant);
+if (!block || !variant) throw new Error(`Missing block variant ${Astro.params.pattern}/${Astro.params.variant}.`);
+---
+
+<BlockPage block={block} variant={variant} />

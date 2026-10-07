@@ -18,11 +18,10 @@ import {
   validateFamily,
 } from '@muxui/schema';
 import { catalogJson } from '../generated/catalog.mjs';
+import { MAX_QUERY_LENGTH, matchSearchTerm, parseSearchQuery } from './search.mjs';
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-const MAX_QUERY_LENGTH = 256;
-const MAX_QUERY_TERMS = 16;
 const OPERATIONS = {
   getManifest: {
     available: true,
@@ -995,11 +994,8 @@ export function createCatalogApi(inputBundle, options = {}) {
     const parsed = normalizeRequest(request, 'searchArtifacts', bundle);
     if (parsed.error) return parsed.error;
     const { normalized } = parsed;
-    if (
-      typeof normalized.query !== 'string'
-      || normalized.query.trim().length === 0
-      || normalized.query.length > MAX_QUERY_LENGTH
-    ) {
+    const query = parseSearchQuery(normalized.query);
+    if (query.rule === 'query.search.text') {
       return queryError(
         'MUXUI_QUERY_INVALID',
         'query.search.text',
@@ -1009,10 +1005,7 @@ export function createCatalogApi(inputBundle, options = {}) {
         normalized.queryApiVersion,
       );
     }
-    const queryTerms = [...new Set(
-      normalized.query.toLowerCase().match(/[a-z0-9]+/g) ?? [],
-    )].slice(0, MAX_QUERY_TERMS);
-    if (queryTerms.length === 0) {
+    if (query.rule === 'query.search.terms') {
       return queryError(
         'MUXUI_QUERY_INVALID',
         'query.search.terms',
@@ -1022,6 +1015,7 @@ export function createCatalogApi(inputBundle, options = {}) {
         normalized.queryApiVersion,
       );
     }
+    const { terms: queryTerms } = query;
     const uses = resolveUses(normalized, 'search');
     if (uses.error) return uses.error;
     const matches = [];
@@ -1038,7 +1032,7 @@ export function createCatalogApi(inputBundle, options = {}) {
       let score = 0;
       for (const term of queryTerms) {
         for (const indexed of indexById.get(artifact.id).terms) {
-          const match = indexed.term === term ? 'exact' : indexed.term.startsWith(term) ? 'prefix' : null;
+          const match = matchSearchTerm(indexed.term, term);
           if (match) {
             // An artifact's own identity must outrank an incidental match in
             // many relation records (for example, `default-theme` references
@@ -1241,3 +1235,5 @@ export const getManifest = defaultApi.getManifest;
 export const listArtifacts = defaultApi.listArtifacts;
 export const searchArtifacts = defaultApi.searchArtifacts;
 export const getArtifact = defaultApi.getArtifact;
+// The pattern taxonomy, so a projection orders groups and categories as the schema declares them.
+export { PATTERN_CATEGORY_GROUPS } from '@muxui/schema';

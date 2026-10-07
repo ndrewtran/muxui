@@ -1,0 +1,709 @@
+/* The Blocks section chrome. Every colour and size comes from Mux tokens. */
+
+.blocks-body {
+	display: grid;
+	grid-template-rows: var(--sl-nav-height) minmax(0, 1fr);
+	height: 100dvh;
+	margin: 0;
+	overflow: hidden;
+	background: var(--muxui-semantic-surface-canvas);
+	color: var(--muxui-semantic-content-default);
+	font-family: var(--muxui-semantic-typography-text-font-family);
+	font-size: var(--muxui-semantic-typography-text-s-font-size);
+	line-height: var(--muxui-semantic-typography-text-line-height);
+}
+
+.blocks-body :where(ul, ol) {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.blocks-body :where(h1, h2, p) {
+	margin: 0;
+	font-size: inherit;
+	font-weight: inherit;
+}
+
+.blocks-body :where(a, button, input, select, summary, [tabindex='0']):focus-visible {
+	outline: 2px solid var(--muxui-semantic-focus-ring);
+	outline-offset: 2px;
+}
+
+.blocks-skip {
+	position: absolute;
+	z-index: var(--sl-z-index-skiplink);
+	inset-block-start: var(--muxui-reference-dimension-space-2xs);
+	inset-inline-start: var(--muxui-reference-dimension-space-2xs);
+	padding: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-xs);
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-control-radius);
+	background: var(--muxui-semantic-surface-raised);
+	color: var(--muxui-semantic-content-strong);
+	transform: translateY(-300%);
+}
+
+.blocks-skip:focus {
+	transform: none;
+}
+
+.blocks-header {
+	z-index: var(--sl-z-index-navbar);
+	height: var(--sl-nav-height);
+	padding: var(--sl-nav-pad-y) var(--sl-nav-pad-x);
+	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+	background: var(--sl-color-bg-nav);
+}
+
+.blocks-shell {
+	display: grid;
+	grid-template-columns: 18.75rem minmax(0, 1fr);
+	min-height: 0;
+}
+
+.blocks-pane {
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.blocks-pane:focus {
+	outline: none;
+}
+
+/* Rail */
+
+.blocks-rail {
+	display: flex;
+	flex-direction: column;
+	min-height: 0;
+	overflow: auto;
+	border-inline-end: 1px solid var(--muxui-semantic-border-subtle);
+}
+
+.blocks-filters {
+	position: sticky;
+	inset-block-start: 0;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: var(--muxui-reference-dimension-space-2xs);
+	padding: var(--muxui-reference-dimension-space-xs);
+	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+	background: var(--muxui-semantic-surface-canvas);
+}
+
+.blocks-field {
+	width: 100%;
+	min-height: var(--muxui-semantic-control-size-md);
+	padding-inline: var(--muxui-reference-dimension-space-2xs);
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-control-radius);
+	background: var(--muxui-semantic-surface-background);
+	color: var(--muxui-semantic-content-default);
+	font: inherit;
+}
+
+.blocks-uses {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	align-items: center;
+	gap: var(--muxui-reference-dimension-space-2xs);
+}
+
+.blocks-count,
+.blocks-small,
+.blocks-readout,
+.blocks-n {
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	color: var(--muxui-semantic-content-muted);
+}
+
+.blocks-tree {
+	padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-m);
+}
+
+.blocks-none {
+	padding: var(--muxui-reference-dimension-space-xs);
+	color: var(--muxui-semantic-content-muted);
+}
+
+.blocks-group {
+	padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-4xs);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-label-xs-font-size);
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.blocks-tree > li + li {
+	margin-block-start: var(--muxui-reference-dimension-space-2xs);
+}
+
+.blocks-tree summary {
+	display: flex;
+	align-items: baseline;
+	gap: var(--muxui-reference-dimension-space-2xs);
+	padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs);
+	border-radius: var(--muxui-semantic-control-radius);
+	color: var(--muxui-semantic-content-strong);
+	font-weight: 600;
+	list-style: none;
+	cursor: pointer;
+}
+
+.blocks-tree summary::-webkit-details-marker {
+	display: none;
+}
+
+.blocks-tree summary::before {
+	content: '\25B8';
+	width: 0.75em;
+	font-size: 0.8em;
+}
+
+.blocks-tree details[open] > summary::before {
+	content: '\25BE';
+}
+
+.blocks-n {
+	margin-inline-start: auto;
+	font-weight: 400;
+}
+
+.blocks-tree a,
+.blocks-all {
+	display: block;
+	padding: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-2xs);
+	border-radius: var(--muxui-semantic-control-radius);
+	color: var(--muxui-semantic-content-default);
+	text-decoration: none;
+}
+
+.blocks-all {
+	margin: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-3xs) 0;
+	font-weight: 600;
+}
+
+.blocks-tree summary:hover,
+.blocks-tree a:hover,
+.blocks-all:hover {
+	background: var(--muxui-semantic-surface-hover);
+	color: var(--muxui-semantic-content-strong);
+}
+
+.blocks-block {
+	margin-inline-start: var(--muxui-reference-dimension-space-2xs);
+}
+
+.blocks-variant {
+	margin-inline-start: var(--muxui-reference-dimension-space-s);
+}
+
+.blocks-tree [data-current] > .blocks-block {
+	color: var(--muxui-semantic-content-strong);
+	font-weight: 600;
+}
+
+.blocks-tree a[aria-current='page'],
+.blocks-all[aria-current='page'] {
+	border-inline-start: 2px solid var(--muxui-semantic-content-link);
+	background: var(--muxui-semantic-surface-hover);
+	color: var(--muxui-semantic-content-strong);
+}
+
+.blocks-tree :where(a, summary):focus-visible {
+	outline-offset: -2px;
+}
+
+/* Gallery */
+
+.blocks-scroll {
+	height: 100%;
+	overflow: auto;
+	padding: var(--muxui-reference-dimension-space-s) var(--muxui-reference-dimension-space-m) var(--muxui-reference-dimension-space-l);
+}
+
+.blocks-ohead {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs);
+	margin-block-end: var(--muxui-reference-dimension-space-s);
+	padding-block-end: var(--muxui-reference-dimension-space-2xs);
+	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+}
+
+.blocks-ohead h1 {
+	color: var(--muxui-semantic-content-strong);
+	font-size: var(--muxui-semantic-typography-heading-s-font-size);
+	font-weight: 600;
+	line-height: var(--muxui-semantic-typography-heading-line-height);
+}
+
+.blocks-ohead p {
+	color: var(--muxui-semantic-content-muted);
+}
+
+.blocks-section + .blocks-section {
+	margin-block-start: var(--muxui-reference-dimension-space-m);
+}
+
+.blocks-section h2 {
+	margin-block-end: var(--muxui-reference-dimension-space-2xs);
+	color: var(--muxui-semantic-content-strong);
+	font-size: var(--muxui-semantic-typography-label-l-font-size);
+	font-weight: 600;
+}
+
+.blocks-cards {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+	gap: var(--muxui-reference-dimension-space-s) var(--muxui-reference-dimension-space-xs);
+}
+
+.blocks-cards > li {
+	min-width: 0;
+}
+
+.blocks-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: var(--muxui-reference-dimension-space-4xs);
+}
+
+.blocks-thumb {
+	position: relative;
+	aspect-ratio: 4 / 3;
+	overflow: hidden;
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-shape-container-radius);
+	background: var(--muxui-semantic-surface-canvas);
+}
+
+.blocks-thumb iframe {
+	position: absolute;
+	inset-block-start: 0;
+	inset-inline-start: 0;
+	width: 1024px;
+	height: 768px;
+	border: 0;
+	transform-origin: top left;
+	pointer-events: none;
+}
+
+/* The link text is the card's one tab stop; its box stretches over the whole card. */
+.blocks-card-link {
+	color: var(--muxui-semantic-content-strong);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.blocks-card-link::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+}
+
+.blocks-card-link:focus-visible {
+	outline: none;
+}
+
+.blocks-card:hover .blocks-thumb,
+.blocks-card:has(.blocks-card-link:focus-visible) .blocks-thumb {
+	border-color: var(--muxui-semantic-border-strong);
+}
+
+.blocks-card:has(.blocks-card-link:focus-visible) .blocks-thumb {
+	outline: 2px solid var(--muxui-semantic-focus-ring);
+	outline-offset: 2px;
+}
+
+.blocks-card:hover .blocks-card-link {
+	text-decoration: underline;
+}
+
+.blocks-card-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: var(--muxui-reference-dimension-space-2xs);
+}
+
+.blocks-muted {
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.blocks-empty {
+	padding-block: var(--muxui-reference-dimension-space-m);
+	color: var(--muxui-semantic-content-muted);
+}
+
+/* Detail */
+
+.blocks-detail {
+	display: flex;
+	flex-direction: column;
+	gap: var(--muxui-reference-dimension-space-2xs);
+	height: 100%;
+	min-height: 0;
+	overflow: auto;
+	padding-block-start: var(--muxui-reference-dimension-space-2xs);
+}
+
+.blocks-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-s);
+	padding-inline: var(--muxui-reference-dimension-space-s);
+}
+
+.blocks-crumbs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-title-s-font-size);
+	line-height: 1.3;
+}
+
+.blocks-crumbs li + li::before {
+	content: '/';
+	margin-inline: 0.5em;
+}
+
+.blocks-crumbs a {
+	color: var(--muxui-semantic-content-strong);
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.blocks-crumbs a:hover {
+	text-decoration: underline;
+}
+
+.blocks-crumbs h1 {
+	display: inline;
+	color: var(--muxui-semantic-content-strong);
+	font-size: inherit;
+	font-weight: 600;
+}
+
+.blocks-summary {
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.blocks-tools {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs);
+}
+
+.blocks-width {
+	display: flex;
+	align-items: center;
+	gap: var(--muxui-reference-dimension-space-2xs);
+}
+
+.blocks-readout {
+	min-width: 9ch;
+}
+
+.blocks-seg {
+	display: inline-flex;
+	overflow: hidden;
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-control-radius);
+}
+
+.blocks-seg button {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.3em;
+	min-height: var(--muxui-semantic-control-size-sm);
+	padding-inline: var(--muxui-reference-dimension-space-2xs);
+	border: 0;
+	background: var(--muxui-semantic-surface-background);
+	color: var(--muxui-semantic-content-default);
+	font: inherit;
+	cursor: pointer;
+}
+
+.blocks-seg button + button {
+	border-inline-start: 1px solid var(--muxui-semantic-border-default);
+}
+
+.blocks-seg button:hover {
+	background: var(--muxui-semantic-surface-hover);
+}
+
+.blocks-seg button[aria-pressed='true'] {
+	background: var(--muxui-semantic-action-selection-background);
+	color: var(--muxui-semantic-action-selection-foreground);
+}
+
+.blocks-seg button:focus-visible {
+	outline-offset: -2px;
+}
+
+.blocks-seg svg {
+	width: 1em;
+	height: 1em;
+}
+
+.blocks-px {
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	opacity: 0.75;
+}
+
+.blocks-tools[inert],
+.blocks-width[inert],
+.blocks-seg[inert] {
+	opacity: 0.45;
+}
+
+.blocks-stage {
+	display: flex;
+	flex: 1 1 auto;
+	gap: var(--muxui-reference-dimension-space-xs);
+	min-height: 24rem;
+	padding-inline: var(--muxui-reference-dimension-space-s);
+}
+
+.blocks-frame {
+	position: relative;
+	flex: 1 1 0;
+	min-width: 0;
+	min-height: 0;
+}
+
+/* The box is as wide as the preview shows; the iframe inside keeps its logical width and scales to fit. */
+.blocks-frame-box {
+	position: relative;
+	height: 100%;
+}
+
+.blocks-frame-clip {
+	height: 100%;
+	overflow: hidden;
+	background: var(--muxui-semantic-surface-canvas);
+	box-shadow: 0 0 0 1px var(--muxui-semantic-border-default);
+}
+
+.blocks-iframe {
+	display: block;
+	width: 100%;
+	height: 100%;
+	border: 0;
+	transform-origin: top left;
+}
+
+.blocks-frame.is-dragging .blocks-iframe {
+	pointer-events: none;
+}
+
+.blocks-handle {
+	position: absolute;
+	inset-block: 0;
+	inset-inline-start: 100%;
+	display: grid;
+	place-items: center;
+	width: var(--muxui-reference-dimension-space-xs);
+	cursor: ew-resize;
+	touch-action: none;
+}
+
+.blocks-handle span {
+	width: var(--muxui-reference-dimension-space-3xs);
+	height: var(--muxui-reference-dimension-space-l);
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-shape-pill-radius);
+	background: var(--muxui-semantic-surface-raised);
+}
+
+.blocks-handle:hover span,
+.blocks-frame.is-dragging .blocks-handle span {
+	border-color: var(--muxui-semantic-border-strong);
+}
+
+.blocks-code {
+	display: none;
+	flex-direction: column;
+	min-width: 0;
+	min-height: 0;
+	overflow: hidden;
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-shape-container-radius);
+	background: var(--muxui-semantic-surface-raised);
+}
+
+.blocks-stage[data-mode='code'] .blocks-frame {
+	display: none;
+}
+
+.blocks-stage[data-mode='code'] .blocks-code {
+	display: flex;
+	flex: 1 1 0;
+}
+
+.blocks-stage[data-mode='split'] .blocks-code {
+	display: flex;
+	flex: 0 0 40%;
+}
+
+.blocks-code-head {
+	display: flex;
+	align-items: center;
+	gap: var(--muxui-reference-dimension-space-xs);
+	padding: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-2xs);
+	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+}
+
+.blocks-code-file {
+	color: var(--muxui-semantic-content-strong);
+}
+
+.blocks-code-lines {
+	margin-inline-start: auto;
+	color: var(--muxui-semantic-content-muted);
+}
+
+.blocks-copy {
+	min-height: var(--muxui-semantic-control-size-sm);
+	padding-inline: var(--muxui-semantic-control-padding-inline);
+	border: 1px solid var(--muxui-semantic-border-default);
+	border-radius: var(--muxui-semantic-control-radius);
+	background: var(--muxui-semantic-surface-background);
+	color: var(--muxui-semantic-content-default);
+	font: inherit;
+	cursor: pointer;
+}
+
+.blocks-copy:hover {
+	background: var(--muxui-semantic-surface-hover);
+	color: var(--muxui-semantic-content-strong);
+}
+
+.blocks-code-body {
+	display: flex;
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: hidden;
+}
+
+.blocks-code-body pre {
+	flex: 1 1 auto;
+	min-width: 0;
+	margin: 0;
+	padding: var(--muxui-reference-dimension-space-2xs);
+	border: 0;
+	border-radius: 0;
+	overflow: auto;
+}
+
+.blocks-code-path {
+	padding: var(--muxui-reference-dimension-space-3xs) var(--muxui-reference-dimension-space-2xs);
+	border-block-start: 1px solid var(--muxui-semantic-border-subtle);
+	color: var(--muxui-semantic-content-muted);
+	font-family: var(--muxui-semantic-typography-mono-font-family);
+	font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	overflow-wrap: anywhere;
+}
+
+.blocks-meta {
+	display: grid;
+	grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+	gap: var(--muxui-reference-dimension-space-s);
+	padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-s) var(--muxui-reference-dimension-space-xs);
+	border-block-start: 1px solid var(--muxui-semantic-border-subtle);
+}
+
+.blocks-meta h2 {
+	margin-block-end: var(--muxui-reference-dimension-space-4xs);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-label-xs-font-size);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+}
+
+.blocks-inline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--muxui-reference-dimension-space-4xs) var(--muxui-reference-dimension-space-xs);
+}
+
+.blocks-role {
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
+.blocks-notes {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+	gap: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+	line-height: 1.4;
+}
+
+@media (max-width: 50rem) {
+	.blocks-body {
+		display: block;
+		height: auto;
+		min-height: 100dvh;
+		overflow: visible;
+	}
+
+	.blocks-header {
+		position: sticky;
+		inset-block-start: 0;
+	}
+
+	.blocks-shell {
+		display: block;
+	}
+
+	.blocks-rail {
+		max-height: 20rem;
+		border-inline-end: 0;
+		border-block-end: 1px solid var(--muxui-semantic-border-subtle);
+	}
+
+	.blocks-pane {
+		overflow: visible;
+	}
+
+	.blocks-detail,
+	.blocks-scroll {
+		height: auto;
+		overflow: visible;
+	}
+
+	.blocks-stage {
+		height: 36rem;
+		flex: none;
+	}
+
+	.blocks-stage[data-mode='split'] {
+		flex-direction: column;
+		height: 56rem;
+	}
+
+	.blocks-stage[data-mode='split'] .blocks-code {
+		flex: 1 1 0;
+	}
+
+	.blocks-meta {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}

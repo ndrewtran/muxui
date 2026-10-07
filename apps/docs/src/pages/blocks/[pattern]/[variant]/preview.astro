@@ -1,0 +1,55 @@
+---
+// The isolated preview an iframe loads. Variants inject unscoped global <style>
+// blocks, so each one lives alone in its own document and runs the canonical
+// example source, never a copy.
+import '../../../../styles/blocks-preview.css';
+import ExampleHost from '../../../../components/ExampleHost.tsx';
+import { blocks } from '../../../../lib/blocks.ts';
+import { assertExampleSource } from '../../../../lib/example-modules.tsx';
+
+export const prerender = true;
+
+export function getStaticPaths() {
+	return blocks.flatMap((block) => block.variants.map((variant) => ({
+		params: { pattern: block.slug, variant: variant.slug },
+		props: { block: block.slug },
+	})));
+}
+
+const block = blocks.find(({ slug }) => slug === Astro.props.block);
+const variant = block?.variants.find(({ slug }) => slug === Astro.params.variant);
+if (!block || !variant) throw new Error(`Missing block variant ${Astro.params.pattern}/${Astro.params.variant}.`);
+assertExampleSource(variant.sourcePath);
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>{block.name}, {variant.name} preview</title>
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<script is:inline>
+			// The preview theme is independent of the site's: ?theme= wins, then the site choice, then the system.
+			(() => {
+				const param = new URLSearchParams(location.search).get('theme');
+				let stored = null;
+				try { stored = localStorage.getItem('starlight-theme'); } catch { /* storage unavailable */ }
+				const theme = param === 'light' || param === 'dark'
+					? param
+					: stored === 'light' || stored === 'dark'
+						? stored
+						: matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+				document.documentElement.dataset.theme = theme;
+			})();
+		</script>
+		<script is:inline src="/_muxui/theme-prepaint.js"></script>
+	</head>
+	<body>
+		<main class="preview" data-block-group={block.group}>
+			<h1 class="preview-heading">{block.name}, {variant.name}</h1>
+			<ExampleHost source={variant.sourcePath} client:load />
+		</main>
+	</body>
+</html>

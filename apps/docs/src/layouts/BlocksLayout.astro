@@ -1,0 +1,48 @@
+---
+// The Blocks section's own shell: a full-width master-detail frame outside Starlight's
+// content column. It shares the site header and theme, and loads the same foundation
+// styles Starlight's Page loads, so the shared header pieces render identically.
+import '../styles/mux-docs.css';
+import 'starlight-style/layers.css';
+import 'starlight-style/props.css';
+import 'starlight-style/reset.css';
+import 'starlight-style/util.css';
+import '../styles/blocks.css';
+import BlocksRail from '../components/blocks/BlocksRail.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import ThemeProvider from '../components/ThemeProvider.astro';
+
+interface Props {
+	title: string;
+	/** The rail marks this variant as the current page; the gallery leaves it unset. */
+	current?: { block: string; variant: string };
+}
+
+const { title, current } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en" data-theme="dark">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex" />
+		<title>{title}</title>
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<ThemeProvider />
+	</head>
+	<body class="blocks-body">
+		<a class="blocks-skip" href="#blocks-main">Skip to content</a>
+		<header class="blocks-header"><SiteHeader titleHref="/" search /></header>
+		<div class="blocks-shell">
+			<BlocksRail current={current} />
+			<main id="blocks-main" class="blocks-pane" data-blocks-pane tabindex="-1">
+				<slot />
+			</main>
+		</div>
+		<div id="blocks-live" class="visually-hidden" role="status" aria-live="polite"></div>
+		<script>
+			import '../scripts/blocks-client.ts';
+		</script>
+	</body>
+</html>

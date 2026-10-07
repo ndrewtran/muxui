@@ -1,0 +1,70 @@
+@import '@muxui/react/styles.css';
+
+/* One isolated document per variant. It shares the docs layer contract so the
+   Mux components render exactly as they do on the component pages. */
+@layer preview-reset, muxui-docs-component-defaults;
+
+@layer preview-reset {
+	*,
+	*::before,
+	*::after {
+		box-sizing: border-box;
+	}
+
+	* {
+		margin: 0;
+	}
+
+	html {
+		color-scheme: dark;
+		-webkit-text-size-adjust: 100%;
+		text-size-adjust: 100%;
+	}
+
+	html[data-theme='light'] {
+		color-scheme: light;
+	}
+
+	input,
+	button,
+	textarea,
+	select {
+		font: inherit;
+	}
+}
+
+@layer muxui-docs-component-defaults {
+	:where([class^='muxui-'], [class*=' muxui-']) {
+		box-sizing: revert;
+	}
+}
+
+body {
+	background: var(--muxui-semantic-surface-canvas);
+	color: var(--muxui-semantic-content-default);
+	font-family: var(--muxui-semantic-typography-text-font-family);
+	line-height: var(--muxui-semantic-typography-text-line-height);
+	-webkit-font-smoothing: antialiased;
+}
+
+.preview {
+	min-height: 100vh;
+}
+
+/* An application block sits inside a page container; a marketing section spans the page. */
+.preview[data-block-group='application'] {
+	padding: var(--muxui-reference-dimension-space-m);
+}
+
+/* The document's heading names the block and variant for assistive technology only. */
+.preview-heading {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}

@@ -1,0 +1,16 @@
+---
+import type { Block, BlockVariant } from '../../lib/blocks.ts';
+import BlocksLayout from '../../layouts/BlocksLayout.astro';
+import BlockDetail from './BlockDetail.astro';
+
+interface Props {
+	block: Block;
+	variant: BlockVariant;
+}
+
+const { block, variant } = Astro.props;
+---
+
+<BlocksLayout title={`${block.name}, ${variant.name} - Blocks - Mux UI`} current={{ block: block.slug, variant: variant.slug }}>
+	<BlockDetail block={block} variant={variant} />
+</BlocksLayout>

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:poster-wall-wall",
+  "kind": "example",
+  "name": "Wall",
+  "summary": "A GridList of posters.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "apps/docs/test/fixtures/patterns/poster-wall/examples/react/wall.tsx"
+}

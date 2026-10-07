@@ -426,6 +426,12 @@ pre code {
 	font-size: var(--muxui-semantic-typography-mono-s-font-size);
 }
 
+.used-in-roles {
+	margin-inline-start: var(--muxui-reference-dimension-space-2xs);
+	color: var(--muxui-semantic-content-muted);
+	font-size: var(--muxui-semantic-typography-text-xs-font-size);
+}
+
 .inline-code {
 	display: inline-block;
 	margin-inline-end: var(--muxui-reference-dimension-space-2xs);
