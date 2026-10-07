@@ -731,9 +731,10 @@ async function proofToolIdentity(path) {
 }
 const proofTool = await proofToolIdentity(captureTool);
 const proofTools = [proofTool, ...await Promise.all(helperTools.map(proofToolIdentity))];
+// A rerun reuses the reviews an earlier run retained, and says so, so the procedure still shows where each review came from.
 const reviewFlags = [
-  option('content-review') === undefined ? '' : ' --content-review=<independent content review record> --content-review-revision=<sha>',
-  option('exit-review') === undefined ? '' : ' --exit-review=<independent exit review record> --exit-review-revision=<sha>',
+  option('content-review') === undefined ? ' (content review reused from the earlier capture)' : ' --content-review=<independent content review record> --content-review-revision=<sha>',
+  option('exit-review') === undefined ? (exitReview === null ? '' : ' (exit review reused from the earlier capture)') : ' --exit-review=<independent exit review record> --exit-review-revision=<sha>',
 ].join('');
 const captureProcedure = `node ${captureTool} --capture-timestamp=${captureTimestamp}${reviewFlags}${growth ? ' --growth' : ''}`;
 
