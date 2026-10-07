@@ -18,10 +18,14 @@
  *   string, or `@import` that names a local path. `src`, `href`, and `srcSet`
  *   count as attributes (`href="/x"`, `href={'/x'}`) and as object
  *   properties (`{ href: '/x' }`), since a data model holds URLs there.
- *   `poster`, `action`, and `formAction` are also ordinary words in data
- *   (`{ action: 'Start free' }`, `const action = 'Save'`), so they count only
- *   as attributes: `name="..."`, `name='...'`, or `name={'...'}`. A reference
- *   must resolve, relative
+ *   `action` and `formAction` are also ordinary words in data
+ *   (`{ action: 'Start free' }`, `const action = 'Save'`, `const { action =
+ *   'Save' } = props`), so they count only as attributes: `name="..."`,
+ *   `name='...'`, or `name={'...'}`. `poster` counts as an attribute whatever
+ *   its value, and as a property, assignment, or variable when its value
+ *   looks like a path (it has a `/`, starts with `.`, or ends in an image or
+ *   video extension), since it carries an asset; `{ poster: 'Sample Title' }`
+ *   is a word and passes. A reference must resolve, relative
  *   to the file that holds it, to a licensed asset inside the pattern
  *   directory. `#fragment` and `data:` references and values that start with
  *   a `${...}` placeholder are exempt; every other scheme (`mailto:`,
@@ -88,8 +92,12 @@ const REMOTE_RULES = [
 // Attributes (or keys) whose string value is a URL, and the one that lists several.
 const REFERENCE_ATTRIBUTE = /(?<![\w-])["']?(?:src|href|xlink:href|xlinkHref)["']?\s*[=:]\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
 // Names that are also plain words in data, so only attribute syntax counts: not
-// `{ action: 'Save' }`, `obj.action = 'x'`, or `const action = 'x'`.
-const ATTRIBUTE_ONLY_REFERENCE = /(?<![\w.-])(?<!(?:const|let|var)\s+)(?:poster|action|formAction)\s*=\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
+// `{ action: 'Save' }`, `obj.action = 'x'`, `const action = 'x'`, or a destructuring
+// or parameter default such as `const { action = 'Save' } = props`.
+const ATTRIBUTE_ONLY_REFERENCE = /(?<![\w.-])(?<![{,(]\s*)(?<!(?:const|let|var)\s+)(?:poster|action|formAction)\s*=\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
+// `poster` also carries an asset as a property, assignment, or variable, so it counts there when its value looks like a path.
+const POSTER_PROPERTY = /(?<![\w-])["']?poster["']?\s*[=:]\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
+const ASSET_PATH = /\/|^\s*\.|\.(?:png|jpe?g|gif|webp|avif|svg|bmp|ico|mp4|webm|ogv|mov)(?:[?#]|\s*$)/iu;
 const SRCSET_ATTRIBUTE = /(?<![\w-])["']?(?:srcSet|imageSrcSet)["']?\s*[=:]\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
 const CSS_URL = /url\(\s*(["']?)([^"')]*)\1\s*\)/giu;
 const CSS_IMAGE_SET = /image-set\(([^)]*)\)/giu;
@@ -196,6 +204,9 @@ function srcsetUrls(value) {
 function* urlReferences(source) {
   for (const match of source.matchAll(REFERENCE_ATTRIBUTE)) yield { offset: match.index, reference: match[2] };
   for (const match of source.matchAll(ATTRIBUTE_ONLY_REFERENCE)) yield { offset: match.index, reference: match[2] };
+  for (const match of source.matchAll(POSTER_PROPERTY)) {
+    if (ASSET_PATH.test(match[2])) yield { offset: match.index, reference: match[2] };
+  }
   for (const match of source.matchAll(SRCSET_ATTRIBUTE)) {
     for (const reference of srcsetUrls(match[2])) yield { offset: match.index, reference, srcset: true };
   }

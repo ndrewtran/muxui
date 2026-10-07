@@ -327,6 +327,10 @@ test('E-BL1-10: a local reference must resolve to a licensed asset inside the pa
     'object properties named formAction and poster': "const row = { formAction: 'Save', poster: 'Sample Title' };",
     'variables named action and poster': "const action = 'Save';\nlet poster = 'Sample Title';",
     'an assigned member named action': "plan.action = 'Save';",
+    'a destructured default named action': "const { action = 'Save' } = props;",
+    'a parameter default named action': "const Row = ({ title, action = 'Save' }) => title;\nconst Plain = (action = 'Save') => action;",
+    'a poster property that is a word': "const row = { poster: 'Sample Title', 'poster': 'Another Title' };",
+    'a poster variable that is a word': "const poster = 'Sample Title';",
   };
   for (const [name, text] of Object.entries(accepted)) assert.deepEqual(localReferences(text), [], name);
   const rejected = {
@@ -356,6 +360,15 @@ test('E-BL1-10: a local reference must resolve to a licensed asset inside the pa
     'an action attribute with spaces around the equals sign': '<form action = "/x"></form>',
     'a formAction attribute': '<button formAction="/x" />',
     'a url() in a style object': "<div style={{ backgroundImage: 'url(/x.png)' }} />",
+    'an action attribute after a spread': '<form {...props} action="/x"></form>',
+    'a poster property with a path': "const row = { poster: 'posters/a.png' };",
+    'a poster property passed to createElement': "createElement('video', { poster: './a.png' });",
+    'a poster property with an image extension': "const row = { poster: 'a.png' };",
+    'a poster property with a slash and no extension': "const row = { poster: 'posters/cover' };",
+    'a poster property that starts with a dot': "const row = { poster: '.cover' };",
+    'a quoted poster key with a path': 'const row = { "poster": "posters/a.png" };',
+    'a poster member assignment with a path': "video.poster = 'posters/a.png';",
+    'a poster variable with a path': "const poster = 'posters/a.png';",
   };
   for (const [name, text] of Object.entries(rejected)) assert.deepEqual(localReferences(text), [1], name);
   // A reference resolves from the file that holds it: an asset's neighbour is found by its own name.
