@@ -11,6 +11,10 @@
     "./compiler": "./src/compiler.mjs",
     "./pattern-imports": "./src/pattern-imports.mjs",
     "./pattern-content": "./src/pattern-content.mjs",
+    "./search": {
+      "types": "./src/search.d.mts",
+      "default": "./src/search.mjs"
+    },
     "./bundle": "./generated/catalog.mjs",
     "./catalog.json": "./generated/catalog.json",
     "./catalog-package.json": "./generated/catalog-package.json",
