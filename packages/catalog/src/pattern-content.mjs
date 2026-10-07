@@ -15,7 +15,13 @@
  *   placeholder image can declare its SVG namespace.
  * - `content.local-reference`: a string-literal `src`, `href`, `xlink:href`,
  *   `poster`, `action`, `formAction`, `srcSet` entry, `url()`, `image-set()`
- *   string, or `@import` that names a local path. It must resolve, relative
+ *   string, or `@import` that names a local path. `src`, `href`, and `srcSet`
+ *   count as attributes (`href="/x"`, `href={'/x'}`) and as object
+ *   properties (`{ href: '/x' }`), since a data model holds URLs there.
+ *   `poster`, `action`, and `formAction` are also ordinary words in data
+ *   (`{ action: 'Start free' }`, `const action = 'Save'`), so they count only
+ *   as attributes: `name="..."`, `name='...'`, or `name={'...'}`. A reference
+ *   must resolve, relative
  *   to the file that holds it, to a licensed asset inside the pattern
  *   directory. `#fragment` and `data:` references and values that start with
  *   a `${...}` placeholder are exempt; every other scheme (`mailto:`,
@@ -80,7 +86,10 @@ const REMOTE_RULES = [
 ];
 
 // Attributes (or keys) whose string value is a URL, and the one that lists several.
-const REFERENCE_ATTRIBUTE = /(?<![\w-])["']?(?:src|href|xlink:href|xlinkHref|poster|action|formAction)["']?\s*[=:]\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
+const REFERENCE_ATTRIBUTE = /(?<![\w-])["']?(?:src|href|xlink:href|xlinkHref)["']?\s*[=:]\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
+// Names that are also plain words in data, so only attribute syntax counts: not
+// `{ action: 'Save' }`, `obj.action = 'x'`, or `const action = 'x'`.
+const ATTRIBUTE_ONLY_REFERENCE = /(?<![\w.-])(?<!(?:const|let|var)\s+)(?:poster|action|formAction)\s*=\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
 const SRCSET_ATTRIBUTE = /(?<![\w-])["']?(?:srcSet|imageSrcSet)["']?\s*[=:]\s*(?:\{\s*)?(["'`])([^]*?)\1/giu;
 const CSS_URL = /url\(\s*(["']?)([^"')]*)\1\s*\)/giu;
 const CSS_IMAGE_SET = /image-set\(([^)]*)\)/giu;
@@ -186,6 +195,7 @@ function srcsetUrls(value) {
 /** Every URL a source spells out as a string literal, with its offset: link attributes, `srcSet` entries, `url()`, `image-set()`, and `@import`. */
 function* urlReferences(source) {
   for (const match of source.matchAll(REFERENCE_ATTRIBUTE)) yield { offset: match.index, reference: match[2] };
+  for (const match of source.matchAll(ATTRIBUTE_ONLY_REFERENCE)) yield { offset: match.index, reference: match[2] };
   for (const match of source.matchAll(SRCSET_ATTRIBUTE)) {
     for (const reference of srcsetUrls(match[2])) yield { offset: match.index, reference, srcset: true };
   }
