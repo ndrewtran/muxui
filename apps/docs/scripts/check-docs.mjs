@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
@@ -136,15 +136,57 @@ const missing = canonicalCatalog.getArtifact({
 assert(missing.type === 'error', 'An unknown component query did not return a canonical error.');
 
 const sourceStyle = readFileSync(resolve(docsRoot, 'src/styles/mux-docs.css'), 'utf8');
-assert(!/(?:#[0-9a-f]{3,8}\b|rgba?\()/iu.test(sourceStyle), 'Authored docs CSS contains a raw color value.');
+const authoredStyles = ['mux-docs.css', 'blocks.css', 'blocks-preview.css']
+	.map((file) => [file, readFileSync(resolve(docsRoot, 'src/styles', file), 'utf8')]);
+for (const [file, css] of authoredStyles) {
+	assert(!/(?:#[0-9a-f]{3,8}\b|rgba?\()/iu.test(css), `Authored docs CSS ${file} contains a raw color value.`);
+}
 assert(sourceStyle.includes("@import '@muxui/react/styles.css';"), 'Docs CSS does not import the generated Mux UI stylesheet.');
+assert(authoredStyles.find(([file]) => file === 'blocks-preview.css')[1].includes("@import '@muxui/react/styles.css';"), 'Block preview CSS does not import the generated Mux UI stylesheet.');
 const generatedMuxStyles = readFileSync(resolve(repositoryRoot, 'packages/react/generated/styles.css'), 'utf8');
 const generatedMuxVariables = new Set([...generatedMuxStyles.matchAll(/(--muxui-[a-z0-9-]+)\s*:/giu)].map(([, name]) => name));
-const referencedMuxVariables = new Set([...sourceStyle.matchAll(/var\(\s*(--muxui-[a-z0-9-]+)/giu)].map(([, name]) => name));
-assert([...referencedMuxVariables].every((name) => generatedMuxVariables.has(name)), 'Docs CSS references a Mux UI variable missing from the generated stylesheet.');
+for (const [file, css] of authoredStyles) {
+	const referencedMuxVariables = new Set([...css.matchAll(/var\(\s*(--muxui-[a-z0-9-]+)/giu)].map(([, name]) => name));
+	assert([...referencedMuxVariables].every((name) => generatedMuxVariables.has(name)), `Docs CSS ${file} references a Mux UI variable missing from the generated stylesheet.`);
+}
 
 const routeSource = readFileSync(resolve(docsRoot, 'src/pages/components/[slug].astro'), 'utf8');
 assert(routeSource.includes('getComponentPage') && routeSource.includes('<ExampleHost'), 'Component pages are not backed by the catalog route and executable example host.');
 assert(routeSource.includes('id="basic"') && routeSource.includes('id="api-reference"'), 'Component page anchors are incomplete.');
 
-console.log(`Docs contract passed: ${components.length} enabled web.react component pages, ${guides.length} canonical guides, and ${components.reduce((count, component) => count + (canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value?.length ?? 0), 0)} canonical examples.`);
+// The Blocks section is a projection: no pattern, variant, or example fact may be authored in the docs app.
+const blockPatterns = [];
+let blockCursor;
+do {
+	const response = canonicalCatalog.listArtifacts({ kind: 'pattern', platform: 'web.react', detail: 'brief', limit: 100, ...(blockCursor === undefined ? {} : { cursor: blockCursor }) });
+	assert(response.type === 'artifact.list', 'The canonical pattern inventory query failed.');
+	blockPatterns.push(...response.data.items);
+	assert(!response.meta.truncated || response.meta.nextCursor !== null, 'The canonical pattern inventory was truncated without a cursor.');
+	blockCursor = response.meta.nextCursor ?? undefined;
+} while (blockCursor !== undefined);
+const docsSourceFiles = readdirSync(resolve(docsRoot, 'src'), { recursive: true })
+	.filter((file) => /\.(?:astro|mjs|ts|tsx)$/u.test(file));
+for (const file of docsSourceFiles) {
+	const text = readFileSync(resolve(docsRoot, 'src', file), 'utf8');
+	for (const { id } of blockPatterns) {
+		const slug = id.slice(id.lastIndexOf(':') + 1);
+		assert(!text.includes(id) && !text.includes(slug), `The docs source ${file} authors the pattern ${id}; Blocks data must come from the catalog.`);
+	}
+}
+for (const route of ['index.astro', '[pattern]/index.astro', '[pattern]/[variant]/index.astro', '[pattern]/[variant]/preview.astro', 'filter-index.json.ts']) {
+	assert(existsSync(resolve(docsRoot, 'src/pages/blocks', route)), `The Blocks route source is missing: ${route}.`);
+}
+const previewSource = readFileSync(resolve(docsRoot, 'src/pages/blocks/[pattern]/[variant]/preview.astro'), 'utf8');
+assert(previewSource.includes('<ExampleHost') && previewSource.includes('assertExampleSource'), 'Block previews are not backed by the canonical example host.');
+for (const pattern of blockPatterns) {
+	const examples = canonicalCatalog.getArtifact({ id: pattern.id, platform: 'web.react', detail: 'compact', section: 'examples' });
+	assert(examples.type === 'artifact.detail' && (examples.data.value ?? []).length > 0, `The enabled pattern ${pattern.id} has no variant example.`);
+	for (const example of examples.data.value) {
+		const sourcePath = resolve(repositoryRoot, example.source.content);
+		assert(sourcePath.startsWith(`${repositoryRoot}/catalog/patterns/`) && existsSync(sourcePath), `The variant ${example.id} source is missing or outside the pattern catalog.`);
+		assert(readFileSync(sourcePath, 'utf8') === example.code, `The variant ${example.id} catalog source differs from its file.`);
+		assert([...example.code.matchAll(/^\s*export\s+(?:function|const|default)\b/gmu)].length === 1, `The variant ${example.id} must declare exactly one executable export.`);
+	}
+}
+
+console.log(`Docs contract passed: ${components.length} enabled web.react component pages, ${guides.length} canonical guides, and ${components.reduce((count, component) => count + (canonicalCatalog.getArtifact({ id: component.id, platform: 'web.react', detail: 'full', section: 'examples' }).data.value?.length ?? 0), 0)} canonical examples, and ${blockPatterns.length} enabled block ${blockPatterns.length === 1 ? 'pattern' : 'patterns'}.`);
