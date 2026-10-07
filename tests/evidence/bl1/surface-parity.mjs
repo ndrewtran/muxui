@@ -10,7 +10,7 @@
 // component-bound. Two error rows keep the negative path in the matrix. The request set is
 // derived from the shipped catalog, so a block added later joins the matrix by itself.
 // A mismatch throws with the row and surface that differ.
-import { spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { resolve } from 'node:path';
@@ -51,14 +51,22 @@ function allListItems(request) {
   return items;
 }
 
-// How the process located the catalog (the installed project, or the package) is not part of the
-// response: these `meta` members differ between the in-process API and the `muxui` process and are
-// excluded from the cross-process comparison. Every other member is compared.
-const resolutionMeta = ['authority', 'muxuiVersion', 'resolution'];
-export const normalizationRule = `meta.${resolutionMeta.join(', meta.')} describe how the process located the catalog and are excluded; every other member of the response is compared`;
+// The in-process API answers without a project, so it reports an advisory authority, an unresolved
+// compatibility, no target package, and the default package version; the `muxui` process resolves
+// this repository's catalog as a project and reports installed-local authority and its own
+// version. Only these location fields differ, and only they are excluded from the cross-process
+// comparison: `meta.resolution.revisions` and `meta.resolution.sourceRevision`, and every other
+// member of the response, are compared.
+const metaLocationFields = ['authority', 'muxuiVersion'];
+const resolutionLocationFields = ['authority', 'catalogSource', 'compatibility', 'targetPackages'];
+export const normalizationRule = `meta.${metaLocationFields.join(', meta.')}, and meta.resolution.${resolutionLocationFields.join(', meta.resolution.')} describe how the process located the catalog and are excluded; every other member of the response, including meta.resolution.revisions and meta.resolution.sourceRevision, is compared`;
 function normalize(response) {
   if (response.meta === undefined) return response;
-  return { ...response, meta: Object.fromEntries(Object.entries(response.meta).filter(([key]) => !resolutionMeta.includes(key))) };
+  const meta = Object.fromEntries(Object.entries(response.meta).filter(([key]) => !metaLocationFields.includes(key)));
+  if (meta.resolution !== undefined) {
+    meta.resolution = Object.fromEntries(Object.entries(meta.resolution).filter(([key]) => !resolutionLocationFields.includes(key)));
+  }
+  return { ...response, meta };
 }
 
 /** One matrix row: `argv` through the API and the CLI's three outputs, plus the site check when the loader answers it. */
@@ -89,6 +97,13 @@ function compareRow(rows, { id, argv, group, site }) {
 }
 
 const apiExitCode = (response) => ({ MUXUI_QUERY_INVALID: 2, MUXUI_ARTIFACT_NOT_FOUND: 4 })[response.error.code];
+
+/** The revision the spawned CLI runs at: the checked-out HEAD, clean outside the evidence root. */
+function cliRevision() {
+  const git = (...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' });
+  const dirty = git('status', '--porcelain=v1', '--untracked-files=all').split('\n').filter(Boolean).filter((line) => !line.slice(3).startsWith('tests/evidence/bl1/'));
+  return { revision: git('rev-parse', 'HEAD').trim(), cleanOutsideEvidenceRoot: dirty.length === 0 };
+}
 
 /** Builds and checks the matrix, and returns its rows and totals. */
 export async function surfaceParityMatrix() {
@@ -229,6 +244,13 @@ export async function surfaceParityMatrix() {
     componentsWithUsedIn,
     rows,
     normalization: normalizationRule,
+    cli: cliRevision(),
+    limits: [
+      'The site comparison covers the fields the Blocks loader and component page loader read, not every member of a response.',
+      'Rail search is compared as the set of matching blocks over the queries listed, not by rank.',
+      'The in-process API is compared with the CLI process after the location fields in the normalization rule are excluded.',
+    ],
+    searchQueries: queries,
     rowCount: rows.length,
     comparedSurfaces: ['api', 'cli-json', 'cli-human', 'cli-dense', 'site'],
   };

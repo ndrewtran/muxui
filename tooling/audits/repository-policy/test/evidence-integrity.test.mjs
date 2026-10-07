@@ -803,3 +803,19 @@ test('R1 exit capture refuses a route or existing capture that belongs to anothe
     await rm(root, { recursive: true, force: true });
   }
 });
+
+// BL1 close-out: the E-BL1-09 boundary audit can fail. Each control runs one check over history known to
+// break it, or gives a predicate an input it must reject, and the check must reject it. A check with no
+// control proves nothing, so every check needs one. This needs the full git history, which CI fetches.
+test('the BL1 boundary audit rejects every negative control and has a control for every check', async () => {
+  const { checkIds, checksWithoutControl, negativeControls, runNegativeControls } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  assert.deepEqual(checksWithoutControl(), [], 'every audit check has a negative control');
+  assert.ok(negativeControls.every(({ check }) => checkIds.includes(check)), 'every control names an audit check');
+  const results = runNegativeControls();
+  assert.deepEqual(results.map(({ id }) => id), negativeControls.map(({ id }) => id));
+  for (const { id, rejected, accepted } of results) {
+    assert.equal(rejected, true, `${id}: the check rejects its control`);
+    // A function control also names an input the check must accept, so a predicate that rejects everything fails here.
+    if (accepted !== null) assert.equal(accepted, true, `${id}: the check accepts the shipped input`);
+  }
+});
