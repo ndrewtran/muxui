@@ -336,6 +336,20 @@ test('E-BL1-02 negative: a scaffold refuses missing decisions, unowned fields, a
   rule((input) => {
     input.variants[0].sourceText = `import lodash from 'lodash';\n${cssText}`;
   }, 'authoring.scaffold.source-import');
+  // The compiler's content rules apply at scaffold time, with its rule IDs.
+  for (const [text, line, contentRuleId] of [
+    ['const style = { color: "#fff" };', 7, 'content.colour-literal'],
+    ['const art = <path fill="red" />;', 7, 'content.colour-literal'],
+    ['const art = <img srcSet="a 1x, //cdn.example.com/b.png 2x" alt="" />;', 7, 'content.remote-reference'],
+    ['const art = <img src="https://example.com/a.png" alt="" />;', 7, 'content.remote-reference'],
+  ]) {
+    const content = rule((input) => {
+      input.variants[0].sourceText = `${cssText}\n${text}\n`;
+    }, 'authoring.scaffold.source-content');
+    assert.equal(content.details.contentRuleId, contentRuleId, text);
+    assert.equal(content.details.line, line, text);
+    assert.ok(content.message.includes(`(${contentRuleId})`), content.message);
+  }
   const accepted = posterGridInput();
   accepted.variants[0].sourceText = `// A leading comment.\nimport { useState } from 'react';\nimport { jsx } from 'react/jsx-runtime';\n${cssText}`;
   assert.equal(scaffoldPattern(accepted).mode, 'preview-only');

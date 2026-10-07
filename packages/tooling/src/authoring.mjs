@@ -22,6 +22,7 @@ import {
   discoverWorkspacePackages,
 } from '../../../tooling/audits/repository-policy/src/workspace-packages.mjs';
 import { CatalogSourceError, compileCatalog } from '@muxui/catalog/compiler';
+import { scanPatternContent } from '@muxui/catalog/pattern-content';
 import { CANONICAL_IMPORT_FORM, scanReactImports } from '@muxui/catalog/pattern-imports';
 
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
@@ -166,7 +167,7 @@ function assertDecisions(value, { required }) {
   return value;
 }
 
-/** Variant sources are bundled as exact bytes and import-checked by the compiler. */
+/** Variant sources are bundled as exact bytes, then import- and content-checked as the compiler does. */
 function assertVariantSource(slug, sourceText) {
   const fail = (ruleId, message, details = {}) => {
     throw new AuthoringPolicyError(ruleId, `variant ${slug} ${message}`, { variant: slug, ...details });
@@ -185,6 +186,17 @@ function assertVariantSource(slug, sourceText) {
       { line: violation.line, canonicalImportForm: CANONICAL_IMPORT_FORM },
     );
   }
+  // The compiler's remote-reference and colour rules, with its rule IDs. Local references
+  // resolve against the pattern's licensed assets, which a scaffold has none of yet, so
+  // only the compile checks them.
+  const [content] = scanPatternContent(sourceText);
+  if (content) {
+    fail(
+      'authoring.scaffold.source-content',
+      `source line ${content.line} ${content.message} (${content.ruleId})`,
+      { line: content.line, contentRuleId: content.ruleId },
+    );
+  }
 }
 
 /**
@@ -196,10 +208,13 @@ function assertVariantSource(slug, sourceText) {
  * `manifestEntries` previews the `catalog-sources.json` lines to add. Nothing
  * is written, and consumer files are never produced.
  *
- * The scaffold checks schema shape and import form only. It does not check that
- * imported components are declared participants, that participants exist, or
- * that an id is free; the catalog is not consulted. Those fail at compile, and
- * `diagnoseCompileFailure` maps them to source-linked diagnostics.
+ * The scaffold checks schema shape, import form, and the content rules that need
+ * no repository files (remote references and literal colours, reported with the
+ * compiler's rule IDs). It does not check that imported components are declared
+ * participants, that participants exist, that an id is free, or that a local
+ * reference names a licensed asset; the catalog and the pattern directory are
+ * not consulted. Those fail at compile, and `diagnoseCompileFailure` maps them
+ * to source-linked diagnostics.
  */
 export function scaffoldPattern({ slug, decisions, variants, authoring = {} } = {}) {
   assertSlug(slug, 'slug');
