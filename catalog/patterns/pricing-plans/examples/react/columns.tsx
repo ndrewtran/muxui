@@ -11,12 +11,12 @@ const plans = [
 
 export function PricingPlansColumnsExample() {
   const titleId = useId();
-  // Local presentation state only: the toggle swaps the displayed prices.
+  // Local presentation state only.
   const [period, setPeriod] = useState<Period>('monthly');
   const column = period === 'monthly' ? 0 : 1;
   return (
     <div className="pricing-frame">
-      {/* One column below 44rem of container width, the recommended plan first; three columns from 44rem. */}
+      {/* Stacks below 44rem, recommended plan first. */}
       <style>{`
         .pricing-frame {
           container-type: inline-size;
@@ -143,12 +143,13 @@ export function PricingPlansColumnsExample() {
         </header>
         <div className="pricing-plans">
           {plans.map((plan) => (
-            <Card.Root key={plan.id} className={plan.recommended ? 'pricing-plan pricing-plan--recommended' : 'pricing-plan'}>
+            <Card.Root key={plan.id} role="group" aria-labelledby={`${titleId}-${plan.id}`} className={plan.recommended ? 'pricing-plan pricing-plan--recommended' : 'pricing-plan'}>
               <Card.Header className="pricing-stack">
-                <div className="pricing-name">
-                  <Text as="h3" variant="title" size="md">{plan.name}</Text>
-                  {plan.recommended && <Text variant="label" size="sm">Recommended</Text>}
-                </div>
+                {/* The flag is part of the heading text. */}
+                <Text as="h3" id={`${titleId}-${plan.id}`} variant="title" size="md" className="pricing-name">
+                  {plan.name}
+                  {plan.recommended && <>{' '}<Text variant="label" size="sm">Recommended</Text></>}
+                </Text>
                 <div className="pricing-price">
                   <Text variant="display" size="sm">{plan.price[column]}</Text>
                   <Text size="sm" color="muted">{plan.unit}</Text>
@@ -160,7 +161,7 @@ export function PricingPlansColumnsExample() {
                 <ul className="pricing-features">
                   {plan.features.map((feature) => (
                     <li key={feature}>
-                      <svg className="pricing-check" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg>
+                      <svg className="pricing-check" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3.5 3.5L13 4.5" /></svg>
                       <Text>{feature}</Text>
                     </li>
                   ))}

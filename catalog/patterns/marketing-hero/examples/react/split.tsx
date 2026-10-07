@@ -74,8 +74,8 @@ export function MarketingHeroSplitExample() {
       `}</style>
       <section className="hero" aria-labelledby={titleId}>
         <div className="hero-copy">
-          <Text as="h1" id={titleId} variant="display" size="lg">Compose pages from tested parts</Text>
-          <Text as="p" size="lg" color="muted">Start from accessible components and plain layout, then adapt the details to your product.</Text>
+          <Text as="h1" id={titleId} variant="display" size="lg">Introduce your product</Text>
+          <Text as="p" size="lg" color="muted">Use this space to describe what your product does and who it is for.</Text>
           <div className="hero-actions">
             <Button className="hero-action" size="lg">Get started</Button>
             <Button className="hero-action" size="lg" variant="neutral">See an example</Button>

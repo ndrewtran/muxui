@@ -18,7 +18,7 @@ const annual = { Starter: ['$0', 'No card needed'], Team: ['$16', 'Billed yearly
 
 // Each plan's name, price, and billing note as the page shows them.
 const readPlans = (tab) => tab.evaluate(() => Object.fromEntries([...document.querySelectorAll('.pricing-plan')].map((card) => [
-  card.querySelector('h3').textContent,
+  card.querySelector('h3').firstChild.textContent,
   [card.querySelector('.muxui-text--display-sm').textContent, card.querySelector('.muxui-card__header > p').textContent],
 ])));
 
@@ -75,7 +75,7 @@ for (const engine of browserEngines()) {
         const { context, tab } = await openBlock(browser, url);
         try {
           const plans = await tab.evaluate(() => [...document.querySelectorAll('.pricing-plan')].map((card) => ({
-            name: card.querySelector('h3').textContent,
+            name: card.querySelector('h3').firstChild.textContent,
             flagged: card.textContent.includes('Recommended'),
             rule: parseFloat(getComputedStyle(card).borderTopWidth),
             variant: card.querySelector('button').getAttribute('data-variant'),
@@ -86,6 +86,25 @@ for (const engine of browserEngines()) {
             { name: 'Scale', flagged: false, rule: 1, variant: 'neutral' },
           ]);
           assert.equal(await tab.getByText('Recommended').count(), 1, 'the flag appears once');
+        } finally {
+          await context.close();
+        }
+      });
+
+      await t.test('names each plan group by its heading, and the recommended flag is part of that heading', async () => {
+        const { context, tab } = await openBlock(browser, url);
+        try {
+          for (const [name, flagged] of [['Starter', false], ['Team', true], ['Scale', false]]) {
+            const heading = flagged ? `${name} Recommended` : name;
+            const group = tab.getByRole('group', { name: heading, exact: true });
+            assert.equal(await group.count(), 1, `${heading} names one plan group`);
+            assert.equal(await group.getByRole('heading', { level: 3, name: heading, exact: true }).count(), 1, `${heading} is the group's h3`);
+            assert.equal(await group.getByRole('button').count(), 1, `${name} holds its own action`);
+            assert.equal(await group.getByText('Recommended').count(), flagged ? 1 : 0, `${name} flag`);
+          }
+          // Heading navigation reaches the flag: the only heading that includes it is the Team plan's.
+          const headings = await tab.getByRole('heading', { level: 3 }).evaluateAll((nodes) => nodes.map((node) => node.textContent));
+          assert.deepEqual(headings, ['Starter', 'Team Recommended', 'Scale']);
         } finally {
           await context.close();
         }
@@ -116,7 +135,7 @@ for (const engine of browserEngines()) {
           try {
             const boxes = await tab.evaluate(() => Object.fromEntries([...document.querySelectorAll('.pricing-plan')].map((card) => {
               const { left, top, right, bottom } = card.getBoundingClientRect();
-              return [card.querySelector('h3').textContent, { left, top, right, bottom }];
+              return [card.querySelector('h3').firstChild.textContent, { left, top, right, bottom }];
             })));
             if (width < 704) {
               assert.ok(boxes.Team.bottom <= boxes.Starter.top + 1, `${width}px: the recommended plan leads the stack`);

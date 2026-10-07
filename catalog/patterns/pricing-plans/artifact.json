@@ -57,9 +57,9 @@
   "variants": [{ "example": "muxui:example:pricing-plans-columns" }],
   "accessibility": [
     "The ToggleButtonGroup is named Billing period, arrow keys move between Monthly and Annual, and one option always stays selected.",
-    "Prices change in place without an announcement; the pressed toggle is the cue, so add a live region if you need prices announced.",
-    "Plan names are h3 headings under an h2; set the levels to your page outline.",
-    "The recommended plan carries the visible word Recommended and a heavier top rule, so colour alone never marks it.",
+    "Prices change in place with no live region; add one if you need price changes announced.",
+    "Each plan is a group named by its h3 heading under an h2; set the levels to your page outline.",
+    "The recommended plan carries the visible word Recommended inside its heading, so heading navigation and the group's name include it, and a heavier top rule; colour alone never marks it.",
     "When the plans stack, CSS order moves the recommended plan first while keyboard order follows the source.",
     "The check marks are decorative SVG hidden from assistive technology; each feature reads as plain text."
   ],

@@ -68,7 +68,7 @@
   "accessibility": [
     "The Form is named by the Settings h1 and each section by its own heading; set the levels to your page outline.",
     "Every field has a visible label, and its description is associated with the input.",
-    "The save bar status is a status region that announces Unsaved changes and Saved.",
+    "The save bar status is a role=status element that reads Unsaved changes, Saved, or No changes.",
     "Enter in a text field runs the Save handler, and Cancel restores the last saved values.",
     "The save bar is sticky and can cover a focused field near the bottom edge; add scroll padding to your page if needed.",
     "Below 40rem of container width the label column stacks above its fields."
@@ -77,7 +77,8 @@
     "Submitting, fetching, or persisting: Save only marks the local state as saved",
     "Server validation and error summaries",
     "Navigation guards for unsaved changes",
-    "Tabbed or multi-page settings"
+    "Tabbed or multi-page settings",
+    "Switches to the right of their labels: the Mux Switch puts its track before its label"
   ],
   "workflowValue": "Replaces laying out a settings page by hand: the label column and two-column fields collapse by container width, and the dirty, saved, and cancel logic is one small state pair, so you rename the fields and keep the section layout and save bar."
 }

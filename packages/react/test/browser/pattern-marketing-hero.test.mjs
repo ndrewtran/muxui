@@ -59,9 +59,9 @@ for (const engine of browserEngines()) {
       await t.test('names the section by its heading, hides the visual, and shows focus on both actions', async () => {
         const { context, tab, errors } = await openBlock(browser, url, { width: 360 });
         try {
-          const heading = tab.getByRole('heading', { level: 1, name: 'Compose pages from tested parts' });
+          const heading = tab.getByRole('heading', { level: 1, name: 'Introduce your product' });
           await heading.waitFor();
-          await tab.getByRole('region', { name: 'Compose pages from tested parts' }).waitFor();
+          await tab.getByRole('region', { name: 'Introduce your product' }).waitFor();
           assert.equal(await tab.locator('.hero-visual').getAttribute('aria-hidden'), 'true', 'the visual is decorative');
           assert.equal(await tab.getByRole('img').count(), 0, 'the visual exposes no image');
 
