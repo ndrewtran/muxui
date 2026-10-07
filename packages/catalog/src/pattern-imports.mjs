@@ -29,6 +29,9 @@
  * closed); a statement start the rules do not list is not detected.
  */
 
+/** The one accepted spelling and its header and allowlist rules, quoted by authoring diagnostics. */
+export const CANONICAL_IMPORT_FORM = "import { A, B } from '@muxui/react'; as a static named import in the leading header, which may also import from 'react' and 'react/jsx-runtime' and from no other module";
+
 const ALLOWED_SPECIFIERS = new Set(['react', 'react/jsx-runtime', '@muxui/react']);
 const IDENTIFIER = /[\p{L}_$][\p{L}\p{N}_$]*/uy;
 const NAME = '[\\p{L}_$][\\p{L}\\p{N}_$]*';

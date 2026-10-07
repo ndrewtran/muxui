@@ -9,11 +9,13 @@ export {
   AuthoringPolicyError,
   affectedClosure,
   diagnoseCanonicalSource,
+  diagnoseCompileFailure,
   explainRevisions,
   loadRepositoryAuthoringContext,
   previewAutofix,
   previewChangeIntent,
   scaffoldComponent,
+  scaffoldPattern,
   semanticDiff,
 } from './authoring.mjs';
 export {
