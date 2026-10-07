@@ -1,0 +1,84 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:poster-grid",
+  "kind": "pattern",
+  "name": "Poster grid",
+  "summary": "A selectable grid of poster cards with nested Details and Save actions.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "poster",
+    "grid",
+    "gallery",
+    "cards",
+    "collection",
+    "selection",
+    "responsive",
+    "virtualized"
+  ],
+  "platforms": ["web.react"],
+  "category": "collections",
+  "intent": {
+    "useWhen": [
+      "Browsing image-led items that people select",
+      "Cards carry secondary actions that must not change selection",
+      "The grid needs 2, 4, or 6 columns by its container width",
+      "Hundreds of cards should mount only their visible rows"
+    ],
+    "avoidWhen": [
+      "Items are tabular data that needs sortable columns",
+      "Cards need drag reordering",
+      "The collection is a handful of items that need no selection"
+    ]
+  },
+  "participants": [
+    {
+      "role": "list",
+      "component": "muxui:component:grid-list",
+      "requirement": "required"
+    },
+    {
+      "role": "scroller",
+      "component": "muxui:component:virtualizer",
+      "requirement": "optional"
+    },
+    {
+      "role": "artwork",
+      "component": "muxui:component:image",
+      "requirement": "required"
+    },
+    {
+      "role": "title",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "details",
+      "component": "muxui:component:link",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    }
+  ],
+  "variants": [
+    { "example": "muxui:example:poster-grid-css-grid" },
+    { "example": "muxui:example:poster-grid-virtualized" }
+  ],
+  "accessibility": [
+    "The GridList carries the accessible name, so pass an aria-label that names the collection.",
+    "Arrow keys move between cards by their rendered position; Tab and Shift+Tab reach the nested Details link and Save button of the focused card.",
+    "A nested link or button runs only its own action and never changes the card selection.",
+    "Each card sets textValue to its visible title, which names the card and drives typeahead, and the artwork carries an empty alt because the title already names it.",
+    "A disabled card disables its nested Button; pass disabled to the nested Link as well, because a Link does not inherit the card state.",
+    "The virtualized variant mounts only the visible rows, so cards outside the viewport are absent from the document until they scroll into view."
+  ],
+  "unsupported": [
+    "Drag reordering of cards",
+    "Masonry layouts and cards of unequal column width",
+    "Data fetching or paging: a block holds local presentation state only",
+    "Real artwork: the placeholder image is an empty data URI, so supply your own src"
+  ],
+  "workflowValue": "Replaces assembling a GridList grid, container-query column tiers, and Virtualizer column math by hand: the card recipe keeps the poster ratio on the image alone so titles and actions wrap without clipping, and the virtualized variant derives maxColumns from the container width with headroom for a classic scrollbar."
+}

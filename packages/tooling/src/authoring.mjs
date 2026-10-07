@@ -528,22 +528,28 @@ export function diagnoseCompileFailure({ error, records = [], authoring = {} } =
       )))
       : duplicate ? second : first;
     const earlier = duplicate && entry ? first : undefined;
-    const imported = issue.source !== undefined;
-    const ruleId = imported
-      ? 'authoring.compile.import-invalid'
-      : error.code === 'MUXUI_SCHEMA_INVALID'
-        ? 'authoring.compile.schema-invalid'
-        : 'authoring.compile.graph-invalid';
+    // A content-rule issue (E-BL1-10) also links a source, but it is not an import issue.
+    const content = issue.ruleId?.startsWith('content.') === true;
+    const imported = issue.source !== undefined && !content;
+    const ruleId = content
+      ? 'authoring.compile.content-invalid'
+      : imported
+        ? 'authoring.compile.import-invalid'
+        : error.code === 'MUXUI_SCHEMA_INVALID'
+          ? 'authoring.compile.schema-invalid'
+          : 'authoring.compile.graph-invalid';
     const message = imported
       ? `${issue.message}. Canonical import form: ${CANONICAL_IMPORT_FORM}`
-      : `${error.code === 'MUXUI_SCHEMA_INVALID' ? 'The canonical source is invalid' : 'The catalog graph is invalid'}: ${issue.message}${earlier ? `; first declared in ${earlier.path}` : ''}`;
+      : content
+        ? `${issue.message} (${issue.ruleId})`
+        : `${error.code === 'MUXUI_SCHEMA_INVALID' ? 'The canonical source is invalid' : 'The catalog graph is invalid'}: ${issue.message}${earlier ? `; first declared in ${earlier.path}` : ''}`;
     return sourceDiagnostic(ruleId, message, {
       record: entry?.record ?? { id: issue.artifactId },
       recordPath: entry?.path ?? null,
       path: issue.path,
       owner: entry ? fieldOwner(entry.family, issue.path, authoring) : null,
       code: error.code,
-      link: imported ? { file: issue.source, line: issue.line } : {},
+      link: imported || content ? { file: issue.source, ...(issue.line === undefined ? {} : { line: issue.line }) } : {},
       command: 'pnpm --filter @muxui/catalog check',
       extra: {
         ...(imported ? { canonicalImportForm: CANONICAL_IMPORT_FORM } : {}),

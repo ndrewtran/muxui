@@ -32,14 +32,18 @@ const MINIMAL_SOURCES = /^catalog\/(?:capabilities\/|tokens\/|components\/(?:but
  * `fixture/` in a root of symlinks to the repository, so `edit` can change
  * any fixture file (by its poster-grid-relative path) without touching the
  * checkout. Returns the compile result.
+ *
+ * The fixture shares the shipped poster grid's pattern and example ids, so it
+ * stands in for the shipped `catalog/patterns` records: they are left out of
+ * the compile. `fixture: false` compiles the real catalog without any pattern.
  */
-export async function compileFixtureCatalog({ edit = () => {}, minimal = false } = {}) {
+export async function compileFixtureCatalog({ edit = () => {}, minimal = false, fixture = true } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'muxui-pattern-fixture-'));
   try {
     for (const name of await readdir(repositoryRoot)) {
       if (name !== '.git') await symlink(join(repositoryRoot, name), join(root, name));
     }
-    const files = await fixtureFiles();
+    const files = fixture ? await fixtureFiles() : new Map();
     edit(files);
     const staged = [];
     for (const [path, text] of files) {
@@ -54,6 +58,7 @@ export async function compileFixtureCatalog({ edit = () => {}, minimal = false }
       join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
       'utf8',
     ));
+    manifest.records = manifest.records.filter(({ path }) => !path.startsWith('catalog/patterns/'));
     if (minimal) manifest.records = manifest.records.filter(({ path }) => MINIMAL_SOURCES.test(path));
     manifest.records.push(...staged);
     await writeFile(join(root, 'catalog-sources.json'), JSON.stringify(manifest));

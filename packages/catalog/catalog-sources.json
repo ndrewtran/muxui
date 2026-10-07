@@ -996,6 +996,18 @@
     {
       "family": "example",
       "path": "catalog/components/text-editor/examples/react/basic.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/poster-grid/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/poster-grid/examples/react/css-grid.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/poster-grid/examples/react/virtualized.example.json"
     }
   ]
 }
