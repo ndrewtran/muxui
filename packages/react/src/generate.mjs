@@ -625,8 +625,11 @@ export declare const ColorSwatchPicker: React.ForwardRefExoticComponent<ColorSwa
 export type ColorWheelProps = MuxUIAriaAccessibleName & { value?: MuxUIColorValue; defaultValue?: MuxUIColorValue; outerRadius?: number; innerRadius?: number; disabled?: boolean; readOnly?: boolean; onChange?: (value: MuxUIColorValue) => void; className?: string; };
 export declare const ColorWheel: React.ForwardRefExoticComponent<ColorWheelProps & React.RefAttributes<HTMLDivElement>>;
 export type CollectionProps = MuxUIAriaAccessibleName & { items?: MuxUIItems; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; onSelectionChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUICollectionItem) => void; className?: string; };
-export type GridListProps = CollectionProps;
-export declare const GridList: React.ForwardRefExoticComponent<GridListProps & React.RefAttributes<HTMLDivElement>>;
+export type GridListProps = CollectionProps & { children?: React.ReactNode; style?: React.CSSProperties; layout?: 'stack' | 'grid'; orientation?: 'vertical' | 'horizontal'; };
+export type GridListItemProps = { id: string; textValue?: string; disabled?: boolean; className?: string; style?: React.CSSProperties; children?: React.ReactNode; };
+export declare const GridList: React.ForwardRefExoticComponent<GridListProps & React.RefAttributes<HTMLDivElement>> & {
+  Item: React.ForwardRefExoticComponent<GridListItemProps & React.RefAttributes<HTMLDivElement>>;
+};
 export type ListBoxProps = CollectionProps & { children?: React.ReactNode; style?: React.CSSProperties; layout?: 'stack' | 'grid'; orientation?: 'vertical' | 'horizontal'; };
 export type ListBoxItemProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'id'> & { id: string; textValue?: string; disabled?: boolean; };
 export type ListBoxSectionProps = Omit<React.HTMLAttributes<HTMLElement>, 'title'> & { title?: React.ReactNode; };
@@ -697,8 +700,27 @@ export declare const Toolbar: React.ForwardRefExoticComponent<ToolbarProps & Rea
 export interface MuxUITreeItem extends MuxUICollectionItem { children?: MuxUITreeItem[]; items?: MuxUITreeItem[]; }
 export type TreeProps = MuxUIAriaAccessibleName & { items?: MuxUITreeItem[]; selectedIds?: MuxUISelection; defaultSelectedIds?: MuxUISelection; expandedIds?: MuxUISelection; defaultExpandedIds?: MuxUISelection; disabled?: boolean; selectionMode?: 'none' | 'single' | 'multiple'; expansionTrigger?: 'chevron' | 'row'; onSelectionChange?: (ids: MuxUISelection) => void; onExpandedChange?: (ids: MuxUISelection) => void; onAction?: (item?: MuxUITreeItem) => void; className?: string; };
 export declare const Tree: React.ForwardRefExoticComponent<TreeProps & React.RefAttributes<HTMLDivElement>>;
-export type VirtualizerProps = MuxUIAriaLabel & { items?: MuxUIItems; height?: number; itemHeight?: number; overscan?: number; disabled?: boolean; onScroll?: React.UIEventHandler<HTMLDivElement>; className?: string; style?: React.CSSProperties; };
-export declare const Virtualizer: React.ForwardRefExoticComponent<VirtualizerProps & React.RefAttributes<HTMLDivElement>>;
+export type VirtualizerProps = VirtualizerStackProps | VirtualizerGridProps;
+/** The default fixed-row list: a bounded, named scroll viewport that renders its own items. */
+export type VirtualizerStackProps = MuxUIAriaLabel & { layout?: 'stack'; items?: MuxUIItems; height?: number; itemHeight?: number; overscan?: number; disabled?: boolean; onScroll?: React.UIEventHandler<HTMLDivElement>; className?: string; style?: React.CSSProperties; children?: never; minItemWidth?: never; maxItemWidth?: never; estimatedItemHeight?: never; maxColumns?: never; };
+/** Lays out a GridList with layout="grid" in measured rows. It renders no element of its own: the GridList is the scroll region, so name, size, spacing, and scroll handling belong on the GridList. */
+export type VirtualizerGridProps = {
+  layout: 'grid';
+  /** A GridList with layout="grid". */
+  children: React.ReactElement;
+  /** Minimum item width in px. Default 200. */
+  minItemWidth?: number;
+  /** Maximum item width in px. Default unbounded, so items stretch to fill their columns. */
+  maxItemWidth?: number;
+  /** Estimated height in px of rows that have not mounted yet. Default 200. Mounted rows take their measured content height. */
+  estimatedItemHeight?: number;
+  /** Cap on the number of columns. Default unbounded. */
+  maxColumns?: number;
+  /** Extra rows mounted above and below the viewport. Default 2. */
+  overscan?: number;
+  'aria-label'?: never; 'aria-labelledby'?: never; items?: never; height?: never; itemHeight?: never; disabled?: never; onScroll?: never; className?: never; style?: never;
+};
+export declare const Virtualizer: React.ForwardRefExoticComponent<(VirtualizerStackProps & React.RefAttributes<HTMLDivElement>) | (VirtualizerGridProps & { ref?: never })>;
 `;
 const overlaysTypes = `
 export type MuxUIDropOperation = 'copy' | 'link' | 'move' | 'cancel';
@@ -741,7 +763,7 @@ const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.
   const module = readmeMappingBySlug.get(slug)?.export.module ?? '.';
   return `| ${markdownCell(artifact.name)} | ${markdownCell(artifact.lifecycle)} | ${module} | .muxui-${slug} | ${markdownCell(binding.api.props.join(', ') || 'none')} |`;
 }).join('\n');
-const readmeCompositionGuidance = ['menu', 'list-box', 'select', 'text-field', 'search-field', 'command-palette', 'popover', 'tooltip', 'dialog', 'alert-dialog', 'button', 'icon-button']
+const readmeCompositionGuidance = ['menu', 'list-box', 'grid-list', 'virtualizer', 'select', 'text-field', 'search-field', 'command-palette', 'popover', 'tooltip', 'dialog', 'alert-dialog', 'button', 'icon-button']
   .map((slug) => {
     const artifact = allCatalogArtifactsBySlug.get(slug);
     const binding = artifact.bindings['web.react'];

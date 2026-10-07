@@ -93,11 +93,15 @@ test('R1.3 artifact declarations have a generated MuxUI type and runtime surface
   }
 });
 
-function installVirtualizerDom() {
+// jsdom has no layout. `measuredItemHeight` makes every element scroll that tall,
+// which is what a measured grid Virtualizer reads to size its rows.
+function installVirtualizerDom({ measuredItemHeight } = {}) {
   const env = createDom();
   const elementPrototype = env.dom.window.HTMLElement.prototype;
   const previousWidth = Object.getOwnPropertyDescriptor(elementPrototype, 'clientWidth');
   const previousHeight = Object.getOwnPropertyDescriptor(elementPrototype, 'clientHeight');
+  const previousScrollHeight = Object.getOwnPropertyDescriptor(elementPrototype, 'scrollHeight');
+  if (measuredItemHeight !== undefined) Object.defineProperty(elementPrototype, 'scrollHeight', { configurable: true, get: () => measuredItemHeight });
   const renderedBlockSize = (element) => Number.parseFloat(element.style.blockSize || element.style.height || '') || 0;
   const observers = new Set();
   Object.defineProperty(elementPrototype, 'clientWidth', { configurable: true, get: () => 600 });
@@ -132,6 +136,8 @@ function installVirtualizerDom() {
       else delete elementPrototype.clientWidth;
       if (previousHeight) Object.defineProperty(elementPrototype, 'clientHeight', previousHeight);
       else delete elementPrototype.clientHeight;
+      if (previousScrollHeight) Object.defineProperty(elementPrototype, 'scrollHeight', previousScrollHeight);
+      else delete elementPrototype.scrollHeight;
       env.restore();
     },
   };
@@ -1754,6 +1760,231 @@ test('R1.3 Menu ordering and GridList disabled hooks stay canonical', async () =
     const blocked = container.querySelector('[role="row"][data-disabled="true"]');
     assert.equal(blocked?.getAttribute('aria-disabled'), 'true');
   } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 GridList layout and orientation reach the root and reject unsupported values', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const items = ['One'];
+  const dataset = () => ({ ...container.querySelector('[role="grid"]').dataset });
+  try {
+    await act(async () => root.render(React.createElement(GridList, { 'aria-label': 'Files', items })));
+    assert.deepEqual([dataset().layout, dataset().orientation], ['stack', 'vertical']);
+    await act(async () => root.render(React.createElement(GridList, { 'aria-label': 'Files', items, layout: 'grid', orientation: 'horizontal' })));
+    assert.deepEqual([dataset().layout, dataset().orientation], ['grid', 'horizontal']);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+  assert.throws(() => renderToString(React.createElement(GridList, { 'aria-label': 'Files', layout: 'masonry' })), /GridList layout/u);
+  assert.throws(() => renderToString(React.createElement(GridList, { 'aria-label': 'Files', orientation: 'diagonal' })), /GridList orientation/u);
+});
+
+test('R1.3 GridList.Item composes items, ignores items, and selects when controlled or uncontrolled', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const h = React.createElement;
+  const itemRef = React.createRef();
+  const changes = [];
+  const fixture = (props) => h(GridList, { 'aria-label': 'Cards', items: [{ id: 'ignored', label: 'Ignored' }], onSelectionChange: (ids) => changes.push(ids), ...props },
+    h(GridList.Item, { id: 'a', ref: itemRef, className: 'poster', style: { color: 'red' } }, 'Alpha'),
+    h(GridList.Item, { id: 'b', textValue: 'Beta card' }, h('strong', null, 'Beta')));
+  const rows = () => [...container.querySelectorAll('[role="row"]')];
+  const selected = () => rows().filter((row) => row.getAttribute('aria-selected') === 'true').map((row) => row.getAttribute('aria-label'));
+  try {
+    await act(async () => root.render(fixture({})));
+    assert.deepEqual(rows().map((row) => row.getAttribute('aria-label')), ['Alpha', 'Beta card'], 'children replace items; textValue falls back to the text content');
+    assert.equal(itemRef.current, rows()[0], 'the item ref targets the row');
+    assert.ok(rows()[0].classList.contains('muxui-grid-list-item') && rows()[0].classList.contains('poster'));
+    assert.equal(rows()[0].style.color, 'red');
+    await act(async () => rows()[1].click());
+    assert.deepEqual([changes, selected()], [[['b']], ['Beta card']], 'uncontrolled press selects');
+
+    changes.length = 0;
+    await act(async () => root.render(fixture({ key: 'controlled', selectedIds: ['a'] })));
+    await act(async () => rows()[1].click());
+    assert.deepEqual([changes, selected()], [[['b']], ['Alpha']], 'a controlled list reports the change and keeps its selection');
+    await act(async () => root.render(fixture({ key: 'controlled', selectedIds: ['b'] })));
+    assert.deepEqual(selected(), ['Beta card']);
+
+    changes.length = 0;
+    await act(async () => root.render(fixture({ key: 'multiple', selectionMode: 'multiple' })));
+    await act(async () => rows()[0].click());
+    await act(async () => rows()[1].click());
+    assert.deepEqual(changes, [['a'], ['a', 'b']]);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 GridList.Item disabled items and a disabled GridList stay inert and onAction returns identity fields', async () => {
+  const env = createDom();
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const h = React.createElement;
+  const seen = [];
+  const fixture = ({ blocked = true, ...props } = {}) => h(GridList, { 'aria-label': 'Cards', onSelectionChange: (ids) => seen.push(['selection', ids]), onAction: (item) => seen.push(['action', item]), ...props },
+    h(GridList.Item, { id: 'open', textValue: 'Open' }, 'Open'),
+    h(GridList.Item, { id: 'blocked', textValue: 'Blocked', disabled: blocked }, 'Blocked'));
+  const rows = () => [...container.querySelectorAll('[role="row"]')];
+  try {
+    await act(async () => root.render(fixture()));
+    const [open, blocked] = rows();
+    assert.deepEqual([blocked.getAttribute('data-disabled'), blocked.getAttribute('aria-disabled')], ['true', 'true']);
+    await act(async () => blocked.click());
+    assert.deepEqual(seen, [], 'a disabled item takes no press');
+    await act(async () => open.click());
+    assert.deepEqual(seen, [['action', { id: 'open', key: 'open', value: 'open' }]], 'compound onAction returns identity fields');
+
+    seen.length = 0;
+    await act(async () => root.render(fixture({ key: 'disabled-root', blocked: false, disabled: true })));
+    for (const row of rows()) {
+      assert.equal(row.getAttribute('aria-disabled'), 'true', 'a child disabled=false cannot re-enable an item under a disabled root');
+      await act(async () => row.click());
+    }
+    assert.deepEqual(seen, []);
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 Virtualizer grid layout validates its options, child, and ref', () => {
+  const h = React.createElement;
+  const poster = h(GridList, { 'aria-label': 'Posters', layout: 'grid' });
+  const render = (props, ...children) => renderToString(h(Virtualizer, { layout: 'grid', ...props }, ...children));
+  const positive = (property) => new RegExp(`Virtualizer ${property} must be a finite number greater than 0`, 'u');
+  const invalidOptions = [
+    ...[0, -1, Number.NaN, Number.POSITIVE_INFINITY].flatMap((value) => [
+      [{ minItemWidth: value }, positive('minItemWidth')],
+      [{ estimatedItemHeight: value }, positive('estimatedItemHeight')],
+    ]),
+    ...[0, -1, Number.NaN, 199, '300'].map((value) => [{ maxItemWidth: value }, /Virtualizer maxItemWidth must be Infinity or a finite number no smaller than minItemWidth/u]),
+    ...[0, -1, 1.5, Number.NaN, '4'].map((value) => [{ maxColumns: value }, /Virtualizer maxColumns must be Infinity or an integer greater than 0/u]),
+    ...[-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY].map((value) => [{ overscan: value }, /Virtualizer overscan must be a finite number greater than or equal to 0/u]),
+  ];
+  for (const [props, message] of invalidOptions) assert.throws(() => render(props, poster), message, JSON.stringify(props));
+  assert.doesNotThrow(() => render({ minItemWidth: 120, maxItemWidth: 120, estimatedItemHeight: 1, maxColumns: Number.POSITIVE_INFINITY, overscan: 0 }, poster));
+  assert.doesNotThrow(() => render({ maxItemWidth: Number.POSITIVE_INFINITY, maxColumns: 3 }, poster));
+
+  const child = /Virtualizer grid layout requires a single GridList element as its child/u;
+  assert.throws(() => render({}), child);
+  assert.throws(() => render({}, 'Posters'), child);
+  assert.throws(() => render({}, poster, poster), child);
+  assert.throws(() => renderToString(h(Virtualizer, { layout: 'masonry', 'aria-label': 'Results' })), /Virtualizer layout must be stack or grid/u);
+  assert.throws(() => render({ ref: React.createRef() }, poster), /renders no element of its own, so it takes no ref/u);
+});
+
+test('R1.3 Virtualizer fails loudly on props that belong to the other layout', () => {
+  const h = React.createElement;
+  const poster = h(GridList, { 'aria-label': 'Posters', layout: 'grid' });
+  const gridListOwned = { 'aria-label': 'Films', 'aria-labelledby': 'heading', items: [], height: 200, itemHeight: 40, disabled: false, onScroll() {}, className: 'films', style: {} };
+  for (const [name, value] of Object.entries(gridListOwned)) {
+    assert.throws(() => renderToString(h(Virtualizer, { layout: 'grid', [name]: value }, poster)), new RegExp(`Virtualizer layout="grid" takes no ${name}; set it on the GridList`, 'u'), name);
+  }
+  for (const [name, value] of Object.entries({ minItemWidth: 96, maxItemWidth: 200, estimatedItemHeight: 300, maxColumns: 4 })) {
+    assert.throws(() => renderToString(h(Virtualizer, { 'aria-label': 'Results', layout: 'stack', [name]: value })), new RegExp(`Virtualizer ${name} applies to layout="grid" only`, 'u'), name);
+  }
+  // An undefined prop is absent, and stack mode has always ignored children.
+  assert.doesNotThrow(() => renderToString(h(Virtualizer, { layout: 'grid', 'aria-label': undefined, items: undefined, className: undefined }, poster)));
+  assert.doesNotThrow(() => renderToString(h(Virtualizer, { 'aria-label': 'Results', items: ['One'], minItemWidth: undefined, maxColumns: undefined }, 'ignored')));
+});
+
+test('R1.3 Virtualizer grid layout needs a vertical grid GridList and renders on the server', () => {
+  const h = React.createElement;
+  const grid = (props) => renderToString(h(Virtualizer, { layout: 'grid' }, h(GridList, { 'aria-label': 'Posters', ...props }, h(GridList.Item, { id: 'a' }, 'Alpha'))));
+  for (const props of [{}, { layout: 'stack' }, { layout: 'grid', orientation: 'horizontal' }]) {
+    assert.throws(() => grid(props), /GridList inside a grid Virtualizer must use layout="grid" and the vertical orientation/u, JSON.stringify(props));
+  }
+  const html = grid({ layout: 'grid' });
+  assert.match(html, /data-muxui-virtualized="true"/u, 'the GridList marks itself for virtualized CSS');
+  assert.doesNotMatch(html, /muxui-virtualizer/u, 'grid mode renders no Virtualizer element');
+  assert.doesNotMatch(renderToString(h(GridList, { 'aria-label': 'Posters', layout: 'grid' })), /data-muxui-virtualized/u, 'a GridList outside a Virtualizer is not virtualized');
+  assert.match(renderToString(h(Virtualizer, { 'aria-label': 'Results', items: ['One'] })), /class="muxui-virtualizer"/u, 'stack mode keeps its own viewport');
+});
+
+test('R1.3 Virtualizer grid mounts partial last rows without throwing', async () => {
+  const env = installVirtualizerDom({ measuredItemHeight: 100 });
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const h = React.createElement;
+  // DOM order waits for scrolling to end, so compare the mounted set in item order.
+  const mounted = () => [...container.querySelectorAll('[role="row"]')].map((row) => Number(row.getAttribute('aria-rowindex')) - 1).sort((left, right) => left - right);
+  const grid = () => container.querySelector('[role="grid"]');
+  const render = (count, overscan, maxColumns = 3) => act(async () => root.render(h(Virtualizer, { layout: 'grid', minItemWidth: 100, estimatedItemHeight: 100, maxColumns, overscan },
+    h(GridList, { 'aria-label': 'Cards', layout: 'grid' }, Array.from({ length: count }, (_, index) => h(GridList.Item, { key: index, id: String(index), textValue: `Card ${index}` }, `Card ${index}`))))));
+  const scrollTo = async (top) => {
+    grid().scrollTop = top;
+    await act(async () => grid().dispatchEvent(new Event('scroll', { bubbles: true })));
+  };
+  try {
+    // The 40px viewport shows one 100px row at a time; at 3 columns row 0 holds items 0 to 2.
+    for (const [count, overscan, atStart, atEnd] of [
+      [1, 0, [0], [0]],
+      [1, 2, [0], [0]],
+      [2, 0, [0, 1], [0, 1]],
+      [7, 0, [0, 1, 2], [6]],
+      [7, 1, [0, 1, 2, 3, 4, 5], [3, 4, 5, 6]],
+      [7, 2, [0, 1, 2, 3, 4, 5, 6], [0, 1, 2, 3, 4, 5, 6]],
+    ]) {
+      await render(count, overscan);
+      await scrollTo(0);
+      assert.deepEqual(mounted(), atStart, `${count} items, overscan ${overscan}: top`);
+      await scrollTo(10_000);
+      assert.deepEqual(mounted(), atEnd, `${count} items, overscan ${overscan}: end`);
+    }
+
+    // The collection changing size, and the column count changing, while scrolled to the end.
+    await render(7, 0);
+    await scrollTo(10_000);
+    assert.deepEqual(mounted(), [6]);
+    await render(7, 0, 2);
+    assert.deepEqual(mounted(), [4, 5], 'two columns re-flow the partial last row; the view keeps its offset');
+    await render(2, 0);
+    assert.deepEqual(mounted(), [0, 1], 'a shrunk collection re-clamps the scroll position');
+    await render(0, 0);
+    assert.deepEqual(mounted(), [], 'an empty collection mounts nothing');
+    await render(7, 0);
+    await scrollTo(0);
+    assert.deepEqual(mounted(), [0, 1, 2], 'a collection that grows again mounts its first row');
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+});
+
+test('R1.3 a GridList nested in a virtualized grid item is not itself virtualized', async () => {
+  const env = installVirtualizerDom({ measuredItemHeight: 100 });
+  const container = document.querySelector('#root');
+  const root = createRoot(container);
+  const h = React.createElement;
+  const errors = [];
+  const onError = (event) => errors.push(event.message);
+  window.addEventListener('error', onError);
+  try {
+    const tags = (id) => h(GridList, { 'aria-label': `Tags of ${id}`, selectionMode: 'single' },
+      ['x', 'y'].map((tag) => h(GridList.Item, { key: tag, id: tag, textValue: `Tag ${tag}` }, `Tag ${tag}`)));
+    const cards = ['a', 'b'].map((id) => h(GridList.Item, { key: id, id, textValue: `Card ${id}` }, h('strong', null, `Card ${id}`), tags(id)));
+    await act(async () => root.render(h(Virtualizer, { layout: 'grid', minItemWidth: 100, estimatedItemHeight: 100, maxColumns: 2 },
+      h(GridList, { 'aria-label': 'Cards', layout: 'grid', selectionMode: 'single' }, cards))));
+    const grids = [...container.querySelectorAll('[role="grid"]')];
+    const [outer, ...nested] = grids;
+    assert.equal(outer.hasAttribute('data-muxui-virtualized'), true, 'the outer list is virtualized');
+    assert.equal(nested.length, 2, 'each card holds a nested list');
+    for (const grid of nested) {
+      assert.equal(grid.hasAttribute('data-muxui-virtualized'), false, 'a nested list is not virtualized');
+      assert.equal(grid.dataset.layout, 'stack');
+      assert.deepEqual([...grid.querySelectorAll('[role="row"]')].map((row) => row.textContent), ['Tag x', 'Tag y'], 'a nested list mounts all of its own rows');
+    }
+    assert.deepEqual(errors, []);
+  } finally {
+    window.removeEventListener('error', onError);
     await act(async () => root.unmount());
     env.restore();
   }

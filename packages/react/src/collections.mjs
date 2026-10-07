@@ -73,6 +73,8 @@ import {
   Toolbar as AriaToolbar,
   Virtualizer as AriaVirtualizer,
   ListLayout,
+  GridLayout,
+  Size,
   Tree as AriaTree,
   TreeItem as AriaTreeItem,
   Group as AriaGroup,
@@ -790,12 +792,135 @@ export const ListBox = /*#__PURE__*/ (() => {
   return ListBox;
 })();
 
+const GridListContext = React.createContext({ disabled: false });
+
+// A grid Virtualizer provides this so its GridList can report the CSS gap it
+// resolves to; the Virtualizer turns that gap into layout spacing.
+const GridVirtualizerContext = React.createContext(null);
+
+const useVirtualizedLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
+
+// Computed lengths resolve to px, including clamp() and viewport-unit tokens. A
+// percentage or `normal` is not a length, so it counts as no gap.
+function gapPixels(value) {
+  const pixels = Number.parseFloat(value);
+  return value.endsWith('px') && Number.isFinite(pixels) ? Math.max(0, pixels) : 0;
+}
+
+// Reports the root's resolved column and row gap on mount, whenever the root
+// resizes, and on window resize, since a fluid gap follows the viewport.
+function useVirtualizedGap(root, reportGap) {
+  useVirtualizedLayoutEffect(() => {
+    if (!root || !reportGap) return undefined;
+    const view = root.ownerDocument.defaultView;
+    const read = () => {
+      const style = view.getComputedStyle(root);
+      reportGap({ column: gapPixels(style.columnGap), row: gapPixels(style.rowGap) });
+    };
+    read();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(read);
+    observer?.observe(root);
+    view.addEventListener('resize', read);
+    return () => {
+      observer?.disconnect();
+      view.removeEventListener('resize', read);
+    };
+  }, [root, reportGap]);
+}
+
+// RAC scrolls a keyboard-focused row into view once, against estimated row sizes.
+// Measured sizes, and scrolling that lands after RAC's own, then move that row: a
+// Home press after End can end up back at the old position. So for a second after
+// a navigation key press, once focus has left the item it was on, keep revealing the
+// focused row whenever the content resizes or the view scrolls. Other keys never
+// start that window, and a wheel, touch, or pointer press ends it at once, so the
+// reveal never pulls the view back from where the user scrolled. The origin is an
+// item key, not a node: the Virtualizer recycles row nodes, so after a jump key the
+// newly focused item can render into the node the origin item had.
+const NAVIGATION_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'PageUp', 'PageDown']);
+const REVEAL_WINDOW_MS = 1000;
+
+function useVirtualizedFocusReveal(root, enabled) {
+  useVirtualizedLayoutEffect(() => {
+    if (!root || !enabled || typeof ResizeObserver === 'undefined') return undefined;
+    const doc = root.ownerDocument;
+    let armedUntil = 0;
+    let originKey = null;
+    let content = null;
+    let contentSize = '';
+    const focusedRow = () => doc.activeElement?.closest('[role="row"]') ?? null;
+    // RAC sets data-key on every row.
+    const keyOf = (row) => row?.getAttribute('data-key') ?? null;
+    const sizeOf = (node) => {
+      const { width, height } = node.getBoundingClientRect();
+      return `${width}x${height}`;
+    };
+    // Scrolling an already visible row is a no-op, so revealing is safe to repeat.
+    const reveal = () => {
+      const row = focusedRow();
+      if (performance.now() < armedUntil && row && keyOf(row) !== originKey && root.contains(row)) row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    };
+    // A ResizeObserver also reports once as soon as it observes, with nothing resized.
+    // Comparing sizes keeps that report, and any other unchanged one, from revealing.
+    const onResize = () => {
+      const size = sizeOf(content);
+      if (size === contentSize) return;
+      contentSize = size;
+      reveal();
+    };
+    const observer = new ResizeObserver(onResize);
+    const onKeyDown = (event) => {
+      if (!NAVIGATION_KEYS.has(event.key)) return;
+      if (content !== root.firstElementChild) {
+        content = root.firstElementChild;
+        observer.disconnect();
+        if (content) observer.observe(content);
+      }
+      if (content) contentSize = sizeOf(content);
+      originKey = keyOf(focusedRow());
+      armedUntil = performance.now() + REVEAL_WINDOW_MS;
+    };
+    // The root scrolls itself when bounded, and the document scrolls it when not.
+    const onScroll = (event) => {
+      if (event.target === root || event.target === doc) reveal();
+    };
+    const disarm = () => { armedUntil = 0; };
+    // The document sees every wheel, touch, and press on the root, and also a scrollbar
+    // drag that scrolls the page around an unbounded root.
+    const disarming = ['wheel', 'touchstart', 'pointerdown'];
+    root.addEventListener('keydown', onKeyDown, true);
+    doc.addEventListener('scroll', onScroll, { capture: true, passive: true });
+    for (const type of disarming) doc.addEventListener(type, disarm, { capture: true, passive: true });
+    return () => {
+      observer.disconnect();
+      root.removeEventListener('keydown', onKeyDown, true);
+      doc.removeEventListener('scroll', onScroll, { capture: true });
+      for (const type of disarming) doc.removeEventListener(type, disarm, { capture: true });
+    };
+  }, [root, enabled]);
+}
+
 export const GridList = /*#__PURE__*/ (() => {
-  const component = React.forwardRef(function GridList(props, ref) {
+  const component = React.forwardRef(function GridList({ children, style, layout = 'stack', orientation = 'vertical', ...props }, ref) {
     const { normalized, rest, selectedKeys, defaultSelectedKeys, onSelectionChange, onAction, selectionMode, className, disabled, disabledKeys } = collectionProps(props, 'grid-list');
+    const reportGap = React.useContext(GridVirtualizerContext);
+    const [gapRoot, setGapRoot] = React.useState(null);
+    useVirtualizedGap(gapRoot, reportGap);
+    useVirtualizedFocusReveal(gapRoot, reportGap !== null);
+    const gapRef = React.useCallback((node) => {
+      setGapRoot(node);
+      if (typeof ref === 'function') return ref(node);
+      if (ref) ref.current = node;
+      return undefined;
+    }, [ref]);
+    if (layout !== 'stack' && layout !== 'grid') throw new TypeError('GridList layout must be stack or grid');
+    if (orientation !== 'vertical' && orientation !== 'horizontal') throw new TypeError('GridList orientation must be vertical or horizontal');
+    const virtualized = reportGap !== null;
+    if (virtualized && (layout !== 'grid' || orientation !== 'vertical')) throw new TypeError('GridList inside a grid Virtualizer must use layout="grid" and the vertical orientation');
+    const hasChildren = children !== undefined && children !== null;
     const gridList = React.createElement(AriaGridList, {
       ...rest,
-      items: normalized,
+      items: hasChildren ? undefined : normalized,
       selectionMode,
       selectedKeys,
       defaultSelectedKeys,
@@ -806,23 +931,39 @@ export const GridList = /*#__PURE__*/ (() => {
       ...(onAction ? {
         onAction: (key) => {
           const item = normalized.find((candidate) => candidate.id === String(key));
-          if (!disabled && !item?.disabled) onAction(item);
+          if (!disabled && !item?.disabled) onAction(item ?? collectionItem(key));
         },
       } : {}),
       isDisabled: disabled,
       'aria-disabled': disabled || undefined,
+      layout,
+      orientation,
+      // RAC already forces tab navigation in the grid layout. A horizontal stack
+      // needs it too: the default arrow behavior spends Left and Right on nested
+      // controls, so they could never move between items.
+      keyboardNavigationBehavior: orientation === 'horizontal' ? 'tab' : 'arrow',
+      'data-muxui-virtualized': virtualized || undefined,
+      style,
       className,
-    }, (item) => React.createElement(AriaGridListItem, {
-      id: item.id,
-      textValue: item.textValue,
-      isDisabled: disabled || item.disabled,
-      'data-disabled': disabled || item.disabled || undefined,
-      'aria-disabled': disabled || item.disabled || undefined,
-      className: 'muxui-grid-list-item',
-    }, item.label));
-    return React.createElement(GridListMotion, { rootRef: ref }, gridList);
+    }, hasChildren ? children : (item) => React.createElement(component.Item, { id: item.id, textValue: item.textValue, disabled: item.disabled }, item.label));
+    // Only this list's own root reports its gap, so a GridList nested in an item stays a plain list.
+    return React.createElement(GridListContext.Provider, { value: { disabled } },
+      React.createElement(GridVirtualizerContext.Provider, { value: null },
+        React.createElement(GridListMotion, { rootRef: virtualized ? gapRef : ref }, gridList)));
   });
   component.displayName = 'GridList';
+  component.Item = React.forwardRef(function GridListItem({ children, id, textValue, disabled = false, className, style }, ref) {
+    const context = React.useContext(GridListContext);
+    const effectiveDisabled = disabled || context.disabled;
+    return React.createElement(AriaGridListItem, {
+      ref, id, style,
+      textValue: textValue ?? (textContent(children) || undefined),
+      isDisabled: effectiveDisabled,
+      'data-disabled': effectiveDisabled || undefined,
+      'aria-disabled': effectiveDisabled || undefined,
+      className: classNames('muxui-grid-list-item', className),
+    }, children);
+  });
   return component;
 })();
 
@@ -1472,7 +1613,144 @@ class MuxFixedRowListLayout extends ListLayout {
   }
 }
 
-export const Virtualizer = React.forwardRef(function Virtualizer({ items = [], renderItem: _renderItem, itemHeight = 40, height = 240, overscan = 2, disabled = false, children: _children, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, style, onScroll, ...props }, ref) {
+// Smallest row in [0, count) that satisfies a monotonic test, or count when none does.
+function firstRowWhere(count, test) {
+  let low = 0;
+  let high = count;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if (test(middle)) high = middle;
+    else low = middle + 1;
+  }
+  return low;
+}
+
+// Grid counterpart of MuxFixedRowListLayout. RAC owns the collection, focus
+// persistence, and item measurement; Mux owns spacing and row-count overscan.
+// It is only built by GridVirtualizer, which supplies every layout option.
+class MuxGridLayout extends GridLayout {
+  update(invalidationContext) {
+    const options = invalidationContext.layoutOptions;
+    this.overscan = options.overscan;
+    super.update({ ...invalidationContext, layoutOptions: this.fitSpacing(options) });
+    this.itemKeys = [];
+    this.itemIndex = new Map();
+    for (const node of this.virtualizer.collection) {
+      if (node.type !== 'item') continue;
+      this.itemIndex.set(node.key, this.itemKeys.length);
+      this.itemKeys.push(node.key);
+    }
+  }
+
+  // RAC sizes items from (width - n * space) and spreads the remainder over n + 1
+  // gaps, so its visible gap comes out smaller than the space it was given. Size
+  // items from n + 1 gaps instead, so columns sit exactly one CSS gap apart and
+  // the outer edges get one gap too. Columns still follow RAC's
+  // floor(width / (minItemWidth + gap)). Reserving the n + 1 gaps can leave items
+  // narrower than minItemWidth: by up to gap / n each, and by more, down to 1px,
+  // when even one column is wider than the container. A very large gap shows both.
+  fitSpacing({ minItemSize, maxItemSize, minSpace, maxColumns, ...options }) {
+    const width = this.virtualizer.size.width;
+    const columns = Math.max(1, Math.min(maxColumns, Math.floor(width / (minItemSize.width + minSpace.width))));
+    const fit = Math.max(1, Math.floor((width - (columns + 1) * minSpace.width) / columns));
+    return {
+      ...options,
+      minSpace,
+      maxColumns: columns,
+      minItemSize: new Size(Math.min(minItemSize.width, fit), minItemSize.height),
+      maxItemSize: new Size(Math.min(maxItemSize.width, fit), maxItemSize.height),
+      maxHorizontalSpace: minSpace.width,
+    };
+  }
+
+  shouldInvalidateLayoutOptions(newOptions, oldOptions) {
+    return newOptions.overscan !== oldOptions.overscan || super.shouldInvalidateLayoutOptions(newOptions, oldOptions);
+  }
+
+  // Mounts the rows that intersect the visible rect plus `overscan` whole rows on
+  // each side, in collection order, with persisted keys such as the focused item.
+  getVisibleLayoutInfos(rect) {
+    const { virtualizer, itemKeys, numColumns } = this;
+    const visibleRect = virtualizer?.visibleRect;
+    const firstItem = itemKeys?.length > 0 ? this.getLayoutInfo(itemKeys[0]) : null;
+    if (!visibleRect || visibleRect.width <= 0 || visibleRect.height <= 0 || !firstItem || numColumns < 1) return super.getVisibleLayoutInfos(rect);
+    const rowCount = Math.ceil(itemKeys.length / numColumns);
+    const rowRect = (row) => this.getLayoutInfo(itemKeys[row * numColumns]).rect;
+    const firstRow = firstRowWhere(rowCount, (row) => rowRect(row).maxY > visibleRect.y);
+    const lastRow = firstRowWhere(rowCount, (row) => rowRect(row).y >= visibleRect.maxY) - 1;
+    const start = Math.max(0, firstRow - this.overscan) * numColumns;
+    // The last row can be partial, so its end is the item count, not a whole row.
+    const end = Math.min(itemKeys.length, (lastRow + 1 + this.overscan) * numColumns);
+    const persisted = [...virtualizer.persistedKeys]
+      .map((key) => this.itemIndex.get(key))
+      .filter((index) => index !== undefined && (index < start || index >= end))
+      .sort((left, right) => left - right);
+    const indexes = [...persisted.filter((index) => index < start)];
+    for (let index = start; index < end; index++) indexes.push(index);
+    indexes.push(...persisted.filter((index) => index >= end));
+    return indexes.map((index) => this.getLayoutInfo(itemKeys[index]));
+  }
+}
+
+function assertMaxItemWidth(value, minItemWidth) {
+  if (value !== Number.POSITIVE_INFINITY && (typeof value !== 'number' || !Number.isFinite(value) || value < minItemWidth)) {
+    throw new TypeError('Virtualizer maxItemWidth must be Infinity or a finite number no smaller than minItemWidth');
+  }
+}
+
+function assertMaxColumns(value) {
+  if (value !== Number.POSITIVE_INFINITY && (typeof value !== 'number' || !Number.isInteger(value) || value < 1)) {
+    throw new TypeError('Virtualizer maxColumns must be Infinity or an integer greater than 0');
+  }
+}
+
+const NO_GAP = Object.freeze({ column: 0, row: 0 });
+
+// Lays the GridList child out in measured, variable-height rows. The GridList
+// owns the scroll region and its CSS gap; the gap it reports becomes the layout spacing.
+function GridVirtualizer({ minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns, overscan, children }) {
+  const [gap, setGap] = React.useState(NO_GAP);
+  const reportGap = React.useCallback((next) => {
+    setGap((current) => (current.column === next.column && current.row === next.row ? current : next));
+  }, []);
+  const layoutOptions = React.useMemo(() => ({
+    // Equal min and max heights make RAC estimate every unmeasured row as exactly
+    // estimatedItemHeight, not scaled with item width. Measured heights ignore it.
+    minItemSize: new Size(minItemWidth, estimatedItemHeight),
+    maxItemSize: new Size(maxItemWidth, estimatedItemHeight),
+    minSpace: new Size(gap.column, gap.row),
+    maxColumns,
+    // Rows size to their content, so a whole-item aspect ratio can never clip text or actions.
+    preserveAspectRatio: false,
+    overscan,
+  }), [minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns, overscan, gap]);
+  return React.createElement(GridVirtualizerContext.Provider, { value: reportGap },
+    // Observing item size re-measures rows after late font or image loads and text reflow.
+    React.createElement(AriaVirtualizer, { layout: MuxGridLayout, layoutOptions, shouldObserveItemSize: true }, children));
+}
+
+// Grid mode renders no element of its own, so these belong on its GridList; stack
+// mode has no columns. Types forbid both, and these checks fail loudly for JS callers.
+const GRIDLIST_OWNED_PROPS = ['aria-label', 'aria-labelledby', 'items', 'height', 'itemHeight', 'disabled', 'onScroll', 'className', 'style'];
+const GRID_ONLY_PROPS = ['minItemWidth', 'maxItemWidth', 'estimatedItemHeight', 'maxColumns'];
+
+export const Virtualizer = React.forwardRef(function Virtualizer(rawProps, ref) {
+  const { layout = 'stack', items = [], renderItem: _renderItem, itemHeight = 40, height = 240, overscan = 2, disabled = false, children, minItemWidth = 200, maxItemWidth = Number.POSITIVE_INFINITY, estimatedItemHeight = 200, maxColumns = Number.POSITIVE_INFINITY, className, 'aria-label': ariaLabel, 'aria-labelledby': _ariaLabelledby, style, onScroll, ...props } = rawProps;
+  if (layout !== 'stack' && layout !== 'grid') throw new TypeError('Virtualizer layout must be stack or grid');
+  if (layout === 'grid') {
+    const misplaced = GRIDLIST_OWNED_PROPS.find((name) => rawProps[name] !== undefined);
+    if (misplaced) throw new TypeError(`Virtualizer layout="grid" takes no ${misplaced}; set it on the GridList`);
+    assertPositiveVirtualizerNumber(minItemWidth, 'minItemWidth');
+    assertPositiveVirtualizerNumber(estimatedItemHeight, 'estimatedItemHeight');
+    assertMaxItemWidth(maxItemWidth, minItemWidth);
+    assertMaxColumns(maxColumns);
+    assertNonNegativeVirtualizerNumber(overscan, 'overscan');
+    if (!React.isValidElement(children) || React.Children.count(children) !== 1) throw new TypeError('Virtualizer grid layout requires a single GridList element as its child');
+    if (ref !== null) throw new TypeError('Virtualizer grid layout renders no element of its own, so it takes no ref; pass the ref to its GridList');
+    return React.createElement(GridVirtualizer, { minItemWidth, maxItemWidth, estimatedItemHeight, maxColumns, overscan }, children);
+  }
+  const gridOnly = GRID_ONLY_PROPS.find((name) => rawProps[name] !== undefined);
+  if (gridOnly) throw new TypeError(`Virtualizer ${gridOnly} applies to layout="grid" only`);
   accessibleName({ ariaLabel }, 'Virtualizer');
   assertPositiveVirtualizerNumber(itemHeight, 'itemHeight');
   assertPositiveVirtualizerNumber(height, 'height');
