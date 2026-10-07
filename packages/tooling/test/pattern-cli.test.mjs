@@ -131,14 +131,17 @@ test('E-BL1-07: the --uses matrix and pattern pages stay inside the dense budget
   }
 });
 
-test('E-BL1-07: the real catalog enables pattern with no records and rejects bad --uses', () => {
-  const empty = JSON.parse(runCli(['list', 'pattern', '--json']).stdout);
-  assert.deepEqual(empty.data.items, []);
+test('E-BL1-07: the real catalog lists the shipped poster grid and rejects bad --uses', () => {
+  const listed = JSON.parse(runCli(['list', 'pattern', '--json']).stdout);
+  assert.ok(listed.data.items.some(({ id }) => id === patternId));
   const manifest = JSON.parse(runCli(['manifest', '--detail', 'brief', '--json']).stdout);
   assert.ok(manifest.data.artifactKinds.includes('pattern'));
-  const none = runCli(['list', '--uses', 'muxui:component:button', '--json']);
-  assert.equal(none.exitCode, 0);
-  assert.deepEqual(JSON.parse(none.stdout).data.items, []);
+  const used = runCli(['list', '--uses', 'muxui:component:button', '--json']);
+  assert.equal(used.exitCode, 0);
+  assert.ok(JSON.parse(used.stdout).data.items.some(({ id }) => id === patternId));
+  const unused = runCli(['list', '--uses', 'muxui:component:dialog', '--json']);
+  assert.equal(unused.exitCode, 0);
+  assert.ok(!JSON.parse(unused.stdout).data.items.some(({ id }) => id === patternId));
 
   const invalid = runCli(['list', '--uses', 'button', '--json']);
   assert.equal(invalid.exitCode, 2);

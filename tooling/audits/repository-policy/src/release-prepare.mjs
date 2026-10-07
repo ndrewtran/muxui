@@ -1,7 +1,6 @@
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { dirname, join, posix, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
 import { pathToFileURL } from 'node:url';
@@ -35,6 +34,9 @@ import {
   summarizeBundleModules,
 } from './release-proof.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
+import { assertPatternVariantMarkup } from './pattern-variant-markup.mjs';
+import { patternVariantExamples } from './pattern-variants.mjs';
+import { resolvePinnedTool as resolvePinnedToolIn } from './pinned-tool.mjs';
 import { fixForwardVersion, parseCandidateVersion } from './npm-publication.mjs';
 import { readSupplementalMapping } from '../../../../packages/react/src/supplemental-mapping.mjs';
 
@@ -137,27 +139,9 @@ function childOutput(result) {
   return tail(result.error?.message || result.stderr || result.stdout || `exited with ${result.signal ?? result.status}`);
 }
 
-function exportTarget(entry) {
-  if (typeof entry === 'string') return entry;
-  if (!entry || typeof entry !== 'object') return undefined;
-  for (const condition of ['import', 'node', 'default']) {
-    const target = exportTarget(entry[condition]);
-    if (target) return target;
-  }
-  return undefined;
-}
-
-// Resolves a proof tool pinned by the React package's devDependencies, so release
-// proof adds no dependency and the clean consumers keep only the packed runtime graph.
+// Resolves a proof tool pinned by the React package's devDependencies; see pinned-tool.mjs.
 function resolvePinnedTool(name) {
-  const requireFromReact = createRequire(join(reactPackageRoot, 'package.json'));
-  const manifestPath = requireFromReact.resolve(`${name}/package.json`);
-  const toolManifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  if (toolManifest.version !== manifest.devDependencies?.[name]) {
-    fail('R1_EXIT_PACK_PROOF_TOOL_UNAVAILABLE', `expected the pinned ${name} ${manifest.devDependencies?.[name]}, found ${toolManifest.version}`);
-  }
-  const relative = exportTarget(toolManifest.exports?.['.']) ?? toolManifest.main;
-  return { version: toolManifest.version, url: pathToFileURL(join(dirname(manifestPath), relative)).href };
+  return resolvePinnedToolIn({ packageRoot: reactPackageRoot, manifest, name, fail });
 }
 
 function exampleImports(source) {
@@ -857,6 +841,16 @@ try {
       planModules.push({ file: output });
     }
   }
+  // Pattern ("block") variants render in the same packed consumer (E-BL1-03).
+  const variants = await patternVariantExamples(repositoryRoot);
+  if (variants.length === 0) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', 'the catalog declares no pattern variant example');
+  // Variants stay out of exampleCoverage: a runtime export needs its own component example.
+  for (const variant of variants) {
+    const { code } = await vite.transformWithOxc(variant.text, resolve(repositoryRoot, variant.source), { lang: 'tsx', jsx: { runtime: 'automatic' } });
+    const output = `examples/pattern-${variant.patternSlug}--${variant.variantSlug}.mjs`;
+    writeFileSync(join(consumer, output), code);
+    planModules.push({ file: output, measuredLayout: true });
+  }
   for (const file of ['render-examples.mjs', 'hydrate-examples.mjs', 'export-fixtures.mjs']) copyConsumerTool(consumer, file);
   planModules.push({ file: 'export-fixtures.mjs', components: ['ToastFixture', 'LightboxPartsFixture'] });
   const componentModules = ['@muxui/react', ...new Set(isolatedExportModules.map((entry) => `@muxui/react/${entry.split(':')[1].slice(2)}`))];
@@ -883,9 +877,17 @@ try {
   if (hydration.status === 3) fail('R1_EXIT_PACK_HYDRATION_MISMATCH', childOutput(hydration));
   if (hydration.status !== 0) fail('R1_EXIT_PACK_HYDRATION_SCRIPT_FAILED', childOutput(hydration));
   const hydrationResult = JSON.parse(readFileSync(join(consumer, 'hydration-result.json'), 'utf8'));
+  // A variant that rendered nothing hydrates without a mismatch, so require the markup and rows it expects.
+  for (const variant of variants) {
+    const file = `examples/pattern-${variant.patternSlug}--${variant.variantSlug}.mjs`;
+    const render = serverResult.renders.find((candidate) => candidate.file === file);
+    const hydrated = hydrationResult.results.find(({ id }) => id === render?.id);
+    if (!render || !hydrated) fail('R1_EXIT_PACK_SSR_COVERAGE_MISSING', `${variant.variantId} has no packed render or hydration result`);
+    assertPatternVariantMarkup({ variantId: variant.variantId, html: render.html, serverRows: hydrated.serverRows, hydratedRows: hydrated.hydratedRows, fail: (_code, detail) => fail('R1_EXIT_PACK_SSR_VARIANT_EMPTY', detail) });
+  }
   const consoleNotes = hydrationResult.results.filter(({ consoleErrors }) => consoleErrors.length !== 0);
   const exportCount = Object.values(serverResult.exportKeys).reduce((sum, names) => sum + names.length, 0);
-  console.log(`R1 exit packed SSR/hydration: ${serverResult.renders.length} renders (${planModules.length - 1} catalog examples plus fixtures) cover ${exportCount} runtime exports across ${componentModules.join(', ')}; SSR ${serverResult.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms; ${hydrationResult.results.length} hydrations without mismatch`);
+  console.log(`R1 exit packed SSR/hydration: ${serverResult.renders.length} renders (${planModules.length - 1 - variants.length} component examples, ${variants.length} pattern variants, plus fixtures) cover ${exportCount} runtime exports across ${componentModules.join(', ')}; SSR ${serverResult.ssrMilliseconds.toFixed(2)}ms / ${budgets.ssrMilliseconds}ms; ${hydrationResult.results.length} hydrations without mismatch`);
   for (const { id, consoleErrors } of consoleNotes) console.log(`R1 exit hydration note ${id}: ${consoleErrors[0]}`);
 
   // Tree-shaking: a Button-only consumer keeps Button's own package modules and their

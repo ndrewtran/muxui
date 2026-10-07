@@ -537,13 +537,19 @@ test('E-BL1-07: usedIn comes from the same function as --uses, and component pag
   assert.deepEqual(api.getArtifact({ id: 'muxui:component:button' }).data.usedIn, []);
 });
 
-test('E-BL1-07: the real catalog enables the pattern kind with no records yet', () => {
+test('E-BL1-07: the real catalog serves the shipped poster grid and its derived uses views', () => {
   assert.ok(getManifest({ detail: 'brief' }).data.artifactKinds.includes('pattern'));
-  assert.deepEqual(listArtifacts({ kind: 'pattern' }).data.items, []);
-  assert.deepEqual(listArtifacts({ uses: 'muxui:component:button' }).data.items, []);
-  assert.deepEqual(searchArtifacts({ query: 'grid', uses: 'muxui:component:grid-list' }).data.items, []);
-  assert.equal(getArtifact({ id: 'muxui:component:button' }).data.usedIn.length, 0);
-  assert.equal(getArtifact({ id: patternId }).error.code, 'MUXUI_ARTIFACT_NOT_FOUND');
+  const ids = (response) => response.data.items.map(({ id }) => id);
+  assert.ok(ids(listArtifacts({ kind: 'pattern' })).includes(patternId));
+  // Every participant of the shipped pattern lists it; a component outside it does not.
+  for (const component of ['grid-list', 'virtualizer', 'image', 'text', 'link', 'button']) {
+    const id = `muxui:component:${component}`;
+    assert.ok(ids(listArtifacts({ uses: id })).includes(patternId), component);
+    assert.ok(getArtifact({ id }).data.usedIn.some((use) => use.id === patternId), component);
+  }
+  assert.ok(!ids(listArtifacts({ uses: 'muxui:component:dialog' })).includes(patternId));
+  assert.ok(ids(searchArtifacts({ query: 'grid', uses: 'muxui:component:grid-list' })).includes(patternId));
+  assert.equal(getArtifact({ id: patternId }).type, 'artifact.detail');
 });
 
 test('E-BL1-08: compiles are byte-identical and listing the fixture changes only the added sources and digests', async () => {
@@ -552,7 +558,9 @@ test('E-BL1-08: compiles are byte-identical and listing the fixture changes only
   assert.equal(second.bytes, first.bytes);
   assert.equal(second.bundle.catalogDigest, first.bundle.catalogDigest);
 
-  const { catalogDigest: baseDigest, sourceRevision: baseRevision, ...base } = structuredClone(baseBundle);
+  // The base is the real catalog without any pattern: the fixture replaces the shipped poster grid.
+  const withoutPatterns = (await compileFixtureCatalog({ fixture: false })).bundle;
+  const { catalogDigest: baseDigest, sourceRevision: baseRevision, ...base } = structuredClone(withoutPatterns);
   const { catalogDigest, sourceRevision, ...listed } = structuredClone(first.bundle);
   assert.notEqual(catalogDigest, baseDigest);
   assert.notEqual(sourceRevision, baseRevision);

@@ -1,8 +1,10 @@
 import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { generatedText, loadPolicy } from '../../../tooling/audits/repository-policy/src/policy.mjs';
+import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import { transformWithOxc } from 'vite';
+import { blockStoryExports, selectionKeyOwners } from './block-pages.mjs';
 import { adapterNames } from './storybook-factory.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -65,6 +67,21 @@ const canonicalStoryExamples = new Map(await Promise.all(
     }];
   }),
 ));
+
+// Blocks (patterns): one page group per pattern, titled
+// `Blocks/<Category>/<Pattern>` with one story per variant, so a variant reads
+// as `Blocks/<Category>/<Pattern>/<Variant>`. Each variant's canonical source
+// is transformed into a helper module and rendered unchanged. The group key is
+// the pattern name, the last segment of its title like a family's name.
+const patternVariants = await patternVariantExamples(repositoryRoot);
+const blockHelperTransforms = await Promise.all(patternVariants.map(async (variant) => {
+  const transformed = await transformWithOxc(variant.text, variant.source, {
+    lang: 'tsx',
+    jsx: { runtime: 'automatic' },
+    sourcemap: false,
+  });
+  return transformed.code.endsWith('\n') ? transformed.code : `${transformed.code}\n`;
+}));
 
 const standardStoryDefinitions = [
   { exportName: 'Default', expression: "createStory(record, 'default')" },
@@ -237,6 +254,91 @@ export default {
 ${storyPagesFor(record).map(({ emit }) => emit).join('\n')}${record.family === 'Autocomplete' ? '' : '\n'}`;
 }
 
+function categoryLabel(category) {
+  if (category === 'faq') return 'FAQ';
+  const words = category.replaceAll('-', ' ');
+  return `${words[0].toUpperCase()}${words.slice(1)}`;
+}
+
+// Groups the variants by pattern and fails when a variant cannot become a page.
+const blockPages = [];
+for (const [index, variant] of patternVariants.entries()) {
+  let page = blockPages.find(({ pattern }) => pattern === variant.patternId);
+  if (!page) {
+    page = {
+      pattern: variant.patternId,
+      slug: variant.patternSlug,
+      family: variant.patternName,
+      category: variant.category,
+      title: `Blocks/${categoryLabel(variant.category)}/${variant.patternName}`,
+      variants: [],
+    };
+    blockPages.push(page);
+  }
+  const exportsFound = [...variant.text.matchAll(/^export (?:function|const) ([A-Z]\w*)/gmu)].map(([, name]) => name);
+  if (exportsFound.length !== 1) {
+    fail(`${variant.source} must export exactly one component to become a Storybook page, found ${exportsFound.length}`);
+  }
+  page.variants.push({
+    ...variant,
+    importName: exportsFound[0],
+    helperName: `block-${variant.patternSlug}-${variant.variantSlug}.example.mjs`,
+    transformedCode: blockHelperTransforms[index],
+  });
+}
+for (const page of blockPages) {
+  if (names.includes(page.family)) fail(`pattern ${page.pattern} is named ${page.family}, which is a component family`);
+  if (blockPages.some((other) => other !== page && other.family === page.family)) fail(`two patterns are named ${page.family}`);
+  try {
+    const exportNames = blockStoryExports(page.pattern, page.variants);
+    page.variants.forEach((variant, index) => { variant.exportName = exportNames[index]; });
+  } catch (error) {
+    fail(error.message);
+  }
+}
+// A scoped run resolves a page group by its lowercased name or slug, so a block cannot share either with a component or another block.
+try {
+  selectionKeyOwners([
+    ...records.map(({ family }) => ({ family, slug: familySlug(family) })),
+    ...blockPages.map(({ family, slug }) => ({ family, slug })),
+  ]);
+} catch (error) {
+  fail(`pattern selection key collision: ${error.message}`);
+}
+
+const blockStoryId = (page) => `muxui-block-${page.slug}`;
+const blockStoryFilename = (page) => `block-${page.slug}.stories.mjs`;
+
+function blockStorySource(page) {
+  return `import React from 'react';
+${page.variants.map((variant) => `import { ${variant.importName} } from './${variant.helperName}';`).join('\n')}
+
+export default {
+  title: ${stringLiteral(page.title)},
+  id: '${blockStoryId(page)}',
+  parameters: {
+    docs: {
+      description: {
+        component: ${stringLiteral(`Private development showcase for the ${page.family} block (pattern ${page.pattern}).`)},
+      },
+    },
+  },
+};
+${page.variants.map((variant) => `export const ${variant.exportName} = {
+  name: ${stringLiteral(variant.variantName)},
+  parameters: {
+    docs: {
+      source: {
+        code: ${JSON.stringify(variant.text)},
+        language: 'tsx',
+      },
+    },
+  },
+  render: () => React.createElement(${variant.importName}),
+};`).join('\n')}
+`;
+}
+
 const outputs = new Map(records.map((record) => [
   storyFilename(record),
   generatedText({ source: generatedSource, body: storySource(record), policy }),
@@ -248,12 +350,19 @@ for (const canonicalExample of canonicalStoryExamples.values()) {
     policy,
   }));
 }
+for (const page of blockPages) {
+  outputs.set(blockStoryFilename(page), generatedText({ source: generatedSource, body: blockStorySource(page), policy }));
+  for (const variant of page.variants) {
+    outputs.set(variant.helperName, generatedText({ source: generatedSource, body: variant.transformedCode, policy }));
+  }
+}
 const manifest = {
   schema: 'muxui-react-storybook-manifest-v1',
   generatedFrom: [
     'packages/react/generated/descriptor.json',
     'catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json',
     ...canonicalStoryDefinitions.map(({ source }) => source),
+    ...(patternVariants.length > 0 ? ['packages/catalog/catalog-sources.json', ...patternVariants.map(({ source }) => source)] : []),
   ],
   count: records.length,
   families: records.map(({ family, tranche, binding }) => ({
@@ -263,16 +372,31 @@ const manifest = {
     defaults: binding.api.defaults ?? {},
     states: binding.states,
   })),
-  pageIndex: records.map((record) => ({
-    family: record.family,
-    storyFile: `apps/react-storybook/.storybook/generated/${storyFilename(record)}`,
-    stories: storyPagesFor(record).map(({ exportName, name, source }) => ({
-      exportName,
-      id: toId(storyId(record), storyNameFromExport(exportName)),
-      name,
-      ...(source ? { source } : {}),
+  // Pattern pages are not component families, so they are listed apart. Their
+  // `family` is the pattern name, the key the scoped audits select by.
+  patterns: blockPages.map(({ pattern, slug, family, category }) => ({ family, slug, pattern, category })),
+  pageIndex: [
+    ...records.map((record) => ({
+      family: record.family,
+      storyFile: `apps/react-storybook/.storybook/generated/${storyFilename(record)}`,
+      stories: storyPagesFor(record).map(({ exportName, name, source }) => ({
+        exportName,
+        id: toId(storyId(record), storyNameFromExport(exportName)),
+        name,
+        ...(source ? { source } : {}),
+      })),
     })),
-  })),
+    ...blockPages.map((page) => ({
+      family: page.family,
+      storyFile: `apps/react-storybook/.storybook/generated/${blockStoryFilename(page)}`,
+      stories: page.variants.map(({ exportName, variantName, source }) => ({
+        exportName,
+        id: toId(blockStoryId(page), storyNameFromExport(exportName)),
+        name: variantName,
+        source,
+      })),
+    })),
+  ],
 };
 const manifestBody = [
   `export const manifest = Object.freeze(${JSON.stringify(manifest, null, 2)});`,
@@ -317,4 +441,5 @@ if (checkOnly) {
   for (const [name, content] of outputs) await writeFile(resolve(generatedRoot, name), content, 'utf8');
 }
 
-console.log(`React Storybook projection: ${records.length} families, ${outputs.size - canonicalStoryDefinitions.length - 1} stories`);
+const blockHelperCount = blockPages.reduce((count, { variants }) => count + variants.length, 0);
+console.log(`React Storybook projection: ${records.length} families, ${outputs.size - canonicalStoryDefinitions.length - blockHelperCount - blockPages.length - 1} stories, ${blockHelperCount} block variants in ${blockPages.length} block pages`);

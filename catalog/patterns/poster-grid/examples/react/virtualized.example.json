@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:poster-grid-virtualized",
+  "kind": "example",
+  "name": "Virtualized",
+  "summary": "A Virtualizer grid of 1,000 poster cards whose column cap follows its container width.",
+  "lifecycle": "experimental",
+  "complexity": "advanced",
+  "prerequisites": [],
+  "source": "catalog/patterns/poster-grid/examples/react/virtualized.tsx"
+}

@@ -36,6 +36,7 @@ import {
   storyArgsForBinding,
 } from '../src/storybook-factory.mjs';
 import { buildTheme, managerThemeCss } from '../.storybook/theme.mjs';
+import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(appRoot, '../..');
@@ -813,6 +814,44 @@ test('NumberField sizing helper is an Oxc projection of the canonical TSX source
   const expected = transformed.code.endsWith('\n') ? transformed.code : `${transformed.code}\n`;
   assert.equal(helperBody, expected);
   assert.equal(manifest.generatedFrom.includes(canonicalSourcePath), true);
+});
+
+test('every pattern variant becomes a Block story that renders its canonical source', async () => {
+  const variants = await patternVariantExamples(repositoryRoot);
+  assert.ok(variants.length > 0, 'the catalog declares pattern variants');
+  const groups = Map.groupBy(variants, ({ patternId }) => patternId);
+  assert.deepEqual(manifest.patterns.map(({ pattern }) => pattern), [...groups.keys()]);
+  assert.equal(new Set(manifest.patterns.map(({ family }) => family)).size, groups.size);
+  for (const [patternId, group] of groups) {
+    const [{ patternSlug, patternName, category }] = group;
+    const label = category === 'faq' ? 'FAQ' : `${category[0].toUpperCase()}${category.slice(1).replaceAll('-', ' ')}`;
+    const storyFile = `block-${patternSlug}.stories.mjs`;
+    const source = await readFile(resolve(appRoot, '.storybook/generated', storyFile), 'utf8');
+    generatedBody(source, storyFile);
+    const story = await import(`../.storybook/generated/${storyFile}`);
+    // A variant reads as Blocks/<Category>/<Pattern>/<Variant> in the sidebar.
+    assert.equal(story.default.title, `Blocks/${label}/${patternName}`, patternId);
+    assert.equal(story.default.id, `muxui-block-${patternSlug}`, patternId);
+    assert.deepEqual(manifest.patterns.find(({ pattern }) => pattern === patternId), {
+      family: patternName, slug: patternSlug, pattern: patternId, category,
+    });
+    const page = manifest.pageIndex.find(({ family }) => family === patternName);
+    assert.equal(page.storyFile, `apps/react-storybook/.storybook/generated/${storyFile}`);
+    assert.deepEqual(page.stories.map(({ name, source: path }) => [name, path]), group.map(({ variantName, source: path }) => [variantName, path]));
+    for (const [index, variant] of group.entries()) {
+      const exported = story[page.stories[index].exportName];
+      assert.equal(exported.name, variant.variantName, variant.variantId);
+      assert.deepEqual(exported.parameters.docs.source, { code: variant.text, language: 'tsx' }, variant.variantId);
+      assert.equal(manifest.generatedFrom.includes(variant.source), true, variant.source);
+      // The helper is an Oxc projection of the canonical TSX, so the story renders the shipped example.
+      const helperName = `block-${patternSlug}-${variant.variantSlug}.example.mjs`;
+      const helper = generatedBody(await readFile(resolve(appRoot, '.storybook/generated', helperName), 'utf8'), helperName);
+      const transformed = await transformWithOxc(variant.text, variant.source, { lang: 'tsx', jsx: { runtime: 'automatic' }, sourcemap: false });
+      assert.equal(helper, transformed.code.endsWith('\n') ? transformed.code : `${transformed.code}\n`, variant.variantId);
+      const markup = renderToStaticMarkup(exported.render());
+      assert.match(markup, /class="muxui-/u, `${variant.variantId} renders Mux UI components`);
+    }
+  }
 });
 
 test('behavior-only state evidence executes the focused Mux UI interactions', async () => {

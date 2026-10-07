@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:poster-grid-css-grid",
+  "kind": "example",
+  "name": "CSS grid",
+  "summary": "A GridList grid whose 2, 4, and 6 column tiers follow its container width through CSS container queries.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/poster-grid/examples/react/css-grid.tsx"
+}

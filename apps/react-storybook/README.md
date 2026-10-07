@@ -13,6 +13,19 @@ R1 tranche metadata and deep-link ID. The explicit
 renderer adapters are checked against that descriptor so the private projection
 cannot silently gain or lose a family.
 
+The generator also emits one page group per catalog pattern (a Block), titled
+`Blocks/<Category>/<Pattern>`, with one story per variant, so a variant reads
+as `Blocks/<Category>/<Pattern>/<Variant>`. Each story renders the variant's
+canonical `catalog/patterns/**` source unchanged and shows that source in Docs.
+A Block page group is listed in the manifest's `patterns` and `pageIndex`, not
+in `families`. The scoped audits select it like a family, by pattern name or
+slug (`MUXUI_STORYBOOK_FAMILIES="Poster grid"` or `poster-grid`), and run light
+and dark axe and colour proof on every variant page. The full audit lists the
+Block pages for those page-level audits too. A variant slug that starts with a
+digit emits a `Variant`-prefixed story export (`2-column` becomes
+`Variant2Column`), and generation fails when a pattern's name or slug is also a
+component family's or another pattern's selection key.
+
 ```sh
 pnpm --filter @muxui/react-storybook storybook
 pnpm --filter @muxui/react-storybook check

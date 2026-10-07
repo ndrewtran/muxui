@@ -6,12 +6,17 @@ import { compileCatalog } from '@muxui/catalog/compiler';
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const fixtureDirectory = 'packages/catalog/test/fixtures/patterns/poster-grid';
 
-/** Compiles the real catalog plus the catalog package's test-only poster-grid pattern. */
+/**
+ * Compiles the real catalog plus the catalog package's test-only poster-grid
+ * pattern. The fixture shares the shipped poster grid's ids, so it stands in
+ * for the shipped `catalog/patterns` records, which are left out.
+ */
 export async function compileFixtureBundle() {
   const manifest = JSON.parse(await readFile(
     join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
     'utf8',
   ));
+  manifest.records = manifest.records.filter(({ path }) => !path.startsWith('catalog/patterns/'));
   manifest.records.push(
     { family: 'pattern', path: `${fixtureDirectory}/artifact.json` },
     { family: 'example', path: `${fixtureDirectory}/examples/react/css-grid.example.json` },

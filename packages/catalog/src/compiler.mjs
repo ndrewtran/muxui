@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 import {
   QUERY_API_VERSIONS,
   SCHEMA_VERSION,
@@ -18,6 +18,7 @@ import {
   validateFamily,
 } from '@muxui/schema';
 import { compileTokenRequirementSet, validateSourceCrosswalk } from '@muxui/tokens';
+import { auditPatternAssets, patternContentIssues } from './pattern-content.mjs';
 import { patternImportIssues } from './pattern-imports.mjs';
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
 
@@ -331,15 +332,28 @@ export async function compileCatalog({
       throw new CatalogSourceError('source-newline', record.source, `${record.source} must use LF newlines`);
     }
   }
+  const variantSources = (pattern) => pattern.variants.map(({ example }) => ({
+    source: examples.find(({ id }) => id === example).source,
+    text: exampleSources[example],
+  }));
   const importIssues = patterns.flatMap((pattern) => patternImportIssues({
     pattern,
     components: records.filter(({ kind }) => kind === 'component'),
-    variants: pattern.variants.map(({ example }) => ({
-      source: examples.find(({ id }) => id === example).source,
-      text: exampleSources[example],
-    })),
+    variants: variantSources(pattern),
   }));
-  if (importIssues.length > 0) throw new SchemaValidationError('MUXUI_RELATION_INVALID', importIssues);
+  // Content rules (E-BL1-10): variant sources, then the assets beside each pattern record.
+  const knownPaths = new Set([
+    ...manifest.records.map(({ path }) => path),
+    ...examples.map(({ source }) => source),
+  ]);
+  const contentIssues = (await Promise.all(loaded.filter(({ record }) => record.kind === 'pattern').map(async ({ entry, record }) => {
+    const directory = posix.dirname(entry.path);
+    const { issues, licensed } = await auditPatternAssets({ repositoryRoot, pattern: record, directory, known: knownPaths });
+    return [...patternContentIssues({ pattern: record, variants: variantSources(record), directory, licensed }), ...issues];
+  }))).flat();
+  if (importIssues.length + contentIssues.length > 0) {
+    throw new SchemaValidationError('MUXUI_RELATION_INVALID', [...importIssues, ...contentIssues]);
+  }
 
   const artifacts = loaded.map(({ entry, record, sourceBytes }) => {
     const revision = contentRevision(entry.family, record, { sourceBytes });

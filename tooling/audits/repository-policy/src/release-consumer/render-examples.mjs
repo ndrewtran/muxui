@@ -1,6 +1,8 @@
 // Server half of the packed SSR/hydration proof. Run from a clean consumer:
 // `node render-examples.mjs <plan.json> <result.json>`. Renders every planned
 // component with react-dom/server and records markup for the hydration half.
+// A module entry may set `measuredLayout: true`; the hydration half then gives
+// jsdom a measured layout for that module's components.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 import { pathToFileURL } from 'node:url';
@@ -17,7 +19,7 @@ for (const specifier of plan.exportModules) exportKeys[specifier] = Object.keys(
 const renders = [];
 const failures = [];
 const started = performance.now();
-for (const { file, components } of plan.modules) {
+for (const { file, components, measuredLayout = false } of plan.modules) {
   const module = await import(pathToFileURL(resolve(file)).href);
   const names = components ?? Object.keys(module).filter((name) => typeof module[name] === 'function');
   if (names.length === 0) failures.push(`${file}: no component export`);
@@ -26,7 +28,7 @@ for (const { file, components } of plan.modules) {
     const renderStarted = performance.now();
     try {
       const html = renderToString(React.createElement(module[name]));
-      renders.push({ id, file, name, html, milliseconds: performance.now() - renderStarted, covers: module.fixtureCoverage?.[name] ?? [] });
+      renders.push({ id, file, name, html, measuredLayout, milliseconds: performance.now() - renderStarted, covers: module.fixtureCoverage?.[name] ?? [] });
     } catch (error) {
       failures.push(`${id}: ${error?.stack ?? error}`);
     }

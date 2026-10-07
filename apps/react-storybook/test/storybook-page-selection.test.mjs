@@ -68,6 +68,36 @@ test('storybook page selection covers every page in one component family and all
   assert.deepEqual(pageTheme.pages.map(({ id }) => id), ['muxui-react-r1-2-number-field--sizing']);
 });
 
+test('storybook page selection treats a Block page group like a family and lists Block pages in the full audit', () => {
+  const [block] = manifest.patterns;
+  assert.ok(block, 'the generated manifest lists at least one Block');
+  const group = manifest.pageIndex.find(({ family }) => family === block.family);
+  assert.ok(!manifest.families.some(({ family }) => family === block.family), 'a Block is not a component family');
+  for (const key of [block.family, block.slug]) {
+    const component = resolveStorybookPageSelection(env('component', key));
+    assert.deepEqual(component.families, [block.family]);
+    assert.deepEqual(component.pages.map(({ id }) => id), group.stories.map(({ id }) => id));
+  }
+  const [first] = group.stories;
+  assert.deepEqual(resolveStorybookPageSelection(env('story', block.family, first.id)).pages.map(({ id }) => id), [first.id]);
+  assert.deepEqual(resolveStorybookPageSelection(env('theme', block.family)).pages.map(({ id }) => id), group.stories.map(({ id }) => id));
+  assert.throws(() => resolveStorybookPageSelection(env('story', 'Button', first.id)), /FAMILY_MISMATCH/u);
+
+  // The full audit walks every component family itself and lists only the Block pages for the page-level audits.
+  const full = resolveStorybookPageSelection({});
+  assert.equal(full.proof, 'full');
+  assert.deepEqual(
+    full.pages.map(({ id }) => id),
+    manifest.patterns.flatMap(({ family }) => manifest.pageIndex.find((page) => page.family === family).stories.map(({ id }) => id)),
+  );
+  assert.throws(() => resolveStorybookPageSelection(env('full', block.family)), /FULL_FILTER_UNEXPECTED/u);
+
+  // The served index titles a Block page Blocks/<Category>/<Pattern>, whose last segment is the group key.
+  const selection = resolveStorybookPageSelection(env('story', block.family, first.id));
+  const runtimeEntry = { id: first.id, type: 'story', title: `Blocks/Category/${block.family}`, name: first.name };
+  assert.deepEqual(validateRuntimeStoryPages(selection, { entries: { [first.id]: runtimeEntry } }), [runtimeEntry]);
+});
+
 test('storybook page selection fails closed for empty, unknown, or mismatched selectors', () => {
   assert.throws(() => resolveStorybookPageSelection(env('story', 'Button', '')), /STORY_IDS_EMPTY/u);
   assert.throws(() => resolveStorybookPageSelection(env('story', 'Button', 'muxui-react-missing--default')), /STORY_ID_UNKNOWN/u);

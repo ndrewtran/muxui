@@ -2233,8 +2233,9 @@ test('catalog edits run the React Native and Web package checks but not the Reac
   }
 });
 
-test('pattern sources route to the catalog, tooling goldens, and docs without a React family', async () => {
+test('pattern sources route to the catalog, tooling goldens, docs, and the packed example type test without a React family', async () => {
   const directory = 'catalog/patterns/poster-grid';
+  const browserTest = 'test/browser/pattern-poster-grid.test.mjs';
   const inputs = [
     `${directory}/artifact.json`,
     `${directory}/examples/react/css-grid.example.json`,
@@ -2247,20 +2248,215 @@ test('pattern sources route to the catalog, tooling goldens, and docs without a 
     // Patterns belong to @muxui/catalog, like guides: its dependents run their own checks.
     assert.deepEqual(result.packageChecks, ['@muxui/react-native', '@muxui/tooling', '@muxui/web'], path);
     assert.deepEqual(result.reactFamilies, [], path);
-    assert.deepEqual(result.storyRuns, [], path);
-    assert.deepEqual(result.storyIds, [], path);
     assert.equal(result.tokens || result.reactTheme || result.reactPackageFull || result.storyTooling, false, path);
     assert.equal(
       result.reasons[0],
-      `${path} is a canonical pattern input; validate the catalog, its dense goldens, and the docs that render it`,
+      `${path} is a canonical pattern input; validate the catalog, its dense goldens, the docs that render it, and its Storybook pages and ${browserTest}`,
     );
-    // The React example type test walks only catalog/components, so no pattern input routes to it.
-    assert.deepEqual(result.reactTestFiles, [], path);
+    // The packed React example type test now enumerates pattern variants, so a variant source joins it
+    // (E-BL1-03); the pattern's declared browser test runs for every input of an interactive pattern.
+    assert.deepEqual(
+      result.reactTestFiles,
+      [browserTest, ...(path.endsWith('.tsx') ? ['test/catalog-examples-types.test.mjs'] : [])],
+      path,
+    );
   }
-  const commands = executionCommands(await plan([inputs[0]], { packages: workspacePackages }), { packages: workspacePackages })
+  // A pattern with no declared browser test adds none.
+  const hero = await plan(['catalog/patterns/hero/examples/react/centered.tsx']);
+  assert.deepEqual(hero.reactTestFiles, ['test/catalog-examples-types.test.mjs']);
+  const commands = executionCommands(await plan([inputs[2]], { packages: workspacePackages }), { packages: workspacePackages })
     .map(({ args }) => args.join(' '));
   assert.ok(commands.includes('--filter @muxui/catalog run check'));
   assert.ok(commands.includes('--filter @muxui/tooling run check'));
+  assert.ok(commands.includes('--filter @muxui/react exec node --test --test-concurrency=1 test/catalog-examples-types.test.mjs'));
+  assert.ok(commands.includes(`--filter @muxui/react exec node --test --test-concurrency=1 ${browserTest}`));
+});
+
+test('pattern inputs select their generated Storybook pages for the scoped audits', async () => {
+  const directory = 'catalog/patterns/poster-grid';
+  const [cssId, virtualizedId] = ['css-grid', 'virtualized'].map((name) => `muxui-block-poster-grid--${name}`);
+  const withPages = {
+    pageIndex: [...pageIndex,
+      {
+        family: 'Poster grid',
+        storyFile: 'apps/react-storybook/.storybook/generated/block-poster-grid.stories.mjs',
+        stories: [
+          { id: cssId, exportName: 'CssGrid', name: 'CSS grid', source: `${directory}/examples/react/css-grid.tsx` },
+          { id: virtualizedId, exportName: 'Virtualized', name: 'Virtualized', source: `${directory}/examples/react/virtualized.tsx` },
+        ],
+      },
+      {
+        family: 'Hero',
+        storyFile: 'apps/react-storybook/.storybook/generated/block-hero.stories.mjs',
+        stories: [{ id: 'muxui-block-hero--centered', exportName: 'Centered', name: 'Centered', source: 'catalog/patterns/hero/examples/react/centered.tsx' }],
+      },
+    ],
+  };
+  const storyRun = (storyIds) => ({
+    proof: 'story',
+    families: ['Poster grid'],
+    storyIds,
+    reason: 'only the exact canonical story pages whose sources changed',
+  });
+
+  // A variant source selects only its own page.
+  const variant = await plan([`${directory}/examples/react/css-grid.tsx`], withPages);
+  assert.deepEqual(variant.storyIds, [cssId]);
+  assert.deepEqual(variant.storyIdFamilies, { [cssId]: 'Poster grid' });
+  assert.deepEqual(variant.storyRuns, [storyRun([cssId])]);
+  assert.deepEqual(variant.storyFamilies, []);
+
+  // The record, an example record, and an asset can change every page of that pattern, and no other pattern's.
+  for (const path of [`${directory}/artifact.json`, `${directory}/examples/react/css-grid.example.json`, `${directory}/assets/mark.svg`]) {
+    const result = await plan([path], withPages);
+    assert.deepEqual(result.storyIds, [cssId, virtualizedId], path);
+    assert.deepEqual(result.storyRuns, [storyRun([cssId, virtualizedId])], path);
+  }
+  const hero = await plan(['catalog/patterns/hero/artifact.json'], withPages);
+  assert.deepEqual(hero.storyRuns, [{ ...storyRun(['muxui-block-hero--centered']), families: ['Hero'] }]);
+
+  // The scoped audit runs with the Block's family name and exact page IDs.
+  const commands = executionCommands(variant, { packages, environment: {} });
+  assert.deepEqual(commands.at(-1).env, {
+    MUXUI_STORYBOOK_AUDIT_PROOF: 'story',
+    MUXUI_STORYBOOK_FAMILIES: 'Poster grid',
+    MUXUI_STORYBOOK_STORY_IDS: cssId,
+    MUXUI_STORYBOOK_A11Y_WORKERS: '1',
+    MUXUI_STORYBOOK_COLORS_WORKERS: '2',
+  });
+
+  // A removed pattern has no page left to audit, and stray inputs name no pattern.
+  assert.deepEqual((await plan([`${directory}/artifact.json`], { pageIndex })).storyRuns, []);
+  assert.deepEqual((await plan(['catalog/patterns/README.md'], withPages)).storyRuns, []);
+
+  // Pattern inputs need the generated page index to route.
+  const needs = (paths) => needsStorybookGeneration(paths, config);
+  assert.equal(needs([`${directory}/examples/react/css-grid.tsx`]), true);
+  assert.equal(needs([`${directory}/artifact.json`]), true);
+  assert.equal(needs(['catalog/guides/discovery.md']), false);
+});
+
+const posterGridPages = [
+  {
+    family: 'Poster grid',
+    storyFile: 'apps/react-storybook/.storybook/generated/block-poster-grid.stories.mjs',
+    stories: ['css-grid', 'virtualized'].map((name) => ({
+      id: `muxui-block-poster-grid--${name}`,
+      exportName: name === 'css-grid' ? 'CssGrid' : 'Virtualized',
+      name,
+      source: `catalog/patterns/poster-grid/examples/react/${name}.tsx`,
+    })),
+  },
+  {
+    family: 'Hero',
+    storyFile: 'apps/react-storybook/.storybook/generated/block-hero.stories.mjs',
+    stories: [{ id: 'muxui-block-hero--centered', exportName: 'Centered', name: 'Centered', source: 'catalog/patterns/hero/examples/react/centered.tsx' }],
+  },
+];
+const posterGridBrowserTest = 'test/browser/pattern-poster-grid.test.mjs';
+const typesTest = 'test/catalog-examples-types.test.mjs';
+const gridListRecord = { family: 'GridList', export: 'GridList', slug: 'grid-list', source: collectionsPath, parts: ['root', 'item'] };
+// The patterns the catalog declares: the poster grid uses GridList, the hero uses no fixture component.
+const declaredPatterns = [
+  { slug: 'poster-grid', components: ['grid-list', 'virtualizer', 'image', 'text', 'link', 'button'] },
+  { slug: 'hero', components: ['heading'] },
+];
+const participantFixture = {
+  records: [...records, gridListRecord],
+  pageIndex: [...pageIndex, ...posterGridPages],
+  patterns: declaredPatterns,
+  moduleSources: { ...cssModuleSources, [collectionsPath]: 'export const Tree = () => null; export const GridList = () => null;' },
+  componentTestSources: {
+    ...componentTestSources,
+    ...Object.fromEntries(['test/browser/grid-list-layout.test.mjs', posterGridBrowserTest].map((file) => [file, readFileSync(resolve(repositoryRoot, 'packages/react', file), 'utf8')])),
+  },
+};
+
+test('a participant component change plans its patterns Block pages, packed type test, and browser test', async () => {
+  const posterIds = posterGridPages[0].stories.map(({ id }) => id);
+  const cssPath = 'packages/react/src/styles/components.css';
+  const gridListCss = { [cssPath]: { before: '.muxui-grid-list { color: black; }', after: '.muxui-grid-list { color: white; }' } };
+  const gridListSource = {
+    before: 'export const Tree = () => null; export const GridList = () => null;',
+    after: 'export const Tree = () => null; export const GridList = () => 1;',
+  };
+  const changes = {
+    'component CSS': await plan([cssPath], { ...participantFixture, textSnapshots: gridListCss }),
+    'component source': await plan([collectionsPath], {
+      ...participantFixture,
+      textSnapshots: { [collectionsPath]: gridListSource },
+      moduleSources: { ...participantFixture.moduleSources, [collectionsPath]: gridListSource },
+    }),
+  };
+  for (const [change, result] of Object.entries(changes)) {
+    assert.deepEqual(result.reactFamilies, ['GridList'], change);
+    assert.deepEqual(result.storyIds, posterIds, `${change} plans the Block pages and no other pattern's`);
+    assert.deepEqual(result.reactTestFiles.filter((file) => file === posterGridBrowserTest || file === typesTest).sort(), [typesTest, posterGridBrowserTest].sort(), change);
+    assert.ok(result.reasons.some((reason) => reason.startsWith('poster-grid uses changed grid-list')), change);
+    assert.ok(result.storyRuns.some(({ proof, families, storyIds }) => proof === 'story' && families.includes('Poster grid') && storyIds.length === 2), change);
+    const commands = executionCommands(result, { packages, environment: {} }).map(({ args }) => args.join(' '));
+    assert.ok(commands.includes(`--filter @muxui/react exec node --test --test-concurrency=1 ${posterGridBrowserTest}`), change);
+  }
+
+  // A component no pattern uses plans no pattern proof.
+  const tree = await plan([cssPath], {
+    ...participantFixture,
+    textSnapshots: { [cssPath]: { before: '.muxui-tree { color: black; }', after: '.muxui-tree { color: white; }' } },
+    moduleSources: participantFixture.moduleSources,
+  });
+  assert.deepEqual(tree.reactFamilies, ['Tree']);
+  assert.deepEqual(tree.storyIds, []);
+  assert.ok(!tree.reactTestFiles.includes(posterGridBrowserTest));
+
+  // The routing follows the catalog: with no declared participant, a GridList change plans no pattern.
+  const undeclared = await plan([cssPath], { ...participantFixture, patterns: [], textSnapshots: gridListCss });
+  assert.deepEqual(undeclared.storyIds, []);
+  assert.ok(!undeclared.reactTestFiles.includes(posterGridBrowserTest));
+
+  // A package-wide React change reaches every pattern's pages; the full React check runs the tests.
+  const full = await plan(['packages/react/src/generate.mjs'], { ...participantFixture, moduleSources: {} });
+  assert.equal(full.reactPackageFull, true);
+  assert.deepEqual(full.storyIds, [...posterIds].concat('muxui-block-hero--centered').sort());
+});
+
+test('a catalog source manifest change that adds or removes a pattern plans Storybook generation and the pattern proofs', async () => {
+  const path = 'packages/catalog/catalog-sources.json';
+  const entry = (file) => ({ family: file.endsWith('artifact.json') ? 'pattern' : 'example', path: file });
+  const poster = ['artifact.json', 'examples/react/css-grid.example.json', 'examples/react/virtualized.example.json'].map((file) => entry(`catalog/patterns/poster-grid/${file}`));
+  const base = { records: [{ family: 'guide', path: 'catalog/guides/discovery.md' }] };
+  const manifestText = (value) => JSON.stringify(value);
+  const withPoster = manifestText({ records: [...base.records, ...poster] });
+  const without = manifestText(base);
+  const posterIds = posterGridPages[0].stories.map(({ id }) => id);
+
+  const added = await plan([path], { ...participantFixture, textSnapshots: { [path]: { before: without, after: withPoster } } });
+  assert.equal(added.storyTooling, true);
+  assert.deepEqual(added.storyIds, posterIds);
+  assert.ok(added.reactTestFiles.includes(posterGridBrowserTest) && added.reactTestFiles.includes(typesTest));
+  assert.ok(added.reasons.some((reason) => reason.includes('adds or removes entries of poster-grid')));
+  assert.ok(executionCommands(added, { packages, environment: {} }).some(({ args }) => args.join(' ') === '--filter @muxui/react-storybook run generate:check'));
+
+  // A removed pattern leaves no page to audit, but generation still has to catch up.
+  const removed = await plan([path], { ...participantFixture, pageIndex, textSnapshots: { [path]: { before: withPoster, after: without } } });
+  assert.equal(removed.storyTooling, true);
+  assert.deepEqual(removed.storyIds, []);
+
+  // An entry outside catalog/patterns plans no Storybook generation.
+  const unrelated = await plan([path], { ...participantFixture, textSnapshots: { [path]: { before: without, after: manifestText({ records: [...base.records, entry('catalog/components/button/artifact.json')] }) } } });
+  assert.equal(unrelated.storyTooling, false);
+  assert.deepEqual(unrelated.storyIds, []);
+
+  // Preview mode must also prepare the page index.
+  assert.equal(needsStorybookGeneration([path], config, { patternManifestChanged: true }), true);
+  assert.equal(needsStorybookGeneration([path], config, { patternManifestChanged: false }), false);
+});
+
+test('the Block naming helper and its test route to the unit tests that read them', async () => {
+  const helper = await plan(['apps/react-storybook/src/block-pages.mjs']);
+  assert.equal(helper.storyTooling, true);
+  assert.deepEqual(helper.storyUnitTests.map(({ file }) => file), ['test/block-pages.test.mjs', 'test/storybook-family-selection.test.mjs']);
+  const unit = await plan(['apps/react-storybook/test/block-pages.test.mjs']);
+  assert.deepEqual(unit.storyUnitTests, [{ file: 'test/block-pages.test.mjs' }]);
 });
 
 test('catalog fixtures plan both the catalog and the tooling tests that read them', async () => {

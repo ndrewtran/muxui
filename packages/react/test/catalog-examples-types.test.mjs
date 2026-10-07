@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
+import { patternVariantExamples } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -37,6 +38,19 @@ async function currentReactExamples() {
   }
   assert.equal(new Set(descriptor.bindings.map(({ binding }) => binding)).size, descriptor.bindings.length);
   assert.equal(new Set(examples.map(({ component }) => component.slug)).size, descriptor.bindings.length);
+  // Pattern variants are acceptance fixtures for admitted components in composition (E-BL1-03).
+  const variants = await patternVariantExamples(repositoryRoot);
+  assert.ok(variants.length > 0, 'the catalog declares no pattern variant example');
+  for (const variant of variants) {
+    assert.equal(seen.has(variant.source), false, `duplicate canonical example ${variant.source}`);
+    seen.add(variant.source);
+    assert.equal(variant.text.length > 0, true, `${variant.variantId} example is empty`);
+    examples.push({
+      component: { slug: `pattern-${variant.patternSlug}`, family: variant.patternName },
+      example: variant.source,
+      sourcePath: resolve(repositoryRoot, variant.source),
+    });
+  }
   return examples;
 }
 
