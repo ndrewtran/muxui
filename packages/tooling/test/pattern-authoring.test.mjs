@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
 import { createCatalogApi } from '@muxui/catalog';
-import { compileCatalog } from '@muxui/catalog/compiler';
+import { CatalogSourceError, compileCatalog } from '@muxui/catalog/compiler';
 import { CANONICAL_IMPORT_FORM } from '@muxui/catalog/pattern-imports';
 import {
   SchemaValidationError,
@@ -533,15 +533,22 @@ test('E-BL1-02: affected closure reaches a pattern from a variant source, its sc
   const closure = (sourcePaths) => affectedClosure({ context, sourcePaths });
   const isRecordPath = (value) => value.startsWith('catalog/patterns/');
 
-  // From a variant .tsx to its pattern and sibling variants, but not up to its components.
+  // From a variant .tsx to its pattern and sibling variants.
   const fromSource = closure([cssSource]);
   for (const id of [cssId, patternId, virtualizedId]) assert.ok(fromSource.artifacts.includes(id), id);
-  assert.equal(fromSource.artifacts.includes('muxui:component:grid-list'), false);
   assert.ok(fromSource.canonicalSources.includes(patternPath));
   assert.ok(fromSource.canonicalSources.includes(`${directory}/examples/react/virtualized.tsx`));
   assert.ok(fromSource.packages.some(({ name }) => name === '@muxui/catalog'));
   assert.ok(fromSource.projections.includes('packages/catalog/generated/catalog.json'));
-  assert.deepEqual(fromSource.participantLinks.map(({ pattern }) => pattern), [patternId, patternId]);
+
+  // Direction: a pattern never reaches its participants, though its links still list them.
+  const fromPattern = closure([patternPath]);
+  for (const reached of [fromSource, fromPattern]) {
+    assert.deepEqual(reached.participantLinks.map(({ pattern }) => pattern), [patternId, patternId]);
+    for (const { component } of reached.participantLinks) {
+      assert.equal(reached.artifacts.includes(component), false, component);
+    }
+  }
 
   // From a schema to every pattern, with the declared type projection.
   const fromSchema = closure(['packages/schema/schemas/pattern.schema.json']);
@@ -552,18 +559,29 @@ test('E-BL1-02: affected closure reaches a pattern from a variant source, its sc
   const fromExampleSchema = closure(['packages/schema/schemas/example.schema.json']);
   for (const id of [cssId, patternId]) assert.ok(fromExampleSchema.artifacts.includes(id), id);
 
-  // From a component to the patterns that use it, through the derived participant link.
-  const fromComponent = closure(['catalog/components/virtualizer/artifact.json']);
-  assert.ok(fromComponent.artifacts.includes(patternId));
-  assert.ok(fromComponent.artifacts.includes(virtualizedId));
-  assert.ok(fromComponent.canonicalSources.includes(patternPath));
-  assert.deepEqual(
-    fromComponent.participantLinks.filter(({ pattern }) => pattern === patternId),
-    [
-      { pattern: patternId, role: 'list', component: 'muxui:component:grid-list' },
-      { pattern: patternId, role: 'scroller', component: 'muxui:component:virtualizer' },
-    ],
-  );
+  // From a component, every pattern that uses it is always included. The closure
+  // over-approximates (through the shared default-theme token it also reaches
+  // patterns that use other components), so only inclusion is asserted.
+  const { artifacts } = context.catalogBundle;
+  const components = artifacts.filter(({ kind }) => kind === 'component');
+  assert.ok(components.length > 0);
+  for (const component of components) {
+    const users = artifacts.filter(({ kind, record }) => (
+      kind === 'pattern' && record.participants.some((participant) => participant.component === component.id)
+    ));
+    assert.ok(users.length > 0, `${component.id} is used by a staged pattern`);
+    const fromComponent = closure([component.source.record]);
+    for (const user of users) {
+      assert.ok(fromComponent.artifacts.includes(user.id), `${component.id} reaches ${user.id}`);
+      assert.ok(fromComponent.canonicalSources.includes(user.source.record), user.source.record);
+      for (const { example } of user.record.variants) {
+        assert.ok(fromComponent.artifacts.includes(example), example);
+      }
+      assert.ok(fromComponent.participantLinks.some((link) => (
+        link.pattern === user.id && link.component === component.id
+      )));
+    }
+  }
   assert.throws(
     () => closure([`${directory}/examples/react/undeclared.tsx`]),
     (error) => error.ruleId === 'authoring.closure.source-undeclared',
@@ -680,6 +698,70 @@ test('E-BL1-02: a duplicate variant is diagnosed through the manifest entry the 
   assert.equal(unattributed.details.source.record, null);
   assert.equal(unattributed.details.owner, null);
   assert.throws(() => diagnoseCompileFailure({ error: new Error('plain'), records }), /plain/u);
+});
+
+test('E-BL1-02: a colliding variant id is attributed to the later declaration and references the earlier one', async () => {
+  // Pattern `poster` with variant `grid-css-grid` scaffolds poster-grid's `css-grid` example id.
+  const colliding = () => {
+    const input = calloutInput();
+    return scaffoldPattern({ ...input, slug: 'poster', variants: [{ ...input.variants[0], slug: 'grid-css-grid' }] });
+  };
+  const existing = `${directory}/examples/react/css-grid.example.json`;
+  const collision = 'catalog/patterns/poster/examples/react/grid-css-grid.example.json';
+  assert.equal(JSON.parse(colliding().writeSet.find(({ path }) => path === collision).bytes).id, cssId);
+
+  // The later manifest entry is named whichever scaffold declares the id first.
+  for (const [list, later, earlier] of [
+    [[...previews(), colliding()], collision, existing],
+    [[colliding(), ...previews()], existing, collision],
+  ]) {
+    const outcome = await compileStaged(list);
+    assert.equal(outcome.error?.code, 'MUXUI_ARTIFACT_ID_INVALID', String(outcome.error));
+    const { diagnostics: [diagnostic] } = diagnoseCompileFailure(outcome);
+    assert.equal(diagnostic.ruleId, 'authoring.compile.graph-invalid');
+    assert.equal(diagnostic.details.artifactId, cssId);
+    assert.deepEqual(diagnostic.details.source, { record: later, path: '$/id' });
+    assert.deepEqual(diagnostic.details.duplicateOf, { artifactId: cssId, record: earlier });
+    assert.equal(diagnostic.details.owner.name, 'example-contract');
+    assert.equal(diagnostic.details.owner.schemaPointer, '#/properties/id');
+    assert.match(diagnostic.message, new RegExp(`${cssId} is duplicated; first declared in ${earlier.replaceAll('.', '\\.')}`, 'u'));
+  }
+
+  // With only one declaration known, the failure stays unlinked instead of blaming it.
+  const outcome = await compileStaged([...previews(), colliding()]);
+  const known = outcome.records.filter(({ record }) => record.id === cssId);
+  assert.equal(known.length, 2);
+  const [partial] = diagnoseCompileFailure({ error: outcome.error, records: [known[0]] }).diagnostics;
+  assert.equal(partial.details.artifactId, cssId);
+  assert.equal(partial.details.source.record, null);
+  assert.equal(Object.hasOwn(partial.details, 'duplicateOf'), false);
+});
+
+test('E-BL1-02: a hand-edited CRLF variant is diagnosed at its example record and source file', async () => {
+  const { error, records } = await compileFailure({
+    edit: (files) => files.set(cssSource, cssText.replaceAll('\n', '\r\n')),
+  });
+  assert.ok(error instanceof CatalogSourceError);
+  const { valid, diagnostics: [diagnostic] } = diagnoseCompileFailure({ error, records });
+  assert.equal(valid, false);
+  assert.equal(diagnostic.ruleId, 'authoring.compile.source-newline');
+  assert.equal(diagnostic.code, 'MUXUI_CATALOG_SOURCE_INVALID');
+  assert.equal(diagnostic.details.artifactId, cssId);
+  assert.deepEqual(diagnostic.details.source, {
+    record: `${directory}/examples/react/css-grid.example.json`,
+    path: '$/source',
+    file: cssSource,
+  });
+  assert.equal(diagnostic.details.owner.name, 'example-contract');
+  assert.match(diagnostic.message, /must use LF newlines/u);
+  assert.ok(diagnostic.message.includes(cssSource));
+
+  // Without the record the file link remains; other source failures still throw.
+  const [unlinked] = diagnoseCompileFailure({ error, records: [] }).diagnostics;
+  assert.equal(unlinked.details.source.record, null);
+  assert.equal(unlinked.details.source.file, cssSource);
+  const other = new CatalogSourceError('other', cssSource, `${cssSource} is unreadable`);
+  assert.throws(() => diagnoseCompileFailure({ error: other, records }), /is unreadable/u);
 });
 
 test('E-BL1-02: pattern records diagnose at their field owners through canonical source diagnosis', async () => {
@@ -827,6 +909,11 @@ test('E-BL1-02: an injected stable pattern field must couple scaffold, diff, dia
   });
   const readiness = { scaffold: false, diff: false, diagnostics: false, closure: false };
 
+  // The required field must be supplied: omitting it is a scaffold rule, not a later schema failure.
+  const omitted = authoringFailure(() => scaffoldPattern({ ...posterGridInput(), authoring }));
+  assert.equal(omitted.ruleId, 'authoring.scaffold.decision-required');
+  assert.equal(omitted.details.field, 'newStableField');
+
   const preview = scaffoldPattern(input);
   readiness.scaffold = preview.record.newStableField === 'baseline';
   assert.equal(Object.values(readiness).every(Boolean), false);
@@ -865,4 +952,58 @@ test('E-BL1-02: an injected stable pattern field must couple scaffold, diff, dia
     && closure.canonicalSources.includes(patternPath)
     && closure.projections.includes('packages/catalog/generated/catalog.json');
   assert.equal(Object.values(readiness).every(Boolean), true);
+});
+
+test('E-BL1-02: an injected required example field must couple variant decisions to the example schema', async () => {
+  const exampleSchema = JSON.parse(await readFile(
+    resolve(repositoryRoot, 'packages/schema/schemas/example.schema.json'),
+    'utf8',
+  ));
+  const ownership = structuredClone(loadFieldOwnershipRegistry());
+  exampleSchema.required.push('newExampleField');
+  exampleSchema.properties.newExampleField = { type: 'string', minLength: 1 };
+  const authoring = { schemas: { 'example.schema.json': exampleSchema }, ownership };
+  const input = () => {
+    const value = { ...posterGridInput(), authoring };
+    for (const variant of value.variants) variant.newExampleField = 'baseline';
+    return value;
+  };
+
+  // The field is not a variant decision until the schema declares it; then it cannot be scaffolded without metadata.
+  const unowned = posterGridInput();
+  unowned.variants[0].newExampleField = 'baseline';
+  assert.equal(authoringFailure(() => scaffoldPattern(unowned)).ruleId, 'authoring.scaffold.variants');
+  assert.throws(
+    () => scaffoldPattern(input()),
+    (error) => error instanceof SchemaValidationError
+      && /missing x-muxui-authoring metadata/u.test(error.message),
+  );
+
+  exampleSchema.properties.newExampleField['x-muxui-authoring'] = {
+    effect: 'incompatible',
+    revisionAxes: ['content'],
+  };
+  ownership.fields.push({
+    class: 'authored',
+    name: 'newExampleField',
+    owner: 'example-contract',
+    schema: 'example.schema.json',
+    schemaPointer: '#/properties/newExampleField',
+  });
+
+  // Every variant must supply the required field, and it lands on each example record only.
+  const preview = scaffoldPattern(input());
+  assert.deepEqual(preview.examples.map(({ record }) => record.newExampleField), ['baseline', 'baseline']);
+  assert.equal(Object.hasOwn(preview.record, 'newExampleField'), false);
+  for (const { recordPath, record } of preview.examples) {
+    const written = JSON.parse(preview.writeSet.find(({ path }) => path === recordPath).bytes);
+    assert.equal(written.newExampleField, record.newExampleField);
+  }
+  for (const omittedFrom of [0, 1]) {
+    const partial = input();
+    delete partial.variants[omittedFrom].newExampleField;
+    const failure = authoringFailure(() => scaffoldPattern(partial));
+    assert.equal(failure.ruleId, 'authoring.scaffold.decision-required', `variant ${omittedFrom}`);
+    assert.equal(failure.details.field, 'newExampleField');
+  }
 });

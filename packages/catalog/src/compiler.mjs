@@ -21,6 +21,21 @@ import { compileTokenRequirementSet, validateSourceCrosswalk } from '@muxui/toke
 import { patternImportIssues } from './pattern-imports.mjs';
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
 
+/**
+ * A source file the compiler rejects before schema or graph checks. `reason`
+ * names the rule and `path` the repository-relative file, so authoring tools
+ * can link the failure without parsing the message.
+ */
+export class CatalogSourceError extends Error {
+  constructor(reason, path, message) {
+    super(`MUXUI_CATALOG_SOURCE_INVALID: ${message}`);
+    this.name = 'CatalogSourceError';
+    this.code = 'MUXUI_CATALOG_SOURCE_INVALID';
+    this.reason = reason;
+    this.path = path;
+  }
+}
+
 function compareText(left, right) {
   return left < right ? -1 : left > right ? 1 : 0;
 }
@@ -313,7 +328,7 @@ export async function compileCatalog({
     const record = examples.find((example) => example.id === id);
     // The bundle carries variant source text in canonical JSON, which folds CR newlines.
     if (exampleSources[id].includes('\r')) {
-      throw new Error(`MUXUI_CATALOG_SOURCE_INVALID: ${record.source} must use LF newlines`);
+      throw new CatalogSourceError('source-newline', record.source, `${record.source} must use LF newlines`);
     }
   }
   const importIssues = patterns.flatMap((pattern) => patternImportIssues({

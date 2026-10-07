@@ -21,7 +21,7 @@ import {
 import {
   discoverWorkspacePackages,
 } from '../../../tooling/audits/repository-policy/src/workspace-packages.mjs';
-import { compileCatalog } from '@muxui/catalog/compiler';
+import { CatalogSourceError, compileCatalog } from '@muxui/catalog/compiler';
 import { CANONICAL_IMPORT_FORM, scanReactImports } from '@muxui/catalog/pattern-imports';
 
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
@@ -195,6 +195,11 @@ function assertVariantSource(slug, sourceText) {
  * complexity, prerequisites). The write set holds only records and sources;
  * `manifestEntries` previews the `catalog-sources.json` lines to add. Nothing
  * is written, and consumer files are never produced.
+ *
+ * The scaffold checks schema shape and import form only. It does not check that
+ * imported components are declared participants, that participants exist, or
+ * that an id is free; the catalog is not consulted. Those fail at compile, and
+ * `diagnoseCompileFailure` maps them to source-linked diagnostics.
  */
 export function scaffoldPattern({ slug, decisions, variants, authoring = {} } = {}) {
   assertSlug(slug, 'slug');
@@ -470,13 +475,37 @@ export function diagnoseCanonicalSource({
  * Graph and import issues name their record by `artifactId`. The compiler's
  * per-file schema errors name nobody, so each is attributed to the first entry
  * that fails with the same issue, which is the entry the compile stopped at.
- * Import issues also link the variant source file and line, and quote the
- * canonical import form.
+ * A duplicated id is the exception: the validator stops at the later
+ * declaration, so that record is the one named, and the diagnostic also
+ * references the earlier one in `details.duplicateOf`. Import issues also link
+ * the variant source file and line, and quote the canonical import form. A
+ * variant source with CRLF newlines links the variant's example record and
+ * source file. Any other non-schema failure is rethrown.
  */
 export function diagnoseCompileFailure({ error, records = [], authoring = {} } = {}) {
-  if (!(error instanceof SchemaValidationError)) throw error;
+  const newline = error instanceof CatalogSourceError && error.reason === 'source-newline';
+  if (!newline && !(error instanceof SchemaValidationError)) throw error;
   for (const [index, { path }] of records.entries()) {
     assertRelativePath(path, `records/${index}/path`);
+  }
+  if (newline) {
+    const entry = records.find(({ family, record }) => family === 'example' && record.source === error.path);
+    return deepFreeze({
+      valid: false,
+      diagnostics: [sourceDiagnostic(
+        'authoring.compile.source-newline',
+        `${error.path} must use LF newlines: variant sources are bundled as exact bytes, so convert its CRLF line endings to LF`,
+        {
+          record: entry?.record ?? null,
+          recordPath: entry?.path ?? null,
+          path: '$/source',
+          owner: entry ? fieldOwner('example', '$/source', authoring) : null,
+          code: error.code,
+          link: { file: error.path },
+          command: 'pnpm --filter @muxui/catalog check',
+        },
+      )],
+    });
   }
   const issuesOf = (entry) => {
     try {
@@ -487,12 +516,18 @@ export function diagnoseCompileFailure({ error, records = [], authoring = {} } =
       return failure.issues;
     }
   };
+  const duplicate = error.code === 'MUXUI_ARTIFACT_ID_INVALID';
   const diagnostics = error.issues.map((issue) => {
+    const declared = issue.artifactId === undefined
+      ? []
+      : records.filter(({ record }) => record.id === issue.artifactId);
+    const [first, second] = declared;
     const entry = issue.artifactId === undefined
       ? records.find((candidate) => issuesOf(candidate).some(({ path, message }) => (
         path === issue.path && message === issue.message
       )))
-      : records.find(({ record }) => record.id === issue.artifactId);
+      : duplicate ? second : first;
+    const earlier = duplicate && entry ? first : undefined;
     const imported = issue.source !== undefined;
     const ruleId = imported
       ? 'authoring.compile.import-invalid'
@@ -501,7 +536,7 @@ export function diagnoseCompileFailure({ error, records = [], authoring = {} } =
         : 'authoring.compile.graph-invalid';
     const message = imported
       ? `${issue.message}. Canonical import form: ${CANONICAL_IMPORT_FORM}`
-      : `${error.code === 'MUXUI_SCHEMA_INVALID' ? 'The canonical source is invalid' : 'The catalog graph is invalid'}: ${issue.message}`;
+      : `${error.code === 'MUXUI_SCHEMA_INVALID' ? 'The canonical source is invalid' : 'The catalog graph is invalid'}: ${issue.message}${earlier ? `; first declared in ${earlier.path}` : ''}`;
     return sourceDiagnostic(ruleId, message, {
       record: entry?.record ?? { id: issue.artifactId },
       recordPath: entry?.path ?? null,
@@ -510,7 +545,10 @@ export function diagnoseCompileFailure({ error, records = [], authoring = {} } =
       code: error.code,
       link: imported ? { file: issue.source, line: issue.line } : {},
       command: 'pnpm --filter @muxui/catalog check',
-      extra: imported ? { canonicalImportForm: CANONICAL_IMPORT_FORM } : {},
+      extra: {
+        ...(imported ? { canonicalImportForm: CANONICAL_IMPORT_FORM } : {}),
+        ...(earlier ? { duplicateOf: { artifactId: earlier.record.id, record: earlier.path } } : {}),
+      },
     });
   });
   return deepFreeze({ valid: false, diagnostics });
@@ -951,8 +989,14 @@ function artifactIdFromEndpoint(endpoint, ids) {
 /**
  * Pattern participants are references, not relation edges, so the closure
  * derives them from the pattern records. The link is directional: a component
- * change reaches the patterns that use it, but a pattern change does not
- * reach its participants.
+ * change reaches the patterns that use it, but a pattern change never reaches
+ * its participants.
+ *
+ * The closure is a conservative over-approximation: it never misses a pattern
+ * that uses a changed component, but it also reaches patterns that do not.
+ * It is transitive through relation edges, and every real binding `uses`
+ * muxui:token:default-theme, so a component change reaches the other
+ * components on that token and the patterns that use them.
  */
 function participantLinks(bundle) {
   return bundle.artifacts
@@ -1089,6 +1133,9 @@ export function affectedClosure({
       relatedIds.has(artifactIdFromEndpoint(source, knownIds))
       || relatedIds.has(artifactIdFromEndpoint(target, knownIds))
     )),
+    // Every participant of each affected pattern. A participant may lie outside
+    // `artifacts`: it is a reference the pattern keeps, and the closure never
+    // flows from a pattern to its participants.
     participantLinks: links.filter(({ pattern }) => relatedIds.has(pattern)),
     projections: [...projections].sort(compareText),
     packages: packages.map(({ name, path }) => ({ name, path })),
