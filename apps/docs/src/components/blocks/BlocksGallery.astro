@@ -1,0 +1,37 @@
+---
+import { blockGroups, blocks } from '../../lib/blocks.ts';
+import { previewPath, variantPath } from '../../lib/block-paths.ts';
+
+const variantCount = blocks.reduce((count, block) => count + block.variants.length, 0);
+const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+---
+
+<div class="blocks-scroll" data-blocks-gallery>
+	<div class="blocks-ohead">
+		<h1>All blocks</h1>
+		<p role="status" data-gallery-count>{plural(blocks.length, 'block')}, {plural(variantCount, 'variant')}</p>
+	</div>
+	{blocks.length === 0 && <p class="blocks-empty">The catalog has no blocks yet.</p>}
+	{blockGroups.flatMap((group) => group.categories).map((category) => (
+		<section class="blocks-section" data-category={category.category} aria-labelledby={`blocks-section-${category.category}`}>
+			<h2 id={`blocks-section-${category.category}`}>{category.label}</h2>
+			<ul class="blocks-cards">
+				{category.blocks.map((block) => (
+					<li data-block={block.slug} data-variants={block.variants.length}>
+						<div class="blocks-card">
+							<div class="blocks-thumb" aria-hidden="true" inert data-thumb>
+								<iframe src={previewPath(block, block.variants[0])} title="" loading="lazy" tabindex="-1"></iframe>
+							</div>
+							<p class="blocks-card-row">
+								<a class="blocks-card-link" href={variantPath(block, block.variants[0])} data-blocks-link>{block.name}</a>
+								<span class="blocks-small">{plural(block.variants.length, 'variant')}</span>
+							</p>
+							<p class="blocks-card-row blocks-muted">{block.summary}</p>
+						</div>
+					</li>
+				))}
+			</ul>
+		</section>
+	))}
+	<p class="blocks-empty" data-gallery-none hidden>No blocks match.</p>
+</div>

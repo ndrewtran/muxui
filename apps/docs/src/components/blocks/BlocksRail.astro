@@ -1,0 +1,65 @@
+---
+import { blockGroups, blocks, usesOptions } from '../../lib/blocks.ts';
+import { blocksPath, variantPath } from '../../lib/block-paths.ts';
+
+interface Props {
+	current?: { block: string; variant: string };
+}
+
+const { current } = Astro.props;
+---
+
+<aside class="blocks-rail" aria-label="Block browser" data-blocks-rail>
+	<div class="blocks-filters" role="search">
+		<label class="visually-hidden" for="blocks-query">Search blocks</label>
+		<input id="blocks-query" class="blocks-field" type="search" placeholder="Search blocks" autocomplete="off" data-blocks-query />
+		<label class="blocks-uses">
+			<span>Uses</span>
+			<select class="blocks-field" aria-label="Uses component" data-blocks-uses>
+				<option value="">Any component</option>
+				{usesOptions.map(({ id, name }) => <option value={id}>{name}</option>)}
+			</select>
+		</label>
+		<p class="blocks-count" role="status" data-blocks-count>{blocks.length} of {blocks.length} {blocks.length === 1 ? 'block' : 'blocks'}</p>
+	</div>
+	<a class="blocks-all" href={blocksPath} data-blocks-link aria-current={current ? undefined : 'page'}>All blocks</a>
+	<nav aria-label="Blocks">
+		<p class="blocks-none" data-blocks-none hidden>No blocks match.</p>
+		<ul class="blocks-tree">
+			{blockGroups.map((group) => (
+				<li data-group={group.group}>
+					<h2 class="blocks-group">{group.label}</h2>
+					<ul>
+						{group.categories.map((category) => (
+							<li data-category={category.category}>
+								<details open>
+									<summary>{category.label}<span class="blocks-n" data-category-count>{category.blocks.length}</span></summary>
+									<ul>
+										{category.blocks.map((block) => (
+											<li data-block={block.slug} data-current={current?.block === block.slug ? '' : undefined}>
+												<a class="blocks-block" href={variantPath(block, block.variants[0])} data-blocks-link>{block.name}</a>
+												<ul>
+													{block.variants.map((variant) => (
+														<li>
+															<a
+																class="blocks-variant"
+																href={variantPath(block, variant)}
+																title={variant.summary}
+																data-blocks-link
+																aria-current={current?.block === block.slug && current.variant === variant.slug ? 'page' : undefined}
+															>{variant.name}</a>
+														</li>
+													))}
+												</ul>
+											</li>
+										))}
+									</ul>
+								</details>
+							</li>
+						))}
+					</ul>
+				</li>
+			))}
+		</ul>
+	</nav>
+</aside>

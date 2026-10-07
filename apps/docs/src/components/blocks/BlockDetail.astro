@@ -1,0 +1,109 @@
+---
+import { Code } from 'astro:components';
+import type { Block, BlockVariant } from '../../lib/blocks.ts';
+import { previewPath, variantPath } from '../../lib/block-paths.ts';
+import { muxCodeTheme, muxTokenPathTransformer } from '../code-theme.ts';
+
+interface Props {
+	block: Block;
+	variant: BlockVariant;
+}
+
+const { block, variant } = Astro.props;
+// Width presets live here, the one place the toolbar and the browser checks read them from.
+const presets = [{ key: 'S', width: 360 }, { key: 'M', width: 768 }, { key: 'L', width: 1280 }];
+const fileName = variant.sourcePath.slice(variant.sourcePath.lastIndexOf('/') + 1);
+const lineCount = variant.code.trimEnd().split('\n').length;
+// Astro's Shiki helper removes one terminal newline, so add it back to keep the exact bytes.
+const highlighted = variant.code.endsWith('\n') ? `${variant.code}\n` : variant.code;
+const previewTitle = `${block.name}, ${variant.name} preview`;
+---
+
+<div class="blocks-detail" data-blocks-detail>
+	<div class="blocks-bar">
+		<div class="blocks-title">
+			<nav aria-label="Breadcrumb">
+				<ol class="blocks-crumbs">
+					<li>{block.categoryLabel}</li>
+					<li><a href={variantPath(block, block.variants[0])} data-blocks-link>{block.name}</a></li>
+					<li><h1 aria-current="page">{variant.name}</h1></li>
+				</ol>
+			</nav>
+			<p class="blocks-summary">{block.summary}</p>
+		</div>
+		<div class="blocks-tools">
+			<div class="blocks-width">
+				<div class="blocks-seg" role="group" aria-label="Preview width" data-width-group>
+					{presets.map(({ key, width }) => (
+						<button type="button" data-width={width} aria-pressed="false" title={`${width} px`}>{key}<span class="blocks-px">{width}</span></button>
+					))}
+					<button type="button" data-width="full" aria-pressed="true" title="Fill the available width">Full</button>
+				</div>
+				<output class="blocks-readout" data-readout></output>
+			</div>
+			<div class="blocks-seg" role="group" aria-label="Preview theme" data-theme-group>
+				<button type="button" data-preview-theme="dark" aria-pressed="false" aria-label="Dark preview" title="Dark preview">
+					<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="M13 9.5A5.5 5.5 0 0 1 6.5 3a5.5 5.5 0 1 0 6.5 6.5Z" /></svg>
+				</button>
+				<button type="button" data-preview-theme="light" aria-pressed="false" aria-label="Light preview" title="Light preview">
+					<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="8" cy="8" r="3" /><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1" /></svg>
+				</button>
+			</div>
+			<div class="blocks-seg" role="group" aria-label="View" data-mode-group>
+				<button type="button" data-mode="preview" aria-pressed="true">Preview</button>
+				<button type="button" data-mode="code" aria-pressed="false">Code</button>
+				<button type="button" data-mode="split" aria-pressed="false">Split</button>
+			</div>
+		</div>
+	</div>
+
+	<div class="blocks-stage" data-stage data-mode="preview">
+		<div class="blocks-frame" data-frame>
+			<div class="blocks-frame-box" data-frame-box>
+				<div class="blocks-frame-clip">
+					<iframe id="blocks-preview" class="blocks-iframe" title={previewTitle} src={previewPath(block, variant)} data-iframe></iframe>
+				</div>
+				<div
+					class="blocks-handle"
+					role="separator"
+					aria-orientation="vertical"
+					aria-label="Resize preview"
+					aria-controls="blocks-preview"
+					tabindex="0"
+					data-handle
+				><span aria-hidden="true"></span></div>
+			</div>
+		</div>
+		<section class="blocks-code" aria-label={`${fileName} source`} data-code>
+			<div class="blocks-code-head">
+				<span class="blocks-code-file">{fileName}</span>
+				<span class="blocks-code-lines">{lineCount} {lineCount === 1 ? 'line' : 'lines'}</span>
+				<button type="button" class="blocks-copy" data-copy>Copy</button>
+			</div>
+			<div class="blocks-code-body" data-code-body>
+				<Code code={highlighted} lang="tsx" theme={muxCodeTheme} transformers={[muxTokenPathTransformer]} wrap={false} />
+			</div>
+			<p class="blocks-code-path" data-source-path>{variant.sourcePath}</p>
+		</section>
+	</div>
+
+	<div class="blocks-meta">
+		<section aria-labelledby="blocks-uses-heading">
+			<h2 id="blocks-uses-heading">Uses</h2>
+			<ul class="blocks-inline">
+				{block.participants.map((participant) => (
+					<li>
+						<a href={participant.href} title={`Role: ${participant.role}`}>{participant.name}</a>
+						{participant.requirement === 'optional' && <span class="blocks-optional"> optional</span>}
+					</li>
+				))}
+			</ul>
+		</section>
+		<section aria-labelledby="blocks-a11y-heading">
+			<h2 id="blocks-a11y-heading">Accessibility</h2>
+			<ul class="blocks-notes">
+				{block.accessibility.map((note) => <li>{note}</li>)}
+			</ul>
+		</section>
+	</div>
+</div>

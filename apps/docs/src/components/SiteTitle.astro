@@ -1,8 +1,13 @@
 ---
-const { siteTitleHref } = Astro.locals.starlightRoute;
+interface Props {
+	/** Overrides the Starlight route's title link, for pages outside Starlight. */
+	href?: string;
+}
+
+const href = Astro.props.href ?? Astro.locals.starlightRoute.siteTitleHref;
 ---
 
-<a href={siteTitleHref} class="mux-site-title">
+<a href={href} class="mux-site-title">
 	<span class="mux-name">Mux UI</span>
 </a>
 

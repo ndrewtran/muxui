@@ -9,7 +9,8 @@ import { fileURLToPath } from 'node:url';
 import { muxTokenPathTransformer } from './src/components/code-theme.ts';
 import { FOUNDATION_OVERVIEW, FOUNDATION_PAGES } from './src/lib/foundation-pages.ts';
 
-const repositoryRoot = resolve(fileURLToPath(new URL('.', import.meta.url)), '../..');
+const docsRoot = resolve(fileURLToPath(new URL('.', import.meta.url)));
+const repositoryRoot = resolve(docsRoot, '../..');
 const themePrepaintBundle = buildSync({
 	entryPoints: [resolve(fileURLToPath(new URL('.', import.meta.url)), 'src/theme-prepaint-entry.mjs')],
 	bundle: true,
@@ -94,6 +95,8 @@ export default defineConfig({
 		}],
 		resolve: {
 			alias: [
+				// The Blocks layout sits outside Starlight's page, so it loads the same foundation styles Starlight's Page does.
+				{ find: /^starlight-style\//u, replacement: `${resolve(docsRoot, 'node_modules/@astrojs/starlight/dist/style')}/` },
 				{ find: /^@muxui\/react\/styles\.css$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/styles.css') },
 				{ find: /^@muxui\/react\/markdown$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/markdown.mjs') },
 				{ find: /^@muxui\/react\/text-editor$/u, replacement: resolve(repositoryRoot, 'packages/react/generated/text-editor.mjs') },

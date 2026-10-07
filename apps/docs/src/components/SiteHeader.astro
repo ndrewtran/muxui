@@ -1,0 +1,108 @@
+---
+import Search from '@astrojs/starlight/components/Search.astro';
+import ThemeSelect from '@astrojs/starlight/components/ThemeSelect.astro';
+import SiteNav from './SiteNav.astro';
+import SiteTitle from './SiteTitle.astro';
+
+interface Props {
+	/** Shown by pages that have no Starlight sidebar to hold search. */
+	search?: boolean;
+	/** Overrides the Starlight route's title link, for pages outside Starlight. */
+	titleHref?: string;
+}
+
+const { search = false, titleHref } = Astro.props;
+---
+
+<div class="mux-header">
+	<div class="mux-header-title"><SiteTitle href={titleHref} /></div>
+	<SiteNav />
+	{search && <div class="mux-header-search"><Search /></div>}
+	<div class="mux-header-actions">
+		<span class="mux-header-package">@muxui/react</span>
+		<ThemeSelect />
+		<slot name="actions" />
+	</div>
+</div>
+
+<style>
+	.mux-header {
+		display: flex;
+		align-items: center;
+		gap: var(--muxui-reference-dimension-space-s);
+		height: 100%;
+	}
+
+	.mux-header-title {
+		flex: none;
+	}
+
+	.mux-header-search {
+		flex: 1 1 auto;
+		display: flex;
+		justify-content: center;
+		min-width: 0;
+	}
+
+	.mux-header-search :global(site-search) {
+		display: block;
+		width: 100%;
+		max-width: 24rem;
+	}
+
+	.mux-header-search :global(button[data-open-modal]) {
+		width: 100%;
+		max-width: none;
+		min-height: var(--muxui-semantic-control-size-md);
+		padding-inline: var(--muxui-reference-dimension-space-xs);
+		border: 1px solid var(--muxui-semantic-border-subtle);
+		border-radius: var(--muxui-semantic-control-radius);
+		background: var(--muxui-semantic-surface-raised);
+		color: var(--muxui-semantic-content-muted);
+		font-family: var(--muxui-semantic-typography-text-font-family);
+		font-size: var(--muxui-semantic-typography-text-s-font-size);
+	}
+
+	.mux-header-search :global(button[data-open-modal]:hover) {
+		border-color: var(--muxui-semantic-border-default);
+		background: var(--muxui-semantic-surface-hover);
+		color: var(--muxui-semantic-content-strong);
+	}
+
+	.mux-header-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--muxui-reference-dimension-space-xs);
+		min-width: 0;
+		margin-inline-start: auto;
+	}
+
+	.mux-header-search + .mux-header-actions {
+		margin-inline-start: 0;
+	}
+
+	.mux-header-package {
+		color: var(--muxui-semantic-content-muted);
+		font-family: var(--muxui-semantic-typography-mono-font-family);
+		font-size: var(--muxui-semantic-typography-mono-xs-font-size);
+	}
+
+	@media (max-width: 50rem) {
+		.mux-header-package,
+		.mux-header-actions :global(select[aria-label*='language' i]) {
+			display: none;
+		}
+	}
+
+	@media (max-width: 40rem) {
+		.mux-header { gap: var(--muxui-reference-dimension-space-2xs); }
+		.mux-header-search { display: none; }
+	}
+
+	/* The theme picker keeps its icon and caret and drops its label on a phone. */
+	@media (max-width: 30rem) {
+		.mux-header-actions :global(starlight-theme-select label) {
+			--sl-select-width: 0px !important;
+		}
+	}
+</style>
