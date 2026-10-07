@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { measureBox, measureFocusIndicator, measurePageFit, openBlock, pageWidths, patternVariant, startVariantServer } from './pattern-probes.mjs';
-import { pollUntil } from './grid-list-probes.mjs';
+import { focusedStop, measureBox, measurePageFit, openBlock, pageWidths, patternVariant, ringWalk, startVariantServer } from './pattern-probes.mjs';
+import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the account settings block, loaded from its canonical
 // catalog source through the public `@muxui/react` entry, edits its fields by
@@ -14,7 +14,20 @@ import { pollUntil } from './grid-list-probes.mjs';
 
 const variant = await patternVariant('account-settings', 'sections');
 
-const controls = ['Display name', 'Email', 'Language', 'Time zone', 'Product updates', 'Mentions', 'Weekly summary', 'Email digest', 'Cancel', 'Save'];
+// The keyboard order and accessible names of the controls, as the accessibility tree reports them.
+// A Select's name starts with its current value.
+const stops = [
+  'textbox Display name',
+  'textbox Email',
+  'button English Language',
+  'button UTC Time zone',
+  'switch Product updates',
+  'switch Mentions',
+  'switch Weekly summary',
+  'button Weekly Email digest',
+  'button Cancel',
+  'button Save',
+];
 
 for (const engine of browserEngines()) {
   test(`account settings keep their editing, status, focus, and layout behavior in ${engine}`, { timeout: 300_000 }, async (t) => {
@@ -22,6 +35,7 @@ for (const engine of browserEngines()) {
     let browser;
     try {
       browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/block.html`, '#root > *');
 
       await t.test('edits fields by keyboard and pointer, reports the status, restores on Cancel, and never submits', async () => {
         const { context, tab, errors } = await openBlock(browser, url);
@@ -98,25 +112,25 @@ for (const engine of browserEngines()) {
         }
       });
 
-      await t.test('walks every control in order with visible focus', async () => {
+      await t.test('walks every control in order by accessible name, each with a focus ring that differs from rest', async () => {
         const { context, tab } = await openBlock(browser, url);
         try {
           await tab.locator('#before').focus();
+          const walk = ringWalk(tab);
           const seen = [];
-          for (const label of controls) {
+          // Each step presses Tab, waits for focus to move, and records the control focus really reached.
+          for (let step = 0; step < stops.length; step += 1) {
+            await tab.evaluate(() => { window.__previousFocus = document.activeElement; });
             await tab.keyboard.press('Tab');
-            await pollUntil(tab, (expected) => {
-              const node = document.activeElement;
-              const named = node?.getAttribute('aria-labelledby')?.split(' ').map((id) => document.getElementById(id)?.textContent).join(' ') ?? '';
-              const labelled = node?.closest('label')?.textContent ?? node?.labels?.[0]?.textContent ?? '';
-              return [node?.textContent, named, labelled].some((text) => text?.includes(expected));
-            }, label, { message: `Tab reaches ${label}`, report: () => document.activeElement?.outerHTML.slice(0, 160) });
-            assert.equal(await tab.evaluate(measureFocusIndicator), true, `${label} paints a focus indicator`);
-            seen.push(label);
+            await pollUntil(tab, () => document.activeElement !== window.__previousFocus, undefined, { message: `Tab moves focus on step ${step + 1}`, report: () => document.activeElement?.outerHTML.slice(0, 160) });
+            const stop = await focusedStop(tab);
+            seen.push(stop);
+            await walk.land(stop);
           }
-          assert.deepEqual(seen, controls);
+          assert.deepEqual(seen, stops, 'Tab visits the controls in this order, by accessible name');
           await tab.keyboard.press('Tab');
           await pollUntil(tab, () => document.activeElement?.id === 'after', undefined, { message: 'Tab leaves the form after Save', report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          await walk.finish();
         } finally {
           await context.close();
         }

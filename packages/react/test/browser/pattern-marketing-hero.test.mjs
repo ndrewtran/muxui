@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { measureBox, measureFocusIndicator, measurePageFit, openBlock, pageWidths, patternVariant, startVariantServer } from './pattern-probes.mjs';
-import { pollUntil } from './grid-list-probes.mjs';
+import { measureBox, measurePageFit, openBlock, pageWidths, patternVariant, ringWalk, startVariantServer } from './pattern-probes.mjs';
+import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the marketing hero, loaded from its canonical catalog
 // source through the public `@muxui/react` entry, never overflows the page
@@ -19,6 +19,7 @@ for (const engine of browserEngines()) {
     let browser;
     try {
       browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/block.html`, '#root > *');
 
       await t.test('never scrolls the page horizontally at 360, 768, and 1280 in light and dark', async () => {
         for (const scheme of ['light', 'dark']) {
@@ -66,14 +67,18 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.getByRole('img').count(), 0, 'the visual exposes no image');
 
           await tab.locator('#before').focus();
+          const walk = ringWalk(tab);
           for (const name of ['Get started', 'See an example']) {
             await tab.keyboard.press('Tab');
             await pollUntil(tab, (label) => document.activeElement?.textContent === label, name, {
               message: `Tab reaches ${name}`,
               report: () => document.activeElement?.outerHTML.slice(0, 120),
             });
-            assert.equal(await tab.evaluate(measureFocusIndicator), true, `${name} paints a focus indicator`);
+            await walk.land(name);
           }
+          await tab.keyboard.press('Tab');
+          await pollUntil(tab, () => document.activeElement?.id === 'after', undefined, { message: 'Tab leaves the hero', report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          await walk.finish();
           assert.deepEqual(errors, []);
         } finally {
           await context.close();

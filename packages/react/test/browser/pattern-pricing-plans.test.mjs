@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { measureBox, measureFocusIndicator, measurePageFit, openBlock, pageWidths, patternVariant, startVariantServer } from './pattern-probes.mjs';
-import { pollUntil } from './grid-list-probes.mjs';
+import { measureBox, measurePageFit, openBlock, pageWidths, patternVariant, ringWalk, startVariantServer } from './pattern-probes.mjs';
+import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the pricing plans block, loaded from its canonical
 // catalog source through the public `@muxui/react` entry, switches every price
@@ -28,6 +28,7 @@ for (const engine of browserEngines()) {
     let browser;
     try {
       browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/block.html`, '#root > *');
 
       await t.test('switches every price with the billing toggle by keyboard and pointer and keeps one period selected', async () => {
         const { context, tab, errors } = await openBlock(browser, url);
@@ -43,7 +44,6 @@ for (const engine of browserEngines()) {
           await tab.locator('#before').focus();
           await tab.keyboard.press('Tab');
           await pollUntil(tab, () => document.activeElement?.getAttribute('role') === 'radio', undefined, { message: 'Tab reaches the billing toggle', report: () => document.activeElement?.outerHTML.slice(0, 120) });
-          assert.equal(await tab.evaluate(measureFocusIndicator), true, 'the toggle paints a focus indicator');
           await tab.keyboard.press('ArrowRight');
           await pollUntil(tab, () => document.activeElement?.textContent === 'Annual', undefined, { message: 'ArrowRight moves focus to Annual', report: () => document.activeElement?.outerHTML.slice(0, 120) });
           await tab.keyboard.press('Space');
@@ -115,14 +115,19 @@ for (const engine of browserEngines()) {
           const { context, tab } = await openBlock(browser, url, { width });
           try {
             await tab.locator('#before').focus();
+            const walk = ringWalk(tab);
             // The toggle is one tab stop: the selected option, with arrow keys inside the group.
             await tab.keyboard.press('Tab');
             await pollUntil(tab, () => document.activeElement?.getAttribute('role') === 'radio', undefined, { message: `${width}px: Tab reaches the toggle`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+            await walk.land(`${width}px: the Monthly toggle`);
             for (const name of ['Start free', 'Choose Team', 'Choose Scale']) {
               await tab.keyboard.press('Tab');
               await pollUntil(tab, (label) => document.activeElement?.textContent === label, name, { message: `${width}px: Tab reaches ${name}`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
-              assert.equal(await tab.evaluate(measureFocusIndicator), true, `${width}px: ${name} paints a focus indicator`);
+              await walk.land(`${width}px: ${name}`);
             }
+            await tab.keyboard.press('Tab');
+            await pollUntil(tab, () => document.activeElement?.id === 'after', undefined, { message: `${width}px: Tab leaves the plans`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+            await walk.finish();
           } finally {
             await context.close();
           }
