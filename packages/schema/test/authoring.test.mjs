@@ -135,6 +135,10 @@ test('E-G0.5-02: every declared revision axis matches its digest preimage member
         'content',
         ...(componentSpecFields.has(field) || field === 'bindings' ? ['binding-spec'] : []),
       ];
+    } else if (declaration.schema === 'example.schema.json') {
+      // The whole record folds into the example content revision, which the
+      // binding spec and pattern revisions both fold in (example-authoring.test.mjs).
+      expected = ['content', 'binding-spec', 'pattern-spec'];
     } else {
       assert.equal(declaration.schema, 'binding.schema.json');
       const rootField = firstProperty(declaration.schemaPointer);
