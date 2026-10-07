@@ -4,15 +4,17 @@ import {
 	catalogApi,
 	componentSummaries,
 	isRecord,
+	patternCategoryGroups,
 	requiredString,
 	stringArray,
+	type CatalogModule,
 	type CatalogUsedIn,
 } from './catalog.ts';
 
 /**
  * The Blocks loader: a typed read of the catalog query API for pattern records.
- * Every list, search, get, `uses`, and `usedIn` answer is the API's own response
- * narrowed to the fields the site reads; nothing here is authored or ranked.
+ * Every list, get, `uses`, and `usedIn` answer is the API's own response narrowed
+ * to the fields the site reads; nothing here is authored or ranked.
  */
 
 export interface BlockSummary {
@@ -25,19 +27,6 @@ export interface BlockSummary {
 	source: { record: string };
 	category: string;
 	group: string;
-}
-
-export interface BlockMatchReason {
-	queryTerm: string;
-	field: string;
-	value: string;
-	match: string;
-	points: number;
-}
-
-export interface BlockSearchItem extends BlockSummary {
-	score: number;
-	matchReasons: readonly BlockMatchReason[];
 }
 
 export interface BlockParticipant {
@@ -90,30 +79,6 @@ function readSummary(value: unknown): BlockSummary {
 	});
 }
 
-function readMatchReason(value: unknown): BlockMatchReason {
-	if (!isRecord(value) || typeof value.points !== 'number') {
-		throw new Error('Canonical catalog response has an invalid match reason.');
-	}
-	return Object.freeze({
-		queryTerm: requiredString(value.queryTerm, 'matchReason.queryTerm'),
-		field: requiredString(value.field, 'matchReason.field'),
-		value: requiredString(value.value, 'matchReason.value'),
-		match: requiredString(value.match, 'matchReason.match'),
-		points: value.points,
-	});
-}
-
-function readSearchItem(value: unknown): BlockSearchItem {
-	if (!isRecord(value) || typeof value.score !== 'number' || !Array.isArray(value.matchReasons)) {
-		throw new Error('Canonical catalog response has an invalid search result.');
-	}
-	return Object.freeze({
-		...readSummary(value),
-		score: value.score,
-		matchReasons: Object.freeze(value.matchReasons.map(readMatchReason)),
-	});
-}
-
 function readParticipant(value: unknown): BlockParticipant {
 	if (!isRecord(value)) throw new Error('Canonical pattern has an invalid participant.');
 	return Object.freeze({
@@ -158,20 +123,20 @@ function readExample(value: unknown): BlockExample {
 	});
 }
 
-/** Follows every page of a list or search request. */
-function collectItems(request: (cursor: string | undefined) => unknown, type: 'artifact.list' | 'artifact.search'): unknown[] {
+/** Follows every page of a list request. */
+function collectItems(request: (cursor: string | undefined) => unknown): unknown[] {
 	const items: unknown[] = [];
 	let cursor: string | undefined;
 	do {
 		const response = request(cursor);
-		if (!isRecord(response) || response.type !== type || !isRecord(response.data) || !Array.isArray(response.data.items) || !isRecord(response.meta)) {
-			throw new Error(`Mux UI docs received an unexpected ${type} response.`);
+		if (!isRecord(response) || response.type !== 'artifact.list' || !isRecord(response.data) || !Array.isArray(response.data.items) || !isRecord(response.meta)) {
+			throw new Error('Mux UI docs received an unexpected artifact.list response.');
 		}
 		items.push(...response.data.items);
 		const next = response.meta.nextCursor;
-		if (next !== null && typeof next !== 'string') throw new Error(`Mux UI docs received invalid ${type} pagination.`);
+		if (next !== null && typeof next !== 'string') throw new Error('Mux UI docs received invalid artifact.list pagination.');
 		if (response.meta.truncated === true && next === null) {
-			throw new Error(`Mux UI ${type} response was truncated without a continuation cursor.`);
+			throw new Error('Mux UI artifact.list response was truncated without a continuation cursor.');
 		}
 		cursor = next ?? undefined;
 	} while (cursor !== undefined);
@@ -179,34 +144,20 @@ function collectItems(request: (cursor: string | undefined) => unknown, type: 'a
 }
 
 /** `list pattern`: every enabled React block, in catalog order. `uses` keeps blocks that reference that component. */
-export function listBlocks(uses?: string): readonly BlockSummary[] {
-	return Object.freeze(collectItems((cursor) => catalogApi.listArtifacts({
+export function listBlocks(uses?: string, api: CatalogModule = catalogApi): readonly BlockSummary[] {
+	return Object.freeze(collectItems((cursor) => api.listArtifacts({
 		kind: 'pattern',
 		platform: PLATFORM,
 		detail: 'brief',
 		limit: 100,
 		...(uses === undefined ? {} : { uses }),
 		...(cursor === undefined ? {} : { cursor }),
-	}), 'artifact.list').map(readSummary));
-}
-
-/** `search <query>` restricted to blocks, in the catalog's ranking. Search spans every kind, so other kinds are dropped. */
-export function searchBlocks(query: string, uses?: string): readonly BlockSearchItem[] {
-	return Object.freeze(collectItems((cursor) => catalogApi.searchArtifacts({
-		query,
-		platform: PLATFORM,
-		detail: 'brief',
-		limit: 100,
-		...(uses === undefined ? {} : { uses }),
-		...(cursor === undefined ? {} : { cursor }),
-	}), 'artifact.search')
-		.filter((item) => isRecord(item) && item.kind === 'pattern')
-		.map(readSearchItem));
+	})).map(readSummary));
 }
 
 /** `get <pattern> --detail full`. */
-export function getBlockRecord(id: string): BlockRecord {
-	const response = catalogApi.getArtifact({ id, platform: PLATFORM, detail: 'full' });
+export function getBlockRecord(id: string, api: CatalogModule = catalogApi): BlockRecord {
+	const response = api.getArtifact({ id, platform: PLATFORM, detail: 'full' });
 	if (!isRecord(response) || response.type !== 'artifact.detail' || !isRecord(response.data)) {
 		throw new Error(`Mux UI docs received no pattern record for ${id}.`);
 	}
@@ -225,8 +176,9 @@ export function getBlockExamples(id: string): readonly BlockExample[] {
 const blockSummaries = listBlocks();
 const componentById = new Map(componentSummaries.map((component) => [component.id, component]));
 
-function categoryLabel(category: string): string {
-	const text = category.split('-').map((word) => (word === 'faq' ? 'FAQ' : word)).join(' ');
+/** The catalog owns no display labels, so a label is derived from the id: `call-to-action` reads "Call to action". */
+export function idLabel(id: string): string {
+	const text = id.replaceAll('-', ' ');
 	return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
@@ -299,30 +251,29 @@ function buildBlock(summary: BlockSummary): Block {
 		name: summary.name,
 		summary: summary.summary,
 		category: summary.category,
-		categoryLabel: categoryLabel(summary.category),
+		categoryLabel: idLabel(summary.category),
 		group: summary.group,
-		groupLabel: categoryLabel(summary.group),
+		groupLabel: idLabel(summary.group),
 		participants: Object.freeze(participants),
 		accessibility: record.accessibility,
 		variants: Object.freeze(variants),
 	});
 }
 
-// Display order is a projection choice: the two documented groups first, then names.
-const GROUP_ORDER = ['application', 'marketing'];
-const rank = (group: string) => {
-	const index = GROUP_ORDER.indexOf(group);
-	return index === -1 ? GROUP_ORDER.length : index;
-};
+// Blocks list in the order the schema declares its categories: groups first, then each group's categories.
+const categoryOrder = patternCategoryGroups.flatMap(([, categories]) => categories);
+function categoryRank(category: string): number {
+	const index = categoryOrder.indexOf(category);
+	if (index === -1) throw new Error(`Mux UI docs found the category ${category} outside the schema's category groups.`);
+	return index;
+}
 
-export const blocks: readonly Block[] = Object.freeze(
-	blockSummaries.map(buildBlock).sort((left, right) => (
-		rank(left.group) - rank(right.group)
-		|| left.group.localeCompare(right.group)
-		|| left.categoryLabel.localeCompare(right.categoryLabel)
-		|| left.name.localeCompare(right.name)
-	)),
-);
+/** Schema category order, then name. */
+export function compareBlocks(left: Pick<Block, 'category' | 'name'>, right: Pick<Block, 'category' | 'name'>): number {
+	return categoryRank(left.category) - categoryRank(right.category) || left.name.localeCompare(right.name);
+}
+
+export const blocks: readonly Block[] = Object.freeze(blockSummaries.map(buildBlock).sort(compareBlocks));
 
 export interface BlockCategoryGroup {
 	category: string;
@@ -367,6 +318,11 @@ interface SearchIndexEntry {
 	terms: readonly { term: string }[];
 }
 
+/**
+ * The catalog's indexed search terms. The query API answers searches but has no operation that
+ * lists the indexed terms, and the rail's browser matcher needs them, so this is the one read
+ * of the generated bundle (the declared `@muxui/catalog/bundle` export), limited to `searchIndex`.
+ */
 function readSearchIndex(): readonly SearchIndexEntry[] {
 	const bundleModule: unknown = createRequire(import.meta.url)('@muxui/catalog/bundle');
 	const catalogJson = isRecord(bundleModule) ? bundleModule.catalogJson : undefined;
@@ -384,13 +340,15 @@ function readSearchIndex(): readonly SearchIndexEntry[] {
 }
 
 /**
- * The filter data the rail ships to the browser. Search terms come straight from
- * the catalog search index; the `uses` sets are the API's own `list --uses` answers.
+ * The filter data the rail ships to the browser: the pattern terms of the catalog search
+ * index, and each participant component's `list --uses` answer from the query API.
+ * `api` and `searchIndex` default to the real catalog; a test passes a fixture catalog's.
  */
-export function buildBlockFilterIndex(): BlockFilterIndex {
-	const slugById = new Map(blocks.map((block) => [block.id, block.slug]));
+export function buildBlockFilterIndex(api: CatalogModule = catalogApi, searchIndex: readonly SearchIndexEntry[] = readSearchIndex()): BlockFilterIndex {
+	const patterns = listBlocks(undefined, api);
+	const slugById = new Map(patterns.map(({ id }) => [id, tail(id)]));
 	const terms = new Map<string, Set<string>>();
-	for (const { id, terms: indexed } of readSearchIndex()) {
+	for (const { id, terms: indexed } of searchIndex) {
 		const slug = slugById.get(id);
 		if (slug === undefined) continue;
 		for (const { term } of indexed) {
@@ -399,10 +357,11 @@ export function buildBlockFilterIndex(): BlockFilterIndex {
 			slugs.add(slug);
 		}
 	}
+	const components = new Set(patterns.flatMap(({ id }) => getBlockRecord(id, api).participants.map(({ component }) => component)));
 	const sorted = (entries: Iterable<[string, string[]]>) => Object.fromEntries([...entries].sort(([left], [right]) => left.localeCompare(right)));
 	return {
 		terms: sorted([...terms].map(([term, slugs]): [string, string[]] => [term, [...slugs].sort()])),
-		uses: sorted(usesOptions.map(({ id }): [string, string[]] => [id, listBlocks(id).map(({ id: block }) => slugById.get(block) ?? tail(block)).sort()])),
+		uses: sorted([...components].map((component): [string, string[]] => [component, listBlocks(component, api).map(({ id }) => tail(id)).sort()])),
 	};
 }
 

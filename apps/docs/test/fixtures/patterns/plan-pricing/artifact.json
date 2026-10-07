@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:plan-pricing",
+  "kind": "pattern",
+  "name": "Plan pricing",
+  "summary": "Tiers side by side with a price.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "price",
+    "tier"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "category": "pricing",
+  "intent": {
+    "useWhen": [
+      "Comparing plans"
+    ],
+    "avoidWhen": [
+      "There is one plan"
+    ]
+  },
+  "participants": [
+    {
+      "role": "plan",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    }
+  ],
+  "variants": [
+    {
+      "example": "muxui:example:plan-pricing-tiers"
+    }
+  ],
+  "accessibility": [
+    "Each plan is a labelled group."
+  ],
+  "unsupported": [
+    "Currency conversion"
+  ],
+  "workflowValue": "Replaces hand-assembling a pricing row."
+}

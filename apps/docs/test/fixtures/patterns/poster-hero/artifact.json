@@ -1,0 +1,48 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:poster-hero",
+  "kind": "pattern",
+  "name": "Poster hero",
+  "summary": "A banner that leads with a poster.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "poster",
+    "banner"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "category": "hero",
+  "intent": {
+    "useWhen": [
+      "Opening a landing page"
+    ],
+    "avoidWhen": [
+      "The page has no single message"
+    ]
+  },
+  "participants": [
+    {
+      "role": "headline",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    }
+  ],
+  "variants": [
+    {
+      "example": "muxui:example:poster-hero-banner"
+    }
+  ],
+  "accessibility": [
+    "The headline is the page heading."
+  ],
+  "unsupported": [
+    "Video backgrounds"
+  ],
+  "workflowValue": "Replaces hand-assembling a landing banner."
+}

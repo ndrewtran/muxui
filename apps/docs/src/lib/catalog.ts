@@ -61,7 +61,7 @@ export interface CatalogExample {
 	source: { content: string; record: string; contentDigest?: string };
 }
 
-interface CatalogModule {
+export interface CatalogModule {
 	getArtifact(request: Record<string, unknown>): unknown;
 	listArtifacts(request: Record<string, unknown>): unknown;
 	searchArtifacts(request: Record<string, unknown>): unknown;
@@ -105,6 +105,15 @@ if (!isCatalogModule(loadedCatalog)) {
 const catalog = loadedCatalog;
 /** The canonical query API. The Blocks loader reads patterns through it, never around it. */
 export const catalogApi: CatalogModule = catalog;
+
+/** The pattern taxonomy the catalog re-exports from the schema: each group, in declared order, with its categories in declared order. */
+export const patternCategoryGroups: readonly (readonly [group: string, categories: readonly string[]])[] = Object.freeze(
+	(() => {
+		const groups = isRecord(loadedCatalog) ? loadedCatalog.PATTERN_CATEGORY_GROUPS : undefined;
+		if (!isRecord(groups)) throw new Error('Mux UI docs could not read the catalog pattern category groups.');
+		return Object.entries(groups).map(([group, categories]) => Object.freeze([group, stringArray(categories, `PATTERN_CATEGORY_GROUPS.${group}`)] as const));
+	})(),
+);
 
 function isCanonicalRepositoryRoot(candidate: string): boolean {
 	return existsSync(resolve(candidate, 'catalog'))

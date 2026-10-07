@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:poster-hero-banner",
+  "kind": "example",
+  "name": "Banner",
+  "summary": "A headline over a call to action.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "apps/docs/test/fixtures/patterns/poster-hero/examples/react/banner.tsx"
+}

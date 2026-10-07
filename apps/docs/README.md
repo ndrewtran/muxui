@@ -20,8 +20,18 @@ The private Blocks section (`/blocks/`) projects the catalog's `pattern` records
 shares the site header and theme, and previews each variant in an isolated iframe
 route (`/blocks/<block>/<variant>/preview/`) that runs the canonical example source.
 
-`src/lib/blocks.ts` reads patterns only through the catalog query API (list, search,
-get with `--section examples`, `--uses`, and the derived `usedIn` view), and
-`/blocks/filter-index.json` ships the rail's filter data derived from that same
-catalog. The app owns no block, pattern, example, search, or prose fact. The section
-is unpublished and claims nothing about a public docs surface.
+`src/lib/blocks.ts` reads blocks through the catalog query API (list, get with
+`--section examples`, `--uses`, and the derived `usedIn` view). Group and category
+order follow the schema's category groups, which `@muxui/catalog` re-exports as
+`PATTERN_CATEGORY_GROUPS`; the catalog owns no display labels, so a label is derived
+from its id. The app owns no block, pattern, example, search, or prose fact. The
+section is unpublished and claims nothing about a public docs surface.
+
+The rail filters in the browser from `/blocks/filter-index.json`. Its query grammar
+and term matching are `@muxui/catalog/search`, the same code `searchArtifacts` runs,
+and its `uses` sets are the API's own `list --uses` answers. The index's search terms
+are the one read of the generated bundle (the declared `@muxui/catalog/bundle` export,
+limited to `searchIndex`): the query API answers searches but has no operation that
+lists the indexed terms, and the browser matcher needs them.
+`test/blocks-loader.test.mjs` proves the filter answers every query as the API does,
+over the shipped catalog and over test-only fixture patterns that give it several blocks.

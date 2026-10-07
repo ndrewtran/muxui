@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:poster-wall",
+  "kind": "pattern",
+  "name": "Poster wall",
+  "summary": "A gallery grid of poster tiles.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "poster",
+    "gallery",
+    "wall"
+  ],
+  "platforms": [
+    "web.react"
+  ],
+  "category": "collections",
+  "intent": {
+    "useWhen": [
+      "Browsing image-led items"
+    ],
+    "avoidWhen": [
+      "Rows need sortable columns"
+    ]
+  },
+  "participants": [
+    {
+      "role": "list",
+      "component": "muxui:component:grid-list",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "optional"
+    }
+  ],
+  "variants": [
+    {
+      "example": "muxui:example:poster-wall-wall"
+    }
+  ],
+  "accessibility": [
+    "The grid carries an accessible name."
+  ],
+  "unsupported": [
+    "Drag reordering"
+  ],
+  "workflowValue": "Replaces hand-assembling a GridList."
+}
