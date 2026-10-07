@@ -2254,13 +2254,35 @@ test('pattern sources route to the catalog, tooling goldens, and docs without a 
       result.reasons[0],
       `${path} is a canonical pattern input; validate the catalog, its dense goldens, and the docs that render it`,
     );
-    // Only a variant source joins the React example type test.
-    assert.deepEqual(result.reactTestFiles, path.endsWith('.tsx') ? ['test/catalog-examples-types.test.mjs'] : [], path);
+    // The React example type test walks only catalog/components, so no pattern input routes to it.
+    assert.deepEqual(result.reactTestFiles, [], path);
   }
   const commands = executionCommands(await plan([inputs[0]], { packages: workspacePackages }), { packages: workspacePackages })
     .map(({ args }) => args.join(' '));
   assert.ok(commands.includes('--filter @muxui/catalog run check'));
   assert.ok(commands.includes('--filter @muxui/tooling run check'));
+});
+
+test('catalog fixtures plan both the catalog and the tooling tests that read them', async () => {
+  // packages/tooling/test/pattern-cli.test.mjs compiles the same poster-grid fixture as the catalog tests.
+  for (const path of [
+    'packages/catalog/test/fixtures/fixture-catalog.mjs',
+    'packages/catalog/test/fixtures/patterns/poster-grid/artifact.json',
+    'packages/catalog/test/fixtures/patterns/poster-grid/examples/react/css-grid.tsx',
+  ]) {
+    const result = await plan([path], { packages: workspacePackages });
+    assert.equal(result.catalog, true, path);
+    assert.ok(result.packageChecks.includes('@muxui/tooling'), path);
+    assert.equal(result.reasons[0], `${path} is a fixture read by @muxui/catalog and @muxui/tooling tests`, path);
+    const commands = executionCommands(result, { packages: workspacePackages }).map(({ args }) => args.join(' '));
+    assert.ok(commands.includes('--filter @muxui/catalog run check'), path);
+    assert.ok(commands.includes('--filter @muxui/tooling run check'), path);
+  }
+  // A catalog test outside the fixtures stays a plain package path.
+  assert.equal(
+    (await plan(['packages/catalog/test/pattern-catalog.test.mjs'])).reasons[0],
+    'packages/catalog/test/pattern-catalog.test.mjs is owned by @muxui/catalog',
+  );
 });
 
 const reactRuntimeDependentsPlanned = (result) => result.docs && result.scale
