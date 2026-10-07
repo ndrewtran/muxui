@@ -5,7 +5,7 @@ import { dirname, join, posix, resolve } from 'node:path';
 import test from 'node:test';
 import { resolveAuthoringField } from '@muxui/schema';
 import { compileCatalog } from '../src/compiler.mjs';
-import { CONTENT_RULES, patternAssetIssues, patternContentIssues, scanPatternContent } from '../src/pattern-content.mjs';
+import { CONTENT_RULES, patternAssetIssues, patternContentIssues, scanLocalReferences, scanPatternContent } from '../src/pattern-content.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const directory = 'catalog/patterns/poster-grid';
@@ -26,7 +26,12 @@ const REJECT = {
     'a scheme URL': 'const socket = "wss://example.com/live";',
     'a remote href': '<Link href="https://example.com/about">About</Link>',
     'a namespace URL that is not an xmlns value': 'const note = "see http://www.w3.org/2000/svg";',
-    'an xmlns that is not an SVG or XLink namespace': '<svg xmlns="http://example.com/ns" />',
+    'an xmlns that is not an SVG, XLink, or XHTML namespace': '<svg xmlns="http://example.com/ns" />',
+    'a protocol-relative srcSet entry after the first': '<img srcSet="data:image/png;base64,AAAA 1x, //cdn.example.com/b.png 2x" alt="" />',
+    'a protocol-relative srcset on a source': '<source srcset="//cdn.example.com/a.webp 1x, //cdn.example.com/b.webp 2x" />',
+    'a protocol-relative srcSet entry in a template': '<img srcSet={`${one} 1x, //cdn.example.com/b.png 2x`} alt="" />',
+    'a remote srcSet entry': '<img srcSet="a.png 1x, https://cdn.example.com/b.png 2x" alt="" />',
+    'a remote entry in a quoted srcSet key': 'const props = { "srcSet": "a.png 1x,\n//cdn.example.com/b.png 2x" };',
   },
   'content.colour-literal': {
     'a 3-digit hex': '.art { color: #fff; }',
@@ -53,8 +58,33 @@ const REJECT = {
     'a named colour in a var() fallback': '.art { color: var(--x, white); }',
     'a named colour in a gradient': '.art { background-image: linear-gradient(red, var(--x)); }',
     'a named colour in an SVG paint attribute': '<path fill="red" d="M0 0" />',
-    'a literal colour in a comment': '/* Previously #fff on a dark surface. */',
+    'a colour declaration in a comment': '/* Previously color: #fff on a dark surface. */',
     'a colour function in color-mix': '.art { color: color-mix(in srgb, var(--x), rgb(0 0 0)); }',
+    'a relative colour from a literal origin': '.art { color: oklch(from #123456 l c h); }',
+    'a relative colour from a named origin': '.art { color: oklch(from red l c h); }',
+    'a nested literal colour in a relative colour': '.art { color: oklch(from rgb(1 2 3) l c h); }',
+    'an uppercase colour function': '.art { color: RGB(10 20 30); }',
+    'an uppercase oklch function': '.art { background: OKLCH(0.5 0.1 200); }',
+    'an uppercase property name': '.art { BACKGROUND: red; }',
+    'a capitalised property with a hex': '.art { Color: #fff; }',
+    'an uppercase kebab property': '.art { BACKGROUND-COLOR: #fff; }',
+    'a PascalCase style key': 'const style = { BackgroundColor: "red" };',
+    'a hex in a custom property': '.art { --accent: #ff0000; }',
+    'a named colour in a custom property': 'const style = { "--accent": "tomato" };',
+    'a hex colour in a plain string': 'const palette = ["#1a2b3c", "#fff"];',
+    'a hex colour in a template string': 'const brand = `#1a2b3c`;',
+    'a JSX stopColor': '<stop offset="0" stopColor="red" />',
+    'a JSX stopColor hex': '<stop offset="0" stopColor="#fff" />',
+    'an SVG stop-color': '<stop offset="0" stop-color="gold" />',
+    'a JSX floodColor': '<feFlood floodColor="gold" />',
+    'a JSX lightingColor': '<feDiffuseLighting lightingColor="navy" />',
+    'a JSX color attribute': '<Text color="red" size="sm">Caption</Text>',
+    'a JSX color attribute with a hex': '<Text color="#fff">Caption</Text>',
+    'a JSX fill in braces': '<path fill={"red"} d="M0 0" />',
+    'a JSX stroke in braces': "<path stroke={'tomato'} d=\"M0 0\" />",
+    'a JSX paint expression with a literal': "<rect fill={on ? 'red' : 'none'} />",
+    'a JSX paint template': '<rect fill={`#fff`} />',
+    'a gradient stop paint beside a url': '<rect fill="url(#fade) red" />',
   },
 };
 
@@ -63,9 +93,31 @@ const ACCEPT = {
   'a data: URI': 'const src = "data:image/png;base64,iVBORw0KGgo=";',
   'an SVG data URI that declares its namespace': 'const src = `data:image/svg+xml,${encodeURIComponent(\'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>\')}`;',
   'an XLink namespace declaration': '<svg xmlns:xlink="http://www.w3.org/1999/xlink" />',
+  'an xmlnsXlink JSX attribute': '<svg xmlns="http://www.w3.org/2000/svg" xmlnsXlink="http://www.w3.org/1999/xlink" />',
+  'the XHTML namespace': '<foreignObject><div xmlns="http://www.w3.org/1999/xhtml">Hi</div></foreignObject>',
+  'a namespace in single quotes': "<svg xmlns='http://www.w3.org/2000/svg' />",
+  'a namespace with escaped quotes': 'const markup = \'<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"1\\"/>\';',
+  'a namespace as a JSX string expression': '<svg xmlns={"http://www.w3.org/2000/svg"} />',
   'a // comment and a // after code': '// A note.\nconst a = 1; // Another note.',
   'a placeholder fragment href': '<a href={`#${id}`}>Details</a>',
   'a fragment that is not a colour': '<a href="#hero">Top</a><a href="#poster-1">One</a>',
+  'a hex-lettered anchor': '<a href="#add">Add</a><Link href={`#fade`}>Fade</Link><a href=\'#cafe\'>Cafe</a>',
+  'a hex-lettered fragment in url()': '.art { fill: url(#fade); mask: url(#bead); }',
+  'a quoted fragment in url()': '.art { background-image: url("#fade"); }',
+  'a gradient reference in a paint attribute': '<rect fill="url(#fade)" stroke="url(#add)" />',
+  'a hash number in JSX text': '<Text size="sm">Ticket #100 and #add</Text>',
+  'a hex-like word in a comment': '// The #fade gradient is defined below.',
+  'a CSS id selector': '#fade { gap: 4px; }\n#add .art, #deadbeef { color: var(--muxui-semantic-content-strong); }',
+  'a relative colour from a token': '.art { color: oklch(from var(--muxui-semantic-content-strong) l c h / 50%); }',
+  'a relative rgb from a token': '.art { background: rgb(from var(--c) r g b / 50%); }',
+  'rgb built from a token with spaces': '.art { color: rgb( var(--channels) ); }',
+  'an uppercase token reference': '.art { color: RGB(VAR(--channels)); }',
+  'a gradient stop built from tokens': '<linearGradient id="fade"><stop offset="0" stopColor="var(--muxui-semantic-surface-track)" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient>',
+  'a paint attribute with a token': '<path fill="var(--muxui-semantic-content-muted)" stroke="none" />',
+  'a paint expression with a token': "<rect fill={on ? 'var(--muxui-semantic-surface-track)' : 'none'} />",
+  'a color prop that names a Mux role': '<Text color={muted ? "muted" : "default"} />',
+  'a custom property that holds a token': '.art { --accent: var(--muxui-semantic-surface-track); }',
+  'a srcSet of data and local entries': '<img srcSet="data:image/png;base64,AAAA 1x, data:image/png;base64,BBBB 2x" alt="" />',
   'an HTML entity': '<p>&#169; and &#x1F4A9;</p>',
   'a token reference': '.art { background-color: var(--muxui-semantic-surface-track); gap: var(--muxui-semantic-layout-tight-gap); }',
   'a token name that contains a colour word': '.art { color: var(--muxui-semantic-color-white); }',
@@ -160,6 +212,11 @@ const MUTATIONS = [
   ['content.colour-literal', 'a hex colour', cssPath, (source) => source.replace('var(--muxui-semantic-surface-track)', '#1a2b3c'), /css-grid\.tsx:\d+ has a hex colour/u],
   ['content.colour-literal', 'an rgb() colour', virtualizedPath, (source) => source.replace('var(--muxui-semantic-surface-track)', 'rgb(10 20 30)'), /virtualized\.tsx:\d+ has a colour function/u],
   ['content.colour-literal', 'an oklch() colour', cssPath, (source) => source.replace('var(--muxui-semantic-surface-track)', 'oklch(0.5 0.1 200)'), /css-grid\.tsx:\d+ has a colour function/u],
+  ['content.remote-reference', 'a protocol-relative srcSet entry', cssPath, (source) => source.replace('alt=""', 'alt="" srcSet="data:image/png;base64,AAAA 1x, //cdn.example.com/b.png 2x"'), /css-grid\.tsx:\d+ has a protocol-relative URL/u],
+  ['content.local-reference', 'a local src', cssPath, (source) => source.replace('src={posterSrc}', 'src="poster.png"'), /css-grid\.tsx:\d+ references the local path "poster\.png"/u],
+  ['content.local-reference', 'a route-style href', virtualizedPath, (source) => source.replace('href={`#${poster.id}`}', 'href="/pricing"'), /virtualized\.tsx:\d+ references the local path "\/pricing"/u],
+  ['content.colour-literal', 'a JSX colour attribute', virtualizedPath, (source) => source.replace('<Text as="div" size="sm" color="muted">', '<Text as="div" size="sm" color="red">'), /virtualized\.tsx:\d+ has the named colour "red" in a colour attribute/u],
+  ['content.colour-literal', 'a hex colour in a plain string', cssPath, (source) => source.replace("const posterSrc =", "const brand = '#1a2b3c';\nconst posterSrc ="), /css-grid\.tsx:\d+ has a hex colour/u],
   ['content.colour-literal', 'a named colour', virtualizedPath, (source) => source.replace('var(--muxui-semantic-surface-track)', 'rebeccapurple'), /virtualized\.tsx:\d+ has the named colour "rebeccapurple" in background-color/u],
 ];
 
@@ -248,6 +305,94 @@ test('E-BL1-10 asset licenses: files the compiler already reads, and dotfiles, a
   assert.equal(result instanceof Error, false, result.message);
 });
 
+const licensedMark = new Set([`${directory}/assets/mark.svg`]);
+const localReferences = (text, path = `${directory}/examples/react/v.tsx`) => scanLocalReferences({ text, path, directory, licensed: licensedMark }).map(({ line }) => line);
+
+test('E-BL1-10: a local reference must resolve to a licensed asset inside the pattern directory', () => {
+  const accepted = {
+    'a licensed asset': '<img src="../../assets/mark.svg" alt="" />',
+    'a licensed asset with a query and fragment': '<img src="../../assets/mark.svg?v=1#icon" alt="" />',
+    'a path that normalises into the pattern': '<img src="../../assets/../assets/mark.svg" alt="" />',
+    'a licensed asset in url()': '.art { background-image: url(../../assets/mark.svg); }',
+    'a licensed asset in srcSet': '<img srcSet="../../assets/mark.svg 1x" alt="" />',
+    'an in-page anchor': '<a href="#pricing">Pricing</a><a href={`#${id}`}>One</a>',
+    'a gradient reference': '<rect fill="url(#fade)" /><path d="M0 0" style={{ fill: "url(#fade)" }} />',
+    'a data: URI': '<img src="data:image/png;base64,AAAA" alt="" />',
+    'a data: URI in url()': '.art { background-image: url(data:image/png;base64,AAAA); }',
+    'a value that starts with a placeholder': '<img src={`${base}/a.png`} alt="" />',
+    'a token in url()': '.art { background-image: url(var(--muxui-semantic-mark)); }',
+    'an expression': '<img src={posterSrc} alt="" />',
+  };
+  for (const [name, text] of Object.entries(accepted)) assert.deepEqual(localReferences(text), [], name);
+  const rejected = {
+    'an unlicensed file': '<img src="../../assets/other.svg" alt="" />',
+    'a path relative to the wrong directory': '<img src="./mark.svg" alt="" />',
+    'a root-absolute path': '<img src="/assets/mark.svg" alt="" />',
+    'a route-style href': '<a href="/pricing">Pricing</a>',
+    'a bare relative path': '<img src="poster.png" alt="" />',
+    'a path that escapes the pattern': '<img src="../../../outside.svg" alt="" />',
+    'a variant source': '<a href="./css-grid.tsx">Source</a>',
+    'a mailto: link': '<a href="mailto:hi@example.com">Mail</a>',
+    'a javascript: link': '<a href="javascript:void(0)">Run</a>',
+    'a query-only link': '<a href="?tab=2">Tab</a>',
+    'a dynamic path': '<img src={`/img/${n}.png`} alt="" />',
+    'a path in an object': 'const poster = { src: "poster.png" };',
+    'a quoted object key': 'const poster = { "href": "/pricing" };',
+    'a local srcSet entry': '<img srcSet="../../assets/mark.svg 1x, poster.png 2x" alt="" />',
+    'a local url()': '.art { background-image: url("poster.png"); }',
+    'a local image-set string': '.art { background-image: image-set("poster.png" 1x); }',
+    'a local @import': '@import "theme.css";',
+    'an xlink href': '<use xlinkHref="sprite.svg#a" />',
+    'a poster': '<video poster="poster.png" />',
+  };
+  for (const [name, text] of Object.entries(rejected)) assert.deepEqual(localReferences(text), [1], name);
+  // A reference resolves from the file that holds it: an asset's neighbour is found by its own name.
+  assert.deepEqual(localReferences('<image href="mark.svg" />', `${directory}/assets/other.svg`), []);
+  assert.deepEqual(localReferences('<image href="mark.svg" />'), [1]);
+  // The rule needs a licensed asset to point at: none is known without context.
+  assert.deepEqual(scanLocalReferences({ text: '<img src="a.svg" />', path: 'a/b.tsx', directory: 'a', licensed: new Set() }).map(({ ruleId }) => ruleId), ['content.local-reference']);
+});
+
+test('E-BL1-10 local references: a variant resolves them against the licensed assets of its pattern', async () => {
+  const reference = (source) => source.replace('src={posterSrc}', 'src="../../assets/mark.svg"');
+  const edit = (...edits) => (files) => edits.forEach((change) => change(files));
+  const licensed = withAsset();
+  const ok = await compileSeed({ edit: edit(licensed, mutate(cssPath, reference)) });
+  assert.equal(ok instanceof Error, false, ok.message);
+
+  // The reference needs both the file and a valid license record.
+  const unlicensed = await compileSeed({ edit: edit(withAsset(null), mutate(cssPath, reference)) });
+  assert.deepEqual(unlicensed.issues.map(({ ruleId, source }) => [ruleId, source]), [
+    ['content.local-reference', cssPath],
+    ['content.asset-license', `${directory}/assets/mark.svg`],
+  ]);
+  const missing = await compileSeed({ edit: mutate(cssPath, reference) });
+  assert.deepEqual(missing.issues.map(({ ruleId }) => ruleId), ['content.local-reference']);
+
+  // Marketing blocks keep working: in-page anchors and an inline SVG gradient with token stops.
+  const marketing = await compileSeed({
+    edit: mutate(cssPath, (source) => source.replace('<Link href={`#${poster.id}`}', '<svg width="0" height="0" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="fade"><stop offset="0" stopColor="var(--muxui-semantic-surface-track)" /><stop offset="1" stopColor="currentColor" stopOpacity="0" /></linearGradient></defs></svg>\n<a href="#add">Add</a>\n<Link href={`#${poster.id}`}')),
+  });
+  assert.equal(marketing instanceof Error, false, marketing.message);
+});
+
+test('E-BL1-10 asset licenses: a text asset resolves its own local references, and a dot-named asset needs a license', async () => {
+  const sprite = (href) => withAsset(SIDECAR, `<svg xmlns="http://www.w3.org/2000/svg"><image href="${href}"/></svg>\n`);
+  const dangling = await compileSeed({ edit: sprite('other.svg') });
+  assert.deepEqual(dangling.issues.map(({ ruleId, source, line }) => [ruleId, source, line]), [['content.local-reference', `${directory}/assets/mark.svg`, 1]]);
+  const self = await compileSeed({ edit: sprite('mark.svg#a') });
+  assert.equal(self instanceof Error, false, self.message);
+
+  const hidden = `${directory}/assets/.hidden.svg`;
+  const hiddenSidecar = { ...SIDECAR, asset: '.hidden.svg' };
+  const bare = await compileSeed({ edit: (files) => files.set(hidden, MARK) });
+  assert.deepEqual(bare.issues.map(({ ruleId, source }) => [ruleId, source]), [['content.asset-license', hidden]]);
+  const bareDirectory = await compileSeed({ edit: (files) => files.set(`${directory}/.private/key.pem`, 'key') });
+  assert.deepEqual(bareDirectory.issues.map(({ ruleId, source }) => [ruleId, source]), [['content.asset-license', `${directory}/.private/key.pem`]]);
+  const licensed = await compileSeed({ edit: (files) => { files.set(hidden, MARK); files.set(`${hidden}.license.json`, JSON.stringify(hiddenSidecar)); } });
+  assert.equal(licensed instanceof Error, false, licensed.message);
+});
+
 test('E-BL1-10: the issue helper links each variant source and names the variants owner', () => {
   const [issue] = patternContentIssues({
     pattern: { id: 'muxui:pattern:poster-grid' },
@@ -261,5 +406,5 @@ test('E-BL1-10: the issue helper links each variant source and names the variant
     line: 2,
     message: 'a/b.tsx:2 has a hex colour ("#fff"); use a --muxui-semantic-* token, a var() reference, or currentColor',
   });
-  assert.deepEqual(CONTENT_RULES, ['content.remote-reference', 'content.colour-literal', 'content.asset-license']);
+  assert.deepEqual(CONTENT_RULES, ['content.remote-reference', 'content.local-reference', 'content.colour-literal', 'content.asset-license']);
 });

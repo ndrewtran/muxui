@@ -18,7 +18,7 @@ import {
   validateFamily,
 } from '@muxui/schema';
 import { compileTokenRequirementSet, validateSourceCrosswalk } from '@muxui/tokens';
-import { patternAssetIssues, patternContentIssues } from './pattern-content.mjs';
+import { auditPatternAssets, patternContentIssues } from './pattern-content.mjs';
 import { patternImportIssues } from './pattern-imports.mjs';
 const SOURCE_MANIFEST_SCHEMA = 'muxui-catalog-source-manifest-v1';
 
@@ -346,17 +346,11 @@ export async function compileCatalog({
     ...manifest.records.map(({ path }) => path),
     ...examples.map(({ source }) => source),
   ]);
-  const contentIssues = [
-    ...patterns.flatMap((pattern) => patternContentIssues({ pattern, variants: variantSources(pattern) })),
-    ...(await Promise.all(loaded.filter(({ record }) => record.kind === 'pattern').map(({ entry, record }) => (
-      patternAssetIssues({
-        repositoryRoot,
-        pattern: record,
-        directory: posix.dirname(entry.path),
-        known: knownPaths,
-      })
-    )))).flat(),
-  ];
+  const contentIssues = (await Promise.all(loaded.filter(({ record }) => record.kind === 'pattern').map(async ({ entry, record }) => {
+    const directory = posix.dirname(entry.path);
+    const { issues, licensed } = await auditPatternAssets({ repositoryRoot, pattern: record, directory, known: knownPaths });
+    return [...patternContentIssues({ pattern: record, variants: variantSources(record), directory, licensed }), ...issues];
+  }))).flat();
   if (importIssues.length + contentIssues.length > 0) {
     throw new SchemaValidationError('MUXUI_RELATION_INVALID', [...importIssues, ...contentIssues]);
   }
