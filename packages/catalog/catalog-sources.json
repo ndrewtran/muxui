@@ -1016,6 +1016,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/marketing-hero/examples/react/split.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/pricing-plans/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/pricing-plans/examples/react/columns.example.json"
     }
   ]
 }

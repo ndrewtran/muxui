@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:pricing-plans",
+  "kind": "pattern",
+  "name": "Pricing plans",
+  "summary": "Three plan cards with a monthly and annual price toggle and one recommended plan.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "pricing",
+    "plans",
+    "tiers",
+    "billing",
+    "subscription",
+    "toggle",
+    "marketing",
+    "cards"
+  ],
+  "platforms": ["web.react"],
+  "category": "pricing",
+  "intent": {
+    "useWhen": [
+      "Comparing a few plans side by side with one recommended",
+      "Switching every price between monthly and annual billing"
+    ],
+    "avoidWhen": [
+      "Plans need a feature-by-feature comparison table",
+      "Prices come from a billing service or start a checkout"
+    ]
+  },
+  "participants": [
+    {
+      "role": "plan",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "period",
+      "component": "muxui:component:toggle-button-group",
+      "requirement": "required"
+    },
+    {
+      "role": "period-option",
+      "component": "muxui:component:toggle-button",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:pricing-plans-columns" }],
+  "accessibility": [
+    "The ToggleButtonGroup is named Billing period, arrow keys move between Monthly and Annual, and one option always stays selected.",
+    "Prices change in place without an announcement; the pressed toggle is the cue, so add a live region if you need prices announced.",
+    "Plan names are h3 headings under an h2; set the levels to your page outline.",
+    "The recommended plan carries the visible word Recommended and a heavier top rule, so colour alone never marks it.",
+    "When the plans stack, CSS order moves the recommended plan first while keyboard order follows the source.",
+    "The check marks are decorative SVG hidden from assistive technology; each feature reads as plain text."
+  ],
+  "unsupported": [
+    "Feature-by-feature comparison tables",
+    "Checkout, billing, or price lookups: the prices are placeholder values",
+    "A Badge for the Recommended flag: Mux has no Badge, so it is plain text",
+    "Card selected state: Card.Root has none, so the rule is block CSS"
+  ],
+  "workflowValue": "Replaces wiring a billing toggle to three price cards by hand: one period state drives every price and note, the Card parts keep each header, feature list, and action aligned across unequal lists, and the recommended plan leads when the columns stack."
+}
