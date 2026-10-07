@@ -62,6 +62,11 @@
     },
     {
       "class": "authored",
+      "file": "pattern.schema.json",
+      "owner": "pattern-contract"
+    },
+    {
+      "class": "authored",
       "file": "relation.schema.json",
       "owner": "relation-registry"
     },
@@ -99,8 +104,20 @@
     {
       "class": "derived",
       "forbiddenInAuthoredSource": true,
+      "name": "group",
+      "owner": "pattern-category-groups"
+    },
+    {
+      "class": "derived",
+      "forbiddenInAuthoredSource": true,
       "name": "packageVersion",
       "owner": "package-graph"
+    },
+    {
+      "class": "derived",
+      "forbiddenInAuthoredSource": true,
+      "name": "patternRevision",
+      "owner": "pattern-revision-compiler"
     },
     {
       "class": "derived",

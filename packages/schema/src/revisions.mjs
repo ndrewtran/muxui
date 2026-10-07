@@ -44,7 +44,7 @@ export function bindingSpecRevisionPreimage({
   const bindingRef = `${component.id}#${bindingId}`;
   const normativeExamples = examples
     .filter((example) => (
-      example.binding.ref === bindingRef
+      example.binding?.ref === bindingRef
       && example.binding.guidanceImpact === 'normative'
     ))
     .map((example) => ({
@@ -113,4 +113,53 @@ export function bindingSpecRevisionPreimage({
 
 export function bindingSpecRevision(input) {
   return canonicalDigest(bindingSpecRevisionPreimage(input));
+}
+
+/**
+ * The normative pattern fields plus each variant example's content revision
+ * (record and source bytes), in authored variant order. Editorial fields
+ * (name, summary, keywords, category, workflowValue) stay out.
+ */
+export function patternRevisionPreimage({
+  pattern,
+  examples = [],
+  exampleSources = {},
+  schemas,
+  ownership,
+}) {
+  validateFamily('pattern', pattern, { schemas, ownership });
+  const variants = pattern.variants.map(({ example: id }) => {
+    const example = examples.find((candidate) => candidate.id === id);
+    if (!example) throw new Error(`MUXUI_RELATION_INVALID: missing variant example ${id}`);
+    return {
+      id,
+      revision: contentRevision('example', example, {
+        sourceBytes: exampleSources[id],
+        schemas,
+        ownership,
+      }),
+    };
+  });
+  const optional = Object.fromEntries(
+    ['relations', 'invariants', 'parameters']
+      .filter((field) => pattern[field] !== undefined)
+      .map((field) => [field, pattern[field]]),
+  );
+  return {
+    pattern: {
+      id: pattern.id,
+      lifecycle: pattern.lifecycle,
+      platforms: pattern.platforms,
+      intent: pattern.intent,
+      participants: pattern.participants,
+      accessibility: pattern.accessibility,
+      unsupported: pattern.unsupported,
+      ...optional,
+    },
+    variants,
+  };
+}
+
+export function patternRevision(input) {
+  return canonicalDigest(patternRevisionPreimage(input));
 }

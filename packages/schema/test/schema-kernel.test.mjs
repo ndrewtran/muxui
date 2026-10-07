@@ -99,7 +99,7 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
   const graph = validateCatalogRecords(allRecords());
   assert.equal(graph.records.length, 5);
   assert.equal(relationEdges(graph.records).length, 8);
-  assert.equal(validateRelationRegistry().relations.length, 4);
+  assert.equal(validateRelationRegistry().relations.length, 5);
   const ownership = validateFieldOwnershipRegistry();
   assert.equal(ownership.classes.length, 3);
   assert.ok(ownership.fields.length > 100);
@@ -187,9 +187,10 @@ test('E-G0.1-01: minimum records, envelopes, diagnostics, ownership, and relatio
     kind: 'component',
     slug: 'button',
   });
-  assert.match('muxui:pattern:form', new RegExp(ARTIFACT_REF_PATTERN));
+  assert.match('muxui:pitfall:form', new RegExp(ARTIFACT_REF_PATTERN));
+  assert.equal(parseArtifactRef('muxui:pattern:form', { requireEnabledRecordKind: true }).kind, 'pattern');
   assert.throws(
-    () => parseArtifactRef('muxui:pattern:form', { requireEnabledRecordKind: true }),
+    () => parseArtifactRef('muxui:pitfall:form', { requireEnabledRecordKind: true }),
     /record behavior is unavailable in G0\.1/,
   );
 
@@ -710,7 +711,9 @@ test('field ownership rules reject orphan, duplicate, missing, unclassed, and au
     'evidenceResults',
     'evidenceStatus',
     'exportPath',
+    'group',
     'packageVersion',
+    'patternRevision',
     'sourceLocation',
     'specRevision',
   ]);

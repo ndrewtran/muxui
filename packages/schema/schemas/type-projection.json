@@ -4,6 +4,8 @@
   "projections": [
     { "name": "ArtifactKind", "source": "artifact-ref.schema.json#/x-muxui-kinds" },
     { "name": "EnabledRecordKind", "source": "artifact-ref.schema.json#/x-muxui-enabled-record-kinds" },
+    { "name": "PatternCategory", "source": "pattern.schema.json#/properties/category/enum" },
+    { "name": "PatternGroup", "source": "pattern.schema.json#/properties/category/x-muxui-category-groups" },
     { "name": "RelationType", "source": "relation.schema.json#/properties/relations/items/properties/type/enum" },
     { "name": "Lifecycle", "source": "binding.schema.json#/properties/lifecycle/enum" },
     { "name": "Strategy", "source": "binding.schema.json#/properties/strategy/enum" },

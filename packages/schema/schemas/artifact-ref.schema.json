@@ -18,6 +18,7 @@
   ],
   "x-muxui-enabled-record-kinds": [
     "component",
+    "pattern",
     "token",
     "guide",
     "example",

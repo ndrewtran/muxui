@@ -2,9 +2,10 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://muxui.dev/schema/example.schema.json",
   "title": "Mux UI example",
+  "description": "An example binds one component binding or is listed as one pattern variant; the catalog graph requires exactly one owner.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schemaVersion", "id", "kind", "name", "summary", "lifecycle", "binding", "complexity", "prerequisites", "source"],
+  "required": ["schemaVersion", "id", "kind", "name", "summary", "lifecycle", "complexity", "prerequisites", "source"],
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
     "id": { "type": "string", "pattern": "^muxui:example:[a-z0-9]+(?:-[a-z0-9]+)*$" },
