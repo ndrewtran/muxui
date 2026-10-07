@@ -2614,6 +2614,18 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   color: var(--muxui-semantic-color-neutral-90);
 }
 
+@media (forced-colors: active) {
+  .muxui-sidebar__account-trigger {
+    /* Keep system colours above the scoped light and dark palette rules. */
+    background: ButtonFace !important;
+    color: ButtonText !important;
+  }
+
+  .muxui-sidebar__account-trigger[data-disabled] {
+    color: GrayText !important;
+  }
+}
+
 .muxui-sidebar__account-trigger-icon {
   width: 1rem;
   height: 1rem;
