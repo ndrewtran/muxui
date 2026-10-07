@@ -30,12 +30,25 @@ import * as Variant from '/${variant.source}';
 const Example = Object.values(Variant).find((value) => typeof value === 'function');
 const { width = 900 } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
 window.__events = [];
-// Records every press that reaches a nested link or button, before any handler can stop it.
+window.__cardClicks = [];
+window.__presses = [];
+// Records every click that reaches a nested link or button, before any handler can stop it,
+// and apart from those the clicks on a card's own surface.
 document.addEventListener('click', (event) => {
   const control = event.target.closest?.('a, button');
-  const row = control?.closest('[role="row"]');
+  const row = event.target.closest?.('[role="row"]');
   if (control && row) window.__events.push([control.tagName.toLowerCase(), window.__card(row)]);
+  else if (row) window.__cardClicks.push(window.__card(row));
 }, true);
+// Records every React Aria press start, keyboard presses included (data-pressed appears on the pressed element).
+// A press can end before the next poll, so the attribute's mutations are the signal, not its presence.
+new MutationObserver((records) => {
+  for (const { target, oldValue } of records) {
+    if (oldValue !== null) continue;
+    const row = target.closest('[role="row"]');
+    window.__presses.push([target === row ? 'row' : target.tagName.toLowerCase(), row ? window.__card(row) : 0]);
+  }
+}).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['data-pressed'], attributeOldValue: true });
 
 window.__card = (row) => Number(/#(\\d+) /u.exec(row.textContent)?.[1]);
 // Names the focused card, plus the nested control when focus is inside one.
@@ -102,6 +115,32 @@ for (const engine of browserEngines()) {
               message: `${message}: focus reaches ${expected}`,
               report: () => ({ focus: window.__focus(), active: document.activeElement?.outerHTML.slice(0, 120) }),
             });
+            // The focused element, named as the failure message needs it.
+            const active = () => tab.evaluate(() => {
+              const element = document.activeElement;
+              const row = element?.closest('[role="row"]');
+              return { tag: element?.tagName.toLowerCase(), text: element?.textContent.trim(), card: row ? window.__card(row) : null };
+            });
+            // Presses `key` on the focused nested control after proving focus is on it, and returns what
+            // the press activated. React Aria runs a keyboard press itself and cancels the native click,
+            // except for Enter on macOS, which keeps it. So a control is activated by a press start or a
+            // click, whichever the platform produces. Anything that reached another control or a card's own
+            // surface is listed too.
+            const activate = async (key, expected) => {
+              assert.deepEqual(await active(), expected, `${key} needs focus on ${JSON.stringify(expected)}; focus is on ${JSON.stringify(await active())}`);
+              const [clicks, presses] = await tab.evaluate(() => [window.__events.length, window.__presses.length]);
+              await tab.keyboard.press(key);
+              const signals = await tab.evaluate(([from, pressFrom]) => ({
+                clicks: window.__events.slice(from),
+                presses: window.__presses.slice(pressFrom),
+                cardClicks: window.__cardClicks,
+              }), [clicks, presses]);
+              const activations = [...signals.presses, ...signals.clicks].map((signal) => JSON.stringify(signal));
+              assert.ok(activations.length > 0, `${key} on ${expected.text} activated nothing: ${JSON.stringify(signals)}`);
+              assert.deepEqual([...new Set(activations)], [JSON.stringify([expected.tag, expected.card])], `${key} on ${expected.text} activated only that control: ${JSON.stringify(signals)}`);
+              assert.deepEqual(signals.cardClicks, [], `${key} on ${expected.text} never clicks its card: ${JSON.stringify(signals)}`);
+              await pollUntil(tab, () => document.querySelector('[data-pressed]') === null, undefined, { message: `the press from ${key} ends`, report: () => document.querySelector('[data-pressed]')?.outerHTML.slice(0, 120) });
+            };
             const press = async (keys) => {
               for (const [key, destination] of keys) {
                 await tab.keyboard.press(key);
@@ -189,26 +228,16 @@ for (const engine of browserEngines()) {
             assert.deepEqual(await events(), [['a', 1]], 'Enter on Details clicks only that link');
             assert.deepEqual(await selected(), [], 'Enter on a nested link leaves selection unchanged');
             await press([['Tab', '1:button']]);
-            await tab.keyboard.press('Enter');
-            assert.deepEqual(await events(), [['a', 1], ['button', 1]], 'Enter on Save clicks only that button');
-            // React Aria runs a button's Space press itself and cancels the native click, so Space
-            // leaves no click in the log in every engine. The button, never its card, is the one pressed.
-            await tab.keyboard.down('Space');
-            await pollUntil(tab, () => document.activeElement.hasAttribute('data-pressed') && !document.activeElement.closest('[role="row"]').hasAttribute('data-pressed'), undefined, {
-              message: 'Space presses the Save button and not its card',
-              report: () => ({ button: document.activeElement.hasAttribute('data-pressed'), card: document.activeElement.closest('[role="row"]').hasAttribute('data-pressed') }),
-            });
-            await tab.keyboard.up('Space');
-            await pollUntil(tab, () => !document.activeElement.hasAttribute('data-pressed'), undefined, { message: 'the Save button releases after Space', report: () => document.activeElement.outerHTML.slice(0, 120) });
-            assert.deepEqual(await events(), [['a', 1], ['button', 1]], 'Space on Save adds no click');
+            // Enter and Space each activate Save (a press or a click, see `activate`), never its card or Details.
+            await activate('Enter', { tag: 'button', text: 'Save', card: 1 });
+            await activate('Space', { tag: 'button', text: 'Save', card: 1 });
             assert.deepEqual(await selected(), [], 'Enter and Space on a nested button leave selection unchanged');
+            // Only the pointer presses are compared: whether a keyboard press leaves a click is the platform's (see `activate`).
+            const keyboardClicks = (await events()).length;
             await row(2).locator('button').click();
             await row(2).locator('a').click();
-            assert.deepEqual(
-              await events(),
-              [['a', 1], ['button', 1], ['button', 2], ['a', 2]],
-              'a pointer press runs only the pressed control, and no other card ran an action',
-            );
+            assert.deepEqual((await events()).slice(keyboardClicks), [['button', 2], ['a', 2]], 'a pointer press runs only the pressed control');
+            assert.equal((await events()).every(([, card]) => card === 1 || card === 2), true, 'no other card ran an action');
             assert.deepEqual(await selected(), [], 'nested actions leave selection unchanged');
             await pollUntil(tab, () => /^#(?:poster-)?2$/u.test(location.hash), undefined, { message: 'the pointer press on Details follows its link', report: () => location.hash });
 
