@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -1018,4 +1018,114 @@ test('a BL1 capture that replaces an earlier one keeps it in the tree and names 
       await rm(directory, { recursive: true, force: true });
     }
   }
+});
+
+// BL1 close-out: the retained evidence covers E-BL1-01 to E-BL1-11 at one source revision that is in main's
+// history, keeps its disclosures, and cites only excerpts and captures the index retains.
+test('BL1 retained evidence covers every assertion at one source revision and keeps its disclosures', async () => {
+  const read = async (path) => JSON.parse(await readFile(join(repositoryRoot, path), 'utf8'));
+  const index = await read('tests/evidence/bl1/index.json');
+  assert.equal(index.milestone, 'BL1');
+  assert.equal(index.disclosureClass, 'public-sanitized');
+  assert.equal(index.sourceRevisionInMainHistory, true, 'the source revision is in main\'s history');
+  const ids = Array.from({ length: 11 }, (_, offset) => `E-BL1-${String(offset + 1).padStart(2, '0')}`);
+  assert.deepEqual(index.records.map(({ assertionId }) => assertionId), ids);
+  const retained = new Map(index.artifacts.map(({ path, sha256 }) => [path, sha256]));
+  const verification = await read(index.validation.path);
+  assert.equal(verification.sourceRevision, index.sourceRevision);
+  assert.equal(verification.sourceTree, index.sourceTree);
+  // Every excerpt an artifact cites is retained at the cited digest.
+  const excerpts = (value) => (Array.isArray(value) ? value.flatMap(excerpts)
+    : value && typeof value === 'object' ? [...(value.excerpt ? [value.excerpt] : []), ...Object.values(value).flatMap(excerpts)] : []);
+
+  const records = {};
+  const artifacts = {};
+  for (const { assertionId, path } of index.records) {
+    const record = await read(path);
+    records[assertionId] = record;
+    assert.equal(record.outcome, 'pass', assertionId);
+    assert.equal(record.sourceRevision, index.sourceRevision, assertionId);
+    assert.equal(record.sourceTree, index.sourceTree, assertionId);
+    assert.equal(record.executedRevision, record.sourceRevision, assertionId);
+    assert.deepEqual(record.proofTool, verification.proofTool, assertionId);
+    assert.ok(record.nonClaims.some((claim) => /^No assistive-technology support claim/u.test(claim)), `${assertionId} states the assistive-technology non-claim`);
+    artifacts[assertionId] = await read(record.artifact.path);
+    assert.equal(artifacts[assertionId].assertionId, assertionId);
+    assert.equal(artifacts[assertionId].sourceRevision, index.sourceRevision, assertionId);
+    for (const excerpt of excerpts(artifacts[assertionId])) assert.equal(retained.get(excerpt.path), excerpt.sha256, `${assertionId} cites ${excerpt.path}`);
+  }
+  // The proof tools are bound at revisions in main's history.
+  for (const { path, revision } of verification.proofTools) {
+    assert.equal(spawnSync('git', ['merge-base', '--is-ancestor', revision, index.sourceRevision], { cwd: repositoryRoot }).status, 0, `${path} is bound at an ancestor of the source revision`);
+  }
+  // The earlier E-BL1-08 and E-BL1-11 records are kept in the tree and named by their successors, never silently replaced.
+  for (const id of ['E-BL1-08', 'E-BL1-11']) {
+    const { path, sha256, sourceRevision } = records[id].supersedes;
+    assert.equal(sourceRevision, 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151', `${id} names the record it supersedes`);
+    assert.ok(path.startsWith('tests/evidence/bl1/superseded/be6f7c411f03/records/'), `${id}: the predecessor is archived in the tree`);
+    assert.equal(retained.get(path), sha256, `${id}: the index retains the predecessor at the digest the record names`);
+  }
+  assert.equal(index.supersessions, undefined, 'the index does not use the applicability-certificate supersessions list');
+
+  // E-BL1-01: eight negatives, parsed from the tests; an unknown field names a path, not an owner.
+  const negatives = artifacts['E-BL1-01'].observations.requiredNegatives;
+  assert.equal(negatives.length, 8);
+  assert.ok(negatives.every(({ owner }) => owner === 'pattern-contract' || typeof owner === 'string'), 'all eight name an owner');
+  assert.deepEqual(negatives.filter(({ ownerProof }) => ownerProof !== undefined).map(({ negative, owner }) => [negative, owner]), [['an unknown field', 'pattern-contract']]);
+  assert.ok(negatives.every(({ code, path, outcome }) => /^MUXUI_/u.test(code) && path.startsWith('$/') && outcome === 'pass'));
+
+  // E-BL1-03: every variant typechecked on its own against the packed declarations.
+  const typecheck = artifacts['E-BL1-03'].observations.typecheck.perVariant;
+  assert.equal(typecheck.variants.length, 5);
+  assert.ok(typecheck.variants.every(({ exitCode, diagnostics, packedDeclarations, workspaceSources }) => exitCode === 0 && diagnostics === 0 && packedDeclarations && !workspaceSources));
+
+  // E-BL1-06: every capture is retained at its digest, and none overflows.
+  const visual = artifacts['E-BL1-06'].observations;
+  assert.deepEqual(visual.pageWidths.widths, [360, 768, 1024, 1280, 1920]);
+  assert.equal(visual.captures.length, visual.expected.variants * 2 * visual.expected.toolbarPresets.length + visual.expected.marketingVariants.length * 2 * 5);
+  assert.equal(visual.overflowReport.measurements, visual.captures.length);
+  assert.ok(visual.captures.every(({ overflowX, path, sha256 }) => overflowX === false && retained.get(path) === sha256));
+
+  // E-BL1-09: the audit passed at the source revision, every control rejected, and the deployment claim is honest.
+  const boundary = artifacts['E-BL1-09'].observations;
+  assert.equal(boundary.audit.pass, true);
+  assert.equal(boundary.audit.head.revision, index.sourceRevision);
+  assert.deepEqual(boundary.negativeControls.checksWithoutControl, []);
+  assert.deepEqual(boundary.negativeControls.legsWithoutControl, {});
+  assert.ok(boundary.negativeControls.results.every(({ rejected, accepted, failingLegs, expectedFailingLegs }) => rejected === true && accepted !== false && JSON.stringify(failingLegs) === JSON.stringify(expectedFailingLegs)));
+  assert.equal(boundary.closeoutScope.run, true);
+  const deployment = boundary.audit.checks.find(({ id }) => id === 'no-deployment');
+  assert.equal(deployment.observations.observed === true ? deployment.observations.problems.length : 0, 0);
+  assert.match(records['E-BL1-09'].claim, deployment.observations.observed ? /GitHub lists no deployment/u : /no deployment configuration was added/u);
+  assert.equal(boundary.audit.checks.find(({ id }) => id === 'plan-install-registry-scaffold-unavailable').observations.liveCli.run, true);
+  // #227 is stated, not hidden, and is not called BL1.
+  const reactSource = boundary.audit.checks.find(({ id }) => id === 'react-source-files').observations;
+  assert.deepEqual(reactSource.nonBl1Changes.map(({ pullRequest, bl1 }) => [pullRequest, bl1]), [[227, false]]);
+  assert.match(records['E-BL1-09'].claim, /BL1 evidence validates the package after it/u);
+
+  // Independent reviews: each is retained at its digest and names its own reviewed revision.
+  const content = artifacts['E-BL1-10'].observations;
+  assert.deepEqual(content.scan.failures, []);
+  assert.equal(retained.get(content.review.artifact.path), content.review.artifact.sha256);
+  assert.equal(content.review.verdict, 'pass');
+  assert.ok(content.review.advisoryLines.length >= 3);
+  const exitReview = boundary.exitReview;
+  assert.equal(retained.get(exitReview.artifact.path), exitReview.artifact.sha256);
+  assert.match(exitReview.reviewedRevision, /^[0-9a-f]{40}$/u);
+  // Each review says how its reviewed tree compares with the source tree, whatever the answer is.
+  for (const review of [content.review, exitReview]) {
+    assert.equal(review.comparison.sourceTree, index.sourceTree);
+    assert.equal(typeof review.comparison.equalTrees, 'boolean');
+    assert.ok(Array.isArray(review.comparison.proofToolsChangedSinceReviewed));
+    assert.equal(typeof review.reviewedRevisionInMainHistory, 'boolean');
+    assert.deepEqual(Object.keys(review.sanitization.replacements).sort(), ['home', 'repositoryRoot', 'temporary']);
+  }
+
+  // E-BL1-11: the revised expectations and the known weaknesses stay on the record.
+  const baseline = artifacts['E-BL1-11'].observations;
+  const thresholds = await read(baseline.thresholds.path);
+  assert.equal(thresholds.provenance.revisedAfterFirstMeasurement.length, 9);
+  assert.equal(thresholds.discovery.queries.length, 21);
+  assert.deepEqual(baseline.knownDiscoveryWeaknesses.map(({ query }) => query).sort(), ['billing toggle', 'collections', 'split hero']);
+  assert.match(records['E-BL1-11'].claim, /9 of 21 discovery expectations were revised/u);
 });

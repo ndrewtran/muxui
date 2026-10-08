@@ -1,0 +1,27 @@
+✔ E-BL1-02: a scaffold emits only canonical inputs under catalog/patterns and previews the manifest (5.949333ms)
+✔ E-BL1-02: a scaffold round-trips through schema validation, compile, and get (2641.654875ms)
+✔ E-BL1-02 negative: a scaffold refuses missing decisions, unowned fields, and non-canonical sources (35.140958ms)
+✔ E-BL1-02: semantic diff separates editorial, compatible, and incompatible pattern edits (10.566334ms)
+✔ E-BL1-02: change intent previews a pattern edit with its variants and checks (4.610125ms)
+✔ E-BL1-02: a variant source edit moves only patternRevision and that example's contentRevision (202.124833ms)
+✔ E-BL1-02: affected closure reaches a pattern from a variant source, its schema, and its components (24.548708ms)
+✔ E-BL1-02: an orphan example is diagnosed at its owner, now resolvable (48.714583ms)
+✔ E-BL1-02: an undeclared import is diagnosed with its file, line, and the canonical form (142.381416ms)
+✔ E-BL1-02: an unknown participant is diagnosed at the participant component (47.116333ms)
+✔ E-BL1-02: a duplicate variant is diagnosed through the manifest entry the compiler stopped at (10.971041ms)
+✔ E-BL1-02: a colliding variant id is attributed to the later declaration and references the earlier one (117.810958ms)
+✔ E-BL1-02: a hand-edited CRLF variant is diagnosed at its example record and source file (49.753166ms)
+✔ E-BL1-02: pattern records diagnose at their field owners through canonical source diagnosis (1.467208ms)
+✔ E-BL1-01: an unknown pattern field is diagnosed at the pattern contract through the family fallback (0.740208ms)
+✔ E-BL1-02: an authored derived field is diagnosed at its reserved owner, not the family contract (15.429208ms)
+✔ E-BL1-02: every pattern and example path reports its own revision members, never the generic fallback (9.916542ms)
+✔ E-BL1-02: an injected stable pattern field must couple scaffold, diff, diagnostics, and closure (8.912459ms)
+✔ E-BL1-02: an injected required example field must couple variant decisions to the example schema (8.065375ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3529.095958

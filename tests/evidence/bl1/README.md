@@ -1,41 +1,68 @@
 # BL1 retained evidence
 
 The Roadmap "BL1 Blocks showcase" slice requires `E-BL1-01` through
-`E-BL1-11`. This root holds the capture tools for all eleven and, until the
-close-out capture is retained, only two records, `E-BL1-08` and `E-BL1-11`. No
-other assertion has a retained record here, so this README claims none of them
-met. The Roadmap exit condition is judged from the retained records, not from
-this file.
+`E-BL1-11`. This root retains all eleven for the four shipped blocks, captured in
+one run of `tests/evidence/capture-bl1.mjs` in close-out scope at main commit
+`c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b` (the squash of #230, tree
+`6c3f51fb3c6d9b33cf5b799b01ca745705850555`), which is in `origin/main`'s history.
+Every record is `pass`; its `claim` and `nonClaims` say what it proves and what it
+does not. The Roadmap exit condition is judged from these records and the Roadmap,
+not from this file.
 
-## Records on main today
+## What is retained
 
-- `E-BL1-08`: repeated generation is a no-op, and the catalog digest changes
-  only for the added sources.
-- `E-BL1-11`: the catalog regression baseline for the seed set. Nine of its
-  twenty-one discovery expectations were revised after a first measurement and
-  before capture, so they were not all fixed before measuring; the thresholds'
-  `provenance` field names them and the reasons. The queries "collections",
-  "split hero", and "billing toggle" rank their pattern below first, known
-  discovery weaknesses the record states rather than passes.
+- `records/E-BL1-01.json` to `records/E-BL1-11.json`, one per assertion, each binding
+  the source revision and tree above and the proof tools by commit, tree, and bytes.
+- `artifacts/`: what each record observed, and the two independent review records
+  (`E-BL1-10-content-review.md` and `E-BL1-09-exit-review.md`).
+- `validation/`: the sanitized output of every proof command; the digest of the raw
+  output is in the artifact and the raw output is not retained.
+- `captures/`: the 60 `E-BL1-06` images.
+- `verification.json` and `index.json`: the validation summary and the index
+  `evidence-verify` checks, including every file above and under `superseded/`.
+- `regression-thresholds.json`, `regression.mjs`, and the other tools listed below.
 
-Both bind source revision `be6f7c41`, a commit from a pull request branch that a
-squash merge removed from main's history, so neither can be fetched from main.
-Until the close-out capture is retained they stay byte for byte as they are.
+## Earlier records, superseded
 
-The close-out capture supersedes them without deleting them, because evidence is
-append-only. The new records are written at the same paths, so before that the
-tool copies the whole earlier capture (index, validation summary, records,
-artifacts, excerpts, and captures) byte for byte under
-`tests/evidence/bl1/superseded/<revision>/`, after checking each earlier artifact
-still matches the digest its record names. Every copied file is listed with its
-digest in the new index's `artifacts`, so `evidence-verify` checks them, and each
-new record carries `supersedes` with the copied predecessor's path, digest, and
-source revision. A rerun of the capture at the same revision copies nothing new and
-carries each `supersedes` forward; a later capture archives the capture it
-replaces the same way, so the chain stays walkable. The index's `supersessions`
-list is not used: Architecture defines it as an `EvidenceApplicabilitySupersession`
-certificate that closes an applicability chain after an accepted authority change,
-which a recapture is not.
+`E-BL1-08` and `E-BL1-11` were first captured at `be6f7c41`, a commit from a pull
+request branch that a squash merge removed from main's history, so those records
+could not be fetched from main. They are superseded, not deleted, because evidence is
+append-only. The new records are written at the same paths, so the capture first
+copied the whole earlier capture (index, validation summary, records, and artifacts;
+it had no excerpts or captures) byte for byte to
+`tests/evidence/bl1/superseded/be6f7c411f03/`, after checking each earlier artifact
+still matched the digest its record names. Every copied file is listed with its
+digest in the index's `artifacts`, so `evidence-verify` checks them, and the new
+`E-BL1-08` and `E-BL1-11` records carry `supersedes` with the copied predecessor's
+path, digest, and source revision. The copied records keep the `artifact` and
+`validation` paths they had, which now name the replaced files rather than the copies
+beside them: their own digests are what the index and `supersedes` bind. A rerun of the
+capture at the same revision copies nothing new and carries each `supersedes`
+forward; a later capture archives the capture it replaces the same way, so the chain
+stays walkable. The index's `supersessions` list is not used: Architecture defines it
+as an `EvidenceApplicabilitySupersession` certificate that closes an applicability
+chain after an accepted authority change, which a recapture is not.
+
+## Independent reviews retained
+
+- **Content review (`E-BL1-10`).** Read the block sources at
+  `670cb1880350e62d19f30a09914b6eb6dadef9a4`. Verdict: pass for all four blocks,
+  with advisories the capture lists and does not fix, because changing a block source
+  would invalidate the reviewed revision. `catalog/patterns` has the same tree at that
+  revision and at the source revision, so the review applies to the sources scanned.
+  The whole tree differs by the 12 files of #230, and the proof tools are among them:
+  the review did not read them, and the record says so.
+- **Exit review (`E-BL1-09`).** The final review of the step 1 tooling at
+  `509d870216ea00a0afbca717fa39188afffbd21a`, tree
+  `6c3f51fb3c6d9b33cf5b799b01ca745705850555`. That commit is a pull request branch
+  commit, so it is not in main's history, but its tree equals the source tree, no path
+  differs, and no proof tool differs: the squash commit is the tree the reviewer read.
+  The record carries its own limits and verdict.
+
+Two earlier reviews of the step 1 tooling, of `82aa2576` and of `c4770e2d`, found
+defects that the step 1 fixup resolved. They are not retained: the `509d8702` review
+supersedes them, and a review of a commit that no longer exists says nothing about
+the tools that ran.
 
 ## The close-out capture
 
