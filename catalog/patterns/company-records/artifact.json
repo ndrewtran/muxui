@@ -68,6 +68,7 @@
     "The selected count is a role=status element, and it counts only the rows the search shows.",
     "The Table is one Tab stop: arrow keys move across the cells, through each row's tags to its menu button, and Enter opens the menu.",
     "Each row's TagGroup is named Tags for that company and each menu button Actions for that company.",
+    "The row menu button's focus ring is a box-shadow plus a transparent outline, so an outline still shows where forced colors drop the shadow.",
     "The Table keeps a 44rem minimum width and scrolls sideways inside its own wrapper on a narrower page, so the page itself never scrolls horizontally."
   ],
   "unsupported": [

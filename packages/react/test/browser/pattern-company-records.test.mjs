@@ -247,6 +247,9 @@ for (const engine of browserEngines()) {
           }
           assert.ok(visited.includes('Vendor'), 'the arrow keys pass through the row tags');
           await expectFocus(tab, 'Actions for Example Holdings', 'ArrowRight ends on the row menu button');
+          // The button reached by arrow keys paints a focus ring that differs from its rest state, like a Tab stop does.
+          const walk = ringWalk(tab);
+          await walk.land('the arrow-reached row menu button');
           await tab.keyboard.press('Enter');
           await tab.getByRole('menu', { name: 'Actions for Example Holdings', exact: true }).waitFor();
           await pollUntil(tab, () => document.activeElement?.getAttribute('role') === 'menuitem', undefined, { message: 'the menu takes focus', report: () => document.activeElement?.outerHTML.slice(0, 120) });
@@ -256,6 +259,34 @@ for (const engine of browserEngines()) {
           await tab.getByRole('menu').waitFor({ state: 'detached' });
           await expectFocus(tab, 'Actions for Example Holdings', 'Escape returns focus to the menu button');
           assert.deepEqual(await selectedNames(tab), ['Example Holdings', 'Placeholder Studio']);
+          await tab.locator('#after').focus();
+          await walk.finish();
+          assert.deepEqual(errors, []);
+        } finally {
+          await context.close();
+        }
+      });
+
+      await t.test('keeps a visible outline on the arrow-reached row menu button in forced colors', async () => {
+        const { context, tab, errors } = await openBlock(browser, url);
+        try {
+          await tab.emulateMedia({ forcedColors: 'active' });
+          assert.equal(await tab.evaluate(() => matchMedia('(forced-colors: active)').matches), true, 'the page is in forced colors');
+          await tabToTable(tab);
+          for (let step = 0; step < 12 && (await tab.evaluate(() => document.activeElement.tagName)) !== 'BUTTON'; step += 1) await tab.keyboard.press('ArrowRight');
+          await expectFocus(tab, 'Actions for Example Holdings', 'ArrowRight ends on the row menu button');
+          const read = (selector) => tab.evaluate((css) => {
+            const node = css === null ? document.activeElement : document.querySelector(css);
+            const style = getComputedStyle(node);
+            return { style: style.outlineStyle, width: parseFloat(style.outlineWidth), color: style.outlineColor, shadow: style.boxShadow };
+          }, selector);
+          const focused = await read(null);
+          // The box-shadow ring is the paint forced colors drops, so the focus indicator has to be an outline.
+          assert.notEqual(focused.style, 'none', 'the focused button keeps an outline');
+          assert.ok(focused.width >= 2, `the outline is at least 2px wide (${focused.width}px)`);
+          // Where the engine applies forced colors (it drops the shadow), the outline paints a system colour, not transparency.
+          if (focused.shadow === 'none') assert.ok(!/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\)$/u.test(focused.color), `the outline is not transparent (${focused.color})`);
+          assert.equal((await read('.records-menu:not(:focus)')).style, 'none', 'a button at rest has no outline');
           assert.deepEqual(errors, []);
         } finally {
           await context.close();
