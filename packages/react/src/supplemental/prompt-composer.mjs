@@ -9,6 +9,7 @@ import { useCandidateMotion } from './candidate-motion.mjs';
 
 const e = React.createElement;
 const modelKeyPrefix = 'model:';
+const px = (value) => Number.parseFloat(value) || 0;
 function triggerAt(node) {
   if (!node || node.selectionStart !== node.selectionEnd) return null;
   const position = node.selectionStart;
@@ -125,12 +126,21 @@ export const PromptComposer = React.forwardRef(function PromptComposer({
     const list = node?.ownerDocument.getElementById(`${id}-suggestions`);
     if (!node || !view || !list) return;
     const place = () => {
-      const rect = node.closest('form').getBoundingClientRect();
+      const form = node.closest('form');
+      const rect = form.getBoundingClientRect();
+      const formStyle = view.getComputedStyle(form);
+      const listStyle = view.getComputedStyle(list);
+      // The menu is anchored to the form's padding box, so its borders move the anchors inward.
+      const anchorTop = rect.top + px(formStyle.borderTopWidth);
+      const anchorBottom = rect.bottom - px(formStyle.borderBottomWidth);
+      // The anchored inset resolves to the padding-box height plus the gap, so the rest is the gap.
+      const gap = Math.max(0, px(list.dataset.placement === 'below' ? listStyle.top : listStyle.bottom) - (anchorBottom - anchorTop));
+      const frame = px(listStyle.borderTopWidth) + px(listStyle.borderBottomWidth);
       const top = view.visualViewport?.offsetTop ?? 0;
       const height = view.visualViewport?.height ?? view.innerHeight;
-      const above = Math.max(0, rect.top - top - 4);
-      const below = Math.max(0, top + height - rect.bottom - 4);
-      const wanted = Math.min(256, list.scrollHeight);
+      const above = Math.max(0, anchorTop - gap - top - 4);
+      const below = Math.max(0, top + height - anchorBottom - gap - 4);
+      const wanted = Math.min(256, list.scrollHeight + frame);
       const placement = above >= wanted || above >= below ? 'above' : 'below';
       const available = placement === 'above' ? above : below;
       const next = { placement, height: Math.min(256, available) };

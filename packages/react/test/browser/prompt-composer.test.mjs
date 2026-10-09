@@ -182,3 +182,30 @@ test('PromptComposer model Select preserves keyboard focus, caller state, reset 
     assert.deepEqual(errors, []);
   } finally { await browser.close(); await server.close(); }
 });
+
+test('PromptComposer keeps the whole suggestion menu, padding, border and gap included, inside the viewport', { timeout: 120_000 }, async () => {
+  const server = await startServer({ entries: ['src/supplemental/prompt-composer.mjs'], pages: { '/prompt.html': fixture }, modules: { '/prompt-entry.mjs': entry } });
+  const browser = await launchBrowser(); const page = await browser.newPage({ viewport: { width: 800, height: 300 } });
+  try {
+    const errors = []; page.on('pageerror', error => errors.push(error.message));
+    await page.goto(server.url + '/prompt.html'); const input = page.getByRole('textbox', { name: 'Draft' }); await input.waitFor();
+    // One compact row and more matches than fit, so the menu is sized by the space left.
+    const sources = Array.from({ length: 30 }, (_, index) => ({ id: `source-${index}`, label: `Source ${index}` }));
+    await page.evaluate(sources => window.mount({ defaultValue: '', sources, attachments: [], models: [], onFilesSelected: undefined }), sources);
+    for (const [top, placement] of [[100, 'below'], [190, 'above']]) {
+      await page.locator('main').evaluate((main, top) => { main.style.paddingTop = '0'; main.style.paddingTop = `${top - main.getBoundingClientRect().top}px`; }, top);
+      await input.fill(''); await input.fill('@'); const menu = page.getByRole('listbox'); await menu.waitFor();
+      const frame = await page.evaluate(() => {
+        const form = document.querySelector('form').getBoundingClientRect(); const menu = document.querySelector('[role=listbox]');
+        const box = menu.getBoundingClientRect(); const style = getComputedStyle(menu);
+        return { placement: menu.dataset.placement, form: { top: form.top, bottom: form.bottom }, menu: { top: box.top, bottom: box.bottom }, viewport: innerHeight, scrolls: menu.scrollHeight > menu.clientHeight, boxSizing: style.boxSizing };
+      });
+      assert.equal(frame.placement, placement, JSON.stringify(frame));
+      assert.equal(frame.scrolls, true, 'the menu is capped by the space left and scrolls');
+      assert.ok(frame.menu.top >= 0 && frame.menu.bottom <= frame.viewport, `the whole ${placement} menu stays inside the viewport: ${JSON.stringify(frame)}`);
+      assert.ok(placement === 'below' ? frame.menu.top >= frame.form.bottom : frame.menu.bottom <= frame.form.top, 'the menu does not cover the form');
+      await page.keyboard.press('Escape');
+    }
+    assert.deepEqual(errors, []);
+  } finally { await browser.close(); await server.close(); }
+});
