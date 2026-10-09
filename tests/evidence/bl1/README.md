@@ -1,10 +1,14 @@
 # BL1 retained evidence
 
 The Roadmap "BL1 Blocks showcase" slice requires `E-BL1-01` through
-`E-BL1-11`. This root retains all eleven for the four shipped blocks, captured in
-one run of `tests/evidence/capture-bl1.mjs` in close-out scope at main commit
-`c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b` (the squash of #230, tree
-`6c3f51fb3c6d9b33cf5b799b01ca745705850555`), which is in `origin/main`'s history.
+`E-BL1-11`. This root retains all eleven for the six shipped blocks, captured in
+one run of `tests/evidence/capture-bl1.mjs` in growth scope at main commit
+`0c3cf6626ffde8c15c970018733672d3731cdaf3` (the squash of #239, tree
+`6e1031f070985f9f67851d6608ba54e34c1c7bba`), which is in `origin/main`'s history.
+The growth commit it audits is `bb6097269c3a2683e8680d0d7be9a83b4f069958` (#238), which
+added the company records and task filters blocks. The close-out capture of the first
+four blocks, at `c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b` (the squash of #230), is
+archived under `superseded/c8f3e7cbc18b/`.
 Every record is `pass`; its `claim` and `nonClaims` say what it proves and what it
 does not. The Roadmap exit condition is judged from these records and the Roadmap,
 not from this file.
@@ -17,7 +21,7 @@ not from this file.
   (`E-BL1-10-content-review.md` and `E-BL1-09-exit-review.md`).
 - `validation/`: the sanitized output of every proof command; the digest of the raw
   output is in the artifact and the raw output is not retained.
-- `captures/`: the 60 `E-BL1-06` images.
+- `captures/`: the 84 `E-BL1-06` images.
 - `verification.json` and `index.json`: the validation summary and the index
   `evidence-verify` checks, including every file above and under `superseded/`.
 - `regression-thresholds.json`, `regression.mjs`, and the other tools listed below. The
@@ -42,25 +46,34 @@ path, digest, and source revision. The copied records keep the `artifact` and
 beside them: their own digests are what the index and `supersedes` bind. A rerun of the
 capture at the same revision copies nothing new and carries each `supersedes`
 forward; a later capture archives the capture it replaces the same way, so the chain
-stays walkable. The index's `supersessions` list is not used: Architecture defines it
+stays walkable. The growth capture at `0c3cf662` archived the close-out capture at
+`c8f3e7cb` the same way, under `superseded/c8f3e7cbc18b/`, and every new record carries
+`supersedes` naming its close-out predecessor. The index's `supersessions` list is not used: Architecture defines it
 as an `EvidenceApplicabilitySupersession` certificate that closes an applicability
 chain after an accepted authority change, which a recapture is not.
 
 ## Independent reviews retained
 
 - **Content review (`E-BL1-10`).** Read the block sources at
-  `670cb1880350e62d19f30a09914b6eb6dadef9a4`. Verdict: pass for all four blocks,
-  with advisories the capture lists and does not fix, because changing a block source
-  would invalidate the reviewed revision. `catalog/patterns` has the same tree at that
-  revision and at the source revision, so the review applies to the sources scanned.
-  The whole tree differs by the 12 files of #230, and the proof tools are among them:
-  the review did not read them, and the record says so.
-- **Exit review (`E-BL1-09`).** The final review of the step 1 tooling at
+  `bb6097269c3a2683e8680d0d7be9a83b4f069958` (#238), by an independent reviewer
+  (Claude Opus 5.5) that authored none of the blocks and did not review their code.
+  Verdict: pass for all six blocks, with advisories the capture lists and does not fix,
+  because changing a block source would invalidate the reviewed revision.
+  `catalog/patterns` has the same tree at that revision and at the source revision, so
+  the review applies to the sources scanned. The whole tree differs by the 6 paths of
+  #239 (this file, four proof tools, and the integrity test): the review did not read
+  them, and the record says so. The close-out content review of `670cb188` is archived
+  with the close-out capture.
+- **Exit review (`E-BL1-09`).** A growth capture takes no new exit review and reuses
+  the close-out's: the final review of the step 1 tooling at
   `509d870216ea00a0afbca717fa39188afffbd21a`, tree
   `6c3f51fb3c6d9b33cf5b799b01ca745705850555`. That commit is a pull request branch
   commit, so it is not in main's history, but its tree equals the source tree, no path
   differs, and no proof tool differs: the squash commit is the tree the reviewer read.
-  The record carries its own limits and verdict.
+  The record carries its own limits and verdict. Five proof tools differ at the growth
+  capture's source revision, so the `E-BL1-09` record states that the exit review is not
+  a review of them as they ran; #233 and #239, which changed them, each had their own
+  independent review.
 
 Two earlier reviews of the step 1 tooling, of `82aa2576` and of `c4770e2d`, found
 defects that the step 1 fixup resolved. They are not retained: the `509d8702` review

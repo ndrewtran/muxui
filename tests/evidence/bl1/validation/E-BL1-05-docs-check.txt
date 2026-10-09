@@ -8,7 +8,7 @@ Scope: 5 of 15 workspace projects
 ../../packages/schema generate: [schema] generated packages/schema/generated/platform-safety-contract.mjs
 ../../packages/schema generate: Done
 ../../packages/tokens generate$ node src/generate.mjs
-../../packages/tokens generate: [tokens] canonical theme integrity verified (919 tokens)
+../../packages/tokens generate: [tokens] canonical theme integrity verified (923 tokens)
 ../../packages/tokens generate: Done
 ../../packages/catalog generate$ node src/generate.mjs
 ../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog.mjs
@@ -17,36 +17,36 @@ Scope: 5 of 15 workspace projects
 ../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog-package.json
 ../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog-package.json.provenance
 ../../packages/catalog generate: Done
-../../packages/react generate$ node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs
 ../../packages/tooling generate$ node src/generate.mjs
+../../packages/react generate$ node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs
 ../../packages/tooling generate: [tooling] generated packages/tooling/generated/command-surface.mjs
 ../../packages/tooling generate: [tooling] generated packages/tooling/generated/response-types.d.ts
 ../../packages/tooling generate: Done
 ../../packages/react generate: [react] generated current R1.6 union projection with the retained R1.5 family closure
 ../../packages/react generate: Done
-00:52:52 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:52:52 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:52:52 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:52:53 [content] Syncing content
-00:52:53 [content] Synced content
-00:52:53 [types] Generated 280ms
-00:52:53 [check] Getting diagnostics for Astro files in <repo>/apps/docs...
+04:54:05 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:05 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:05 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:06 [content] Syncing content
+04:54:06 [content] Synced content
+04:54:06 [types] Generated 273ms
+04:54:06 [check] Getting diagnostics for Astro files in <repo>/apps/docs...
 Result (66 files):
 - 0 errors
 - 0 warnings
 - 0 hints
 
-Docs contract passed: 79 enabled web.react component pages, 71 canonical guides, and 94 canonical examples, and 4 enabled block patterns.
-✔ flags a quoted id or slug and a path segment (0.4605ms)
-✔ passes words, identifiers, selectors, and longer names that only contain the slug (0.096833ms)
-✔ a hyphenated slug is matched whole (0.074ms)
-✔ list pattern: the loader returns the API items in order (1.133709ms)
-✔ get pattern: the loader returns the record fields and the exact variant sources (3.844916ms)
-✔ ordering and labels come from the schema category groups, not the app (0.23575ms)
-✔ participant filter: list --uses matches the loader and the rail index (11.441791ms)
-✔ rail filter: the shipped index answers every query as the API does (473.81675ms)
-✔ rail filter over several blocks: any-term, the 16-term cap, the 256-character limit, and uses (2503.597792ms)
-✔ usedIn: component pages carry the derived view, and list only component-bound examples (72.71975ms)
+Docs contract passed: 84 enabled web.react component pages, 71 canonical guides, and 104 canonical examples, and 6 enabled block patterns.
+✔ flags a quoted id or slug and a path segment (0.460167ms)
+✔ passes words, identifiers, selectors, and longer names that only contain the slug (0.095167ms)
+✔ a hyphenated slug is matched whole (0.072958ms)
+✔ list pattern: the loader returns the API items in order (1.330083ms)
+✔ get pattern: the loader returns the record fields and the exact variant sources (5.659583ms)
+✔ ordering and labels come from the schema category groups, not the app (0.244417ms)
+✔ participant filter: list --uses matches the loader and the rail index (12.609ms)
+✔ rail filter: the shipped index answers every query as the API does (732.739166ms)
+✔ rail filter over several blocks: any-term, the 16-term cap, the 256-character limit, and uses (2705.39625ms)
+✔ usedIn: component pages carry the derived view, and list only component-bound examples (81.716292ms)
 ℹ tests 10
 ℹ suites 0
 ℹ pass 10
@@ -54,167 +54,185 @@ Docs contract passed: 79 enabled web.react component pages, 71 canonical guides,
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 3249.195
-00:53:00 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:53:00 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [content] Syncing content
-00:53:00 [content] Synced content
-00:53:00 [types] Generated 227ms
-00:53:00 [build] output: "static"
-00:53:00 [build] mode: "static"
-00:53:00 [build] directory: <tmp>
-00:53:00 [build] Collecting build info...
-00:53:00 [build] ✓ Completed in 290ms.
-00:53:00 [build] Building static entrypoints...
-00:53:00 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:53:00 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:53:00 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:53:00 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:53:00 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
-00:53:00 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
-00:53:00 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
-00:53:01 [vite] ✓ built in 859ms
-00:53:01 [vite] ✓ built in 271ms
-00:53:01 [build] Rearranging server assets...
+ℹ duration_ms 3728.211417
+04:54:13 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:13 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [content] Syncing content
+04:54:13 [content] Synced content
+04:54:13 [types] Generated 225ms
+04:54:13 [build] output: "static"
+04:54:13 [build] mode: "static"
+04:54:13 [build] directory: <tmp>
+04:54:13 [build] Collecting build info...
+04:54:13 [build] ✓ Completed in 288ms.
+04:54:13 [build] Building static entrypoints...
+04:54:13 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:13 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:13 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:13 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:13 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+04:54:13 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+04:54:13 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+04:54:14 [vite] ✓ built in 987ms
+04:54:15 [WARN] [vite] [plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+04:54:15 [vite] ✓ built in 396ms
+04:54:15 [build] Rearranging server assets...
 
  generating static routes
-00:53:01 [WARN] [content] The collection "i18n" does not exist or is empty. Please check your content config file for errors.
-00:53:01   ├─ /404.html00:53:01 [WARN] [content] Entry docs → 404 was not found.
- (+8ms)
-00:53:01   ├─ /blocks/filter-index.json (+8ms)
-00:53:01   ├─ /blocks/poster-grid/css-grid/preview/index.html (+40ms)
-00:53:01   ├─ /blocks/poster-grid/virtualized/preview/index.html (+6ms)
-00:53:01   ├─ /blocks/account-settings/sections/preview/index.html (+10ms)
-00:53:01   ├─ /blocks/marketing-hero/split/preview/index.html (+1ms)
-00:53:01   ├─ /blocks/pricing-plans/columns/preview/index.html (+2ms)
-00:53:01   ├─ /blocks/poster-grid/css-grid/index.html (+108ms)
-00:53:01   ├─ /blocks/poster-grid/virtualized/index.html (+148ms)
-00:53:01   ├─ /blocks/account-settings/sections/index.html (+23ms)
-00:53:01   ├─ /blocks/marketing-hero/split/index.html (+8ms)
-00:53:01   ├─ /blocks/pricing-plans/columns/index.html (+7ms)
-00:53:01   ├─ /blocks/poster-grid/index.html (+4ms)
-00:53:01   ├─ /blocks/account-settings/index.html (+6ms)
-00:53:01   ├─ /blocks/marketing-hero/index.html (+2ms)
-00:53:01   ├─ /blocks/pricing-plans/index.html (+6ms)
-00:53:01   ├─ /blocks/index.html (+1ms)
-00:53:01   ├─ /components/alert-dialog/index.html (+8ms)
-00:53:01   ├─ /components/autocomplete/index.html (+7ms)
-00:53:01   ├─ /components/avatar/index.html (+4ms)
-00:53:01   ├─ /components/breadcrumbs/index.html (+4ms)
-00:53:01   ├─ /components/button/index.html (+9ms)
-00:53:01   ├─ /components/button-group/index.html (+3ms)
-00:53:01   ├─ /components/calendar/index.html (+7ms)
-00:53:01   ├─ /components/card/index.html (+3ms)
-00:53:01   ├─ /components/checkbox/index.html (+4ms)
-00:53:01   ├─ /components/checkbox-field/index.html (+3ms)
-00:53:01   ├─ /components/checkbox-group/index.html (+3ms)
-00:53:02   ├─ /components/color-area/index.html (+4ms)
-00:53:02   ├─ /components/color-field/index.html (+4ms)
-00:53:02   ├─ /components/color-mode-toggle/index.html (+3ms)
-00:53:02   ├─ /components/color-picker/index.html (+3ms)
-00:53:02   ├─ /components/color-slider/index.html (+5ms)
-00:53:02   ├─ /components/color-swatch/index.html (+7ms)
-00:53:02   ├─ /components/color-swatch-picker/index.html (+5ms)
-00:53:02   ├─ /components/color-wheel/index.html (+4ms)
-00:53:02   ├─ /components/combo-box/index.html (+5ms)
-00:53:02   ├─ /components/command-palette/index.html (+7ms)
-00:53:02   ├─ /components/date-field/index.html (+5ms)
-00:53:02   ├─ /components/date-picker/index.html (+5ms)
-00:53:02   ├─ /components/date-range-picker/index.html (+6ms)
-00:53:02   ├─ /components/dialog/index.html (+7ms)
-00:53:02   ├─ /components/disclosure/index.html (+5ms)
-00:53:02   ├─ /components/disclosure-group/index.html (+5ms)
-00:53:02   ├─ /components/drop-zone/index.html (+3ms)
-00:53:02   ├─ /components/file-trigger/index.html (+3ms)
-00:53:02   ├─ /components/form/index.html (+3ms)
-00:53:02   ├─ /components/grid-list/index.html (+6ms)
-00:53:02   ├─ /components/group/index.html (+3ms)
-00:53:02   ├─ /components/header-nav/index.html (+3ms)
-00:53:02   ├─ /components/icon-button/index.html (+6ms)
-00:53:02   ├─ /components/image/index.html (+3ms)
-00:53:02   ├─ /components/input/index.html (+3ms)
-00:53:02   ├─ /components/input-tags/index.html (+5ms)
-00:53:02   ├─ /components/lightbox/index.html (+4ms)
-00:53:02   ├─ /components/link/index.html (+4ms)
-00:53:02   ├─ /components/list-box/index.html (+6ms)
-00:53:02   ├─ /components/markdown/index.html (+8ms)
-00:53:02   ├─ /components/menu/index.html (+5ms)
-00:53:02   ├─ /components/meter/index.html (+3ms)
-00:53:02   ├─ /components/multi-select/index.html (+3ms)
-00:53:02   ├─ /components/number-field/index.html (+7ms)
-00:53:02   ├─ /components/payment-input/index.html (+3ms)
-00:53:02   ├─ /components/popover/index.html (+6ms)
-00:53:02   ├─ /components/preview-trigger/index.html (+3ms)
-00:53:02   ├─ /components/progress-bar/index.html (+3ms)
-00:53:02   ├─ /components/progress-circle/index.html (+3ms)
-00:53:02   ├─ /components/radio-field/index.html (+3ms)
-00:53:02   ├─ /components/radio-group/index.html (+3ms)
-00:53:02   ├─ /components/range-calendar/index.html (+4ms)
-00:53:02   ├─ /components/resizable/index.html (+3ms)
-00:53:02   ├─ /components/search-field/index.html (+4ms)
-00:53:02   ├─ /components/select/index.html (+3ms)
-00:53:02   ├─ /components/select-native/index.html (+3ms)
-00:53:02   ├─ /components/separator/index.html (+3ms)
-00:53:02   ├─ /components/sidebar/index.html (+4ms)
-00:53:02   ├─ /components/slider/index.html (+4ms)
-00:53:02   ├─ /components/switch/index.html (+3ms)
-00:53:02   ├─ /components/switch-field/index.html (+3ms)
-00:53:02   ├─ /components/table/index.html (+6ms)
-00:53:02   ├─ /components/tabs/index.html (+8ms)
-00:53:02   ├─ /components/tag-group/index.html (+4ms)
-00:53:02   ├─ /components/tag-select/index.html (+4ms)
-00:53:02   ├─ /components/text/index.html (+3ms)
-00:53:02   ├─ /components/text-area/index.html (+3ms)
-00:53:02   ├─ /components/text-editor/index.html (+17ms)
-00:53:02   ├─ /components/text-field/index.html (+4ms)
-00:53:02   ├─ /components/time-field/index.html (+2ms)
-00:53:02   ├─ /components/toast/index.html (+3ms)
-00:53:02   ├─ /components/toggle-button/index.html (+3ms)
-00:53:02   ├─ /components/toggle-button-group/index.html (+3ms)
-00:53:02   ├─ /components/token-field/index.html (+3ms)
-00:53:02   ├─ /components/toolbar/index.html (+3ms)
-00:53:02   ├─ /components/tooltip/index.html (+3ms)
-00:53:02   ├─ /components/tree/index.html (+5ms)
-00:53:02   ├─ /components/virtualizer/index.html (+6ms)
-00:53:02   ├─ /foundations/reference-tokens/index.html (+51ms)
-00:53:02   ├─ /foundations/semantic-tokens/index.html (+127ms)
-00:53:02   ├─ /foundations/colour/index.html (+51ms)
-00:53:02   ├─ /foundations/typography/index.html (+33ms)
-00:53:02   ├─ /foundations/spacing/index.html (+45ms)
-00:53:02   ├─ /foundations/shape/index.html (+22ms)
-00:53:02   ├─ /foundations/elevation/index.html (+27ms)
-00:53:02   ├─ /foundations/motion/index.html (+32ms)
-00:53:02   ├─ /foundations/component-tokens/index.html (+31ms)
-00:53:02   ├─ /foundations/index.html (+28ms)
-00:53:02   ├─ /scale/index.html (+2ms)
-00:53:02   ├─ /accessibility/index.html (+1ms)
-00:53:02   ├─ /contribution/index.html (+2ms)
-00:53:02   ├─ /discovery/index.html (+2ms)
-00:53:02   ├─ /installation/index.html (+4ms)
-00:53:02   ├─ /lifecycle/index.html (+2ms)
-00:53:02   ├─ /themes/index.html (+2ms)
-00:53:02   ├─ /token-migration/index.html (+7ms)
-00:53:02   ├─ /index.html (+69ms)
-00:53:02 ✓ Completed in 1.40s.
+04:54:15 [WARN] [content] The collection "i18n" does not exist or is empty. Please check your content config file for errors.
+04:54:15   ├─ /404.html04:54:15 [WARN] [content] Entry docs → 404 was not found.
+ (+7ms)
+04:54:15   ├─ /blocks/filter-index.json (+10ms)
+04:54:15   ├─ /blocks/company-records/sortable/preview/index.html (+47ms)
+04:54:15   ├─ /blocks/poster-grid/css-grid/preview/index.html (+7ms)
+04:54:15   ├─ /blocks/poster-grid/virtualized/preview/index.html (+6ms)
+04:54:15   ├─ /blocks/task-filters/status-buttons/preview/index.html (+4ms)
+04:54:15   ├─ /blocks/task-filters/filter-bar/preview/index.html (+6ms)
+04:54:15   ├─ /blocks/account-settings/sections/preview/index.html (+4ms)
+04:54:15   ├─ /blocks/marketing-hero/split/preview/index.html (+1ms)
+04:54:15   ├─ /blocks/pricing-plans/columns/preview/index.html (+2ms)
+04:54:15   ├─ /blocks/company-records/sortable/index.html (+142ms)
+04:54:15   ├─ /blocks/poster-grid/css-grid/index.html (+96ms)
+04:54:15   ├─ /blocks/poster-grid/virtualized/index.html (+36ms)
+04:54:15   ├─ /blocks/task-filters/status-buttons/index.html (+7ms)
+04:54:15   ├─ /blocks/task-filters/filter-bar/index.html (+7ms)
+04:54:15   ├─ /blocks/account-settings/sections/index.html (+18ms)
+04:54:15   ├─ /blocks/marketing-hero/split/index.html (+3ms)
+04:54:15   ├─ /blocks/pricing-plans/columns/index.html (+7ms)
+04:54:15   ├─ /blocks/company-records/index.html (+15ms)
+04:54:15   ├─ /blocks/poster-grid/index.html (+3ms)
+04:54:15   ├─ /blocks/task-filters/index.html (+4ms)
+04:54:15   ├─ /blocks/account-settings/index.html (+6ms)
+04:54:15   ├─ /blocks/marketing-hero/index.html (+2ms)
+04:54:15   ├─ /blocks/pricing-plans/index.html (+7ms)
+04:54:15   ├─ /blocks/index.html (+1ms)
+04:54:15   ├─ /components/activity/index.html (+10ms)
+04:54:15   ├─ /components/alert-dialog/index.html (+4ms)
+04:54:15   ├─ /components/autocomplete/index.html (+7ms)
+04:54:15   ├─ /components/avatar/index.html (+4ms)
+04:54:15   ├─ /components/breadcrumbs/index.html (+4ms)
+04:54:15   ├─ /components/button/index.html (+11ms)
+04:54:15   ├─ /components/button-group/index.html (+3ms)
+04:54:15   ├─ /components/calendar/index.html (+7ms)
+04:54:15   ├─ /components/card/index.html (+3ms)
+04:54:15   ├─ /components/checkbox/index.html (+7ms)
+04:54:15   ├─ /components/checkbox-field/index.html (+3ms)
+04:54:15   ├─ /components/checkbox-group/index.html (+4ms)
+04:54:15   ├─ /components/code-block/index.html (+8ms)
+04:54:15   ├─ /components/color-area/index.html (+4ms)
+04:54:15   ├─ /components/color-field/index.html (+4ms)
+04:54:15   ├─ /components/color-mode-toggle/index.html (+3ms)
+04:54:15   ├─ /components/color-picker/index.html (+3ms)
+04:54:15   ├─ /components/color-slider/index.html (+5ms)
+04:54:15   ├─ /components/color-swatch/index.html (+5ms)
+04:54:15   ├─ /components/color-swatch-picker/index.html (+4ms)
+04:54:15   ├─ /components/color-wheel/index.html (+5ms)
+04:54:15   ├─ /components/combo-box/index.html (+4ms)
+04:54:15   ├─ /components/command-palette/index.html (+7ms)
+04:54:15   ├─ /components/data-diff/index.html (+8ms)
+04:54:15   ├─ /components/date-field/index.html (+5ms)
+04:54:15   ├─ /components/date-picker/index.html (+5ms)
+04:54:15   ├─ /components/date-range-picker/index.html (+5ms)
+04:54:15   ├─ /components/dialog/index.html (+4ms)
+04:54:15   ├─ /components/disclosure/index.html (+3ms)
+04:54:15   ├─ /components/disclosure-group/index.html (+7ms)
+04:54:15   ├─ /components/drop-zone/index.html (+3ms)
+04:54:15   ├─ /components/file-trigger/index.html (+3ms)
+04:54:15   ├─ /components/form/index.html (+3ms)
+04:54:15   ├─ /components/grid-list/index.html (+6ms)
+04:54:15   ├─ /components/group/index.html (+3ms)
+04:54:15   ├─ /components/header-nav/index.html (+3ms)
+04:54:15   ├─ /components/icon-button/index.html (+6ms)
+04:54:15   ├─ /components/image/index.html (+3ms)
+04:54:15   ├─ /components/input/index.html (+3ms)
+04:54:15   ├─ /components/input-tags/index.html (+4ms)
+04:54:15   ├─ /components/lightbox/index.html (+4ms)
+04:54:15   ├─ /components/link/index.html (+6ms)
+04:54:15   ├─ /components/list-box/index.html (+5ms)
+04:54:15   ├─ /components/markdown/index.html (+8ms)
+04:54:15   ├─ /components/menu/index.html (+5ms)
+04:54:15   ├─ /components/message/index.html (+10ms)
+04:54:15   ├─ /components/meter/index.html (+3ms)
+04:54:15   ├─ /components/multi-select/index.html (+3ms)
+04:54:15   ├─ /components/number-field/index.html (+7ms)
+04:54:15   ├─ /components/payment-input/index.html (+3ms)
+04:54:15   ├─ /components/popover/index.html (+5ms)
+04:54:15   ├─ /components/preview-trigger/index.html (+3ms)
+04:54:15   ├─ /components/progress-bar/index.html (+3ms)
+04:54:15   ├─ /components/progress-circle/index.html (+3ms)
+04:54:15   ├─ /components/prompt-composer/index.html (+6ms)
+04:54:15   ├─ /components/radio-field/index.html (+3ms)
+04:54:15   ├─ /components/radio-group/index.html (+3ms)
+04:54:15   ├─ /components/range-calendar/index.html (+4ms)
+04:54:15   ├─ /components/resizable/index.html (+4ms)
+04:54:15   ├─ /components/search-field/index.html (+4ms)
+04:54:15   ├─ /components/select/index.html (+3ms)
+04:54:15   ├─ /components/select-native/index.html (+5ms)
+04:54:15   ├─ /components/separator/index.html (+3ms)
+04:54:15   ├─ /components/sidebar/index.html (+3ms)
+04:54:15   ├─ /components/slider/index.html (+3ms)
+04:54:15   ├─ /components/switch/index.html (+3ms)
+04:54:15   ├─ /components/switch-field/index.html (+3ms)
+04:54:15   ├─ /components/table/index.html (+4ms)
+04:54:15   ├─ /components/tabs/index.html (+7ms)
+04:54:15   ├─ /components/tag-group/index.html (+3ms)
+04:54:15   ├─ /components/tag-select/index.html (+4ms)
+04:54:15   ├─ /components/text/index.html (+4ms)
+04:54:15   ├─ /components/text-area/index.html (+3ms)
+04:54:15   ├─ /components/text-editor/index.html (+18ms)
+04:54:15   ├─ /components/text-field/index.html (+4ms)
+04:54:15   ├─ /components/time-field/index.html (+2ms)
+04:54:15   ├─ /components/toast/index.html (+3ms)
+04:54:15   ├─ /components/toggle-button/index.html (+3ms)
+04:54:15   ├─ /components/toggle-button-group/index.html (+3ms)
+04:54:15   ├─ /components/token-field/index.html (+3ms)
+04:54:15   ├─ /components/toolbar/index.html (+3ms)
+04:54:15   ├─ /components/tooltip/index.html (+3ms)
+04:54:15   ├─ /components/tree/index.html (+6ms)
+04:54:16   ├─ /components/virtualizer/index.html (+6ms)
+04:54:16   ├─ /foundations/reference-tokens/index.html (+53ms)
+04:54:16   ├─ /foundations/semantic-tokens/index.html (+127ms)
+04:54:16   ├─ /foundations/colour/index.html (+53ms)
+04:54:16   ├─ /foundations/typography/index.html (+35ms)
+04:54:16   ├─ /foundations/spacing/index.html (+35ms)
+04:54:16   ├─ /foundations/shape/index.html (+31ms)
+04:54:16   ├─ /foundations/elevation/index.html (+36ms)
+04:54:16   ├─ /foundations/motion/index.html (+33ms)
+04:54:16   ├─ /foundations/component-tokens/index.html (+32ms)
+04:54:16   ├─ /foundations/index.html (+28ms)
+04:54:16   ├─ /scale/index.html (+2ms)
+04:54:16   ├─ /accessibility/index.html (+2ms)
+04:54:16   ├─ /contribution/index.html (+2ms)
+04:54:16   ├─ /discovery/index.html (+1ms)
+04:54:16   ├─ /installation/index.html (+4ms)
+04:54:16   ├─ /lifecycle/index.html (+2ms)
+04:54:16   ├─ /themes/index.html (+2ms)
+04:54:16   ├─ /token-migration/index.html (+7ms)
+04:54:16   ├─ /index.html (+72ms)
+04:54:16 ✓ Completed in 1.51s.
 
-00:53:02 [build] ✓ Completed in 2.56s.
-00:53:02 [starlight:pagefind] Building search index with Pagefind...
-00:53:03 [starlight:pagefind] Found 114 HTML files.
-00:53:03 [starlight:pagefind] Finished building search index in 551ms.
-00:53:03 [WARN] [@astrojs/sitemap] The Sitemap integration requires the `site` astro.config option. Skipping.
-00:53:03 [build] 114 page(s) built in 3.40s
-00:53:03 [build] Complete!
-Rendered source contract passed: 94 canonical React examples preserve exact pre.textContent.
-Home showcase contract passed: all 79 enabled web.react components link to one runnable canonical example.
+04:54:16 [build] ✓ Completed in 2.94s.
+04:54:16 [starlight:pagefind] Building search index with Pagefind...
+04:54:17 [starlight:pagefind] Found 127 HTML files.
+04:54:17 [starlight:pagefind] Finished building search index in 551ms.
+04:54:17 [WARN] [@astrojs/sitemap] The Sitemap integration requires the `site` astro.config option. Skipping.
+04:54:17 [build] 127 page(s) built in 3.78s
+04:54:17 [build] Complete!
+Rendered source contract passed: 104 canonical React examples preserve exact pre.textContent.
+Home showcase contract passed: all 84 enabled web.react components link to one runnable canonical example.
 Foundation TOC contract passed: 10 routes expose only existing, non-presentation heading targets.
-Blocks contract passed: 4 patterns in the rail and gallery, 5 variant pages with exact-source Code views and canonical preview routes, 79 component pages with only component-bound examples, 14 with "Used in blocks".
-Token path contract passed: 2643 canonical code values preserve exact text and syntax decorations; dotted, CSS, mismatch, unknown, hyphenated, and inline guide cases covered.
+Blocks contract passed: 6 patterns in the rail and gallery, 8 variant pages with exact-source Code views and canonical preview routes, 84 component pages with only component-bound examples, 18 with "Used in blocks".
+Token path contract passed: 2659 canonical code values preserve exact text and syntax decorations; dotted, CSS, mismatch, unknown, hyphenated, and inline guide cases covered.

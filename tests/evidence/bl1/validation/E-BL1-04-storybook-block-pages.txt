@@ -2,31 +2,37 @@
 > @muxui/react-storybook@0.0.0 check:scoped <repo>/apps/react-storybook
 > node src/check-scoped.mjs
 
-[storybook-check] component proof (5 selected pages)
-[storybook-a11y] partial component proof: component families: Account settings, Marketing hero, Poster grid, Pricing plans (5 pages, light+dark, 1 worker, 8797ms)
-✔ selected Mux UI React Storybook pages are axe-clean in light and dark (8797.25575ms)
-[storybook-colours] partial component proof: component families: Account settings, Marketing hero, Poster grid, Pricing plans, 10 page-scheme checks, 7481ms
-✔ selected Storybook pages paint only canonical Mux colours in light and dark (7481.094334ms)
+[storybook-check] component proof (8 selected pages)
+[storybook-a11y] partial component proof: component families: Account settings, Company records, Marketing hero, Poster grid, Pricing plans, Task filters (8 pages, light+dark, 1 worker, 10900ms)
+✔ selected Mux UI React Storybook pages are axe-clean in light and dark (10900.29175ms)
+[storybook-colours] partial component proof: component families: Account settings, Company records, Marketing hero, Poster grid, Pricing plans, Task filters, 16 page-scheme checks, 8412ms
+✔ selected Storybook pages paint only canonical Mux colours in light and dark (8412.931792ms)
 ℹ light/muxui-block-poster-grid--css-grid: 102 visible elements, 178 paint occurrences
 ℹ light/muxui-block-poster-grid--virtualized: 223 visible elements, 348 paint occurrences
 ℹ light/muxui-block-marketing-hero--split: 29 visible elements, 49 paint occurrences
 ℹ light/muxui-block-pricing-plans--columns: 120 visible elements, 137 paint occurrences
 ℹ light/muxui-block-account-settings--sections: 68 visible elements, 105 paint occurrences
+ℹ light/muxui-block-company-records--sortable: 130 visible elements, 118 paint occurrences
+ℹ light/muxui-block-task-filters--status-buttons: 67 visible elements, 118 paint occurrences
+ℹ light/muxui-block-task-filters--filter-bar: 68 visible elements, 105 paint occurrences
 ℹ dark/muxui-block-poster-grid--css-grid: 102 visible elements, 178 paint occurrences
 ℹ dark/muxui-block-poster-grid--virtualized: 223 visible elements, 348 paint occurrences
 ℹ dark/muxui-block-marketing-hero--split: 29 visible elements, 49 paint occurrences
 ℹ dark/muxui-block-pricing-plans--columns: 120 visible elements, 137 paint occurrences
 ℹ dark/muxui-block-account-settings--sections: 68 visible elements, 105 paint occurrences
-✔ Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity (2492.963125ms)
-✔ storybook page selection resolves one exact authored page and its family (0.7915ms)
-✔ storybook page index mirrors static CSF fallback and explicit story names (0.072541ms)
-✔ storybook page selection covers every page in one component family and all pages for theme proof (0.821416ms)
-✔ storybook page selection treats a Block page group like a family and lists Block pages in the full audit (0.876ms)
-✔ storybook page selection fails closed for empty, unknown, or mismatched selectors (0.221084ms)
-✔ storybook page selection validates every selected ID against the served index (0.238625ms)
-✔ storybook scoped check runner includes only suites for the selected proof (0.445792ms)
-✔ storybook scoped check runner rejects an implicit full audit at its entrypoint (296.676875ms)
-✔ storybook page index requests honor cancellation and a bounded timeout (42.074125ms)
+ℹ dark/muxui-block-company-records--sortable: 130 visible elements, 118 paint occurrences
+ℹ dark/muxui-block-task-filters--status-buttons: 67 visible elements, 118 paint occurrences
+ℹ dark/muxui-block-task-filters--filter-bar: 68 visible elements, 105 paint occurrences
+✔ Storybook colour audit recognizes canonical token mixes and shadow-only focus opacity (2745.875291ms)
+✔ storybook page selection resolves one exact authored page and its family (0.744875ms)
+✔ storybook page index mirrors static CSF fallback and explicit story names (0.071625ms)
+✔ storybook page selection covers every page in one component family and all pages for theme proof (0.767ms)
+✔ storybook page selection treats a Block page group like a family and lists Block pages in the full audit (0.9595ms)
+✔ storybook page selection fails closed for empty, unknown, or mismatched selectors (0.230625ms)
+✔ storybook page selection validates every selected ID against the served index (0.205458ms)
+✔ storybook scoped check runner includes only suites for the selected proof (0.424333ms)
+✔ storybook scoped check runner rejects an implicit full audit at its entrypoint (297.647833ms)
+✔ storybook page index requests honor cancellation and a bounded timeout (42.058875ms)
 ℹ tests 12
 ℹ suites 0
 ℹ pass 12
@@ -34,4 +40,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 19502.294625
+ℹ duration_ms 22777.616833

@@ -42,6 +42,30 @@
       "diagnostics": 0,
       "packedDeclarations": true,
       "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:company-records-sortable",
+      "source": "catalog/patterns/company-records/examples/react/sortable.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:task-filters-status-buttons",
+      "source": "catalog/patterns/task-filters/examples/react/status-buttons.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:task-filters-filter-bar",
+      "source": "catalog/patterns/task-filters/examples/react/filter-bar.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
     }
   ]
 }
