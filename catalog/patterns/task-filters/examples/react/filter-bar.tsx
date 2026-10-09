@@ -28,7 +28,11 @@ export function TaskFiltersFilterBarExample() {
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState('all');
   const rows = tasks.filter((task) => task.task.toLowerCase().includes(query.trim().toLowerCase()) && (status === 'all' || task.status === status));
-  const active = [...(query ? [{ id: 'query', label: `Task: ${query}` }] : []), ...(status === 'all' ? [] : [{ id: 'status', label: `Status: ${status}` }])];
+  // A long query is cut with an ellipsis inside its tag, so the remove button stays in view; the title and the tag text keep the whole value.
+  const active = [
+    ...(query ? [{ id: 'query', label: <span className="tasks-tag-text" title={query}>Task: {query}</span>, textValue: `Task: ${query}` }] : []),
+    ...(status === 'all' ? [] : [{ id: 'status', label: `Status: ${status}` }]),
+  ];
   // Removing the last filter unmounts its tags and disables Clear filters, so focus moves to the search field.
   const clear = () => {
     setQuery('');
@@ -67,6 +71,22 @@ export function TaskFiltersFilterBarExample() {
           min-block-size: 1.5rem;
         }
 
+        .tasks-meta .tasks-tags {
+          min-inline-size: 0;
+          max-inline-size: 100%;
+        }
+
+        .tasks-tags .muxui-tag {
+          max-inline-size: 100%;
+        }
+
+        .tasks-tag-text {
+          min-inline-size: 0;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
         .tasks-scroll {
           overflow-x: auto;
           padding: 0.375rem;
@@ -85,7 +105,7 @@ export function TaskFiltersFilterBarExample() {
         <Button variant="ghost" disabled={active.length === 0} onActivate={clear}>Clear filters</Button>
       </div>
       <div className="tasks-meta">
-        {active.length > 0 && <TagGroup aria-label="Active filters" items={active} onRemove={(removed) => (removed.length === active.length ? clear() : removed.forEach(({ id }) => (id === 'query' ? setQuery('') : setStatus('all'))))} />}
+        {active.length > 0 && <TagGroup className="tasks-tags" aria-label="Active filters" items={active} onRemove={(removed) => (removed.length === active.length ? clear() : removed.forEach(({ id }) => (id === 'query' ? setQuery('') : setStatus('all'))))} />}
         <Text size="sm" color="muted" role="status">{rows.length} of {tasks.length} tasks</Text>
       </div>
       <div className="tasks-scroll">

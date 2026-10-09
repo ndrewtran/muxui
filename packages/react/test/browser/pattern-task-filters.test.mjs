@@ -342,6 +342,42 @@ async function filterBarTests(t, browser, url) {
     }
   });
 
+  await t.test('filter bar: keeps a long unbroken query inside its tag at 360, with the remove button visible, named, and operable', async () => {
+    const query = 'x'.repeat(200);
+    for (const scheme of ['light', 'dark']) {
+      const { context, tab, errors } = await openBlock(browser, url, { width: 360, scheme });
+      try {
+        await search(tab).fill(query);
+        await expectTags(tab, [`Task: ${query}`], `${scheme}: the long query becomes one tag with its whole text`);
+        const { scrollWidth, innerWidth } = await tab.evaluate(measurePageFit);
+        assert.ok(scrollWidth <= innerWidth, `${scheme}: the page scrolls horizontally with a long tag (${scrollWidth} > ${innerWidth})`);
+        const tag = await tab.locator('.muxui-tag').boundingBox();
+        assert.ok(tag.x >= 0 && tag.x + tag.width <= innerWidth, `${scheme}: the tag stays inside the viewport (${tag.x} to ${tag.x + tag.width})`);
+        // The text is cut with an ellipsis, so it is narrower than its full width, and its title and DOM text keep the whole value.
+        const text = await tab.evaluate(() => {
+          const node = document.querySelector('.tasks-tag-text');
+          return { clipped: node.scrollWidth > node.clientWidth, title: node.title, content: node.textContent };
+        });
+        assert.equal(text.clipped, true, `${scheme}: the long text is clipped inside the tag`);
+        assert.equal(text.title, query);
+        assert.equal(text.content, `Task: ${query}`);
+        // The remove button keeps its label, stays inside the tag and the viewport, and removes the filter.
+        const remove = tab.getByRole('button', { name: `Remove Task: ${query}`, exact: true });
+        await remove.waitFor();
+        const button = await remove.boundingBox();
+        assert.ok(button.x >= 0 && button.x + button.width <= innerWidth, `${scheme}: the remove button stays inside the viewport`);
+        assert.ok(button.x + button.width <= tag.x + tag.width + 1, `${scheme}: the remove button stays inside its tag`);
+        await remove.click();
+        await expectTags(tab, [], `${scheme}: the remove button clears the long query`);
+        assert.equal(await search(tab).inputValue(), '');
+        await expectFocusIn(tab, 'input[type="search"]', `${scheme}: focus returns to the search field`);
+        assert.deepEqual(errors, []);
+      } finally {
+        await context.close();
+      }
+    }
+  });
+
   await t.test('filter bar: never scrolls the page horizontally at 360, 768, and 1280 in light and dark', async () => {
     await assertPageFit(browser, url, '.tasks', 'filter bar');
     // With both tags showing, the bar and its tags still stay inside the viewport at 360.

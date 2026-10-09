@@ -77,6 +77,7 @@
     "The counts are part of each option's label and describe the whole list; the result count after the controls is a role=status element reading how many of the tasks show.",
     "In the filter bar, the SearchField is named Search tasks, the Select is named Status, and the tags are a TagGroup named Active filters.",
     "Backspace on a focused tag removes it, and Tab moves from a tag to its remove button before the Table.",
+    "A long query is cut with an ellipsis inside its tag, which keeps the whole value in its text and title, and the remove button stays in view.",
     "Removing the last tag, or pressing Clear filters, moves focus to the search field, because each removes the control that held it.",
     "The empty message is plain text, and only the result count is a status region.",
     "The Table is named Tasks, keeps a 32rem minimum width, and scrolls sideways inside its own wrapper on a narrower page, so the page itself never scrolls horizontally."
