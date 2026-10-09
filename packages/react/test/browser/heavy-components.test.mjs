@@ -6,6 +6,9 @@ import { HeavyBrowserFixture } from '../fixtures/heavy-browser-fixture.mjs';
 import { launchBrowser, pageShell, startServer } from './harness.mjs';
 
 const selectAllModifier = process.platform === 'darwin' ? 'Meta' : 'Control';
+// Vite scans this entry before the first request. Without it, a cold server finds the editor's dependencies
+// while the page loads, re-optimizes, and can blank the page long enough for the editor to never appear.
+const fixtureEntry = 'packages/react/test/fixtures/heavy-browser-entry.mjs';
 
 function fixtureDocument() {
   const body = renderToStaticMarkup(React.createElement(HeavyBrowserFixture, { interactive: true }));
@@ -16,7 +19,7 @@ function fixtureDocument() {
 }
 
 test('heavy React ports hydrate and preserve core browser interactions', { timeout: 90_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/heavy-fixture.html': fixtureDocument } });
+  const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;
   try {
     browser = await launchBrowser();
@@ -234,7 +237,7 @@ const bulletList = (...items) => ({ type: 'bulletList', content: items.map((cont
 // item (Decision 0011 amendment 04). Tab and Shift+Tab must still leave the
 // editor everywhere else they did under 3.22.3.
 test('TextEditor Tab and Shift+Tab leave the editor except when nesting after a list', { timeout: 60_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/heavy-fixture.html': fixtureDocument } });
+  const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;
   try {
     browser = await launchBrowser();
@@ -303,7 +306,7 @@ test('TextEditor Tab and Shift+Tab leave the editor except when nesting after a 
 
 // Pins two editing changes accepted by Decision 0011 amendment 04.
 test('TextEditor blockquote Backspace and leading code block ArrowUp follow Tiptap 3.31', { timeout: 60_000 }, async () => {
-  const { url, close } = await startServer({ root: 'repository', pages: { '/heavy-fixture.html': fixtureDocument } });
+  const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;
   try {
     browser = await launchBrowser();
