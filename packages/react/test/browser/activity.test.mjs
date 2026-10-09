@@ -156,3 +156,21 @@ test('Activity details removal cancels ownership and restoration starts closed a
     assert.deepEqual(await page.evaluate(() => window.events), []); assert.deepEqual(errors, []);
   } finally { await context.close(); }
 });
+
+test('Activity keeps its 300px preference but never overflows a narrower container', { timeout: 120_000 }, async () => {
+  const context = await setup(); const { page, errors } = context;
+  const widths = () => page.locator('.muxui-activity, .muxui-activity-item').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().width));
+  try {
+    await page.locator('#scope').evaluate(node => { node.style.inlineSize = '272px'; });
+    const fit = await page.locator('#scope').evaluate(scope => {
+      const limit = scope.getBoundingClientRect().right;
+      const rects = [...scope.querySelectorAll('.muxui-activity, .muxui-activity-item')].map(node => node.getBoundingClientRect());
+      return { count: rects.length, overflow: scope.scrollWidth - scope.clientWidth, beyond: rects.filter(rect => rect.right > limit + 0.5).length };
+    });
+    assert.deepEqual(fit, { count: 4, overflow: 0, beyond: 0 });
+    // As a flex item the content is narrower than 300px, so only the minimum can widen it.
+    await page.locator('#scope').evaluate(node => { node.style.inlineSize = '600px'; node.style.display = 'flex'; node.style.alignItems = 'flex-start'; node.firstElementChild.style.display = 'contents'; });
+    assert.deepEqual((await widths()).map(width => Math.round(width)), [300, 300, 300, 300]);
+    assert.deepEqual(errors, []);
+  } finally { await context.close(); }
+});

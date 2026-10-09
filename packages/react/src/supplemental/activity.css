@@ -3,7 +3,7 @@
   --muxui-activity-parent-resize-easing: var(--muxui-semantic-motion-content-resize-transition-easing);
   --muxui-activity-parent-resize-visual-duration: var(--muxui-semantic-motion-content-resize-transition-spring-visual-duration);
   --muxui-activity-parent-resize-bounce: var(--muxui-semantic-motion-content-resize-transition-spring-bounce);
-  box-sizing: border-box; min-inline-size: 300px; max-inline-size: 100%; color: var(--muxui-semantic-content-default); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-semantic-typography-text-s-font-size); line-height: 1.5;
+  box-sizing: border-box; min-inline-size: min(300px, 100%); max-inline-size: 100%; color: var(--muxui-semantic-content-default); font-family: var(--muxui-semantic-typography-text-font-family); font-size: var(--muxui-semantic-typography-text-s-font-size); line-height: 1.5;
 }
 /* Match DisclosureGroup's component spring without retiming nested controls. */
 .muxui-activity-motion-panel, .muxui-activity-chevron, .muxui-activity-item-chevron {
@@ -27,7 +27,7 @@
 .muxui-activity-label { color: var(--muxui-semantic-content-default); overflow-wrap: anywhere; }
 .muxui-activity-count, .muxui-activity-time, .muxui-activity-meta { color: var(--muxui-semantic-content-default); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
 .muxui-activity-items { display: grid; gap: var(--muxui-semantic-layout-tight-gap); margin: var(--muxui-semantic-layout-tight-gap) 0 0; padding: 0; list-style: none; }
-.muxui-activity-item { box-sizing: border-box; min-inline-size: 300px; border: 1px solid var(--muxui-semantic-border-default); border-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-surface-raised); }
+.muxui-activity-item { box-sizing: border-box; min-inline-size: min(300px, 100%); border: 1px solid var(--muxui-semantic-border-default); border-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-surface-raised); }
 .muxui-activity-item summary, .muxui-activity-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 0 var(--muxui-semantic-layout-action-gap); padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-medium); }
 .muxui-activity-item summary { list-style: none; cursor: pointer; }
 .muxui-activity-item summary::-webkit-details-marker { display: none; }
