@@ -1913,6 +1913,32 @@
     0 0 0 4px var(--muxui-semantic-focus-ring);
 }
 
+.muxui-table-column-content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-tight-gap);
+}
+
+/* Sortable headers always reserve the chevron slot, so revealing it never shifts the label. The base chevron points up (ascending) and doubles as the unsorted hint, because activating an unsorted header sorts ascending. The hint uses the faint content role for low-emphasis indicators, well below the sorted chevron's strong content. A disabled Table ignores sorting, so it shows no hint. */
+.muxui-table-sort-icon {
+  visibility: hidden;
+  color: var(--muxui-semantic-content-faint);
+  transform: rotate(180deg);
+}
+
+.muxui-table-column[data-sort-direction] .muxui-table-sort-icon {
+  visibility: visible;
+  color: var(--muxui-semantic-content-strong);
+}
+
+.muxui-table-column[data-sort-direction='descending'] .muxui-table-sort-icon {
+  transform: none;
+}
+
+.muxui-table:not([data-disabled]) .muxui-table-column[data-allows-sorting]:is([data-hovered], [data-focus-visible]) .muxui-table-sort-icon {
+  visibility: visible;
+}
+
 .muxui-table-body {
 
 }
@@ -2574,6 +2600,11 @@
 
   .muxui-list-box-selection {
     display: none;
+  }
+
+  .muxui-table-column .muxui-table-sort-icon,
+  .muxui-table-column[data-sort-direction] .muxui-table-sort-icon {
+    color: CanvasText;
   }
 
   .muxui-radio[data-focus-visible] .muxui-radio-indicator {
