@@ -1470,12 +1470,34 @@ test('the BL1 block browser tests are derived from the policy routes, one per in
   assert.equal(catalogAt(closeoutRevision).browserTests.length, 4);
 });
 
-// The one capture older than scopes, named with its revision so no other capture can go without a scope.
-const legacyCaptures = new Map([[`${bl1}/superseded/be6f7c411f03`, 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151']]);
+// The one capture older than scopes: the first E-BL1-08 and E-BL1-11 records. It is immutable history, and its index names every
+// file of the archive by digest, so the digest of that index is pinned here. Only an archive whose index is this exact file is
+// exempt from the scope-specific assertions, and its files are still checked against that index.
+const legacyCapture = {
+  directory: `${bl1}/superseded/be6f7c411f03`,
+  sourceRevision: 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151',
+  indexSha256: 'sha256:84eaec2dca4c6440f6d60e48de059eaca1aeb892a7f149583cad663c34583565',
+};
+
+/** Checks the older capture against its pin, then every file its index names against the digests the index records. */
+async function assertLegacyCapture({ repo, summaryRevision }) {
+  const { directory, sourceRevision, indexSha256 } = legacyCapture;
+  const indexBytes = await readFile(join(repo, directory, 'index.json'));
+  assert.equal(digest(indexBytes), indexSha256, `${directory}: the older capture's index is the pinned immutable one`);
+  const index = JSON.parse(indexBytes.toString('utf8'));
+  assert.deepEqual([index.sourceRevision, summaryRevision], [sourceRevision, sourceRevision], `${directory}: the older capture's index and summary name its revision`);
+  await assertCopyMatchesIndex({ repo, directory, index });
+  const into = capturePath(directory);
+  for (const { path } of index.records) {
+    const record = JSON.parse(await readFile(join(repo, into(path)), 'utf8'));
+    assert.equal(record.sourceRevision, sourceRevision, `${path}: the older record names its revision`);
+    assert.equal(digest(await readFile(join(repo, into(record.artifact.path)))), record.artifact.sha256, `${path}: the older record names its artifact`);
+  }
+}
 
 /**
  * Checks every capture under the retained root of `repo`: the current capture and each archived one records a scope
- * (only the named older capture may not), and each is held to its scope and to the retained close-out revision.
+ * (only the pinned older capture may not), and each is held to its scope and to the retained close-out revision.
  */
 async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
   const { retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
@@ -1484,7 +1506,10 @@ async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
   const closeout = captures.find(({ scope }) => scope === 'close-out');
   assert.ok(closeout, 'a close-out capture is retained, current or archived');
   for (const { directory, scope, sourceRevision } of captures) {
-    if (scope === undefined && legacyCaptures.has(directory) && legacyCaptures.get(directory) === sourceRevision) continue;
+    if (scope === undefined && directory === legacyCapture.directory) {
+      await assertLegacyCapture({ repo, summaryRevision: sourceRevision });
+      continue;
+    }
     assert.ok(scope === 'close-out' || scope === 'growth', `${directory} records a scope`);
     const capture = await loadCapture({ repo, directory });
     if (directory !== bl1) await assertCopyMatchesIndex({ repo, ...capture });
@@ -1557,10 +1582,64 @@ test('every retained BL1 capture records a valid scope, and only the one named o
   await refuses('the current capture has no scope', /tests\/evidence\/bl1 records a scope/u, (repo) => editSummary(repo, bl1, (summary) => { delete summary.scope; }));
   await refuses('the current capture has an unknown scope', /tests\/evidence\/bl1 records a scope/u, (repo) => editSummary(repo, bl1, (summary) => { summary.scope = 'sideways'; }));
   await refuses('an archived capture has no scope', /superseded\/\w+ records a scope/u, (repo) => editSummary(repo, archive, (summary) => { delete summary.scope; }));
-  await refuses('the older capture is named by its revision', /be6f7c411f03 records a scope/u, (repo) => editSummary(repo, `${bl1}/superseded/be6f7c411f03`, (summary) => { summary.sourceRevision = 'c'.repeat(40); }));
+  await refuses('the older capture summary is edited', /the older capture's index is the pinned immutable one/u, (repo) => editSummary(repo, legacyCapture.directory, (summary) => { summary.sourceRevision = 'c'.repeat(40); }));
   await refuses('a capture with no validation summary', /tests\/evidence\/bl1 records a scope/u, (repo) => rm(join(repo, bl1, 'verification.json')));
   // An archived capture is held to its scope as the current one is.
   await refuses('an archived close-out relabelled growth', /a growth capture records that it skipped the close-out scope check/u, (repo) => editSummary(repo, archive, (summary) => { summary.scope = 'growth'; }));
+});
+
+// The exemption was once applied before the archive was read: an index naming another revision, a summary still naming the exempt
+// one, and a refreshed parent digest passed both the generic verifier and the scope loop. The pinned index digest closes that.
+test('the older BL1 capture is exempt from a scope only while it is the pinned immutable capture', async () => {
+  const closeout = await retainedCloseout();
+  const archive = legacyCapture.directory;
+  const parentPath = `${bl1}/index.json`;
+  /** Names the current bytes of `paths` in the parent index, as a rewrite of the archive plus a refreshed digest would. */
+  const refreshParent = async (repo, paths) => {
+    const parent = JSON.parse(await readFile(join(repo, parentPath), 'utf8'));
+    for (const entry of parent.artifacts.filter(({ path }) => paths.includes(path))) entry.sha256 = digest(await readFile(join(repo, entry.path)));
+    await writeFile(join(repo, parentPath), canonicalJson(parent));
+  };
+  const rewrite = async (repo, file, change) => {
+    const path = join(repo, archive, file);
+    const value = JSON.parse(await readFile(path, 'utf8'));
+    change(value);
+    await writeFile(path, canonicalJson(value));
+    return `${archive}/${file}`;
+  };
+  const tampered = async (label, pattern, edit) => {
+    const repo = await stageRetainedTree(closeout);
+    try {
+      assert.equal((await verifyEvidence(repo, { gitRoot: repositoryRoot })).indexCount, 1, 'the untouched tree verifies');
+      await assertRetainedCaptures({ repo });
+      await edit(repo);
+      // The generic verifier checks only the digests the parent index names, so a consistent rewrite is blind to it.
+      if (label !== 'a file the archive index names is changed') assert.equal((await verifyEvidence(repo, { gitRoot: repositoryRoot })).indexCount, 1, `${label}: the generic verifier accepts the rewrite`);
+      await assert.rejects(assertRetainedCaptures({ repo }), pattern, label);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  };
+
+  // The reviewer's rewrite: the archive's index names a revision that does not exist, its summary still names the exempt one.
+  await tampered('the archive index names another revision', /the older capture's index is the pinned immutable one/u, async (repo) => {
+    await refreshParent(repo, [await rewrite(repo, 'index.json', (index) => { index.sourceRevision = 'f'.repeat(40); })]);
+  });
+  // A record rewritten, with the archive index and the parent index refreshed to match, changes the pinned index, and the
+  // successor record that names its predecessor's digest no longer finds it.
+  await tampered('a record is rewritten and both indexes are refreshed', /the older capture's index is the pinned immutable one|the index retains the predecessor at the digest the record names/u, async (repo) => {
+    const record = await rewrite(repo, 'records/E-BL1-08.json', (value) => { value.claim = 'rewritten'; });
+    const index = await rewrite(repo, 'index.json', (value) => { value.records[0].sha256 = digest(readFileSync(join(repo, archive, 'records/E-BL1-08.json'))); });
+    await refreshParent(repo, [record, index]);
+  });
+  // The pinned index is untouched but a file it names is not the file it names.
+  await tampered('a file the archive index names is changed', /archived at the digest its index names/u, async (repo) => {
+    await rewrite(repo, 'artifacts/E-BL1-08.json', (value) => { value.claim = 'rewritten'; });
+  });
+  // The summary alone: it must name the exempt revision too.
+  await tampered('the archive summary names another revision', /the older capture's index is the pinned immutable one|index and summary name its revision/u, async (repo) => {
+    await refreshParent(repo, [await rewrite(repo, 'verification.json', (summary) => { summary.sourceRevision = 'f'.repeat(40); })]);
+  });
 });
 
 /**
