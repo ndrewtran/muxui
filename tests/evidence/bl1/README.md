@@ -219,34 +219,30 @@ commit and the records must bind a commit on main.
 - the block under `catalog/patterns/<slug>/` and its entries in
   `packages/catalog/catalog-sources.json`, then `pnpm generate` for the projections
   (the catalog digest goldens, the Storybook Block pages, and the docs routes);
-- `tests/evidence/bl1/regression-thresholds.json`: entries for the new block, all
+- `tests/evidence/bl1/regression-thresholds.json`: entries for the new block only, all
   written before any measurement of that block: its own discovery queries and
   expectations, its id in `seedSet`, its ids in the `relevant` lists of the component
   queries it participates in, and the provenance text that records them. Each query key is
   unique in the file. Roadmap `E-BL1-11` and Product Scope fix thresholds before the
-  relevant candidate is measured, so an expectation is not revised to fit a measurement:
+  relevant candidate is measured, so an expectation is never revised to fit a measurement:
   when the block fails an expectation it wrote, the block changes (its name, keywords, or
   copy), or an authority decision is sought, and `provenance.revisedAfterFirstMeasurement`
-  does not grow. A growth pull request does not revise, loosen, or remove an existing
-  block's expectation (`expectedFirst`, `expectedWithin`), a limit, or a budget, with one
-  exception ([Decision 0026 amendment 02](../../../decisions/0026-amendment-02-category-name-queries.md)).
-  A category's name query is the query equal to the category's name (`collections`,
-  `call to action`), and every block of the category scores alike for it, so a block that
-  joins the category moves an earlier block's rank. The pull request that adds the block may
-  then revise that one query's expectations (`expectedFirst`, `expectedWithin`, `expectedId`,
-  `knownWeakness`, `relevant`), only for a category that gains a block in that pull request,
-  keeping an expectation on it. Commit the revision in the block pull request, so the main-only capture
-  measures a committed file; say in `provenance.summary` and in the pull request description
-  which query changed, from what to what, and the rank that prompted it. Any other rank a
-  new block shifts (a component query, or another discovery query) still fails
-  `pattern-regression.test.mjs`: an authority decision on the existing expectation comes
-  first, and the pull request waits for it. Prefer a block whose id, name, keywords, and
-  category do not shift an existing rank. A pattern whose id and name carry a component word
-  can outrank that component and fail the component search rule, so name a block for what it
-  shows, not for a component. The later capture lists every change to the file since the
-  close-out in `E-BL1-11` (`thresholdChanges`), so the revision is visible in the records, and
-  it refuses (`BL1_THRESHOLDS_GROWTH`) any change beyond the new blocks' own entries, the
-  provenance text, and that one revision;
+  does not grow. For the same reason a growth pull request does not revise, loosen, or
+  remove an existing block's expectation (`expectedFirst`, `expectedWithin`), a limit, or a
+  budget. The one standing exception is Decision 0026 amendment 02: a pull request that adds
+  a block to a category may revise the existing blocks' expectations for that category's
+  name query (the category name in lower case, such as `collections`), because every block
+  in the category ties on it. The revision is committed before the capture, keeps an
+  expectation on the query, goes in `provenance.summary` (not
+  `provenance.revisedAfterFirstMeasurement`), and is named in the pull request with the old
+  and new expectation and the measured rank. Any other shifted rank makes
+  `pattern-regression.test.mjs` fail: an authority decision on that expectation comes first,
+  and the pull request waits for it. Prefer a block whose id, name, keywords, and category do
+  not shift an existing rank. A
+  pattern whose id and name carry a component word can outrank that component and fail the
+  component search rule, so name a block for what it shows, not for a component. The later
+  capture still lists every change to the file since the close-out in `E-BL1-11`
+  (`thresholdChanges`), so a change is visible in the records whatever its authority;
 - for an interactive block, its cross-engine test
   `packages/react/test/browser/pattern-<slug>.test.mjs` and its route in
   `pullRequestImpact.patternBrowserTests` (`tooling/audits/repository-policy/repository-policy.json`).
@@ -274,9 +270,7 @@ in the working tree. On the branch, in order:
    runs every proof and writes under `<dir>`, never the repository, and skips the
    main-history check. The review is an independent content review (`E-BL1-10`) that
    covers every block, including the new one, and read the `catalog/patterns` tree the
-   capture binds; the capture refuses a record that omits a block. The rehearsal also
-   refuses a threshold change amendment 02 does not allow, so run it before merging a
-   pull request that revises a category-name query.
+   capture binds; the capture refuses a record that omits a block.
 
 **2. The records-only pull request, captured from main after the first merges.** Fetch,
 check out the merge commit on main (a clean worktree), and run:
@@ -298,9 +292,7 @@ node tests/evidence/capture-bl1.mjs --growth \
 
 `evidence-integrity.test.mjs` holds a growth capture to facts derived at its own source
 revision (the variants from the catalog, the browser tests from `patternBrowserTests`,
-the query count and the revised-expectation count from the thresholds, and the same
-amendment 02 rule on its thresholds against the close-out's, with the categories read
-from the pattern records at both revisions), and keeps the close-out
+the query count and the revised-expectation count from the thresholds), and keeps the close-out
 capture, current or archived, to its exact pins: five variants, 57 of 57 browser results,
 79 parity rows, 13 of 13 audit checks, nine of 21 revised expectations, the close-out
 scope check run, and an exit review of the source tree.

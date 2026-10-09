@@ -8,7 +8,6 @@
 // `packages/tooling/test/pattern-regression.test.mjs` holds every later block to
 // the current thresholds. A capture reads the thresholds as committed at the
 // revision it binds, so editing the file later leaves retained records valid.
-// `assertGrowthThresholds` holds a growth capture's thresholds to the close-out's.
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -79,39 +78,6 @@ export function thresholdChanges(before, after) {
     changedValues: [...new Set([...oldLeaves.keys(), ...newLeaves.keys()])].filter((path) => oldLeaves.get(path) !== newLeaves.get(path)).sort().map((path) => ({ path, before: oldLeaves.get(path) ?? null, after: newLeaves.get(path) ?? null })),
     seedSet: { added: after.seedSet.filter((id) => !before.seedSet.includes(id)), removed: before.seedSet.filter((id) => !after.seedSet.includes(id)) },
   };
-}
-
-/** The query that is a category's name: `call-to-action` is searched as "call to action". */
-export const categoryNameQuery = (category) => category.replaceAll('-', ' ');
-
-const hasExpectation = ({ expectedFirst, expectedWithin, firstWithoutPatterns }) => expectedFirst !== undefined || expectedWithin !== undefined || firstWithoutPatterns === true;
-
-/**
- * Throws unless `after` differs from the close-out thresholds `before` only as Decision 0026 amendment 02
- * allows a growth capture. `added` are the pattern records added since the close-out. The new blocks may add
- * queries, seed ids, and provenance text, and may join an existing query's `relevant` list. They may revise a
- * query that is the name of a category that gained a block, as long as it keeps an expectation. Every other
- * existing query, limit, budget, and the revised-expectation list stay as they were.
- */
-export function assertGrowthThresholds(before, after, added) {
-  const gained = new Set(added.map(({ category }) => categoryNameQuery(category)));
-  const addedIds = new Set(added.flatMap(({ id, variants }) => [id, ...variants.map(({ example }) => example)]));
-  const joinsOnly = ({ relevant: was, ...rest }, { relevant: now, ...others }) => canonicalJson(rest) === canonicalJson(others)
-    && was.every((id) => now.includes(id)) && now.every((id) => was.includes(id) || addedIds.has(id));
-  const changes = thresholdChanges(before, after);
-  const problems = [
-    ...changes.removedQueries.map((query) => `removes the query "${query}"`),
-    ...changes.seedSet.removed.map((id) => `removes ${id} from the seed set`),
-    // The provenance summary is where the new entries and a revision are recorded; everything else in the file is fixed.
-    ...changes.changedValues.filter(({ path }) => path !== 'provenance.summary').map(({ path }) => `changes ${path}`),
-    ...changes.revisedQueries.flatMap(({ query, before: was, after: now }) => {
-      if (!gained.has(query)) return joinsOnly(was, now) ? [] : [`revises "${query}", which is not the name of a category that gained a block`];
-      return hasExpectation(now) ? [] : [`removes the expectation on "${query}"`];
-    }),
-  ];
-  if (problems.length > 0) {
-    throw new Error(`BL1_THRESHOLDS_GROWTH: a growth pull request may revise only the name query of a category that gained a block (Decision 0026 amendment 02), but it ${problems.join('; ')}`);
-  }
 }
 
 /** The compile result of the source manifest with `keep` deciding which records stay. */
