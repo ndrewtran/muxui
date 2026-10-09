@@ -36,7 +36,7 @@ const FAMILY_ROUTES = Object.freeze({
   SelectNative: ['test/select-native.test.mjs'],
   Table: ['test/browser/table-sort-indicator.test.mjs'],
   Text: ['test/text.test.mjs'],
-  TextEditor: ['test/heavy-components.test.mjs'],
+  TextEditor: ['test/heavy-components.test.mjs', 'test/browser/text-editor-selection-actions.test.mjs'],
   TagSelect: ['test/browser/tag-select-focus.test.mjs'],
   Tree: ['test/browser/tree-toggle-browser.test.mjs'],
   Virtualizer: ['test/browser/virtualizer-grid.test.mjs'],
