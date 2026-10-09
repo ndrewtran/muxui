@@ -20,15 +20,21 @@ export const growthScopeRule = 'Each commit on the first-parent history of the s
 /**
  * The paths that run when the catalog compiles and can move the digest of sources that did not change. Both sides of the
  * E-BL1-08 comparison are compiled by one compiler, so a change to these in a growth commit could not show in the digest,
- * and the commit fails instead. Data the compiler reads (the records, the command registry, the page budget profile, the
- * catalog package version) is read from each tree, so a change to it shows in the digest. `pattern-content.mjs` and
- * `pattern-imports.mjs` only reject records and write nothing to the output, so they are not listed; a test pins that
- * `compiler.mjs` imports nothing else from this package.
+ * and the commit fails instead. The three `package.json` files are listed because their `exports` and `main` decide which
+ * module the compiler loads for `@muxui/schema`, `@muxui/tokens`, and the catalog package; a growth pull request never
+ * touches them. Data the compiler reads (the records, the command registry, the page budget profile) is read from each
+ * tree, so a change to it shows in the digest. `pattern-content.mjs` and `pattern-imports.mjs` only reject records and
+ * write nothing to the output, so they are not listed; a test pins that `compiler.mjs` imports nothing else from this
+ * package. The integrity test requires a retained capture to declare exactly this list as the tool bound at its source
+ * revision exports it, so the list is a constant array of string literals that test reads.
  */
 export const digestAffectingPaths = [
+  'packages/catalog/package.json',
   'packages/catalog/src/compiler.mjs',
-  'packages/schema/src',
+  'packages/schema/package.json',
   'packages/schema/schemas',
+  'packages/schema/src',
+  'packages/tokens/package.json',
   'packages/tokens/src',
 ];
 
@@ -60,11 +66,19 @@ const recordExists = (cwd, revision, path) => {
  * merge, a merge commit, and a branch of plain commits are each audited one commit at a time against the first parent.
  * Each result is `{ commit, parent, subject, addedPatterns, changedPatterns, excludedDirectories, excludedEntries,
  * digestAffectingPathsChanged }`, all read from git: the sources E-BL1-08 leaves out of both sides, and the
- * `digestPaths` the commit changed. A block that no commit after `since` touched throws.
+ * `digestPaths` the commit changed. A block that no commit after `since` touched throws, and so does a commit that
+ * renames, moves, or deletes the record of a block added since the close-out: renames are not tracked, so the
+ * exclusions of the two sides would not match and the block's earlier commits would go unaudited.
  */
 export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patternIds, digestPaths = digestAffectingPaths }) {
   if (since === undefined) throw new Error('BL1_GROWTH_COMMIT_MISSING: the growth commits are those after the retained close-out revision, and none was given');
   const records = patternRecords(cwd, head);
+  const recordsAt = new Map();
+  const patternRecordsAt = (revision) => {
+    if (!recordsAt.has(revision)) recordsAt.set(revision, patternRecords(cwd, revision));
+    return recordsAt.get(revision);
+  };
+  const closeoutPatterns = patternRecordsAt(since);
   const patterns = patternIds.map((id) => {
     const path = records.get(id);
     if (path === undefined) throw new Error(`BL1_GROWTH_COMMIT_MISSING: ${id} is not a pattern of ${head}`);
@@ -77,11 +91,17 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
   };
   const touched = new Set();
   const growth = [];
-  const candidates = lines(git(cwd, 'log', '--first-parent', '--format=%H', `${since}..${head}`, '--', manifestPath, ...patterns.map(({ directory }) => directory))).reverse();
+  const candidates = lines(git(cwd, 'log', '--first-parent', '--format=%H', `${since}..${head}`, '--', manifestPath, 'catalog/patterns', ...patterns.map(({ directory }) => directory))).reverse();
   for (const commit of candidates) {
     const parents = lines(git(cwd, 'rev-list', '--parents', '-n', '1', commit)).flatMap((line) => line.split(' ').slice(1));
     if (parents.length === 0) throw new Error(`BL1_GROWTH_COMMIT_MISSING: ${commit} has no parent to compare with`);
     const [parent] = parents;
+    // A block added since the close-out whose record is gone from the commit was renamed, moved, or deleted, whatever it is called at the head.
+    for (const [id, path] of patternRecordsAt(parent)) {
+      if (!closeoutPatterns.has(id) && !recordExists(cwd, commit, path)) {
+        throw new Error(`BL1_GROWTH_BLOCK_MOVED: ${commit} (${git(cwd, 'log', '-1', '--format=%s', commit)}) renames, moves, or deletes the growth block ${id} (${path}); rename or remove a growth block in a separate, non-growth change`);
+      }
+    }
     const under = (revision, directory) => canonicalJson(entriesAt(revision).filter(({ path }) => path.startsWith(directory)));
     const changed = patterns.filter(({ directory }) => lines(git(cwd, 'diff', '--name-only', parent, commit, '--', directory)).length > 0 || under(parent, directory) !== under(commit, directory));
     if (changed.length === 0) continue;

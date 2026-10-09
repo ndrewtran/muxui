@@ -1270,6 +1270,18 @@ async function assertCopyMatchesIndex({ repo = repositoryRoot, directory, index 
   }
 }
 
+const growthScopeTool = 'tests/evidence/bl1/growth-scope.mjs';
+
+/** The `digestAffectingPaths` a growth-scope tool source exports: a constant array of string literals. */
+function parseGrowthToolPaths(source, label) {
+  const body = /export const digestAffectingPaths = \[([^\]]*)\];/u.exec(source)?.[1];
+  assert.ok(body !== undefined, `${growthScopeTool} at ${label} exports digestAffectingPaths as an array of string literals`);
+  return [...body.matchAll(/'([^']+)'/gu)].map(([, path]) => path);
+}
+
+/** The `digestAffectingPaths` the growth-scope tool exports at `revision`, read from its source in git. */
+const growthToolPaths = (revision) => parseGrowthToolPaths(readAtRevision(repositoryRoot, revision, growthScopeTool).toString('utf8'), revision.slice(0, 8));
+
 /**
  * A growth capture's E-BL1-08 and E-BL1-09 are scoped to the commits after the retained close-out that added or changed its
  * blocks, so they are derived from git at the capture's own source revision (the first-parent commits that touch a block the
@@ -1278,16 +1290,18 @@ async function assertCopyMatchesIndex({ repo = repositoryRoot, directory, index 
  * the added and changed blocks, the excluded sources, and the compiler and schema paths a commit changed must match git exactly.
  * The digests are only checked to agree with each other, because recompiling an old tree with a later compiler would tie a
  * retained record to the compiler of a later day; like the other retained values they are bound by the artifact and index digests.
- * The capture is held to the digest-affecting paths it declared, so a later change to the list never fails a retained capture.
+ * The capture is held to the digest-affecting paths the growth-scope tool bound at its source revision exports, read from git and
+ * not from the record, so a record cannot narrow the list; a later change to the list in the tool never fails a retained capture.
  */
-async function assertGrowthScope({ sourceRevision, closeoutRevision, added, artifacts, records }) {
+async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision = sourceRevision, added, verification, artifacts, records }) {
   const { growthCommits } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
   const { auditBoundary, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
   const catalog = artifacts['E-BL1-08'].observations;
   assert.equal(catalog.baseline, undefined, 'a growth capture does not carry the close-out digest pin');
-  const declared = catalog.growthScope?.digestAffectingPaths ?? [];
-  assert.ok(['packages/catalog/src/compiler.mjs', 'packages/schema/src'].every((path) => declared.includes(path)), 'E-BL1-08 declares the compiler and schema paths that move the digest');
-  const derived = growthCommits({ cwd: repositoryRoot, head: sourceRevision, since: closeoutRevision, patternIds: added, digestPaths: declared });
+  const bound = growthToolPaths(toolRevision);
+  assert.equal(verification.proofTools.find(({ path }) => path === growthScopeTool)?.sha256, digest(readAtRevision(repositoryRoot, toolRevision, growthScopeTool)), 'E-BL1-08 binds the growth-scope tool at the source revision');
+  assert.deepEqual(catalog.growthScope?.digestAffectingPaths, bound, 'E-BL1-08 declares the digest-affecting paths of the bound growth-scope tool');
+  const derived = growthCommits({ cwd: repositoryRoot, head: sourceRevision, since: closeoutRevision, patternIds: added, digestPaths: bound });
   assert.ok(derived.length > 0, 'a growth capture follows at least one commit that added a block');
   const short = derived.map(({ commit }) => commit.slice(0, 8));
 
@@ -1320,7 +1334,7 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, added, arti
  * and a growth capture to the facts derived from the catalog, the browser test routes, and the thresholds at its own
  * revision, and to the retained close-out at `closeoutRevision`, whether it is the current capture or an archived one.
  */
-async function assertCapture({ directory, index, verification, records, artifacts, retained }, { closeoutRevision } = {}) {
+async function assertCapture({ directory, index, verification, records, artifacts, retained }, { closeoutRevision, growthToolRevision } = {}) {
   const { assertUniqueQueries, parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
   const { sourceRevision, sourceTree } = index;
   const { scope } = verification;
@@ -1487,7 +1501,7 @@ async function assertCapture({ directory, index, verification, records, artifact
     assert.ok(added.length > 0, 'E-BL1-11: a growth capture adds a block to the close-out');
     assert.deepEqual([...addedPatterns].sort(), added, 'E-BL1-11 names the blocks added since the close-out');
     for (const [id, record] of Object.entries(records)) assert.ok(record.supersedes !== undefined, `${id}: a growth capture replaces the capture before it`);
-    await assertGrowthScope({ sourceRevision, closeoutRevision, added, artifacts, records });
+    await assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision: growthToolRevision, added, verification, artifacts, records });
   }
   return { scope, sourceRevision, catalog };
 }
@@ -1723,6 +1737,8 @@ async function forgeGrowth(capture, closeout) {
     const source = capture.index.sourceRevision;
     const { digestAffectingPaths } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
     const commits = growthCommits({ cwd: repositoryRoot, head: source, since: closeout, patternIds: added });
+    // The forged source revision predates the tool, so the fixture binds the committed tool and reads it at HEAD (see `growthToolRevision`).
+    forged.verification.proofTools.push({ ...forged.verification.proofTool, path: growthScopeTool, sha256: digest(readAtRevision(repositoryRoot, 'HEAD', growthScopeTool)) });
     const scoped = auditBoundary({ head: source, growthCommits: commits.map(({ commit }) => commit), offline: true, only: growthScopedChecks, closeoutBase: null });
     boundary.audit.growthScope = scoped.growthScope;
     boundary.audit.checks = boundary.audit.checks.map((check) => scoped.checks.find(({ id }) => id === check.id) ?? check);
@@ -1788,8 +1804,10 @@ test('a BL1 growth capture is held to the retained close-out revision, current o
   const growth = await forgeGrowth(capture, earlier);
   assert.deepEqual(growth.artifacts['E-BL1-11'].observations.thresholdChanges.addedPatterns, added);
   // Derived expectations alone hold a growth capture; the close-out pins do not apply to it.
-  assert.equal((await assertCapture(growth, { closeoutRevision: earlier })).scope, 'growth');
-  const rejects = (change, message, options = { closeoutRevision: earlier }, base = growth) => {
+  // The forged source revision predates the growth-scope tool, so the tool bound there is read at HEAD.
+  const forgedOptions = { closeoutRevision: earlier, growthToolRevision: 'HEAD' };
+  assert.equal((await assertCapture(growth, forgedOptions)).scope, 'growth');
+  const rejects = (change, message, options = forgedOptions, base = growth) => {
     const forged = structuredClone(base);
     change(forged);
     return assert.rejects(assertCapture(forged, options), (error) => error.message.includes(message), message);
@@ -1825,7 +1843,15 @@ test('a BL1 growth capture is held to the retained close-out revision, current o
   await rejects(({ artifacts: forged }) => { recordedScope(forged).commits[0].excludedEntries.pop(); }, gitGiven);
   await rejects(({ artifacts: forged }) => { recordedScope(forged).commits[0].excludedDirectories = []; }, gitGiven);
   await rejects(({ artifacts: forged }) => { recordedScope(forged).commits[0].digestAffectingPathsChanged.push('packages/schema/src/index.mjs'); }, gitGiven);
-  await rejects(({ artifacts: forged }) => { recordedScope(forged).digestAffectingPaths = []; }, 'E-BL1-08 declares the compiler and schema paths that move the digest');
+  // The declared digest-affecting paths are those of the bound tool, not whatever the record says: a narrowed or widened list is refused.
+  const declaresBound = 'E-BL1-08 declares the digest-affecting paths of the bound growth-scope tool';
+  await rejects(({ artifacts: forged }) => { recordedScope(forged).digestAffectingPaths = []; }, declaresBound);
+  await rejects(({ artifacts: forged }) => { recordedScope(forged).digestAffectingPaths = recordedScope(forged).digestAffectingPaths.filter((path) => path !== 'packages/schema/schemas'); }, declaresBound);
+  await rejects(({ artifacts: forged }) => { recordedScope(forged).digestAffectingPaths = recordedScope(forged).digestAffectingPaths.filter((path) => path !== 'packages/tokens/src'); }, declaresBound);
+  await rejects(({ artifacts: forged }) => { recordedScope(forged).digestAffectingPaths = recordedScope(forged).digestAffectingPaths.filter((path) => !path.endsWith('package.json')); }, declaresBound);
+  await rejects(({ artifacts: forged }) => { recordedScope(forged).digestAffectingPaths.push('packages/react/src'); }, declaresBound);
+  await rejects(({ verification: forged }) => { forged.proofTools = forged.proofTools.filter(({ path }) => path !== growthScopeTool); }, 'E-BL1-08 binds the growth-scope tool at the source revision');
+  await rejects(({ verification: forged }) => { forged.proofTools.find(({ path }) => path === growthScopeTool).sha256 = digest('another tool'); }, 'E-BL1-08 binds the growth-scope tool at the source revision');
   await rejects(({ artifacts: forged }) => { recordedScope(forged).commits[0].digestAfter = `sha256:${'f'.repeat(64)}`; }, 'has the same digest before and after');
   await rejects(({ artifacts: forged }) => { recordedScope(forged).commits[0].identical = false; }, 'has the same digest before and after');
   await rejects(({ artifacts: forged }) => { recordedScope(forged).commits[0].holds = false; }, 'has the same digest before and after');
@@ -1865,12 +1891,12 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
   const latest = '46d66444bd2b1c3bc26988e3b47fd08aa6cda4ab'; // #236, a main with all three after the close-out
   const collections = 'bb6097269c3a2683e8680d0d7be9a83b4f069958'; // #238, the first real growth merge, on top of #236
   // The four close-out blocks arrived in two commits since the pre-BL1 base, and the head need not be either of them. #226 also changed the
-  // compiler, which a growth commit may not: the digest comparison compiles both sides with one compiler and could not see it.
+  // compiler and the catalog package manifest, which a growth commit may not: the digest comparison compiles both sides with one compiler and could not see it.
   for (const head of [closeoutRevision, latest]) {
     assert.deepEqual(
       growthCommits({ head, since: preBl1Base, patternIds: catalogAt(closeoutRevision).patternIds }).map(({ commit, parent, addedPatterns, changedPatterns, digestAffectingPathsChanged }) => [commit, parent, addedPatterns.map(slug), changedPatterns, digestAffectingPathsChanged]),
       [
-        [posterGrid, '5302eeb528588e53beb89a6617e85a05dce24aa1', ['poster-grid'], [], ['packages/catalog/src/compiler.mjs']],
+        [posterGrid, '5302eeb528588e53beb89a6617e85a05dce24aa1', ['poster-grid'], [], ['packages/catalog/package.json', 'packages/catalog/src/compiler.mjs']],
         [otherBlocks, posterGrid, ['account-settings', 'marketing-hero', 'pricing-plans'], [], []],
       ],
       `the commits that added the close-out blocks, found from ${head.slice(0, 8)}`,
@@ -1945,7 +1971,7 @@ async function growthRepository() {
   // A later commit on top of `second`: the growth is over, and this one changes the second block, as a follow-up to the pull request does.
   const modify = async (change) => {
     gitIn(cwd, 'checkout', '-q', '--detach', second);
-    await change(edit);
+    await change(edit, cwd);
     return commitAll('a later commit that changes the second block');
   };
   const dispose = () => Promise.all([cwd, stash].map((path) => rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })));
@@ -2015,14 +2041,15 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     // Only the commit that changed more is blamed: the clean one alone still passes.
     assert.deepEqual(failed([first]), []);
 
-    // A growth commit that changes the catalog without the sources of its blocks moves the digest: a component record, or a close-out block.
+    // A growth commit that changes the catalog without the sources of its blocks moves the digest: a component record, or a close-out block, which is
+    // not one of the new blocks and so is never left out of either side.
     const [, recordCommit] = derive(withRecord);
     const recordCatalog = await catalogAcrossCommit({ cwd, ...recordCommit });
     assert.deepEqual([recordCatalog.identical, recordCatalog.holds], [false, false], 'a changed component record moves the digest');
     const withCloseoutBlock = await repo.variant((edit) => edit(`${dirname(repo.records[0].path)}/artifact.json`, summaryEdit));
     assert.deepEqual(failed([first, withCloseoutBlock]), [], 'an edit to a close-out block is outside the E-BL1-09 record checks');
     const [, closeoutBlockCommit] = derive(withCloseoutBlock);
-    assert.equal((await catalogAcrossCommit({ cwd, ...closeoutBlockCommit })).identical, false, 'a changed close-out block moves the digest: only the new blocks are left out');
+    assert.ok(!closeoutBlockCommit.excludedDirectories.some((directory) => directory.startsWith(dirname(repo.records[0].path))), 'a close-out block is not left out of either side, so its edit moves the digest');
 
     // A growth commit that changes a compiler or schema path fails even though the one-compiler digest comparison cannot see it.
     const withSchema = await repo.variant((edit) => edit('packages/schema/src/index.mjs', (text) => text.replace("SCHEMA_VERSION = '2.2.0'", "SCHEMA_VERSION = '2.2.1'")));
@@ -2030,9 +2057,35 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.deepEqual(schemaCommit.digestAffectingPathsChanged, ['packages/schema/src/index.mjs']);
     const schemaCatalog = await catalogAcrossCommit({ cwd, ...schemaCommit });
     assert.deepEqual([schemaCatalog.identical, schemaCatalog.holds], [true, false], 'the same compiler compiles both sides, so only the changed path fails the commit');
+    // Export resolution decides which module the compiler loads, so redirecting a package's exports fails like changing the module: the
+    // same compiler compiles both sides and the digest cannot show it. A growth pull request never touches these files.
+    const redirect = (name) => repo.variant((edit) => edit(`packages/${name}/package.json`, jsonEdit((manifest) => ({ ...manifest, exports: { ...manifest.exports, '.': './src/elsewhere.mjs' } }))));
+    const [, redirectCommit] = derive(await redirect('schema'));
+    assert.deepEqual(redirectCommit.digestAffectingPathsChanged, ['packages/schema/package.json']);
+    const redirected = await catalogAcrossCommit({ cwd, ...redirectCommit });
+    assert.deepEqual([redirected.identical, redirected.holds], [true, false], 'a redirected schema export leaves the digest alone and fails the commit');
+    for (const name of ['tokens', 'catalog']) assert.deepEqual(derive(await redirect(name))[1].digestAffectingPathsChanged, [`packages/${name}/package.json`], `a redirected ${name} export is a digest-affecting change`);
     // A commit that changes only a pattern validator, which writes nothing to the compiled output, is not held to the compiler paths.
     const withValidator = await repo.variant((edit) => edit('packages/catalog/src/pattern-content.mjs', (text) => `${text}\n// changed\n`));
     assert.deepEqual(derive(withValidator)[1].digestAffectingPathsChanged, []);
+
+    // Renames are not tracked: a commit that renames, moves, or deletes the directory or record of a block added since the close-out fails, whatever
+    // the block is called at the head, because the two sides could not exclude it consistently and its earlier commits would go unaudited.
+    const movedMessage = /BL1_GROWTH_BLOCK_MOVED: .* the growth block .*; rename or remove a growth block in a separate, non-growth change/u;
+    const renamed = await repo.modify(async (edit, root) => {
+      const target = join(dirname(directoryB), 'zz-renamed-block');
+      await cp(join(root, directoryB), join(root, target), { recursive: true });
+      await rm(join(root, directoryB), { recursive: true });
+      await edit('packages/catalog/catalog-sources.json', (text) => text.replaceAll(`${directoryB}/`, `${target}/`));
+    });
+    assert.throws(() => derive(renamed), movedMessage, 'a growth block renamed after its addition');
+    const deleted = await repo.modify(async (edit, root) => {
+      await rm(join(root, directoryB), { recursive: true });
+      await edit('packages/catalog/catalog-sources.json', jsonEdit((manifest) => ({ ...manifest, records: manifest.records.filter(({ path }) => !path.startsWith(`${directoryB}/`)) })));
+    });
+    assert.throws(() => derive(deleted, [patternA]), movedMessage, 'a growth block deleted after its addition');
+    // Only the record's move counts: the other blocks, and later edits to an unmoved block, are untouched by this rule.
+    assert.doesNotThrow(() => derive(edited));
   } finally {
     await repo.dispose();
   }
@@ -2045,6 +2098,9 @@ test('the BL1 growth scope lists every module the catalog compiler runs that can
   const imports = [...compiler.matchAll(/^import[\s\S]*?from '([^']+)';/gmu)].map(([, specifier]) => specifier).filter((specifier) => !specifier.startsWith('node:'));
   assert.deepEqual(imports.sort(), ['./pattern-content.mjs', './pattern-imports.mjs', '@muxui/schema', '@muxui/tokens'], 'a new import of the compiler is classified here and in digestAffectingPaths');
   for (const path of ['packages/catalog/src/compiler.mjs', 'packages/schema/src', 'packages/schema/schemas', 'packages/tokens/src']) assert.ok(digestAffectingPaths.includes(path), `${path} is digest-affecting`);
+  // Export resolution picks the module each package loads, so the three package manifests are listed too.
+  for (const name of ['catalog', 'schema', 'tokens']) assert.ok(digestAffectingPaths.includes(`packages/${name}/package.json`), `packages/${name}/package.json decides which module the compiler loads`);
+  assert.deepEqual(parseGrowthToolPaths(await readFile(join(repositoryRoot, growthScopeTool), 'utf8'), 'the working tree'), digestAffectingPaths, 'the constant the integrity test parses from the tool source is the one the tool exports');
   // The two validators only reject records: neither is listed, and the compiler throws on their issues before it builds any artifact.
   assert.ok(!digestAffectingPaths.some((path) => /pattern-(?:content|imports)/u.test(path)));
   assert.match(compiler, /if \(importIssues\.length \+ contentIssues\.length > 0\) \{\s*throw new SchemaValidationError/u);

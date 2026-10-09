@@ -252,8 +252,10 @@ growth itself, found from git:
   included, or the catalog package version, because then the digest moved for more than the
   added and changed sources. It also fails when the commit changes a file under
   `digestAffectingPaths` in `growth-scope.mjs` (the catalog compiler, the schema's sources and
-  JSON Schemas, and the token package's sources), because both sides are compiled by one compiler
-  and a change to it could not show in the digest. The pattern validators (`pattern-content.mjs`
+  JSON Schemas, the token package's sources, and the `package.json` of the catalog, schema, and
+  token packages, whose `exports` decide which module the compiler loads), because both sides
+  are compiled by one compiler and a change to it could not show in the digest. A growth pull
+  request never touches these files. The pattern validators (`pattern-content.mjs`
   and `pattern-imports.mjs`) only reject records, so they are not listed, and a test pins that the
   compiler imports nothing else from its package. The `generate:check` identity and the
   tree-internal check that the catalog differs from the catalog with no pattern entries by the
@@ -264,8 +266,16 @@ growth itself, found from git:
   and requires an exact match. It does not run a historical compiler to recompute the digests,
   because that would tie a retained record to a later compiler, so the digests are bound only by
   the artifact and index digests, like the other retained values. The record's non-claims and the
-  artifact say so. A retained capture is held to the `digestAffectingPaths` it declared, which
-  must still include the compiler and the schema.
+  artifact say so. A retained capture must declare exactly the `digestAffectingPaths` that the
+  `growth-scope.mjs` bound at its source revision exports, which the test reads from git, not from
+  the record, so a record cannot narrow the list; the tool's bytes must match the proof tool the
+  validation summary binds. A later change to the list never fails a retained capture.
+- A growth block is not tracked through a rename. A commit after the close-out that renames, moves,
+  or deletes the record of a block added since the close-out stops the capture with
+  `BL1_GROWTH_BLOCK_MOVED` ("rename or remove a growth block in a separate, non-growth change"),
+  whatever the block is called at the head: the exclusions of the two sides would not match, and the
+  block's earlier commits would go unaudited. Edits inside an unmoved block are growth commits as
+  above.
 - `E-BL1-09`, per growth commit: its first parent and the commit have the same `@muxui/react`
   `package.json`, and the commit changes no non-test file of `packages/react`, no stylesheet
   class name or custom property, no dependency field of any `package.json`, no lockfile,
@@ -275,8 +285,9 @@ growth itself, found from git:
 - The claims no longer say anything about changes other pull requests made since the close-out;
   the records state that. A growth pull request therefore has to be a commit (or commits) that
   adds or edits blocks and their tests, thresholds, and goldens only: one that also touches
-  `@muxui/react`, a component record, a dependency, a close-out block, or the compiler or schema
-  fails the capture and belongs in its own pull request.
+  `@muxui/react`, a component record, a dependency, a close-out block, or the compiler or schema,
+  or that renames, moves, or deletes a growth block, fails the capture and belongs in its own pull
+  request.
 
 The close-out capture keeps its exact scope and pins: the range from the pre-BL1 base, the digest
 pinned at #225, and the pinned #227 exception, which the growth scope does not need.
