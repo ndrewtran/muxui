@@ -52,8 +52,7 @@ The rest of the Lucide boundary is unchanged and restated here:
 
 Existing Mux-drawn internal glyphs, such as the `DatePicker` calendar glyph
 and the `Button` pending indicator, may stay; this amendment does not require
-converting them. New internal artwork is for icons Lucide has no fitting icon
-for.
+converting them.
 
 ## Scope
 

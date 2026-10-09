@@ -1057,9 +1057,8 @@ component needs a decision amendment or approval to use it (Decision 0011
 amendment 06, which supersedes the per-component lists of amendments 02 and 03
 and of R1.6). Mux UI owns all labels and public contracts. No Lucide export,
 type, name, prop, or import path, and no public Icon API, catalog, or package,
-may cross the package boundary. Existing Mux-drawn internal glyphs may stay;
-new internal artwork is for icons Lucide has no fitting icon for. Changing the
-version or the package is still a dependency decision. Other renderers would
+may cross the package boundary. Existing Mux-drawn internal glyphs may stay.
+Changing the version or the package is still a dependency decision. Other renderers would
 need their own dependency decision for a Lucide package.
 
 Lucide icons are decorative and non-focusable unless a Mux UI binding
