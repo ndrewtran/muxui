@@ -13,6 +13,7 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 //   hold:   the request returns a promise that the test settles through window.__settle
 //   spacer: pixels above the editor, to push the selection toward the viewport bottom
 //   tail:   pixels below the editor, to make the page scroll
+//   scope:  wraps the editor in a dark, right-to-left Mux runtime scope inside the light page
 // Tests call window.__tools.replace or insertAfter the way a caller's handler would.
 
 const entry = `
@@ -21,7 +22,7 @@ import { createRoot } from 'react-dom/client';
 import { TextEditor } from '/src/text-editor/index.mjs';
 
 const h = React.createElement;
-const { hold = false, spacer = 0, tail = 0 } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
+const { hold = false, spacer = 0, tail = 0, scope = false } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
 const sentence = 'Pistachio holds the top slot all weekend. Churn it first thing Saturday so the batch has time to firm up before the afternoon rush.';
 const actions = [
   { id: 'explain', label: 'Explain' },
@@ -34,21 +35,22 @@ window.__requests = [];
 window.__edits = 0;
 
 function Fixture() {
+  const editor = h(TextEditor, {
+    label: 'Draft',
+    defaultValue: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: sentence }] }] },
+    selectionActions: actions,
+    onChange: () => { window.__edits += 1; },
+    onSelectionRequest: (request, tools) => {
+      window.__requests.push(request);
+      window.__tools = tools;
+      if (hold) return new Promise((resolve, reject) => { window.__settle = { resolve, reject }; });
+    },
+  });
   return h('main', null,
     h('h1', null, 'TextEditor selection actions'),
     h('button', { id: 'before', type: 'button' }, 'Before'),
     spacer ? h('div', { style: { height: spacer }, 'aria-hidden': 'true' }) : null,
-    h(TextEditor, {
-      label: 'Draft',
-      defaultValue: { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: sentence }] }] },
-      selectionActions: actions,
-      onChange: () => { window.__edits += 1; },
-      onSelectionRequest: (request, tools) => {
-        window.__requests.push(request);
-        window.__tools = tools;
-        if (hold) return new Promise((resolve, reject) => { window.__settle = { resolve, reject }; });
-      },
-    }),
+    scope ? h('section', { id: 'scope', 'data-muxui-color-scheme': 'dark', 'data-muxui-direction': 'rtl', dir: 'rtl' }, editor) : editor,
     h('button', { id: 'after', type: 'button' }, 'After'),
     tail ? h('div', { style: { height: tail }, 'aria-hidden': 'true' }) : null);
 }
@@ -286,6 +288,37 @@ for (const engine of browserEngines()) {
         await tab.mouse.click(5, 5);
         await bar.waitFor({ state: 'detached' });
         assert.equal(await tab.evaluate(() => document.activeElement === document.body), true, 'a click on the page background does not return focus to the editor');
+        await context.close();
+      });
+
+      await t.test('a scoped dark right-to-left editor keeps its scope and direction in the bar', async () => {
+        const { tab, bar, selectWord, selection, focused, context } = await open({ config: { scope: true } });
+        await selectWord('weekend');
+        assert.equal(await selection(), 'weekend');
+        assert.equal(await bar.evaluate((node) => node.closest('#scope') !== null), true, 'the bar renders inside the scoped subtree');
+        assert.equal(await bar.getAttribute('dir'), 'rtl');
+        assert.equal(await bar.evaluate((node) => getComputedStyle(node).direction), 'rtl', 'the bar lays out right to left');
+        // The dark token resolves inside the scope but not on the light page, so the bar surface proves the scope applies.
+        const surfaces = await bar.evaluate((node) => {
+          const resolve = (parent) => {
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--muxui-semantic-color-neutral-18)';
+            parent.append(probe);
+            const color = getComputedStyle(probe).color;
+            probe.remove();
+            return color;
+          };
+          return { bar: getComputedStyle(node).backgroundColor, scoped: resolve(document.querySelector('#scope')), page: resolve(document.body) };
+        });
+        assert.equal(surfaces.bar, surfaces.scoped, 'the bar uses the scoped dark surface');
+        assert.notEqual(surfaces.bar, surfaces.page, 'the page itself is light');
+        // Right to left: the forward arrow is the left arrow.
+        await tab.keyboard.press('Alt+F10');
+        assert.equal(await focused(), 'Describe edits');
+        await tab.keyboard.press('ArrowLeft');
+        assert.equal(await focused(), 'Explain', 'ArrowLeft moves forward');
+        await tab.keyboard.press('ArrowRight');
+        assert.equal(await focused(), 'Describe edits', 'ArrowRight moves back');
         await context.close();
       });
 

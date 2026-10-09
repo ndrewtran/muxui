@@ -56,7 +56,7 @@ export type TextEditorSelectionRequest =
 export type TextEditorSelectionActions = {
   /** The selected text and content when the request started. */
   readonly selection: { readonly text: string; readonly document: TextEditorDocument };
-  /** Aborts on Escape or Cancel, an edit of the selected range, a new request, `close()`, and unmount. */
+  /** Aborts on Escape or Cancel, an edit or formatting change of the selected range, a new request, `close()`, and unmount. */
   readonly signal: AbortSignal;
   /**
    * Replaces the selection and starts the Keep, Discard, and Try again review.
@@ -67,11 +67,12 @@ export type TextEditorSelectionActions = {
    */
   replace(content: string | TextEditorDocument): boolean;
   /**
-   * Like `replace`, but leaves the selection in place. A string is inserted right after the selection; a
-   * document is inserted as blocks after the block that holds the end of the selection.
+   * Like `replace`, but leaves the selection in place. A string is inserted right after the selection with the
+   * formatting at the start of the selection; a document is inserted as blocks after the block that holds the end
+   * of the selection.
    */
   insertAfter(content: string | TextEditorDocument): boolean;
-  /** Ends the request and its bar, keeping any applied edit. */
+  /** Ends the request and hides the bar until the selection changes, keeping any applied edit. */
   close(): void;
 };
 export type TextEditorProps = Omit<React.HTMLAttributes<HTMLDivElement>, 'value' | 'defaultValue' | 'onChange'> & {

@@ -497,6 +497,15 @@ function selectionRangePainter() {
   return rangePainter;
 }
 
+// The runtime scopes a Mux subtree can set; Autocomplete portals into the nearest one the same way.
+const MUX_RUNTIME_SCOPE_SELECTOR = '[data-muxui-color-scheme], [data-muxui-contrast], [data-muxui-motion], [data-muxui-density], [data-muxui-direction]';
+
+/** The subtree-scoped runtime profile around the editor, if any, so the portaled bar keeps its tokens and direction. */
+function runtimeScope(node) {
+  const scope = node.closest(MUX_RUNTIME_SCOPE_SELECTOR);
+  return scope && scope !== document.documentElement && scope !== document.body ? scope : undefined;
+}
+
 const PENDING_LABEL = 'Editing…';
 const FAILURE_MESSAGE = "Couldn't complete the edit";
 const REVIEW_MESSAGE = 'Edit ready to review';
@@ -536,7 +545,11 @@ function takeSnapshot(editor, { from, to }) {
   return Object.freeze({ text: doc.textBetween(from, to, '\n'), document: normalizeTextEditorDocument(doc.cut(from, to).toJSON()) });
 }
 
-/** Maps `range` through the transaction, or returns null when the transaction edits inside it. */
+/**
+ * Maps `range` through the transaction, or returns null when the transaction changes what the range holds:
+ * an edit inside it, or a mark, attribute, or wrapping change that moves no position. Mark steps have empty
+ * position maps, so the content with its parents is compared as well.
+ */
 function mapRange(range, transaction) {
   let { from, to } = range;
   for (const map of transaction.mapping.maps) {
@@ -548,6 +561,7 @@ function mapRange(range, transaction) {
     from = map.map(from, 1);
     to = map.map(to, -1);
   }
+  if (to <= from || !transaction.before.slice(range.from, range.to, true).eq(transaction.doc.slice(from, to, true))) return null;
   return { from, to };
 }
 
@@ -568,19 +582,22 @@ function buildEdit(editor, { from, to }, mode, content, limit) {
   const { state } = editor;
   const { schema } = state;
   const isText = typeof content === 'string';
-  if (!isText && !(content && typeof content === 'object' && content.type === 'doc')) return null;
+  // An invalid document is refused as given; normalizing it first would turn it into an empty paragraph.
+  if (!isText && !isTextEditorDocument(content)) return null;
   const transaction = closeHistory(state.tr);
   let range;
   try {
     const blocks = isText ? null : Fragment.fromJSON(schema, normalizeTextEditorDocument(content).content);
+    // Plain text takes the formatting at the start of the selection, wherever it is inserted.
+    const marks = isText ? transaction.doc.resolve(from).marksAcross(transaction.doc.resolve(to)) ?? [] : null;
     if (mode === 'replace') {
-      if (isText) transaction.replaceWith(from, to, plainTextNodes(schema, content, transaction.doc.resolve(from).marksAcross(transaction.doc.resolve(to)) ?? []));
+      if (isText) transaction.replaceWith(from, to, plainTextNodes(schema, content, marks));
       else transaction.replaceRange(from, to, Slice.maxOpen(blocks));
       range = { from: transaction.mapping.map(from, -1), to: transaction.mapping.map(to, 1) };
     } else {
       let at = to;
       if (isText) {
-        transaction.replaceWith(at, at, plainTextNodes(schema, content, transaction.doc.resolve(at).marks()));
+        transaction.replaceWith(at, at, plainTextNodes(schema, content, marks));
       } else {
         const $to = transaction.doc.resolve(to);
         at = $to.depth === 0 ? to : $to.after();
@@ -605,7 +622,7 @@ function buildEdit(editor, { from, to }, mode, content, limit) {
  * that edits inside the range makes the session stale; one outside only moves
  * the range. During review, any outside edit keeps the change.
  */
-function createSelectionController(editor, { getLimit, getOnRequest, notify }) {
+function createSelectionController(editor, { getLimit, getOnRequest, notify, onClose }) {
   let session = null;
   let ownEdit = false;
   const inOwnEdit = (callback) => {
@@ -625,15 +642,27 @@ function createSelectionController(editor, { getLimit, getOnRequest, notify }) {
     const edit = buildEdit(editor, record.range, mode, content, getLimit());
     if (!edit) return false;
     const before = editor.state.doc;
-    inOwnEdit(() => {
-      editor.view.dispatch(edit.transaction);
-      // Edits after this one start a new history event, whatever the timing.
-      editor.view.dispatch(closeHistory(editor.state.tr));
-    });
+    const { range, status } = record;
+    // Mark the request applied first: dispatching reports the change, and a handler may call replace again.
     record.edit = { before };
     record.range = edit.range;
     record.status = 'review';
-    notify();
+    try {
+      inOwnEdit(() => {
+        editor.view.dispatch(edit.transaction);
+        // Edits after this one start a new history event, whatever the timing.
+        editor.view.dispatch(closeHistory(editor.state.tr));
+      });
+    } catch (error) {
+      if (editor.state.doc.eq(before)) {
+        record.edit = null;
+        record.range = range;
+        record.status = status;
+      }
+      throw error;
+    } finally {
+      notify();
+    }
     return true;
   }
 
@@ -670,7 +699,11 @@ function createSelectionController(editor, { getLimit, getOnRequest, notify }) {
         signal: record.controller.signal,
         replace: (content) => applyEdit(record, 'replace', content),
         insertAfter: (content) => applyEdit(record, 'insertAfter', content),
-        close: () => end(record),
+        close: () => {
+          if (session !== record) return;
+          end(record);
+          onClose();
+        },
       });
     } catch {
       fail(record);
@@ -774,6 +807,10 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
   const latest = React.useRef({});
   onRequestRef.current = onRequest;
 
+  const dismissSelection = () => {
+    const current = readSelectionRange(editor);
+    setDismissedKey(current ? `${current.from}:${current.to}` : null);
+  };
   // A control that has focus when the bar changes may be replaced, so remember it to hand focus on afterwards.
   const rememberFocus = () => {
     focusWasInBar.current = focusWasInBar.current || Boolean(barRef.current?.contains(document.activeElement));
@@ -785,6 +822,8 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
       rememberFocus();
       refresh();
     },
+    // close() hides the bar until the selection changes, like Escape at rest.
+    onClose: () => dismissSelection(),
   }), [editor, limitRef]);
 
   const record = controller.session;
@@ -866,6 +905,13 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     if (!sameRange(key.getState(editor.state), highlight)) editor.view.dispatch(editor.state.tr.setMeta(key, { range: highlight }));
   }, [editor, highlight?.from, highlight?.to]);
 
+  // The painted range belongs to this bar, so removing the bar removes it.
+  React.useEffect(() => () => {
+    if (editor.isDestroyed) return;
+    const { key } = selectionRangePainter();
+    if (key.getState(editor.state)) editor.view.dispatch(editor.state.tr.setMeta(key, { range: null }));
+  }, [editor]);
+
   // Keep focus in the bar when its content changes underneath the focused control.
   React.useLayoutEffect(() => {
     if (!focusWasInBar.current) return;
@@ -918,6 +964,8 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
   };
 
   const onBarKeyDown = (event) => {
+    // Keys that drive an IME composition belong to the field, as in the editor handler above.
+    if (event.nativeEvent.isComposing || event.keyCode === 229) return;
     if (event.key === 'Escape') {
       event.preventDefault();
       event.stopPropagation();
@@ -962,7 +1010,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     label = REVIEW_MESSAGE;
     content = [
       // The text stays selected, so keep the bar closed until the selection changes.
-      button('keep', { variant: 'primary', onActivate: () => leave(() => { const current = readSelectionRange(editor); setDismissedKey(current ? `${current.from}:${current.to}` : null); controller.keep(record); }) }, barIcon(Check), 'Keep'),
+      button('keep', { variant: 'primary', onActivate: () => leave(() => { dismissSelection(); controller.keep(record); }) }, barIcon(Check), 'Keep'),
       button('discard', { onActivate: () => leave(() => controller.discard(record)) }, barIcon(X), 'Discard'),
       e('div', { key: 'divider', className: 'muxui-text-editor__separator', 'aria-hidden': 'true' }),
       iconButton('retry', 'Try again', RotateCw, { onActivate: () => controller.retry(record) }),
@@ -1013,6 +1061,8 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     }
   }
 
+  // React Aria sets the popover direction from the locale, so the bar takes the editor's own direction.
+  const direction = show && getComputedStyle(editor.view.dom).direction === 'rtl' ? 'rtl' : 'ltr';
   const anchorKey = anchor ? `${anchor.left}|${anchor.top}|${anchor.width}|${anchor.height}` : '';
   const anchorRef = React.useMemo(() => ({ current: anchorElement }), [anchorElement]);
   return e(React.Fragment, null,
@@ -1032,6 +1082,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
       isKeyboardDismissDisabled: true,
       // The bar moves focus itself, so the popover must not restore it when the bar goes away.
       disableFocusManagement: true,
+      UNSTABLE_portalContainer: show ? runtimeScope(editor.view.dom) : undefined,
       placement: 'bottom',
       offset: 6,
       containerPadding: 8,
@@ -1040,6 +1091,7 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
     }, e('div', {
       ref: barRef,
       role: 'toolbar',
+      dir: direction,
       'aria-label': 'Selection actions',
       'aria-orientation': 'horizontal',
       'aria-busy': phase === 'pending' ? 'true' : undefined,
