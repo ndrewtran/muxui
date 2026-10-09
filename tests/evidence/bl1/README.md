@@ -20,7 +20,10 @@ not from this file.
 - `captures/`: the 60 `E-BL1-06` images.
 - `verification.json` and `index.json`: the validation summary and the index
   `evidence-verify` checks, including every file above and under `superseded/`.
-- `regression-thresholds.json`, `regression.mjs`, and the other tools listed below.
+- `regression-thresholds.json`, `regression.mjs`, and the other tools listed below. The
+  index pins the thresholds at the source revision it binds, and `evidence-verify` reads
+  them from that revision's git object, not the working tree, so a later block can edit the
+  file without invalidating a retained record (see "Adding a block").
 
 ## Earlier records, superseded
 
@@ -83,8 +86,11 @@ index binds a single source revision and tree.
 - A close-out capture needs both independent reviews (see below).
 - `--rehearsal=<dir>` runs every proof and writes the evidence under `<dir>`
   instead, skipping the main-history check and the exit review requirement, so the
-  tool can be exercised before a merge. A rehearsal is never retained.
-- `--growth` is for a capture after a block is added (see "Adding a block").
+  tool can be exercised before a merge. `<dir>` starts as a copy of the retained
+  evidence root, so reused reviews and the supersession archive behave as in a real
+  capture. A rehearsal is never retained.
+- `--growth` is for a capture after a block is added (see "Adding a block"). It needs a
+  retained close-out capture and a block that capture did not measure.
 - It refuses to write when any proof fails, retains a sanitized excerpt of every
   command's output (the raw output's digest is in the artifact, the raw output is
   not retained), binds each proof tool by commit, tree, and bytes, and verifies the
@@ -95,7 +101,7 @@ index binds a single source revision and tree.
 | `E-BL1-01` | `node --test` over `packages/schema/test/pattern.test.mjs` and `packages/catalog/test/pattern-catalog.test.mjs`; each required negative is listed with the code, path, message, and owner parsed from the test source that ran |
 | `E-BL1-02` | `packages/tooling/test/pattern-authoring.test.mjs` |
 | `E-BL1-03` | `pnpm --filter @muxui/repository-policy run proof:pattern-variants` (packed SSR and hydration, with row proof), the packed-declarations typecheck test, and `variant-typecheck.mjs` (one `tsc` run per variant against the packed declarations) |
-| `E-BL1-04` | `apps/react-storybook` `check:scoped` with the block slugs as families (light and dark axe and colour audits per Block page), and the four block browser tests with `MUXUI_BROWSER_ENGINES=chromium,firefox,webkit` |
+| `E-BL1-04` | `apps/react-storybook` `check:scoped` with the block slugs as families (light and dark axe and colour audits per Block page), and the block browser tests with `MUXUI_BROWSER_ENGINES=chromium,firefox,webkit`: one per interactive block, as `pullRequestImpact.patternBrowserTests` in `tooling/audits/repository-policy/repository-policy.json` declares them (four at the close-out) |
 | `E-BL1-05` | `pnpm --filter @muxui/docs run check`, which includes the `check-blocks` report |
 | `E-BL1-06` | `pnpm --filter @muxui/scale run check:browser:docs` with `MUXUI_BLOCKS_CAPTURE_DIR`: every variant at every toolbar preset, and every marketing variant at every page width, in light and dark, with the overflow report |
 | `E-BL1-07` | `surface-parity.mjs`: the API, CLI JSON, human, dense, and the site loader over pattern `list`, `search`, `get`, the participant filter, `usedIn`, and component examples, plus the CLI and loader tests |
@@ -107,8 +113,9 @@ index binds a single source revision and tree.
 The other files here are the proof tools the capture binds: `proof-run.mjs`
 (runs, sanitizes, and parses a command), `capture-support.mjs` (the main-history
 guard, the review slots, and the supersession archive, which
-`evidence-integrity.test.mjs` exercises), `surface-parity.mjs`, `boundary-audit.mjs`,
-`content-scan.mjs`, `variant-typecheck.mjs`, and `regression.mjs`.
+`evidence-integrity.test.mjs` exercises) and the growth-source and browser-test derivations
+below, `surface-parity.mjs`, `boundary-audit.mjs`, `content-scan.mjs`,
+`variant-typecheck.mjs`, and `regression.mjs`.
 
 ## The boundary audit
 
@@ -197,19 +204,82 @@ two reviews by the same model are not independent of each other.
 The Roadmap gives a block added later `E-BL1-03` through `E-BL1-08`, `E-BL1-10`, and
 `E-BL1-11`, not `E-BL1-09`, so the close-out scope check and the exit review do not
 apply to it. Its close-out scope would fail by design, because a new block changes
-`catalog/patterns/` and the catalog sources, which the close-out may not. Capture it
-with `--growth`: that skips the close-out scope check and the exit review, records
+`catalog/patterns/` and the catalog sources, which the close-out may not. A growth
+capture (`--growth`) skips the close-out scope check and the exit review, records
 `scope: growth` in `verification.json` and in the `E-BL1-09` artifact, and keeps every
-other check, including the rest of the boundary audit, which must still pass. The
-block adds its search queries to `regression-thresholds.json` (and its id to
-`seedSet`) before it is measured, needs its own independent content review, and then
-re-runs the capture from a main commit, because the index pins the thresholds digest;
-the capture archives the capture it replaces under `superseded/`. Raising a threshold
-is a deliberate edit to `regression-thresholds.json`, not to a record. A pattern whose
-id and name carry a component word can outrank that component and fail the component
-search rule, so name a block for what it shows, not for a component.
-`packages/tooling/test/pattern-regression.test.mjs` runs `regression.mjs` on every
-`@muxui/tooling` check, so each block added later is held to the same thresholds.
+other check, including the rest of the boundary audit, which must still pass.
+
+A block is delivered in two pull requests, because a squash merge orphans a branch
+commit and the records must bind a commit on main.
+
+**1. The block pull request (a branch).** It edits sources, never a record:
+
+- the block under `catalog/patterns/<slug>/` and its entries in
+  `packages/catalog/catalog-sources.json`, then `pnpm generate` for the projections
+  (the catalog digest goldens, the Storybook Block pages, and the docs routes);
+- `tests/evidence/bl1/regression-thresholds.json`: the block's discovery queries, written
+  before it is measured, and its id in `seedSet`. A block can move an existing block's
+  rank (a second collections block moves the poster grid's `collections` rank), so an
+  existing expectation may change in the same pull request. Make that edit only for a
+  measured shift, make sure the query is listed in `provenance.revisedAfterFirstMeasurement`,
+  and say why in `provenance.summary`. Loosening a threshold is a deliberate edit for review, never an
+  edit to a record. The later capture lists every such change in `E-BL1-11`
+  (`thresholdChanges`), so it is visible in the records too. A pattern whose id and name
+  carry a component word can outrank that component and fail the component search rule,
+  so name a block for what it shows, not for a component;
+- for an interactive block, its cross-engine test
+  `packages/react/test/browser/pattern-<slug>.test.mjs` and its route in
+  `pullRequestImpact.patternBrowserTests` (`tooling/audits/repository-policy/repository-policy.json`).
+  CI impact planning and the capture both read that one route. A block with no
+  interactive behavior declares none.
+
+Retained evidence keeps verifying while the file changes: the index pins the thresholds
+at the close-out revision and `evidence-verify` reads that revision's git object, so the
+edit does not fail with `EVIDENCE_DIGEST_MISMATCH`. The edit applies to the next capture
+and, at once, to `packages/tooling/test/pattern-regression.test.mjs`, which runs
+`regression.mjs` on every `@muxui/tooling` check and holds the new block to the thresholds
+in the working tree. On the branch, in order:
+
+1. `pnpm generate`, then refresh the dense goldens in `packages/tooling/test/goldens/`,
+   which pin the catalog digest (the `E-G0.3-03` test in
+   `packages/tooling/test/cli.test.mjs` renders them; the diff must be digests only).
+2. `node tooling/audits/repository-policy/src/ci-impact.mjs --preview` for the groups CI
+   will run, then those checks: `pnpm check` for the changed files, or the packages the
+   plan names (`@muxui/repository-policy`, which runs `evidence-verify` and the integrity
+   test, `@muxui/catalog`, `@muxui/tooling`, `@muxui/docs`, and the Storybook and React
+   groups for the block's pages and browser test).
+3. Optionally, a rehearsal of the capture on the committed branch, to see the capture
+   accept the block before merge: `node tests/evidence/capture-bl1.mjs --growth
+   --rehearsal=<dir> --content-review=<record> --content-review-revision=<sha>`. It
+   runs every proof and writes under `<dir>`, never the repository, and skips the
+   main-history check. The review is an independent content review (`E-BL1-10`) that
+   covers every block, including the new one, and read the `catalog/patterns` tree the
+   capture binds; the capture refuses a record that omits a block.
+
+**2. The records-only pull request, captured from main after the first merges.** Fetch,
+check out the merge commit on main (a clean worktree), and run:
+
+```sh
+node tests/evidence/capture-bl1.mjs --growth \
+  --content-review=<independent content review of every block> --content-review-revision=<sha>
+```
+
+- It refuses unless a close-out capture is retained (current, or archived under
+  `superseded/`) and the catalog has a block that capture did not measure.
+- It reads the thresholds as committed at the merge commit, derives the browser tests
+  from `patternBrowserTests`, and measures every block, not only the new one.
+- It archives the capture it replaces under `superseded/<revision>/` byte for byte, so the
+  close-out stays in the tree and keeps its exact pins, and names that predecessor in each
+  new record's `supersedes`.
+- Commit only `tests/evidence/bl1/`, with this file's opening paragraph and its list of
+  retained reviews updated for the new capture, and open it as a records-only pull request.
+
+`evidence-integrity.test.mjs` holds a growth capture to facts derived at its own source
+revision (the variants from the catalog, the browser tests from `patternBrowserTests`,
+the queries and revised expectations from the thresholds), and keeps the close-out
+capture, current or archived, to its exact pins: five variants, 57 of 57 browser results,
+79 parity rows, 13 of 13 audit checks, nine of 21 revised expectations, the close-out
+scope check run, and an exit review of the source tree.
 
 These records make no assistive-technology support, publication, deployment, or
 public-surface claim, and satisfy none of `E-P2.3-01…05`. They do not set a milestone
