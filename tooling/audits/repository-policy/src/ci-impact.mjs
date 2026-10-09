@@ -1132,6 +1132,14 @@ export async function buildPullRequestImpact({
       plan.reasons.push(`${path} is the Tailwind consumer fixture`);
       continue;
     }
+    // The shared component grouping drives docs navigation and every generated
+    // Storybook page title, so it selects the docs and every Storybook page.
+    if (config.componentNavigationPaths?.includes(path)) {
+      plan.docs = true;
+      storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+      plan.reasons.push(`${path} groups components for the docs navigation and every Storybook page`);
+      continue;
+    }
     // Docs also embeds source it imports by path (Scale's App), so a path can
     // select both the documentation and its owning application.
     const documentationInput = matches(path, config.documentationPrefixes);
@@ -1603,6 +1611,7 @@ export function needsStorybookGeneration(paths, config, {
     || matches(path, config.themePrefixes)
     || Object.keys(config.reactCatalogInputReaders ?? {}).some((prefix) => matches(path, [prefix]))
     || config.reactStorybookSharedPaths.includes(path)
+    || config.componentNavigationPaths?.includes(path)
     || config.reactStorybookChromePaths.includes(path)
     || config.reactStorybookGeneratorPaths.includes(path)
     || path.startsWith('apps/react-storybook/.storybook/generated/'));

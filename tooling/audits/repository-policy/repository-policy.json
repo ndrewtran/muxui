@@ -195,6 +195,9 @@
       "apps/docs/",
       "apps/scale/src/"
     ],
+    "componentNavigationPaths": [
+      "apps/component-navigation.mjs"
+    ],
     "reactStylePrefixes": [
       "packages/react/src/styles/",
       "packages/react/src/supplemental/styles.css"
