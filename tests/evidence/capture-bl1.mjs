@@ -30,33 +30,41 @@
 // if catalog/patterns differs from the tree it read, and a close-out capture needs both reviews.
 // `--growth` is for a capture after a block is added: the Roadmap gives a later block only
 // E-BL1-03 to E-BL1-08, E-BL1-10, and E-BL1-11, so it skips the close-out scope check and the
-// exit review, and records that it did. `--rehearsal=<dir>` runs every proof and writes the
+// exit review, and records that it did. It refuses to run unless a close-out capture is retained and
+// the catalog has a block that capture did not measure, and its E-BL1-11 record lists how the
+// thresholds changed since that close-out (a visible record, not an authority to change them). The thresholds, the browser tests, and every count come from the
+// source revision (the thresholds as committed there, the browser tests from the policy's
+// patternBrowserTests), not from this file. `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
-// review, so the tool can be exercised before a merge. When a capture replaces an earlier one,
+// review, so the tool can be exercised before a merge; <dir> starts as a copy of the retained
+// evidence, so review reuse and supersession behave as in a real capture. When a capture replaces an earlier one,
 // the earlier capture is kept byte for byte under tests/evidence/bl1/superseded/ and each new
 // record names its predecessor. A proof tool is bound by its bytes and by the last commit that
 // changed it, and must already be committed.
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
-import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput, verifyEvidence } from '../../tooling/audits/repository-policy/src/evidence-verify.mjs';
+import { loadPolicy } from '../../tooling/audits/repository-policy/src/policy.mjs';
 import { patternVariantExamples } from '../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { pageWidths, toolbarPresets } from '../../apps/docs/src/lib/block-presets.ts';
 import { auditBoundary, checksWithoutControl, legsWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
 import { scanBlockContent } from './bl1/content-scan.mjs';
-import { archiveSupersededCapture, assertDurableSource, isAncestor as isAncestorIn, retainReview, supersededFiles } from './bl1/capture-support.mjs';
+import { archiveSupersededCapture, assertDurableSource, assertGrowthSource, blockBrowserTests, isAncestor as isAncestorIn, retainReview, seedRehearsal, supersededFiles } from './bl1/capture-support.mjs';
 import { parseTestReport, runProof, sanitizationRules } from './bl1/proof-run.mjs';
 import {
   compileBundle,
   isPatternSource,
-  loadThresholds,
   measureRegression,
+  parseThresholds,
+  readThresholds,
   regressionFailures,
   repositoryRoot,
+  thresholdChanges,
   thresholdsPath,
 } from './bl1/regression.mjs';
 import { normalizationRule, surfaceParityMatrix } from './bl1/surface-parity.mjs';
@@ -92,6 +100,8 @@ const sourceRevision = command('git', ['rev-parse', 'HEAD']);
 const sourceTree = command('git', ['rev-parse', 'HEAD^{tree}']);
 const sourceRevisionInMainHistory = isAncestor('HEAD', 'origin/main');
 if (rehearsal === undefined) assertDurableSource({ cwd: repositoryRoot, revision: sourceRevision });
+// A rehearsal starts from a copy of the retained evidence, so the earlier capture is there to reuse reviews from and to supersede.
+if (rehearsal !== undefined) await seedRehearsal({ repositoryRoot, destination: outputRoot, root });
 
 function chromeVersion() {
   for (const candidate of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']) {
@@ -156,6 +166,8 @@ if (patterns.length === 0 || variants.length === 0) throw new Error('BL1_NO_PATT
 const patternSlugs = patterns.map(({ id }) => tail(id));
 const storyIds = variants.map(({ patternSlug, variantSlug }) => `muxui-block-${patternSlug}--${variantSlug}`);
 const groupOf = new Map(patterns.map(({ id, group }) => [tail(id), group]));
+// A growth capture follows an added block: it needs a retained close-out capture and a pattern that capture did not measure.
+const growthBase = growth ? await assertGrowthSource({ evidenceRoot: repositoryRoot, root, patternIds: patterns.map(({ id }) => id) }) : null;
 
 // ---- E-BL1-08: repeated generation is a no-op, and the digest moves only for the added sources. ----
 if (first.bytes !== second.bytes) throw new Error('E-BL1-08: two compiles of the same sources differ');
@@ -194,7 +206,18 @@ if (!identity || identity[1] !== sourceRevision) throw new Error('E-BL1-08: pnpm
 validationResults.find(({ command: ran }) => ran === 'pnpm generate:check').observedAssertions = [{ id: 'generation-identity', value: identity[2] }];
 
 // ---- E-BL1-11: the baseline for the seed set, held to the thresholds committed before capture. ----
-const thresholds = await loadThresholds();
+// The thresholds are the ones committed at the source revision, so a later edit to the file never changes what this capture bound.
+// The regression test below reads the working tree, so the working tree must be the committed file.
+const thresholdsBytes = await readThresholds(sourceRevision);
+if (!(await readThresholds()).equals(thresholdsBytes)) throw new Error(`EVIDENCE_THRESHOLDS_UNCOMMITTED: ${thresholdsPath} must match HEAD`);
+const thresholds = parseThresholds(thresholdsBytes);
+// The record shows every change to the thresholds since the close-out, including any to an existing block's expectations.
+const closeoutThresholds = growthBase === null ? null : await readThresholds(growthBase.closeout.sourceRevision);
+const changes = closeoutThresholds === null ? null : {
+  against: { revision: growthBase.closeout.sourceRevision, path: thresholdsPath, sha256: sha256(closeoutThresholds) },
+  addedPatterns: growthBase.added,
+  ...thresholdChanges(parseThresholds(closeoutThresholds), thresholds),
+};
 const api = createCatalogApi(first.bundle);
 const measured = measureRegression({ api, baselineApi: createCatalogApi(withoutPatterns.bundle), thresholds });
 const failures = regressionFailures(measured, thresholds);
@@ -364,7 +387,10 @@ const paintByPage = storyIds.map((id) => {
   return { page: id, ...Object.fromEntries(schemes) };
 });
 
-const browserTests = ['pattern-poster-grid', 'pattern-marketing-hero', 'pattern-pricing-plans', 'pattern-account-settings'].map((name) => `test/browser/${name}.test.mjs`);
+// One cross-engine test per interactive block, as the policy declares them for CI impact planning, so a block declares its test once.
+const browserTests = blockBrowserTests({ declared: (await loadPolicy(repositoryRoot)).pullRequestImpact.patternBrowserTests ?? {}, patternSlugs, reactRoot: join(repositoryRoot, 'packages/react') });
+const numberWords = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+const blockTestCount = `${numberWords[browserTests.length] ?? browserTests.length} block browser test${browserTests.length === 1 ? '' : 's'}`;
 const engines = ['chromium', 'firefox', 'webkit'];
 const crossEngine = prove('E-BL1-04-cross-engine-browser-tests', {
   command: process.execPath,
@@ -585,7 +611,7 @@ const artifacts = {
   },
   'E-BL1-04': {
     evidenceKind: 'storybook-audits-and-cross-engine-browser-tests',
-    claim: `Every variant example passes light and dark axe and colour audits through its generated Storybook page (${storyIds.length} pages), and the four block browser tests pass in Chromium, Firefox, and WebKit.`,
+    claim: `Every variant example passes light and dark axe and colour audits through its generated Storybook page (${storyIds.length} pages), and the ${blockTestCount} ${browserTests.length === 1 ? 'passes' : 'pass'} in Chromium, Firefox, and WebKit.`,
     observations: {
       storybook: {
         proof: storybook.ref,
@@ -699,7 +725,8 @@ const artifacts = {
     claim: `The seed set stays within the regression thresholds committed before capture, after ${thresholds.provenance.revisedAfterFirstMeasurement.length} of ${thresholds.discovery.queries.length} discovery expectations were revised following a first measurement. Known discovery weakness: ${weaknessSummary}.`,
     observations: {
       seedSet: thresholds.seedSet,
-      thresholds: { path: thresholdsPath, sha256: sha256(await readFile(join(repositoryRoot, thresholdsPath))) },
+      thresholds: { path: thresholdsPath, sha256: sha256(thresholdsBytes) },
+      ...(changes === null ? {} : { thresholdChanges: changes }),
       measured,
       knownDiscoveryWeaknesses,
       failures,
@@ -853,10 +880,6 @@ await write(`${root}/index.json`, {
   validation,
 });
 
-// A rehearsal tree is verified on its own, so it needs the thresholds file the index cites.
-if (rehearsal !== undefined) {
-  await mkdir(dirname(join(outputRoot, thresholdsPath)), { recursive: true });
-  await copyFile(join(repositoryRoot, thresholdsPath), join(outputRoot, thresholdsPath));
-}
-const verified = await verifyEvidence(outputRoot);
+// The index cites the thresholds at the source revision, which only the repository's git objects hold, even for a rehearsal tree.
+const verified = await verifyEvidence(outputRoot, { gitRoot: repositoryRoot });
 console.log(`[evidence] captured BL1 E-BL1-01 to E-BL1-11 at ${sourceRevision}${rehearsal === undefined ? '' : ` (rehearsal in ${rehearsal}, not for retention)`}; evidence-verify: ${verified.indexCount} indexes, ${verified.recordCount} records, ${verified.artifactCount} artifacts`);
