@@ -36,6 +36,7 @@
 .muxui-code-block-removed-count { color: var(--muxui-semantic-content-default); }
 .muxui-code-block-copy { flex: none; margin-inline-start: auto; }
 .muxui-code-block-copy:disabled { pointer-events: auto; }
+.muxui-code-block-copy:disabled > * { pointer-events: none; }
 .muxui-code-block-counts + .muxui-code-block-copy { margin-inline-start: 0; }
 .muxui-code-block-pre:focus-visible { outline: 2px solid var(--muxui-semantic-focus-ring); outline-offset: -2px; }
 
