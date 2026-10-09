@@ -1,0 +1,91 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:task-filters",
+  "kind": "pattern",
+  "name": "Task filters",
+  "summary": "Status buttons with counts, or a filter bar with search, a status select, and removable tags, above a table of tasks.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "status",
+    "filter",
+    "search",
+    "counts",
+    "tags",
+    "table",
+    "todo"
+  ],
+  "platforms": ["web.react"],
+  "category": "collections",
+  "intent": {
+    "useWhen": [
+      "Narrowing a short list of tasks by status",
+      "Combining a text search with a status choice and clearing both at once"
+    ],
+    "avoidWhen": [
+      "The rows come from a server that does the filtering",
+      "Each filter needs its own panel or many criteria"
+    ]
+  },
+  "participants": [
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "rows",
+      "component": "muxui:component:table",
+      "requirement": "required"
+    },
+    {
+      "role": "choices",
+      "component": "muxui:component:toggle-button-group",
+      "requirement": "optional"
+    },
+    {
+      "role": "choice",
+      "component": "muxui:component:toggle-button",
+      "requirement": "optional"
+    },
+    {
+      "role": "search",
+      "component": "muxui:component:search-field",
+      "requirement": "optional"
+    },
+    {
+      "role": "state",
+      "component": "muxui:component:select",
+      "requirement": "optional"
+    },
+    {
+      "role": "tags",
+      "component": "muxui:component:tag-group",
+      "requirement": "optional"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "optional"
+    }
+  ],
+  "variants": [
+    { "example": "muxui:example:task-filters-status-buttons" },
+    { "example": "muxui:example:task-filters-filter-bar" }
+  ],
+  "accessibility": [
+    "The status ToggleButtonGroup is named Filter by status: arrow keys move focus between options, Space or Enter selects one, and one option always stays selected.",
+    "The counts are part of each option's label and describe the whole list; the result count after the controls is a role=status element reading how many of the tasks show.",
+    "In the filter bar, the SearchField is named Search tasks, the Select is named Status, and the tags are a TagGroup named Active filters.",
+    "Backspace on a focused tag removes it, and Tab moves from a tag to its remove button before the Table.",
+    "Removing the last tag, or pressing Clear filters, moves focus to the search field, because each removes the control that held it.",
+    "The empty message is plain text, and only the result count is a status region.",
+    "The Table is named Tasks, keeps a 32rem minimum width, and scrolls sideways inside its own wrapper on a narrower page, so the page itself never scrolls horizontally."
+  ],
+  "unsupported": [
+    "Creating, editing, deleting, or saving tasks: the rows are placeholders",
+    "Sorting, paging, or row selection",
+    "Server-side search or filtering",
+    "Keeping the filters across visits: they live in component state only"
+  ],
+  "workflowValue": "Replaces wiring filter state to a table by hand: one filter value derives the rows, the per-status counts, and the result text, and the filter bar keeps its search, status, removable tags, and one Clear filters action in step."
+}

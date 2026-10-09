@@ -1100,6 +1100,18 @@
     {
       "family": "example",
       "path": "catalog/patterns/company-records/examples/react/sortable.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/task-filters/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/task-filters/examples/react/filter-bar.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/task-filters/examples/react/status-buttons.example.json"
     }
   ]
 }

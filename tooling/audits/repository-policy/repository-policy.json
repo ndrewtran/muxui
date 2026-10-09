@@ -190,7 +190,8 @@
       "company-records": "test/browser/pattern-company-records.test.mjs",
       "marketing-hero": "test/browser/pattern-marketing-hero.test.mjs",
       "poster-grid": "test/browser/pattern-poster-grid.test.mjs",
-      "pricing-plans": "test/browser/pattern-pricing-plans.test.mjs"
+      "pricing-plans": "test/browser/pattern-pricing-plans.test.mjs",
+      "task-filters": "test/browser/pattern-task-filters.test.mjs"
     },
     "documentationPrefixes": [
       "apps/docs/",
