@@ -107,8 +107,8 @@ index binds a single source revision and tree.
 | `E-BL1-05` | `pnpm --filter @muxui/docs run check`, which includes the `check-blocks` report |
 | `E-BL1-06` | `pnpm --filter @muxui/scale run check:browser:docs` with `MUXUI_BLOCKS_CAPTURE_DIR`: every variant at every toolbar preset, and every marketing variant at every page width, in light and dark, with the overflow report |
 | `E-BL1-07` | `surface-parity.mjs`: the API, CLI JSON, human, dense, and the site loader over pattern `list`, `search`, `get`, the participant filter, `usedIn`, and component examples, plus the CLI and loader tests |
-| `E-BL1-08` | `pnpm generate:check` and a catalog compare: against the digest pinned at #225 in a close-out capture, and across each commit that added a block in a growth capture (see "Adding a block") |
-| `E-BL1-09` | `boundary-audit.mjs` and its negative controls; a growth capture scopes the checks that read `@muxui/react` and the catalog records to the commits that added its blocks |
+| `E-BL1-08` | `pnpm generate:check` and a catalog compare: against the digest pinned at #225 in a close-out capture, and across each commit that added or changed a block in a growth capture (see "Adding a block") |
+| `E-BL1-09` | `boundary-audit.mjs` and its negative controls; a growth capture scopes the checks that read `@muxui/react` and the catalog records to the commits that added or changed its blocks |
 | `E-BL1-10` | `content-scan.mjs`, the content-rule tests, and the independent content review |
 | `E-BL1-11` | `regression.mjs` against `regression-thresholds.json` |
 
@@ -116,7 +116,7 @@ The other files here are the proof tools the capture binds: `proof-run.mjs`
 (runs, sanitizes, and parses a command), `capture-support.mjs` (the main-history
 guard, the review slots, and the supersession archive, which
 `evidence-integrity.test.mjs` exercises) and the growth-source and browser-test derivations
-below, `growth-scope.mjs` (the commits that added a block and the E-BL1-08 comparison across
+below, `growth-scope.mjs` (the commits that added or changed a block and the E-BL1-08 comparison across
 them), `surface-parity.mjs`, `boundary-audit.mjs`, `content-scan.mjs`,
 `variant-typecheck.mjs`, and `regression.mjs`.
 
@@ -213,8 +213,9 @@ two reviews by the same model are not independent of each other.
   #223, and the pattern kind, #224), so the close-out baseline is the digest pinned at #225, not
   the pre-BL1 digest; the capture records the whole chain. That pin is never moved: later
   pull requests changed component records, so a growth capture compares across the commits that
-  added its blocks instead, with the same compiler on both sides, so a compiler change inside
-  a growth commit is listed under `compilerPathsChanged` and not detected by the digest.
+  added or changed its blocks instead, with the same compiler on both sides, so a growth commit
+  that changes the compiler or schema is refused (`digestAffectingPaths`) rather than detected by
+  the digest.
 
 ## Adding a block
 
@@ -232,32 +233,50 @@ component records under their own authority (#234 to #236 did), so comparing the
 the head would blame the blocks for them. A growth capture evaluates both claims across the
 growth itself, found from git:
 
-- The growth commits are the commits on the first-parent history of the source revision that
-  added the record (`catalog/patterns/<slug>/artifact.json`) of a pattern the close-out did not
-  measure, the same patterns `E-BL1-11` lists as `addedPatterns`. A squash merge, a merge commit,
-  and a branch of plain commits each give one commit per pull request's worth of history. Blocks
-  that arrived in more than one commit are audited one commit at a time, and the rehearsal on a
-  branch audits the branch's own commits. The source revision need not be a growth commit, so
-  other pull requests may land after the merge. A block with no such commit, or one that arrived
-  with the repository's first commit, stops the capture.
+- The growth commits are every commit on the first-parent history of the source revision, after
+  the retained close-out revision, that adds or changes a pattern the close-out did not measure
+  (the patterns `E-BL1-11` lists as `addedPatterns`): it changes a file under
+  `catalog/patterns/<slug>/`, or that pattern's entries in `packages/catalog/catalog-sources.json`.
+  A later commit that adds a variant or edits a new block is a growth commit like the one that
+  added it, so it cannot also change `@muxui/react`, a dependency, or a component record
+  unaudited. A squash merge, a merge commit, and a branch of plain commits each give one commit
+  per pull request's worth of history. Blocks that arrived in more than one commit are audited one
+  commit at a time, and the rehearsal on a branch audits the branch's own commits. The source
+  revision need not be a growth commit, so other pull requests may land after the merge. A new
+  block that no commit after the close-out touched stops the capture. Each audited commit is
+  recorded with its parent, the blocks it added and the blocks it changed, and the sources
+  `E-BL1-08` left out for it.
 - `E-BL1-08`, per growth commit: the catalog compiled from the tree at the commit's first parent
-  and from the tree at the commit, each without the sources that commit added, has the same digest.
-  It also fails when the commit edits any other source, an existing block included, or the catalog
-  package version, because then the digest moved for more than the added sources. The artifact lists
-  each commit, its parent, the pattern ids and manifest entries it added, both digests, and the
-  compiler files it touched. The `generate:check` identity and the tree-internal check that the
-  catalog differs from the catalog with no pattern entries by the added artifacts alone are unchanged.
+  and from the tree at the commit, each without the sources of the blocks that commit added or
+  changed, has the same digest. It fails when the commit edits any other source, a close-out block
+  included, or the catalog package version, because then the digest moved for more than the
+  added and changed sources. It also fails when the commit changes a file under
+  `digestAffectingPaths` in `growth-scope.mjs` (the catalog compiler, the schema's sources and
+  JSON Schemas, and the token package's sources), because both sides are compiled by one compiler
+  and a change to it could not show in the digest. The pattern validators (`pattern-content.mjs`
+  and `pattern-imports.mjs`) only reject records, so they are not listed, and a test pins that the
+  compiler imports nothing else from its package. The `generate:check` identity and the
+  tree-internal check that the catalog differs from the catalog with no pattern entries by the
+  added artifacts alone are unchanged.
+- `E-BL1-08` limit: the integrity test re-derives from git everything the artifact records except
+  the two digests of each commit: the growth commits, their parents, the added and changed
+  blocks, the excluded source directories and entries, and the changed compiler and schema paths,
+  and requires an exact match. It does not run a historical compiler to recompute the digests,
+  because that would tie a retained record to a later compiler, so the digests are bound only by
+  the artifact and index digests, like the other retained values. The record's non-claims and the
+  artifact say so. A retained capture is held to the `digestAffectingPaths` it declared, which
+  must still include the compiler and the schema.
 - `E-BL1-09`, per growth commit: its first parent and the commit have the same `@muxui/react`
   `package.json`, and the commit changes no non-test file of `packages/react`, no stylesheet
   class name or custom property, no dependency field of any `package.json`, no lockfile,
   workspace, `.npmrc`, or `.node-version` file, and no component, token, capability, or React
-  family record. The claim text names the
-  audited commits. The release, publish, deployment, registry, assistive-technology, and CLI
-  checks run as before.
+  family record. The claim text names the audited commits. The release, publish, deployment,
+  registry, assistive-technology, and CLI checks run as before.
 - The claims no longer say anything about changes other pull requests made since the close-out;
   the records state that. A growth pull request therefore has to be a commit (or commits) that
-  adds blocks and their tests, thresholds, and goldens only: one that also touches `@muxui/react`,
-  a component record, or a dependency fails the capture and belongs in its own pull request.
+  adds or edits blocks and their tests, thresholds, and goldens only: one that also touches
+  `@muxui/react`, a component record, a dependency, a close-out block, or the compiler or schema
+  fails the capture and belongs in its own pull request.
 
 The close-out capture keeps its exact scope and pins: the range from the pre-BL1 base, the digest
 pinned at #225, and the pinned #227 exception, which the growth scope does not need.
@@ -335,7 +354,7 @@ node tests/evidence/capture-bl1.mjs --growth \
   `superseded/`) and the catalog has a block that capture did not measure.
 - It reads the thresholds as committed at the merge commit, derives the browser tests
   from `patternBrowserTests`, and measures every block, not only the new one.
-- It finds the commits that added the new blocks in the history of the checked-out revision and
+- It finds the commits after the close-out that added or changed the new blocks in the history of the checked-out revision and
   evaluates `E-BL1-08` and `E-BL1-09` across them (see "Growth scope"), so the merge commit does
   not have to be the checked-out head.
 - It archives the capture it replaces under `superseded/<revision>/` byte for byte, so the

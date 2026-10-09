@@ -33,8 +33,8 @@
 // exit review, and records that it did. It refuses to run unless a close-out capture is retained and
 // the catalog has a block that capture did not measure, and its E-BL1-11 record lists how the
 // thresholds changed since that close-out (a visible record, not an authority to change them). Its E-BL1-08 and E-BL1-09 are scoped to
-// the growth itself, not to every change since the close-out: each commit that added a block is compared with its first parent
-// (growth-scope.mjs), so other pull requests that landed in between do not fail it and are not claimed. The thresholds, the browser tests, and every count come from the
+// the growth itself, not to every change since the close-out: each commit after the close-out that adds or changes a new block is
+// compared with its first parent (growth-scope.mjs), so other pull requests that landed in between do not fail it and are not claimed. The thresholds, the browser tests, and every count come from the
 // source revision (the thresholds as committed there, the browser tests from the policy's
 // patternBrowserTests), not from this file. `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
@@ -57,7 +57,7 @@ import { pageWidths, toolbarPresets } from '../../apps/docs/src/lib/block-preset
 import { auditBoundary, checksWithoutControl, legsWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
 import { scanBlockContent } from './bl1/content-scan.mjs';
 import { archiveSupersededCapture, assertDurableSource, assertGrowthSource, blockBrowserTests, isAncestor as isAncestorIn, retainReview, seedRehearsal, supersededFiles } from './bl1/capture-support.mjs';
-import { catalogAcrossCommit, growthCommits, growthScopeRule } from './bl1/growth-scope.mjs';
+import { catalogAcrossCommit, digestAffectingPaths, growthCommits, growthScopeRule } from './bl1/growth-scope.mjs';
 import { parseTestReport, runProof, sanitizationRules } from './bl1/proof-run.mjs';
 import {
   compileBundle,
@@ -80,7 +80,7 @@ const authority = 'strategy/milestone-roadmap.md: BL1 Blocks showcase (Decision 
 const pageWidthDecision = 'decisions/0026-amendment-01-page-width-presets.md';
 // A close-out capture holds the catalog digest with no pattern entries to the one the tooling golden pinned at #225, the last
 // main commit before any block shipped (the same digest #224 introduced with the pattern kind). That pin is never moved:
-// later pull requests changed component records, so a growth capture compares across the commits that added its blocks instead.
+// later pull requests changed component records, so a growth capture compares across the commits that added or changed its blocks instead.
 const baselineCommit = 'e0385c97b39d040c183d0f2030c3f086d2dc56e3';
 const baselineGolden = 'packages/tooling/test/goldens/manifest-brief.txt';
 const baselineCatalogDigest = 'sha256:ab0998dfb2f51aa572e77f16e5d5f80982242a5c5df4aac16d66b1390bbc9671';
@@ -172,16 +172,17 @@ const storyIds = variants.map(({ patternSlug, variantSlug }) => `muxui-block-${p
 const groupOf = new Map(patterns.map(({ id, group }) => [tail(id), group]));
 // A growth capture follows an added block: it needs a retained close-out capture and a pattern that capture did not measure.
 const growthBase = growth ? await assertGrowthSource({ evidenceRoot: repositoryRoot, root, patternIds: patterns.map(({ id }) => id) }) : null;
-// The commits that added those blocks: E-BL1-08 and E-BL1-09 are evaluated across them, not across the range since the close-out.
-const growthScope = growthBase === null ? null : growthCommits({ cwd: repositoryRoot, head: 'HEAD', patternIds: growthBase.added });
+// The commits after the close-out that added or changed those blocks: E-BL1-08 and E-BL1-09 are evaluated across them, not across the range since the close-out.
+const growthScope = growthBase === null ? null : growthCommits({ cwd: repositoryRoot, head: 'HEAD', since: growthBase.closeout.sourceRevision, patternIds: growthBase.added });
 const shortCommits = growthScope?.map(({ commit }) => commit.slice(0, 8)).join(', ');
 
 // ---- E-BL1-08: repeated generation is a no-op, and the digest moves only for the added sources. ----
 if (first.bytes !== second.bytes) throw new Error('E-BL1-08: two compiles of the same sources differ');
 const withoutPatterns = await compileBundle((entry) => !isPatternSource(entry));
 const goldenDigest = (revision) => /sha256:[0-9a-f]{64}/u.exec(command('git', ['show', `${revision}:${baselineGolden}`]))[0];
-// The close-out holds the catalog without patterns to the digest pinned at #225. A growth capture holds each commit that added a block to
-// "the catalog without the sources that commit added is the same before and after", compiled from the tree at its first parent and at the commit.
+// The close-out holds the catalog without patterns to the digest pinned at #225. A growth capture holds each commit that added or changed a block to
+// "the catalog without the sources of those blocks is the same before and after", compiled from the tree at its first parent and at the commit,
+// and to changing no compiler or schema path that moves the digest, which the same-compiler comparison cannot see.
 let digestHistory = null;
 const growthCatalog = [];
 if (growthScope === null) {
@@ -202,9 +203,12 @@ if (growthScope === null) {
   for (const scope of growthScope) {
     const across = await catalogAcrossCommit({ cwd: repositoryRoot, ...scope });
     if (!across.identical) {
-      throw new Error(`E-BL1-08: across ${scope.commit} (${scope.subject}) the catalog without the sources it added has digest ${across.digestBefore} before and ${across.digestAfter} after: the digest changed by more than the added sources`);
+      throw new Error(`E-BL1-08: across ${scope.commit} (${scope.subject}) the catalog without the sources of the blocks it added or changed has digest ${across.digestBefore} before and ${across.digestAfter} after: the digest changed by more than those sources`);
     }
-    growthCatalog.push({ subject: scope.subject, ...across });
+    if (scope.digestAffectingPathsChanged.length > 0) {
+      throw new Error(`E-BL1-08: ${scope.commit} (${scope.subject}) changed ${scope.digestAffectingPathsChanged.join(', ')}, which can move the catalog digest; a growth commit adds block sources, tests, thresholds, and goldens only`);
+    }
+    growthCatalog.push({ ...scope, ...across });
   }
 }
 const manifest = JSON.parse(await readFile(join(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
@@ -578,7 +582,7 @@ if (strayChanges.length > 0 || command('git', ['rev-parse', 'HEAD']) !== sourceR
 const reviewObservation = ({ text: _text, ...review }) => review;
 const reactClaim = growthScope === null
   ? `@muxui/react has no API, export, or version change: its manifest is byte-identical to the pre-BL1 base and no BL1 pull request changed a non-test file of packages/react.${reactSource.nonBl1Changes === undefined ? '' : ` One change that is not a BL1 pull request, #227 (${reactSource.nonBl1Changes[0].commit}), landed before the last BL1 merge and flipped Sidebar's default token mapping with light-scheme overrides and forced-colors rules, a visible default-appearance change to the shipped styles with no class name, custom property, export, or version change. BL1 evidence validates the package after it.`}`
-  : `@muxui/react has no API, export, or version change across the growth commit${growthScope.length === 1 ? '' : 's'} that added the blocks (${shortCommits}): its package.json is byte-identical before and after ${growthScope.length === 1 ? 'it' : 'each'}, and no growth commit changed a non-test file of packages/react, a stylesheet class name or custom property, a dependency, the lockfile, or a component, token, capability, or React family record. Other pull requests changed these between the close-out and this capture under their own authority; this audit does not cover them.`;
+  : `@muxui/react has no API, export, or version change across the growth commit${growthScope.length === 1 ? '' : 's'} that added or changed the blocks (${shortCommits}): its package.json is byte-identical before and after ${growthScope.length === 1 ? 'it' : 'each'}, and no growth commit changed a non-test file of packages/react, a stylesheet class name or custom property, a dependency, the lockfile, or a component, token, capability, or React family record. Other pull requests changed these between the close-out and this capture under their own authority; this audit does not cover them.`;
 const boundaryClaim = [
   reactClaim,
   `Nothing is published or retagged: the registry is read-only observed${registryClaim.observations.skipped ? ' (skipped)' : ' to show only 0.1.0-rc.1 with the R1 exit dist-tags and integrity'}.`,
@@ -691,7 +695,7 @@ const artifacts = {
     evidenceKind: 'catalog-generation-identity',
     claim: growthScope === null
       ? 'Repeated generation is a no-op, and, from the catalog the pattern kind produced with no block, the catalog digest changes only for the added sources.'
-      : `Repeated generation is a no-op, and, across each commit that added a block (${shortCommits}), the catalog compiled without the sources that commit added has the same digest before and after, so the catalog digest changes only for the added sources.`,
+      : `Repeated generation is a no-op, and, across each commit after the close-out that added or changed a block (${shortCommits}), the catalog compiled without the sources of the blocks that commit added or changed has the same digest before and after and the commit changed no compiler or schema path that moves the digest, so the catalog digest changes only for the added sources.`,
     observations: {
       catalogDigest: first.bundle.catalogDigest,
       catalogVersion: first.bundle.catalogVersion,
@@ -710,9 +714,10 @@ const artifacts = {
         : {
           growthScope: {
             rule: growthScopeRule,
-            comparison: 'the catalog digest of the tree at the first parent and of the tree at the commit, each compiled by the compiler at the source revision without the sources the commit added',
+            comparison: 'the catalog digest of the tree at the first parent and of the tree at the commit, each compiled by the compiler at the source revision without the sources of the blocks the commit added or changed',
+            digestAffectingPaths,
             commits: growthCatalog,
-            limit: 'Both sides are compiled by the same compiler, so a change to the compiler or schema inside a growth commit (compilerPathsChanged) is listed, not detected by the digest comparison.',
+            limit: 'Both sides are compiled by the same compiler, so a change to the compiler or schema inside a growth commit cannot show in the digest; digestAffectingPathsChanged lists the files the commit changed under digestAffectingPaths, and the capture refuses a commit that changed any. The commits, parents, added and changed blocks, excluded sources, and changed paths are read from git, and the integrity test re-derives them; the two recorded digests are not recompiled from the historical trees, so they are bound only by the artifact and index digests like the other retained values.',
           },
         }),
       addedSources: {
@@ -846,7 +851,10 @@ const extraNonClaims = {
   'E-BL1-03': ['The virtualized poster grid renders an empty shell on the server by design; its rows are proved after a measured hydration, and by the browser test (E-BL1-04).'],
   'E-BL1-06': ['The captures judge horizontal overflow and give a visual record; they are not a pixel-regression baseline and not a responsive-support claim for any consumer page.'],
   'E-BL1-07': ['The site comparison covers the fields the loaders read, and rail search is compared as a set of blocks, not by rank.'],
-  'E-BL1-08': growthScope === null ? [] : [`The catalog digest is compared across the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, with the same compiler on both sides, not from the pre-BL1 base; the digest chain from the base belongs to the close-out capture.`],
+  'E-BL1-08': growthScope === null ? [] : [
+    `The catalog digest is compared across the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, with the same compiler on both sides, not from the pre-BL1 base; the digest chain from the base belongs to the close-out capture.`,
+    'The recorded before and after digests of each growth commit are bound by the artifact and index digests like the other retained values. The integrity test re-derives the growth commits, their parents, the added and changed blocks, the excluded sources, and the changed compiler and schema paths from git, but does not run a historical compiler to recompute the digests.',
+  ],
   'E-BL1-09': [
     ...(growthScope === null ? [] : [`The @muxui/react, dependency, stylesheet-name, and catalog-record checks cover the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, not every change since the pre-BL1 base: other pull requests changed them under their own authority.`]),
     ...(reactSource.nonBl1Changes === undefined ? [] : [`The pre-BL1 base is not the package these records ran against: ${reactSource.nonBl1Changes[0].commit} (#227, not a BL1 pull request) changed the shipped Sidebar styles before the last BL1 merge, so the packed package is not byte-identical to the pre-BL1 one.`]),

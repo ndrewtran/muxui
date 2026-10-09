@@ -10,7 +10,7 @@
 // deployment that cannot be observed narrows the claim to "no deployment configuration added".
 //
 // A growth capture (`growthCommits`) scopes the checks that read @muxui/react and the catalog records to the commits that
-// added the blocks, each against its first parent, because other pull requests change those under their own authority
+// added or changed the blocks, each against its first parent, because other pull requests change those under their own authority
 // between the close-out and a later capture. The other checks keep their range from the base to `head`.
 //
 // `negativeControls` proves each check can fail: git controls run a check over a range or a
@@ -602,7 +602,7 @@ function runAcrossGrowth(check, context, growth) {
 /**
  * Runs the checks (or only those in `only`) and returns `{ pass, base, head, checks }`, each check with its legs.
  * `closeoutBase: null` skips the close-out scope check, for a capture after a block is added.
- * `growthCommits` (revisions that added blocks) scopes `growthScopedChecks` to those commits, each against its first
+ * `growthCommits` (revisions that added or changed blocks) scopes `growthScopedChecks` to those commits, each against its first
  * parent, and records them in `growthScope`; the other checks keep the range from `base` to `head`.
  * `mergeRevision` is the last BL1 merge, and `observers` replaces the live registry and deployment reads, for tests.
  * `cwd` runs the git reads in another repository, for tests; the live observations still read this checkout, so use it with `offline`
@@ -728,7 +728,7 @@ export const negativeControls = [
   { id: 'closeout-outside-allowed-paths', kind: 'git', check: 'closeout-scope', failingLegs: ['onlyAllowedPaths'], description: 'from #222 to the last BL1 merge, files outside evidence and decisions changed', base: commit.pr222, head: commit.pr229, closeoutBase: commit.pr222 },
   { id: 'closeout-vacuous', kind: 'git', check: 'closeout-scope', failingLegs: ['hasChange'], description: 'a range with no close-out change must not pass vacuously', base: commit.pr222, head: commit.pr229, closeoutBase: commit.pr229 },
   { id: 'closeout-not-an-ancestor', kind: 'git', check: 'closeout-scope', failingLegs: ['descendsFromCloseoutBase'], description: 'a close-out base that is not an ancestor of the head', base: commit.pr221, head: commit.pr222, closeoutBase: commit.pr229 },
-  // A growth capture scopes these checks to the commits that added the blocks, each against its first parent.
+  // A growth capture scopes these checks to the commits that added or changed the blocks, each against its first parent.
   { id: 'growth-commit-changed-react-manifest', kind: 'git', check: 'react-package-manifest', failingLegs: ['manifestUnchanged'], description: 'as a growth commit, #207 changed the @muxui/react manifest', base: `${commit.pr207}^`, head: commit.pr207, growthCommits: [commit.pr207] },
   { id: 'growth-commit-changed-react-source', kind: 'git', check: 'react-source-files', failingLegs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'], description: 'as a growth commit, #222 changed the GridList and Virtualizer sources in packages/react', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr222] },
   { id: 'growth-commit-changed-stylesheet-names', kind: 'git', check: 'react-stylesheet-names', failingLegs: ['classNamesUnchanged'], description: 'as a growth commit, #201 changed class names in the React stylesheet', base: `${commit.pr201}^`, head: commit.pr201, growthCommits: [commit.pr201] },
