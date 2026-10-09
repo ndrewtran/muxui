@@ -1,4 +1,4 @@
-✔ packed @muxui/react declarations typecheck every current catalog example (6175.389791ms)
+✔ packed @muxui/react declarations typecheck every current catalog example (6385.325708ms)
 ℹ tests 1
 ℹ suites 0
 ℹ pass 1
@@ -6,4 +6,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 6205.118667
+ℹ duration_ms 6417.615

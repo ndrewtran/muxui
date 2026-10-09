@@ -7,4 +7,7 @@
 [E-BL1-03] muxui:example:marketing-hero-split: packed SSR 3715 bytes with 0 rows, hydrated without mismatch to 0 rows
 [E-BL1-03] muxui:example:pricing-plans-columns: packed SSR 9670 bytes with 0 rows, hydrated without mismatch to 0 rows
 [E-BL1-03] muxui:example:account-settings-sections: packed SSR 11159 bytes with 0 rows, hydrated without mismatch to 0 rows
-[E-BL1-03] 5 pattern variants passed packed SSR and hydration
+[E-BL1-03] muxui:example:company-records-sortable: packed SSR 25008 bytes with 17 rows, hydrated without mismatch to 17 rows
+[E-BL1-03] muxui:example:task-filters-status-buttons: packed SSR 12000 bytes with 9 rows, hydrated without mismatch to 9 rows
+[E-BL1-03] muxui:example:task-filters-filter-bar: packed SSR 14448 bytes with 9 rows, hydrated without mismatch to 9 rows
+[E-BL1-03] 8 pattern variants passed packed SSR and hydration

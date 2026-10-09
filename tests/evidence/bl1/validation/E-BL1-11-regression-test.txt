@@ -1,5 +1,5 @@
-✔ E-BL1-11: the shipped patterns hold the regression thresholds (1.465958ms)
-✔ E-BL1-11: each threshold fails when its measurement worsens (0.527375ms)
+✔ E-BL1-11: the shipped patterns hold the regression thresholds (1.559916ms)
+✔ E-BL1-11: each threshold fails when its measurement worsens (0.673584ms)
 ℹ tests 2
 ℹ suites 0
 ℹ pass 2
@@ -7,4 +7,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 2657.525875
+ℹ duration_ms 2804.301583
