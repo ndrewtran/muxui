@@ -88,7 +88,9 @@ index binds a single source revision and tree.
   instead, skipping the main-history check and the exit review requirement, so the
   tool can be exercised before a merge. `<dir>` starts as a copy of the retained
   evidence root, so reused reviews and the supersession archive behave as in a real
-  capture. A rehearsal is never retained.
+  capture; the tool refuses a `<dir>` that overlaps the retained root (resolved through
+  symlinks, either containing the other, so not `.`) before it removes anything. A
+  rehearsal is never retained.
 - `--growth` is for a capture after a block is added (see "Adding a block"). It needs a
   retained close-out capture and a block that capture did not measure.
 - It refuses to write when any proof fails, retains a sanitized excerpt of every
@@ -217,16 +219,22 @@ commit and the records must bind a commit on main.
 - the block under `catalog/patterns/<slug>/` and its entries in
   `packages/catalog/catalog-sources.json`, then `pnpm generate` for the projections
   (the catalog digest goldens, the Storybook Block pages, and the docs routes);
-- `tests/evidence/bl1/regression-thresholds.json`: the block's discovery queries, written
-  before it is measured, and its id in `seedSet`. A block can move an existing block's
-  rank (a second collections block moves the poster grid's `collections` rank), so an
-  existing expectation may change in the same pull request. Make that edit only for a
-  measured shift, make sure the query is listed in `provenance.revisedAfterFirstMeasurement`,
-  and say why in `provenance.summary`. Loosening a threshold is a deliberate edit for review, never an
-  edit to a record. The later capture lists every such change in `E-BL1-11`
-  (`thresholdChanges`), so it is visible in the records too. A pattern whose id and name
-  carry a component word can outrank that component and fail the component search rule,
-  so name a block for what it shows, not for a component;
+- `tests/evidence/bl1/regression-thresholds.json`: entries for the new block only, written
+  before it is measured: its own discovery queries and expectations, its id in `seedSet`,
+  its ids in the `relevant` lists of the component queries it participates in, and the
+  provenance text that records them (a query of the new block revised after its first
+  measurement is listed in `provenance.revisedAfterFirstMeasurement`). Each query key is
+  unique in the file. Roadmap `E-BL1-11` and Product Scope fix thresholds before the
+  relevant candidate is measured, so a growth pull request does not revise, loosen, or
+  remove an existing block's expectation (`expectedFirst`, `expectedWithin`), a limit, or a
+  budget. A new block can still shift an existing rank (a second collections block moves the
+  poster grid's `collections` rank), and then `pattern-regression.test.mjs` fails: an
+  authority decision on the existing expectation comes first, and the pull request waits for
+  it. Prefer a block whose id, name, keywords, and category do not shift an existing rank. A
+  pattern whose id and name carry a component word can outrank that component and fail the
+  component search rule, so name a block for what it shows, not for a component. The later
+  capture still lists every change to the file since the close-out in `E-BL1-11`
+  (`thresholdChanges`), so a change is visible in the records whatever its authority;
 - for an interactive block, its cross-engine test
   `packages/react/test/browser/pattern-<slug>.test.mjs` and its route in
   `pullRequestImpact.patternBrowserTests` (`tooling/audits/repository-policy/repository-policy.json`).
