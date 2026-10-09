@@ -32,7 +32,8 @@
 // E-BL1-03 to E-BL1-08, E-BL1-10, and E-BL1-11, so it skips the close-out scope check and the
 // exit review, and records that it did. It refuses to run unless a close-out capture is retained and
 // the catalog has a block that capture did not measure, and its E-BL1-11 record lists how the
-// thresholds changed since that close-out (a visible record, not an authority to change them). The thresholds, the browser tests, and every count come from the
+// thresholds changed since that close-out. It refuses a change Decision 0026 amendment 02 does not
+// allow (assertGrowthThresholds). The thresholds, the browser tests, and every count come from the
 // source revision (the thresholds as committed there, the browser tests from the policy's
 // patternBrowserTests), not from this file. `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
@@ -57,6 +58,7 @@ import { scanBlockContent } from './bl1/content-scan.mjs';
 import { archiveSupersededCapture, assertDurableSource, assertGrowthSource, blockBrowserTests, isAncestor as isAncestorIn, retainReview, seedRehearsal, supersededFiles } from './bl1/capture-support.mjs';
 import { parseTestReport, runProof, sanitizationRules } from './bl1/proof-run.mjs';
 import {
+  assertGrowthThresholds,
   compileBundle,
   isPatternSource,
   measureRegression,
@@ -211,8 +213,11 @@ validationResults.find(({ command: ran }) => ran === 'pnpm generate:check').obse
 const thresholdsBytes = await readThresholds(sourceRevision);
 if (!(await readThresholds()).equals(thresholdsBytes)) throw new Error(`EVIDENCE_THRESHOLDS_UNCOMMITTED: ${thresholdsPath} must match HEAD`);
 const thresholds = parseThresholds(thresholdsBytes);
-// The record shows every change to the thresholds since the close-out, including any to an existing block's expectations.
+// The record shows every change to the thresholds since the close-out, and only the name query of a category that gained a block may be revised.
 const closeoutThresholds = growthBase === null ? null : await readThresholds(growthBase.closeout.sourceRevision);
+if (closeoutThresholds !== null) {
+  assertGrowthThresholds(parseThresholds(closeoutThresholds), thresholds, patterns.filter(({ id }) => growthBase.added.includes(id)).map(({ record }) => record));
+}
 const changes = closeoutThresholds === null ? null : {
   against: { revision: growthBase.closeout.sourceRevision, path: thresholdsPath, sha256: sha256(closeoutThresholds) },
   addedPatterns: growthBase.added,

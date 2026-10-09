@@ -1107,6 +1107,61 @@ test('a capture reads the thresholds as committed at a revision, and lists what 
   });
 });
 
+// BL1 growth: Decision 0026 amendment 02 lets a block that joins a category revise that category's name query, and nothing else.
+test('a growth capture may revise only the name query of a category that gained a block', async () => {
+  const { assertGrowthThresholds: allowed, categoryNameQuery } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  assert.deepEqual(['collections', 'call-to-action'].map(categoryNameQuery), ['collections', 'call to action']);
+  const entry = (query, fields) => ({ query, relevant: ['muxui:pattern:p'], ...fields });
+  const before = {
+    provenance: { summary: 'close-out', revisedAfterFirstMeasurement: ['collections'] },
+    seedSet: ['muxui:pattern:p'],
+    discovery: {
+      minimumMeanPrecisionAt3: 0.5,
+      queries: [
+        entry('collections', { expectedId: 'muxui:pattern:p', expectedWithin: 3 }),
+        entry('call to action', { expectedFirst: 'muxui:pattern:c' }),
+        entry('button', { firstWithoutPatterns: true, component: 'muxui:component:button' }),
+        entry('poster grid', { expectedFirst: 'muxui:pattern:p' }),
+      ],
+    },
+    search: { maximumDisplacedComponentQueries: 0 },
+  };
+  const [collections, callToAction, button, posterGrid] = before.discovery.queries.map(({ query }) => query);
+  const q = { id: 'muxui:pattern:q', category: 'collections', variants: [{ example: 'muxui:example:q-one' }] };
+  const grow = (change, added = [q]) => {
+    const after = structuredClone(before);
+    change(after, Object.fromEntries(after.discovery.queries.map((entry_) => [entry_.query, entry_])));
+    return () => allowed(before, after, added);
+  };
+
+  // Allowed: nothing changed; the new block's own entries; and the name query of the category that gained a block.
+  allowed(before, structuredClone(before), []);
+  grow((after, by) => {
+    after.seedSet.push(q.id);
+    after.provenance.summary = 'close-out, then q, and "collections" within 4';
+    after.discovery.queries.push(entry('q query', { expectedFirst: q.id }));
+    by[button].relevant.push(q.id, 'muxui:example:q-one');
+    Object.assign(by[collections], { expectedWithin: 4, knownWeakness: 'Ties sort by id.' });
+    by[collections].relevant.push(q.id);
+  })();
+  // A hyphenated category is searched with spaces.
+  grow((after, by) => { by[callToAction].expectedFirst = 'muxui:pattern:other'; }, [{ id: 'x', category: 'call-to-action', variants: [] }])();
+
+  const refuses = (label, pattern, change, added) => assert.throws(grow(change, added), (error) => error.message.startsWith('BL1_THRESHOLDS_GROWTH') && pattern.test(error.message), label);
+  refuses('the name query of a category that gained no block', new RegExp(`revises "${callToAction}"`, 'u'), (after, by) => { by[callToAction].expectedFirst = 'muxui:pattern:other'; });
+  refuses('a name query when nothing was added', new RegExp(`revises "${collections}"`, 'u'), (after, by) => { by[collections].expectedWithin = 4; }, []);
+  refuses('a component query expectation', new RegExp(`revises "${button}"`, 'u'), (after, by) => { by[button].component = 'muxui:component:other'; });
+  refuses('another discovery query expectation', new RegExp(`revises "${posterGrid}"`, 'u'), (after, by) => { by[posterGrid].expectedFirst = 'muxui:pattern:other'; });
+  refuses('a relevant id the new block does not own', new RegExp(`revises "${button}"`, 'u'), (after, by) => { by[button].relevant.push('muxui:component:other'); });
+  refuses('a relevant id dropped', new RegExp(`revises "${posterGrid}"`, 'u'), (after, by) => { by[posterGrid].relevant = []; });
+  refuses('a name query left with no expectation', new RegExp(`removes the expectation on "${collections}"`, 'u'), (after, by) => { delete by[collections].expectedWithin; });
+  refuses('a removed query', new RegExp(`removes the query "${posterGrid}"`, 'u'), (after) => { after.discovery.queries.pop(); });
+  refuses('a seed id removed', /removes muxui:pattern:p from the seed set/u, (after) => { after.seedSet = []; });
+  refuses('the precision floor', /changes discovery\.minimumMeanPrecisionAt3/u, (after) => { after.discovery.minimumMeanPrecisionAt3 = 0.4; });
+  refuses('a budget or limit', /changes search\.maximumDisplacedComponentQueries/u, (after) => { after.search.maximumDisplacedComponentQueries = 1; });
+  refuses('the list of expectations revised after a first measurement', /changes provenance\.revisedAfterFirstMeasurement/u, (after) => { after.provenance.revisedAfterFirstMeasurement.push(callToAction); });
+});
+
 // BL1 growth: a growth capture builds on a retained close-out capture and must add a block to it.
 test('a growth capture needs a retained close-out capture and a block that capture did not measure', async () => {
   const { assertGrowthSource, retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
@@ -1223,13 +1278,14 @@ const closeoutRevision = 'c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b';
 const jsonAt = (revision, path) => JSON.parse(readAtRevision(repositoryRoot, revision, path).toString('utf8'));
 const gitOut = (...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' }).trim();
 
-/** What the catalog declares at `revision`: the patterns, their variant example ids, and the block browser tests the policy routes. */
+/** What the catalog declares at `revision`: the patterns (`records`, with their categories), their variant example ids, and the block browser tests the policy routes. */
 function catalogAt(revision) {
   const { records } = jsonAt(revision, 'packages/catalog/catalog-sources.json');
   const patterns = records.filter(({ family }) => family === 'pattern').map(({ path }) => jsonAt(revision, path));
   const declared = jsonAt(revision, 'tooling/audits/repository-policy/repository-policy.json').pullRequestImpact.patternBrowserTests ?? {};
   const slugOf = ({ id }) => id.slice('muxui:pattern:'.length);
   return {
+    records: patterns,
     patternIds: patterns.map(({ id }) => id).sort(),
     patternSlugs: patterns.map(slugOf).sort(),
     variantIds: patterns.flatMap(({ variants }) => variants.map(({ example }) => example)).sort(),
@@ -1496,6 +1552,17 @@ async function assertLegacyCapture({ repo, summaryRevision }) {
 }
 
 /**
+ * A growth capture revises the thresholds since the retained close-out only as Decision 0026 amendment 02 allows,
+ * judged from the thresholds and the pattern records committed at the capture's revision and at the close-out's.
+ */
+async function assertGrowthThresholds({ index: { sourceRevision } }, closeoutRevision) {
+  const { assertGrowthThresholds: allowed, parseThresholds, thresholdsPath } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const [before, after] = [closeoutRevision, sourceRevision].map((revision) => parseThresholds(readAtRevision(repositoryRoot, revision, thresholdsPath)));
+  const closeoutIds = catalogAt(closeoutRevision).patternIds;
+  allowed(before, after, catalogAt(sourceRevision).records.filter(({ id }) => !closeoutIds.includes(id)));
+}
+
+/**
  * Checks every capture under the retained root of `repo`: the current capture and each archived one records a scope
  * (only the pinned older capture may not), and each is held to its scope and to the retained close-out revision.
  */
@@ -1513,7 +1580,8 @@ async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
     assert.ok(scope === 'close-out' || scope === 'growth', `${directory} records a scope`);
     const capture = await loadCapture({ repo, directory });
     if (directory !== bl1) await assertCopyMatchesIndex({ repo, ...capture });
-    await assertCapture(capture, { closeoutRevision: closeout.sourceRevision });
+    const { scope: held } = await assertCapture(capture, { closeoutRevision: closeout.sourceRevision });
+    if (held === 'growth') await assertGrowthThresholds(capture, closeout.sourceRevision);
   }
   return captures;
 }
@@ -1735,6 +1803,15 @@ test('a BL1 growth capture is held to the retained close-out revision, current o
   // It must add a block to that close-out, and must be checked against one.
   await assert.rejects(assertCapture(await forgeGrowth(capture, own), { closeoutRevision: own }), (error) => error.message.includes('a growth capture adds a block to the close-out'));
   await rejects(() => {}, 'a growth capture is checked against a retained close-out revision', {});
+});
+
+test('a BL1 growth capture is held to the amendment 02 rule from the thresholds and blocks at the close-out and at its revision', async () => {
+  const closeout = await retainedCloseout();
+  const capture = await loadCapture({ directory: closeout.directory });
+  // No block added and no threshold changed since the close-out itself.
+  await assertGrowthThresholds(capture, capture.index.sourceRevision);
+  // From #226 to the close-out, the thresholds grew the list of expectations revised after a first measurement, which a growth capture may not do.
+  await assert.rejects(assertGrowthThresholds(capture, '5026836747b36e23b8f2dd8bd695d3a420cc295c'), /BL1_THRESHOLDS_GROWTH.*changes provenance\.revisedAfterFirstMeasurement/u);
 });
 
 test('a BL1 archived capture is read from its own directory and must match its index', async () => {
