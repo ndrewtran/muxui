@@ -219,13 +219,15 @@ commit and the records must bind a commit on main.
 - the block under `catalog/patterns/<slug>/` and its entries in
   `packages/catalog/catalog-sources.json`, then `pnpm generate` for the projections
   (the catalog digest goldens, the Storybook Block pages, and the docs routes);
-- `tests/evidence/bl1/regression-thresholds.json`: entries for the new block only, written
-  before it is measured: its own discovery queries and expectations, its id in `seedSet`,
-  its ids in the `relevant` lists of the component queries it participates in, and the
-  provenance text that records them (a query of the new block revised after its first
-  measurement is listed in `provenance.revisedAfterFirstMeasurement`). Each query key is
+- `tests/evidence/bl1/regression-thresholds.json`: entries for the new block only, all
+  written before any measurement of that block: its own discovery queries and
+  expectations, its id in `seedSet`, its ids in the `relevant` lists of the component
+  queries it participates in, and the provenance text that records them. Each query key is
   unique in the file. Roadmap `E-BL1-11` and Product Scope fix thresholds before the
-  relevant candidate is measured, so a growth pull request does not revise, loosen, or
+  relevant candidate is measured, so an expectation is never revised to fit a measurement:
+  when the block fails an expectation it wrote, the block changes (its name, keywords, or
+  copy), or an authority decision is sought, and `provenance.revisedAfterFirstMeasurement`
+  does not grow. For the same reason a growth pull request does not revise, loosen, or
   remove an existing block's expectation (`expectedFirst`, `expectedWithin`), a limit, or a
   budget. A new block can still shift an existing rank (a second collections block moves the
   poster grid's `collections` rank), and then `pattern-regression.test.mjs` fails: an
@@ -284,7 +286,7 @@ node tests/evidence/capture-bl1.mjs --growth \
 
 `evidence-integrity.test.mjs` holds a growth capture to facts derived at its own source
 revision (the variants from the catalog, the browser tests from `patternBrowserTests`,
-the queries and revised expectations from the thresholds), and keeps the close-out
+the query count and the revised-expectation count from the thresholds), and keeps the close-out
 capture, current or archived, to its exact pins: five variants, 57 of 57 browser results,
 79 parity rows, 13 of 13 audit checks, nine of 21 revised expectations, the close-out
 scope check run, and an exit review of the source tree.
