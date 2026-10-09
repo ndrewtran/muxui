@@ -1,0 +1,275 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:data-diff",
+  "kind": "component",
+  "name": "DataDiff",
+  "summary": "Review and select caller-supplied scalar table changes before an explicit Apply request.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Reviewing proposed additions, removals, and updates to a small scalar table before requesting their application."
+    ],
+    "avoidWhen": [
+      "Computing a generic data diff, editing arbitrary records, or automatically applying patches or backend writes."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "header",
+    "title",
+    "description",
+    "viewport",
+    "table",
+    "head",
+    "column",
+    "body",
+    "row",
+    "cell",
+    "selection",
+    "change",
+    "values",
+    "before",
+    "after",
+    "arrow",
+    "footer",
+    "totals",
+    "apply",
+    "empty"
+  ],
+  "states": [
+    "default",
+    "empty",
+    "pending",
+    "disabled",
+    "selected",
+    "mixed",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": true,
+    "obligations": [
+      "Provide a visible label, semantic column headings, and a nonblank accessible label for every row.",
+      "Use native row and select-all checkboxes with keyboard focus and mixed selection state; unchanged and disabled rows cannot be selected.",
+      "Expose additions, removals, and before/after updates beyond color, retain explicit false/zero/null values, and safely escape scalar content.",
+      "Keep wide tables in a keyboard-focusable scroll region and announce selected-change totals without moving focus."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "label",
+          "description",
+          "columns",
+          "rows",
+          "selectedIds",
+          "defaultSelectedIds",
+          "onSelectionChange",
+          "onApply",
+          "pending",
+          "disabled",
+          "applyLabel",
+          "emptyMessage"
+        ],
+        "events": [
+          "selectionChange",
+          "apply"
+        ],
+        "parts": [
+          "root",
+          "header",
+          "title",
+          "description",
+          "viewport",
+          "table",
+          "head",
+          "column",
+          "body",
+          "row",
+          "cell",
+          "selection",
+          "change",
+          "values",
+          "before",
+          "after",
+          "arrow",
+          "footer",
+          "totals",
+          "apply",
+          "empty"
+        ],
+        "defaults": {
+          "description": "Select changes to apply",
+          "pending": false,
+          "disabled": false,
+          "emptyMessage": "No rows to review."
+        }
+      },
+      "behavior": [
+        "The native div host attributes, ref, native title tooltip, and native onSelect event are preserved. label is a required nonblank visible heading and table name. children and dangerouslySetInnerHTML are unsupported because columns and rows own the content.",
+        "DataDiffValue is string, finite number, boolean, or null. columns is a nonempty readonly array of {id, label}; rows is a readonly array with stable unique nonblank string id, nonblank accessible label, optional disabled boolean, and kind unchanged, added, removed, or updated. Duplicate row/column IDs and invalid shapes throw TypeError.",
+        "Unchanged/added/removed rows contain values only. Updated rows contain before and after only. Every value record is a plain own-data record with exactly the declared column IDs and explicit scalars, including 0, false, and null; missing/extra keys, accessors, symbols, non-scalar objects, and non-finite numbers are rejected. Values are escaped text rather than rendered HTML.",
+        "selectedIds controls selection; defaultSelectedIds initializes uncontrolled selection and otherwise defaults to all enabled proposed changes. Unchanged, disabled, and absent rows are filtered from selection, totals, onSelectionChange, and onApply. Uncontrolled unavailable IDs are permanently pruned after a committed row change. Newly supplied changes are not automatically selected.",
+        "Row pointer activation and native checkboxes toggle proposed changes. Select-all selects or clears enabled changes and exposes a mixed state for a partial selection. Domain onSelectionChange receives readonly string IDs in current row order; controlled input reports the requested selection without changing its rendered value. Native onSelect remains a host event.",
+        "Selected removal/addition/update totals update in a polite status region. Apply is an explicit native type=button action and calls onApply with a fresh selected-ID array in current row order. The callback does not mutate records, perform writes, infer asynchronous fulfillment, or clear selection.",
+        "pending and disabled gate row activation, checkboxes, select-all, and Apply. pending exposes aria-busy and Applying text supplied by caller state without a timer or animation. Apply is also disabled when there are zero selected changes or no onApply callback. applyLabel optionally overrides its complete non-pending label.",
+        "description defaults to Select changes to apply and an empty string omits it. Empty rows preserve column headings and display emptyMessage. Long scalar content wraps within cells; the table viewport contains horizontal overflow for narrow layouts. Leading selection checkboxes stay visible while scrolling; a selected-row edge remains separate from added/removed change backgrounds."
+      ],
+      "accessibility": [
+        "Native table column headers and the first supplied data column's row headers remain semantic after the leading selection column. Accessible row labels and Added/Removed/Updated/Unchanged spoken prefixes supplement visible +, minus, and update markers.",
+        "Changed updated cells expose Before and After text with del/ins presentation. Equal cells stay unmodified. Null renders as null, boolean as true/false, and numbers as their literal scalar text.",
+        "Native checkboxes support Space, select-all mixed state, and visible focus distinct from the persistent selection edge. The labeled scroll region supports keyboard focus; applying never changes focus. Forced colors preserves readable values, markers, selected controls, and the selection edge."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.border.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.container-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.raised",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-font-family",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-s-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-line-height",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.action-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-small",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-medium",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.subtle",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.label-weight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-xs-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.selection.track",
+            "requirement": "required"
+          },
+          {
+            "token": "component.datadiff.added-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.datadiff.removed-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-tight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.status.success",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.feedback.invalid",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.selection-indicator",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.radius-s",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.foreground",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.muted",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.background-hover",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.tight-gap",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

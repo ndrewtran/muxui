@@ -1297,7 +1297,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
       });
       await snapshot(scheme, 'manager/text-selection');
       await page.evaluate(() => document.getSelection().removeAllRanges());
-      const row = page.locator('.sidebar-item[data-item-id="mux-ui-react-calendar"]');
+      const row = page.locator('.sidebar-item[data-item-id="mux-ui-react-components-calendar"]');
       const trigger = row.locator('[data-testid="context-menu"]');
       await row.hover();
       await trigger.hover();
@@ -1328,7 +1328,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
         if (!style) throw new Error('Manager token projection is missing');
         const text = style.textContent;
         style.textContent = '';
-        const button = document.querySelector('.sidebar-item[data-item-id="mux-ui-react-calendar"] [data-testid="context-menu"]');
+        const button = document.querySelector('.sidebar-item[data-item-id="mux-ui-react-components-calendar"] [data-testid="context-menu"]');
         const value = getComputedStyle(button).backgroundColor;
         style.textContent = text;
         const probe = document.createElement('span'); document.body.append(probe);

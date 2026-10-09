@@ -109,6 +109,7 @@
     "tooling/": ["@muxui/repository-policy"]
   },
   "affectedPathConsumers": {
+    "apps/component-navigation.mjs": ["@muxui/docs", "@muxui/react-storybook"],
     "apps/scale/src/": ["@muxui/docs"]
   },
   "generationPrerequisites": {

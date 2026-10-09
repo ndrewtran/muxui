@@ -337,7 +337,7 @@ export function useDisclosureIconMotion(ref, isOpen, grouped = false) {
 }
 
 /** Animate a disclosure's measured content height without scaling its contents. */
-export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, grouped = false, ...props }) {
+export function MotionHeight({ children, isOpen, triggerRef, hostRef, className, contentClassName = 'muxui-disclosure-panel muxui-disclosure-motion-content', onCloseComplete, grouped = false, ...props }) {
   const panelRef = React.useRef(null);
   const contentRef = React.useRef(null);
   const controlsRef = React.useRef(null);
@@ -351,10 +351,12 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
   const mountedRef = React.useRef(false);
   const closedSettledRef = React.useRef(!isOpen);
   const initialClosedRef = React.useRef(!isOpen);
+  const onCloseCompleteRef = React.useRef(onCloseComplete);
   const [initialClosedStyle, setInitialClosedStyle] = React.useState(initialClosedRef.current);
   const [reduced, setReduced] = React.useState(false);
   isOpenRef.current = Boolean(isOpen);
   reducedRef.current = reduced;
+  onCloseCompleteRef.current = onCloseComplete;
 
   useIsomorphicLayoutEffect(() => {
     if (initialClosedRef.current) setInitialClosedStyle(false);
@@ -398,6 +400,7 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
         panel.style.overflow = 'hidden';
         host?.setAttribute('hidden', 'until-found');
         closedSettledRef.current = true;
+        onCloseCompleteRef.current?.();
       }
     };
     if (!isOpenRef.current && !mountedRef.current) {
@@ -580,5 +583,5 @@ export function MotionHeight({ children, isOpen, triggerRef, hostRef, className,
     style: initialClosedStyle ? { ...props.style, height: '0px', overflow: 'hidden' } : props.style,
     'aria-hidden': !isOpen || undefined,
     inert: !isOpen || undefined,
-  }, React.createElement('div', { ref: contentRef, className: 'muxui-disclosure-panel muxui-disclosure-motion-content' }, children));
+  }, React.createElement('div', { ref: contentRef, className: contentClassName }, children));
 }

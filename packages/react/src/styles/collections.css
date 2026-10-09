@@ -1587,6 +1587,10 @@
   min-block-size: max-content;
 }
 /* MuxUI component source: select.css */
+:where(.muxui-select[data-size='sm']) {
+  --muxui-field-font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+
 .muxui-select-trigger {
   display: inline-flex;
   align-items: center;

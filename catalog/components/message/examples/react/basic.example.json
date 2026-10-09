@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:message-basic-react",
+  "kind": "example",
+  "name": "Basic React Message",
+  "summary": "Present caller-updated conversation content with compact actions, source disclosure and follow-up callbacks.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:message#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/message/examples/react/basic.tsx"
+}

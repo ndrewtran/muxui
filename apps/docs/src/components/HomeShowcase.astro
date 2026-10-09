@@ -2,6 +2,7 @@
 import { componentSummaries, getComponentPage } from '../lib/catalog.ts';
 import ExampleHost from './ExampleHost.tsx';
 import TimeFieldExampleHost from './TimeFieldExampleHost.tsx';
+import { groupComponentNavigation } from '../../../component-navigation.mjs';
 
 const showcaseItems = componentSummaries.map(({ id, name }) => {
 	const slug = id.slice(id.lastIndexOf(':') + 1);
@@ -14,10 +15,14 @@ const showcaseItems = componentSummaries.map(({ id, name }) => {
 		source: example.source.content,
 	};
 });
+const showcaseGroups = groupComponentNavigation(showcaseItems, ({ slug }) => slug);
 ---
 
-<div class="home-showcase not-content" aria-label="Component showcase">
-	{showcaseItems.map((item) => (
+{showcaseGroups.map(({ label, items }) => (
+	<Fragment>
+	<h2 id={label === 'Components' ? 'components' : 'ai-agent'}>{label}</h2>
+	<div class="home-showcase not-content" aria-label={`${label} showcase`} data-component-category={label}>
+	{items.map((item) => (
 		<div class="showcase-item">
 			<a class="showcase-name" href={item.href}>{item.name}</a>
 			<div class="showcase-preview">
@@ -29,4 +34,6 @@ const showcaseItems = componentSummaries.map(({ id, name }) => {
 			</div>
 		</div>
 	))}
-</div>
+	</div>
+	</Fragment>
+))}

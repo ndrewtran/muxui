@@ -1,0 +1,68 @@
+.muxui-prompt-composer {
+  position: relative;
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  border: 1px solid var(--muxui-semantic-border-default);
+  border-radius: var(--muxui-semantic-shape-container-radius);
+  background: var(--muxui-semantic-surface-raised);
+  color: var(--muxui-semantic-content-default);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+.muxui-prompt-composer:hover:not(:focus-within, [data-disabled], [data-invalid]) { border-color: var(--muxui-semantic-border-indicator); }
+.muxui-prompt-composer:focus-within { border-color: var(--muxui-field-focus-border); box-shadow: var(--muxui-field-focus-glow); }
+.muxui-prompt-composer[data-invalid], .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid) { border-color: var(--muxui-semantic-feedback-invalid-border); }
+.muxui-prompt-composer[data-invalid]:focus-within, .muxui-prompt-composer:has(.muxui-prompt-composer-input:user-invalid):focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--muxui-semantic-feedback-invalid) 20%, transparent); }
+.muxui-prompt-composer[data-disabled] { opacity: 0.45; background: var(--muxui-semantic-surface-hover); cursor: not-allowed; }
+.muxui-prompt-composer-field { display: flex; align-items: flex-end; gap: var(--muxui-semantic-layout-action-gap); padding: var(--muxui-semantic-layout-inset-tight); }
+.muxui-prompt-composer-input {
+  box-sizing: border-box;
+  display: block;
+  flex: 1;
+  min-inline-size: 3ch;
+  inline-size: 100%;
+  max-block-size: 12rem;
+  min-block-size: var(--muxui-control-size-sm);
+  padding: max(0px, calc((var(--muxui-control-size-sm) - 1.5em) / 2)) var(--muxui-semantic-layout-inset-tight);
+  resize: none;
+  overflow-y: auto;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: 1.5;
+}
+.muxui-prompt-composer-input::placeholder { color: var(--muxui-semantic-content-muted); opacity: 1; }
+.muxui-prompt-composer-controls { display: flex; align-items: center; flex: none; gap: var(--muxui-semantic-layout-action-gap); }
+.muxui-prompt-composer button.muxui-button:disabled { pointer-events: auto; }
+.muxui-prompt-composer button.muxui-button:disabled > * { pointer-events: none; }
+.muxui-prompt-composer-model { flex: none; inline-size: auto; max-inline-size: 9rem; min-inline-size: 0; }
+.muxui-prompt-composer-model .muxui-select-trigger { min-inline-size: 0; max-inline-size: 100%; }
+.muxui-prompt-composer-input:focus-visible { outline: none; }
+.muxui-prompt-composer-input:disabled { cursor: not-allowed; }
+.muxui-prompt-composer-attachments { display: flex; flex-wrap: wrap; gap: var(--muxui-semantic-layout-action-gap); margin: 0; padding: var(--muxui-semantic-layout-inset-small); list-style: none; }
+.muxui-prompt-composer-attachments li { display: inline-flex; align-items: center; min-inline-size: 0; max-inline-size: 100%; padding-inline-start: var(--muxui-semantic-layout-inset-small); border: 1px solid var(--muxui-semantic-border-default); border-radius: var(--muxui-semantic-shape-radius-s); }
+.muxui-prompt-composer-attachments li > span { overflow-wrap: anywhere; }
+.muxui-prompt-composer-suggestions { position: absolute; inset-inline: 0; inset-block-end: calc(100% + var(--muxui-semantic-layout-inset-tight)); z-index: 1; max-block-size: 16rem; overflow-y: auto; padding: var(--muxui-semantic-layout-inset-tight); border: 1px solid var(--muxui-semantic-border-default); border-radius: var(--muxui-semantic-shape-container-radius); background: var(--muxui-semantic-surface-raised); color: var(--muxui-semantic-content-default); }
+.muxui-prompt-composer-suggestions[data-placement='below'] { inset-block-end: auto; inset-block-start: calc(100% + var(--muxui-semantic-layout-inset-tight)); }
+.muxui-prompt-composer-option { display: flex; gap: var(--muxui-semantic-layout-action-gap); padding: var(--muxui-semantic-layout-inset-small); border-radius: var(--muxui-semantic-shape-radius-s); cursor: pointer; overflow-wrap: anywhere; }
+.muxui-prompt-composer-option:hover:not([aria-selected='true']) { background: var(--muxui-semantic-surface-hover); }
+.muxui-prompt-composer-option:active { background: var(--muxui-semantic-surface-pressed); }
+.muxui-prompt-composer-option[aria-selected='true'] { background: var(--muxui-semantic-selection-background); color: var(--muxui-semantic-content-default); }
+.muxui-prompt-composer-option-symbol { flex: none; color: var(--muxui-semantic-content-default); }
+.muxui-prompt-composer-option-label { display: block; }
+.muxui-prompt-composer-option-description { display: block; color: var(--muxui-semantic-content-default); font-size: var(--muxui-semantic-typography-text-xs-font-size); }
+.muxui-prompt-composer-error { margin: 0; padding: var(--muxui-semantic-layout-inset-small); border-block-start: 1px solid var(--muxui-semantic-feedback-invalid); color: var(--muxui-semantic-content-default); }
+.muxui-prompt-composer-sr-only { position: absolute; inline-size: 1px; block-size: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@media (max-width: 400px) {
+  .muxui-prompt-composer-field:has(.muxui-prompt-composer-model) { flex-wrap: wrap; align-items: center; }
+  .muxui-prompt-composer-field:has(.muxui-prompt-composer-model) .muxui-prompt-composer-controls { flex-basis: 100%; justify-content: flex-end; }
+  .muxui-prompt-composer-field, .muxui-prompt-composer-controls { gap: var(--muxui-semantic-layout-micro-gap); }
+}
+@media (forced-colors: active) {
+  .muxui-prompt-composer { border-color: CanvasText; }
+  .muxui-prompt-composer:focus-within { outline: 2px solid Highlight; outline-offset: 2px; box-shadow: none; }
+  .muxui-prompt-composer[data-disabled] { opacity: 1; color: GrayText; }
+  .muxui-prompt-composer-option[aria-selected='true'] { outline: 1px solid Highlight; outline-offset: -1px; }
+}

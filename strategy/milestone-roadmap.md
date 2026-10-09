@@ -975,8 +975,8 @@ in Decision 0014 is met and separately admitted.
 ### Post-R1.6 Text addition
 
 Decision 0017 adds Text under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and
-preserves the fixed 53-family inventory and completed R1.6 evidence. The
-current mapping now contains 23 supplemental families and 76 total current
+preserves the fixed 53-family inventory and completed R1.6 evidence. That
+admission established 23 supplemental families and 76 total
 families, with 74 root exports and the two existing isolated subpaths. Text
 requires focused native-host ref/type, field and collection TextContext slot,
 token/style, truncation, SSR/hydration, generation, and packed-consumer proof.
@@ -988,7 +988,7 @@ publication, platform activation, or final R1-exit merge authorization.
 Decision 0018 explicitly extends `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` with
 Image, Avatar, and SelectNative, including the named native-backed image
 families. This expansion follows the Text addition and preserves historical
-R1.6 evidence. The current mapping contains 26 supplemental families and 79
+R1.6 evidence. That admission established 26 supplemental families and 79
 total families, with 77 root exports and two existing isolated subpaths.
 SelectNative's `useField` uses the existing pinned internal
 `react-aria@3.51.0` edge alongside Resizable's `useMove`; version identity,
@@ -1006,6 +1006,80 @@ the completed initial migration record. Generic Field remains deferred.
 These deliverables establish implementation readiness for the three families,
 not milestone completion, publication, support, consumer mutation, or a
 final R1-exit merge authorization.
+
+### Post-R1 CodeBlock addition
+
+Decision 0024 admits only CodeBlock under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` in the existing React root. Its canonical
+artifact, code/diff API, bounded line comparison, truthful explicit copying,
+Mux token CSS, examples, and projections follow ordinary post-R1 delivery.
+At Decision 0024's admission, the mapping grew to 27 supplemental and 80 total families, with 78
+root exports and two existing isolated subpaths; the historical 53-family
+floor and completed evidence remain unchanged.
+
+Deliver native host refs/types, escaping and whitespace, diff edge cases and
+character/line/work budgets, clipboard fulfillment/error/stale completion,
+SSR/hydration, keyboard/focus, light/dark/narrow-width styles, generation,
+root isolation, and packed-consumer proof. Two component-owned derived row
+background tokens also require canonical token and affected-dependent proof.
+Independent review covers public
+API, accessibility, and bounded diff behavior. Existing assertions
+`E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07` route current mapping,
+behavior/styles, projections, and platform/release checks; retained historical
+evidence does not prove the new family. The original admission implied no
+syntax highlighter or dependency; Decision 0024 amendment 01 below separately
+admits that bounded extension. No G3 activation, stable support, secondary
+platform, or publication is implied.
+Other Beautiful UI candidates have no deliverable under this admission.
+
+#### CodeBlock Shiki extension, 7 October 2026
+
+Decision 0024 amendment 01 and Product Scope 18.0.0 extend the existing
+CodeBlock outcome with exact private `shiki@4.5.0`. Preserve the existing
+container, copy/diff/input contracts and public API. Deliver client-effect-only
+fine-grained core/language/Oniguruma/WASM imports; matching plain SSR/initial
+hydration; bundled names/aliases with safe unknown/failure fallback; original
+text spans; separate before/after ordered grammar states; stale/unmount guards;
+semantic default/strong/link colors; and smaller aggregate highlighting budgets.
+
+Current `E-R1.6-01`, `03`, `04` and `07` continue to route canonical records,
+examples, behavior/styles, projections and package/platform boundaries. Add
+focused multiline/embedded grammar context, exact whitespace/escaping, loading/
+failure/alias/unknown, async cleanup, bounds and representative timing proof.
+Dependency proof retains exact pins, npm integrity and notices, root/SSR module
+isolation, ordinary Button tree-shaking and real packed-consumer highlighting.
+Run the full deterministic workspace graph for this runtime dependency change.
+Freeze the delta before independent API/security/lifecycle/budget/ownership
+review. Existing retained evidence does not prove this extension.
+
+No family/export count, lifecycle, renderer activation, milestone completion,
+release boundary, publication, tracker mutation or TextEditor work follows.
+
+### Post-R1 remaining Beautiful UI candidates addition
+
+Decision 0025 admits PromptComposer, Message, Activity and DataDiff under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` in the existing experimental React root.
+Andrew's explicit creation request names this bounded batch; the selected
+Beautiful UI rendered anatomy is adapted through independently owned Mux
+source, tokens, native controls and accessibility. CodeBlock remains admitted
+separately by Decision 0024. The current mapping is 31 supplemental and 84
+total families, with 82 roots and the unchanged two isolated subpaths.
+
+Deliver native host/ref/event types, real form validation/reset/IME and caret
+menus, caller streaming/disclosures/source/follow-up actions, finite supplied
+activity states, safe scalar table changes/selection/Apply, controlled state,
+pending/error/empty paths, SSR/hydration, keyboard/focus, both themes/narrow/
+forced-colors, canonical examples, generation identity, parser/editor root
+isolation and packed consumers. DataDiff's two component-owned derived tints
+require token and actual affected-dependent proof. Freeze the complete batch
+before independent public-API/a11y/state/security/ownership review.
+
+Existing `E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04` and `E-R1.6-07` route current
+mapping, runtime/styles, projections and platform/release checks. This is local
+implementation readiness, not completed retained evidence, milestone/release
+readiness, G3 activation, secondary renderer support, publication, tracker
+mutation, production or consumer work. No AI/network/upload service, generic
+workflow engine or timed cosmetic processing is admitted.
 
 ### Post-R1.6 Figma token export addition
 
@@ -2244,7 +2318,8 @@ parser boundary, and `@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`,
 `@tiptap/extension-placeholder@3.31.4`,
 `@tiptap/extension-text-align@3.31.4`, and
 `@tiptap/extension-text-style@3.31.4` for `TextEditor` only (Decision 0011
-amendment 04). All are
+amendment 04). Decision 0024 amendment 01 adds exact `shiki@4.5.0` only for
+CodeBlock client highlighting. All are
 internal, replaceable, module-isolated implementation edges; no upstream public
 type, Tiptap editor object, or parser object crosses the Mux UI
 public boundary. The Lucide edge carries npm integrity

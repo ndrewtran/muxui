@@ -63,6 +63,7 @@ for (const exportName of ['Button', 'TextField']) {
         `${exportName} does not retain the bundled motion dependency closure (${retainedModuleSummary(retainedMotionModules)})`,
       );
       assert.doesNotMatch(chunk.code, /(?:motion\/react|framer-motion|motion-dom|motion-utils)/u, `${exportName} output has no motion runtime code`);
+      assert.ok(Object.entries(chunk.modules).every(([id, module]) => !/node_modules\/\.pnpm\/(?:shiki|@shikijs\+)/u.test(id) || module.renderedLength === 0), `${exportName} excludes Shiki modules`);
     } finally {
       await rm(directory, { recursive: true, force: true });
     }

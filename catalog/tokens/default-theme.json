@@ -5,7 +5,7 @@
   "name": "Mux UI default theme tokens",
   "summary": "Mux-owned default theme with complete palette, typography, motion, effects, and Scale foundation inputs.",
   "lifecycle": "experimental",
-  "tokenContractVersion": "5.0.0",
+  "tokenContractVersion": "5.2.0",
   "theme": {
     "name": "default",
     "modeAxes": {
@@ -9579,6 +9579,58 @@
         "kind": "transition",
         "duration": "semantic.motion.exit-duration",
         "easing": "semantic.motion.modal-easing"
+      }
+    },
+    "component.codeblock.added-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent added-line surface in CodeBlock; the parent Mux surface remains visible.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.status.success",
+        "color": "#00000000",
+        "weight": 0.1
+      }
+    },
+    "component.codeblock.removed-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent removed-line surface in CodeBlock; the parent Mux surface remains visible.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.feedback.invalid",
+        "color": "#00000000",
+        "weight": 0.1
+      }
+    },
+    "component.datadiff.added-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent added-row and added-value surface in DataDiff; the parent Mux surface remains visible.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.status.success",
+        "color": "#00000000",
+        "weight": 0.1
+      }
+    },
+    "component.datadiff.removed-background": {
+      "layer": "component",
+      "type": "color",
+      "unit": "hex",
+      "meaning": "Translucent removed-row and removed-value surface in DataDiff; the parent Mux surface remains visible.",
+      "overridePolicy": "theme",
+      "mix": {
+        "space": "srgb",
+        "token": "semantic.feedback.invalid",
+        "color": "#00000000",
+        "weight": 0.1
       }
     }
   }
