@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { join, resolve } from 'node:path';
@@ -42,6 +43,22 @@ function sha256(value) {
   return createHash('sha256').update(value).digest('hex');
 }
 
+/**
+ * Source files an index lists but does not own. A later change may edit them in the working tree (a block
+ * added after the BL1 capture edits the regression thresholds), so the index pins each at the revision it
+ * binds: the digest is checked against the git object at `index.sourceRevision`, never the working-tree file.
+ */
+export const REVISION_BOUND_INPUTS = new Set(['tests/evidence/bl1/regression-thresholds.json']);
+
+/** The bytes of `path` at `revision`, read from the git objects of `gitRoot`. */
+export function readAtRevision(gitRoot, revision, path) {
+  try {
+    return execFileSync('git', ['show', `${revision}:${path}`], { cwd: gitRoot, stdio: ['ignore', 'pipe', 'ignore'] });
+  } catch {
+    throw new EvidenceIntegrityError('EVIDENCE_REVISION_UNAVAILABLE', `${path} cannot be read at ${revision}; fetch the full history`);
+  }
+}
+
 async function readCanonicalJson(path) {
   const bytes = await readFile(path, 'utf8');
   let value;
@@ -59,14 +76,15 @@ async function readCanonicalJson(path) {
   return { bytes, value };
 }
 
-async function assertReference(repositoryRoot, reference, kind) {
+async function assertReference(repositoryRoot, reference, kind, bound) {
   if (!reference || typeof reference.path !== 'string' || !/^sha256:[0-9a-f]{64}$/u.test(reference.sha256 ?? '')) {
     throw new EvidenceIntegrityError('EVIDENCE_REFERENCE_INVALID', `${kind} reference must contain path and sha256`);
   }
-  const path = join(repositoryRoot, reference.path);
-  const bytes = await readFile(path).catch(() => {
-    throw new EvidenceIntegrityError('EVIDENCE_REFERENCE_MISSING', `${reference.path} is missing`);
-  });
+  const bytes = bound
+    ? readAtRevision(bound.gitRoot, bound.revision, reference.path)
+    : await readFile(join(repositoryRoot, reference.path)).catch(() => {
+      throw new EvidenceIntegrityError('EVIDENCE_REFERENCE_MISSING', `${reference.path} is missing`);
+    });
   const actual = `sha256:${sha256(bytes)}`;
   if (actual !== reference.sha256) {
     throw new EvidenceIntegrityError('EVIDENCE_DIGEST_MISMATCH', `${reference.path} has ${actual}; expected ${reference.sha256}`);
@@ -74,20 +92,31 @@ async function assertReference(repositoryRoot, reference, kind) {
   return bytes;
 }
 
-async function assertIndexReferences(repositoryRoot, index) {
+async function assertIndexReferences(repositoryRoot, index, gitRoot) {
   for (const key of ['records', 'artifacts', 'recertifications', 'supersessions']) {
     if (!Array.isArray(index[key])) continue;
-    for (const reference of index[key]) await assertReference(repositoryRoot, reference, key);
+    for (const reference of index[key]) {
+      const bound = key === 'artifacts' && REVISION_BOUND_INPUTS.has(reference.path) ? { gitRoot, revision: index.sourceRevision } : undefined;
+      if (bound && !/^[0-9a-f]{40}$/u.test(bound.revision ?? '')) {
+        throw new EvidenceIntegrityError('EVIDENCE_REFERENCE_INVALID', `${reference.path} is bound to the index's sourceRevision, which is not a full revision`);
+      }
+      await assertReference(repositoryRoot, reference, key, bound);
+    }
   }
   if (index.validation) await assertReference(repositoryRoot, index.validation, 'validation');
 }
 
-/** Verify current evidence indexes and their content-addressed child records. */
+/**
+ * Verify current evidence indexes and their content-addressed child records. `gitRoot` names the repository
+ * whose git objects hold the revision-bound inputs (see REVISION_BOUND_INPUTS); it defaults to
+ * `repositoryRoot`, and differs only when the evidence tree is a rehearsal outside the repository.
+ */
 export async function verifyEvidence(repositoryRoot, options) {
-  if (options !== undefined) {
+  const { gitRoot = repositoryRoot, ...retired } = options ?? {};
+  if (Object.keys(retired).length > 0) {
     throw new EvidenceIntegrityError(
       'EVIDENCE_OPTIONS_UNSUPPORTED',
-      'verifyEvidence accepts only the repository root; legacy identity options are retired',
+      'verifyEvidence accepts only the repository root and gitRoot; legacy identity options are retired',
     );
   }
   const evidenceRoot = join(repositoryRoot, 'tests/evidence');
@@ -105,7 +134,7 @@ export async function verifyEvidence(repositoryRoot, options) {
       }
       throw error;
     });
-    await assertIndexReferences(repositoryRoot, index);
+    await assertIndexReferences(repositoryRoot, index, gitRoot);
     recordCount += index.records?.length ?? 0;
     artifactCount += index.artifacts?.length ?? 0;
     recertificationCount += index.recertifications?.length ?? 0;
