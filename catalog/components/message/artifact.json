@@ -1,0 +1,203 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:message",
+  "kind": "component",
+  "name": "Message",
+  "summary": "Present caller-updated conversation content with compact actions, source disclosure and follow-up callbacks.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Present caller-updated conversation content with compact actions, source disclosure and follow-up callbacks."
+    ],
+    "avoidWhen": [
+      "Executing remote tasks, managing backend state or simulating assistant processing."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "author",
+    "content",
+    "actions",
+    "sources",
+    "follow-ups",
+    "status"
+  ],
+  "states": [
+    "default",
+    "streaming",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "sourcesExpanded/onSourcesExpandedChange or defaultSourcesExpanded control the source disclosure. Follow-up records use id/label; their buttons render only when onFollowUp exists and report the chosen record without auto-sending.",
+      "streaming is caller-owned. A polite atomic region announces streamingLabel independently of content updates; tokens are not live-announced. There is no timer, fake response, focus theft, auto-scroll or remote request."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "sender",
+          "author",
+          "children",
+          "actions",
+          "sources",
+          "sourcesExpanded",
+          "defaultSourcesExpanded",
+          "followUps",
+          "streaming",
+          "streamingLabel"
+        ],
+        "events": [
+          "sourcesExpandedChange",
+          "followUp"
+        ],
+        "parts": [
+          "root",
+          "author",
+          "content",
+          "actions",
+          "sources",
+          "follow-ups",
+          "status"
+        ],
+        "defaults": {
+          "sender": "assistant",
+          "defaultSourcesExpanded": false,
+          "streaming": false,
+          "streamingLabel": "Response in progress."
+        }
+      },
+      "behavior": [
+        "The native article host/ref, children and HTML attributes/events retain their native meanings. sender is user, assistant or system rather than redefining native role; author is React content rather than native title or RDFa content.",
+        "Caller-updated ReactNode children render first, followed by compact labeled actions and source disclosure, then follow-up controls. Markdown is explicitly composed through separately imported @muxui/react/markdown; the root imports no parser or editor.",
+        "Actions use id/label/icon/onAction/disabled/pressed records. Decorative icons never supply the accessible name. Sources use id/label/href/description records; HTTP(S) and relative links are admitted, unsafe schemes/control characters are presented as unlinked labels.",
+        "sourcesExpanded/onSourcesExpandedChange or defaultSourcesExpanded control the source disclosure. Follow-up records use id/label; their buttons render only when onFollowUp exists and report the chosen record without auto-sending.",
+        "streaming is caller-owned. A polite atomic region announces streamingLabel independently of content updates; tokens are not live-announced. There is no timer, fake response, focus theft, auto-scroll or remote request."
+      ],
+      "accessibility": [
+        "Preserve native host/ref/events and keyboard controls with visible focus.",
+        "Use semantic labels and static status announcements; do not rely on color or continuously animated processing."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.border.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.action-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.content-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-medium",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-small",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-tight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.micro-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.section-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.container-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.radius-s",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.hover",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.subtle",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-font-family",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-font-weight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-m-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-s-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-xs-font-size",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

@@ -15,7 +15,7 @@ const current: Section = Astro.props.current
 // There is no components index, so the entry opens the first component the catalog lists.
 const links: readonly { section: Section; label: string; href: string }[] = [
 	{ section: 'docs', label: 'Docs', href: '/' },
-	{ section: 'components', label: 'Components', href: componentSidebar[0]?.link ?? '/' },
+	{ section: 'components', label: 'Components', href: componentSidebar[0]?.items[0]?.link ?? '/' },
 	{ section: 'blocks', label: 'Blocks', href: blocksPath },
 ];
 ---

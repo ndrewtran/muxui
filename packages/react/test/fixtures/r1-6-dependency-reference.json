@@ -169,7 +169,7 @@
       "peerDependencies": {}
     }
   ],
-  "verificationBoundary": "Exact direct package, motion closure, and complete 32-package editor pin, integrity and license references; packed evaluation isolation and runtime/SSR proof are separate obligations.",
+  "verificationBoundary": "Exact direct package, motion and Shiki closures, and complete 32-package editor pin, integrity and license references; packed evaluation isolation and runtime/SSR proof are separate obligations.",
   "motionClosureRecords": [
     {
       "package": "motion",
@@ -434,6 +434,81 @@
       "license": "MIT",
       "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
       "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
+    }
+  ],
+  "shikiClosureRecords": [
+    {
+      "package": "shiki",
+      "version": "4.5.0",
+      "integrity": "sha512-OcRW72ngQvc+MSVWBRIovC/BTW589iUE/Vxav7VeM4RcY9MUjqB+IR6ILG1k9nuW6LiG/nct9uma4/MBtnZbmQ==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee",
+      "owner": "packages/react/package.json"
+    },
+    {
+      "package": "@shikijs/core",
+      "version": "4.5.0",
+      "integrity": "sha512-6CIgwq+bt2JZ3OSjb/nBkkwEf/CfpHcbam+Mg5Pllco7HAGRQ2/EFhZrrJtbyNTgKwknfVS+llsXGygiDGwJWw==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/engine-javascript",
+      "version": "4.5.0",
+      "integrity": "sha512-Ed6UdEj84LyYkwnxM5CvSMWAD+id9ExTYri0/+x41U9zrgNifPSS9lZm0JqBP0VfYI8yr8tY5nbNq9+p9R0kFA==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/engine-oniguruma",
+      "version": "4.5.0",
+      "integrity": "sha512-dKVmbJecVdB9recl8a/CU4jdpNXyjJQrIcesIkpS70s5HS02ohpnCSpMUbotPnEUzbAcLQ+S4hwZYbkBBiTcJw==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/langs",
+      "version": "4.5.0",
+      "integrity": "sha512-wwBTqwduXSz0X4v9Qa2EWeFaYJEw1clCncWjoRNQRbVDu3SPRTRWucnouYapKj3b8Q+sk/41Vbc4B5c8nuYzLA==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/primitive",
+      "version": "4.5.0",
+      "integrity": "sha512-UM7ShlA8oz0OWxLLO8BmO9Ip6fVqdkt8yF0EH7nOCqHfrx1eEAzF0ZUVK7L+I8NEgeu1PEWSRlxaiPPeCb4iDg==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/themes",
+      "version": "4.5.0",
+      "integrity": "sha512-zGb87H3UBbpuI4yoh5UguB1XbU+2BDU3kflM7UfZ+Cy2hWo9lBtqjSVK20gmLY6ukYl040hAypGXMgud9vul8Q==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/types",
+      "version": "4.5.0",
+      "integrity": "sha512-drtPrtD8N0DENyD2cyt6Ajy+IWsiCLgMxODwLTpvH1UsN6a9jf90tNTPjqwHvA+0Lzu9e0txk8DjfqH1p9UJRw==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
+      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
+    },
+    {
+      "package": "@shikijs/vscode-textmate",
+      "version": "10.0.2",
+      "integrity": "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==",
+      "license": "MIT",
+      "licenseFile": "packages/react/licenses/shiki-vscode-textmate.MIT.txt",
+      "licenseSha256": "sha256:b5cb7ff7859e7d282d98fc43ab081b0dda5dc659dc3385cf65740c759a7e6a6c"
     }
   ]
 }

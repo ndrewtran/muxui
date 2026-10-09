@@ -240,7 +240,7 @@ test('repository policy routes navigation and CI paths to the policy check with 
   }
 });
 
-test('Scale source also selects docs, which embeds it by path without a workspace dependency', async () => {
+test('shared app source selects its declared consumers without a workspace dependency', async () => {
   const repositoryRoot = resolve(import.meta.dirname, '../../../..');
   const [realPolicy, realPackages] = await Promise.all([
     loadPolicy(repositoryRoot),
@@ -254,4 +254,5 @@ test('Scale source also selects docs, which embeds it by path without a workspac
   assert.deepEqual(selected('apps/scale/src/App.jsx'), ['@muxui/docs', '@muxui/scale']);
   assert.deepEqual(selected('apps/scale/test/browser/docs-theme.test.mjs'), ['@muxui/scale']);
   assert.deepEqual(selected('apps/docs/src/pages/scale.astro'), ['@muxui/docs']);
+  assert.deepEqual(selected('apps/component-navigation.mjs'), ['@muxui/docs', '@muxui/react-storybook']);
 });

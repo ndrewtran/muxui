@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { parseFragment } from 'parse5';
 import { FOUNDATION_PAGES } from '../src/lib/foundations.ts';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
+import { groupComponentNavigation } from '../../component-navigation.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsDist = process.argv[2] === undefined
@@ -84,10 +85,18 @@ console.log(`Rendered source contract passed: ${checked} canonical React example
 const homePath = resolve(docsDist, 'index.html');
 assert(existsSync(homePath), 'Built Starlight home page is missing.');
 const home = parseFragment(readFileSync(homePath, 'utf8'));
-const showcase = elements(home).find((node) => node.tagName === 'div' && classNames(node).has('home-showcase'));
-assert(showcase !== undefined, 'Built Starlight home page has no component showcase.');
-const showcaseItems = elements(showcase).filter((node) => node.tagName === 'div' && classNames(node).has('showcase-item'));
+const showcases = elements(home).filter((node) => node.tagName === 'div' && classNames(node).has('home-showcase'));
+const showcaseItems = showcases.flatMap((showcase) => elements(showcase).filter((node) => node.tagName === 'div' && classNames(node).has('showcase-item')));
 const components = listComponents();
+const groups = groupComponentNavigation(components, ({ id }) => id.slice(id.lastIndexOf(':') + 1));
+assert(showcases.length === groups.length, 'Built Starlight home page must expose both component categories.');
+for (const { label, items } of groups) {
+	const showcase = showcases.find((node) => attributeValue(node, 'data-component-category') === label);
+	assert(showcase !== undefined, `Built Starlight home page is missing the ${label} showcase.`);
+	const links = elements(showcase).filter((node) => node.tagName === 'a' && classNames(node).has('showcase-name'));
+	assert(links.length === items.length, `The ${label} showcase has an incorrect component count.`);
+	assert(items.every(({ id }) => links.some((node) => attributeValue(node, 'href') === `/components/${id.slice(id.lastIndexOf(':') + 1)}/`)), `The ${label} showcase has incorrect membership.`);
+}
 assert(showcaseItems.length === components.length, `Home showcase has ${showcaseItems.length} components, expected ${components.length}.`);
 for (const component of components) {
 	const slug = component.id.slice(component.id.lastIndexOf(':') + 1);

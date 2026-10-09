@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:activity-basic-react",
+  "kind": "example",
+  "name": "Basic React Activity",
+  "summary": "Present caller-owned task statuses as dense rows with aggregate and item disclosures.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:activity#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/activity/examples/react/basic.tsx"
+}

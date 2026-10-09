@@ -31,7 +31,7 @@ test('supplemental mapping derives catalog owners and the export name from slug 
     anatomyOwner: 'catalog/components/card/artifact.json#/anatomy',
     export: { name: 'Card', module: '.', isolation: 'root' },
   });
-  assert.equal(readSupplementalMapping(repositoryRoot).length, 26);
+  assert.equal(readSupplementalMapping(repositoryRoot).length, 31);
 });
 
 test('supplemental mapping rejects authored derived fields and stale schemas', async () => {

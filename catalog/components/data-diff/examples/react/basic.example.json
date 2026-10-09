@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:data-diff-basic-react",
+  "kind": "example",
+  "name": "Basic React DataDiff",
+  "summary": "Proposed additions and removals with unchanged context and an explicit application request.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:data-diff#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/data-diff/examples/react/basic.tsx"
+}

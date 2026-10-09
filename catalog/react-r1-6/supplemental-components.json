@@ -3,6 +3,19 @@
   "tranche": "R1.6",
   "components": [
     {
+      "family": "Activity",
+      "slug": "activity",
+      "examples": [
+        "catalog/components/activity/examples/react/basic.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/activity.mjs",
+      "styleSource": "packages/react/src/supplemental/activity.css"
+    },
+    {
       "family": "AlertDialog",
       "slug": "alert-dialog",
       "examples": [
@@ -68,6 +81,20 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
+      "family": "CodeBlock",
+      "slug": "code-block",
+      "examples": [
+        "catalog/components/code-block/examples/react/basic.tsx",
+        "catalog/components/code-block/examples/react/diff.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/code-block.mjs",
+      "styleSource": "packages/react/src/supplemental/code-block.css"
+    },
+    {
       "family": "ColorModeToggle",
       "slug": "color-mode-toggle",
       "examples": [
@@ -94,6 +121,20 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
+      "family": "DataDiff",
+      "slug": "data-diff",
+      "examples": [
+        "catalog/components/data-diff/examples/react/basic.tsx",
+        "catalog/components/data-diff/examples/react/controlled.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/data-diff.mjs",
+      "styleSource": "packages/react/src/supplemental/data-diff.css"
+    },
+    {
       "family": "HeaderNav",
       "slug": "header-nav",
       "examples": [
@@ -104,19 +145,6 @@
         "isolation": "root"
       },
       "runtimeSource": "packages/react/src/supplemental/index.mjs",
-      "styleSource": "packages/react/src/supplemental/styles.css"
-    },
-    {
-      "family": "Image",
-      "slug": "image",
-      "examples": [
-        "catalog/components/image/examples/react/basic.tsx"
-      ],
-      "export": {
-        "module": ".",
-        "isolation": "root"
-      },
-      "runtimeSource": "packages/react/src/supplemental/image.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
@@ -131,6 +159,19 @@
       },
       "runtimeSource": "packages/react/src/supplemental/icon-button.mjs",
       "styleSource": "packages/react/src/supplemental/icon-button.css"
+    },
+    {
+      "family": "Image",
+      "slug": "image",
+      "examples": [
+        "catalog/components/image/examples/react/basic.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/image.mjs",
+      "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
       "family": "Input",
@@ -185,6 +226,20 @@
       "styleSource": "packages/react/src/markdown/markdown.css"
     },
     {
+      "family": "Message",
+      "slug": "message",
+      "examples": [
+        "catalog/components/message/examples/react/basic.tsx",
+        "catalog/components/message/examples/react/conversation.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/message.mjs",
+      "styleSource": "packages/react/src/supplemental/message.css"
+    },
+    {
       "family": "MultiSelect",
       "slug": "multi-select",
       "examples": [
@@ -223,6 +278,20 @@
       },
       "runtimeSource": "packages/react/src/supplemental/index.mjs",
       "styleSource": "packages/react/src/supplemental/styles.css"
+    },
+    {
+      "family": "PromptComposer",
+      "slug": "prompt-composer",
+      "examples": [
+        "catalog/components/prompt-composer/examples/react/basic.tsx",
+        "catalog/components/prompt-composer/examples/react/suggestions.tsx"
+      ],
+      "export": {
+        "module": ".",
+        "isolation": "root"
+      },
+      "runtimeSource": "packages/react/src/supplemental/prompt-composer.mjs",
+      "styleSource": "packages/react/src/supplemental/prompt-composer.css"
     },
     {
       "family": "RadioField",
@@ -303,10 +372,10 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
-      "family": "TextArea",
-      "slug": "text-area",
+      "family": "Text",
+      "slug": "text",
       "examples": [
-        "catalog/components/text-area/examples/react/basic.tsx"
+        "catalog/components/text/examples/react/basic.tsx"
       ],
       "export": {
         "module": ".",
@@ -316,10 +385,10 @@
       "styleSource": "packages/react/src/supplemental/styles.css"
     },
     {
-      "family": "Text",
-      "slug": "text",
+      "family": "TextArea",
+      "slug": "text-area",
       "examples": [
-        "catalog/components/text/examples/react/basic.tsx"
+        "catalog/components/text-area/examples/react/basic.tsx"
       ],
       "export": {
         "module": ".",

@@ -3,6 +3,7 @@ import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
+import { componentCategory } from '../../component-navigation.mjs';
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview(args) {
@@ -24,18 +25,19 @@ const BOOLEAN_PROPS = new Set([
   'acceptDirectory', 'allowsMultiple', 'checked', 'current', 'defaultChecked',
   'defaultExpanded', 'defaultOpen', 'defaultSelected', 'disabled', 'dismissable',
   'expanded', 'invalid', 'indeterminate', 'open', 'pending', 'readOnly', 'required',
-  'showTextWhileLoading',
+  'showTextWhileLoading', 'lineNumbers', 'copyable', 'wrap', 'streaming', 'sourcesExpanded', 'defaultSourcesExpanded', 'multiple',
   'shouldCloseOnSelect',
 ]);
 
 const ARRAY_PROPS = new Set([
   'columns', 'defaultExpandedIds', 'defaultSelectedIds', 'expandedIds', 'items',
-  'options', 'rows', 'selectedIds', 'value',
+  'options', 'rows', 'selectedIds', 'value', 'actions', 'sources', 'commands', 'followUps', 'attachments', 'models',
 ]);
 
 const STRING_PROPS = new Set([
   'action', 'aria-label', 'aria-labelledby', 'children', 'className', 'color', 'content',
   'description', 'endName', 'errorMessage', 'href', 'label', 'message', 'name',
+  'source', 'before', 'after', 'language', 'filename', 'inputLabel', 'author', 'streamingLabel', 'applyLabel', 'emptyMessage', 'selectedModel', 'defaultSelectedModel',
   'placeholder', 'rel', 'src', 'srcSet', 'alt', 'fallbackSrc', 'fallbackSrcSet', 'fit', 'radius', 'startName', 'target', 'title',
 ]);
 
@@ -56,6 +58,8 @@ const CONTROLLED_DEFAULT_PAIRS = Object.freeze([
   ['selectedId', 'defaultSelectedId'],
   ['selectedIds', 'defaultSelectedIds'],
   ['value', 'defaultValue'],
+  ['sourcesExpanded', 'defaultSourcesExpanded'],
+  ['selectedModel', 'defaultSelectedModel'],
 ]);
 
 const UNCONTROLLED_PROPS = new Map(CONTROLLED_DEFAULT_PAIRS);
@@ -322,6 +326,20 @@ function stateIsSupported(binding, state, family) {
   const props = new Set(binding.api.props);
   const normalizedState = state.toLowerCase().replaceAll('-', '');
   switch (normalizedState) {
+    case 'default':
+      return true;
+    case 'running':
+    case 'failed':
+      return family === 'Activity';
+    case 'streaming':
+      return family === 'Message';
+    case 'error':
+      return family === 'PromptComposer';
+    case 'mixed':
+      return family === 'DataDiff';
+    case 'diff':
+    case 'wrap':
+      return family === 'CodeBlock';
     case 'idle':
     case 'visible':
       return true;
@@ -428,6 +446,25 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
       break;
     case 'unchecked':
       if (props.has('checked') && canSupplyStateValue(args, props, 'checked', preserveExplicit)) setControlledArg(args, props, 'checked', false);
+      break;
+    case 'running':
+    case 'failed':
+      if (family === 'Activity') args.status = state;
+      break;
+    case 'streaming':
+      if (family === 'Message') args.streaming = true;
+      break;
+    case 'error':
+      if (family === 'PromptComposer') args.error = 'Unable to send. Try again.';
+      break;
+    case 'mixed':
+      if (family === 'DataDiff') args.defaultSelectedIds = ['added'];
+      break;
+    case 'diff':
+      if (family === 'CodeBlock') args.mode = 'diff';
+      break;
+    case 'wrap':
+      if (family === 'CodeBlock') args.wrap = true;
       break;
     case 'indeterminate':
       if (props.has('indeterminate')) args.indeterminate = true;
@@ -546,7 +583,76 @@ function ownChildArg(args, name, defaultValue) {
   return ownArg(args, 'children', {})?.[name] ?? defaultValue;
 }
 
+const CODE_BLOCK_BEFORE = 'export async function loadPanel() {\n  const panel = await workspace.read("inbox");\n  return panel.title;\n}';
+const CODE_BLOCK_AFTER = 'export async function loadPanel() {\n  const panel = await workspace.read("research");\n  if (!panel.visible) return null;\n  return panel.title;\n}';
+
+function PromptComposerPreview(args) {
+  const [attachments, setAttachments] = React.useState([]);
+  const [result, setResult] = React.useState('');
+  return e('div', null, e(MuxUI.PromptComposer, {
+    ...args, inputLabel: args.inputLabel ?? 'Message',
+    inputProps: { placeholder: 'Write a message, @ source, / command…', name: 'message', required: true, ...args.inputProps },
+    sources: args.sources ?? [{ id: 'notes', label: 'Workspace notes', description: 'Selected local notes', insertText: '@notes ' }, { id: 'records', label: 'Supplier records', description: 'Selected workspace records', insertText: '@records ' }],
+    commands: args.commands ?? [{ id: 'summarize', label: 'Summarize', description: 'Insert a summary prompt', insertText: 'Summarize these notes: ' }],
+    attachments: args.attachments ?? attachments,
+    onFilesSelected: (files) => { args.onFilesSelected?.(files); setAttachments((previous) => [...previous, ...files.map((file, index) => ({ id: `${previous.length + index}-${file.name}`, label: file.name }))]); },
+    onRemoveAttachment: (id) => { args.onRemoveAttachment?.(id); setAttachments((previous) => previous.filter((item) => item.id !== id)); },
+    models: args.models ?? [{ id: 'standard', label: 'Standard' }, { id: 'detailed', label: 'Detailed' }],
+    onModelChange: (id) => { args.onModelChange?.(id); },
+    onSend: (value) => { args.onSend?.(value); setResult(`Saved locally: ${value}`); },
+    onStop: () => { args.onStop?.(); setResult('Stop requested locally.'); },
+  }), result && e('p', { role: 'status' }, result));
+}
+
+function MessagePreview(args) {
+  const [helpful, setHelpful] = React.useState(false);
+  const [result, setResult] = React.useState('');
+  return e('div', null, e(MuxUI.Message, {
+    ...args, author: args.author ?? 'Assistant',
+    sources: args.sources ?? [{ id: 'react', label: 'React documentation', href: 'https://react.dev/', description: 'react.dev' }, { id: 'aria', label: 'Accessible patterns', href: 'https://www.w3.org/WAI/ARIA/apg/', description: 'w3.org' }],
+    actions: args.actions ?? [{ id: 'helpful', label: 'Helpful', pressed: helpful, onAction: () => setHelpful(!helpful) }],
+    followUps: args.followUps ?? [{ id: 'explain', label: 'Explain the comparison' }, { id: 'checks', label: 'Review the remaining checks' }],
+    onFollowUp: (item) => { args.onFollowUp?.(item); setResult(`Selected: ${item.label}`); },
+  }, args.children ?? e('p', null, 'Review the selected records before applying changes. The proposed update preserves existing data and makes each change explicit.')), result && e('p', { role: 'status' }, result));
+}
+
+const ACTIVITY_ITEMS = [
+  { id: 'records', label: 'Verified vendor records', status: 'completed', meta: '12 suppliers', time: '4s', details: 'Matched tax and contact IDs: 12/12. No stale records.' },
+  { id: 'read', label: 'Read selected export', status: 'running', meta: '3 files', details: 'Status supplied by the host application. No task executes in this preview.' },
+  { id: 'draft', label: 'Prepare reorder notes', status: 'queued', meta: '7 items', details: 'Waiting for the host application.' },
+];
+function ActivityPreview(args) {
+  return e(MuxUI.Activity, { ...args, label: args.label ?? 'Workspace activity', items: args.items ?? ACTIVITY_ITEMS });
+}
+
+const DATA_DIFF_COLUMNS = [{ id: 'flavor', label: 'Flavor' }, { id: 'category', label: 'Category' }, { id: 'supplier', label: 'Supplier' }];
+const DATA_DIFF_ROWS = [
+  { id: 'unchanged', label: 'Vanilla', kind: 'unchanged', values: { flavor: 'Vanilla', category: 'Classic', supplier: 'Local dairy' } },
+  { id: 'removed', label: 'Bubblegum', kind: 'removed', values: { flavor: 'Bubblegum', category: 'Retro', supplier: 'City creamery' } },
+  { id: 'updated', label: 'Mint chip', kind: 'updated', before: { flavor: 'Mint chip', category: 'Classic', supplier: 'Local dairy' }, after: { flavor: 'Mint chip', category: 'Seasonal', supplier: 'Local dairy' } },
+  { id: 'added', label: 'Pistachio', kind: 'added', values: { flavor: 'Pistachio', category: 'Seasonal', supplier: 'Valley creamery' } },
+];
+function DataDiffPreview(args) {
+  const [result, setResult] = React.useState('');
+  return e('div', null, e(MuxUI.DataDiff, { ...args, label: args.label ?? 'Proposed menu cleanup', columns: args.columns ?? DATA_DIFF_COLUMNS, rows: args.rows ?? DATA_DIFF_ROWS,
+    onApply: (ids) => { args.onApply?.(ids); setResult(`Requested locally: ${ids.join(', ')}`); },
+  }), result && e('p', { role: 'status' }, result));
+}
+
 const ADAPTERS = {
+  PromptComposer: (args) => e(PromptComposerPreview, args),
+  Message: (args) => e(MessagePreview, args),
+  Activity: (args) => e(ActivityPreview, args),
+  DataDiff: (args) => e(DataDiffPreview, args),
+  CodeBlock: (args) => {
+    const { source, before, after, mode, ...shared } = args;
+    return e(MuxUI.CodeBlock, {
+      ...shared, filename: args.filename ?? 'panel.ts', language: args.language ?? 'typescript',
+      ...(mode === 'diff'
+        ? { mode, before: before ?? CODE_BLOCK_BEFORE, after: after ?? CODE_BLOCK_AFTER }
+        : { mode: 'code', source: source ?? CODE_BLOCK_AFTER }),
+    });
+  },
   IconButton: (args) => e(MuxUI.IconButton, { ...args, 'aria-label': fallback(args['aria-label'], 'Search') }, e('svg', { viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 2 }, e('circle', { cx: 10.5, cy: 10.5, r: 6.5 }), e('path', { d: 'm16 16 4 4' }))),
   Button: (args) => e(MuxUI.Button, args, 'Save'),
   Breadcrumbs: (args) => e(MuxUI.Breadcrumbs, {
@@ -1060,6 +1166,17 @@ function StateVariant({ family, state, args, available }) {
   }, [family, state]);
 
   const variantArgs = { ...args };
+  if (family === 'DataDiff') variantArgs.label = `${args.label ?? 'Proposed menu cleanup'} ${state}`;
+  if (family === 'Activity') {
+    if (state === 'running' || state === 'failed') variantArgs.status = state;
+  }
+  if (family === 'Message' && state === 'streaming') variantArgs.streaming = true;
+  if (family === 'PromptComposer' && state === 'error') variantArgs.error = 'Unable to send. Try again.';
+  if (family === 'DataDiff' && state === 'mixed') variantArgs.defaultSelectedIds = ['added'];
+  if (family === 'CodeBlock') {
+    if (state === 'diff') variantArgs.mode = 'diff';
+    if (state === 'wrap') variantArgs.wrap = true;
+  }
   const lifecycleAttribute = LIFECYCLE_ATTRIBUTES[state];
   const activeLifecycleState = React.useContext(LifecycleSelectionContext);
   const marker = OVERLAY_FAMILIES.has(family) ? lifecycleMarker(family, state) : undefined;
@@ -1180,7 +1297,10 @@ function EventHarness({ record, args, heading = 'Live event log', children }) {
   );
 }
 
-function eventForControlledProp(controlled) {
+function eventForControlledProp(controlled, family) {
+  if (family === 'PromptComposer' && controlled === 'value') return 'valueChange';
+  if (family === 'PromptComposer' && controlled === 'selectedModel') return 'modelChange';
+  if (family === 'Message' && controlled === 'sourcesExpanded') return 'sourcesExpandedChange';
   if (controlled === 'open') return 'openChange';
   if (controlled === 'expanded' || controlled === 'expandedIds') return 'expandedChange';
   if (controlled === 'selectedIds') return 'selectionChange';
@@ -1201,7 +1321,7 @@ function ControlledHarness({ record, args }) {
   const controlledPairs = controlledDefaultPairsForBinding(record.binding);
   const eventArgs = { ...values };
   for (const { controlled } of controlledPairs) {
-    const channel = eventForControlledProp(controlled);
+    const channel = eventForControlledProp(controlled, record.family);
     const prop = eventCallbackPropForChannel(channel);
     const supplied = args[prop];
     eventArgs[prop] = (...payload) => {
@@ -1253,6 +1373,10 @@ const CANONICAL_PART_SELECTORS = Object.freeze({
   ListBox: { header: ['.muxui-list-box-section-header'] },
   Menu: { header: ['.muxui-menu-section-header'] },
   Image: { root: ['.muxui-image'] },
+  CodeBlock: { status: ['.muxui-code-block [role="status"]'] },
+  PromptComposer: { status: ['.muxui-prompt-composer [role="status"]'] },
+  Message: { status: ['.muxui-message [role="status"]'] },
+  Activity: { status: ['.muxui-activity [role="status"]'] },
   Select: { popup: ['.muxui-select-popover'] },
   SelectNative: { select: ['.muxui-select-native'], label: ['.muxui-select-native__label'], description: ['.muxui-select-native__description'], error: ['.muxui-select-native__error'] },
   Meter: { label: ['.muxui-value-label'] },
@@ -1337,6 +1461,9 @@ function anatomyArgsForBinding(record, sourceArgs) {
       e(MuxUI.ListBox.Item, { id: 'one' }, 'One'),
       e(MuxUI.ListBox.Item, { id: 'two' }, 'Two'));
   }
+  if (record.family === 'CodeBlock') args.mode = 'diff';
+  if (record.family === 'PromptComposer') args.error = 'Unable to send. Try again.';
+  if (record.family === 'Message') args.defaultSourcesExpanded = true;
   if (record.family === 'Dialog') args.actions = e(MuxUI.Button, null, 'Confirm');
   return args;
 }
@@ -1939,6 +2066,11 @@ const R16_BROWSER_PROOF_ROOTS = Object.freeze({
   Avatar: '.muxui-avatar',
   ButtonGroup: '.muxui-button-group button',
   Card: '.muxui-card',
+  CodeBlock: '.muxui-code-block-copy',
+  PromptComposer: '.muxui-prompt-composer-input',
+  Message: '.muxui-message-sources-trigger',
+  Activity: '.muxui-activity-trigger',
+  DataDiff: '.muxui-data-diff input[type="checkbox"]',
   CheckboxField: '.muxui-checkbox-field__button',
   ColorModeToggle: '.muxui-color-mode-toggle',
   CommandPalette: '.muxui-command-palette__trigger',
@@ -2105,7 +2237,7 @@ export function createStoryMeta(record) {
   const component = MuxUI[record.family];
   if (!component) throw new Error(`Missing @muxui/react export for ${record.family}`);
   return {
-    title: `Mux UI React/${record.family}`,
+    title: `Mux UI React/${componentCategory(familySlug(record.family))}/${record.family}`,
     component,
     tags: ['autodocs'],
     parameters: {

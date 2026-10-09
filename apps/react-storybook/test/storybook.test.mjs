@@ -14,6 +14,7 @@ import { transformWithOxc } from 'vite';
 import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
+import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
 import {
   argTypesForBinding,
   adapterNames,
@@ -25,6 +26,7 @@ import {
   createControlledStory,
   createEventsStory,
   createStory,
+  createStoryMeta,
   createUncontrolledStory,
   controlledDefaultPairsForBinding,
   eventBindingsForBinding,
@@ -182,11 +184,19 @@ test('current Storybook manifest covers the complete package union', () => {
 test('Storybook navigation is alphabetical with stable deep links', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
   assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical'\s*\}/u);
+  const groups = groupComponentNavigation(manifest.families, ({ family }) => family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase());
+  assert.deepEqual(groups[0].items.map(({ family }) => family).sort(), ['Activity', 'CodeBlock', 'DataDiff', 'Message', 'PromptComposer']);
+  assert.equal(groups[1].items.length, manifest.count - 5);
+  assert.equal(new Set(groups.flatMap(({ items }) => items)).size, manifest.count);
   for (const record of manifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
     const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
-    assert.equal(story.default.title, `Mux UI React/${record.family}`, record.family);
+    const title = `Mux UI React/${componentCategory(slug)}/${record.family}`;
+    assert.equal(story.default.title, title, record.family);
+    const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
+    assert.ok(binding, record.family);
+    if (binding.module === '.') assert.equal(createStoryMeta({ ...record, binding }).title, title, record.family);
     assert.equal(story.default.id, `muxui-react-${tranche}-${slug}`, record.family);
   }
 });
@@ -403,6 +413,16 @@ test('generated event and mode harnesses are behaviorally live', async () => {
     await act(async () => root.unmount());
     env.resolveAnimations();
     env.restore();
+  }
+});
+
+test('Activity stories use its single layout and caller-owned finite statuses', () => {
+  const binding = descriptorSource.bindings.find(({ export: name }) => name === 'Activity');
+  assert.equal(Object.hasOwn(argTypesForBinding(binding), 'variant'), false);
+  const root = new JSDOM(renderToStaticMarkup(renderFamily('Activity', {}))).window.document.querySelector('.muxui-activity');
+  assert.equal(root.hasAttribute('data-variant'), false);
+  for (const status of ['running', 'failed']) {
+    assert.equal(stateArgsForBinding(binding, status, 'Activity').status, status);
   }
 });
 

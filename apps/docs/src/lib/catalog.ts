@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { groupComponentNavigation } from '../../../component-navigation.mjs';
 
 export interface CatalogSummary {
 	id: string;
@@ -358,10 +359,13 @@ do {
 export const componentSummaries: readonly CatalogSummary[] = Object.freeze(
 	componentItems.map(readComponentSummary),
 );
-export const componentSidebar = Object.freeze(componentSummaries.map(({ id, name }) => ({
-	label: name,
-	link: `/components/${id.slice(id.lastIndexOf(':') + 1)}/`,
-})));
+export const componentSidebar = Object.freeze(
+	groupComponentNavigation(componentSummaries, ({ id }) => id.slice(id.lastIndexOf(':') + 1))
+		.map(({ label, items }) => ({
+			label,
+			items: items.map(({ id, name }) => ({ label: name, link: `/components/${id.slice(id.lastIndexOf(':') + 1)}/` })),
+		})),
+);
 
 const guideItems: readonly Omit<CatalogGuide, 'keywords' | 'content'>[] = Object.freeze(
 	(() => {

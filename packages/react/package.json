@@ -53,7 +53,7 @@
   "scripts": {
     "prepack": "pnpm --filter @muxui/catalog... generate && node src/generate.mjs",
     "prepublishOnly": "node src/publish-guard.mjs",
-    "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test 'test/!(capability-enrichment|catalog-examples-types).test.mjs' && node --test --test-concurrency=1 test/capability-enrichment.test.mjs test/catalog-examples-types.test.mjs && tsc --noEmit -p test/tsconfig.json",
+    "check": "node src/generate.mjs --check && node advisory/capability-enrichment/generate-status.mjs --check && node --test 'test/!(capability-enrichment|catalog-examples-types|code-block|code-block-highlight|code-block-lifecycle|code-block-package-boundary).test.mjs' && node --test --test-concurrency=1 test/capability-enrichment.test.mjs test/catalog-examples-types.test.mjs test/code-block.test.mjs test/code-block-highlight.test.mjs test/code-block-lifecycle.test.mjs test/code-block-package-boundary.test.mjs && tsc --noEmit -p test/tsconfig.json",
     "check:component": "node ../../tooling/audits/repository-policy/src/run-component-check.mjs",
     "check:browser": "node --test --test-concurrency=1 test/browser/*.test.mjs",
     "check:capability-enrichment:strict": "MUXUI_CAPABILITY_ENRICHMENT_STRICT=1 node --test test/capability-enrichment.test.mjs",
@@ -76,7 +76,8 @@
     "marked": "13.0.3",
     "motion": "13.4.0",
     "react-aria": "3.51.0",
-    "react-aria-components": "1.20.0"
+    "react-aria-components": "1.20.0",
+    "shiki": "4.5.0"
   },
   "peerDependencies": {
     "react": ">=19.2.0 <20",

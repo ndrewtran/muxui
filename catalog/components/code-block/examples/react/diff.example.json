@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:code-block-diff-react",
+  "kind": "example",
+  "name": "Diff React CodeBlock",
+  "summary": "Syntax-highlighted original and updated documents with added and removed line semantics.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:code-block#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/code-block/examples/react/diff.tsx"
+}

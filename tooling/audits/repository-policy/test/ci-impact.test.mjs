@@ -421,6 +421,14 @@ test('per-family usage guides take the guide route without selecting their compo
   assert.deepEqual(result.storyRuns, []);
 });
 
+test('the shared component navigation helper selects the docs and every Storybook family', async () => {
+  const result = await plan(['apps/component-navigation.mjs']);
+  assert.equal(result.docs, true);
+  assert.equal(result.scale || result.catalog || result.tokens || result.reactTheme, false);
+  assert.deepEqual(result.storyRuns.map(({ proof }) => proof), ['component']);
+  assert.deepEqual(result.storyRuns[0].families, records.map(({ family }) => family));
+});
+
 test('Scale, Starlight docs, and CI policy edits stay in their independent owner scopes', async () => {
   const scale = await plan(['apps/scale/test/browser/theme-builder.test.mjs']);
   assert.equal(scale.scale, true);

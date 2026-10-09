@@ -6,6 +6,7 @@ import { storyNameFromExport, toId } from 'storybook/internal/csf';
 import { transformWithOxc } from 'vite';
 import { blockStoryExports, selectionKeyOwners } from './block-pages.mjs';
 import { adapterNames } from './storybook-factory.mjs';
+import { componentCategory } from '../../component-navigation.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const descriptorPath = resolve(repositoryRoot, 'packages/react/generated/descriptor.json');
@@ -228,7 +229,7 @@ const binding = ${JSON.stringify(record.binding, null, 2)};
 const record = { family: '${record.family}', tranche: '${record.tranche}', binding };
 
 export default {
-  title: 'Mux UI React/${record.family}',
+  title: 'Mux UI React/${componentCategory(familySlug(record.family))}/${record.family}',
   id: '${storyId(record)}',
   component: ${componentExpression},
   tags: ['autodocs'],

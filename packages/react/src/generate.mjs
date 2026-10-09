@@ -45,6 +45,8 @@ const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-po
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
 const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-components.mjs'), 'utf8');
+const candidateMotionSource = (await readFile(resolve(packageRoot, 'src/supplemental/candidate-motion.mjs'), 'utf8'))
+  .replaceAll("from '../motion.mjs'", "from './motion.mjs'");
 const popoverMotionSource = await readFile(resolve(packageRoot, 'src/popover-motion.mjs'), 'utf8');
 const tabsMotionSource = await readFile(resolve(packageRoot, 'src/tabs-motion.mjs'), 'utf8');
 const rangeSelectionMotionSource = await readFile(resolve(packageRoot, 'src/range-selection-motion.mjs'), 'utf8');
@@ -1011,6 +1013,8 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
     artifact,
     sourceText: sourceText
       .replaceAll("from '../button.mjs'", "from './button.mjs'")
+      .replaceAll("from '../collections.mjs'", "from './collections.mjs'")
+      .replaceAll("from '../overlays.mjs'", "from './overlays.mjs'")
       .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'")
       .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
       .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
@@ -1195,6 +1199,8 @@ const outputs = new Map([
   ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
   ['motion-components.mjs', generatedText('packages/react/src/motion-components.mjs', motionComponentsSource)],
+  ['candidate-motion.mjs', generatedText('packages/react/src/supplemental/candidate-motion.mjs', candidateMotionSource)],
+  ['code-block-highlight.mjs', generatedText('packages/react/src/supplemental/code-block-highlight.mjs', await readFile(resolve(packageRoot, 'src/supplemental/code-block-highlight.mjs'), 'utf8'))],
   ['popover-motion.mjs', generatedText('packages/react/src/popover-motion.mjs', popoverMotionSource)],
   ['tabs-motion.mjs', generatedText('packages/react/src/tabs-motion.mjs', flatIconButtonImport(tabsMotionSource))],
   ['range-selection-motion.mjs', generatedText('packages/react/src/range-selection-motion.mjs', rangeSelectionMotionSource)],
