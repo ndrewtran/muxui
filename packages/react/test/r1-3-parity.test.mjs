@@ -1487,6 +1487,34 @@ test('R1.3 Select, Table, and Tabs expose bounded state controls', async () => {
   }
 });
 
+test('R1.3 Table sortable headers carry aria-sort and a decorative sort chevron', () => {
+  const columns = [{ id: 'name', label: 'Name', sortable: true, isRowHeader: true }, { id: 'role', label: 'Role', sortable: true }, { id: 'age', label: 'Age' }];
+  const rows = [{ id: 'ada', name: 'Ada', role: 'Engineer', age: 36 }];
+  const render = (props) => new JSDOM(`<!doctype html>${renderToString(React.createElement(Table, { 'aria-label': 'People', columns, rows, ...props }))}`).window.document;
+  const headers = (document) => Object.fromEntries([...document.querySelectorAll('[role="columnheader"]')].map((header) => [header.textContent, header]));
+
+  for (const direction of ['ascending', 'descending']) {
+    const { Name, Role, Age } = headers(render({ sortDescriptor: { column: 'name', direction } }));
+    assert.equal(Name.getAttribute('aria-sort'), direction);
+    assert.equal(Name.getAttribute('data-sort-direction'), direction);
+    assert.equal(Role.getAttribute('aria-sort'), 'none');
+    assert.equal(Role.getAttribute('data-sort-direction'), null);
+    assert.equal(Age.getAttribute('aria-sort'), null);
+    for (const header of [Name, Role]) {
+      const chevron = header.querySelector('svg.muxui-table-sort-icon');
+      assert.ok(chevron, `${header.textContent} renders the chevron`);
+      assert.equal(chevron.getAttribute('aria-hidden'), 'true');
+      assert.equal(chevron.getAttribute('focusable'), 'false');
+      assert.equal(chevron.getAttribute('stroke'), 'currentColor');
+      assert.equal(chevron.classList.contains('lucide-chevron-down'), true);
+    }
+    // The label stays the header's whole accessible text; non-sortable headers get no wrapper or chevron.
+    assert.equal(Age.querySelector('svg, .muxui-table-column-content'), null);
+  }
+  assert.equal(render({}).querySelector('.muxui-table').hasAttribute('data-disabled'), false);
+  assert.equal(render({ disabled: true }).querySelector('.muxui-table').hasAttribute('data-disabled'), true);
+});
+
 test('R1.3 ToggleButtonGroup bounds IDs and Toolbar keeps child-owned state', async () => {
   assert.throws(() => renderToString(React.createElement(ToggleButtonGroup, {
     'aria-label': 'Styles', selectedIds: ['bold', 'italic'],

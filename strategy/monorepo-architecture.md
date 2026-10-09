@@ -1109,6 +1109,17 @@ inert/background, or scroll-lock ownership. Integrations preserve both system
 preference and explicit Mux reduced-mode paths. No React Native, `web.html`, or
 cross-renderer contract follows from this edge.
 
+Decision 0024 amendment 01 admits exact `shiki@4.5.0` only for CodeBlock
+syntax highlighting. It is an internal, replaceable MIT dependency, compatible
+with the workspace Node engine, loaded through fine-grained client-effect
+imports of core, language map, Oniguruma engine and WebAssembly. Root imports
+and SSR load no Shiki module, engine or grammar. Bundled names and aliases use
+safe own-key lookups; escaped original text and plain fallback remain valid.
+Mux owns theme roles, spans, forced colors, hydration and asynchronous cleanup.
+No Shiki type, provider, public subpath or upstream API is exported. Exact pin,
+integrity, license/notice, bounded grammar-context behavior, tree-shaking and
+packed-consumer proof are required. TextEditor is outside this extension.
+
 #### React styling and parity boundary
 
 Mux UI owns the React styling contract, including selectors, token mappings,
@@ -1234,6 +1245,7 @@ flowchart TD
   resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
   markdown["marked@13.0.3\nMarkdown lexer only"]
   editor["Tiptap 3.31.4 packages\nTextEditor only"]
+  highlighter["shiki@4.5.0\nCodeBlock client highlighting only"]
   peers["react + react-dom\n>=19.2.0 <20 peers"]
   web["@muxui/web\nlater W1 track"]
   native["@muxui/react-native\nlater N1 track"]
@@ -1246,6 +1258,7 @@ flowchart TD
   resizable --> react
   markdown --> react
   editor --> react
+  highlighter --> react
   peers --> react
   canonical -. later activation .-> web
   canonical -. later activation .-> native
@@ -1284,7 +1297,9 @@ Icon API/catalog/package is part of the Mux UI surface. R1.6 also admits
 `SelectNative`/`useField`; `marked@13.0.3` for the typed
 `Markdown` parser boundary, and the exact eight `@tiptap/*@3.31.4` packages
 for `TextEditor` (Decision 0011 amendment 04). These module-local edges remain internal and replaceable; no
-upstream runtime types or editor/parser objects are public.
+upstream runtime types or editor/parser objects are public. Decision 0024
+amendment 01 adds only the exact private `shiki@4.5.0` CodeBlock edge described
+above; its engine and grammar evaluation remain client-effect-only.
 
 | Package | Responsibility | Must not own |
 | --- | --- | --- |
@@ -2546,8 +2561,8 @@ change accessibility obligations, or authorize publication or production use.
 Decision 0017 adds the Mux-owned `Text` family after the IconButton addition.
 Text applies existing typography roles and sizes to a selected native host and
 preserves caller DOM, ARIA, event, data, and React Aria TextContext slot props.
-The current supplemental mapping contains 23 families, and the current React
-union contains 76 families with 74 root exports and the two existing isolated
+At that admission, the supplemental mapping contained 23 families, and the
+React union contained 76 families with 74 root exports and the two existing isolated
 subpaths. The fixed 53-family floor and completed R1.6 evidence remain
 historical and unchanged.
 
@@ -2580,7 +2595,64 @@ fallback-only composition, native form/reset behavior, SSR/hydration, and
 generated/packed-consumer identity receive focused proof and independent
 review. No dependency or token values are added; generic Field stays deferred.
 
-Following Text's admission, the current mapping contains 26 supplemental
-families and the React union contains 79 families, with 77 root exports and
+Following Text's admission, that expansion established 26 supplemental
+families and a React union of 79 families, with 77 root exports and
 the two existing isolated subpaths. Historical inventories, completed
 evidence, renderer activation, support, and release boundaries remain intact.
+
+## Decision 0024: supplemental CodeBlock
+
+[Decision 0024](../decisions/0024-code-block-admission.md) explicitly admits
+the experimental CodeBlock family in the existing React root under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`. Its selected rendered design basis is
+Beautiful UI's compact code listing and unified diff; Mux owns its API, native
+host semantics, accessible changes, selectors, CSS, and existing token use.
+The initial admission added no external component source, styling, assets,
+or runtime dependency. The 7 October 2026 amendment adds only the private Shiki
+highlighter described above, without importing another component design.
+Two component-owned added/removed background tokens derive from existing
+status accents; this bounded token addition requires token/dependent proof.
+
+CodeBlock renders escaped code with lazy client syntax highlighting, offers
+exact explicit copying with
+truthful live status, and presents bounded line diffs with original/updated
+numbers and labels beyond color. Large diff middles use an explicit replacement
+fallback; documented character/line limits reject excessive input. Highlighting
+uses independent ordered grammar streams for before/after, smaller workload
+bounds and whole-input plain fallback. Editors, general parsers, patch
+application and task engines remain outside this addition. Focused runtime,
+type, accessibility, light/dark, hydration,
+generation, module-isolation, and packed-consumer proof remain required.
+
+At Decision 0024's admission, the supplemental mapping contained 27 families and the React union
+contained 80 families, with 78 root exports and the two existing isolated
+subpaths. The historical 53-family floor and completed evidence are unchanged.
+This addition activates no other renderer, G3 capability, support, or release.
+
+
+## Decision 0025: remaining Beautiful UI candidates
+
+[Decision 0025](../decisions/0025-remaining-candidates-admission.md) admits
+PromptComposer, Message, Activity and DataDiff as experimental React root
+families under the existing `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` route. Their
+rendered Beautiful UI design basis is adapted with canonical Mux tokens and
+independently authored native React implementation. No upstream source,
+assets, CSS, public API or dependency boundary is imported.
+
+PromptComposer preserves native form and textarea semantics while exposing
+separate domain callbacks. Message composes caller content and independently
+imported Markdown, keeping the root free of parser/editor imports. Activity
+presents finite supplied task states without executing or timing work. DataDiff
+renders escaped scalar records and supplies selected IDs only on explicit
+Apply activation. Each family owns its runtime, types, CSS and binding facts;
+canonical examples and supplemental mapping generate all projections.
+
+The current mapping is 31 supplemental families, 84 total families and 82 root
+exports plus the two existing isolated subpaths. Two DataDiff component tokens
+add translucent success/invalid-derived paint independently of CodeBlock's
+existing roles; token contract 5.2.0 requires affected-dependent proof. The October 6, 2026 user correction aligns these five admitted families
+with the existing internal pinned Lucide route and Mux control states. No
+additional direct React Aria hook affordance is introduced.
+No package, schema, platform, capability, G3 activation, lifecycle promotion,
+support claim, release or backend service enters this addition. Historical
+inventories and completed evidence remain immutable.

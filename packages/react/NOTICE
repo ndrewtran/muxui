@@ -41,6 +41,16 @@ motion@13.4.0, framer-motion@13.4.0, motion-dom@13.3.0, and
 motion-utils@13.3.0 are MIT; tslib@2.8.1 is 0BSD. Unchanged copies of these
 license texts are included in licenses/.
 
+The private CodeBlock highlighter uses shiki@4.5.0, @shikijs/core@4.5.0,
+@shikijs/engine-javascript@4.5.0, @shikijs/engine-oniguruma@4.5.0,
+@shikijs/langs@4.5.0, @shikijs/primitive@4.5.0, @shikijs/themes@4.5.0,
+and @shikijs/types@4.5.0 under MIT. @shikijs/vscode-textmate@10.0.2 retains Microsoft's MIT
+notice. Unchanged notices are included in licenses/shiki.MIT.txt and
+licenses/shiki-vscode-textmate.MIT.txt. The bundled Oniguruma WebAssembly
+from vscode-oniguruma 1.7.0 retains its BSD notice in
+licenses/shiki-oniguruma.NOTICES.txt. Upstream installed dependencies retain
+their own license material. No Shiki API or type is public.
+
 Lucide ISC License
 
 Copyright (c) 2026 Lucide Icons and Contributors

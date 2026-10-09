@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:code-block-basic-react",
+  "kind": "example",
+  "name": "Basic React CodeBlock",
+  "summary": "Syntax-highlighted escaped code, filename metadata, line numbers, and explicit copying.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:code-block#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 0
+  },
+  "complexity": "minimal",
+  "prerequisites": [],
+  "source": "catalog/components/code-block/examples/react/basic.tsx"
+}

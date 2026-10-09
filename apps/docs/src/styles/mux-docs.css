@@ -471,6 +471,10 @@ pre code {
 	border-inline-start: 1px solid var(--muxui-semantic-border-default);
 }
 
+.home-showcase[data-component-category='AI Agent'] {
+	grid-template-columns: minmax(0, 1fr);
+}
+
 .showcase-item {
 	display: flex;
 	flex-direction: column;

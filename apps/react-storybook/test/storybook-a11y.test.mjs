@@ -923,6 +923,21 @@ async function runSelectedPageA11yWorker({ browser, baseUrl, stories, schemes, s
             `${scheme} ${story.id} (${family}) has axe violations:\n${formatViolations(result.violations)}`,
           );
           coverage.push(`${scheme}:axe:${story.id}`);
+          if (story.exportName === 'Controlled' && ['PromptComposer', 'Message'].includes(family)) {
+            const output = page.locator(`[data-muxui-controlled-values="${family}"]`);
+            if (family === 'PromptComposer') {
+              await page.locator('.muxui-prompt-composer-input').fill('Edited controlled draft');
+              await page.waitForFunction(() => JSON.parse(document.querySelector('[data-muxui-controlled-values="PromptComposer"]').textContent).value === 'Edited controlled draft');
+              await page.getByRole('button', { name: /Model/u }).click();
+              await page.getByRole('option', { name: 'Detailed', exact: true }).click();
+              assert.deepEqual(JSON.parse(await output.textContent()), { value: 'Edited controlled draft', selectedModel: 'detailed' });
+            } else {
+              await page.locator('.muxui-message-sources-trigger').click();
+              await page.waitForFunction(() => JSON.parse(document.querySelector('[data-muxui-controlled-values="Message"]').textContent).sourcesExpanded === true);
+              assert.equal(await page.locator('.muxui-message-sources a').first().isVisible(), true);
+            }
+            coverage.push(`${scheme}:controlled-callbacks:${story.id}`);
+          }
           if (story.name === 'States' && family === 'Dialog') {
             await assertDialogLifecycleDismissal(page, baseUrl, story, scheme);
             coverage.push(`${scheme}:dialog-state-dismissal:${story.id}`);
@@ -946,6 +961,7 @@ function expectedSelectedPageCoverage(stories, schemes) {
   return schemes.flatMap((scheme) => stories.flatMap((story) => [
     `${scheme}:axe:${story.id}`,
     ...(story.exportName === 'BrowserProof' ? [`${scheme}:browser-proof:${story.id}`] : []),
+    ...(story.exportName === 'Controlled' && ['PromptComposer', 'Message'].includes(storyFamily(story)) ? [`${scheme}:controlled-callbacks:${story.id}`] : []),
     ...(story.name === 'Disabled items keyboard navigation' ? [`${scheme}:autocomplete-keyboard:${story.id}`] : []),
     ...(story.name === 'Variant × size' ? [`${scheme}:button-matrix:${story.id}`] : []),
     ...(story.name === 'States' && INTERACTION_OPEN_LOCATORS[storyFamily(story)] ? [`${scheme}:open-portal:${story.id}`] : []),

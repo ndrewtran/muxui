@@ -1,5 +1,5 @@
 ---
-scopeVersion: 15.0.2
+scopeVersion: 18.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -63,9 +63,8 @@ isolated subpaths.
 Product Scope `12.0.0` applies Decision 0018: the post-R1.6 supplemental
 boundary also admits Mux-owned Image, Avatar, and SelectNative. Image and
 Avatar use native image/fallback behavior; SelectNative uses a native select
-with internal React Aria field associations. The current mapping contains 26
-supplemental families and 79 total families, with 77 root exports and the two
-existing isolated subpaths. This explicit expansion does not recast the
+with internal React Aria field associations. That admission established 26 supplemental families and 79 total families,
+with 77 root exports and the two existing isolated subpaths. This explicit expansion does not recast the
 original Aria-only R1.6 inventory or its evidence.
 
 Product Scope `12.0.1` applies accepted Decision 0019 as a patch clarification:
@@ -307,7 +306,7 @@ stable release is promoted, and install guidance uses `@muxui/react@next`.
 | `SCOPE-OUTCOME-REACT-PRIMARY` | `committed` | Installable React prerelease using Mux UI-owned experimental bindings and generated package guidance. | R1.0–R1 exit |
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, Mux UI-owned styling and tranche delivery. | R1.0–R1.5 |
 | `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
-| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports outside the historical fixed 53-family table: the exact R1.6 React Aria inventory plus explicitly named post-R1.6 admissions in Decisions 0014, 0017, and 0018, including native-backed Image and Avatar. Each admission requires its declared proof and the single current supplemental mapping. | R1.6, named post-R1.6 additions, and R1 exit |
+| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports outside the historical fixed 53-family table: the exact R1.6 React Aria inventory plus explicitly named post-R1.6 admissions in Decisions 0014, 0017, 0018, 0024, and 0025, including native-backed Image and Avatar. Each admission requires its declared proof and the single current supplemental mapping. | R1.6, named post-R1.6 additions, and R1 exit |
 | `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`, or a fix-forward `0.1.0-rc.N+1` that replaces a deprecated rc under Decision 0023. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
 
@@ -935,7 +934,8 @@ accessibility, package, compatibility, integrity, or generation failures.
   parser boundary, and the eight `@tiptap/*@3.31.4` packages for `TextEditor`
   (Decision 0011 amendment 04);
   `motion@13.4.0` for bounded component motion in existing admitted React
-  bindings; no Mux UI workspace runtime edge or dependency public API/type
+  bindings; exact `shiki@4.5.0` only for CodeBlock client highlighting under
+  Decision 0024 amendment 01; no Mux UI workspace runtime edge or dependency public API/type
   leak is permitted;
 - the first-party default token/theme system satisfies every applicable React
   requirement and accessibility adaptation;
@@ -1198,7 +1198,7 @@ heading, title, label, body, expressive, and mono typography roles to a
 selected native text host, preserves caller DOM and accessibility props, and
 is exported from the root React package.
 
-The current mapping contains 23 supplemental families and 76 total current
+That admission established 23 supplemental families and 76 total
 families: the fixed 53-family floor, 74 root exports, and the two existing
 isolated subpaths. The current supplemental mapping entries are:
 `alert-dialog`, `button-group`, `card`, `checkbox-field`, `color-mode-toggle`,
@@ -1603,3 +1603,122 @@ dependency decision for a Lucide package.
 
 Tracker migration: none. No open work changes, and this change creates no
 tracker items.
+
+## Product Scope 16.0.0: CodeBlock admission
+
+[Decision 0024](../decisions/0024-code-block-admission.md) extends the committed
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` outcome with one experimental React root
+family, CodeBlock. It presents escaped plain code and bounded unified line
+diffs with exact explicit copying, native host attributes/ref, old/new numbers,
+and accessible added/removed semantics. Beautiful UI's rendered demonstration
+is the selected design basis; Mux owns the implementation, API, CSS, and
+existing token roles. Two component-owned row-background tokens derive
+translucent paint from existing status accents, advancing the token contract
+additively from `5.0.0` to `5.1.0`, with token/dependent proof.
+Other candidates are not admitted by this change.
+
+The existing mapping becomes 27 supplemental families and 80 total families,
+with 78 root exports and the two existing isolated subpaths. Existing runtime
+dependencies, packages, renderer boundaries, and the historical 53-family floor
+remain unchanged. This is bounded post-R1 React delivery with focused proof
+under the current mapping/style/projection/platform assertions, without
+rewriting completed evidence or establishing milestone/release readiness.
+
+Each input accepts at most 1,000,000 UTF-16 units and 10,000 lines. A diff
+middle requiring more than 250,000 LCS cells is shown as an explicitly labeled
+replacement. Syntax highlighting, token diffs, editors, patch application,
+parsers, task engines, G3 activation, new platforms, support claims, publication,
+and production/consumer changes are excluded. Clipboard writes occur only
+after activation, remain local, and announce success only after fulfillment.
+
+Canonical ownership is the CodeBlock record/examples, existing supplemental
+mapping, and React source. Generation and packed-consumer checks prove their
+projections. Open work references this named addition and existing Scope ID;
+tracker reconciliation and protected-PR adoption remain pending. Reversal
+before publication requires a follow-up scope change removing its mapping
+and export with regenerated projections; completed evidence stays immutable.
+
+
+## Product Scope 17.0.0: remaining Beautiful UI candidates
+
+[Decision 0025](../decisions/0025-remaining-candidates-admission.md) extends
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` with four experimental React root families:
+PromptComposer, Message, Activity and DataDiff. Andrew selected Beautiful UI's
+rendered components as their design basis and explicitly requested creation of
+the remaining candidates. Mux independently owns source, API, native host
+semantics, selectors, CSS, examples and accessibility. Decision 0024's local
+CodeBlock admission and the historical 53-family floor remain intact.
+
+PromptComposer owns local multiline form editing, native validation/reset,
+IME-safe send, caret-triggered source/command insertion and wired file/model/
+stop/dictation callbacks. Message presents supplied React content, compact
+labeled actions, safe source links/disclosure and explicit follow-ups, with
+caller-controlled streaming. Activity presents supplied finite task statuses,
+dense list rows and aggregate/item disclosures. DataDiff presents supplied
+scalar rows, selected additions/removals/updates and an explicit Apply callback.
+Backend execution, uploads, AI/network services, permissions, recognition,
+generic workflow engines and cosmetic processing timers are excluded.
+
+The existing mapping becomes 31 supplemental families and 84 total families,
+with 82 root exports and the unchanged Markdown/TextEditor isolated subpaths.
+No package, schema, runtime dependency, platform, capability, lifecycle or
+support promotion is added. Two DataDiff-owned change-background tokens reuse
+existing success/invalid paint through transparent tint, advancing the token
+contract additively from 5.1.0 to 5.2.0 with token and affected-dependent proof.
+
+This bounded post-R1 addition follows `E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04` and
+`E-R1.6-07` for current mapping, behavior/styles, projections and platform/
+release checks. Focused type, native ref/event, SSR/hydration, form/IME/reset,
+keyboard/focus, disclosure, safe links/scalars, controlled state, pending/error,
+light/dark/narrow/forced-colors, generation identity, import isolation and
+packed-consumer proof remain required. Existing evidence is not rewritten or
+claimed to prove these additions. No milestone, release, G3 activation,
+publication, production or consumer mutation is authorized. Tracker
+reconciliation and protected-PR adoption remain pending; reversal before
+publication requires a follow-up scope change and regenerated projections.
+
+## Product Scope 18.0.0: CodeBlock Shiki highlighting
+
+[Decision 0024 amendment 01](../decisions/0024-code-block-admission.md) accepts
+Andrew's workflow of reading syntax-highlighted CodeBlock listings and diffs.
+It supersedes only the 16.0.0 syntax-highlighting non-goal and unchanged-runtime-
+dependency clause for this existing family. This material redefinition is major.
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and `SCOPE-PKG-REACT` keep their commitments;
+no Scope ID, family, export, package, platform, lifecycle or release boundary
+is added or removed. The current 31 supplemental/84 total families, 82 root
+exports and two isolated subpaths remain unchanged.
+
+The React package adds exact private `shiki@4.5.0`, with fine-grained lazy
+client imports and license/notice/integrity proof. Existing language metadata
+selects bundled grammars and aliases without a new API. SSR, initial hydration,
+missing/plain/unknown languages, loading, failures and excess highlighting work
+remain escaped plain text. Original/copy bytes stay exact, and independent
+complete grammar streams supply original or updated diff rows. No raw HTML,
+code execution, external source service or global source/token cache is used.
+Mux semantic content roles own colors across themes, contrast and forced colors.
+
+Highlighting budgets are independent of accepted input bounds: 50,000 UTF-16
+units, 500 lines, 2,000 units per line and 20,000 tokens aggregate across a
+listing's inputs, with at most eight detected optional embedded languages.
+Cooperative per-line and measured aggregate time guards discard the whole
+result; they do not promise hard real-time behavior. Editor/token-diff/patch/
+task-engine work and TextEditor changes remain excluded.
+
+Canonical ownership remains CodeBlock records/examples and React source, plus
+the package dependency/notice and necessary generation/proof contracts. Current
+`E-R1.6-01`, `03`, `04` and `07` route focused grammar/escaping/whitespace,
+loading/failure/async/hydration, bounded timing, semantic visual, root/SSR
+isolation, tree-shaking and packed-consumer proof. The runtime dependency
+requires the full deterministic workspace graph and independent API/security/
+lifecycle/budget/ownership review. No schema, token version or migration utility
+is needed in the current pre-release state. Reversal before publication requires
+an explicit scope amendment removing the highlighting/dependency and regenerating
+projections; historical evidence stays immutable.
+
+Tracker migration: open CodeBlock/Shiki work routes to this existing scope and
+post-R1 CodeBlock addition. The Delivery Project's 7 October 2026 historical
+R1.6 item #121 and older scope/family snapshot are unchanged. No named Shiki
+item was present; tracker reconciliation and protected-PR adoption remain
+pending. This local implementation creates no tracker item and claims no
+milestone completion, release readiness, stable or assistive-technology support,
+publication, production, daily-driver channel or consumer mutation.

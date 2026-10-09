@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:data-diff-controlled-react",
+  "kind": "example",
+  "name": "Controlled React DataDiff",
+  "summary": "Controlled selection of before/after scalar updates with caller-owned application.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:data-diff#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/data-diff/examples/react/controlled.tsx"
+}

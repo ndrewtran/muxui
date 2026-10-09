@@ -1002,6 +1002,62 @@
       "path": "catalog/components/text-editor/examples/react/selection-actions.example.json"
     },
     {
+      "family": "component",
+      "path": "catalog/components/code-block/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/code-block/examples/react/basic.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/code-block/examples/react/diff.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/activity/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/activity/examples/react/basic.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/data-diff/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/data-diff/examples/react/basic.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/data-diff/examples/react/controlled.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/message/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/message/examples/react/basic.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/message/examples/react/conversation.example.json"
+    },
+    {
+      "family": "component",
+      "path": "catalog/components/prompt-composer/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/prompt-composer/examples/react/basic.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/components/prompt-composer/examples/react/suggestions.example.json"
+    },
+    {
       "family": "pattern",
       "path": "catalog/patterns/poster-grid/artifact.json"
     },

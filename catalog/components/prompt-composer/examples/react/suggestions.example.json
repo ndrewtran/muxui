@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:prompt-composer-suggestions-react",
+  "kind": "example",
+  "name": "Suggestions React PromptComposer",
+  "summary": "Compose local multiline messages with native validation and caller-owned send, model, file and suggestion actions.",
+  "lifecycle": "experimental",
+  "binding": {
+    "ref": "muxui:component:prompt-composer#web.react",
+    "guidanceImpact": "normative",
+    "purposes": [
+      "generation",
+      "explanation",
+      "validation"
+    ],
+    "preference": 1
+  },
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/components/prompt-composer/examples/react/suggestions.tsx"
+}

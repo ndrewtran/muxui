@@ -9,6 +9,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { muxTokenPathTransformer } from './src/components/code-theme.ts';
 import { FOUNDATION_OVERVIEW, FOUNDATION_PAGES } from './src/lib/foundation-pages.ts';
+import { groupComponentNavigation } from '../component-navigation.mjs';
 
 const docsRoot = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const repositoryRoot = resolve(docsRoot, '../..');
@@ -57,7 +58,7 @@ if (!isCatalog(loadedCatalog)) {
 }
 const listArtifacts = loadedCatalog.listArtifacts;
 
-const componentSidebar = [];
+const componentItems = [];
 let componentCursor;
 do {
 	const componentInventory = listArtifacts({
@@ -70,17 +71,17 @@ do {
 	if (!isComponentInventory(componentInventory)) {
 		throw new Error('Mux UI docs could not resolve the complete React component inventory.');
 	}
-	for (const { id, name } of componentInventory.data.items ?? []) {
-		componentSidebar.push({
-			label: name,
-			link: `/components/${id.slice(id.lastIndexOf(':') + 1)}/`,
-		});
-	}
+	componentItems.push(...componentInventory.data.items);
 	if (componentInventory.meta.truncated && componentInventory.meta.nextCursor === null) {
 		throw new Error('Mux UI component inventory was truncated without a continuation cursor.');
 	}
 	componentCursor = componentInventory.meta.nextCursor ?? undefined;
 } while (componentCursor !== undefined);
+const componentSidebar = groupComponentNavigation(componentItems, ({ id }) => id.slice(id.lastIndexOf(':') + 1))
+	.map(({ label, items }) => ({
+		label,
+		items: items.map(({ id, name }) => ({ label: name, link: `/components/${id.slice(id.lastIndexOf(':') + 1)}/` })),
+	}));
 
 const foundationSidebar = [
 	{ label: FOUNDATION_OVERVIEW.label, link: '/foundations/' },
@@ -147,7 +148,7 @@ export default defineConfig({
 				{ label: 'Discovery & CLI', link: '/discovery/' },
 				{ label: 'Lifecycle', link: '/lifecycle/' },
 				{ label: 'Authoring', link: '/contribution/' },
-				{ label: 'Components', items: componentSidebar },
+				...componentSidebar,
 			],
 			components: {
 				Header: './src/components/Header.astro',

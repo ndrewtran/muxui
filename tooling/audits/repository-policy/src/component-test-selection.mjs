@@ -16,8 +16,13 @@ const SOURCE_ROUTES = Object.freeze({
 });
 
 const FAMILY_ROUTES = Object.freeze({
+  Activity: ['test/activity.test.mjs', 'test/browser/activity.test.mjs', 'test/browser/candidate-motion.test.mjs'],
+  DataDiff: ['test/data-diff.test.mjs', 'test/browser/data-diff.test.mjs', 'test/browser/candidate-motion.test.mjs'],
+  Message: ['test/message.test.mjs', 'test/browser/message.test.mjs', 'test/browser/candidate-motion.test.mjs'],
+  PromptComposer: ['test/prompt-composer.test.mjs', 'test/browser/prompt-composer.test.mjs', 'test/browser/candidate-motion.test.mjs'],
   Autocomplete: ['test/browser/autocomplete-dismissal.test.mjs'],
   Avatar: ['test/image-avatar.test.mjs'],
+  CodeBlock: ['test/code-block.test.mjs', 'test/code-block-highlight.test.mjs', 'test/code-block-lifecycle.test.mjs', 'test/code-block-package-boundary.test.mjs', 'test/browser/code-block.test.mjs', 'test/browser/candidate-motion.test.mjs'],
   ColorPicker: ['test/color-swatch.test.mjs'],
   ColorSwatch: ['test/color-swatch.test.mjs'],
   CommandPalette: ['test/command-palette-hook.test.mjs'],
@@ -29,6 +34,7 @@ const FAMILY_ROUTES = Object.freeze({
   ProgressCircle: ['test/progress-circle.test.mjs'],
   Resizable: ['test/heavy-components.test.mjs'],
   SelectNative: ['test/select-native.test.mjs'],
+  Table: ['test/browser/table-sort-indicator.test.mjs'],
   Text: ['test/text.test.mjs'],
   TextEditor: ['test/heavy-components.test.mjs', 'test/browser/text-editor-selection-actions.test.mjs'],
   TagSelect: ['test/browser/tag-select-focus.test.mjs'],

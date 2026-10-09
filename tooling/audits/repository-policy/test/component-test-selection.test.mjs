@@ -132,3 +132,23 @@ test('unmapped families still fail without either named React behavior or Browse
     /MUXUI_COMPONENT_FOCUSED_ROUTE_MISSING: Unknown/u,
   );
 });
+
+
+test('every candidate family retains all shared motion lifecycle cases in real scoped and CI source filtering', async () => {
+  const file = 'test/browser/candidate-motion.test.mjs';
+  const source = await readFile(resolve(packageRoot, file), 'utf8');
+  const names = [
+    'CodeBlock, PromptComposer, Message, Activity and DataDiff motion stays finite through feedback, typing, streaming and pending',
+    'CodeBlock, PromptComposer, Message, Activity and DataDiff honor reduced ancestors and mid-flight system preferences',
+    'CodeBlock, PromptComposer, Message, Activity and DataDiff clean up rapid reversals, animations and observers',
+  ].sort();
+  const candidates = ['Activity', 'DataDiff', 'Message', 'PromptComposer', 'CodeBlock']
+    .map(family => ({ family, source: `packages/react/src/supplemental/${family}.mjs` }));
+  for (const records of [...candidates.map(record => [record]), candidates]) {
+    for (const includeSharedSource of [true, false]) {
+      const selected = componentTestSelection(records, availableFiles, { includeSharedSource, testSources: { [file]: source } });
+      assert.equal(selected.files.filter(selectedFile => selectedFile === file).length, 1);
+      if (!includeSharedSource) assert.deepEqual(selected.testNamesByFile[file], names);
+    }
+  }
+});

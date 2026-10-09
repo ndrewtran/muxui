@@ -1,0 +1,267 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:component:code-block",
+  "kind": "component",
+  "name": "CodeBlock",
+  "summary": "Present syntax-highlighted code or a bounded unified line diff with exact clipboard copying.",
+  "lifecycle": "experimental",
+  "intent": {
+    "useWhen": [
+      "Presenting a code listing or reviewing a before/after code change."
+    ],
+    "avoidWhen": [
+      "Editing code or requiring token diffs or patch application."
+    ]
+  },
+  "anatomy": [
+    "root",
+    "header",
+    "filename",
+    "copy",
+    "pre",
+    "code",
+    "line",
+    "number",
+    "marker",
+    "status"
+  ],
+  "states": [
+    "default",
+    "diff",
+    "wrap",
+    "focused"
+  ],
+  "accessibility": {
+    "nameRequired": false,
+    "obligations": [
+      "Preserve source whitespace and escape code text without executing it.",
+      "Keep decorative line numbers and change markers out of speech and selection; announce added and removed lines beyond color.",
+      "Copy the exact source or updated input only after an explicit button action, and announce success only after clipboard fulfillment.",
+      "Expose clipboard unavailability or rejection honestly and keep the code scroll viewport keyboard focusable."
+    ]
+  },
+  "bindings": {
+    "web.react": {
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
+      "strategy": "direct",
+      "api": {
+        "props": [
+          "mode",
+          "source",
+          "before",
+          "after",
+          "language",
+          "filename",
+          "lineNumbers",
+          "copyable",
+          "wrap"
+        ],
+        "events": [
+          "copy"
+        ],
+        "parts": [
+          "root",
+          "header",
+          "filename",
+          "copy",
+          "pre",
+          "code",
+          "line",
+          "number",
+          "marker",
+          "status"
+        ],
+        "defaults": {
+          "mode": "code",
+          "lineNumbers": true,
+          "copyable": true,
+          "wrap": false
+        }
+      },
+      "behavior": [
+        "mode=code (the default) requires source; mode=diff requires before and after. These input modes are mutually exclusive. The native div host attributes, ref, and native onCopy ClipboardEvent are preserved; children and dangerouslySetInnerHTML are not supported.",
+        "language selects a bundled Shiki grammar by name or alias and remains the displayed header metadata when filename is absent; filename otherwise labels the listing. Client effects load the private highlighter lazily. SSR and the initial client render are escaped plain pre/code; missing, plain/text/ansi, unknown languages, loading, failures, and over-budget inputs stay plain without an error UI. Code is never executed and no source is sent remotely. Newlines, tabs, CRLF, lone CR, and trailing blank lines are retained.",
+        "lineNumbers defaults to true; unified diff numbers show original and updated positions. Copy uses the exact source in code mode and exact after in diff mode, excluding gutters, change labels, and markers.",
+        "copyable defaults to true and shows a small tonal Mux IconButton with a decorative Lucide Copy icon. Fulfillment replaces Copy with Check and opens the Mux Tooltip saying Copied for three seconds or until a mouse or pen pointer leaves the button, focus leaves, or Escape dismisses it. Touch departure preserves copied feedback. Leaving during a pending write suppresses its visible success feedback while fulfillment still announces success. Pending shows the static Mux IconButton indicator and disables repeated activation. Clipboard access happens only on activation; unavailable/rejected writes expose a manual-copy error. Copying again replaces the feedback timer; content, mode, or copyable changes discard stale feedback. Fulfillment and error use finite icon feedback through semantic motion roles and honor system or explicit reduced motion.",
+        "wrap defaults to false for horizontal scrolling; true wraps long lines without altering the source. The code viewport accepts keyboard focus.",
+        "Each input accepts at most 1,000,000 UTF-16 code units and at most 10,000 lines, including a final blank line after a trailing newline. Larger inputs throw RangeError. Empty source has no diff lines and displays a blank code listing.",
+        "Line diff trims equal edges and uses a longest common subsequence table only when the changed middle needs at most 250,000 cells. Larger changes show the exact middle as removed then added lines with a visible replacement notice and data-diff-strategy=replacement; this fallback does not claim a minimal patch.",
+        "Highlighting processes each complete original input in order with carried grammar state; diff rows map removed lines from before and added/context lines from after. Before and after have independent grammar state. React spans render original text slices rather than HTML. Colors use existing semantic content.default, content.strong, and content.link roles, including nested theme and contrast changes.",
+        "Highlighting has a separate aggregate budget across source or before/after: at most 50,000 UTF-16 units, 500 lines, 2,000 units per line, and 20,000 output tokens. Optional embedded-language detection loads at most eight bundled names through safe lookups. A 600 ms cooperative Shiki line limit and a 500 ms measured aggregate cutoff discard the whole highlight result; the aggregate is checked between lines. These are workload bounds, not a hard real-time guarantee. These limits do not change accepted input, diff, display, or copy bounds."
+      ],
+      "accessibility": [
+        "Line-number and marker glyphs use aria-hidden generated content and user-select:none. Added/removed lines include visually hidden spoken labels. Original/updated columns have a description.",
+        "Copy uses Mux IconButton with a native type=button host with an explicit code/updated-code accessible name, visible focus, and a polite live status region. Native onCopy remains a ClipboardEvent rather than a string callback.",
+        "Forced colors preserves readable text and change markers; changes do not depend on color alone."
+      ],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          {
+            "token": "semantic.surface.raised",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.subtle",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.surface.hover",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.border.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.default",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.muted",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.secondary",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.strong",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background-hover",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.action.neutral-background-pressed",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.control.size-sm",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.option-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.focus.ring",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.container-radius",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.shape.radius-s",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.action-gap",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-tight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-small",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.layout.inset-medium",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.mono-font-family",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.mono-s-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.mono-font-weight",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.mono-line-height",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-font-family",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.text-s-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.status.success",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.feedback.invalid",
+            "requirement": "required"
+          },
+          {
+            "token": "component.codeblock.added-background",
+            "requirement": "required"
+          },
+          {
+            "token": "component.codeblock.removed-background",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.typography.mono-xs-font-size",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.content.link",
+            "requirement": "required"
+          }
+        ]
+      },
+      "platformSafety": [
+        {
+          "profile": "web.react",
+          "requirements": [
+            {
+              "id": "system.forced-colors",
+              "disposition": "required"
+            },
+            {
+              "id": "system.high-contrast",
+              "disposition": "required"
+            },
+            {
+              "id": "native.dynamic-color",
+              "disposition": "not-applicable",
+              "reason": "Native dynamic colors do not apply to the React web binding."
+            },
+            {
+              "id": "native.font-metrics",
+              "disposition": "not-applicable",
+              "reason": "Native font metrics do not apply to the React web binding."
+            },
+            {
+              "id": "layout.direction",
+              "disposition": "required"
+            },
+            {
+              "id": "platform.accessibility-mapping",
+              "disposition": "required"
+            }
+          ]
+        }
+      ],
+      "runtimeProfiles": {}
+    }
+  }
+}

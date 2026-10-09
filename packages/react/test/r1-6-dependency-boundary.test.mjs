@@ -34,7 +34,7 @@ test('accepted dependency pins retain exact lockfile integrity and unchanged lic
   const lockfile = await read(reference.lockfile);
   const packageEntries = lockfile.split('\npackages:\n')[1]?.split('\nsnapshots:\n')[0];
   assert.ok(packageEntries, 'pnpm lockfile declares its resolved package records');
-  for (const entry of [...reference.records, ...reference.transitiveEditorRecords, ...reference.motionClosureRecords]) {
+  for (const entry of [...reference.records, ...reference.transitiveEditorRecords, ...reference.motionClosureRecords, ...reference.shikiClosureRecords]) {
     if (entry.owner) {
       const manifest = await readJson(entry.owner);
       assert.equal(manifest.dependencies[entry.package], entry.version, entry.package);
@@ -51,6 +51,23 @@ test('accepted dependency pins retain exact lockfile integrity and unchanged lic
   assert.equal(reference.records.filter((entry) => entry.package.startsWith('@tiptap/')).length + reference.transitiveEditorRecords.length, editorVersions.length);
   assert.deepEqual([...new Set(editorVersions)], ['3.31.4'], 'the entire internal editor closure uses the accepted version');
   assert.doesNotMatch(lockfile, /(?:@tailwindcss\/|tailwindcss@)/u, 'Tailwind remains outside the Mux workspace lockfile');
+});
+
+test('Shiki stays one exact private dependency with retained grammar, engine and WASM notices', async () => {
+  const manifest = await readJson('packages/react/package.json');
+  assert.equal(manifest.dependencies.shiki, '4.5.0');
+  assert.ok(Object.keys(manifest.dependencies).every((name) => !name.startsWith('@shikijs/')));
+  assert.ok(Object.keys(manifest.exports).every((name) => !/shiki|highlight|code-block/u.test(name)));
+  const notice = await read('packages/react/NOTICE');
+  for (const entry of reference.shikiClosureRecords) {
+    assert.ok(notice.includes(`${entry.package}@${entry.version}`), `${entry.package} disclosed`);
+  }
+  assert.match(await read('packages/react/licenses/shiki-oniguruma.NOTICES.txt'), /Copyright.*Kosako|Copyright.*K\.Kosako/us);
+  const lockfile = await read(reference.lockfile);
+  const snapshots = lockfile.split('\nsnapshots:\n')[1];
+  for (const entry of reference.shikiClosureRecords) assert.ok(lockRecordBlock(snapshots, entry), `${entry.package} has a locked snapshot`);
+  const types = await read('packages/react/generated/index.d.ts');
+  assert.doesNotMatch(types, /shiki|Highlighter|GrammarState/u);
 });
 
 test('motion closure retains exact snapshots, license identity, and React peer resolution', async () => {

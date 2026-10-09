@@ -4,7 +4,9 @@ id: muxui:guide:token-migration
 
 # Token contract migration
 
-Token contract `5.0.0` adds typed easing and transition compositions while
+Current token contract `5.2.0` adds two component-owned DataDiff change
+backgrounds derived from existing status accents. Token contract `5.1.0` added
+the separate CodeBlock change backgrounds. Token contract `5.0.0` added typed easing and transition compositions while
 retaining the `4.0.0` removals. The canonical source remains schema `2.1.0`;
 removed names are not exported, emitted as CSS variables, accepted by authoring
 documents, or available to component recipes. This guide is a direct change map
@@ -87,7 +89,7 @@ and `mono-color` roles have dark branches.
 
 ## Authoring and Scale
 
-Authoring documents must declare `tokenContractVersion: "5.0.0"` and reference
+Authoring documents must declare `tokenContractVersion: "5.2.0"` and reference
 only current token IDs. The compiler validates an exact contract match; it does
 not normalize older same-major documents or rewrite overrides. Scale imports
 follow the same rule. Saved Scale settings accept numeric curvature factors and
