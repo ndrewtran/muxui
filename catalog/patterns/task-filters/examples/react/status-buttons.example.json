@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:task-filters-status-buttons",
+  "kind": "example",
+  "name": "Status buttons",
+  "summary": "A status ToggleButtonGroup with counts above a table of tasks.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/task-filters/examples/react/status-buttons.tsx"
+}

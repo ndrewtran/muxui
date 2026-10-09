@@ -1,0 +1,82 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:company-records",
+  "kind": "pattern",
+  "name": "Company records",
+  "summary": "A searchable table of companies with sortable columns, tags, row selection, and a row menu.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "companies",
+    "contacts",
+    "directory",
+    "sortable",
+    "search",
+    "selection",
+    "tags",
+    "table",
+    "bulk"
+  ],
+  "platforms": ["web.react"],
+  "category": "collections",
+  "intent": {
+    "useWhen": [
+      "Browsing a short list of companies with a few facts each",
+      "Searching, sorting, and selecting rows before a bulk action"
+    ],
+    "avoidWhen": [
+      "Rows are created, edited, or removed in place",
+      "The list needs paging or server-side sorting"
+    ]
+  },
+  "participants": [
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "search",
+      "component": "muxui:component:search-field",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    },
+    {
+      "role": "rows",
+      "component": "muxui:component:table",
+      "requirement": "required"
+    },
+    {
+      "role": "tags",
+      "component": "muxui:component:tag-group",
+      "requirement": "required"
+    },
+    {
+      "role": "menu",
+      "component": "muxui:component:menu",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:company-records-sortable" }],
+  "accessibility": [
+    "The Table is named Companies and the SearchField is named Search companies by their aria-label; rename both for your data.",
+    "Rows select by click or Space, with no checkbox column: selected rows get a background and aria-selected, Ctrl or Cmd+A selects every row, and Escape clears the selection.",
+    "Sortable column headers sort on click, Enter, or Space, and report ascending, descending, or none through aria-sort.",
+    "The selected count is a role=status element, and it counts only the rows the search shows.",
+    "The Table is one Tab stop: arrow keys move across the cells, through each row's tags to its menu button, and Enter opens the menu.",
+    "Each row's TagGroup is named Tags for that company and each menu button Actions for that company.",
+    "The row menu button's focus ring is a box-shadow plus a transparent outline, so an outline still shows where forced colors drop the shadow.",
+    "The Table keeps a 44rem minimum width and scrolls sideways inside its own wrapper on a narrower page, so the page itself never scrolls horizontally."
+  ],
+  "unsupported": [
+    "Creating, editing, deleting, or saving rows: the rows are placeholders",
+    "Paging, virtualized rows, or server-side search and sort",
+    "A checkbox selection column: the Table has none, so rows select by click or Space",
+    "Sticky headers, footers, or column resizing",
+    "Menu actions: the items do nothing until you add your own handlers"
+  ],
+  "workflowValue": "Replaces wiring search, sort, and selection around a Table by hand: one query, one sort descriptor, and one selection value drive the rows and the selected count, and the cells hold a TagGroup and a Menu, so you swap the placeholder rows and keep the toolbar and the scroll wrapper."
+}

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:task-filters-filter-bar",
+  "kind": "example",
+  "name": "Filter bar",
+  "summary": "A search field, status select, removable filter tags, and a result count above a table of tasks.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/task-filters/examples/react/filter-bar.tsx"
+}
