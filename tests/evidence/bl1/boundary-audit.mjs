@@ -9,6 +9,10 @@
 // observations at the time they run. `--offline` skips them and the report says so; a
 // deployment that cannot be observed narrows the claim to "no deployment configuration added".
 //
+// A growth capture (`growthCommits`) scopes the checks that read @muxui/react and the catalog records to the commits that
+// added the blocks, each against its first parent, because other pull requests change those under their own authority
+// between the close-out and a later capture. The other checks keep their range from the base to `head`.
+//
 // `negativeControls` proves each check can fail: git controls run a check over a range or a
 // head from this repository's history that is known to break it, and function controls feed
 // a pure predicate a synthetic input. `tooling/audits/repository-policy/test/evidence-integrity.test.mjs`
@@ -53,10 +57,12 @@ const expectedCliCommands = ['manifest', 'list', 'search', 'get'];
 const probedCommands = ['plan', 'install', 'add', 'init', 'registry', 'scaffold', 'create', 'migrate'];
 const dependencyFields = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies', 'overrides'];
 
-const git = (...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+// The repository the git reads see: this one, or the `cwd` of an `auditBoundary` call (a throwaway repository in tests).
+let gitRoot = repositoryRoot;
+const git = (...args) => execFileSync('git', args, { cwd: gitRoot, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 const resolveRevision = (revision) => git('rev-parse', `${revision}^{commit}`).trim();
 const show = (revision, path) => git('show', `${revision}:${path}`);
-const exists = (revision, path) => spawnSync('git', ['cat-file', '-e', `${revision}:${path}`], { cwd: repositoryRoot }).status === 0;
+const exists = (revision, path) => spawnSync('git', ['cat-file', '-e', `${revision}:${path}`], { cwd: gitRoot }).status === 0;
 const jsonAt = (revision, path) => (exists(revision, path) ? JSON.parse(show(revision, path)) : null);
 const lines = (text) => text.split('\n').filter(Boolean);
 const names = (base, head, ...paths) => lines(git('diff', '--name-only', base, head, '--', ...paths));
@@ -67,7 +73,7 @@ const statuses = (base, head, ...paths) => lines(git('diff', '--name-status', ba
 const blob = (revision, path) => git('rev-parse', `${revision}:${path}`).trim();
 const sorted = (values) => [...values].sort();
 const sameJson = (left, right) => canonicalJson(left) === canonicalJson(right);
-const isAncestor = (ancestor, descendant) => spawnSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], { cwd: repositoryRoot }).status === 0;
+const isAncestor = (ancestor, descendant) => spawnSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], { cwd: gitRoot }).status === 0;
 const excludeTests = ':(exclude)packages/react/test';
 
 function addedLines(base, head, path) {
@@ -260,6 +266,7 @@ const checks = [
     id: 'react-package-manifest',
     legs: ['manifestUnchanged'],
     claim: '@muxui/react has the same package.json (version, exports, dependencies, files) before and after BL1.',
+    growthClaim: '@muxui/react has the same package.json (version, exports, dependencies, files) before and after each growth commit.',
     run({ baseRevision, headRevision }) {
       const before = jsonAt(baseRevision, 'packages/react/package.json');
       const after = jsonAt(headRevision, 'packages/react/package.json');
@@ -277,14 +284,18 @@ const checks = [
     id: 'react-source-files',
     legs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'],
     claim: 'No BL1 pull request changed a non-test file of packages/react. Across the whole range, outside packages/react/test, the only change is the pinned non-BL1 Sidebar change.',
-    run({ baseRevision, headRevision, mergeRevision }) {
-      const known = nonBl1ReactChanges.map((change) => ({ ...change, sha: resolveRevision(change.commit) }));
+    growthClaim: 'No growth commit changed a non-test file of packages/react.',
+    run({ baseRevision, headRevision, mergeRevision, growthCommit }) {
+      // A growth commit has no exception: it changes no non-test file of packages/react.
+      const known = growthCommit !== undefined ? [] : nonBl1ReactChanges.map((change) => ({ ...change, sha: resolveRevision(change.commit) }));
       const knownShas = new Set(known.map(({ sha }) => sha));
       const inRange = new Set(lines(git('rev-list', `${baseRevision}..${headRevision}`)));
       // Pull requests are first-parent commits up to the last BL1 merge; the pinned non-BL1 ones are not BL1.
-      const bl1Commits = isAncestor(mergeRevision, headRevision) && isAncestor(baseRevision, mergeRevision)
-        ? lines(git('rev-list', '--first-parent', '--reverse', `${baseRevision}..${mergeRevision}`)).filter((sha) => !knownShas.has(sha))
-        : [];
+      // Under a growth scope the one commit audited is the pull request.
+      const bl1Commits = growthCommit !== undefined ? [growthCommit]
+        : isAncestor(mergeRevision, headRevision) && isAncestor(baseRevision, mergeRevision)
+          ? lines(git('rev-list', '--first-parent', '--reverse', `${baseRevision}..${mergeRevision}`)).filter((sha) => !knownShas.has(sha))
+          : [];
       const bl1Touching = bl1Commits.filter((sha) => names(`${sha}^`, sha, 'packages/react', excludeTests).length > 0);
       const touching = lines(git('log', '--format=%H', `${baseRevision}..${headRevision}`, '--', 'packages/react', excludeTests));
       const unknown = touching.filter((sha) => !knownShas.has(sha));
@@ -318,6 +329,7 @@ const checks = [
     id: 'react-stylesheet-names',
     legs: ['classNamesUnchanged', 'customPropertiesUnchanged'],
     claim: 'The stylesheet that changed adds and removes no .muxui-* class name and no custom property declaration: its declared names are the same before and after.',
+    growthClaim: 'The stylesheet adds and removes no .muxui-* class name and no custom property declaration across any growth commit: its declared names are the same before and after each.',
     run({ baseRevision, headRevision }) {
       const path = 'packages/react/src/supplemental/styles.css';
       const baseCss = show(baseRevision, path);
@@ -345,6 +357,7 @@ const checks = [
     id: 'no-dependency-change',
     legs: ['dependenciesUnchanged', 'lockfileAndWorkspaceUnchanged'],
     claim: 'No dependency, devDependency, peerDependency, or override changed in any package.json, and the lockfile and workspace files are unchanged.',
+    growthClaim: 'No growth commit changed a dependency, devDependency, peerDependency, or override in any package.json, or the lockfile or workspace files.',
     run({ baseRevision, headRevision }) {
       const manifests = names(baseRevision, headRevision, '*package.json').filter((path) => !path.includes('node_modules'));
       const dependencyChanges = [];
@@ -524,10 +537,12 @@ const checks = [
     id: 'no-new-component-token-capability-or-platform',
     legs: ['catalogRecordsUnchanged', 'patternsReactOnly'],
     claim: 'BL1 added or changed no component, token, capability, or React family record, and every pattern targets web.react only.',
-    run({ baseRevision, headRevision }) {
+    growthClaim: 'No growth commit added or changed a component, token, capability, or React family record, and every pattern at the audited head targets web.react only.',
+    run({ baseRevision, headRevision, currentRevision }) {
       const changedCatalogRecords = names(baseRevision, headRevision, 'catalog/components', 'catalog/tokens', 'catalog/capabilities', 'catalog/react-r1-0', 'catalog/react-r1-5', 'catalog/react-r1-6');
-      const patternPlatforms = sorted(new Set(lines(git('ls-tree', '-r', '--name-only', headRevision, 'catalog/patterns'))
-        .filter((path) => path.endsWith('/artifact.json')).flatMap((path) => jsonAt(headRevision, path).platforms)));
+      // The platforms are the state of the audited head, not of a growth commit.
+      const patternPlatforms = sorted(new Set(lines(git('ls-tree', '-r', '--name-only', currentRevision, 'catalog/patterns'))
+        .filter((path) => path.endsWith('/artifact.json')).flatMap((path) => jsonAt(currentRevision, path).platforms)));
       return {
         legs: { catalogRecordsUnchanged: changedCatalogRecords.length === 0, patternsReactOnly: platformProblems(patternPlatforms).length === 0 },
         observations: {
@@ -560,17 +575,61 @@ export const checkIds = checks.map(({ id }) => id);
 /** The legs each check declares. */
 export const checkLegs = Object.fromEntries(checks.map(({ id, legs }) => [id, legs]));
 
+/** The checks a growth capture evaluates across each growth commit instead of the range from the base. */
+export const growthScopedChecks = checks.filter(({ growthClaim }) => growthClaim !== undefined).map(({ id }) => id);
+
+/** Runs one check and refuses a result whose legs are not the ones the check declares. */
+function runCheck({ id, legs: declared, run }, context) {
+  const result = run(context);
+  if (!sameJson(sorted(Object.keys(result.legs)), sorted(declared))) throw new Error(`BL1_AUDIT_LEGS: ${id} returned legs ${Object.keys(result.legs).join(', ')}, not ${declared.join(', ')}`);
+  return result;
+}
+
+/** A growth-scoped check: run once per growth commit against its first parent; a leg fails if it fails on any commit and holds only if it holds on all of them. */
+function runAcrossGrowth(check, context, growth) {
+  const runs = growth.map(({ commit, parent }) => ({ commit, parent, ...runCheck(check, { ...context, baseRevision: parent, headRevision: commit, growthCommit: commit }) }));
+  const merged = (leg) => {
+    const values = runs.map(({ legs }) => legs[leg]);
+    return values.includes(false) ? false : values.includes(null) ? null : true;
+  };
+  return {
+    legs: Object.fromEntries(check.legs.map((leg) => [leg, merged(leg)])),
+    claim: check.growthClaim,
+    observations: { scope: 'growth', commits: runs.map(({ commit, parent, legs, observations }) => ({ commit, parent, legs, observations })) },
+  };
+}
+
 /**
  * Runs the checks (or only those in `only`) and returns `{ pass, base, head, checks }`, each check with its legs.
  * `closeoutBase: null` skips the close-out scope check, for a capture after a block is added.
+ * `growthCommits` (revisions that added blocks) scopes `growthScopedChecks` to those commits, each against its first
+ * parent, and records them in `growthScope`; the other checks keep the range from `base` to `head`.
  * `mergeRevision` is the last BL1 merge, and `observers` replaces the live registry and deployment reads, for tests.
+ * `cwd` runs the git reads in another repository, for tests; the live observations still read this checkout, so use it with `offline`
+ * and only checks that read git objects.
  */
-export function auditBoundary({ base = preBl1Base, head = 'HEAD', offline = false, only, closeoutBase = bl1MergeRevision, mergeRevision = bl1MergeRevision, observers = {} } = {}) {
+export function auditBoundary({ cwd = repositoryRoot, ...options } = {}) {
+  const previous = gitRoot;
+  gitRoot = cwd;
+  try {
+    return auditRevisions(options);
+  } finally {
+    gitRoot = previous;
+  }
+}
+
+function auditRevisions({ base = preBl1Base, head = 'HEAD', offline = false, only, closeoutBase = bl1MergeRevision, mergeRevision = bl1MergeRevision, growthCommits, observers = {} }) {
   const baseRevision = resolveRevision(base);
   const headRevision = resolveRevision(head);
+  const growth = growthCommits === undefined ? null : growthCommits.map((revision) => {
+    const commit = resolveRevision(revision);
+    return { commit, parent: resolveRevision(`${commit}^1`) };
+  });
+  if (growth !== null && growth.length === 0) throw new Error('BL1_AUDIT_GROWTH: a growth scope needs at least one growth commit');
   const context = {
     baseRevision,
     headRevision,
+    currentRevision: headRevision,
     mergeRevision: resolveRevision(mergeRevision),
     closeoutBase: closeoutBase === null ? null : resolveRevision(closeoutBase),
     offline,
@@ -578,15 +637,22 @@ export function auditBoundary({ base = preBl1Base, head = 'HEAD', offline = fals
     deployments: observers.deployments ?? observeDeployments,
   };
   const selected = checks.filter(({ id }) => (only === undefined || only.includes(id)) && !(id === 'closeout-scope' && closeoutBase === null));
-  const results = selected.map(({ id, legs: declared, claim, run }) => {
-    const { legs, observations, claim: observedClaim } = run(context);
-    if (!sameJson(sorted(Object.keys(legs)), sorted(declared))) throw new Error(`BL1_AUDIT_LEGS: ${id} returned legs ${Object.keys(legs).join(', ')}, not ${declared.join(', ')}`);
-    return { id, claim: observedClaim ?? claim, pass: Object.values(legs).every((value) => value !== false), legs, observations };
+  const results = selected.map((check) => {
+    const scoped = growth !== null && growthScopedChecks.includes(check.id);
+    const { legs, observations, claim: observedClaim } = scoped ? runAcrossGrowth(check, context, growth) : runCheck(check, context);
+    return { id: check.id, claim: observedClaim ?? check.claim, pass: Object.values(legs).every((value) => value !== false), legs, observations };
   });
   return {
     schema: 'muxui-bl1-boundary-audit-v1',
     base: { revision: baseRevision, subject: git('log', '-1', '--format=%s', baseRevision).trim() },
     head: { revision: headRevision, lastBl1Merge: context.mergeRevision },
+    ...(growth === null ? {} : {
+      growthScope: {
+        rule: 'Each growth commit is compared with its first parent for the scoped checks; the other checks compare the pre-BL1 base with the head. Other pull requests change @muxui/react, its dependencies, and the catalog records under their own authority, and this audit does not cover them.',
+        scopedChecks: results.filter(({ id }) => growthScopedChecks.includes(id)).map(({ id }) => id),
+        commits: growth.map(({ commit, parent }) => ({ commit, parent, subject: git('log', '-1', '--format=%s', commit).trim() })),
+      },
+    }),
     pass: results.every(({ pass }) => pass),
     checks: results,
   };
@@ -629,6 +695,7 @@ const commit = {
   pr213: '5773276b8c050f927d29d3a8f237cfc29e465bba',
   pr221: 'd370455359467597ba6ebe222e3ad7401118f9cb',
   pr222: 'b53a05ab55f12696aaf443ffdefb832b4ad2380b',
+  pr228: '70a093bf48a361ff918cb4f15b05d005b0ee0145',
   pr229: '670cb1880350e62d19f30a09914b6eb6dadef9a4',
 };
 
@@ -661,6 +728,13 @@ export const negativeControls = [
   { id: 'closeout-outside-allowed-paths', kind: 'git', check: 'closeout-scope', failingLegs: ['onlyAllowedPaths'], description: 'from #222 to the last BL1 merge, files outside evidence and decisions changed', base: commit.pr222, head: commit.pr229, closeoutBase: commit.pr222 },
   { id: 'closeout-vacuous', kind: 'git', check: 'closeout-scope', failingLegs: ['hasChange'], description: 'a range with no close-out change must not pass vacuously', base: commit.pr222, head: commit.pr229, closeoutBase: commit.pr229 },
   { id: 'closeout-not-an-ancestor', kind: 'git', check: 'closeout-scope', failingLegs: ['descendsFromCloseoutBase'], description: 'a close-out base that is not an ancestor of the head', base: commit.pr221, head: commit.pr222, closeoutBase: commit.pr229 },
+  // A growth capture scopes these checks to the commits that added the blocks, each against its first parent.
+  { id: 'growth-commit-changed-react-manifest', kind: 'git', check: 'react-package-manifest', failingLegs: ['manifestUnchanged'], description: 'as a growth commit, #207 changed the @muxui/react manifest', base: `${commit.pr207}^`, head: commit.pr207, growthCommits: [commit.pr207] },
+  { id: 'growth-commit-changed-react-source', kind: 'git', check: 'react-source-files', failingLegs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'], description: 'as a growth commit, #222 changed the GridList and Virtualizer sources in packages/react', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr222] },
+  { id: 'growth-commit-changed-stylesheet-names', kind: 'git', check: 'react-stylesheet-names', failingLegs: ['classNamesUnchanged'], description: 'as a growth commit, #201 changed class names in the React stylesheet', base: `${commit.pr201}^`, head: commit.pr201, growthCommits: [commit.pr201] },
+  { id: 'growth-commit-changed-dependency', kind: 'git', check: 'no-dependency-change', failingLegs: ['dependenciesUnchanged', 'lockfileAndWorkspaceUnchanged'], description: 'as a growth commit, #207 pinned a dependency and changed the lockfile', base: `${commit.pr207}^`, head: commit.pr207, growthCommits: [commit.pr207] },
+  { id: 'growth-commit-changed-catalog-records', kind: 'git', check: 'no-new-component-token-capability-or-platform', failingLegs: ['catalogRecordsUnchanged'], description: 'as a growth commit, #222 changed the GridList and Virtualizer catalog records', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr222] },
+  { id: 'growth-one-commit-of-two-changed-react-source', kind: 'git', check: 'react-source-files', failingLegs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'], description: 'with #228 (blocks only) and #222 (React sources) as growth commits, the one that changes packages/react fails the check', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr228, commit.pr222] },
   ...['distTags', 'integrity', 'shasum', 'versions', 'versionTimes'].map((leg) => ({
     id: `registry-${leg}`,
     kind: 'function',
@@ -717,7 +791,15 @@ export function runNegativeControls() {
       const observed = sorted(control.reject());
       return { id, check, kind, description, expectedFailingLegs: expected, failingLegs: observed, rejected: sameJson(observed, expected), accepted: control.accepts() === true };
     }
-    const audit = auditBoundary({ base: control.base, head: control.head, closeoutBase: control.closeoutBase, mergeRevision: control.mergeRevision, offline: true, only: [check] });
+    const audit = auditBoundary({
+      base: control.base,
+      head: control.head,
+      closeoutBase: control.growthCommits === undefined ? control.closeoutBase : null,
+      mergeRevision: control.mergeRevision,
+      growthCommits: control.growthCommits,
+      offline: true,
+      only: [check],
+    });
     const [result] = audit.checks;
     const observed = sorted(Object.entries(result.legs).filter(([, value]) => value === false).map(([leg]) => leg));
     return {
@@ -725,7 +807,13 @@ export function runNegativeControls() {
       check,
       kind,
       description,
-      range: { base: control.base, head: control.head, ...(control.closeoutBase === undefined ? {} : { closeoutBase: control.closeoutBase }), ...(control.mergeRevision === undefined ? {} : { mergeRevision: control.mergeRevision }) },
+      range: {
+        base: control.base,
+        head: control.head,
+        ...(control.closeoutBase === undefined ? {} : { closeoutBase: control.closeoutBase }),
+        ...(control.mergeRevision === undefined ? {} : { mergeRevision: control.mergeRevision }),
+        ...(control.growthCommits === undefined ? {} : { growthCommits: control.growthCommits }),
+      },
       expectedFailingLegs: expected,
       failingLegs: observed,
       rejected: result.pass === false && sameJson(observed, expected),

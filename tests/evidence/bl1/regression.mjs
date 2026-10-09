@@ -80,15 +80,15 @@ export function thresholdChanges(before, after) {
   };
 }
 
-/** The compile result of the source manifest with `keep` deciding which records stay. */
-export async function compileBundle(keep = () => true) {
-  const manifest = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
+/** The compile result of the source manifest with `keep` deciding which records stay, read from the tree at `root`. */
+export async function compileBundle(keep = () => true, root = repositoryRoot) {
+  const manifest = JSON.parse(await readFile(resolve(root, 'packages/catalog/catalog-sources.json'), 'utf8'));
   manifest.records = manifest.records.filter(keep);
   const directory = await mkdtemp(join(tmpdir(), 'muxui-bl1-regression-'));
   try {
     const sourceManifestPath = join(directory, 'catalog-sources.json');
     await writeFile(sourceManifestPath, JSON.stringify(manifest));
-    return await compileCatalog({ repositoryRoot, sourceManifestPath });
+    return await compileCatalog({ repositoryRoot: root, sourceManifestPath });
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
