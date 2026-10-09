@@ -497,8 +497,9 @@ function selectionRangePainter() {
   return rangePainter;
 }
 
-// The runtime scopes a Mux subtree can set; Autocomplete portals into the nearest one the same way.
-const MUX_RUNTIME_SCOPE_SELECTOR = '[data-muxui-color-scheme], [data-muxui-contrast], [data-muxui-motion], [data-muxui-density], [data-muxui-direction]';
+// Every attribute the Mux stylesheets scope tokens or direction by. A theme preset applies without a mode
+// attribute, so it counts as a scope on its own.
+const MUX_RUNTIME_SCOPE_SELECTOR = '[data-muxui-theme], [data-muxui-color-scheme], [data-muxui-contrast], [data-muxui-motion], [data-muxui-density], [data-muxui-direction], [data-muxui-responsive]';
 
 /** The subtree-scoped runtime profile around the editor, if any, so the portaled bar keeps its tokens and direction. */
 function runtimeScope(node) {
@@ -831,6 +832,11 @@ function SelectionActions({ editor, enabled, actions: actionsProp, instruction, 
   const live = phase !== 'idle';
   const range = live ? record.range : selection;
   const rangeKey = range ? `${range.from}:${range.to}` : '';
+  // A dismissal lasts until the selection changes, so the first change after it, even a collapse, ends it.
+  const selectionKey = selection ? `${selection.from}:${selection.to}` : '';
+  React.useEffect(() => {
+    if (dismissedKey !== null && dismissedKey !== selectionKey) setDismissedKey(null);
+  }, [dismissedKey, selectionKey]);
   const show = enabled && range !== null && (live || ((instruction || actions.length > 0) && focusWithin && dismissedKey !== rangeKey));
   const highlight = show && (barFocused || live) ? range : null;
   latest.current = { phase, show, range, rangeKey, record };

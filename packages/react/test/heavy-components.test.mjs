@@ -865,6 +865,49 @@ test('TextEditor selection close keeps an applied edit and ignores a finished re
   }
 });
 
+test('TextEditor selection bar portals into a theme preset scope that has no mode attribute', async () => {
+  const t = await mountSelectionEditor({ scope: 'data-muxui-theme="standard-harbour"' });
+  try {
+    await t.select(7, 12);
+    assert.ok(t.bar().closest('[data-muxui-theme]') === document.querySelector('#root'), 'the bar renders inside the preset scope');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection dismissal ends at the first selection change, including a collapse', async () => {
+  const t = await mountSelectionEditor({ onSelectionRequest: () => new Promise(() => {}) });
+  try {
+    // close() on one range, then another range, then the first again.
+    await t.select(7, 12);
+    await t.click('Improve');
+    await act(async () => t.session.actions.close());
+    assert.ok(t.bar() === null, 'close hides the bar');
+    await t.select(1, 5);
+    assert.ok(t.bar() !== null, 'another selection shows the bar');
+    await t.select(7, 12);
+    assert.ok(t.bar() !== null, 'returning to the first range shows it again');
+
+    // A collapse is a selection change too.
+    await t.click('Improve');
+    await act(async () => t.session.actions.close());
+    assert.ok(t.bar() === null);
+    await act(async () => t.editor.commands.setTextSelection(9));
+    await t.flush();
+    await t.select(7, 12);
+    assert.ok(t.bar() !== null, 'collapsing and reselecting shows the bar');
+
+    // Escape at rest dismisses the same way.
+    await t.key(t.pm, 'Escape');
+    assert.ok(t.bar() === null, 'Escape hides the bar');
+    await t.select(1, 5);
+    await t.select(7, 12);
+    assert.ok(t.bar() !== null, 'Escape lasts only until the selection changes');
+  } finally {
+    await t.close();
+  }
+});
+
 test('Resizable maintains pair totals, RTL keyboard direction, and cancels pointer commits', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);

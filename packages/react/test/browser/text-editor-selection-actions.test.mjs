@@ -13,7 +13,8 @@ import { browserEngines, launchBrowser, pageShell, startServer } from './harness
 //   hold:   the request returns a promise that the test settles through window.__settle
 //   spacer: pixels above the editor, to push the selection toward the viewport bottom
 //   tail:   pixels below the editor, to make the page scroll
-//   scope:  wraps the editor in a dark, right-to-left Mux runtime scope inside the light page
+//   scope:  wraps the editor in a Mux runtime scope inside the light page: 'dark-rtl' sets a dark mode and
+//           direction; 'preset' sets only a theme preset, which applies without a mode attribute
 // Tests call window.__tools.replace or insertAfter the way a caller's handler would.
 
 const entry = `
@@ -22,7 +23,7 @@ import { createRoot } from 'react-dom/client';
 import { TextEditor } from '/src/text-editor/index.mjs';
 
 const h = React.createElement;
-const { hold = false, spacer = 0, tail = 0, scope = false } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
+const { hold = false, spacer = 0, tail = 0, scope = '' } = JSON.parse(new URLSearchParams(location.search).get('config') ?? '{}');
 const sentence = 'Pistachio holds the top slot all weekend. Churn it first thing Saturday so the batch has time to firm up before the afternoon rush.';
 const actions = [
   { id: 'explain', label: 'Explain' },
@@ -31,6 +32,10 @@ const actions = [
   { id: 'tone', label: 'Change tone', overflow: true },
   { id: 'grammar', label: 'Fix grammar', overflow: true },
 ];
+const scopes = {
+  'dark-rtl': { 'data-muxui-color-scheme': 'dark', 'data-muxui-direction': 'rtl', dir: 'rtl' },
+  preset: { 'data-muxui-theme': 'standard-harbour' },
+};
 window.__requests = [];
 window.__edits = 0;
 
@@ -50,7 +55,7 @@ function Fixture() {
     h('h1', null, 'TextEditor selection actions'),
     h('button', { id: 'before', type: 'button' }, 'Before'),
     spacer ? h('div', { style: { height: spacer }, 'aria-hidden': 'true' }) : null,
-    scope ? h('section', { id: 'scope', 'data-muxui-color-scheme': 'dark', 'data-muxui-direction': 'rtl', dir: 'rtl' }, editor) : editor,
+    scope ? h('section', { id: 'scope', ...scopes[scope] }, editor) : editor,
     h('button', { id: 'after', type: 'button' }, 'After'),
     tail ? h('div', { style: { height: tail }, 'aria-hidden': 'true' }) : null);
 }
@@ -59,7 +64,7 @@ createRoot(document.getElementById('root')).render(h(Fixture));
 
 const page = (url) => pageShell({
   attributes: `lang="en" data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}" data-muxui-motion="full"`,
-  head: '<link rel="stylesheet" href="/generated/styles.css"><style>body { margin: 24px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-default); }</style>',
+  head: '<link rel="stylesheet" href="/generated/styles.css"><link rel="stylesheet" href="/generated/themes.css"><style>body { margin: 24px; background: var(--muxui-semantic-surface-canvas); color: var(--muxui-semantic-content-default); }</style>',
   body: '<div id="root"></div>',
   entry: '/selection-actions-entry.mjs',
 });
@@ -292,7 +297,7 @@ for (const engine of browserEngines()) {
       });
 
       await t.test('a scoped dark right-to-left editor keeps its scope and direction in the bar', async () => {
-        const { tab, bar, selectWord, selection, focused, context } = await open({ config: { scope: true } });
+        const { tab, bar, selectWord, selection, focused, context } = await open({ config: { scope: 'dark-rtl' } });
         await selectWord('weekend');
         assert.equal(await selection(), 'weekend');
         assert.equal(await bar.evaluate((node) => node.closest('#scope') !== null), true, 'the bar renders inside the scoped subtree');
@@ -319,6 +324,27 @@ for (const engine of browserEngines()) {
         assert.equal(await focused(), 'Explain', 'ArrowLeft moves forward');
         await tab.keyboard.press('ArrowRight');
         assert.equal(await focused(), 'Describe edits', 'ArrowRight moves back');
+        await context.close();
+      });
+
+      await t.test('a theme preset scope without a mode attribute reaches the bar', async () => {
+        const { bar, selectWord, context } = await open({ config: { scope: 'preset' } });
+        await selectWord('weekend');
+        assert.equal(await bar.evaluate((node) => node.closest('#scope') !== null), true, 'the bar renders inside the preset scope');
+        // The preset sets its own neutral palette, so the bar surface proves the preset applies.
+        const surfaces = await bar.evaluate((node) => {
+          const resolve = (parent) => {
+            const probe = document.createElement('span');
+            probe.style.color = 'var(--muxui-semantic-color-neutral-10)';
+            parent.append(probe);
+            const color = getComputedStyle(probe).color;
+            probe.remove();
+            return color;
+          };
+          return { bar: getComputedStyle(node).backgroundColor, scoped: resolve(document.querySelector('#scope')), page: resolve(document.body) };
+        });
+        assert.equal(surfaces.bar, surfaces.scoped, 'the bar uses the preset surface');
+        assert.notEqual(surfaces.bar, surfaces.page, 'the page uses the default surface');
         await context.close();
       });
 
