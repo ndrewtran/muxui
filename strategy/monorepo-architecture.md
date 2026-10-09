@@ -1045,26 +1045,21 @@ ranges. No `@internationalized/date` or React Aria public type, value, import
 path, export, lifecycle, or ownership path may leak through the package; this
 is an internal, replaceable adapter dependency only.
 
-For existing R1 control affordances, `@muxui/react` is also approved to
+For internal decorative affordances, `@muxui/react` is also approved to
 directly use `lucide-react@1.37.0` as an exact internal, replaceable runtime
 dependency. Its npm integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
 its package license is ISC, its included Feather-derived artwork carries the
 MIT notice, and it is React peer-compatible with the existing React and React
-DOM peer boundary. Use is limited to `DatePicker`/`DateRangePicker` calendar
-triggers; `Calendar`/`RangeCalendar` previous/next controls;
-`ComboBox`/`Select` and `Tree` chevrons; `SearchField` clear;
-`NumberField` plus/minus; `Checkbox` check/indeterminate; `TagGroup` remove;
-and `Dialog`/`Toast` close. Decision 0011 amendment 03 adds the decorative
-`Tabs` overflow scroll chevrons (left, right, up, and down), the `Disclosure`
-trigger chevron, and the `CheckboxField` check and minus. R1.6 also permits
-the same pinned internal Lucide edge for the supplemental affordances in
-`AlertDialog`, `CommandPalette`, `HeaderNav`,
-`Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
-`TextEditor`. Mux UI owns all labels and public contracts. No Lucide export,
+DOM peer boundary. Lucide is the default icon source for decorative
+affordances in every `@muxui/react` component, current and future, and no
+component needs a decision amendment or approval to use it (Decision 0011
+amendment 06, which supersedes the per-component lists of amendments 02 and 03
+and of R1.6). Mux UI owns all labels and public contracts. No Lucide export,
 type, name, prop, or import path, and no public Icon API, catalog, or package,
-may cross the package boundary. Breadcrumb separators are text and no Search
-icon is added.
+may cross the package boundary. Existing Mux-drawn internal glyphs may stay.
+Changing the version or the package is still a dependency decision. Other renderers would
+need their own dependency decision for a Lucide package.
 
 Lucide icons are decorative and non-focusable unless a Mux UI binding
 explicitly requires a different semantic; an icon never supplies an
@@ -1234,7 +1229,7 @@ flowchart TD
   react["@muxui/react@0.1.0-alpha.N\nfirst public component package"]
   aria["react-aria-components@1.20.0\nexact internal runtime dependency"]
   temporal["@internationalized/date@3.12.4\napproved internal temporal adapter dependency"]
-  lucide["lucide-react@1.37.0\nR1 + R1.6 internal affordances"]
+  lucide["lucide-react@1.37.0\ninternal decorative affordances"]
   motion["motion@13.4.0\ninternal component motion"]
   resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
   markdown["marked@13.0.3\nMarkdown lexer only"]
@@ -1278,10 +1273,8 @@ contain no unresolved `workspace:` dependency, repository-only or source-tree
 import, undeclared file dependency, or `@muxui/web` import.
 
 The same graph includes the exact direct internal runtime dependency
-`lucide-react@1.37.0` for the existing R1 control affordances and the nine
-approved R1.6 supplemental affordance roots: `AlertDialog`, `CommandPalette`,
-`HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
-and `TextEditor`, and those admitted by Decision 0011 amendment 03. Its npm
+`lucide-react@1.37.0` for internal decorative affordances in any
+`@muxui/react` component (Decision 0011 amendment 06). Its npm
 integrity is
 `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
 the package is ISC with the Feather-derived MIT notice, and React

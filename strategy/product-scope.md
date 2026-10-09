@@ -1,5 +1,5 @@
 ---
-scopeVersion: 15.0.1
+scopeVersion: 15.0.2
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -134,6 +134,11 @@ Product Scope `15.0.1` applies Decision 0026 item 10 as a patch clarification:
 token-source retrieval now names query API `2.1.0`, the additive minor that the
 pattern kind's new response members take, so the line agrees with the query
 surface.
+
+Product Scope `15.0.2` applies Decision 0011 amendment 06 as a patch
+clarification: the existing internal `lucide-react@1.37.0` edge of
+`@muxui/react` is the default icon source for decorative affordances in every
+component, so the per-component affordance lists no longer limit it.
 
 ## Scope vocabulary
 
@@ -920,17 +925,12 @@ accessibility, package, compatibility, integrity, or generation failures.
   `lucide-react@1.37.0` dependency (npm integrity
   `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
   ISC license with its Feather-derived MIT notice, React peer-compatible with
-  the existing React and React DOM peer boundary) for the existing R1 control
-  affordances: `DatePicker`/`DateRangePicker` calendar triggers;
-  `Calendar`/`RangeCalendar` previous/next; `ComboBox`/`Select` and `Tree`
-  chevrons; `SearchField` clear; `NumberField` plus/minus; `Checkbox`
-  check/indeterminate; `TagGroup` remove; and `Dialog`/`Toast` close, plus
-  the `Tabs` overflow scroll chevrons, `Disclosure` trigger chevron, and
-  `CheckboxField` check and minus admitted by Decision 0011 amendment 03, with
-  Breadcrumb separators kept as text, no Search icon, decorative and
+  the existing React and React DOM peer boundary) as the default icon source
+  for decorative affordances in every `@muxui/react` component, with no
+  per-component approval (Decision 0011 amendment 06), decorative and
   non-focusable icons that never supply an undocumented accessible name, and
   no Lucide export, type, name, prop, import path, or public Icon API, catalog,
-  or package; plus the R1.6 internal, replaceable supplemental-affordance edges
+  or package; plus the R1.6 internal, replaceable edges
   `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
   parser boundary, and the eight `@tiptap/*@3.31.4` packages for `TextEditor`
   (Decision 0011 amendment 04);
@@ -1140,10 +1140,9 @@ export/persist/round-trip behavior, and clean-consumer proof for the optional
 Tailwind build adapter. Mux UI owns token role names, values, and definitions;
 bundled third-party assets retain their applicable license notices.
 
-The existing internal `lucide-react@1.37.0` edge may cover the nine R1.6
-supplemental affordance roots `AlertDialog`, `CommandPalette`,
-`HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`,
-`TagSelect`, and `TextEditor`. R1.6 also admits `react-aria@3.51.0` for
+The existing internal `lucide-react@1.37.0` edge covers decorative
+affordances in every R1.6 supplemental root, as in every other component
+(Decision 0011 amendment 06). R1.6 also admits `react-aria@3.51.0` for
 `Resizable`'s `useMove`, `marked@13.0.3` behind the typed Markdown parser
 boundary, and the eight `@tiptap/*@3.31.4` packages only inside
 `TextEditor` (Decision 0011 amendment 04; originally `3.22.3`). These are
@@ -1583,3 +1582,24 @@ This patch brings one line into line with an accepted decision. It changes no
 Scope ID, commitment state, release boundary, package, platform, public
 surface, support claim, or non-goal, and no Scope ID is added, removed, or
 transitioned.
+
+## Product Scope 15.0.2: Lucide in every component
+
+[Decision 0011 amendment 06](../decisions/0011-amendment-06-lucide-all-components.md)
+makes the internal `lucide-react@1.37.0` edge of `@muxui/react` the default
+icon source for decorative affordances in every component, current and future,
+with no per-component amendment or approval. It supersedes the component
+lists that amendment 02, amendment 03, and R1.6 attached to the edge, and the
+Breadcrumb-separator and Search-icon exclusions with them. The release
+acceptance scope above and the R1.6 deliverables state the general rule in
+place of those lists.
+
+This patch changes no Scope ID, commitment state, release boundary, package,
+platform, public surface, support claim, or non-goal. The dependency name,
+exact version, npm integrity, license notices, internal-only boundary,
+decorative semantics, and reproof rule are unchanged, and no Scope ID is
+added, removed, or transitioned. Other renderers would need their own
+dependency decision for a Lucide package.
+
+Tracker migration: none. No open work changes, and this change creates no
+tracker items.

@@ -662,18 +662,14 @@ upstream temporal or React Aria public type, value, import path, export,
 lifecycle, or ownership crosses the public boundary.
 
 The graph also includes the exact internal, replaceable
-`lucide-react@1.37.0` edge for existing control affordances and the nine
-R1.6 roots `AlertDialog`, `CommandPalette`, `HeaderNav`, `Lightbox`,
-`MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`, and
-`TextEditor`. Decision 0011 amendment 03 adds the four decorative `Tabs`
-overflow scroll chevrons (`chevron-left`, `chevron-right`, `chevron-up`, and
-`chevron-down`), named by their Mux-owned button labels, the decorative
-`Disclosure` trigger `chevron-down`, and the decorative `CheckboxField`
-`check` and `minus`. Its integrity, ISC license, Feather-derived MIT notice,
-React peer compatibility, lockfile pin, module isolation, and packed-consumer
-proof are required. Existing control affordances remain bounded to their
-established Mux UI modules; no Lucide export, public Icon API, decorative
-component, or new decorative affordance beyond those listed is admitted.
+`lucide-react@1.37.0` edge as the default icon source for decorative
+affordances in every `@muxui/react` component, with no per-component
+approval (Decision 0011 amendment 06, which supersedes the component lists of
+amendments 02 and 03 and of R1.6). Its integrity, ISC license, Feather-derived
+MIT notice, React peer compatibility, lockfile pin, module isolation, and
+packed-consumer proof are required. A new or changed icon reruns the affected
+visual, accessibility, SSR/hydration, tree-shaking, and packed-consumer proof.
+No Lucide export, public Icon API, icon catalog, or icon package is admitted.
 
 R1.6 also admits the exact internal, replaceable `react-aria@3.51.0` edge
 for `Resizable`, extended by Decision 0018 to `SelectNative`'s `useField`;
@@ -925,8 +921,8 @@ Storybook owns neither canonical examples nor token/theme data.
   Tailwind remains a consumer build dependency only and is absent from Mux
   runtime, peer, generated-source, and styling-engine closure.
 - Exact internal, replaceable dependencies remain at owning Mux modules:
-  Lucide for the nine listed roots and those admitted by Decision 0011
-  amendment 03, `motion@13.4.0` for bounded component
+  Lucide for decorative affordances in any component (Decision 0011
+  amendment 06), `motion@13.4.0` for bounded component
   motion in existing admitted bindings, `react-aria@3.51.0` for `Resizable`,
   `marked@13.0.3` for the typed Markdown parser boundary, and the eight
   `@tiptap/*@3.31.4` packages for `TextEditor` (Decision 0011 amendment 04).
@@ -2239,16 +2235,12 @@ dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.4`
 (Decision 0011 amendment 05) limited to the six named value-adapter families above, and
 `motion@13.4.0` for bounded Mux-owned component motion in existing admitted
 React bindings, and
-`lucide-react@1.37.0` for the approved existing R1 control affordances plus
-  the nine R1.6 affordance roots `AlertDialog`, `CommandPalette`,
-`HeaderNav`, `Lightbox`, `MultiSelect`, `PaymentInput`, `Sidebar`, `TagSelect`,
-and `TextEditor`, and the `Tabs` overflow scroll chevrons, `Disclosure`
-trigger chevron, and `CheckboxField` check and minus admitted by Decision 0011
-amendment 03. R1.6 also permits `react-aria@3.51.0` for `Resizable`'s
-`useMove`, with Decision 0018 extending the same edge to SelectNative's
-`useField`; `marked@13.0.3` for the Mux-owned typed `Markdown` parser boundary,
-and `@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`, `@tiptap/react@3.31.4`,
-`@tiptap/starter-kit@3.31.4`, `@tiptap/extension-image@3.31.4`,
+`lucide-react@1.37.0` for decorative affordances in any `@muxui/react`
+component (Decision 0011 amendment 06). R1.6 also permits `react-aria@3.51.0`
+for `Resizable`'s `useMove`, with Decision 0018 extending the same edge to
+SelectNative's `useField`; `marked@13.0.3` for the Mux-owned typed `Markdown`
+parser boundary, and `@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`,
+`@tiptap/react@3.31.4`, `@tiptap/starter-kit@3.31.4`, `@tiptap/extension-image@3.31.4`,
 `@tiptap/extension-placeholder@3.31.4`,
 `@tiptap/extension-text-align@3.31.4`, and
 `@tiptap/extension-text-style@3.31.4` for `TextEditor` only (Decision 0011
@@ -2267,5 +2259,5 @@ separate exact publication authorization and a final registry/version/dist-tag
 collision and authorization-drift check. This authority publishes nothing.
 
 The historical pre-R1.6 icon affordance clarification is archived by Decision
-0021; the current Lucide edge, its proof obligations, and its R1.6 roots are
-stated above and in Architecture.
+0021; the current Lucide edge and its proof obligations are stated above and in
+Architecture.
