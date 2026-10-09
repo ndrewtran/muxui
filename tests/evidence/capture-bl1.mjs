@@ -32,7 +32,7 @@
 // E-BL1-03 to E-BL1-08, E-BL1-10, and E-BL1-11, so it skips the close-out scope check and the
 // exit review, and records that it did. It refuses to run unless a close-out capture is retained and
 // the catalog has a block that capture did not measure, and its E-BL1-11 record lists how the
-// thresholds changed since that close-out. The thresholds, the browser tests, and every count come from the
+// thresholds changed since that close-out (a visible record, not an authority to change them). The thresholds, the browser tests, and every count come from the
 // source revision (the thresholds as committed there, the browser tests from the policy's
 // patternBrowserTests), not from this file. `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
@@ -44,7 +44,7 @@
 import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
@@ -54,12 +54,13 @@ import { patternVariantExamples } from '../../tooling/audits/repository-policy/s
 import { pageWidths, toolbarPresets } from '../../apps/docs/src/lib/block-presets.ts';
 import { auditBoundary, checksWithoutControl, legsWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
 import { scanBlockContent } from './bl1/content-scan.mjs';
-import { archiveSupersededCapture, assertDurableSource, assertGrowthSource, blockBrowserTests, isAncestor as isAncestorIn, retainReview, supersededFiles } from './bl1/capture-support.mjs';
+import { archiveSupersededCapture, assertDurableSource, assertGrowthSource, blockBrowserTests, isAncestor as isAncestorIn, retainReview, seedRehearsal, supersededFiles } from './bl1/capture-support.mjs';
 import { parseTestReport, runProof, sanitizationRules } from './bl1/proof-run.mjs';
 import {
   compileBundle,
   isPatternSource,
   measureRegression,
+  parseThresholds,
   readThresholds,
   regressionFailures,
   repositoryRoot,
@@ -100,10 +101,7 @@ const sourceTree = command('git', ['rev-parse', 'HEAD^{tree}']);
 const sourceRevisionInMainHistory = isAncestor('HEAD', 'origin/main');
 if (rehearsal === undefined) assertDurableSource({ cwd: repositoryRoot, revision: sourceRevision });
 // A rehearsal starts from a copy of the retained evidence, so the earlier capture is there to reuse reviews from and to supersede.
-if (rehearsal !== undefined) {
-  await rm(join(outputRoot, root), { recursive: true, force: true });
-  await cp(join(repositoryRoot, root), join(outputRoot, root), { recursive: true });
-}
+if (rehearsal !== undefined) await seedRehearsal({ repositoryRoot, destination: outputRoot, root });
 
 function chromeVersion() {
   for (const candidate of [process.env.MUXUI_CHROME_EXECUTABLE, process.env.CHROME_BIN, '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']) {
@@ -212,13 +210,13 @@ validationResults.find(({ command: ran }) => ran === 'pnpm generate:check').obse
 // The regression test below reads the working tree, so the working tree must be the committed file.
 const thresholdsBytes = await readThresholds(sourceRevision);
 if (!(await readThresholds()).equals(thresholdsBytes)) throw new Error(`EVIDENCE_THRESHOLDS_UNCOMMITTED: ${thresholdsPath} must match HEAD`);
-const thresholds = JSON.parse(thresholdsBytes.toString('utf8'));
-// A growth block can move an existing block's expectations (a second collections block moves the first one's rank), so the record shows every change since the close-out.
+const thresholds = parseThresholds(thresholdsBytes);
+// The record shows every change to the thresholds since the close-out, including any to an existing block's expectations.
 const closeoutThresholds = growthBase === null ? null : await readThresholds(growthBase.closeout.sourceRevision);
 const changes = closeoutThresholds === null ? null : {
   against: { revision: growthBase.closeout.sourceRevision, path: thresholdsPath, sha256: sha256(closeoutThresholds) },
   addedPatterns: growthBase.added,
-  ...thresholdChanges(JSON.parse(closeoutThresholds.toString('utf8')), thresholds),
+  ...thresholdChanges(parseThresholds(closeoutThresholds), thresholds),
 };
 const api = createCatalogApi(first.bundle);
 const measured = measureRegression({ api, baselineApi: createCatalogApi(withoutPatterns.bundle), thresholds });

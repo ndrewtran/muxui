@@ -32,8 +32,27 @@ export async function readThresholds(revision) {
   return revision === undefined ? readFile(resolve(repositoryRoot, thresholdsPath)) : readAtRevision(repositoryRoot, revision, thresholdsPath);
 }
 
+/**
+ * Throws when two discovery queries share a key. Measurement counts every entry, but a comparison keyed by
+ * query would merge them, so a duplicate could change the measured precision with no reported change.
+ */
+export function assertUniqueQueries(thresholds) {
+  const seen = new Set();
+  for (const { query } of thresholds.discovery.queries) {
+    if (seen.has(query)) throw new Error(`BL1_THRESHOLDS_DUPLICATE_QUERY: the discovery query "${query}" is listed more than once`);
+    seen.add(query);
+  }
+}
+
+/** The thresholds in `bytes`, refused when a discovery query repeats. */
+export function parseThresholds(bytes) {
+  const thresholds = JSON.parse(bytes.toString('utf8'));
+  assertUniqueQueries(thresholds);
+  return thresholds;
+}
+
 export async function loadThresholds(revision) {
-  return JSON.parse((await readThresholds(revision)).toString('utf8'));
+  return parseThresholds(await readThresholds(revision));
 }
 
 const leaves = (value, path = '') => (value !== null && typeof value === 'object' && !Array.isArray(value)
@@ -46,6 +65,8 @@ const leaves = (value, path = '') => (value !== null && typeof value === 'object
  * moved (limits, budgets, provenance), and the seed set.
  */
 export function thresholdChanges(before, after) {
+  assertUniqueQueries(before);
+  assertUniqueQueries(after);
   const byQuery = (thresholds) => new Map(thresholds.discovery.queries.map((entry) => [entry.query, entry]));
   const [was, now] = [byQuery(before), byQuery(after)];
   const rest = ({ discovery: { queries: _queries, ...discovery }, seedSet: _seedSet, ...others }) => ({ ...others, discovery });
@@ -93,6 +114,7 @@ function dense(api, args) {
 
 /** Measures the catalog `api` against the fixed query set; `baselineApi` has no pattern compiled. */
 export function measureRegression({ api, baselineApi, thresholds }) {
+  assertUniqueQueries(thresholds);
   const ranked = (target, query) => target.searchArtifacts({ query, limit: 100 }).data.items.map(({ id }) => id);
 
   const queries = thresholds.discovery.queries.map(({ query, expectedFirst, firstWithoutPatterns, expectedId, expectedWithin, relevant }) => {

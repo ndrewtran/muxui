@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { chmod, cp, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -1148,6 +1148,72 @@ test('a growth capture needs a retained close-out capture and a block that captu
   }
 });
 
+// A duplicate query key would be merged by a comparison keyed by query, while measurement counts every entry.
+test('BL1 threshold queries are unique, so a comparison and a measurement see the same entries', async () => {
+  const { assertUniqueQueries, loadThresholds, measureRegression, parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const thresholds = await loadThresholds();
+  assertUniqueQueries(thresholds);
+  const [first] = thresholds.discovery.queries;
+  const duplicated = structuredClone(thresholds);
+  duplicated.discovery.queries.push({ ...first, relevant: [] });
+  const refused = /BL1_THRESHOLDS_DUPLICATE_QUERY: the discovery query "poster grid" is listed more than once/u;
+  assert.throws(() => assertUniqueQueries(duplicated), refused);
+  assert.throws(() => parseThresholds(Buffer.from(JSON.stringify(duplicated))), refused);
+  assert.throws(() => thresholdChanges(thresholds, duplicated), refused);
+  assert.throws(() => thresholdChanges(duplicated, thresholds), refused);
+  assert.throws(() => measureRegression({ api: null, baselineApi: null, thresholds: duplicated }), refused, 'measurement refuses before it reads the catalog');
+});
+
+// A rehearsal copies the retained evidence over its destination, so a destination that overlaps the evidence must be refused first.
+test('a BL1 rehearsal starts from a copy of the retained evidence and refuses a destination that overlaps it', async () => {
+  const { seedRehearsal } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const root = 'tests/evidence/bl1';
+  const base = await mkdtemp(join(tmpdir(), 'muxui-bl1-seed-'));
+  const repo = join(base, 'repo');
+  const retained = join(repo, root);
+  const intact = async () => {
+    assert.equal(await readFile(join(retained, 'index.json'), 'utf8'), '{"retained":true}', 'the retained evidence is untouched');
+    assert.equal(await readFile(join(retained, 'records/a.json'), 'utf8'), 'a');
+  };
+  try {
+    await mkdir(join(retained, 'records'), { recursive: true });
+    await writeFile(join(retained, 'index.json'), '{"retained":true}');
+    await writeFile(join(retained, 'records/a.json'), 'a');
+    await symlink(repo, join(base, 'link-to-repo'));
+    await mkdir(join(base, 'tests-link'), { recursive: true });
+    await symlink(join(repo, 'tests'), join(base, 'tests-link/tests'));
+
+    // Each destination overlaps the retained evidence: the repository itself (what `--rehearsal=.` resolves to), its parent, a
+    // directory inside the evidence, a symlink to the repository, a path that reaches the evidence through a symlink and does not exist yet,
+    // and a destination whose own `tests` is a symlink into the repository.
+    for (const [label, destination] of [
+      ['the repository', repo],
+      ['its parent', base],
+      ['inside the evidence', join(retained, 'out')],
+      ['a symlink to the repository', join(base, 'link-to-repo')],
+      ['a missing path through a symlink', join(base, 'link-to-repo', root, 'not-yet')],
+      ['a destination whose tests is a symlink', join(base, 'tests-link')],
+    ]) {
+      await assert.rejects(seedRehearsal({ repositoryRoot: repo, destination, root }), /BL1_REHEARSAL_OVERLAP/u, label);
+      await intact();
+    }
+
+    // A directory outside the evidence, existing or not, receives a copy, and a rerun replaces what an earlier rehearsal left.
+    const destination = join(base, 'rehearsal');
+    await seedRehearsal({ repositoryRoot: repo, destination, root });
+    assert.equal(await readFile(join(destination, root, 'records/a.json'), 'utf8'), 'a');
+    await writeFile(join(destination, root, 'stale.json'), 'stale');
+    await seedRehearsal({ repositoryRoot: repo, destination, root });
+    assert.deepEqual((await readdir(join(destination, root))).sort(), ['index.json', 'records']);
+    // A directory inside the repository but outside the evidence is allowed.
+    await seedRehearsal({ repositoryRoot: repo, destination: join(repo, 'scratch'), root });
+    assert.equal(await readFile(join(repo, 'scratch', root, 'index.json'), 'utf8'), '{"retained":true}');
+    await intact();
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
 // BL1: each retained capture is checked against what it derives from its own source revision, read through git objects so a
 // later edit to the catalog, the thresholds, or the browser test routes never changes what a record bound. A close-out capture
 // is also held to the exact close-out pins. The current capture is at tests/evidence/bl1; an earlier one that a later capture
@@ -1169,6 +1235,13 @@ function catalogAt(revision) {
     variantIds: patterns.flatMap(({ variants }) => variants.map(({ example }) => example)).sort(),
     browserTests: patterns.filter((pattern) => declared[slugOf(pattern)] !== undefined).map((pattern) => `packages/react/${declared[slugOf(pattern)]}`).sort(),
   };
+}
+
+/** The titles of the cross-engine tests in a browser test file at `revision`: its `test(\`... in ${engine}\`)` declarations. */
+function browserTestTitles(revision, file) {
+  const titles = [...readAtRevision(repositoryRoot, revision, file).toString('utf8').matchAll(/^\s*test\(`([^`]*?) in \$\{engine\}`/gmu)].map(([, title]) => title);
+  assert.ok(titles.length > 0, `${file} declares a test titled "... in \${engine}"`);
+  return titles;
 }
 
 /** Maps a path a capture cites into the directory that holds the capture; archived copies keep the layout of the root. */
@@ -1199,10 +1272,11 @@ async function assertCopyMatchesIndex({ repo = repositoryRoot, directory, index 
 
 /**
  * The checks every capture passes, then those of its scope: a close-out capture is held to the exact close-out facts,
- * and a growth capture to the facts derived from the catalog, the browser test routes, and the thresholds at its own revision.
+ * and a growth capture to the facts derived from the catalog, the browser test routes, and the thresholds at its own
+ * revision, and to the retained close-out at `closeoutRevision`, whether it is the current capture or an archived one.
  */
-async function assertCapture({ directory, index, verification, records, artifacts, retained }) {
-  const { thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+async function assertCapture({ directory, index, verification, records, artifacts, retained }, { closeoutRevision } = {}) {
+  const { assertUniqueQueries, parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
   const { sourceRevision, sourceTree } = index;
   const { scope } = verification;
   assert.ok(scope === 'close-out' || scope === 'growth', `${directory}: the validation summary records its scope`);
@@ -1254,14 +1328,20 @@ async function assertCapture({ directory, index, verification, records, artifact
   assert.deepEqual(typecheck.variants.map(({ id }) => id).sort(), catalog.variantIds, 'E-BL1-03 typechecks every variant the catalog declares');
   assert.ok(typecheck.variants.every(({ exitCode, diagnostics, packedDeclarations, workspaceSources }) => exitCode === 0 && diagnostics === 0 && packedDeclarations && !workspaceSources));
 
-  // E-BL1-04: every variant page is audited, and every block browser test the policy routes passes in every engine.
+  // E-BL1-04: every variant page is audited, and every block browser test the policy routes passes in all three engines.
+  // The expected test and engine pairs come from the test files at this revision, never from the record's own engine list.
   const { storybook, browser } = artifacts['E-BL1-04'].observations;
   assert.deepEqual([...storybook.selection.families].sort(), catalog.patternSlugs, 'E-BL1-04 audits every block');
   assert.equal(storybook.selection.pages.length, catalog.variantIds.length, 'E-BL1-04 audits every variant page');
+  assert.deepEqual(browser.engines, ['chromium', 'firefox', 'webkit'], 'E-BL1-04 runs chromium, firefox, and webkit');
   assert.deepEqual([...browser.files].sort(), catalog.browserTests, 'E-BL1-04 runs the block browser tests the policy routes');
-  assert.equal(browser.engineRuns.length, browser.files.length * browser.engines.length, 'E-BL1-04 runs each test in each engine');
+  const expectedRuns = browser.engines.flatMap((engine) => catalog.browserTests.flatMap((file) => browserTestTitles(sourceRevision, file).map((title) => `${engine}: ${title}`))).sort();
+  assert.ok(expectedRuns.length > 0, 'E-BL1-04 expects at least one browser run');
+  assert.deepEqual(browser.engineRuns.map(({ engine, test }) => `${engine}: ${test}`).sort(), expectedRuns, 'E-BL1-04 passes each block browser test in each engine');
+  assert.match(browser.proof.command, /MUXUI_BROWSER_ENGINES=chromium,firefox,webkit /u, 'E-BL1-04 ran with all three engines');
+  assert.deepEqual(browser.proof.command.match(/test\/browser\/\S+\.test\.mjs/gu).sort(), catalog.browserTests.map((file) => file.slice('packages/react/'.length)), 'E-BL1-04 ran the routed test files');
   const results = browser.proof.tests;
-  assert.ok(results.fail === 0 && results.cancelled === 0 && results.skipped === 0 && results.pass === results.tests && results.pass >= browser.engineRuns.length, 'E-BL1-04: every browser result passes');
+  assert.ok(results.fail === 0 && results.cancelled === 0 && results.skipped === 0 && results.pass === results.tests && results.pass >= expectedRuns.length, 'E-BL1-04: every browser result passes');
 
   // E-BL1-05 and E-BL1-07: every pattern and variant is covered by the docs check and the parity matrix.
   const docs = artifacts['E-BL1-05'].observations.counts;
@@ -1315,7 +1395,8 @@ async function assertCapture({ directory, index, verification, records, artifact
   const thresholdBytes = readAtRevision(repositoryRoot, sourceRevision, baseline.thresholds.path);
   assert.equal(digest(thresholdBytes), baseline.thresholds.sha256, 'E-BL1-11 binds the thresholds committed at the source revision');
   assert.equal(retained.get(baseline.thresholds.path), baseline.thresholds.sha256);
-  const thresholds = JSON.parse(thresholdBytes.toString('utf8'));
+  const thresholds = parseThresholds(thresholdBytes);
+  assertUniqueQueries(thresholds);
   const { queries } = thresholds.discovery;
   const revised = thresholds.provenance.revisedAfterFirstMeasurement;
   assert.deepEqual(baseline.seedSet, thresholds.seedSet);
@@ -1343,14 +1424,20 @@ async function assertCapture({ directory, index, verification, records, artifact
     // The earlier E-BL1-08 and E-BL1-11 records are named by their successors, never silently replaced.
     assert.deepEqual(Object.entries(records).filter(([, record]) => record.supersedes !== undefined).map(([id, { supersedes }]) => [id, supersedes.sourceRevision]), [['E-BL1-08', 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151'], ['E-BL1-11', 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151']]);
   } else {
-    // A growth capture skips the close-out scope check and says so, and lists how the thresholds changed since the close-out.
+    // A growth capture skips the close-out scope check and says so, and is held to the retained close-out: it compares the
+    // thresholds with the close-out's, and its added blocks are the catalog here minus the catalog there, derived independently.
     assert.equal(boundary.closeoutScope.run, false, 'a growth capture records that it skipped the close-out scope check');
     assert.ok(!boundary.audit.checks.some(({ id }) => id === 'closeout-scope'));
+    assert.match(closeoutRevision ?? '', /^[0-9a-f]{40}$/u, `${directory}: a growth capture is checked against a retained close-out revision`);
     const { against, addedPatterns, ...changes } = baseline.thresholdChanges;
-    const before = readAtRevision(repositoryRoot, against.revision, against.path);
+    assert.deepEqual([against.revision, against.path], [closeoutRevision, baseline.thresholds.path], 'E-BL1-11 compares the thresholds with the retained close-out revision');
+    const before = readAtRevision(repositoryRoot, closeoutRevision, against.path);
     assert.equal(digest(before), against.sha256);
-    assert.deepEqual(changes, thresholdChanges(JSON.parse(before.toString('utf8')), thresholds), 'E-BL1-11 lists every change to the thresholds since the close-out');
-    assert.ok(addedPatterns.length > 0 && addedPatterns.every((id) => catalog.patternIds.includes(id)), 'E-BL1-11 names the added blocks');
+    assert.deepEqual(changes, thresholdChanges(parseThresholds(before), thresholds), 'E-BL1-11 lists every change to the thresholds since the close-out');
+    const closeoutPatterns = catalogAt(closeoutRevision).patternIds;
+    const added = catalog.patternIds.filter((id) => !closeoutPatterns.includes(id));
+    assert.ok(added.length > 0, 'E-BL1-11: a growth capture adds a block to the close-out');
+    assert.deepEqual([...addedPatterns].sort(), added, 'E-BL1-11 names the blocks added since the close-out');
     for (const [id, record] of Object.entries(records)) assert.ok(record.supersedes !== undefined, `${id}: a growth capture replaces the capture before it`);
   }
   return { scope, sourceRevision, catalog };
@@ -1383,40 +1470,135 @@ test('the BL1 block browser tests are derived from the policy routes, one per in
   assert.equal(catalogAt(closeoutRevision).browserTests.length, 4);
 });
 
+// The one capture older than scopes, named with its revision so no other capture can go without a scope.
+const legacyCaptures = new Map([[`${bl1}/superseded/be6f7c411f03`, 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151']]);
+
+/**
+ * Checks every capture under the retained root of `repo`: the current capture and each archived one records a scope
+ * (only the named older capture may not), and each is held to its scope and to the retained close-out revision.
+ */
+async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
+  const { retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const captures = await retainedCaptures({ outputRoot: repo, root: bl1 });
+  assert.equal(captures[0].directory, bl1, 'the current capture is retained');
+  const closeout = captures.find(({ scope }) => scope === 'close-out');
+  assert.ok(closeout, 'a close-out capture is retained, current or archived');
+  for (const { directory, scope, sourceRevision } of captures) {
+    if (scope === undefined && legacyCaptures.has(directory) && legacyCaptures.get(directory) === sourceRevision) continue;
+    assert.ok(scope === 'close-out' || scope === 'growth', `${directory} records a scope`);
+    const capture = await loadCapture({ repo, directory });
+    if (directory !== bl1) await assertCopyMatchesIndex({ repo, ...capture });
+    await assertCapture(capture, { closeoutRevision: closeout.sourceRevision });
+  }
+  return captures;
+}
+
 // The retained evidence covers E-BL1-01 to E-BL1-11 at one source revision that is in main's history, keeps its
 // disclosures, and cites only excerpts and captures the index retains. Every capture under the root is checked.
 test('BL1 retained evidence covers every assertion at one source revision and keeps its disclosures', async () => {
-  const { assertGrowthSource, measuredPatternIds, retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
-  const captures = await retainedCaptures({ outputRoot: repositoryRoot, root: bl1 });
-  assert.equal(captures[0].directory, bl1, 'the current capture is retained');
-  assert.ok(captures.some(({ scope }) => scope === 'close-out'), 'a close-out capture is retained, current or archived');
-  for (const { directory, scope } of captures) {
-    // A capture older than scopes is kept for its supersession chain, which the capture that replaced it names.
-    if (scope === undefined) continue;
-    const capture = await loadCapture({ directory });
-    if (directory !== bl1) await assertCopyMatchesIndex(capture);
-    await assertCapture(capture);
-  }
-  if (captures[0].scope === 'growth') {
-    // The growth capture adds a block to the close-out it replaced, and its threshold changes are relative to that close-out.
-    const baseline = (await loadCapture()).artifacts['E-BL1-11'].observations;
-    const { closeout, added } = await assertGrowthSource({ evidenceRoot: repositoryRoot, root: bl1, patternIds: await measuredPatternIds({ outputRoot: repositoryRoot, directory: bl1 }) });
-    assert.equal(baseline.thresholdChanges.against.revision, closeout.sourceRevision);
-    assert.deepEqual(baseline.thresholdChanges.addedPatterns, added);
-  }
+  await assertRetainedCaptures();
 });
 
-test('BL1 retained captures are held to their derived and close-out facts, and an archived copy is read from its own directory', async () => {
+/** The retained close-out capture of the repository: the current capture, or the one archived under superseded/. */
+async function retainedCloseout() {
   const { retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
-  const closeout = (await retainedCaptures({ outputRoot: repositoryRoot, root: bl1 })).find(({ scope }) => scope === 'close-out');
+  return (await retainedCaptures({ outputRoot: repositoryRoot, root: bl1 })).find(({ scope }) => scope === 'close-out');
+}
+
+/** A tree holding copies of the retained close-out, as the current capture and as each archive named in `archives`, plus the older named capture. */
+async function stageRetainedTree(closeout, archives = []) {
+  const repo = await mkdtemp(join(tmpdir(), 'muxui-bl1-retained-'));
+  const copy = async (directory) => {
+    for (const entry of ['index.json', 'verification.json', 'records', 'artifacts', 'validation', 'captures']) {
+      await cp(join(repositoryRoot, closeout.directory, entry), join(repo, directory, entry), { recursive: true });
+    }
+  };
+  await copy(bl1);
+  for (const name of archives) await copy(`${bl1}/superseded/${name}`);
+  await cp(join(repositoryRoot, bl1, 'superseded/be6f7c411f03'), join(repo, bl1, 'superseded/be6f7c411f03'), { recursive: true });
+  return repo;
+}
+
+/** Edits the validation summary of the capture in `directory` and keeps its index naming the edited bytes, so only the edit fails. */
+async function editSummary(repo, directory, change) {
+  const summaryPath = join(repo, directory, 'verification.json');
+  const summary = JSON.parse(await readFile(summaryPath, 'utf8'));
+  change(summary);
+  const text = canonicalJson(summary);
+  await writeFile(summaryPath, text);
+  const indexPath = join(repo, directory, 'index.json');
+  const index = JSON.parse(await readFile(indexPath, 'utf8'));
+  index.validation.sha256 = digest(text);
+  await writeFile(indexPath, canonicalJson(index));
+}
+
+test('every retained BL1 capture records a valid scope, and only the one named older capture may go without', async () => {
+  const closeout = await retainedCloseout();
+  const archive = `${bl1}/superseded/${closeout.sourceRevision.slice(0, 12)}`;
+  const refuses = async (label, pattern, edit, archives = [closeout.sourceRevision.slice(0, 12)]) => {
+    const repo = await stageRetainedTree(closeout, archives);
+    try {
+      await edit(repo);
+      await assert.rejects(assertRetainedCaptures({ repo }), pattern, label);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  };
+  const clean = await stageRetainedTree(closeout, [closeout.sourceRevision.slice(0, 12)]);
+  try {
+    const found = (await assertRetainedCaptures({ repo: clean })).map(({ directory, scope }) => [directory, scope]);
+    assert.deepEqual(found[0], [bl1, 'close-out']);
+    assert.deepEqual(found.slice(1), [[archive, 'close-out'], [`${bl1}/superseded/be6f7c411f03`, undefined]].sort(([left], [right]) => (left < right ? -1 : 1)));
+  } finally {
+    await rm(clean, { recursive: true, force: true });
+  }
+
+  // The archived close-out satisfies the presence check, so the current capture must carry a valid scope itself.
+  await refuses('the current capture has no scope', /tests\/evidence\/bl1 records a scope/u, (repo) => editSummary(repo, bl1, (summary) => { delete summary.scope; }));
+  await refuses('the current capture has an unknown scope', /tests\/evidence\/bl1 records a scope/u, (repo) => editSummary(repo, bl1, (summary) => { summary.scope = 'sideways'; }));
+  await refuses('an archived capture has no scope', /superseded\/\w+ records a scope/u, (repo) => editSummary(repo, archive, (summary) => { delete summary.scope; }));
+  await refuses('the older capture is named by its revision', /be6f7c411f03 records a scope/u, (repo) => editSummary(repo, `${bl1}/superseded/be6f7c411f03`, (summary) => { summary.sourceRevision = 'c'.repeat(40); }));
+  await refuses('a capture with no validation summary', /tests\/evidence\/bl1 records a scope/u, (repo) => rm(join(repo, bl1, 'verification.json')));
+  // An archived capture is held to its scope as the current one is.
+  await refuses('an archived close-out relabelled growth', /a growth capture records that it skipped the close-out scope check/u, (repo) => editSummary(repo, archive, (summary) => { summary.scope = 'growth'; }));
+});
+
+/**
+ * The close-out capture forged into a growth capture of the same source revision, as if `closeout` were the retained
+ * close-out revision, carrying what a real growth capture records: the thresholds compared with that revision's, the
+ * blocks added since it, and a predecessor for every record.
+ */
+async function forgeGrowth(capture, closeout) {
+  const { parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const forged = structuredClone(capture);
+  forged.verification.scope = 'growth';
+  const boundary = forged.artifacts['E-BL1-09'].observations;
+  boundary.closeoutScope = { run: false, reason: 'forged' };
+  boundary.audit.checks = boundary.audit.checks.filter(({ id }) => id !== 'closeout-scope');
+  const path = forged.artifacts['E-BL1-11'].observations.thresholds.path;
+  const before = readAtRevision(repositoryRoot, closeout, path);
+  const closeoutPatterns = catalogAt(closeout).patternIds;
+  forged.artifacts['E-BL1-11'].observations.thresholdChanges = {
+    against: { revision: closeout, path, sha256: digest(before) },
+    addedPatterns: catalogAt(capture.index.sourceRevision).patternIds.filter((id) => !closeoutPatterns.includes(id)),
+    ...thresholdChanges(parseThresholds(before), parseThresholds(readAtRevision(repositoryRoot, capture.index.sourceRevision, path))),
+  };
+  for (const [id, record] of Object.entries(forged.records)) {
+    record.supersedes = { path: `${bl1}/superseded/${closeout.slice(0, 12)}/records/${id}.json`, sha256: digest(id), sourceRevision: closeout };
+    forged.retained.set(record.supersedes.path, record.supersedes.sha256);
+  }
+  return forged;
+}
+
+test('BL1 retained captures are held to their derived and close-out facts', async () => {
+  const closeout = await retainedCloseout();
   const capture = await loadCapture({ directory: closeout.directory });
   assert.equal((await assertCapture(capture)).catalog.variantIds.length, 5);
-  const tampered = (change) => {
-    const forged = structuredClone(capture);
+  const rejects = (change, message, base = capture, options) => {
+    const forged = structuredClone(base);
     change(forged);
-    return assertCapture(forged);
+    return assert.rejects(assertCapture(forged, options), (error) => error.message.includes(message), message);
   };
-  const rejects = (change, message) => assert.rejects(tampered(change), (error) => error.message.includes(message), message);
 
   // Derived from the catalog, the policy routes, and the thresholds at the capture's own revision.
   await rejects(({ artifacts: forged }) => { forged['E-BL1-03'].observations.typecheck.perVariant.variants.pop(); }, 'E-BL1-03 typechecks every variant the catalog declares');
@@ -1424,6 +1606,16 @@ test('BL1 retained captures are held to their derived and close-out facts, and a
   await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholds.sha256 = `sha256:${'0'.repeat(64)}`; }, 'E-BL1-11 binds the thresholds committed at the source revision');
   await rejects(({ artifacts: forged }) => { forged['E-BL1-10'].observations.review.reviewedCatalogPatternsTree = 'c'.repeat(40); }, 'the reviewer read the block sources this capture scanned');
   await rejects(({ artifacts: forged }) => { forged['E-BL1-01'].observations.requiredNegatives[0].owner = null; }, 'E-BL1-01: all eight name an owner');
+  // The browser proof is derived from the test files, not from the record's own engine list: an empty record is refused.
+  await rejects(({ artifacts: forged }) => {
+    const browser = forged['E-BL1-04'].observations.browser;
+    Object.assign(browser, { engines: [], engineRuns: [] });
+    Object.assign(browser.proof.tests, { pass: 0, tests: 0 });
+  }, 'E-BL1-04 runs chromium, firefox, and webkit');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.engineRuns = forged['E-BL1-04'].observations.browser.engineRuns.filter(({ engine }) => engine !== 'webkit'); }, 'E-BL1-04 passes each block browser test in each engine');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.engineRuns.pop(); }, 'E-BL1-04 passes each block browser test in each engine');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.proof.command = forged['E-BL1-04'].observations.browser.proof.command.replace('chromium,firefox,webkit', 'chromium'); }, 'E-BL1-04 ran with all three engines');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.proof.command = forged['E-BL1-04'].observations.browser.proof.command.replace(/ test\/browser\/pattern-poster-grid\.test\.mjs/u, ''); }, 'E-BL1-04 ran the routed test files');
   // The close-out pins.
   await rejects(({ artifacts: forged }) => { Object.assign(forged['E-BL1-04'].observations.browser.proof.tests, { pass: 56, tests: 56 }); }, 'the close-out passes 57 of 57 browser results');
   await rejects(({ artifacts: forged }) => {
@@ -1435,15 +1627,46 @@ test('BL1 retained captures are held to their derived and close-out facts, and a
   // A scope is not interchangeable: relabelled as growth, the close-out is refused for the facts a growth capture must carry.
   await rejects(({ verification: forged }) => { forged.scope = 'growth'; }, 'a growth capture records that it skipped the close-out scope check');
   await rejects(({ verification: forged }) => { delete forged.scope; }, 'the validation summary records its scope');
+});
 
-  // An archived capture sits under superseded/<revision>/ and cites the root it was written to.
-  const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-archive-'));
+test('a BL1 growth capture is held to the retained close-out revision, current or archived', async () => {
+  const closeout = await retainedCloseout();
+  const capture = await loadCapture({ directory: closeout.directory });
+  // Only the poster grid had shipped at #226, so a capture of the four blocks added three to that close-out.
+  const earlier = '5026836747b36e23b8f2dd8bd695d3a420cc295c';
+  const added = ['muxui:pattern:account-settings', 'muxui:pattern:marketing-hero', 'muxui:pattern:pricing-plans'];
+  const growth = await forgeGrowth(capture, earlier);
+  assert.deepEqual(growth.artifacts['E-BL1-11'].observations.thresholdChanges.addedPatterns, added);
+  // Derived expectations alone hold a growth capture; the close-out pins do not apply to it.
+  assert.equal((await assertCapture(growth, { closeoutRevision: earlier })).scope, 'growth');
+  const rejects = (change, message, options = { closeoutRevision: earlier }, base = growth) => {
+    const forged = structuredClone(base);
+    change(forged);
+    return assert.rejects(assertCapture(forged, options), (error) => error.message.includes(message), message);
+  };
+
+  // It compares with the retained close-out, not with itself.
+  const own = capture.index.sourceRevision;
+  await rejects(({ artifacts: forged }) => {
+    const changes = forged['E-BL1-11'].observations.thresholdChanges;
+    Object.assign(changes, { against: { ...changes.against, revision: own }, addedPatterns: ['muxui:pattern:poster-grid'], addedQueries: [], revisedQueries: [], changedValues: [], removedQueries: [], seedSet: { added: [], removed: [] } });
+  }, 'E-BL1-11 compares the thresholds with the retained close-out revision');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholdChanges.addedPatterns = ['muxui:pattern:poster-grid']; }, 'E-BL1-11 names the blocks added since the close-out');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholdChanges.addedQueries.push('invented'); }, 'E-BL1-11 lists every change to the thresholds since the close-out');
+  // It must add a block to that close-out, and must be checked against one.
+  await assert.rejects(assertCapture(await forgeGrowth(capture, own), { closeoutRevision: own }), (error) => error.message.includes('a growth capture adds a block to the close-out'));
+  await rejects(() => {}, 'a growth capture is checked against a retained close-out revision', {});
+});
+
+test('a BL1 archived capture is read from its own directory and must match its index', async () => {
+  const closeout = await retainedCloseout();
+  const capture = await loadCapture({ directory: closeout.directory });
+  const outputRoot = await stageRetainedTree(closeout);
   try {
     const archive = `${bl1}/superseded/${capture.index.sourceRevision.slice(0, 12)}`;
     for (const entry of ['index.json', 'verification.json', 'records', 'artifacts', 'validation', 'captures']) {
       await cp(join(repositoryRoot, closeout.directory, entry), join(outputRoot, archive, entry), { recursive: true });
     }
-    await cp(join(repositoryRoot, bl1, 'superseded'), join(outputRoot, bl1, 'superseded'), { recursive: true, force: true });
     const archived = await loadCapture({ repo: outputRoot, directory: archive });
     await assertCopyMatchesIndex({ repo: outputRoot, ...archived });
     assert.deepEqual(await assertCapture(archived), await assertCapture(capture));

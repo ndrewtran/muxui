@@ -9,11 +9,13 @@
 // - `retainedCaptures` and `assertGrowthSource` find the retained close-out capture a growth capture
 //   builds on, and refuse a growth capture that adds no block to it.
 // - `blockBrowserTests` derives the cross-engine browser tests from the policy's pattern routes.
+// - `seedRehearsal` starts a rehearsal from a copy of the retained evidence, and refuses a destination
+//   that overlaps it before removing anything.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { cp, mkdir, readFile, readdir } from 'node:fs/promises';
-import { join, posix } from 'node:path';
+import { cp, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises';
+import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { hasUnsanitizedEvidenceOutput } from '../../../tooling/audits/repository-policy/src/evidence-verify.mjs';
 import { sanitizePaths } from './proof-run.mjs';
 
@@ -183,15 +185,18 @@ export async function supersededFiles({ outputRoot, root }) {
   return files.sort((left, right) => (left.path < right.path ? -1 : 1));
 }
 
-/** Every retained capture under `<root>`: the current one, then each archived under `superseded/`, with the scope its validation summary records (absent on a capture older than scopes). */
+/**
+ * Every capture directory under `<root>`: the current one, then each archived under `superseded/`, with the
+ * scope its validation summary records. A directory with no validation summary, or an older one with no scope,
+ * reports no scope, so a caller decides which of those it accepts.
+ */
 export async function retainedCaptures({ outputRoot, root }) {
   const archive = join(outputRoot, root, 'superseded');
   const archived = existsSync(archive) ? (await readdir(archive, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map(({ name }) => name).sort() : [];
   const captures = [];
   for (const directory of [root, ...archived.map((name) => posix.join(root, 'superseded', name))]) {
     const path = join(outputRoot, directory, 'verification.json');
-    if (!existsSync(path)) continue;
-    const { scope, sourceRevision } = JSON.parse(await readFile(path, 'utf8'));
+    const { scope, sourceRevision } = existsSync(path) ? JSON.parse(await readFile(path, 'utf8')) : {};
     captures.push({ directory, scope, sourceRevision });
   }
   return captures;
@@ -228,4 +233,43 @@ export function blockBrowserTests({ declared, patternSlugs, reactRoot }) {
   const missing = tests.filter((test) => !existsSync(join(reactRoot, test)));
   if (tests.length === 0 || missing.length > 0) throw new Error(`BL1_BROWSER_TEST_MISSING: ${tests.length === 0 ? 'patternBrowserTests declares no block browser test' : `${missing.join(', ')} does not exist`}`);
   return tests;
+}
+
+/** The real path of `path` with symlinks resolved; a path that does not exist yet resolves through its deepest existing ancestor. */
+async function realpathLoose(path) {
+  const missing = [];
+  let current = resolve(path);
+  for (;;) {
+    try {
+      return join(await realpath(current), ...missing.toReversed());
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      missing.push(basename(current));
+      current = dirname(current);
+    }
+  }
+}
+
+const isInside = (outer, inner) => {
+  const path = relative(outer, inner);
+  return path === '' || !(path === '..' || path.startsWith(`..${sep}`) || isAbsolute(path));
+};
+
+/**
+ * Starts a rehearsal from the retained evidence: replaces `<destination>/<root>` with a copy of
+ * `<repositoryRoot>/<root>`, so reused reviews and the supersession archive behave as in a real capture.
+ * It refuses, before removing anything, a destination or target that overlaps the retained evidence,
+ * compared by real path with either containing the other (`--rehearsal=.` would otherwise delete the
+ * evidence before it is copied).
+ */
+export async function seedRehearsal({ repositoryRoot, destination, root }) {
+  const source = await realpathLoose(join(repositoryRoot, root));
+  const target = await realpathLoose(join(destination, root));
+  for (const [name, path] of [['destination', await realpathLoose(destination)], ['target', target]]) {
+    if (isInside(path, source) || isInside(source, path)) {
+      throw new Error(`BL1_REHEARSAL_OVERLAP: the rehearsal ${name} ${path} overlaps the retained evidence ${source}; choose a directory outside it`);
+    }
+  }
+  await rm(target, { recursive: true, force: true });
+  await cp(source, target, { recursive: true });
 }
