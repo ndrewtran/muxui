@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:f1893c4b294bc3e107bc95feceb4c4e47e9f36a32314b5a48899a5508d6a70ce -->
+<!-- @generated-content-sha256: sha256:775653729dd083873db8146ecea0e50e165256834f1dd8135adf414572de99c4 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -148,7 +148,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | TagSelect | experimental | . | .muxui-tag-select | items, size, selectedKeys, defaultSelectedKeys, getItemLabel, label, placeholder, description, errorMessage, disabled, invalid, required, onSelectionChange |
 | Text | experimental | . | .muxui-text | variant, size, color, as, truncate |
 | TextArea | experimental | . | .muxui-text-area | value, defaultValue, rows, maxLength, placeholder, disabled, invalid, required, readOnly, size |
-| TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, onGenerate, onLinkRequest, onImageRequest, onColorRequest, bubbleMenu |
+| TextEditor | experimental | ./text-editor | .muxui-text-editor | value, defaultValue, label, description, errorMessage, disabled, readOnly, required, invalid, placeholder, limit, toolbar, floating, onGenerate, onLinkRequest, onImageRequest, onColorRequest, bubbleMenu, selectionActions, selectionInstruction, onSelectionRequest |
 | TextField | experimental | . | .muxui-text-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, disabled, size, readOnly, required, invalid, name, placeholder, type, autoComplete, autoFocus, inputMode, maxLength, minLength, pattern, spellCheck, id, inputRef, inputProps |
 | TimeField | experimental | . | .muxui-time-field | label, description, errorMessage, aria-label, aria-labelledby, value, defaultValue, minValue, maxValue, disabled, size, readOnly, required, invalid, name |
 | Toast | experimental | . | .muxui-toast | message, title, variant, duration, onDismiss, className |

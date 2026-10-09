@@ -998,6 +998,10 @@
       "path": "catalog/components/text-editor/examples/react/basic.example.json"
     },
     {
+      "family": "example",
+      "path": "catalog/components/text-editor/examples/react/selection-actions.example.json"
+    },
+    {
       "family": "pattern",
       "path": "catalog/patterns/poster-grid/artifact.json"
     },
