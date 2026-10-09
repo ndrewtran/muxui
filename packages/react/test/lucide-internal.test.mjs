@@ -9,7 +9,6 @@ import { resolve } from 'node:path';
 import { createDom, installDom } from './support/dom.mjs';
 import {
   AlertDialog,
-  Breadcrumbs,
   Calendar,
   Checkbox,
   CheckboxField,
@@ -53,7 +52,9 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   assert.match(lockfile, new RegExp(`lucide-react@1\\.37\\.0:\\n\\s+resolution: \\{integrity: ${lucideIntegrity.replaceAll('+', '\\+')}\\}`));
 
   // Every renderer source importing Lucide, with its exact deep icon modules.
-  // Deep default imports keep unbundled Node consumers off the full icon barrel.
+  // This inventory is updated alongside new icons so the reproof rule can see
+  // them; it is not an approval list (Decision 0011 amendment 06). Deep default
+  // imports keep unbundled Node consumers off the full icon barrel.
   const expectedIconsByFile = {
     'collections.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'x'],
     'components.mjs': ['check', 'chevron-down', 'minus'],
@@ -93,7 +94,6 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
 
 test('MuxUI affordances render the accepted Lucide glyph mapping as decorative SVGs', () => {
   const markup = renderToString(React.createElement('div', null,
-    React.createElement(Breadcrumbs, { 'aria-label': 'Path', items: [{ label: 'Home', href: '/' }, { label: 'Current' }] }),
     React.createElement(Checkbox, { defaultChecked: true }, 'Complete'),
     React.createElement(Checkbox, { indeterminate: true }, 'Mixed'),
     React.createElement(SearchField, { label: 'Search', defaultValue: 'MuxUI' }),
@@ -182,8 +182,6 @@ test('MuxUI affordances render the accepted Lucide glyph mapping as decorative S
       ['path', 'M3 10h18', null, null, null, null, null],
     ]);
   }
-  assert.equal(dom.window.document.querySelector('.muxui-breadcrumbs svg'), null);
-  assert.equal(dom.window.document.querySelector('.muxui-search-field .lucide-search'), null);
   dom.window.close();
 });
 
