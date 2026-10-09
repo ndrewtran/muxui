@@ -6,6 +6,9 @@
 //   reviewed revision and tree, and compares them with the source revision.
 // - `archiveSupersededCapture` and `supersededFiles` keep an earlier capture in the tree
 //   when a later one replaces it, so replacing records never deletes the only copy.
+// - `retainedCaptures` and `assertGrowthSource` find the retained close-out capture a growth capture
+//   builds on, and refuse a growth capture that adds no block to it.
+// - `blockBrowserTests` derives the cross-engine browser tests from the policy's pattern routes.
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
@@ -178,4 +181,51 @@ export async function supersededFiles({ outputRoot, root }) {
     files.push({ path: posix.join(root, 'superseded', absolute.slice(base.length + 1).split('\\').join('/')), sha256: sha256(await readFile(absolute)) });
   }
   return files.sort((left, right) => (left.path < right.path ? -1 : 1));
+}
+
+/** Every retained capture under `<root>`: the current one, then each archived under `superseded/`, with the scope its validation summary records (absent on a capture older than scopes). */
+export async function retainedCaptures({ outputRoot, root }) {
+  const archive = join(outputRoot, root, 'superseded');
+  const archived = existsSync(archive) ? (await readdir(archive, { withFileTypes: true })).filter((entry) => entry.isDirectory()).map(({ name }) => name).sort() : [];
+  const captures = [];
+  for (const directory of [root, ...archived.map((name) => posix.join(root, 'superseded', name))]) {
+    const path = join(outputRoot, directory, 'verification.json');
+    if (!existsSync(path)) continue;
+    const { scope, sourceRevision } = JSON.parse(await readFile(path, 'utf8'));
+    captures.push({ directory, scope, sourceRevision });
+  }
+  return captures;
+}
+
+/** The pattern ids the E-BL1-11 artifact of the capture in `directory` measured. */
+export async function measuredPatternIds({ outputRoot, directory }) {
+  const { observations } = JSON.parse(await readFile(join(outputRoot, directory, 'artifacts/E-BL1-11.json'), 'utf8'));
+  return observations.measured.denseBudgets.patterns.map(({ id }) => id);
+}
+
+/**
+ * A growth capture builds on a retained close-out capture, current or archived, and must add a block to
+ * it: the catalog needs a pattern id the close-out's E-BL1-11 record did not measure. Returns the
+ * close-out capture and the pattern ids added since it.
+ */
+export async function assertGrowthSource({ evidenceRoot, root, patternIds }) {
+  const closeout = (await retainedCaptures({ outputRoot: evidenceRoot, root })).find(({ scope }) => scope === 'close-out');
+  if (closeout === undefined) throw new Error(`BL1_GROWTH_NO_CLOSEOUT: a growth capture builds on a retained close-out capture, and ${root} retains none`);
+  const measured = await measuredPatternIds({ outputRoot: evidenceRoot, directory: closeout.directory });
+  const added = patternIds.filter((id) => !measured.includes(id));
+  if (added.length === 0) throw new Error(`BL1_GROWTH_NO_BLOCK: the catalog has no pattern beyond the ${measured.length} the close-out at ${closeout.sourceRevision.slice(0, 8)} measured; a growth capture follows an added block`);
+  return { closeout, added };
+}
+
+/**
+ * The cross-engine browser tests E-BL1-04 runs, in pattern order: the policy's `patternBrowserTests`,
+ * declared once per interactive block. Throws when a declared test names no enabled pattern or no file.
+ */
+export function blockBrowserTests({ declared, patternSlugs, reactRoot }) {
+  const unknown = Object.keys(declared).filter((slug) => !patternSlugs.includes(slug));
+  if (unknown.length > 0) throw new Error(`BL1_BROWSER_TEST_UNKNOWN: patternBrowserTests names ${unknown.join(', ')}, which is not an enabled pattern`);
+  const tests = patternSlugs.filter((slug) => declared[slug] !== undefined).map((slug) => declared[slug]);
+  const missing = tests.filter((test) => !existsSync(join(reactRoot, test)));
+  if (tests.length === 0 || missing.length > 0) throw new Error(`BL1_BROWSER_TEST_MISSING: ${tests.length === 0 ? 'patternBrowserTests declares no block browser test' : `${missing.join(', ')} does not exist`}`);
+  return tests;
 }

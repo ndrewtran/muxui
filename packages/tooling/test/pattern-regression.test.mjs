@@ -13,7 +13,7 @@ const thresholds = await loadThresholds();
 const api = createCatalogApi(JSON.parse(catalogJson));
 const measured = measureRegression({ api, baselineApi: await compileApiWithoutPatterns(), thresholds });
 
-// Every block holds the thresholds committed before the BL1 baseline was captured (E-BL1-11).
+// Every block holds the current thresholds, which a block revises in its own pull request (E-BL1-11).
 test('E-BL1-11: the shipped patterns hold the regression thresholds', () => {
   assert.deepEqual(regressionFailures(measured, thresholds), []);
   // The measurement saw every shipped pattern, not an empty set.
@@ -23,6 +23,7 @@ test('E-BL1-11: the shipped patterns hold the regression thresholds', () => {
   assert.equal(measured.search.componentQueries, api.listArtifacts({ kind: 'component', limit: 100 }).data.items.length);
 });
 
+// The mutations derive from the thresholds, so a block that revises a threshold keeps this test meaningful without editing it.
 test('E-BL1-11: each threshold fails when its measurement worsens', () => {
   const mutate = (change) => {
     const copy = structuredClone(measured);
@@ -34,12 +35,15 @@ test('E-BL1-11: each threshold fails when its measurement worsens', () => {
     assert.equal(failures.length, 1, JSON.stringify(failures));
     assert.match(failures[0], pattern_);
   };
-  only(mutate((copy) => { copy.discovery.queries[0].first = 'muxui:component:button'; }), /search "poster grid" ranks muxui:component:button first/u);
-  only(mutate((copy) => { copy.discovery.queries.find(({ expectedWithin }) => expectedWithin).rank = 4; }), /expected within 3/u);
-  only(mutate((copy) => { copy.discovery.queries.find(({ expectedWithin }) => expectedWithin).rank = 0; }), /nowhere/u);
+  const { tokensPerVariant, envelopeTokens, variantSourceLexemes } = thresholds.denseBudgets.examplesSection;
+  const { expectedWithin } = thresholds.discovery.queries.find((entry) => entry.expectedWithin !== undefined);
+  const [{ query: firstQuery }] = measured.discovery.queries;
+  only(mutate((copy) => { copy.discovery.queries[0].first = 'muxui:component:button'; }), new RegExp(`search "${firstQuery}" ranks muxui:component:button first`, 'u'));
+  only(mutate((copy) => { copy.discovery.queries.find((entry) => entry.expectedWithin !== undefined).rank = expectedWithin + 1; }), new RegExp(`expected within ${expectedWithin}`, 'u'));
+  only(mutate((copy) => { copy.discovery.queries.find((entry) => entry.expectedWithin !== undefined).rank = 0; }), /nowhere/u);
   only(mutate((copy) => { copy.discovery.meanPrecisionAt3 = 0.2; }), /mean precision at 3 is 0\.200/u);
   only(mutate((copy) => { copy.search.displaced.push({ query: 'Button', baselineFirst: 'a', first: 'b' }); }), /displace the first result of 1 component searches: Button/u);
   only(mutate((copy) => { copy.denseBudgets.patterns[0].rows[0].tokens = copy.denseBudgets.patterns[0].rows[0].budget + 1; }), /list pattern .* the registry budget is/u);
-  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.tokens = 1000 * pattern.examples.variants + 401; }), /get --section examples takes .* the ceiling is/u);
-  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.variantSourceLexemes[0].lexemes = 701; }), /source has 701 lexemes; the ceiling is 700/u);
+  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.tokens = tokensPerVariant * pattern.examples.variants + envelopeTokens + 1; }), /get --section examples takes .* the ceiling is/u);
+  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.variantSourceLexemes[0].lexemes = variantSourceLexemes + 1; }), new RegExp(`source has ${variantSourceLexemes + 1} lexemes; the ceiling is ${variantSourceLexemes}`, 'u'));
 });
