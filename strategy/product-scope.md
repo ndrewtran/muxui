@@ -1,5 +1,5 @@
 ---
-scopeVersion: 18.0.0
+scopeVersion: 18.0.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -138,6 +138,12 @@ Product Scope `15.0.2` applies Decision 0011 amendment 06 as a patch
 clarification: the existing internal `lucide-react@1.37.0` edge of
 `@muxui/react` is the default icon source for decorative affordances in every
 component, so the per-component affordance lists no longer limit it.
+
+Product Scope `18.0.1` applies Decision 0026 amendment 02 as a patch clarification:
+the rule that thresholds are fixed before a candidate is measured now states
+its one exception, a block-growth pull request revising the expectations for the
+name query of a category that gains a block, committed before the retained
+capture.
 
 ## Scope vocabulary
 
@@ -871,8 +877,11 @@ roadmap, not the tracker, owns milestone proof.
 ## Success measures
 
 Threshold values live in versioned evidence or release policy and are fixed
-before the relevant candidate is measured. This document owns the measures,
-not mutable numeric values.
+before the relevant candidate is measured. The one exception is BL1 block
+growth: the pull request that adds a block to a category may revise the
+expectations for that category's name query before the retained capture
+([Decision 0026 amendment 02](../decisions/0026-amendment-02-category-name-queries.md)).
+This document owns the measures, not mutable numeric values.
 
 ### Product and renderer measures
 
@@ -1722,3 +1731,24 @@ item was present; tracker reconciliation and protected-PR adoption remain
 pending. This local implementation creates no tracker item and claims no
 milestone completion, release readiness, stable or assistive-technology support,
 publication, production, daily-driver channel or consumer mutation.
+
+## Product Scope 18.0.1: category-name query expectations
+
+[Decision 0026 amendment 02](../decisions/0026-amendment-02-category-name-queries.md)
+lets the pull request that adds a block to a category revise the expectations
+for that category's name query, such as "collections", for the category's
+existing blocks. Every block of a category scores alike for its name query and
+ties sort by id, so an earlier block's rank depends on how many blocks share
+the category. The revision is committed before the main-only capture, recorded
+in the capture's `thresholdChanges`, and named in the pull request. The
+success-measures rule above and the Roadmap `E-BL1-11` row state the exception;
+every other existing threshold stays fixed and still needs a decision to
+revise.
+
+This patch changes no Scope ID, commitment state, release boundary, package,
+platform, public surface, support claim, or non-goal, and no Scope ID is added,
+removed, or transitioned. The showcase stays private and unpublished, and
+`SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE` stays `admitted`.
+
+Tracker migration: none. No open work changes, and this change creates no
+tracker items.

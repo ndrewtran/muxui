@@ -229,10 +229,16 @@ commit and the records must bind a commit on main.
   copy), or an authority decision is sought, and `provenance.revisedAfterFirstMeasurement`
   does not grow. For the same reason a growth pull request does not revise, loosen, or
   remove an existing block's expectation (`expectedFirst`, `expectedWithin`), a limit, or a
-  budget. A new block can still shift an existing rank (a second collections block moves the
-  poster grid's `collections` rank), and then `pattern-regression.test.mjs` fails: an
-  authority decision on the existing expectation comes first, and the pull request waits for
-  it. Prefer a block whose id, name, keywords, and category do not shift an existing rank. A
+  budget. The one standing exception is Decision 0026 amendment 02: a pull request that adds
+  a block to a category may revise the existing blocks' expectations for that category's
+  name query (the category name in lower case, such as `collections`), because every block
+  in the category ties on it. The revision is committed before the capture, keeps an
+  expectation on the query, goes in `provenance.summary` (not
+  `provenance.revisedAfterFirstMeasurement`), and is named in the pull request with the old
+  and new expectation and the measured rank. Any other shifted rank makes
+  `pattern-regression.test.mjs` fail: an authority decision on that expectation comes first,
+  and the pull request waits for it. Prefer a block whose id, name, keywords, and category do
+  not shift an existing rank. A
   pattern whose id and name carry a component word can outrank that component and fail the
   component search rule, so name a block for what it shows, not for a component. The later
   capture still lists every change to the file since the close-out in `E-BL1-11`
