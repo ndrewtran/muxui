@@ -35,7 +35,9 @@ test('E-BL1-11: each threshold fails when its measurement worsens', () => {
     assert.match(failures[0], pattern_);
   };
   only(mutate((copy) => { copy.discovery.queries[0].first = 'muxui:component:button'; }), /search "poster grid" ranks muxui:component:button first/u);
-  only(mutate((copy) => { copy.discovery.queries.find(({ expectedWithin }) => expectedWithin).rank = 4; }), /expected within 3/u);
+  // One rank past the first within-rank expectation, whatever a growth pull request revises that limit to.
+  const { expectedWithin } = thresholds.discovery.queries.find((query) => query.expectedWithin);
+  only(mutate((copy) => { copy.discovery.queries.find((query) => query.expectedWithin).rank = expectedWithin + 1; }), new RegExp(`expected within ${expectedWithin}$`, 'u'));
   only(mutate((copy) => { copy.discovery.queries.find(({ expectedWithin }) => expectedWithin).rank = 0; }), /nowhere/u);
   only(mutate((copy) => { copy.discovery.meanPrecisionAt3 = 0.2; }), /mean precision at 3 is 0\.200/u);
   only(mutate((copy) => { copy.search.displaced.push({ query: 'Button', baselineFirst: 'a', first: 'b' }); }), /displace the first result of 1 component searches: Button/u);
