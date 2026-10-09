@@ -63,7 +63,7 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
     'supplemental/index.mjs': ['check', 'chevron-down', 'chevrons-up-down', 'credit-card', 'external-link', 'menu', 'minus', 'search', 'x'],
     'supplemental/lightbox.mjs': ['chevron-left', 'chevron-right', 'x'],
     'tabs-motion.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'chevron-up'],
-    'text-editor/index.mjs': ['bold', 'image', 'italic', 'link', 'list', 'sparkles', 'text-align-center', 'text-align-end', 'text-align-start', 'type', 'underline'],
+    'text-editor/index.mjs': ['arrow-up', 'bold', 'check', 'chevron-left', 'chevron-right', 'image', 'italic', 'link', 'list', 'rotate-cw', 'sparkles', 'text-align-center', 'text-align-end', 'text-align-start', 'type', 'underline', 'x'],
   };
   const sourceRoot = resolve(packageRoot, 'src');
   const sourceFiles = (await readdir(sourceRoot, { recursive: true })).filter((file) => file.endsWith('.mjs') && file !== 'generate.mjs');

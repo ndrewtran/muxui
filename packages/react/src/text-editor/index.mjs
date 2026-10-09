@@ -1,4 +1,10 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
+import { Extension, getText, getTextSerializersFromSchema } from '@tiptap/core';
+import { closeHistory } from '@tiptap/pm/history';
+import { Fragment, Slice } from '@tiptap/pm/model';
+import { AllSelection, Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
+import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { StarterKit } from '@tiptap/starter-kit';
 import { Image } from '@tiptap/extension-image';
@@ -8,14 +14,20 @@ import { TextStyleKit } from '@tiptap/extension-text-style';
 import AlignCenter from 'lucide-react/dist/esm/icons/text-align-center.mjs';
 import AlignLeft from 'lucide-react/dist/esm/icons/text-align-start.mjs';
 import AlignRight from 'lucide-react/dist/esm/icons/text-align-end.mjs';
+import ArrowUp from 'lucide-react/dist/esm/icons/arrow-up.mjs';
 import Bold from 'lucide-react/dist/esm/icons/bold.mjs';
+import Check from 'lucide-react/dist/esm/icons/check.mjs';
+import ChevronLeft from 'lucide-react/dist/esm/icons/chevron-left.mjs';
+import ChevronRight from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import ImageIcon from 'lucide-react/dist/esm/icons/image.mjs';
 import Italic from 'lucide-react/dist/esm/icons/italic.mjs';
 import LinkIcon from 'lucide-react/dist/esm/icons/link.mjs';
 import List from 'lucide-react/dist/esm/icons/list.mjs';
+import RotateCw from 'lucide-react/dist/esm/icons/rotate-cw.mjs';
 import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs';
 import Type from 'lucide-react/dist/esm/icons/type.mjs';
 import Underline from 'lucide-react/dist/esm/icons/underline.mjs';
+import X from 'lucide-react/dist/esm/icons/x.mjs';
 import {
   ColorField as AriaColorField,
   Dialog as AriaDialog,
@@ -23,6 +35,7 @@ import {
   Input as AriaInput,
   Label as AriaLabel,
   Popover as AriaPopover,
+  VisuallyHidden,
   parseColor,
 } from 'react-aria-components';
 import { Button } from '../button.mjs';
@@ -435,10 +448,617 @@ function BubbleMenu({ editor, disabled, callbacks }) {
   );
 }
 
+// ─── Selection actions ───────────────────────────────────────────────────────
+//
+// A bar under a text selection hands the selected range to the caller, who runs
+// any transformation and applies the result through `replace` or `insertAfter`.
+// Undo history: an applied edit is one closed history event, so Cmd+Z reverts
+// it in a single step. Discard undoes that event (restoring the original
+// selection and leaving Redo available) instead of stacking a second edit, and
+// Keep leaves the event in place.
+
+let rangePainter;
+
+/**
+ * Paints one range owned by the selection bar, so the selection stays visible while focus is in the bar.
+ * Built on first use, so importing the module does no work.
+ */
+function selectionRangePainter() {
+  if (rangePainter) return rangePainter;
+  const key = new PluginKey('muxuiSelectionRange');
+  const extension = Extension.create({
+    name: 'muxuiSelectionRange',
+    addProseMirrorPlugins() {
+      return [new Plugin({
+        key,
+        state: {
+          init: () => null,
+          apply(transaction, range) {
+            const meta = transaction.getMeta(key);
+            if (meta !== undefined) return meta.range;
+            if (range === null || !transaction.docChanged) return range;
+            const from = transaction.mapping.map(range.from, 1);
+            const to = transaction.mapping.map(range.to, -1);
+            return to > from ? { from, to } : null;
+          },
+        },
+        props: {
+          decorations(state) {
+            const range = key.getState(state);
+            return range && range.to > range.from
+              ? DecorationSet.create(state.doc, [Decoration.inline(range.from, range.to, { class: 'muxui-text-editor__selection-range' })])
+              : null;
+          },
+        },
+      })];
+    },
+  });
+  rangePainter = { key, extension };
+  return rangePainter;
+}
+
+const PENDING_LABEL = 'Editing…';
+const FAILURE_MESSAGE = "Couldn't complete the edit";
+const REVIEW_MESSAGE = 'Edit ready to review';
+
+const sameRange = (a, b) => a === b || (a !== null && b !== null && a.from === b.from && a.to === b.to);
+const isThenable = (value) => typeof value?.then === 'function';
+const barControls = (bar) => [...bar.querySelectorAll('button:not(:disabled), input:not(:disabled)')];
+
+function validateSelectionActions(actions) {
+  if (actions === undefined) return [];
+  const ids = new Set();
+  for (const action of actions) {
+    if (!action || typeof action.id !== 'string' || action.id === '' || typeof action.label !== 'string' || action.label === '' || ids.has(action.id)) {
+      throw new TypeError('TextEditor selectionActions need a unique id and a nonempty label for every action.');
+    }
+    ids.add(action.id);
+  }
+  return actions;
+}
+
+/** The selected text range, or null for a caret, a node selection, or an empty document range. */
+function readSelectionRange(editor) {
+  const { selection, doc } = editor.state;
+  if (selection.empty) return null;
+  let { from, to } = selection;
+  if (selection instanceof AllSelection) {
+    from = Selection.atStart(doc).from;
+    to = Selection.atEnd(doc).to;
+  } else if (!(selection instanceof TextSelection)) {
+    return null;
+  }
+  return to > from ? { from, to } : null;
+}
+
+function takeSnapshot(editor, { from, to }) {
+  const { doc } = editor.state;
+  return Object.freeze({ text: doc.textBetween(from, to, '\n'), document: normalizeTextEditorDocument(doc.cut(from, to).toJSON()) });
+}
+
+/** Maps `range` through the transaction, or returns null when the transaction edits inside it. */
+function mapRange(range, transaction) {
+  let { from, to } = range;
+  for (const map of transaction.mapping.maps) {
+    let touched = false;
+    map.forEach((oldStart, oldEnd) => {
+      if (oldStart < to && oldEnd > from) touched = true;
+    });
+    if (touched) return null;
+    from = map.map(from, 1);
+    to = map.map(to, -1);
+  }
+  return { from, to };
+}
+
+function plainTextNodes(schema, text, marks) {
+  const nodes = [];
+  text.split(/\r\n|\r|\n/u).forEach((line, index) => {
+    if (index > 0) nodes.push(schema.nodes.hardBreak.create());
+    if (line) nodes.push(schema.text(line, marks));
+  });
+  return nodes;
+}
+
+/**
+ * Builds one closed history event that replaces the range or inserts after it, or returns null when the
+ * content is invalid, cannot be placed, or would exceed the character limit.
+ */
+function buildEdit(editor, { from, to }, mode, content, limit) {
+  const { state } = editor;
+  const { schema } = state;
+  const isText = typeof content === 'string';
+  if (!isText && !(content && typeof content === 'object' && content.type === 'doc')) return null;
+  const transaction = closeHistory(state.tr);
+  let range;
+  try {
+    const blocks = isText ? null : Fragment.fromJSON(schema, normalizeTextEditorDocument(content).content);
+    if (mode === 'replace') {
+      if (isText) transaction.replaceWith(from, to, plainTextNodes(schema, content, transaction.doc.resolve(from).marksAcross(transaction.doc.resolve(to)) ?? []));
+      else transaction.replaceRange(from, to, Slice.maxOpen(blocks));
+      range = { from: transaction.mapping.map(from, -1), to: transaction.mapping.map(to, 1) };
+    } else {
+      let at = to;
+      if (isText) {
+        transaction.replaceWith(at, at, plainTextNodes(schema, content, transaction.doc.resolve(at).marks()));
+      } else {
+        const $to = transaction.doc.resolve(to);
+        at = $to.depth === 0 ? to : $to.after();
+        transaction.replaceRange(at, at, new Slice(blocks, 0, 0));
+      }
+      range = { from: at, to: transaction.mapping.map(at, 1) };
+      // Nothing before the insertion point moved, so the selection stays where it was.
+      transaction.setSelection(TextSelection.create(transaction.doc, from, to));
+    }
+  } catch {
+    return null;
+  }
+  if (!transaction.docChanged) return null;
+  // Mirrors the length `TextEditor` enforces in onUpdate, so a rejected edit is never applied and reverted.
+  if (limit !== undefined && getText(transaction.doc, { blockSeparator: '\n\n', textSerializers: getTextSerializersFromSchema(schema) }).length > limit) return null;
+  return { transaction, range };
+}
+
+/**
+ * One request at a time. A session holds the request, its range, and an
+ * AbortController, and moves idle -> pending -> review or error. A transaction
+ * that edits inside the range makes the session stale; one outside only moves
+ * the range. During review, any outside edit keeps the change.
+ */
+function createSelectionController(editor, { getLimit, getOnRequest, notify }) {
+  let session = null;
+  let ownEdit = false;
+  const inOwnEdit = (callback) => {
+    ownEdit = true;
+    try { return callback(); } finally { ownEdit = false; }
+  };
+
+  function end(record) {
+    if (session !== record) return;
+    session = null;
+    record.controller.abort();
+    notify();
+  }
+
+  function applyEdit(record, mode, content) {
+    if (session !== record || record.edit || record.controller.signal.aborted || editor.isDestroyed || !editor.isEditable) return false;
+    const edit = buildEdit(editor, record.range, mode, content, getLimit());
+    if (!edit) return false;
+    const before = editor.state.doc;
+    inOwnEdit(() => {
+      editor.view.dispatch(edit.transaction);
+      // Edits after this one start a new history event, whatever the timing.
+      editor.view.dispatch(closeHistory(editor.state.tr));
+    });
+    record.edit = { before };
+    record.range = edit.range;
+    record.status = 'review';
+    notify();
+    return true;
+  }
+
+  function settle(record) {
+    if (session !== record || record.status !== 'pending') return;
+    record.status = 'idle';
+    notify();
+  }
+
+  function fail(record) {
+    if (session !== record || record.controller.signal.aborted || record.status === 'review') return;
+    record.status = 'error';
+    notify();
+  }
+
+  function start(request, reuse) {
+    const range = reuse?.range ?? readSelectionRange(editor);
+    if (!range || editor.isDestroyed || !editor.isEditable) return;
+    if (session) end(session);
+    const record = {
+      request,
+      origin: range,
+      range,
+      status: 'idle',
+      edit: null,
+      snapshot: reuse?.snapshot ?? takeSnapshot(editor, range),
+      controller: new AbortController(),
+    };
+    session = record;
+    let result;
+    try {
+      result = getOnRequest()?.(request, {
+        selection: record.snapshot,
+        signal: record.controller.signal,
+        replace: (content) => applyEdit(record, 'replace', content),
+        insertAfter: (content) => applyEdit(record, 'insertAfter', content),
+        close: () => end(record),
+      });
+    } catch {
+      fail(record);
+      return;
+    }
+    if (isThenable(result)) {
+      if (record.status === 'idle') record.status = 'pending';
+      Promise.resolve(result).then(() => settle(record), () => fail(record));
+    }
+    notify();
+  }
+
+  /** Undoes the applied edit and reselects its original range. */
+  function restore(record) {
+    const { before } = record.edit;
+    inOwnEdit(() => {
+      editor.commands.undo();
+      if (!editor.state.doc.eq(before)) {
+        const { tr } = editor.state;
+        editor.view.dispatch(tr.replace(0, tr.doc.content.size, new Slice(before.content, 0, 0)));
+      }
+      const { tr } = editor.state;
+      editor.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, record.origin.from, record.origin.to)));
+    });
+  }
+
+  return {
+    get session() { return session; },
+    start,
+    cancel: end,
+    keep: end,
+    discard(record) {
+      if (session !== record || !record.edit) return;
+      restore(record);
+      end(record);
+    },
+    retry(record) {
+      if (session !== record) return;
+      const { request, snapshot, origin, edit } = record;
+      if (edit) restore(record);
+      end(record);
+      start(request, { snapshot, range: origin });
+    },
+    transacted(transaction) {
+      const record = session;
+      if (ownEdit || !record || !transaction.docChanged) return;
+      if (record.status === 'review') {
+        end(record);
+        return;
+      }
+      const range = mapRange(record.range, transaction);
+      if (!range) {
+        end(record);
+        return;
+      }
+      record.range = range;
+      if (!record.edit) record.origin = range;
+    },
+    dispose() {
+      if (session) end(session);
+    },
+  };
+}
+
+function measureRange(editor, { from, to }) {
+  try {
+    const start = editor.view.coordsAtPos(from, 1);
+    const end = editor.view.coordsAtPos(to, -1);
+    const content = editor.view.dom.getBoundingClientRect();
+    const singleLine = Math.abs(start.top - end.top) < 2;
+    const left = singleLine ? Math.min(start.left, end.left) : content.left;
+    const right = singleLine ? Math.max(start.left, end.left) : content.right;
+    const top = Math.min(start.top, end.top);
+    return { left, top, width: right - left, height: Math.max(start.bottom, end.bottom) - top };
+  } catch {
+    // Layout is unavailable, for example before the editor mounts or in jsdom.
+    return { left: 0, top: 0, width: 0, height: 0 };
+  }
+}
+
+const sameRect = (a, b) => a !== null && b !== null && a.left === b.left && a.top === b.top && a.width === b.width && a.height === b.height;
+
+const e = React.createElement;
+const barIcon = (Icon) => e(Icon, { size: 16, 'aria-hidden': 'true', focusable: 'false' });
+
+function SelectionActions({ editor, enabled, actions: actionsProp, instruction, onRequest, limitRef }) {
+  const actions = React.useMemo(() => validateSelectionActions(actionsProp), [actionsProp]);
+  const [selection, setSelection] = React.useState(() => readSelectionRange(editor));
+  const [focusWithin, setFocusWithin] = React.useState(() => editor.isFocused);
+  const [barFocused, setBarFocused] = React.useState(false);
+  const [dismissedKey, setDismissedKey] = React.useState(null);
+  const [expanded, setExpanded] = React.useState(false);
+  const [draft, setDraft] = React.useState('');
+  const [anchor, setAnchor] = React.useState(null);
+  const [anchorElement, setAnchorElement] = React.useState(null);
+  const [, refresh] = React.useReducer((count) => count + 1, 0);
+  const barRef = React.useRef(null);
+  const focusWasInBar = React.useRef(false);
+  const frame = React.useRef(0);
+  const onRequestRef = React.useRef(onRequest);
+  const latest = React.useRef({});
+  onRequestRef.current = onRequest;
+
+  // A control that has focus when the bar changes may be replaced, so remember it to hand focus on afterwards.
+  const rememberFocus = () => {
+    focusWasInBar.current = focusWasInBar.current || Boolean(barRef.current?.contains(document.activeElement));
+  };
+  const controller = React.useMemo(() => createSelectionController(editor, {
+    getLimit: () => limitRef.current,
+    getOnRequest: () => onRequestRef.current,
+    notify: () => {
+      rememberFocus();
+      refresh();
+    },
+  }), [editor, limitRef]);
+
+  const record = controller.session;
+  const phase = record?.status ?? 'idle';
+  const live = phase !== 'idle';
+  const range = live ? record.range : selection;
+  const rangeKey = range ? `${range.from}:${range.to}` : '';
+  const show = enabled && range !== null && (live || ((instruction || actions.length > 0) && focusWithin && dismissedKey !== rangeKey));
+  const highlight = show && (barFocused || live) ? range : null;
+  latest.current = { phase, show, range, rangeKey, record };
+
+  const focusEditor = () => {
+    focusWasInBar.current = false;
+    editor.view.focus();
+  };
+
+  React.useEffect(() => {
+    const onTransaction = ({ transaction }) => {
+      controller.transacted(transaction);
+      const next = readSelectionRange(editor);
+      setSelection((current) => (sameRange(current, next) ? current : next));
+      measure();
+    };
+    editor.on('transaction', onTransaction);
+    return () => {
+      editor.off('transaction', onTransaction);
+      controller.dispose();
+    };
+  }, [controller, editor]);
+
+  React.useEffect(() => {
+    if (!enabled) controller.dispose();
+  }, [controller, enabled]);
+
+  // Whether focus is in the editor, its toolbar, or the bar.
+  React.useEffect(() => {
+    const surface = (node) => node instanceof Node && (editor.view.dom.closest('.muxui-text-editor')?.contains(node) || barRef.current?.contains(node));
+    const onFocusIn = (event) => setFocusWithin(Boolean(surface(event.target)));
+    const onFocusOut = (event) => { if (!surface(event.relatedTarget)) setFocusWithin(false); };
+    document.addEventListener('focusin', onFocusIn);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.removeEventListener('focusin', onFocusIn);
+      document.removeEventListener('focusout', onFocusOut);
+    };
+  }, [editor]);
+
+  function measure() {
+    const { show: visible, range: current } = latest.current;
+    setAnchor((previous) => {
+      const next = visible && current ? measureRange(editor, current) : null;
+      return sameRect(previous, next) ? previous : next;
+    });
+  }
+  function scheduleMeasure() {
+    if (frame.current) return;
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0;
+      measure();
+    });
+  }
+  React.useLayoutEffect(measure, [show, range?.from, range?.to]);
+  React.useEffect(() => {
+    if (!show) return undefined;
+    window.addEventListener('scroll', scheduleMeasure, true);
+    window.addEventListener('resize', scheduleMeasure);
+    return () => {
+      window.removeEventListener('scroll', scheduleMeasure, true);
+      window.removeEventListener('resize', scheduleMeasure);
+      cancelAnimationFrame(frame.current);
+      frame.current = 0;
+    };
+  }, [show]);
+
+  // Paint the range while focus is in the bar or a request owns it.
+  React.useEffect(() => {
+    if (editor.isDestroyed) return;
+    const { key } = selectionRangePainter();
+    if (!sameRange(key.getState(editor.state), highlight)) editor.view.dispatch(editor.state.tr.setMeta(key, { range: highlight }));
+  }, [editor, highlight?.from, highlight?.to]);
+
+  // Keep focus in the bar when its content changes underneath the focused control.
+  React.useLayoutEffect(() => {
+    if (!focusWasInBar.current) return;
+    focusWasInBar.current = false;
+    const bar = barRef.current;
+    if (bar && !bar.contains(document.activeElement)) barControls(bar)[0]?.focus();
+  });
+
+  // Alt+F10 enters the bar; Escape hides it, or cancels a request, from the editor.
+  React.useEffect(() => {
+    const dom = editor.view.dom;
+    const onKeyDown = (event) => {
+      if (event.isComposing) return;
+      const { show: visible, phase: current, rangeKey: key, record: active } = latest.current;
+      if (event.key === 'F10' && event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+        const first = barRef.current && barControls(barRef.current)[0];
+        if (first) {
+          event.preventDefault();
+          first.focus();
+        }
+      } else if (event.key === 'Escape' && visible && !event.defaultPrevented) {
+        if (current === 'pending' || current === 'error') controller.cancel(active);
+        else if (current === 'idle') setDismissedKey(key);
+        else return;
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    dom.addEventListener('keydown', onKeyDown, true);
+    return () => dom.removeEventListener('keydown', onKeyDown, true);
+  }, [controller, editor]);
+
+  const send = (request) => {
+    setExpanded(false);
+    controller.start(request);
+  };
+  const toggleExpanded = () => {
+    rememberFocus();
+    setExpanded((value) => !value);
+  };
+  const sendInstruction = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setDraft('');
+    send({ type: 'instruction', text });
+  };
+  const leave = (action) => {
+    action();
+    focusEditor();
+  };
+
+  const onBarKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      event.stopPropagation();
+      if (phase === 'pending' || phase === 'error') controller.cancel(record);
+      focusEditor();
+      return;
+    }
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      focusEditor();
+      return;
+    }
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const controls = barControls(event.currentTarget);
+    const index = controls.indexOf(document.activeElement);
+    if (index < 0) return;
+    const forward = (event.key === 'ArrowRight') !== (getComputedStyle(event.currentTarget).direction === 'rtl');
+    const target = event.target;
+    if (target instanceof HTMLInputElement) {
+      // Inside the field, arrows move the caret and only leave it at either end.
+      if (event.key === 'Home' || event.key === 'End' || target.selectionStart !== target.selectionEnd) return;
+      if (forward ? target.selectionStart !== target.value.length : target.selectionStart !== 0) return;
+    }
+    event.preventDefault();
+    const next = event.key === 'Home' ? 0 : event.key === 'End' ? controls.length - 1 : index + (forward ? 1 : -1);
+    controls[next]?.focus();
+  };
+
+  const button = (key, props, ...children) => e(Button, { key, variant: 'ghost', size: 'sm', preventFocusOnPress: true, ...props }, e('span', { className: 'muxui-text-editor__selection-content' }, ...children));
+  const iconButton = (key, label, Icon, props) => e(IconButton, { key, 'aria-label': label, size: 'sm', preventFocusOnPress: true, ...props }, barIcon(Icon));
+
+  let content;
+  let label = '';
+  if (phase === 'pending') {
+    const action = record.request.type === 'action' ? actions.find(({ id }) => id === record.request.id) : undefined;
+    label = action?.pendingLabel ?? PENDING_LABEL;
+    content = [
+      e('span', { key: 'pending', className: 'muxui-text-editor__selection-pending' }, barIcon(Sparkles), e('span', null, label)),
+      button('cancel', { onActivate: () => leave(() => controller.cancel(record)) }, 'Cancel'),
+    ];
+  } else if (phase === 'review') {
+    label = REVIEW_MESSAGE;
+    content = [
+      // The text stays selected, so keep the bar closed until the selection changes.
+      button('keep', { variant: 'primary', onActivate: () => leave(() => { const current = readSelectionRange(editor); setDismissedKey(current ? `${current.from}:${current.to}` : null); controller.keep(record); }) }, barIcon(Check), 'Keep'),
+      button('discard', { onActivate: () => leave(() => controller.discard(record)) }, barIcon(X), 'Discard'),
+      e('div', { key: 'divider', className: 'muxui-text-editor__separator', 'aria-hidden': 'true' }),
+      iconButton('retry', 'Try again', RotateCw, { onActivate: () => controller.retry(record) }),
+    ];
+  } else if (phase === 'error') {
+    label = FAILURE_MESSAGE;
+    content = [
+      e('span', { key: 'message', className: 'muxui-text-editor__selection-message' }, FAILURE_MESSAGE),
+      button('retry', { onActivate: () => controller.retry(record) }, 'Try again'),
+      button('dismiss', { onActivate: () => leave(() => controller.cancel(record)) }, 'Dismiss'),
+    ];
+  } else {
+    const overflow = actions.filter((action) => action.overflow);
+    const typing = instruction && draft !== '';
+    const visible = expanded ? actions : actions.filter((action) => !action.overflow);
+    content = [];
+    if (instruction && !expanded) {
+      content.push(e('input', {
+        key: 'input',
+        className: 'muxui-text-editor__selection-input',
+        type: 'text',
+        value: draft,
+        placeholder: 'Describe edits',
+        'aria-label': 'Describe edits',
+        autoComplete: 'off',
+        enterKeyHint: 'send',
+        onChange: (event) => setDraft(event.target.value),
+        onKeyDown: (event) => {
+          // A key that confirms an IME candidate reports isComposing, or keyCode 229 in Safari.
+          if (event.key !== 'Enter' || event.nativeEvent.isComposing || event.keyCode === 229) return;
+          event.preventDefault();
+          sendInstruction();
+        },
+      }));
+    }
+    if (typing) {
+      content.push(iconButton('send', 'Send', ArrowUp, { variant: 'primary', onActivate: sendInstruction }));
+    } else {
+      if (instruction && !expanded && visible.length > 0) content.push(e('div', { key: 'divider-start', className: 'muxui-text-editor__separator', 'aria-hidden': 'true' }));
+      for (const action of visible) {
+        content.push(button(`action-${action.id}`, { onActivate: () => send({ type: 'action', id: action.id }) },
+          action.icon === undefined ? null : e('span', { className: 'muxui-text-editor__selection-icon', 'aria-hidden': 'true' }, action.icon), action.label));
+      }
+      if (overflow.length > 0) {
+        content.push(e('div', { key: 'divider-end', className: 'muxui-text-editor__separator', 'aria-hidden': 'true' }));
+        content.push(iconButton('more', expanded ? 'Show fewer actions' : 'More actions', expanded ? ChevronLeft : ChevronRight, { 'aria-expanded': expanded, onActivate: toggleExpanded }));
+      }
+    }
+  }
+
+  const anchorKey = anchor ? `${anchor.left}|${anchor.top}|${anchor.width}|${anchor.height}` : '';
+  const anchorRef = React.useMemo(() => ({ current: anchorElement }), [anchorElement]);
+  return e(React.Fragment, null,
+    e(VisuallyHidden, { elementType: 'div', role: 'status', 'aria-live': 'polite', 'aria-atomic': 'true' }, show ? label : ''),
+    show && anchor && typeof document !== 'undefined' ? createPortal(e('span', {
+      // A new element per position makes the popover measure its anchor again.
+      key: anchorKey,
+      ref: setAnchorElement,
+      'aria-hidden': 'true',
+      style: { position: 'fixed', left: anchor.left, top: anchor.top, width: anchor.width, height: anchor.height, visibility: 'hidden', pointerEvents: 'none' },
+    }), document.body) : null,
+    show && anchorElement ? e(AriaPopover, {
+      isOpen: true,
+      onOpenChange: () => {},
+      triggerRef: anchorRef,
+      isNonModal: true,
+      isKeyboardDismissDisabled: true,
+      // The bar moves focus itself, so the popover must not restore it when the bar goes away.
+      disableFocusManagement: true,
+      placement: 'bottom',
+      offset: 6,
+      containerPadding: 8,
+      shouldFlip: true,
+      className: 'muxui-text-editor__selection-popover',
+    }, e('div', {
+      ref: barRef,
+      role: 'toolbar',
+      'aria-label': 'Selection actions',
+      'aria-orientation': 'horizontal',
+      'aria-busy': phase === 'pending' ? 'true' : undefined,
+      className: 'muxui-text-editor__selection-bar',
+      'data-phase': phase,
+      'data-instruction': instruction && !expanded && phase === 'idle' ? '' : undefined,
+      onKeyDown: onBarKeyDown,
+      // Pressing the bar must not move focus out of the editor, except into the field.
+      onMouseDown: (event) => { if (!(event.target instanceof HTMLInputElement)) event.preventDefault(); },
+      onFocus: () => setBarFocused(true),
+      onBlur: (event) => { if (!event.currentTarget.contains(event.relatedTarget)) setBarFocused(false); },
+    }, content)) : null);
+}
+
 /** Rich editing through Mux-owned document and command values; Tiptap stays internal. */
 export const TextEditor = React.forwardRef(function TextEditor({
   value, defaultValue = emptyDocument, onChange, disabled = false, invalid = false, placeholder = '', limit,
   toolbar = 'simple', floating = false, bubbleMenu = false, onLinkRequest, onImageRequest, onColorRequest, onGenerate,
+  selectionActions, selectionInstruction = true, onSelectionRequest,
   label, description, errorMessage, required = false, readOnly = false,
   id, 'aria-label': ariaLabel, 'aria-labelledby': ariaLabelledby, 'aria-describedby': ariaDescribedby,
   'aria-errormessage': ariaErrormessage, 'aria-invalid': ariaInvalid, 'aria-required': ariaRequired,
@@ -487,6 +1107,7 @@ export const TextEditor = React.forwardRef(function TextEditor({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Image,
       Placeholder.configure({ placeholder }),
+      selectionRangePainter().extension,
     ],
     onUpdate: ({ editor: instance }) => {
       const next = normalizeTextEditorDocument(instance.getJSON());
@@ -582,7 +1203,11 @@ export const TextEditor = React.forwardRef(function TextEditor({
   }, label !== undefined ? React.createElement('label', { id: labelId, htmlFor: contentId, className: 'muxui-text-editor__label' }, label) : null,
   toolbar ? React.createElement(Toolbar, { editor, disabled: disabled || readOnly, variant, floating: isFloating, callbacks }) : null,
   editor && bubbleMenu ? React.createElement(BubbleMenu, { editor, disabled: disabled || readOnly, callbacks }) : null,
-  React.createElement('div', { className: 'muxui-text-editor__content' }, editor ? React.createElement(EditorContent, { editor }) : null),
+  React.createElement('div', { className: 'muxui-text-editor__content' },
+    editor ? React.createElement(EditorContent, { editor }) : null,
+    editor && typeof onSelectionRequest === 'function'
+      ? React.createElement(SelectionActions, { editor, enabled: !disabled && !readOnly, actions: selectionActions, instruction: selectionInstruction, onRequest: onSelectionRequest, limitRef })
+      : null),
   description !== undefined ? React.createElement('p', { id: descriptionId, className: 'muxui-text-editor__description' }, description) : null,
   errorMessage !== undefined ? React.createElement('p', { id: errorId, className: 'muxui-text-editor__error', 'aria-live': 'polite' }, errorMessage) : null,
   characterLimit !== undefined ? React.createElement('p', { id: description === undefined && errorMessage === undefined ? descriptionId : undefined, className: cx('muxui-text-editor__hint', invalid && 'muxui-text-editor__hint--invalid'), 'aria-live': 'polite' }, `${Math.max(0, characterLimit - (editor?.getText().length ?? 0))} characters left`) : null);

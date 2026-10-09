@@ -249,6 +249,438 @@ test('TextEditor advanced controls expose the color dialog and durable image URL
   }
 });
 
+// Mounts a TextEditor with a selection bar in its own jsdom. The editor text is
+// "Hello brave new world"; "brave" is bold and spans positions 7 to 12.
+const selectionDocument = { type: 'doc', content: [{ type: 'paragraph', content: [
+  { type: 'text', text: 'Hello ' }, { type: 'text', text: 'brave', marks: [{ type: 'bold' }] }, { type: 'text', text: ' new world' },
+] }] };
+const selectionActionList = [
+  { id: 'improve', label: 'Improve', pendingLabel: 'Improving…' },
+  { id: 'explain', label: 'Explain' },
+  { id: 'shorten', label: 'Shorten', overflow: true },
+];
+
+async function mountSelectionEditor({ onSelectionRequest, ...props } = {}) {
+  const dom = new JSDOM('<!doctype html><button id="outside">Outside</button><div id="root"></div>', { url: 'http://localhost/' });
+  const restore = installDom(dom, { layoutStubs: true });
+  // jsdom has no layout, so give ProseMirror's coordinate lookups empty rectangles.
+  const emptyRect = () => ({ left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 });
+  dom.window.Range.prototype.getClientRects = () => [];
+  dom.window.Range.prototype.getBoundingClientRect = emptyRect;
+  const root = createRoot(document.querySelector('#root'));
+  const session = { actions: undefined };
+  const render = (next = {}) => act(async () => root.render(React.createElement(TextEditor, {
+    'aria-label': 'Draft',
+    defaultValue: selectionDocument,
+    selectionActions: selectionActionList,
+    onSelectionRequest: (request, actions) => {
+      session.actions = actions;
+      return onSelectionRequest?.(request, actions);
+    },
+    ...props,
+    ...next,
+  })));
+  await render();
+  const pm = document.querySelector('.ProseMirror');
+  const { editor } = pm;
+  const flush = () => act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)); });
+  const bar = () => document.querySelector('[role="toolbar"][aria-label="Selection actions"]');
+  const control = (name) => [...(bar()?.querySelectorAll('button, input') ?? [])].find((node) => (node.getAttribute('aria-label') ?? node.textContent.trim()) === name);
+  const names = () => [...(bar()?.querySelectorAll('button, input') ?? [])].map((node) => node.getAttribute('aria-label') ?? node.textContent.trim());
+  // React loads before jsdom, so it never sees native input events and reads the value on keyup instead.
+  const type = (input, value) => act(async () => {
+    input.focus();
+    Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set.call(input, value);
+    input.dispatchEvent(new window.KeyboardEvent('keyup', { key: 'a', bubbles: true }));
+  });
+  return {
+    editor, pm, render, flush, bar, control, names, type, session,
+    json: () => JSON.stringify(editor.getJSON()),
+    blocks: () => normalizeTextEditorDocument(editor.getJSON()).content,
+    text: () => editor.getText(),
+    status: () => document.querySelector('[role="status"]')?.textContent ?? '',
+    async select(from, to) {
+      await act(async () => { pm.focus(); editor.commands.setTextSelection({ from, to }); });
+      await flush();
+    },
+    click: (name) => act(async () => control(name).click()),
+    // Calls a request controller method the way a caller would, then lets React render the result.
+    async apply(method, content) {
+      let result;
+      await act(async () => { result = session.actions[method](content); });
+      return result;
+    },
+    key: (target, key, init) => act(async () => target.dispatchEvent(new window.KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init }))),
+    async close() {
+      await act(async () => root.unmount());
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      restore();
+    },
+  };
+}
+
+test('TextEditor selection actions follow a nonempty selection without taking focus', async () => {
+  const t = await mountSelectionEditor();
+  try {
+    assert.equal(t.bar(), null, 'no selection, no bar');
+    await t.select(7, 12);
+    assert.ok(t.bar());
+    assert.equal(document.activeElement, t.pm, 'the bar never takes focus');
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.deepEqual(t.names(), ['Describe edits', 'Improve', 'Explain', 'More actions']);
+    assert.equal(document.querySelector('.muxui-text-editor__selection-range'), null, 'the editor paints its own selection while focused');
+    for (const svg of t.bar().querySelectorAll('svg')) {
+      assert.equal(svg.getAttribute('aria-hidden'), 'true');
+      assert.equal(svg.getAttribute('focusable'), 'false');
+    }
+    await act(async () => t.editor.commands.setTextSelection(9));
+    await t.flush();
+    assert.equal(t.bar(), null, 'a caret hides the bar');
+    await t.select(7, 12);
+    await act(async () => document.querySelector('#outside').focus());
+    await t.flush();
+    assert.equal(t.bar(), null, 'focus outside the editor hides the bar');
+    await t.select(7, 12);
+    await t.render({ selectionInstruction: false });
+    assert.deepEqual(t.names(), ['Improve', 'Explain', 'More actions'], 'selectionInstruction hides the field');
+    await t.render({ selectionInstruction: false, selectionActions: [] });
+    assert.equal(t.bar(), null, 'a bar with nothing to offer stays hidden');
+    await t.render({ selectionInstruction: false });
+    await t.render({ readOnly: true });
+    assert.equal(t.bar(), null, 'read-only hides the bar');
+    await t.render({ readOnly: false, disabled: true });
+    assert.equal(t.bar(), null, 'disabled hides the bar');
+    await t.render({ disabled: false });
+    await t.select(7, 12);
+    assert.ok(t.bar());
+    await t.render({ onSelectionRequest: undefined });
+    assert.equal(t.bar(), null, 'the bar is enabled by onSelectionRequest');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection actions send action and instruction requests with a snapshot of the selection', async () => {
+  const requests = [];
+  const t = await mountSelectionEditor({ onSelectionRequest: (request, actions) => { requests.push({ request, ...actions.selection }); } });
+  try {
+    await t.select(7, 16);
+    await t.click('Improve');
+    assert.deepEqual(requests.at(-1).request, { type: 'action', id: 'improve' });
+    assert.equal(requests.at(-1).text, 'brave new');
+    assert.deepEqual(requests.at(-1).document, { type: 'doc', content: [{ type: 'paragraph', content: [
+      { type: 'text', text: 'brave', marks: [{ type: 'bold' }] }, { type: 'text', text: ' new' },
+    ] }] });
+
+    await t.click('More actions');
+    assert.equal(t.control('Show fewer actions').getAttribute('aria-expanded'), 'true');
+    assert.deepEqual(t.names(), ['Improve', 'Explain', 'Shorten', 'Show fewer actions'], 'overflow actions replace the field inline');
+    await t.click('Shorten');
+    assert.deepEqual(requests.at(-1).request, { type: 'action', id: 'shorten' });
+    assert.equal(t.control('More actions').getAttribute('aria-expanded'), 'false', 'sending collapses the bar');
+
+    const field = t.control('Describe edits');
+    await t.type(field, '  tighten this  ');
+    assert.deepEqual(t.names(), ['Describe edits', 'Send'], 'typing replaces the actions with Send');
+    const count = requests.length;
+    for (const init of [{ isComposing: true }, { keyCode: 229 }]) await t.key(field, 'Enter', init);
+    assert.equal(requests.length, count, 'an IME confirmation does not send');
+    await t.type(field, '   ');
+    await t.key(field, 'Enter');
+    assert.equal(requests.length, count, 'blank text does not send');
+    await t.type(field, '  tighten this  ');
+    await t.key(field, 'Enter');
+    assert.deepEqual(requests.at(-1).request, { type: 'instruction', text: 'tighten this' });
+    assert.equal(t.control('Describe edits').value, '');
+    await t.type(t.control('Describe edits'), 'again');
+    await t.click('Send');
+    assert.deepEqual(requests.at(-1).request, { type: 'instruction', text: 'again' });
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection review keeps, discards, and retries an applied edit', async () => {
+  const requests = [];
+  const t = await mountSelectionEditor({ onSelectionRequest: (request) => { requests.push(request); } });
+  try {
+    const original = t.json();
+    await t.select(7, 12);
+    await t.click('Improve');
+    assert.equal(await t.apply('replace', 'plucky'), true);
+    await t.flush();
+    assert.equal(t.text(), 'Hello plucky new world');
+    assert.deepEqual(t.blocks()[0].content[1], { type: 'text', text: 'plucky', marks: [{ type: 'bold' }] }, 'a string takes the marks at the start of the selection');
+    assert.equal(t.bar().getAttribute('data-phase'), 'review');
+    assert.deepEqual(t.names(), ['Keep', 'Discard', 'Try again']);
+    assert.equal(document.querySelector('.muxui-text-editor__selection-range')?.textContent, 'plucky', 'the new content stays highlighted');
+    assert.equal(t.status(), 'Edit ready to review');
+    for (const svg of t.bar().querySelectorAll('svg')) assert.equal(svg.getAttribute('aria-hidden'), 'true');
+
+    await t.click('Discard');
+    assert.equal(t.json(), original, 'discard restores the original content exactly');
+    assert.deepEqual([t.editor.state.selection.from, t.editor.state.selection.to], [7, 12], 'discard reselects the original range');
+    assert.equal(t.editor.can().undo(), false, 'discard leaves no extra undo step');
+    assert.equal(t.editor.can().redo(), true, 'discard acts like undo');
+    assert.equal(document.querySelector('.muxui-text-editor__selection-range'), null);
+    assert.deepEqual(t.names(), ['Describe edits', 'Improve', 'Explain', 'More actions']);
+    assert.equal(t.session.actions.signal.aborted, true, 'ending a request aborts its signal');
+
+    await t.click('Improve');
+    await t.apply('replace', 'plucky');
+    await t.flush();
+    await t.click('Try again');
+    assert.equal(t.json(), original, 'try again restores the original first');
+    assert.deepEqual(requests.slice(-2), [{ type: 'action', id: 'improve' }, { type: 'action', id: 'improve' }], 'try again sends the same request');
+    assert.equal(t.session.actions.selection.text, 'brave');
+    assert.equal(await t.apply('replace', 'spry'), true);
+    await t.flush();
+    await t.click('Keep');
+    assert.equal(t.text(), 'Hello spry new world');
+    assert.equal(t.bar(), null, 'keep closes the bar, though the kept text stays selected');
+    assert.equal(t.session.actions.signal.aborted, true);
+    await act(async () => t.editor.commands.undo());
+    assert.equal(t.json(), original, 'a kept edit undoes in one step');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection edits replace or insert strings and documents', async () => {
+  const t = await mountSelectionEditor();
+  const paragraph = (...content) => ({ type: 'paragraph', content });
+  const doc = (...content) => ({ type: 'doc', content });
+  const start = async () => {
+    await t.select(7, 12);
+    await t.click('Improve');
+  };
+  try {
+    const original = t.json();
+    await start();
+    assert.equal(await t.apply('replace', doc(paragraph({ type: 'text', text: 'sturdy', marks: [{ type: 'italic' }] }))), true);
+    assert.deepEqual(t.blocks(), [paragraph(
+      { type: 'text', text: 'Hello ' }, { type: 'text', text: 'sturdy', marks: [{ type: 'italic' }] }, { type: 'text', text: ' new world' },
+    )], 'a document keeps its own formatting and merges inline');
+    assert.equal(await t.apply('replace', 'again'), false, 'only the first edit of a request applies');
+    await t.click('Discard');
+    assert.equal(t.json(), original);
+
+    await start();
+    assert.equal(await t.apply('replace', doc(paragraph({ type: 'text', text: 'one' }), paragraph({ type: 'text', text: 'two' }))), true);
+    assert.deepEqual(t.blocks().map((block) => block.content.map((node) => node.text).join('')), ['Hello one', 'two new world']);
+    await t.click('Discard');
+
+    await start();
+    assert.equal(await t.apply('replace', 'a\nb'), true);
+    assert.deepEqual(t.blocks()[0].content.map((node) => node.type), ['text', 'text', 'hardBreak', 'text', 'text']);
+    await t.click('Discard');
+
+    await start();
+    assert.equal(await t.apply('insertAfter', '!'), true);
+    assert.equal(t.text(), 'Hello brave! new world', 'a string goes right after the selection');
+    assert.equal(document.querySelector('.muxui-text-editor__selection-range')?.textContent, '!');
+    assert.deepEqual([t.editor.state.selection.from, t.editor.state.selection.to], [7, 12], 'insertAfter leaves the selection in place');
+    await t.click('Discard');
+    assert.equal(t.json(), original);
+
+    await start();
+    assert.equal(await t.apply('insertAfter', doc(paragraph({ type: 'text', text: 'Added' }))), true);
+    assert.deepEqual(t.blocks().map((block) => block.content.map((node) => node.text).join('')), ['Hello brave new world', 'Added'], 'a document goes after the block');
+    await t.click('Discard');
+    assert.equal(t.json(), original);
+
+    await start();
+    for (const invalid of [42, null, undefined, { type: 'paragraph' }]) assert.equal(await t.apply('replace', invalid), false);
+    assert.equal(t.json(), original);
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection edits are refused once stale, aborted, over the limit, or not editable', async () => {
+  let changes = 0;
+  const t = await mountSelectionEditor({ limit: 25, onChange: () => { changes += 1; }, onSelectionRequest: () => new Promise(() => {}) });
+  try {
+    const original = t.json();
+    await t.select(7, 12);
+    await t.click('Improve');
+    const baseline = changes;
+    assert.equal(await t.apply('replace', 'x'.repeat(10)), false, 'an edit over the limit is refused');
+    assert.equal(t.json(), original);
+    assert.equal(changes, baseline, 'a refused edit is never applied and reverted');
+    assert.equal(t.bar().getAttribute('data-phase'), 'pending', 'no review state is entered');
+
+    await act(async () => t.editor.commands.insertContentAt(1, '>>'));
+    assert.equal(t.session.actions.signal.aborted, false, 'an edit outside the range keeps the request');
+    assert.equal(await t.apply('replace', 'Q'), true);
+    assert.equal(t.text(), '>>Hello Q new world', 'the range follows edits made before it');
+    await t.click('Discard');
+    assert.equal(t.text(), '>>Hello brave new world');
+
+    await t.select(9, 14);
+    await t.click('Improve');
+    await act(async () => t.editor.commands.insertContentAt(11, 'X'));
+    assert.equal(t.session.actions.signal.aborted, true, 'an edit inside the range makes the request stale');
+    assert.equal(await t.apply('replace', 'Q'), false);
+    await t.select(9, 14);
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'a stale request leaves no pending bar');
+
+    await t.click('Improve');
+    await t.render({ readOnly: true });
+    assert.equal(t.session.actions.signal.aborted, true, 'read-only ends the request');
+    assert.equal(await t.apply('replace', 'Q'), false);
+    assert.equal(t.bar(), null);
+    await t.render({ readOnly: false });
+
+    // A controlled value that changes under the request makes it stale.
+    const changed = { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Hello there new world' }] }] };
+    await t.render({ value: selectionDocument, defaultValue: undefined });
+    await t.select(7, 12);
+    await t.click('Improve');
+    assert.equal(t.session.actions.signal.aborted, false);
+    await t.render({ value: changed, defaultValue: undefined });
+    assert.equal(t.session.actions.signal.aborted, true, 'a controlled value change makes the request stale');
+    assert.equal(await t.apply('replace', 'Q'), false);
+    assert.equal(t.text(), 'Hello there new world');
+    await t.render({ value: undefined, defaultValue: changed });
+
+    await t.select(9, 14);
+    await t.click('Improve');
+    await t.key(t.pm, 'Escape');
+    assert.equal(t.session.actions.signal.aborted, true, 'Escape aborts the request');
+    assert.equal(await t.apply('replace', 'Q'), false);
+    await t.select(9, 14);
+    await t.click('Improve');
+    const closing = t.session.actions;
+    await act(async () => closing.close());
+    await t.flush();
+    assert.equal(closing.signal.aborted, true);
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'close() ends the request');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection requests show pending, cancel through the signal, and report failures', async () => {
+  const pending = [];
+  const t = await mountSelectionEditor({ onSelectionRequest: (request, actions) => new Promise((resolve, reject) => { pending.push({ request, actions, resolve, reject }); }) });
+  try {
+    await t.select(7, 12);
+    await t.click('Improve');
+    assert.equal(t.bar().getAttribute('data-phase'), 'pending');
+    assert.equal(t.bar().getAttribute('aria-busy'), 'true');
+    assert.equal(t.bar().textContent, 'Improving…Cancel', 'an action can name its pending text');
+    assert.equal(t.status(), 'Improving…', 'a polite live region announces the pending state');
+    assert.equal(document.querySelector('[role="status"]').getAttribute('aria-live'), 'polite');
+
+    await t.click('Cancel');
+    assert.equal(pending[0].actions.signal.aborted, true);
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(document.activeElement, t.pm, 'cancel returns focus to the editor');
+    pending[0].reject(new Error('late'));
+    await t.flush();
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'an aborted request reports no failure');
+
+    await t.click('Explain');
+    assert.equal(t.bar().textContent, 'Editing…Cancel', 'the default pending text');
+    pending[1].reject(new Error('offline'));
+    await t.flush();
+    assert.equal(t.bar().getAttribute('data-phase'), 'error');
+    assert.deepEqual(t.names(), ['Try again', 'Dismiss']);
+    assert.match(t.bar().textContent, /Couldn't complete the edit/u);
+    assert.equal(t.status(), "Couldn't complete the edit");
+    await t.click('Try again');
+    assert.deepEqual(pending[2].request, { type: 'action', id: 'explain' }, 'try again resends the request');
+    assert.equal(pending[2].actions.selection.text, 'brave');
+    pending[2].resolve();
+    await t.flush();
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle', 'a request that applies nothing returns to the bar');
+
+    await t.click('Explain');
+    pending[3].reject(new Error('offline'));
+    await t.flush();
+    await t.click('Dismiss');
+    assert.equal(t.bar().getAttribute('data-phase'), 'idle');
+    assert.equal(pending[3].actions.signal.aborted, true);
+    assert.equal(t.status(), '');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selection bar keyboard entry, roving, and Escape', async () => {
+  const t = await mountSelectionEditor();
+  try {
+    await t.select(7, 12);
+    await t.key(t.pm, 'F10', { altKey: true });
+    assert.equal(document.activeElement, t.control('Describe edits'), 'Alt+F10 moves focus into the bar');
+    assert.equal(document.querySelector('.muxui-text-editor__selection-range')?.textContent, 'brave', 'the range stays painted while focus is in the bar');
+
+    const focused = () => document.activeElement.getAttribute('aria-label') ?? document.activeElement.textContent.trim();
+    const sequence = [];
+    await t.key(document.activeElement, 'ArrowRight');
+    sequence.push(focused());
+    await t.key(document.activeElement, 'ArrowRight');
+    sequence.push(focused());
+    await t.key(document.activeElement, 'ArrowRight');
+    sequence.push(focused());
+    await t.key(document.activeElement, 'ArrowRight');
+    sequence.push(focused());
+    await t.key(document.activeElement, 'ArrowLeft');
+    sequence.push(focused());
+    await t.key(document.activeElement, 'Home');
+    sequence.push(focused());
+    await t.key(document.activeElement, 'End');
+    sequence.push(focused());
+    await act(async () => t.control('Explain').focus());
+    await t.key(document.activeElement, 'End');
+    sequence.push(focused());
+    assert.deepEqual(sequence, ['Improve', 'Explain', 'More actions', 'More actions', 'Explain', 'Describe edits', 'Describe edits', 'More actions'], 'Home and End stay with the caret inside the field');
+
+    const field = t.control('Describe edits');
+    await act(async () => field.focus());
+    await t.type(field, 'ab');
+    field.setSelectionRange(1, 1);
+    await t.key(field, 'ArrowRight');
+    assert.equal(document.activeElement, field, 'arrows move the caret inside the field');
+    field.setSelectionRange(2, 2);
+    await t.key(field, 'ArrowRight');
+    assert.equal(document.activeElement, t.control('Send'), 'the caret at the end hands focus to the next control');
+    await t.type(field, '');
+
+    await t.key(document.activeElement, 'Escape');
+    assert.equal(document.activeElement, t.pm, 'Escape returns focus to the editor');
+    assert.deepEqual([t.editor.state.selection.from, t.editor.state.selection.to], [7, 12], 'the selection stays intact');
+    assert.ok(t.bar(), 'the bar stays while the selection stays');
+    assert.equal(document.querySelector('.muxui-text-editor__selection-range'), null);
+
+    await t.key(t.pm, 'F10', { altKey: true });
+    await t.key(document.activeElement, 'Tab');
+    assert.equal(document.activeElement, t.pm, 'Tab leaves the bar for the editor');
+
+    await t.key(t.pm, 'Escape');
+    assert.equal(t.bar(), null, 'Escape in the editor hides the bar');
+    await t.select(1, 5);
+    assert.ok(t.bar(), 'a new selection shows the bar again');
+  } finally {
+    await t.close();
+  }
+});
+
+test('TextEditor selectionActions need unique ids and nonempty labels', async () => {
+  const t = await mountSelectionEditor();
+  const consoleError = console.error;
+  console.error = () => {};
+  try {
+    await t.select(7, 12);
+    await assert.rejects(async () => { await t.render({ selectionActions: [{ id: 'a', label: 'A' }, { id: 'a', label: 'B' }] }); }, /unique id/u);
+  } finally {
+    console.error = consoleError;
+    await t.close();
+  }
+});
+
 test('Resizable maintains pair totals, RTL keyboard direction, and cancels pointer commits', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom);

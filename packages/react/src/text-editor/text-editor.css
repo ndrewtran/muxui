@@ -451,6 +451,115 @@
   color: var(--muxui-semantic-color-neutral-90);
 }
 
+/* ─── Selection actions ────────────────────────────────────────────────────── */
+
+/* The selected range, painted while focus is in the bar or a request owns it. */
+.muxui-text-editor__selection-range {
+  background-color: color-mix(in srgb, var(--muxui-semantic-selection-track) 28%, transparent);
+  border-radius: var(--muxui-semantic-shape-editor-mark-radius);
+}
+
+.muxui-text-editor__selection-popover {
+  max-inline-size: calc(100vw - 1rem);
+  outline: none;
+}
+
+.muxui-text-editor__selection-bar {
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-dense-gap);
+  max-inline-size: 100%;
+  padding: var(--muxui-semantic-layout-inset-tight);
+  border: 1px solid var(--muxui-semantic-color-neutral-22);
+  border-radius: var(--muxui-semantic-control-radius);
+  background-color: var(--muxui-semantic-color-neutral-10);
+  color: var(--muxui-semantic-color-neutral-90);
+  box-shadow: var(--muxui-semantic-elevation-overlay);
+  font-family: var(--muxui-semantic-typography-text-font-family);
+  font-size: var(--muxui-semantic-typography-text-s-font-size);
+}
+
+/* The field state keeps one width, so typing never resizes the bar. */
+.muxui-text-editor__selection-bar[data-instruction] {
+  inline-size: min(22rem, calc(100vw - 1rem));
+}
+
+.muxui-text-editor__selection-input {
+  box-sizing: border-box;
+  flex: 1 1 7rem;
+  min-inline-size: 0;
+  block-size: var(--muxui-control-size-sm);
+  padding: 0 var(--muxui-semantic-layout-inset-tiny);
+  border: 0;
+  border-radius: var(--muxui-semantic-shape-indicator-radius);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+/* Placeholder text needs 4.5:1, which the field placeholder color does not give on the bar surface. */
+.muxui-text-editor__selection-input::placeholder {
+  color: var(--muxui-semantic-content-muted);
+  opacity: 1;
+}
+
+.muxui-text-editor__selection-input:focus-visible {
+  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline-offset: -2px;
+}
+
+.muxui-text-editor__selection-content {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-control-gap);
+}
+
+.muxui-text-editor__selection-icon {
+  display: inline-flex;
+  align-items: center;
+}
+
+.muxui-text-editor__selection-icon svg,
+.muxui-text-editor__selection-icon img {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+.muxui-text-editor__selection-pending,
+.muxui-text-editor__selection-message {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--muxui-semantic-layout-control-gap);
+  padding: 0 var(--muxui-semantic-layout-inset-tight);
+  color: var(--muxui-semantic-color-neutral-70);
+}
+
+/* The failure shows in the border; the message keeps the bar's text color to stay readable in both modes. */
+.muxui-text-editor__selection-message {
+  color: var(--muxui-semantic-color-neutral-90);
+}
+
+.muxui-text-editor__selection-bar[data-phase='error'] {
+  border-color: var(--muxui-semantic-feedback-invalid-border);
+}
+
+@media (forced-colors: active) {
+  .muxui-text-editor__selection-bar {
+    border-color: ButtonText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+  }
+
+  .muxui-text-editor__selection-range {
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
 /* ─── Dark mode ────────────────────────────────────────────────────────────── */
 
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
@@ -485,6 +594,17 @@
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-text-editor__separator {
     background: var(--muxui-semantic-color-neutral-22);
+  }
+}
+
+/* The bar floats above the field, so it takes a lighter surface than the field's. */
+@scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
+  :scope .muxui-text-editor__selection-bar {
+    background-color: var(--muxui-semantic-color-neutral-18);
+  }
+
+  :scope .muxui-text-editor__selection-bar:not([data-phase='error']) {
+    border-color: var(--muxui-semantic-color-neutral-26);
   }
 }
 
