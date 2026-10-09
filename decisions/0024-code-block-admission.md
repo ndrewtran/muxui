@@ -27,7 +27,12 @@ spoken added/removed labels convey changes beyond color. A bounded line diff
 uses at most 250,000 middle LCS cells after trimming equal edges; larger
 changes have an explicitly labeled replacement fallback. Each input rejects
 more than 1,000,000 UTF-16 units or 10,000 lines (including a trailing blank
-line). There is no repeating animation or status-reset timer.
+line). Copied feedback is bounded and never repeats: a fulfilled write shows a
+Check icon and a `Copied` tooltip, then returns to the Copy icon after three
+seconds, or sooner when a mouse or pen pointer leaves the button, focus leaves
+it, or Escape is pressed. Touch departure keeps the feedback, and a newer copy,
+changed content, or unmount clears the pending reset. There is no repeating
+animation.
 
 The existing semantic surface, border, content, focus, typography, spacing,
 shape, and success/invalid status tokens are reused. Two component-owned
@@ -41,7 +46,10 @@ The historical 53-family floor and completed R1 evidence remain immutable.
 The October 6, 2026 user correction requires the code identity icon to use
 the existing internal pinned Lucide `code-xml` module and the copy control
 to follow existing Mux Button states. Textual added/removed counts and line
-markers remain text. This introduces no dependency or public icon API.
+markers remain text. This introduces no dependency or public icon API. A later
+user-approved change adds the copied feedback above with the existing Mux
+Tooltip and the same internal Lucide edge, again without a new dependency or
+public API.
 
 ## Scope and proof
 
@@ -53,12 +61,13 @@ through `E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07`; historical
 retained evidence is not rewritten or claimed to prove this addition.
 
 Focused proof covers native refs/types, escaping/whitespace, empty/repeated/
-trailing-newline diffs and bounds, clipboard success/rejection/unavailability
-and stale completion, SSR/hydration, keyboard/focus, overflow/wrapping,
-light/dark token styles, canonical examples, generation identity, root module
-isolation, and clean packed-consumer use. Independent review covers public API,
-a11y, the line-diff budget, and ownership. No assistive-technology support
-claim follows from the deterministic and browser checks.
+trailing-newline diffs and bounds, clipboard success/rejection/unavailability,
+stale completion and the copied-feedback reset, SSR/hydration, keyboard/focus,
+overflow/wrapping, light/dark token styles, canonical examples, generation
+identity, root module isolation, and clean packed-consumer use. Independent
+review covers public API, a11y, the line-diff budget, and ownership. No
+assistive-technology support claim follows from the deterministic and browser
+checks.
 
 Only CodeBlock enters the public surface. Open work routes to this existing
 Scope ID and named addition without changing completed tracker/evidence
