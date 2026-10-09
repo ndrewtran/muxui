@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:company-records-sortable",
+  "kind": "example",
+  "name": "Sortable",
+  "summary": "A searchable table with sortable columns, selectable rows, tags, and a row menu.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/company-records/examples/react/sortable.tsx"
+}
