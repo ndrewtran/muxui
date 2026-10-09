@@ -6,12 +6,15 @@
 // captured (its provenance names the expectations revised after a first
 // measurement). `tests/evidence/capture-bl1.mjs` records the baseline, and
 // `packages/tooling/test/pattern-regression.test.mjs` holds every later block to
-// the same thresholds.
+// the current thresholds. A capture reads the thresholds as committed at the
+// revision it binds, so editing the file later leaves retained records valid.
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createCatalogApi } from '../../../packages/catalog/src/index.mjs';
 import { compileCatalog } from '../../../packages/catalog/src/compiler.mjs';
+import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
+import { readAtRevision } from '../../../tooling/audits/repository-policy/src/evidence-verify.mjs';
 import { commandRegistry } from '../../../packages/tooling/generated/command-surface.mjs';
 import {
   countTokens,
@@ -24,8 +27,57 @@ import {
 export const repositoryRoot = resolve(import.meta.dirname, '../../..');
 export const thresholdsPath = 'tests/evidence/bl1/regression-thresholds.json';
 
-export async function loadThresholds() {
-  return JSON.parse(await readFile(resolve(repositoryRoot, thresholdsPath), 'utf8'));
+/** The thresholds file's bytes: the working tree's, or, with `revision`, as committed at that revision. */
+export async function readThresholds(revision) {
+  return revision === undefined ? readFile(resolve(repositoryRoot, thresholdsPath)) : readAtRevision(repositoryRoot, revision, thresholdsPath);
+}
+
+/**
+ * Throws when two discovery queries share a key. Measurement counts every entry, but a comparison keyed by
+ * query would merge them, so a duplicate could change the measured precision with no reported change.
+ */
+export function assertUniqueQueries(thresholds) {
+  const seen = new Set();
+  for (const { query } of thresholds.discovery.queries) {
+    if (seen.has(query)) throw new Error(`BL1_THRESHOLDS_DUPLICATE_QUERY: the discovery query "${query}" is listed more than once`);
+    seen.add(query);
+  }
+}
+
+/** The thresholds in `bytes`, refused when a discovery query repeats. */
+export function parseThresholds(bytes) {
+  const thresholds = JSON.parse(bytes.toString('utf8'));
+  assertUniqueQueries(thresholds);
+  return thresholds;
+}
+
+export async function loadThresholds(revision) {
+  return parseThresholds(await readThresholds(revision));
+}
+
+const leaves = (value, path = '') => (value !== null && typeof value === 'object' && !Array.isArray(value)
+  ? Object.entries(value).flatMap(([key, child]) => leaves(child, path === '' ? key : `${path}.${key}`))
+  : [[path, canonicalJson(value)]]);
+
+/**
+ * How `after` differs from `before`, so a growth capture shows what a block changed in the thresholds it
+ * is held to: queries added or removed, queries whose expectation was revised, every other value that
+ * moved (limits, budgets, provenance), and the seed set.
+ */
+export function thresholdChanges(before, after) {
+  assertUniqueQueries(before);
+  assertUniqueQueries(after);
+  const byQuery = (thresholds) => new Map(thresholds.discovery.queries.map((entry) => [entry.query, entry]));
+  const [was, now] = [byQuery(before), byQuery(after)];
+  const rest = ({ discovery: { queries: _queries, ...discovery }, seedSet: _seedSet, ...others }) => ({ ...others, discovery });
+  const [oldLeaves, newLeaves] = [new Map(leaves(rest(before))), new Map(leaves(rest(after)))];
+  return {
+    addedQueries: [...now.keys()].filter((query) => !was.has(query)),
+    removedQueries: [...was.keys()].filter((query) => !now.has(query)),
+    revisedQueries: [...now].filter(([query, entry]) => was.has(query) && canonicalJson(was.get(query)) !== canonicalJson(entry)).map(([query, entry]) => ({ query, before: was.get(query), after: entry })),
+    changedValues: [...new Set([...oldLeaves.keys(), ...newLeaves.keys()])].filter((path) => oldLeaves.get(path) !== newLeaves.get(path)).sort().map((path) => ({ path, before: oldLeaves.get(path) ?? null, after: newLeaves.get(path) ?? null })),
+    seedSet: { added: after.seedSet.filter((id) => !before.seedSet.includes(id)), removed: before.seedSet.filter((id) => !after.seedSet.includes(id)) },
+  };
 }
 
 /** The compile result of the source manifest with `keep` deciding which records stay. */
@@ -62,6 +114,7 @@ function dense(api, args) {
 
 /** Measures the catalog `api` against the fixed query set; `baselineApi` has no pattern compiled. */
 export function measureRegression({ api, baselineApi, thresholds }) {
+  assertUniqueQueries(thresholds);
   const ranked = (target, query) => target.searchArtifacts({ query, limit: 100 }).data.items.map(({ id }) => id);
 
   const queries = thresholds.discovery.queries.map(({ query, expectedFirst, firstWithoutPatterns, expectedId, expectedWithin, relevant }) => {

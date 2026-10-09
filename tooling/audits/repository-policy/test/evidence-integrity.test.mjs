@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
-import { chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
-import { hasUnsanitizedEvidenceOutput, verifyEvidence } from '../src/evidence-verify.mjs';
+import { REVISION_BOUND_INPUTS, hasUnsanitizedEvidenceOutput, readAtRevision, verifyEvidence } from '../src/evidence-verify.mjs';
 import { DEFERRED_R1_EVIDENCE } from '../../../../packages/react/src/r1-deferred-evidence.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
@@ -1020,112 +1020,738 @@ test('a BL1 capture that replaces an earlier one keeps it in the tree and names 
   }
 });
 
-// BL1 close-out: the retained evidence covers E-BL1-01 to E-BL1-11 at one source revision that is in main's
-// history, keeps its disclosures, and cites only excerpts and captures the index retains.
-test('BL1 retained evidence covers every assertion at one source revision and keeps its disclosures', async () => {
-  const read = async (path) => JSON.parse(await readFile(join(repositoryRoot, path), 'utf8'));
-  const index = await read('tests/evidence/bl1/index.json');
-  assert.equal(index.milestone, 'BL1');
-  assert.equal(index.disclosureClass, 'public-sanitized');
-  assert.equal(index.sourceRevisionInMainHistory, true, 'the source revision is in main\'s history');
-  const ids = Array.from({ length: 11 }, (_, offset) => `E-BL1-${String(offset + 1).padStart(2, '0')}`);
-  assert.deepEqual(index.records.map(({ assertionId }) => assertionId), ids);
-  const retained = new Map(index.artifacts.map(({ path, sha256 }) => [path, sha256]));
-  const verification = await read(index.validation.path);
-  assert.equal(verification.sourceRevision, index.sourceRevision);
-  assert.equal(verification.sourceTree, index.sourceTree);
-  // Every excerpt an artifact cites is retained at the cited digest.
-  const excerpts = (value) => (Array.isArray(value) ? value.flatMap(excerpts)
-    : value && typeof value === 'object' ? [...(value.excerpt ? [value.excerpt] : []), ...Object.values(value).flatMap(excerpts)] : []);
+// BL1 growth: a later block edits the regression thresholds, so an index pins them at the revision it binds.
+test('an index pins a revision-bound input at its source revision, so a later edit leaves retained evidence valid', async () => {
+  const thresholds = 'tests/evidence/bl1/regression-thresholds.json';
+  assert.ok(REVISION_BOUND_INPUTS.has(thresholds), 'the BL1 regression thresholds are revision-bound');
+  const cwd = await mkdtemp(join(tmpdir(), 'muxui-bound-input-'));
+  const outside = await mkdtemp(join(tmpdir(), 'muxui-bound-input-rehearsal-'));
+  try {
+    gitIn(cwd, 'init', '-q', '-b', 'main');
+    const bound = canonicalJson({ queries: ['poster grid'] });
+    const revision = await commitFiles(cwd, { [thresholds]: bound }, 'thresholds at capture');
+    const indexText = (sha256 = digest(bound), sourceRevision = revision) => canonicalJson({
+      artifacts: [{ path: thresholds, sha256 }],
+      schema: 'muxui-evidence-index-v1',
+      sourceRevision,
+      sourceTree: '1'.repeat(40),
+    });
+    const indexPath = join(cwd, 'tests/evidence/bl1/index.json');
+    await writeFile(indexPath, indexText());
+    assert.equal((await verifyEvidence(cwd)).artifactCount, 1);
 
+    // A growth block edits the file, uncommitted and then committed: the index still verifies against the bound revision.
+    await writeFile(join(cwd, thresholds), canonicalJson({ queries: ['poster grid', 'scratch sample'] }));
+    assert.equal((await verifyEvidence(cwd)).artifactCount, 1, 'an uncommitted edit');
+    await commitFiles(cwd, {}, 'growth block');
+    assert.equal((await verifyEvidence(cwd)).artifactCount, 1, 'a committed edit');
+
+    // The digest must still be the bound revision's bytes, and the revision must be a full one this repository holds.
+    await writeFile(indexPath, indexText(digest(Buffer.from('other'))));
+    await assert.rejects(verifyEvidence(cwd), /EVIDENCE_DIGEST_MISMATCH/u);
+    await writeFile(indexPath, indexText(digest(bound), 'f'.repeat(40)));
+    await assert.rejects(verifyEvidence(cwd), /EVIDENCE_REVISION_UNAVAILABLE/u);
+    await writeFile(indexPath, indexText(digest(bound), 'main'));
+    await assert.rejects(verifyEvidence(cwd), /EVIDENCE_REFERENCE_INVALID/u);
+
+    // A rehearsal tree outside the repository reads the objects of gitRoot, and has none of its own.
+    await mkdir(join(outside, 'tests/evidence/bl1'), { recursive: true });
+    await writeFile(join(outside, 'tests/evidence/bl1/index.json'), indexText());
+    assert.equal((await verifyEvidence(outside, { gitRoot: cwd })).artifactCount, 1);
+    await assert.rejects(verifyEvidence(outside), /EVIDENCE_REVISION_UNAVAILABLE/u);
+    assert.equal(readAtRevision(cwd, revision, thresholds).toString('utf8'), bound);
+
+    // Any other artifact is still read from the working tree.
+    await mkdir(join(cwd, 'tests/evidence/bl1/artifacts'), { recursive: true });
+    await writeFile(join(cwd, 'tests/evidence/bl1/artifacts/a.json'), '{}');
+    await writeFile(indexPath, canonicalJson({ artifacts: [{ path: 'tests/evidence/bl1/artifacts/a.json', sha256: digest('{}') }], schema: 'muxui-evidence-index-v1', sourceRevision: revision, sourceTree: '1'.repeat(40) }));
+    assert.equal((await verifyEvidence(cwd)).artifactCount, 1);
+    await writeFile(join(cwd, 'tests/evidence/bl1/artifacts/a.json'), '{"edited":true}');
+    await assert.rejects(verifyEvidence(cwd), /EVIDENCE_DIGEST_MISMATCH/u);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  }
+});
+
+test('a capture reads the thresholds as committed at a revision, and lists what a block changed in them', async () => {
+  const { readThresholds, loadThresholds, thresholdChanges, thresholdsPath } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  // The revision a capture binds holds the thresholds it measured, whatever the working tree has now.
+  const bound = JSON.parse(await readFile(join(repositoryRoot, 'tests/evidence/bl1/index.json'), 'utf8')).sourceRevision;
+  assert.deepEqual(await readThresholds(bound), readAtRevision(repositoryRoot, bound, thresholdsPath));
+  assert.equal((await loadThresholds(bound)).schema, 'muxui-bl1-regression-thresholds-v1');
+  await assert.rejects(readThresholds('f'.repeat(40)), /EVIDENCE_REVISION_UNAVAILABLE/u);
+
+  const before = {
+    discovery: { minimumMeanPrecisionAt3: 0.5, queries: [{ query: 'collections', expectedId: 'x', expectedWithin: 3 }, { query: 'hero', expectedFirst: 'h' }, { query: 'old', expectedFirst: 'o' }] },
+    search: { maximumDisplacedComponentQueries: 0 },
+    seedSet: ['x', 'h'],
+  };
+  assert.deepEqual(thresholdChanges(before, structuredClone(before)), { addedQueries: [], removedQueries: [], revisedQueries: [], changedValues: [], seedSet: { added: [], removed: [] } });
+  const after = structuredClone(before);
+  after.discovery.queries[0].expectedWithin = 5;
+  after.discovery.queries.splice(2, 1);
+  after.discovery.queries.push({ query: 'scratch sample', expectedFirst: 's' });
+  after.discovery.minimumMeanPrecisionAt3 = 0.4;
+  after.search.maximumDisplacedComponentQueries = 1;
+  after.seedSet = ['x', 'h', 's'];
+  assert.deepEqual(thresholdChanges(before, after), {
+    addedQueries: ['scratch sample'],
+    removedQueries: ['old'],
+    revisedQueries: [{ query: 'collections', before: before.discovery.queries[0], after: after.discovery.queries[0] }],
+    changedValues: [
+      { path: 'discovery.minimumMeanPrecisionAt3', before: '0.5', after: '0.4' },
+      { path: 'search.maximumDisplacedComponentQueries', before: '0', after: '1' },
+    ],
+    seedSet: { added: ['s'], removed: [] },
+  });
+});
+
+// BL1 growth: a growth capture builds on a retained close-out capture and must add a block to it.
+test('a growth capture needs a retained close-out capture and a block that capture did not measure', async () => {
+  const { assertGrowthSource, retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const root = 'tests/evidence/bl1';
+  const evidenceRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-'));
+  const id = (name) => `muxui:pattern:${name}`;
+  const capture = async (directory, scope, revision, names) => {
+    await mkdir(join(evidenceRoot, directory, 'artifacts'), { recursive: true });
+    await writeFile(join(evidenceRoot, directory, 'verification.json'), JSON.stringify({ ...(scope === undefined ? {} : { scope }), sourceRevision: revision }));
+    await writeFile(join(evidenceRoot, directory, 'artifacts/E-BL1-11.json'), JSON.stringify({ observations: { measured: { denseBudgets: { patterns: names.map((name) => ({ id: id(name) })) } } } }));
+  };
+  const growth = (...names) => assertGrowthSource({ evidenceRoot, root, patternIds: names.map(id) });
+  try {
+    await assert.rejects(growth('a', 'b'), /BL1_GROWTH_NO_CLOSEOUT/u, 'nothing is retained');
+
+    // A capture older than scopes, and a growth capture alone, are not a close-out.
+    await capture(`${root}/superseded/${'0'.repeat(12)}`, undefined, '0'.repeat(40), ['a']);
+    await capture(root, 'growth', 'b'.repeat(40), ['a', 'b']);
+    await assert.rejects(growth('a', 'b', 'c'), /BL1_GROWTH_NO_CLOSEOUT/u);
+
+    // The close-out is current: the catalog must have a pattern it did not measure.
+    await capture(root, 'close-out', 'a'.repeat(40), ['a']);
+    await assert.rejects(growth('a'), /BL1_GROWTH_NO_BLOCK/u);
+    const added = await growth('a', 'b');
+    assert.deepEqual([added.closeout.directory, added.closeout.sourceRevision, added.added], [root, 'a'.repeat(40), [id('b')]]);
+
+    // A first growth capture replaced the close-out and archived it; a later one, or a rerun of the first, still builds on that close-out.
+    const archive = `${root}/superseded/${'a'.repeat(12)}`;
+    await capture(archive, 'close-out', 'a'.repeat(40), ['a']);
+    await capture(root, 'growth', 'b'.repeat(40), ['a', 'b']);
+    assert.deepEqual((await retainedCaptures({ outputRoot: evidenceRoot, root })).map(({ directory, scope }) => [directory, scope]), [[root, 'growth'], [`${root}/superseded/${'0'.repeat(12)}`, undefined], [archive, 'close-out']]);
+    for (const names of [['a', 'b'], ['a', 'b', 'c']]) {
+      const next = await growth(...names);
+      assert.deepEqual([next.closeout.directory, next.added], [archive, names.slice(1).map(id)]);
+    }
+    await assert.rejects(growth('a'), /BL1_GROWTH_NO_BLOCK/u, 'the close-out set alone is not growth');
+  } finally {
+    await rm(evidenceRoot, { recursive: true, force: true });
+  }
+});
+
+// A duplicate query key would be merged by a comparison keyed by query, while measurement counts every entry.
+test('BL1 threshold queries are unique, so a comparison and a measurement see the same entries', async () => {
+  const { assertUniqueQueries, loadThresholds, measureRegression, parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const thresholds = await loadThresholds();
+  assertUniqueQueries(thresholds);
+  const [first] = thresholds.discovery.queries;
+  const duplicated = structuredClone(thresholds);
+  duplicated.discovery.queries.push({ ...first, relevant: [] });
+  const refused = /BL1_THRESHOLDS_DUPLICATE_QUERY: the discovery query "poster grid" is listed more than once/u;
+  assert.throws(() => assertUniqueQueries(duplicated), refused);
+  assert.throws(() => parseThresholds(Buffer.from(JSON.stringify(duplicated))), refused);
+  assert.throws(() => thresholdChanges(thresholds, duplicated), refused);
+  assert.throws(() => thresholdChanges(duplicated, thresholds), refused);
+  assert.throws(() => measureRegression({ api: null, baselineApi: null, thresholds: duplicated }), refused, 'measurement refuses before it reads the catalog');
+});
+
+// A rehearsal copies the retained evidence over its destination, so a destination that overlaps the evidence must be refused first.
+test('a BL1 rehearsal starts from a copy of the retained evidence and refuses a destination that overlaps it', async () => {
+  const { seedRehearsal } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const root = 'tests/evidence/bl1';
+  const base = await mkdtemp(join(tmpdir(), 'muxui-bl1-seed-'));
+  const repo = join(base, 'repo');
+  const retained = join(repo, root);
+  const intact = async () => {
+    assert.equal(await readFile(join(retained, 'index.json'), 'utf8'), '{"retained":true}', 'the retained evidence is untouched');
+    assert.equal(await readFile(join(retained, 'records/a.json'), 'utf8'), 'a');
+  };
+  try {
+    await mkdir(join(retained, 'records'), { recursive: true });
+    await writeFile(join(retained, 'index.json'), '{"retained":true}');
+    await writeFile(join(retained, 'records/a.json'), 'a');
+    await symlink(repo, join(base, 'link-to-repo'));
+    await mkdir(join(base, 'tests-link'), { recursive: true });
+    await symlink(join(repo, 'tests'), join(base, 'tests-link/tests'));
+
+    // Each destination overlaps the retained evidence: the repository itself (what `--rehearsal=.` resolves to), its parent, a
+    // directory inside the evidence, a symlink to the repository, a path that reaches the evidence through a symlink and does not exist yet,
+    // and a destination whose own `tests` is a symlink into the repository.
+    for (const [label, destination] of [
+      ['the repository', repo],
+      ['its parent', base],
+      ['inside the evidence', join(retained, 'out')],
+      ['a symlink to the repository', join(base, 'link-to-repo')],
+      ['a missing path through a symlink', join(base, 'link-to-repo', root, 'not-yet')],
+      ['a destination whose tests is a symlink', join(base, 'tests-link')],
+    ]) {
+      await assert.rejects(seedRehearsal({ repositoryRoot: repo, destination, root }), /BL1_REHEARSAL_OVERLAP/u, label);
+      await intact();
+    }
+
+    // A directory outside the evidence, existing or not, receives a copy, and a rerun replaces what an earlier rehearsal left.
+    const destination = join(base, 'rehearsal');
+    await seedRehearsal({ repositoryRoot: repo, destination, root });
+    assert.equal(await readFile(join(destination, root, 'records/a.json'), 'utf8'), 'a');
+    await writeFile(join(destination, root, 'stale.json'), 'stale');
+    await seedRehearsal({ repositoryRoot: repo, destination, root });
+    assert.deepEqual((await readdir(join(destination, root))).sort(), ['index.json', 'records']);
+    // A directory inside the repository but outside the evidence is allowed.
+    await seedRehearsal({ repositoryRoot: repo, destination: join(repo, 'scratch'), root });
+    assert.equal(await readFile(join(repo, 'scratch', root, 'index.json'), 'utf8'), '{"retained":true}');
+    await intact();
+  } finally {
+    await rm(base, { recursive: true, force: true });
+  }
+});
+
+// BL1: each retained capture is checked against what it derives from its own source revision, read through git objects so a
+// later edit to the catalog, the thresholds, or the browser test routes never changes what a record bound. A close-out capture
+// is also held to the exact close-out pins. The current capture is at tests/evidence/bl1; an earlier one that a later capture
+// replaced is archived at tests/evidence/bl1/superseded/<revision>, with the paths it cites still naming the root it was written to.
+const bl1 = 'tests/evidence/bl1';
+const closeoutRevision = 'c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b';
+const jsonAt = (revision, path) => JSON.parse(readAtRevision(repositoryRoot, revision, path).toString('utf8'));
+const gitOut = (...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' }).trim();
+
+/** What the catalog declares at `revision`: the patterns, their variant example ids, and the block browser tests the policy routes. */
+function catalogAt(revision) {
+  const { records } = jsonAt(revision, 'packages/catalog/catalog-sources.json');
+  const patterns = records.filter(({ family }) => family === 'pattern').map(({ path }) => jsonAt(revision, path));
+  const declared = jsonAt(revision, 'tooling/audits/repository-policy/repository-policy.json').pullRequestImpact.patternBrowserTests ?? {};
+  const slugOf = ({ id }) => id.slice('muxui:pattern:'.length);
+  return {
+    patternIds: patterns.map(({ id }) => id).sort(),
+    patternSlugs: patterns.map(slugOf).sort(),
+    variantIds: patterns.flatMap(({ variants }) => variants.map(({ example }) => example)).sort(),
+    browserTests: patterns.filter((pattern) => declared[slugOf(pattern)] !== undefined).map((pattern) => `packages/react/${declared[slugOf(pattern)]}`).sort(),
+  };
+}
+
+/** The titles of the cross-engine tests in a browser test file at `revision`: its `test(\`... in ${engine}\`)` declarations. */
+function browserTestTitles(revision, file) {
+  const titles = [...readAtRevision(repositoryRoot, revision, file).toString('utf8').matchAll(/^\s*test\(`([^`]*?) in \$\{engine\}`/gmu)].map(([, title]) => title);
+  assert.ok(titles.length > 0, `${file} declares a test titled "... in \${engine}"`);
+  return titles;
+}
+
+/** Maps a path a capture cites into the directory that holds the capture; archived copies keep the layout of the root. */
+const capturePath = (directory) => (path) => (path.startsWith(`${bl1}/superseded/`) ? path : path.replace(`${bl1}/`, `${directory}/`));
+
+/** Reads the capture in `directory` of the tree `repo`: its index, validation summary, records, and artifacts. */
+async function loadCapture({ repo = repositoryRoot, directory = bl1 } = {}) {
+  const read = async (path) => JSON.parse(await readFile(join(repo, path), 'utf8'));
+  const into = capturePath(directory);
+  const index = await read(`${directory}/index.json`);
   const records = {};
   const artifacts = {};
   for (const { assertionId, path } of index.records) {
-    const record = await read(path);
-    records[assertionId] = record;
+    records[assertionId] = await read(into(path));
+    artifacts[assertionId] = await read(into(records[assertionId].artifact.path));
+  }
+  return { directory, index, verification: await read(into(index.validation.path)), records, artifacts, retained: new Map(index.artifacts.map(({ path, sha256 }) => [path, sha256])) };
+}
+
+/** An archived capture is a byte-for-byte copy: every file its index names is in the archive at that digest. */
+async function assertCopyMatchesIndex({ repo = repositoryRoot, directory, index }) {
+  const into = capturePath(directory);
+  for (const { path, sha256 } of [...index.records, ...index.artifacts, index.validation]) {
+    if (REVISION_BOUND_INPUTS.has(path)) continue;
+    assert.equal(digest(await readFile(join(repo, into(path)))), sha256, `${directory}: ${path} is archived at the digest its index names`);
+  }
+}
+
+/**
+ * The checks every capture passes, then those of its scope: a close-out capture is held to the exact close-out facts,
+ * and a growth capture to the facts derived from the catalog, the browser test routes, and the thresholds at its own
+ * revision, and to the retained close-out at `closeoutRevision`, whether it is the current capture or an archived one.
+ */
+async function assertCapture({ directory, index, verification, records, artifacts, retained }, { closeoutRevision } = {}) {
+  const { assertUniqueQueries, parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const { sourceRevision, sourceTree } = index;
+  const { scope } = verification;
+  assert.ok(scope === 'close-out' || scope === 'growth', `${directory}: the validation summary records its scope`);
+  assert.equal(index.milestone, 'BL1');
+  assert.equal(index.disclosureClass, 'public-sanitized');
+  assert.equal(index.sourceRevisionInMainHistory, true, `${directory}: the source revision is in main's history`);
+  const ids = Array.from({ length: 11 }, (_, offset) => `E-BL1-${String(offset + 1).padStart(2, '0')}`);
+  assert.deepEqual(index.records.map(({ assertionId }) => assertionId), ids);
+  assert.equal(verification.sourceRevision, sourceRevision);
+  assert.equal(verification.sourceTree, sourceTree);
+  // Every excerpt an artifact cites is retained at the cited digest.
+  const excerpts = (value) => (Array.isArray(value) ? value.flatMap(excerpts)
+    : value && typeof value === 'object' ? [...(value.excerpt ? [value.excerpt] : []), ...Object.values(value).flatMap(excerpts)] : []);
+  for (const assertionId of ids) {
+    const record = records[assertionId];
     assert.equal(record.outcome, 'pass', assertionId);
-    assert.equal(record.sourceRevision, index.sourceRevision, assertionId);
-    assert.equal(record.sourceTree, index.sourceTree, assertionId);
+    assert.equal(record.sourceRevision, sourceRevision, assertionId);
+    assert.equal(record.sourceTree, sourceTree, assertionId);
     assert.equal(record.executedRevision, record.sourceRevision, assertionId);
     assert.deepEqual(record.proofTool, verification.proofTool, assertionId);
     assert.ok(record.nonClaims.some((claim) => /^No assistive-technology support claim/u.test(claim)), `${assertionId} states the assistive-technology non-claim`);
-    artifacts[assertionId] = await read(record.artifact.path);
     assert.equal(artifacts[assertionId].assertionId, assertionId);
-    assert.equal(artifacts[assertionId].sourceRevision, index.sourceRevision, assertionId);
+    assert.equal(artifacts[assertionId].sourceRevision, sourceRevision, assertionId);
     for (const excerpt of excerpts(artifacts[assertionId])) assert.equal(retained.get(excerpt.path), excerpt.sha256, `${assertionId} cites ${excerpt.path}`);
   }
   // The proof tools are bound at revisions in main's history.
   for (const { path, revision } of verification.proofTools) {
-    assert.equal(spawnSync('git', ['merge-base', '--is-ancestor', revision, index.sourceRevision], { cwd: repositoryRoot }).status, 0, `${path} is bound at an ancestor of the source revision`);
+    assert.equal(spawnSync('git', ['merge-base', '--is-ancestor', revision, sourceRevision], { cwd: repositoryRoot }).status, 0, `${path} is bound at an ancestor of the source revision`);
   }
-  // The earlier E-BL1-08 and E-BL1-11 records are kept in the tree and named by their successors, never silently replaced.
-  for (const id of ['E-BL1-08', 'E-BL1-11']) {
-    const { path, sha256, sourceRevision } = records[id].supersedes;
-    assert.equal(sourceRevision, 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151', `${id} names the record it supersedes`);
-    assert.ok(path.startsWith('tests/evidence/bl1/superseded/be6f7c411f03/records/'), `${id}: the predecessor is archived in the tree`);
-    assert.equal(retained.get(path), sha256, `${id}: the index retains the predecessor at the digest the record names`);
+  // A record a later capture replaced names the copy of its predecessor kept in the tree, and the index retains that copy at the digest it names.
+  for (const [id, { supersedes }] of Object.entries(records).filter(([, record]) => record.supersedes !== undefined)) {
+    assert.ok(supersedes.path.startsWith(`${bl1}/superseded/${supersedes.sourceRevision.slice(0, 12)}/records/`), `${id}: the predecessor is archived in the tree`);
+    assert.equal(retained.get(supersedes.path), supersedes.sha256, `${id}: the index retains the predecessor at the digest the record names`);
   }
   assert.equal(index.supersessions, undefined, 'the index does not use the applicability-certificate supersessions list');
+
+  // What the catalog, the policy routes, and the thresholds declare at this capture's own revision.
+  const catalog = catalogAt(sourceRevision);
 
   // E-BL1-01: eight negatives, parsed from the tests; an unknown field names a path, not an owner.
   const negatives = artifacts['E-BL1-01'].observations.requiredNegatives;
   assert.equal(negatives.length, 8);
-  assert.ok(negatives.every(({ owner }) => owner === 'pattern-contract' || typeof owner === 'string'), 'all eight name an owner');
+  assert.ok(negatives.every(({ owner }) => typeof owner === 'string' && owner.length > 0), 'E-BL1-01: all eight name an owner');
   assert.deepEqual(negatives.filter(({ ownerProof }) => ownerProof !== undefined).map(({ negative, owner }) => [negative, owner]), [['an unknown field', 'pattern-contract']]);
   assert.ok(negatives.every(({ code, path, outcome }) => /^MUXUI_/u.test(code) && path.startsWith('$/') && outcome === 'pass'));
 
-  // E-BL1-03: every variant typechecked on its own against the packed declarations.
+  // E-BL1-03: every variant the catalog declares typechecked on its own against the packed declarations.
   const typecheck = artifacts['E-BL1-03'].observations.typecheck.perVariant;
-  assert.equal(typecheck.variants.length, 5);
+  assert.deepEqual(typecheck.variants.map(({ id }) => id).sort(), catalog.variantIds, 'E-BL1-03 typechecks every variant the catalog declares');
   assert.ok(typecheck.variants.every(({ exitCode, diagnostics, packedDeclarations, workspaceSources }) => exitCode === 0 && diagnostics === 0 && packedDeclarations && !workspaceSources));
+
+  // E-BL1-04: every variant page is audited, and every block browser test the policy routes passes in all three engines.
+  // The expected test and engine pairs come from the test files at this revision, never from the record's own engine list.
+  const { storybook, browser } = artifacts['E-BL1-04'].observations;
+  assert.deepEqual([...storybook.selection.families].sort(), catalog.patternSlugs, 'E-BL1-04 audits every block');
+  assert.equal(storybook.selection.pages.length, catalog.variantIds.length, 'E-BL1-04 audits every variant page');
+  assert.deepEqual(browser.engines, ['chromium', 'firefox', 'webkit'], 'E-BL1-04 runs chromium, firefox, and webkit');
+  assert.deepEqual([...browser.files].sort(), catalog.browserTests, 'E-BL1-04 runs the block browser tests the policy routes');
+  const expectedRuns = browser.engines.flatMap((engine) => catalog.browserTests.flatMap((file) => browserTestTitles(sourceRevision, file).map((title) => `${engine}: ${title}`))).sort();
+  assert.ok(expectedRuns.length > 0, 'E-BL1-04 expects at least one browser run');
+  assert.deepEqual(browser.engineRuns.map(({ engine, test }) => `${engine}: ${test}`).sort(), expectedRuns, 'E-BL1-04 passes each block browser test in each engine');
+  assert.match(browser.proof.command, /MUXUI_BROWSER_ENGINES=chromium,firefox,webkit /u, 'E-BL1-04 ran with all three engines');
+  assert.deepEqual(browser.proof.command.match(/test\/browser\/\S+\.test\.mjs/gu).sort(), catalog.browserTests.map((file) => file.slice('packages/react/'.length)), 'E-BL1-04 ran the routed test files');
+  const results = browser.proof.tests;
+  assert.ok(results.fail === 0 && results.cancelled === 0 && results.skipped === 0 && results.pass === results.tests && results.pass >= expectedRuns.length, 'E-BL1-04: every browser result passes');
+
+  // E-BL1-05 and E-BL1-07: every pattern and variant is covered by the docs check and the parity matrix.
+  const docs = artifacts['E-BL1-05'].observations.counts;
+  assert.deepEqual([docs.patterns, docs.variantPages], [catalog.patternIds.length, catalog.variantIds.length], 'E-BL1-05 covers every pattern and variant');
+  const matrix = artifacts['E-BL1-07'].observations.matrix;
+  assert.deepEqual([[...matrix.patterns].sort(), [...matrix.variants].sort(), matrix.rowCount], [catalog.patternIds, catalog.variantIds, matrix.rows.length], 'E-BL1-07 covers every pattern and variant');
 
   // E-BL1-06: every capture is retained at its digest, and none overflows.
   const visual = artifacts['E-BL1-06'].observations;
   assert.deepEqual(visual.pageWidths.widths, [360, 768, 1024, 1280, 1920]);
-  assert.equal(visual.captures.length, visual.expected.variants * 2 * visual.expected.toolbarPresets.length + visual.expected.marketingVariants.length * 2 * 5);
+  assert.equal(visual.expected.variants, catalog.variantIds.length, 'E-BL1-06 captures every variant');
+  assert.equal(visual.captures.length, visual.expected.variants * 2 * visual.expected.toolbarPresets.length + visual.expected.marketingVariants.length * 2 * visual.expected.pageWidths.length);
   assert.equal(visual.overflowReport.measurements, visual.captures.length);
   assert.ok(visual.captures.every(({ overflowX, path, sha256 }) => overflowX === false && retained.get(path) === sha256));
 
   // E-BL1-09: the audit passed at the source revision, every control rejected, and the deployment claim is honest.
   const boundary = artifacts['E-BL1-09'].observations;
   assert.equal(boundary.audit.pass, true);
-  assert.equal(boundary.audit.head.revision, index.sourceRevision);
+  assert.ok(boundary.audit.checks.every(({ pass }) => pass), 'E-BL1-09: every audit check passes');
+  assert.equal(boundary.audit.head.revision, sourceRevision);
   assert.deepEqual(boundary.negativeControls.checksWithoutControl, []);
   assert.deepEqual(boundary.negativeControls.legsWithoutControl, {});
   assert.ok(boundary.negativeControls.results.every(({ rejected, accepted, failingLegs, expectedFailingLegs }) => rejected === true && accepted !== false && JSON.stringify(failingLegs) === JSON.stringify(expectedFailingLegs)));
-  assert.equal(boundary.closeoutScope.run, true);
   const deployment = boundary.audit.checks.find(({ id }) => id === 'no-deployment');
   assert.equal(deployment.observations.observed === true ? deployment.observations.problems.length : 0, 0);
   assert.match(records['E-BL1-09'].claim, deployment.observations.observed ? /GitHub lists no deployment/u : /no deployment configuration was added/u);
   assert.equal(boundary.audit.checks.find(({ id }) => id === 'plan-install-registry-scaffold-unavailable').observations.liveCli.run, true);
   // #227 is stated, not hidden, and is not called BL1.
   const reactSource = boundary.audit.checks.find(({ id }) => id === 'react-source-files').observations;
-  assert.deepEqual(reactSource.nonBl1Changes.map(({ pullRequest, bl1 }) => [pullRequest, bl1]), [[227, false]]);
+  assert.deepEqual(reactSource.nonBl1Changes.map(({ pullRequest, bl1: isBl1 }) => [pullRequest, isBl1]), [[227, false]]);
   assert.match(records['E-BL1-09'].claim, /BL1 evidence validates the package after it/u);
 
-  // Independent reviews: each is retained at its digest and names its own reviewed revision.
+  // Independent reviews: each is retained at its digest, names its own reviewed revision, and records how its tree compares with the source tree.
   const content = artifacts['E-BL1-10'].observations;
   assert.deepEqual(content.scan.failures, []);
-  assert.equal(retained.get(content.review.artifact.path), content.review.artifact.sha256);
+  assert.equal(content.scan.variantSources, catalog.variantIds.length, 'E-BL1-10 scans every variant source');
   assert.equal(content.review.verdict, 'pass');
-  assert.ok(content.review.advisoryLines.length >= 3);
+  assert.deepEqual([...content.review.blocks].sort(), catalog.patternSlugs, 'E-BL1-10 reviews every block');
+  assert.equal(content.review.reviewedCatalogPatternsTree, gitOut('rev-parse', `${sourceRevision}:catalog/patterns`), 'E-BL1-10: the reviewer read the block sources this capture scanned');
   const exitReview = boundary.exitReview;
-  assert.equal(retained.get(exitReview.artifact.path), exitReview.artifact.sha256);
-  assert.match(exitReview.reviewedRevision, /^[0-9a-f]{40}$/u);
-  // Each review says how its reviewed tree compares with the source tree, whatever the answer is.
-  for (const review of [content.review, exitReview]) {
-    assert.equal(review.comparison.sourceTree, index.sourceTree);
-    assert.equal(typeof review.comparison.equalTrees, 'boolean');
-    assert.ok(Array.isArray(review.comparison.proofToolsChangedSinceReviewed));
-    assert.equal(typeof review.reviewedRevisionInMainHistory, 'boolean');
+  for (const review of [content.review, ...(exitReview === null ? [] : [exitReview])]) {
+    assert.equal(retained.get(review.artifact.path), review.artifact.sha256);
+    assert.match(review.reviewedRevision, /^[0-9a-f]{40}$/u);
+    assert.equal(review.comparison.sourceTree, sourceTree);
+    assert.equal(review.comparison.equalTrees, review.reviewedTree === sourceTree, 'the recorded tree comparison agrees with the recorded trees');
     assert.deepEqual(Object.keys(review.sanitization.replacements).sort(), ['home', 'repositoryRoot', 'temporary']);
   }
 
-  // E-BL1-11: the revised expectations and the known weaknesses stay on the record.
+  // E-BL1-11: the thresholds are the ones committed at the source revision, and the expectations revised and the known weaknesses stay on the record.
   const baseline = artifacts['E-BL1-11'].observations;
-  const thresholds = await read(baseline.thresholds.path);
-  assert.equal(thresholds.provenance.revisedAfterFirstMeasurement.length, 9);
-  assert.equal(thresholds.discovery.queries.length, 21);
-  assert.deepEqual(baseline.knownDiscoveryWeaknesses.map(({ query }) => query).sort(), ['billing toggle', 'collections', 'split hero']);
-  assert.match(records['E-BL1-11'].claim, /9 of 21 discovery expectations were revised/u);
+  const thresholdBytes = readAtRevision(repositoryRoot, sourceRevision, baseline.thresholds.path);
+  assert.equal(digest(thresholdBytes), baseline.thresholds.sha256, 'E-BL1-11 binds the thresholds committed at the source revision');
+  assert.equal(retained.get(baseline.thresholds.path), baseline.thresholds.sha256);
+  const thresholds = parseThresholds(thresholdBytes);
+  assertUniqueQueries(thresholds);
+  const { queries } = thresholds.discovery;
+  const revised = thresholds.provenance.revisedAfterFirstMeasurement;
+  assert.deepEqual(baseline.seedSet, thresholds.seedSet);
+  assert.ok(thresholds.seedSet.every((id) => catalog.patternIds.includes(id)));
+  assert.ok(revised.every((query) => queries.some((entry) => entry.query === query)), 'every revised expectation names a query');
+  assert.equal(baseline.measured.discovery.queries.length, queries.length, 'E-BL1-11 measures every threshold query');
+  assert.deepEqual(baseline.measured.denseBudgets.patterns.map(({ id }) => id).sort(), catalog.patternIds, 'E-BL1-11 measures every pattern');
+  assert.deepEqual(baseline.failures, []);
+  assert.deepEqual(baseline.knownDiscoveryWeaknesses.map(({ query }) => query).sort(), queries.filter(({ knownWeakness }) => knownWeakness !== undefined).map(({ query }) => query).sort());
+  assert.match(records['E-BL1-11'].claim, new RegExp(`${revised.length} of ${queries.length} discovery expectations were revised`, 'u'));
+
+  if (scope === 'close-out') {
+    // The close-out facts stay pinned, so a later change to the derivations above cannot soften what the close-out claims.
+    assert.equal(typecheck.variants.length, 5, 'the close-out covers five variants');
+    assert.deepEqual([results.pass, results.tests], [57, 57], 'the close-out passes 57 of 57 browser results');
+    assert.equal(matrix.rows.length, 79, 'the close-out compares 79 parity rows');
+    assert.deepEqual([boundary.audit.checks.length, boundary.audit.checks.filter(({ pass }) => pass).length], [13, 13], 'the close-out passes 13 of 13 audit checks');
+    assert.equal(boundary.closeoutScope.run, true, 'the close-out runs the close-out scope check');
+    assert.ok(boundary.audit.checks.some(({ id }) => id === 'closeout-scope'));
+    assert.deepEqual([revised.length, queries.length], [9, 21], 'the close-out revised 9 of 21 expectations');
+    assert.equal(baseline.thresholdChanges, undefined, 'the close-out lists no threshold changes');
+    assert.equal(content.review.advisoryLines.length >= 3, true);
+    assert.notEqual(exitReview, null, 'the close-out retains the independent exit review');
+    assert.deepEqual([exitReview.comparison.equalTrees, exitReview.comparison.changedPathCount, exitReview.comparison.proofToolsChangedSinceReviewed], [true, 0, []], 'the exit review read the source tree and the tools that ran');
+    // The earlier E-BL1-08 and E-BL1-11 records are named by their successors, never silently replaced.
+    assert.deepEqual(Object.entries(records).filter(([, record]) => record.supersedes !== undefined).map(([id, { supersedes }]) => [id, supersedes.sourceRevision]), [['E-BL1-08', 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151'], ['E-BL1-11', 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151']]);
+  } else {
+    // A growth capture skips the close-out scope check and says so, and is held to the retained close-out: it compares the
+    // thresholds with the close-out's, and its added blocks are the catalog here minus the catalog there, derived independently.
+    assert.equal(boundary.closeoutScope.run, false, 'a growth capture records that it skipped the close-out scope check');
+    assert.ok(!boundary.audit.checks.some(({ id }) => id === 'closeout-scope'));
+    assert.match(closeoutRevision ?? '', /^[0-9a-f]{40}$/u, `${directory}: a growth capture is checked against a retained close-out revision`);
+    const { against, addedPatterns, ...changes } = baseline.thresholdChanges;
+    assert.deepEqual([against.revision, against.path], [closeoutRevision, baseline.thresholds.path], 'E-BL1-11 compares the thresholds with the retained close-out revision');
+    const before = readAtRevision(repositoryRoot, closeoutRevision, against.path);
+    assert.equal(digest(before), against.sha256);
+    assert.deepEqual(changes, thresholdChanges(parseThresholds(before), thresholds), 'E-BL1-11 lists every change to the thresholds since the close-out');
+    const closeoutPatterns = catalogAt(closeoutRevision).patternIds;
+    const added = catalog.patternIds.filter((id) => !closeoutPatterns.includes(id));
+    assert.ok(added.length > 0, 'E-BL1-11: a growth capture adds a block to the close-out');
+    assert.deepEqual([...addedPatterns].sort(), added, 'E-BL1-11 names the blocks added since the close-out');
+    for (const [id, record] of Object.entries(records)) assert.ok(record.supersedes !== undefined, `${id}: a growth capture replaces the capture before it`);
+  }
+  return { scope, sourceRevision, catalog };
+}
+
+// BL1 growth: the block browser tests are declared once, in the policy's pattern routes, and the capture runs what it declares.
+test('the BL1 block browser tests are derived from the policy routes, one per interactive block', async () => {
+  const { blockBrowserTests } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const reactRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-browser-'));
+  try {
+    await mkdir(join(reactRoot, 'test/browser'), { recursive: true });
+    const declared = { a: 'test/browser/pattern-a.test.mjs', c: 'test/browser/pattern-c.test.mjs' };
+    for (const file of Object.values(declared)) await writeFile(join(reactRoot, file), '');
+    // Pattern order, and a block with no declared test (a non-interactive one) adds none.
+    assert.deepEqual(blockBrowserTests({ declared, patternSlugs: ['c', 'b', 'a'], reactRoot }), [declared.c, declared.a]);
+    assert.throws(() => blockBrowserTests({ declared: { ...declared, z: 'test/browser/pattern-z.test.mjs' }, patternSlugs: ['a', 'c'], reactRoot }), /BL1_BROWSER_TEST_UNKNOWN: .* z,/u);
+    assert.throws(() => blockBrowserTests({ declared: { a: 'test/browser/pattern-gone.test.mjs' }, patternSlugs: ['a'], reactRoot }), /BL1_BROWSER_TEST_MISSING: test\/browser\/pattern-gone/u);
+    assert.throws(() => blockBrowserTests({ declared: {}, patternSlugs: ['a'], reactRoot }), /BL1_BROWSER_TEST_MISSING: patternBrowserTests declares no/u);
+  } finally {
+    await rm(reactRoot, { recursive: true, force: true });
+  }
+
+  // The shipped routes derive every declared test, and the same derivation at a revision gives that revision's set.
+  const { loadPolicy } = await import('../src/policy.mjs');
+  const { patternParticipants } = await import('../src/pattern-variants.mjs');
+  const { patternBrowserTests } = (await loadPolicy(repositoryRoot)).pullRequestImpact;
+  const patternSlugs = (await patternParticipants(repositoryRoot)).map(({ slug }) => slug);
+  assert.deepEqual(blockBrowserTests({ declared: patternBrowserTests, patternSlugs, reactRoot: join(repositoryRoot, 'packages/react') }).sort(), Object.values(patternBrowserTests).sort());
+  assert.deepEqual(catalogAt('5026836747b36e23b8f2dd8bd695d3a420cc295c').browserTests, ['packages/react/test/browser/pattern-poster-grid.test.mjs'], 'only the poster grid had shipped at #226');
+  assert.equal(catalogAt(closeoutRevision).browserTests.length, 4);
+});
+
+// The one capture older than scopes: the first E-BL1-08 and E-BL1-11 records. It is immutable history, and its index names every
+// file of the archive by digest, so the digest of that index is pinned here. Only an archive whose index is this exact file is
+// exempt from the scope-specific assertions, and its files are still checked against that index.
+const legacyCapture = {
+  directory: `${bl1}/superseded/be6f7c411f03`,
+  sourceRevision: 'be6f7c411f03dd7e7d6f4cc50016d4a3d2f65151',
+  indexSha256: 'sha256:84eaec2dca4c6440f6d60e48de059eaca1aeb892a7f149583cad663c34583565',
+};
+
+/** Checks the older capture against its pin, then every file its index names against the digests the index records. */
+async function assertLegacyCapture({ repo, summaryRevision }) {
+  const { directory, sourceRevision, indexSha256 } = legacyCapture;
+  const indexBytes = await readFile(join(repo, directory, 'index.json'));
+  assert.equal(digest(indexBytes), indexSha256, `${directory}: the older capture's index is the pinned immutable one`);
+  const index = JSON.parse(indexBytes.toString('utf8'));
+  assert.deepEqual([index.sourceRevision, summaryRevision], [sourceRevision, sourceRevision], `${directory}: the older capture's index and summary name its revision`);
+  await assertCopyMatchesIndex({ repo, directory, index });
+  const into = capturePath(directory);
+  for (const { path } of index.records) {
+    const record = JSON.parse(await readFile(join(repo, into(path)), 'utf8'));
+    assert.equal(record.sourceRevision, sourceRevision, `${path}: the older record names its revision`);
+    assert.equal(digest(await readFile(join(repo, into(record.artifact.path)))), record.artifact.sha256, `${path}: the older record names its artifact`);
+  }
+}
+
+/**
+ * Checks every capture under the retained root of `repo`: the current capture and each archived one records a scope
+ * (only the pinned older capture may not), and each is held to its scope and to the retained close-out revision.
+ */
+async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
+  const { retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const captures = await retainedCaptures({ outputRoot: repo, root: bl1 });
+  assert.equal(captures[0].directory, bl1, 'the current capture is retained');
+  const closeout = captures.find(({ scope }) => scope === 'close-out');
+  assert.ok(closeout, 'a close-out capture is retained, current or archived');
+  for (const { directory, scope, sourceRevision } of captures) {
+    if (scope === undefined && directory === legacyCapture.directory) {
+      await assertLegacyCapture({ repo, summaryRevision: sourceRevision });
+      continue;
+    }
+    assert.ok(scope === 'close-out' || scope === 'growth', `${directory} records a scope`);
+    const capture = await loadCapture({ repo, directory });
+    if (directory !== bl1) await assertCopyMatchesIndex({ repo, ...capture });
+    await assertCapture(capture, { closeoutRevision: closeout.sourceRevision });
+  }
+  return captures;
+}
+
+// The retained evidence covers E-BL1-01 to E-BL1-11 at one source revision that is in main's history, keeps its
+// disclosures, and cites only excerpts and captures the index retains. Every capture under the root is checked.
+test('BL1 retained evidence covers every assertion at one source revision and keeps its disclosures', async () => {
+  await assertRetainedCaptures();
+});
+
+/** The retained close-out capture of the repository: the current capture, or the one archived under superseded/. */
+async function retainedCloseout() {
+  const { retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  return (await retainedCaptures({ outputRoot: repositoryRoot, root: bl1 })).find(({ scope }) => scope === 'close-out');
+}
+
+/** A tree holding copies of the retained close-out, as the current capture and as each archive named in `archives`, plus the older named capture. */
+async function stageRetainedTree(closeout, archives = []) {
+  const repo = await mkdtemp(join(tmpdir(), 'muxui-bl1-retained-'));
+  const copy = async (directory) => {
+    for (const entry of ['index.json', 'verification.json', 'records', 'artifacts', 'validation', 'captures']) {
+      await cp(join(repositoryRoot, closeout.directory, entry), join(repo, directory, entry), { recursive: true });
+    }
+  };
+  await copy(bl1);
+  for (const name of archives) await copy(`${bl1}/superseded/${name}`);
+  await cp(join(repositoryRoot, bl1, 'superseded/be6f7c411f03'), join(repo, bl1, 'superseded/be6f7c411f03'), { recursive: true });
+  return repo;
+}
+
+/** Edits the validation summary of the capture in `directory` and keeps its index naming the edited bytes, so only the edit fails. */
+async function editSummary(repo, directory, change) {
+  const summaryPath = join(repo, directory, 'verification.json');
+  const summary = JSON.parse(await readFile(summaryPath, 'utf8'));
+  change(summary);
+  const text = canonicalJson(summary);
+  await writeFile(summaryPath, text);
+  const indexPath = join(repo, directory, 'index.json');
+  const index = JSON.parse(await readFile(indexPath, 'utf8'));
+  index.validation.sha256 = digest(text);
+  await writeFile(indexPath, canonicalJson(index));
+}
+
+test('every retained BL1 capture records a valid scope, and only the one named older capture may go without', async () => {
+  const closeout = await retainedCloseout();
+  const archive = `${bl1}/superseded/${closeout.sourceRevision.slice(0, 12)}`;
+  const refuses = async (label, pattern, edit, archives = [closeout.sourceRevision.slice(0, 12)]) => {
+    const repo = await stageRetainedTree(closeout, archives);
+    try {
+      await edit(repo);
+      await assert.rejects(assertRetainedCaptures({ repo }), pattern, label);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  };
+  const clean = await stageRetainedTree(closeout, [closeout.sourceRevision.slice(0, 12)]);
+  try {
+    const found = (await assertRetainedCaptures({ repo: clean })).map(({ directory, scope }) => [directory, scope]);
+    assert.deepEqual(found[0], [bl1, 'close-out']);
+    assert.deepEqual(found.slice(1), [[archive, 'close-out'], [`${bl1}/superseded/be6f7c411f03`, undefined]].sort(([left], [right]) => (left < right ? -1 : 1)));
+  } finally {
+    await rm(clean, { recursive: true, force: true });
+  }
+
+  // The archived close-out satisfies the presence check, so the current capture must carry a valid scope itself.
+  await refuses('the current capture has no scope', /tests\/evidence\/bl1 records a scope/u, (repo) => editSummary(repo, bl1, (summary) => { delete summary.scope; }));
+  await refuses('the current capture has an unknown scope', /tests\/evidence\/bl1 records a scope/u, (repo) => editSummary(repo, bl1, (summary) => { summary.scope = 'sideways'; }));
+  await refuses('an archived capture has no scope', /superseded\/\w+ records a scope/u, (repo) => editSummary(repo, archive, (summary) => { delete summary.scope; }));
+  await refuses('the older capture summary is edited', /the older capture's index is the pinned immutable one/u, (repo) => editSummary(repo, legacyCapture.directory, (summary) => { summary.sourceRevision = 'c'.repeat(40); }));
+  await refuses('a capture with no validation summary', /tests\/evidence\/bl1 records a scope/u, (repo) => rm(join(repo, bl1, 'verification.json')));
+  // An archived capture is held to its scope as the current one is.
+  await refuses('an archived close-out relabelled growth', /a growth capture records that it skipped the close-out scope check/u, (repo) => editSummary(repo, archive, (summary) => { summary.scope = 'growth'; }));
+});
+
+// The exemption was once applied before the archive was read: an index naming another revision, a summary still naming the exempt
+// one, and a refreshed parent digest passed both the generic verifier and the scope loop. The pinned index digest closes that.
+test('the older BL1 capture is exempt from a scope only while it is the pinned immutable capture', async () => {
+  const closeout = await retainedCloseout();
+  const archive = legacyCapture.directory;
+  const parentPath = `${bl1}/index.json`;
+  /** Names the current bytes of `paths` in the parent index, as a rewrite of the archive plus a refreshed digest would. */
+  const refreshParent = async (repo, paths) => {
+    const parent = JSON.parse(await readFile(join(repo, parentPath), 'utf8'));
+    for (const entry of parent.artifacts.filter(({ path }) => paths.includes(path))) entry.sha256 = digest(await readFile(join(repo, entry.path)));
+    await writeFile(join(repo, parentPath), canonicalJson(parent));
+  };
+  const rewrite = async (repo, file, change) => {
+    const path = join(repo, archive, file);
+    const value = JSON.parse(await readFile(path, 'utf8'));
+    change(value);
+    await writeFile(path, canonicalJson(value));
+    return `${archive}/${file}`;
+  };
+  const tampered = async (label, pattern, edit) => {
+    const repo = await stageRetainedTree(closeout);
+    try {
+      assert.equal((await verifyEvidence(repo, { gitRoot: repositoryRoot })).indexCount, 1, 'the untouched tree verifies');
+      await assertRetainedCaptures({ repo });
+      await edit(repo);
+      // The generic verifier checks only the digests the parent index names, so a consistent rewrite is blind to it.
+      if (label !== 'a file the archive index names is changed') assert.equal((await verifyEvidence(repo, { gitRoot: repositoryRoot })).indexCount, 1, `${label}: the generic verifier accepts the rewrite`);
+      await assert.rejects(assertRetainedCaptures({ repo }), pattern, label);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  };
+
+  // The reviewer's rewrite: the archive's index names a revision that does not exist, its summary still names the exempt one.
+  await tampered('the archive index names another revision', /the older capture's index is the pinned immutable one/u, async (repo) => {
+    await refreshParent(repo, [await rewrite(repo, 'index.json', (index) => { index.sourceRevision = 'f'.repeat(40); })]);
+  });
+  // A record rewritten, with the archive index and the parent index refreshed to match, changes the pinned index, and the
+  // successor record that names its predecessor's digest no longer finds it.
+  await tampered('a record is rewritten and both indexes are refreshed', /the older capture's index is the pinned immutable one|the index retains the predecessor at the digest the record names/u, async (repo) => {
+    const record = await rewrite(repo, 'records/E-BL1-08.json', (value) => { value.claim = 'rewritten'; });
+    const index = await rewrite(repo, 'index.json', (value) => { value.records[0].sha256 = digest(readFileSync(join(repo, archive, 'records/E-BL1-08.json'))); });
+    await refreshParent(repo, [record, index]);
+  });
+  // The pinned index is untouched but a file it names is not the file it names.
+  await tampered('a file the archive index names is changed', /archived at the digest its index names/u, async (repo) => {
+    await rewrite(repo, 'artifacts/E-BL1-08.json', (value) => { value.claim = 'rewritten'; });
+  });
+  // The summary alone: it must name the exempt revision too.
+  await tampered('the archive summary names another revision', /the older capture's index is the pinned immutable one|index and summary name its revision/u, async (repo) => {
+    await refreshParent(repo, [await rewrite(repo, 'verification.json', (summary) => { summary.sourceRevision = 'f'.repeat(40); })]);
+  });
+});
+
+/**
+ * The close-out capture forged into a growth capture of the same source revision, as if `closeout` were the retained
+ * close-out revision, carrying what a real growth capture records: the thresholds compared with that revision's, the
+ * blocks added since it, and a predecessor for every record.
+ */
+async function forgeGrowth(capture, closeout) {
+  const { parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const forged = structuredClone(capture);
+  forged.verification.scope = 'growth';
+  const boundary = forged.artifacts['E-BL1-09'].observations;
+  boundary.closeoutScope = { run: false, reason: 'forged' };
+  boundary.audit.checks = boundary.audit.checks.filter(({ id }) => id !== 'closeout-scope');
+  const path = forged.artifacts['E-BL1-11'].observations.thresholds.path;
+  const before = readAtRevision(repositoryRoot, closeout, path);
+  const closeoutPatterns = catalogAt(closeout).patternIds;
+  forged.artifacts['E-BL1-11'].observations.thresholdChanges = {
+    against: { revision: closeout, path, sha256: digest(before) },
+    addedPatterns: catalogAt(capture.index.sourceRevision).patternIds.filter((id) => !closeoutPatterns.includes(id)),
+    ...thresholdChanges(parseThresholds(before), parseThresholds(readAtRevision(repositoryRoot, capture.index.sourceRevision, path))),
+  };
+  for (const [id, record] of Object.entries(forged.records)) {
+    record.supersedes = { path: `${bl1}/superseded/${closeout.slice(0, 12)}/records/${id}.json`, sha256: digest(id), sourceRevision: closeout };
+    forged.retained.set(record.supersedes.path, record.supersedes.sha256);
+  }
+  return forged;
+}
+
+test('BL1 retained captures are held to their derived and close-out facts', async () => {
+  const closeout = await retainedCloseout();
+  const capture = await loadCapture({ directory: closeout.directory });
+  assert.equal((await assertCapture(capture)).catalog.variantIds.length, 5);
+  const rejects = (change, message, base = capture, options) => {
+    const forged = structuredClone(base);
+    change(forged);
+    return assert.rejects(assertCapture(forged, options), (error) => error.message.includes(message), message);
+  };
+
+  // Derived from the catalog, the policy routes, and the thresholds at the capture's own revision.
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-03'].observations.typecheck.perVariant.variants.pop(); }, 'E-BL1-03 typechecks every variant the catalog declares');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.files.pop(); }, 'E-BL1-04 runs the block browser tests the policy routes');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholds.sha256 = `sha256:${'0'.repeat(64)}`; }, 'E-BL1-11 binds the thresholds committed at the source revision');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-10'].observations.review.reviewedCatalogPatternsTree = 'c'.repeat(40); }, 'the reviewer read the block sources this capture scanned');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-01'].observations.requiredNegatives[0].owner = null; }, 'E-BL1-01: all eight name an owner');
+  // The browser proof is derived from the test files, not from the record's own engine list: an empty record is refused.
+  await rejects(({ artifacts: forged }) => {
+    const browser = forged['E-BL1-04'].observations.browser;
+    Object.assign(browser, { engines: [], engineRuns: [] });
+    Object.assign(browser.proof.tests, { pass: 0, tests: 0 });
+  }, 'E-BL1-04 runs chromium, firefox, and webkit');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.engineRuns = forged['E-BL1-04'].observations.browser.engineRuns.filter(({ engine }) => engine !== 'webkit'); }, 'E-BL1-04 passes each block browser test in each engine');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.engineRuns.pop(); }, 'E-BL1-04 passes each block browser test in each engine');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.proof.command = forged['E-BL1-04'].observations.browser.proof.command.replace('chromium,firefox,webkit', 'chromium'); }, 'E-BL1-04 ran with all three engines');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.proof.command = forged['E-BL1-04'].observations.browser.proof.command.replace(/ test\/browser\/pattern-poster-grid\.test\.mjs/u, ''); }, 'E-BL1-04 ran the routed test files');
+  // The close-out pins.
+  await rejects(({ artifacts: forged }) => { Object.assign(forged['E-BL1-04'].observations.browser.proof.tests, { pass: 56, tests: 56 }); }, 'the close-out passes 57 of 57 browser results');
+  await rejects(({ artifacts: forged }) => {
+    const review = forged['E-BL1-09'].observations.exitReview;
+    review.comparison.equalTrees = false;
+    review.reviewedTree = 'c'.repeat(40);
+  }, 'the exit review read the source tree and the tools that ran');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-09'].observations.exitReview = null; }, 'the close-out retains the independent exit review');
+  // A scope is not interchangeable: relabelled as growth, the close-out is refused for the facts a growth capture must carry.
+  await rejects(({ verification: forged }) => { forged.scope = 'growth'; }, 'a growth capture records that it skipped the close-out scope check');
+  await rejects(({ verification: forged }) => { delete forged.scope; }, 'the validation summary records its scope');
+});
+
+test('a BL1 growth capture is held to the retained close-out revision, current or archived', async () => {
+  const closeout = await retainedCloseout();
+  const capture = await loadCapture({ directory: closeout.directory });
+  // Only the poster grid had shipped at #226, so a capture of the four blocks added three to that close-out.
+  const earlier = '5026836747b36e23b8f2dd8bd695d3a420cc295c';
+  const added = ['muxui:pattern:account-settings', 'muxui:pattern:marketing-hero', 'muxui:pattern:pricing-plans'];
+  const growth = await forgeGrowth(capture, earlier);
+  assert.deepEqual(growth.artifacts['E-BL1-11'].observations.thresholdChanges.addedPatterns, added);
+  // Derived expectations alone hold a growth capture; the close-out pins do not apply to it.
+  assert.equal((await assertCapture(growth, { closeoutRevision: earlier })).scope, 'growth');
+  const rejects = (change, message, options = { closeoutRevision: earlier }, base = growth) => {
+    const forged = structuredClone(base);
+    change(forged);
+    return assert.rejects(assertCapture(forged, options), (error) => error.message.includes(message), message);
+  };
+
+  // It compares with the retained close-out, not with itself.
+  const own = capture.index.sourceRevision;
+  await rejects(({ artifacts: forged }) => {
+    const changes = forged['E-BL1-11'].observations.thresholdChanges;
+    Object.assign(changes, { against: { ...changes.against, revision: own }, addedPatterns: ['muxui:pattern:poster-grid'], addedQueries: [], revisedQueries: [], changedValues: [], removedQueries: [], seedSet: { added: [], removed: [] } });
+  }, 'E-BL1-11 compares the thresholds with the retained close-out revision');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholdChanges.addedPatterns = ['muxui:pattern:poster-grid']; }, 'E-BL1-11 names the blocks added since the close-out');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholdChanges.addedQueries.push('invented'); }, 'E-BL1-11 lists every change to the thresholds since the close-out');
+  // It must add a block to that close-out, and must be checked against one.
+  await assert.rejects(assertCapture(await forgeGrowth(capture, own), { closeoutRevision: own }), (error) => error.message.includes('a growth capture adds a block to the close-out'));
+  await rejects(() => {}, 'a growth capture is checked against a retained close-out revision', {});
+});
+
+test('a BL1 archived capture is read from its own directory and must match its index', async () => {
+  const closeout = await retainedCloseout();
+  const capture = await loadCapture({ directory: closeout.directory });
+  const outputRoot = await stageRetainedTree(closeout);
+  try {
+    const archive = `${bl1}/superseded/${capture.index.sourceRevision.slice(0, 12)}`;
+    for (const entry of ['index.json', 'verification.json', 'records', 'artifacts', 'validation', 'captures']) {
+      await cp(join(repositoryRoot, closeout.directory, entry), join(outputRoot, archive, entry), { recursive: true });
+    }
+    const archived = await loadCapture({ repo: outputRoot, directory: archive });
+    await assertCopyMatchesIndex({ repo: outputRoot, ...archived });
+    assert.deepEqual(await assertCapture(archived), await assertCapture(capture));
+    await writeFile(join(outputRoot, archive, 'artifacts/E-BL1-05.json'), '{}');
+    await assert.rejects(assertCopyMatchesIndex({ repo: outputRoot, ...archived }), /E-BL1-05\.json is archived at the digest its index names/u);
+  } finally {
+    await rm(outputRoot, { recursive: true, force: true });
+  }
 });
