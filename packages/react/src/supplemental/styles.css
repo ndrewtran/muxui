@@ -2282,6 +2282,11 @@
   border-right: none;
 }
 
+/* Root takes focus only as the last place folding can send it; it is not a control, so it shows no ring. */
+.muxui-sidebar[tabindex='-1']:focus {
+  outline: none;
+}
+
 
 
 .muxui-sidebar__header {
@@ -3000,7 +3005,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   }
 
   /* Folded, the icon is the only name a sighted user has, so it needs non-text contrast on its own. */
-  :scope :where(.muxui-sidebar[data-collapsed]) .muxui-sidebar__nav-icon {
+  :scope :where(.muxui-sidebar[data-collapsed]) :is(.muxui-sidebar__nav-icon, .muxui-sidebar__search-icon) {
     color: var(--muxui-semantic-color-neutral-60);
   }
 
@@ -3014,7 +3019,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
   :scope .muxui-sidebar__nav-link:not(.muxui-sidebar__nav-link--current):hover .muxui-sidebar__nav-icon,
   :scope .muxui-sidebar__nav-link--current .muxui-sidebar__nav-icon {
-    color: var(--muxui-semantic-color-neutral-20);
+    color: var(--muxui-semantic-color-neutral-100);
   }
 
   :scope .muxui-sidebar__account-status {

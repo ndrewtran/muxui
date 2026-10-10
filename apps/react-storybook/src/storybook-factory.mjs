@@ -51,6 +51,7 @@ const NUMBER_VALUE_CONTEXT_PROPS = new Set(['max', 'min', 'step']);
 
 const CONTROLLED_DEFAULT_PAIRS = Object.freeze([
   ['checked', 'defaultChecked'],
+  ['collapsed', 'defaultCollapsed'],
   ['expanded', 'defaultExpanded'],
   ['expandedIds', 'defaultExpandedIds'],
   ['open', 'defaultOpen'],
@@ -193,7 +194,7 @@ function sampleControlledValue(binding, family, controlled, uncontrolled, source
   const defaults = binding.api.defaults ?? {};
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
   if (sourceValue !== undefined) return sourceValue;
-  if (controlled === 'open' || controlled === 'checked' || controlled === 'expanded' || controlled === 'selected') return false;
+  if (controlled === 'open' || controlled === 'checked' || controlled === 'collapsed' || controlled === 'expanded' || controlled === 'selected') return false;
   if (controlled === 'selectedId') return 'Melbourne';
   if (controlled.endsWith('Ids')) return [];
   if (controlled !== 'value') return undefined;
@@ -478,7 +479,7 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'collapsed':
       if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
       else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', []);
-      else if (props.has('collapsed')) args.collapsed = true;
+      else if (props.has('collapsed')) setControlledArg(args, props, 'collapsed', true);
       break;
     case 'pending':
       if (props.has('pending')) args.pending = true;
@@ -1316,6 +1317,7 @@ function eventForControlledProp(controlled, family) {
   if (family === 'PromptComposer' && controlled === 'selectedModel') return 'modelChange';
   if (family === 'Message' && controlled === 'sourcesExpanded') return 'sourcesExpandedChange';
   if (controlled === 'open') return 'openChange';
+  if (controlled === 'collapsed') return 'collapsedChange';
   if (controlled === 'expanded' || controlled === 'expandedIds') return 'expandedChange';
   if (controlled === 'selectedIds') return 'selectionChange';
   if (controlled === 'selectedId') return 'select';

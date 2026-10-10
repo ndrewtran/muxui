@@ -27,9 +27,19 @@ function Shell() {
   const provider = {
     shortcut: params.get('shortcut') === 'none' ? undefined : 'b',
     ...(controlled
-      ? { collapsed: folded, onCollapsedChange: (next) => { window.__changes.push(next); if (params.get('reject') !== '1') setFolded(next); } }
+      ? {
+        collapsed: folded,
+        // A parent may apply the change late (delay) or never (reject).
+        onCollapsedChange: (next) => {
+          window.__changes.push(next);
+          if (params.get('reject') === '1') return;
+          const delay = Number(params.get('delay') ?? 0);
+          if (delay > 0) setTimeout(() => setFolded(next), delay); else setFolded(next);
+        },
+      }
       : { defaultCollapsed: folded, onCollapsedChange: (next) => window.__changes.push(next) }),
   };
+  window.__fold = setFolded;
   const shell = h('div', { className: 'shell' },
     h(Sidebar.Root, { 'aria-label': 'Workspace' },
       h(Sidebar.Header, null,
@@ -39,20 +49,31 @@ function Shell() {
         h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home'),
         h(Sidebar.NavItem, { href: '#inbox', icon: Icon, badge: '3' }, 'Inbox'),
         h(Sidebar.NavItem, { href: '#docs' }, 'Docs'),
+        h(Sidebar.NavItem, { href: '#wiki' }, h('span', null, 'Wiki')),
+        h(Sidebar.NavItem, { href: '#raw' }, h('svg', { role: 'img', 'aria-label': 'Raw', width: 1, height: 1 })),
         h(Sidebar.Section, { label: 'Projects' },
           h(Sidebar.NavItem, { href: '#overview', icon: Icon, current: true }, 'Overview'),
           h(Sidebar.NavItem, { icon: Icon, items: [{ href: '#now', label: 'Now' }, { href: '#next', label: 'Next' }] }, 'Roadmap'))),
       h(Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => {} }),
       h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' })),
     h('main', { className: 'main' },
-      h(Sidebar.Toggle, { size: 'sm' }),
+      params.get('toggle') !== 'none' && h(Sidebar.Toggle, { size: 'sm' }),
       h('input', { id: 'field', 'aria-label': 'Notes' }),
       h('div', { id: 'editor', contentEditable: true, role: 'textbox', 'aria-label': 'Editor', suppressContentEditableWarning: true }, 'Draft'),
       h('button', { type: 'button', id: 'external', onClick: () => setFolded((value) => !value) }, 'Set folded'),
       h('button', { type: 'button', id: 'unmount', onClick: () => setMounted(false) }, 'Unmount')));
-  return h(React.Fragment, null, h('button', { id: 'before', tabIndex: 0 }, 'Before'), mounted ? h(Sidebar.Provider, provider, shell) : null);
+  // A second Provider with the same shortcut, mounted after the first.
+  const second = params.get('providers') === '2' && h(Sidebar.Provider, { shortcut: 'b' },
+    h(Sidebar.Root, { 'aria-label': 'Second' }, h(Sidebar.NavList, { 'aria-label': 'Second links' }, h(Sidebar.NavItem, { href: '#second', icon: Icon }, 'Second'))),
+    h(Sidebar.Toggle, { 'aria-label': 'Toggle second' }));
+  return h(React.Fragment, null, h('button', { id: 'before', tabIndex: 0 }, 'Before'), mounted ? h(Sidebar.Provider, provider, shell) : null, second);
 }
 createRoot(document.getElementById('root')).render(h(Shell));
+// An editable control inside a shadow root: the document only sees its host.
+const host = document.createElement('div');
+host.id = 'shadow-host';
+document.body.append(host);
+host.attachShadow({ mode: 'open' }).innerHTML = '<input aria-label="Shadow notes">';
 `;
 
 const css = `
@@ -155,7 +176,7 @@ for (const engine of browserEngines()) {
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
         await tab.goto(`${url}/sidebar.html${query}`, { waitUntil: 'networkidle' });
-        await tab.locator('aside').waitFor({ timeout: 15_000 });
+        await tab.locator('aside').first().waitFor({ timeout: 15_000 });
         return { tab, context, errors };
       };
       const read = (tab) => tab.evaluate(readSidebar);
@@ -171,6 +192,8 @@ for (const engine of browserEngines()) {
       }, { collapsed }, { message, report: () => document.querySelector('aside').getBoundingClientRect().width });
       // A key press makes RAC treat the next focus as keyboard focus, which is what shows tooltips.
       const focusByKeyboard = async (tab, selector) => { await tab.keyboard.press('Escape'); await tab.locator(selector).focus(); };
+      const chordOf = async (tab) => ((await tab.evaluate(() => /mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform))) ? 'Meta+b' : 'Control+b');
+      const hasFocus = (tab, selector) => tab.evaluate((selector) => document.activeElement === document.querySelector(selector), selector);
 
       for (const scheme of ['light', 'dark']) {
         const label = (message) => `${engine} ${scheme}: ${message}`;
@@ -197,8 +220,21 @@ for (const engine of browserEngines()) {
           const icon = await tab.evaluate(boxOf, 'a[href="#home"] .muxui-sidebar__nav-icon');
           const rootBox = await tab.evaluate(boxOf, 'aside');
           assert.ok(Math.abs(icon.left + icon.width / 2 - (rootBox.left + (state.railWidth - 1) / 2)) <= 1, label(`the icon column is centred in the rail (${icon.left + icon.width / 2} in ${state.railWidth}px)`));
-          const iconContrast = await tab.evaluate(contrastOf, { selector: 'a[href="#home"] .muxui-sidebar__nav-icon', background: 'aside' });
-          assert.ok(iconContrast >= 3, label(`the folded icon meets non-text contrast (${iconContrast.toFixed(2)}:1)`));
+          // Every folded stand-in for a name meets non-text contrast: idle, hovered, keyboard-focused, and current.
+          const railContrasts = (selectors) => Promise.all(selectors.map((selector) => tab.evaluate(contrastOf, { selector, background: 'aside' })));
+          const essentials = ['.muxui-sidebar__search-icon', 'a[href="#home"] .muxui-sidebar__nav-icon', 'a[href="#overview"] .muxui-sidebar__nav-icon', 'a[href="#docs"] .muxui-sidebar__nav-mark', 'summary .muxui-sidebar__nav-icon'];
+          const meets = async (state) => assert.ok((await railContrasts(essentials)).every((ratio) => ratio >= 3), label(`${state}: every folded icon and mark meets non-text contrast`));
+          await meets('idle');
+          for (const item of ['a[href="#home"]', 'a[href="#docs"]', 'summary']) {
+            await tab.locator(item).hover();
+            await tab.waitForTimeout(300);
+            await meets(`hovering ${item}`);
+          }
+          await tab.mouse.move(0, 0);
+          await focusByKeyboard(tab, 'a[href="#home"]');
+          await tab.waitForTimeout(300);
+          await meets('keyboard focus on a nav item');
+          await tab.locator('#before').focus();
 
           // Folded NavItems keep their names, Section its label, and the other parts fold away.
           assert.equal(await tab.getByRole('link', { name: 'Inbox 3' }).count(), 1, label('a folded NavItem keeps its label and badge in its accessible name'));
@@ -210,6 +246,10 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.getByRole('link', { name: 'Docs', exact: true }).count(), 1, label('the mark is decorative: the item is still named by its label'));
           const markContrast = await tab.evaluate(contrastOf, { selector: 'a[href="#docs"] .muxui-sidebar__nav-mark', background: 'aside' });
           assert.ok(markContrast >= 3, label(`the mark meets non-text contrast (${markContrast.toFixed(2)}:1)`));
+          // The mark reads through elements, and a label with no text gets a dot rather than a blank target.
+          assert.equal(await tab.locator('a[href="#wiki"] .muxui-sidebar__nav-mark').textContent(), 'W', label('the mark reads the text inside an element label'));
+          assert.equal(await tab.locator('a[href="#raw"] .muxui-sidebar__nav-mark').textContent(), '\u2022', label('a label with no text gets a dot'));
+          assert.equal(await tab.getByRole('link', { name: 'Raw', exact: true }).count(), 1, label('the dotted item keeps its name'));
           const hidden = await tab.evaluate(boxOf, 'a[href="#home"] .muxui-sidebar__nav-label');
           assert.ok(hidden.width <= 1 && hidden.height <= 1, label('the NavItem label is visually hidden'));
           assert.ok(await tab.evaluate(boxOf, '.muxui-sidebar__section-label').then((box) => box.width <= 1), label('the Section label is visually hidden'));
@@ -354,6 +394,118 @@ for (const engine of browserEngines()) {
           assert.ok(await tab.evaluate(() => document.activeElement === document.querySelector('.muxui-sidebar__search-input')), `${engine}: and focuses the input`);
           assert.equal(await tab.getByRole('button', { name: 'Search' }).count(), 0, `${engine}: the search button leaves the accessibility tree when expanded`);
           assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // Folding moves focus out of content it hides: to the group of a hidden child, else to Toggle, else to Root.
+      {
+        const { tab, context } = await open();
+        try {
+          const chord = await chordOf(tab);
+          await tab.locator('summary').click();
+          await focusByKeyboard(tab, 'a[href="#now"]');
+          await tab.keyboard.press(chord);
+          await settled(tab, true, `${engine}: the shortcut folds with focus on a group child`);
+          assert.ok(await hasFocus(tab, 'summary'), `${engine}: focus moves from a hidden group child to its group`);
+          await tab.keyboard.press(chord);
+          await settled(tab, false, `${engine}: the shortcut unfolds from the group`);
+          await focusByKeyboard(tab, '.muxui-sidebar__feature-card-dismiss');
+          await tab.keyboard.press(chord);
+          await settled(tab, true, `${engine}: the shortcut folds with focus on the FeatureCard`);
+          assert.ok(await hasFocus(tab, '.muxui-sidebar__toggle'), `${engine}: focus moves from hidden FeatureCard controls to Toggle`);
+          await tab.keyboard.press(chord);
+          await settled(tab, false, `${engine}: the shortcut unfolds again`);
+          await focusByKeyboard(tab, '.muxui-sidebar__account-trigger');
+          await tab.locator('.muxui-sidebar__toggle').evaluate((toggle) => toggle.click());
+          await settled(tab, true, `${engine}: Toggle folds with focus on the account button`);
+          assert.ok(await hasFocus(tab, '.muxui-sidebar__toggle'), `${engine}: focus moves from the hidden account button to Toggle`);
+        } finally {
+          await context.close();
+        }
+        const controlled = await open('?mode=controlled');
+        try {
+          await controlled.tab.locator('summary').click();
+          await focusByKeyboard(controlled.tab, 'a[href="#now"]');
+          await controlled.tab.evaluate(() => window.__fold(true));
+          await settled(controlled.tab, true, `${engine}: a controlled prop folds the sidebar`);
+          assert.ok(await hasFocus(controlled.tab, 'summary'), `${engine}: a controlled fold also moves focus to the group`);
+        } finally {
+          await controlled.context.close();
+        }
+        const bare = await open('?toggle=none');
+        try {
+          await focusByKeyboard(bare.tab, '.muxui-sidebar__feature-card-dismiss');
+          await bare.tab.keyboard.press(await chordOf(bare.tab));
+          await settled(bare.tab, true, `${engine}: the shortcut folds a sidebar with no Toggle`);
+          assert.ok(await hasFocus(bare.tab, 'aside') && (await bare.tab.locator('aside').getAttribute('tabindex')) === '-1', `${engine}: without a Toggle, focus falls back to Root, which becomes programmatically focusable`);
+        } finally {
+          await bare.context.close();
+        }
+      }
+
+      // Folded Search focuses its input once Root is really expanded, even when a controlling parent answers late.
+      {
+        const delayed = await open('?mode=controlled&delay=100&folded=1');
+        try {
+          await delayed.tab.getByRole('button', { name: 'Search' }).click();
+          await settled(delayed.tab, false, `${engine}: a late controlled parent unfolds the sidebar`);
+          assert.ok(await hasFocus(delayed.tab, '.muxui-sidebar__search-input'), `${engine}: the search input is focused once the late unfold lands`);
+        } finally {
+          await delayed.context.close();
+        }
+        const interrupted = await open('?mode=controlled&delay=300&folded=1');
+        try {
+          await interrupted.tab.getByRole('button', { name: 'Search' }).click();
+          await interrupted.tab.locator('.muxui-sidebar__toggle').click();
+          await settled(interrupted.tab, false, `${engine}: both requests unfold the sidebar`);
+          assert.ok(!(await hasFocus(interrupted.tab, '.muxui-sidebar__search-input')), `${engine}: another fold request cancels the pending Search focus`);
+        } finally {
+          await interrupted.context.close();
+        }
+        const rejected = await open('?mode=controlled&reject=1&folded=1');
+        try {
+          await rejected.tab.getByRole('button', { name: 'Search' }).click();
+          await rejected.tab.waitForTimeout(1200);
+          await rejected.tab.locator('#external').click();
+          await settled(rejected.tab, false, `${engine}: the parent unfolds later by itself`);
+          assert.ok(!(await hasFocus(rejected.tab, '.muxui-sidebar__search-input')), `${engine}: a lapsed Search request does not steal focus`);
+        } finally {
+          await rejected.context.close();
+        }
+      }
+
+      // Several Providers share one shortcut: the one holding focus handles the chord, else the latest; and the check
+      // sees through shadow roots and ignores IME composition.
+      {
+        const { tab, context } = await open('?providers=2');
+        try {
+          const chord = await chordOf(tab);
+          const folds = () => tab.evaluate(() => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-collapsed')));
+          await tab.evaluate(() => { window.__prevented = []; window.addEventListener('keydown', (event) => { if (event.key.toLowerCase() === 'b') window.__prevented.push(event.defaultPrevented); }); });
+          await tab.keyboard.press(chord);
+          await pollUntil(tab, () => document.querySelectorAll('aside')[1].hasAttribute('data-collapsed'), undefined, { message: `${engine}: the latest Provider handles a chord from outside both`, report: () => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-collapsed')) });
+          assert.deepEqual(await folds(), [false, true], `${engine}: only the latest Provider folded`);
+          assert.deepEqual(await tab.evaluate(() => window.__prevented), [true], `${engine}: one handler prevented the default`);
+          await focusByKeyboard(tab, 'a[href="#home"]');
+          await tab.keyboard.press(chord);
+          await pollUntil(tab, () => document.querySelectorAll('aside')[0].hasAttribute('data-collapsed'), undefined, { message: `${engine}: the Provider holding focus handles the chord` });
+          assert.deepEqual(await folds(), [true, true], `${engine}: the first Provider folded and the second kept its state`);
+
+          await tab.locator('#shadow-host input').focus();
+          await tab.keyboard.press(chord);
+          await tab.waitForTimeout(150);
+          assert.deepEqual(await folds(), [true, true], `${engine}: typing in a shadow-root input leaves both sidebars alone`);
+          assert.equal((await tab.evaluate(() => window.__prevented)).at(-1), false, `${engine}: and keeps the chord's default`);
+          const apple = chord.startsWith('Meta');
+          const composing = await tab.evaluate((apple) => [{ isComposing: true }, { keyCode: 229 }].map((init) => {
+            const event = new KeyboardEvent('keydown', { key: 'b', metaKey: apple, ctrlKey: !apple, bubbles: true, cancelable: true, ...init });
+            document.body.dispatchEvent(event);
+            return event.defaultPrevented;
+          }), apple);
+          assert.deepEqual(composing, [false, false], `${engine}: IME composition keeps the chord`);
+          assert.deepEqual(await folds(), [true, true], `${engine}: IME composition does not toggle`);
         } finally {
           await context.close();
         }

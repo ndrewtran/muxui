@@ -45,7 +45,7 @@
       "Mobile navigation traps focus and returns it to the trigger on close.",
       "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
       "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
-      "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element."
+      "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element, including inside a shadow root, and during IME composition."
     ]
   },
   "bindings": {
@@ -111,7 +111,9 @@
         "Provider holds the folded state, controlled by collapsed or uncontrolled from defaultCollapsed, and folds with Cmd or Ctrl plus its shortcut key.",
         "A folded root animates to an icon rail; the transition is removed under reduced motion.",
         "Folded search unfolds the sidebar and focuses the input; a folded nested group unfolds the sidebar and opens.",
-        "A folded nav item without an icon shows the first character of its label in the icon column; the label stays in its accessible name and tooltip.",
+        "A folded nav item without an icon shows the first character of its label in the icon column, or a dot when the label has no text; the label stays in its accessible name and tooltip.",
+        "Folding moves focus out of content it hides: a hidden nested link goes to its group, anything else to Toggle, or to Root when no Toggle is mounted.",
+        "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the most recently mounted one; only that Provider prevents the default.",
         "A folded header is clipped to the rail, so a text-only header shows only its first word; give it a leading mark.",
         "When Root sets its own id, Toggle's aria-controls names the generated id until hydration."
       ],
@@ -120,7 +122,7 @@
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
         "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
-        "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element."
+        "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element, including inside a shadow root, and during IME composition."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
