@@ -14,7 +14,7 @@ import {
 } from '@muxui/schema';
 import { catalogJson } from '../generated/catalog.mjs';
 import { assertExamplePreferences, compileCatalog } from '../src/compiler.mjs';
-import { assertManifestCompleteness } from '../src/completeness.mjs';
+import { deriveSourceRecords, syncSourceRecords } from '../src/completeness.mjs';
 import {
   createCatalogApi,
   getArtifact,
@@ -993,49 +993,99 @@ test('compiler reads content from each record source and rejects bad sources', a
   }
 });
 
-test('catalog source manifest lists every canonical component and example record', async () => {
+test('catalog source manifest is exactly the canonical records on disk', async () => {
   const manifest = JSON.parse(await readFile(
     join(repositoryRoot, 'packages/catalog/catalog-sources.json'),
     'utf8',
   ));
-  await assertManifestCompleteness({ repositoryRoot, manifest });
+  // Syncing the committed list with disk changes nothing: no unlisted, stale, or misfiled record.
+  assert.deepEqual(await syncSourceRecords(repositoryRoot, manifest.records), manifest.records);
+  const derived = await deriveSourceRecords(repositoryRoot);
+  assert.deepEqual(
+    new Set(derived.map(({ family }) => family)),
+    new Set(['capability', 'component', 'example', 'guide', 'pattern', 'token-source']),
+  );
+  assert.equal(derived.length, manifest.records.length);
 });
 
-test('catalog completeness negative: unlisted records, stale exclusions, and symlinks fail', async () => {
-  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-catalog-completeness-'));
+test('catalog source records derive from disk by path convention', async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-catalog-derive-'));
   try {
-    const listed = 'catalog/components/listed/artifact.json';
-    const artifact = 'catalog/components/unlisted/artifact.json';
-    const example = 'catalog/components/unlisted/examples/react/basic.example.json';
-    for (const path of [listed, artifact, example, 'catalog/components/unlisted/examples/react/basic.tsx']) {
+    const records = {
+      'catalog/capabilities/query.json': 'capability',
+      'catalog/guides/usage.json': 'guide',
+      'catalog/tokens/theme.json': 'token-source',
+      'catalog/components/button/artifact.json': 'component',
+      'catalog/components/button/examples/react/basic.example.json': 'example',
+      'catalog/patterns/hero/artifact.json': 'pattern',
+      'catalog/patterns/hero/examples/react/split.example.json': 'example',
+    };
+    const ignored = [
+      'catalog/guides/usage.md',
+      'catalog/components/button/examples/react/basic.tsx',
+      'catalog/patterns/hero/assets/photo.license.json',
+      'catalog/components/button/notes.json',
+      'catalog/components/loose.json',
+      'catalog/react-r1-0/inputs.json',
+    ];
+    for (const path of [...Object.keys(records), ...ignored]) {
       await mkdir(join(temporaryRoot, path, '..'), { recursive: true });
       await writeFile(join(temporaryRoot, path), '{}');
     }
-    const manifest = { records: [{ family: 'component', path: listed }] };
-    await assert.rejects(
-      assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions: {} }),
-      (error) => error.message.startsWith('MUXUI_CATALOG_SOURCE_UNLISTED:')
-        && error.message.includes(artifact)
-        && error.message.includes(example)
-        && !error.message.includes(listed)
-        && !error.message.includes('basic.tsx'),
+    assert.deepEqual(
+      await deriveSourceRecords(temporaryRoot, {}),
+      Object.entries(records).map(([path, family]) => ({ family, path })).sort((a, b) => (a.path < b.path ? -1 : 1)),
     );
+
+    // A listed record keeps its place and extra fields; a stale one drops; a new one follows in path order.
+    const listed = [
+      { family: 'guide', path: 'catalog/guides/usage.json' },
+      { family: 'token-source', path: 'catalog/tokens/theme.json', baselineOccurrencesPath: 'catalog/tokens/baseline.json' },
+      { family: 'guide', path: 'catalog/guides/gone.json' },
+      { family: 'component', path: 'catalog/patterns/hero/artifact.json' },
+    ];
+    assert.deepEqual((await syncSourceRecords(temporaryRoot, listed, {})), [
+      { family: 'guide', path: 'catalog/guides/usage.json' },
+      { family: 'token-source', path: 'catalog/tokens/theme.json', baselineOccurrencesPath: 'catalog/tokens/baseline.json' },
+      { family: 'pattern', path: 'catalog/patterns/hero/artifact.json' },
+      { family: 'capability', path: 'catalog/capabilities/query.json' },
+      { family: 'component', path: 'catalog/components/button/artifact.json' },
+      { family: 'example', path: 'catalog/components/button/examples/react/basic.example.json' },
+      { family: 'example', path: 'catalog/patterns/hero/examples/react/split.example.json' },
+    ]);
+  } finally {
+    await rm(temporaryRoot, { recursive: true, force: true });
+  }
+});
+
+test('catalog source exclusions drop records, stale exclusions and symlinks fail', async () => {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-catalog-completeness-'));
+  try {
+    const kept = 'catalog/components/kept/artifact.json';
+    const artifact = 'catalog/components/excluded/artifact.json';
+    const example = 'catalog/components/excluded/examples/react/basic.example.json';
+    for (const path of [kept, artifact, example, 'catalog/components/excluded/examples/react/basic.tsx']) {
+      await mkdir(join(temporaryRoot, path, '..'), { recursive: true });
+      await writeFile(join(temporaryRoot, path), '{}');
+    }
     const exclusions = { [artifact]: 'fixture reason', [example]: 'fixture reason' };
-    await assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions });
+    assert.deepEqual(await deriveSourceRecords(temporaryRoot, exclusions), [{ family: 'component', path: kept }]);
+    assert.equal((await deriveSourceRecords(temporaryRoot, {})).length, 3);
     for (const [label, stale] of [
-      ['listed', { ...exclusions, [listed]: 'already listed' }],
       ['missing', { ...exclusions, 'catalog/components/gone/artifact.json': 'deleted folder' }],
       ['reasonless', { ...exclusions, [artifact]: ' ' }],
     ]) {
       await assert.rejects(
-        assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions: stale }),
+        deriveSourceRecords(temporaryRoot, stale),
         /MUXUI_CATALOG_SOURCE_EXCLUSION_STALE:/,
         label,
       );
     }
-    await symlink(join(temporaryRoot, listed), join(temporaryRoot, 'catalog/components/unlisted/linked.json'));
+    // The committed exclusions all match real records.
+    await deriveSourceRecords(repositoryRoot);
+    await symlink(join(temporaryRoot, kept), join(temporaryRoot, 'catalog/components/excluded/linked.json'));
     await assert.rejects(
-      assertManifestCompleteness({ repositoryRoot: temporaryRoot, manifest, exclusions }),
+      deriveSourceRecords(temporaryRoot, exclusions),
       /MUXUI_CATALOG_SOURCE_INVALID: .*linked\.json must be a plain file or directory/,
     );
   } finally {

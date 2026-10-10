@@ -9,6 +9,7 @@ import {
   auditAliases,
   auditCurrentIdentity,
   auditRepository,
+  auditRootContract,
   generatedText,
   loadPolicy,
   projectionFilesToValidate,
@@ -25,6 +26,30 @@ const policy = await loadPolicy(repositoryRoot);
 test('E-G0.0-01: a cold root navigation audit reaches every major owner', async () => {
   const result = await auditRepository(repositoryRoot);
   assert.equal(result.owners, 7);
+});
+
+test('the root script surface must include the core commands and may add others', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-root-contract-'));
+  const writeRoot = async (scripts) => {
+    await writeFile(join(root, 'package.json'), JSON.stringify({
+      scripts,
+      packageManager: `pnpm@${policy.toolchain.pnpm}`,
+      engines: { node: policy.toolchain.nodeRange },
+    }));
+    await writeFile(join(root, '.node-version'), `${policy.toolchain.node}\n`);
+  };
+  const core = Object.fromEntries(policy.requiredRootCommands.map((name) => [name, 'true']));
+  await writeRoot(core);
+  await auditRootContract(root, policy);
+  await writeRoot({ ...core, lint: 'true' });
+  await auditRootContract(root, policy);
+  const { check: _check, ...withoutCheck } = core;
+  await writeRoot({ ...withoutCheck, lint: 'true' });
+  await assert.rejects(
+    auditRootContract(root, policy),
+    (error) => error.code === 'ROOT_COMMAND_SURFACE_DRIFT' && /missing: check$/u.test(error.message),
+  );
+  await auditRootContract(repositoryRoot, policy);
 });
 
 test('identity reset audit rejects stale current names but permits explicit history', async () => {

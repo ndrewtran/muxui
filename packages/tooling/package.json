@@ -17,7 +17,8 @@
   },
   "scripts": {
     "prepack": "pnpm --filter @muxui/tooling... generate",
-    "check": "node src/generate.mjs --check && node --test test/*.test.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check": "node src/generate.mjs --check && pnpm test",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
   },

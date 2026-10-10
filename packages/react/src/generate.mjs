@@ -5,7 +5,7 @@ import { canonicalJson } from '@muxui/schema';
 import { compileTokenGraph, webThemeFromGraph } from '@muxui/tokens';
 import { compileScalePresetTheme } from '@muxui/tokens/authoring';
 import { cssName, cssValue } from '@muxui/tokens/core';
-import { assertReactR10SourceContracts, assertReactR15GeneratedContracts } from './r1-contracts.mjs';
+import { assertReactR10SourceContracts, assertReactR15GeneratedContracts, compatibilityUpstream } from './r1-contracts.mjs';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 import { readSupplementalMapping } from './supplemental-mapping.mjs';
 
@@ -13,6 +13,8 @@ const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
 const generatedRoot = resolve(packageRoot, 'generated');
 const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
+// The exact React Aria Components pin; the generated compatibility record and README follow it.
+const racVersion = manifest.dependencies['react-aria-components'];
 const tokenPath = resolve(repositoryRoot, 'catalog/tokens/default-theme.json');
 const tokenRaw = await readFile(tokenPath);
 const tokenSha256 = createHash('sha256').update(tokenRaw).digest('hex');
@@ -349,7 +351,7 @@ const compatibility = {
   schema: 'muxui-react-compatibility-v1',
   package: manifest.name,
   version: manifest.version,
-  upstream: { package: 'react-aria-components', version: '1.20.0', gitHead: '5ecb3333001313e83898cd07644227897e3bae1f' },
+  upstream: compatibilityUpstream({ pin: racVersion, retained: familySnapshot.upstream }),
   tokenSource: { path: 'catalog/tokens/default-theme.json', sha256: tokenSha256 },
   compatibilityProfile: {
     runtimeProfile: r15ClosureSource.compatibility.runtimeProfile,
@@ -614,7 +616,7 @@ export declare const Tooltip: React.ForwardRefExoticComponent<TooltipProps & Rea
 `;
 const reactTypesBody = typesBody.replace("export const reactCompatibility: Readonly<Record<string, unknown>>;\n", `export const reactCompatibility: Readonly<Record<string, unknown>>;\n${fieldsTypes}${collectionsTypes}${overlaysTypes}`);
 const testingBody = "export const reactPlatformSafetyFixture = Object.freeze({ componentSupportClaim: 'none', fixture: 'r1.5-react-breadth', discovery: 'informational' });\n";
-const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components 1.20.0 is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
+const readmeBody = `# @muxui/react\n\nR1.6 current React union for the standalone Mux UI renderer.\n\n- The current union contains Mux UI-owned family exports, including root exports and isolated subpaths.\n- React Aria Components ${racVersion} is an internal replaceable substrate.\n- MuxUI owns the public APIs, tokens, selectors, styling, accessibility behavior, lifecycle, and prop names.\n- The R1.5 closure retains its fixed family membership separately from this current union.\n`;
 const markdownCell = (value) => String(value).replaceAll('|', '\\|').replaceAll('\n', ' ');
 const readmeMappingBySlug = new Map(r16SupplementalComponents.map((entry) => [entry.slug, entry]));
 const readmeComponentRows = allCatalogArtifacts.sort((left, right) => left.name.localeCompare(right.name)).map((artifact) => {

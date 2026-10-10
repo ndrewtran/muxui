@@ -157,15 +157,7 @@
         "reactGenerator": true,
         "policy": true,
         "packageChecks": ["@muxui/schema"],
-        "storybookUnitTests": [
-          {
-            "file": "test/storybook.test.mjs",
-            "names": [
-              "private host and exact Mux UI React family projection",
-              "every story exposes exactly its canonical Mux UI-owned properties"
-            ]
-          }
-        ]
+        "storybookUnitTests": ["test/storybook.test.mjs"]
       },
       "catalog/react-r1-5/": { "reactGenerator": true, "policy": true },
       "catalog/react-r1-6/": { "reactGenerator": true, "policy": true }

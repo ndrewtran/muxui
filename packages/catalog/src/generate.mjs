@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { canonicalJson, parseJsonStrict } from '@muxui/schema';
 import { generatedText } from '../../../tooling/audits/repository-policy/src/policy.mjs';
 import { compileCatalog } from './compiler.mjs';
-import { assertManifestCompleteness } from './completeness.mjs';
+import { syncSourceRecords } from './completeness.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const source = 'packages/catalog/catalog-sources.json';
@@ -14,11 +14,22 @@ const repositoryPolicy = parseJsonStrict(await readFile(
   join(repositoryRoot, 'tooling/audits/repository-policy/repository-policy.json'),
   'utf8',
 ));
+const checking = process.argv.includes('--check');
+// The manifest lists exactly the canonical records on disk; only its settings
+// are authored. The compiler reads the file, so it is written before compiling.
+const sourcePath = join(repositoryRoot, source);
+const listedManifest = parseJsonStrict(await readFile(sourcePath, 'utf8'));
+const manifestOutput = {
+  path: sourcePath,
+  expected: `${JSON.stringify({
+    ...listedManifest,
+    records: await syncSourceRecords(repositoryRoot, listedManifest.records),
+  }, null, 2)}\n`,
+  label: source,
+  from: 'catalog/',
+};
+if (!checking) await writeFile(sourcePath, manifestOutput.expected);
 const { bundle, bytes } = await compileCatalog({ repositoryRoot, sourceManifestPath: source });
-await assertManifestCompleteness({
-  repositoryRoot,
-  manifest: parseJsonStrict(await readFile(join(repositoryRoot, source), 'utf8')),
-});
 const tokenArtifact = bundle.artifacts.find(({ kind }) => kind === 'token');
 if (!tokenArtifact) throw new Error('CATALOG_TOKEN_CONTRACT_MISSING: expected one canonical token source');
 if (packageManifest.version !== bundle.catalogVersion) {
@@ -125,6 +136,7 @@ function strictJsonOutputs(path, sourcePath, value) {
   ];
 }
 const outputs = [
+  manifestOutput,
   {
     path: resolve(packageRoot, 'generated/catalog.mjs'),
     expected,
@@ -135,11 +147,11 @@ const outputs = [
 ];
 
 for (const output of outputs) {
-  if (process.argv.includes('--check')) {
+  if (checking) {
     const actual = await readFile(output.path, 'utf8').catch(() => null);
     if (actual !== output.expected) {
       console.error(
-        `CATALOG_GENERATED_BUNDLE_DRIFT: ${output.label} must be regenerated from ${source}`,
+        `CATALOG_GENERATED_BUNDLE_DRIFT: ${output.label} must be regenerated from ${output.from ?? source}`,
       );
       process.exitCode = 1;
     } else {

@@ -2,6 +2,9 @@ import { createHash } from 'node:crypto';
 import { canonicalJson, validateContractDocument } from '@muxui/schema';
 import { DEFERRED_R1_EVIDENCE, deferredEvidenceForFamily } from './r1-deferred-evidence.mjs';
 
+// The R1.0 Stage 1 registry snapshot, a historical record of the upstream it
+// was taken from. It does not follow the live `react-aria-components` pin in
+// package.json, so a dependency upgrade does not change it.
 const EXPECTED_UPSTREAM = Object.freeze({
   package: 'react-aria-components',
   version: '1.20.0',
@@ -18,6 +21,19 @@ const EXPECTED_NORMALIZED_EXPORTS_SHA256 = 'sha256:8f4e9dd637585ed98d529624f4696
 const EXPECTED_UPSTREAM_DISPOSITIONS = Object.freeze([
   'candidate', 'delivered', 'defer', 'exclude', 'not-a-component',
 ]);
+
+/**
+ * The upstream identity the generated compatibility record declares: the exact
+ * pin from package.json. The retained snapshot's commit is added only while the
+ * pin is still the snapshot's version, since a newer version has another commit.
+ */
+export function compatibilityUpstream({ pin, retained }) {
+  return {
+    package: 'react-aria-components',
+    version: pin,
+    ...(pin === retained.version ? { gitHead: retained.commit } : {}),
+  };
+}
 
 function sha256(value) {
   return `sha256:${createHash('sha256').update(value).digest('hex')}`;
@@ -225,7 +241,7 @@ export function assertReactR15GeneratedContracts({
     || closureRecord.package !== manifest?.name
     || closureRecord.version !== manifest?.version
     || closureRecord.upstream?.package !== 'react-aria-components'
-    || closureRecord.upstream?.version !== '1.20.0'
+    || closureRecord.upstream?.version !== EXPECTED_UPSTREAM.version
     || closureRecord.upstream?.commit !== EXPECTED_UPSTREAM.commit
     || closureRecord.upstream?.tree !== EXPECTED_UPSTREAM.tree
     || closureRecord.upstream?.rawExports !== 613

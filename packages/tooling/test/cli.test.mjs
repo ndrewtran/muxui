@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
@@ -195,16 +197,49 @@ test('E-G0.3-03 dense outputs round-trip deterministically within every locked b
   }
 });
 
+// Compares each rendering with its golden file in `directory`. With `update`,
+// a stale golden is rewritten instead, so a catalog edit needs no throwaway script.
+async function checkGoldens(renderings, directory, { update = false } = {}) {
+  for (const [name, actual] of Object.entries(renderings)) {
+    const path = join(directory, name);
+    const expected = await readFile(path, 'utf8').catch(() => null);
+    if (actual === expected) continue;
+    if (!update) assert.equal(actual, expected, name);
+    await writeFile(path, actual);
+    console.log(`[goldens] rewrote ${name}`);
+  }
+}
+
 test('E-G0.3-03 dense golden snapshots remain stable', async () => {
+  // MUXUI_UPDATE_GOLDENS=1 pnpm --filter @muxui/tooling test rewrites them from these requests.
   const goldenCases = {
     'manifest-brief.txt': executeCommand('manifest', { detail: 'brief' }),
     'list-brief.txt': executeCommand('list', { ...commandCases.list('brief').request, limit: 1 }),
     'search-brief.txt': executeCommand('search', { ...commandCases.search('brief').request, limit: 1 }),
     'get-compact.txt': executeCommand('get', commandCases.get('compact').request),
   };
-  for (const [name, response] of Object.entries(goldenCases)) {
-    const expected = await readFile(new URL(`goldens/${name}`, import.meta.url), 'utf8');
-    assert.equal(renderDense(response), expected, name);
+  await checkGoldens(
+    Object.fromEntries(Object.entries(goldenCases).map(([name, response]) => [name, renderDense(response)])),
+    fileURLToPath(new URL('goldens/', import.meta.url)),
+    { update: process.env.MUXUI_UPDATE_GOLDENS === '1' },
+  );
+});
+
+test('golden update mode rewrites stale goldens only when asked', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'muxui-goldens-'));
+  try {
+    await writeFile(join(directory, 'a.txt'), 'stale');
+    await writeFile(join(directory, 'b.txt'), 'current');
+    const renderings = { 'a.txt': 'fresh', 'b.txt': 'current', 'c.txt': 'new' };
+    await assert.rejects(checkGoldens(renderings, directory), /a\.txt/u);
+    // A failed compare leaves the files alone.
+    assert.equal(await readFile(join(directory, 'a.txt'), 'utf8'), 'stale');
+    await checkGoldens(renderings, directory, { update: true });
+    assert.equal(await readFile(join(directory, 'a.txt'), 'utf8'), 'fresh');
+    assert.equal(await readFile(join(directory, 'c.txt'), 'utf8'), 'new');
+    await checkGoldens(renderings, directory);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
   }
 });
 

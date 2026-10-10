@@ -11,7 +11,7 @@ import {
 } from '@muxui/schema';
 import { catalogJson } from '../generated/catalog.mjs';
 import { CatalogSourceError } from '../src/compiler.mjs';
-import { assertManifestCompleteness } from '../src/completeness.mjs';
+import { deriveSourceRecords } from '../src/completeness.mjs';
 import {
   createCatalogApi,
   getArtifact,
@@ -319,7 +319,7 @@ test('E-BL1-01 negative: the rest of the source is scanned raw, so hidden code s
   assert.match(multiline[0].message, /export \.\.\. from/u);
 });
 
-test('E-BL1-01: the manifest completeness audit lists unlisted pattern records', async () => {
+test('E-BL1-01: derived source records include pattern artifacts and variant examples', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-pattern-completeness-'));
   try {
     const record = 'catalog/patterns/poster-grid/artifact.json';
@@ -329,23 +329,14 @@ test('E-BL1-01: the manifest completeness audit lists unlisted pattern records',
       await mkdir(join(root, path, '..'), { recursive: true });
       await writeFile(join(root, path), '{}');
     }
-    const manifest = { records: [{ family: 'component', path: component }] };
-    await assert.rejects(
-      assertManifestCompleteness({ repositoryRoot: root, manifest, exclusions: {} }),
-      (error) => error.message.startsWith('MUXUI_CATALOG_SOURCE_UNLISTED:')
-        && error.message.includes(record)
-        && error.message.includes(example)
-        && !error.message.includes('css-grid.tsx'),
-    );
-    manifest.records.push({ family: 'pattern', path: record }, { family: 'example', path: example });
-    await assertManifestCompleteness({ repositoryRoot: root, manifest, exclusions: {} });
-    // `catalog/patterns` is audited only when it exists.
+    assert.deepEqual(await deriveSourceRecords(root, {}), [
+      { family: 'component', path: component },
+      { family: 'pattern', path: record },
+      { family: 'example', path: example },
+    ]);
+    // `catalog/patterns` is optional.
     await rm(join(root, 'catalog/patterns'), { recursive: true });
-    await assertManifestCompleteness({
-      repositoryRoot: root,
-      manifest: { records: [{ family: 'component', path: component }] },
-      exclusions: {},
-    });
+    assert.deepEqual(await deriveSourceRecords(root, {}), [{ family: 'component', path: component }]);
   } finally {
     await rm(root, { recursive: true, force: true });
   }

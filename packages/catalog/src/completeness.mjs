@@ -1,8 +1,5 @@
-import { readdir, stat } from 'node:fs/promises';
+import { readdir } from 'node:fs/promises';
 import { join, relative, sep } from 'node:path';
-
-const COMPONENTS_ROOT = 'catalog/components';
-const PATTERNS_ROOT = 'catalog/patterns';
 
 // Canonical component, pattern, or example records that stay out of the manifest on
 // purpose. Keys are repository-relative record paths; values give the reason.
@@ -12,7 +9,11 @@ export const MANIFEST_EXCLUSIONS = Object.freeze({
 });
 
 async function walk(directory) {
-  const entries = await readdir(directory, { withFileTypes: true });
+  const entries = await readdir(directory, { withFileTypes: true }).catch((error) => {
+    // Only the component root is required; the other roots may not exist yet.
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  });
   const nested = await Promise.all(entries.map((entry) => {
     const path = join(directory, entry.name);
     if (entry.isDirectory()) return walk(path);
@@ -24,56 +25,60 @@ async function walk(directory) {
 }
 
 /**
- * Lists every canonical component and pattern artifact and example record on
- * disk. The manifest stays the declared inventory; this only audits it.
- * `catalog/patterns` is audited only when it exists.
+ * The manifest family of a repository-relative path under `catalog/`, or null
+ * when the path is not a canonical record (content sources, assets, projections).
  */
-export async function canonicalCatalogRecords(repositoryRoot) {
-  const roots = [COMPONENTS_ROOT];
-  const patterns = await stat(join(repositoryRoot, PATTERNS_ROOT)).catch(() => null);
-  if (patterns?.isDirectory()) roots.push(PATTERNS_ROOT);
-  const files = (await Promise.all(roots.map((root) => walk(join(repositoryRoot, root))))).flat();
-  return files
-    .map((file) => relative(repositoryRoot, file).split(sep).join('/'))
-    .filter((path) => {
-      const [, , , ...rest] = path.split('/');
-      return (rest.length === 1 && rest[0] === 'artifact.json')
-        || (rest[0] === 'examples' && path.endsWith('.example.json'));
-    })
-    .sort();
+function recordFamily(path) {
+  const [, root, ...rest] = path.split('/');
+  if (!path.endsWith('.json')) return null;
+  if (rest.length === 1) return { capabilities: 'capability', guides: 'guide', tokens: 'token-source' }[root] ?? null;
+  const family = { components: 'component', patterns: 'pattern' }[root];
+  if (!family) return null;
+  if (rest.length === 2 && rest[1] === 'artifact.json') return family;
+  return rest[1] === 'examples' && path.endsWith('.example.json') ? 'example' : null;
 }
 
 /**
- * Fails when a canonical component, pattern, or example record is neither listed in
- * the source manifest nor explicitly excluded with a reason, or when an
- * exclusion is stale (listed, absent on disk, or missing its reason).
+ * Every canonical record under `catalog/`, as `{ family, path }` sorted by path:
+ * capability, guide, and token-source records at the top of their roots, and a
+ * component or pattern `artifact.json` plus the example records under its
+ * `examples/`. Exclusions are removed; an exclusion that is missing on disk,
+ * lacks a reason, or names a path the walk would not list fails as stale.
  */
-export async function assertManifestCompleteness({
-  repositoryRoot,
-  manifest,
-  exclusions = MANIFEST_EXCLUSIONS,
-}) {
-  const listed = new Set(manifest.records.map(({ path }) => path));
-  const onDisk = await canonicalCatalogRecords(repositoryRoot);
-  const present = new Set(onDisk);
+export async function deriveSourceRecords(repositoryRoot, exclusions = MANIFEST_EXCLUSIONS) {
+  const roots = ['capabilities', 'guides', 'tokens', 'components', 'patterns'];
+  const files = (await Promise.all(roots.map((root) => walk(join(repositoryRoot, 'catalog', root))))).flat();
+  const onDisk = files
+    .map((file) => relative(repositoryRoot, file).split(sep).join('/'))
+    .flatMap((path) => {
+      const family = recordFamily(path);
+      return family ? [{ family, path }] : [];
+    })
+    .sort((left, right) => (left.path < right.path ? -1 : left.path > right.path ? 1 : 0));
+  const present = new Set(onDisk.map(({ path }) => path));
   const stale = Object.entries(exclusions)
-    .filter(([path, reason]) => (
-      listed.has(path)
-      || !present.has(path)
-      || typeof reason !== 'string'
-      || reason.trim().length === 0
-    ))
+    .filter(([path, reason]) => !present.has(path) || typeof reason !== 'string' || reason.trim().length === 0)
     .map(([path]) => path)
     .sort();
   if (stale.length > 0) {
     throw new Error(
-      `MUXUI_CATALOG_SOURCE_EXCLUSION_STALE: remove or fix these exclusions, which are listed, missing on disk, or lack a reason: ${stale.join(', ')}`,
+      `MUXUI_CATALOG_SOURCE_EXCLUSION_STALE: remove or fix these exclusions, which are missing on disk or lack a reason: ${stale.join(', ')}`,
     );
   }
-  const unlisted = onDisk.filter((path) => !listed.has(path) && !(path in exclusions));
-  if (unlisted.length > 0) {
-    throw new Error(
-      `MUXUI_CATALOG_SOURCE_UNLISTED: list these canonical records in the catalog source manifest or exclude them with a reason: ${unlisted.join(', ')}`,
-    );
-  }
+  return onDisk.filter(({ path }) => !(path in exclusions));
+}
+
+/**
+ * The manifest records after syncing with disk: listed records that still exist
+ * keep their place, and records new on disk follow in path order. The compiler
+ * orders records by path, so the listed order is only a diff-stability choice.
+ */
+export async function syncSourceRecords(repositoryRoot, listed, exclusions = MANIFEST_EXCLUSIONS) {
+  const derived = await deriveSourceRecords(repositoryRoot, exclusions);
+  const familyOf = new Map(derived.map(({ family, path }) => [path, family]));
+  const kept = listed
+    .filter(({ path }) => familyOf.has(path))
+    .map((entry) => ({ ...entry, family: familyOf.get(entry.path) }));
+  const keptPaths = new Set(kept.map(({ path }) => path));
+  return [...kept, ...derived.filter(({ path }) => !keptPaths.has(path))];
 }
