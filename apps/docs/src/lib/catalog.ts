@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { groupComponentNavigation } from '../../../component-navigation.mjs';
+import { componentRecordCategory } from './component-categories.ts';
 
 export interface CatalogSummary {
 	id: string;
@@ -360,7 +361,7 @@ export const componentSummaries: readonly CatalogSummary[] = Object.freeze(
 	componentItems.map(readComponentSummary),
 );
 export const componentSidebar = Object.freeze(
-	groupComponentNavigation(componentSummaries, ({ id }) => id.slice(id.lastIndexOf(':') + 1))
+	groupComponentNavigation(componentSummaries, ({ id }) => componentRecordCategory(id.slice(id.lastIndexOf(':') + 1)))
 		.map(({ label, items }) => ({
 			label,
 			items: items.map(({ id, name }) => ({ label: name, link: `/components/${id.slice(id.lastIndexOf(':') + 1)}/` })),

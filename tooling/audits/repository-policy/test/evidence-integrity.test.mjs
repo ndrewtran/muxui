@@ -2312,7 +2312,13 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.ok(!closeoutBlockCommit.excludedDirectories.some((directory) => directory.startsWith(dirname(repo.records[0].path))), 'a close-out block is not left out of either side, so its edit moves the digest');
 
     // A growth commit that changes a compiler or schema path fails even though the one-compiler digest comparison cannot see it.
-    const withSchema = await repo.variant((edit) => edit('packages/schema/src/index.mjs', (text) => text.replace("SCHEMA_VERSION = '2.3.0'", "SCHEMA_VERSION = '2.3.1'")));
+    // The copy is this checkout's HEAD, so bump whatever SCHEMA_VERSION it holds, and fail loudly if the edit finds nothing to change.
+    const bumpSchemaVersion = (text) => {
+      const bumped = text.replace(/(SCHEMA_VERSION = '\d+\.\d+\.)(\d+)'/u, (_, head, patch) => `${head}${Number(patch) + 1}'`);
+      assert.notEqual(bumped, text, 'the schema source edit must change packages/schema/src/index.mjs');
+      return bumped;
+    };
+    const withSchema = await repo.variant((edit) => edit('packages/schema/src/index.mjs', bumpSchemaVersion));
     const [, schemaCommit] = derive(withSchema);
     assert.deepEqual(schemaCommit.digestAffectingPathsChanged, ['packages/schema/src/index.mjs']);
     const schemaCatalog = await catalogAcrossCommit({ cwd, ...schemaCommit });

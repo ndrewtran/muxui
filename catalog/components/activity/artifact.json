@@ -5,6 +5,7 @@
   "name": "Activity",
   "summary": "Present caller-owned task statuses as dense rows with aggregate and item disclosures.",
   "lifecycle": "experimental",
+  "category": "ai-agent",
   "intent": {
     "useWhen": [
       "Present caller-owned task statuses as dense rows with aggregate and item disclosures."

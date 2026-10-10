@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { muxTokenPathTransformer } from './src/components/code-theme.ts';
 import { FOUNDATION_OVERVIEW, FOUNDATION_PAGES } from './src/lib/foundation-pages.ts';
 import { groupComponentNavigation } from '../component-navigation.mjs';
+import { componentRecordCategory } from './src/lib/component-categories.ts';
 
 const docsRoot = resolve(fileURLToPath(new URL('.', import.meta.url)));
 const repositoryRoot = resolve(docsRoot, '../..');
@@ -77,7 +78,7 @@ do {
 	}
 	componentCursor = componentInventory.meta.nextCursor ?? undefined;
 } while (componentCursor !== undefined);
-const componentSidebar = groupComponentNavigation(componentItems, ({ id }) => id.slice(id.lastIndexOf(':') + 1))
+const componentSidebar = groupComponentNavigation(componentItems, ({ id }) => componentRecordCategory(id.slice(id.lastIndexOf(':') + 1)))
 	.map(({ label, items }) => ({
 		label,
 		items: items.map(({ id, name }) => ({ label: name, link: `/components/${id.slice(id.lastIndexOf(':') + 1)}/` })),

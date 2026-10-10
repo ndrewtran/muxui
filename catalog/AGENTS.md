@@ -14,6 +14,12 @@ listed there; the compiler rejects any other and derives the block's group from 
 Adding, renaming, or regrouping a category edits that file (and the blocks that name
 it), not the schema.
 
+A component record's optional `category` is its navigation group in docs and
+Storybook: `"ai-agent"` places it in AI Agent, and no `category` leaves it in
+Components. Adding a component to the group edits its record only: docs and
+Storybook read the category from the generated catalog bundle, and
+`apps/component-navigation.mjs` owns just the group labels.
+
 `patterns/<slug>/` holds one Block (a pattern): `artifact.json`, and per
 variant an `examples/react/<variant>.example.json` record with its `.tsx`
 source. Create them with `scaffoldPattern`. `pnpm generate` lists every

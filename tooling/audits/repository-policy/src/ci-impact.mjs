@@ -1052,6 +1052,12 @@ export async function buildPullRequestImpact({
     plan.notices.push(message);
     plan.reasons.push(message);
   };
+  const addCompleteStorybookProof = () => {
+    addEveryStoryPage(plan, records, pageIndex);
+    for (const file of storybookTestFiles()) {
+      for (const route of [storybookUnitRoute(`apps/react-storybook/${file}`) ?? { file }].flat()) addStoryUnitTest(plan, route);
+    }
+  };
   // A Storybook tooling file with no focused unit route: a test file runs
   // itself, and any other file (a helper whose importers are unknown) gets the
   // complete Storybook proof: every page and every Storybook unit test.
@@ -1063,10 +1069,7 @@ export async function buildPullRequestImpact({
       widen(`${path} has no focused Storybook unit-test route; running that test file`);
       return;
     }
-    addEveryStoryPage(plan, records, pageIndex);
-    for (const file of storybookTestFiles()) {
-      for (const route of [storybookUnitRoute(`apps/react-storybook/${file}`) ?? { file }].flat()) addStoryUnitTest(plan, route);
-    }
+    addCompleteStorybookProof();
     widen(`${path} has no focused Storybook unit-test route and unknown importers; running the complete Storybook proof (every page and every unit test)`);
   };
   // Files outside packages/react/src can name a React module by path (tests,
@@ -1391,6 +1394,12 @@ export async function buildPullRequestImpact({
       afterSource: await readHeadText(path),
       pageIndex,
     });
+    // A base generator that cannot run against the head helpers has no emission to compare.
+    if (impact.baseRunFailed) {
+      addCompleteStorybookProof();
+      widen(`${path}: ${impact.reason}; running the complete Storybook proof (every page and every unit test)`);
+      continue;
+    }
     for (const id of impact.storyIds) {
       const page = pageIndex.find(({ stories }) => stories.some((story) => story.id === id));
       if (!page) throw new Error(`MUXUI_CI_IMPACT_STORY_PAGE_MISSING: emitted page ID ${id} is absent from the canonical pageIndex`);

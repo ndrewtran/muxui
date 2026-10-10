@@ -5,6 +5,7 @@
   "name": "CodeBlock",
   "summary": "Present syntax-highlighted code or a bounded unified line diff with exact clipboard copying.",
   "lifecycle": "experimental",
+  "category": "ai-agent",
   "intent": {
     "useWhen": [
       "Presenting a code listing or reviewing a before/after code change."
