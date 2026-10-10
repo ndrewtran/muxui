@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser, pageShell, startServer } from './harness.mjs';
-import { measureFocusRing, measureForcedSelection, measureSelectedContrast, measureSelectedPaint, pollUntil, selectedBackgroundSettled, warmUpServer } from './grid-list-probes.mjs';
+import { measureFocusRing, measureForcedSelection, measureSelectedContrast, measureSelectedPaint, pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof for <Virtualizer layout="grid"> around a GridList of
 // poster-like cards: 1,003 items with a 2:3 placeholder image, titles from one to
@@ -902,7 +902,7 @@ for (const engine of browserEngines()) {
           await ltr.tab.mouse.move(0, 0);
           const selector = '[role="row"][aria-selected="true"]';
           // The background fades in; wait for it to stop moving before sampling.
-          await pollUntil(ltr.tab, selectedBackgroundSettled, selector, { polling: 120, message: 'the selected background stops transitioning', report: (rowSelector) => getComputedStyle(document.querySelector(rowSelector)).backgroundColor });
+          await settleMotion(ltr.tab.locator(selector));
           const contrast = await ltr.tab.evaluate(measureSelectedContrast, selector);
           assert.equal(contrast.opaque, true, 'the effective background is opaque');
           assert.ok(contrast.ratio >= 4.5, `${scheme} contrast ${contrast.ratio.toFixed(2)}:1 of ${contrast.text} on ${contrast.background}`);
@@ -921,7 +921,7 @@ for (const engine of browserEngines()) {
           await ltr.tab.locator('#before').focus();
           await ltr.tab.keyboard.press('Tab');
           await ltr.expectFocus('1', 'Tab returns to the selected card');
-          await pollUntil(ltr.tab, selectedBackgroundSettled, selector, { polling: 120, message: 'the selected background stops transitioning', report: (rowSelector) => getComputedStyle(document.querySelector(rowSelector)).backgroundColor });
+          await settleMotion(ltr.tab.locator(selector));
           for (const [property, [actual, expected]] of Object.entries(await ltr.tab.evaluate(measureForcedSelection, selector))) assert.equal(actual, expected, property);
         } finally {
           await ltr.tab.emulateMedia({ forcedColors: 'none' });
