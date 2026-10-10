@@ -8,7 +8,7 @@ const titles = [
   'Short Title',
   'A Sample Title Long Enough to Wrap Across Several Lines of the Card',
   'Another Title',
-  'A Disabled Sample Title That Also Wraps Onto a Second Line',
+  'A Sample Title That Also Wraps Onto a Second Line',
   'Third Title',
   'Fourth Title',
   'A Medium Sample Title',
@@ -18,12 +18,17 @@ const titles = [
   'A Last Sample Title',
 ];
 
-const posters: Poster[] = Array.from({ length: 1000 }, (_, index) => ({
-  id: String(index + 1),
-  title: titles[index % titles.length],
-  year: 1970 + ((index * 7) % 55),
-  disabled: index % 11 === 10,
-}));
+// Every 11th card is disabled and says so in its title.
+const posters: Poster[] = Array.from({ length: 1000 }, (_, index) => {
+  const disabled = index % 11 === 10;
+  const title = titles[index % titles.length];
+  return {
+    id: String(index + 1),
+    title: disabled ? `Disabled ${title}` : title,
+    year: 1970 + ((index * 7) % 55),
+    disabled,
+  };
+});
 
 // Placeholder artwork: an empty SVG over a token surface. Use your poster URL as src.
 const posterSrc = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>')}`;

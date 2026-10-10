@@ -59,14 +59,14 @@
     "The ToggleButtonGroup is named Billing period, arrow keys move between Monthly and Annual, and one option always stays selected.",
     "Prices change in place with no live region; add one if you need price changes announced.",
     "Each plan is a group named by its h3 heading under an h2; set the levels to your page outline.",
-    "The recommended plan carries the visible word Recommended inside its heading, so heading navigation and the group's name include it, and a heavier top rule; colour alone never marks it.",
+    "The recommended plan carries the visible word Recommended inside its heading, so the heading text and the group's name include it, and a heavier top rule; colour alone never marks it.",
     "When the plans stack, CSS order moves the recommended plan first while keyboard order follows the source.",
-    "The check marks are decorative SVG hidden from assistive technology; each feature reads as plain text."
+    "The check marks are decorative SVG marked aria-hidden; each feature is plain text."
   ],
   "unsupported": [
     "Feature-by-feature comparison tables",
     "Checkout, billing, or price lookups: the prices are placeholder values",
-    "A Badge for the Recommended flag: Mux has no Badge, so it is plain text",
+    "A Badge for the Recommended flag: Mux has no standalone Badge component, so it is plain text",
     "Card selected state: Card.Root has none, so the rule is block CSS"
   ],
   "workflowValue": "Replaces wiring a billing toggle to three price cards by hand: one period state drives every price and note, the Card parts keep each header, feature list, and action aligned across unequal lists, and the recommended plan leads when the columns stack."
