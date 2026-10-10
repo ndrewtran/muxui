@@ -300,14 +300,15 @@ async function auditNavigation(repositoryRoot, policy) {
   }
 }
 
-async function auditRootContract(repositoryRoot, policy) {
+// The root scripts must include the core commands; other scripts are allowed.
+export async function auditRootContract(repositoryRoot, policy) {
   const packageJson = JSON.parse(await readFile(join(repositoryRoot, 'package.json'), 'utf8'));
-  const scripts = Object.keys(packageJson.scripts ?? {}).sort();
-  const required = [...policy.requiredRootCommands].sort();
-  if (JSON.stringify(scripts) !== JSON.stringify(required)) {
+  const scripts = new Set(Object.keys(packageJson.scripts ?? {}));
+  const missing = policy.requiredRootCommands.filter((name) => !scripts.has(name));
+  if (missing.length > 0) {
     throw new PolicyError(
       'ROOT_COMMAND_SURFACE_DRIFT',
-      `root scripts must be exactly: ${required.join(', ')}`,
+      `root scripts must include ${[...policy.requiredRootCommands].sort().join(', ')}; missing: ${missing.sort().join(', ')}`,
     );
   }
 

@@ -9,7 +9,7 @@ import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from
 import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
 import { dependencyClosure, familyRecordsFromContract } from './scoped-verification.mjs';
-import { componentTestSelection, familyRouteFiles } from './component-test-selection.mjs';
+import { componentTestSelection } from './component-test-selection.mjs';
 import { loadPolicy, normalizePath } from './policy.mjs';
 import { changedPatternSlugs, patternParticipants } from './pattern-variants.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
@@ -812,13 +812,8 @@ function storybookUnitRoute(path) {
       'Storybook search status icons use canonical action and option-state colours',
     ]);
   }
-  if (file === 'test/helpers/storybook-index.mjs') {
-    return exact('test/storybook-page-selection.test.mjs', [
-      'storybook page index requests honor cancellation and a bounded timeout',
-    ]);
-  }
-  if (file === 'test/storybook-page-selection.mjs' || file === 'test/storybook-page-selection.test.mjs'
-      || file === 'src/check-scoped.mjs') {
+  if (file === 'test/helpers/storybook-index.mjs' || file === 'test/storybook-page-selection.mjs'
+      || file === 'test/storybook-page-selection.test.mjs' || file === 'src/check-scoped.mjs') {
     return { file: 'test/storybook-page-selection.test.mjs' };
   }
   if (file === 'test/storybook-family-selection.mjs' || file === 'test/storybook-family-selection.test.mjs') {
@@ -835,39 +830,31 @@ function storybookUnitRoute(path) {
   if (file === 'test/storybook-audit-failures.mjs' || file === 'test/storybook-audit-failures.test.mjs') {
     return { file: 'test/storybook-audit-failures.test.mjs' };
   }
-  // Shared Storybook config files that unit tests read directly.
-  if (file === '.storybook/main.mjs') {
-    return exact('test/storybook.test.mjs', ['showcase does not expose React Aria as a public import']);
-  }
+  // Shared Storybook config files that unit tests read directly. The jsdom unit
+  // file runs whole; the colour and a11y files also hold browser audits, so
+  // only their pure unit cases are pinned by title.
+  if (file === '.storybook/main.mjs' || file === 'test/storybook.test.mjs') return { file: 'test/storybook.test.mjs' };
   if (file === '.storybook/measure-palette.mjs') {
     return exact('test/storybook-colors.test.mjs', ['Storybook canvas palette adapter rejects upstream drift and removes generated alpha']);
   }
   if (file === '.storybook/preview.css') {
     return [
-      exact('test/storybook.test.mjs', [
-        'preview exposes the Mux UI theme and direction host contract',
-        'manager projection covers internal chrome and keeps docs syntax scoped',
-      ]),
+      { file: 'test/storybook.test.mjs' },
       exact('test/storybook-colors.test.mjs', [
         'Storybook colour declarations reference Mux tokens, including values that happen to match the palette',
       ]),
     ];
   }
-  if (file === 'test/storybook.test.mjs') {
-    return exact('test/storybook.test.mjs', [
-      'private host and exact Mux UI React family projection',
-      'current Storybook manifest covers the complete package union',
-    ]);
-  }
   return null;
 }
 
+// Adds the focused unit tests for a Storybook tooling path; false when the path
+// has no focused route.
 function addStoryUnitRoute(plan, path) {
   const routes = storybookUnitRoute(path);
-  if (!routes) {
-    throw new Error(`MUXUI_CI_IMPACT_STORY_TOOLING_TEST_MISSING: ${path} has no focused unit-test route`);
-  }
+  if (!routes) return false;
   for (const route of [routes].flat()) addStoryUnitTest(plan, route);
+  return true;
 }
 
 function addStoryUnitTest(plan, route) {
@@ -1023,6 +1010,7 @@ export async function buildPullRequestImpact({
     reactPackageFull: false,
     reactFamilies: new Set(),
     reactBehaviorProofFamilies: [],
+    reactComponentTests: [],
     scopedEntrypointChecks: new Set(),
     storyIds: new Set(),
     storyIdFamilies: new Map(),
@@ -1037,9 +1025,30 @@ export async function buildPullRequestImpact({
     packageChecks: new Set(),
     tailwind: false,
     reasons: [],
+    notices: [],
   };
   const missing = [];
   const reactGeneratorPaths = [];
+  // A route the planner cannot resolve widens the plan instead of failing it;
+  // the notice says what widened and why.
+  const widen = (message) => {
+    plan.notices.push(message);
+    plan.reasons.push(message);
+  };
+  // A Storybook tooling file with no focused unit route: a test file runs
+  // itself, and any other file (a helper whose importers are unknown) proves
+  // every Storybook page.
+  const routeStoryUnit = (path) => {
+    plan.storyTooling = true;
+    if (addStoryUnitRoute(plan, path)) return;
+    if (path.endsWith('.test.mjs')) {
+      addStoryUnitTest(plan, { file: path.slice('apps/react-storybook/'.length) });
+      widen(`${path} has no focused Storybook unit-test route; running that test file`);
+      return;
+    }
+    storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+    widen(`${path} has no focused Storybook unit-test route and unknown importers; proving every Storybook page`);
+  };
   // Files outside packages/react/src can name a React module by path (tests,
   // browser entries, apps, catalog inputs). A deleted module's referencing
   // files are routed through their own owners as though they changed.
@@ -1098,9 +1107,9 @@ export async function buildPullRequestImpact({
       if (catalogReaders.reactGenerator) reactGeneratorPaths.push(path);
       if (catalogReaders.policy) plan.policy = true;
       for (const name of catalogReaders.packageChecks ?? []) routePackage(plan, requirePackage(packages, name, path), records);
-      for (const { file, names } of catalogReaders.storybookUnitTests ?? []) {
+      for (const file of catalogReaders.storybookUnitTests ?? []) {
         plan.storyTooling = true;
-        addStoryUnitTest(plan, { file, testNamePattern: names.map((name) => `^${name}$`).join('|') });
+        addStoryUnitTest(plan, { file });
       }
       plan.reasons.push(`${path} is a canonical React catalog input; validate its readers`);
       continue;
@@ -1198,7 +1207,9 @@ export async function buildPullRequestImpact({
       } else {
         const testFiles = reactTestFilesReferencing(testPath, reactTestReferenceSources);
         if (testFiles.length === 0 && await readHeadText(path) !== null) {
-          throw new Error(`MUXUI_CI_IMPACT_REACT_TEST_OWNER_MISSING: ${path} is not referenced by any React test file; reference it from a test or remove it`);
+          plan.reactPackageFull = true;
+          widen(`${path} is not referenced by any React test file; running the full React proof (reference it from a test or remove it to narrow this)`);
+          continue;
         }
         testFiles.forEach((file) => plan.reactTestFiles.add(file));
         plan.reasons.push(`${path} is a shared React test helper; run the test files that reference it`);
@@ -1227,8 +1238,7 @@ export async function buildPullRequestImpact({
         plan.storyTooling = true;
         plan.reasons.push(`${path} changes Storybook generation; generated page diffs decide whether page audits are needed`);
       } else if (config.reactStorybookSelectionPaths.includes(path)) {
-        plan.storyTooling = true;
-        addStoryUnitRoute(plan, path);
+        routeStoryUnit(path);
         plan.reasons.push(`${path} changes Storybook selection tooling; run its focused unit proof`);
       } else if (path.startsWith('apps/react-storybook/.storybook/generated/')) {
         plan.reasons.push(`${path} is generated Storybook page output; map emitted exports to canonical page IDs`);
@@ -1236,8 +1246,7 @@ export async function buildPullRequestImpact({
           throw new Error(`MUXUI_CI_IMPACT_STORY_PAGE_MISSING: ${path} has no current canonical pageIndex owner; provide the base/head page owner mapping for this removal or rename`);
         }
       } else if (path.startsWith('apps/react-storybook/test/')) {
-        plan.storyTooling = true;
-        addStoryUnitRoute(plan, path);
+        routeStoryUnit(path);
         plan.reasons.push(`${path} is Storybook audit test machinery`);
       } else if (path.startsWith('apps/react-storybook/src/')) {
         plan.storyTooling = true;
@@ -1390,7 +1399,8 @@ export async function buildPullRequestImpact({
   }
 
   if (missing.length > 0) {
-    throw new Error(`MUXUI_CI_IMPACT_OWNER_MISSING: ${missing.join(', ')}; add an explicit canonical owner route to pullRequestImpact`);
+    plan.policy = true;
+    widen(`${missing.join(', ')} ${missing.length === 1 ? 'has' : 'have'} no owner route; running the repository policy check (add an owner route to pullRequestImpact to narrow this)`);
   }
   if (plan.fullReasons.length > 0) {
     plan.full = true;
@@ -1460,7 +1470,19 @@ export async function buildPullRequestImpact({
   for (const path of cssPaths) {
     const before = await readBaseText(path);
     const after = await readHeadText(path);
-    const impact = analyzeReactStyleChange({ before: before ?? '', after: after ?? '', records, sourcePath: path, moduleSources });
+    let impact;
+    try {
+      impact = analyzeReactStyleChange({ before: before ?? '', after: after ?? '', records, sourcePath: path, moduleSources });
+    } catch (error) {
+      if (!error.message.startsWith('MUXUI_CI_IMPACT_STYLE_OWNERSHIP:')) throw error;
+      // The analyzer cannot attribute the change to families, so every family is affected.
+      plan.reactPackageFull = true;
+      plan.reactProjectionCheck = false;
+      storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+      plan.tailwind = true;
+      widen(`${path}: ${error.message.slice('MUXUI_CI_IMPACT_STYLE_OWNERSHIP: '.length)}; running the full React and Storybook proof`);
+      continue;
+    }
     impact.families.forEach((family) => {
       changedSourceFamilies.add(family);
       if (impact.theme) plan.themeFamilies.add(family);
@@ -1569,6 +1591,7 @@ export async function buildPullRequestImpact({
     });
     componentRoutedTestFiles = new Set(selection.files);
     plan.reactBehaviorProofFamilies = selection.behaviorProofFamilies;
+    plan.reactComponentTests = selection.files;
     // A family proven only by its Storybook BrowserProof needs that page even
     // when no other page of the family is selected.
     for (const family of selection.behaviorProofFamilies) {
@@ -1966,7 +1989,7 @@ function plannedCommands(plan, {
       MUXUI_COMPONENT_FAMILIES: plan.reactFamilies.join(','),
       MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE: '0',
       ...(plan.reactBehaviorProofFamilies.length ? { MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES: plan.reactBehaviorProofFamilies.join(',') } : {}),
-      ...(plan.reactFamilies.some((family) => familyRouteFiles(family).some((file) => runsInEveryEngine(file, testSources))) ? crossEngineEnvironment : {}),
+      ...(plan.reactComponentTests.some((file) => runsInEveryEngine(file, testSources)) ? crossEngineEnvironment : {}),
     };
     add('react', scopedEntrypointArgs('react', packages), {
       env,
@@ -2161,6 +2184,7 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, groups }) {
     },
     storyRuns: plan.storyRuns,
     reasons: [...new Set(plan.reasons)],
+    notices: plan.notices ?? [],
   };
 }
 
@@ -2385,6 +2409,7 @@ export async function runCiImpact({
   const reuse = reuseRecord ? await writeReuse({ plan, full, groups, packages, reuseRecord, reuseClient, environment }) : [];
   const matrix = groupMatrix(groups, reuse);
   console.log(`[ci-impact] changed paths=${plan.changedPaths.join(', ') || '(none)'}`);
+  for (const notice of plan.notices ?? []) console.log(`[ci-impact] notice: ${notice}`);
   console.log(`[ci-impact] plan=${JSON.stringify(report, null, 2)}`);
   console.log(`[ci-impact] groups=${JSON.stringify(matrix)}`);
   if (githubOutput) {

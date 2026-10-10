@@ -231,6 +231,30 @@ test('TagSelect helper runtime changes route to TagSelect pages and its focused 
   ]);
 });
 
+test('a new supplemental family with no test of its own plans its supplemental group instead of failing', async () => {
+  const source = await readFile(resolve(repositoryRoot, supplementalPath), 'utf8');
+  const after = `${source}\nexport const ScratchWidget = () => null;\n`;
+  const scratch = { family: 'ScratchWidget', export: 'ScratchWidget', slug: 'scratch-widget', source: supplementalPath, parts: ['root'] };
+  const scratchPage = {
+    family: 'ScratchWidget',
+    storyFile: 'apps/react-storybook/.storybook/generated/scratch-widget.stories.mjs',
+    stories: [{ id: 'muxui-react-r1-6-scratch-widget--default', exportName: 'Default', name: 'Default' }],
+  };
+  const result = await plan([supplementalPath], {
+    records: [...records.filter(({ family }) => ['TagSelect', 'MultiSelect'].includes(family)), scratch],
+    pageIndex: [...pageIndex, scratchPage],
+    textSnapshots: { [supplementalPath]: { before: source, after } },
+    moduleSources: { [supplementalPath]: { before: source, after } },
+  });
+  assert.deepEqual(result.reactFamilies, ['ScratchWidget']);
+  assert.deepEqual(result.reactBehaviorProofFamilies, []);
+  assert.ok(result.reactComponentTests.includes('test/supplemental.test.mjs'));
+  // The group runs whole: the check names no per-case filter in the plan.
+  const react = executionGroups(result, { packages, environment: {}, pageIndex: [...pageIndex, scratchPage], testSources: componentTestSources })
+    .find(({ id }) => id === 'react');
+  assert.equal(react.commands.find(({ args }) => args.includes('check:component')).env.MUXUI_COMPONENT_FAMILIES, 'ScratchWidget');
+});
+
 test('Tree browser-proof edits select their exact test file without story or family expansion', async () => {
   const result = await plan(['packages/react/test/browser/tree-toggle-browser.test.mjs']);
 
@@ -899,7 +923,7 @@ test('Storybook audit tooling runs explicit focused test names and never launche
   const indexCommands = executionCommands(indexHelper, { packages });
   const indexUnit = indexCommands.find(({ args }) => args.includes('test/storybook-page-selection.test.mjs'));
   assert.ok(indexUnit);
-  assert.match(indexUnit.args.find((arg) => arg.startsWith('--test-name-pattern=')), /storybook page index requests honor cancellation/u);
+  assert.ok(!indexUnit.args.some((arg) => arg.startsWith('--test-name-pattern=')), 'the light page-selection file runs whole');
   assert.ok(!indexCommands.some(({ args }) => args.includes('check:scoped')));
 
   const fullSelectionProof = await plan([
@@ -941,8 +965,15 @@ test('mixed component and exact-page changes preserve each distinct proof scope'
   ]);
 });
 
-test('unknown owners, missing exact page metadata, and empty diffs fail closed', async () => {
-  await assert.rejects(plan(['scripts/unowned-change.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING/u);
+test('an unowned path widens to the policy check with a notice; missing records and empty diffs still fail', async () => {
+  const unowned = await plan(['scripts/unowned-change.mjs', 'scripts/other.mjs']);
+  assert.equal(unowned.policy, true);
+  assert.equal(unowned.full, false);
+  assert.equal(unowned.notices.length, 1);
+  assert.match(unowned.notices[0], /^scripts\/other\.mjs, scripts\/unowned-change\.mjs have no owner route; running the repository policy check/u);
+  assert.ok(unowned.reasons.includes(unowned.notices[0]));
+  // An owned path adds no notice.
+  assert.deepEqual((await plan(['AGENTS.md'])).notices, []);
   await assert.rejects(plan(['catalog/components/not-a-family/examples/react/basic.example.json']), /MUXUI_CI_IMPACT_COMPONENT_RECORD_MISSING/u);
   await assert.rejects(plan([]), /MUXUI_CI_IMPACT_EMPTY/u);
 });
@@ -1861,8 +1892,10 @@ test('a deleted React module still named outside React source routes to each ref
   const buttonFixture = await deleted('packages/react/src/button-fixture.mjs', ['apps/react-playground/src/main.jsx']);
   assert.deepEqual(buttonFixture.packageChecks, ['@muxui/react', '@muxui/react-playground']);
 
-  // A reference with no owner route fails instead of being dropped.
-  await assert.rejects(deleted('packages/react/src/button-fixture.mjs', ['scripts/unowned.mjs']), /MUXUI_CI_IMPACT_OWNER_MISSING: scripts\/unowned\.mjs/u);
+  // A reference with no owner route widens to the policy check instead of being dropped.
+  const unowned = await deleted('packages/react/src/button-fixture.mjs', ['scripts/unowned.mjs']);
+  assert.equal(unowned.policy, true);
+  assert.match(unowned.notices[0], /^scripts\/unowned\.mjs has no owner route/u);
 });
 
 test('modules the React projection compiler imports take the compiler route', async () => {
@@ -2176,10 +2209,7 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   assert.equal(upstreamExports.reactPackageFull, true);
   assert.equal(upstreamExports.policy, true);
   assert.deepEqual(upstreamExports.packageChecks, ['@muxui/figma', '@muxui/react-playground', '@muxui/schema']);
-  assert.deepEqual(upstreamExports.storyUnitTests, [{
-    file: 'test/storybook.test.mjs',
-    testNamePattern: '^private host and exact Mux UI React family projection$|^every story exposes exactly its canonical Mux UI-owned properties$',
-  }]);
+  assert.deepEqual(upstreamExports.storyUnitTests, [{ file: 'test/storybook.test.mjs' }]);
 
   const capability = await route('catalog/capabilities/query-baseline.json');
   assert.equal(capability.catalog, true);
@@ -2198,15 +2228,67 @@ test('generator inputs, package fixtures, and Storybook config each route to the
   const main = await route('apps/react-storybook/.storybook/main.mjs');
   assert.equal(main.storyChrome, true);
   assert.deepEqual(main.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
-  assert.deepEqual(main.storyUnitTests, [{
-    file: 'test/storybook.test.mjs',
-    testNamePattern: '^showcase does not expose React Aria as a public import$',
-  }]);
+  assert.deepEqual(main.storyUnitTests, [{ file: 'test/storybook.test.mjs' }]);
   const previewCss = await route('apps/react-storybook/.storybook/preview.css');
   assert.deepEqual(previewCss.storyUnitTests.map(({ file }) => file), ['test/storybook-colors.test.mjs', 'test/storybook.test.mjs']);
   assert.equal((await route('apps/react-storybook/.storybook/measure-palette.mjs')).storyUnitTests[0].file, 'test/storybook-colors.test.mjs');
   assert.equal((await route('apps/react-storybook/.storybook/manager.mjs')).storyChrome, true);
   assert.equal((await route('apps/react-storybook/.gitignore')).policy, true);
+});
+
+test('a Storybook tooling file with no focused unit route widens instead of failing', async () => {
+  const route = (path) => plan([`apps/react-storybook/${path}`], { packages: workspacePackages });
+  // A new test file runs itself.
+  const newTest = await route('test/storybook-new.test.mjs');
+  assert.equal(newTest.storyTooling, true);
+  assert.deepEqual(newTest.storyUnitTests, [{ file: 'test/storybook-new.test.mjs' }]);
+  assert.deepEqual(newTest.storyFamilies, []);
+  assert.match(newTest.notices[0], /^apps\/react-storybook\/test\/storybook-new\.test\.mjs has no focused Storybook unit-test route; running that test file/u);
+  // A helper with unknown importers proves every Storybook page.
+  const helper = await route('test/helpers/new-helper.mjs');
+  assert.deepEqual(helper.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
+  assert.match(helper.notices[0], /unknown importers; proving every Storybook page/u);
+  // A routed file adds no notice.
+  assert.deepEqual((await route('test/storybook.test.mjs')).notices, []);
+});
+
+test('a CSS change no family owns widens to the full React and Storybook proof', async () => {
+  const cssPath = 'packages/react/src/styles/base.css';
+  const result = await plan([cssPath], {
+    packages: workspacePackages,
+    textSnapshots: { [cssPath]: { before: ':root { --a: 1; }', after: ':root { --a: 2; }' } },
+    moduleSources: cssModuleSources,
+  });
+  assert.equal(result.reactPackageFull, true);
+  assert.equal(result.reactProjectionCheck, false);
+  assert.equal(result.tailwind, true);
+  assert.deepEqual(result.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
+  assert.match(result.notices[0], /^packages\/react\/src\/styles\/base\.css: changed global selector ":root".*; running the full React and Storybook proof$/u);
+  // A selector a family owns stays scoped and adds no notice.
+  const scoped = await plan(['packages/react/src/styles/components.css'], {
+    textSnapshots: { 'packages/react/src/styles/components.css': { before: '.muxui-tree { color: black; }', after: '.muxui-tree { color: white; }' } },
+    moduleSources: cssModuleSources,
+  });
+  assert.equal(scoped.reactPackageFull, false);
+  assert.deepEqual(scoped.notices, []);
+});
+
+test('every pinned Storybook unit-test title still names a test in its file', async () => {
+  const paths = ['test/storybook-a11y.test.mjs', 'test/storybook-colors.test.mjs', '.storybook/measure-palette.mjs', '.storybook/preview.css'];
+  let pinned = 0;
+  for (const path of paths) {
+    const { storyUnitTests } = await plan([`apps/react-storybook/${path}`], { packages: workspacePackages });
+    for (const { file, testNamePattern } of storyUnitTests) {
+      if (!testNamePattern) continue;
+      const source = await readFile(resolve(repositoryRoot, 'apps/react-storybook', file), 'utf8');
+      for (const pattern of testNamePattern.split('|')) {
+        pinned += 1;
+        // A renamed title would match no test, and node --test passes when nothing matches.
+        assert.ok(source.includes(`test('${pattern.slice(1, -1)}'`), `${file}: ${pattern}`);
+      }
+    }
+  }
+  assert.equal(pinned, 9);
 });
 
 // Plans every tracked path as a no-op edit with the generated React records,
@@ -2282,10 +2364,14 @@ test('a shared React test helper reruns the test files that reference it', async
   });
   assert.ok(fixture.reactTestFiles.includes('test/browser/tree-motion.test.mjs'));
 
-  await assert.rejects(plan(['packages/react/test/support/unused.mjs'], {
+  // A helper no test references has unknown consumers: the full React proof runs.
+  const unused = await plan(['packages/react/test/support/unused.mjs'], {
     reactTestReferenceSources,
     textSnapshots: { 'packages/react/test/support/unused.mjs': { after: 'export {};' } },
-  }), /MUXUI_CI_IMPACT_REACT_TEST_OWNER_MISSING/u);
+  });
+  assert.equal(unused.reactPackageFull, true);
+  assert.match(unused.notices[0], /^packages\/react\/test\/support\/unused\.mjs is not referenced by any React test file; running the full React proof/u);
+  assert.deepEqual(harness.notices, []);
 });
 
 

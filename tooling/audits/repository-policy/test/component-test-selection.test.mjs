@@ -125,7 +125,7 @@ test('focused routing fails when a mapped behavioral test file is unavailable', 
   );
 });
 
-test('unmapped families still fail without either named React behavior or BrowserProof', () => {
+test('a family with no test, no source group, and no BrowserProof still fails explicitly', () => {
   const record = { family: 'Unknown', export: 'Unknown', slug: 'unknown', source: 'packages/react/src/unknown.mjs' };
   assert.throws(
     () => selectComponentTestFiles([record], availableFiles, { includeSharedSource: false }),
@@ -133,6 +133,80 @@ test('unmapped families still fail without either named React behavior or Browse
   );
 });
 
+const sharedFiles = ['test/style-scopes.test.mjs', 'test/styling-tokens.test.mjs'];
+
+test('slug-named tests route by convention without a map entry', () => {
+  const record = { family: 'ScratchWidget', slug: 'scratch-widget', source: 'packages/react/src/elsewhere.mjs' };
+  const both = [...sharedFiles, 'test/scratch-widget.test.mjs', 'test/browser/scratch-widget.test.mjs', 'test/scratch-widget-other.test.mjs'];
+  for (const includeSharedSource of [true, false]) {
+    assert.deepEqual(
+      selectComponentTestFiles([record], both, { includeSharedSource }),
+      ['test/browser/scratch-widget.test.mjs', 'test/scratch-widget.test.mjs', ...sharedFiles],
+    );
+  }
+  assert.deepEqual(
+    selectComponentTestFiles([record], [...sharedFiles, 'test/scratch-widget.test.mjs'], { includeSharedSource: false }),
+    ['test/scratch-widget.test.mjs', ...sharedFiles],
+  );
+});
+
+test('real families gain the slug-named browser test their old map entry omitted', () => {
+  for (const [family, slug] of [['Text', 'text'], ['SelectNative', 'select-native'], ['IconButton', 'icon-button'], ['ProgressCircle', 'progress-circle']]) {
+    const record = { family, slug, source: 'packages/react/src/supplemental/index.mjs' };
+    const selected = selectComponentTestFiles([record], availableFiles, { includeSharedSource: false });
+    assert.ok(selected.includes(`test/${slug}.test.mjs`), family);
+    assert.ok(selected.includes(`test/browser/${slug}.test.mjs`), family);
+  }
+});
+
+test('every canonical family resolves its routes against the real React tests', async () => {
+  const contract = JSON.parse((await readFile(resolve(packageRoot, 'generated/r1-6-contract.json'), 'utf8'))
+    .split('\n').filter((line) => !line.startsWith('// @generated-')).join('\n'));
+  assert.ok(contract.components.length > 0);
+  for (const record of contract.components) {
+    for (const includeSharedSource of [true, false]) {
+      // A stale explicit extra throws MUXUI_COMPONENT_TEST_ROUTE_FILE_MISSING here.
+      const selected = selectComponentTestFiles([record], availableFiles, { includeSharedSource, behaviorProofFamilies: [record.family] });
+      assert.ok(selected.length >= sharedFiles.length, record.family);
+    }
+  }
+});
+
+test('a family no test names runs its source group whole instead of failing', () => {
+  const field = { family: 'ScratchField', slug: 'scratch-field', source: 'packages/react/src/fields.mjs' };
+  const selected = componentTestSelection([field], availableFiles, { includeSharedSource: false, testSources: { 'test/fields.test.mjs': '' } });
+  assert.deepEqual(selected.files, [
+    'test/browser/form-fields.test.mjs',
+    'test/fields.test.mjs',
+    'test/r1-2-parity.test.mjs',
+    ...sharedFiles,
+  ]);
+  assert.deepEqual(selected.testNamesByFile, {});
+  assert.deepEqual(selected.behaviorProofFamilies, []);
+
+  // Every supplemental module belongs to the supplemental group.
+  const supplemental = { family: 'ScratchWidget', slug: 'scratch-widget', source: 'packages/react/src/supplemental/scratch-widget.mjs' };
+  assert.deepEqual(
+    selectComponentTestFiles([supplemental], availableFiles, { includeSharedSource: false }),
+    [...sharedFiles, 'test/supplemental.test.mjs'],
+  );
+});
+
+test('a whole-group fallback is never narrowed to another selected family\'s cases', () => {
+  const field = { family: 'ScratchCollection', slug: 'scratch-collection', source: 'packages/react/src/collections.mjs' };
+  const selected = componentTestSelection([records[1], field], availableFiles, {
+    includeSharedSource: false,
+    testSources: { 'test/r1-3-parity.test.mjs': parity },
+  });
+  assert.ok(selected.files.includes('test/r1-3-parity.test.mjs'));
+  assert.equal('test/r1-3-parity.test.mjs' in selected.testNamesByFile, false);
+  // Tree alone still narrows to its named case.
+  const treeOnly = componentTestSelection([records[1]], availableFiles, {
+    includeSharedSource: false,
+    testSources: { 'test/r1-3-parity.test.mjs': parity },
+  });
+  assert.ok(treeOnly.testNamesByFile['test/r1-3-parity.test.mjs'].length > 0);
+});
 
 test('every candidate family retains all shared motion lifecycle cases in real scoped and CI source filtering', async () => {
   const file = 'test/browser/candidate-motion.test.mjs';

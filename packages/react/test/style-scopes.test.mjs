@@ -1,17 +1,20 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import test from 'node:test';
 
-const sourceFiles = [
-  '../src/styles/base.css',
-  '../src/styles/components.css',
-  '../src/styles/fields.css',
-  '../src/styles/collections.css',
-  '../src/styles/overlays.css',
-  '../src/supplemental/styles.css',
-  '../src/supplemental/select-native.css',
-  '../src/text-editor/text-editor.css',
-].map((path) => new URL(path, import.meta.url));
+// Every authored stylesheet, so a new one is checked without being listed.
+const sourceRoot = new URL('../src/', import.meta.url);
+const sourceFiles = (await readdir(sourceRoot, { recursive: true }))
+  .filter((path) => path.endsWith('.css'))
+  .sort()
+  .map((path) => new URL(path, sourceRoot));
+
+test('authored stylesheets are all found', () => {
+  const names = sourceFiles.map((url) => url.pathname.slice(sourceRoot.pathname.length));
+  for (const name of ['styles/base.css', 'supplemental/styles.css', 'text-editor/text-editor.css']) {
+    assert.ok(names.includes(name), name);
+  }
+});
 
 test('authored color-mode descendants use nearest explicit @scope boundaries', async () => {
   const sources = await Promise.all(sourceFiles.map((url) => readFile(url, 'utf8')));

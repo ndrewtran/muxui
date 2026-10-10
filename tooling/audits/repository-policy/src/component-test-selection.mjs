@@ -15,28 +15,26 @@ const SOURCE_ROUTES = Object.freeze({
   'text-editor': ['test/heavy-components.test.mjs'],
 });
 
-const FAMILY_ROUTES = Object.freeze({
-  Activity: ['test/activity.test.mjs', 'test/browser/activity.test.mjs', 'test/browser/candidate-motion.test.mjs'],
-  DataDiff: ['test/data-diff.test.mjs', 'test/browser/data-diff.test.mjs', 'test/browser/candidate-motion.test.mjs'],
-  Message: ['test/message.test.mjs', 'test/browser/message.test.mjs', 'test/browser/candidate-motion.test.mjs'],
-  PromptComposer: ['test/prompt-composer.test.mjs', 'test/browser/prompt-composer.test.mjs', 'test/browser/candidate-motion.test.mjs'],
+// Tests that belong to a family but are not named for its slug. The slug-named
+// pair (`test/<slug>.test.mjs`, `test/browser/<slug>.test.mjs`) is found by
+// convention and needs no entry here.
+const FAMILY_EXTRA_TESTS = Object.freeze({
+  Activity: ['test/browser/candidate-motion.test.mjs'],
+  DataDiff: ['test/browser/candidate-motion.test.mjs'],
+  Message: ['test/browser/candidate-motion.test.mjs'],
+  PromptComposer: ['test/browser/candidate-motion.test.mjs'],
   Autocomplete: ['test/browser/autocomplete-dismissal.test.mjs'],
   Avatar: ['test/image-avatar.test.mjs'],
-  CodeBlock: ['test/code-block.test.mjs', 'test/code-block-highlight.test.mjs', 'test/code-block-lifecycle.test.mjs', 'test/code-block-package-boundary.test.mjs', 'test/browser/code-block.test.mjs', 'test/browser/candidate-motion.test.mjs'],
+  CodeBlock: ['test/code-block-highlight.test.mjs', 'test/code-block-lifecycle.test.mjs', 'test/code-block-package-boundary.test.mjs', 'test/browser/candidate-motion.test.mjs'],
   ColorPicker: ['test/color-swatch.test.mjs'],
   ColorSwatch: ['test/color-swatch.test.mjs'],
   CommandPalette: ['test/command-palette-hook.test.mjs'],
   GridList: ['test/browser/grid-list-layout.test.mjs'],
-  IconButton: ['test/icon-button.test.mjs'],
   Image: ['test/image-avatar.test.mjs'],
   Lightbox: ['test/heavy-components.test.mjs'],
   Markdown: ['test/heavy-components.test.mjs'],
-  ProgressCircle: ['test/progress-circle.test.mjs'],
   Resizable: ['test/heavy-components.test.mjs'],
-  SelectNative: ['test/select-native.test.mjs'],
-  Sidebar: ['test/sidebar.test.mjs', 'test/browser/sidebar.test.mjs'],
   Table: ['test/browser/table-sort-indicator.test.mjs'],
-  Text: ['test/text.test.mjs'],
   TextEditor: ['test/heavy-components.test.mjs', 'test/browser/text-editor-selection-actions.test.mjs'],
   TagSelect: ['test/browser/tag-select-focus.test.mjs'],
   Tree: ['test/browser/tree-toggle-browser.test.mjs'],
@@ -57,30 +55,28 @@ const FAMILY_TEST_NAMES = Object.freeze({
   },
 });
 
-// The test files a family routes to directly, without its shared source group.
-export function familyRouteFiles(family) {
-  return [...new Set([...(FAMILY_ROUTES[family] ?? []), ...Object.keys(FAMILY_TEST_NAMES[family] ?? {})])];
+const SUPPLEMENTAL_TESTS = Object.freeze(['test/supplemental.test.mjs']);
+
+// The files a family routes to directly, without its shared source group: the
+// slug-named pair that exists, plus its explicit extras.
+function familyRoute(record, available) {
+  const named = record.slug ? [`test/${record.slug}.test.mjs`, `test/browser/${record.slug}.test.mjs`] : [];
+  return [...named.filter((file) => available.has(file)), ...(FAMILY_EXTRA_TESTS[record.family] ?? [])];
 }
 
 function sourceRoute(record) {
   const source = record.source ?? '';
-  if (source.endsWith('/supplemental/index.mjs')) return ['test/supplemental.test.mjs'];
+  if (source.endsWith('/supplemental/index.mjs')) return SUPPLEMENTAL_TESTS;
   const sourceName = source.split('/').at(-1)?.replace(/\.mjs$/u, '');
   return SOURCE_ROUTES[sourceName] ?? [];
 }
 
-export function componentTestRoute(record, { includeSharedSource = true } = {}) {
-  const familyTestFiles = Object.keys(FAMILY_TEST_NAMES[record.family] ?? {});
-  const route = [
-    ...(FAMILY_ROUTES[record.family] ?? []),
-    ...familyTestFiles,
-    ...(includeSharedSource ? sourceRoute(record) : []),
-  ];
-  if (route.length === 0) {
-    const code = includeSharedSource ? 'MUXUI_COMPONENT_TEST_ROUTE_MISSING' : 'MUXUI_COMPONENT_FOCUSED_ROUTE_MISSING';
-    throw new Error(`${code}: ${record.family} (${record.source ?? 'no source'}); add a verified family test route`);
-  }
-  return [...new Set(route)];
+// What a family with no test of its own runs: its source group, whole. Every
+// supplemental module belongs to the supplemental group.
+function sourceGroupTests(record) {
+  const group = sourceRoute(record);
+  if (group.length > 0) return group;
+  return record.source?.includes('/supplemental/') ? SUPPLEMENTAL_TESTS : [];
 }
 
 function testTitles(source, file) {
@@ -132,11 +128,13 @@ export function componentTestSelection(records, availableFiles, {
   const selectedBehaviorProofs = new Set();
   const selected = new Set();
   const namedFiles = new Map();
+  const wholeFiles = new Set();
   for (const record of records) {
     const sourceFiles = sourceRoute(record);
-    const explicitRoute = new Set(FAMILY_ROUTES[record.family] ?? []);
+    const ownFiles = familyRoute(record, available);
+    const explicitRoute = new Set(ownFiles);
     const familyNames = FAMILY_TEST_NAMES[record.family] ?? {};
-    const route = [...(FAMILY_ROUTES[record.family] ?? [])];
+    const route = [...ownFiles];
     for (const [file, names] of Object.entries(familyNames)) {
       if (includeSharedSource || explicitRoute.has(file)) continue;
       route.push(file);
@@ -168,9 +166,15 @@ export function componentTestSelection(records, availableFiles, {
       }
     }
 
-    const uniqueRoute = [...new Set(route)];
+    let uniqueRoute = [...new Set(route)];
     if (uniqueRoute.length === 0 && !includeSharedSource && !behaviorProofs.has(record.family)) {
-      throw new Error(`MUXUI_COMPONENT_FOCUSED_ROUTE_MISSING: ${record.family}; no named React case or verified Storybook BrowserProof is available`);
+      // No test names the family, so its source group runs whole. With no group
+      // either, no proof exists to run.
+      uniqueRoute = sourceGroupTests(record);
+      if (uniqueRoute.length === 0) {
+        throw new Error(`MUXUI_COMPONENT_FOCUSED_ROUTE_MISSING: ${record.family} (${record.source ?? 'no source'}); no test names it, its source has no test group, and no verified Storybook BrowserProof is available`);
+      }
+      uniqueRoute.forEach((file) => wholeFiles.add(file));
     }
     if (uniqueRoute.length === 0 && !includeSharedSource) selectedBehaviorProofs.add(record.family);
     for (const file of uniqueRoute) {
@@ -178,6 +182,8 @@ export function componentTestSelection(records, availableFiles, {
       selected.add(file);
     }
   }
+  // A group file one family needs whole is never narrowed to another family's cases.
+  wholeFiles.forEach((file) => namedFiles.delete(file));
   const missingShared = SHARED_TESTS.filter((file) => !available.has(file));
   if (missingShared.length > 0) throw new Error(`MUXUI_COMPONENT_TEST_SHARED_FILE_MISSING: ${missingShared.join(', ')}`);
   SHARED_TESTS.forEach((file) => selected.add(file));
