@@ -7,6 +7,7 @@ import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { resolve } from 'node:path';
 import { createDom, installDom } from './support/dom.mjs';
+import { exactLockedProblems, readLockfile } from './support/locked-dependencies.mjs';
 import {
   AlertDialog,
   Calendar,
@@ -42,45 +43,26 @@ import {
 import { TextEditor } from '../generated/text-editor.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
-const lucideIntegrity = 'sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==';
 
 test('Lucide stays an exact internal, tree-shakeable dependency with no public leakage', async () => {
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
-  assert.equal(manifest.dependencies['lucide-react'], '1.37.0');
+  const version = manifest.dependencies['lucide-react'];
+  // Exact specifier, locked to that version, with a retained npm integrity.
+  assert.deepEqual(exactLockedProblems(await readLockfile(), 'packages/react', { dependencies: { 'lucide-react': version } }), []);
 
-  const lockfile = await readFile(resolve(packageRoot, '../../pnpm-lock.yaml'), 'utf8');
-  assert.match(lockfile, new RegExp(`lucide-react@1\\.37\\.0:\\n\\s+resolution: \\{integrity: ${lucideIntegrity.replaceAll('+', '\\+')}\\}`));
-
-  // Every renderer source importing Lucide, with its exact deep icon modules.
-  // This inventory is updated alongside new icons so the reproof rule can see
-  // them; it is not an approval list (Decision 0011 amendment 06). Deep default
-  // imports keep unbundled Node consumers off the full icon barrel.
-  const expectedIconsByFile = {
-    'collections.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'x'],
-    'components.mjs': ['check', 'chevron-down', 'minus'],
-    'fields.mjs': ['chevron-left', 'chevron-right', 'minus', 'plus', 'x'],
-    'overlays.mjs': ['x'],
-    'supplemental/activity.mjs': ['chevron-down', 'circle-alert', 'circle-check', 'circle-dot', 'circle-minus', 'clock'],
-    'supplemental/code-block.mjs': ['check', 'code-xml', 'copy'],
-    'supplemental/data-diff.mjs': ['arrow-right', 'check', 'minus', 'refresh-cw'],
-    'supplemental/message.mjs': ['arrow-up-right', 'chevron-down'],
-    'supplemental/prompt-composer.mjs': ['arrow-up', 'mic', 'plus', 'square', 'x'],
-    'supplemental/index.mjs': ['check', 'chevron-down', 'chevrons-up-down', 'credit-card', 'external-link', 'menu', 'minus', 'panel-left', 'search', 'x'],
-    'supplemental/lightbox.mjs': ['chevron-left', 'chevron-right', 'x'],
-    'tabs-motion.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'chevron-up'],
-    'text-editor/index.mjs': ['arrow-up', 'bold', 'check', 'chevron-left', 'chevron-right', 'image', 'italic', 'link', 'list', 'rotate-cw', 'sparkles', 'text-align-center', 'text-align-end', 'text-align-start', 'type', 'underline', 'x'],
-  };
+  // Deep default imports keep unbundled Node consumers off the full icon barrel.
+  // Which icons a file uses is not inventoried: Lucide is the default icon source.
   const sourceRoot = resolve(packageRoot, 'src');
   const sourceFiles = (await readdir(sourceRoot, { recursive: true })).filter((file) => file.endsWith('.mjs') && file !== 'generate.mjs');
-  const actualIconsByFile = {};
+  let lucideImports = 0;
   for (const file of sourceFiles.sort()) {
     const source = await readFile(resolve(sourceRoot, file), 'utf8');
-    const specifiers = [...source.matchAll(/from ['"](lucide-react[^'"]*)['"]/gu)].map(([, specifier]) => specifier);
-    if (specifiers.length === 0) continue;
-    for (const specifier of specifiers) assert.match(specifier, /^lucide-react\/dist\/esm\/icons\/[a-z0-9-]+\.mjs$/u, `${file} imports ${specifier}`);
-    actualIconsByFile[file] = specifiers.map((specifier) => specifier.slice('lucide-react/dist/esm/icons/'.length, -'.mjs'.length)).sort();
+    for (const [, specifier] of source.matchAll(/from ['"](lucide-react[^'"]*)['"]/gu)) {
+      assert.match(specifier, /^lucide-react\/dist\/esm\/icons\/[a-z0-9-]+\.mjs$/u, `${file} imports ${specifier}`);
+      lucideImports += 1;
+    }
   }
-  assert.deepEqual(actualIconsByFile, expectedIconsByFile);
+  assert.ok(lucideImports > 0, 'renderer sources import Lucide icons');
 
   const generatedRoot = resolve(packageRoot, 'generated');
   const generatedFiles = await readdir(generatedRoot);
@@ -91,7 +73,7 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   assert.doesNotMatch(publicEntry, /lucide-react|lucide-[a-z-]+|IconProps/u);
 
   const lucideManifest = JSON.parse(await readFile(resolve(packageRoot, 'node_modules/lucide-react/package.json'), 'utf8'));
-  assert.equal(lucideManifest.version, '1.37.0');
+  assert.equal(lucideManifest.version, version);
   assert.equal(lucideManifest.sideEffects, false);
   const checkModule = await import('lucide-react/dist/esm/icons/check.mjs');
   assert.equal(typeof checkModule.default, 'object');

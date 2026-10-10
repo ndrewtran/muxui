@@ -579,8 +579,14 @@ test('E-R1.5-02: every React family and example source passes canonical diagnosi
   const examples = context.catalogBundle.artifacts.filter(({ kind, record }) => (
     kind === 'example' && record.binding?.ref?.endsWith('#web.react')
   ));
-  assert.equal(components.length, 84);
-  assert.ok(components.some(({ id }) => id === 'muxui:component:icon-button'));
+  // Every component artifact the source manifest declares is diagnosed, once.
+  const manifest = JSON.parse(await readFile(resolve(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
+  const declaredIds = manifest.records
+    .map(({ path }) => /^catalog\/components\/([^/]+)\/artifact\.json$/u.exec(path)?.[1])
+    .filter(Boolean)
+    .map((slug) => `muxui:component:${slug}`);
+  assert.ok(components.length > 0);
+  assert.deepEqual(components.map(({ id }) => id).sort(), declaredIds.sort());
   assert.ok(examples.length >= components.length);
   assert.deepEqual(
     [...new Set(examples.map(({ record }) => record.binding.ref))].sort(),

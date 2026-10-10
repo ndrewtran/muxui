@@ -4,16 +4,19 @@ import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { reactCompatibility } from '../generated/index.mjs';
+import { exactLockedProblems, readLockfile } from './support/locked-dependencies.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 
 test('package has an exact standalone React Aria substrate identity', async () => {
   assert.equal(reactCompatibility.package, '@muxui/react');
   assert.equal(reactCompatibility.upstream.package, 'react-aria-components');
-  assert.equal(reactCompatibility.upstream.version, '1.20.0');
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
   assert.equal(manifest.private, true);
-  assert.equal(manifest.dependencies['react-aria-components'], '1.20.0');
+  // The declared upstream identity is the exact, locked dependency.
+  assert.equal(reactCompatibility.upstream.version, manifest.dependencies['react-aria-components']);
+  const substrate = { dependencies: { 'react-aria-components': manifest.dependencies['react-aria-components'] } };
+  assert.deepEqual(exactLockedProblems(await readLockfile(), 'packages/react', substrate), []);
   assert.equal(manifest.dependencies['@muxui/web'], undefined);
 });
 

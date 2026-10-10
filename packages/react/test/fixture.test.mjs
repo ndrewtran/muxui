@@ -178,10 +178,14 @@ test('Button exposes seven variants with stable root hooks', async () => {
 });
 
 test('Button generator guard binds the canonical finite API contract', async () => {
-  const source = await readFile(resolve(import.meta.dirname, '../src/generate.mjs'), 'utf8');
-  assert.match(source, /const expectedButtonProps = \['disabled', 'pending', 'showTextWhileLoading', 'variant', 'size'\];/u);
-  assert.match(source, /const expectedButtonDefaults = \{[\s\S]*showTextWhileLoading: false,[\s\S]*variant: 'primary',[\s\S]*size: 'md',[\s\S]*\};/u);
-  assert.match(source, /const expectedButtonFiniteApi = \{[\s\S]*variant: \['primary', 'neutral', 'ghost', 'danger', 'danger-neutral', 'danger-ghost', 'inverse'\],[\s\S]*size: \['sm', 'md', 'lg'\],[\s\S]*\};/u);
+  const artifact = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../catalog/components/button/artifact.json'), 'utf8'));
+  const { api } = artifact.bindings['web.react'];
+  const descriptor = JSON.parse(await readFile(resolve(import.meta.dirname, '../generated/descriptor.json'), 'utf8'));
+  assert.deepEqual(descriptor.bindings.find(({ export: name }) => name === 'Button').api, api);
+  // The renderer applies the catalog defaults when no props are given.
+  const markup = renderToString(React.createElement(Button, null, 'Save'));
+  assert.match(markup, new RegExp(`data-variant="${api.defaults.variant}"`, 'u'));
+  assert.match(markup, new RegExp(`data-size="${api.defaults.size}"`, 'u'));
   const result = spawnSync(process.execPath, ['src/generate.mjs', '--check'], {
     cwd: resolve(import.meta.dirname, '..'),
     encoding: 'utf8',
