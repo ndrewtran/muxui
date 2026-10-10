@@ -18,7 +18,8 @@ export const PACKAGE_NAME = '@muxui/react';
 export const REGISTRY = 'https://registry.npmjs.org';
 // npm trusted publishing (OIDC) needs npm CLI 11.5.1 or later.
 export const MINIMUM_NPM = '11.5.1';
-// Roadmap R1 exit admits only 0.1.0-rc.1 or a fix-forward rc.N+1 that replaces it.
+// Roadmap R1 exit admits rc.1, then any number of later rcs in sequence, each
+// the next number after the rc `next` points at (Decision 0023 amendment 01).
 const candidatePattern = /^0\.1\.0-rc\.(?<rc>[1-9]\d*)$/u;
 const firstCandidate = '0.1.0-rc.1';
 
@@ -40,7 +41,7 @@ export function parseCandidateVersion(version) {
   return Number(match.groups.rc);
 }
 
-/** The fix-forward successor named by Decision 0023's rollback plan. */
+/** The rc a rollback of `version` fixes forward to (Decision 0023's rollback plan). */
 export function fixForwardVersion(version) {
   return `0.1.0-rc.${parseCandidateVersion(version) + 1}`;
 }
@@ -62,9 +63,9 @@ export function meetsMinimumNpm(version, minimum = MINIMUM_NPM) {
  * when the package is absent (404).
  *
  * - first: the package is absent, so this must be rc.1 (today's first publish).
- * - later: `latest` is recorded as-is, `next` must be a published rc whose
- *   fix-forward is exactly this version (rc.N+1, Decision 0023), and no other
- *   dist-tag may exist.
+ * - later: `latest` is recorded as-is, `next` must be a published rc and this
+ *   version the next number after it (rc.N+1, Decision 0023 amendment 01), and
+ *   no other dist-tag may exist.
  */
 export function classifyPreflight({ version, versionStatus, packument }) {
   const rc = parseCandidateVersion(version);
@@ -73,7 +74,7 @@ export function classifyPreflight({ version, versionStatus, packument }) {
 
   if (packument === null) {
     if (version !== firstCandidate) {
-      stop('Package absent', `${PACKAGE_NAME} is absent, so only ${firstCandidate} can be a first publish; ${version} fixes forward a published rc.`);
+      stop('Package absent', `${PACKAGE_NAME} is absent, so only ${firstCandidate} can be a first publish; ${version} follows a published rc.`);
     }
     return { kind: 'first', latest: '', next: '' };
   }
@@ -89,7 +90,7 @@ export function classifyPreflight({ version, versionStatus, packument }) {
   if (!versions.includes(latest)) stop('Dist-tag drift', `latest points at ${latest}, which is not a published version.`);
   if (!versions.includes(next)) stop('Dist-tag drift', `next points at ${next}, which is not a published version.`);
   if (!candidatePattern.test(next) || parseCandidateVersion(next) + 1 !== rc) {
-    stop('Not the fix-forward', `${version} must be the fix-forward of next (rc.N+1); next points at ${next}. Anything else stops for a decision.`);
+    stop('Not the next candidate', `${version} must be the next release candidate after next (rc.N+1); next points at ${next}. Anything else stops for a decision.`);
   }
   return { kind: 'later', latest, next };
 }
@@ -244,7 +245,7 @@ export async function main(command, environment = process.env, io = {}) {
   switch (command) {
     case 'validate-version':
       parseCandidateVersion(version);
-      log(`${version} is an admitted candidate version; fix forward to ${fixForwardVersion(version)}.`);
+      log(`${version} is an admitted candidate version; a rollback would fix forward to ${fixForwardVersion(version)}.`);
       return;
     case 'check-npm': {
       const npmVersion = execFileSync('npm', ['--version'], { encoding: 'utf8' }).trim();

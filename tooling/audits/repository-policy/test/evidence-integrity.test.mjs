@@ -495,6 +495,7 @@ test('R1 exit capture binds the dry run, publish run, and registry to one candid
   for (const record of Object.values(records)) {
     assert.ok(record.deferredToS1.every(({ status, deferredTo }) => status === 'unmet' && deferredTo === 'S1.0'));
     assert.ok(record.nonClaims.some((claim) => claim.includes('No assistive-technology support claim')));
+    assert.equal(record.expiry, 'Retained as R1 exit proof for this exact candidate; a fix-forward rc needs new E-R1-EXIT-01 to 03 evidence rather than an edit', 'rc.1 wording is retained byte for byte');
   }
   // Without the registry read-back, E-R1-EXIT-02 is not a pass, even after publish.
   for (const phases of [{ dryRun: phase(dryRun) }, { dryRun: phase(dryRun), publish: phase(publish) }]) {
@@ -697,9 +698,9 @@ test('R1 exit capture replaces the route atomically and leaves it unchanged when
   }
 });
 
-// Trusted-publishing workflow: a fix-forward rc binds from npm-publication.mjs
+// Trusted-publishing workflow: a later rc binds from npm-publication.mjs
 // output, with latest unchanged, into its own route.
-test('R1 exit capture binds a trusted-publishing fix-forward rc with latest unchanged', () => {
+test('R1 exit capture binds a trusted-publishing later rc with latest unchanged', () => {
   const fixture = r1ExitFixture({ version: '0.1.0-rc.2' });
   const dryRun = { ...r1Exit.bindDryRun({ ...fixture.dryRunInput, credentials: undefined }), manifest: fixture.manifest };
   assert.equal(dryRun.credentials, undefined, 'no verify-credentials run under trusted publishing');
@@ -746,6 +747,8 @@ test('R1 exit capture binds a trusted-publishing fix-forward rc with latest unch
   assert.match(records['E-R1-EXIT-04'].distTags.latest.setBy, /^unchanged by this publish/u);
   assert.equal(records['E-R1-EXIT-04'].distTags.latest.claimed, false);
   assert.ok(records['E-R1-EXIT-01'].nonClaims.some((claim) => claim.includes('0.1.0-rc.2 claims none')));
+  // A later rc is the next release candidate, not a fix-forward.
+  assert.equal(records['E-R1-EXIT-01'].expiry, 'Retained as R1 exit proof for this exact candidate; a later rc needs new E-R1-EXIT-01 to 03 evidence rather than an edit');
 });
 
 test('R1 exit capture routes each candidate version to its own evidence root', async () => {
@@ -790,13 +793,16 @@ test('R1 exit capture routes each candidate version to its own evidence root', a
 
     const out = join(root, 'out');
     await r1Exit.main(argv(out, version), github);
-    assert.deepEqual([...new Set(requested)], [1], 'no verify-credentials run is fetched for a fix-forward rc');
+    assert.deepEqual([...new Set(requested)], [1], 'no verify-credentials run is fetched for a later rc');
     const index = JSON.parse(await readFile(join(out, 'index.json'), 'utf8'));
     assert.ok([...index.artifacts, ...index.records, index.validation].every(({ path }) => path.startsWith('tests/evidence/r1-exit-0.1.0-rc.2/')));
     assert.ok(!index.artifacts.some(({ path }) => path.includes('verify-credentials')));
     const verification = JSON.parse(await readFile(join(out, 'verification.json'), 'utf8'));
     assert.match(verification.captureProcedure, /--version=0\.1\.0-rc\.2 /u);
-    assert.match(await readFile(join(out, 'README.md'), 'utf8'), /^# R1 exit retained publication evidence for 0\.1\.0-rc\.2\n/u);
+    const readme = await readFile(join(out, 'README.md'), 'utf8');
+    assert.match(readme, /^# R1 exit retained publication evidence for 0\.1\.0-rc\.2\n/u);
+    assert.match(readme, /admits any number of release candidates in sequence/u);
+    assert.doesNotMatch(readme, /fix-forward|bad rc/u, 'a later rc is not labelled a fix-forward');
   } finally {
     await rm(root, { recursive: true, force: true });
   }

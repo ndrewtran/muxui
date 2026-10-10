@@ -2,7 +2,7 @@ name: npm publish
 
 # Manual npm publication of an exact @muxui/react release candidate. It never
 # runs on push or merge. The version input must be 0.1.0-rc.N (Roadmap R1 exit:
-# rc.1 or a Decision 0023 fix-forward rc).
+# rc.1, then any number of later rcs in sequence, Decision 0023 amendment 01).
 #
 # - mode=dry-run (default): `prepare` runs `pnpm release:prepare` for the input
 #   version on the dispatched commit, reports the candidate version and
@@ -20,11 +20,12 @@ name: npm publish
 #
 # Preflight: the version must be absent from the registry. A first publish
 # (package absent) must be rc.1. Otherwise the dist-tags must be exactly
-# latest and next, the version must be next's fix-forward (next = rc.N, the
-# version rc.N+1), and latest is recorded; after publishing, next must be the
-# candidate and latest unchanged. Any other state stops for a decision. The registry sets `latest` on
-# a first publish; nothing here claims or moves a dist-tag, and no deprecate,
-# unpublish, dist-tag, or owner command runs anywhere.
+# latest and next, the version must be the next release candidate after next
+# (next = rc.N, the version rc.N+1), and latest is recorded; after publishing,
+# next must be the candidate and latest unchanged. Any other state stops for a
+# decision. The registry sets `latest` on a first publish; nothing here claims
+# or moves a dist-tag, and no deprecate, unpublish, dist-tag, or owner command
+# runs anywhere.
 #
 # Record `tarball-sha512` from a dry run of this workflow, not a local run. The
 # archive is byte-stable across Linux runners, but Node's gzip header stores

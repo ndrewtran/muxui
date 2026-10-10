@@ -695,9 +695,9 @@ test('the registry preflight admits a first rc.1, or rc.N+1 over next=rc.N', () 
   assert.throws(() => classify('0.1.0-rc.2', 404, { ...publishedRc1, 'dist-tags': { ...publishedRc1['dist-tags'], beta: '0.1.0-rc.1' } }), /exactly latest and next/u);
   assert.throws(() => classify('0.1.0-rc.2', 404, { ...publishedRc1, 'dist-tags': { latest: '0.1.0-rc.1' } }), /exactly latest and next/u);
   const rc3 = { 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.3' }, versions: { '0.1.0-rc.1': {}, '0.1.0-rc.3': {} } };
-  assert.throws(() => classify('0.1.0-rc.2', 404, rc3), /must be the fix-forward of next/u);
+  assert.throws(() => classify('0.1.0-rc.2', 404, rc3), /must be the next release candidate after next/u);
   // Only rc.N+1 over next=rc.N: skipping an rc stops for a decision.
-  assert.throws(() => classify('0.1.0-rc.3', 404, publishedRc1), /must be the fix-forward of next \(rc\.N\+1\); next points at 0\.1\.0-rc\.1/u);
+  assert.throws(() => classify('0.1.0-rc.3', 404, publishedRc1), /must be the next release candidate after next \(rc\.N\+1\); next points at 0\.1\.0-rc\.1/u);
   assert.throws(() => classify('0.1.0-rc.2', 404, { ...publishedRc1, 'dist-tags': { latest: '0.1.0-rc.1', next: '0.1.0-rc.0' } }), /not a published version/u);
   assert.throws(() => npmPublication.assertNoDrift({ kind: 'later', latest: '0.1.0-rc.1', next: '0.1.0-rc.1' }, { kind: 'later', latest: '0.1.0-rc.2', next: '0.1.0-rc.1' }), /latest changed since the preflight/u);
 });
@@ -812,6 +812,10 @@ test('the npm publication CLI reads its environment and writes step outputs and 
     });
     const lines = [];
     const run = (command, environment) => npmPublication.main(command, { GITHUB_OUTPUT: output, GITHUB_STEP_SUMMARY: summary, VERSION: '0.1.0-rc.2', ...environment }, { ...io, log: (line) => lines.push(line) });
+
+    // rc.2 over a healthy rc.1 is the next release candidate; fixing forward is only the rollback case.
+    await run('validate-version');
+    assert.deepEqual(lines.splice(0), ['0.1.0-rc.2 is an admitted candidate version; a rollback would fix forward to 0.1.0-rc.3.']);
 
     await run('preflight');
     assert.equal(readFileSync(output, 'utf8'), 'kind=later\nlatest=0.1.0-rc.1\nnext=0.1.0-rc.1\n');
