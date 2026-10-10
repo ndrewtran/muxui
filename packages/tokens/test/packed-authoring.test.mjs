@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, realpath, rm, symlink } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, realpath, rm, symlink } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
@@ -18,7 +18,9 @@ test('the packed authoring export imports from an unpacked tarball without repos
     const consumer = join(directory, 'consumer');
     const installed = join(consumer, 'node_modules/@muxui/tokens');
     await mkdir(installed, { recursive: true });
-    const extracted = run('tar', ['-xzf', join(directory, 'muxui-tokens-2.0.0.tgz'), '--strip-components=1', '-C', installed], directory);
+    const tarballs = (await readdir(directory)).filter((name) => name.endsWith('.tgz'));
+    assert.equal(tarballs.length, 1, 'pnpm pack emits one tarball');
+    const extracted = run('tar', ['-xzf', join(directory, tarballs[0]), '--strip-components=1', '-C', installed], directory);
     assert.equal(extracted.status, 0, extracted.stderr);
     // The only runtime dependency of the authoring export is culori; link the workspace copy.
     await symlink(await realpath(join(packageRoot, 'node_modules/culori')), join(consumer, 'node_modules/culori'));

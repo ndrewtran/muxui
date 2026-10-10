@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { posix, resolve } from 'node:path';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const exactVersion = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/u;
@@ -73,26 +73,40 @@ export function exactLockedProblems(lockfile, importer, manifest, edges = ['depe
 /**
  * Walks everything one locked importer dependency reaches over `edges`. Every
  * package reached needs a snapshot and a sha512 integrity, so a deleted record
- * is reported instead of read as a dependency-free leaf. Returns the sorted
- * `name@version` strings (optionally narrowed to names the caller owns) and the
- * problems found anywhere in the walk.
+ * is reported instead of read as a dependency-free leaf. A `link:` is followed
+ * only to a workspace importer in the lockfile (resolved from the importer it
+ * appears under); any other link is a problem. Returns the sorted `name@version`
+ * strings (optionally narrowed to names the caller owns) and the problems found.
  */
 export function lockedClosure(lockfile, importer, root, { edges = ['dependencies'], include = () => true } = {}) {
   const start = lockfile.importers.get(importer)?.get(`dependencies:${root}`)?.version;
   if (!start) return { packages: [], problems: [`${importer} does not lock ${root}`] };
   const problems = [];
   const seen = new Set();
-  const pending = [`${root}@${start}`];
+  const linked = new Set();
+  const pending = [[root, start, importer]];
   while (pending.length > 0) {
-    const key = pending.pop();
+    const [name, reference, context] = pending.pop();
+    if (reference.startsWith('link:')) {
+      const target = posix.normalize(posix.join(context, reference.slice('link:'.length)));
+      if (!lockfile.importers.has(target)) problems.push(`${name} links to ${reference}, which is not a workspace importer in the lockfile`);
+      else if (!linked.has(target)) {
+        linked.add(target);
+        for (const [entry, locked] of lockfile.importers.get(target)) {
+          const split = entry.indexOf(':');
+          if (edges.includes(entry.slice(0, split))) pending.push([entry.slice(split + 1), locked.version, target]);
+        }
+      }
+      continue;
+    }
+    const key = `${name}@${reference}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    const [name, version] = splitKey(key);
-    if (!lockfile.integrities.has(`${name}@${baseVersion(version)}`)) problems.push(`${key} has no lockfile integrity`);
+    if (!lockfile.integrities.has(`${name}@${baseVersion(reference)}`)) problems.push(`${key} has no lockfile integrity`);
     const snapshot = lockfile.snapshots.get(key);
     if (!snapshot) { problems.push(`${key} has no lockfile snapshot`); continue; }
     for (const edge of edges) {
-      for (const [dependency, reference] of snapshot[edge]) if (!reference.startsWith('link:')) pending.push(`${dependency}@${reference}`);
+      for (const [dependency, dependencyReference] of snapshot[edge]) pending.push([dependency, dependencyReference, context]);
     }
   }
   const packages = [...new Set([...seen].map(splitKey).filter(([name]) => include(name)).map(([name, version]) => `${name}@${baseVersion(version)}`))].sort();

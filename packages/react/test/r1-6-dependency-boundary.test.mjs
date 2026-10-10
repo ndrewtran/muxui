@@ -21,7 +21,8 @@ const mergeWalks = (walks) => ({ packages: [...new Set(walks.flatMap(({ packages
 // Each walk needs a snapshot and an integrity for everything it reaches.
 function closures(lock) {
   const npmDependencies = (manifest) => Object.keys(manifest.dependencies).filter((name) => !manifest.dependencies[name].startsWith('workspace:'));
-  const walkAll = (importer, manifest, options) => npmDependencies(manifest).map((name) => lockedClosure(lock, importer, name, options));
+  // Workspace links are walked too: each must resolve to an importer in the lockfile.
+  const walkAll = (importer, manifest, options) => Object.keys(manifest.dependencies).map((name) => lockedClosure(lock, importer, name, options));
   return {
     runtime: mergeWalks([...walkAll('packages/react', reactManifest, { edges: bothEdges }), ...walkAll('packages/tokens', tokensManifest, { edges: bothEdges })]),
     tiptap: mergeWalks(npmDependencies(reactManifest).filter((name) => name.startsWith('@tiptap/'))
@@ -57,6 +58,24 @@ test('closure checks report a missing snapshot or integrity anywhere in a closur
   const missingRootSnapshot = closures({ ...lockfile, snapshots: without(lockfile.snapshots, (key) => key.startsWith(motionRoot)) });
   assert.ok(reports(missingRootSnapshot.motion, motionRoot, 'has no lockfile snapshot'));
   assert.ok(reports(missingRootSnapshot.runtime, motionRoot, 'has no lockfile snapshot'));
+});
+
+test('closure checks follow a link only to a workspace importer', () => {
+  const [snapshotKey, snapshot] = [...lockfile.snapshots].find(([key]) => key.startsWith(`motion@${reactManifest.dependencies.motion}`));
+  const lockWithMotionLink = (reference, importers = lockfile.importers) => ({
+    ...lockfile,
+    importers,
+    snapshots: new Map([...lockfile.snapshots, [snapshotKey, { ...snapshot, dependencies: new Map([...snapshot.dependencies, ['missing-runtime-package', reference]]) }]]),
+  });
+  const missing = closures(lockWithMotionLink('link:../../missing-runtime-package'));
+  for (const closure of [missing.motion, missing.runtime]) {
+    assert.ok(closure.problems.some((problem) => problem.startsWith('missing-runtime-package links to') && problem.endsWith('not a workspace importer in the lockfile')));
+  }
+  // A link to a real importer is traversed: that importer's own unlocked dependency is reported.
+  const importers = new Map(lockfile.importers).set('packages/linked', new Map([['dependencies:ghost', { specifier: '1.0.0', version: '1.0.0' }]]));
+  const linked = closures(lockWithMotionLink('link:../linked', importers));
+  assert.deepEqual(linked.motion.problems.filter((problem) => !problem.startsWith('ghost@')), []);
+  assert.ok(linked.motion.problems.includes('ghost@1.0.0 has no lockfile integrity'));
 });
 
 test('every disclosed runtime package keeps its unchanged license text', async () => {

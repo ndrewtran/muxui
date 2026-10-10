@@ -10,6 +10,7 @@ import { JSDOM } from 'jsdom';
 import { Button } from '../src/button.mjs';
 import * as generated from '../generated/index.mjs';
 import { R1ButtonFixture } from '../src/button-fixture.mjs';
+import { createDom } from './support/dom.mjs';
 
 test('Button owns MuxUI selectors and required token bindings', async () => {
   const css = await readFile(resolve(import.meta.dirname, '../generated/styles.css'), 'utf8');
@@ -213,7 +214,7 @@ const markupValues = {
   variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
   orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
   defaultValue: (doc) => doc.querySelector('input')?.getAttribute('value'),
-  selectionMode: (doc) => ({ radiogroup: 'single', group: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="group"]')?.getAttribute('role')],
+  selectionMode: (doc) => ({ radiogroup: 'single', toolbar: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="toolbar"]')?.getAttribute('role')],
 };
 const h = React.createElement;
 const minimalRenders = {
@@ -226,9 +227,57 @@ const minimalRenders = {
   Autocomplete: () => h(generated.Autocomplete, { label: 'City', items: ['Melbourne'] }),
   Tabs: () => h(generated.Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }),
 };
+const sectionItems = [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }];
+
+async function withMounted(element, run) {
+  const env = createDom('<div id="root"></div>', { layoutStubs: true });
+  const root = createRoot(document.querySelector('#root'));
+  try {
+    await act(async () => root.render(element));
+    return await run(document.querySelector('#root'));
+  } finally {
+    await act(async () => root.unmount());
+    env.restore();
+  }
+}
+
+// Defaults only behaviour shows. Each observer renders the component (optionally
+// with the prop overridden) and returns what the renderer does.
+const behaviourObservers = {
+  Button: {
+    // A pending Button either keeps its label visible beside the spinner or hides it.
+    showTextWhileLoading: (props) => {
+      const { document } = new JSDOM(renderToString(h(generated.Button, { pending: true, ...props }, 'Saving'))).window;
+      return !(document.querySelector('.muxui-button-content')?.getAttribute('style') ?? '').includes('visibility:hidden');
+    },
+  },
+  ToggleButtonGroup: {
+    // Activating the only selected item either keeps or clears the selection.
+    disallowEmptySelection: (props) => withMounted(
+      h(generated.ToggleButtonGroup, { 'aria-label': 'Format', defaultSelectedIds: ['a'], ...props }, h(generated.ToggleButton, { id: 'a' }, 'A'), h(generated.ToggleButton, { id: 'b' }, 'B')),
+      async (container) => {
+        await act(async () => container.querySelector('button').click());
+        return container.querySelector('[aria-checked="true"], [aria-pressed="true"]') !== null;
+      },
+    ),
+  },
+  Tabs: {
+    // An arrow key either selects the next tab at once (automatic) or only moves focus (manual).
+    keyboardActivation: (props) => {
+      const changes = [];
+      return withMounted(h(generated.Tabs, { 'aria-label': 'Sections', items: sectionItems, onChange: (id) => changes.push(id), ...props }), async (container) => {
+        const [first] = container.querySelectorAll('[role="tab"]');
+        await act(async () => first.focus());
+        await act(async () => first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, cancelable: true })));
+        return changes.length > 0 ? 'automatic' : 'manual';
+      });
+    },
+  },
+};
+
 const kebab = (name) => name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
 
-/** Catalog defaults the markup contradicts. Defaults with no markup (such as keyboardActivation) are not observable here. */
+/** Catalog defaults the server-rendered markup contradicts. */
 function defaultMismatches(markup, defaults) {
   const { document } = new JSDOM(markup).window;
   const mismatches = [];
@@ -238,6 +287,21 @@ function defaultMismatches(markup, defaults) {
   }
   return mismatches;
 }
+
+/** Catalog defaults the renderer's behaviour contradicts. */
+async function behaviourMismatches(name, defaults) {
+  const mismatches = [];
+  for (const [key, observe] of Object.entries(behaviourObservers[name] ?? {})) {
+    if (!(key in defaults)) continue;
+    const observed = await observe();
+    if (observed !== defaults[key]) mismatches.push(`${key}: catalog ${JSON.stringify(defaults[key])}, behaves ${JSON.stringify(observed)}`);
+  }
+  return mismatches;
+}
+
+/** Catalog defaults no markup or behaviour observer covers, so they would pass unchecked. */
+const unobservedDefaults = (name, defaults) => Object.keys(defaults)
+  .filter((key) => !(key in markupFlags) && !(key in markupValues) && !(key in (behaviourObservers[name] ?? {})));
 
 /** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. */
 function undeclaredProps(types, name, props) {
@@ -259,19 +323,42 @@ function undeclaredProps(types, name, props) {
 
 test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
   const types = await readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8');
+  const catalogApi = {};
   for (const [name, render] of Object.entries(minimalRenders)) {
     const artifact = JSON.parse(await readFile(resolve(import.meta.dirname, `../../../catalog/components/${kebab(name)}/artifact.json`), 'utf8'));
     const { api } = artifact.bindings['web.react'];
+    catalogApi[name] = api;
     const markup = renderToString(render());
     assert.deepEqual(defaultMismatches(markup, api.defaults), [], `${name} renders the catalog defaults`);
+    assert.deepEqual(await behaviourMismatches(name, api.defaults), [], `${name} behaves as the catalog defaults say`);
+    assert.deepEqual(unobservedDefaults(name, api.defaults), [], `${name} defaults each have a markup or behaviour observer`);
     assert.deepEqual(undeclaredProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
     if ('size' in api.defaults) assert.equal(markupValues.size(new JSDOM(markup).window.document), api.defaults.size, `${name} exposes its size default`);
   }
-  // Catalog drift is caught: a different size default or an undeclared prop fails.
-  const toggle = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../catalog/components/toggle-button/artifact.json'), 'utf8')).bindings['web.react'].api;
+  // Catalog drift is caught: a different default or an undeclared prop fails.
+  const toggle = catalogApi.ToggleButton;
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, size: 'lg' }), ['size: catalog "lg", rendered "md"']);
   assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
   assert.deepEqual(undeclaredProps(types, 'ToggleButton', [...toggle.props, 'missingProp']), ['missingProp']);
+  // Selection mode follows the role each mode renders: radiogroup for single, toolbar for multiple.
+  const multiple = renderToString(h(generated.ToggleButtonGroup, { 'aria-label': 'Format', selectionMode: 'multiple' }, h(generated.ToggleButton, { id: 'a' }, 'A')));
+  assert.equal(markupValues.selectionMode(new JSDOM(multiple).window.document), 'multiple');
+  assert.deepEqual(defaultMismatches(multiple, { ...catalogApi.ToggleButtonGroup.defaults, selectionMode: 'multiple' }), []);
+  assert.equal(defaultMismatches(renderToString(minimalRenders.ToggleButtonGroup()), { selectionMode: 'multiple' }).length, 1);
+});
+
+test('catalog defaults only behaviour shows are compared with what the renderer does', async () => {
+  const states = { showTextWhileLoading: [false, true], disallowEmptySelection: [false, true], keyboardActivation: ['automatic', 'manual'] };
+  for (const [name, observers] of Object.entries(behaviourObservers)) {
+    for (const [key, observe] of Object.entries(observers)) {
+      // The observer sees both states, so a catalog default that differs from the renderer is reported.
+      const rendered = await observe();
+      for (const value of states[key]) {
+        assert.equal(await observe({ [key]: value }), value, `${name}.${key} observer sees ${value}`);
+        assert.equal((await behaviourMismatches(name, { [key]: value })).length, value === rendered ? 0 : 1, `${name}.${key}=${value} is compared with the rendered ${rendered}`);
+      }
+    }
+  }
 });
 
 test('MuxUI styles bind states and public theme hooks', async () => {
