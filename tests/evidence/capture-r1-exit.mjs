@@ -7,8 +7,9 @@
 //   node tests/evidence/capture-r1-exit.mjs [--version=<0.1.0-rc.N>] --capture-timestamp=<ISO-8601 UTC> <phase>...
 //
 // --version picks the candidate and its route (default 0.1.0-rc.1). rc.1 is
-// retained at tests/evidence/r1-exit; a Decision 0023 fix-forward rc gets its own
-// tests/evidence/r1-exit-<version>, and never rewrites an earlier rc's route.
+// retained at tests/evidence/r1-exit; each later rc (Decision 0023 amendment 01)
+// gets its own tests/evidence/r1-exit-<version>, and never rewrites an earlier
+// rc's route.
 //
 // Phases, in release order:
 //   --dry-run-run=<id>  the mode=dry-run run on main: execution identity,
@@ -51,7 +52,7 @@ import { DEFERRED_R1_EVIDENCE } from '../../packages/react/src/r1-deferred-evide
 const repositoryRoot = resolve(import.meta.dirname, '../..');
 const repository = 'ndrewtran/muxui';
 const captureTool = 'tests/evidence/capture-r1-exit.mjs';
-// rc.1, the first publish, keeps the original route; each fix-forward rc has its own.
+// rc.1, the first publish, keeps the original route; each later rc has its own.
 const firstVersion = '0.1.0-rc.1';
 export function routeFor(version) {
   try {
@@ -610,7 +611,7 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
   const provenance = bindAttestations(attestations, { dryRun, publishRunId });
   if (view.distTags?.next !== version) fail('R1_EXIT_NEXT_MISMATCH', `next points at ${view.distTags?.next}; the verified rc is ${version}`);
   if (prior.kind === 'later') {
-    // Decision 0023: a fix-forward publish moves next only; latest stays where the preflight recorded it.
+    // Decision 0023: a later rc's publish moves next only; latest stays where the preflight recorded it.
     if (Object.keys(view.distTags).sort().join(',') !== 'latest,next' || view.distTags.latest !== prior.latest) {
       fail('R1_EXIT_LATEST_UNEXPECTED', `dist-tags are ${JSON.stringify(view.distTags)}; expected next=${version} and latest unchanged at ${prior.latest}`);
     }
@@ -638,7 +639,7 @@ export function bindRegistry({ dryRun, view, attestations, consumer, publishRunI
 // ---------------------------------------------------------------------------
 // Route assembly: records, index, and README derive only from verification.json.
 
-// rc.1's wording is retained byte for byte; a fix-forward rc names itself.
+// rc.1's wording is retained byte for byte; a later rc names itself.
 function nonClaimsFor(version) {
   return [
     version === firstVersion
@@ -674,7 +675,9 @@ function record(verification, refs, assertionId, body) {
     owner: 'ndrewtran',
     ...(verification.rehearsal ? { rehearsal: verification.rehearsal } : {}),
     retentionPolicy: 'Content-addressed Git records retained in default-branch history; hosted logs, workflow artifacts, the tarball, and registry state are mutable or expiring locators bound by digest',
-    expiry: 'Retained as R1 exit proof for this exact candidate; a fix-forward rc needs new E-R1-EXIT-01 to 03 evidence rather than an edit',
+    expiry: dryRun.candidate.version === firstVersion
+      ? 'Retained as R1 exit proof for this exact candidate; a fix-forward rc needs new E-R1-EXIT-01 to 03 evidence rather than an edit'
+      : 'Retained as R1 exit proof for this exact candidate; a later rc needs new E-R1-EXIT-01 to 03 evidence rather than an edit',
   });
 }
 
@@ -795,7 +798,7 @@ export function buildRoute(verification, refs) {
 
 function readme(verification) {
   const { version } = verification.phases.dryRun.candidate;
-  if (version !== firstVersion) return fixForwardReadme(verification, version);
+  if (version !== firstVersion) return laterCandidateReadme(verification, version);
   return `# R1 exit retained publication evidence
 
 Roadmap "R1 exit — React prerelease publication" requires \`E-R1-EXIT-01\` to
@@ -829,12 +832,13 @@ R1-exit pull request is Andrew's separate stop.${verification.rehearsal ? '\n\nT
 `;
 }
 
-function fixForwardReadme(verification, version) {
+function laterCandidateReadme(verification, version) {
   return `# R1 exit retained publication evidence for ${version}
 
-Decision 0023 fixes a bad rc forward with a new exact candidate, which needs its
-own \`E-R1-EXIT-01\` to \`E-R1-EXIT-03\` evidence; the Roadmap R1 exit and
-\`E-R1-EXIT-04\` then apply to it. This root retains them for
+Decision 0023 amendment 01 admits any number of release candidates in sequence.
+Each is a new exact candidate with its own \`E-R1-EXIT-01\` to
+\`E-R1-EXIT-03\` evidence; the Roadmap R1 exit and \`E-R1-EXIT-04\` then apply to
+the current verified rc, the one \`next\` points at. This root retains them for
 \`@muxui/react@${version}\` from the \`npm-publish.yml\` dry-run and publish runs
 (npm trusted publishing) and from read-only registry observations, captured by
 \`node ${captureTool} --version=${version}\`. Earlier candidates keep their own

@@ -44,7 +44,7 @@ const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 const packages = await discoverWorkspacePackages(repositoryRoot);
 const reactVersionPattern = /^0\.1\.0-alpha\.(?:0|[1-9]\d*)$/u;
 // The candidate version is an input (the npm-publish workflow's version), so a
-// Decision 0023 fix-forward rc is prepared without changing the source tree.
+// later rc (Decision 0023 amendment 01) is prepared without changing the source tree.
 const candidateVersion = process.env.MUXUI_RELEASE_CANDIDATE_VERSION || '0.1.0-rc.1';
 try {
   parseCandidateVersion(candidateVersion);
@@ -1123,7 +1123,7 @@ try {
           name: 'next dist-tag collision',
           command: 'GET https://registry.npmjs.org/@muxui/react (dist-tags)',
           status: 'pending',
-          policy: `a first publish expects the package to be absent and must be ${sourceCandidateVersion}; otherwise the dist-tags must be exactly latest and next, next must be the published rc.N that this rc.N+1 candidate fixes forward, and latest is recorded unchanged; any other dist-tag state is a hard stop for review`,
+          policy: `a first publish expects the package to be absent and must be ${sourceCandidateVersion}; otherwise the dist-tags must be exactly latest and next, next must be a published rc.N and this candidate the next number, rc.N+1, and latest is recorded unchanged; any other dist-tag state is a hard stop for review`,
           laterPublish: 'record the prior next and latest pointers; after publication next must be the candidate and latest unchanged',
         },
         {
