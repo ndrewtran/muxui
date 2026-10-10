@@ -51,6 +51,7 @@ const NUMBER_VALUE_CONTEXT_PROPS = new Set(['max', 'min', 'step']);
 
 const CONTROLLED_DEFAULT_PAIRS = Object.freeze([
   ['checked', 'defaultChecked'],
+  ['collapsed', 'defaultCollapsed'],
   ['expanded', 'defaultExpanded'],
   ['expandedIds', 'defaultExpandedIds'],
   ['open', 'defaultOpen'],
@@ -193,7 +194,7 @@ function sampleControlledValue(binding, family, controlled, uncontrolled, source
   const defaults = binding.api.defaults ?? {};
   const sourceValue = firstDefined(sourceArgs[controlled], sourceArgs[uncontrolled], defaults[controlled], defaults[uncontrolled]);
   if (sourceValue !== undefined) return sourceValue;
-  if (controlled === 'open' || controlled === 'checked' || controlled === 'expanded' || controlled === 'selected') return false;
+  if (controlled === 'open' || controlled === 'checked' || controlled === 'collapsed' || controlled === 'expanded' || controlled === 'selected') return false;
   if (controlled === 'selectedId') return 'Melbourne';
   if (controlled.endsWith('Ids')) return [];
   if (controlled !== 'value') return undefined;
@@ -363,8 +364,9 @@ function stateIsSupported(binding, state, family) {
     case 'indeterminate':
       return props.has('indeterminate') || family === 'ProgressBar';
     case 'expanded':
-    case 'collapsed':
       return props.has('expanded') || props.has('expandedIds');
+    case 'collapsed':
+      return props.has('expanded') || props.has('expandedIds') || props.has('collapsed');
     case 'pending':
       return props.has('pending');
     case 'open':
@@ -477,6 +479,7 @@ function applyStateArgs(args, binding, state, family, preserveExplicit = false) 
     case 'collapsed':
       if (props.has('expanded')) setControlledArg(args, props, 'expanded', false);
       else if (props.has('expandedIds')) setControlledArg(args, props, 'expandedIds', []);
+      else if (props.has('collapsed')) setControlledArg(args, props, 'collapsed', true);
       break;
     case 'pending':
       if (props.has('pending')) args.pending = true;
@@ -786,6 +789,11 @@ const ADAPTERS = {
 // R1.6 families use their authored compound anatomy in the private showcase.
 // These adapters deliberately keep the example data small while exercising
 // the public root or dedicated subpath export and every catalogued part.
+// The folded Sidebar rail shows icons only, so each specimen item carries one.
+function SidebarSpecimenIcon({ className }) {
+  return e('svg', { className, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, 'aria-hidden': true }, e('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }));
+}
+
 Object.assign(ADAPTERS, {
   AlertDialog: (args) => e(MuxUI.AlertDialog.Root, { defaultOpen: args.open ?? false, className: args.className },
     e(MuxUI.AlertDialog.Trigger, { disabled: args.disabled }, 'Open alert'),
@@ -904,19 +912,26 @@ Object.assign(ADAPTERS, {
     e('span', { className: 'muxui-radio-field__description' }, 'Choose one option'),
     args.invalid ? e('span', { className: 'muxui-radio-field__error' }, 'Invalid choice') : null,
   ),
-  Sidebar: (args) => e(MuxUI.Sidebar.Root, { ...args },
-    e(MuxUI.Sidebar.Header, null, 'Workspace'),
-    e(MuxUI.Sidebar.Search, { placeholder: 'Search' }),
-    e(MuxUI.Sidebar.Divider),
-    e(MuxUI.Sidebar.NavList, null,
-      e(MuxUI.Sidebar.NavItem, { href: '#home', current: true }, 'Home'),
-      e(MuxUI.Sidebar.NavItem, { href: '#settings' }, 'Settings'),
-    ),
-    e(MuxUI.Sidebar.AccountCard, { name: 'Andrew', email: 'andrew@example.com' }),
-    e(MuxUI.Sidebar.AccountMenu, null, 'Account'),
-    e(MuxUI.Sidebar.MobileTrigger, null, 'Menu'),
-    e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens' }),
-  ),
+  Sidebar: ({ collapsed, defaultCollapsed, onCollapsedChange, shortcut, ...args }) => {
+    return e(MuxUI.Sidebar.Provider, { collapsed, defaultCollapsed, onCollapsedChange, shortcut },
+      e(MuxUI.Sidebar.Toggle),
+      e(MuxUI.Sidebar.Root, { ...args },
+        e(MuxUI.Sidebar.Header, null, 'Workspace'),
+        e(MuxUI.Sidebar.Search, { placeholder: 'Search' }),
+        e(MuxUI.Sidebar.Divider),
+        e(MuxUI.Sidebar.NavList, null,
+          e(MuxUI.Sidebar.NavItem, { href: '#home', icon: SidebarSpecimenIcon, current: true }, 'Home'),
+          e(MuxUI.Sidebar.Section, { label: 'Projects' },
+            e(MuxUI.Sidebar.NavItem, { href: '#settings', icon: SidebarSpecimenIcon }, 'Settings'),
+          ),
+        ),
+        e(MuxUI.Sidebar.AccountCard, { name: 'Andrew', email: 'andrew@example.com' }),
+        e(MuxUI.Sidebar.AccountMenu, null, 'Account'),
+        e(MuxUI.Sidebar.MobileTrigger, null, 'Menu'),
+        e(MuxUI.Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens' }),
+      ),
+    );
+  },
   SwitchField: (args) => e(MuxUI.SwitchField.Root, { ...args },
     e(MuxUI.SwitchField.Button, { disabled: args.disabled }, 'Enabled', e(MuxUI.SwitchField.Thumb)),
     e(MuxUI.SwitchField.Description, null, 'Enable updates'),
@@ -1302,6 +1317,7 @@ function eventForControlledProp(controlled, family) {
   if (family === 'PromptComposer' && controlled === 'selectedModel') return 'modelChange';
   if (family === 'Message' && controlled === 'sourcesExpanded') return 'sourcesExpandedChange';
   if (controlled === 'open') return 'openChange';
+  if (controlled === 'collapsed') return 'collapsedChange';
   if (controlled === 'expanded' || controlled === 'expandedIds') return 'expandedChange';
   if (controlled === 'selectedIds') return 'selectionChange';
   if (controlled === 'selectedId') return 'select';

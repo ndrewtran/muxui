@@ -65,7 +65,7 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
     'supplemental/data-diff.mjs': ['arrow-right', 'check', 'minus', 'refresh-cw'],
     'supplemental/message.mjs': ['arrow-up-right', 'chevron-down'],
     'supplemental/prompt-composer.mjs': ['arrow-up', 'mic', 'plus', 'square', 'x'],
-    'supplemental/index.mjs': ['check', 'chevron-down', 'chevrons-up-down', 'credit-card', 'external-link', 'menu', 'minus', 'search', 'x'],
+    'supplemental/index.mjs': ['check', 'chevron-down', 'chevrons-up-down', 'credit-card', 'external-link', 'menu', 'minus', 'panel-left', 'search', 'x'],
     'supplemental/lightbox.mjs': ['chevron-left', 'chevron-right', 'x'],
     'tabs-motion.mjs': ['chevron-down', 'chevron-left', 'chevron-right', 'chevron-up'],
     'text-editor/index.mjs': ['arrow-up', 'bold', 'check', 'chevron-left', 'chevron-right', 'image', 'italic', 'link', 'list', 'rotate-cw', 'sparkles', 'text-align-center', 'text-align-end', 'text-align-start', 'type', 'underline', 'x'],

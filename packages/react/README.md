@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:9981099b758a2634fa401f9faab873073ae410f305e9ba993117d45468a477c2 -->
+<!-- @generated-content-sha256: sha256:94437479afc7de2cc8b9ae78f17168629d644a6158af4fa6e5b5b2aca3cd4da1 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -143,7 +143,7 @@ Supporting runtime exports: `ToastProvider` and `useToast` are available alongsi
 | Select | experimental | . | .muxui-select | label, description, errorMessage, aria-label, aria-labelledby, items, value, defaultValue, open, defaultOpen, disabled, size, readOnly, required, invalid, name, placeholder, children, selectedContent, trigger, placement, offset, crossOffset, shouldFlip, containerPadding, anchorRef, modal |
 | SelectNative | experimental | . | .muxui-select-native | label, description, errorMessage, aria-label, aria-labelledby, aria-describedby, id, value, defaultValue, onChange, name, form, autoComplete, disabled, required, invalid, multiple, size, children |
 | Separator | experimental | . | .muxui-separator | orientation |
-| Sidebar | experimental | . | .muxui-sidebar | hideBorder, href, current, external, items, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss |
+| Sidebar | experimental | . | .muxui-sidebar | collapsed, defaultCollapsed, onCollapsedChange, shortcut, hideBorder, label, href, current, external, items, badge, icon, placeholder, value, onChange, name, email, avatarSrc, status, onDismiss |
 | Slider | experimental | . | .muxui-slider | label, aria-label, aria-labelledby, value, defaultValue, min, max, step, disabled, readOnly, orientation, name |
 | Switch | experimental | . | .muxui-switch | label, description, errorMessage, aria-label, aria-labelledby, selected, defaultSelected, disabled, size, readOnly, required, invalid, name, value |
 | SwitchField | experimental | . | .muxui-switch-field | checked, defaultChecked, name, value, size, disabled, invalid, required, readOnly, onChange |

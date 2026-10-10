@@ -34,6 +34,7 @@ const FAMILY_ROUTES = Object.freeze({
   ProgressCircle: ['test/progress-circle.test.mjs'],
   Resizable: ['test/heavy-components.test.mjs'],
   SelectNative: ['test/select-native.test.mjs'],
+  Sidebar: ['test/sidebar.test.mjs', 'test/browser/sidebar.test.mjs'],
   Table: ['test/browser/table-sort-indicator.test.mjs'],
   Text: ['test/text.test.mjs'],
   TextEditor: ['test/heavy-components.test.mjs', 'test/browser/text-editor-selection-actions.test.mjs'],

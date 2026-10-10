@@ -12,6 +12,7 @@ import {
   DialogTrigger as AriaDialogTrigger,
   FieldError as AriaFieldError,
   FieldInputContext as AriaFieldInputContext,
+  Focusable as AriaFocusable,
   Group as AriaGroup,
   Header as AriaHeader,
   Heading as AriaHeading,
@@ -51,11 +52,13 @@ import SearchIcon from 'lucide-react/dist/esm/icons/search.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
 import MenuIcon from 'lucide-react/dist/esm/icons/menu.mjs';
 import ChevronsUpDownIcon from 'lucide-react/dist/esm/icons/chevrons-up-down.mjs';
+import PanelLeftIcon from 'lucide-react/dist/esm/icons/panel-left.mjs';
 import ExternalLinkIcon from 'lucide-react/dist/esm/icons/external-link.mjs';
 import CreditCardIcon from 'lucide-react/dist/esm/icons/credit-card.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from '../choice-context.mjs';
 import { useModalMotion } from '../dialog-motion.mjs';
 import { observeReducedMotion } from '../motion.mjs';
+import { Tooltip } from '../overlays.mjs';
 import { PopoverMotion } from '../popover-motion.mjs';
 import { useMotionLayout, useMotionLifecycle } from '../motion-components.mjs';
 import { Button as MuxUIButton } from '../button.mjs';
@@ -1096,17 +1099,259 @@ const HeaderNav = {
 };
 
 /* Sidebar */
+// Folding state lives in Sidebar.Provider so Root, Toggle, and the shortcut share it. Without a Provider every part renders as before.
+const SidebarContext = React.createContext(null);
+function useSidebarPart(part) { const context = React.useContext(SidebarContext); if (!context) throw new Error(`Sidebar.${part} must be used inside Sidebar.Provider`); return context; }
+const SIDEBAR_EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
+const sidebarShortcutModifier = (event) => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey);
+// Providers that own a shortcut. One pair of document listeners serves them all, so exactly one Provider handles a chord.
+const sidebarShortcuts = new Set();
+let sidebarMounts = 0;
+function handleSidebarShortcut(event, capturing) {
+  if (event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 || event.altKey || event.shiftKey || !sidebarShortcutModifier(event)) return;
+  // The composed path sees through shadow roots, where the document only sees the host.
+  const path = event.composedPath?.() ?? [event.target];
+  // Leave the chord to text editing, where Cmd or Ctrl plus B means bold.
+  if (path[0] instanceof Element && path[0].closest(SIDEBAR_EDITABLE)) return;
+  const matches = [...sidebarShortcuts].filter(({ key }) => key === event.key?.toLowerCase()).sort((a, b) => a.order - b.order);
+  const holder = matches.find(({ nodes }) => nodes().some((node) => path.includes(node)));
+  // A Sidebar's own controls stop keydown before it bubbles (Tooltip triggers do), so their chords are taken while
+  // capturing. Every other target gets to handle the chord first: it is ours in the bubble phase, if still uncancelled,
+  // for the Provider that mounted last.
+  const owner = capturing ? holder : holder ?? matches.at(-1);
+  if (!owner) return;
+  event.preventDefault();
+  owner.toggle();
+}
+const onSidebarShortcutCapture = (event) => handleSidebarShortcut(event, true);
+const onSidebarShortcutBubble = (event) => handleSidebarShortcut(event, false);
+// Focus that folding would hide: a display:none or visibility:hidden control.
+const sidebarUnreachable = (node) => node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden';
+/** Focuses the first candidate that is rendered and really takes focus, and says whether one did; a Root reached this way gets a tabindex only then. */
+function sidebarFocusFirst(candidates, roots) {
+  for (const candidate of candidates) {
+    if (!candidate?.isConnected || sidebarUnreachable(candidate)) continue;
+    if (roots.has(candidate) && !candidate.hasAttribute('tabindex')) candidate.tabIndex = -1;
+    candidate.focus({ preventScroll: true });
+    if (candidate.getRootNode().activeElement === candidate) return true;
+  }
+  return false;
+}
+/** The column's focus candidates after its drawer is gone: the link matching the drawer's focused link, the current link, a Toggle, then Root. */
+function sidebarColumnCandidates({ roots, toggles }, href) {
+  const links = [...roots].flatMap((root) => [...root.querySelectorAll('a[href]')]);
+  return [links.find((link) => link.getAttribute('href') === href), links.find((link) => link.getAttribute('aria-current') === 'page'), ...toggles, ...roots];
+}
+/**
+ * Hands lost focus over to the first candidate that takes it, retrying on animation frames for about half a second:
+ * an overlay that is still closing keeps the target inert. It only acts while focus is lost, on nothing, on the body,
+ * or on `stale` content, so a newer deliberate focus is never overwritten.
+ */
+function sidebarHandoff(candidates, roots, stale) {
+  const started = performance.now();
+  const attempt = () => {
+    const active = document.activeElement;
+    if (active && active !== document.body && !stale(active)) return;
+    if (!sidebarFocusFirst(candidates(), roots) && performance.now() - started < 500) requestAnimationFrame(attempt);
+  };
+  attempt();
+}
+/** Runs `exit` once the drawer content unmounts, after any exit animation. */
+function SidebarDrawerExit({ exit }) {
+  const latest = React.useRef(exit);
+  latest.current = exit;
+  React.useEffect(() => () => latest.current(), []);
+  return null;
+}
+/** The text a NavItem label spells out, through elements and fragments. */
+function sidebarLabelText(node) {
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(sidebarLabelText).join('');
+  return React.isValidElement(node) ? sidebarLabelText(node.props.children) : '';
+}
+/** Names a folded icon with a Mux Tooltip; outside a Provider it returns the trigger untouched. */
+function SidebarRailTooltip({ label, children }) {
+  const sidebar = React.useContext(SidebarContext);
+  if (!sidebar || label === undefined || label === null || label === '') return children;
+  // Native hosts join the tooltip trigger through Focusable; React Aria links already consume it.
+  const trigger = typeof children.type === 'string' ? h(AriaFocusable, null, children) : children;
+  return h(Tooltip, { content: label, trigger, placement: 'end', offset: 8, disabled: !sidebar.collapsed });
+}
 const Sidebar = {
-  Root: React.forwardRef(function SidebarRoot({ hideBorder = false, ...props }, ref) { return h('aside', { ...props, ref, className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) }); }),
+  Provider: function SidebarProvider({ collapsed, defaultCollapsed = false, onCollapsedChange, shortcut, children }) {
+    const controlled = collapsed !== undefined;
+    const [internal, setInternal] = React.useState(defaultCollapsed);
+    const [customRootId, setRootId] = React.useState(undefined);
+    // Roots and Toggles register their elements for the shortcut's target check and for rescuing focus when folding hides it.
+    const [roots] = React.useState(() => new Set());
+    const [toggles] = React.useState(() => new Set());
+    // The MobileTrigger menu buttons, so Root can hand focus to one when layout swaps the column for the drawer.
+    const [menuButtons] = React.useState(() => new Set());
+    // Counts fold requests so a pending Search focus can tell that another fold has happened since.
+    const requests = React.useRef(0);
+    const generatedRootId = React.useId();
+    const current = controlled ? collapsed : internal;
+    const latest = React.useRef({ controlled, current, onCollapsedChange });
+    latest.current = { controlled, current, onCollapsedChange };
+    const setCollapsed = React.useCallback((next) => { const state = latest.current; if (next === state.current) return; requests.current += 1; if (!state.controlled) setInternal(next); state.onCollapsedChange?.(next); }, []);
+    const toggle = React.useCallback(() => setCollapsed(!latest.current.current), [setCollapsed]);
+    // Precedence between Providers follows mount order. The sequence is assigned once, so a changed shortcut keeps it.
+    const mounted = React.useRef(0);
+    React.useEffect(() => {
+      mounted.current ||= (sidebarMounts += 1);
+      if (!shortcut) return undefined;
+      const entry = { key: shortcut.toLowerCase(), toggle, order: mounted.current, nodes: () => [...roots, ...toggles] };
+      if (sidebarShortcuts.size === 0) {
+        document.addEventListener('keydown', onSidebarShortcutCapture, true);
+        document.addEventListener('keydown', onSidebarShortcutBubble);
+      }
+      sidebarShortcuts.add(entry);
+      return () => {
+        sidebarShortcuts.delete(entry);
+        if (sidebarShortcuts.size === 0) {
+          document.removeEventListener('keydown', onSidebarShortcutCapture, true);
+          document.removeEventListener('keydown', onSidebarShortcutBubble);
+        }
+      };
+    }, [shortcut, toggle, roots, toggles]);
+    const value = React.useMemo(() => ({ collapsed: current, setCollapsed, toggle, rootId: customRootId ?? generatedRootId, setRootId, roots, toggles, menuButtons, requests }), [current, setCollapsed, toggle, customRootId, generatedRootId, roots, toggles, menuButtons]);
+    return h(SidebarContext.Provider, { value }, children);
+  },
+  Root: React.forwardRef(function SidebarRoot({ hideBorder = false, ...props }, ref) {
+    const sidebar = React.useContext(SidebarContext);
+    const node = React.useRef(null);
+    React.useImperativeHandle(ref, () => node.current);
+    const { roots, setRootId } = sidebar ?? {};
+    // A caller-supplied id replaces the generated one so Toggle's aria-controls follows it.
+    useIsomorphicLayoutEffect(() => { if (!setRootId || props.id === undefined) return undefined; setRootId(props.id); return () => setRootId(undefined); }, [setRootId, props.id]);
+    useIsomorphicLayoutEffect(() => { const element = node.current; if (!roots) return undefined; roots.add(element); return () => roots.delete(element); }, [roots]);
+    // Folding hides some content. If focus sat in it, move it to a control that survives: the group of a hidden
+    // nested link, the folded Search button for the Search input, else the Toggle, else Root itself.
+    useIsomorphicLayoutEffect(() => {
+      const root = node.current;
+      const active = root?.ownerDocument.activeElement;
+      if (!sidebar?.collapsed || !root || !active || !root.contains(active) || !sidebarUnreachable(active)) return;
+      const group = active.closest('.muxui-sidebar__nav-children')?.closest('details')?.querySelector(':scope > summary');
+      const search = active.closest('.muxui-sidebar__search')?.querySelector('.muxui-sidebar__search-button');
+      sidebarFocusFirst([group, search, ...sidebar.toggles, root], roots);
+    }, [sidebar?.collapsed]);
+    // When layout hides Root (the drawer took over) while focus is inside it, hand focus to the menu button if that is rendered.
+    const { menuButtons } = sidebar ?? {};
+    React.useEffect(() => {
+      const root = node.current;
+      if (!menuButtons || !root || typeof ResizeObserver === 'undefined') return undefined;
+      // The browser may blur the hidden element before the observer runs, so remember that focus was inside while Root
+      // rendered, starting with focus that arrived before this subscribed (autofocus). Focus a user sends elsewhere resets it.
+      let inside = root.contains(document.activeElement);
+      const track = (event) => {
+        if (event.type === 'focusin') inside = true;
+        else if (root.getClientRects().length > 0 || (event.relatedTarget && !root.contains(event.relatedTarget))) inside = false;
+      };
+      root.addEventListener('focusin', track);
+      root.addEventListener('focusout', track);
+      const observer = new ResizeObserver(() => {
+        if (!inside || root.getClientRects().length > 0) return;
+        inside = false;
+        sidebarHandoff(() => [...menuButtons], roots, (active) => root.contains(active));
+      });
+      observer.observe(root);
+      return () => {
+        observer.disconnect();
+        root.removeEventListener('focusin', track);
+        root.removeEventListener('focusout', track);
+      };
+    }, [menuButtons, roots]);
+    return h('aside', { ...props, ref: node, id: props.id ?? sidebar?.rootId, 'data-foldable': dataState(sidebar), 'data-collapsed': dataState(sidebar?.collapsed), className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) });
+  }),
+  Toggle: React.forwardRef(function SidebarToggle({ onActivate, className, children, ...props }, ref) {
+    const sidebar = useSidebarPart('Toggle');
+    const node = React.useRef(null);
+    React.useImperativeHandle(ref, () => node.current);
+    const { toggles } = sidebar;
+    useIsomorphicLayoutEffect(() => { const element = node.current; toggles.add(element); return () => toggles.delete(element); }, [toggles]);
+    return h(IconButton, { 'aria-label': 'Toggle sidebar', ...props, ref: node, 'aria-expanded': !sidebar.collapsed, 'aria-controls': sidebar.rootId, className: cx('muxui-sidebar__toggle', className), onActivate: (event) => { onActivate?.(event); sidebar.toggle(); } }, children ?? h(PanelLeftIcon, { 'aria-hidden': true, focusable: 'false' }));
+  }),
   Header: React.forwardRef(function SidebarHeader(props, ref) { return nativePart('div', 'muxui-sidebar__header', props, ref); }),
-  Search: React.forwardRef(function SidebarSearch({ placeholder = 'Search', value, onChange, className, ...props }, ref) { return nativePart('div', 'muxui-sidebar__search', { ...props, className }, ref, h(React.Fragment, null, h(SearchIcon, { className: 'muxui-sidebar__search-icon', 'aria-hidden': true, focusable: 'false' }), h('input', { className: 'muxui-sidebar__search-input', placeholder, value, onChange, 'aria-label': placeholder }))); }),
+  Search: React.forwardRef(function SidebarSearch({ placeholder = 'Search', value, onChange, className, ...props }, ref) {
+    const sidebar = React.useContext(SidebarContext);
+    const inputRef = React.useRef(null);
+    // Folded, the icon is a button that unfolds the sidebar and asks for the input's focus. A controlled parent may
+    // apply the change later, so the request waits for Root to be expanded; it lapses if another fold happens or
+    // the sidebar stays folded.
+    const pending = React.useRef(null);
+    const unfold = () => {
+      sidebar.setCollapsed(false);
+      clearTimeout(pending.current?.timer);
+      pending.current = { request: sidebar.requests.current, timer: setTimeout(() => { pending.current = null; }, 1000) };
+    };
+    useIsomorphicLayoutEffect(() => {
+      const wanted = pending.current;
+      if (!wanted || !sidebar || sidebar.collapsed) return;
+      clearTimeout(wanted.timer);
+      pending.current = null;
+      if (wanted.request === sidebar.requests.current) inputRef.current?.focus();
+    }, [sidebar?.collapsed]);
+    React.useEffect(() => () => clearTimeout(pending.current?.timer), []);
+    return nativePart('div', 'muxui-sidebar__search', { ...props, className }, ref, h(React.Fragment, null,
+      sidebar && h(SidebarRailTooltip, { label: placeholder }, h('button', { type: 'button', className: 'muxui-sidebar__nav-btn muxui-sidebar__search-button', 'aria-label': placeholder, onClick: unfold })),
+      h(SearchIcon, { className: 'muxui-sidebar__search-icon', 'aria-hidden': true, focusable: 'false' }),
+      h('input', { ref: inputRef, className: 'muxui-sidebar__search-input', placeholder, value, onChange, 'aria-label': placeholder })));
+  }),
   Divider: React.forwardRef(function SidebarDivider(props, ref) { return nativePart('hr', 'muxui-sidebar__divider', props, ref); }),
   NavList: React.forwardRef(function SidebarNavList(props, ref) { return nativePart('ul', 'muxui-sidebar__nav-list', props, ref); }),
-  NavItem: function SidebarNavItem({ href, icon: Icon, badge, current = false, children, items, external = false }) { const link = (entry, child = false) => h(AriaLink, { href: entry.href, className: cx('muxui-sidebar__nav-link', child && 'muxui-sidebar__nav-child-link', entry.current && 'muxui-sidebar__nav-link--current'), 'aria-current': entry.current ? 'page' : undefined }, entry.label); if (items?.length) return h('li', { className: 'muxui-sidebar__nav-item' }, h('details', null, h('summary', { className: cx('muxui-sidebar__nav-link', current && 'muxui-sidebar__nav-link--current') }, Icon && h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }), h('span', { className: 'muxui-sidebar__nav-label' }, children), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' })), h('ul', { className: 'muxui-sidebar__nav-children' }, items.map((entry) => h('li', { key: entry.href, className: 'muxui-sidebar__nav-item' }, link(entry, true)))))); return h('li', { className: 'muxui-sidebar__nav-item' }, h(AriaLink, { href, className: cx('muxui-sidebar__nav-link', current && 'muxui-sidebar__nav-link--current'), 'aria-current': current ? 'page' : undefined }, Icon && h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }), h('span', { className: 'muxui-sidebar__nav-label' }, children), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), external && h(ExternalLinkIcon, { className: 'muxui-sidebar__nav-external', 'aria-hidden': true, focusable: 'false' }))); },
+  Section: React.forwardRef(function SidebarSection({ label, className, children, ...props }, ref) { const labelId = React.useId(); return h('li', { ...props, ref, className: cx('muxui-sidebar__section', className) }, h('span', { id: labelId, className: 'muxui-sidebar__section-label' }, label), h('ul', { className: 'muxui-sidebar__section-items', 'aria-labelledby': labelId }, children)); }),
+  NavItem: function SidebarNavItem({ href, icon: Icon, badge, current = false, children, items, external = false }) {
+    const sidebar = React.useContext(SidebarContext);
+    const detailsRef = React.useRef(null);
+    // Folded, an item without an icon keeps a mark in the icon column: the first character of its label, or a dot if it has no text.
+    const initial = Icon || !sidebar ? undefined : [...sidebarLabelText(children).trim()][0]?.toUpperCase() ?? '\u2022';
+    const leading = Icon ? h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }) : initial && h('span', { className: 'muxui-sidebar__nav-mark', 'aria-hidden': true }, initial);
+    const link = (entry, child = false) => h(AriaLink, { href: entry.href, className: cx('muxui-sidebar__nav-link', child && 'muxui-sidebar__nav-child-link', entry.current && 'muxui-sidebar__nav-link--current'), 'aria-current': entry.current ? 'page' : undefined }, entry.label);
+    if (items?.length) {
+      // Folded, the group has no room to open: activating it unfolds the sidebar and opens the group.
+      const unfoldGroup = (event) => { if (!sidebar?.collapsed) return; event.preventDefault(); detailsRef.current.open = true; sidebar.setCollapsed(false); };
+      const summary = h('summary', { className: cx('muxui-sidebar__nav-link', current && 'muxui-sidebar__nav-link--current'), onClick: sidebar ? unfoldGroup : undefined }, leading, h('span', { className: 'muxui-sidebar__nav-label' }, children), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' }));
+      return h('li', { className: 'muxui-sidebar__nav-item' }, h('details', { ref: detailsRef }, h(SidebarRailTooltip, { label: children }, summary), h('ul', { className: 'muxui-sidebar__nav-children' }, items.map((entry) => h('li', { key: entry.href, className: 'muxui-sidebar__nav-item' }, link(entry, true))))));
+    }
+    return h('li', { className: 'muxui-sidebar__nav-item' }, h(SidebarRailTooltip, { label: children }, h(AriaLink, { href, className: cx('muxui-sidebar__nav-link', current && 'muxui-sidebar__nav-link--current'), 'aria-current': current ? 'page' : undefined }, leading, h('span', { className: 'muxui-sidebar__nav-label' }, children), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), external && h(ExternalLinkIcon, { className: 'muxui-sidebar__nav-external', 'aria-hidden': true, focusable: 'false' }))));
+  },
   NavButton: React.forwardRef(function SidebarNavButton({ href, icon: Icon, label, current = false, className, ...props }, ref) { return h('a', { ...props, ref, href, 'aria-label': label, className: cx('muxui-sidebar__nav-btn', current && 'muxui-sidebar__nav-btn--current', className) }, Icon && h(Icon, { className: 'muxui-sidebar__nav-btn-icon', 'aria-hidden': true }), props.children); }),
   AccountCard: React.forwardRef(function SidebarAccountCard({ name, email, avatarSrc, avatarAlt, status, className, children, ...props }, ref) { return h('div', { ...props, ref, className: cx('muxui-sidebar__account-card', className) }, h('div', { className: 'muxui-sidebar__account-avatar-wrap' }, avatarSrc ? h('img', { src: avatarSrc, alt: avatarAlt ?? name, className: 'muxui-sidebar__account-avatar' }) : h('div', { className: 'muxui-sidebar__account-avatar muxui-sidebar__account-avatar--placeholder', 'aria-hidden': true }, name?.charAt(0)), status && h('span', { className: `muxui-sidebar__account-status muxui-sidebar__account-status--${status}`, 'aria-label': status })), h('div', { className: 'muxui-sidebar__account-info' }, h('div', { className: 'muxui-sidebar__account-name' }, name), h('div', { className: 'muxui-sidebar__account-email' }, email)), h(IconButton, { className: 'muxui-sidebar__account-trigger', 'aria-label': 'Account options' }, h(ChevronsUpDownIcon, { className: 'muxui-sidebar__account-trigger-icon', 'aria-hidden': true, focusable: 'false' })), children); }),
   AccountMenu: React.forwardRef(function SidebarAccountMenu(props, ref) { return nativePart('div', 'muxui-sidebar__account-menu', props, ref); }),
-  MobileTrigger: function SidebarMobileTrigger({ children, logo }) { return h(AriaDialogTrigger, null, h('header', { className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { className: 'muxui-sidebar__mobile-menu-btn', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' }))), h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog' }, ({ close }) => h(React.Fragment, null, h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children))))); },
+  MobileTrigger: function SidebarMobileTrigger({ children, logo }) {
+    const sidebar = React.useContext(SidebarContext);
+    const [open, setOpen] = React.useState(false);
+    const latest = React.useRef({ open, sidebar });
+    latest.current = { open, sidebar };
+    const header = React.useRef(null);
+    const button = React.useRef(null);
+    // The drawer's focused link and dialog when layout took it away, for the column link that should receive focus next.
+    const handoff = React.useRef(null);
+    const menuButtons = sidebar?.menuButtons;
+    useIsomorphicLayoutEffect(() => { const element = button.current; if (!menuButtons) return undefined; menuButtons.add(element); return () => menuButtons.delete(element); }, [menuButtons]);
+    // When layout hides this header (the column took over), an open drawer would be stranded: close it and hand focus to the column.
+    React.useEffect(() => {
+      if (!menuButtons || typeof ResizeObserver === 'undefined') return undefined;
+      const observer = new ResizeObserver(() => {
+        if (!latest.current.open || header.current.getClientRects().length > 0) return;
+        const dialog = document.activeElement?.closest('.muxui-sidebar__mobile-dialog') ?? null;
+        handoff.current = { dialog, href: dialog ? document.activeElement.closest('a[href]')?.getAttribute('href') ?? null : null };
+        setOpen(false);
+      });
+      observer.observe(header.current);
+      return () => observer.disconnect();
+    }, [menuButtons]);
+    const exit = () => {
+      const wanted = handoff.current;
+      handoff.current = null;
+      const { sidebar: current } = latest.current;
+      if (wanted && current) sidebarHandoff(() => sidebarColumnCandidates(current, wanted.href), current.roots, (active) => wanted.dialog?.contains(active));
+    };
+    // The drawer is always full size, so its navigation ignores the folded state of the desktop sidebar.
+    return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen },
+      h('header', { ref: header, className: 'muxui-sidebar__mobile-header' }, logo && h('div', { className: 'muxui-sidebar__mobile-logo' }, logo), h(IconButton, { ref: button, className: 'muxui-sidebar__mobile-menu-btn', 'aria-label': 'Open navigation' }, h(MenuIcon, { 'aria-hidden': true, focusable: 'false' }))),
+      h(AriaModalOverlay, { className: 'muxui-sidebar__mobile-overlay' }, h(AriaModal, { className: 'muxui-sidebar__mobile-drawer' }, h(AriaDialog, { 'aria-label': 'Navigation', className: 'muxui-sidebar__mobile-dialog' }, ({ close }) => h(SidebarContext.Provider, { value: null }, h(SidebarDrawerExit, { exit }), h('div', { className: 'muxui-sidebar__mobile-close-row' }, h(IconButton, { size: 'sm', className: 'muxui-sidebar__mobile-close-btn', onActivate: close, 'aria-label': 'Close navigation' }, h(XIcon, { 'aria-hidden': true, focusable: 'false' }))), children)))));
+  },
   FeatureCard: React.forwardRef(function SidebarFeatureCard({ title, description, dismissLabel, onDismiss, ...props }, ref) { return nativePart('div', 'muxui-sidebar__feature-card', props, ref, h(React.Fragment, null, title && h('div', { className: 'muxui-sidebar__feature-card-title' }, title), description && h('div', { className: 'muxui-sidebar__feature-card-description' }, description), props.children, onDismiss && h('button', { type: 'button', className: 'muxui-sidebar__feature-card-dismiss', onClick: onDismiss }, dismissLabel ?? 'Dismiss'))); }),
 };
 
