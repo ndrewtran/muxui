@@ -534,9 +534,9 @@ fixture for GridList grid layout and Virtualizer grid mode.
 
 **Primary ownership**
 
-- `@muxui/schema`: the pattern schema, its closed category enum and groups,
-  field ownership, and the relation registry (`example-of` target `pattern`,
-  owned by `pattern.variants`).
+- `@muxui/schema`: the pattern schema, its category list and groups, field
+  ownership, and the relation registry (`example-of` target `pattern`, owned by
+  `pattern.variants`).
 - `@muxui/catalog`: compiler support, pure `list`, `search`, and `get` over
   patterns, and the derived participant and "used in" views.
 - `@muxui/tooling`: the CLI adapter and pattern authoring support.
@@ -545,15 +545,17 @@ fixture for GridList grid layout and Virtualizer grid mode.
   Mux-authored.
 - `apps/docs` (Blocks section) and `apps/react-storybook` (generated variant
   stories): projections that own no fact.
-- `@muxui/react`: unchanged.
+- `@muxui/react`: owns the components a block uses. A block's pull request may
+  change it under Decisions 0028 and 0029.
 
 **Deliverables**
 
 - The `pattern` schema with the staged v1 fields (Architecture, "Patterns are
-  bounded composition specifications"), the closed category enum in two groups
+  bounded composition specifications"), a category in one of two groups
   (Application: Collections, Forms, Feedback, Conversation, Navigation;
   Marketing: Hero, Features, Pricing, Call to action, Testimonials, FAQ, Stats,
-  Logo cloud, Newsletter, Footer), the `catalog/patterns/` source convention,
+  Logo cloud, Newsletter, Footer), added by an ordinary pull request
+  ([Decision 0029](../decisions/0029-blocks-growth-rules.md)), the `catalog/patterns/` source convention,
   and catalog compiler support for the four negative paths: an unknown
   participant, a variant example importing a Mux component that is not a
   declared participant, a missing or duplicate variant example, and a pattern
@@ -583,27 +585,28 @@ fixture for GridList grid layout and Virtualizer grid mode.
 - The BL1 evidence index.
 
 **Block growth.** After the seed set, a further block inside the Decision 0026
-boundary that uses admitted components and existing categories is ordinary
-protected-PR delivery under BL1. It carries `E-BL1-03` through `E-BL1-08` for
-its variants, `E-BL1-10` for its content, and `E-BL1-11`, and it needs no
-further decision. A new category, an unadmitted component, or a boundary change
-still needs a decision.
+boundary is ordinary protected-PR delivery under BL1 ([Decision 0029](../decisions/0029-blocks-growth-rules.md)),
+including a new category and the component work the block needs, which ships in
+the same pull request or before it under the proof its own risk calls for. It
+carries `E-BL1-03` through `E-BL1-08` for its variants, `E-BL1-10` for its
+content, and `E-BL1-11`, and it needs no further decision. A boundary change
+(see the scope controls below) still needs a decision.
 
 **Acceptance evidence**
 
 | ID | Required assertion | Retained evidence |
 | --- | --- | --- |
-| `E-BL1-01` | The pattern schema is closed and a valid record compiles. Each negative fixture fails with a diagnostic that names the earliest owner: an unknown field, a category outside the enum, an unknown participant, a variant example importing an undeclared Mux component, a missing variant example, a duplicate variant example, and a pattern with no variants. | Schema and compiler positive and negative fixtures. |
+| `E-BL1-01` | The pattern schema is closed and a valid record compiles. Each negative fixture fails with a diagnostic that names the earliest owner: an unknown field, a category the schema does not list, an unknown participant, a variant example importing an undeclared Mux component, a missing variant example, a duplicate variant example, and a pattern with no variants. | Schema and compiler positive and negative fixtures. |
 | `E-BL1-02` | The pattern kind has authoring support: a scaffold round-trips through validation and compilation, and semantic diff, revision explainer, affected closure, and source-linked diagnostics cover patterns and variant examples. | Authoring fixtures. |
 | `E-BL1-03` | Every variant example typechecks against the packed `@muxui/react` declarations and passes packed SSR and hydration. | Packed-consumer proof per variant. |
 | `E-BL1-04` | Every variant example passes light and dark axe and colour audits through generated Storybook stories, and every interactive block passes keyboard, focus, and state browser checks. | Storybook audit reports and browser tests. |
 | `E-BL1-05` | Every enabled pattern appears in the Blocks rail and opens its block, each preview loads its canonical example, and the Code view equals the example source bytes. | Docs check report. |
-| `E-BL1-06` | Each variant is captured at every width preset in light and dark. Each marketing variant is also captured at every page-width preset, narrowest to widest, in light and dark, with no horizontal overflow at any preset. | Retained visual captures and overflow report. |
+| `E-BL1-06` | Each variant is captured at every width preset in light and dark. Each marketing variant is also captured at every page-width preset, narrowest to widest, in light and dark, with no horizontal overflow at any preset. The presets are the `toolbarPresets` and `pageWidths` lists in `apps/docs/src/lib/block-presets.ts`, and no other document lists them. | Retained visual captures and overflow report. |
 | `E-BL1-07` | The API, CLI JSON, human, and dense output, and the site loader return the same normalized response for pattern `list`, `search`, and `get`, for the participant filter, and for the derived "used in" view, and component pages list only component-bound examples. | Surface-parity matrix. |
-| `E-BL1-08` | Repeated generation leaves the worktree unchanged, and the catalog digest changes only for the added sources. | Generation identity digest. |
-| `E-BL1-09` | `@muxui/react` has no API, export, or version change. Nothing is published, retagged, or deployed. No assistive-technology support claim is made (Decision 0022). `plan`, install, registry, and consumer scaffold are absent or explicitly unavailable. | Platform, release, and negative-boundary audit. |
-| `E-BL1-10` | Variant example sources and assets contain no external URL or remote asset and no literal colour value, and every asset that is not Mux-authored has a recorded license and disclosure. An independent review of each block's content finds no third-party brand logo or mark, no real person's name or likeness, and only generic Mux-authored copy. | Content scan report and content review record. |
-| `E-BL1-11` | A catalog regression report is recorded for the seed set as the baseline. Each block added later keeps discovery precision, search results, and dense budgets within thresholds fixed before measurement, and states its workflow value in its pattern record. The one exception ([Decision 0026 amendment 02](../decisions/0026-amendment-02-category-name-queries.md)): the pull request that adds a block to a category may revise the expectations for that category's name query for the category's existing blocks, committed before the main-only capture and recorded in the capture's `thresholdChanges`. Every other existing threshold stays fixed. | Catalog regression report. |
+| `E-BL1-08` | Repeated generation leaves the worktree unchanged, two compiles are byte-identical, and the pattern entries add only their own artifacts to the catalog. The catalog digest before and after each commit that adds or changes a block is recorded as an observation and claims nothing, because such a commit may change other catalog sources under its own proof. | Generation identity digest. |
+| `E-BL1-09` | At the BL1 close-out, `@muxui/react` has no API, export, or version change. For every block, nothing is published, retagged, or deployed; no growth commit bumps a package version or changes a workflow, hosting, or deployment file; every package stays private; every pattern targets `web.react` only; no assistive-technology support claim is made (Decision 0022); and `plan`, install, registry, and consumer scaffold are absent or explicitly unavailable. The audit lists what a block added later changed in `@muxui/react`, dependencies, and component records and claims nothing about it ([Decision 0029](../decisions/0029-blocks-growth-rules.md)). | Platform, release, and negative-boundary audit. |
+| `E-BL1-10` | Variant example sources and assets contain no external URL or remote asset and no literal colour value, and every asset that is not Mux-authored has a recorded license and disclosure. An independent review of each block's content finds no third-party brand logo or mark, no real person's name or likeness, and only generic Mux-authored copy. A retained review covers each block whose `catalog/patterns/<slug>` tree it read, so new or changed copy needs a new review and unchanged copy does not. | Content scan report and content review record. |
+| `E-BL1-11` | A catalog regression report is recorded for the seed set as the baseline. Each block added later keeps discovery precision, search results, and dense budgets within the thresholds in `tests/evidence/bl1/regression-thresholds.json`, and states its workflow value in its pattern record. A pull request may change a threshold, the variant source size limit included, when it states the change and its reason before measuring and logs it in the file's `provenance.revisions`; no expectation is removed, a threshold is never changed to fit a failure, and an expectation changed after its result was seen is listed in `provenance.revisedAfterFirstMeasurement` ([Decision 0029](../decisions/0029-blocks-growth-rules.md)). The capture lists every change since the close-out. | Catalog regression report. |
 
 **Scope controls**
 
@@ -617,9 +620,10 @@ still needs a decision.
   and G3.8.
 - Block placeholder copy and imagery are demonstration material, not product
   truth, and follow the content rules in Decision 0026.
-- No new component, family, token, or dependency. A block that needs an
-  unadmitted component waits for that component's own admission and merge, and
-  agentic blocks wait for their components.
+- A block may ship with the component, family, token, or dependency it needs,
+  in the same pull request or before it, under the proof that change's own risk
+  calls for (Decision 0028). The pull request names it, and a block never adds
+  one implicitly.
 - Blocks inside the Decision 0026 boundary are delivered under BL1, outside
   G3.1. All other component and pattern breadth stays with G3.1.
   `SCOPE-NONGOAL-012` still bars block count as a goal.

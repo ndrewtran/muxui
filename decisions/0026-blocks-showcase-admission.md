@@ -7,6 +7,9 @@
   [Roadmap](../strategy/milestone-roadmap.md), and
   [Product Scope](../strategy/product-scope.md)
 - Accepted request: [acceptance record](./0026-blocks-showcase-admission-acceptance.md)
+- Amended by: [Decision 0029](./0029-blocks-growth-rules.md), which replaces the
+  closed category list, the growth conditions, the thresholds rule, the page-width
+  list, and the evidence rules for later blocks stated below
 
 Andrew accepted this decision with the choices in the acceptance record.
 Repository adoption remains subject to the protected pull-request process, and
@@ -42,12 +45,12 @@ under `tests/evidence/r1-exit`.
    schema and compiler support, with every record `experimental`. A record
    requires:
    - identity, name, summary, lifecycle, and keywords;
-   - a category from a closed enum in two groups. Application: Collections,
-     Forms, Feedback, Conversation, Navigation. Marketing: Hero, Features,
-     Pricing, Call to action, Testimonials, FAQ, Stats, Logo cloud, Newsletter,
-     Footer. The group is derived from the category, never authored. Adding a
-     category needs a decision and is a schema change under the schema-evolution
-     rules;
+   - a category in one of two groups. Application: Collections, Forms, Feedback,
+     Conversation, Navigation. Marketing: Hero, Features, Pricing, Call to action,
+     Testimonials, FAQ, Stats, Logo cloud, Newsletter, Footer. The group is
+     derived from the category, never authored. Adding a category is an ordinary
+     pull request and needs no decision (Decision 0029); while the list is a
+     schema enum it is a schema change under the schema-evolution rules;
    - intent (`useWhen`, `avoidWhen`) and `platforms` (`web.react` only);
    - `participants`, each a role name, a component `ArtifactRef`, and
      `required` or `optional`;
@@ -87,8 +90,8 @@ under `tests/evidence/r1-exit`.
        pattern or binding;
      - a pattern with no variants.
 
-     The closed schema also rejects an unknown field and a category outside
-     the enum.
+     The closed schema also rejects an unknown field and a category it does
+     not list.
 
 4. **Showcase surface.** A Blocks section in the existing `apps/docs` Astro
    project, with its own full-width layout. Starlight keeps the component docs.
@@ -132,9 +135,11 @@ under `tests/evidence/r1-exit`.
      lists styled with semantic tokens). Routing means a router, route state, or
      navigation logic; a link is a placeholder `href`. Interactive controls hold
      only local presentation state, such as a billing-period toggle, and a form
-     never submits, fetches, or persists. Anything that needs a new reusable
-     component waits for that component's own family admission. A block never
-     introduces one implicitly.
+     never submits, fetches, or persists. A block that needs a new reusable
+     component ships with it, in the same pull request or after it, under the
+     proof that component's own risk calls for, and the pull request names the
+     component and that proof (Decision 0029). A block never introduces one
+     implicitly.
    - **Demonstration material.** Block placeholder copy and imagery are
      demonstration material, not Mux UI product truth. Product Scope records
      this on `SCOPE-NONGOAL-008`.
@@ -144,8 +149,9 @@ under `tests/evidence/r1-exit`.
        and disclosure, kept beside the asset in the pattern's source directory.
      - No third-party brand logos or marks. Logo clouds use generic marks.
      - No real people's names or likenesses.
-   - Conversation and composer blocks are in boundary but wait for their
-     components (item 8).
+   - Conversation and composer blocks are inside the boundary and use the
+     components the catalog has, or ship with the ones they need (Decision
+     0029).
 
 7. **Sequencing.** Roadmap gains one separately named slice, `BL1` "Blocks
    showcase", that may start now once this change merges. Its entry condition is
@@ -163,13 +169,11 @@ under `tests/evidence/r1-exit`.
 
 8. **Seed blocks.**
    - First, the poster grid (Collections), with a CSS-grid variant (GridList
-     `layout="grid"`) and a virtualized variant (Virtualizer grid). Its variants
-     wait for the GridList grid layout and Virtualizer grid mode work in review
-     on branch `feat/grid-list-grid-virtualization` to merge.
-     `SCOPE-COMP-GRIDLIST-REACT` and `SCOPE-COMP-VIRTUALIZER-REACT` remain the
-     owners of that work; BL1 adds nothing to them.
-   - Then two marketing sections that need only admitted components, so neither
-     waits for the grid work:
+     `layout="grid"`) and a virtualized variant (Virtualizer grid).
+     `SCOPE-COMP-GRIDLIST-REACT` and `SCOPE-COMP-VIRTUALIZER-REACT` own the
+     GridList grid layout and Virtualizer grid mode it uses; BL1 adds nothing to
+     them.
+   - Then two marketing sections:
      - a hero (Hero) from `Text`, `Button`, and `Link`, with plain layout
        markup;
      - a pricing section (Pricing) from `Card`, `Text`, `Button`, and
@@ -177,19 +181,18 @@ under `tests/evidence/r1-exit`.
        for a billing-period toggle.
    - Optionally one further application block, named in the BL1 activation
      packet, that uses only admitted components.
-   - Agentic compositions (message thread, prompt composer) come only after
-     their components are admitted and merged under the separate effort
-     proposing Decisions 0024 and 0025, which are not on `main`. That is a
-     dependency, not scope here.
-   - **Growth.** Further blocks inside the item 6 boundary that use admitted
-     components and existing categories are ordinary protected-PR delivery under
-     BL1. Each carries `E-BL1-03` to `E-BL1-08` for its variants and
-     `E-BL1-10` for its content, and needs no further decision. `E-BL1-11`
-     keeps the `SCOPE-NONGOAL-012` workflow-value requirement and the catalog
-     search and dense budget regression report. A new category, an unadmitted
-     component, or a boundary change still needs a decision. Blocks inside this
-     boundary are therefore delivered under BL1 outside G3.1, and all other
-     component and pattern breadth stays with `SCOPE-CAP-BREADTH` and G3.1.
+   - Agentic compositions (message thread, prompt composer) are blocks like any
+     other and use the components the catalog has.
+   - **Growth.** Further blocks inside the item 6 boundary are ordinary
+     protected-PR delivery under BL1, including a new category and the component
+     work a block needs (Decision 0029). Each carries `E-BL1-03` to `E-BL1-08`
+     for its variants and `E-BL1-10` for its content, and needs no further
+     decision. `E-BL1-11` keeps the `SCOPE-NONGOAL-012` workflow-value
+     requirement and the catalog search and dense budget regression report, held
+     to thresholds that follow Decision 0029. A boundary change still needs a
+     decision. Blocks inside this boundary are therefore delivered under BL1
+     outside G3.1, and all other component and pattern breadth stays with
+     `SCOPE-CAP-BREADTH` and G3.1.
 
 9. **Evidence.** Roadmap BL1 records `E-BL1-01` to `E-BL1-11`:
    - pattern schema validation and the negative compiler fixtures, plus pattern
@@ -201,10 +204,14 @@ under `tests/evidence/r1-exit`.
    - showcase pages pass the docs check, and the Code view equals the example
      source bytes;
    - visual evidence at the width presets in light and dark, and for marketing
-     blocks at every page-width preset with no horizontal overflow;
+     blocks at every page-width preset with no horizontal overflow; the page
+     widths are the `pageWidths` list in `apps/docs/src/lib/block-presets.ts`;
    - CLI and site surface parity for pattern data;
    - generation identity;
-   - a boundary audit;
+   - a boundary audit, which for a block added later gates the release, publish,
+     deployment, registry, and boundary checks and records without gating what a
+     growth commit changed in `@muxui/react`, dependencies, and component records
+     (Decision 0029);
    - a content-rules check: no external assets or brand marks, no literal colour
      values, and a license and disclosure record for every asset that is not
      Mux-authored;
@@ -219,10 +226,13 @@ under `tests/evidence/r1-exit`.
     record kind and a relaxed `example-of` target, per
     `packages/schema/schemas/schema-evolution.json`). Catalog: minor (new
     patterns and examples). `@muxui/catalog` and `@muxui/tooling`: minor where
-    their public surface grows with the kind. No `@muxui/react` API, export, or
-    version change. If a list, search, or get response needs a new member, the
-    query API takes an additive minor under the current-version-only rule of
-    Decision 0016. Packages stay private. No publish, dist-tag, `latest`, or
+    their public surface grows with the kind. If a list, search, or get response
+    needs a new member, the query API takes an additive minor under the
+    current-version-only rule of Decision 0016. Packages stay private. Block
+    growth publishes nothing and bumps no package version: a release candidate is
+    its own release preparation (Decision 0023), and its version change is not a
+    growth change. Whether a block's pull request also changes `@muxui/react` is
+    governed by Decisions 0028 and 0029. No publish, dist-tag, `latest`, or
     deployment change follows from this decision. Product Scope takes major
     `15.0.0` (see Authority effect).
 
@@ -318,13 +328,14 @@ source, and no fact has two authoring owners.
 
 This decision does not:
 
-- change `@muxui/react` or add a component, family, token, or dependency;
+- change `@muxui/react` itself; a component a block needs is its own change
+  under Decisions 0028 and 0029;
 - publish a package, change a dist-tag or `latest`, or deploy the docs site;
 - add an install command, registry, consumer scaffold, `plan`, or consumer
   validation;
 - add non-React (`web.html`, native) blocks, page templates, journeys, or flows;
-- admit an agentic component, or accept evidence, mark a milestone ready or
-  complete, or authorize the final R1-exit merge;
+- accept evidence, mark a milestone ready or complete, or authorize the final
+  R1-exit merge;
 - create a tracker item, update the Delivery Project, or open a pull request.
 
 ## Reversal

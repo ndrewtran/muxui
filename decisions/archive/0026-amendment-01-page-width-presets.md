@@ -1,7 +1,7 @@
 # Decision 0026 amendment 01: Blocks page-width presets
 
 - Status: accepted user direction; repository adoption through a protected pull request
-- Parent decision: [Decision 0026](./0026-blocks-showcase-admission.md)
+- Parent decision: [Decision 0026](../0026-blocks-showcase-admission.md)
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0026:amendment:01`
 - Accepted request: [acceptance record](./0026-amendment-01-page-width-presets-acceptance.md)

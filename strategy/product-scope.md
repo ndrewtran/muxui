@@ -1,5 +1,5 @@
 ---
-scopeVersion: 20.0.0
+scopeVersion: 20.0.1
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -712,11 +712,11 @@ roadmap, not the tracker, owns milestone proof.
 ## Success measures
 
 Threshold values live in versioned evidence or release policy and are fixed
-before the relevant candidate is measured. The one exception is BL1 block
-growth: the pull request that adds a block to a category may revise the
-expectations for that category's name query before the retained capture
-([Decision 0026 amendment 02](../decisions/0026-amendment-02-category-name-queries.md)).
-This document owns the measures, not mutable numeric values.
+before the relevant candidate is measured, and are never changed to fit a
+result. A pull request may change a BL1 regression threshold when it states the
+change and its reason before measuring and logs it
+([Decision 0029](../decisions/0029-blocks-growth-rules.md)). This document owns
+the measures, not mutable numeric values.
 
 ### Product and renderer measures
 
