@@ -2789,6 +2789,181 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 
 
+/* Section: a labelled group of nav items. */
+.muxui-sidebar__section {
+  position: relative;
+  list-style: none;
+}
+
+.muxui-sidebar__section:not(:first-child) {
+  margin-block-start: var(--muxui-semantic-layout-group-gap);
+}
+
+.muxui-sidebar__section-label {
+  display: block;
+  padding: var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-small) var(--muxui-semantic-layout-inset-tight);
+  font-size: var(--muxui-semantic-typography-tiny-size);
+  font-weight: var(--muxui-semantic-typography-label-weight);
+  color: var(--muxui-semantic-color-neutral-70);
+}
+
+.muxui-sidebar__section-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--muxui-semantic-layout-dense-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Folding icon rail: a Root inside Sidebar.Provider sizes itself and animates between the expanded width and the rail. */
+.muxui-sidebar[data-foldable] {
+  /* Nav icons keep their offset from the edge, so the rail is the icon column plus an equal gutter on each side. */
+  --muxui-component-sidebar-rail-gutter: var(--muxui-semantic-layout-inset-tiny);
+  --muxui-component-sidebar-rail-size: calc(2 * (var(--muxui-component-sidebar-rail-gutter) + var(--muxui-semantic-layout-inset-small)) + 1.25rem);
+  flex: none;
+  overflow: hidden;
+  transition: inline-size var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing);
+}
+
+/* Zero specificity, so a width the consumer sets on Root replaces this expanded default. */
+:where(.muxui-sidebar[data-foldable]) {
+  inline-size: 16rem;
+}
+
+.muxui-sidebar[data-collapsed] {
+  inline-size: var(--muxui-component-sidebar-rail-size);
+}
+
+.muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card) {
+  transition:
+    padding-inline var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing),
+    margin-inline var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing);
+}
+
+.muxui-sidebar[data-foldable] .muxui-sidebar__account-avatar {
+  transition:
+    width var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing),
+    height var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing);
+}
+
+.muxui-sidebar[data-foldable] .muxui-sidebar__search-icon {
+  transition:
+    left var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing),
+    width var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing),
+    height var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-reveal-easing);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .muxui-sidebar[data-foldable],
+  .muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
+    transition-duration: 0s !important;
+  }
+}
+
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-sidebar[data-foldable],
+:where([data-reduced-motion], [data-muxui-motion='reduced']) .muxui-sidebar[data-foldable] :is(.muxui-sidebar__header, .muxui-sidebar__nav-list, .muxui-sidebar__account-card, .muxui-sidebar__account-avatar, .muxui-sidebar__search-icon) {
+  transition-duration: 0s !important;
+}
+
+/* Folded, the header and nav list narrow their gutters and header content is clipped to the rail, so its leading element stays in place and nothing reflows. */
+.muxui-sidebar[data-collapsed] .muxui-sidebar__header,
+.muxui-sidebar[data-collapsed] .muxui-sidebar__nav-list {
+  padding-inline: var(--muxui-component-sidebar-rail-gutter);
+}
+
+.muxui-sidebar[data-collapsed] .muxui-sidebar__header > * {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Text stays in the accessibility tree: it is clipped, not removed. */
+.muxui-sidebar[data-collapsed] :is(.muxui-sidebar__nav-link, .muxui-sidebar__section) {
+  position: relative;
+}
+
+.muxui-sidebar[data-collapsed] :is(.muxui-sidebar__nav-label, .muxui-sidebar__nav-badge, .muxui-sidebar__section-label, .muxui-sidebar__account-info) {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.muxui-sidebar[data-collapsed] :is(
+  .muxui-sidebar__nav-chevron,
+  .muxui-sidebar__nav-external,
+  .muxui-sidebar__nav-children,
+  .muxui-sidebar__nav-item--text,
+  .muxui-sidebar__account-trigger,
+  .muxui-sidebar__feature-card
+) {
+  display: none;
+}
+
+/* A thin divider takes the place of the section label. */
+.muxui-sidebar[data-collapsed] .muxui-sidebar__section:not(:first-child) {
+  margin-block-start: 0;
+}
+
+.muxui-sidebar[data-collapsed] .muxui-sidebar__section::before {
+  content: '';
+  display: block;
+  margin-block: var(--muxui-semantic-layout-group-gap);
+  border-block-start: 1px solid var(--muxui-semantic-color-neutral-20);
+}
+
+/* The avatar is 0.5rem wider than an icon, so its inset is 0.25rem smaller to centre both on the same column. */
+.muxui-sidebar[data-collapsed] .muxui-sidebar__account-card {
+  margin-inline: var(--muxui-component-sidebar-rail-gutter);
+  padding-inline: calc(var(--muxui-semantic-layout-inset-small) - 0.25rem);
+  box-shadow: none;
+}
+
+.muxui-sidebar[data-collapsed] .muxui-sidebar__account-avatar {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+/* Folded Search keeps only its icon, as a button that unfolds the sidebar. */
+:where(.muxui-sidebar__search-button) {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+}
+
+.muxui-sidebar__nav-btn.muxui-sidebar__search-button {
+  display: none;
+  position: absolute;
+  inset: 0;
+  inline-size: auto;
+  block-size: auto;
+}
+
+.muxui-sidebar[data-collapsed] .muxui-sidebar__nav-btn.muxui-sidebar__search-button {
+  display: flex;
+}
+
+.muxui-sidebar__search-button:focus-visible {
+  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline-offset: -2px;
+}
+
+.muxui-sidebar[data-collapsed] .muxui-sidebar__search-input {
+  visibility: hidden;
+  padding-inline: 0;
+}
+
+.muxui-sidebar[data-collapsed] .muxui-sidebar__search-icon {
+  left: var(--muxui-semantic-layout-inset-small);
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-sidebar {
     background: var(--muxui-semantic-color-neutral-14);
@@ -2804,6 +2979,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
     .muxui-sidebar__nav-chevron
   ) {
     color: var(--muxui-semantic-color-neutral-40);
+  }
+
+  /* Folded, the icon is the only name a sighted user has, so it needs non-text contrast on its own. */
+  :scope :where(.muxui-sidebar[data-collapsed]) .muxui-sidebar__nav-icon {
+    color: var(--muxui-semantic-color-neutral-60);
   }
 
   :scope .muxui-sidebar__search-input::placeholder {

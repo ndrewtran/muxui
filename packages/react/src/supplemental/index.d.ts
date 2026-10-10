@@ -1,4 +1,5 @@
 import type * as React from 'react';
+import type { IconButtonProps } from '@muxui/react';
 
 export type SupplementalActivation = {
   type: 'activate';
@@ -302,12 +303,27 @@ export declare const RadioField: {
 };
 
 export type SidebarProps = React.HTMLAttributes<HTMLElement> & { hideBorder?: boolean };
+export type SidebarProviderProps = {
+  /** Folded state; supply it with `onCollapsedChange` to control the rail. */
+  collapsed?: boolean;
+  defaultCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  /** A key that toggles the rail with Cmd on macOS or Ctrl elsewhere; ignored while typing in a text field or editor. */
+  shortcut?: string;
+  children?: React.ReactNode;
+};
+/** Names the control "Toggle sidebar" unless `aria-label` or `aria-labelledby` says otherwise. */
+export type SidebarToggleProps = Omit<IconButtonProps, 'aria-label' | 'aria-labelledby'> & { 'aria-label'?: string; 'aria-labelledby'?: string };
+export type SidebarSectionProps = PartProps<HTMLLIElement> & { label: React.ReactNode };
 export declare const Sidebar: {
+  Provider: React.ComponentType<SidebarProviderProps>;
   Root: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<HTMLElement>>;
+  Toggle: React.ForwardRefExoticComponent<SidebarToggleProps & React.RefAttributes<HTMLButtonElement>>;
   Header: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;
   Search: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { placeholder?: string; value?: string; onChange?: React.ChangeEventHandler<HTMLInputElement> } & React.RefAttributes<HTMLDivElement>>;
   Divider: React.ForwardRefExoticComponent<PartProps<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
   NavList: React.ForwardRefExoticComponent<PartProps<HTMLUListElement> & React.RefAttributes<HTMLUListElement>>;
+  Section: React.ForwardRefExoticComponent<SidebarSectionProps & React.RefAttributes<HTMLLIElement>>;
   NavItem: React.ComponentType<{ href?: string; icon?: React.ComponentType<{ className?: string }>; badge?: React.ReactNode; current?: boolean; children?: React.ReactNode; items?: Array<{ href: string; label: string; current?: boolean }>; external?: boolean }>;
   NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
   AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;

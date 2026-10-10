@@ -14,11 +14,14 @@
     ]
   },
   "anatomy": [
+    "provider",
     "root",
+    "toggle",
     "header",
     "search",
     "divider",
     "nav-list",
+    "section",
     "nav-item",
     "nav-button",
     "account-card",
@@ -32,13 +35,17 @@
     "current",
     "external",
     "expanded",
+    "collapsed",
     "focused"
   ],
   "accessibility": {
     "nameRequired": true,
     "obligations": [
       "Nested nav items use native disclosure semantics.",
-      "Mobile navigation traps focus and returns it to the trigger on close."
+      "Mobile navigation traps focus and returns it to the trigger on close.",
+      "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
+      "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
+      "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element."
     ]
   },
   "bindings": {
@@ -48,7 +55,12 @@
       "strategy": "direct",
       "api": {
         "props": [
+          "collapsed",
+          "defaultCollapsed",
+          "onCollapsedChange",
+          "shortcut",
           "hideBorder",
+          "label",
           "href",
           "current",
           "external",
@@ -66,14 +78,18 @@
         ],
         "events": [
           "change",
+          "collapsedChange",
           "dismiss"
         ],
         "parts": [
+          "provider",
           "root",
+          "toggle",
           "header",
           "search",
           "divider",
           "nav-list",
+          "section",
           "nav-item",
           "nav-button",
           "account-card",
@@ -82,6 +98,7 @@
           "feature-card"
         ],
         "defaults": {
+          "defaultCollapsed": false,
           "hideBorder": false,
           "current": false,
           "external": false,
@@ -90,11 +107,17 @@
       },
       "behavior": [
         "Nested nav items use native disclosure semantics.",
-        "Mobile navigation traps focus and returns it to the trigger on close."
+        "Mobile navigation traps focus and returns it to the trigger on close.",
+        "Provider holds the folded state, controlled by collapsed or uncontrolled from defaultCollapsed, and folds with Cmd or Ctrl plus its shortcut key.",
+        "A folded root animates to an icon rail; the transition is removed under reduced motion.",
+        "Folded search unfolds the sidebar and focuses the input; a folded nested group unfolds the sidebar and opens."
       ],
       "accessibility": [
         "Nested nav items use native disclosure semantics.",
-        "Mobile navigation traps focus and returns it to the trigger on close."
+        "Mobile navigation traps focus and returns it to the trigger on close.",
+        "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
+        "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
+        "The fold shortcut is ignored while focus is in an input, textarea, select, or contenteditable element."
       ],
       "tokenRecipe": {
         "source": "muxui:token:default-theme",
@@ -125,6 +148,14 @@
           },
           {
             "token": "component.sidebar.shadow-color",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.reveal-duration",
+            "requirement": "required"
+          },
+          {
+            "token": "semantic.motion.reveal-easing",
             "requirement": "required"
           }
         ]

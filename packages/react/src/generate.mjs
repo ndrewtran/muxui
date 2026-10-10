@@ -994,6 +994,7 @@ const generatedSupplementalSource = supplementalSource
   .replaceAll("from '../dialog-motion.mjs'", "from './dialog-motion.mjs'")
   .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
   .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
+  .replaceAll("from '../overlays.mjs'", "from './overlays.mjs'")
   .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
   .replaceAll("from '../button.mjs'", "from './button.mjs'");
 const flatIconButtonImport = (source) => source
