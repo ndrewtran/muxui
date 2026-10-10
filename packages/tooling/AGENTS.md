@@ -10,9 +10,9 @@ Change `command-registry.json` before regenerating command projections. Run
 `pnpm generate:check`. Never patch `generated/command-surface.mjs` or
 `generated/response-types.d.ts` directly.
 
-The dense goldens in `test/goldens/` pin the catalog digest, so any catalog edit
-changes them. Refresh them with
-`MUXUI_UPDATE_GOLDENS=1 pnpm --filter @muxui/tooling test` and review the diff.
-An editorial guide edit whose returned data stays the same changes digests only;
-any other catalog edit can change the golden content, which the update mode
-rewrites and the reviewer should read.
+The dense goldens in `test/goldens/` hold rendered content, not digests: the
+test replaces each `sha256:` digest and each `nextCursor` value with a
+placeholder before comparing or writing, so a catalog edit changes a golden only
+when the content it renders changes. When one does, refresh them with
+`MUXUI_UPDATE_GOLDENS=1 pnpm --filter @muxui/tooling test` and review the diff;
+it is content only.

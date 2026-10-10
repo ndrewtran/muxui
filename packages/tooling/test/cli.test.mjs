@@ -197,10 +197,20 @@ test('E-G0.3-03 dense outputs round-trip deterministically within every locked b
   }
 });
 
-// Compares each rendering with its golden file in `directory`. With `update`,
+// Digests and the cursors that embed them change with any catalog edit, so goldens
+// hold placeholders for them and a catalog PR changes a golden only when rendered
+// content changes. The cursor's operation and offset are asserted separately.
+function normalizeDigests(rendering) {
+  return rendering
+    .replace(/sha256:[0-9a-f]{64}/gu, 'sha256:<digest>')
+    .replace(/"nextCursor":"[^"]+"/gu, '"nextCursor":"<cursor>"');
+}
+
+// Compares each normalized rendering with its golden file in `directory`. With `update`,
 // a stale golden is rewritten instead, so a catalog edit needs no throwaway script.
 async function checkGoldens(renderings, directory, { update = false } = {}) {
-  for (const [name, actual] of Object.entries(renderings)) {
+  for (const [name, rendering] of Object.entries(renderings)) {
+    const actual = normalizeDigests(rendering);
     const path = join(directory, name);
     const expected = await readFile(path, 'utf8').catch(() => null);
     if (actual === expected) continue;
@@ -218,6 +228,14 @@ test('E-G0.3-03 dense golden snapshots remain stable', async () => {
     'search-brief.txt': executeCommand('search', { ...commandCases.search('brief').request, limit: 1 }),
     'get-compact.txt': executeCommand('get', commandCases.get('compact').request),
   };
+  // A normalized cursor hides what it encodes, so pin its operation, offset, and catalog binding here.
+  for (const [name, operation] of [['list-brief.txt', 'listArtifacts'], ['search-brief.txt', 'searchArtifacts']]) {
+    const { meta } = goldenCases[name];
+    const { catalogDigest, requestDigest, ...position } = JSON.parse(Buffer.from(meta.nextCursor, 'base64url').toString('utf8'));
+    assert.deepEqual(position, { operation, offset: 1 }, name);
+    assert.equal(catalogDigest, meta.catalogDigest, name);
+    assert.match(requestDigest, /^sha256:[0-9a-f]{64}$/u, name);
+  }
   await checkGoldens(
     Object.fromEntries(Object.entries(goldenCases).map(([name, response]) => [name, renderDense(response)])),
     fileURLToPath(new URL('goldens/', import.meta.url)),
@@ -238,6 +256,12 @@ test('golden update mode rewrites stale goldens only when asked', async () => {
     assert.equal(await readFile(join(directory, 'a.txt'), 'utf8'), 'fresh');
     assert.equal(await readFile(join(directory, 'c.txt'), 'utf8'), 'new');
     await checkGoldens(renderings, directory);
+
+    // Digests and cursors are stored as placeholders, so a different digest still matches.
+    const meta = (digest, cursor) => `meta={"catalogDigest":"sha256:${digest.repeat(64)}","nextCursor":"${cursor}"}`;
+    await checkGoldens({ 'd.txt': meta('a', 'eyJvZmZzZXQiOjF9') }, directory, { update: true });
+    assert.equal(await readFile(join(directory, 'd.txt'), 'utf8'), 'meta={"catalogDigest":"sha256:<digest>","nextCursor":"<cursor>"}');
+    await checkGoldens({ 'd.txt': meta('b', 'eyJvZmZzZXQiOjJ9') }, directory);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

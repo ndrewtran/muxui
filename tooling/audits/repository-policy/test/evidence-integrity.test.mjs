@@ -1256,17 +1256,32 @@ const closeoutRevision = 'c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b';
 const jsonAt = (revision, path) => JSON.parse(readAtRevision(repositoryRoot, revision, path).toString('utf8'));
 const gitOut = (...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' }).trim();
 
-/** What the catalog declares at `revision`: the patterns, their variant example ids, and the block browser tests the policy routes. */
+/**
+ * The block browser tests of `slugs` at `revision` by convention: each block's own `pattern-<slug>.test.mjs` in that revision's tree,
+ * read from git objects. A block with no such file is not interactive.
+ */
+function derivedBrowserTestsAt(revision, slugs) {
+  const files = new Set(gitOut('ls-tree', '--name-only', revision, 'packages/react/test/browser/').split('\n'));
+  return slugs.map((slug) => `packages/react/test/browser/pattern-${slug}.test.mjs`).filter((file) => files.has(file)).sort();
+}
+
+/**
+ * What the catalog declares at `revision`: the patterns, their variant example ids, and the block browser tests, each revision
+ * held to its own rules. A revision whose policy declares `pullRequestImpact.patternBrowserTests` (every capture made before the
+ * convention) is held to that list; one whose policy does not is held to the files in its tree.
+ */
 function catalogAt(revision) {
   const { records } = jsonAt(revision, 'packages/catalog/catalog-sources.json');
   const patterns = records.filter(({ family }) => family === 'pattern').map(({ path }) => jsonAt(revision, path));
-  const declared = jsonAt(revision, 'tooling/audits/repository-policy/repository-policy.json').pullRequestImpact.patternBrowserTests ?? {};
+  const declared = jsonAt(revision, 'tooling/audits/repository-policy/repository-policy.json').pullRequestImpact.patternBrowserTests;
   const slugOf = ({ id }) => id.slice('muxui:pattern:'.length);
   return {
     patternIds: patterns.map(({ id }) => id).sort(),
     patternSlugs: patterns.map(slugOf).sort(),
     variantIds: patterns.flatMap(({ variants }) => variants.map(({ example }) => example)).sort(),
-    browserTests: patterns.filter((pattern) => declared[slugOf(pattern)] !== undefined).map((pattern) => `packages/react/${declared[slugOf(pattern)]}`).sort(),
+    browserTests: declared === undefined
+      ? derivedBrowserTestsAt(revision, patterns.map(slugOf))
+      : patterns.filter((pattern) => declared[slugOf(pattern)] !== undefined).map((pattern) => `packages/react/${declared[slugOf(pattern)]}`).sort(),
   };
 }
 
@@ -1527,7 +1542,7 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
     assert.equal(retained.get(supersedes.path), supersedes.sha256, `${id}: the index retains the predecessor at the digest the record names`);
   }
 
-  // What the catalog, the policy routes, and the thresholds declare at this capture's own revision.
+  // What the catalog, the browser tests, and the thresholds declare at this capture's own revision.
   const catalog = catalogAt(sourceRevision);
 
   // E-BL1-01: eight negatives, parsed from the tests; an unknown field names a path, not an owner.
@@ -1542,13 +1557,13 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
   assert.deepEqual(typecheck.variants.map(({ id }) => id).sort(), catalog.variantIds, 'E-BL1-03 typechecks every variant the catalog declares');
   assert.ok(typecheck.variants.every(({ exitCode, diagnostics, packedDeclarations, workspaceSources }) => exitCode === 0 && diagnostics === 0 && packedDeclarations && !workspaceSources));
 
-  // E-BL1-04: every variant page is audited, and every block browser test the policy routes passes in all three engines.
+  // E-BL1-04: every variant page is audited, and every block browser test of the revision passes in all three engines.
   // The expected test and engine pairs come from the test files at this revision, never from the record's own engine list.
   const { storybook, browser } = artifacts['E-BL1-04'].observations;
   assert.deepEqual([...storybook.selection.families].sort(), catalog.patternSlugs, 'E-BL1-04 audits every block');
   assert.equal(storybook.selection.pages.length, catalog.variantIds.length, 'E-BL1-04 audits every variant page');
   assert.deepEqual(browser.engines, ['chromium', 'firefox', 'webkit'], 'E-BL1-04 runs chromium, firefox, and webkit');
-  assert.deepEqual([...browser.files].sort(), catalog.browserTests, 'E-BL1-04 runs the block browser tests the policy routes');
+  assert.deepEqual([...browser.files].sort(), catalog.browserTests, 'E-BL1-04 runs the block browser tests of its revision');
   const expectedRuns = browser.engines.flatMap((engine) => catalog.browserTests.flatMap((file) => browserTestTitles(sourceRevision, file).map((title) => `${engine}: ${title}`))).sort();
   assert.ok(expectedRuns.length > 0, 'E-BL1-04 expects at least one browser run');
   assert.deepEqual(browser.engineRuns.map(({ engine, test }) => `${engine}: ${test}`).sort(), expectedRuns, 'E-BL1-04 passes each block browser test in each engine');
@@ -1699,31 +1714,35 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
   return { scope, sourceRevision, catalog };
 }
 
-// BL1 growth: the block browser tests are declared once, in the policy's pattern routes, and the capture runs what it declares.
-test('the BL1 block browser tests are derived from the policy routes, one per interactive block', async () => {
+// BL1 growth: a block's browser test is its own pattern-<slug>.test.mjs, and the capture runs the ones that exist.
+test('the BL1 block browser tests are the pattern-<slug> files present, one per interactive block', async () => {
   const { blockBrowserTests } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
   const reactRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-browser-'));
   try {
     await mkdir(join(reactRoot, 'test/browser'), { recursive: true });
-    const declared = { a: 'test/browser/pattern-a.test.mjs', c: 'test/browser/pattern-c.test.mjs' };
-    for (const file of Object.values(declared)) await writeFile(join(reactRoot, file), '');
-    // Pattern order, and a block with no declared test (a non-interactive one) adds none.
-    assert.deepEqual(blockBrowserTests({ declared, patternSlugs: ['c', 'b', 'a'], reactRoot }), [declared.c, declared.a]);
-    assert.throws(() => blockBrowserTests({ declared: { ...declared, z: 'test/browser/pattern-z.test.mjs' }, patternSlugs: ['a', 'c'], reactRoot }), /BL1_BROWSER_TEST_UNKNOWN: .* z,/u);
-    assert.throws(() => blockBrowserTests({ declared: { a: 'test/browser/pattern-gone.test.mjs' }, patternSlugs: ['a'], reactRoot }), /BL1_BROWSER_TEST_MISSING: test\/browser\/pattern-gone/u);
-    assert.throws(() => blockBrowserTests({ declared: {}, patternSlugs: ['a'], reactRoot }), /BL1_BROWSER_TEST_MISSING: patternBrowserTests declares no/u);
+    for (const slug of ['a', 'c']) await writeFile(join(reactRoot, `test/browser/pattern-${slug}.test.mjs`), '');
+    // Pattern order, and a block with no test file (a non-interactive one) adds none.
+    assert.deepEqual(blockBrowserTests({ patternSlugs: ['c', 'b', 'a'], reactRoot }), ['test/browser/pattern-c.test.mjs', 'test/browser/pattern-a.test.mjs']);
+    // A capture with no block browser test would claim cross-engine coverage it never ran.
+    assert.throws(() => blockBrowserTests({ patternSlugs: ['b'], reactRoot }), /BL1_BROWSER_TEST_MISSING/u);
+    assert.throws(() => blockBrowserTests({ patternSlugs: [], reactRoot }), /BL1_BROWSER_TEST_MISSING/u);
   } finally {
     await rm(reactRoot, { recursive: true, force: true });
   }
 
-  // The shipped routes derive every declared test, and the same derivation at a revision gives that revision's set.
-  const { loadPolicy } = await import('../src/policy.mjs');
+  // Every shipped pattern-<slug> test belongs to an enabled pattern, so a renamed or orphaned file cannot go unrun.
   const { patternParticipants } = await import('../src/pattern-variants.mjs');
-  const { patternBrowserTests } = (await loadPolicy(repositoryRoot)).pullRequestImpact;
   const patternSlugs = (await patternParticipants(repositoryRoot)).map(({ slug }) => slug);
-  assert.deepEqual(blockBrowserTests({ declared: patternBrowserTests, patternSlugs, reactRoot: join(repositoryRoot, 'packages/react') }).sort(), Object.values(patternBrowserTests).sort());
+  const shippedRoot = join(repositoryRoot, 'packages/react');
+  const shipped = (await readdir(join(shippedRoot, 'test/browser'))).filter((name) => /^pattern-.+\.test\.mjs$/u.test(name)).map((name) => `test/browser/${name}`).sort();
+  assert.deepEqual(blockBrowserTests({ patternSlugs, reactRoot: shippedRoot }).sort(), shipped);
+
+  // Each revision is held to its own rules: the policy's list where it declares one, the tree's files where it does not,
+  // and at the close-out the files give the same four tests the policy declared then.
   assert.deepEqual(catalogAt('5026836747b36e23b8f2dd8bd695d3a420cc295c').browserTests, ['packages/react/test/browser/pattern-poster-grid.test.mjs'], 'only the poster grid had shipped at #226');
-  assert.equal(catalogAt(closeoutRevision).browserTests.length, 4);
+  const closeout = catalogAt(closeoutRevision);
+  assert.equal(closeout.browserTests.length, 4);
+  assert.deepEqual(derivedBrowserTestsAt(closeoutRevision, closeout.patternSlugs), closeout.browserTests);
 });
 
 // The one capture older than scopes: the first E-BL1-08 and E-BL1-11 records. It is immutable history, and its index names every
@@ -1937,10 +1956,11 @@ async function forgeGrowth(capture, closeout) {
     boundary.audit.checks = boundary.audit.checks.map((check) => scoped.checks.find(({ id }) => id === check.id) ?? check);
     const catalogObservations = forged.artifacts['E-BL1-08'].observations;
     delete catalogObservations.baseline;
-    // Without the blocks the commit added, the catalog after is the catalog before, and the tooling golden at the parent pins the digest of that catalog.
-    const parentDigest = (parent) => /sha256:[0-9a-f]{64}/u.exec(gitOut('show', `${parent}:packages/tooling/test/goldens/manifest-brief.txt`))[0];
-    assert.equal(commits.length, 1, 'the forged capture follows a single growth commit, whose parent pins both digests');
-    catalogObservations.growthScope = { digestAffectingPaths, commits: commits.map((scope) => ({ ...scope, digestBefore: parentDigest(scope.parent), digestAfter: parentDigest(scope.parent), identical: true, holds: true })) };
+    // Without the blocks the commit added, the catalog after is the catalog before, so one digest stands for both. The test never
+    // recomputes a historical digest (the claim below says so), and the tooling goldens no longer carry one to read, so the fixture
+    // uses a well-formed digest of the parent revision.
+    assert.equal(commits.length, 1, 'the forged capture follows a single growth commit, whose parent stands for both digests');
+    catalogObservations.growthScope = { digestAffectingPaths, commits: commits.map((scope) => ({ ...scope, digestBefore: digest(scope.parent), digestAfter: digest(scope.parent), identical: true, holds: true })) };
     const short = commits.map(({ commit }) => commit.slice(0, 8)).join(', ');
     forged.records['E-BL1-08'].claim = `${forged.records['E-BL1-08'].claim} Across each commit that added or changed a block (${short}).`;
     forged.records['E-BL1-08'].nonClaims.push('The recorded digests are bound by the artifact and index digests; the integrity test does not run a historical compiler to recompute them.');
@@ -1959,9 +1979,9 @@ test('BL1 retained captures are held to their derived and close-out facts', asyn
     return assert.rejects(assertCapture(forged, options), (error) => error.message.includes(message), message);
   };
 
-  // Derived from the catalog, the policy routes, and the thresholds at the capture's own revision.
+  // Derived from the catalog, the browser tests, and the thresholds at the capture's own revision.
   await rejects(({ artifacts: forged }) => { forged['E-BL1-03'].observations.typecheck.perVariant.variants.pop(); }, 'E-BL1-03 typechecks every variant the catalog declares');
-  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.files.pop(); }, 'E-BL1-04 runs the block browser tests the policy routes');
+  await rejects(({ artifacts: forged }) => { forged['E-BL1-04'].observations.browser.files.pop(); }, 'E-BL1-04 runs the block browser tests of its revision');
   await rejects(({ artifacts: forged }) => { forged['E-BL1-11'].observations.thresholds.sha256 = `sha256:${'0'.repeat(64)}`; }, 'E-BL1-11 binds the thresholds committed at the source revision');
   await rejects(({ artifacts: forged }) => { forged['E-BL1-10'].observations.review.reviewedCatalogPatternsTree = 'c'.repeat(40); }, 'the reviewer read the block sources this capture scanned');
   await rejects(({ artifacts: forged }) => { forged['E-BL1-01'].observations.requiredNegatives[0].owner = null; }, 'E-BL1-01: all eight name an owner');

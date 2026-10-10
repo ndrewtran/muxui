@@ -11,7 +11,7 @@
 // - `retainedContentReviews` and `contentReviewCoverage` decide which independent content review covers each block,
 //   by the git tree of `catalog/patterns/<slug>` and the copy-bearing inputs of its participants, so a capture needs a new review only
 //   for a block, or a participant it renders, that no retained review read.
-// - `blockBrowserTests` derives the cross-engine browser tests from the policy's pattern routes.
+// - `blockBrowserTests` derives the cross-engine browser tests from the enabled patterns and the test files present.
 // - `seedRehearsal` starts a rehearsal from a copy of the retained evidence, and refuses a destination
 //   that overlaps it before removing anything.
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -21,6 +21,7 @@ import { cp, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput } from '../../../tooling/audits/repository-policy/src/evidence-verify.mjs';
+import { patternBrowserTest } from '../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { sanitizePaths } from './proof-run.mjs';
 
 export const sha256 = (bytes) => `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
@@ -334,15 +335,13 @@ export function contentReviewCoverage({ cwd, sourceRevision, patternSlugs, revie
 }
 
 /**
- * The cross-engine browser tests E-BL1-04 runs, in pattern order: the policy's `patternBrowserTests`,
- * declared once per interactive block. Throws when a declared test names no enabled pattern or no file.
+ * The cross-engine browser tests E-BL1-04 runs, in pattern order: each enabled pattern's own
+ * `test/browser/pattern-<slug>.test.mjs` when `reactRoot` has it, so a block declares its test by adding the file.
+ * A pattern with no such file is not interactive and adds none; throws when no pattern has one.
  */
-export function blockBrowserTests({ declared, patternSlugs, reactRoot }) {
-  const unknown = Object.keys(declared).filter((slug) => !patternSlugs.includes(slug));
-  if (unknown.length > 0) throw new Error(`BL1_BROWSER_TEST_UNKNOWN: patternBrowserTests names ${unknown.join(', ')}, which is not an enabled pattern`);
-  const tests = patternSlugs.filter((slug) => declared[slug] !== undefined).map((slug) => declared[slug]);
-  const missing = tests.filter((test) => !existsSync(join(reactRoot, test)));
-  if (tests.length === 0 || missing.length > 0) throw new Error(`BL1_BROWSER_TEST_MISSING: ${tests.length === 0 ? 'patternBrowserTests declares no block browser test' : `${missing.join(', ')} does not exist`}`);
+export function blockBrowserTests({ patternSlugs, reactRoot }) {
+  const tests = patternSlugs.map((slug) => patternBrowserTest(reactRoot, slug)).filter((test) => test !== undefined);
+  if (tests.length === 0) throw new Error('BL1_BROWSER_TEST_MISSING: no enabled pattern has a test/browser/pattern-<slug>.test.mjs');
   return tests;
 }
 
