@@ -1944,6 +1944,11 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
   assert.deepEqual([growth.commit, growth.parent, growth.addedPatterns.map(slug), growth.changedPatterns, growth.digestAffectingPathsChanged], [collections, latest, ['company-records', 'task-filters'], [], []]);
   assert.ok(growth.excludedEntries.length > 0 && growth.excludedEntries.every(({ path }) => growth.excludedDirectories.some((directory) => path.startsWith(directory))));
   const scoped = (growth, head = latest) => auditBoundary({ head, growthCommits: growth, offline: true, only: growthScopedChecks, closeoutBase: null });
+  // The real growth merges are squash merges, so the selection accepts them: #238, then #247 on a main whose workflow #245 changed.
+  assert.deepEqual(
+    growthCommits({ head: workspaceNavigation, since: closeoutRevision, patternIds: ['muxui:pattern:company-records', 'muxui:pattern:task-filters', 'muxui:pattern:workspace-navigation'] }).map(({ commit, subject }) => [commit, subject.slice(subject.lastIndexOf(' (#'))]),
+    [[collections, ' (#238)'], [workspaceNavigation, ' (#247)']],
+  );
   const failed = (audit) => audit.checks.filter(({ pass }) => !pass).map(({ id }) => id);
   // The defect this scope removes: over the whole range, #234 to #236 fail the checks that read @muxui/react, the lockfile, and the component records.
   assert.deepEqual(failed(auditBoundary({ head: latest, offline: true, only: growthScopedChecks, closeoutBase: null })), ['react-package-manifest', 'react-source-files', 'no-dependency-change', 'no-new-component-token-capability-or-platform']);
@@ -1963,7 +1968,8 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
 /**
  * A throwaway repository holding this checkout's HEAD tree, rebuilt so its last two patterns arrive in two growth commits:
  * `base` has neither, `first` adds the first, `second` adds the other. `variant(change)` branches from `first`, adds the other
- * pattern back, and applies `change`, as a growth commit that also changes something else.
+ * pattern back, and applies `change`, as a growth commit that also changes something else. Its growth commits are squash merges
+ * (their subjects end with a pull request number), as growth commits must be; `rebased()` builds the pull request that is not one.
  */
 async function growthRepository() {
   const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-repo-'));
@@ -1997,25 +2003,36 @@ async function growthRepository() {
   const base = commitAll('base: neither block');
   await restore(directoryA);
   await writeFile(join(cwd, manifestPath), listing(directoryA));
-  const first = commitAll('first: adds one block');
+  const first = commitAll('first: adds one block (#101)');
   await restore(directoryB);
   await writeFile(join(cwd, manifestPath), original);
-  const second = commitAll('second: adds the other block');
+  const second = commitAll('second: adds the other block (#102)');
   const variant = async (change) => {
     gitIn(cwd, 'checkout', '-q', '--detach', first);
     await restore(directoryB);
     await writeFile(join(cwd, manifestPath), original);
     await change(edit);
-    return commitAll('growth that also changes something else');
+    return commitAll('growth that also changes something else (#103)');
   };
   // A later commit on top of `second`: the growth is over, and this one changes the second block, as a follow-up to the pull request does.
   const modify = async (change) => {
     gitIn(cwd, 'checkout', '-q', '--detach', second);
     await change(edit, cwd);
-    return commitAll('a later commit that changes the second block');
+    return commitAll('a later commit that changes the second block (#104)');
+  };
+  // One pull request rebase-merged as two commits on `base`, neither with a pull request number: the first adds a block, the second adds a
+  // workflow and touches no block.
+  const rebased = async () => {
+    gitIn(cwd, 'checkout', '-q', '--detach', base);
+    await restore(directoryA);
+    await writeFile(join(cwd, manifestPath), listing(directoryA));
+    const block = commitAll('feat(catalog): add the block');
+    await mkdir(join(cwd, '.github/workflows'), { recursive: true });
+    await writeFile(join(cwd, '.github/workflows/x.yml'), 'name: x\n');
+    return { block, workflow: commitAll('ci: add a workflow') };
   };
   const dispose = () => Promise.all([cwd, stash].map((path) => rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })));
-  return { cwd, base, first, second, variant, modify, edit, patternA, patternB, directoryA, directoryB, earlier, records, dispose };
+  return { cwd, base, first, second, variant, modify, rebased, edit, patternA, patternB, directoryA, directoryB, earlier, records, dispose };
 }
 
 test('each BL1 growth commit is audited against its first parent, and one that changes more than its blocks fails', async () => {
@@ -2048,6 +2065,21 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.throws(() => derive(later, [repo.earlier]), /BL1_GROWTH_COMMIT_MISSING: no commit after .* added or changed/u, 'a block no commit after the close-out touched is not growth');
     // Growth that only adds blocks passes every scoped check, whatever else the head holds.
     assert.deepEqual(failed([first, second]), []);
+
+    // Git cannot say which commits belong to one pull request, so each growth pull request must be one squash-merged commit. A pull request
+    // rebase-merged as several commits has a commit that touches no block (here a workflow): selection would never see it, and every scoped
+    // check would pass without it. The selection refuses the pull request instead.
+    const { block, workflow } = await repo.rebased();
+    assert.throws(() => derive(workflow, [patternA]), /BL1_GROWTH_NOT_SQUASHED: .* \(feat\(catalog\): add the block\) adds or changes a block but is not a squash merge/u);
+    // Without the rule the workflow commit escapes the selection and the scoped audit passes: the defect the rule closes.
+    const escaped = growthCommits({ cwd, head: workflow, since: base, patternIds: [patternA], requireSquash: false }).map(({ commit }) => commit);
+    assert.deepEqual(escaped, [block], 'the workflow commit is not a growth commit');
+    assert.deepEqual(failed(escaped), [], 'and so no scoped check sees the workflow');
+    assert.deepEqual(failed([block, workflow]), ['no-workflow-or-hosting-config'], 'while auditing the workflow commit does fail the check');
+    // A merge commit is refused the same way.
+    gitIn(cwd, 'checkout', '-q', '--detach', base);
+    gitIn(cwd, 'merge', '-q', '--no-ff', '-m', 'Merge pull request #7 from side', block);
+    assert.throws(() => derive(gitIn(cwd, 'rev-parse', 'HEAD'), [patternA]), /BL1_GROWTH_NOT_SQUASHED: .* is a merge commit/u);
     const clean = await catalogAcrossCommit({ cwd, ...found[1] });
     assert.deepEqual([clean.identical, clean.holds], [true, true], 'the catalog without the sources the commit added is the same before and after');
 

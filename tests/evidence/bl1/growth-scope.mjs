@@ -8,6 +8,11 @@
 // `catalog/patterns/` or its `catalog-sources.json` entries), each against its first parent. A later commit
 // that only edits a new block is a growth commit like the one that added it, so it cannot also change
 // `@muxui/react` or a dependency unaudited. The head need not be a growth commit.
+//
+// Git cannot say which commits belonged to one pull request, so the scope is sound only when each growth pull
+// request is one commit: a squash merge, whose subject ends with GitHub's ` (#<number>)`. A pull request merged as
+// several commits could carry a change (a workflow, a dependency) in a commit that touches no block, and that
+// commit would be neither selected nor audited. A growth commit that is not a squash merge stops the selection.
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -15,7 +20,7 @@ import { dirname, join } from 'node:path';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { compileBundle, repositoryRoot } from './regression.mjs';
 
-export const growthScopeRule = 'Each commit on the first-parent history of the source revision, after the retained close-out revision, that adds or changes a block the close-out did not measure (its directory under catalog/patterns or its catalog-sources.json entries) is compared with its first parent. E-BL1-08: the catalog compiled without the sources of the blocks that commit added or changed has the same digest before and after, and the commit changes no compiler or schema path that moves the digest. E-BL1-09: across that commit @muxui/react (sources, package.json, stylesheet names), every dependency and the lockfile, and the component, token, capability, and React family records are unchanged. Changes other pull requests made between the close-out and the capture are outside both claims.';
+export const growthScopeRule = 'Each commit on the first-parent history of the source revision, after the retained close-out revision, that adds or changes a block the close-out did not measure (its directory under catalog/patterns or its catalog-sources.json entries) is compared with its first parent. E-BL1-08: the catalog compiled without the sources of the blocks that commit added or changed has the same digest before and after, and the commit changes no compiler or schema path that moves the digest. E-BL1-09: across that commit @muxui/react (sources, package.json, stylesheet names), every dependency and the lockfile, and the component, token, capability, and React family records are unchanged. Every growth commit is a squash merge of one pull request (a single-parent commit whose subject ends with " (#<number>)"), so no commit of a growth pull request escapes the audit. Changes other pull requests made between the close-out and the capture are outside both claims.';
 
 /**
  * The paths that run when the catalog compiles and can move the digest of sources that did not change. Both sides of the
@@ -41,6 +46,8 @@ export const digestAffectingPaths = [
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 }).trim();
 const lines = (text) => text.split('\n').filter(Boolean);
 const manifestPath = 'packages/catalog/catalog-sources.json';
+// The subject GitHub gives a squash merge: the pull request's title and its number.
+const squashSubject = / \(#\d+\)$/u;
 
 /** The source manifest's entries at `revision`. */
 const manifestEntries = (cwd, revision) => JSON.parse(git(cwd, 'show', `${revision}:${manifestPath}`)).records;
@@ -62,15 +69,20 @@ const recordExists = (cwd, revision, path) => {
 /**
  * The commits of a growth, oldest first. A growth commit is a commit on the first-parent history of `head` after
  * `since` (the retained close-out revision) that adds or changes one of `patternIds`, the blocks the close-out did not
- * measure: it changes a file under the block's directory or the block's entries in the source manifest. A squash
- * merge, a merge commit, and a branch of plain commits are each audited one commit at a time against the first parent.
+ * measure: it changes a file under the block's directory or the block's entries in the source manifest. Each is
+ * audited on its own against the first parent.
  * Each result is `{ commit, parent, subject, addedPatterns, changedPatterns, excludedDirectories, excludedEntries,
  * digestAffectingPathsChanged }`, all read from git: the sources E-BL1-08 leaves out of both sides, and the
  * `digestPaths` the commit changed. A block that no commit after `since` touched throws, and so does a commit that
  * renames, moves, or deletes the record of a block added since the close-out: renames are not tracked, so the
  * exclusions of the two sides would not match and the block's earlier commits would go unaudited.
+ *
+ * Every growth commit must be a squash merge of one pull request: a single-parent commit whose subject ends with
+ * ` (#<number>)`. Otherwise `BL1_GROWTH_NOT_SQUASHED` is thrown, because a pull request merged as several commits (a rebase
+ * merge) or as a merge commit may carry a change in a commit that touches no block, which this selection would never see.
+ * `requireSquash: false` is for a rehearsal on a pull request branch, whose commits are not merged yet and never retained.
  */
-export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patternIds, digestPaths = digestAffectingPaths }) {
+export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patternIds, digestPaths = digestAffectingPaths, requireSquash = true }) {
   if (since === undefined) throw new Error('BL1_GROWTH_COMMIT_MISSING: the growth commits are those after the retained close-out revision, and none was given');
   const records = patternRecords(cwd, head);
   const recordsAt = new Map();
@@ -105,12 +117,16 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
     const under = (revision, directory) => canonicalJson(entriesAt(revision).filter(({ path }) => path.startsWith(directory)));
     const changed = patterns.filter(({ directory }) => lines(git(cwd, 'diff', '--name-only', parent, commit, '--', directory)).length > 0 || under(parent, directory) !== under(commit, directory));
     if (changed.length === 0) continue;
+    const subject = git(cwd, 'log', '-1', '--format=%s', commit);
+    if (requireSquash && (parents.length !== 1 || !squashSubject.test(subject))) {
+      throw new Error(`BL1_GROWTH_NOT_SQUASHED: ${commit} (${subject}) adds or changes a block but is ${parents.length !== 1 ? 'a merge commit' : 'not a squash merge (its subject does not end with " (#<number>)")'}. A growth pull request must be squash-merged so that it is one commit and every change it makes is audited: git cannot tell which other commits belonged to a pull request merged as several commits, and one of them could change a workflow, a dependency, or @muxui/react without touching a block`);
+    }
     for (const { id } of changed) touched.add(id);
     const excludedDirectories = changed.map(({ directory }) => directory).sort();
     growth.push({
       commit,
       parent,
-      subject: git(cwd, 'log', '-1', '--format=%s', commit),
+      subject,
       addedPatterns: changed.filter(({ path }) => !recordExists(cwd, parent, path)).map(({ id }) => id).sort(),
       changedPatterns: changed.filter(({ path }) => recordExists(cwd, parent, path)).map(({ id }) => id).sort(),
       excludedDirectories,

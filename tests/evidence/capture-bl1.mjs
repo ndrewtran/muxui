@@ -34,7 +34,8 @@
 // the catalog has a block that capture did not measure, and its E-BL1-11 record lists how the
 // thresholds changed since that close-out (a visible record, not an authority to change them). Its E-BL1-08 and E-BL1-09 are scoped to
 // the growth itself, not to every change since the close-out: each commit after the close-out that adds or changes a new block is
-// compared with its first parent (growth-scope.mjs), so other pull requests that landed in between do not fail it and are not claimed. The thresholds, the browser tests, and every count come from the
+// compared with its first parent (growth-scope.mjs), so other pull requests that landed in between do not fail it and are not claimed. A real capture refuses a
+// growth commit that is not a squash merge of one pull request (a rehearsal on a branch does not), so every change a growth pull request makes is audited. The thresholds, the browser tests, and every count come from the
 // source revision (the thresholds as committed there, the browser tests from the policy's
 // patternBrowserTests), not from this file. `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
@@ -173,7 +174,8 @@ const groupOf = new Map(patterns.map(({ id, group }) => [tail(id), group]));
 // A growth capture follows an added block: it needs a retained close-out capture and a pattern that capture did not measure.
 const growthBase = growth ? await assertGrowthSource({ evidenceRoot: repositoryRoot, root, patternIds: patterns.map(({ id }) => id) }) : null;
 // The commits after the close-out that added or changed those blocks: E-BL1-08 and E-BL1-09 are evaluated across them, not across the range since the close-out.
-const growthScope = growthBase === null ? null : growthCommits({ cwd: repositoryRoot, head: 'HEAD', since: growthBase.closeout.sourceRevision, patternIds: growthBase.added });
+// A rehearsal on a pull request branch audits commits that are not squash merges yet; a real capture refuses them.
+const growthScope = growthBase === null ? null : growthCommits({ cwd: repositoryRoot, head: 'HEAD', since: growthBase.closeout.sourceRevision, patternIds: growthBase.added, requireSquash: rehearsal === undefined });
 const shortCommits = growthScope?.map(({ commit }) => commit.slice(0, 8)).join(', ');
 
 // ---- E-BL1-08: repeated generation is a no-op, and the digest moves only for the added sources. ----

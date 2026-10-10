@@ -255,9 +255,15 @@ growth itself, found from git:
   `catalog/patterns/<slug>/`, or that pattern's entries in `packages/catalog/catalog-sources.json`.
   A later commit that adds a variant or edits a new block is a growth commit like the one that
   added it, so it cannot also change `@muxui/react`, a dependency, or a component record
-  unaudited. A squash merge, a merge commit, and a branch of plain commits each give one commit
-  per pull request's worth of history. Blocks that arrived in more than one commit are audited one
-  commit at a time, and the rehearsal on a branch audits the branch's own commits. The source
+  unaudited. Every growth commit must be a squash merge of one pull request: a single-parent commit
+  whose subject ends with GitHub's ` (#<number>)`. Git cannot say which commits belonged to one pull
+  request, so a pull request merged as several commits (a rebase merge) or as a merge commit could carry
+  a workflow, dependency, or `@muxui/react` change in a commit that touches no block, and that commit
+  would be neither selected nor audited. The capture and the integrity test therefore refuse a growth
+  commit that is not a squash merge (`BL1_GROWTH_NOT_SQUASHED`) rather than audit part of a pull request.
+  Blocks that arrived in more than one squash-merged pull request are audited one commit at a time,
+  and the rehearsal on a branch audits the branch's own commits, which are not merged yet and so are
+  exempt from the squash rule. The source
   revision need not be a growth commit, so other pull requests may land after the merge. A new
   block that no commit after the close-out touched stops the capture. Each audited commit is
   recorded with its parent, the blocks it added and the blocks it changed, and the sources
@@ -300,7 +306,7 @@ growth itself, found from git:
   output setting (`no-workflow-or-hosting-config`). The claim text names the audited commits. The
   release, publish, deployment, registry, assistive-technology, and CLI checks run as before.
 - The claims no longer say anything about changes other pull requests made since the close-out;
-  the records state that. A growth pull request therefore has to be a commit (or commits) that
+  the records state that. A growth pull request therefore has to be one squash-merged commit that
   adds or edits blocks and their tests, thresholds, and goldens only: one that also touches
   `@muxui/react`, a component record, a dependency, a workflow or hosting file, a close-out block, or the compiler or schema,
   or that renames, moves, or deletes a growth block, fails the capture and belongs in its own pull
@@ -310,7 +316,11 @@ The close-out capture keeps its exact scope and pins: the range from the pre-BL1
 pinned at #225, and the pinned #227 exception, which the growth scope does not need.
 
 A block is delivered in two pull requests, because a squash merge orphans a branch
-commit and the records must bind a commit on main.
+commit and the records must bind a commit on main. Merge the block pull request with a squash
+merge: a growth capture refuses any other, as above. The repository still allows rebase and
+merge-commit merges (a repository setting for Andrew to restrict), so until it does the rule is
+held by the capture and the integrity test, not by GitHub, and a growth pull request merged another
+way cannot be captured.
 
 **1. The block pull request (a branch).** It edits sources, never a record:
 
