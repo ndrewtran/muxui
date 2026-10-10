@@ -3,7 +3,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { patternVariantExamples } from '../../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { browserEngines, launchBrowser, packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
-import { measureFocusRing, measureSelectedPaint, pollUntil, selectedBackgroundSettled, warmUpServer } from './grid-list-probes.mjs';
+import { measureFocusRing, measureSelectedPaint, pollUntil, settleMotion, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof (E-BL1-04) that the shipped poster grid variants, loaded
 // from their canonical catalog sources through the public `@muxui/react` entry,
@@ -165,16 +165,22 @@ for (const engine of browserEngines()) {
               assert.deepEqual(ring, expected, message);
             };
 
-            // A nested control's painted ring, as the focus-visible tokens set it.
-            const paintOf = (control) => control.evaluate((node) => {
-              const styles = getComputedStyle(node);
-              return { outline: styles.outlineStyle === 'none' ? 'none' : `${styles.outlineWidth} ${styles.outlineStyle} ${styles.outlineColor}`, boxShadow: styles.boxShadow };
-            });
+            // A nested control's painted ring, as the focus-visible tokens set it, once its transitions have
+            // finished: Save fades its ring in and out, so a read in between blends the focused and resting paint.
+            const paintOf = async (control) => {
+              await settleMotion(control);
+              return control.evaluate((node) => {
+                const styles = getComputedStyle(node);
+                return { outline: styles.outlineStyle === 'none' ? 'none' : `${styles.outlineWidth} ${styles.outlineStyle} ${styles.outlineColor}`, boxShadow: styles.boxShadow };
+              });
+            };
             // The focused nested control shows a focus-visible ring inside the grid and clear of every clipping ancestor.
+            // The paint is read first, so the ring is measured at full size and not partway through its fade-in.
             const expectControlRing = async (control, name) => {
+              const paint = await paintOf(control);
               const { painted, ...ring } = await tab.evaluate(measureFocusRing);
               assert.deepEqual(ring, { focusVisible: true, insideRoot: true, clippedBy: [] }, `${name} shows an unclipped focus-visible ring`);
-              return paintOf(control);
+              return paint;
             };
 
             await open();
@@ -282,7 +288,7 @@ for (const engine of browserEngines()) {
             // With focus on card 4, selected card 3 paints the selection tokens; focusing it again keeps a ring.
             const selector = '[role="row"][aria-selected="true"]';
             await tab.mouse.move(0, 0);
-            await pollUntil(tab, selectedBackgroundSettled, selector, { polling: 120, message: 'the selected background stops transitioning', report: (rowSelector) => getComputedStyle(document.querySelector(rowSelector)).backgroundColor });
+            await settleMotion(tab.locator(selector));
             for (const [property, [actual, expected]] of Object.entries(await tab.evaluate(measureSelectedPaint, selector))) {
               assert.equal(actual, expected, `${property} uses the selection tokens`);
             }
@@ -294,7 +300,7 @@ for (const engine of browserEngines()) {
             await open('dark');
             await row(1).locator('.muxui-text').first().click();
             assert.deepEqual(await selected(), [1]);
-            await pollUntil(tab, selectedBackgroundSettled, selector, { polling: 120, message: 'the dark selected background stops transitioning', report: (rowSelector) => getComputedStyle(document.querySelector(rowSelector)).backgroundColor });
+            await settleMotion(tab.locator(selector));
             for (const [property, [actual, expected]] of Object.entries(await tab.evaluate(measureSelectedPaint, selector))) {
               assert.equal(actual, expected, `dark ${property} uses the selection tokens`);
             }

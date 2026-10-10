@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 // Page-side probes shared by the GridList browser tests. Each probe is passed to
 // `page.evaluate` or `page.waitForFunction`, so it must stay self-contained. The
-// two helpers at the end run in Node.
+// helpers from `settleMotion` on run in Node.
 
 /** Reads the focused row's painted ring, and every ancestor that would clip it. */
 export function measureFocusRing() {
@@ -72,14 +72,6 @@ export function measureSelectedContrast(rowSelector) {
   return { ratio: (lighter + 0.05) / (darker + 0.05), background, text, opaque: background[3] === 255 };
 }
 
-/** For `waitForFunction`: true once the selected row's background stops transitioning between polls. */
-export function selectedBackgroundSettled(rowSelector) {
-  const color = getComputedStyle(document.querySelector(rowSelector)).backgroundColor;
-  const settled = color === window.__lastSelectedBackground;
-  window.__lastSelectedBackground = color;
-  return settled;
-}
-
 /** The selected row's painted background, ring, and text color beside the same values built from the selection tokens. */
 export function measureSelectedPaint(rowSelector) {
   const row = document.querySelector(rowSelector);
@@ -114,6 +106,24 @@ export function measureForcedSelection(rowSelector) {
   };
   probe.remove();
   return result;
+}
+
+/**
+ * Resolves once nothing animates on the element or inside it, so the paint read next is a settled
+ * value and not one frame of a transition: a read taken before the first frame still shows the
+ * transition's start, and one taken while it runs shows a blend that can equal the paint it is
+ * leaving. A transition that a later style change replaces rejects its `finished` promise, so each
+ * pass looks again. Fails, naming what still runs, after `timeout`.
+ */
+export function settleMotion(locator, timeout = 5000) {
+  return locator.evaluate(async (node, limit) => {
+    const deadline = Date.now() + limit;
+    const expired = new Promise((resolve) => setTimeout(resolve, limit));
+    for (let running = node.getAnimations({ subtree: true }); running.length > 0; running = node.getAnimations({ subtree: true })) {
+      if (Date.now() >= deadline) throw new Error(`still animating after ${limit}ms: ${running.map((animation) => animation.transitionProperty ?? animation.animationName).join(', ')}`);
+      await Promise.race([Promise.allSettled(running.map((animation) => animation.finished)), expired]);
+    }
+  }, timeout);
 }
 
 /**
