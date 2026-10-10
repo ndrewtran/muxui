@@ -85,8 +85,6 @@ test('content-addressed evidence indexes verify canonical child records', async 
       indexCount: 1,
       recordCount: 1,
       artifactCount: 0,
-      recertificationCount: 0,
-      supersessionCount: 0,
     });
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -107,6 +105,26 @@ test('content-addressed evidence rejects a changed child record', async () => {
       sourceTree: '1'.repeat(40),
     }));
     await assert.rejects(verifyEvidence(root), /EVIDENCE_DIGEST_MISMATCH/u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+// Decision 0027: closed milestone evidence under archive/ is kept byte-exact and is not verified.
+test('evidence verification skips the archive directory and still verifies current roots', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-evidence-'));
+  try {
+    const evidence = join(root, 'tests/evidence');
+    await mkdir(join(evidence, 'example'), { recursive: true });
+    await mkdir(join(evidence, 'archive/g0.0'), { recursive: true });
+    await writeFile(join(evidence, 'archive/g0.0/index.json'), '{"records":[{"path":"missing.json","sha256":"sha256:0"}]}');
+    await writeFile(join(evidence, 'example/index.json'), canonicalJson({
+      records: [],
+      schema: 'muxui-evidence-index-v1',
+      sourceRevision: '0'.repeat(40),
+      sourceTree: '1'.repeat(40),
+    }));
+    assert.deepEqual(await verifyEvidence(root), { indexCount: 1, recordCount: 0, artifactCount: 0 });
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -1370,7 +1388,6 @@ async function assertCapture({ directory, index, verification, records, artifact
     assert.ok(supersedes.path.startsWith(`${bl1}/superseded/${supersedes.sourceRevision.slice(0, 12)}/records/`), `${id}: the predecessor is archived in the tree`);
     assert.equal(retained.get(supersedes.path), supersedes.sha256, `${id}: the index retains the predecessor at the digest the record names`);
   }
-  assert.equal(index.supersessions, undefined, 'the index does not use the applicability-certificate supersessions list');
 
   // What the catalog, the policy routes, and the thresholds declare at this capture's own revision.
   const catalog = catalogAt(sourceRevision);

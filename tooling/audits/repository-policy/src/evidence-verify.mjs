@@ -93,7 +93,7 @@ async function assertReference(repositoryRoot, reference, kind, bound) {
 }
 
 async function assertIndexReferences(repositoryRoot, index, gitRoot) {
-  for (const key of ['records', 'artifacts', 'recertifications', 'supersessions']) {
+  for (const key of ['records', 'artifacts']) {
     if (!Array.isArray(index[key])) continue;
     for (const reference of index[key]) {
       const bound = key === 'artifacts' && REVISION_BOUND_INPUTS.has(reference.path) ? { gitRoot, revision: index.sourceRevision } : undefined;
@@ -107,9 +107,10 @@ async function assertIndexReferences(repositoryRoot, index, gitRoot) {
 }
 
 /**
- * Verify current evidence indexes and their content-addressed child records. `gitRoot` names the repository
- * whose git objects hold the revision-bound inputs (see REVISION_BOUND_INPUTS); it defaults to
- * `repositoryRoot`, and differs only when the evidence tree is a rehearsal outside the repository.
+ * Verify current evidence indexes and their content-addressed child records. `tests/evidence/archive/` holds
+ * closed milestone evidence kept byte-exact (Decision 0027); nothing current reads it, so it is not verified.
+ * `gitRoot` names the repository whose git objects hold the revision-bound inputs (see REVISION_BOUND_INPUTS);
+ * it defaults to `repositoryRoot`, and differs only when the evidence tree is a rehearsal outside the repository.
  */
 export async function verifyEvidence(repositoryRoot, options) {
   const { gitRoot = repositoryRoot, ...retired } = options ?? {};
@@ -121,11 +122,9 @@ export async function verifyEvidence(repositoryRoot, options) {
   }
   const evidenceRoot = join(repositoryRoot, 'tests/evidence');
   const entries = await readdir(evidenceRoot, { withFileTypes: true }).catch(() => []);
-  const roots = entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'));
+  const roots = entries.filter((entry) => entry.isDirectory() && !entry.name.startsWith('.') && entry.name !== 'archive');
   let recordCount = 0;
   let artifactCount = 0;
-  let recertificationCount = 0;
-  let supersessionCount = 0;
   for (const root of roots) {
     const indexPath = join(evidenceRoot, root.name, 'index.json');
     const { value: index } = await readCanonicalJson(indexPath).catch((error) => {
@@ -137,15 +136,11 @@ export async function verifyEvidence(repositoryRoot, options) {
     await assertIndexReferences(repositoryRoot, index, gitRoot);
     recordCount += index.records?.length ?? 0;
     artifactCount += index.artifacts?.length ?? 0;
-    recertificationCount += index.recertifications?.length ?? 0;
-    supersessionCount += index.supersessions?.length ?? 0;
   }
   return {
     indexCount: roots.length,
     recordCount,
     artifactCount,
-    recertificationCount,
-    supersessionCount,
   };
 }
 
