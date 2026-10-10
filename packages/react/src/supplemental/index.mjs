@@ -1127,19 +1127,34 @@ const onSidebarShortcutCapture = (event) => handleSidebarShortcut(event, true);
 const onSidebarShortcutBubble = (event) => handleSidebarShortcut(event, false);
 // Focus that folding would hide: a display:none or visibility:hidden control.
 const sidebarUnreachable = (node) => node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden';
-/** Focuses the first candidate that is rendered and really takes focus; a Root reached this way gets a tabindex only then. */
+/** Focuses the first candidate that is rendered and really takes focus, and says whether one did; a Root reached this way gets a tabindex only then. */
 function sidebarFocusFirst(candidates, roots) {
   for (const candidate of candidates) {
     if (!candidate?.isConnected || sidebarUnreachable(candidate)) continue;
     if (roots.has(candidate) && !candidate.hasAttribute('tabindex')) candidate.tabIndex = -1;
     candidate.focus({ preventScroll: true });
-    if (candidate.getRootNode().activeElement === candidate) return;
+    if (candidate.getRootNode().activeElement === candidate) return true;
   }
+  return false;
 }
-/** Lands focus in the column after its drawer is gone: the link matching the drawer's focused link, the current link, a Toggle, then Root. */
-function sidebarColumnFocus({ roots, toggles }, href) {
+/** The column's focus candidates after its drawer is gone: the link matching the drawer's focused link, the current link, a Toggle, then Root. */
+function sidebarColumnCandidates({ roots, toggles }, href) {
   const links = [...roots].flatMap((root) => [...root.querySelectorAll('a[href]')]);
-  sidebarFocusFirst([links.find((link) => link.getAttribute('href') === href), links.find((link) => link.getAttribute('aria-current') === 'page'), ...toggles, ...roots], roots);
+  return [links.find((link) => link.getAttribute('href') === href), links.find((link) => link.getAttribute('aria-current') === 'page'), ...toggles, ...roots];
+}
+/**
+ * Hands lost focus over to the first candidate that takes it, retrying on animation frames for about half a second:
+ * an overlay that is still closing keeps the target inert. It only acts while focus is lost, on nothing, on the body,
+ * or on `stale` content, so a newer deliberate focus is never overwritten.
+ */
+function sidebarHandoff(candidates, roots, stale) {
+  const started = performance.now();
+  const attempt = () => {
+    const active = document.activeElement;
+    if (active && active !== document.body && !stale(active)) return;
+    if (!sidebarFocusFirst(candidates(), roots) && performance.now() - started < 500) requestAnimationFrame(attempt);
+  };
+  attempt();
 }
 /** Runs `exit` once the drawer content unmounts, after any exit animation. */
 function SidebarDrawerExit({ exit }) {
@@ -1225,15 +1240,19 @@ const Sidebar = {
     React.useEffect(() => {
       const root = node.current;
       if (!menuButtons || !root || typeof ResizeObserver === 'undefined') return undefined;
-      // The browser may blur the hidden element before the observer runs, so remember that focus was inside while Root rendered.
-      let inside = false;
-      const track = (event) => { inside = event.type === 'focusin' || (inside && root.getClientRects().length === 0); };
+      // The browser may blur the hidden element before the observer runs, so remember that focus was inside while Root
+      // rendered, starting with focus that arrived before this subscribed (autofocus). Focus a user sends elsewhere resets it.
+      let inside = root.contains(document.activeElement);
+      const track = (event) => {
+        if (event.type === 'focusin') inside = true;
+        else if (root.getClientRects().length > 0 || (event.relatedTarget && !root.contains(event.relatedTarget))) inside = false;
+      };
       root.addEventListener('focusin', track);
       root.addEventListener('focusout', track);
       const observer = new ResizeObserver(() => {
         if (!inside || root.getClientRects().length > 0) return;
         inside = false;
-        sidebarFocusFirst([...menuButtons], roots);
+        sidebarHandoff(() => [...menuButtons], roots, (active) => root.contains(active));
       });
       observer.observe(root);
       return () => {
@@ -1306,7 +1325,7 @@ const Sidebar = {
     latest.current = { open, sidebar };
     const header = React.useRef(null);
     const button = React.useRef(null);
-    // The href the drawer's focus was on when layout took it away, for the column link that should receive focus next.
+    // The drawer's focused link and dialog when layout took it away, for the column link that should receive focus next.
     const handoff = React.useRef(null);
     const menuButtons = sidebar?.menuButtons;
     useIsomorphicLayoutEffect(() => { const element = button.current; if (!menuButtons) return undefined; menuButtons.add(element); return () => menuButtons.delete(element); }, [menuButtons]);
@@ -1315,7 +1334,8 @@ const Sidebar = {
       if (!menuButtons || typeof ResizeObserver === 'undefined') return undefined;
       const observer = new ResizeObserver(() => {
         if (!latest.current.open || header.current.getClientRects().length > 0) return;
-        handoff.current = { href: document.activeElement?.closest('.muxui-sidebar__mobile-dialog a[href]')?.getAttribute('href') ?? null };
+        const dialog = document.activeElement?.closest('.muxui-sidebar__mobile-dialog') ?? null;
+        handoff.current = { dialog, href: dialog ? document.activeElement.closest('a[href]')?.getAttribute('href') ?? null : null };
         setOpen(false);
       });
       observer.observe(header.current);
@@ -1324,7 +1344,8 @@ const Sidebar = {
     const exit = () => {
       const wanted = handoff.current;
       handoff.current = null;
-      if (wanted && latest.current.sidebar) sidebarColumnFocus(latest.current.sidebar, wanted.href);
+      const { sidebar: current } = latest.current;
+      if (wanted && current) sidebarHandoff(() => sidebarColumnCandidates(current, wanted.href), current.roots, (active) => wanted.dialog?.contains(active));
     };
     // The drawer is always full size, so its navigation ignores the folded state of the desktop sidebar.
     return h(AriaDialogTrigger, { isOpen: open, onOpenChange: setOpen },

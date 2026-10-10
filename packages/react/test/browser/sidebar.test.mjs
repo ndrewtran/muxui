@@ -14,6 +14,7 @@ const entry = `
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { Sidebar } from '/src/supplemental/index.mjs';
+import { Menu } from '/src/collections.mjs';
 
 const h = React.createElement;
 const params = new URLSearchParams(location.search);
@@ -84,10 +85,16 @@ function Shell() {
 const pages = () => h(Sidebar.NavList, { 'aria-label': 'Pages' },
   h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home'),
   h(Sidebar.NavItem, { href: '#overview', icon: Icon, current: true }, 'Overview'));
+// The workspace switcher: a Menu inside the drawer, whose popover is a second overlay to close with it.
+const switcher = h(Menu.Root, null, h(Menu.Trigger, null, 'Workspaces'), h(Menu.Popup, null, h(Menu.List, { 'aria-label': 'Workspace list', items: ['Sample workspace', 'Example team'] })));
 function Responsive() {
-  return h(Sidebar.Provider, null, h('div', { className: 'rwd-frame' }, h('div', { className: 'rwd' },
-    h('div', { className: 'rwd-mobile' }, h(Sidebar.MobileTrigger, { logo: 'Mux' }, pages())),
-    h(Sidebar.Root, { className: 'rwd-column', 'aria-label': 'Workspace' }, pages()))));
+  return h(Sidebar.Provider, null,
+    h('div', { className: 'rwd-frame' }, h('div', { className: 'rwd' },
+      h('div', { className: 'rwd-mobile' }, h(Sidebar.MobileTrigger, { logo: 'Mux' }, h(React.Fragment, null, switcher, pages()))),
+      h(Sidebar.Root, { className: 'rwd-column', 'aria-label': 'Workspace' },
+        params.has('autofocus') && h('input', { id: 'root-input', 'aria-label': 'Filter', autoFocus: true }),
+        pages()))),
+    h('button', { type: 'button', id: 'outside' }, 'Outside'));
 }
 createRoot(document.getElementById('root')).render(h(params.get('layout') === 'rwd' ? Responsive : Shell));
 // An editable control inside a shadow root: the document only sees its host.
@@ -107,10 +114,12 @@ const css = `
 .rwd { display: flex; block-size: 24rem; }
 .rwd-column { display: none; }
 @container (min-width: 40rem) { .rwd-mobile { display: none; } .rwd-column { display: flex; } }
+@keyframes rwd-slow-exit { from { opacity: 1; } to { opacity: 0; } }
+html[data-slow-exit] .muxui-sidebar__mobile-overlay[data-exiting] { animation: rwd-slow-exit 600ms linear forwards; }
 `;
 
 const page = (url) => pageShell({
-  attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}"${url.searchParams.get('motion') === 'reduced' ? ' data-muxui-motion="reduced"' : ''}`,
+  attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}"${url.searchParams.get('motion') === 'reduced' ? ' data-muxui-motion="reduced"' : ''}${url.searchParams.has('slowexit') ? ' data-slow-exit' : ''}`,
   head: `<link rel="stylesheet" href="/generated/styles.css"><style>${css}</style>`,
   bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
   body: '<div id="root"></div>',
@@ -200,7 +209,7 @@ async function sampleWidths(selector) {
 for (const engine of browserEngines()) {
   test(`Sidebar folds to an icon rail in ${engine}`, { timeout: 300_000 }, async () => {
     const { url, close } = await startServer({
-      entries: ['src/supplemental/index.mjs'],
+      entries: ['src/supplemental/index.mjs', 'src/collections.mjs'],
       pages: { '/sidebar.html': page },
       modules: { '/sidebar-entry.mjs': entry },
     });
@@ -639,6 +648,56 @@ for (const engine of browserEngines()) {
           await focusIs('.muxui-sidebar__mobile-menu-btn', `${engine}: narrowing moves focus from the hidden column to the menu button`);
         } finally {
           await context.close();
+        }
+
+        // A Menu open inside the drawer is a second overlay; focus still reaches the column once both are gone.
+        const menu = await open('?layout=rwd', { viewport: narrow });
+        try {
+          await menu.tab.getByRole('button', { name: 'Open navigation' }).click();
+          await menu.tab.getByRole('button', { name: 'Workspaces' }).click();
+          await menu.tab.getByRole('menuitem').first().focus();
+          await menu.tab.setViewportSize(wide);
+          await pollUntil(menu.tab, () => document.activeElement === document.querySelector('aside a[aria-current="page"]'), undefined, { message: `${engine}: with a Menu open in the drawer, focus still reaches the column`, timeout: 4000, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          assert.equal(await menu.tab.getByRole('menu').count() + await menu.tab.getByRole('dialog').count(), 0, `${engine}: the Menu and the drawer are both closed`);
+        } finally {
+          await menu.context.close();
+        }
+
+        // Handoffs never overwrite a newer, deliberate focus.
+        const deliberate = await open('?layout=rwd', { viewport: wide });
+        try {
+          await deliberate.tab.locator('aside a[href="#home"]').focus();
+          await deliberate.tab.evaluate(() => {
+            document.querySelector('.rwd-frame').style.width = '500px';
+            document.querySelector('#outside').focus();
+          });
+          await deliberate.tab.waitForTimeout(500);
+          assert.ok(await hasFocus(deliberate.tab, '#outside'), `${engine}: focus a user sends elsewhere as the column hides is not pulled to the menu button`);
+        } finally {
+          await deliberate.context.close();
+        }
+        const slow = await open('?layout=rwd&slowexit=1', { viewport: narrow });
+        try {
+          await slow.tab.getByRole('button', { name: 'Open navigation' }).click();
+          await slow.tab.locator('.muxui-sidebar__mobile-dialog a[href="#home"]').focus();
+          await slow.tab.setViewportSize(wide);
+          // Only once the drawer is really exiting can the user focus elsewhere.
+          await slow.tab.locator('.muxui-sidebar__mobile-overlay[data-exiting]').waitFor({ state: 'attached', timeout: 5000 });
+          await slow.tab.locator('#outside').focus();
+          await slow.tab.waitForTimeout(1000);
+          assert.ok(await hasFocus(slow.tab, '#outside'), `${engine}: focus moved during the drawer's exit animation is not pulled back to the column`);
+        } finally {
+          await slow.context.close();
+        }
+
+        // Focus that arrived before the tracker subscribed still counts as inside the column.
+        const early = await open('?layout=rwd&autofocus=1', { viewport: wide });
+        try {
+          assert.ok(await hasFocus(early.tab, '#root-input'), `${engine}: the column's autofocus input holds focus`);
+          await early.tab.setViewportSize(narrow);
+          await pollUntil(early.tab, () => document.activeElement === document.querySelector('.muxui-sidebar__mobile-menu-btn'), undefined, { message: `${engine}: focus that arrived by autofocus still moves to the menu button`, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+        } finally {
+          await early.context.close();
         }
       }
 
