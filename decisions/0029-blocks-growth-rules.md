@@ -45,10 +45,11 @@ is under development.
 ## Decision
 
 1. **Categories are catalog data.** A block's category, and the group derived from
-   it, are ordinary catalog data. Adding or renaming a category is an ordinary pull
-   request and needs no decision. The companion change moves the list out of the
-   schema into catalog data; until it lands, the schema's list is the owner and
-   adding a category is a schema change under the schema-evolution rules.
+   it, are ordinary catalog data, declared in the registry
+   `catalog/patterns/categories.json`. Adding or renaming a category is an ordinary
+   pull request and needs no decision. The companion change introduces the registry
+   and moves the list out of the schema; until it lands, the schema's list is the
+   owner and adding a category is a schema change under the schema-evolution rules.
 2. **Blocks and the component work they need ship in ordinary pull requests.** A
    block may ship in the same pull request as the `@muxui/react` change, component,
    family, token, or dependency it needs. The component change carries the proof its
@@ -195,8 +196,8 @@ decisions.
 
 This decision changes no block, category, component, dependency, token, or
 threshold value, and adds no record kind. It does not change the CLI, the query API,
-or the publishing tooling. It does not move the category list out of the schema
-(that code is a companion change), change the pattern browser test routes or the
+or the publishing tooling. It does not introduce the category registry or move the
+list out of the schema (that code is a companion change), change the pattern browser test routes or the
 dense goldens, or reuse a measurement across captures. It publishes no package,
 changes no dist-tag, deploys nothing, and mutates no Project, consumer, or
 production system. It claims no check result, evidence, or milestone completion and

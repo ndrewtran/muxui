@@ -537,10 +537,10 @@ not implied by `PatternRecord` validation.
 
 **Staged fields (Decision 0026).** The first delivered `PatternRecord` schema,
 enabled with the Blocks showcase slice, requires identity, name, summary,
-lifecycle, keywords, a category in one of two groups (application and
-marketing; adding a category is an ordinary pull request, Decision 0029),
-intent, platforms, participants, variants, accessibility notes, and unsupported
-cases. Composition relations,
+lifecycle, keywords, a category the registry (`catalog/patterns/categories.json`)
+declares, in one of two groups (application and marketing; adding a category is
+an ordinary pull request, Decision 0029), intent, platforms, participants,
+variants, accessibility notes, and unsupported cases. Composition relations,
 invariants, and the closed parameter schema are defined by the schema but
 optional, and the compiler validates whatever a record declares. `plan` and any
 other pattern-derived claim require them, so the planner never selects a

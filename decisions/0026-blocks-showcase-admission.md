@@ -45,12 +45,10 @@ under `tests/evidence/r1-exit`.
    schema and compiler support, with every record `experimental`. A record
    requires:
    - identity, name, summary, lifecycle, and keywords;
-   - a category in one of two groups. Application: Collections, Forms, Feedback,
-     Conversation, Navigation. Marketing: Hero, Features, Pricing, Call to action,
-     Testimonials, FAQ, Stats, Logo cloud, Newsletter, Footer. The group is
-     derived from the category, never authored. Adding a category is an ordinary
-     pull request and needs no decision (Decision 0029); while the list is a
-     schema enum it is a schema change under the schema-evolution rules;
+   - a category the registry `catalog/patterns/categories.json` declares, in one
+     of two groups, application or marketing. The group is derived from the
+     category, never authored. Adding a category is an ordinary pull request and
+     needs no decision (Decision 0029);
    - intent (`useWhen`, `avoidWhen`) and `platforms` (`web.react` only);
    - `participants`, each a role name, a component `ArtifactRef`, and
      `required` or `optional`;
@@ -90,8 +88,8 @@ under `tests/evidence/r1-exit`.
        pattern or binding;
      - a pattern with no variants.
 
-     The closed schema also rejects an unknown field and a category it does
-     not list.
+     The closed schema also rejects an unknown field, and the compiler rejects a
+     category the registry does not declare.
 
 4. **Showcase surface.** A Blocks section in the existing `apps/docs` Astro
    project, with its own full-width layout. Starlight keeps the component docs.

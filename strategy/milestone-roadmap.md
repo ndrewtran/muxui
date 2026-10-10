@@ -534,12 +534,13 @@ fixture for GridList grid layout and Virtualizer grid mode.
 
 **Primary ownership**
 
-- `@muxui/schema`: the pattern schema, its category list and groups, field
-  ownership, and the relation registry (`example-of` target `pattern`, owned by
-  `pattern.variants`).
+- `@muxui/schema`: the pattern schema, field ownership, and the relation
+  registry (`example-of` target `pattern`, owned by `pattern.variants`).
 - `@muxui/catalog`: compiler support, pure `list`, `search`, and `get` over
   patterns, and the derived participant and "used in" views.
 - `@muxui/tooling`: the CLI adapter and pattern authoring support.
+- `catalog/patterns/categories.json`: the category registry, which declares each
+  block category and its group.
 - `catalog/patterns/<slug>/`: pattern records, variant example records, example
   sources, and the license and disclosure record for any asset that is not
   Mux-authored.
@@ -551,11 +552,11 @@ fixture for GridList grid layout and Virtualizer grid mode.
 **Deliverables**
 
 - The `pattern` schema with the staged v1 fields (Architecture, "Patterns are
-  bounded composition specifications"), a category in one of two groups
-  (Application: Collections, Forms, Feedback, Conversation, Navigation;
-  Marketing: Hero, Features, Pricing, Call to action, Testimonials, FAQ, Stats,
-  Logo cloud, Newsletter, Footer), added by an ordinary pull request
-  ([Decision 0029](../decisions/0029-blocks-growth-rules.md)), the `catalog/patterns/` source convention,
+  bounded composition specifications"), a category the registry
+  (`catalog/patterns/categories.json`) declares, in one of two groups
+  (application or marketing); adding a category is an ordinary pull request
+  ([Decision 0029](../decisions/0029-blocks-growth-rules.md)). Also the
+  `catalog/patterns/` source convention,
   and catalog compiler support for the four negative paths: an unknown
   participant, a variant example importing a Mux component that is not a
   declared participant, a missing or duplicate variant example, and a pattern
@@ -596,7 +597,7 @@ content, and `E-BL1-11`, and it needs no further decision. A boundary change
 
 | ID | Required assertion | Retained evidence |
 | --- | --- | --- |
-| `E-BL1-01` | The pattern schema is closed and a valid record compiles. Each negative fixture fails with a diagnostic that names the earliest owner: an unknown field, a category the schema does not list, an unknown participant, a variant example importing an undeclared Mux component, a missing variant example, a duplicate variant example, and a pattern with no variants. | Schema and compiler positive and negative fixtures. |
+| `E-BL1-01` | The pattern schema is closed and a valid record compiles. Each negative fixture fails with a diagnostic that names the earliest owner: an unknown field, a category the registry (`catalog/patterns/categories.json`) does not declare, an unknown participant, a variant example importing an undeclared Mux component, a missing variant example, a duplicate variant example, and a pattern with no variants. | Schema and compiler positive and negative fixtures. |
 | `E-BL1-02` | The pattern kind has authoring support: a scaffold round-trips through validation and compilation, and semantic diff, revision explainer, affected closure, and source-linked diagnostics cover patterns and variant examples. | Authoring fixtures. |
 | `E-BL1-03` | Every variant example typechecks against the packed `@muxui/react` declarations and passes packed SSR and hydration. | Packed-consumer proof per variant. |
 | `E-BL1-04` | Every variant example passes light and dark axe and colour audits through generated Storybook stories, and every interactive block passes keyboard, focus, and state browser checks. | Storybook audit reports and browser tests. |
