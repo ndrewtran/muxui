@@ -63,8 +63,9 @@ is under development.
    limit, the dense budgets, and the variant source size limit. The tests derive
    their numbers from that file. A pull request may change any of them when it:
    - states the change and its reason in its description before the change is
-     measured, and logs it in the file's `provenance.revisions` (the query or value,
-     what changed, and why);
+     measured, and logs it in the file's `provenance.revisions` as an exact
+     transition: the query and field, or the value, with what it was and what it
+     became (a list field as the items added and removed), and why;
    - keeps an expectation on every query and records a remaining weakness as a
      `knownWeakness`; an expectation is never removed; and
    - lists an expectation changed after its result was seen in
@@ -72,11 +73,18 @@ is under development.
 
    A threshold is never changed to turn a failing result into a passing one: when a
    block fails an expectation it wrote, the block changes. The capture lists every
-   change since the retained close-out and refuses a change that is not on the log,
-   and a change since the capture it replaces that has no new log entry, so an old
-   entry for a query does not cover a later revision of it. The integrity test holds
-   the working tree to the same rule on every pull request. The log and
+   change since the retained close-out and refuses any difference from the
+   thresholds it compares with that the log's entries do not carry from the old value
+   to the new one, against the close-out and against the capture it replaces. An
+   entry covers only the transition it states, so an entry for 3 to 4 does not cover
+   4 to 999, and a later revision needs its own entry. The integrity test holds the
+   working tree to the same rule on every pull request. The log and
    `revisedAfterFirstMeasurement` only grow.
+
+   That a change was stated before it was measured is the author's statement, made
+   visible by the log and the pull request. Nothing in the repository proves when a
+   change was made. A correction made after its result was seen is disclosed in
+   `revisedAfterFirstMeasurement`, and is never presented as written first.
 4. **Page widths live only in code.** The page widths at which a marketing variant
    is captured are the `pageWidths` list in `apps/docs/src/lib/block-presets.ts`,
    beside the toolbar presets. The capture records the list and the file's blob at
@@ -89,8 +97,10 @@ is under development.
    - gates the boundary checks of `E-BL1-09`: no growth commit changes a workflow, a
      hosting or deployment file, an Astro deployment setting, or a package version;
      every package stays private with no publish configuration or script; the
-     registry still lists what the R1 exit published, with a later release
-     candidate listed and not claimed; no assistive-technology support claim is
+     registry still lists what the R1 exit published, with `latest` where it was
+     and that version not deprecated, and a later release candidate listed and not
+     claimed (a rollback that deprecates the version or re-points `latest` needs a
+     reviewed edit of the check); no assistive-technology support claim is
      made; `plan`, install, registry, and consumer scaffold stay unavailable; and
      every pattern targets `web.react` only; and
    - records, without gating on them, what each growth commit changed in
@@ -105,11 +115,19 @@ is under development.
    The `E-BL1-09` assertion that `@muxui/react` has no API, export, or version
    change describes the close-out and stays with it.
 6. **Content review is reused for unchanged copy.** A retained independent review
-   covers each block whose `catalog/patterns/<slug>` git tree it read. A capture
-   records which review covers each block and keeps that review's own reviewed
-   revision and tree. It needs a new independent review only for a block whose tree
-   matches no retained review, that is, a new block or an edited one. Measurements,
-   scans, and tests are retaken at every capture.
+   covers a block when it names the block and read what the capture scans: the
+   block's `catalog/patterns/<slug>` git tree, the catalog record of every
+   participant component, and the React runtime sources (`packages/react/src`),
+   because a block renders copy that its participants own, such as a default
+   placeholder. The runtime part is conservative: any change under
+   `packages/react/src` asks for a new review, except in the few files that render
+   nothing (the generator, the contract checks, the deferred-evidence list, the
+   publish guard, and the supplemental-mapping reader), which the key lists. A capture
+   records which review covers each block with its key and keeps that review's own
+   reviewed revision, tree, and key. It needs a new independent review only for a
+   block whose key matches no retained review, that is, a new block, an edited one,
+   or one whose participants or runtime changed. Measurements, scans, and tests are
+   retaken at every capture.
 
 ## What stays protected
 

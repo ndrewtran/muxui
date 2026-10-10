@@ -201,9 +201,11 @@ the claim to "no deployment configuration added", and the record says which.
 - **Release checks after the close-out.** `versions-follow-decision-0026` holds the close-out range to
   the three packages Decision 0026 named and, across a growth commit, to no version change at all.
   `registry-unchanged` holds that every version the R1 exit read-back recorded is still listed with its
-  recorded integrity, shasum, and publish time, and that `latest` still names the version it named then;
-  a later release candidate and a moved `next` are listed and not claimed (Decision 0023 amendment 01).
-  Neither fails a growth capture because a release candidate was published.
+  recorded integrity, shasum, and publish time, that `latest` still names the version it named then, and that
+  version is not deprecated (the read-back records no deprecation); a later release candidate and a moved
+  `next` are listed and not claimed (Decision 0023 amendment 01). Neither fails a growth capture because a
+  release candidate was published. A Decision 0023 rollback that deprecates the recorded version, or
+  re-points `latest`, does fail it, and needs a reviewed edit of the check.
 - **Heuristics.** The assistive-technology claim scan reads added lines in catalog
   records, docs and Storybook sources, package sources and readmes, and the root
   readme, and flags claim-shaped wording. It is a heuristic and cannot prove a claim
@@ -223,11 +225,19 @@ revision is in main's history, whether its tree equals the source tree, which pa
 changed between them, and which proof tools differ at the source revision, so a
 reader can see whether the tools that ran are the tools that were reviewed. A
 close-out capture refuses a content review if `catalog/patterns` differs from the tree it read. A growth capture
-instead records, for each block, the retained review that covers it: a review covers a block when it names the
-block and the git tree of `catalog/patterns/<slug>` at the revision the reviewer read is the tree at the source
-revision (`reviewCoverage` in the `E-BL1-10` artifact, with each row keeping its review's own reviewed revision
-and tree). Reviews retained by earlier captures, current or archived, are candidates, so `--content-review` is
-needed only for a block whose tree matches none of them, a new block or an edited one. A review is independent of the authoring agents only: it records its reviewer, and
+instead records, for each block, the retained review that covers it (`reviewCoverage` in the `E-BL1-10`
+artifact, each row keeping its review's own reviewed revision, tree, and key). A review covers a block when it
+names the block and the block's key is the same at the revision the reviewer read as at the source revision. The
+key is what a block renders copy from: the git tree of `catalog/patterns/<slug>`, the git tree of the catalog
+record of every participant component (`catalog/components/<slug>`), and a digest of the path and blob of every
+file under `packages/react/src` except the few that render nothing (`nonRenderingReactSources` in
+`capture-support.mjs`: the generator, the contract checks, the deferred-evidence list, the publish guard, and
+the supplemental-mapping reader). A participant's default copy, such as a placeholder or an accessible label,
+lives in its record and its runtime module; no per-component source mapping exists for every participant, so
+the runtime part is the whole of `packages/react/src`, which is conservative: any runtime change asks for a new
+review. Reviews retained by earlier captures, current or archived, are candidates, so `--content-review` is
+needed only for a block whose key matches none of them: a new block, an edited one, or one whose participants
+or runtime changed. A review is independent of the authoring agents only: it records its reviewer, and
 two reviews by the same model are not independent of each other.
 
 ## Known limits
@@ -380,18 +390,27 @@ way cannot be captured.
   change a threshold (Decision 0029): an existing query's expectation or `relevant` list, the
   precision floor, the displacement limit, a dense budget, or the variant source size limit
   (`denseBudgets.examplesSection.variantSourceLexemes`). It states the change and its reason in
-  its description before measuring and adds an entry to `provenance.revisions`:
-  `{ "query": "<query>" | "limit": "<dot path of the value>", "change": "...", "reason": "...",
-  "pullRequests": [...] }`, with `"afterFirstMeasurement": true` for a query revised after its
-  result was seen, which must also be in `provenance.revisedAfterFirstMeasurement`. A limit or a budget
-  is never logged as changed after its result was seen. No expectation is removed, every query keeps an
+  its description before measuring and adds an entry to `provenance.revisions` that states the exact
+  transition. A query entry names the field and what it was and became:
+  `{ "query": "<query>", "field": "expectedWithin", "from": 4, "to": 5, "change": "...", "reason": "...",
+  "pullRequests": [...] }`, and for the list field `relevant` the items it added and removed
+  (`"added": [...], "removed": [...]`). A limit or budget entry names the value by its dot path:
+  `{ "limit": "denseBudgets.examplesSection.variantSourceLexemes", "from": 700, "to": 800, ... }`. A field
+  absent before or after is `null`. An entry carries `"afterFirstMeasurement": true` for a query revised after
+  its result was seen, which must also be in `provenance.revisedAfterFirstMeasurement`; a limit or a budget
+  is never logged as changed after its result was seen. The capture and the integrity test follow the entries,
+  in log order, from each value in the thresholds they compare with (the close-out, and the capture being
+  replaced; only entries new since them count, and an entry whose `from` is not the running value is earlier
+  history) to its current value, and refuse any difference they do not reach. So an entry for 3 to 4 does not
+  cover 4 to 999, and a later revision needs its own entry. No expectation is removed, every query keeps an
   expectation (`expectedFirst`, `firstWithoutPatterns`, or `expectedId` with `expectedWithin`), a
   remaining weakness is a `knownWeakness`, and the log and that list only grow. A category-name query
   such as `collections` is an ordinary revision: its expectation is revised and logged like any other
-  (Decision 0026 amendment 02 is superseded). The capture and the integrity test refuse a revised query,
-  limit, or budget that has no new entry since the thresholds they compare with (the close-out, and the capture
-  being replaced), and `pattern-regression.test.mjs` derives its numbers from the file, so a changed
-  limit is followed by the test. Prefer a block whose id, name, keywords, and category do
+  (Decision 0026 amendment 02 is superseded). That an entry was written before the change was measured is the
+  author's statement, made visible by the log and the pull request; nothing here proves it, and a correction
+  made after its result was seen is disclosed in `revisedAfterFirstMeasurement`, not presented as written
+  first. `pattern-regression.test.mjs` derives its numbers from the file, so a changed limit is followed by
+  the test. Prefer a block whose id, name, keywords, and category do
   not shift an existing rank. A
   pattern whose id and name carry a component word can outrank that component and fail the
   component search rule, so name a block for what it shows, not for a component. The later
@@ -462,7 +481,11 @@ results, 79 parity rows, 13 of 13 audit checks, nine of 21 revised expectations,
 scope check run, and an exit review of the source tree. A capture with `growthGate: 'informational'`
 is also held to the informational legs and scoped checks the tool bound at its source revision
 declares (read from git, so a record cannot widen them), the non-claim on `E-BL1-08` and `E-BL1-09`,
-the content-review coverage table, and the threshold revision log; a capture without `growthGate` is
+the content-review coverage table (each row's key re-derived from git, with the list of files that render
+nothing read from the tool bound at its revision), and the threshold revision log. Every scoped check of
+`E-BL1-09` is re-derived from git by the boundary-audit tool bound at the capture's revision (imported from
+a copy of its bytes in git), and the recorded checks, their per-commit observations (parents, legs, changed
+files, dependency fields, records), and the growth scope with its commits' subjects must equal what it gives; a capture without `growthGate` is
 held to the strict rules as before. The same test holds the working-tree thresholds to the log on every
 pull request, so an unlogged change fails there before any capture.
 
