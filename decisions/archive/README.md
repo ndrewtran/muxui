@@ -29,6 +29,7 @@ Each entry gives the last commit where the decision text was live in
 | 0019 (with its acceptance) | [Mux-owned React component motion](./0019-react-component-motion.md) | A version-named dependency decision. The motion and reduced-motion boundary is restated. | [Decision 0028](../0028-standing-development-rule.md) | `bd85d3d5` |
 | 0024 (with its acceptance) | [CodeBlock family admission](./0024-code-block-admission.md) | Completed family admission. The bounded-work rule is restated and its numbers live in code. | [Decision 0028](../0028-standing-development-rule.md) | `bd85d3d5` |
 | 0025 (with its acceptance) | [Remaining candidates admission](./0025-remaining-candidates-admission.md) | Completed family admission. | [Decision 0028](../0028-standing-development-rule.md) | `bd85d3d5` |
+| 0009 amendment 02 (with its acceptance) | [Core UI delivery skill successor identity](./0009-amendment-02-skill-routing.md) | Byte-identity tuple for a retired verifier and a skill path that no longer exists. Its guidance semantics are restated in amendments 05 and 06. | [Decision 0009 amendment 06](../0009-amendment-06-repository-delivery-skill-owner.md) | `d195cad6` |
 
 21 retired stubs were removed: Decisions 0007 and 0008, the Decision 0009 base
 and amendment 03, and Decision 0010 amendments 04 to 09, with their acceptance,

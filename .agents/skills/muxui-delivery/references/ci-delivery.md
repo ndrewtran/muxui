@@ -44,8 +44,15 @@ contract, or a safety rule.
 
 ## Authority pull requests
 
-A PR touching a file matched by `AUTHORITY_FILES`, `PLANNING_CONTROL_FILES`,
-or `PLANNING_CONTROL_PREFIXES` in `.github/scripts/validate-planning-pr.cjs`
+A PR that touches a file listed in `.github/scripts/validate-planning-pr.cjs`
 needs the `type:decision` or `type:architecture-maintenance` label and an
-`Authority change record: #…` line; a Product Scope change also needs the
-scope-version and migration fields from the PR template.
+`Authority change record:` line, which is an issue (`#N`) or a decision path
+(`decisions/NNNN-….md`). The list is short: the strategy documents, the
+platform safety contract, the validator with its test, the planning-policy
+workflow, `CODEOWNERS`, and the publishing workflow with its registry
+preflight (`npm-publication.mjs`). A Product Scope change also states
+`Scope version effect`; an effect other than `none` adds the four change-packet
+fields from the PR template, where `None` is a valid answer.
+
+The PR template's authority section is only for those PRs. Edits to this skill,
+the PR template, issue forms, READMEs, and route maps are ordinary PRs.

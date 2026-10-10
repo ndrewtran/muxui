@@ -4,7 +4,6 @@
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0009:amendment:05`
 - Parent decision: `core-ui:decision:0009`
-- Amends: `core-ui:decision:0009:amendment:02`, admitted guidance semantics item 2
 - Accepted request: [acceptance record](./0009-amendment-05-vendor-neutral-delivery-skill-acceptance.md)
 
 Andrew's acceptance records the bounded direction below. Repository adoption
@@ -17,12 +16,10 @@ The repository delivery skill is operator guidance for every agent client that
 works in Mux UI. Its text names roles, context rules, and outcomes. It does not
 name a vendor, model, spawn parameter, or client-specific syntax.
 
-Amendment 02's admitted guidance item 2 read: "Only root delegates; every
-delegation uses `fork_turns="none"` and the minimum task-local context." It now
-reads: "Only root delegates; every delegation starts fresh, without inherited
-conversation turns, and receives only the minimum task-local context." Each
+Only root delegates; every delegation starts fresh, without inherited
+conversation turns, and receives only the minimum task-local context. Each
 client's own configuration outside this repository maps that rule to its
-mechanism and selects role models and effort. Items 1 and 3 to 6 are unchanged.
+mechanism and selects role models and effort.
 
 `.agents/skills/muxui-delivery/` remains the skill's single canonical location.
 A tracked relative symbolic link, `.claude/skills` to `../.agents/skills`, lets
@@ -43,7 +40,3 @@ Scope ID or commitment, milestone state, evidence record, public package,
 platform, support claim, lifecycle, or release boundary. Decision 0011's
 protected pull-request route and the skill's stops, as narrowed by Decision
 0028, remain in force.
-
-Historical decisions and receipts are not rewritten. Amendment 02's exact
-successor tuple still describes the skill bytes at its materialization commit,
-and the verifier that audits those historical bytes is unchanged.

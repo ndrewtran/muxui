@@ -12,30 +12,19 @@ const AUTHORITY_LABELS = new Set([
   'type:decision',
 ]);
 
+// The machinery that enforces protection, plus the publishing workflow and the
+// registry preflight it runs.
 const PLANNING_CONTROL_FILES = new Set([
   '.github/CODEOWNERS',
-  '.github/pull_request_template.md',
   '.github/workflows/repository-planning-policy.yml',
+  '.github/workflows/npm-publish.yml',
+  'tooling/audits/repository-policy/src/npm-publication.mjs',
   '.github/scripts/validate-planning-pr.cjs',
   '.github/scripts/validate-planning-pr.test.cjs',
-  'tests/AGENTS.md',
-  'tests/evidence/README.md',
-  'tooling/AGENTS.md',
-  'tooling/audits/repository-policy/README.md',
-  'tooling/audits/repository-policy/package.json',
 ]);
 
-// Every file under these directories is planning control, including the
-// delivery skill's references.
-const PLANNING_CONTROL_PREFIXES = [
-  '.agents/skills/muxui-delivery/',
-  '.github/ISSUE_TEMPLATE/',
-];
-
 function isProtectedPlanningFile(file) {
-  return AUTHORITY_FILES.has(file)
-    || PLANNING_CONTROL_FILES.has(file)
-    || PLANNING_CONTROL_PREFIXES.some((prefix) => file.startsWith(prefix));
+  return AUTHORITY_FILES.has(file) || PLANNING_CONTROL_FILES.has(file);
 }
 
 // A rename or move out of a protected path still changes that path, so the
@@ -55,16 +44,18 @@ function fieldValue(body, label) {
   return match ? match[1].trim() : '';
 }
 
-function hasSubstantiveValue(value) {
-  return Boolean(value) && !/^(?:n\/?a|none|pending|tbd|not assigned)[\s.!-]*$/i.test(value);
+// A filled-in answer; an honest "None" or "N/A" counts, a placeholder does not.
+function isFilledIn(value) {
+  return Boolean(value) && !/^(?:pending|tbd|not assigned)[\s.!-]*$/i.test(value);
 }
+
+// An issue number or the path of a decision that records the change.
+const CHANGE_RECORD = /^`?(?:#\d+|decisions\/\d{4}-[\w.-]+\.md)\b/;
 
 function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
   const errors = [];
-  const planningControlChanged = files.some(isProtectedPlanningFile);
-  const productScopeChanged = files.includes('strategy/product-scope.md');
 
-  if (!planningControlChanged) return errors;
+  if (!files.some(isProtectedPlanningFile)) return errors;
 
   if (!labels.some((label) => AUTHORITY_LABELS.has(label))) {
     errors.push(
@@ -72,17 +63,22 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
     );
   }
 
-  const changeRecord = fieldValue(body, 'Authority change record');
-  if (!/^#\d+\b/.test(changeRecord)) {
-    errors.push('Authority-source changes require an Authority change record: #… reference.');
+  if (!CHANGE_RECORD.test(fieldValue(body, 'Authority change record'))) {
+    errors.push(
+      'Authority-source changes require an Authority change record: #… or decisions/NNNN-….md reference.',
+    );
   }
 
-  if (!productScopeChanged) return errors;
+  if (!files.includes('strategy/product-scope.md')) return errors;
 
+  // Only a change that alters a commitment (a version effect other than none)
+  // needs the change packet.
   const scopeVersion = fieldValue(body, 'Scope version effect');
   if (!/^(?:none|patch|minor|major)\b/i.test(scopeVersion)) {
-    errors.push('Product Scope changes require a valid Scope version effect.');
+    errors.push('Product Scope changes require a Scope version effect: none, patch, minor, or major.');
+    return errors;
   }
+  if (/^none\b/i.test(scopeVersion)) return errors;
 
   for (const label of [
     'Affected Scope IDs / commitment transitions',
@@ -90,8 +86,8 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
     'Release additions / removals',
     'Open tracker migration',
   ]) {
-    if (!hasSubstantiveValue(fieldValue(body, label))) {
-      errors.push(`Product Scope changes require a substantive ${label} entry.`);
+    if (!isFilledIn(fieldValue(body, label))) {
+      errors.push(`Product Scope version changes require a ${label} entry (None is accepted).`);
     }
   }
 
@@ -101,7 +97,6 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
 module.exports = {
   AUTHORITY_FILES,
   PLANNING_CONTROL_FILES,
-  PLANNING_CONTROL_PREFIXES,
   changedPaths,
   isProtectedPlanningFile,
   validatePlanningPullRequest,

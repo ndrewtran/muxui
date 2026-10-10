@@ -8,21 +8,7 @@ body:
     id: contract
     attributes:
       label: Violated contract or invariant
-      description: Cite the schema, API, roadmap assertion, architecture heading, or public package contract.
-    validations:
-      required: true
-  - type: input
-    id: scope_ids
-    attributes:
-      label: Scope ID(s)
-      placeholder: SCOPE-COMP-BUTTON-REACT
-    validations:
-      required: true
-  - type: input
-    id: roadmap_evidence
-    attributes:
-      label: Owning roadmap milestone and evidence ID(s)
-      placeholder: R1 exit; E-R1-EXIT-01
+      description: Cite the schema, API, component record, architecture heading, or public package contract.
     validations:
       required: true
   - type: textarea
@@ -45,8 +31,13 @@ body:
     validations:
       required: true
   - type: textarea
-    id: impact
+    id: references
     attributes:
-      label: Compatibility, safety, integrity, or proof impact
+      label: References
+      description: Where they apply, the Scope ID(s), Roadmap milestone, and Evidence ID(s).
+      placeholder: |
+        Scope ID(s):
+        Roadmap milestone:
+        Evidence ID(s):
     validations:
-      required: true
+      required: false
