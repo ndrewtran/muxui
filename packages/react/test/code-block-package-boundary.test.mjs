@@ -62,7 +62,10 @@ test('packed public consumer hydrates and highlights with exact copy text and re
     const consumer = join(directory, 'consumer');
     await mkdir(consumer);
     await writeFile(join(consumer, 'package.json'), JSON.stringify({ private: true, type: 'module', dependencies: {
-      '@muxui/react': 'file:../muxui-react.tgz', react: '19.2.8', 'react-dom': '19.2.8', jsdom: '30.0.1',
+      '@muxui/react': 'file:../muxui-react.tgz',
+      react: manifest.devDependencies.react,
+      'react-dom': manifest.devDependencies['react-dom'],
+      jsdom: manifest.devDependencies.jsdom,
     } }));
     const install = spawnSync('pnpm', ['install', '--prefer-offline', '--ignore-scripts'], { cwd: consumer, encoding: 'utf8' });
     assert.equal(install.status, 0, install.stderr || install.stdout);
@@ -76,7 +79,7 @@ test('packed public consumer hydrates and highlights with exact copy text and re
       import { CodeBlock } from '@muxui/react';
       const entry = import.meta.resolve('@muxui/react');
       const manifest = JSON.parse(await readFile(new URL('../package.json', entry), 'utf8'));
-      assert.equal(manifest.dependencies.shiki, '4.5.0');
+      assert.equal(manifest.dependencies.shiki, ${JSON.stringify(manifest.dependencies.shiki)});
       for (const file of ['shiki.MIT.txt', 'shiki-vscode-textmate.MIT.txt', 'shiki-oniguruma.NOTICES.txt']) await access(new URL('../licenses/' + file, entry));
       const source = '\\tconst value = "<script>&";\\r\\n  // retained  \\n';
       const element = React.createElement(CodeBlock, {source, language: 'typescript'});

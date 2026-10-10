@@ -15,6 +15,7 @@ import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
+import { exactLockedProblems, readLockfile } from '../../../packages/react/test/support/locked-dependencies.mjs';
 import {
   argTypesForBinding,
   adapterNames,
@@ -184,9 +185,14 @@ test('current Storybook manifest covers the complete package union', () => {
 test('Storybook navigation is alphabetical with stable deep links', async () => {
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
   assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical'\s*\}/u);
-  const groups = groupComponentNavigation(manifest.families, ({ family }) => family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase());
-  assert.deepEqual(groups[0].items.map(({ family }) => family).sort(), ['Activity', 'CodeBlock', 'DataDiff', 'Message', 'PromptComposer']);
-  assert.equal(groups[1].items.length, manifest.count - 5);
+  const slugFor = ({ family }) => family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  const groups = groupComponentNavigation(manifest.families, slugFor);
+  assert.deepEqual(groups.map(({ label }) => label), ['AI Agent', 'Components']);
+  // Every family lands in exactly one group, the one its category names.
+  for (const { label, items } of groups) {
+    assert.ok(items.every((item) => componentCategory(slugFor(item)) === label), label);
+  }
+  assert.equal(groups[0].items.length + groups[1].items.length, manifest.count);
   assert.equal(new Set(groups.flatMap(({ items }) => items)).size, manifest.count);
   for (const record of manifest.families) {
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
@@ -1209,7 +1215,7 @@ test('showcase does not expose React Aria as a public import', async () => {
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
   assert.equal(packageManifest.dependencies['@muxui/react'], 'workspace:*');
   assert.equal(packageManifest.devDependencies['react-aria-components'], undefined);
-  assert.equal(packageManifest.devDependencies['@storybook/addon-docs'], '10.5.10');
+  assert.ok(packageManifest.devDependencies['@storybook/addon-docs'], 'the docs addon is a declared dependency');
   const factory = await readFile(resolve(appRoot, 'src/storybook-factory.mjs'), 'utf8');
   assert.doesNotMatch(factory, /react-aria-components/i);
   const main = await readFile(resolve(appRoot, '.storybook/main.mjs'), 'utf8');
@@ -1257,8 +1263,7 @@ test('preview exposes the Mux UI theme and direction host contract', async () =>
   assert.doesNotMatch(preview, /'data-muxui-contrast'/u);
   assert.match(preview, /test: 'error'/);
   const packageManifest = JSON.parse(await readFile(resolve(appRoot, 'package.json'), 'utf8'));
-  assert.equal(packageManifest.devDependencies['axe-core'], '4.13.0');
-  assert.equal(packageManifest.devDependencies['playwright-core'], '1.62.1');
+  assert.deepEqual(exactLockedProblems(await readLockfile(), 'apps/react-storybook', packageManifest, ['dependencies', 'devDependencies']), []);
 
   assert.match(previewCss, /:root\[data-muxui-color-scheme='dark'\]/);
   assert.match(previewCss, /background: var\(--muxui-semantic-surface-canvas\)/);

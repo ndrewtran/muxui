@@ -92,6 +92,7 @@ test('packed package resolves motion closure and temporal SSR from an isolated c
     const packageStaging = join(directory, 'package');
     await mkdir(packageStaging);
     const packageManifest = JSON.parse(await readFile(join(packageRoot, 'package.json'), 'utf8'));
+    const motionVersion = packageManifest.dependencies.motion;
     for (const file of new Set(['package.json', ...(packageManifest.files ?? [])])) {
       await cp(join(packageRoot, file), join(packageStaging, file), { recursive: true });
     }
@@ -111,8 +112,8 @@ test('packed package resolves motion closure and temporal SSR from an isolated c
       type: 'module',
       dependencies: {
         '@muxui/react': `file:../${archiveName}`,
-        react: '19.2.8',
-        'react-dom': '19.2.8',
+        react: packageManifest.devDependencies.react,
+        'react-dom': packageManifest.devDependencies['react-dom'],
       },
     }, null, 2)}\n`);
     const install = spawnSync('pnpm', ['install', '--prefer-offline', '--ignore-scripts'], {
@@ -130,7 +131,7 @@ test('packed package resolves motion closure and temporal SSR from an isolated c
       const packageEntry = await import.meta.resolve('@muxui/react');
       if (!packageEntry.endsWith('/generated/index.mjs')) throw new Error('public package entry resolution');
       const packageManifest = JSON.parse(await readFile(new URL('../package.json', packageEntry), 'utf8'));
-      if (packageManifest.dependencies.motion !== '13.4.0') throw new Error('packed motion dependency');
+      if (packageManifest.dependencies.motion !== ${JSON.stringify(motionVersion)}) throw new Error('packed motion dependency');
       for (const file of ['motion.MIT.txt', 'framer-motion.MIT.txt', 'motion-dom.MIT.txt', 'motion-utils.MIT.txt', 'tslib.0BSD.txt']) {
         await access(new URL('../licenses/' + file, packageEntry));
       }

@@ -144,6 +144,7 @@ export function assertReactR15GeneratedContracts({
   release,
   closureRecord,
   currentContract,
+  supplementalComponents,
   manifest,
   runtimeSources,
   styles,
@@ -244,6 +245,8 @@ export function assertReactR15GeneratedContracts({
     || !isR15EvidenceStatus(release?.historical?.evidence, closure.evidenceCapture?.retention, R15_DEFERRED_EVIDENCE)
     || 'donor' in closureRecord) failR15('FAMILY_GRAPH_INVALID');
 
+  // The current union is the retained 53 plus whatever the supplemental mapping declares.
+  const currentCount = componentArtifacts.length + supplementalComponents.length;
   const historicalBindings = descriptor?.historical?.bindings;
   const historicalExports = descriptor?.historical?.exports;
   const historicalReleaseBindings = release?.historical?.bindings;
@@ -253,28 +256,29 @@ export function assertReactR15GeneratedContracts({
     || descriptor.generatedFrom !== 'packages/react/src/generate.mjs'
     || descriptor.package !== manifest.name
     || descriptor.tranche !== 'R1.6'
-    || descriptor.bindings?.length !== 84
-    || descriptor.exports?.length !== 84
+    || descriptor.bindings?.length !== currentCount
+    || descriptor.exports?.length !== currentCount
     || descriptor.historical?.tranche !== 'R1.5'
     || descriptor.historical?.familyCount !== 53
     || historicalBindings?.length !== 53
     || historicalExports?.length !== 53
     || release?.schema !== 'muxui-react-release-candidate-v1'
     || release.packagePrivate !== true
-    || release.componentExports?.length !== 84
-    || release.bindings?.length !== 84
+    || release.componentExports?.length !== currentCount
+    || release.bindings?.length !== currentCount
     || release.catalog?.status !== 'bound'
-    || release.catalog.components?.length !== 84
+    || release.catalog.components?.length !== currentCount
     || release.historical?.tranche !== 'R1.5'
     || release.historical?.familyCount !== 53
     || historicalReleaseBindings?.length !== 53
     || historicalReleaseExports?.length !== 53
     || release.publication?.status !== 'disabled'
     || currentContract?.schema !== 'muxui-react-r1-6-contract-v1'
-    || currentContract.current?.familyCount !== 84
+    || currentContract.current?.familyCount !== currentCount
     || currentContract.current?.fixed53Count !== 53
-    || currentContract.current?.supplementalCount !== 31
-    || currentContract.components?.length !== 84
+    || currentContract.current?.supplementalCount !== supplementalComponents.length
+    || currentContract.components?.length !== currentCount
+    || new Set(currentContract.components.map(({ binding }) => binding)).size !== currentCount
     || currentContract.components?.filter(({ tranche }) => tranche !== 'R1.6').length !== 53) {
     failR15('PROJECTION_COUNTS_INVALID');
   }

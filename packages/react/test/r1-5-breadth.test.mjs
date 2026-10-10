@@ -3,6 +3,7 @@ import test from 'node:test';
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { reactCompatibility } from '../generated/compatibility.mjs';
+import { readSupplementalMapping } from '../src/supplemental-mapping.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const repositoryRoot = resolve(packageRoot, '../..');
@@ -29,12 +30,24 @@ test('R1.5 family closure retains the fixed 53-family floor', async () => {
   }
 });
 
-test('R1.6 contract retains the 53-family floor and 31 supplemental roots', async () => {
+test('R1.6 contract is the retained 53-family floor plus the supplemental mapping', async () => {
   const contract = await generatedJson('r1-6-contract.json');
-  assert.equal(contract.current.familyCount, 84);
+  const mapping = readSupplementalMapping(repositoryRoot);
   assert.equal(contract.current.fixed53Count, 53);
-  assert.equal(contract.current.supplementalCount, 31);
-  assert.equal(contract.components.length, 84);
+  assert.equal(contract.current.supplementalCount, mapping.length);
+  assert.equal(contract.current.familyCount, contract.current.fixed53Count + contract.current.supplementalCount);
+  assert.equal(contract.components.length, contract.current.familyCount);
+  assert.equal(new Set(contract.components.map(({ slug }) => slug)).size, contract.components.length);
+  assert.deepEqual(
+    contract.components.filter(({ tranche }) => tranche === 'R1.6').map(({ slug }) => slug).sort(),
+    mapping.map(({ slug }) => slug).sort(),
+  );
+  assert.equal(contract.components.filter(({ tranche }) => tranche !== 'R1.6').length, contract.current.fixed53Count);
+  // Every component has exactly one package binding and one component export.
+  const descriptor = await generatedJson('descriptor.json');
+  const bindings = contract.components.map(({ binding }) => binding).sort();
+  assert.deepEqual(descriptor.bindings.map(({ binding }) => binding).sort(), bindings);
+  assert.deepEqual(descriptor.exports.map(({ binding }) => binding).sort(), bindings);
   assert.ok(contract.components.every((component) => !('donor' in component)));
 });
 

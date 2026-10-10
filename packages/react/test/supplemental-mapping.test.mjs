@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -31,7 +32,16 @@ test('supplemental mapping derives catalog owners and the export name from slug 
     anatomyOwner: 'catalog/components/card/artifact.json#/anatomy',
     export: { name: 'Card', module: '.', isolation: 'root' },
   });
-  assert.equal(readSupplementalMapping(repositoryRoot).length, 31);
+});
+
+test('the repository mapping names unique components that each have a catalog artifact', () => {
+  const mapping = readSupplementalMapping(repositoryRoot);
+  assert.ok(mapping.length > 0);
+  assert.equal(new Set(mapping.map(({ slug }) => slug)).size, mapping.length);
+  assert.equal(new Set(mapping.map(({ export: componentExport }) => componentExport.name)).size, mapping.length);
+  for (const { artifact, slug } of mapping) {
+    assert.equal(JSON.parse(readFileSync(resolve(repositoryRoot, artifact), 'utf8')).id, `muxui:component:${slug}`, slug);
+  }
 });
 
 test('supplemental mapping rejects authored derived fields and stale schemas', async () => {

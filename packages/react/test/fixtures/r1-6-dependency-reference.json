@@ -1,514 +1,82 @@
 {
-  "schema": "muxui-r1-6-dependency-reference-v2",
+  "schema": "muxui-r1-6-dependency-reference-v3",
   "authority": "decisions/0013-theme-parity-and-private-authoring.md",
-  "lockfile": "pnpm-lock.yaml",
-  "records": [
-    {
-      "package": "@tiptap/core",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-cIVUQYBycighzsk6GbmCef8ZiEDVxoT5EuAe4xg2q9dNkDqCXVqI4YGr9aavCQEiAS4uHiRwqvcsPqJHipFDfg==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {
-        "@tiptap/pm": "3.31.4"
-      }
+  "verificationBoundary": "Unchanged license texts for the disclosed runtime packages. Versions, lockfile resolution and integrity come from package.json and pnpm-lock.yaml, not from this file; packed evaluation isolation and runtime/SSR proof are separate obligations.",
+  "licenses": {
+    "@internationalized/date": {
+      "license": "Apache-2.0",
+      "file": "packages/react/licenses/internationalized-date.Apache-2.0.txt",
+      "sha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84"
     },
-    {
-      "package": "@tiptap/extension-image",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-vtD+rK73abJnPRKOjU37sQTCa5Auyg451yhqZD/3lZKiFJDBHAZKI7lQARkXBQYK289hBhK6yMIwofoqCBvi3g==",
+    "@shikijs/": {
       "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {
-        "@tiptap/core": "3.31.4"
-      }
+      "file": "packages/react/licenses/shiki.MIT.txt",
+      "sha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
     },
-    {
-      "package": "@tiptap/extension-placeholder",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-3SoJopaOzaA9IZHSk9ZXHiO6ib8ErPh7ssRh3bIaxfD+BqRyXcm4hV4yfFXTqrDCnl5FE+DbBRGmeVAVkDko3g==",
+    "@shikijs/vscode-textmate": {
       "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {
-        "@tiptap/extensions": "3.31.4"
-      }
+      "file": "packages/react/licenses/shiki-vscode-textmate.MIT.txt",
+      "sha256": "sha256:b5cb7ff7859e7d282d98fc43ab081b0dda5dc659dc3385cf65740c759a7e6a6c"
     },
-    {
-      "package": "@tiptap/extension-text-align",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-Z8x/x2N4BiFwu7+UfJABT/OQbwZPUHbmvAH6Fo5lefgeIlTwAXFBzz4x7Eeed7iJAcXUzOnyd6bmkhK36gYJ2g==",
+    "@tiptap/": {
       "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {
-        "@tiptap/core": "3.31.4"
-      }
+      "file": "packages/react/licenses/tiptap.MIT.txt",
+      "sha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
     },
-    {
-      "package": "@tiptap/extension-text-style",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-djeemliEWmqs3cJrUyMG+17HbjHyf6D/0NkIHl/RkVHYOCX1AYMZ7r+XLefApSNBCAx/aFh1hJzaMlnGbnTaAw==",
+    "culori": {
       "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {
-        "@tiptap/core": "3.31.4"
-      }
+      "file": "packages/tokens/licenses/culori.MIT.txt",
+      "sha256": "sha256:5e9ac3317f048184d001bd3814aed28d4874bdcac9da1d001465e52e1a0e8077"
     },
-    {
-      "package": "@tiptap/pm",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-x7dwth79cQp4QGae66/RJqMDJQv0+n7b7dD7cyFQBWqzPFLJxN/4paHY4qbWedZjNLhRyIOAD9a5q4AYM1zmPA==",
+    "framer-motion": {
       "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {}
+      "file": "packages/react/licenses/framer-motion.MIT.txt",
+      "sha256": "sha256:5ff46083b88563822b0560dd6221ab89d2f74bc97a52d4c97a75020fd62c6f32"
     },
-    {
-      "package": "@tiptap/react",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-mBvvXgdPhMinT1NPfwHvFK1dFdMXHVWMSeNn0IPj7/zV0XBmOnASkEOwoIvl8NluKYEtpZBE1yA+6pN2enLa5g==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {
-        "react": "^17.0.0 || ^18.0.0 || ^19.0.0",
-        "react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0",
-        "@types/react": "^17.0.0 || ^18.0.0 || ^19.0.0",
-        "@types/react-dom": "^17.0.0 || ^18.0.0 || ^19.0.0",
-        "@tiptap/core": "3.31.4",
-        "@tiptap/pm": "3.31.4"
-      }
-    },
-    {
-      "package": "@tiptap/starter-kit",
-      "version": "3.31.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-u7HIJ9vK6kFe4S4J2CIcDLrhRZzoTMSyU0XxjQ6lUNF7pWW3rMi//pvi8RcsZmxGjyb8CpXAqYgNl7f9WyaUeA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9",
-      "peerDependencies": {}
-    },
-    {
-      "package": "lucide-react",
-      "version": "1.37.0",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==",
+    "lucide-react": {
       "license": "ISC",
-      "licenseFile": "packages/react/licenses/lucide.ISC-MIT.txt",
-      "licenseSha256": "sha256:b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
-      "peerDependencies": {
-        "react": "^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0"
-      }
+      "file": "packages/react/licenses/lucide.ISC-MIT.txt",
+      "sha256": "sha256:b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
     },
-    {
-      "package": "marked",
-      "version": "13.0.3",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-rqRix3/TWzE9rIoFGIn8JmsVfhiuC8VIQ8IdX5TfzmeBucdY05/0UlzKaw0eVtpcN/OdVFpBk7CjKGo9iHJ/zA==",
+    "marked": {
       "license": "MIT",
-      "licenseFile": "packages/react/licenses/marked.MIT.txt",
-      "licenseSha256": "sha256:8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c",
-      "peerDependencies": {}
+      "file": "packages/react/licenses/marked.MIT.txt",
+      "sha256": "sha256:8e3a3f82f59a60958f56ca08f445647c32a4733dc7ca6c2c46f6eb898471ab9c"
     },
-    {
-      "package": "react-aria",
-      "version": "3.51.0",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-AyWLw0XR38cFPwBu/ErgGaVrc5dupLEKmRlMXTGvFKOtbaGRQ2+yQJkjVhpdHhoRhU4+G+tJDFeHDTS8tK3bfQ==",
+    "motion": {
+      "license": "MIT",
+      "file": "packages/react/licenses/motion.MIT.txt",
+      "sha256": "sha256:1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1"
+    },
+    "motion-dom": {
+      "license": "MIT",
+      "file": "packages/react/licenses/motion-dom.MIT.txt",
+      "sha256": "sha256:1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1"
+    },
+    "motion-utils": {
+      "license": "MIT",
+      "file": "packages/react/licenses/motion-utils.MIT.txt",
+      "sha256": "sha256:1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1"
+    },
+    "react-aria": {
       "license": "Apache-2.0",
-      "licenseFile": "packages/react/licenses/react-aria.Apache-2.0.txt",
-      "licenseSha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84",
-      "peerDependencies": {
-        "react": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1",
-        "react-dom": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1"
-      }
+      "file": "packages/react/licenses/react-aria.Apache-2.0.txt",
+      "sha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84"
     },
-    {
-      "package": "@internationalized/date",
-      "version": "3.12.4",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-M1dEn4c1U1HsSlaVR8upZtSqvXrTkHDfv18H01uCSJyjVLDxnBR38v/fMxecmlwXKR4i9HeZcmgQAPE6A+aGJQ==",
+    "react-aria-components": {
       "license": "Apache-2.0",
-      "licenseFile": "packages/react/licenses/internationalized-date.Apache-2.0.txt",
-      "licenseSha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84",
-      "peerDependencies": {}
+      "file": "packages/react/licenses/react-aria-components.Apache-2.0.txt",
+      "sha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84"
     },
-    {
-      "package": "react-aria-components",
-      "version": "1.20.0",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-BMbpIgoV9aELeBrB0Y120NgoigHb5OdcJwc+4e7uSnbTbamea6lo+gqcc4LAxzMaK3Jf+7LI1oCDE6yANsmxIQ==",
-      "license": "Apache-2.0",
-      "licenseFile": "packages/react/licenses/react-aria-components.Apache-2.0.txt",
-      "licenseSha256": "sha256:7dfe6526888bac51759c99f9a51262ba2711a8c12a067f2181609dd9a4066b84",
-      "peerDependencies": {
-        "react": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1",
-        "react-dom": "^16.8.0 || ^17.0.0-rc.1 || ^18.0.0 || ^19.0.0-rc.1"
-      }
-    },
-    {
-      "package": "culori",
-      "version": "4.0.2",
-      "owner": "packages/tokens/package.json",
-      "integrity": "sha512-1+BhOB8ahCn4O0cep0Sh2l9KCOfOdY+BXJnKMHFFzDEouSr/el18QwXEMRlOj9UY5nCeA8UN3a/82rUWRBeyBw==",
+    "shiki": {
       "license": "MIT",
-      "licenseFile": "packages/tokens/licenses/culori.MIT.txt",
-      "licenseSha256": "sha256:5e9ac3317f048184d001bd3814aed28d4874bdcac9da1d001465e52e1a0e8077",
-      "peerDependencies": {}
-    }
-  ],
-  "verificationBoundary": "Exact direct package, motion and Shiki closures, and complete 32-package editor pin, integrity and license references; packed evaluation isolation and runtime/SSR proof are separate obligations.",
-  "motionClosureRecords": [
-    {
-      "package": "motion",
-      "version": "13.4.0",
-      "owner": "packages/react/package.json",
-      "integrity": "sha512-aiNSA29N+vgV5p5cJSB5cFzx8KTuuxB99z8zGtxsaqlwKtBK6sq8YgPRpkVQLkbJMOcLDU0q/ShdT95qpBy/0g==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/motion.MIT.txt",
-      "licenseSha256": "sha256:1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1",
-      "dependencies": {
-        "framer-motion": "13.4.0",
-        "tslib": "2.8.1"
-      },
-      "peerDependencies": {
-        "react": "^18.0.0 || ^19.0.0",
-        "react-dom": "^18.0.0 || ^19.0.0"
-      }
+      "file": "packages/react/licenses/shiki.MIT.txt",
+      "sha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
     },
-    {
-      "package": "framer-motion",
-      "version": "13.4.0",
-      "integrity": "sha512-HCpqKM9BTu6UYKtj0u6J1QNxojnnirNcghcSDZ+SkpiL3myxvtsgXPS3ZGEELC2eSma7YiA937rAEXtRyydSXQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/framer-motion.MIT.txt",
-      "licenseSha256": "sha256:5ff46083b88563822b0560dd6221ab89d2f74bc97a52d4c97a75020fd62c6f32",
-      "dependencies": {
-        "motion-dom": "13.3.0",
-        "motion-utils": "13.3.0",
-        "tslib": "2.8.1"
-      },
-      "peerDependencies": {
-        "react": "^18.0.0 || ^19.0.0",
-        "react-dom": "^18.0.0 || ^19.0.0"
-      }
-    },
-    {
-      "package": "motion-dom",
-      "version": "13.3.0",
-      "integrity": "sha512-AmAnB6pHdZ1vHGzWzuzteG6Q3j1lHKeX/lbST6jGlgm0cjvLUgaCk1xhOuPMOy5SgovN6wnnUdwFrkcsus7Ftg==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/motion-dom.MIT.txt",
-      "licenseSha256": "sha256:1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1",
-      "dependencies": {
-        "motion-utils": "13.3.0"
-      },
-      "peerDependencies": {}
-    },
-    {
-      "package": "motion-utils",
-      "version": "13.3.0",
-      "integrity": "sha512-sgSschQp7EseHInIlR7hBbMuvet3RA0bs28KPZAXJcGKGdxHGvh1ogpYDilY3bOMtl73EqPNmp75sAKHYPU5sg==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/motion-utils.MIT.txt",
-      "licenseSha256": "sha256:1bf0dc3f7727723e5a032ed12164a47cf92c05204cb1a3485f123c24e2833ed1",
-      "dependencies": {},
-      "peerDependencies": {}
-    },
-    {
-      "package": "tslib",
-      "version": "2.8.1",
-      "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==",
+    "tslib": {
       "license": "0BSD",
-      "licenseFile": "packages/react/licenses/tslib.0BSD.txt",
-      "licenseSha256": "sha256:5989359645911c04a140c49d89496b13feca980bbf36d2250a12d3b9d06250d6",
-      "dependencies": {},
-      "peerDependencies": {}
+      "file": "packages/react/licenses/tslib.0BSD.txt",
+      "sha256": "sha256:5989359645911c04a140c49d89496b13feca980bbf36d2250a12d3b9d06250d6"
     }
-  ],
-  "motionPeerResolution": {
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
-  },
-  "transitiveEditorRecords": [
-    {
-      "package": "@tiptap/extension-blockquote",
-      "version": "3.31.4",
-      "integrity": "sha512-FHnbvCIW0eDKgUUFjmvEB0ax9YUBW7/Unm+38qpuQROvU872yRqhnDtycKT9IKk46jNdjM4A4fAGUbge10CrAA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-bold",
-      "version": "3.31.4",
-      "integrity": "sha512-QX1xoXvO0gz6uVsoLegumqQ4MJXL7lcUDQZ4J7la7LBqiIh4efrCmp2EXbhpr37M/YQL7w8q3g7H/VovSh7xIg==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-bubble-menu",
-      "version": "3.31.4",
-      "integrity": "sha512-Ml/yswuys+3QkOMajfXyAGlUKCxEbT3dMyF8vHwQ5mDk9MDm+dqp10It5CrDBkUT/KkVTa6AJI3kb0TXZJZiAA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-bullet-list",
-      "version": "3.31.4",
-      "integrity": "sha512-gHn1RDR4olCnmKpH+G9x+f8R+iKPNVdLlvbFkIpR/stjabZi7fB4Rr5GiHWsulbtxAjdQrNjnVeNdGM4rBxApw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-code",
-      "version": "3.31.4",
-      "integrity": "sha512-pzi8GNDs5J1DEoO1HNYiJ5WZpgOZzlc/2VIa77mMpEuD4hZxuK0BQzlF/O6Ps/O5P1lGJT4xS0Yowpzb9mD9RA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-code-block",
-      "version": "3.31.4",
-      "integrity": "sha512-su/B/cfQ1HpiHl6JfJ6wa+RVEptiYsV4dCntE8XQNj2dUcII4y6w6PQbbswOoDrU79uXHsAvpy44215rghG4LA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-document",
-      "version": "3.31.4",
-      "integrity": "sha512-vT20u62RWR+BLIyNJ54e24MPUY4zm8VF7tcgJnxQXi7BgVJWcNMtMWWDIkPJ4JNXwfoIznKh3jzYsaYmbCJgQQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-dropcursor",
-      "version": "3.31.4",
-      "integrity": "sha512-5TbCPCC4RL+QT1NYHjXCYDBHBtVqYOFvFEnk3v98lvXCM2PNL13ofXUfJPuykAVy1OdTAx4DlZOQAD9WKy/IdQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-floating-menu",
-      "version": "3.31.4",
-      "integrity": "sha512-pKzulkDmolpVt7IP9FSPsC5pKbXQ5pyeqkaAYr8cyOVW+KUObpPRIzAuXvEso8PCjWgwJ1f2qyishOEMw8MbfQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-gapcursor",
-      "version": "3.31.4",
-      "integrity": "sha512-hBogUAepQH6IQUhaePhPWzQ1Oeu+yqlJVMKO06Eue5m36uRy1PZZAQ780pCGT0SC4R5MH2td1N8EUQ7bupQdDA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-hard-break",
-      "version": "3.31.4",
-      "integrity": "sha512-oLNajLyUvRMg1qtzFgKGduygTlpaHFB9PU+M+pUWdA4sa1bRnxS2Y++Ao4lHYopJ7nxatLndrYoCIHkotqkPDQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-heading",
-      "version": "3.31.4",
-      "integrity": "sha512-KqlSeLathpdxCc3kVHBCA/RkHvb+V7u5vgiSEu1Cv3L70r7F19COMGODav/k1AGYBgEXKL6lM9cy8cloE5/28g==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-horizontal-rule",
-      "version": "3.31.4",
-      "integrity": "sha512-ws0Kh8kfHL7ESILSXj0HJAXs8G10ewlW1sedXKm8dm0op9L8il+xl8bEJVoqG/jMf77900Fc2CaQldcCGRpF1g==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-italic",
-      "version": "3.31.4",
-      "integrity": "sha512-pftTQBPYZocNDAj/u6OyDIp7YxmN0+N895cQPogJQ6qMHdLiRhzgawiEewJkniyN1w8k3Wx/Etp8pTKrxaOOBQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-link",
-      "version": "3.31.4",
-      "integrity": "sha512-LLxW3qfeL9gvDdMPVdxYFYZ0zZSjsoIDhOqjJ5U2UfaK3U2iwkKTBgV2qT+FWf3uUHmBRjBZ08q3dRPmWBAD5g==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-list",
-      "version": "3.31.4",
-      "integrity": "sha512-Wd4YRYxOdf+TtF33/QsRo1RK1CecVxjYGjUBIKNGHAywfh8tghgV4YOUCiV1iJqYt2IBs+RWlIqTmdIPzBrd4A==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-list-item",
-      "version": "3.31.4",
-      "integrity": "sha512-ao8XAPvhOrtGFILs+fKtOM91omDSpUC8X19m44gbaq5xJDVpIMZ0rP+NAVUS72G7LskhcHa0bu/Pm022bUVjVw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-list-keymap",
-      "version": "3.31.4",
-      "integrity": "sha512-etdkl/YnYfwtALDxecJ+4WYgJAez1fn1vzzZqJklZBpgqiZtny3NxpvWS7/JhsltNG84Wo/oovpfJgVmzhddrw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-ordered-list",
-      "version": "3.31.4",
-      "integrity": "sha512-UNWyF+Dhm08znszIMnT8Y2kJ1lvtiCvUGs1aG7m9cPHxDa7VycWnOqdtXWkc+6xRLNiC0zgWCFWgLLHduV8pRQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-paragraph",
-      "version": "3.31.4",
-      "integrity": "sha512-WZlBgw+XVKXerRlmEsoQ7x1PwSU+dh3X+b70+ViZsLebdfsmmYBIaNDrvIGwG9UQr5eLnddJnZplMSTI2YKs+g==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-strike",
-      "version": "3.31.4",
-      "integrity": "sha512-4MBr63TJIMqxCjE+gAPdlY1IdELgvbAP516K3Ntn/BkcpEbEoPMEYVz+XTxULyHQEuARDO6jsXPPxRXpA74jaw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-text",
-      "version": "3.31.4",
-      "integrity": "sha512-WL2ZRpFksgQcXJN05/UQH09YCH9LlhdLrSEcviASvEH/aAfsKiJlDrouN8PET+YAWK/F5xFc5/Q1z0xj+I23jw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extension-underline",
-      "version": "3.31.4",
-      "integrity": "sha512-0iFGPIqmqGkCrOFh1OPo7Dzv5s86dVN3bZaugsz0jK04otkb8bn04ZDKP2/6Wq+lcK0M9DfJ0QqfW5hC2nBZxQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    },
-    {
-      "package": "@tiptap/extensions",
-      "version": "3.31.4",
-      "integrity": "sha512-nIupIne/sHpV2Kw1M4MOmr4+G454KI8BXM5+LWKOU2EpzfALZWVSy7koF9lVRna4Zp5Gv8hfg5Z8kvmrYQvhkw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/tiptap.MIT.txt",
-      "licenseSha256": "sha256:c96e5ecb55ac593157ad1d21d1f44a611187f494a0f04c235a1ae692c88d6ba9"
-    }
-  ],
-  "shikiClosureRecords": [
-    {
-      "package": "shiki",
-      "version": "4.5.0",
-      "integrity": "sha512-OcRW72ngQvc+MSVWBRIovC/BTW589iUE/Vxav7VeM4RcY9MUjqB+IR6ILG1k9nuW6LiG/nct9uma4/MBtnZbmQ==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee",
-      "owner": "packages/react/package.json"
-    },
-    {
-      "package": "@shikijs/core",
-      "version": "4.5.0",
-      "integrity": "sha512-6CIgwq+bt2JZ3OSjb/nBkkwEf/CfpHcbam+Mg5Pllco7HAGRQ2/EFhZrrJtbyNTgKwknfVS+llsXGygiDGwJWw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/engine-javascript",
-      "version": "4.5.0",
-      "integrity": "sha512-Ed6UdEj84LyYkwnxM5CvSMWAD+id9ExTYri0/+x41U9zrgNifPSS9lZm0JqBP0VfYI8yr8tY5nbNq9+p9R0kFA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/engine-oniguruma",
-      "version": "4.5.0",
-      "integrity": "sha512-dKVmbJecVdB9recl8a/CU4jdpNXyjJQrIcesIkpS70s5HS02ohpnCSpMUbotPnEUzbAcLQ+S4hwZYbkBBiTcJw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/langs",
-      "version": "4.5.0",
-      "integrity": "sha512-wwBTqwduXSz0X4v9Qa2EWeFaYJEw1clCncWjoRNQRbVDu3SPRTRWucnouYapKj3b8Q+sk/41Vbc4B5c8nuYzLA==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/primitive",
-      "version": "4.5.0",
-      "integrity": "sha512-UM7ShlA8oz0OWxLLO8BmO9Ip6fVqdkt8yF0EH7nOCqHfrx1eEAzF0ZUVK7L+I8NEgeu1PEWSRlxaiPPeCb4iDg==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/themes",
-      "version": "4.5.0",
-      "integrity": "sha512-zGb87H3UBbpuI4yoh5UguB1XbU+2BDU3kflM7UfZ+Cy2hWo9lBtqjSVK20gmLY6ukYl040hAypGXMgud9vul8Q==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/types",
-      "version": "4.5.0",
-      "integrity": "sha512-drtPrtD8N0DENyD2cyt6Ajy+IWsiCLgMxODwLTpvH1UsN6a9jf90tNTPjqwHvA+0Lzu9e0txk8DjfqH1p9UJRw==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki.MIT.txt",
-      "licenseSha256": "sha256:7a9d8d01038aeacf9e5bcdabbddf2a7815200dce9fc1118468cc553e00ae3eee"
-    },
-    {
-      "package": "@shikijs/vscode-textmate",
-      "version": "10.0.2",
-      "integrity": "sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==",
-      "license": "MIT",
-      "licenseFile": "packages/react/licenses/shiki-vscode-textmate.MIT.txt",
-      "licenseSha256": "sha256:b5cb7ff7859e7d282d98fc43ab081b0dda5dc659dc3385cf65740c759a7e6a6c"
-    }
-  ]
+  }
 }

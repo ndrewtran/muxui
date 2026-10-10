@@ -196,11 +196,18 @@ test('R1.4 catalog closure registers and discovers every canonical family', asyn
   }
 });
 
-test('R1.5 React curriculum selects one preferred generation example for every family', () => {
+test('R1.5 React curriculum selects one preferred generation example for every family', async () => {
   const components = baseBundle.artifacts
     .filter(({ kind }) => kind === 'component')
     .sort((left, right) => left.id.localeCompare(right.id));
-  assert.equal(components.length, 84);
+  // Every component artifact the source manifest declares is in the bundle, once.
+  const manifest = JSON.parse(await readFile(join(repositoryRoot, 'packages/catalog/catalog-sources.json'), 'utf8'));
+  const declaredComponents = manifest.records
+    .map(({ path }) => /^catalog\/components\/([^/]+)\/artifact\.json$/u.exec(path)?.[1])
+    .filter(Boolean)
+    .map((slug) => `muxui:component:${slug}`);
+  assert.ok(components.length > 0);
+  assert.deepEqual(components.map(({ id }) => id).sort(), declaredComponents.sort());
   const selected = components.map((component) => {
     const response = getArtifact({
       id: component.id,
@@ -224,7 +231,7 @@ test('R1.5 React curriculum selects one preferred generation example for every f
     assert.equal(example.record.binding.ref, `${component.id}#web.react`, component.id);
     return example.id;
   });
-  assert.equal(new Set(selected).size, 84);
+  assert.equal(new Set(selected).size, components.length);
 });
 
 test('examples section orders by authored preference, not artifact ID', () => {
