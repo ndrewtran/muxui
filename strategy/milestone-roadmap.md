@@ -1154,14 +1154,19 @@ claims or promotes `latest`, and the Decision 0023 deprecate and fix-forward
 plan is prepared in the release manifest, with no prior `next` pointer
 assumed.
 
-**Exit:** only `@muxui/react@0.1.0-rc.1`, or a fix-forward rc that replaces
-it, is published, with `--tag next`. If rc.1 is the first publish, the registry also points `latest` at it
+**Exit:** only exact release candidates `@muxui/react@0.1.0-rc.N` are
+published, in sequence and with no limit on N, each with `--tag next` and each
+the next number after the rc `next` points at (Decision 0023 amendment 01). A
+new rc does not require the previous rc to be bad or deprecated. If rc.1 is the
+first publish, the registry also points `latest` at it
 (Decision 0023). Apart from a separately authorized re-point of `latest` to
-the fix-forward rc during a rollback, nothing claims or promotes `latest`, no
+the fix-forward rc during a rollback, nothing claims or promotes `latest`, a
+sequence rc published without a rollback leaves `latest` where it is, no
 stable release is promoted, and install guidance uses `@muxui/react@next`
 until a stable release moves `latest`. No `latest`, stable, framework-free,
-native, React Native Web, parity, or equivalence claim is made. A bad rc.1 is
-deprecated with a message and fixed forward. A fix-forward `rc.N+1` is a new
+native, React Native Web, parity, or equivalence claim is made. A bad rc is
+deprecated with a message and fixed forward; deprecating a superseded rc that
+is not bad is not required and needs its own authorization. Every rc is a new
 exact candidate with its own release preparation, `E-R1-EXIT-01` through
 `E-R1-EXIT-03` evidence, and publish authorization; this exit and
 `E-R1-EXIT-04` then apply to the current verified rc. Mux UI unpublishes only

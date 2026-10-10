@@ -1,5 +1,5 @@
 ---
-scopeVersion: 18.0.1
+scopeVersion: 19.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -144,6 +144,13 @@ the rule that thresholds are fixed before a candidate is measured now states
 its one exception, a block-growth pull request revising the expectations for the
 name query of a category that gains a block, committed before the retained
 capture.
+
+Product Scope `19.0.0` applies Decision 0023 amendment 01: the committed React
+`0.1` prerelease rule no longer limits release candidates to rc.1 and a fix
+forward of a deprecated rc. The `SCOPE-PRODUCT-REACT-PRERELEASE` row now names
+any number of exact `0.1.0-rc.N` candidates published in sequence under `next`,
+with no requirement that the previous rc be bad or deprecated. Changing what a
+committed prerelease row admits is major.
 
 ## Scope vocabulary
 
@@ -313,7 +320,7 @@ stable release is promoted, and install guidance uses `@muxui/react@next`.
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, Mux UI-owned styling and tranche delivery. | R1.0–R1.5 |
 | `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
 | `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports outside the historical fixed 53-family table: the exact R1.6 React Aria inventory plus explicitly named post-R1.6 admissions in Decisions 0014, 0017, 0018, 0024, and 0025, including native-backed Image and Avatar. Each admission requires its declared proof and the single current supplemental mapping. | R1.6, named post-R1.6 additions, and R1 exit |
-| `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`, or a fix-forward `0.1.0-rc.N+1` that replaces a deprecated rc under Decision 0023. | R1 tranche exits and R1 exit |
+| `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`, or any number of later exact `0.1.0-rc.N` candidates published in sequence under Decision 0023 amendment 01. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
 
 The React-specific component and pattern commitments are
@@ -1749,6 +1756,39 @@ This patch changes no Scope ID, commitment state, release boundary, package,
 platform, public surface, support claim, or non-goal, and no Scope ID is added,
 removed, or transitioned. The showcase stays private and unpublished, and
 `SCOPE-CAP-BLOCKS-SHOWCASE-PRIVATE` stays `admitted`.
+
+Tracker migration: none. No open work changes, and this change creates no
+tracker items.
+
+## Product Scope 19.0.0: release candidate sequence
+
+[Decision 0023 amendment 01](../decisions/0023-amendment-01-release-candidate-sequence.md)
+lets R1 publish any number of exact release candidates `0.1.0-rc.N` in
+sequence, each to `next` and each the next number after the rc `next` points
+at. A new rc no longer needs the previous rc to be bad or deprecated. The
+`SCOPE-PRODUCT-REACT-PRERELEASE` row reads: exact
+`@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`,
+or any number of later exact `0.1.0-rc.N` candidates published in sequence
+under Decision 0023 amendment 01. The Roadmap R1 exit states the same rule.
+
+Each rc remains a new exact candidate with its own release preparation,
+`E-R1-EXIT-01` through `E-R1-EXIT-03` evidence, and publish authorization, and
+the R1 exit and `E-R1-EXIT-04` apply to the current verified rc. The Decision
+0023 rollback and `latest` rules are unchanged: a sequence rc published
+without a rollback leaves `latest` where it is, and the only re-point is the
+authorized one during a rollback.
+
+This is a major change because it changes the committed prerelease rule: a
+later rc was admitted only as a fix forward that replaces a deprecated rc, and
+now any number of rcs may follow a healthy one. It is not a patch. Product
+Scope `14.0.2` only brought the row into line with text `13.0.0` already
+covered, while this removes that condition. The React `0.1` boundary keeps its
+version line, the `next` tag, and every claim limit. The change adds no Scope
+ID, commitment state, package, platform, public surface, support claim, or
+non-goal. `SCOPE-PRODUCT-REACT-PRERELEASE` stays `committed`, and no Scope ID is
+added, removed, or transitioned. Nothing about `latest`, a stable `0.1.0`
+release, or another package is admitted, and every publish, deprecation,
+dist-tag change, and unpublish still needs its own explicit authorization.
 
 Tracker migration: none. No open work changes, and this change creates no
 tracker items.
