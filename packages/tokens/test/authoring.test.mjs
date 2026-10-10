@@ -56,9 +56,12 @@ test('canonical Scale presets compile through the shared authoring path in both 
 test('documents, sources and Scale generation stay on the canonical token contract version', () => {
   const offContract = { ...source, tokenContractVersion: `${source.tokenContractVersion}-other` };
   const scale = documentFor({}).scale;
-  validateThemeAuthoringDocument({ ...base, overrides: {} }, { source });
-  generateScaleTheme({ source, ...scale });
-  compileScalePresetTheme({ source, presetId: 'harbour' });
+  // On failure, update TOKEN_CONTRACT_VERSION in src/authoring.mjs to the canonical source's version.
+  assert.doesNotThrow(() => {
+    validateThemeAuthoringDocument({ ...base, overrides: {} }, { source });
+    generateScaleTheme({ source, ...scale });
+    compileScalePresetTheme({ source, presetId: 'harbour' });
+  }, 'src/authoring.mjs must accept the canonical source tokenContractVersion');
   assert.throws(() => validateThemeAuthoringDocument({ ...base, tokenContractVersion: offContract.tokenContractVersion, overrides: {} }, { source: offContract }), /MUXUI_THEME_CONTRACT_INVALID/u);
   assert.throws(() => validateThemeAuthoringDocument({ ...base, overrides: {} }, { source: offContract }), /MUXUI_THEME_CONTRACT_INVALID/u);
   assert.throws(() => generateScaleTheme({ source: offContract, ...scale }), /MUXUI_THEME_CONTRACT_INVALID/u);

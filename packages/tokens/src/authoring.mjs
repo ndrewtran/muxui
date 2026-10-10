@@ -1,5 +1,4 @@
 import { compilePureTokenGraph, cssDeclaration, validatePureLiteral } from './core.mjs';
-import canonicalSource from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getContrastRatio as contrastRatio } from './scale-palette.mjs';
 export { NAMED_SHADES, NEUTRAL_SHADES, randomScaleBaseColor } from './scale-palette.mjs';
 export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
@@ -11,8 +10,10 @@ export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
  * consumers can compile a validated document's typed overrides directly.
  */
 
-// The canonical default theme owns the token contract version this module accepts.
-const TOKEN_CONTRACT_VERSION = canonicalSource.tokenContractVersion;
+// The token contract version this module accepts. The package must not import the
+// canonical theme (it is not packed), so authoring.test.mjs asserts this equals
+// catalog/tokens/default-theme.json's tokenContractVersion.
+const TOKEN_CONTRACT_VERSION = '5.2.0';
 const DOCUMENT_KEYS = ['schema', 'id', 'source', 'tokenContractVersion', 'modes', 'overrides', 'scale'];
 const MODE_AXES = ['colorScheme', 'contrast', 'motion', 'density', 'direction'];
 const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'curvature'];
