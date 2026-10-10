@@ -1,4 +1,5 @@
 import { compilePureTokenGraph, cssDeclaration, validatePureLiteral } from './core.mjs';
+import canonicalSource from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { NAMED_SHADES, NEUTRAL_SHADES, generatePalette, generateMonochromePalette, getContrastRatio as contrastRatio } from './scale-palette.mjs';
 export { NAMED_SHADES, NEUTRAL_SHADES, randomScaleBaseColor } from './scale-palette.mjs';
 export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
@@ -10,6 +11,8 @@ export { getContrastRatio as getScaleContrastRatio } from './scale-palette.mjs';
  * consumers can compile a validated document's typed overrides directly.
  */
 
+// The canonical default theme owns the token contract version this module accepts.
+const TOKEN_CONTRACT_VERSION = canonicalSource.tokenContractVersion;
 const DOCUMENT_KEYS = ['schema', 'id', 'source', 'tokenContractVersion', 'modes', 'overrides', 'scale'];
 const MODE_AXES = ['colorScheme', 'contrast', 'motion', 'density', 'direction'];
 const SCALE_KEYS = ['mode', 'presetId', 'namedColor', 'neutralColor', 'whiteAnchor', 'contrastPivot', 'curvature'];
@@ -164,7 +167,7 @@ export function validateThemeAuthoringDocument(document, { source } = {}) {
   if (document.schema !== 'muxui-theme-authoring-v1') throw new TypeError('MUXUI_THEME_SCHEMA_INVALID');
   if (typeof document.id !== 'string' || !/^muxui:theme:[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(document.id)) throw new TypeError('MUXUI_THEME_ID_INVALID');
   if (document.source !== 'muxui:token:default-theme') throw new TypeError('MUXUI_THEME_SOURCE_INVALID');
-  if (document.tokenContractVersion !== '5.2.0') throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
+  if (document.tokenContractVersion !== TOKEN_CONTRACT_VERSION) throw new TypeError('MUXUI_THEME_CONTRACT_INVALID');
   assertSource(source, document);
   assertKeys(document.modes, MODE_AXES, 'document.modes');
   for (const axis of MODE_AXES) {
@@ -245,7 +248,7 @@ export function generateScaleTheme(inputs) {
   if (!['standard', 'named', 'mono', 'monochrome'].includes(inputs.mode)) throw new TypeError('MUXUI_THEME_SCALE_MODE_INVALID');
   if (inputs.whiteAnchor !== undefined && typeof inputs.whiteAnchor !== 'boolean') throw new TypeError('MUXUI_THEME_SCALE_WHITE_ANCHOR_INVALID');
   const source = inputs.source;
-  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: '5.2.0' });
+  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: TOKEN_CONTRACT_VERSION });
   const sourceScale = source.theme.scale;
   const namedShades = sourceScale.namedShades;
   const neutralShades = sourceScale.neutralShades;
@@ -369,7 +372,7 @@ export function compileThemeAuthoringDocument(document, { source, target = 'web.
  * and target-specific compilation result.
  */
 export function compileScalePresetTheme({ source, collection = 'standard', presetId, target = 'web.css', selector = ':root', modes, whiteAnchor = false, contrastPivot, curvature } = {}) {
-  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: '5.2.0' });
+  assertSource(source, { source: 'muxui:token:default-theme', tokenContractVersion: TOKEN_CONTRACT_VERSION });
   if (!['standard', 'monochrome'].includes(collection)) throw new TypeError('MUXUI_THEME_SCALE_COLLECTION_INVALID');
   if (typeof presetId !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(presetId)) throw new TypeError('MUXUI_THEME_SCALE_PRESET_INVALID');
   const scale = source.theme.scale;
