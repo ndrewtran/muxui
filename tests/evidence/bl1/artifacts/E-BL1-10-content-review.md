@@ -1,168 +1,171 @@
-# E-BL1-10 content review record: BL1 blocks after the workspace navigation block
+# E-BL1-10 content review record: BL1 blocks after the block copy advisories
 
-**Reviewer:** independent read-only reviewer agent (Claude Opus), not the authoring agents.
-**Source revision:** `e9a470c26afec974dba93a2daa5b1c95b7071b00`. Primary checkout on `main` at `e9a470c2` (PR #247), clean worktree (`git status --short` empty).
-**Date:** 2026-10-10.
-**Revision note:** during the review, an outside `git merge origin/main` fast-forwarded the checkout to `bcb671e1` (PR #248, Decision 0027). That commit changes only `README.md`, `docs/`, `decisions/`, and `strategy/`. The `catalog/patterns` tree at `bcb671e1` is the same tree as at `e9a470c2`, so this review applies unchanged. All line numbers below are at `e9a470c2`. At `bcb671e1`, the unchanged `SCOPE-NONGOAL-008` row is at `strategy/product-scope.md:162` and the unchanged `E-BL1-10` row at `strategy/milestone-roadmap.md:622`.
+**Reviewer:** independent read-only reviewer agent (Claude Opus 5.5), not the authoring agents.
+**Source revision:** `c1e5c437c385af91b38f72e04597571bb28be5b2`. Read-only checkout `<home>/Projects/muxui-content-review`, detached at `c1e5c437` (main, PR #261), clean worktree (`git status --short` empty). All line numbers below are at `c1e5c437`.
+**Date:** 2026-10-11.
 
 ## Method
 
 - **Authority:**
-  - Decision 0026 (`decisions/0026-blocks-showcase-admission.md`): item 6 (block boundary, bounded-section test, content rules; lines 122-148), item 8 (growth; lines 184-192), and item 9 (evidence, Decision 0022 carry-over; lines 194-216). The item 2 closed category enum (lines 45-50) was used for the category check.
-  - Decision 0026 amendments 01 (page-width presets) and 02 (category-name queries). Neither changes a content rule.
-  - `SCOPE-NONGOAL-008` in `strategy/product-scope.md:279`, Decision 0022, and the Roadmap `E-BL1-10` row (`strategy/milestone-roadmap.md:1316`). Both moved since the last review only because Product Scope 19.0.0 and the Decision 0023 amendment 01 R1 exit edit added lines above them; neither row's text changed.
-  - The scanner contract in `packages/catalog/src/pattern-content.mjs:1-58`, unchanged since bb609726.
-- **Block files:** for each of `catalog/patterns/{poster-grid,marketing-hero,pricing-plans,account-settings,company-records,task-filters,workspace-navigation}`, every variant `.tsx` (nine in all), every `.example.json`, and `artifact.json`.
-- **Change since the last review:** `git diff bb609726 e9a470c2 -- catalog/patterns/` only adds the three workspace-navigation files. The six earlier blocks are byte-identical to the bb609726 review (the four seed blocks also to 670cb188), so their findings carry forward. They were re-scanned, and their advisories were re-checked against the current tree. Outside the block directories, the range also changes the Sidebar component record and example (PRs #243, #244). That is component content, not block content, and it was read only where a new-block note depends on Sidebar behaviour.
+  - Decision 0026 (`decisions/0026-blocks-showcase-admission.md`), as edited in place by Decision 0029: item 2 (category from the registry; lines 48-51), item 6 (block boundary, bounded-section test, demonstration material, content rules; lines 123-152), item 8 growth (lines 184-193), and item 9 evidence with the Decision 0022 carry-over (lines 195-221).
+  - Decision 0029 (`decisions/0029-blocks-growth-rules.md`): item 1 (categories are catalog data; lines 47-50), item 6 (content review reuse and its coverage key: block tree, participant component records, and `packages/react/src` apart from the three non-rendering files; lines 116-130), and "What stays protected" (content rules, independent review of new or changed copy, Decision 0022; lines 143-153).
+  - Decision 0022 (`decisions/0022-rc1-assistive-technology-non-claim.md`): no assistive-technology support claim.
+  - `SCOPE-NONGOAL-008` (`strategy/product-scope.md:162`) and the Roadmap `E-BL1-10` row (`strategy/milestone-roadmap.md:609`). Both moved since the last review because Decision 0027 (#248) and later authority edits shortened those documents.
+  - The scanner contract in `packages/catalog/src/pattern-content.mjs:1-58`, unchanged since #228.
+- **Block files read:** for each of `catalog/patterns/{poster-grid,marketing-hero,pricing-plans,account-settings,company-records,task-filters,workspace-navigation}`, every variant `.tsx` (nine in all), every `.example.json` (nine), and `artifact.json` (seven), plus `catalog/patterns/categories.json`.
+- **Change since the e9a470c2 review, and how it was checked:**
+  - `git diff e9a470c2 c1e5c437 -- catalog/patterns` changes six files and adds one:
+    - #259 adds `catalog/patterns/categories.json`;
+    - #261 edits `poster-grid/examples/react/virtualized.tsx`, and the records `marketing-hero/artifact.json`, `pricing-plans/artifact.json`, `account-settings/artifact.json`, and `workspace-navigation/artifact.json`.
+    - Every changed line was read against the e9a470c2 advisory it answers (see Per-block findings). The `company-records` and `task-filters` trees, and the other block files (`css-grid.tsx`, `split.tsx`, `columns.tsx`, `sections.tsx`, `foldable.tsx`, and the poster-grid record), are byte-identical to e9a470c2, so their e9a470c2 findings carry forward. They were still re-read and re-scanned.
+  - `git diff e9a470c2 c1e5c437 -- catalog/components` is empty. All 21 participant component records (avatar, breadcrumbs, button, card, form, grid-list, image, link, menu, search-field, select, separator, sidebar, switch, table, tag-group, text, text-field, toggle-button, toggle-button-group, virtualizer) are unchanged. Their copy-bearing fields were read: the string API defaults (only `breadcrumbs` `aria-label: "Breadcrumbs"` and `sidebar` `placeholder: "Search"` carry copy) and their accessibility text, which was grepped for claim words.
+  - `git diff e9a470c2 c1e5c437 -- packages/react/src` changes only `generate.mjs` (#250, #256) and `r1-contracts.mjs`. No runtime module, stylesheet, or supplemental mapping changed, so no participant's rendered copy, default label, or placeholder changed. In detail:
+    - `r1-contracts.mjs` is one of the three non-rendering files that Decision 0029 item 6 leaves out of the coverage key (`tests/evidence/bl1/capture-support.mjs:245`). Its changes are build-time count and upstream checks.
+    - `generate.mjs` drops about 140 lines of drift assertions (they only throw) and derives two values that were literals. The compatibility upstream now comes from `compatibilityUpstream` (`r1-contracts.mjs:30-36`, called at `generate.mjs:354`). The React Aria version in the generated README now comes from `racVersion` (`generate.mjs:17`, used at line 619). At this revision the pin is still `1.20.0` (`packages/react/package.json:79`) and the retained snapshot's upstream is `1.20.0` at the same commit as the old literal (`catalog/react-r1-0/react-aria-1.20.0-family-evaluation.snapshot.json`). So both outputs equal the e9a470c2 literals, and neither is copy that a block renders.
+    - Runtime-owned copy that blocks render, unchanged: "Search" (`packages/react/src/supplemental/index.mjs:1275`), "Toggle sidebar" (`:1272`), "Account options" (`:1319`), the Sidebar drawer labels (`:1352-1353`), and "Clear search" (`packages/react/src/fields.mjs:592`). All are generic.
+  - Outside these paths, the range also changes `packages/catalog/src` (#259 category registry, #256 source discovery) and `packages/tokens/src/authoring.mjs` (a named constant for the token contract version). Neither renders block copy.
 - **Scans, all seven directories:**
-  - `auditPatternAssets`, `scanPatternContent`, and `scanLocalReferences` from `packages/catalog/src/pattern-content.mjs` were run read-only from a Node script outside the repository. They covered all nine variant sources, with each directory's records and sources as its known files. Result: zero violations in every file and zero asset issues, and every licensed set is empty. Positive controls (a hex colour beside a remote `url()`, and `href="/pricing"`) raised `content.colour-literal`, `content.remote-reference`, and `content.local-reference`, so the scan was live.
-  - Grep for URLs, `url()`, `@import`, `href`, `src=`, `srcSet`, and asset extensions. The only URL is the SVG-namespace data URI already passed in poster-grid (`css-grid.tsx:21`, `virtualized.tsx:29`). The new block has 13 `href` values, all `#fragment` (`foldable.tsx:39-48,157`), and no `src`, `url()`, or `@import`.
-  - Grep for hex colours, colour functions, and common named colours. No literal colour; the only hits are `white-space: nowrap` in the earlier blocks. Every colour-carrying declaration or attribute in the new block is a `--muxui-semantic-*` token, `transparent`, `inherit`, `none`, or `currentColor` (`foldable.tsx:6,72-131`).
-  - Claim words: accessible, tested, supported, compliant, certified, a11y, assistive, screen reader, VoiceOver, NVDA, JAWS, TalkBack, Narrator, WCAG, guarantee. No claim. The hits are:
+  - `auditPatternAssets` and `patternContentIssues` (`scanPatternContent` plus `scanLocalReferences`) from `packages/catalog/src/pattern-content.mjs` ran read-only from a Node script outside the repository, over all nine variant sources, with each directory's tracked records and sources as its known files. Result: zero content violations, zero asset issues, and an empty licensed set in every directory. Positive controls (a hex colour, a remote `url()`, and `href="/pricing"`) raised `content.colour-literal`, `content.remote-reference`, and `content.local-reference`, so the scan was live.
+  - Grep for URLs, `url()`, `@import`, `src=`, `srcSet`, `href`, and asset extensions. The only URL is the SVG-namespace data URI in poster-grid (`css-grid.tsx:21`, `virtualized.tsx:34`). All 15 `href` values are `#fragment`s: 13 in `foldable.tsx:39-48,157` and the two template `#${poster.id}` links (`css-grid.tsx:78`, `virtualized.tsx:96`).
+  - Grep for hex colours, colour functions, and common named colours. No literal colour; the only named-colour hits are `white-space: nowrap`.
+  - Claim words: accessible, tested, testing, support, compliant, certified, a11y, assistive, screen reader, VoiceOver, NVDA, JAWS, TalkBack, Narrator, WCAG, guarantee. The hits are only:
     - the `accessibility` and `unsupported` field names in all seven records;
     - "supporting text" (`marketing-hero/artifact.json:6`) and the ARIA term "accessible name" (`poster-grid/artifact.json:70`);
-    - the placeholder plan features "Community support", "Email support", and "Priority support" (`pricing-plans/examples/react/columns.tsx:7-9`), and the team "Support" (`task-filters`, both variants, line 9);
-    - "hidden from assistive technology", carried forward under Cross-block checks.
-    - The bb609726 record listed only the field names and "Support". The other hits were already in those byte-identical files, and none is a claim.
-  - Brand and sample-data terms: Acme, Northwind, Contoso, Fabrikam, Initech, Globex, Hooli, product brands such as Linear, Notion, Slack, GitHub, Figma, and Stripe, CRM brands such as Twenty, Attio, HubSpot, and Salesforce, "lorem ipsum", and common placeholder person names. No match in any block.
-  - Source-demo terms for the new block, from the brief's list of the BeUI animated sidebar demo: Acme Inc, Ava Stone, ava@solace.app, "Good morning, Ava.", "Wednesday, July 29", Search, AI Assistant, Inbox (4), WORKSPACES, People, Companies, Opportunities, Tasks, Notes, Workflows, Dashboard, and "Press ⌘B to toggle". Results are under Workspace navigation below.
-  - Icon provenance: the ten inline icon paths in the new block were compared segment by segment with `lucide-react` 1.37.0, the icon set `@muxui/react` already depends on. Results are under Workspace navigation below.
-- **Assets:** no block directory holds any file except its records and variant sources. No asset or `.license.json` exists in any of the seven blocks, and none is required.
-- **Limits:** the review did not run the compiler, the test suites, the browser suites, the capture script, or the docs site. The scanner functions were run on their own. Browser test sources were read, not run, to see which behaviour notes they assert. The reviewer has no copy of the BeUI demo, so freshness was checked only against the demo data the brief lists.
+    - the placeholder plan features "Community support", "Email support", and "Priority support" (`pricing-plans/examples/react/columns.tsx:7-9`), and the team "Support" (`task-filters`, both variants, line 9).
+    - "hidden from assistive technology" no longer appears in any block (#261).
+  - Brand and sample-data terms: Acme, Northwind, Contoso, Fabrikam, Initech, Globex, Hooli, Linear, Notion, Slack, GitHub, Figma, Stripe, Twenty, Attio, HubSpot, Salesforce, Apple, Google, Microsoft, Amazon, Netflix, IMDb, Spotify, Airbnb, Uber, Vercel, shadcn, Tailwind, BeUI, Solace, Ava, "lorem ipsum", and common placeholder person names (John, Jane, Doe, Smith). No match in any block.
+- **Assets:** no block directory holds any file except its records and variant sources. No asset or `.license.json` exists, and none is required.
+- **Limits:** the review did not run the compiler, `pnpm generate`, the test suites, the browser suites, the capture script, or the docs site. That the generated compatibility record and README are unchanged is reasoned from source, not regenerated. Browser test sources were read, not run, where an advisory depends on them. The reviewer has no copy of the source demos; freshness was checked only against the demo data the earlier reviews list, and the copy that could carry it is unchanged since e9a470c2.
 
 ## Per-block findings
 
-**Poster grid** (unchanged since 670cb188)
-- Copy is generic: "Sample Title" style titles, plus "Details", "Save", and "Posters" (`catalog/patterns/poster-grid/examples/react/css-grid.tsx:5-18`, `catalog/patterns/poster-grid/examples/react/virtualized.tsx:6-19`).
-- Imagery is an empty SVG data URI over a token surface (`css-grid.tsx:21`, `virtualized.tsx:29`). Links are `#fragment` placeholders.
-- Bounded-section test: pass. Only local column state is kept, and there is no fetch and no routing.
-- Advisory (carried forward, still present): `catalog/patterns/poster-grid/examples/react/virtualized.tsx:11` titles a card "A Disabled Sample Title…" while only `index % 11 === 10` is disabled (`virtualized.tsx:25`). This is misleading demonstration copy, not a content-rule breach.
+**Poster grid** (`virtualized.tsx` changed in #261; record and `css-grid.tsx` unchanged)
+- Copy is generic: "Sample Title" style titles, plus "Details", "Save", and "Posters" (`catalog/patterns/poster-grid/examples/react/css-grid.tsx:5-18,69,78-79`, `catalog/patterns/poster-grid/examples/react/virtualized.tsx:6-19,87,96-97`).
+- Imagery is an empty SVG data URI over a token surface (`css-grid.tsx:21`, `virtualized.tsx:34`). Links are `#fragment` placeholders.
+- Bounded-section test: pass. The only state is the local column count from a ResizeObserver (`virtualized.tsx:39-54`) and GridList's own selection. There is no fetch and no routing.
+- Imports match declared participants: Button, GridList, Image, Link, Text, and, in the virtualized variant, Virtualizer (`css-grid.tsx:1`, `virtualized.tsx:2`; `artifact.json:33-64`).
+- No claim (`artifact.json:69-82`).
+- e9a470c2 advisory, title mismatch: **resolved.** No base title says "Disabled" any more (`virtualized.tsx:6-19`; line 11 is now "A Sample Title That Also Wraps Onto a Second Line"). The card title takes a "Disabled " prefix exactly when `index % 11 === 10` disables the card (`virtualized.tsx:21-31`), so all 90 disabled cards say so and no enabled card does. The comment at line 21 matches the code.
+- New advisory, copy polish: because 11 and 12 share no factor, every base title is prefixed somewhere. The four that start with "A" read "Disabled A Sample Title Long Enough…", "Disabled A Sample Title That Also Wraps…", "Disabled A Medium Sample Title", and "Disabled A Last Sample Title" (base titles at `virtualized.tsx:9,11,14,18`). The CSS-grid variant writes the same idea as "A Disabled Sample Title That Also Wraps Onto a Second Line" (`css-grid.tsx:10`). This is generic placeholder copy, not a content-rule breach.
 
-**Marketing hero** (unchanged since 670cb188)
-- Copy is generic: "Introduce your product", the descriptive line, "Get started", and "See an example" (`catalog/patterns/marketing-hero/examples/react/split.tsx:77-78`).
-- The visual is Mux-authored inline SVG painted with tokens and `currentColor` (`split.tsx:85-101`), with no initials, text, or mark.
+**Marketing hero** (record changed in #261; `split.tsx` unchanged)
+- Copy is generic: "Introduce your product", the descriptive line, "Get started", and "See an example" (`catalog/patterns/marketing-hero/examples/react/split.tsx:77-81`).
+- The visual is Mux-authored inline SVG painted with tokens and `currentColor` (`split.tsx:39-58,85-101`), with no initials, text, or mark.
+- Bounded-section test: pass. No state, no fetch, no routing.
+- Imports match declared participants: Button and Text (`split.tsx:2`; `artifact.json:21-32`).
+- e9a470c2 advisory, AT wording: **resolved.** "hidden from assistive technology" now reads "marked aria-hidden" (`catalog/patterns/marketing-hero/artifact.json:37`), a DOM statement that matches `split.tsx:85`.
+- e9a470c2 advisory, stale-prone "Mux Button has no outlined variant": **resolved.** The line now reads "An outlined button: the second action uses the neutral Button variant" (`artifact.json:44`) and no longer asserts what Mux lacks. The use of neutral matches `split.tsx:81`.
+- No claim (`artifact.json:34-45`).
+
+**Pricing plans** (record changed in #261; `columns.tsx` unchanged)
+- Plan names, features, and prices are generic (`catalog/patterns/pricing-plans/examples/react/columns.tsx:6-10`). "Annual saves 20%" (`columns.tsx:141`) agrees with the placeholder prices (20 to 16, 50 to 40).
+- Only the local `period` toggle holds state, and the CTAs are inert (`columns.tsx:15,171`).
 - Bounded-section test: pass.
+- Imports match declared participants: Button, Card, Text, ToggleButton, and ToggleButtonGroup (`columns.tsx:2`; `artifact.json:30-56`).
+- e9a470c2 advisory, "heading navigation … include it": **resolved.** It now reads "so the heading text and the group's name include it" (`catalog/patterns/pricing-plans/artifact.json:62`), which follows from the markup (`columns.tsx:146-152`) and describes no AT behaviour.
+- e9a470c2 advisory, "hidden from assistive technology": **resolved.** It now reads "decorative SVG marked aria-hidden; each feature is plain text" (`artifact.json:64`), matching `columns.tsx:164-165`.
+- e9a470c2 advisory, Badge note: **resolved** with the suggested wording "Mux has no standalone Badge component" (`artifact.json:69`). It is still true: `catalog/components` has 84 entries and no Badge, and the Sidebar's count badge is a `Sidebar.NavItem` prop.
+- Advisory (carried forward, still present): "Start free and upgrade when you need more." (`columns.tsx:127`) carries no in-block placeholder marker. The record calls the prices placeholders (`artifact.json:68`), and `SCOPE-NONGOAL-008` covers them, so this is acceptable.
+- Advisory (carried forward, still present, low): "Card selected state: Card.Root has none" (`artifact.json:70`) is the one "has none" line #261 left as it was. It is true: `Card.Root` renders a plain `div` with no selected state, while `Card.Button` sets `aria-pressed` (`packages/react/src/supplemental/index.mjs:358-370`). It would go stale only if `Card.Root` gains a selected state.
+- "Prices change in place with no live region; add one if you need price changes announced." (`artifact.json:60`) states an absence and gives advice. It claims no AT behaviour.
 
-**Pricing plans** (unchanged since 670cb188)
-- Plan names, features, and prices are generic (`catalog/patterns/pricing-plans/examples/react/columns.tsx:6-10`).
-- Only the local `period` toggle holds state, and the CTAs are inert.
-- Bounded-section test: pass.
-- Advisory (carried forward, still present): "Start free and upgrade when you need more" (`catalog/patterns/pricing-plans/examples/react/columns.tsx:127`) carries no in-block placeholder marker. The record calls the prices placeholders, and `SCOPE-NONGOAL-008` covers them, so this is acceptable.
-
-**Account settings** (unchanged since 670cb188)
+**Account settings** (record changed in #261; `sections.tsx` unchanged)
 - Sample data is "Sample user" and `sample@example.com` (`catalog/patterns/account-settings/examples/react/sections.tsx:4`).
 - The form calls `preventDefault` and only moves a local snapshot (`sections.tsx:99-104`). It never submits, fetches, or persists.
 - Bounded-section test: pass.
+- Imports match declared participants: Button, Form, Select, Separator, Switch, Text, and TextField (`sections.tsx:2`; `artifact.json:30-66`).
+- e9a470c2 advisory, stale-prone "the Mux Switch puts its track before its label": **resolved.** It now reads "each Switch shows its track before its label" (`catalog/patterns/account-settings/artifact.json:81`). That describes the participant's layout without a "Mux has no X" assertion. The Switch record is unchanged.
+- No claim (`artifact.json:68-82`).
 
-**Company records** (unchanged since bb609726, Collections)
-- The bb609726 findings carry forward:
-  - placeholder companies built from obvious placeholder words, with real city names, generic tags, and no person or owner column (`catalog/patterns/company-records/examples/react/sortable.tsx:6-15`);
-  - no reuse of the earlier source demo or mock;
+**Company records** (tree byte-identical to e9a470c2)
+- The e9a470c2 findings carry forward:
+  - placeholder companies built from obvious placeholder words, with real city names, generic tags, and no person or owner column (`catalog/patterns/company-records/examples/react/sortable.tsx:8-15`);
   - one Mux-authored inline SVG (`sortable.tsx:45-49`) and token-only CSS;
-  - bounded-section test pass, with local `query`, `sort`, and `selected` state only (`sortable.tsx:32-35`);
-  - imports matching declared participants, and no AT or support claim (`catalog/patterns/company-records/artifact.json:64-73`).
-- Advisory (carried forward, still present): "Generic Supply" (`sortable.tsx:11`) shares the common noun "Supply" with the earlier mock's "Northwind Supply". It is not reuse.
-- Advisory (refined): the forced-colours note at `catalog/patterns/company-records/artifact.json:71` is asserted by an emulated forced-colours browser test (`packages/react/test/browser/pattern-company-records.test.mjs:270`, present at bb609726), so the bb609726 record overstated the gap.
-  - The test emulates forced colours; it was not run in a real forced-colours environment. This is a CSS mechanism note, not an AT or support claim.
+  - bounded-section test pass, with local `query`, `sort`, and `selected` state only (`sortable.tsx:33-35`);
+  - imports match declared participants: Button, Menu, SearchField, Table, TagGroup, and Text (`sortable.tsx:2`; `artifact.json:31-62`);
+  - no AT or support claim (`catalog/patterns/company-records/artifact.json:64-79`).
+- Advisory (carried forward, still present): "Generic Supply" (`sortable.tsx:11`) shares the common noun "Supply" with an earlier mock's "Northwind Supply". It is not reuse.
+- Advisory (carried forward, still present): the forced-colours note (`artifact.json:71`) is a CSS mechanism note. It is backed by an emulated forced-colours browser test (`packages/react/test/browser/pattern-company-records.test.mjs:270-274`), not by a run in a real forced-colours environment. It is not an AT or support claim.
+- New advisory, wording consistency: "report ascending, descending, or none through aria-sort" (`artifact.json:67`) uses the verb that #261 replaced with "sets" in workspace-navigation. "set aria-sort to ascending, descending, or none" would match. It names an ARIA attribute and claims no tested AT behaviour, so it does not fail the block.
 
-**Task filters** (unchanged since bb609726, Collections)
-- The bb609726 findings carry forward:
+**Task filters** (tree byte-identical to e9a470c2)
+- The e9a470c2 findings carry forward:
   - the same eight generic office tasks, dates, statuses, and team owners in both variants, with no person's name (`catalog/patterns/task-filters/examples/react/filter-bar.tsx:4-13`, `catalog/patterns/task-filters/examples/react/status-buttons.tsx:4-13`);
-  - no reuse of the earlier source demo or mock;
   - no imagery;
-  - bounded-section test pass, with local `query`, `status`, and `filter` state only;
-  - imports matching declared participants, and no AT or support claim (`catalog/patterns/task-filters/artifact.json:75-84`).
-- Advisory (carried forward, still present): "Review the draft outline" (`filter-bar.tsx:6`, `status-buttons.tsx:6`) shares "Review" and "draft" with the earlier mock's "Review the menu draft". It is not reuse.
+  - bounded-section test pass, with local `query`, `status`, and `filter` state only (`filter-bar.tsx:28-29`, `status-buttons.tsx:27`);
+  - imports match declared participants (`filter-bar.tsx:2`: Button, SearchField, Select, Table, TagGroup, Text; `status-buttons.tsx:2`: Table, Text, ToggleButton, ToggleButtonGroup; `artifact.json:29-70`);
+  - no AT or support claim (`catalog/patterns/task-filters/artifact.json:75-89`).
+- Advisory (carried forward, still present): "Review the draft outline" (`filter-bar.tsx:6`, `status-buttons.tsx:6`) shares "Review" and "draft" with an earlier mock's "Review the menu draft". It is not reuse.
 
-**Workspace navigation** (new, Navigation)
-- **Category:** `navigation` is in the Application group of the Decision 0026 item 2 closed enum (decision lines 45-46) and in `packages/schema/schemas/pattern.schema.json:51-53` since PR #224. This is the first block in that category, not a new category, so item 8 growth applies without a further decision (`catalog/patterns/workspace-navigation/artifact.json:21`).
-- **Placeholder data**, `catalog/patterns/workspace-navigation/examples/react/foldable.tsx`:
-  - Workspace: "Sample workspace" on the switcher and the drawer header (lines 28, 151), the menu items "Sample workspace" and "Example team" (line 32), and an Avatar fallback initial "S" with no image (line 27).
-  - Account: "Sample user" and `sample@example.com` (line 52), the same placeholder as account-settings. `example.com` is a reserved example domain. No `avatarSrc` is passed, so the Sidebar renders only the initial (`packages/react/src/supplemental/index.mjs:1319`).
-  - Links: Inbox (badge "3"), Updates, and Saved, then a "Projects" section with Overview (current), Roadmap (Now, Next, Later), Reviews (badge "12"), Files, Reports (Weekly, Quarterly), and Settings (lines 39-48).
-  - Main pane: the breadcrumb Projects / Overview, the heading "Overview", and "This pane holds your page content." (lines 157-160).
-  - No real person, company, or product is named. "Now, Next, Later" is a common generic roadmap convention, not a brand or mark.
-- **Freshness against the source demo:**
-  - No distinctive demo data reappears. There is no "Acme Inc", "Ava Stone", "ava@solace.app", greeting, or date. There is no "AI Assistant", "WORKSPACES" label, People, Companies, Opportunities, Tasks, Notes, Workflows, or Dashboard item, and no "Press ⌘B to toggle" text. The theme is a generic project workspace, not a CRM.
-  - Generic overlaps:
-    - "Search" is the Sidebar component's default placeholder (`index.mjs:1275`), not block copy.
-    - "Inbox" with a count badge is a generic inbox item, and the count differs (3, not 4).
-    - "workspace" appears as the block's name and in the "Sample workspace" placeholder, not as a "Workspaces" section label. The block's section label is "Projects".
-  - Advisory: the Cmd or Ctrl plus B fold shortcut (`shortcut="b"`, line 148; disclosed at `artifact.json:62`) matches the demo's ⌘B toggle. It is a common sidebar-toggle convention and a behaviour, not copy, and the block renders no shortcut hint, so this is not reuse.
-- **Copy:** "Sample workspace", "Example team", "Workspace links", the link and section labels above, "Breadcrumb", "Workspace", "Overview", and "This pane holds your page content." It is generic and Mux-authored, and makes no product or quality claim. Labels the components own ("Toggle sidebar", "Search", "Open navigation", "Close navigation", "Navigation", "Account options"; `index.mjs:1272,1275,1319,1352-1353`) are generic too.
-- **Imagery:** ten inline stroke icons made by one local factory (`foldable.tsx:5-19`), with `fill="none"`, `stroke="currentColor"`, and `aria-hidden`. There is no raster, no data URI, and no mark.
-  - Nine of the ten paths match no Lucide icon.
-  - Advisory: the `Switch` icon (`foldable.tsx:19`) has the same geometry as Lucide's `chevrons-up-down`, which the Sidebar account card imports (`index.mjs:54`). Two plain chevrons, ISC-licensed and listed in `packages/react/NOTICE`, and not a mark, so it does not block.
-    - Redrawing the icon, or noting that it follows Lucide, would make its Mux-authored provenance exact. Path: `m7 15 5 5 5-5M7 9l5-5 5 5` against Lucide `m7 15 5 5 5-5`, `m7 9 5-5 5 5`.
-- **Bounded-section test: pass.**
-  - One bounded frame (`.workspace`, lines 67-74, 149) holds the navigation column (or its drawer below 40rem) and a placeholder main pane. The pane holds only a breadcrumb, a heading, and one sentence (lines 154-161). The region is the navigation shell; it composes no page content.
-  - No routing: there is no router, route state, or navigation logic. Every href is a `#fragment`, and the current link is fixed in the source (line 43), as `artifact.json:69` discloses.
-  - State is local presentation only, and it lives in the components: the fold (`Sidebar.Provider`, uncontrolled), native `details` groups, the menu, and the drawer. The block itself keeps no state; it calls only `useId` (line 57). The shortcut listens on the document (`index.mjs:1204-1206`) but changes only the local fold.
-  - No fetch, submission, or persistence. The menu items, Search, and badges are inert placeholders (`artifact.json:71-73`), and the fold resets on reload (`artifact.json:70`).
-  - Advisory: of the seven blocks, this one is closest to a page shell. It stays one region because the main pane is only a placeholder. Filling that pane with page content would move it toward the page templates that item 6 excludes.
-- **Imports vs participants:** Avatar, Breadcrumbs, Menu, Sidebar, and Text (line 2) all match declared participants (`artifact.json:32-58`), and all five are catalog components at e9a470c2. The plain markup is `div`, `nav`, `section`, `style`, and inline `svg`.
-- **Claims:** the accessibility notes (`artifact.json:60-67`) cover several points. They make no "accessible", "tested", "supported", "compliant", WCAG, or screen-reader claim (Decision 0022). The points are:
-  - landmarks and names set by `aria-label`;
-  - `aria-expanded` and `aria-controls` on the fold button, and the shortcut;
-  - rail tooltips, native disclosures, and `aria-current`;
-  - the drawer dialog's focus handling;
-  - a forced-colours outline.
-  - Each statement follows from DOM structure or component source (`index.mjs:1105-1115,1264-1272,1302-1316,1351-1353`, `packages/react/src/supplemental/styles.css:2904-2918`). The block browser test asserts them by role, name, and focus (`packages/react/test/browser/pattern-workspace-navigation.test.mjs`, test cases at lines 112-463).
-  - Advisory: "complementary landmark", "navigation landmark", "a dialog named Navigation", and "reports aria-expanded" (`artifact.json:61-62,65`) name ARIA roles and states. "Reports" reads closest to an AT-behaviour statement; "sets aria-expanded" would be plainer. None of these claims tested or supported AT behaviour.
-  - Advisory: the forced-colours note (`artifact.json:66`) repeats the company-records mechanism note. An emulated forced-colours, computed-style test backs it (`pattern-workspace-navigation.test.mjs:316-340`); it was not checked in a real forced-colours environment. It is not an AT or support claim.
-- **Unsupported list and workflow value:** they disclose routing, fold persistence, workspace switching, search, and live counts as placeholders (`artifact.json:68-75`), and they make no claim.
+**Workspace navigation** (record changed in #261; `foldable.tsx` unchanged)
+- **Category:** `navigation` is declared in the application group of the registry (`catalog/patterns/categories.json:2`), which Decision 0029 item 1 makes the category authority (`catalog/patterns/workspace-navigation/artifact.json:21`).
+- **Placeholder data:** the e9a470c2 findings carry forward, at the same lines of `catalog/patterns/workspace-navigation/examples/react/foldable.tsx`:
+  - "Sample workspace", "Example team", and an Avatar fallback initial "S" (lines 27-32, 151);
+  - "Sample user" and `sample@example.com` (line 52);
+  - the links Inbox (badge "3"), Updates, Saved, Projects, Overview, Roadmap (Now, Next, Later), Reviews (badge "12"), Files, Reports (Weekly, Quarterly), and Settings (lines 39-48);
+  - the main pane's breadcrumb, heading "Overview", and "This pane holds your page content." (lines 157-160).
+  - No real person, company, or product is named. No distinctive data from the BeUI sidebar demo reappears.
+- **Participant-owned copy:** "Search" (`supplemental/index.mjs:1275`), "Toggle sidebar" (`:1272`), "Account options" (`:1319`), and the drawer labels (`:1352-1353`) are unchanged since e9a470c2 and generic. The block overrides the Breadcrumbs default "Breadcrumbs" with "Breadcrumb" (line 157).
+- **Imagery:** ten Mux-drawn inline stroke icons from one local factory (`foldable.tsx:5-19`), with `fill="none"`, `stroke="currentColor"`, and `aria-hidden`.
+- **Bounded-section test: pass.** One bounded frame holds the navigation column (or its drawer below 40rem) and a placeholder main pane (`foldable.tsx:149-162`). There is no router or route state, every href is a `#fragment`, and the current link is fixed (line 43). The block keeps no state of its own and calls only `useId` (line 57).
+- **Imports vs participants:** Avatar, Breadcrumbs, Menu, Sidebar, and Text (line 2) match declared participants (`artifact.json:32-58`).
+- e9a470c2 advisory, "reports aria-expanded": **resolved.** It now reads "The fold button sets aria-expanded and controls the column by id" (`artifact.json:62`), which matches the runtime (`supplemental/index.mjs:1272`).
+- Advisory (carried forward, no change needed): "complementary landmark", "navigation landmark", and "a dialog named Navigation" (`artifact.json:61,65`) name ARIA roles that follow from DOM structure. They claim no tested or supported AT behaviour.
+- Advisory (carried forward, still present): the forced-colours note (`artifact.json:66`) is backed by an emulated forced-colours test (`packages/react/test/browser/pattern-workspace-navigation.test.mjs:316-320`), not by a real forced-colours run. It is not an AT or support claim.
+- Advisory (carried forward, still present): the `Switch` icon (`foldable.tsx:19`) has the same geometry as Lucide's `chevrons-up-down`, which the Sidebar account card imports (`supplemental/index.mjs:54`). It is two plain chevrons, ISC-licensed and listed in `packages/react/NOTICE:54-56`, not a mark. Decision 0029 records Andrew's direction that Lucide is Mux UI's default icon set (line 221), which lowers this further. Importing the Lucide icon, or noting that the path follows it, would make the provenance exact.
+- Advisory (carried forward, still present): the Cmd or Ctrl plus B fold shortcut (`shortcut="b"`, line 148; `artifact.json:62`) matches the source demo's toggle. It is a common convention and a behaviour, not copy, and the block renders no shortcut hint.
+- Advisory (carried forward, still present): of the seven blocks this one is closest to a page shell. It stays one region because the main pane is only a placeholder (`foldable.tsx:154-161`). Filling that pane with page content would move it toward the page templates that item 6 excludes.
+- No claim (`artifact.json:60-74`).
 
 ## Cross-block checks
 
-- **Imports vs participants:** every `@muxui/react` import in each of the nine variants is a declared participant of its pattern.
+- **Categories:** every block's category is declared in `catalog/patterns/categories.json:2-3`: collections (poster-grid, company-records, task-filters), forms (account-settings), navigation (workspace-navigation), hero (marketing-hero), and pricing (pricing-plans).
+- **Imports vs participants:** every `@muxui/react` import in each of the nine variants is a declared participant of its pattern, and every participant resolves to a catalog component record that is unchanged since e9a470c2.
 - **Content scan:** the scanner rules ran on all nine variant sources and found zero `content.remote-reference`, `content.local-reference`, or `content.colour-literal` violations. No asset exists, so `content.asset-license` has nothing to check.
-- **Claims:** no record or visible prose in any of the seven blocks says "accessible", "tested", "supported", or "compliant", names a screen reader, or cites WCAG. No assistive-technology support claim is made (Decision 0022).
-- **Overlap with the source demo:** the new block reuses no distinctive name, email, greeting, date, nav item, or theme from the BeUI sidebar demo. The earlier headings "Companies" (`company-records/examples/react/sortable.tsx:121`) and "Tasks" (`task-filters/examples/react/filter-bar.tsx:101`, `status-buttons.tsx:51`) share generic nouns with that demo's nav items. Those blocks are byte-identical since bb609726, which reviewed them against their own source demo, and both words name the block's own collection, so this is not reuse.
-- **Cross-block reuse:** "Sample user" and `sample@example.com` appear in both account-settings and workspace-navigation. "Vendor" still appears in company-records and task-filters. All are Mux-authored generic placeholders, which is acceptable.
-- **Advisory, AT wording (carried forward, still present):** these phrases follow from DOM structure rather than from tested support:
-  - "hidden from assistive technology" (`catalog/patterns/marketing-hero/artifact.json:37`, `catalog/patterns/pricing-plans/artifact.json:64`);
-  - "heading navigation … include it" (`catalog/patterns/pricing-plans/artifact.json:62`). This one is closest to an AT-behaviour statement and could be softened.
-- **Advisory, stale-prone notes (carried forward, still true):** the "Mux has no X" style lines go stale once that component or variant is admitted:
-  - `catalog/patterns/marketing-hero/artifact.json:44`: Button variants are still primary, neutral, ghost, danger, danger-neutral, danger-ghost, and inverse, with no outlined variant;
-  - `catalog/patterns/pricing-plans/artifact.json:69-70`: at e9a470c2, `catalog/components` has 84 entries and still no Badge, and the Card record is unchanged;
-  - `catalog/patterns/account-settings/artifact.json:81`: the Switch record is unchanged;
-  - the Button, Card, and Switch records are unchanged since 670cb188;
-  - new nuance: the workspace navigation block shows count badges through the `badge` prop of `Sidebar.NavItem`, which is a Sidebar part, not a Badge family. "Mux has no Badge" is still true, but beside this block it could read as contradicted. "Mux has no standalone Badge component" would be exact.
+- **Claims:** no record or visible prose in any of the seven blocks says "accessible" as a quality claim, "tested", "supported", or "compliant", names a screen reader, or cites WCAG. No assistive-technology support claim is made (Decision 0022). #261 removed the remaining "hidden from assistive technology" and "heading navigation" phrasing from the block records.
+- **Participant records, outside block content:** the Table component record still says "the sort chevron is decorative and hidden from assistive technology" (`catalog/components/table/artifact.json:1`), and several records use "supported" for API behaviour (for example "Controlled and uncontrolled values are supported"). These are component records, outside the block content rules, unchanged since e9a470c2, and not rendered by any block. They are noted only for completeness.
+- **Cross-block reuse:** "Sample user" and `sample@example.com` appear in both account-settings and workspace-navigation. "Vendor" appears in company-records and task-filters. All are Mux-authored generic placeholders, which is acceptable.
+- **Overlap with source demos:** "Companies" and "Tasks" (`company-records/examples/react/sortable.tsx:121`, `task-filters/examples/react/filter-bar.tsx:101`, `status-buttons.tsx:51`) share generic nouns with the BeUI sidebar demo's nav items. Both name the block's own collection, and the copy is unchanged since the reviews that cleared it. This is not reuse.
+- **Stale-prone notes:** #261 resolved three of the four "Mux has no X" lines. Only `pricing-plans/artifact.json:70` ("Card.Root has none") remains, and it is true at this revision.
 
 ## Verdict table
 
-| Block | Third-party brand or mark | Real person or likeness | Generic Mux-authored copy | No external URL or asset | Imagery | No product, quality, test, or AT claim | Bounded-section test | Verdict |
-|---|---|---|---|---|---|---|---|---|
-| poster-grid | none | none | yes | yes (`css-grid.tsx:21`) | empty data URI | yes (`artifact.json:69-83`) | pass | **Pass** |
-| marketing-hero | none | none | yes (`split.tsx:77-78`) | yes | inline SVG (`split.tsx:85`) | yes (`artifact.json:34-46`) | pass | **Pass** |
-| pricing-plans | none | none | yes (`columns.tsx:6-10,126-141`) | yes | inline SVG (`columns.tsx:164`) | yes, with advisory (`artifact.json:62`) | pass | **Pass** |
-| account-settings | none | none | yes (`sections.tsx:4,107-136`) | yes | none | yes (`artifact.json:68-83`) | pass | **Pass** |
-| company-records | none | none (teams only, no owner column) | yes, fresh data (`sortable.tsx:6-15,121-131`) | yes | inline SVG (`sortable.tsx:45-49`) | yes, with advisory (`artifact.json:71`) | pass | **Pass** |
-| task-filters | none | none (team owners) | yes, fresh data (`filter-bar.tsx:4-15`, `status-buttons.tsx:4-15`) | yes | none | yes (`artifact.json:75-84`) | pass | **Pass** |
-| workspace-navigation | none (one Lucide-identical chevron glyph, not a mark) | none ("Sample user", `sample@example.com`) | yes, fresh data (`foldable.tsx:27-52,157-160`) | yes (`#fragment` only, `foldable.tsx:39-48,157`) | inline SVG icons (`foldable.tsx:5-19`) | yes, with advisories (`artifact.json:61-66`) | pass | **Pass** |
+| Block | Third-party brand or mark | Real person or likeness | Generic Mux-authored copy | No external URL or asset | No literal colour | Imagery | Imports are declared participants | No accessibility, testing, support, or compliance claim | Bounded-section test | Verdict |
+|---|---|---|---|---|---|---|---|---|---|---|
+| poster-grid | none | none | yes (`virtualized.tsx:6-31`, `css-grid.tsx:5-18`) | yes (data URI, `#` links) | yes | empty data URI (`css-grid.tsx:21`, `virtualized.tsx:34`) | yes | yes (`artifact.json:69-82`) | pass | **Pass** |
+| marketing-hero | none | none | yes (`split.tsx:77-81`) | yes | yes | inline SVG (`split.tsx:85-101`) | yes | yes (`artifact.json:34-45`) | pass | **Pass** |
+| pricing-plans | none | none | yes (`columns.tsx:6-10,126-141`) | yes | yes | inline SVG (`columns.tsx:164`) | yes | yes (`artifact.json:58-71`) | pass | **Pass** |
+| account-settings | none | none ("Sample user") | yes (`sections.tsx:4,107-139`) | yes | yes | none | yes | yes (`artifact.json:68-82`) | pass | **Pass** |
+| company-records | none | none (no owner column) | yes (`sortable.tsx:8-15,121-131`) | yes | yes | inline SVG (`sortable.tsx:45-49`) | yes | yes, with wording advisory (`artifact.json:67`) | pass | **Pass** |
+| task-filters | none | none (team owners) | yes (`filter-bar.tsx:4-15`, `status-buttons.tsx:4-15`) | yes | yes | none | yes | yes (`artifact.json:75-89`) | pass | **Pass** |
+| workspace-navigation | none (one Lucide-identical chevron glyph, not a mark) | none ("Sample user", `sample@example.com`) | yes (`foldable.tsx:27-52,157-160`) | yes (`#fragment` only) | yes | inline SVG icons (`foldable.tsx:5-19`) | yes | yes (`artifact.json:60-74`) | pass | **Pass** |
 
 ## Overall verdict
 
-**Pass.** All seven blocks meet the E-BL1-10 content assertions at `e9a470c2`:
+**Pass.** All seven blocks meet the E-BL1-10 content assertions at `c1e5c437`:
 
 - no third-party brand or mark;
 - no real person's name or likeness;
-- only generic Mux-authored copy;
+- only generic Mux-authored copy, with no distinctive reuse from a source demo;
 - no external URL or remote asset;
 - no literal colour;
 - no unlicensed asset;
-- the bounded-section test passes for every block.
+- every import is a declared participant;
+- the bounded-section test passes for every block;
+- no record or visible prose claims accessibility, testing, support, or compliance, names a screen reader, or cites WCAG.
 
-The new workspace-navigation block's placeholder data is freshly written. It reuses no distinctive name, email, greeting, date, nav item, or theme from the BeUI sidebar demo; its only echoes are generic UI words ("Search", "Inbox") and the common Cmd or Ctrl plus B shortcut. The six earlier blocks are byte-identical to the bb609726 review, and their findings hold.
+The #261 copy changes are generic and Mux-authored and introduce no claim. The category registry from #259 declares every block's category. No participant component record changed since e9a470c2. The `packages/react/src` changes (`generate.mjs`, `r1-contracts.mjs`) change no runtime module, stylesheet, or mapping, and at this revision they leave every generated value equal to its old literal, so no block renders different copy.
 
-No actionable failure remains. The advisories above are optional follow-ups and do not block this verdict:
+**Resolved by #261:** the virtualized title mismatch (`poster-grid/examples/react/virtualized.tsx:11,21-31`); the AT wording in `marketing-hero/artifact.json:37`, `pricing-plans/artifact.json:62,64`, and `workspace-navigation/artifact.json:62`; and the stale-prone lines in `marketing-hero/artifact.json:44`, `account-settings/artifact.json:81`, and `pricing-plans/artifact.json:69` (Badge).
 
-- the `virtualized.tsx:11` title mismatch;
-- the unmarked pricing offer copy;
-- the AT wording in `pricing-plans`, `marketing-hero`, and `workspace-navigation` ("reports aria-expanded");
-- the stale-prone "Mux has no X" lines, including the Badge note beside the Sidebar's count badges;
-- the forced-colours notes at `company-records/artifact.json:71` and `workspace-navigation/artifact.json:66`, which emulated tests back but no real forced-colours run does;
-- the generic-word echoes "Generic Supply" and "Review the draft outline";
-- the Lucide-identical `Switch` chevron glyph in `workspace-navigation/examples/react/foldable.tsx:19`;
-- the shared Cmd or Ctrl plus B convention with the source demo;
-- workspace-navigation as the block closest to a page shell, whose main pane should stay a placeholder.
+No failure. The remaining advisories are optional follow-ups and do not block this verdict:
+
+- New: the "Disabled A …" prefix reads awkwardly on titles that start with "A", and the two poster-grid variants phrase disabled titles differently (`virtualized.tsx:9,11,14,18,27`, `css-grid.tsx:10`).
+- New: "report … through aria-sort" (`company-records/artifact.json:67`) keeps the verb #261 replaced elsewhere; "set aria-sort" would match.
+- Carried: the unmarked pricing offer copy (`pricing-plans/examples/react/columns.tsx:127`).
+- Carried, low: the stale-prone "Card.Root has none" (`pricing-plans/artifact.json:70`), true today.
+- Carried: the forced-colours notes (`company-records/artifact.json:71`, `workspace-navigation/artifact.json:66`), which emulated tests back but no real forced-colours run does.
+- Carried: the generic-word echoes "Generic Supply" and "Review the draft outline".
+- Carried: the Lucide-identical `Switch` chevron glyph (`workspace-navigation/examples/react/foldable.tsx:19`).
+- Carried: the shared Cmd or Ctrl plus B convention with the source demo.
+- Carried: workspace-navigation is the block closest to a page shell, so its main pane should stay a placeholder.

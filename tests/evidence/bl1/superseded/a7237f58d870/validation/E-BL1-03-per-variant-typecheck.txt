@@ -1,0 +1,79 @@
+{
+  "tsc": "Version 7.0.2",
+  "strict": true,
+  "skipLibCheck": false,
+  "variants": [
+    {
+      "id": "muxui:example:poster-grid-css-grid",
+      "source": "catalog/patterns/poster-grid/examples/react/css-grid.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:poster-grid-virtualized",
+      "source": "catalog/patterns/poster-grid/examples/react/virtualized.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:marketing-hero-split",
+      "source": "catalog/patterns/marketing-hero/examples/react/split.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:pricing-plans-columns",
+      "source": "catalog/patterns/pricing-plans/examples/react/columns.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:account-settings-sections",
+      "source": "catalog/patterns/account-settings/examples/react/sections.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:company-records-sortable",
+      "source": "catalog/patterns/company-records/examples/react/sortable.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:task-filters-status-buttons",
+      "source": "catalog/patterns/task-filters/examples/react/status-buttons.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:task-filters-filter-bar",
+      "source": "catalog/patterns/task-filters/examples/react/filter-bar.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    },
+    {
+      "id": "muxui:example:workspace-navigation-foldable",
+      "source": "catalog/patterns/workspace-navigation/examples/react/foldable.tsx",
+      "exitCode": 0,
+      "diagnostics": 0,
+      "packedDeclarations": true,
+      "workspaceSources": false
+    }
+  ]
+}

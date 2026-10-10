@@ -1,5 +1,5 @@
 {
-  "tsc": "Version 7.0.2",
+  "tsc": "Version 6.0.3",
   "strict": true,
   "skipLibCheck": false,
   "variants": [

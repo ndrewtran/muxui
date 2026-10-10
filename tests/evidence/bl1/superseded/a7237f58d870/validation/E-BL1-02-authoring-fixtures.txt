@@ -1,0 +1,27 @@
+✔ E-BL1-02: a scaffold emits only canonical inputs under catalog/patterns and previews the manifest (9.454541ms)
+✔ E-BL1-02: a scaffold round-trips through schema validation, compile, and get (3657.517125ms)
+✔ E-BL1-02 negative: a scaffold refuses missing decisions, unowned fields, and non-canonical sources (37.921625ms)
+✔ E-BL1-02: semantic diff separates editorial, compatible, and incompatible pattern edits (10.709208ms)
+✔ E-BL1-02: change intent previews a pattern edit with its variants and checks (6.489541ms)
+✔ E-BL1-02: a variant source edit moves only patternRevision and that example's contentRevision (236.695583ms)
+✔ E-BL1-02: affected closure reaches a pattern from a variant source, its schema, and its components (32.219417ms)
+✔ E-BL1-02: an orphan example is diagnosed at its owner, now resolvable (61.657875ms)
+✔ E-BL1-02: an undeclared import is diagnosed with its file, line, and the canonical form (186.258542ms)
+✔ E-BL1-02: an unknown participant is diagnosed at the participant component (61.749542ms)
+✔ E-BL1-02: a duplicate variant is diagnosed through the manifest entry the compiler stopped at (14.507417ms)
+✔ E-BL1-02: a colliding variant id is attributed to the later declaration and references the earlier one (144.625625ms)
+✔ E-BL1-02: a hand-edited CRLF variant is diagnosed at its example record and source file (61.976291ms)
+✔ E-BL1-02: pattern records diagnose at their field owners through canonical source diagnosis (2.075208ms)
+✔ E-BL1-01: an unknown pattern field is diagnosed at the pattern contract through the family fallback (1.489709ms)
+✔ E-BL1-02: an authored derived field is diagnosed at its reserved owner, not the family contract (27.896125ms)
+✔ E-BL1-02: every pattern and example path reports its own revision members, never the generic fallback (16.153208ms)
+✔ E-BL1-02: an injected stable pattern field must couple scaffold, diff, diagnostics, and closure (10.467625ms)
+✔ E-BL1-02: an injected required example field must couple variant decisions to the example schema (9.600875ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4800.427
