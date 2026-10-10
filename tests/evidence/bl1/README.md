@@ -126,7 +126,7 @@ index binds a single source revision and tree.
 | `E-BL1-01` | `node --test` over `packages/schema/test/pattern.test.mjs` and `packages/catalog/test/pattern-catalog.test.mjs`; each required negative is listed with the code, path, message, and owner parsed from the test source that ran |
 | `E-BL1-02` | `packages/tooling/test/pattern-authoring.test.mjs` |
 | `E-BL1-03` | `pnpm --filter @muxui/repository-policy run proof:pattern-variants` (packed SSR and hydration, with row proof), the packed-declarations typecheck test, and `variant-typecheck.mjs` (one `tsc` run per variant against the packed declarations) |
-| `E-BL1-04` | `apps/react-storybook` `check:scoped` with the block slugs as families (light and dark axe and colour audits per Block page), and the block browser tests with `MUXUI_BROWSER_ENGINES=chromium,firefox,webkit`: one per interactive block, as `pullRequestImpact.patternBrowserTests` in `tooling/audits/repository-policy/repository-policy.json` declares them (four at the close-out) |
+| `E-BL1-04` | `apps/react-storybook` `check:scoped` with the block slugs as families (light and dark axe and colour audits per Block page), and the block browser tests with `MUXUI_BROWSER_ENGINES=chromium,firefox,webkit`: one per interactive block, each the block's own `packages/react/test/browser/pattern-<slug>.test.mjs` (four at the close-out) |
 | `E-BL1-05` | `pnpm --filter @muxui/docs run check`, which includes the `check-blocks` report |
 | `E-BL1-06` | `pnpm --filter @muxui/scale run check:browser:docs` with `MUXUI_BLOCKS_CAPTURE_DIR`: every variant at every toolbar preset, and every marketing variant at every page width, in light and dark, with the overflow report |
 | `E-BL1-07` | `surface-parity.mjs`: the API, CLI JSON, human, dense, and the site loader over pattern `list`, `search`, `get`, the participant filter, `usedIn`, and component examples, plus the CLI and loader tests |
@@ -269,7 +269,8 @@ two reviews by the same model are not independent of each other.
   rank.
 - `E-BL1-08`: the catalog digest moved before any block shipped (the query API bump,
   #223, and the pattern kind, #224), so the close-out baseline is the digest pinned at #225, not
-  the pre-BL1 digest; the capture records the whole chain. That pin is never moved: later
+  the pre-BL1 digest; the capture records the whole chain, reading each digest from the
+  golden at its fixed commit (the current goldens hold placeholders, not digests). That pin is never moved: later
   pull requests changed component records, so a growth capture records the digest across the commits
   that added or changed its blocks instead, with the same compiler on both sides. That comparison is an
   observation, not a gate (Decision 0029): a growth commit that changes the compiler, the schema, or other
@@ -382,7 +383,7 @@ way cannot be captured.
 
 - the block under `catalog/patterns/<slug>/` and its entries in
   `packages/catalog/catalog-sources.json`, then `pnpm generate` for the projections
-  (the catalog digest goldens, the Storybook Block pages, and the docs routes);
+  (the Storybook Block pages and the docs routes);
 - `tests/evidence/bl1/regression-thresholds.json`: entries for the new block, all
   written before any measurement of that block: its own discovery queries and
   expectations, its id in `seedSet`, its ids in the `relevant` lists of the component
@@ -423,10 +424,9 @@ way cannot be captured.
   that change's own risk calls for (Decision 0028), named in the pull request. A growth capture records
   it and claims nothing about it;
 - for an interactive block, its cross-engine test
-  `packages/react/test/browser/pattern-<slug>.test.mjs` and its route in
-  `pullRequestImpact.patternBrowserTests` (`tooling/audits/repository-policy/repository-policy.json`).
-  CI impact planning and the capture both read that one route. A block with no
-  interactive behavior declares none.
+  `packages/react/test/browser/pattern-<slug>.test.mjs`. CI impact planning and the
+  capture both find a block's test by that file name, so adding the file is the whole
+  declaration. A block with no interactive behavior has no such file.
 
 Retained evidence keeps verifying while the file changes: the index pins the thresholds
 at the close-out revision and `evidence-verify` reads that revision's git object, so the
@@ -435,9 +435,10 @@ and, at once, to `packages/tooling/test/pattern-regression.test.mjs`, which runs
 `regression.mjs` on every `@muxui/tooling` check and holds the new block to the thresholds
 in the working tree. On the branch, in order:
 
-1. `pnpm generate`, then refresh the dense goldens in `packages/tooling/test/goldens/`,
-   which pin the catalog digest (the `E-G0.3-03` test in
-   `packages/tooling/test/cli.test.mjs` renders them; the diff must be digests only).
+1. `pnpm generate`. The dense goldens in `packages/tooling/test/goldens/` hold no digests
+   (the `E-G0.3-03` test in `packages/tooling/test/cli.test.mjs` normalizes them), so a
+   block that changes no rendered content leaves them alone; refresh them with
+   `MUXUI_UPDATE_GOLDENS=1` only when that test reports a content change.
 2. `node tooling/audits/repository-policy/src/ci-impact.mjs --preview` for the groups CI
    will run, then those checks: `pnpm check` for the changed files, or the packages the
    plan names (`@muxui/repository-policy`, which runs `evidence-verify` and the integrity
@@ -462,7 +463,7 @@ node tests/evidence/capture-bl1.mjs --growth \
 - It refuses unless a close-out capture is retained (current, or archived under
   `superseded/`) and the catalog has a block that capture did not measure.
 - It reads the thresholds as committed at the merge commit, derives the browser tests
-  from `patternBrowserTests`, and measures every block, not only the new one. It refuses an unlogged
+  from the `pattern-<slug>.test.mjs` files, and measures every block, not only the new one. It refuses an unlogged
   threshold change (`BL1_THRESHOLDS_UNLOGGED`).
 - A content review is passed only for the blocks no retained review covers by tree; a review already
   retained covers an unchanged block, and the coverage table in `E-BL1-10` says which.
@@ -476,7 +477,7 @@ node tests/evidence/capture-bl1.mjs --growth \
   retained reviews updated for the new capture, and open it as a records-only pull request.
 
 `evidence-integrity.test.mjs` holds a growth capture to facts derived at its own source
-revision (the variants from the catalog, the browser tests from `patternBrowserTests`,
+revision (the variants from the catalog, the browser tests from `pullRequestImpact.patternBrowserTests` where the policy at that revision declares it and from the `pattern-<slug>.test.mjs` files in that revision's tree otherwise,
 the page widths from `block-presets.ts`, the query count and the revised-expectation count from the
 thresholds, and the growth commits from git, whose scoped audit it recomputes from git objects), and
 keeps the close-out capture, current or archived, to its exact pins: five variants, 57 of 57 browser

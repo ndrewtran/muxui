@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { posix, resolve } from 'node:path';
 
@@ -79,4 +80,16 @@ export function changedPatternSlugs(beforeText, afterText) {
   const [before, after] = [entries(beforeText), entries(afterText)];
   const changed = [...before].filter((path) => !after.has(path)).concat([...after].filter((path) => !before.has(path)));
   return [...new Set(changed.map((path) => path.split('/')[2]))].sort();
+}
+
+/**
+ * The browser test an interactive pattern ("block") owns by convention, as a
+ * path relative to `packages/react`: `test/browser/pattern-<slug>.test.mjs`
+ * when `reactRoot` has that file, otherwise undefined. A block adds its test by
+ * adding the file; no policy entry declares it. CI impact planning and the BL1
+ * capture both derive their block browser tests from this.
+ */
+export function patternBrowserTest(reactRoot, slug) {
+  const file = `test/browser/pattern-${slug}.test.mjs`;
+  return existsSync(resolve(reactRoot, file)) ? file : undefined;
 }

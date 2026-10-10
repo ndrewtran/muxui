@@ -781,8 +781,8 @@ test('generation and install commands are marked as CI prerequisites', async () 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
   const catalog = await plan(['packages/catalog/src/compiler.mjs']);
   const catalogCommands = executionCommands(catalog, { packages });
-  // Catalog changes also run the tooling dense goldens that pin the catalog
-  // digest, plan its runtime dependents (docs, tooling, and policy through
+  // Catalog changes also run the tooling dense goldens that snapshot catalog
+  // responses, plan its runtime dependents (docs, tooling, and policy through
   // tooling) as if they changed, and run only the package checks of React
   // Native and Web, which depend on the catalog as a devDependency. React's
   // catalog devDependency is scoped: React never imports @muxui/catalog.
@@ -1296,7 +1296,7 @@ test('story page groups generate Storybook metadata unless this process already 
   const prepared = executionGroups(result, { packages, environment: {}, pageIndex, metadataPrepared: true });
   assert.deepEqual(groupIds(prepared), groupIds(groups));
   // Only the catalog's other dependents (policy through tooling, React Native,
-  // Web) and the tooling goldens the catalog digest feeds remain to generate.
+  // Web) and the tooling goldens that snapshot catalog responses remain to generate.
   for (const command of prepared.flatMap(({ commands }) => commands).filter(({ prerequisite }) => prerequisite)) {
     assert.deepEqual(generationFilters(command), [
       '@muxui/foundation', '@muxui/react-native', '@muxui/repository-policy', '@muxui/tooling', '@muxui/web',
@@ -2618,14 +2618,14 @@ test('pattern sources route to the catalog, tooling goldens, docs, and the packe
       `${path} is a canonical pattern input; validate the catalog, its dense goldens, the docs that render it, and its Storybook pages and ${browserTest}`,
     );
     // The packed React example type test now enumerates pattern variants, so a variant source joins it
-    // (E-BL1-03); the pattern's declared browser test runs for every input of an interactive pattern.
+    // (E-BL1-03); the pattern's own browser test runs for every input of an interactive pattern.
     assert.deepEqual(
       result.reactTestFiles,
       [browserTest, ...(path.endsWith('.tsx') ? ['test/catalog-examples-types.test.mjs'] : [])],
       path,
     );
   }
-  // A pattern with no declared browser test adds none.
+  // A pattern with no pattern-<slug>.test.mjs adds none.
   const hero = await plan(['catalog/patterns/hero/examples/react/centered.tsx']);
   assert.deepEqual(hero.reactTestFiles, ['test/catalog-examples-types.test.mjs']);
   const commands = executionCommands(await plan([inputs[2]], { packages: workspacePackages }), { packages: workspacePackages })
@@ -2634,6 +2634,31 @@ test('pattern sources route to the catalog, tooling goldens, docs, and the packe
   assert.ok(commands.includes('--filter @muxui/tooling run check'));
   assert.ok(commands.includes('--filter @muxui/react exec node --test --test-concurrency=1 test/catalog-examples-types.test.mjs'));
   assert.ok(commands.includes(`--filter @muxui/react exec node --test --test-concurrency=1 ${browserTest}`));
+});
+
+test('a new block adds its browser test by adding the file, with no policy entry', () => {
+  // The planner reads the checkout named by MUXUI_TASK_REPOSITORY_ROOT when it loads, so plan in a process pointed at a fixture.
+  const root = mkdtempSync(join(tmpdir(), 'muxui-block-test-'));
+  try {
+    mkdirSync(join(root, 'packages/react/test/browser'), { recursive: true });
+    writeFileSync(join(root, 'packages/react/test/browser/pattern-fresh-block.test.mjs'), '');
+    const script = `const { buildPullRequestImpact } = await import(${JSON.stringify(resolve(import.meta.dirname, '../src/ci-impact.mjs'))});
+      const { readFileSync } = await import('node:fs');
+      const plan = await buildPullRequestImpact({ ...JSON.parse(readFileSync(process.env.INPUT_PATH, 'utf8')), readBaseText: async () => null, readHeadText: async () => null });
+      console.log(JSON.stringify(plan.reactTestFiles));`;
+    const changedPaths = ['catalog/patterns/fresh-block/artifact.json', 'catalog/patterns/plain-block/artifact.json'];
+    // The input is a file, not an environment variable: Linux caps one environment string at 128 KiB.
+    const inputPath = join(root, 'input.json');
+    writeFileSync(inputPath, JSON.stringify(inputFor(changedPaths)));
+    const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
+      cwd: root, encoding: 'utf8', env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root, INPUT_PATH: inputPath },
+    });
+    assert.equal(result.status, 0, result.stderr || String(result.error));
+    // The block with a test file routes it; the block without one routes nothing.
+    assert.deepEqual(JSON.parse(result.stdout.trim().split('\n').at(-1)), ['test/browser/pattern-fresh-block.test.mjs']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('pattern inputs select their generated Storybook pages for the scoped audits', async () => {

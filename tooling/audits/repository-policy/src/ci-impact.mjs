@@ -11,7 +11,7 @@ import { compareStorybookGeneratorEmissions } from './storybook-generator-impact
 import { dependencyClosure, familyRecordsFromContract } from './scoped-verification.mjs';
 import { componentTestSelection } from './component-test-selection.mjs';
 import { loadPolicy, normalizePath } from './policy.mjs';
-import { changedPatternSlugs, patternParticipants } from './pattern-variants.mjs';
+import { changedPatternSlugs, patternBrowserTest, patternParticipants } from './pattern-variants.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
 
 const repositoryRoot = resolve(process.env.MUXUI_TASK_REPOSITORY_ROOT ?? resolve(import.meta.dirname, '../../../..'));
@@ -974,6 +974,10 @@ function refreshStoryRuns(plan, pageIndex) {
   return plan;
 }
 
+// A block's browser test is the file `test/browser/pattern-<slug>.test.mjs` in the
+// React package, when the checkout has it: adding the file is the whole declaration.
+const blockBrowserTest = (slug) => patternBrowserTest(resolve(repositoryRoot, 'packages/react'), slug);
+
 // Plans every generated Block page whose variants live in the pattern's directory.
 function addPatternPages(plan, slug, pageIndex) {
   for (const page of pageIndex) {
@@ -1139,7 +1143,7 @@ export async function buildPullRequestImpact({
         plan.storyTooling = true;
         plan.reactTestFiles.add(catalogExampleTypesTestFile);
         addPatternPages(plan, slug, pageIndex);
-        const browserTest = config.patternBrowserTests?.[slug];
+        const browserTest = blockBrowserTest(slug);
         if (browserTest) plan.reactTestFiles.add(browserTest);
       }
       if (slugs.length > 0) plan.reasons.push(`${path} adds or removes entries of ${slugs.join(', ')}; validate the generated Block pages and the pattern proofs`);
@@ -1328,14 +1332,14 @@ export async function buildPullRequestImpact({
     }
 
     // Pattern records, variant example records, their sources, and assets
-    // compile into the catalog (the digest pinned by @muxui/tooling dense
-    // goldens). Docs projects them and follows from the catalog's dependents.
+    // compile into the catalog that @muxui/tooling queries and renders. Docs
+    // projects them and follows from the catalog's dependents.
     // A pattern names no component family, so no React family route applies.
     // A variant source joins the packed React example type test and its exact
     // generated Storybook page; any other pattern input (record, example
     // record, asset) can change every page of that pattern, because the page
     // title, story names, and rendered source come from them. An interactive
-    // pattern also runs its declared browser test.
+    // pattern also runs its browser test.
     if (path.startsWith('catalog/patterns/')) {
       plan.catalog = true;
       const slug = path.split('/')[2];
@@ -1348,15 +1352,15 @@ export async function buildPullRequestImpact({
       } else if (slug !== undefined) {
         addPatternPages(plan, slug, pageIndex);
       }
-      const browserTest = slug === undefined ? undefined : config.patternBrowserTests?.[slug];
+      const browserTest = slug === undefined ? undefined : blockBrowserTest(slug);
       if (browserTest) plan.reactTestFiles.add(browserTest);
       plan.reasons.push(`${path} is a canonical pattern input; validate the catalog, its dense goldens, the docs that render it, and its Storybook pages${browserTest ? ` and ${browserTest}` : ''}`);
       continue;
     }
 
-    // Guide bytes feed the catalog digest pinned by @muxui/tooling dense
-    // goldens, and docs renders every guide. No renderer or Storybook page
-    // reads guides, so per-family usage guides need no family route.
+    // Guides compile into the catalog that @muxui/tooling queries and renders,
+    // and docs renders every guide. No renderer or Storybook page reads
+    // guides, so per-family usage guides need no family route.
     if (path.startsWith('catalog/guides/')) {
       plan.catalog = true;
       plan.docs = true;
@@ -1516,15 +1520,15 @@ export async function buildPullRequestImpact({
   }
 
   // A participant's source change reaches the patterns that use it: their Block
-  // pages, the packed example type test, and the browser test the pattern
-  // declares. A compiler or package-wide change reaches every pattern. A full
-  // React check already runs those tests, so only the pages are added then.
+  // pages, the packed example type test, and the pattern's browser test. A
+  // compiler or package-wide change reaches every pattern. A full React check
+  // already runs those tests, so only the pages are added then.
   const changedComponentSlugs = new Set(records.filter(({ family }) => changedSourceFamilies.has(family)).map(({ slug }) => slug));
   for (const { slug, components } of patterns) {
     const changedComponents = plan.reactPackageFull ? components : components.filter((component) => changedComponentSlugs.has(component));
     if (changedComponents.length === 0) continue;
     addPatternPages(plan, slug, pageIndex);
-    const browserTest = config.patternBrowserTests?.[slug];
+    const browserTest = blockBrowserTest(slug);
     if (!plan.reactPackageFull) {
       plan.reactTestFiles.add(catalogExampleTypesTestFile);
       if (browserTest) plan.reactTestFiles.add(browserTest);
@@ -1620,8 +1624,8 @@ export async function buildPullRequestImpact({
     }
   }
   plan.reactTestFiles = [...plan.reactTestFiles].filter((file) => !componentRoutedTestFiles.has(file)).sort();
-  // Every catalog input changes the catalog digest that @muxui/tooling dense
-  // goldens pin.
+  // Every catalog input compiles into the catalog that @muxui/tooling queries
+  // and renders, so its tests and dense goldens run.
   if (plan.catalog) plan.packageChecks.add('@muxui/tooling');
   // The full React check already runs the React package check.
   if (plan.reactPackageFull) plan.packageChecks.delete('@muxui/react');

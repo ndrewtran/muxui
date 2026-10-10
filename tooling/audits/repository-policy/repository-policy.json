@@ -177,15 +177,6 @@
       "packages/catalog/catalog-sources.json": "@muxui/catalog",
       "packages/tooling/command-registry.json": "@muxui/tooling"
     },
-    "patternBrowserTests": {
-      "account-settings": "test/browser/pattern-account-settings.test.mjs",
-      "company-records": "test/browser/pattern-company-records.test.mjs",
-      "marketing-hero": "test/browser/pattern-marketing-hero.test.mjs",
-      "poster-grid": "test/browser/pattern-poster-grid.test.mjs",
-      "pricing-plans": "test/browser/pattern-pricing-plans.test.mjs",
-      "task-filters": "test/browser/pattern-task-filters.test.mjs",
-      "workspace-navigation": "test/browser/pattern-workspace-navigation.test.mjs"
-    },
     "documentationPrefixes": [
       "apps/docs/",
       "apps/scale/src/"

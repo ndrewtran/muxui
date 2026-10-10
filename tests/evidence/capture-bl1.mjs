@@ -40,8 +40,8 @@
 // are computed and recorded but gate nothing, and the records say they claim nothing about those changes. A capture without
 // `growthGate` was made before Decision 0029 and is verified strictly. A real capture refuses a
 // growth commit that is not a squash merge of one pull request (a rehearsal on a branch does not), so every change a growth pull request makes is audited. The thresholds, the browser tests, the page widths
-// (apps/docs/src/lib/block-presets.ts), and every count come from the source revision (the thresholds as committed there, the browser tests from the policy's
-// patternBrowserTests), not from this file. A content review covers each block whose catalog/patterns/<slug> tree, participant component records, and React runtime sources it read (capture-support.mjs, coverageKey). `--rehearsal=<dir>` runs every proof and writes the
+// (apps/docs/src/lib/block-presets.ts), and every count come from the source revision (the thresholds as committed there, the browser tests from the
+// packages/react/test/browser/pattern-<slug>.test.mjs files there), not from this file. A content review covers each block whose catalog/patterns/<slug> tree, participant component records, and React runtime sources it read (capture-support.mjs, coverageKey). `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
 // review, so the tool can be exercised before a merge; <dir> starts as a copy of the retained
 // evidence, so review reuse and supersession behave as in a real capture. When a capture replaces an earlier one,
@@ -56,7 +56,6 @@ import { homedir, tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { canonicalJson } from '../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput, verifyEvidence } from '../../tooling/audits/repository-policy/src/evidence-verify.mjs';
-import { loadPolicy } from '../../tooling/audits/repository-policy/src/policy.mjs';
 import { patternVariantExamples } from '../../tooling/audits/repository-policy/src/pattern-variants.mjs';
 import { pageWidths, toolbarPresets } from '../../apps/docs/src/lib/block-presets.ts';
 import { auditBoundary, checksWithoutControl, legsWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
@@ -87,6 +86,7 @@ const pageWidthsSource = 'apps/docs/src/lib/block-presets.ts';
 // A close-out capture holds the catalog digest with no pattern entries to the one the tooling golden pinned at #225, the last
 // main commit before any block shipped (the same digest #224 introduced with the pattern kind). That pin is never moved:
 // later pull requests changed component records, so a growth capture compares across the commits that added or changed its blocks instead.
+// The golden is read only at the fixed commits below, which predate the digest-free goldens; a later golden holds a placeholder, not a digest.
 const baselineCommit = 'e0385c97b39d040c183d0f2030c3f086d2dc56e3';
 const baselineGolden = 'packages/tooling/test/goldens/manifest-brief.txt';
 const baselineCatalogDigest = 'sha256:ab0998dfb2f51aa572e77f16e5d5f80982242a5c5df4aac16d66b1390bbc9671';
@@ -429,8 +429,8 @@ const paintByPage = storyIds.map((id) => {
   return { page: id, ...Object.fromEntries(schemes) };
 });
 
-// One cross-engine test per interactive block, as the policy declares them for CI impact planning, so a block declares its test once.
-const browserTests = blockBrowserTests({ declared: (await loadPolicy(repositoryRoot)).pullRequestImpact.patternBrowserTests ?? {}, patternSlugs, reactRoot: join(repositoryRoot, 'packages/react') });
+// One cross-engine test per interactive block, found by the file name CI impact planning uses (pattern-<slug>.test.mjs), so a block declares its test by adding the file.
+const browserTests = blockBrowserTests({ patternSlugs, reactRoot: join(repositoryRoot, 'packages/react') });
 const numberWords = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
 const blockTestCount = `${numberWords[browserTests.length] ?? browserTests.length} block browser test${browserTests.length === 1 ? '' : 's'}`;
 const engines = ['chromium', 'firefox', 'webkit'];
