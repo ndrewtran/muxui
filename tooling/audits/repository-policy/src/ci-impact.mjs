@@ -1036,8 +1036,9 @@ export async function buildPullRequestImpact({
     plan.reasons.push(message);
   };
   // A Storybook tooling file with no focused unit route: a test file runs
-  // itself, and any other file (a helper whose importers are unknown) proves
-  // every Storybook page.
+  // itself, and any other file (a helper whose importers are unknown) gets the
+  // complete Storybook proof: every component family, every Block page, and
+  // every Storybook unit test.
   const routeStoryUnit = (path) => {
     plan.storyTooling = true;
     if (addStoryUnitRoute(plan, path)) return;
@@ -1046,8 +1047,19 @@ export async function buildPullRequestImpact({
       widen(`${path} has no focused Storybook unit-test route; running that test file`);
       return;
     }
-    storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
-    widen(`${path} has no focused Storybook unit-test route and unknown importers; proving every Storybook page`);
+    const families = storybookFamilies(records);
+    families.forEach((family) => plan.storyFamilies.add(family));
+    // Block pages are not component families, so their stories are selected by ID.
+    for (const page of pageIndex.filter(({ family }) => !families.includes(family))) {
+      for (const story of page.stories) {
+        plan.storyIds.add(story.id);
+        plan.storyIdFamilies.set(story.id, page.family);
+      }
+    }
+    for (const file of storybookTestFiles()) {
+      for (const route of [storybookUnitRoute(`apps/react-storybook/${file}`) ?? { file }].flat()) addStoryUnitTest(plan, route);
+    }
+    widen(`${path} has no focused Storybook unit-test route and unknown importers; running the complete Storybook proof (every page and every unit test)`);
   };
   // Files outside packages/react/src can name a React module by path (tests,
   // browser entries, apps, catalog inputs). A deleted module's referencing

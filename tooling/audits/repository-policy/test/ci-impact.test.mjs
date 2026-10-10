@@ -2244,10 +2244,44 @@ test('a Storybook tooling file with no focused unit route widens instead of fail
   assert.deepEqual(newTest.storyUnitTests, [{ file: 'test/storybook-new.test.mjs' }]);
   assert.deepEqual(newTest.storyFamilies, []);
   assert.match(newTest.notices[0], /^apps\/react-storybook\/test\/storybook-new\.test\.mjs has no focused Storybook unit-test route; running that test file/u);
-  // A helper with unknown importers proves every Storybook page.
-  const helper = await route('test/helpers/new-helper.mjs');
+  // A helper with unknown importers gets the complete Storybook proof: every
+  // component family, every Block page by story ID, and every unit test.
+  const blockPages = [
+    {
+      family: 'Poster grid',
+      storyFile: 'apps/react-storybook/.storybook/generated/block-poster-grid.stories.mjs',
+      stories: [
+        { id: 'muxui-block-poster-grid--css-grid', exportName: 'CssGrid', name: 'CssGrid', source: 'catalog/patterns/poster-grid/examples/react/css-grid.tsx' },
+        { id: 'muxui-block-poster-grid--virtualized', exportName: 'Virtualized', name: 'Virtualized', source: 'catalog/patterns/poster-grid/examples/react/virtualized.tsx' },
+      ],
+    },
+    {
+      family: 'Task filters',
+      storyFile: 'apps/react-storybook/.storybook/generated/block-task-filters.stories.mjs',
+      stories: [{ id: 'muxui-block-task-filters--filter-bar', exportName: 'FilterBar', name: 'FilterBar', source: 'catalog/patterns/task-filters/examples/react/filter-bar.tsx' }],
+    },
+  ];
+  const helper = await plan(['apps/react-storybook/test/helpers/new-helper.mjs'], {
+    packages: workspacePackages,
+    pageIndex: [...pageIndex, ...blockPages],
+  });
   assert.deepEqual(helper.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
-  assert.match(helper.notices[0], /unknown importers; proving every Storybook page/u);
+  assert.deepEqual(helper.storyIds, [
+    'muxui-block-poster-grid--css-grid',
+    'muxui-block-poster-grid--virtualized',
+    'muxui-block-task-filters--filter-bar',
+  ]);
+  assert.deepEqual(helper.storyRuns.map(({ proof, families }) => [proof, families]), [
+    ['component', ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']],
+    ['story', ['Poster grid', 'Task filters']],
+  ]);
+  const unitFiles = readdirSync(resolve(repositoryRoot, 'apps/react-storybook/test')).filter((name) => name.endsWith('.test.mjs')).sort();
+  assert.ok(unitFiles.length >= 8);
+  assert.deepEqual(helper.storyUnitTests.map(({ file }) => file), unitFiles.map((name) => `test/${name}`));
+  // The a11y and colour files also hold browser audits, so only their pinned unit cases run.
+  const pinned = new Set(helper.storyUnitTests.filter(({ testNamePattern }) => testNamePattern).map(({ file }) => file));
+  assert.deepEqual([...pinned].sort(), ['test/storybook-a11y.test.mjs', 'test/storybook-colors.test.mjs']);
+  assert.match(helper.notices[0], /unknown importers; running the complete Storybook proof/u);
   // A routed file adds no notice.
   assert.deepEqual((await route('test/storybook.test.mjs')).notices, []);
 });

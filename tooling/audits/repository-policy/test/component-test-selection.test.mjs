@@ -184,11 +184,21 @@ test('a family no test names runs its source group whole instead of failing', ()
   assert.deepEqual(selected.testNamesByFile, {});
   assert.deepEqual(selected.behaviorProofFamilies, []);
 
-  // Every supplemental module belongs to the supplemental group.
+  // Every supplemental module belongs to the supplemental group, in the local
+  // (shared source) check as well as the focused one.
   const supplemental = { family: 'ScratchWidget', slug: 'scratch-widget', source: 'packages/react/src/supplemental/scratch-widget.mjs' };
+  for (const includeSharedSource of [true, false]) {
+    assert.deepEqual(
+      selectComponentTestFiles([supplemental], availableFiles, { includeSharedSource }),
+      [...sharedFiles, 'test/supplemental.test.mjs'],
+      `includeSharedSource ${includeSharedSource}`,
+    );
+  }
+  // A family with its own slug-named test does not also pull in the group.
+  const own = { family: 'ScratchOwn', slug: 'scratch-own', source: supplemental.source };
   assert.deepEqual(
-    selectComponentTestFiles([supplemental], availableFiles, { includeSharedSource: false }),
-    [...sharedFiles, 'test/supplemental.test.mjs'],
+    selectComponentTestFiles([own], [...availableFiles, 'test/scratch-own.test.mjs'], { includeSharedSource: true }),
+    ['test/scratch-own.test.mjs', ...sharedFiles],
   );
 });
 

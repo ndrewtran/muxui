@@ -167,11 +167,11 @@ export function componentTestSelection(records, availableFiles, {
     }
 
     let uniqueRoute = [...new Set(route)];
-    if (uniqueRoute.length === 0 && !includeSharedSource && !behaviorProofs.has(record.family)) {
-      // No test names the family, so its source group runs whole. With no group
-      // either, no proof exists to run.
+    if (uniqueRoute.length === 0 && !behaviorProofs.has(record.family)) {
+      // No test names the family, so its source group runs whole, in local and
+      // focused checks alike. Focused CI with no group either has no proof to run.
       uniqueRoute = sourceGroupTests(record);
-      if (uniqueRoute.length === 0) {
+      if (uniqueRoute.length === 0 && !includeSharedSource) {
         throw new Error(`MUXUI_COMPONENT_FOCUSED_ROUTE_MISSING: ${record.family} (${record.source ?? 'no source'}); no test names it, its source has no test group, and no verified Storybook BrowserProof is available`);
       }
       uniqueRoute.forEach((file) => wholeFiles.add(file));
