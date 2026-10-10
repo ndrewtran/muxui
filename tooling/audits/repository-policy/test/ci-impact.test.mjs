@@ -2350,6 +2350,40 @@ test('a shared Storybook path covers every page, Block pages included', async ()
   assert.deepEqual(plain.storyIds, []);
 });
 
+test('every route that means every Storybook page plans the Block pages too', async () => {
+  const withBlocks = { packages: workspacePackages, pageIndex: [...pageIndex, ...blockPages] };
+  const blockIds = blockPages.flatMap(({ stories }) => stories.map(({ id }) => id)).sort();
+  const reactBefore = JSON.stringify({ name: '@muxui/react', dependencies: { react: '19.0.0' } });
+  const reactAfter = JSON.stringify({ name: '@muxui/react', dependencies: { react: '19.1.0' } });
+  const storybookPath = 'apps/react-storybook/package.json';
+  const importer = (before, after) => ({
+    lockfileBefore: lockfile('    devDependencies: {}', before),
+    lockfileAfter: lockfile('    devDependencies: {}', after),
+  });
+  const reactImporter = importer('    dependencies: {}', '    dependencies:\n      react:\n        specifier: 19.0.0\n        version: 19.0.0');
+  const storybookImporter = Object.fromEntries(Object.entries(reactImporter).map(([key, text]) => [key, text.replace('  packages/react:', '  apps/react-storybook:')]));
+  const cases = {
+    'the React package runtime boundary': await plan(['packages/react/package.json'], { ...withBlocks, reactPackageBefore: reactBefore, reactPackageAfter: reactAfter }),
+    'the Storybook package runtime boundary': await plan([storybookPath], {
+      ...withBlocks,
+      textSnapshots: { [storybookPath]: { before: JSON.stringify({ dependencies: { vite: '1' } }), after: JSON.stringify({ dependencies: { vite: '2' } }) } },
+    }),
+    'the React projection compiler': await plan(['packages/react/src/generate.mjs'], withBlocks),
+    'a React lockfile importer': await plan(['pnpm-lock.yaml'], { ...withBlocks, ...reactImporter }),
+    'a Storybook lockfile importer': await plan(['pnpm-lock.yaml'], { ...withBlocks, ...storybookImporter }),
+    'a file owned by @muxui/react': await plan(['packages/react/advisory/note.md'], withBlocks),
+  };
+  for (const [label, result] of Object.entries(cases)) {
+    assert.deepEqual(result.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree'], label);
+    assert.deepEqual(result.storyIds, blockIds, label);
+    assert.ok(result.storyRuns.some(({ proof, families }) => proof === 'story' && families.includes('Poster grid')), label);
+  }
+  // Block pages take their titles from their patterns, so the component grouping selects component pages only.
+  const navigation = await plan(['apps/component-navigation.mjs'], withBlocks);
+  assert.deepEqual(navigation.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
+  assert.deepEqual(navigation.storyIds, []);
+});
+
 // Plans every tracked path as a no-op edit with the generated React records,
 // a page per family, and real sources; any planner error fails the test.
 test('every tracked path plans without a planner error', async () => {

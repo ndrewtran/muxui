@@ -624,7 +624,20 @@ function addUnique(target, value) {
   else if (Array.isArray(target) && !target.includes(value)) target.push(value);
 }
 
-function applyPackageImpact(plan, packageName, records) {
+// Plans every Storybook page: each component family, and each Block page by
+// story ID, since Blocks are not component families.
+function addEveryStoryPage(plan, records, pageIndex) {
+  const families = storybookFamilies(records);
+  families.forEach((family) => addUnique(plan.storyFamilies, family));
+  for (const page of pageIndex.filter(({ family }) => !families.includes(family))) {
+    for (const story of page.stories) {
+      plan.storyIds.add(story.id);
+      plan.storyIdFamilies.set(story.id, page.family);
+    }
+  }
+}
+
+function applyPackageImpact(plan, packageName, records, pageIndex) {
   if (packageName === '@muxui/repository-policy') {
     plan.policy = true;
     return 'repository-policy machinery';
@@ -656,12 +669,12 @@ function applyPackageImpact(plan, packageName, records) {
   }
   if (packageName === '@muxui/react') {
     plan.reactPackageFull = true;
-    storybookFamilies(records).forEach((family) => addUnique(plan.storyFamilies, family));
+    addEveryStoryPage(plan, records, pageIndex);
     plan.tailwind = true;
     return 'React renderer and all direct component consumers';
   }
   if (packageName === '@muxui/react-storybook') {
-    storybookFamilies(records).forEach((family) => addUnique(plan.storyFamilies, family));
+    addEveryStoryPage(plan, records, pageIndex);
     plan.storyTooling = true;
     return 'Storybook renderer and all emitted pages';
   }
@@ -671,18 +684,18 @@ function applyPackageImpact(plan, packageName, records) {
 
 // Applies a workspace package's impact; packages without a dedicated plan
 // flag run their own package check.
-function routePackage(plan, packageName, records) {
-  const description = applyPackageImpact(plan, packageName, records);
+function routePackage(plan, packageName, records, pageIndex) {
+  const description = applyPackageImpact(plan, packageName, records, pageIndex);
   if (description === packageName) plan.packageChecks.add(packageName);
   return description;
 }
 
-function routeLockfileImporter(plan, importer, packages, records) {
+function routeLockfileImporter(plan, importer, packages, records, pageIndex) {
   const owner = packageByPath(importer, packages);
   if (!owner || owner.path !== importer) {
     throw new Error(`MUXUI_CI_IMPACT_LOCKFILE_OWNER_MISSING: importer ${importer} has no current workspace package owner`);
   }
-  const description = applyPackageImpact(plan, owner.name, records);
+  const description = applyPackageImpact(plan, owner.name, records, pageIndex);
   if (!['@muxui/repository-policy', '@muxui/catalog', '@muxui/tokens', '@muxui/foundation', '@muxui/docs', '@muxui/scale', '@muxui/react', '@muxui/react-storybook'].includes(owner.name)) {
     addUnique(plan.packageChecks, owner.name);
   }
@@ -1035,18 +1048,6 @@ export async function buildPullRequestImpact({
     plan.notices.push(message);
     plan.reasons.push(message);
   };
-  // Every Storybook page: each component family, and each Block page by story
-  // ID, since Blocks are not component families.
-  const addEveryStoryPage = () => {
-    const families = storybookFamilies(records);
-    families.forEach((family) => plan.storyFamilies.add(family));
-    for (const page of pageIndex.filter(({ family }) => !families.includes(family))) {
-      for (const story of page.stories) {
-        plan.storyIds.add(story.id);
-        plan.storyIdFamilies.set(story.id, page.family);
-      }
-    }
-  };
   // A Storybook tooling file with no focused unit route: a test file runs
   // itself, and any other file (a helper whose importers are unknown) gets the
   // complete Storybook proof: every page and every Storybook unit test.
@@ -1058,7 +1059,7 @@ export async function buildPullRequestImpact({
       widen(`${path} has no focused Storybook unit-test route; running that test file`);
       return;
     }
-    addEveryStoryPage();
+    addEveryStoryPage(plan, records, pageIndex);
     for (const file of storybookTestFiles()) {
       for (const route of [storybookUnitRoute(`apps/react-storybook/${file}`) ?? { file }].flat()) addStoryUnitTest(plan, route);
     }
@@ -1121,7 +1122,7 @@ export async function buildPullRequestImpact({
     if (catalogReaders) {
       if (catalogReaders.reactGenerator) reactGeneratorPaths.push(path);
       if (catalogReaders.policy) plan.policy = true;
-      for (const name of catalogReaders.packageChecks ?? []) routePackage(plan, requirePackage(packages, name, path), records);
+      for (const name of catalogReaders.packageChecks ?? []) routePackage(plan, requirePackage(packages, name, path), records, pageIndex);
       for (const file of catalogReaders.storybookUnitTests ?? []) {
         plan.storyTooling = true;
         addStoryUnitTest(plan, { file });
@@ -1147,7 +1148,7 @@ export async function buildPullRequestImpact({
     const fixtureOwner = Object.entries(config.packageFixtureOwners ?? {}).find(([prefix]) => matches(path, [prefix]))?.[1];
     if (fixtureOwner) {
       const owners = [fixtureOwner].flat();
-      for (const owner of owners) routePackage(plan, requirePackage(packages, owner, path), records);
+      for (const owner of owners) routePackage(plan, requirePackage(packages, owner, path), records, pageIndex);
       plan.reasons.push(`${path} is a fixture read by ${owners.join(' and ')} tests`);
       continue;
     }
@@ -1157,11 +1158,12 @@ export async function buildPullRequestImpact({
       continue;
     }
     // The shared component grouping drives docs navigation and every generated
-    // Storybook page title, so it selects the docs and every Storybook page.
+    // component page title, so it selects the docs and every component page.
+    // Block pages take their titles from their patterns, not this grouping.
     if (config.componentNavigationPaths?.includes(path)) {
       plan.docs = true;
       storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
-      plan.reasons.push(`${path} groups components for the docs navigation and every Storybook page`);
+      plan.reasons.push(`${path} groups components for the docs navigation and every component Storybook page`);
       continue;
     }
     // Docs also embeds source it imports by path (Scale's App), so a path can
@@ -1199,7 +1201,7 @@ export async function buildPullRequestImpact({
       const impact = reactPackageWideChanges(reactPackageBefore, reactPackageAfter);
       if (impact.pagesAffected) {
         plan.reactPackageFull = true;
-        storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+        addEveryStoryPage(plan, records, pageIndex);
         plan.tailwind = true;
         plan.reasons.push(`${impact.reason}; validate every direct component consumer`);
       } else {
@@ -1242,7 +1244,7 @@ export async function buildPullRequestImpact({
           plan.reasons.push(`${path} changes Storybook manager chrome`);
         }
         if (shared) {
-          addEveryStoryPage();
+          addEveryStoryPage(plan, records, pageIndex);
           plan.reasons.push(`${path} is shared by every Storybook page`);
         }
         if (storybookUnitRoute(path)) {
@@ -1272,7 +1274,7 @@ export async function buildPullRequestImpact({
         const before = await readBaseText(path);
         const after = await readHeadText(path);
         const impact = storybookPackageWideChanges(before, after);
-        if (impact.pagesAffected) storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+        if (impact.pagesAffected) addEveryStoryPage(plan, records, pageIndex);
         plan.storyTooling = true;
         addStoryUnitRoute(plan, 'apps/react-storybook/test/storybook-page-selection.test.mjs');
         plan.reasons.push(impact.pagesAffected
@@ -1371,7 +1373,7 @@ export async function buildPullRequestImpact({
     const packageOwner = packageByPath(path, packages);
     if (packageOwner) {
       const { name } = packageOwner;
-      routePackage(plan, name, records);
+      routePackage(plan, name, records, pageIndex);
       plan.reasons.push(`${path} is owned by ${name}`);
       continue;
     }
@@ -1408,7 +1410,7 @@ export async function buildPullRequestImpact({
       plan.reasons.push('pnpm-lock.yaml changes only the repository-policy importer and adds its parser resolutions');
     } else if (plan.fullReasons.length === 0) {
       for (const importer of changedLockfileImporters(lockfileBefore, lockfileAfter)) {
-        changedPackages.add(routeLockfileImporter(plan, importer, packages, records));
+        changedPackages.add(routeLockfileImporter(plan, importer, packages, records, pageIndex));
       }
     }
   }
@@ -1446,7 +1448,7 @@ export async function buildPullRequestImpact({
   if (reactGeneratorPaths.length > 0) {
     plan.reactPackageFull = true;
     plan.reactProjectionCheck = false;
-    storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+    addEveryStoryPage(plan, records, pageIndex);
     plan.tailwind = true;
     plan.reasons.push(`React projection compiler inputs changed (${reactGeneratorPaths.join(', ')}); every canonical React family is affected`);
   }
@@ -1493,7 +1495,7 @@ export async function buildPullRequestImpact({
       // The analyzer cannot attribute the change to families, so every family is affected.
       plan.reactPackageFull = true;
       plan.reactProjectionCheck = false;
-      addEveryStoryPage();
+      addEveryStoryPage(plan, records, pageIndex);
       plan.tailwind = true;
       widen(`${path}: ${error.message.slice('MUXUI_CI_IMPACT_STYLE_OWNERSHIP: '.length)}; running the full React and Storybook proof`);
       continue;
@@ -1571,7 +1573,7 @@ export async function buildPullRequestImpact({
   }
   for (const { name, via, scope } of workspaceDependentRoutes(packages, [...changedPackages].sort())) {
     if (scope === 'package') {
-      routePackage(plan, name, records);
+      routePackage(plan, name, records, pageIndex);
       plan.reasons.push(`${name} depends on changed ${via} through a workspace link; plan it as if it changed`);
     } else {
       plan.packageChecks.add(name);
