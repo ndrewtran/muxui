@@ -25,7 +25,7 @@ If `CONTEXT.md` doesn't exist, **proceed silently**. Don't flag its absence; don
 
 ## Recording decisions
 
-New decisions go in `decisions/` using the next free number. Preserve decision numbers and history: amend or supersede an existing decision instead of silently rewriting its meaning. Do not create a separate `docs/adr/` directory.
+New decisions go in `decisions/` using the next free number, with Andrew's acceptance quoted in an `## Acceptance` section. Numbers are never reused. A live decision may be edited to stay current; a decision that is fully replaced, applied, or retired moves to `decisions/archive/` with its acceptance record and an index line (see `decisions/AGENTS.md`). Do not create a separate `docs/adr/` directory.
 
 ## Use the glossary's vocabulary
 

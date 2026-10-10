@@ -8,13 +8,6 @@
 
 ## Purpose and authority
 
-Decision 0012 and Product Scope `8.0.0` reset only the current product and
-machine identity to Mux UI / `muxui` / `@muxui/*`. Existing milestone states,
-the 53-family R1 allocation, accepted proof meaning, platform deferrals, and
-release stops do not change. Historical evidence and locators remain under
-their original predecessor identities; current and future delivery uses Mux UI
-identities.
-
 This roadmap turns the Mux UI architecture into evidence-bearing delivery
 milestones. It does not replace or reinterpret the architecture. If this
 roadmap conflicts with the architecture, the architecture wins and the roadmap
@@ -35,10 +28,9 @@ The governing delivery rule is:
 Decision 0016 removes legacy compatibility implementation from the current
 pre-release product. No consumer requires superseded Mux-owned aliases, query
 versions, source migrations, or notice releases. Current checks prove current
-contracts and reject unsupported input; historical evidence is retained as
-history. This changes no completed milestone state or evidence identity.
-Historical negotiation and migration deliverables below apply only when a
-supported published contract establishes an actual consumer need.
+contracts and reject unsupported input. Historical negotiation and migration
+deliverables below apply only when a supported published contract establishes an
+actual consumer need.
 
 ## How to use this roadmap
 
@@ -96,15 +88,12 @@ Public evidence exposes only sanitized metadata and digests. Restricted or
 internal payloads remain access-controlled. A transient log cannot satisfy an
 exit condition.
 
-Evidence used for a current milestone entry or exit assertion must follow
-that assertion's existing proof owner and exact source, executed, and
-proof-tool identity relationship. Historical evidence and internal
+Evidence used for a current milestone entry or exit assertion must follow that
+assertion's existing proof owner and exact source, executed, and proof-tool
+identity relationship. Historical evidence and internal
 applicability-maintenance roots remain retrievable audit records but cannot
-substitute for current proof. In the superseded historical sequence, G1.0,
-G1.1, and G1.2 retained separate evidence indexes, assertions, acceptance, and
-dependency states and each had to be independently proved ready before G1.3
-could enter `ready`. That past dependency cannot route or satisfy current R1
-entry; R1 uses only an explicit reusable-proof binding or bounded reproof.
+substitute for current proof. R1 entry uses only an explicit reusable-proof
+binding or bounded reproof.
 
 ### Acceptance cadence
 
@@ -166,7 +155,7 @@ No milestone may silently broaden its target matrix, supported runtime profile,
 public API, or evidence claim. Narrowing support requires an explicit canonical
 disposition or permitted operational exception.
 
-From G1.9 onward, the separately admitted `ChangeIntentEnvelope` capability may
+The separately admitted `ChangeIntentEnvelope` capability may
 provide an optional read-only preview for its named authoring workflows. It is
 not a repository-wide merge prerequisite and is not an R1 component-delivery
 prerequisite. A later write-capable protocol, if admitted, must establish its
@@ -255,10 +244,8 @@ flowchart TD
   p2exit --> optional
 ```
 
-Completed G1.0–G1.2 and their evidence remain immutable historical inputs.
-G1.3–G1.9, the old Gate 1 exit, and the old G2 sequence no longer own current
-React delivery. A historical result satisfies a new entry only when the new
-milestone explicitly binds the exact reusable fact and its applicability.
+A historical result satisfies a new entry only when the new milestone explicitly
+binds the exact reusable fact and its applicability.
 
 ## Roadmap overview
 
@@ -269,369 +256,23 @@ milestone explicitly binds the exact reusable fact and its applicability.
 | P2 | Compatible catalog/tooling, exact installed-local guidance, consumer validation, React docs/explorer/local MCP, and enabled safe operations are productized. | React Productization release candidate; stable only through S1. | Secondary renderer completion, hosted write access, arbitrary agent patches, unproved extensions. |
 | Gate 3 | Operational scale and independently justified integrations are enabled without changing kernel authority. | Capability-specific releases. | Any capability lacking observed demand, owner, bounded protocol, proof, and lifecycle. |
 
-## Gate 0 — schema and query kernel
-
-### G0.0 Repository, ownership, and task graph
-
-**Objective:** Establish the predictable repository topology and the smallest
-root workflow before product sources multiply.
-
-**Entry conditions**
-
-- The architecture is accepted as the normative source.
-- The package manager and supported runtime policy are recorded in one
-  repository decision.
-- No existing generated inventory is treated as canonical input.
-
-**Primary ownership**
-
-- Root workspace configuration
-- Root `AGENTS.md` and local navigation files
-- Declarative task graph and repository policy checks
-
-**Deliverables**
-
-- The architecture-defined `catalog/`, `packages/`, `apps/`, `tooling/`,
-  `tests/`, and `decisions/` boundaries.
-- pnpm workspaces with a dependency-aware task graph.
-- The memorable root commands: `check`, `check:all`, `generate`,
-  `generate:check`, `test:agent`, and `release:prepare`.
-- Generated-file markers, canonical/projection path policy, slug convention,
-  and alias audit.
-- A short root `AGENTS.md` containing only the route map, discovery loop,
-  source ownership, and verification entry points.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G0.0-01` | A clean checkout discovers every major owner from the root route map without a repository-wide component inventory. | Cold-navigation transcript and path audit. |
-| `E-G0.0-02` | Root tasks invoke package-owned tasks in dependency order and affected mode does not skip a required dependent. | Synthetic dependency fixture and task-graph report. |
-| `E-G0.0-03` | Canonical and generated paths are distinguishable; a projection edit is rejected with its source pointer. | Positive/negative repository-policy fixture. |
-| `E-G0.0-04` | A clean second generation run leaves the worktree unchanged. | Generation identity digest and clean-worktree assertion. |
-
-**Scope controls**
-
-- Do not create a component registry, docs site, MCP server, semantic-search
-  service, or release dashboard.
-- Do not add package-specific scripts to the root when a filtered task can own
-  them.
-- Do not create extra foundation packages before real slices prove separate
-  distribution value.
-
-**Exit condition:** The repository has one predictable navigation path, one
-task graph, enforced ownership boundaries, and reproducible no-op generation.
-
-### G0.1 Schema, identity, and revision kernel
-
-**Objective:** Define the minimum closed schemas and identity rules required to
-compile one real component without pre-building the full ontology.
-
-**Entry conditions**
-
-- G0.0 is complete.
-- The first proof artifact and initial platform identifiers are selected.
-- Every proposed field has an authored, derived, or proved classification.
-
-**Primary ownership**
-
-- `@muxui/schema`
-- Canonical serialization and revision policy
-- Minimal relation registry
-
-**Deliverables**
-
-- Immutable `ArtifactRef` syntax and uniqueness checks.
-- Minimum schemas for a component concept, platform binding, example, guide,
-  capability, token source, query envelope, and diagnostic.
-- Closed-schema behavior, explicit `schemaVersion`, lifecycle and strategy
-  enums, platform/runtime-profile IDs, and minimal typed relations.
-- Authored/derived/proved field metadata and one-owner validation.
-- Canonical serialization plus `contentRevision` and binding `specRevision`
-  closure calculation.
-- Guidance-impact classification and the rule that implementation-relevant
-  examples are normative regardless of an authored editorial label.
-- Response-envelope versioning and append-only error-code policy.
-- Schema evolution rules for patch, minor, major, and supported published
-  deprecation/migration; pre-release sources use the current contract directly.
-- Token-source schema with closed typed layers, modes, aliases, override
-  policies, and canonical ownership of authored and derived fields.
-- Versioned query schemas for bounded token sections, cursors, summary
-  metadata, diagnostics, and deterministic compatibility negotiation.
-- Closed `TokenSectionPageBudgetProfile` grammar for the query/lexer versions,
-  canonical cost/order rule, envelope preimage/reserve, limits, progress,
-  2,048-token budget, and stable oversize diagnostic.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G0.1-01` | Valid minimal records compile; unknown fields, duplicate IDs, invalid relations, and unowned fields fail closed. | Positive and negative schema corpus. |
-| `E-G0.1-02` | Whitespace/key-order changes preserve revisions while a meaningful authored change updates the correct revision. | Canonicalization fixture and digest comparison. |
-| `E-G0.1-03` | Editorial-only input changes content identity but not renderer compatibility; normative binding input changes `specRevision`. | Revision-closure fixture. |
-| `E-G0.1-04` | Renderer/package/source locations are derived and cannot be authored as duplicate inventory. | Field-ownership audit. |
-| `E-G0.1-05` | Schema fixtures enforce current source/query versions, typed absence, page profiles, and unsupported-version rejection. Published compatibility rules require migration/notice proof only when a supported consumer contract exists. | Current source/query validation and negative version matrix; retained prior evidence remains historical. |
-
-**Scope controls**
-
-- Do not add generic page, journey, flow, free-standing rationale, or consumer
-  overlay kinds.
-- Do not encode the full TypeScript, JSX, DOM, or React Native host type system.
-- Do not create a revision axis without a named compatibility decision that
-  existing revisions cannot express.
-- Experimental fields stay inert and cannot affect stable query behavior.
-
-**Exit condition:** One minimal canonical record family has stable identity,
-closed validation, explicit ownership, and deterministic content/spec revision
-semantics.
-
-### G0.2 Catalog compiler and pure query kernel
-
-**Objective:** Compile canonical sources into one immutable local catalog and
-query it through a side-effect-free API.
-
-**Entry conditions**
-
-- G0.1 is complete.
-- One minimal canonical component and its relations validate.
-- Canonical ordering and digest algorithms are fixed by tests.
-
-**Primary ownership**
-
-- `@muxui/catalog`
-- Catalog compiler and search-index builder
-
-**Deliverables**
-
-- Deterministic catalog compiler, relation graph, search index, catalog digest,
-  and immutable bundle format.
-- Pure `getManifest`, `listArtifacts`, `searchArtifacts`, and `getArtifact`
-  operations.
-- Deterministic lexical/metadata search with match reasons; no required hosted
-  or semantic search.
-- Platform, detail, section, example-purpose, limit, and cursor request
-  semantics.
-- Resolution/provenance metadata in every implementation-guidance response.
-- Query response schemas and stable type discriminators.
-- Explicit source pointers and bounded relation traversal.
-- Stable, complete, sectional `tokens` retrieval with query-version/content-
-  bound cursors and no unbounded current response.
-- Catalog-owned `TokenSectionPageBudgetProfile` canonical values and
-  budget-aware page selection. The profile's canonical JSON enters catalog
-  identity; `limit` is an item ceiling, the catalog reserves the declared
-  envelope, emits the greatest fitting non-empty prefix, and fails a single
-  oversize entry without truncation.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G0.2-01` | Two clean builds from the same sources produce byte-identical catalogs, indices, ordering, and digests. | Dual-build digest report. |
-| `E-G0.2-02` | Programmatic list/search/get requests are deterministic and include exact match reasons, provenance, authority, and compatibility context. | Golden API corpus. |
-| `E-G0.2-03` | Pagination is stable under the same query API, catalog digest, token-source revision, section, and selector state and rejects invalid, cross-version, or cross-digest cursors. | Cursor integrity and unsupported-version fixture. |
-| `E-G0.2-04` | Search returns bounded summaries; under the current sectional contract, retrieval returns selected complete records without copying the whole graph and continuation enumerates every token/crosswalk entry within response and dense-page budgets. A single oversize entry fails closed without truncation. Superseded inline response versions are rejected; historical evidence does not require active compatibility responses. | Response-size, completeness, oversize, unsupported-version, and relation-boundary tests. |
-| `E-G0.2-05` | Query operations perform no writes, network requests, code execution, or environment-dependent ranking. | Hermeticity and side-effect audit. |
-
-**Scope controls**
-
-- `planComposition` remains unavailable.
-- No docs application, MCP transport, project analysis, mutation, or hosted
-  fallback is implemented here.
-- Query logic stays transport-independent; adapters cannot fork it later.
-
-**Exit condition:** The minimal artifact graph compiles reproducibly and the
-pure local API retrieves it deterministically with complete provenance.
-
-### G0.3 CLI documentation baseline
-
-**Objective:** Make the CLI the first human, agent, and software documentation
-surface over the query kernel.
-
-**Entry conditions**
-
-- G0.2 is complete.
-- Success and error envelope schemas are published by `@muxui/schema`.
-- A token budget exists for each baseline command and detail level.
-
-**Primary ownership**
-
-- `@muxui/tooling`
-- Declarative command registry and output renderers
-
-**Deliverables**
-
-- `muxui manifest`, `muxui list`, `muxui search`, and `muxui get`.
-- One declarative command registry generating parser metadata, `--help`, shell
-  completion, manifest, response types, and future MCP schemas.
-- Human, JSON, and dense renderers over the same response object.
-- Common platform/detail/section/purpose/pagination selectors.
-- One JSON value on stdout; progress and diagnostics on stderr.
-- Versioned query envelopes, append-only codes, meaningful exit statuses, and
-  safe `nextCommand` objects with effect and confirmation metadata.
-- `muxui manifest --json` as cold-start discovery; bare `muxui --json` recovery.
-- Dense golden snapshots and per-command token budgets.
-- Generated `section`, `limit`, and `cursor` request/response types and help for
-  bounded `tokens` retrieval, including summary/continuation behavior.
-- Human, JSON, and dense rendering of catalog-selected pages without adapter-
-  owned entry costing or page-boundary selection.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G0.3-01` | API and CLI JSON normalize to the same response for identical requests. | Surface-parity matrix. |
-| `E-G0.3-02` | Human, dense, and JSON outputs contain the same IDs, applicability, defaults, omissions, revisions, and follow-up actions. | Cross-renderer golden corpus. |
-| `E-G0.3-03` | Dense output is deterministic, round-trippable to the response object, and within the 2,048-token page budget across early page breaks, minimum progress, and oversize-entry rejection. | Snapshot, continuation, and token-count report. |
-| `E-G0.3-04` | Manifest, parser, help, completion, request/response types, section values, pagination metadata, and deprecation diagnostics agree; an undeclared command or response fails CI. | Command-registry consistency test. |
-| `E-G0.3-05` | Error consumers can branch on code and structured details without parsing prose; mutating suggestions require confirmation. | Error-schema and exit-status fixture. |
-| `E-G0.3-06` | An unprimed agent discovers the manifest and retrieves the artifact without repository crawling. | Informational cold-start smoke transcript. |
-
-**Scope controls**
-
-- No public `validate`, `plan`, `doctor`, `init`, or `migrate` behavior.
-- Dense is a renderer, not a second content source.
-- Static agent files are not created as large catalog dumps.
-
-**Exit condition:** The CLI is a self-describing, deterministic documentation
-API with equivalent human, JSON, and dense views of the same local record.
-
-### G0.4 Project-local catalog package and resolver
-
-**Objective:** Ensure implementation guidance resolves to the exact local
-project dependency graph and never silently to hosted or highest-compatible
-data.
-
-**Entry conditions**
-
-- G0.2 defines the catalog bundle and digest.
-- G0.3 defines compatibility-aware query envelopes and diagnostics.
-- Synthetic renderer descriptors and package graphs exist for resolver proof.
-
-**Primary ownership**
-
-- `@muxui/catalog` package format
-- `@muxui/tooling` local resolver
-
-**Deliverables**
-
-- Published-package layout tying package version to `catalogVersion`, digest,
-  query API, schema range, and source revision.
-- Deterministic workspace discovery through the active package manager.
-- Direct project-local catalog resolution; no parent/sibling/highest-version
-  scan.
-- Manifest/lockfile/installed-graph drift and integrity checks.
-- Compatibility matching across schema, tooling, binding revision, renderer
-  package/export, token range, and release manifest.
-- Explicit content-addressed cache selection only by version and digest.
-- Resolver error precedence and all seven architecture-defined error codes.
-- Relative-path diagnostics and privacy-safe exact next commands.
-- Package/query compatibility metadata. The catalog owns deterministic
-  current query API v2 sectional behavior and unsupported-version rejection;
-  tooling selects a compatible installed catalog, forwards explicit version
-  intent, and rejects unsupported tuples without reinterpretation.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G0.4-01` | Hoisted, sibling, ancestor, and newer cached catalogs never replace the selected workspace’s direct declaration. | Multi-workspace resolver matrix. |
-| `E-G0.4-02` | Every reachable resolver code, precedence path, secondary detail, and safe next command is exercised. | Resolver taxonomy fixture. |
-| `E-G0.4-03` | Integrity, declaration drift, ambiguous resolution, incompatible binding/token tuples, and unsupported query/cursor versions fail without network fallback or silent response reinterpretation. | Negative package-graph and query-version corpus. |
-| `E-G0.4-04` | Installed-local authority and exact package/catalog/query/schema tuple appear in every applicable response, with unsupported query versions rejected. | Query metadata assertion. |
-| `E-G0.4-05` | JSON exposes no absolute root, credentials, secret, access-bearing URL, or unrestricted storage locator. | Privacy scan. |
-
-**Scope controls**
-
-- Do not invent `muxui.lock`; package manifests and the package-manager
-  lockfile remain dependency authority.
-- A global CLI is bootstrap convenience only.
-- Hosted discovery remains unavailable and cannot repair a local resolution
-  failure.
-
-**Exit condition:** Local guidance is offline, deterministic, project-correct,
-privacy-safe, and fails with typed cause-specific remediation.
-
-### G0.5 Maintainer authoring baseline
-
-**Objective:** Make the correct canonical edit path easier to discover than an
-informal projection patch from the first artifact onward.
-
-**Entry conditions**
-
-- G0.1 owns minimal source schemas and revisions.
-- G0.2 can compile and locate canonical sources.
-- G0.0 enforces generated/canonical path boundaries.
-
-**Primary ownership**
-
-- `@muxui/schema` authoring metadata
-- `@muxui/tooling` maintainer-only authoring helpers
-
-**Deliverables**
-
-- Schema-aware editor metadata and completion.
-- Minimal canonical scaffold for the first artifact family.
-- Source-linked diagnostics naming the earliest editable owner.
-- Semantic diff distinguishing editorial, compatible, and incompatible change.
-- Revision explainer listing normalized inputs for content/spec digests.
-- Affected-closure view over sources, projections, and required checks.
-- Preview-only, semantics-preserving autofixes with explicit changed paths.
-- Source-crosswalk scaffolding, source-linked coverage/grouping diagnostics,
-  semantic disposition diff, revision/affected-closure explanation, and a hard
-  autofix prohibition for authored `adopt`/`adapt`/`defer`/`reject` decisions.
-
-**Acceptance evidence**
-
-| ID | Required assertion | Retained evidence |
-| --- | --- | --- |
-| `E-G0.5-01` | A maintainer scaffolds, validates, compiles, retrieves, breaks, diagnoses, and repairs the minimal artifact without editing a projection. | Authoring round-trip transcript and fixture. |
-| `E-G0.5-02` | The semantic diff and revision explainer identify the exact owning field and correct version/revision effect. | Golden change corpus. |
-| `E-G0.5-03` | Autofix rejects any change to intent, lifecycle, accessibility, public API, token meaning, migration, source-crosswalk disposition/grouping/rationale, or exception. | Negative autofix policy tests. |
-| `E-G0.5-04` | A new stable schema field, including `sourceCrosswalk`, fails readiness until scaffold, diff, diagnostics, revision explanation, and affected-closure support understand it. | Schema-authoring coupling fixture. |
-
-**Scope controls**
-
-- No general code generator, consumer scaffold, model-authored product decision,
-  or automatic mutation.
-- The authoring helper cannot own a second registry.
-- Full change-intent closure is completed in Gate 1 against real renderer
-  changes.
-
-**Exit condition:** The minimum canonical source has a complete, owner-linked,
-non-mutating authoring and diagnosis path.
-
-### Gate 0 integration exit
-
-Gate 0 completes only when G0.0 through G0.5 are complete and one evidence
-packet proves this uninterrupted path:
-
-```text
-scaffold canonical source
-  -> validate ownership and relations
-  -> compile deterministic catalog
-  -> resolve project-local authority
-  -> manifest/list/search/get through API and CLI
-  -> render human/JSON/dense equivalently
-  -> explain revisions and repair a deliberate source error
-```
-
-Gate 0 does not wait for renderer breadth, public MCP, a docs application,
-planning, project mutation, migration, hosted services, or model-evaluation
-stability.
-
-#### Retired pre-R1 token-correction sequence
-
-The pre-R1 token-correction sequence and its phase profiles were migration-only
-delivery records. Their exact bytes are preserved only in the ignored preflight
-archive and are not current roadmap authority. The active token contract is
-defined by the canonical catalog, Product Scope 8.0.0, and the current R1
-milestones; no historical evidence is reinterpreted as a current Mux UI
-outcome.
-
-Gate 0 still requires deterministic schema, catalog, query, CLI, and authoring
-proof. Token retrieval is bounded and complete, generated surfaces remain
-projections of canonical records, and any migration capability remains deferred
-to its separately gated milestone.
+## Gate 0 — schema and query kernel (complete)
+
+| ID | Milestone | Assertions | Evidence |
+| --- | --- | --- | --- |
+| G0.0 | Repository, ownership, task graph | `E-G0.0-01`–`04` | `tests/evidence/archive/g0.0` |
+| G0.1 | Schema, identity, revision kernel | `E-G0.1-01`–`05` | `tests/evidence/archive/g0.1` |
+| G0.2 | Catalog compiler, pure query kernel | `E-G0.2-01`–`05` | `tests/evidence/archive/g0.2` |
+| G0.3 | CLI documentation baseline | `E-G0.3-01`–`06` | `tests/evidence/archive/g0.3` |
+| G0.4 | Project-local catalog and resolver | `E-G0.4-01`–`05` | `tests/evidence/archive/g0.4` |
+| G0.5 | Maintainer authoring baseline | `E-G0.5-01`–`04` | `tests/evidence/archive/g0.5` |
+| Gate 0 exit | Scaffold to repair, one path | `E-GATE0-01` | `tests/evidence/archive/gate-0` |
+
+Behavior is owned by Architecture and the package tests. The assertion IDs name
+the standing fixtures in "Mandatory fixture ledger". Gate 0 still means
+deterministic schema, catalog, query, CLI and authoring proof; bounded and
+complete token retrieval; generated surfaces as projections; migration stays
+G3.2.
 
 ## R1 — React-primary component delivery
 
@@ -696,240 +337,28 @@ projections, keeps React Aria internal, and runs focused checks proportional to
 the exported behavior. Protected CI, ordinary review, accessibility/privacy
 proof, and the publication/final-merge boundaries remain required.
 
-### R1.0 React package and substrate baseline
+### R1.0 to R1.5 (complete)
 
-**Entry**
-
-- The immutable Stage 1 snapshot, fixed 53-family table, and R1.0
-  package/substrate baseline are materialized and remain fail-closed authority
-  and release inputs.
-- Canonical token/theme facts are selected and bound to current Mux UI owners.
-- `muxui:component:button#web.react` is the named first renderer slice.
-
-**Deliverables**
-
-- Standalone `@muxui/react` package graph with React Aria Components
-  `1.20.0`, React/React DOM peer ranges, compiled CSS/assets, generated
-  package guidance, and no Mux UI workspace runtime dependency.
-- The upstream evaluation snapshot and closed styling/interaction disposition
-  grammar.
-- Shared styling, SSR/hydration, accessibility, compatibility,
-  descriptor, release-manifest, packed-consumer, and baseline proofs.
-- A private generated React playground for canonical examples, theme/mode/state
-  coverage, and visual contract comparison.
-- The first Button implementation fixture and complete React-only proof.
-
-**Evidence:** `E-R1.0-01` package/substrate identity;
-`E-R1.0-02` Mux UI-owned contract/export/license-notice boundary;
-`E-R1.0-03` CSS/SSR/hydration/private-playground baseline plus Button visual
-contract comparison; `E-R1.0-04` accessibility/compatibility baseline;
-`E-R1.0-05` packed clean-consumer and generated-guidance proof, including
-negative runtime-edge cases.
-
-**Exit:** the exact reusable baseline is fixed and Button implementation may
-begin. No component publication or support claim follows.
-
-### R1.1 Foundation and simple controls
-
-**Entry:** the fixed R1.0 baseline and fixed 53-family R1.1 allocation.
-
-**Deliverables:** Button first, then the remaining foundation, action, and
-disclosure components; one tranche implementation sequence, exception ledger,
-Mux UI-owned CSS, generated package surfaces, and packed proof.
-
-**Evidence:** `E-R1.1-01` canonical/binding closure;
-`E-R1.1-02` React behavior, types, Mux UI-owned CSS, visual contract,
-SSR/hydration, and automated accessibility; `E-R1.1-03` generated
-descriptor/guidance/export parity and packed consumer; `E-R1.1-04`
-risk-selected browser/manual results, advisories, exceptions, and release
-manifest (manual half for `DisclosureGroup` unmet, provisionally, and
-deferred to `S1.0` by Decision 0022).
-
-**Exit:** every committed family in the fixed R1.1 allocation is export-ready;
-an exact `0.1.0-alpha.N` publication may be proposed. Prerelease amendment
-(Decision 0022): the `DisclosureGroup` manual half of `E-R1.1-04`
-(provisional: applies if its risk class is declared Composite) is recorded as
-unmet, not passed, and deferred to `S1.0`. An rc on `next` may still export
-`DisclosureGroup` with assistive-technology support explicitly unproved and
-not claimed. R1.1 is complete for the rc prerelease boundary on its logged
-evidence, which must be captured into retained evidence before the R1 exit;
-the deferred item is a required `S1.0` entry condition, and no completion
-claim rests on the missing evidence.
-
-### R1.2 Forms and field controls
-
-**Entry:** the fixed R1.0 baseline and fixed 53-family R1.2 allocation.
-
-**Deliverables:** TextField, Switch, Form, and other form/field components with
-value, state, label, description, error, validation, submission, and
-composition contracts under Mux UI-owned hooks and tokens.
-
-**Evidence:** `E-R1.2-01` canonical/binding closure;
-`E-R1.2-02` form/input/label/error behavior and types;
-`E-R1.2-03` browser and required accessibility proof (manual and
-assistive-technology half unmet; deferred to `S1.0` by Decision 0022);
-`E-R1.2-04` generated/packed/release correlation.
-
-**Exit:** the fixed R1.2 allocation's exact export and prerelease conditions
-pass. Prerelease amendment (Decision 0022): the manual and
-assistive-technology half of `E-R1.2-03` is recorded as unmet, not passed, and
-deferred to `S1.0`. An rc on `next` may still export `Autocomplete`,
-`DatePicker`, `DateRangePicker`, `CheckboxGroup`, and `Form` with
-assistive-technology support explicitly unproved and not claimed. R1.2 is
-complete for the rc prerelease boundary on its logged evidence, which must be
-captured into retained evidence before the R1 exit; the deferred item is a
-required `S1.0` entry condition, and no completion claim rests on the missing
-evidence.
-
-### R1.3 Collections and composites
-
-**Entry:** the fixed R1.0 baseline and fixed 53-family R1.3 allocation.
-
-**Deliverables:** Select, Tabs, and collection/composite components with explicit
-focus, keyboard, selection, composition, and state ownership, plus visual
-contract comparisons.
-
-**Evidence:** `E-R1.3-01` canonical/binding closure;
-`E-R1.3-02` keyboard/focus behavior; `E-R1.3-03`
-selection/form/composition behavior; `E-R1.3-04` required accessibility
-evidence (manual and assistive-technology half unmet; deferred to `S1.0` by
-Decision 0022); `E-R1.3-05` generated/packed/release correlation.
-
-**Exit:** the fixed R1.3 allocation's exact export and prerelease conditions
-pass. Prerelease amendment (Decision 0022): the manual and
-assistive-technology half of `E-R1.3-04` is recorded as unmet, not passed, and
-deferred to `S1.0`. An rc on `next` may still export the 22 R1.3 collection
-and composite families listed in Decision 0022 with assistive-technology
-support explicitly unproved and not claimed. R1.3 is complete for the rc
-prerelease boundary on its logged evidence, which must be captured into
-retained evidence before the R1 exit; the deferred item is a required `S1.0`
-entry condition, and no completion claim rests on the missing evidence.
-
-### R1.4 Overlays and temporal interactions
-
-**Entry:** the fixed R1.0 baseline and fixed 53-family R1.4 allocation.
-
-**Deliverables:** Dialog, Toast, and overlay/temporal components with focus,
-dismissal, portal/global-effect, ordering, timing, announcement, concurrency,
-and teardown ownership, plus visual contract comparisons that never override
-responsible focus/accessibility fixes.
-
-**Evidence:** `E-R1.4-01` canonical/binding closure;
-`E-R1.4-02` overlay/focus/dismissal behavior;
-`E-R1.4-03` temporal/announcement/concurrency behavior;
-`E-R1.4-04` manual and assistive-technology proof required by the exact risk
-profiles (unmet; deferred to `S1.0` by Decision 0022);
-`E-R1.4-05` teardown/advisory/exception proof;
-`E-R1.4-06` generated/packed/release correlation.
-
-**Exit:** every family in the fixed R1.4 allocation is export-ready and has
-complete evidence for its exact contract and risk profile. Missing required
-proof keeps the component unexported and blocks R1.4 completion, except as
-this amendment records. Prerelease amendment (Decision 0022): `E-R1.4-04` is
-recorded as unmet, not passed, and deferred to `S1.0`. An rc on `next` may
-still export the seven R1.4 families with assistive-technology support
-explicitly unproved and not claimed. R1.4 is complete for the rc prerelease
-boundary on its logged evidence, which must be captured into retained evidence
-before the R1 exit; the deferred item is a required `S1.0` entry condition,
-and no completion claim rests on the missing evidence. An exact alpha
-publication candidate may be prepared only after all seven R1.4 families
-satisfy this exit. No publication, secondary-renderer, stable, `latest`, or
-equivalence claim follows.
-
-### R1.5 React breadth closure
-
-**Entry:** R1.1–R1.4 complete. R1.5 closes the fixed 53-family inventory and
-release proof; it does not introduce another implementation inventory.
-
-**Deliverables:** an exact `53/53` committed-family reconciliation: every
-documented family in the React Aria snapshot maps to a committed Mux UI family
-root, contract, export, lifecycle ledger, evidence/support record, and packed
-prerelease graph. A `defer`, `exclude`, or `not-a-component` disposition
-outside the fixed 53 families cannot alter an R1.5 family outcome. Every
-committed family remains export-ready at R1 exit.
-
-**Evidence:** `E-R1.5-01` upstream disposition completeness;
-`E-R1.5-02` canonical/binding/export/CSS coverage;
-`E-R1.5-03` risk-profile and visual contract proof (visual half recorded;
-risk-profile half unmet, because no binding declares a risk profile, and
-deferred to `S1.0` by Decision 0022);
-`E-R1.5-04` package/guidance/descriptor parity; `E-R1.5-05`
-compatibility and performance; `E-R1.5-06` informational agent discovery
-and final exception/advisory closure.
-
-**Exit:** the exact committed-family reconciliation is `53/53`; no defer,
-exclude, or not-a-component completion path remains; R1.6 may begin. The
-`@muxui/react@0.1.0-rc.1` proposal remains gated by R1.6 and exact R1 exit
-conditions. Prerelease amendment (Decision 0022): the risk-profile half of
-`E-R1.5-03` is recorded as unmet, not passed, and deferred to `S1.0`. An rc on
-`next` may still export every binding with no declared risk profile and
-support unproved and not claimed. R1.5 is complete for the rc prerelease
-boundary on its logged evidence, which must be captured into retained evidence
-before the R1 exit; the deferred item is a required `S1.0` entry condition,
-and no completion claim rests on the missing evidence.
+| ID | Milestone | State and evidence |
+| --- | --- | --- |
+| R1.0 | Package and substrate baseline | Complete. The Stage 1 snapshot and baseline in `catalog/react-r1-0/` are fail-closed input. `E-R1.0-01` through `E-R1.0-05` were removed in c7e3fe71 and live in git history. |
+| R1.1 | Foundation and simple controls | Complete for the rc prerelease boundary. `E-R1.1-01` through `E-R1.1-04`: `tests/evidence/r1.1`. The `DisclosureGroup` manual half of `E-R1.1-04` is deferred to `S1.0` (Decision 0022). Review is author-reported only (Decision 0022 amendment 01). |
+| R1.2 | Forms and field controls | Complete for the rc prerelease boundary. `E-R1.2-01` through `E-R1.2-04`: `tests/evidence/r1.2` and `tests/evidence/r1-retro-review`. The manual and assistive-technology half of `E-R1.2-03` is deferred to `S1.0`. |
+| R1.3 | Collections and composites | Complete for the rc prerelease boundary. `E-R1.3-01` through `E-R1.3-05`: `tests/evidence/r1.3` and `tests/evidence/r1-retro-review`. The manual and assistive-technology half of `E-R1.3-04` is deferred to `S1.0`. |
+| R1.4 | Overlays and temporal interactions | Complete for the rc prerelease boundary. `E-R1.4-01` through `E-R1.4-06`: `tests/evidence/r1.4` and `tests/evidence/r1-retro-review`. `E-R1.4-04` is deferred to `S1.0`. |
+| R1.5 | React breadth closure | Complete for the rc prerelease boundary. The exact `53/53` closure is `catalog/react-r1-5/closure.json`, with `E-R1.5-01` through `E-R1.5-06` in `tests/evidence/r1.5`. The risk-profile half of `E-R1.5-03` is deferred to `S1.0`. Review is author-reported only. |
+| R1.6 | Parity and private theme authoring | Complete. `E-R1.6-01` through `E-R1.6-07` below stay the standing assertions for supplemental additions. |
 
 ### R1.6 React parity and private Mux theme authoring
 
-**Objective:** Complete the current Mux UI-owned token/theme contract and
-applicable React Aria visual/interaction parity, then make the ported Scale
-application a functioning private authoring surface before React publication
-is eligible.
-
-**Entry:** R1.5's fixed 53-family reconciliation and Decision 0013. R1.6
-preserves the React Aria identity while admitting supplemental families only
-through the exact `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` mapping and proof.
-
-**Primary ownership:** `catalog/tokens/` owns canonical token/theme facts;
-`@muxui/tokens` owns transforms; `@muxui/react` owns React CSS and
-behavior; `apps/scale` owns only the private editor/projection; current
-Storybook owns neither canonical examples nor token/theme data.
-
-**Deliverables**
-
-- A classification-complete inventory of current React Aria-backed styles,
-  explicit applicable roots and support styles, and explicit exclusions for
-  unrelated marketing/layout roots. Every applicable mapping receives a Mux
-  UI-owned binding identity; no blanket standalone API/export requirement or
-  non-Aria component is added.
-- The exact 21 supplemental roots:
-  `AlertDialog`, `ButtonGroup`, `Card`, `CheckboxField`,
-  `ColorModeToggle`, `CommandPalette`, `HeaderNav`, `InputTags`,
-  `Input`, `MultiSelect`, `PaymentInput`, `ProgressCircle`,
-  `RadioField`, `Sidebar`, `SwitchField`, `TagSelect`, `TextArea`,
-  `TextEditor`, `Resizable`, `Lightbox`, and `Markdown`.
-  `Resizable` uses `react-aria/useMove`; `Lightbox` and `Markdown`
-  are indirect React Aria-backed roots. `Drawer` and `FileUpload` are
-  standalone vanilla controls outside this supplemental React Aria scope;
-  `RadioGroup` and `ToggleGroup` are already covered by existing mappings.
-  These 21 candidates require Mux UI binding mapping and proof before export or
-  availability claims.
-- Mux-namespaced token/theme data covering admitted values, modes, palette
-  families, Inter, Playfair Display, and Roboto Mono font families,
-  display/heading/title/label/body/mono/expressive typography roles, and
-  standard and mono presets. Canonical Mux UI names are the public vocabulary;
-  bundled local fonts retain applicable third-party license notices.
-- Matched light/dark fixtures comparing CSS, anatomy, interaction, variants,
-  and states for every applicable mapped component. Missing states or fixtures
-  fail closed; existing Mux screenshot regressions cannot substitute for this
-  proof.
-- Current Storybook examples render canonical Mux UI tokens and themes.
-- A functioning private `apps/scale` authoring path loads, edits, previews,
-  imports, exports, persists, and round-trips themes under canonical types,
-  modes, aliases, and override safety, with explicit loss/rejection
-  diagnostics.
-- An optional Tailwind consumer adapter and clean consumer compilation proof.
-  Tailwind remains a consumer build dependency only and is absent from Mux
-  runtime, peer, generated-source, and styling-engine closure.
-- Exact internal, replaceable dependencies remain at owning Mux modules:
-  Lucide for decorative affordances in any component (Decision 0011
-  amendment 06), `motion@13.4.0` for bounded component
-  motion in existing admitted bindings, `react-aria@3.51.0` for `Resizable`,
-  `marked@13.0.3` for the typed Markdown parser boundary, and the eight
-  `@tiptap/*@3.31.4` packages for `TextEditor` (Decision 0011 amendment 04).
-  Their license/notice,
-  integrity, peer-compatibility, lockfile, isolation, tree-shaking,
-  SSR/hydration, packed-consumer, and Markdown security proofs are required;
-  no upstream implementation type or object becomes public.
+Complete (Decision 0013). R1.6 delivered the Mux UI-owned token and theme
+contract, applicable React Aria parity, and the private `apps/scale` authoring
+path. `catalog/tokens/` owns token and theme facts, `@muxui/tokens` owns
+transforms, `@muxui/react` owns React CSS and behavior, and `apps/scale` owns
+only the private editor and projection.
+`catalog/react-r1-6/supplemental-components.json` owns the supplemental family
+list. R1 exit publication eligibility still requires its exact tarball, release,
+registry, rollback, and human authorization conditions.
 
 **Acceptance evidence**
 
@@ -955,131 +384,15 @@ is private and may be disabled without changing canonical truth. Safety,
 accessibility, runtime ownership, and platform differences are recorded
 explicitly and cannot be hidden to claim 100% parity.
 
-**Exit:** all seven R1.6 assertions pass against canonical Mux UI sources. R1
-exit publication eligibility still requires its existing exact tarball,
-release, registry, rollback, and human authorization conditions.
+### Post-R1.6 supplemental admissions
 
-### Post-R1.6 IconButton addition
-
-Decision 0014 adds IconButton under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and
-explicitly defers Field. Deliver the artifact, Button composition, square styles,
-root export, examples, generated guidance, and focused proof through an ordinary
-protected PR before preparing the next R1-exit candidate. Existing assertions
-`E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07` cover current mapping,
-representative interaction/style behavior, projections, and release boundaries.
-Retain the completed initial R1.6 migration and its 74-family evidence unchanged;
-this follow-up establishes the expanded 75-family source surface independently.
-Field has no implementation deliverable until the custom-control consumer trigger
-in Decision 0014 is met and separately admitted.
-
-### Post-R1.6 Text addition
-
-Decision 0017 adds Text under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and
-preserves the fixed 53-family inventory and completed R1.6 evidence. That
-admission established 23 supplemental families and 76 total
-families, with 74 root exports and the two existing isolated subpaths. Text
-requires focused native-host ref/type, field and collection TextContext slot,
-token/style, truncation, SSR/hydration, generation, and packed-consumer proof.
-The addition remains experimental and does not establish readiness, support,
-publication, platform activation, or final R1-exit merge authorization.
-
-### Post-R1.6 Image, Avatar, and SelectNative addition
-
-Decision 0018 explicitly extends `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` with
-Image, Avatar, and SelectNative, including the named native-backed image
-families. This expansion follows the Text addition and preserves historical
-R1.6 evidence. That admission established 26 supplemental families and 79
-total families, with 77 root exports and two existing isolated subpaths.
-SelectNative's `useField` uses the existing pinned internal
-`react-aria@3.51.0` edge alongside Resizable's `useMove`; version identity,
-module isolation, and dependency/package proof remain required.
-
-Deliver native image load/error/recovery and fallback-only composition;
-visible native select options, events, form/reset, keyboard/focus, and field
-associations; native ref/types; SSR/hydration; token-based light/dark styles;
-canonical examples; generation identity; and clean packed-consumer proof.
-Independent review covers public API and accessibility boundaries. Reuse
-`E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07` for current mapping,
-styles/behavior, projections, and platform/release boundaries without changing
-the completed initial migration record. Generic Field remains deferred.
-
-These deliverables establish implementation readiness for the three families,
-not milestone completion, publication, support, consumer mutation, or a
-final R1-exit merge authorization.
-
-### Post-R1 CodeBlock addition
-
-Decision 0024 admits only CodeBlock under
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` in the existing React root. Its canonical
-artifact, code/diff API, bounded line comparison, truthful explicit copying,
-Mux token CSS, examples, and projections follow ordinary post-R1 delivery.
-At Decision 0024's admission, the mapping grew to 27 supplemental and 80 total families, with 78
-root exports and two existing isolated subpaths; the historical 53-family
-floor and completed evidence remain unchanged.
-
-Deliver native host refs/types, escaping and whitespace, diff edge cases and
-character/line/work budgets, clipboard fulfillment/error/stale completion,
-SSR/hydration, keyboard/focus, light/dark/narrow-width styles, generation,
-root isolation, and packed-consumer proof. Two component-owned derived row
-background tokens also require canonical token and affected-dependent proof.
-Independent review covers public
-API, accessibility, and bounded diff behavior. Existing assertions
-`E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04`, and `E-R1.6-07` route current mapping,
-behavior/styles, projections, and platform/release checks; retained historical
-evidence does not prove the new family. The original admission implied no
-syntax highlighter or dependency; Decision 0024 amendment 01 below separately
-admits that bounded extension. No G3 activation, stable support, secondary
-platform, or publication is implied.
-Other Beautiful UI candidates have no deliverable under this admission.
-
-#### CodeBlock Shiki extension, 7 October 2026
-
-Decision 0024 amendment 01 and Product Scope 18.0.0 extend the existing
-CodeBlock outcome with exact private `shiki@4.5.0`. Preserve the existing
-container, copy/diff/input contracts and public API. Deliver client-effect-only
-fine-grained core/language/Oniguruma/WASM imports; matching plain SSR/initial
-hydration; bundled names/aliases with safe unknown/failure fallback; original
-text spans; separate before/after ordered grammar states; stale/unmount guards;
-semantic default/strong/link colors; and smaller aggregate highlighting budgets.
-
-Current `E-R1.6-01`, `03`, `04` and `07` continue to route canonical records,
-examples, behavior/styles, projections and package/platform boundaries. Add
-focused multiline/embedded grammar context, exact whitespace/escaping, loading/
-failure/alias/unknown, async cleanup, bounds and representative timing proof.
-Dependency proof retains exact pins, npm integrity and notices, root/SSR module
-isolation, ordinary Button tree-shaking and real packed-consumer highlighting.
-Run the full deterministic workspace graph for this runtime dependency change.
-Freeze the delta before independent API/security/lifecycle/budget/ownership
-review. Existing retained evidence does not prove this extension.
-
-No family/export count, lifecycle, renderer activation, milestone completion,
-release boundary, publication, tracker mutation or TextEditor work follows.
-
-### Post-R1 remaining Beautiful UI candidates addition
-
-Decision 0025 admits PromptComposer, Message, Activity and DataDiff under
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` in the existing experimental React root.
-Andrew's explicit creation request names this bounded batch; the selected
-Beautiful UI rendered anatomy is adapted through independently owned Mux
-source, tokens, native controls and accessibility. CodeBlock remains admitted
-separately by Decision 0024. The current mapping is 31 supplemental and 84
-total families, with 82 roots and the unchanged two isolated subpaths.
-
-Deliver native host/ref/event types, real form validation/reset/IME and caret
-menus, caller streaming/disclosures/source/follow-up actions, finite supplied
-activity states, safe scalar table changes/selection/Apply, controlled state,
-pending/error/empty paths, SSR/hydration, keyboard/focus, both themes/narrow/
-forced-colors, canonical examples, generation identity, parser/editor root
-isolation and packed consumers. DataDiff's two component-owned derived tints
-require token and actual affected-dependent proof. Freeze the complete batch
-before independent public-API/a11y/state/security/ownership review.
-
-Existing `E-R1.6-01`, `E-R1.6-03`, `E-R1.6-04` and `E-R1.6-07` route current
-mapping, runtime/styles, projections and platform/release checks. This is local
-implementation readiness, not completed retained evidence, milestone/release
-readiness, G3 activation, secondary renderer support, publication, tracker
-mutation, production or consumer work. No AI/network/upload service, generic
-workflow engine or timed cosmetic processing is admitted.
+IconButton (Decision 0014), Text (0017), Image/Avatar/SelectNative (0018),
+CodeBlock including Shiki (0024), and PromptComposer/Message/Activity/DataDiff
+(0025) are ordinary protected-PR admissions under
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`. The family list is owned by
+`catalog/react-r1-6/supplemental-components.json`. Each carries the focused
+proof its decision names, routed by `E-R1.6-01`, `-03`, `-04` and `-07`. None
+claims milestone completion, support, publication or G3 activation.
 
 ### Post-R1.6 Figma token export addition
 
@@ -1132,19 +445,12 @@ completion, public package, support, or release claim.
 
 ### R1 exit — React prerelease publication
 
-**Entry:** R1.5 complete plus exact tarball, release manifest, provenance,
+**Entry:** R1.5 complete, with the retained R1.1–R1.5 check evidence
+(`tests/evidence/r1.1` through `r1.5`) and the R1.2–R1.4 retroactive review
+(`tests/evidence/r1-retro-review`) that release preparation reads for every rc;
+R1.1 and R1.5 review is author-reported only, which is not proof (Decision 0022
+amendment 01). Also required: exact tarball, release manifest, provenance,
 registry control, checks, rollback plan, and human publish authorization.
-R1.1 through R1.5 are complete for the rc prerelease boundary only on logged
-check and review evidence, and a transient log cannot satisfy this exit.
-Capturing that logged evidence into retained evidence is therefore a required
-entry condition and a required step before the rc.1 cut, done before the logs
-expire around 2026-11-23 (Decision 0022). No hosted review logs exist, so
-Decision 0022 amendment 01 meets the review half with the retained
-retroactive reviews of R1.2 through R1.4, each finding resolved, and accepts
-R1.1 and R1.5 review as author-reported only, which is not proof. That
-acceptance of an unretained author claim is Andrew's accepted exception to the
-transient-log rule for R1.1 and R1.5 only. The generated records mark R1.5
-evidence `checks-retained-review-author-reported`.
 
 **Evidence:** `E-R1-EXIT-01` exact tarball/export/install tuple;
 `E-R1-EXIT-02` registry/provenance/integrity; `E-R1-EXIT-03` published clean-
@@ -1350,32 +656,14 @@ API, CLI, and private Blocks section with surface parity, and the poster grid,
 the marketing hero, and the marketing pricing section pass `E-BL1-01` through
 `E-BL1-11` with every claim above left unmade.
 
-## Historical Gate 1 — superseded cross-platform sequence
+## Retired Gate 1 and Gate 2
 
-The former cross-platform Gate 1 bodies and their migration-era evidence are
-retired from current roadmap authority. Their exact bytes are preserved only in
-the ignored preflight archive. Current work begins with the React-primary R1
-sequence above; framework-free web, native, React Native Web, and cross-platform
-comparison remain separately deferred tracks with independent activation,
-binding, accessibility, privacy, support, and release proof.
-
-No historical Gate 1 status, evidence packet, source identity, or retention
-rule changes the immutable Product Scope 8.0.0 commitments or establishes a
-current support, parity, publication, or platform claim.
-
-## Historical Gate 2 — superseded productization sequence
-
-Decision 0021 moved the superseded G2.0–G2.3 and G2.7 bodies to the ignored
-recovery archive (`.migration-archive/20261003-decision-0021/`). Their current
-React successors are R1.3 and R1.4 for the React Tabs and Toast outcomes of
-G2.0, and P2.1–P2 exit for G2.1–G2.3 and G2.7; framework-free and native
-portions wait for W1/N1. A later reference to Gate 2 means those successors.
-
-G2.4–G2.6 remain below because they still define the entry, evidence, and
-scope controls of the admitted optional `plan`, `doctor`/`init`, and
-canonical-proposal capabilities. Each remains unavailable until its own
-evidence passes, and an incomplete one stays disabled without lowering the
-P2 exit release standard.
+Gate 1 (cross-platform) and the old Gate 2 are retired. A reference to Gate 1
+means R1.0–R1.6. A reference to Gate 2 means P2.1–P2 exit (old G2.1–G2.3 and
+G2.7), with R1.3/R1.4 for the React Tabs and Toast outcomes of G2.0.
+Framework-free and native portions wait for W1/N1. G2.4–G2.6 below remain the
+entry, evidence and scope controls of the admitted optional capabilities; an
+incomplete one stays disabled without lowering the P2 exit standard.
 
 ### G2.4 Grounded composition planning
 
@@ -1431,7 +719,7 @@ detection, preview, confinement, atomicity, and recovery are proved.
 
 **Entry conditions**
 
-- G2.2 project detection and diagnostics are complete.
+- P2.2 project detection and diagnostics are complete.
 - Change-intent envelopes and semantic diffs are stable for consumer-project
   effects.
 - A journal/recovery format and confirmation policy are versioned.
@@ -1480,9 +768,9 @@ creating an arbitrary model-driven patch path.
 
 **Entry conditions**
 
-- Gate 1 change-intent closure passes for concepts, bindings, examples, tokens,
+- R1.5 change-intent closure passes for concepts, bindings, examples, tokens,
   and renderers.
-- G2.1 version effects and G2.5 journal/confirmation primitives are available.
+- P2.1 version effects and G2.5 journal/confirmation primitives are available.
 - Each proposed operation has one owner, closed input schema, deterministic
   preview, proof policy, and rejection boundary.
 
@@ -1547,8 +835,8 @@ have proved the reusable authoring, renderer, and evidence paths.
 
 **Entry conditions**
 
-- Gate 2 is complete for package/catalog/consumer authority.
-- G2.0 is complete before adding broad component families with comparable
+- P2 exit is complete for package/catalog/consumer authority.
+- R1.3 and R1.4 are complete before adding broad component families with comparable
   keyboard, overlay, or temporal risks.
 - Each candidate has observed demand, platform disposition, owner, risk class,
   and a named pattern or consumer need.
@@ -1593,7 +881,7 @@ be transformed deterministically and recovered safely.
 
 **Entry conditions**
 
-- Gate 2 release history contains at least one real supported migration need.
+- P2 release history contains at least one real supported migration need.
 - Old and new binding specs/catalogs remain retrievable.
 - G2.5 mutation safety and G2.6 review-packet primitives are complete.
 - A migration is either declarative or has a reviewed, maintained parser and
@@ -1639,7 +927,7 @@ state impersonate installed-local implementation authority.
 
 **Entry conditions**
 
-- Gate 2 query schemas and catalog compatibility policy are stable.
+- P2.1 query schemas and catalog compatibility policy are stable.
 - Local MCP parity has passed across released records.
 - Hosted storage, authentication where applicable, rate limits, privacy,
   revocation, and availability policies are defined.
@@ -1685,7 +973,7 @@ exist.
 
 **Entry conditions**
 
-- Gate 1 and Gate 2 have accumulated repeated cold-start and generation runs.
+- R1.5 and P2 have accumulated repeated cold-start and generation runs.
 - Prompt sets reference canonical artifact/example IDs and contain no copied
   implementation source.
 - Model/version variance, retry policy, threshold calculation, and failure owner
@@ -1738,7 +1026,7 @@ still apply to import, round-trip, and every other G3.5 capability.
 
 **Entry conditions**
 
-- Gate 2 package, token-contract, artifact, binding, and release identities are
+- P2.1 package, token-contract, artifact, binding, and release identities are
   stable across at least one real release change.
 - At least one named design-tool workflow and adapter version is selected from
   observed maintainer use.
@@ -1801,7 +1089,7 @@ need additional typed semantics without pre-committing a parallel ontology.
 
 **Entry conditions**
 
-- Gate 1 has real component/pattern examples and recorded agent tasks.
+- R1 has real component/pattern examples and recorded agent tasks.
 - A representative, privacy-safe corpus of synthesis, transformation,
   explanation, and design-to-code requests exists.
 - Current behavior over tokens, variants, patterns, decision context, and
@@ -1842,7 +1130,7 @@ need additional typed semantics without pre-committing a parallel ontology.
 - No free-standing interpretation graph, prompt-only truth, model-generated
   ranking, or universal “design intent” object.
 - Product-specific business priority and navigation remain application-owned.
-- This read-only discovery cannot block Gate 2 or retroactively change Gate 1
+- This read-only discovery cannot block P2 or retroactively change R1
   acceptance.
 
 **Exit condition:** Observed workflows either justify narrowly owned typed
@@ -1856,7 +1144,7 @@ moving beyond v1’s closed first-party catalog.
 
 **Entry conditions**
 
-- Gate 2 is complete and an observed workflow cannot be satisfied by first-party
+- P2 is complete and an observed workflow cannot be satisfied by first-party
   records, normal project code, or an inert namespace.
 - Threat model, integrity/provenance, permissions, revocation, confinement,
   timeout, and compatibility policies are approved.
@@ -1982,7 +1270,7 @@ integration, never as the definition of AI-first or a kernel dependency.
 
 **Entry conditions**
 
-- Gate 2 canonical query, compatibility, validation, and proof surfaces are
+- P2 canonical query, compatibility, validation, and proof surfaces are
   stable.
 - A named protocol and observed workflow justify a renderer/integration.
 - Protocol input cannot bypass pattern/component constraints or installed
@@ -2067,13 +1355,7 @@ valid outcomes and do not make the core product incomplete.
 
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
-| R1.0 | React package/substrate baseline | Gate 0; accepted Product Scope 6.0.2, Decision 0010 amendments 01–03, and the accepted Stage 1 snapshot through the immutable committed-source route | R1.1–R1.5 |
-| R1.1 | Foundation and simple controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.1 allocation | R1.5, eligible alpha |
-| R1.2 | Forms and field controls | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.2 allocation | R1.5, eligible alpha |
-| R1.3 | Collections and composites | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 temporal-adapter/icon-affordance clarifications, and the fixed 53-family R1.3 allocation | R1.5, eligible alpha |
-| R1.4 | Overlays and temporal interactions | Fixed R1.0 baseline, Product Scope 8.0.0 carrying forward the 6.0.4 icon-affordance clarification, and the fixed 53-family R1.4 allocation | R1.5, eligible alpha |
-| R1.5 | React breadth closure | R1.1–R1.4 and the fixed 53-family 53/53 closure | R1.6 |
-| R1.6 | React parity and private Mux theme authoring | R1.5 and Decision 0013 | R1 exit |
+| R1.0–R1.6 | React package baseline, tranches R1.1–R1.5, parity and private theme authoring | Complete: Gate 0, then R1.0, R1.1–R1.4, R1.5 closure, R1.6 | R1 exit |
 | R1 exit | React prerelease publication | R1.5, R1.6, and exact publish authorization | P2.1; BL1; optional W1/N1/S1 activation reviews |
 | P2.1 | React packages, catalog, CLI, compatibility | R1 exit and accepted public package graph | P2.2, P2.3, P2 exit |
 | P2.2 | React consumer validation/local authority | P2.1 | P2.3, P2 exit |
@@ -2089,24 +1371,23 @@ valid outcomes and do not make the core product incomplete.
 
 These rows remain the current register for the optional G2.4–G2.6 and G3.x
 capabilities, as Product Scope treats them, and keep their original dependency
-wording. Decision 0021 moved the completed and superseded G0, G1, and other G2
-rows, which were audit locators only, to the ignored recovery archive.
+wording.
 
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
 | G2.4 | Grounded composition planning | G1.8, Gate 1 | Public `plan`, G3.11 |
-| G2.5 | Doctor and init | G2.2, Gate 1 change intent | Enabled project writes |
-| G2.6 | Allowlisted canonical proposals | G1.9, G2.1, G2.5 primitives | Enabled maintainer proposals |
-| G3.1 | Component and pattern breadth | Gate 2; G2.0 for comparable risks | Only its admitted families |
-| G3.2 | Migrations and codemods | Gate 2 history, G2.5/G2.6 safety | Public `migrate` |
-| G3.3 | Hosted MCP | Gate 2 query stability | Hosted read-only capability |
-| G3.4 | Agent-evaluation promotion | Repeated Gate 1/2 baselines | Only promoted eval gates |
-| G3.5 | Themes and design-tool interchange | Stable Gate 2 identities, G2.6 | Selected interchange capability |
-| G3.6 | Promptable-semantics discovery | Gate 1 task evidence | Only separately admitted semantics |
-| G3.7 | Extension and overlay trust | Gate 2 plus observed demand | Only enabled extension scope |
+| G2.5 | Doctor and init | P2.2, R1.5 change intent | Enabled project writes |
+| G2.6 | Allowlisted canonical proposals | R1.5, P2.1, G2.5 primitives | Enabled maintainer proposals |
+| G3.1 | Component and pattern breadth | P2 exit; R1.3/R1.4 for comparable risks | Only its admitted families |
+| G3.2 | Migrations and codemods | P2 history, G2.5/G2.6 safety | Public `migrate` |
+| G3.3 | Hosted MCP | P2 query stability | Hosted read-only capability |
+| G3.4 | Agent-evaluation promotion | Repeated R1/P2 baselines | Only promoted eval gates |
+| G3.5 | Themes and design-tool interchange | Stable P2 identities, G2.6 | Selected interchange capability |
+| G3.6 | Promptable-semantics discovery | R1 task evidence | Only separately admitted semantics |
+| G3.7 | Extension and overlay trust | P2 plus observed demand | Only enabled extension scope |
 | G3.8 | Higher-order artifacts | G3.6/equivalent demand evidence | Only accepted new kind |
-| G3.9 | Additional framework | Stable Gate 2 web, demand | Selected framework binding |
-| G3.10 | Agent-to-UI protocol | Stable Gate 2, named protocol demand | Selected protocol adapter |
+| G3.9 | Additional framework | Stable P2 web, demand | Selected framework binding |
+| G3.10 | Agent-to-UI protocol | Stable P2, named protocol demand | Selected protocol adapter |
 | G3.11 | Consumer pattern validation/scaffolds | G2.4, parser evidence, demand | Supported consumer analysis only |
 
 ## Mandatory fixture ledger
@@ -2127,7 +1408,7 @@ rows, which were audit locators only, to the ignored recovery archive.
 | Example curriculum selection | Every R1 component tranche; integrated at R1.5 | Applicable `E-R1.1-*` through `E-R1.5-*` |
 | Change-intent closure | R1.5, then enabled Productization operations | `E-R1.5-04`; later operation evidence |
 | Packed descriptor derivation | R1.0 baseline, every tranche, R1 exit, then P2.1 | `E-R1.0-05`, tranche packed proof, `E-R1-EXIT-01`, P2.1 release proof |
-| Token fallback denial | Historical G1.0 facts explicitly rebound at R1.0 | `E-G1.0-03` plus `E-R1.0-01` reusable-proof binding |
+| Token fallback denial | R1.0 | `E-R1.0-01` (fixture `E-G1.0-03` in `packages/tokens/test/token-contract.test.mjs`) |
 | Token/theme ownership and override safety | R1.0 and R1.6 | `E-R1.0-01` through `E-R1.6-07` |
 | Platform theme safety and accessibility | R1.0 React baseline; each tranche's exact binding/profile risk proof; R1.5 correlation; R1.6 parity/theme closure; later W1/N1 profiles independently | Applicable `E-R1.0-*` through `E-R1.6-*` |
 | Evidence advisory propagation | R1.5 and every publication candidate | `E-R1.5-05`; `E-R1-EXIT-01` |
@@ -2255,22 +1536,8 @@ If any answer is “no,” stop the affected capability at its current gate, ret
 the failure evidence, and repair the earliest authoritative owner. Do not patch
 a projection, lower the evidence claim, or expand the milestone to hide the
 failure.
-## Roadmap reconciliation and fixed R1 family allocations
 
-R1.0 remains the baseline milestone. The accepted fixed 53-family table,
-immutable Stage 1 snapshot, and R1.0 package/substrate baseline are the existing
-lock for all four implementation tranches. Product Scope 8.0.0 carries forward
-the 6.0.4 and 6.0.2 clarifications that ordinary R1 implementation does not require
-another scope lock, digest acceptance, or human evidence-acceptance gate.
-Earlier Product Scope 5.0.1 or
-Decision 0010 amendment 01–02 wording retained elsewhere in this roadmap is a
-historical audit locator only; it is not a current R1 entry or completion rule.
-R1.0 remains historically complete against Product Scope 6.0.2; Product Scope
-6.0.3 remains the successor input for the approved temporal dependency, and
-Product Scope 6.0.4 added the approved icon dependency for the affected R1.1–R1.4
-affordances, and Product Scope 8.0.0 carries it forward under the Mux UI
-identity. Neither clarification nor the identity reset retroactively changes
-R1.0 evidence.
+## Roadmap reconciliation and fixed R1 family allocations
 
 The immutable tranche family sets are:
 
@@ -2337,7 +1604,3 @@ tree-shaking, SSR/hydration, and exact packed-consumer resolution. Every
 registry mutation requires a
 separate exact publication authorization and a final registry/version/dist-tag
 collision and authorization-drift check. This authority publishes nothing.
-
-The historical pre-R1.6 icon affordance clarification is archived by Decision
-0021; the current Lucide edge and its proof obligations are stated above and in
-Architecture.

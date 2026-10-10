@@ -9,5 +9,8 @@ change.
 the architecture's platform-safety section. It is not a fourth authority layer;
 schema, compiler, catalog, and package forms derive from it.
 
+Strategy documents state current rules only; earlier versions live in git history.
+`archive/`, if present, is history, not authority.
+
 Run `pnpm check` after edits. Planning-policy tests run in the
 repository-policy package check and the repository planning-policy workflow.

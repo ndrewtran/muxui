@@ -4,7 +4,7 @@
 - Parent decision: `muxui:decision:0015`
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0015:amendment:01`
-- Amends by reference: [Decision 0015](./0015-authority-retirement.md),
+- Amends by reference: [Decision 0015](./archive/0015-authority-retirement.md),
   "Decision", the sentence "The retired attribution is replaced with
   `Copyright (c) 2025 Andrew`."
 - Accepted request: [acceptance record](./0015-amendment-01-copyright-year-acceptance.md)

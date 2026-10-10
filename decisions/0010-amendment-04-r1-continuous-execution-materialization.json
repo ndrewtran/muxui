@@ -1,7 +1,0 @@
-{
-  "decisionId": "0010-amendment-04-materialization",
-  "status": "retired",
-  "supersededBy": "decisions/0021-retired-strategy-history-archive.md",
-  "reason": "Historical materialization record retired with its amendment record.",
-  "recoveryArchive": ".migration-archive/20261003-decision-0021/authority-originals/decisions/0010-amendment-04-r1-continuous-execution-materialization.json"
-}
