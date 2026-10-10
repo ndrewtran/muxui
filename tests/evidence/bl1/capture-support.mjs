@@ -236,12 +236,12 @@ export function blockTreeAt(cwd, revision, slug) {
 
 const reactRuntimeRoot = 'packages/react/src';
 /**
- * The files under `packages/react/src` that render no component: the generator and contract checks that project and verify the
- * package, the deferred-evidence list, the publish guard, and the reader of the supplemental mapping. Every other file there, runtime
- * modules and stylesheets alike, can carry the copy a block renders (a default placeholder, an accessible label), so it is part of the
- * coverage key. Keeping these out means a generator or contract change does not ask for a new review of every block.
+ * The files under `packages/react/src` that neither render a component nor decide what one renders: the contract checks that verify the
+ * generated package, the deferred-evidence list, and the publish guard. Every other file there is part of the coverage key: runtime modules
+ * and stylesheets can carry the copy a block renders (a default placeholder, an accessible label), the generator projects the runtime that
+ * blocks import and could transform that copy, and the supplemental mapping selects the runtime sources and exports.
  */
-export const nonRenderingReactSources = ['generate.mjs', 'r1-contracts.mjs', 'r1-deferred-evidence.mjs', 'publish-guard.mjs', 'supplemental-mapping.mjs'].map((name) => `${reactRuntimeRoot}/${name}`);
+export const nonRenderingReactSources = ['r1-contracts.mjs', 'r1-deferred-evidence.mjs', 'publish-guard.mjs'].map((name) => `${reactRuntimeRoot}/${name}`);
 
 /**
  * What a review of a block read, as far as the copy the block renders goes: the block's own sources (its git tree), the catalog

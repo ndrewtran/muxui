@@ -2509,7 +2509,8 @@ async function forgeInformational(capture) {
     rows: catalogAt(source).patternSlugs.map((block) => ({
       block,
       key: expectedCoverageKey(source, block, boundNonRenderingSources('HEAD')),
-      review: { artifact: review.artifact, reviewer: review.reviewer, reviewedRevision: review.reviewedRevision, reviewedTree: review.reviewedTree, keyAtReviewedRevision: expectedCoverageKey(review.reviewedRevision, block, boundNonRenderingSources('HEAD')) },
+      // The retained review read e9a470c2, before #251 and #256 changed the generator; its key no longer matches the source revision's, so the forged rows stand a review of the source revision in for it.
+      review: { artifact: review.artifact, reviewer: review.reviewer, reviewedRevision: source, reviewedTree: capture.index.sourceTree, keyAtReviewedRevision: expectedCoverageKey(source, block, boundNonRenderingSources('HEAD')) },
     })),
   };
   const logged = parseThresholds(readAtRevision(repositoryRoot, 'HEAD', forged.artifacts['E-BL1-11'].observations.thresholds.path));
@@ -2692,7 +2693,8 @@ test('a content review covers a block only for the sources, participants, and Re
     const first = await commitFiles(cwd, {
       ...pattern('a', 'a1', 'button'), ...pattern('b', 'b1', 'button', 'text'),
       ...component('button', 'button1'), ...component('text', 'text1'), ...component('unrelated', 'unrelated1'),
-      'packages/react/src/button.mjs': 'export const Button = 1;\n', 'packages/react/src/generate.mjs': 'generate 1\n', 'packages/react/src/r1-contracts.mjs': 'contracts 1\n',
+      'packages/react/src/button.mjs': 'export const Button = 1;\n', 'packages/react/src/generate.mjs': 'generate 1\n', 'packages/react/src/supplemental-mapping.mjs': 'mapping 1\n',
+      'packages/react/src/r1-contracts.mjs': 'contracts 1\n', 'packages/react/src/r1-deferred-evidence.mjs': 'deferred 1\n', 'packages/react/src/publish-guard.mjs': 'guard 1\n',
     }, 'a and b');
     const review = (name, reviewedRevision, blocks) => ({ artifact: { path: `reviews/${name}.md`, sha256: `sha256:${name}` }, reviewer: `reviewer ${name}`, reviewedRevision, reviewedTree: gitIn(cwd, 'rev-parse', `${reviewedRevision}^{tree}`), blocks });
     const early = review('early', first, ['a', 'b']);
@@ -2706,14 +2708,20 @@ test('a content review covers a block only for the sources, participants, and Re
     assert.deepEqual(key.participants.map(({ component: name }) => name), ['muxui:component:button', 'muxui:component:text']);
     assert.equal(key.participants[0].tree, gitIn(cwd, 'rev-parse', `${first}:catalog/components/button`));
     assert.equal(key.blockTree, gitIn(cwd, 'rev-parse', `${first}:catalog/patterns/b`));
-    assert.deepEqual([key.reactRuntime.root, key.reactRuntime.files, key.reactRuntime.excluded], ['packages/react/src', 1, nonRenderingReactSources]);
-    assert.ok(nonRenderingReactSources.every((path) => path.startsWith('packages/react/src/')) && nonRenderingReactSources.includes('packages/react/src/generate.mjs'));
+    assert.deepEqual([key.reactRuntime.root, key.reactRuntime.files, key.reactRuntime.excluded], ['packages/react/src', 3, nonRenderingReactSources], 'the runtime module, the generator, and the mapping are in the key');
+    assert.deepEqual(nonRenderingReactSources, ['r1-contracts.mjs', 'r1-deferred-evidence.mjs', 'publish-guard.mjs'].map((name) => `packages/react/src/${name}`), 'only the contract checks, the deferred-evidence list, and the publish guard are left out');
     assert.equal(coverageKey(cwd, first, 'missing'), null);
     assert.deepEqual(coverage(first, [early]).uncovered, [], 'a review covers what it read');
 
-    // A change that reaches no copy a block renders does not ask for a new review: an unrelated component's record, and a file that renders nothing.
+    // A change that reaches no copy a block renders does not ask for a new review: an unrelated component's record, and the files that neither render nor select anything.
     assert.deepEqual(await uncoveredAfter(component('unrelated', 'unrelated2'), 'an unrelated component changes'), []);
-    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/generate.mjs': 'generate 2\n', 'packages/react/src/r1-contracts.mjs': 'contracts 2\n' }, 'the generator and contracts change'), []);
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/r1-contracts.mjs': 'contracts 2\n', 'packages/react/src/r1-deferred-evidence.mjs': 'deferred 2\n', 'packages/react/src/publish-guard.mjs': 'guard 2\n' }, 'the contract checks, deferred evidence, and publish guard change'), []);
+    // The generator projects the runtime that blocks import and could turn a placeholder `Search` into `Find`, and the supplemental mapping selects the runtime sources
+    // and exports, so a change to either asks for a new review of every block.
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/generate.mjs': 'generate 2 (placeholder = "Find")\n' }, 'the generator changes'), ['a', 'b']);
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/supplemental-mapping.mjs': 'mapping 2\n' }, 'the supplemental mapping changes'), ['a', 'b']);
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
     // A change to a participant's record asks for a new review of the blocks that render that participant, and of no other.
     assert.deepEqual(await uncoveredAfter(component('text', 'text2'), 'Text changes'), ['b']);
     assert.deepEqual(await uncoveredAfter(component('button', 'button2'), 'Button changes'), ['a', 'b']);

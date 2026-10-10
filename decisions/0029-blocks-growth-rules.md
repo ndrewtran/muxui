@@ -121,9 +121,10 @@ is under development.
    participant component, and the React runtime sources (`packages/react/src`),
    because a block renders copy that its participants own, such as a default
    placeholder. The runtime part is conservative: any change under
-   `packages/react/src` asks for a new review, except in the few files that render
-   nothing (the generator, the contract checks, the deferred-evidence list, the
-   publish guard, and the supplemental-mapping reader), which the key lists. A capture
+   `packages/react/src` asks for a new review, the generator and the supplemental
+   mapping included because they project and select the runtime that blocks import,
+   except in the three files that neither render nor select anything (the contract
+   checks, the deferred-evidence list, and the publish guard), which the key lists. A capture
    records which review covers each block with its key and keeps that review's own
    reviewed revision, tree, and key. It needs a new independent review only for a
    block whose key matches no retained review, that is, a new block, an edited one,

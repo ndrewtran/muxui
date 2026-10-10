@@ -230,12 +230,15 @@ artifact, each row keeping its review's own reviewed revision, tree, and key). A
 names the block and the block's key is the same at the revision the reviewer read as at the source revision. The
 key is what a block renders copy from: the git tree of `catalog/patterns/<slug>`, the git tree of the catalog
 record of every participant component (`catalog/components/<slug>`), and a digest of the path and blob of every
-file under `packages/react/src` except the few that render nothing (`nonRenderingReactSources` in
-`capture-support.mjs`: the generator, the contract checks, the deferred-evidence list, the publish guard, and
-the supplemental-mapping reader). A participant's default copy, such as a placeholder or an accessible label,
-lives in its record and its runtime module; no per-component source mapping exists for every participant, so
-the runtime part is the whole of `packages/react/src`, which is conservative: any runtime change asks for a new
-review. Reviews retained by earlier captures, current or archived, are candidates, so `--content-review` is
+file under `packages/react/src` except the three that neither render nor select anything
+(`nonRenderingReactSources` in `capture-support.mjs`: the contract checks, the deferred-evidence list, and the
+publish guard). A participant's default copy, such as a placeholder or an accessible label, lives in its record
+and its runtime module; no per-component source mapping exists for every participant, so the runtime part is
+the whole of `packages/react/src`, which is conservative: any runtime change asks for a new review. That
+includes `generate.mjs`, which projects the runtime that blocks import and could transform its copy, and
+`supplemental-mapping.mjs`, which selects the runtime sources and exports. The retained content review read
+the blocks before #256 changed `generate.mjs`, so it no longer covers any block at current main: the next
+growth capture needs a new independent content review (`--content-review`), and refuses to run without one. Reviews retained by earlier captures, current or archived, are candidates, so `--content-review` is
 needed only for a block whose key matches none of them: a new block, an edited one, or one whose participants
 or runtime changed. A review is independent of the authoring agents only: it records its reviewer, and
 two reviews by the same model are not independent of each other.
