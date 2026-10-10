@@ -2643,13 +2643,17 @@ test('a new block adds its browser test by adding the file, with no policy entry
     mkdirSync(join(root, 'packages/react/test/browser'), { recursive: true });
     writeFileSync(join(root, 'packages/react/test/browser/pattern-fresh-block.test.mjs'), '');
     const script = `const { buildPullRequestImpact } = await import(${JSON.stringify(resolve(import.meta.dirname, '../src/ci-impact.mjs'))});
-      const plan = await buildPullRequestImpact({ ...JSON.parse(process.env.INPUT), readBaseText: async () => null, readHeadText: async () => null });
+      const { readFileSync } = await import('node:fs');
+      const plan = await buildPullRequestImpact({ ...JSON.parse(readFileSync(process.env.INPUT_PATH, 'utf8')), readBaseText: async () => null, readHeadText: async () => null });
       console.log(JSON.stringify(plan.reactTestFiles));`;
     const changedPaths = ['catalog/patterns/fresh-block/artifact.json', 'catalog/patterns/plain-block/artifact.json'];
+    // The input is a file, not an environment variable: Linux caps one environment string at 128 KiB.
+    const inputPath = join(root, 'input.json');
+    writeFileSync(inputPath, JSON.stringify(inputFor(changedPaths)));
     const result = spawnSync(process.execPath, ['--input-type=module', '-e', script], {
-      cwd: root, encoding: 'utf8', env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root, INPUT: JSON.stringify(inputFor(changedPaths)) },
+      cwd: root, encoding: 'utf8', env: { ...process.env, MUXUI_TASK_REPOSITORY_ROOT: root, INPUT_PATH: inputPath },
     });
-    assert.equal(result.status, 0, result.stderr);
+    assert.equal(result.status, 0, result.stderr || String(result.error));
     // The block with a test file routes it; the block without one routes nothing.
     assert.deepEqual(JSON.parse(result.stdout.trim().split('\n').at(-1)), ['test/browser/pattern-fresh-block.test.mjs']);
   } finally {
