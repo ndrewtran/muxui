@@ -2,10 +2,15 @@
 
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
-const { changedPaths, validatePlanningPullRequest } = require('./validate-planning-pr.cjs');
+const {
+  changedPaths,
+  decisionFileExists,
+  validatePlanningPullRequest,
+} = require('./validate-planning-pr.cjs');
 
 const repoRoot = path.resolve(__dirname, '..', '..');
 
@@ -166,6 +171,33 @@ test('checks decision paths against the repository checkout by default', () => {
   }), []);
 });
 
+test('counts only a regular file as a decision, not a symbolic link to one', (t) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'planning-pr-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  fs.mkdirSync(path.join(root, 'decisions', 'archive'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'decisions', '0001-real.md'), '# Real\n');
+  fs.writeFileSync(path.join(root, 'decisions', 'archive', '0002-archived.md'), '# Archived\n');
+  fs.symlinkSync('archive/0002-archived.md', path.join(root, 'decisions', '9999-record.md'));
+  fs.symlinkSync('0001-real.md', path.join(root, 'decisions', '0003-alias.md'));
+  fs.symlinkSync('missing.md', path.join(root, 'decisions', '0004-dangling.md'));
+  fs.mkdirSync(path.join(root, 'decisions', '0005-directory.md'));
+
+  assert.equal(decisionFileExists('decisions/0001-real.md', root), true);
+  for (const link of ['9999-record', '0003-alias', '0004-dangling', '0005-directory', '0006-absent']) {
+    assert.equal(decisionFileExists(`decisions/${link}.md`, root), false, link);
+  }
+
+  const run = (record) => validatePlanningPullRequest({
+    files: ['strategy/milestone-roadmap.md'],
+    labels: ['type:decision'],
+    body: `- Authority change record: ${record}`,
+    exists: (reference) => decisionFileExists(reference, root),
+  });
+  assert.deepEqual(run('decisions/0001-real.md'), []);
+  assert.equal(run('decisions/9999-record.md').length, 1);
+  assert.equal(run('decisions/0003-alias.md').length, 1);
+});
+
 test('rejects a missing or placeholder authority change record', () => {
   for (const record of ['', 'N/A', 'TBD', '<#issue or decisions/NNNN-….md>']) {
     const errors = validatePlanningPullRequest({
@@ -176,6 +208,22 @@ test('rejects a missing or placeholder authority change record', () => {
     assert.equal(errors.length, 1, record);
     assert.match(errors[0], /change record/);
   }
+});
+
+test('ignores trailing punctuation and comments around an authority change record', () => {
+  for (const record of ['#12.', '`#12`.', '#12 <!-- tracker -->']) {
+    assert.deepEqual(validatePlanningPullRequest({
+      files: ['strategy/milestone-roadmap.md'],
+      labels: ['type:decision'],
+      body: `- Authority change record: ${record}`,
+    }), [], record);
+  }
+  assert.deepEqual(validatePlanningPullRequest({
+    files: ['strategy/milestone-roadmap.md'],
+    labels: ['type:decision'],
+    body: '- Authority change record: `decisions/0029-x.md`. <!-- the decision -->',
+    exists: checkoutWith('decisions/0029-x.md'),
+  }), []);
 });
 
 test('reads a field only from its own line', () => {
@@ -260,7 +308,12 @@ test('rejects placeholder Product Scope fields, including Markdown-wrapped and t
   assert.match(errors[2], /Release additions \/ removals/);
   assert.match(errors[3], /Open tracker migration/);
 
-  for (const value of ['**TBD**', '_not assigned_', '~~Pending~~', '`<anything at all>`', '<a> <b>', '', '``', '**']) {
+  for (const value of [
+    '**TBD**', '_not assigned_', '~~Pending~~', '`<anything at all>`', '<a> <b>', '', '``', '**',
+    // Trailing punctuation and HTML comments do not make a placeholder an answer.
+    '**TBD**.', '`TBD.`', '*Pending*;', 'tbd!', '**`Pending`**.',
+    'TBD <!-- complete later -->', 'TBD <!-- unterminated', '<!-- complete later -->', '<Scope IDs>. <!-- x -->',
+  ]) {
     const [error, ...rest] = validatePlanningPullRequest({
       files: ['strategy/product-scope.md'],
       labels: ['type:decision'],
@@ -272,7 +325,10 @@ test('rejects placeholder Product Scope fields, including Markdown-wrapped and t
 });
 
 test('accepts an honest None or N/A in the Product Scope fields, also when wrapped', () => {
-  for (const value of ['None', '`None`', '**N/A**', 'none yet, tracked in #12']) {
+  for (const value of [
+    'None', '`None`', '**N/A**', 'none yet, tracked in #12',
+    'None.', '**None**.', '`N/A`.', 'None <!-- confirmed -->',
+  ]) {
     assert.deepEqual(validatePlanningPullRequest({
       files: ['strategy/product-scope.md'],
       labels: ['type:decision'],

@@ -56,17 +56,24 @@ function fieldValue(body, label) {
   return match ? match[1].trim() : '';
 }
 
-// Drops Markdown emphasis and code wrappers: `x`, *x*, **x**, _x_, ~x~.
-function unwrap(value) {
-  return value.replace(/^[\s`*_~]+|[\s`*_~]+$/g, '');
+// Reduces a field value to its content: removes HTML comments (an unterminated
+// one runs to the end of the line), then strips Markdown wrappers (`x`, *x*,
+// **x**, _x_, ~x~) and trailing punctuation until nothing more comes off.
+function normalize(value) {
+  let text = value.replace(/<!--.*?(?:-->|$)/g, ' ');
+  for (let previous = ''; text !== previous;) {
+    previous = text;
+    text = text.replace(/^[\s`*_~]+|[\s`*_~.,;:!-]+$/g, '');
+  }
+  return text;
 }
 
 // A filled-in answer. An honest "None" or "N/A" counts; an empty value, a
 // placeholder word, or a template placeholder such as <Scope IDs> does not.
-const PLACEHOLDER = /^(?:pending|tbd|not assigned)[\s.!-]*$|^(?:<[^<>]*>[\s,;/|]*)+$/i;
+const PLACEHOLDER = /^(?:pending|tbd|not assigned)$|^(?:<[^<>]*>[\s,;/|]*)+$/i;
 
 function isFilledIn(value) {
-  const text = unwrap(value);
+  const text = normalize(value);
   return text !== '' && !PLACEHOLDER.test(text);
 }
 
@@ -74,13 +81,15 @@ function isFilledIn(value) {
 // "..", no suffix.
 const DECISION_REFERENCE = /^decisions\/\d{4}-[a-z0-9-]+\.md$/;
 
-function decisionFileExists(reference) {
-  return fs.statSync(path.join(REPO_ROOT, reference), { throwIfNoEntry: false })?.isFile() === true;
+// A regular file. lstat does not follow links, so a symbolic link, which could
+// point at an archived or unrelated file, does not count as a decision.
+function decisionFileExists(reference, root = REPO_ROOT) {
+  return fs.lstatSync(path.join(root, reference), { throwIfNoEntry: false })?.isFile() === true;
 }
 
 // An issue number, or the path of a decision file that exists in the checkout.
 function isChangeRecord(value, exists) {
-  const reference = unwrap(value);
+  const reference = normalize(value);
   return /^#\d+\b/.test(reference) || (DECISION_REFERENCE.test(reference) && exists(reference));
 }
 
@@ -130,6 +139,7 @@ module.exports = {
   AUTHORITY_FILES,
   PLANNING_CONTROL_FILES,
   changedPaths,
+  decisionFileExists,
   isProtectedPlanningFile,
   validatePlanningPullRequest,
 };
