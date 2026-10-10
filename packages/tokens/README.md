@@ -23,10 +23,11 @@ to respect the consumer's root font size.
 The Scale browser verification covers the live theme-builder flow and palette
 generation uses the complete canonical source.
 
-## Token contract 5.1
+## Token contract
 
-The default source uses token schema `2.1.0` and token contract `5.2.0`.
-Contract 4.0 removes 34 provisional IDs that had no Mux UI consumer. Removed
+The default source, `catalog/tokens/default-theme.json`, declares its token
+schema (`schemaVersion`) and token contract (`tokenContractVersion`) versions.
+Contract 4.0 removed 34 provisional IDs that had no Mux UI consumer. Removed
 IDs are absent from the graph and generated CSS, and authoring and component
 recipes must use current token IDs. The [token contract migration guide](../../catalog/guides/token-migration.md)
 contains the direct change map.
@@ -58,8 +59,8 @@ canonical source through `{ source }`:
 
 Theme instances use `muxui-theme-authoring-v1` and contain `id`, `source`,
 `tokenContractVersion`, `modes`, typed `overrides`, and optional Scale inputs.
-Authoring documents must declare `tokenContractVersion: "5.2.0"` and match the
-canonical source exactly. Older contract versions are rejected; the compiler
+Authoring documents must declare the source's `tokenContractVersion` and match
+the canonical source exactly. Older contract versions are rejected; the compiler
 does not normalize documents or rewrite overrides. Scale-generated assignments
 must agree with their inputs. Other allowed semantic and component overrides
 are preserved. Unknown tokens or fields, wrong types, unsafe string values, and

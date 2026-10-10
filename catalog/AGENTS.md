@@ -10,8 +10,9 @@ declared here by its implementing package.
 
 `patterns/<slug>/` holds one Block (a pattern): `artifact.json`, and per
 variant an `examples/react/<variant>.example.json` record with its `.tsx`
-source, all listed in the catalog source manifest. Create them with
-`scaffoldPattern`. The compiler checks variant sources against the import and
+source. Create them with `scaffoldPattern`. `pnpm generate` lists every
+canonical record in `packages/catalog/catalog-sources.json`, so add or remove
+the files and regenerate instead of editing that list. The compiler checks variant sources against the import and
 content rules (`packages/catalog/src/pattern-imports.mjs` and
 `pattern-content.mjs`): imports only in the leading header, no remote
 reference, no literal colour, an `<asset>.license.json` beside any asset

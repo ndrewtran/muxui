@@ -548,9 +548,9 @@ export function readLockedIntegrity(lockfileText, name, version) {
 }
 
 /**
- * Identity of the visual-contract inputs named by Decision 0011 amendment 02
- * section 5: dependency version (Lucide version and integrity), icon mapping
- * and call-site geometry or accessibility semantics (the full bytes of every
+ * Identity of the icon visual-contract inputs (Decision 0028, Icons):
+ * dependency version (Lucide version and integrity), icon mapping and
+ * call-site geometry or accessibility semantics (the full bytes of every
  * packed module importing Lucide), and styling geometry (tokens and packed
  * stylesheets). No visual baseline is recorded (`comparison: none-recorded`);
  * a different identity means any earlier visual comparison no longer applies.

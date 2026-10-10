@@ -31,8 +31,9 @@ checks:
 - `checks.fullWorkspace`, `checks.reactPackageFull`, `checks.tokens`, or
   `checks.reactTheme` set to `true`;
 - Storybook running across every family; or
-- a `STYLE_OWNERSHIP` failure asking for the shared theme or style owner, which
-  you resolve by changing the owner it names.
+- a plan notice that it widened, or a `STYLE_OWNERSHIP` failure asking for the
+  shared theme or style owner, which you resolve by changing the owner it names
+  or by running the wider proof the notice plans.
 
 Typical causes, as examples only: the token catalog under `catalog/tokens/`,
 `packages/foundation/`, global or selector-free rules in shared stylesheets,

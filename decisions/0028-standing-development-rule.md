@@ -186,8 +186,9 @@ claims no stable, support, or assistive-technology property and changes no
 release or merge stop. It does not alter the Blocks rules, block content rules,
 or Decision 0026 and its amendments, the release candidate sequence in Decision
 0023 and its amendment, the assistive-technology non-claim in Decision 0022, or
-Decision 0027. The planning validator, the pull-request template, and the
-release and publish tooling are left to later changes.
+Decision 0027. It loosens no release or publish tooling: those paths keep
+their stops and protection. Decision 0009 amendment 06 states the narrower
+planning validator and pull-request template.
 
 ## Reversal
 

@@ -194,7 +194,7 @@ test('release proof rejects private archive files and export drift', () => {
 
 test('release proof derives the exact generated archive set from the React generator outputs', () => {
   const generatedOutputs = readGeneratedOutputNames(packageRoot);
-  // Decision 0018 and 0019 outputs prove the list tracks the generator rather than a copy.
+  // Avatar, Image, SelectNative and motion outputs prove the list tracks the generator rather than a copy.
   for (const name of ['avatar.mjs', 'image.d.ts', 'select-native.mjs', 'motion.mjs', 'motion-components.mjs', 'tabs-motion.mjs']) {
     assert.ok(generatedOutputs.includes(name), name);
   }

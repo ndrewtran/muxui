@@ -205,8 +205,9 @@ function assertVariantSource(slug, sourceText) {
  * `decisions` (all pattern fields except `variants`) and, per variant, a
  * `slug`, its `sourceText`, and the example fields (name, summary, lifecycle,
  * complexity, prerequisites). The write set holds only records and sources;
- * `manifestEntries` previews the `catalog-sources.json` lines to add. Nothing
- * is written, and consumer files are never produced.
+ * `manifestEntries` previews the `catalog-sources.json` entries that
+ * `pnpm generate` adds once those files are written, so the list is never
+ * edited by hand. Nothing is written, and consumer files are never produced.
  *
  * The scaffold checks schema shape, import form, and the content rules that need
  * no repository files (remote references and literal colours, reported with the

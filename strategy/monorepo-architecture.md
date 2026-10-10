@@ -1503,7 +1503,9 @@ predict every relevant location without repository-wide search.
 ### Workspace orchestration
 
 Use pnpm workspaces and one task graph. The exact orchestrator is secondary;
-the important part is a small, memorable root interface:
+the important part is a small, memorable root interface. These six core
+commands are its minimum, and `repository-policy.json` owns the required root
+list:
 
 ```text
 pnpm check                 # deterministic affected checks
@@ -2054,15 +2056,17 @@ opposite direction. A same-layer alias is allowed only for documented semantic
 equivalence; it cannot conceal a role change or retain a superseded spelling.
 Components consume semantic or component tokens only.
 
-A closed default-theme exception permits the fixed reference families
-`reference.color.error-*`, `reference.color.warning-*`, and
-`reference.color.success-*` when an accepted authority decision pins their
-exclusive system-status family meaning and exact source values. These remain
-reference palette values, not component states or permission to introduce
-other role-named reference families. Mux UI components and binding token
-recipes never consume them directly; component styling and behavior reach them
-only through semantic or component aliases. Target compilers may intentionally
-emit their admitted typed public reference values. That emission does not prove
+Reference families are named scales of raw values, such as brand, neutral,
+error, warning, and success. Adding a family, or a step to one, is an ordinary
+token pull request that carries the token contract proof: schema and
+alias-graph validation, and a `tokenContractVersion` change whenever public
+token names, types, layers, or semantic meaning change. It needs no decision. A
+reference palette cannot silently change what a semantic role means; a
+reference change that moves a semantic role is a semantic change and is
+versioned as one. Mux UI components and binding token recipes never consume
+reference tokens directly; component styling and behavior reach them only
+through semantic or component aliases. Target compilers may intentionally emit
+their admitted typed public reference values. That emission does not prove
 support, accessibility, lifecycle, availability, or parity. Consumer
 customization remains limited to permitted semantic/component roles and
 private reference values under the existing override policy.

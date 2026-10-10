@@ -18,12 +18,18 @@ GitHub pull requests use `src/ci-impact.mjs` to plan checks from the merge-base
 to head diff. The plan is printed as JSON before checks run. PR text and labels
 do not establish ownership or narrow proof. Canonical React records, generated
 Storybook page IDs, changed importer paths, and explicit owner routes determine
-the checks; an unresolved path fails with a mapping diagnostic.
+the checks. A route the planner cannot resolve widens the plan and prints a
+notice saying what widened and why; only a lockfile change whose consumers
+cannot be identified fails.
 
 Component runtime and CSS changes select the affected React families, their
 verified named test cases and browser proofs, and every Storybook page in those
-families. A changed authored example or Storybook story export selects only its
-canonical page ID. Theme/token changes run their compiler and projection checks
+families. A family's tests are found by name: `test/<slug>.test.mjs` and
+`test/browser/<slug>.test.mjs` in the React package. Only a test that does not
+follow that name needs an entry in `FAMILY_EXTRA_TESTS` in
+`src/component-test-selection.mjs`, and a family that no test names runs its
+source group whole. A changed authored example or Storybook story export
+selects only its canonical page ID. Theme/token changes run their compiler and projection checks
 with theme color and contrast proofs, without component keyboard suites.
 Documentation-only changes run the documentation owner. Catalog guide changes
 run the catalog, documentation, and `@muxui/tooling` checks, because guide bytes
