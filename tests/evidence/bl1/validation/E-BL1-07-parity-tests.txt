@@ -1,14 +1,14 @@
-✔ list pattern: the loader returns the API items in order (1.407416ms)
-✔ get pattern: the loader returns the record fields and the exact variant sources (5.909708ms)
-✔ ordering and labels come from the schema category groups, not the app (0.279792ms)
-✔ participant filter: list --uses matches the loader and the rail index (13.226ms)
-✔ rail filter: the shipped index answers every query as the API does (729.330375ms)
-✔ rail filter over several blocks: any-term, the 16-term cap, the 256-character limit, and uses (2734.728ms)
-✔ usedIn: component pages carry the derived view, and list only component-bound examples (82.738584ms)
-✔ --uses parses on list and search only, and the registry owns it (2.620833ms)
-✔ E-BL1-07: pattern list, search, and get keep one response across JSON, human, and dense (2681.746958ms)
-✔ E-BL1-07: the --uses matrix and pattern pages stay inside the dense budgets (3.652542ms)
-✔ E-BL1-07: the real catalog lists the shipped poster grid and rejects bad --uses (2476.354709ms)
+✔ list pattern: the loader returns the API items in order (1.337125ms)
+✔ get pattern: the loader returns the record fields and the exact variant sources (6.834083ms)
+✔ ordering and labels come from the schema category groups, not the app (0.308666ms)
+✔ participant filter: list --uses matches the loader and the rail index (15.929208ms)
+✔ rail filter: the shipped index answers every query as the API does (1022.718625ms)
+✔ rail filter over several blocks: any-term, the 16-term cap, the 256-character limit, and uses (2928.5725ms)
+✔ usedIn: component pages carry the derived view, and list only component-bound examples (91.290375ms)
+✔ --uses parses on list and search only, and the registry owns it (2.90975ms)
+✔ E-BL1-07: pattern list, search, and get keep one response across JSON, human, and dense (2784.589708ms)
+✔ E-BL1-07: the --uses matrix and pattern pages stay inside the dense budgets (3.471583ms)
+✔ E-BL1-07: the real catalog lists the shipped poster grid and rejects bad --uses (2779.322125ms)
 ℹ tests 11
 ℹ suites 0
 ℹ pass 11
@@ -16,4 +16,4 @@
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 5322.0325
+ℹ duration_ms 5746.450959

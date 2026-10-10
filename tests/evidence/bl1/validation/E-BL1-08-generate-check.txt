@@ -7,15 +7,15 @@ Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +1001
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 1001, reused 1001, downloaded 0, added 337
-Progress: resolved 1001, reused 1001, downloaded 0, added 669
+Progress: resolved 1001, reused 1001, downloaded 0, added 315
+Progress: resolved 1001, reused 1001, downloaded 0, added 738
 Progress: resolved 1001, reused 1001, downloaded 0, added 998
 Progress: resolved 1001, reused 1001, downloaded 0, added 1001, done
 
 devDependencies:
 + @muxui/catalog 2.1.0 <- packages/catalog
 
-Done in 3.9s using pnpm v10.33.0
+Done in 4.1s using pnpm v10.33.0
 [workspace-task] generate: full graph
 [workspace-task] reason: generate requested full workspace coverage
 [workspace-task] generation packages: @muxui/docs, @muxui/react-playground, @muxui/react-storybook, @muxui/scale, @muxui/catalog, @muxui/foundation, @muxui/react, @muxui/react-native, @muxui/schema, @muxui/tokens, @muxui/tooling, @muxui/web, @muxui/repository-policy, @muxui/figma
@@ -73,7 +73,7 @@ Scope: 14 of 15 workspace projects
 > node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/generate-stories.mjs
 
 [prerequisites] @muxui/react...: already generated for this run
-React Storybook projection: 84 families, 84 stories, 8 block variants in 6 block pages
+React Storybook projection: 84 families, 84 stories, 9 block variants in 7 block pages
 
 > @muxui/repository-policy@0.0.0 generate <tmp>
 > node src/generate.mjs
@@ -84,15 +84,15 @@ Lockfile is up to date, resolution step is skipped
 Progress: resolved 1, reused 0, downloaded 0, added 0
 Packages: +1001
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-Progress: resolved 1001, reused 1001, downloaded 0, added 325
-Progress: resolved 1001, reused 1001, downloaded 0, added 625
+Progress: resolved 1001, reused 1001, downloaded 0, added 297
+Progress: resolved 1001, reused 1001, downloaded 0, added 917
 Progress: resolved 1001, reused 1001, downloaded 0, added 998
 Progress: resolved 1001, reused 1001, downloaded 0, added 1001, done
 
 devDependencies:
 + @muxui/catalog 2.1.0 <- packages/catalog
 
-Done in 3.9s using pnpm v10.33.0
+Done in 4.1s using pnpm v10.33.0
 [workspace-task] generate: full graph
 [workspace-task] reason: generate requested full workspace coverage
 [workspace-task] generation packages: @muxui/docs, @muxui/react-playground, @muxui/react-storybook, @muxui/scale, @muxui/catalog, @muxui/foundation, @muxui/react, @muxui/react-native, @muxui/schema, @muxui/tokens, @muxui/tooling, @muxui/web, @muxui/repository-policy, @muxui/figma
@@ -150,10 +150,10 @@ Scope: 14 of 15 workspace projects
 > node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && node src/generate-stories.mjs
 
 [prerequisites] @muxui/react...: already generated for this run
-React Storybook projection: 84 families, 84 stories, 8 block variants in 6 block pages
+React Storybook projection: 84 families, 84 stories, 9 block variants in 7 block pages
 
 > @muxui/repository-policy@0.0.0 generate <tmp>
 > node src/generate.mjs
 
 Repository-policy package owns no projections; generation is a deterministic no-op.
-[E-G0.0-04] independent clean checkouts 0c3cf6626ffde8c15c970018733672d3731cdaf3 generated identical projections with clean worktrees (sha256:724f1b75bcf87a9bca9585a0325ab6f11b9c317c6f3b9cd7d09de3b384772065)
+[E-G0.0-04] independent clean checkouts a7237f58d8706ec54d21b88e0363241a936695f0 generated identical projections with clean worktrees (sha256:6536d2f136e310039b53c7ae174e7e9773e2980172086793437c8ee251300dfc)
