@@ -8,6 +8,12 @@ projections beside canonical records.
 Use the root verification commands until a narrower catalog-owned command is
 declared here by its implementing package.
 
+`patterns/categories.json` declares the block categories and their groups as
+`{ "<group>": ["<category>", ...] }`, in display order. A block's `category` must be
+listed there; the compiler rejects any other and derives the block's group from it.
+Adding, renaming, or regrouping a category edits that file (and the blocks that name
+it), not the schema.
+
 `patterns/<slug>/` holds one Block (a pattern): `artifact.json`, and per
 variant an `examples/react/<variant>.example.json` record with its `.tsx`
 source. Create them with `scaffoldPattern`. `pnpm generate` lists every

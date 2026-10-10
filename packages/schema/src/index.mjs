@@ -3,7 +3,6 @@ import { loadJsonDocument } from './contracts.mjs';
 const artifactRefSchema = loadJsonDocument('artifact-ref.schema.json');
 const errorCodeSchema = loadJsonDocument('error-code.schema.json');
 const queryEnvelopeSchema = loadJsonDocument('query-envelope.schema.json');
-const patternCategory = loadJsonDocument('pattern.schema.json').properties.category;
 
 export const ARTIFACT_KINDS = Object.freeze([...artifactRefSchema['x-muxui-kinds']]);
 export const ENABLED_RECORD_KINDS = Object.freeze([
@@ -21,18 +20,14 @@ export const QUERY_SELECTORS = Object.freeze(
       .map(([key, values]) => [key, Object.freeze([...values])]),
   ),
 );
-/** Pattern group to its categories; the sole owner of a pattern's derived group. */
-export const PATTERN_CATEGORY_GROUPS = Object.freeze(Object.fromEntries(
-  Object.entries(patternCategory['x-muxui-category-groups'])
-    .map(([group, categories]) => [group, Object.freeze([...categories])]),
-));
-export const SCHEMA_VERSION = '2.2.0';
+export const SCHEMA_VERSION = '2.3.0';
 export const API_VERSION = '2.1.0';
 export const QUERY_SCHEMA_VERSION = '2.1.0';
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
 
-export function patternGroup(category) {
-  return Object.entries(PATTERN_CATEGORY_GROUPS)
+/** The group a pattern category belongs to in `patternCategories` (the validated category registry), or undefined. */
+export function patternGroup(patternCategories, category) {
+  return Object.entries(patternCategories)
     .find(([, categories]) => categories.includes(category))?.[0];
 }
 
@@ -83,6 +78,9 @@ export {
   validateContractDocument,
   validateFamily,
   validateFieldOwnershipRegistry,
+  patternCategoryGroups,
+  patternCategoryRegistry,
+  validatePatternCategories,
   validateRelationRegistry,
 } from './validation.mjs';
 export {

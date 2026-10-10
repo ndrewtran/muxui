@@ -11,11 +11,13 @@ import {
   compilePlatformSafetyRequirementSets,
   contentRevision,
   parseJsonStrict,
+  patternCategoryGroups,
   patternGroup,
   patternRevision,
   sha256Digest,
   validateCatalogRecords,
   validateFamily,
+  validatePatternCategories,
 } from '@muxui/schema';
 import { compileTokenRequirementSet, validateSourceCrosswalk } from '@muxui/tokens';
 import { auditPatternAssets, patternContentIssues } from './pattern-content.mjs';
@@ -74,6 +76,7 @@ function validateSourceManifest(manifest) {
       'schema',
       'commandRegistryPath',
       'pageBudgetProfilePath',
+      'patternCategoriesPath',
       'platformSafetyContractPath',
       'queryApiVersion',
       'records',
@@ -81,6 +84,7 @@ function validateSourceManifest(manifest) {
     ].includes(key))
     || typeof manifest.commandRegistryPath !== 'string'
     || typeof manifest.pageBudgetProfilePath !== 'string'
+    || typeof manifest.patternCategoriesPath !== 'string'
     || typeof manifest.platformSafetyContractPath !== 'string'
     || !QUERY_API_VERSIONS.includes(manifest.queryApiVersion)
     || !Array.isArray(manifest.supportedQueryApiVersions)
@@ -94,6 +98,7 @@ function validateSourceManifest(manifest) {
   const paths = new Set();
   assertRelativePath(manifest.commandRegistryPath, 'commandRegistryPath');
   assertRelativePath(manifest.pageBudgetProfilePath, 'pageBudgetProfilePath');
+  assertRelativePath(manifest.patternCategoriesPath, 'patternCategoriesPath');
   assertRelativePath(manifest.platformSafetyContractPath, 'platformSafetyContractPath');
   for (const [index, entry] of manifest.records.entries()) {
     if (
@@ -121,6 +126,7 @@ function validateSourceManifest(manifest) {
     schema: manifest.schema,
     commandRegistryPath: manifest.commandRegistryPath,
     pageBudgetProfilePath: manifest.pageBudgetProfilePath,
+    patternCategoriesPath: manifest.patternCategoriesPath,
     platformSafetyContractPath: manifest.platformSafetyContractPath,
     queryApiVersion: manifest.queryApiVersion,
     records: [...manifest.records].sort((left, right) => compareText(left.path, right.path)),
@@ -261,6 +267,11 @@ export async function compileCatalog({
   );
   const pageBudgetProfile = parseJsonStrict(pageBudgetProfileBytes);
   assertAcceptedQueryProfile({ manifest, pageBudgetProfile });
+  const patternCategoriesBytes = await readFile(
+    resolve(repositoryRoot, manifest.patternCategoriesPath),
+    'utf8',
+  );
+  const patternCategories = validatePatternCategories(parseJsonStrict(patternCategoriesBytes));
   const platformSafetyContractBytes = await readFile(
     resolve(repositoryRoot, manifest.platformSafetyContractPath),
     'utf8',
@@ -302,7 +313,7 @@ export async function compileCatalog({
   }
 
   const records = loaded.map(({ record }) => record);
-  const { edges } = validateCatalogRecords(records);
+  const { edges } = validateCatalogRecords(records, { patternCategories });
   assertExamplePreferences(records);
   const relations = sortByKeys(edges, ['type', 'source', 'target']);
   const examples = records.filter(({ kind }) => kind === 'example');
@@ -424,7 +435,7 @@ export async function compileCatalog({
           : canonicalDigest(record.sourceCrosswalk),
       } : {}),
       ...(record.kind === 'pattern' ? {
-        group: patternGroup(record.category),
+        group: patternGroup(patternCategories, record.category),
         patternRevision: patternRevision({ pattern: record, examples, exampleSources }),
       } : {}),
       // Variant examples carry their exact source so `get` can return it.
@@ -444,6 +455,7 @@ export async function compileCatalog({
     manifest,
     commandRegistryDigest: sha256Digest(commandRegistryBytes),
     pageBudgetProfileDigest: sha256Digest(pageBudgetProfileBytes),
+    patternCategoriesDigest: sha256Digest(patternCategoriesBytes),
     platformSafetyContractDigest: canonicalDigest(platformSafetyContract),
     inputs: loaded.map(({ entry, record, recordBytes, sourceBytes, baselineOccurrencesBytes }) => ({
       path: entry.path,
@@ -471,6 +483,8 @@ export async function compileCatalog({
     sourceRevision,
     commandRegistry,
     pageBudgetProfile,
+    // An ordered list: canonical JSON sorts object keys, which would lose the declared group order.
+    patternCategories: patternCategoryGroups(patternCategories),
     platformSafetyContract,
     platformSafetyContractDigest: canonicalDigest(platformSafetyContract),
     artifacts,

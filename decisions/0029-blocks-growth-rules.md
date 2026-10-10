@@ -47,9 +47,7 @@ is under development.
 1. **Categories are catalog data.** A block's category, and the group derived from
    it, are ordinary catalog data, declared in the registry
    `catalog/patterns/categories.json`. Adding or renaming a category is an ordinary
-   pull request and needs no decision. The companion change introduces the registry
-   and moves the list out of the schema; until it lands, the schema's list is the
-   owner and adding a category is a schema change under the schema-evolution rules.
+   pull request and needs no decision.
 2. **Blocks and the component work they need ship in ordinary pull requests.** A
    block may ship in the same pull request as the `@muxui/react` change, component,
    family, token, or dependency it needs. The component change carries the proof its

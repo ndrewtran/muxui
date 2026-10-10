@@ -11,6 +11,7 @@ import {
   canonicalDigest,
   canonicalJson,
   parseJsonStrict,
+  patternCategoryRegistry,
   patternGroup,
   patternRevision,
   sha256Digest,
@@ -73,7 +74,11 @@ function assertBundle(bundle) {
   if (!Array.isArray(bundle.artifacts)) {
     throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: catalog artifacts must be an array');
   }
-  validateCatalogRecords(bundle.artifacts.map(({ record }) => record));
+  const patternCategories = patternCategoryRegistry(bundle.patternCategories);
+  validateCatalogRecords(
+    bundle.artifacts.map(({ record }) => record),
+    { patternCategories },
+  );
   if (
     !QUERY_API_VERSIONS.includes(bundle.apiVersion)
     || !Array.isArray(bundle.supportedQueryApiVersions)
@@ -111,7 +116,7 @@ function assertBundle(bundle) {
       exampleSources: Object.fromEntries(examples.map(({ id, sourceText }) => [id, sourceText])),
     });
     if (
-      artifact.group !== patternGroup(artifact.record.category)
+      artifact.group !== patternGroup(patternCategories, artifact.record.category)
       || artifact.patternRevision !== expectedRevision
     ) {
       throw new Error('MUXUI_CATALOG_INTEGRITY_MISMATCH: pattern group or revision does not match its canonical record');
@@ -1229,11 +1234,12 @@ export function createCatalogApi(inputBundle, options = {}) {
   return deepFreeze({ getManifest, listArtifacts, searchArtifacts, getArtifact });
 }
 
-const defaultApi = createCatalogApi(parseJsonStrict(catalogJson));
+const defaultBundle = parseJsonStrict(catalogJson);
+const defaultApi = createCatalogApi(defaultBundle);
 
 export const getManifest = defaultApi.getManifest;
 export const listArtifacts = defaultApi.listArtifacts;
 export const searchArtifacts = defaultApi.searchArtifacts;
 export const getArtifact = defaultApi.getArtifact;
-// The pattern taxonomy, so a projection orders groups and categories as the schema declares them.
-export { PATTERN_CATEGORY_GROUPS } from '@muxui/schema';
+/** The pattern taxonomy from catalog/patterns/categories.json: each group, then its categories, in declared order (the keys follow the bundle's ordered list). */
+export const PATTERN_CATEGORY_GROUPS = deepFreeze(structuredClone(patternCategoryRegistry(defaultBundle.patternCategories)));

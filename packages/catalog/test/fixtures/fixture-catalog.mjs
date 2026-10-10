@@ -36,8 +36,10 @@ const MINIMAL_SOURCES = /^catalog\/(?:capabilities\/|tokens\/|components\/(?:but
  * The fixture shares the shipped poster grid's pattern and example ids, so it
  * stands in for the shipped `catalog/patterns` records: they are left out of
  * the compile. `fixture: false` compiles the real catalog without any pattern.
+ * `categories(registry)` returns the pattern category registry to compile with
+ * instead of the real `catalog/patterns/categories.json`.
  */
-export async function compileFixtureCatalog({ edit = () => {}, minimal = false, fixture = true } = {}) {
+export async function compileFixtureCatalog({ edit = () => {}, minimal = false, fixture = true, categories } = {}) {
   const root = await mkdtemp(join(tmpdir(), 'muxui-pattern-fixture-'));
   try {
     for (const name of await readdir(repositoryRoot)) {
@@ -61,6 +63,11 @@ export async function compileFixtureCatalog({ edit = () => {}, minimal = false, 
     manifest.records = manifest.records.filter(({ path }) => !path.startsWith('catalog/patterns/'));
     if (minimal) manifest.records = manifest.records.filter(({ path }) => MINIMAL_SOURCES.test(path));
     manifest.records.push(...staged);
+    if (categories) {
+      const registry = JSON.parse(await readFile(join(repositoryRoot, manifest.patternCategoriesPath), 'utf8'));
+      await writeFile(join(root, 'categories.json'), JSON.stringify(categories(registry)));
+      manifest.patternCategoriesPath = 'categories.json';
+    }
     await writeFile(join(root, 'catalog-sources.json'), JSON.stringify(manifest));
     return await compileCatalog({ repositoryRoot: root, sourceManifestPath: 'catalog-sources.json' });
   } finally {

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, posix, resolve } from 'node:path';
 import test from 'node:test';
@@ -185,6 +185,9 @@ async function compileSeed({ edit = () => {} } = {}) {
     for (const name of await readdir(join(repositoryRoot, 'catalog'))) {
       if (name !== 'patterns') await symlink(join(repositoryRoot, 'catalog', name), join(root, 'catalog', name));
     }
+    // The category registry sits beside the pattern directories the copy replaces.
+    await mkdir(join(root, 'catalog/patterns'));
+    await copyFile(join(repositoryRoot, 'catalog/patterns/categories.json'), join(root, 'catalog/patterns/categories.json'));
     const files = await seedFiles();
     edit(files);
     for (const [path, text] of files) {

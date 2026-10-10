@@ -1,0 +1,4 @@
+{
+  "application": ["collections", "forms", "feedback", "conversation", "navigation"],
+  "marketing": ["hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"]
+}

@@ -48,11 +48,9 @@
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "pattern-spec"] }
     },
     "category": {
-      "enum": ["collections", "forms", "feedback", "conversation", "navigation", "hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"],
-      "x-muxui-category-groups": {
-        "application": ["collections", "forms", "feedback", "conversation", "navigation"],
-        "marketing": ["hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"]
-      },
+      "description": "Declared in catalog/patterns/categories.json; the compiler rejects a category the registry does not list, and derives the pattern's group from it.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
       "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"] }
     },
     "intent": {

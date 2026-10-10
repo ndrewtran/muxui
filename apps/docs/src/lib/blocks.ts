@@ -260,15 +260,15 @@ function buildBlock(summary: BlockSummary): Block {
 	});
 }
 
-// Blocks list in the order the schema declares its categories: groups first, then each group's categories.
+// Blocks list in the order the catalog declares its categories: groups first, then each group's categories.
 const categoryOrder = patternCategoryGroups.flatMap(([, categories]) => categories);
 function categoryRank(category: string): number {
 	const index = categoryOrder.indexOf(category);
-	if (index === -1) throw new Error(`Mux UI docs found the category ${category} outside the schema's category groups.`);
+	if (index === -1) throw new Error(`Mux UI docs found the category ${category} outside the catalog's category groups.`);
 	return index;
 }
 
-/** Schema category order, then name. */
+/** Catalog category order, then name. */
 export function compareBlocks(left: Pick<Block, 'category' | 'name'>, right: Pick<Block, 'category' | 'name'>): number {
 	return categoryRank(left.category) - categoryRank(right.category) || left.name.localeCompare(right.name);
 }

@@ -70,14 +70,14 @@ test('get pattern: the loader returns the record fields and the exact variant so
 	}
 });
 
-test('ordering and labels come from the schema category groups, not the app', () => {
-	// Schema order for marketing is hero, features, pricing, ..., faq; alphabetical would put faq first.
+test('ordering and labels come from the catalog category groups, not the app', () => {
+	// Catalog order for marketing is hero, features, pricing, ..., faq; alphabetical would put faq first.
 	const named = (category, name = 'A') => ({ category, name });
 	assert.ok(compareBlocks(named('forms'), named('hero')) < 0, 'application before marketing');
 	assert.ok(compareBlocks(named('hero'), named('pricing')) < 0);
-	assert.ok(compareBlocks(named('pricing'), named('faq')) < 0, 'schema order, not alphabetical');
+	assert.ok(compareBlocks(named('pricing'), named('faq')) < 0, 'catalog order, not alphabetical');
 	assert.ok(compareBlocks(named('pricing', 'A'), named('pricing', 'B')) < 0, 'then by name');
-	assert.throws(() => compareBlocks(named('unlisted'), named('hero')), /outside the schema's category groups/u);
+	assert.throws(() => compareBlocks(named('unlisted'), named('hero')), /outside the catalog's category groups/u);
 
 	assert.deepEqual([
 		idLabel('application'), idLabel('hero'), idLabel('call-to-action'), idLabel('logo-cloud'), idLabel('faq'),

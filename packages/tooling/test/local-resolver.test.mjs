@@ -122,7 +122,7 @@ function rendererDocuments(bundle, installed) {
     releaseManifest: {
       id: descriptor.releaseProvenance,
       releaseVersion: '1.0.1',
-      schemaVersion: '2.2.0',
+      schemaVersion: '2.3.0',
       queryApiVersion: '2.1.0',
       tokenContractVersion: '2.0.0',
       sourceRevision: bundle.sourceRevision,

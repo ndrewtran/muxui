@@ -2,6 +2,7 @@
   "schema": "muxui-catalog-source-manifest-v1",
   "commandRegistryPath": "packages/tooling/command-registry.json",
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
+  "patternCategoriesPath": "catalog/patterns/categories.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",
   "queryApiVersion": "2.1.0",
   "supportedQueryApiVersions": [

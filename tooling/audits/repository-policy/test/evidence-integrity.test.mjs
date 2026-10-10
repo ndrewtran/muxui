@@ -2286,7 +2286,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.ok(!closeoutBlockCommit.excludedDirectories.some((directory) => directory.startsWith(dirname(repo.records[0].path))), 'a close-out block is not left out of either side, so its edit moves the digest');
 
     // A growth commit that changes a compiler or schema path fails even though the one-compiler digest comparison cannot see it.
-    const withSchema = await repo.variant((edit) => edit('packages/schema/src/index.mjs', (text) => text.replace("SCHEMA_VERSION = '2.2.0'", "SCHEMA_VERSION = '2.2.1'")));
+    const withSchema = await repo.variant((edit) => edit('packages/schema/src/index.mjs', (text) => text.replace("SCHEMA_VERSION = '2.3.0'", "SCHEMA_VERSION = '2.3.1'")));
     const [, schemaCommit] = derive(withSchema);
     assert.deepEqual(schemaCommit.digestAffectingPathsChanged, ['packages/schema/src/index.mjs']);
     const schemaCatalog = await catalogAcrossCommit({ cwd, ...schemaCommit });
@@ -2315,6 +2315,20 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.deepEqual([acrossLegacy.identical, acrossLegacy.holds], [true, true], 'trees that carry the removed manifest key compile on both sides');
     const acrossAdded = await catalogAcrossCommit({ cwd, commit: legacy, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] });
     assert.deepEqual([acrossAdded.identical, acrossAdded.holds], [true, true], 'the key is dropped from the tree that carries it, and the one that does not is unchanged');
+    // Block categories became catalog data after the close-out: trees from before have no registry and compile with the closed list they had.
+    const unregistered = await repo.modify(async (edit, root) => {
+      await edit('packages/catalog/catalog-sources.json', jsonEdit(({ patternCategoriesPath: _registry, ...manifest }) => manifest));
+      await rm(join(root, 'catalog/patterns/categories.json'));
+    });
+    await repo.edit('README.md', (text) => `${text}\nUnregistered.\n`);
+    gitIn(cwd, 'add', '-A');
+    gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree without a category registry (#106)');
+    const unregisteredChild = gitIn(cwd, 'rev-parse', 'HEAD');
+    const acrossUnregistered = await catalogAcrossCommit({ cwd, commit: unregisteredChild, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] });
+    assert.deepEqual([acrossUnregistered.identical, acrossUnregistered.holds], [true, true], 'trees from before categories were catalog data compile with the closed list');
+    // The injected list is the shipped file, so a tree without the registry and the same tree with it compile to one bundle.
+    const withRegistry = await catalogAcrossCommit({ cwd, commit: second, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] });
+    assert.deepEqual([withRegistry.identical, withRegistry.holds], [true, true], 'a tree compiles to the same digest with the registry injected or shipped');
     const unknownKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ unexpectedKey: true })));
     await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), /MUXUI_CATALOG_SOURCE_INVALID/u, 'any other unknown manifest key still fails');
 
@@ -2338,6 +2352,16 @@ test('each BL1 growth commit is audited against its first parent, and one that c
   } finally {
     await repo.dispose();
   }
+});
+
+// A tree from before block categories were catalog data is compiled with the closed list injected. The text is held to the registry file as the
+// change that moved the list added it, so the injected tree and the shipped one compile to the same bundle.
+test('the closed category list injected into pre-registry trees is the registry file as it was added', async () => {
+  const { closedCategoryRegistry } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
+  const path = 'catalog/patterns/categories.json';
+  const added = execFileSync('git', ['log', '--diff-filter=A', '--format=%H', '--', path], { cwd: repositoryRoot, encoding: 'utf8' }).trim().split('\n').at(-1);
+  assert.ok(added, `${path} has an adding commit`);
+  assert.equal(execFileSync('git', ['show', `${added}:${path}`], { cwd: repositoryRoot, encoding: 'utf8' }), closedCategoryRegistry);
 });
 
 // The digest-affecting paths are the compiler and what it runs; a new module the compiler imports must be classified, not missed.
