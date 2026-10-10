@@ -64,7 +64,7 @@
   "accessibility": [
     "The Table is named Companies and the SearchField is named Search companies by their aria-label; rename both for your data.",
     "Rows select by click or Space, with no checkbox column: selected rows get a background and aria-selected, Ctrl or Cmd+A selects every row, and Escape clears the selection.",
-    "Sortable column headers sort on click, Enter, or Space, and report ascending, descending, or none through aria-sort.",
+    "Sortable column headers sort on click, Enter, or Space, and set aria-sort to ascending, descending, or none.",
     "The selected count is a role=status element, and it counts only the rows the search shows.",
     "The Table is one Tab stop: arrow keys move across the cells, through each row's tags to its menu button, and Enter opens the menu.",
     "Each row's TagGroup is named Tags for that company and each menu button Actions for that company.",

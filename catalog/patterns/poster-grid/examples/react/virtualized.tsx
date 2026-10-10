@@ -18,13 +18,17 @@ const titles = [
   'A Last Sample Title',
 ];
 
-// Every 11th card is disabled and says so in its title.
+const disabledTitles = [
+  'A Disabled Sample Title That Also Wraps Onto a Second Line',
+  'Another Disabled Sample Title With Plenty of Words in It',
+];
+
+// Every 11th card is disabled and says so in its title, alternating the two disabled titles.
 const posters: Poster[] = Array.from({ length: 1000 }, (_, index) => {
   const disabled = index % 11 === 10;
-  const title = titles[index % titles.length];
   return {
     id: String(index + 1),
-    title: disabled ? `Disabled ${title}` : title,
+    title: disabled ? disabledTitles[Math.floor(index / 11) % 2] : titles[index % titles.length],
     year: 1970 + ((index * 7) % 55),
     disabled,
   };
