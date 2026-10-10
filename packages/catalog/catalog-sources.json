@@ -1112,6 +1112,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/task-filters/examples/react/status-buttons.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/workspace-navigation/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/workspace-navigation/examples/react/foldable.example.json"
     }
   ]
 }

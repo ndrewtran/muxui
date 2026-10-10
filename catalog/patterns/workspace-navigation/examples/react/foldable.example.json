@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:workspace-navigation-foldable",
+  "kind": "example",
+  "name": "Foldable",
+  "summary": "A workspace switcher, search, grouped links, and an account card in a column that folds to an icon rail, beside a main pane.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/workspace-navigation/examples/react/foldable.tsx"
+}
