@@ -856,6 +856,7 @@ const extraNonClaims = {
   'E-BL1-08': growthScope === null ? [] : [
     `The catalog digest is compared across the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, with the same compiler on both sides, not from the pre-BL1 base; the digest chain from the base belongs to the close-out capture.`,
     'The recorded before and after digests of each growth commit are bound by the artifact and index digests like the other retained values. The integrity test re-derives the growth commits, their parents, the added and changed blocks, the excluded sources, and the changed compiler and schema paths from git, but does not run a historical compiler to recompute the digests.',
+    'A tree that still carries the catalog source manifest key authorityDecisionPath, as every tree from before #251 does, is compiled with that key dropped on both sides of each comparison, because the current compiler no longer accepts it. The compiler, the repository manifest, and every other key are unchanged, so the digests compare the trees as the current compiler reads them.',
   ],
   'E-BL1-09': [
     ...(growthScope === null ? [] : [`The @muxui/react, dependency, stylesheet-name, catalog-record, and workflow and hosting-file checks cover the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, not every change since the pre-BL1 base: other pull requests changed them under their own authority.`]),
