@@ -1,7 +1,0 @@
-{
-  "decisionId": "0009",
-  "status": "retired",
-  "supersededBy": "decisions/0015-authority-retirement.md",
-  "reason": "Historical delivery-review authority retired from the tracked current record.",
-  "recoveryArchive": ".migration-archive/20260912-preflight/authority-originals/decisions/0009-delivery-review-readiness.json"
-}

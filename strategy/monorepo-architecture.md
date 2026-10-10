@@ -6,12 +6,12 @@
 
 ## Executive decision
 
-Decision 0012 resets the current pre-publication product identity to Mux UI,
-with machine identity `muxui`, package scope `@muxui/*`, active artifact and
-schema namespace `muxui:`, CLI `muxui`, and public styling hooks rooted in
-`.muxui-*`, `--muxui-*`, and `data-muxui-*`. No compatibility alias is required
-because no public npm release exists. Historical records retain their original
-predecessor identities and bytes.
+Mux UI's current identity is display name Mux UI, machine identity `muxui`,
+package scope `@muxui/*`, active artifact and schema namespace `muxui:`, CLI
+`muxui`, and public styling hooks rooted in `.muxui-*`, `--muxui-*`, and
+`data-muxui-*`. Predecessor identities are not current and no compatibility
+alias is kept for them. Retained evidence keeps its original predecessor
+identities and bytes.
 
 Decision 0016 applies a current-only compatibility policy during Mux UI's
 pre-release state. No consuming projects depend on the superseded Mux-owned
@@ -1748,13 +1748,13 @@ their capability; a future-capability fixture does not block an earlier gate.
 | --- | --- | --- |
 | Authoring round trip | Gate 0 | A maintainer can scaffold the minimum canonical source, follow source-linked diagnostics, compile it, and explain every resulting revision without editing a projection. |
 | Workspace catalog resolution | Gate 0 | Multiple compatible-looking/hoisted catalogs still resolve through the selected workspace's declared dependency, or fail deterministically; fixtures exercise every reachable resolver code, precedence, structured dimension, and safe `nextCommand`; no ancestor or hosted fallback occurs. |
-| Normative example closure | Gate 1 | A normative example change changes `specRevision`; an editorial-only change changes content/catalog identity but not renderer compatibility; forbidden downgrades fail compilation. |
-| Example curriculum selection | Gate 1 | Purpose/profile filtering and authored preference choose one compatible example deterministically; contradictory preferences, missing prerequisites, or a model/search-score override fail. |
-| Change-intent closure | Gate 1 | A representative concept, binding, example, token, and renderer change reports the complete authoritative write set, invalidated proof, version effect, required checks, confirmation policy, and base-drift rejection. |
-| Packed descriptor derivation | Gate 1 | The descriptor is generated after packing from the tarball export map, binding specs, and token-requirement digests; a source-only or missing export fails. |
-| Token fallback denial | Gate 1 | A missing required token fails for every profile without an exact evidenced fallback; authorized fallback succeeds with a structured diagnostic. |
-| Evidence advisory propagation | Gate 1 before stable promotion | Withdrawing required evidence makes the support claim unproved in every enabled catalog/query/release view without exposing restricted payload data; MCP and site adapters inherit the same parity fixture when enabled. |
-| Operational exception enforcement | Gate 1 before stable promotion | Expired, support-broadening, proof-manufacturing, integrity-bypassing, or projection-patching exceptions fail; an allowed restriction is visible in diagnostics and release metadata. |
+| Normative example closure | R1 tranches | A normative example change changes `specRevision`; an editorial-only change changes content/catalog identity but not renderer compatibility; forbidden downgrades fail compilation. |
+| Example curriculum selection | R1 tranches | Purpose/profile filtering and authored preference choose one compatible example deterministically; contradictory preferences, missing prerequisites, or a model/search-score override fail. |
+| Change-intent closure | R1.5 | A representative concept, binding, example, token, and renderer change reports the complete authoritative write set, invalidated proof, version effect, required checks, confirmation policy, and base-drift rejection. |
+| Packed descriptor derivation | R1.0 and every tranche | The descriptor is generated after packing from the tarball export map, binding specs, and token-requirement digests; a source-only or missing export fails. |
+| Token fallback denial | R1.0 | A missing required token fails for every profile without an exact evidenced fallback; authorized fallback succeeds with a structured diagnostic. |
+| Evidence advisory propagation | R1.5 and every publication candidate | Withdrawing required evidence makes the support claim unproved in every enabled catalog/query/release view without exposing restricted payload data; MCP and site adapters inherit the same parity fixture when enabled. |
+| Operational exception enforcement | Every R1 tranche and publication candidate | Expired, support-broadening, proof-manufacturing, integrity-bypassing, or projection-patching exceptions fail; an allowed restriction is visible in diagnostics and release metadata. |
 | Inert extension isolation | Gate 3 or earlier capability enablement | Changing inert extension data changes required content/catalog provenance but not `specRevision`, descriptors, search ranking/data, stable `get` payload fields, dense guidance, or agent bootstrap content. Comparisons ignore the provenance fields that must change. |
 
 These fixtures use synthetic data, test both positive and negative paths, and
@@ -1868,42 +1868,13 @@ supersession is represented by a separate, signed, append-only
 effective time, public reason code, disclosure class, and optional replacement
 digest. It never edits the original evidence record or release manifest.
 
-Before G1.9 enables the signed catalog/query/release `EvidenceAdvisory`
-surface, repository proof may use a narrower internal
-`EvidenceApplicabilitySupersession` only to close a retained applicability or
-recertification chain after a human-accepted authority change. It is not an
-`EvidenceAdvisory`, cannot withdraw the historical result, does not enter a
-catalog or release manifest, and cannot satisfy current evidence, promotion,
-or support. The content-addressed certificate binds the exact historical index
-digest, terminal recertification digest when present, superseded and current
-applicability manifests, affected assertion IDs, exact source commit/tree, and
-an immutable repository decision record containing the provider-supplied
-designated owner's stable actor identity, comment identity and timestamp, and
-decision-body digest. The grammar is closed and the verifier rejects unknown fields,
-malformed identities, forks, cycles, duplicate references, stale current
-manifests, and a certificate that does not represent an actual applicability
-change.
-
-The certificate closes that historical recertification chain permanently: a
-later source-only drift may append one digest-linked supersession certificate,
-but no later passing recertification may extend the superseded chain. Compatible
-replacement proof starts a new immutable evidence index bound to its new
-authority/source profile. The original index, records, artifacts,
-recertifications, and certificates remain byte-for-byte historical. Enabling
-the public signed advisory surface still requires the complete G1.9 contract;
-this internal certificate does not satisfy `SCOPE-TRUST-ADVISORY` by itself.
-
-Current proof and historical audit are separate resolution modes. A current
-milestone-readiness, support, promotion, or release evaluation resolves each
-repository source input through the exact source, executed, and proof-tool
-identity relationship declared by its canonical proof owner. An explicitly
-admitted historical resolver may reproduce historical bytes only for audit,
-integrity, compatibility, or exact historical reproduction; those bytes and
-results do not enter or satisfy current proof. Evidence retention remains
-governed by the proof owner and disclosure class. Retained positive,
-negative-path, and failure evidence stays immutable, while task working
-material classified `Transient` and not admitted by a proof owner need not be
-retained in the repository.
+Current proof and historical audit are separate. A current readiness, support,
+promotion, or release evaluation resolves each source input through the source,
+executed, and proof-tool identity relationship declared by its proof owner.
+Historical bytes serve audit, integrity, and compatibility only and never
+satisfy current proof. Retained positive, negative-path, and failure evidence
+stays immutable; task material classified `Transient` and not admitted by a
+proof owner need not be kept.
 
 Queries resolve evidence with `evidenceStatus: valid | superseded | withdrawn`
 and surface the advisory without exposing restricted detail. Supersession keeps
@@ -2383,8 +2354,7 @@ kernel.
 
 The [milestone roadmap](./milestone-roadmap.md) owns the sequence, entry and
 exit conditions, deliverables, and evidence for Gate 0, R1, P2, the optional
-G2.4–G2.6 capabilities, and the Gate 3 portfolio. Decision 0021 moved the
-former gate-era build-order bodies to the ignored recovery archive.
+G2.4–G2.6 capabilities, and the Gate 3 portfolio.
 
 ## Non-negotiable invariants
 

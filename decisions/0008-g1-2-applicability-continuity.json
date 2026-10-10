@@ -1,7 +1,0 @@
-{
-  "decisionId": "0008",
-  "status": "retired",
-  "supersededBy": "decisions/0015-authority-retirement.md",
-  "reason": "Historical applicability-continuity authority retired from the tracked current record.",
-  "recoveryArchive": ".migration-archive/20260912-preflight/authority-originals/decisions/0008-g1-2-applicability-continuity.json"
-}

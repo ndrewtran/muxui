@@ -1,7 +1,0 @@
-{
-  "decisionId": "0009-acceptance",
-  "status": "retired",
-  "supersededBy": "decisions/0015-authority-retirement.md",
-  "reason": "Historical acceptance receipt retired with its authority record.",
-  "recoveryArchive": ".migration-archive/20260912-preflight/authority-originals/decisions/0009-delivery-review-readiness-acceptance.json"
-}
