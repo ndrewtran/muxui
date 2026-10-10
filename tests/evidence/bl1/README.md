@@ -48,9 +48,11 @@ capture at the same revision copies nothing new and carries each `supersedes`
 forward; a later capture archives the capture it replaces the same way, so the chain
 stays walkable. The growth capture at `0c3cf662` archived the close-out capture at
 `c8f3e7cb` the same way, under `superseded/c8f3e7cbc18b/`, and every new record carries
-`supersedes` naming its close-out predecessor. The index's `supersessions` list is not used: Architecture defines it
-as an `EvidenceApplicabilitySupersession` certificate that closes an applicability
-chain after an accepted authority change, which a recapture is not.
+`supersedes` naming its close-out predecessor. The index's `supersessions` list is not used.
+That reasoning is historical wording: Architecture once defined the list as an
+`EvidenceApplicabilitySupersession` certificate that closed an applicability chain after an
+accepted authority change, and no longer does (Decision 0027, #248, removed that machinery).
+`supersedes` on each record is the link between captures.
 
 ## Independent reviews retained
 
@@ -121,7 +123,7 @@ index binds a single source revision and tree.
 | `E-BL1-06` | `pnpm --filter @muxui/scale run check:browser:docs` with `MUXUI_BLOCKS_CAPTURE_DIR`: every variant at every toolbar preset, and every marketing variant at every page width, in light and dark, with the overflow report |
 | `E-BL1-07` | `surface-parity.mjs`: the API, CLI JSON, human, dense, and the site loader over pattern `list`, `search`, `get`, the participant filter, `usedIn`, and component examples, plus the CLI and loader tests |
 | `E-BL1-08` | `pnpm generate:check` and a catalog compare: against the digest pinned at #225 in a close-out capture, and across each commit that added or changed a block in a growth capture (see "Adding a block") |
-| `E-BL1-09` | `boundary-audit.mjs` and its negative controls; a growth capture scopes the checks that read `@muxui/react` and the catalog records to the commits that added or changed its blocks |
+| `E-BL1-09` | `boundary-audit.mjs` and its negative controls; a growth capture scopes the checks that read `@muxui/react`, the catalog records, and workflow and hosting files to the commits that added or changed its blocks |
 | `E-BL1-10` | `content-scan.mjs`, the content-rule tests, and the independent content review |
 | `E-BL1-11` | `regression.mjs` against `regression-thresholds.json` |
 
@@ -166,8 +168,9 @@ the claim to "no deployment configuration added", and the record says which.
   exercise the predicates and the git comparisons; they do not exercise the live
   `npm`, `gh`, and CLI reads themselves.
 - **Growth scope.** A growth capture (see "Adding a block") runs the checks that read
-  `@muxui/react` and the catalog records (`react-package-manifest`, `react-source-files`,
-  `react-stylesheet-names`, `no-dependency-change`, and
+  `@muxui/react`, the catalog records, and workflow and hosting files (`react-package-manifest`,
+  `react-source-files`, `react-stylesheet-names`, `no-dependency-change`,
+  `no-workflow-or-hosting-config`, and
   `no-new-component-token-capability-or-platform`) once per growth commit, each against its first
   parent, instead of from the pre-BL1 base to the head: a leg fails when it fails on any commit.
   Every other check keeps its range, so the release, publish, deployment, registry, assistive-technology,
@@ -241,8 +244,8 @@ capture (`--growth`) skips the close-out scope check and the exit review, record
 other check, including the rest of the boundary audit, which must still pass.
 
 **Growth scope of `E-BL1-08` and `E-BL1-09`.** Other pull requests land between the
-close-out and a growth capture and change `@muxui/react`, a manifest, the lockfile, or
-component records under their own authority (#234 to #236 did), so comparing the close-out with
+close-out and a growth capture and change `@muxui/react`, a manifest, the lockfile,
+component records, or a workflow under their own authority (#234 to #236 and #245 did), so comparing the close-out with
 the head would blame the blocks for them. A growth capture evaluates both claims across the
 growth itself, found from git:
 
@@ -293,12 +296,13 @@ growth itself, found from git:
   `package.json`, and the commit changes no non-test file of `packages/react`, no stylesheet
   class name or custom property, no dependency field of any `package.json`, no lockfile,
   workspace, `.npmrc`, or `.node-version` file, and no component, token, capability, or React
-  family record. The claim text names the audited commits. The release, publish, deployment,
-  registry, assistive-technology, and CLI checks run as before.
+  family record, and no workflow, hosting or deployment file, and no Astro site, base, adapter, or
+  output setting (`no-workflow-or-hosting-config`). The claim text names the audited commits. The
+  release, publish, deployment, registry, assistive-technology, and CLI checks run as before.
 - The claims no longer say anything about changes other pull requests made since the close-out;
   the records state that. A growth pull request therefore has to be a commit (or commits) that
   adds or edits blocks and their tests, thresholds, and goldens only: one that also touches
-  `@muxui/react`, a component record, a dependency, a close-out block, or the compiler or schema,
+  `@muxui/react`, a component record, a dependency, a workflow or hosting file, a close-out block, or the compiler or schema,
   or that renames, moves, or deletes a growth block, fails the capture and belongs in its own pull
   request.
 
