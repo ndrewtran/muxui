@@ -1,0 +1,224 @@
+
+> @muxui/scale@0.0.0 check:browser:docs <repo>/apps/scale
+> pnpm --filter @muxui/docs build && node --test test/browser/docs-theme.test.mjs test/browser/docs-blocks.test.mjs
+
+
+> @muxui/docs@0.0.0 build <repo>/apps/docs
+> node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && astro build
+
+Scope: 5 of 15 workspace projects
+../../packages/schema generate$ node src/generate.mjs
+../../packages/schema generate: [schema] generated packages/schema/generated/types.d.ts
+../../packages/schema generate: [schema] generated packages/schema/generated/platform-safety-contract.mjs
+../../packages/schema generate: Done
+../../packages/tokens generate$ node src/generate.mjs
+../../packages/tokens generate: [tokens] canonical theme integrity verified (923 tokens)
+../../packages/tokens generate: Done
+../../packages/catalog generate$ node src/generate.mjs
+../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog.mjs
+../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog.json
+../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog.json.provenance
+../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog-package.json
+../../packages/catalog generate: [catalog] generated packages/catalog/generated/catalog-package.json.provenance
+../../packages/catalog generate: Done
+../../packages/tooling generate$ node src/generate.mjs
+../../packages/react generate$ node src/generate.mjs && node advisory/capability-enrichment/generate-status.mjs
+../../packages/tooling generate: [tooling] generated packages/tooling/generated/command-surface.mjs
+../../packages/tooling generate: [tooling] generated packages/tooling/generated/response-types.d.ts
+../../packages/tooling generate: Done
+../../packages/react generate: [react] generated current R1.6 union projection with the retained R1.5 family closure
+../../packages/react generate: Done
+20:32:21 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+20:32:21 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [content] Syncing content
+20:32:21 [content] Synced content
+20:32:21 [types] Generated 229ms
+20:32:21 [build] output: "static"
+20:32:21 [build] mode: "static"
+20:32:21 [build] directory: <repo>/apps/docs/dist/
+20:32:21 [build] Collecting build info...
+20:32:21 [build] ✓ Completed in 295ms.
+20:32:21 [build] Building static entrypoints...
+20:32:21 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+20:32:21 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+20:32:21 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+20:32:21 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+20:32:21 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] warning: `esbuild` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `oxc` instead.
+20:32:21 [WARN] [vite] warning: `optimizeDeps.esbuildOptions` option was specified by "vite:react-babel" plugin. This option is deprecated, please use `optimizeDeps.rolldownOptions` instead.
+20:32:21 [WARN] [vite] You or a plugin you are using have set `optimizeDeps.esbuildOptions` but this option is now deprecated. Vite now uses Rolldown to optimize the dependencies. Please use `optimizeDeps.rolldownOptions` instead.
+20:32:22 [vite] ✓ built in 856ms
+20:32:22 [WARN] [vite] [plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+20:32:22 [vite] ✓ built in 403ms
+20:32:22 [build] Rearranging server assets...
+
+ generating static routes
+20:32:22 [WARN] [content] The collection "i18n" does not exist or is empty. Please check your content config file for errors.
+20:32:22   ├─ /404.html20:32:22 [WARN] [content] Entry docs → 404 was not found.
+ (+8ms)
+20:32:22   ├─ /blocks/filter-index.json (+12ms)
+20:32:22   ├─ /blocks/company-records/sortable/preview/index.html (+41ms)
+20:32:22   ├─ /blocks/poster-grid/css-grid/preview/index.html (+6ms)
+20:32:22   ├─ /blocks/poster-grid/virtualized/preview/index.html (+7ms)
+20:32:22   ├─ /blocks/task-filters/status-buttons/preview/index.html (+4ms)
+20:32:22   ├─ /blocks/task-filters/filter-bar/preview/index.html (+8ms)
+20:32:22   ├─ /blocks/account-settings/sections/preview/index.html (+4ms)
+20:32:22   ├─ /blocks/workspace-navigation/foldable/preview/index.html (+5ms)
+20:32:22   ├─ /blocks/marketing-hero/split/preview/index.html (+2ms)
+20:32:22   ├─ /blocks/pricing-plans/columns/preview/index.html (+2ms)
+20:32:22   ├─ /blocks/company-records/sortable/index.html (+143ms)
+20:32:22   ├─ /blocks/poster-grid/css-grid/index.html (+103ms)
+20:32:23   ├─ /blocks/poster-grid/virtualized/index.html (+36ms)
+20:32:23   ├─ /blocks/task-filters/status-buttons/index.html (+7ms)
+20:32:23   ├─ /blocks/task-filters/filter-bar/index.html (+7ms)
+20:32:23   ├─ /blocks/account-settings/sections/index.html (+17ms)
+20:32:23   ├─ /blocks/workspace-navigation/foldable/index.html (+5ms)
+20:32:23   ├─ /blocks/marketing-hero/split/index.html (+3ms)
+20:32:23   ├─ /blocks/pricing-plans/columns/index.html (+7ms)
+20:32:23   ├─ /blocks/company-records/index.html (+15ms)
+20:32:23   ├─ /blocks/poster-grid/index.html (+4ms)
+20:32:23   ├─ /blocks/task-filters/index.html (+4ms)
+20:32:23   ├─ /blocks/account-settings/index.html (+6ms)
+20:32:23   ├─ /blocks/workspace-navigation/index.html (+6ms)
+20:32:23   ├─ /blocks/marketing-hero/index.html (+2ms)
+20:32:23   ├─ /blocks/pricing-plans/index.html (+6ms)
+20:32:23   ├─ /blocks/index.html (+2ms)
+20:32:23   ├─ /components/activity/index.html (+10ms)
+20:32:23   ├─ /components/alert-dialog/index.html (+4ms)
+20:32:23   ├─ /components/autocomplete/index.html (+7ms)
+20:32:23   ├─ /components/avatar/index.html (+4ms)
+20:32:23   ├─ /components/breadcrumbs/index.html (+4ms)
+20:32:23   ├─ /components/button/index.html (+12ms)
+20:32:23   ├─ /components/button-group/index.html (+4ms)
+20:32:23   ├─ /components/calendar/index.html (+7ms)
+20:32:23   ├─ /components/card/index.html (+5ms)
+20:32:23   ├─ /components/checkbox/index.html (+4ms)
+20:32:23   ├─ /components/checkbox-field/index.html (+4ms)
+20:32:23   ├─ /components/checkbox-group/index.html (+4ms)
+20:32:23   ├─ /components/code-block/index.html (+6ms)
+20:32:23   ├─ /components/color-area/index.html (+4ms)
+20:32:23   ├─ /components/color-field/index.html (+4ms)
+20:32:23   ├─ /components/color-mode-toggle/index.html (+3ms)
+20:32:23   ├─ /components/color-picker/index.html (+3ms)
+20:32:23   ├─ /components/color-slider/index.html (+5ms)
+20:32:23   ├─ /components/color-swatch/index.html (+6ms)
+20:32:23   ├─ /components/color-swatch-picker/index.html (+7ms)
+20:32:23   ├─ /components/color-wheel/index.html (+4ms)
+20:32:23   ├─ /components/combo-box/index.html (+5ms)
+20:32:23   ├─ /components/command-palette/index.html (+8ms)
+20:32:23   ├─ /components/data-diff/index.html (+8ms)
+20:32:23   ├─ /components/date-field/index.html (+6ms)
+20:32:23   ├─ /components/date-picker/index.html (+5ms)
+20:32:23   ├─ /components/date-range-picker/index.html (+6ms)
+20:32:23   ├─ /components/dialog/index.html (+5ms)
+20:32:23   ├─ /components/disclosure/index.html (+5ms)
+20:32:23   ├─ /components/disclosure-group/index.html (+5ms)
+20:32:23   ├─ /components/drop-zone/index.html (+4ms)
+20:32:23   ├─ /components/file-trigger/index.html (+3ms)
+20:32:23   ├─ /components/form/index.html (+3ms)
+20:32:23   ├─ /components/grid-list/index.html (+6ms)
+20:32:23   ├─ /components/group/index.html (+3ms)
+20:32:23   ├─ /components/header-nav/index.html (+4ms)
+20:32:23   ├─ /components/icon-button/index.html (+6ms)
+20:32:23   ├─ /components/image/index.html (+3ms)
+20:32:23   ├─ /components/input/index.html (+3ms)
+20:32:23   ├─ /components/input-tags/index.html (+5ms)
+20:32:23   ├─ /components/lightbox/index.html (+4ms)
+20:32:23   ├─ /components/link/index.html (+5ms)
+20:32:23   ├─ /components/list-box/index.html (+6ms)
+20:32:23   ├─ /components/markdown/index.html (+8ms)
+20:32:23   ├─ /components/menu/index.html (+6ms)
+20:32:23   ├─ /components/message/index.html (+10ms)
+20:32:23   ├─ /components/meter/index.html (+3ms)
+20:32:23   ├─ /components/multi-select/index.html (+3ms)
+20:32:23   ├─ /components/number-field/index.html (+7ms)
+20:32:23   ├─ /components/payment-input/index.html (+5ms)
+20:32:23   ├─ /components/popover/index.html (+5ms)
+20:32:23   ├─ /components/preview-trigger/index.html (+4ms)
+20:32:23   ├─ /components/progress-bar/index.html (+3ms)
+20:32:23   ├─ /components/progress-circle/index.html (+4ms)
+20:32:23   ├─ /components/prompt-composer/index.html (+7ms)
+20:32:23   ├─ /components/radio-field/index.html (+4ms)
+20:32:23   ├─ /components/radio-group/index.html (+3ms)
+20:32:23   ├─ /components/range-calendar/index.html (+4ms)
+20:32:23   ├─ /components/resizable/index.html (+3ms)
+20:32:23   ├─ /components/search-field/index.html (+4ms)
+20:32:23   ├─ /components/select/index.html (+5ms)
+20:32:23   ├─ /components/select-native/index.html (+3ms)
+20:32:23   ├─ /components/separator/index.html (+3ms)
+20:32:23   ├─ /components/sidebar/index.html (+4ms)
+20:32:23   ├─ /components/slider/index.html (+3ms)
+20:32:23   ├─ /components/switch/index.html (+3ms)
+20:32:23   ├─ /components/switch-field/index.html (+3ms)
+20:32:23   ├─ /components/table/index.html (+4ms)
+20:32:23   ├─ /components/tabs/index.html (+8ms)
+20:32:23   ├─ /components/tag-group/index.html (+4ms)
+20:32:23   ├─ /components/tag-select/index.html (+5ms)
+20:32:23   ├─ /components/text/index.html (+3ms)
+20:32:23   ├─ /components/text-area/index.html (+3ms)
+20:32:23   ├─ /components/text-editor/index.html (+14ms)
+20:32:23   ├─ /components/text-field/index.html (+4ms)
+20:32:23   ├─ /components/time-field/index.html (+2ms)
+20:32:23   ├─ /components/toast/index.html (+4ms)
+20:32:23   ├─ /components/toggle-button/index.html (+3ms)
+20:32:23   ├─ /components/toggle-button-group/index.html (+3ms)
+20:32:23   ├─ /components/token-field/index.html (+3ms)
+20:32:23   ├─ /components/toolbar/index.html (+3ms)
+20:32:23   ├─ /components/tooltip/index.html (+4ms)
+20:32:23   ├─ /components/tree/index.html (+5ms)
+20:32:23   ├─ /components/virtualizer/index.html (+6ms)
+20:32:23   ├─ /foundations/reference-tokens/index.html (+54ms)
+20:32:23   ├─ /foundations/semantic-tokens/index.html (+127ms)
+20:32:23   ├─ /foundations/colour/index.html (+54ms)
+20:32:23   ├─ /foundations/typography/index.html (+35ms)
+20:32:23   ├─ /foundations/spacing/index.html (+36ms)
+20:32:23   ├─ /foundations/shape/index.html (+30ms)
+20:32:23   ├─ /foundations/elevation/index.html (+30ms)
+20:32:23   ├─ /foundations/motion/index.html (+32ms)
+20:32:24   ├─ /foundations/component-tokens/index.html (+32ms)
+20:32:24   ├─ /foundations/index.html (+28ms)
+20:32:24   ├─ /scale/index.html (+2ms)
+20:32:24   ├─ /accessibility/index.html (+1ms)
+20:32:24   ├─ /contribution/index.html (+1ms)
+20:32:24   ├─ /discovery/index.html (+1ms)
+20:32:24   ├─ /installation/index.html (+5ms)
+20:32:24   ├─ /lifecycle/index.html (+2ms)
+20:32:24   ├─ /themes/index.html (+2ms)
+20:32:24   ├─ /token-migration/index.html (+7ms)
+20:32:24   ├─ /index.html (+74ms)
+20:32:24 ✓ Completed in 1.55s.
+
+20:32:24 [build] ✓ Completed in 2.86s.
+20:32:24 [starlight:pagefind] Building search index with Pagefind...
+20:32:24 [starlight:pagefind] Found 130 HTML files.
+20:32:24 [starlight:pagefind] Finished building search index in 150ms.
+20:32:24 [WARN] [@astrojs/sitemap] The Sitemap integration requires the `site` astro.config option. Skipping.
+20:32:24 [build] 130 page(s) built in 3.36s
+20:32:24 [build] Complete!
+✔ the Blocks section: rail, filters, presets, handle, theme, views, and copy (6988.824667ms)
+✔ Copy returns to its label after clicks inside the confirmation (6255.549917ms)
+✔ a filter index that fails to load shows a status, and the next change retries (3037.688583ms)
+✔ the Blocks header keeps its actions at the end, with search shown or hidden (2917.61675ms)
+✔ the site header fits a phone on Starlight docs pages and Blocks pages (3015.031209ms)
+✔ E-BL1-06: every variant fits every width preset, light and dark, and marketing variants fit every page width (16630.469167ms)
+✔ docs Scale applies one validated theme across shell, islands and portals (10302.952125ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 39023.227333
