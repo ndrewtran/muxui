@@ -59,7 +59,7 @@
   "variants": [{ "example": "muxui:example:workspace-navigation-foldable" }],
   "accessibility": [
     "The column is a complementary landmark named Workspace and its links sit in a navigation landmark named Workspace links, both by aria-label; the main pane is a section named by its heading. Rename all three for your content.",
-    "The fold button reports aria-expanded and controls the column by id, and Cmd or Ctrl plus B does the same except while focus is in a text field or editor.",
+    "The fold button sets aria-expanded and controls the column by id, and Cmd or Ctrl plus B does the same except while focus is in a text field or editor.",
     "A folded rail keeps every link's full name and shows it in a tooltip on hover and keyboard focus.",
     "Nested groups are native disclosures, and the current link carries aria-current.",
     "Below 40rem of container width the navigation opens from a header button as a dialog named Navigation that holds focus and returns it to the button on close.",

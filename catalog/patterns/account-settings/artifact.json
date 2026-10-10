@@ -78,7 +78,7 @@
     "Server validation and error summaries",
     "Navigation guards for unsaved changes",
     "Tabbed or multi-page settings",
-    "Switches to the right of their labels: the Mux Switch puts its track before its label"
+    "Switches to the right of their labels: each Switch shows its track before its label"
   ],
   "workflowValue": "Replaces laying out a settings page by hand: the label column and two-column fields collapse by container width, and the dirty, saved, and cancel logic is one small state pair, so you rename the fields and keep the section layout and save bar."
 }
