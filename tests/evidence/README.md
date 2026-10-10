@@ -16,9 +16,16 @@ Retained records must keep their own privacy, retention, expiry, exception, and
 advisory bindings. Task-local review notes are not repository evidence. Hosted
 URLs and mutable Project values remain observations outside immutable records.
 
-## Retired capture scripts
+## Archive
 
-Some older gate READMEs and indexes, such as g0.5, g1.0, and g1.1, cite capture
-scripts (`capture-g0.5.mjs`, `capture-g1.0.mjs`, `capture-g1.1.mjs`) that were
-retired with the migration records. The citations stay because records are
-append-only and unchanged; the scripts remain available in git history.
+Closed milestone evidence is under `archive/`, byte-exact and not verified:
+`evidence-verify.mjs` skips it. A set moves there with `git mv`, unchanged, once
+its milestone is closed and no current tooling, test, or published package reads
+it. Evidence that current tooling or the published package reads stays in its
+own directory and stays verified. The rule is in Decision 0027.
+
+Scripts of archived sets were deleted; use git history. Records and READMEs
+inside `archive/` may cite those scripts (`capture-g0.3.mjs`,
+`capture-g0.4.mjs`, `capture-g0.5.mjs`, `capture-g1.0.mjs`,
+`capture-g1.1.mjs`, `capture-gate-0.mjs`) and paths outside `archive/`; the
+citations stay as recorded.
