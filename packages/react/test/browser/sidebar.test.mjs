@@ -80,7 +80,16 @@ function Shell() {
     h(Sidebar.Toggle, { 'aria-label': 'Toggle second' }));
   return h(React.Fragment, null, h('button', { id: 'before', tabIndex: 0 }, 'Before'), mounted ? h(Sidebar.Provider, provider, shell) : null, second);
 }
-createRoot(document.getElementById('root')).render(h(Shell));
+// A column and a drawer that consumer CSS swaps by container width, as a responsive shell does.
+const pages = () => h(Sidebar.NavList, { 'aria-label': 'Pages' },
+  h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home'),
+  h(Sidebar.NavItem, { href: '#overview', icon: Icon, current: true }, 'Overview'));
+function Responsive() {
+  return h(Sidebar.Provider, null, h('div', { className: 'rwd-frame' }, h('div', { className: 'rwd' },
+    h('div', { className: 'rwd-mobile' }, h(Sidebar.MobileTrigger, { logo: 'Mux' }, pages())),
+    h(Sidebar.Root, { className: 'rwd-column', 'aria-label': 'Workspace' }, pages()))));
+}
+createRoot(document.getElementById('root')).render(h(params.get('layout') === 'rwd' ? Responsive : Shell));
 // An editable control inside a shadow root: the document only sees its host.
 const host = document.createElement('div');
 host.id = 'shadow-host';
@@ -94,6 +103,10 @@ const css = `
 .switcher { display: flex; align-items: center; gap: 8px; inline-size: 100%; padding: 4px; border: 0; background: transparent; color: inherit; }
 .tile { display: grid; place-items: center; flex: none; inline-size: 2rem; block-size: 2rem; border-radius: 6px; background: var(--muxui-semantic-surface-track); }
 .muxui-sidebar .muxui-sidebar__account-card { margin-block-start: auto; }
+.rwd-frame { container-type: inline-size; }
+.rwd { display: flex; block-size: 24rem; }
+.rwd-column { display: none; }
+@container (min-width: 40rem) { .rwd-mobile { display: none; } .rwd-column { display: flex; } }
 `;
 
 const page = (url) => pageShell({
@@ -202,7 +215,7 @@ for (const engine of browserEngines()) {
         tab.on('pageerror', (error) => errors.push(error.message));
         tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
         await tab.goto(`${url}/sidebar.html${query}`, { waitUntil: 'networkidle' });
-        await tab.locator('aside').first().waitFor({ timeout: 15_000 });
+        await tab.locator(query.includes('layout=rwd') ? '.rwd' : 'aside').first().waitFor({ timeout: 15_000 });
         return { tab, context, errors };
       };
       const read = (tab) => tab.evaluate(readSidebar);
@@ -590,6 +603,40 @@ for (const engine of browserEngines()) {
           }), apple);
           assert.deepEqual(composing, [false, false], `${engine}: IME composition keeps the chord`);
           assert.deepEqual(await folds(), [true, true], `${engine}: IME composition does not toggle`);
+        } finally {
+          await context.close();
+        }
+      }
+
+      // Consumer CSS swaps the column and the drawer by width. An open drawer must not outlive its trigger, and focus
+      // must follow whichever one stays rendered.
+      {
+        const narrow = { width: 500, height: 700 };
+        const wide = { width: 900, height: 700 };
+        const { tab, context } = await open('?layout=rwd', { viewport: narrow });
+        try {
+          const focusIs = (selector, message) => pollUntil(tab, (selector) => document.activeElement === document.querySelector(selector), selector, { message, report: () => document.activeElement?.outerHTML.slice(0, 120) });
+          const drawer = tab.getByRole('dialog', { name: 'Navigation' });
+          const openDrawer = async () => {
+            await tab.getByRole('button', { name: 'Open navigation' }).click();
+            await drawer.waitFor({ timeout: 5000 });
+          };
+          await openDrawer();
+          await tab.locator('.muxui-sidebar__mobile-dialog a[href="#home"]').focus();
+          await tab.setViewportSize(wide);
+          await focusIs('aside a[href="#home"]', `${engine}: widening closes the drawer and focus lands on the matching column link`);
+          assert.equal(await drawer.count(), 0, `${engine}: the drawer is closed once its trigger is gone`);
+
+          await tab.setViewportSize(narrow);
+          await openDrawer();
+          await tab.locator('.muxui-sidebar__mobile-close-btn').focus();
+          await tab.setViewportSize(wide);
+          await focusIs('aside a[aria-current="page"]', `${engine}: with no matching link, focus lands on the current column link`);
+          assert.equal(await drawer.count(), 0, `${engine}: the drawer closes again`);
+
+          await tab.locator('aside a[href="#home"]').focus();
+          await tab.setViewportSize(narrow);
+          await focusIs('.muxui-sidebar__mobile-menu-btn', `${engine}: narrowing moves focus from the hidden column to the menu button`);
         } finally {
           await context.close();
         }

@@ -115,6 +115,7 @@
         "Folding moves focus out of content it hides: a hidden nested link goes to its group, the Search input to its folded button, anything else to the first Toggle that accepts focus, or to Root when none does.",
         "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the one mounted last, whatever shortcut changes happened since; only that Provider prevents the default.",
         "The shortcut yields to a control outside Sidebar that handles the chord itself; only targets inside a Root or Toggle are taken before they can stop it.",
+        "Inside a Provider, a MobileTrigger whose header layout hides while its drawer is open closes the drawer and moves focus to the matching column link, else the current link, a Toggle, or Root; a Root that layout hides while it holds focus hands focus to the rendered menu button.",
         "A folded header is clipped to the rail, so a text-only header shows only its first word; give it a leading mark.",
         "When Root sets its own id, Toggle's aria-controls names the generated id until hydration."
       ],
