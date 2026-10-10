@@ -8,6 +8,8 @@
 //   when a later one replaces it, so replacing records never deletes the only copy.
 // - `retainedCaptures` and `assertGrowthSource` find the retained close-out capture a growth capture
 //   builds on, and refuse a growth capture that adds no block to it.
+// - `retainedContentReviews` and `contentReviewCoverage` decide which independent content review covers each block,
+//   by the git tree of `catalog/patterns/<slug>`, so a capture needs a new review only for a block no retained review read.
 // - `blockBrowserTests` derives the cross-engine browser tests from the policy's pattern routes.
 // - `seedRehearsal` starts a rehearsal from a copy of the retained evidence, and refuses a destination
 //   that overlaps it before removing anything.
@@ -211,15 +213,90 @@ export async function measuredPatternIds({ outputRoot, directory }) {
 /**
  * A growth capture builds on a retained close-out capture, current or archived, and must add a block to
  * it: the catalog needs a pattern id the close-out's E-BL1-11 record did not measure. Returns the
- * close-out capture and the pattern ids added since it.
+ * close-out capture, the pattern ids added since it, and the source revision of the capture at the retained root,
+ * which a new capture replaces (the thresholds changed since it need new log entries).
  */
 export async function assertGrowthSource({ evidenceRoot, root, patternIds }) {
-  const closeout = (await retainedCaptures({ outputRoot: evidenceRoot, root })).find(({ scope }) => scope === 'close-out');
+  const captures = await retainedCaptures({ outputRoot: evidenceRoot, root });
+  const closeout = captures.find(({ scope }) => scope === 'close-out');
   if (closeout === undefined) throw new Error(`BL1_GROWTH_NO_CLOSEOUT: a growth capture builds on a retained close-out capture, and ${root} retains none`);
   const measured = await measuredPatternIds({ outputRoot: evidenceRoot, directory: closeout.directory });
   const added = patternIds.filter((id) => !measured.includes(id));
   if (added.length === 0) throw new Error(`BL1_GROWTH_NO_BLOCK: the catalog has no pattern beyond the ${measured.length} the close-out at ${closeout.sourceRevision.slice(0, 8)} measured; a growth capture follows an added block`);
-  return { closeout, added };
+  return { closeout, added, previousRevision: captures[0].sourceRevision };
+}
+
+/** The git tree of `catalog/patterns/<slug>` at `revision`, or null when the block or the revision is absent. */
+function blockTreeAt(cwd, revision, slug) {
+  const result = spawnSync('git', ['rev-parse', `${revision}:catalog/patterns/${slug}`], { cwd, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+/**
+ * The independent content reviews that earlier captures retained, as the coverage candidates of a capture at
+ * `sourceRevision`: the review of the capture at the retained root and of each archived capture, with where its file
+ * is (or will be) retained. The root capture is archived under `superseded/` when `sourceRevision` replaces it, so its
+ * review is reported at the archive path; a capture at `sourceRevision` itself is being rerun and its review is replaced,
+ * so it is skipped. Each file must still match the digest its capture recorded.
+ */
+export async function retainedContentReviews({ outputRoot, root, sourceRevision }) {
+  const reviews = [];
+  for (const { directory, sourceRevision: captured } of await retainedCaptures({ outputRoot, root })) {
+    const artifactFile = join(outputRoot, directory, 'artifacts/E-BL1-10.json');
+    if (!existsSync(artifactFile) || captured === sourceRevision) continue;
+    const { review } = JSON.parse(await readFile(artifactFile, 'utf8')).observations;
+    if (review?.artifact === undefined) continue;
+    const file = join(outputRoot, directory, 'artifacts', basename(review.artifact.path));
+    const text = await readFile(file, 'utf8');
+    if (sha256(text) !== review.artifact.sha256) throw new Error(`E-BL1-10: the content review retained with the capture at ${captured.slice(0, 8)} no longer matches its recorded digest`);
+    const retainedDirectory = directory === root ? posix.join(root, 'superseded', captured.slice(0, 12)) : directory;
+    reviews.push({
+      artifact: { path: posix.join(retainedDirectory, 'artifacts', basename(review.artifact.path)), sha256: review.artifact.sha256 },
+      reviewer: review.reviewer,
+      reviewedRevision: review.reviewedRevision,
+      reviewedTree: review.reviewedTree,
+      blocks: review.blocks,
+    });
+  }
+  return reviews;
+}
+
+/**
+ * Which retained independent content review covers each of `patternSlugs` at `sourceRevision` (Decision 0029). A review
+ * covers a block when it names the block and the block's git tree, `catalog/patterns/<slug>`, is the same at the
+ * revision the reviewer read as at `sourceRevision`, so the reviewer read exactly the sources the capture scanned. `reviews`
+ * are candidates (`artifact`, `reviewer`, `reviewedRevision`, `reviewedTree`, `blocks`); the first is preferred, then the
+ * others by the date of the revision they read, newest first. A review that reads a revision this repository does not
+ * hold covers nothing. Returns `{ rows, uncovered }`: one row per covered block, keeping the covering review's own reviewed
+ * revision and tree, and the blocks no review covers, which need a new review.
+ */
+export function contentReviewCoverage({ cwd, sourceRevision, patternSlugs, reviews }) {
+  const readable = reviews.filter(({ reviewedRevision }) => gitStatus(cwd, 'cat-file', '-e', `${reviewedRevision}^{commit}`) === 0);
+  const dated = (review) => Number(git(cwd, 'log', '-1', '--format=%ct', review.reviewedRevision));
+  const [preferred, ...others] = readable;
+  const candidates = [...(preferred === undefined ? [] : [preferred]), ...others.sort((left, right) => dated(right) - dated(left))];
+  const rows = [];
+  const uncovered = [];
+  for (const slug of patternSlugs) {
+    const tree = blockTreeAt(cwd, sourceRevision, slug);
+    const covering = candidates.find((review) => review.blocks.includes(slug) && tree !== null && blockTreeAt(cwd, review.reviewedRevision, slug) === tree);
+    if (covering === undefined) {
+      uncovered.push(slug);
+      continue;
+    }
+    rows.push({
+      block: slug,
+      tree,
+      review: {
+        artifact: covering.artifact,
+        reviewer: covering.reviewer,
+        reviewedRevision: covering.reviewedRevision,
+        reviewedTree: covering.reviewedTree,
+        blockTreeAtReviewedRevision: blockTreeAt(cwd, covering.reviewedRevision, slug),
+      },
+    });
+  }
+  return { rows, uncovered };
 }
 
 /**

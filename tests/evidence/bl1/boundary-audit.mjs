@@ -9,9 +9,12 @@
 // observations at the time they run. `--offline` skips them and the report says so; a
 // deployment that cannot be observed narrows the claim to "no deployment configuration added".
 //
-// A growth capture (`growthCommits`) scopes the checks that read @muxui/react, the catalog records, and workflow and hosting files
-// to the commits that added or changed the blocks, each against its first parent, because other pull requests change those under
-// their own authority between the close-out and a later capture. The other checks keep their range from the base to `head`.
+// A growth capture (`growthCommits`) scopes the checks that read @muxui/react, the catalog records, workflow and hosting files, and
+// package versions to the commits that added or changed the blocks, each against its first parent, because other pull requests change
+// those under their own authority between the close-out and a later capture. The other checks keep their range from the base to `head`.
+// With `growthGate: 'informational'` (Decision 0029) a growth commit may change @muxui/react, a dependency, a stylesheet name, or a
+// component record: those legs (`growthInformational`) are still computed and recorded per commit but do not fail the audit. Every
+// other leg stays a gate. Without `growthGate` every leg gates, as the captures made before Decision 0029 were audited.
 //
 // `negativeControls` proves each check can fail: git controls run a check over a range or a
 // head from this repository's history that is known to break it, and function controls feed
@@ -118,9 +121,20 @@ export function atClaims(text) {
   return atClaimPatterns.filter(({ expression }) => expression.test(text)).map(({ name }) => name);
 }
 
-/** The legs on which an `npm view` observation differs from the recorded R1 exit read-back. */
+/**
+ * The legs on which an `npm view` observation shows that something the recorded R1 exit read-back published was rewritten.
+ * Later release candidates are not a problem (Decision 0023 amendment 01): every recorded version is still listed with its
+ * recorded publish time, `integrity` and `shasum` are those of the recorded `latest` version, and `latest` still names it.
+ * `next` moves along the release-candidate sequence and is not claimed.
+ */
 export function registryProblems(observed, expected) {
-  return ['distTags', 'integrity', 'shasum', 'versions', 'versionTimes'].filter((key) => !sameJson(observed[key], expected[key]));
+  return [
+    ['distTags', observed.distTags?.latest === expected.distTags.latest],
+    ['integrity', observed.integrity === expected.integrity],
+    ['shasum', observed.shasum === expected.shasum],
+    ['versions', expected.versions.every((version) => observed.versions.includes(version))],
+    ['versionTimes', expected.versions.every((version) => observed.versionTimes[version] === expected.versionTimes[version])],
+  ].filter(([, holds]) => !holds).map(([leg]) => leg);
 }
 
 /** Problems with the CLI surface, each on one leg: the command set, a capability's effect, a capability's availability. */
@@ -218,16 +232,21 @@ export function observeDeployments() {
   };
 }
 
-/** The registry as `npm view` reports it now. Read-only. */
-function observeRegistry() {
+/**
+ * The registry as `npm view` reports it now. Read-only. `integrity` and `shasum` are those of `recordedVersion`, the version the
+ * R1 exit read-back recorded as `latest`, because the unqualified view reports whichever version `latest` names now.
+ */
+function observeRegistry(recordedVersion) {
   const result = spawnSync('npm', ['view', '@muxui/react', '--json'], { cwd: repositoryRoot, encoding: 'utf8' });
   if (result.status !== 0) return { observed: null, failure: `npm view @muxui/react exited ${result.status}: ${result.stderr.trim().split('\n').at(-1)}` };
   const view = JSON.parse(result.stdout);
+  const pinned = spawnSync('npm', ['view', `@muxui/react@${recordedVersion}`, '--json'], { cwd: repositoryRoot, encoding: 'utf8' });
+  const dist = pinned.status === 0 ? JSON.parse(pinned.stdout).dist : undefined;
   return {
     observed: {
       distTags: view['dist-tags'],
-      integrity: view.dist?.integrity ?? null,
-      shasum: view.dist?.shasum ?? null,
+      integrity: dist?.integrity ?? null,
+      shasum: dist?.shasum ?? null,
       versions: view.versions,
       versionTimes: Object.fromEntries(Object.entries(view.time ?? {}).filter(([key]) => key !== 'created' && key !== 'modified')),
     },
@@ -267,6 +286,8 @@ const checks = [
     legs: ['manifestUnchanged'],
     claim: '@muxui/react has the same package.json (version, exports, dependencies, files) before and after BL1.',
     growthClaim: '@muxui/react has the same package.json (version, exports, dependencies, files) before and after each growth commit.',
+    growthInformational: ['manifestUnchanged'],
+    growthInformationalClaim: 'Whether @muxui/react has the same package.json before and after each growth commit is recorded. A growth commit may change it; this record lists the result and claims nothing about it.',
     run({ baseRevision, headRevision }) {
       const before = jsonAt(baseRevision, 'packages/react/package.json');
       const after = jsonAt(headRevision, 'packages/react/package.json');
@@ -285,6 +306,8 @@ const checks = [
     legs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'],
     claim: 'No BL1 pull request changed a non-test file of packages/react. Across the whole range, outside packages/react/test, the only change is the pinned non-BL1 Sidebar change.',
     growthClaim: 'No growth commit changed a non-test file of packages/react.',
+    growthInformational: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'],
+    growthInformationalClaim: 'The non-test files of packages/react that each growth commit changed are recorded. A growth commit may change them; this record lists them and claims nothing about them.',
     run({ baseRevision, headRevision, mergeRevision, growthCommit }) {
       // A growth commit has no exception: it changes no non-test file of packages/react.
       const known = growthCommit !== undefined ? [] : nonBl1ReactChanges.map((change) => ({ ...change, sha: resolveRevision(change.commit) }));
@@ -330,6 +353,8 @@ const checks = [
     legs: ['classNamesUnchanged', 'customPropertiesUnchanged'],
     claim: 'The stylesheet that changed adds and removes no .muxui-* class name and no custom property declaration: its declared names are the same before and after.',
     growthClaim: 'The stylesheet adds and removes no .muxui-* class name and no custom property declaration across any growth commit: its declared names are the same before and after each.',
+    growthInformational: ['classNamesUnchanged', 'customPropertiesUnchanged'],
+    growthInformationalClaim: 'Whether the stylesheet gains or loses a .muxui-* class name or a custom property declaration across each growth commit is recorded. A growth commit may change them; this record lists the result and claims nothing about it.',
     run({ baseRevision, headRevision }) {
       const path = 'packages/react/src/supplemental/styles.css';
       const baseCss = show(baseRevision, path);
@@ -358,6 +383,8 @@ const checks = [
     legs: ['dependenciesUnchanged', 'lockfileAndWorkspaceUnchanged'],
     claim: 'No dependency, devDependency, peerDependency, or override changed in any package.json, and the lockfile and workspace files are unchanged.',
     growthClaim: 'No growth commit changed a dependency, devDependency, peerDependency, or override in any package.json, or the lockfile or workspace files.',
+    growthInformational: ['dependenciesUnchanged', 'lockfileAndWorkspaceUnchanged'],
+    growthInformationalClaim: 'The dependency, devDependency, peerDependency, and override changes, and the lockfile and workspace file changes, of each growth commit are recorded. A growth commit may change them; this record lists them and claims nothing about them.',
     run({ baseRevision, headRevision }) {
       const manifests = names(baseRevision, headRevision, '*package.json').filter((path) => !path.includes('node_modules'));
       const dependencyChanges = [];
@@ -376,9 +403,11 @@ const checks = [
   {
     id: 'versions-follow-decision-0026',
     legs: ['onlyDecidedVersionsChanged'],
-    claim: 'Only @muxui/schema, @muxui/catalog, and @muxui/tooling changed version (Decision 0026 item 10), and @muxui/react did not.',
-    run({ baseRevision, headRevision }) {
-      const allowed = new Set(['@muxui/catalog', '@muxui/schema', '@muxui/tooling']);
+    claim: 'Only @muxui/schema, @muxui/catalog, and @muxui/tooling changed version across BL1 (the delivery Decision 0026 item 10 named), and @muxui/react did not.',
+    growthClaim: 'No growth commit changed the version of any workspace package: a growth commit does not publish or bump a version, so a later release candidate does not fail it.',
+    run({ baseRevision, headRevision, growthCommit }) {
+      // Across BL1's delivery only the three packages Decision 0026 named changed version. A growth commit changes none.
+      const allowed = growthCommit === undefined ? new Set(['@muxui/catalog', '@muxui/schema', '@muxui/tooling']) : new Set();
       const versionChanges = [];
       for (const path of names(baseRevision, headRevision, '*package.json').filter((candidate) => !candidate.includes('node_modules'))) {
         const before = jsonAt(baseRevision, path);
@@ -445,17 +474,23 @@ const checks = [
   {
     id: 'registry-unchanged',
     legs: ['registryReadable', 'distTags', 'integrity', 'shasum', 'versions', 'versionTimes'],
-    claim: 'The npm registry still shows only @muxui/react@0.1.0-rc.1 with the R1 exit dist-tags, integrity, and publish time.',
+    claim: 'The npm registry still lists every version the R1 exit read-back recorded with its integrity, shasum, and publish time, and `latest` still names the version it named then. A later release candidate, or a moved `next`, is listed and not claimed (Decision 0023 amendment 01).',
     run({ offline, registry }) {
       const unobserved = { registryReadable: null, distTags: null, integrity: null, shasum: null, versions: null, versionTimes: null };
       if (offline) return { legs: unobserved, observations: { skipped: 'offline' } };
-      const { observed, failure } = registry();
-      if (observed === null) return { legs: { ...unobserved, registryReadable: false }, observations: { failure } };
       const expected = recordedRegistry();
+      const { observed, failure } = registry(expected.distTags.latest);
+      if (observed === null) return { legs: { ...unobserved, registryReadable: false }, observations: { failure } };
       const differing = registryProblems(observed, expected);
       return {
         legs: { registryReadable: true, distTags: !differing.includes('distTags'), integrity: !differing.includes('integrity'), shasum: !differing.includes('shasum'), versions: !differing.includes('versions'), versionTimes: !differing.includes('versionTimes') },
-        observations: { observed, expectedFrom: 'tests/evidence/r1-exit/artifacts/registry-observation.json (the R1 exit registry read-back)', expected, differing },
+        observations: {
+          observed,
+          expectedFrom: 'tests/evidence/r1-exit/artifacts/registry-observation.json (the R1 exit registry read-back)',
+          expected,
+          differing,
+          laterVersions: observed.versions.filter((version) => !expected.versions.includes(version)),
+        },
       };
     },
   },
@@ -539,6 +574,8 @@ const checks = [
     legs: ['catalogRecordsUnchanged', 'patternsReactOnly'],
     claim: 'BL1 added or changed no component, token, capability, or React family record, and every pattern targets web.react only.',
     growthClaim: 'No growth commit added or changed a component, token, capability, or React family record, and every pattern at the audited head targets web.react only.',
+    growthInformational: ['catalogRecordsUnchanged'],
+    growthInformationalClaim: 'Every pattern at the audited head targets web.react only. The component, token, capability, and React family records that each growth commit added or changed are recorded; a growth commit may change them, and this record lists them and claims nothing about them.',
     run({ baseRevision, headRevision, currentRevision }) {
       const changedCatalogRecords = names(baseRevision, headRevision, 'catalog/components', 'catalog/tokens', 'catalog/capabilities', 'catalog/react-r1-0', 'catalog/react-r1-5', 'catalog/react-r1-6');
       // The platforms are the state of the audited head, not of a growth commit.
@@ -579,6 +616,9 @@ export const checkLegs = Object.fromEntries(checks.map(({ id, legs }) => [id, le
 /** The checks a growth capture evaluates across each growth commit instead of the range from the base. */
 export const growthScopedChecks = checks.filter(({ growthClaim }) => growthClaim !== undefined).map(({ id }) => id);
 
+/** The legs of each growth-scoped check that `growthGate: 'informational'` records without gating on them (Decision 0029). */
+export const growthInformationalLegs = Object.fromEntries(checks.filter(({ growthInformational }) => growthInformational !== undefined).map(({ id, growthInformational }) => [id, growthInformational]));
+
 /** Runs one check and refuses a result whose legs are not the ones the check declares. */
 function runCheck({ id, legs: declared, run }, context) {
   const result = run(context);
@@ -587,7 +627,7 @@ function runCheck({ id, legs: declared, run }, context) {
 }
 
 /** A growth-scoped check: run once per growth commit against its first parent; a leg fails if it fails on any commit and holds only if it holds on all of them. */
-function runAcrossGrowth(check, context, growth) {
+function runAcrossGrowth(check, context, growth, informational) {
   const runs = growth.map(({ commit, parent }) => ({ commit, parent, ...runCheck(check, { ...context, baseRevision: parent, headRevision: commit, growthCommit: commit }) }));
   const merged = (leg) => {
     const values = runs.map(({ legs }) => legs[leg]);
@@ -595,7 +635,7 @@ function runAcrossGrowth(check, context, growth) {
   };
   return {
     legs: Object.fromEntries(check.legs.map((leg) => [leg, merged(leg)])),
-    claim: check.growthClaim,
+    claim: informational ? check.growthInformationalClaim ?? check.growthClaim : check.growthClaim,
     observations: { scope: 'growth', commits: runs.map(({ commit, parent, legs, observations }) => ({ commit, parent, legs, observations })) },
   };
 }
@@ -605,6 +645,8 @@ function runAcrossGrowth(check, context, growth) {
  * `closeoutBase: null` skips the close-out scope check, for a capture after a block is added.
  * `growthCommits` (revisions that added or changed blocks) scopes `growthScopedChecks` to those commits, each against its first
  * parent, and records them in `growthScope`; the other checks keep the range from `base` to `head`.
+ * `growthGate: 'informational'` (with `growthCommits`) records the `growthInformationalLegs` of the scoped checks without failing the audit on
+ * them (Decision 0029); without it every leg gates.
  * `mergeRevision` is the last BL1 merge, and `observers` replaces the live registry and deployment reads, for tests.
  * `cwd` runs the git reads in another repository, for tests; the live observations still read this checkout, so use it with `offline`
  * and only checks that read git objects.
@@ -619,7 +661,10 @@ export function auditBoundary({ cwd = repositoryRoot, ...options } = {}) {
   }
 }
 
-function auditRevisions({ base = preBl1Base, head = 'HEAD', offline = false, only, closeoutBase = bl1MergeRevision, mergeRevision = bl1MergeRevision, growthCommits, observers = {} }) {
+function auditRevisions({ base = preBl1Base, head = 'HEAD', offline = false, only, closeoutBase = bl1MergeRevision, mergeRevision = bl1MergeRevision, growthCommits, growthGate, observers = {} }) {
+  if (growthGate !== undefined && growthGate !== 'informational') throw new Error(`BL1_AUDIT_GROWTH_GATE: unknown growth gate ${String(growthGate)}`);
+  if (growthGate !== undefined && growthCommits === undefined) throw new Error('BL1_AUDIT_GROWTH_GATE: a growth gate needs growth commits');
+  const informational = growthGate === 'informational';
   const baseRevision = resolveRevision(base);
   const headRevision = resolveRevision(head);
   const growth = growthCommits === undefined ? null : growthCommits.map((revision) => {
@@ -640,8 +685,16 @@ function auditRevisions({ base = preBl1Base, head = 'HEAD', offline = false, onl
   const selected = checks.filter(({ id }) => (only === undefined || only.includes(id)) && !(id === 'closeout-scope' && closeoutBase === null));
   const results = selected.map((check) => {
     const scoped = growth !== null && growthScopedChecks.includes(check.id);
-    const { legs, observations, claim: observedClaim } = scoped ? runAcrossGrowth(check, context, growth) : runCheck(check, context);
-    return { id: check.id, claim: observedClaim ?? check.claim, pass: Object.values(legs).every((value) => value !== false), legs, observations };
+    const { legs, observations, claim: observedClaim } = scoped ? runAcrossGrowth(check, context, growth, informational) : runCheck(check, context);
+    const informationalLegs = scoped && informational ? check.growthInformational ?? [] : [];
+    return {
+      id: check.id,
+      claim: observedClaim ?? check.claim,
+      pass: Object.entries(legs).every(([leg, value]) => value !== false || informationalLegs.includes(leg)),
+      legs,
+      ...(informationalLegs.length > 0 ? { informationalLegs } : {}),
+      observations,
+    };
   });
   return {
     schema: 'muxui-bl1-boundary-audit-v1',
@@ -649,7 +702,10 @@ function auditRevisions({ base = preBl1Base, head = 'HEAD', offline = false, onl
     head: { revision: headRevision, lastBl1Merge: context.mergeRevision },
     ...(growth === null ? {} : {
       growthScope: {
-        rule: 'Each growth commit is compared with its first parent for the scoped checks; the other checks compare the pre-BL1 base with the head. Other pull requests change @muxui/react, its dependencies, and the catalog records under their own authority, and this audit does not cover them.',
+        rule: informational
+          ? 'Each growth commit is compared with its first parent for the scoped checks; the other checks compare the pre-BL1 base with the head. The legs listed in informationalLegs are recorded and do not fail the audit: a growth commit may change @muxui/react, dependencies, and component records, this audit lists what it changed and claims nothing about it, and each such change carries its own proof in its pull request. Every other leg gates.'
+          : 'Each growth commit is compared with its first parent for the scoped checks; the other checks compare the pre-BL1 base with the head. Other pull requests change @muxui/react, its dependencies, and the catalog records under their own authority, and this audit does not cover them.',
+        ...(informational ? { growthGate, informationalLegs: Object.fromEntries(Object.entries(growthInformationalLegs).filter(([id]) => results.some((result) => result.id === id))) } : {}),
         scopedChecks: results.filter(({ id }) => growthScopedChecks.includes(id)).map(({ id }) => id),
         commits: growth.map(({ commit, parent }) => ({ commit, parent, subject: git('log', '-1', '--format=%s', commit).trim() })),
       },
@@ -672,8 +728,15 @@ const changedRegistryField = {
   distTags: { latest: '0.1.0-rc.2', next: '0.1.0-rc.1' },
   integrity: 'sha512-b',
   shasum: 'b',
-  versions: ['0.1.0-rc.1', '0.1.0-rc.2'],
+  versions: ['0.1.0-rc.2'],
   versionTimes: { '0.1.0-rc.1': '2026-10-09T00:00:00.000Z' },
+};
+// A later release candidate in the sequence: `next` moved and a version was added, with the recorded one untouched. It must be accepted.
+const laterCandidate = {
+  ...oldRegistry,
+  distTags: { latest: '0.1.0-rc.1', next: '0.1.0-rc.2' },
+  versions: ['0.1.0-rc.1', '0.1.0-rc.2'],
+  versionTimes: { ...oldRegistry.versionTimes, '0.1.0-rc.2': '2026-10-20T00:00:00.000Z' },
 };
 const readOnlyCapability = { id: 'muxui:capability:query-baseline', availability: 'available', effect: 'read-only' };
 const emptyObservation = { observed: true, deployments: { items: [] }, pages: { configured: false } };
@@ -695,6 +758,7 @@ const commit = {
   pr201: '548019a8e7215f5f23f41a76165e511bd4ca5d57',
   pr213: '5773276b8c050f927d29d3a8f237cfc29e465bba',
   pr221: 'd370455359467597ba6ebe222e3ad7401118f9cb',
+  pr224: '02f1d215a921290dc8557aa96c98526096cb6016',
   pr222: 'b53a05ab55f12696aaf443ffdefb832b4ad2380b',
   pr228: '70a093bf48a361ff918cb4f15b05d005b0ee0145',
   pr229: '670cb1880350e62d19f30a09914b6eb6dadef9a4',
@@ -709,6 +773,7 @@ export const negativeControls = [
   { id: 'manifest-changed', kind: 'git', check: 'react-package-manifest', failingLegs: ['manifestUnchanged'], description: '#207 changed the @muxui/react manifest', base: `${commit.pr207}^`, head: commit.pr207 },
   { id: 'dependency-changed', kind: 'git', check: 'no-dependency-change', failingLegs: ['dependenciesUnchanged', 'lockfileAndWorkspaceUnchanged'], description: '#207 pinned a dependency and changed the lockfile', base: `${commit.pr207}^`, head: commit.pr207 },
   { id: 'react-version-changed', kind: 'git', check: 'versions-follow-decision-0026', failingLegs: ['onlyDecidedVersionsChanged'], description: 'aab51163 changed the @muxui/react version', base: `${commit.reactVersion}^`, head: commit.reactVersion },
+  { id: 'growth-commit-bumped-version', kind: 'git', check: 'versions-follow-decision-0026', failingLegs: ['onlyDecidedVersionsChanged'], description: 'as a growth commit, #224 bumped the catalog, schema, and tooling versions, which the BL1 delivery range allows and a growth commit does not', base: `${commit.pr224}^`, head: commit.pr224, growthCommits: [commit.pr224] },
   { id: 'package-not-private', kind: 'git', check: 'packages-stay-private', failingLegs: ['allPrivate'], description: 'at aab51163 @muxui/react was not private', base: `${commit.reactVersion}^`, head: commit.reactVersion },
   { id: 'react-source-changed', kind: 'git', check: 'react-source-files', failingLegs: ['onlyKnownCommits', 'onlyKnownPaths'], description: '#222 changed the GridList and Virtualizer sources in packages/react', base: commit.pr221, head: commit.pr222 },
   {
@@ -742,9 +807,9 @@ export const negativeControls = [
     kind: 'function',
     check: 'registry-unchanged',
     failingLegs: [leg],
-    description: `a changed ${leg} is rejected on that leg only, and the recorded read-back is accepted`,
+    description: `a changed ${leg} is rejected on that leg only, and the recorded read-back and a later release candidate are accepted`,
     reject: () => registryProblems({ ...oldRegistry, [leg]: changedRegistryField[leg] }, oldRegistry),
-    accepts: () => registryProblems(oldRegistry, oldRegistry).length === 0,
+    accepts: () => registryProblems(oldRegistry, oldRegistry).length === 0 && registryProblems(laterCandidate, oldRegistry).length === 0,
   })),
   { id: 'deployment-after-base', kind: 'function', check: 'no-deployment', failingLegs: ['noRecentDeployments'], description: 'a deployment created after the base is rejected, an empty observation is accepted', reject: () => legsOf(deploymentProblems({ ...emptyObservation, deployments: { items: [afterBase] } }, since)), accepts: () => deploymentProblems(emptyObservation, since).length === 0 },
   { id: 'pages-configured', kind: 'function', check: 'no-deployment', failingLegs: ['noPagesSite'], description: 'a configured Pages site is rejected', reject: () => legsOf(deploymentProblems({ ...emptyObservation, pages: { configured: true } }, since)), accepts: () => deploymentProblems(emptyObservation, since).length === 0 },

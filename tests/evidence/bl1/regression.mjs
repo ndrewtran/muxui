@@ -80,6 +80,69 @@ export function thresholdChanges(before, after) {
   };
 }
 
+const hasExpectation = ({ expectedFirst, firstWithoutPatterns, expectedId, expectedWithin }) => Boolean(expectedFirst || firstWithoutPatterns || (expectedId && expectedWithin));
+
+/**
+ * What a change from the thresholds `before` to `after` leaves unlogged or takes away (Decision 0029), as sentences; an empty
+ * list means every change is on the record. A pull request may change a query, a limit, or a budget, but it states the change
+ * and its reason before measuring and logs it in `provenance.revisions`; it never removes an expectation, and a change made
+ * after its result was seen is also listed in `provenance.revisedAfterFirstMeasurement`.
+ * - Every revised query, and every limit or budget that moved (any changed value outside `provenance`), has a log entry that is new
+ *   since `before`, so an entry for an earlier revision of the same query or value does not cover a later one.
+ * - No query is removed, every query keeps an expectation, and the flag that makes the expectations bind stays true.
+ * - A log entry names a query or a value that exists and says what changed and why. An entry made after a first
+ *   measurement names a query listed in `revisedAfterFirstMeasurement`; a limit or budget is never changed after its result was seen.
+ * - The log and `revisedAfterFirstMeasurement` only grow.
+ */
+export function thresholdRevisionProblems(before, after) {
+  const problems = [];
+  const { removedQueries, revisedQueries, changedValues } = thresholdChanges(before, after);
+  const log = after.provenance?.revisions ?? [];
+  const earlier = before.provenance?.revisions ?? [];
+  const fresh = log.filter((entry) => !earlier.some((kept) => canonicalJson(kept) === canonicalJson(entry)));
+  const afterLeaves = new Map(leaves(after));
+  for (const query of removedQueries) problems.push(`the query "${query}" was removed; an expectation is never removed`);
+  for (const entry of after.discovery.queries) if (!hasExpectation(entry)) problems.push(`the query "${entry.query}" has no expectation (expectedFirst, firstWithoutPatterns, or expectedId with expectedWithin)`);
+  if (after.discovery.everyQueryMeetsItsExpectation !== true) problems.push('discovery.everyQueryMeetsItsExpectation is not true, so the expectations no longer bind');
+  for (const { query } of revisedQueries) {
+    if (!fresh.some((entry) => entry.query === query)) problems.push(`the query "${query}" was revised with no new entry in provenance.revisions`);
+  }
+  for (const { path } of changedValues.filter(({ path: changed }) => changed !== 'provenance' && !changed.startsWith('provenance.'))) {
+    if (!fresh.some((entry) => entry.limit === path)) problems.push(`${path} changed with no new entry in provenance.revisions`);
+  }
+  const afterMeasurement = new Set(after.provenance?.revisedAfterFirstMeasurement ?? []);
+  for (const [position, entry] of log.entries()) {
+    const label = `provenance.revisions[${position}]`;
+    if ((entry.query === undefined) === (entry.limit === undefined)) problems.push(`${label} names exactly one of a query or a limit`);
+    else if (entry.query !== undefined && !after.discovery.queries.some(({ query }) => query === entry.query)) problems.push(`${label} names the query "${entry.query}", which is not in the thresholds`);
+    else if (entry.limit !== undefined && !afterLeaves.has(entry.limit)) problems.push(`${label} names the value ${entry.limit}, which is not in the thresholds`);
+    for (const field of ['change', 'reason']) if (typeof entry[field] !== 'string' || entry[field].trim() === '') problems.push(`${label} does not say its ${field}`);
+    if (entry.afterFirstMeasurement === true && entry.limit !== undefined) problems.push(`${label} changes ${entry.limit} after its result was seen; a limit or budget is never fitted to a result`);
+    else if (entry.afterFirstMeasurement === true && !afterMeasurement.has(entry.query)) problems.push(`${label} was made after a first measurement, so "${entry.query}" must be listed in provenance.revisedAfterFirstMeasurement`);
+  }
+  for (const entry of earlier) {
+    if (!log.some((kept) => canonicalJson(kept) === canonicalJson(entry))) problems.push(`provenance.revisions dropped or changed an earlier entry for ${entry.query ?? entry.limit}; the log only grows`);
+  }
+  for (const query of before.provenance?.revisedAfterFirstMeasurement ?? []) {
+    if (!afterMeasurement.has(query)) problems.push(`revisedAfterFirstMeasurement dropped "${query}"; the list only grows`);
+  }
+  return problems;
+}
+
+/**
+ * Refuses (`BL1_THRESHOLDS_UNLOGGED`) a thresholds file whose changes are not on the record, and returns the empty list otherwise. Against
+ * the close-out every revised query, limit, or budget must have a log entry; against the capture being replaced (`previousRevision`, when
+ * there is one) each must have an entry new since it, so an old entry for a query does not cover a later revision of it.
+ */
+export async function assertThresholdsLogged({ closeoutRevision, previousRevision = null, thresholds }) {
+  const problems = [
+    ...thresholdRevisionProblems(await loadThresholds(closeoutRevision), thresholds),
+    ...(previousRevision === null ? [] : thresholdRevisionProblems(await loadThresholds(previousRevision), thresholds).map((problem) => `since the capture at ${previousRevision.slice(0, 8)}: ${problem}`)),
+  ];
+  if (problems.length > 0) throw new Error(`BL1_THRESHOLDS_UNLOGGED: the thresholds changed since the close-out at ${closeoutRevision.slice(0, 8)} in ways the log does not cover:\n${problems.join('\n')}`);
+  return problems;
+}
+
 /** The compile result of the source manifest with `keep` deciding which records stay, read from the tree at `root`. */
 export async function compileBundle(keep = () => true, root = repositoryRoot) {
   const manifest = JSON.parse(await readFile(resolve(root, 'packages/catalog/catalog-sources.json'), 'utf8'));
