@@ -1,5 +1,12 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
+
+// The checkout root. The planning-policy workflow runs this from the PR merge
+// checkout, so a decision added in the PR exists here.
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
 const AUTHORITY_FILES = new Set([
   'strategy/monorepo-architecture.md',
   'strategy/milestone-roadmap.md',
@@ -12,30 +19,22 @@ const AUTHORITY_LABELS = new Set([
   'type:decision',
 ]);
 
+// The machinery that enforces protection, the publishing workflow, and the
+// files it runs to prepare, prove, and guard a release.
 const PLANNING_CONTROL_FILES = new Set([
   '.github/CODEOWNERS',
-  '.github/pull_request_template.md',
   '.github/workflows/repository-planning-policy.yml',
   '.github/scripts/validate-planning-pr.cjs',
   '.github/scripts/validate-planning-pr.test.cjs',
-  'tests/AGENTS.md',
-  'tests/evidence/README.md',
-  'tooling/AGENTS.md',
-  'tooling/audits/repository-policy/README.md',
-  'tooling/audits/repository-policy/package.json',
+  '.github/workflows/npm-publish.yml',
+  'tooling/audits/repository-policy/src/npm-publication.mjs',
+  'tooling/audits/repository-policy/src/release-prepare.mjs',
+  'tooling/audits/repository-policy/src/release-proof.mjs',
+  'packages/react/src/publish-guard.mjs',
 ]);
 
-// Every file under these directories is planning control, including the
-// delivery skill's references.
-const PLANNING_CONTROL_PREFIXES = [
-  '.agents/skills/muxui-delivery/',
-  '.github/ISSUE_TEMPLATE/',
-];
-
 function isProtectedPlanningFile(file) {
-  return AUTHORITY_FILES.has(file)
-    || PLANNING_CONTROL_FILES.has(file)
-    || PLANNING_CONTROL_PREFIXES.some((prefix) => file.startsWith(prefix));
+  return AUTHORITY_FILES.has(file) || PLANNING_CONTROL_FILES.has(file);
 }
 
 // A rename or move out of a protected path still changes that path, so the
@@ -49,22 +48,55 @@ function changedPaths(files) {
   return [...paths];
 }
 
+// The value on the label's own line. An empty value is missing; the next
+// line's label is never its value.
 function fieldValue(body, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = body.match(new RegExp(`^\\s*-?\\s*${escaped}:\\s*(.+?)\\s*$`, 'im'));
+  const match = body.match(new RegExp(`^[ \\t]*(?:[-*][ \\t]+)?${escaped}:[ \\t]*(.*?)[ \\t]*$`, 'im'));
   return match ? match[1].trim() : '';
 }
 
-function hasSubstantiveValue(value) {
-  return Boolean(value) && !/^(?:n\/?a|none|pending|tbd|not assigned)[\s.!-]*$/i.test(value);
+// Reduces a field value to its content: removes HTML comments (an unterminated
+// one runs to the end of the line), then strips Markdown wrappers (`x`, *x*,
+// **x**, _x_, ~x~) and trailing punctuation until nothing more comes off.
+function normalize(value) {
+  let text = value.replace(/<!--.*?(?:-->|$)/g, ' ');
+  for (let previous = ''; text !== previous;) {
+    previous = text;
+    text = text.replace(/^[\s`*_~]+|[\s`*_~.,;:!-]+$/g, '');
+  }
+  return text;
 }
 
-function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
-  const errors = [];
-  const planningControlChanged = files.some(isProtectedPlanningFile);
-  const productScopeChanged = files.includes('strategy/product-scope.md');
+// A filled-in answer. An honest "None" or "N/A" counts; an empty value, a
+// placeholder word, or a template placeholder such as <Scope IDs> does not.
+const PLACEHOLDER = /^(?:pending|tbd|not assigned)$|^(?:<[^<>]*>[\s,;/|]*)+$/i;
 
-  if (!planningControlChanged) return errors;
+function isFilledIn(value) {
+  const text = normalize(value);
+  return text !== '' && !PLACEHOLDER.test(text);
+}
+
+// A decision record is exactly decisions/<NNNN-name>.md: no subdirectory, no
+// "..", no suffix.
+const DECISION_REFERENCE = /^decisions\/\d{4}-[a-z0-9-]+\.md$/;
+
+// A regular file. lstat does not follow links, so a symbolic link, which could
+// point at an archived or unrelated file, does not count as a decision.
+function decisionFileExists(reference, root = REPO_ROOT) {
+  return fs.lstatSync(path.join(root, reference), { throwIfNoEntry: false })?.isFile() === true;
+}
+
+// An issue number, or the path of a decision file that exists in the checkout.
+function isChangeRecord(value, exists) {
+  const reference = normalize(value);
+  return /^#\d+\b/.test(reference) || (DECISION_REFERENCE.test(reference) && exists(reference));
+}
+
+function validatePlanningPullRequest({ files = [], labels = [], body = '', exists = decisionFileExists }) {
+  const errors = [];
+
+  if (!files.some(isProtectedPlanningFile)) return errors;
 
   if (!labels.some((label) => AUTHORITY_LABELS.has(label))) {
     errors.push(
@@ -72,17 +104,22 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
     );
   }
 
-  const changeRecord = fieldValue(body, 'Authority change record');
-  if (!/^#\d+\b/.test(changeRecord)) {
-    errors.push('Authority-source changes require an Authority change record: #… reference.');
+  if (!isChangeRecord(fieldValue(body, 'Authority change record'), exists)) {
+    errors.push(
+      'Authority-source changes require an Authority change record: #… or the path of an existing decisions/NNNN-….md file.',
+    );
   }
 
-  if (!productScopeChanged) return errors;
+  if (!files.includes('strategy/product-scope.md')) return errors;
 
+  // Only a change that alters a commitment (a version effect other than none)
+  // needs the change packet.
   const scopeVersion = fieldValue(body, 'Scope version effect');
   if (!/^(?:none|patch|minor|major)\b/i.test(scopeVersion)) {
-    errors.push('Product Scope changes require a valid Scope version effect.');
+    errors.push('Product Scope changes require a Scope version effect: none, patch, minor, or major.');
+    return errors;
   }
+  if (/^none\b/i.test(scopeVersion)) return errors;
 
   for (const label of [
     'Affected Scope IDs / commitment transitions',
@@ -90,8 +127,8 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
     'Release additions / removals',
     'Open tracker migration',
   ]) {
-    if (!hasSubstantiveValue(fieldValue(body, label))) {
-      errors.push(`Product Scope changes require a substantive ${label} entry.`);
+    if (!isFilledIn(fieldValue(body, label))) {
+      errors.push(`Product Scope version changes require a ${label} entry (None is accepted).`);
     }
   }
 
@@ -101,8 +138,8 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
 module.exports = {
   AUTHORITY_FILES,
   PLANNING_CONTROL_FILES,
-  PLANNING_CONTROL_PREFIXES,
   changedPaths,
+  decisionFileExists,
   isProtectedPlanningFile,
   validatePlanningPullRequest,
 };

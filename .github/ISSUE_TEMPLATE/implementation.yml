@@ -1,97 +1,46 @@
 name: Bounded implementation task
-description: Propose an implementation task under an activated roadmap milestone.
+description: Propose a bounded implementation task.
 title: "[Implementation] "
 labels:
   - type:implementation
 body:
-  - type: input
-    id: parent
+  - type: textarea
+    id: goal
     attributes:
-      label: Parent milestone issue
-      placeholder: "#123"
-    validations:
-      required: true
-  - type: input
-    id: scope_ids
-    attributes:
-      label: Scope ID(s)
-      placeholder: SCOPE-COMP-BUTTON-REACT; SCOPE-REACT-BREADTH-001
-    validations:
-      required: true
-  - type: input
-    id: roadmap_milestone
-    attributes:
-      label: Roadmap milestone
-      placeholder: R1 exit
+      label: Goal
+      description: The outcome and why it is needed.
     validations:
       required: true
   - type: textarea
-    id: architecture_requirements
+    id: canonical_owner
     attributes:
-      label: Architecture requirements
-      description: Cite exact headings and non-negotiable invariants governing the change.
-    validations:
-      required: true
-  - type: input
-    id: evidence_ids
-    attributes:
-      label: Evidence ID(s)
-      placeholder: E-R1-EXIT-01
+      label: Canonical owner
+      description: The earliest editable source this changes, such as a canonical record, renderer source, schema, token, or tool. Generated output is never the owner.
     validations:
       required: true
   - type: textarea
-    id: dependencies
+    id: affected_behavior
     attributes:
-      label: Dependencies
+      label: Affected behavior
+      description: What changes for users, consumers, or tooling, and what stays the same.
     validations:
       required: true
   - type: textarea
-    id: deliverables
+    id: verification
     attributes:
-      label: Deliverables
-      description: Name the bounded canonical owners, derived projections, packages, and supported platforms.
+      label: Verification
+      description: The checks that prove it, positive and negative paths as the risk calls for.
     validations:
       required: true
   - type: textarea
-    id: acceptance_commands
+    id: references
     attributes:
-      label: Acceptance commands
-      description: Include required positive, negative, generation, parity, compatibility, accessibility, and packed checks as applicable.
+      label: References
+      description: Where they apply, the Scope ID(s), Roadmap milestone, Evidence ID(s), and pull request or change record. An experimental React addition may use SCOPE-REACT-DONOR-SUPPLEMENTAL-001.
+      placeholder: |
+        Scope ID(s):
+        Roadmap milestone:
+        Evidence ID(s):
+        Pull request or change record:
     validations:
-      required: true
-  - type: textarea
-    id: change
-    attributes:
-      label: Bounded change
-      description: Name canonical owners, projections, packages, and platforms affected.
-    validations:
-      required: true
-  - type: textarea
-    id: proof
-    attributes:
-      label: Required proof
-      description: Include positive paths, negative paths, compatibility, accessibility, and deterministic-output evidence as applicable.
-    validations:
-      required: true
-  - type: textarea
-    id: non_goals
-    attributes:
-      label: Non-goals
-    validations:
-      required: true
-  - type: input
-    id: change_record
-    attributes:
-      label: Pull request or change record
-      placeholder: "#123 or branch/change-record reference"
-    validations:
-      required: true
-  - type: checkboxes
-    id: ownership
-    attributes:
-      label: Ownership checks
-      options:
-        - label: I identified the earliest editable canonical owner.
-          required: true
-        - label: I am not introducing a second registry or hand-maintained projection.
-          required: true
+      required: false

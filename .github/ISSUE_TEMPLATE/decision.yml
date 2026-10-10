@@ -1,33 +1,13 @@
 name: Bounded decision
-description: Record a decision needed to activate or complete roadmap work.
+description: Record a decision that changes a rule, commitment, or protected stop.
 title: "[Decision] "
 labels:
   - type:decision
 body:
-  - type: input
-    id: parent
-    attributes:
-      label: Parent milestone or architecture issue
-      placeholder: "#123"
-    validations:
-      required: true
   - type: textarea
     id: question
     attributes:
       label: Decision question
-    validations:
-      required: true
-  - type: textarea
-    id: constraints
-    attributes:
-      label: Architectural constraints and evidence
-    validations:
-      required: true
-  - type: textarea
-    id: authority_refs
-    attributes:
-      label: Authority, scope, and evidence references
-      description: Cite affected architecture sections, roadmap milestones/evidence IDs, immutable Product Scope IDs, dependencies, release boundary, and explicit non-goals.
     validations:
       required: true
   - type: textarea
@@ -43,9 +23,9 @@ body:
     validations:
       required: true
   - type: textarea
-    id: tracker_migration
+    id: references
     attributes:
-      label: Open-tracker migration
-      description: Name affected issues and Project items, or state N/A with rationale.
+      label: Authority and tracker effect
+      description: Where they apply, the affected architecture sections, Roadmap milestones and evidence IDs, Product Scope IDs, release boundary, non-goals, and open tracker work.
     validations:
-      required: true
+      required: false

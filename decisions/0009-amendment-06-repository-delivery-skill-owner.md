@@ -4,7 +4,6 @@
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0009:amendment:06`
 - Parent decision: `core-ui:decision:0009`
-- Amends: `core-ui:decision:0009:amendment:02`, admitted guidance semantics (scope and item 5); `muxui:decision:0009:amendment:05`, the delivery guard reference under "Unchanged"
 - Accepted request: [acceptance record](./0009-amendment-06-repository-delivery-skill-owner-acceptance.md)
 
 Andrew's acceptance records the bounded direction below. Repository adoption
@@ -29,23 +28,27 @@ source of Mux UI delivery guidance once this amendment's pull request merges.
 `references/` directory, and `SKILL.md` names when to read each file.
 `agents/openai.yaml` remains non-authoritative interface metadata.
 
-Amendment 02 limited the skill to its six admitted guidance items. The
-admitted guidance now also includes the absorbed guard content: the authority
-order and state domains, alignment classes and deviation stops, Delivery
-Project reconciliation, agent orchestration and review lenses, and Mux UI CI
-delivery. None of it creates an authority source, registry, reviewer decision,
-evidence, tracker state, public surface, support claim, or release boundary.
+## Role guidance
 
-Amendment 02's admitted guidance item 5 read: "`reviewer` is read-only and
-selected only by the canonical delivery profile's reviewer contract."
-Decision 0011 retired that profile. Item 5 now reads: "`reviewer` is read-only
-and selected by the actual risk of the change, as Decision 0011's ordinary
-delivery contract describes." Items 1 to 4 and 6, as amended by amendment 05,
-are unchanged.
+The skill's role rules are:
 
-Amendment 02's exact successor tuple remains a historical record of the skill
-bytes at its materialization commit. This amendment, not that tuple, governs
-the current contents of `.agents/skills/muxui-delivery/`.
+1. Root remains accountable for delivery planning, architecture, difficult
+   reasoning, escalated blocker resolution, delegation, and final synthesis or
+   decisions.
+2. Only root delegates; amendment 05 states the delegation rule.
+3. `coder` is the normal bounded end-to-end implementation lane, with explicit
+   file ownership, routine repository research, debugging, and testing, and no
+   external mutations or architecture decisions.
+4. `researcher` is optional and read-only.
+5. `reviewer` is read-only and selected by the actual risk of the change, as
+   Decision 0011's ordinary delivery contract describes.
+6. `browser_debugger` is optional, advisory, and does not edit application code
+   or local files.
+
+These are operator-guidance semantics only. They create no authority source,
+workflow registry, reviewer decision, dispatch, clearance, evidence,
+readiness, tracker state, capability, public surface, support claim,
+package/version behavior, release boundary, or external mutation.
 
 Where amendment 05 refers to the delivery stops, they live in the repository
 skill. Decision 0028 narrows that stop list to publishing, dist-tags,
@@ -53,14 +56,23 @@ production, writes to outside services, waived proof, activation of a new
 package, platform, or renderer, and stable, support, or assistive-technology
 claims.
 
-## Proposed protection
+## Protection
 
-The pull request adopting this amendment also proposes that every file under
-`.agents/skills/muxui-delivery/` be a protected planning-control file. The
-planning-policy validator would match the directory by prefix, so a change to
-any reference needs the same authority label and change record as a change to
-`SKILL.md`. This protection is proposed direction; it is adopted only when
-Andrew merges that pull request.
+The delivery skill is reviewed like any other pull request. No file under
+`.agents/skills/muxui-delivery/` is a protected planning-control path, and a
+change to the skill needs no authority label or change record.
+
+The planning-policy validator, `.github/scripts/validate-planning-pr.cjs`, owns
+the protected-file list. It protects the strategy documents and the platform
+safety contract, the validator with its test and the workflow and CODEOWNERS
+entry that enforce it, and the publishing workflow with the files it runs to
+prepare, prove, and guard a release. Issue forms, the pull-request template,
+READMEs, route maps, the repository-policy package manifest, and the root
+`package.json` are ordinary files. A change to a protected file needs the
+`type:decision` or `type:architecture-maintenance` label and an `Authority
+change record` that is an issue number or the path of an existing decision file.
+Product Scope also states its version effect, and its change packet when that
+effect is not `none`.
 
 ## Unchanged
 
@@ -70,5 +82,17 @@ platform, support claim, lifecycle, or release boundary. Amendment 05's
 vendor-neutral wording rule and `.claude/skills` discovery link, and Decision
 0011's protected pull-request route, remain in force.
 
-Historical decisions and receipts are not rewritten, including Decision 0011's
-reference to the user-level guard.
+## Acceptance
+
+- Owner: Andrew / `ndrewtran`
+- Outcome: Accepted user direction; repository adoption through a protected pull request
+- Acceptance date: 10 October 2026 (the protection narrowed above); the original amendment was accepted on 28 September 2026 in the acceptance record linked at the top
+
+Andrew's direction, in his words:
+
+> I want to loosen the authorities and decisions surrounding hard-lists and blockers for development work as Mux UI is under development. Decisions such as a definitive component list that can use Lucide icons for example has no place in Mux UI as Lucide is the default iconography provider/substrate for all Mux UI components. Find other examples of authority and decision gates that are similar in their restrictive nature that ought to be loosened/removed.
+
+> Go ahead with batch 0 plus batches 1 to 5.
+
+This record does not claim that any check passed, that a pull request was
+opened or merged, or that the repository has adopted the narrowed protection.
