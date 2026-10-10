@@ -62,7 +62,7 @@ function Shell() {
         h(Sidebar.NavItem, { href: '#wiki' }, h('span', null, 'Wiki')),
         h(Sidebar.NavItem, { href: '#raw' }, h('svg', { role: 'img', 'aria-label': 'Raw', width: 1, height: 1 })),
         h(Sidebar.Section, { label: 'Projects' },
-          h(Sidebar.NavItem, { href: '#overview', icon: Icon, current: true }, 'Overview'),
+          h(Sidebar.NavItem, { href: '#overview', icon: Icon, badge: '12', current: true }, 'Overview'),
           h(Sidebar.NavItem, { icon: Icon, items: [{ href: '#now', label: 'Now' }, { href: '#next', label: 'Next' }] }, 'Roadmap'))),
       h(Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => {} }),
       h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' })),
@@ -141,7 +141,7 @@ function boxOf(selector) {
 }
 
 /** WCAG contrast of a node's text or icon color against the background painted behind it; runs in the page, where canvas resolves any CSS color. */
-function contrastOf({ selector }) {
+function contrastOf({ selector, color, behind = selector }) {
   const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
   const pixel = (...layers) => {
     context.clearRect(0, 0, 1, 1);
@@ -159,15 +159,15 @@ function contrastOf({ selector }) {
     return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   };
   const element = document.querySelector(selector);
-  // Stack the backgrounds behind the node, nearest on top, down to the first opaque one: a hovered link tints what is under it.
+  // Stack the backgrounds behind the node (or the `behind` node), nearest on top, down to the first opaque one: a hovered link tints what is under it.
   const layers = [];
-  for (let node = element; node; node = node.parentElement) {
-    const color = getComputedStyle(node).backgroundColor;
-    const alpha = pixel(color)[3];
-    if (alpha > 0) layers.unshift(color);
+  for (let node = document.querySelector(behind); node; node = node.parentElement) {
+    const paint = getComputedStyle(node).backgroundColor;
+    const alpha = pixel(paint)[3];
+    if (alpha > 0) layers.unshift(paint);
     if (alpha === 255) break;
   }
-  const [high, low] = [luminance(pixel(getComputedStyle(element).color)), luminance(pixel(...layers))].sort((x, y) => y - x);
+  const [high, low] = [luminance(pixel(color ?? getComputedStyle(element).color)), luminance(pixel(...layers))].sort((x, y) => y - x);
   return (high + 0.05) / (low + 0.05);
 }
 
@@ -236,6 +236,24 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.evaluate(boxOf, '.muxui-sidebar__nav-mark'), null, label('an expanded sidebar shows no stand-in mark'));
           const labelContrast = await tab.evaluate(contrastOf, { selector: '.muxui-sidebar__section-label' });
           assert.ok(labelContrast >= 4.5, label(`the section label meets text contrast (${labelContrast.toFixed(2)}:1)`));
+          // Badge text meets 4.5:1 on every background it sits on: idle, hovered, and the current item, hovered or not.
+          const badges = ['a[href="#inbox"] .muxui-sidebar__nav-badge', 'a[href="#overview"] .muxui-sidebar__nav-badge'];
+          for (const hovered of [null, 'a[href="#inbox"]', 'a[href="#overview"]']) {
+            if (hovered) {
+              await tab.locator(hovered).hover();
+              await tab.waitForTimeout(300);
+            }
+            const ratios = await Promise.all(badges.map((selector) => tab.evaluate(contrastOf, { selector })));
+            assert.ok(ratios.every((ratio) => ratio >= 4.5), label(`badge text meets text contrast, ${hovered ? `hovering ${hovered}` : 'idle'} (${ratios.map((ratio) => ratio.toFixed(2))})`));
+          }
+          await tab.mouse.move(0, 0);
+          // Search shows a focus ring in both schemes: a 2px shadow that stands out from the sidebar by 3:1.
+          await focusByKeyboard(tab, '.muxui-sidebar__search-input');
+          const shadow = await tab.evaluate(() => getComputedStyle(document.querySelector('.muxui-sidebar__search-input')).boxShadow);
+          const ringColor = shadow.replace(/-?\d+(\.\d+)?px/gu, '').replace('inset', '').trim();
+          const ringContrast = await tab.evaluate(contrastOf, { selector: '.muxui-sidebar__search-input', color: ringColor, behind: '.muxui-sidebar__header' });
+          assert.ok(/0px 0px 0px 2px/u.test(shadow) && !shadow.includes('inset') && ringContrast >= 3, label(`the focused Search field draws a visible ring (${shadow}, ${ringContrast.toFixed(2)}:1)`));
+          await tab.locator('#before').focus();
 
           await tab.getByRole('button', { name: 'Toggle sidebar' }).click();
           await settled(tab, true, label('Toggle folds Root to the rail'));

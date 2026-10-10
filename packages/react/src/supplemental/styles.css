@@ -2997,7 +2997,6 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   :scope :is(
     .muxui-sidebar__search-icon,
     .muxui-sidebar__nav-icon,
-    .muxui-sidebar__nav-badge,
     .muxui-sidebar__nav-external,
     .muxui-sidebar__nav-chevron
   ) {
@@ -3064,6 +3063,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
     background: var(--muxui-semantic-color-neutral-16);
     box-shadow: 0 0 0 1px var(--muxui-semantic-color-neutral-22) inset;
     color: var(--muxui-semantic-color-neutral-96);
+  }
+
+  /* The rule above would otherwise outrank the base :focus ring. */
+  :scope .muxui-sidebar__search-input:focus {
+    box-shadow: 0 0 0 2px var(--muxui-semantic-color-color-60);
   }
 }
 
