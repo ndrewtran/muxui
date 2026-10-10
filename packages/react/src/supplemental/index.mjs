@@ -1104,21 +1104,27 @@ const SidebarContext = React.createContext(null);
 function useSidebarPart(part) { const context = React.useContext(SidebarContext); if (!context) throw new Error(`Sidebar.${part} must be used inside Sidebar.Provider`); return context; }
 const SIDEBAR_EDITABLE = 'input, textarea, select, [contenteditable]:not([contenteditable="false"])';
 const sidebarShortcutModifier = (event) => (/mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform ?? '') ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey);
-// Providers that own a shortcut, in mount order. One document listener serves them all, so exactly one Provider handles a chord.
+// Providers that own a shortcut. One pair of document listeners serves them all, so exactly one Provider handles a chord.
 const sidebarShortcuts = new Set();
-function onSidebarShortcut(event) {
+let sidebarMounts = 0;
+function handleSidebarShortcut(event, capturing) {
   if (event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 || event.altKey || event.shiftKey || !sidebarShortcutModifier(event)) return;
   // The composed path sees through shadow roots, where the document only sees the host.
   const path = event.composedPath?.() ?? [event.target];
   // Leave the chord to text editing, where Cmd or Ctrl plus B means bold.
   if (path[0] instanceof Element && path[0].closest(SIDEBAR_EDITABLE)) return;
-  const matches = [...sidebarShortcuts].filter(({ key }) => key === event.key?.toLowerCase());
-  // The Provider whose Root or Toggle holds the target handles it; otherwise the most recently mounted one.
-  const owner = matches.find(({ nodes }) => nodes().some((node) => path.includes(node))) ?? matches.at(-1);
+  const matches = [...sidebarShortcuts].filter(({ key }) => key === event.key?.toLowerCase()).sort((a, b) => a.order - b.order);
+  const holder = matches.find(({ nodes }) => nodes().some((node) => path.includes(node)));
+  // A Sidebar's own controls stop keydown before it bubbles (Tooltip triggers do), so their chords are taken while
+  // capturing. Every other target gets to handle the chord first: it is ours in the bubble phase, if still uncancelled,
+  // for the Provider that mounted last.
+  const owner = capturing ? holder : holder ?? matches.at(-1);
   if (!owner) return;
   event.preventDefault();
   owner.toggle();
 }
+const onSidebarShortcutCapture = (event) => handleSidebarShortcut(event, true);
+const onSidebarShortcutBubble = (event) => handleSidebarShortcut(event, false);
 // Focus that folding would hide: a display:none or visibility:hidden control.
 const sidebarUnreachable = (node) => node.getClientRects().length === 0 || getComputedStyle(node).visibility === 'hidden';
 /** The text a NavItem label spells out, through elements and fragments. */
@@ -1151,15 +1157,23 @@ const Sidebar = {
     latest.current = { controlled, current, onCollapsedChange };
     const setCollapsed = React.useCallback((next) => { const state = latest.current; if (next === state.current) return; requests.current += 1; if (!state.controlled) setInternal(next); state.onCollapsedChange?.(next); }, []);
     const toggle = React.useCallback(() => setCollapsed(!latest.current.current), [setCollapsed]);
+    // Precedence between Providers follows mount order. The sequence is assigned once, so a changed shortcut keeps it.
+    const mounted = React.useRef(0);
     React.useEffect(() => {
+      mounted.current ||= (sidebarMounts += 1);
       if (!shortcut) return undefined;
-      const entry = { key: shortcut.toLowerCase(), toggle, nodes: () => [...roots, ...toggles] };
-      // Capture phase: a focused tooltip trigger or link stops its keydown from bubbling to the document.
-      if (sidebarShortcuts.size === 0) document.addEventListener('keydown', onSidebarShortcut, true);
+      const entry = { key: shortcut.toLowerCase(), toggle, order: mounted.current, nodes: () => [...roots, ...toggles] };
+      if (sidebarShortcuts.size === 0) {
+        document.addEventListener('keydown', onSidebarShortcutCapture, true);
+        document.addEventListener('keydown', onSidebarShortcutBubble);
+      }
       sidebarShortcuts.add(entry);
       return () => {
         sidebarShortcuts.delete(entry);
-        if (sidebarShortcuts.size === 0) document.removeEventListener('keydown', onSidebarShortcut, true);
+        if (sidebarShortcuts.size === 0) {
+          document.removeEventListener('keydown', onSidebarShortcutCapture, true);
+          document.removeEventListener('keydown', onSidebarShortcutBubble);
+        }
       };
     }, [shortcut, toggle, roots, toggles]);
     const value = React.useMemo(() => ({ collapsed: current, setCollapsed, toggle, rootId: customRootId ?? generatedRootId, setRootId, roots, toggles, requests }), [current, setCollapsed, toggle, customRootId, generatedRootId, roots, toggles]);
@@ -1181,10 +1195,13 @@ const Sidebar = {
       if (!sidebar?.collapsed || !root || !active || !root.contains(active) || !sidebarUnreachable(active)) return;
       const group = active.closest('.muxui-sidebar__nav-children')?.closest('details')?.querySelector(':scope > summary');
       const search = active.closest('.muxui-sidebar__search')?.querySelector('.muxui-sidebar__search-button');
-      const toggle = [...sidebar.toggles].find((candidate) => candidate.isConnected && !sidebarUnreachable(candidate));
-      const target = group ?? search ?? toggle ?? root;
-      if (target === root && !root.hasAttribute('tabindex')) root.tabIndex = -1;
-      target.focus({ preventScroll: true });
+      // Take the first candidate that really accepts focus (a disabled Toggle does not); Root is the last resort.
+      for (const candidate of [group, search, ...sidebar.toggles, root]) {
+        if (!candidate?.isConnected || sidebarUnreachable(candidate)) continue;
+        if (candidate === root && !root.hasAttribute('tabindex')) root.tabIndex = -1;
+        candidate.focus({ preventScroll: true });
+        if (candidate.getRootNode().activeElement === candidate) return;
+      }
     }, [sidebar?.collapsed]);
     return h('aside', { ...props, ref: node, id: props.id ?? sidebar?.rootId, 'data-foldable': dataState(sidebar), 'data-collapsed': dataState(sidebar?.collapsed), className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) });
   }),

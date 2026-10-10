@@ -112,8 +112,9 @@
         "A folded root animates to an icon rail; the transition is removed under reduced motion.",
         "Folded search unfolds the sidebar and focuses the input; a folded nested group unfolds the sidebar and opens.",
         "A folded nav item without an icon shows the first character of its label in the icon column, or a dot when the label has no text; the label stays in its accessible name and tooltip.",
-        "Folding moves focus out of content it hides: a hidden nested link goes to its group, the Search input to its folded button, anything else to Toggle, or to Root when no Toggle is mounted.",
-        "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the most recently mounted one; only that Provider prevents the default.",
+        "Folding moves focus out of content it hides: a hidden nested link goes to its group, the Search input to its folded button, anything else to the first Toggle that accepts focus, or to Root when none does.",
+        "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the one mounted last, whatever shortcut changes happened since; only that Provider prevents the default.",
+        "The shortcut yields to a control outside Sidebar that handles the chord itself; only targets inside a Root or Toggle are taken before they can stop it.",
         "A folded header is clipped to the rail, so a text-only header shows only its first word; give it a leading mark.",
         "When Root sets its own id, Toggle's aria-controls names the generated id until hydration."
       ],

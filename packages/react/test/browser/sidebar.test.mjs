@@ -19,13 +19,23 @@ const h = React.createElement;
 const params = new URLSearchParams(location.search);
 const Icon = ({ className }) => h('svg', { className, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.75, 'aria-hidden': true }, h('rect', { x: 4, y: 4, width: 16, height: 16, rx: 3 }));
 window.__changes = [];
+window.__vetoed = [];
+// A control outside Sidebar that handles the fold chord itself, with and without stopping its propagation.
+const veto = (id, stop) => h('button', { type: 'button', id, onKeyDown: (event) => {
+  if (event.key.toLowerCase() !== 'b' || !(event.metaKey || event.ctrlKey)) return;
+  window.__vetoed.push(event.nativeEvent.defaultPrevented);
+  event.preventDefault();
+  if (stop) event.stopPropagation();
+} }, id);
 
 function Shell() {
   const [mounted, setMounted] = React.useState(true);
   const [folded, setFolded] = React.useState(params.get('folded') === '1');
   const controlled = params.get('mode') === 'controlled';
+  const [shortcut, setShortcut] = React.useState('b');
+  window.__setShortcut = setShortcut;
   const provider = {
-    shortcut: params.get('shortcut') === 'none' ? undefined : 'b',
+    shortcut: params.get('shortcut') === 'none' ? undefined : shortcut,
     ...(controlled
       ? {
         collapsed: folded,
@@ -57,7 +67,9 @@ function Shell() {
       h(Sidebar.FeatureCard, { title: 'Try Scale', description: 'Explore tokens', onDismiss: () => {} }),
       h(Sidebar.AccountCard, { name: 'Sample user', email: 'sample@example.com' })),
     h('main', { className: 'main' },
-      params.get('toggle') !== 'none' && h(Sidebar.Toggle, { size: 'sm' }),
+      params.get('toggle') !== 'none' && h(Sidebar.Toggle, { size: 'sm', disabled: params.get('toggle') === 'disabled' }),
+      veto('veto', true),
+      veto('veto-soft', false),
       h('input', { id: 'field', 'aria-label': 'Notes' }),
       h('div', { id: 'editor', contentEditable: true, role: 'textbox', 'aria-label': 'Editor', suppressContentEditableWarning: true }, 'Draft'),
       h('button', { type: 'button', id: 'external', onClick: () => setFolded((value) => !value) }, 'Set folded'),
@@ -128,20 +140,34 @@ function boxOf(selector) {
   return { left, top, width, height };
 }
 
-/** WCAG contrast of a node's text or icon color against a background; runs in the page, where canvas resolves any CSS color. */
-function contrastOf({ selector, background }) {
+/** WCAG contrast of a node's text or icon color against the background painted behind it; runs in the page, where canvas resolves any CSS color. */
+function contrastOf({ selector }) {
   const context = document.createElement('canvas').getContext('2d', { willReadFrequently: true });
-  const luminance = (css) => {
+  const pixel = (...layers) => {
     context.clearRect(0, 0, 1, 1);
-    context.fillStyle = css;
-    context.fillRect(0, 0, 1, 1);
-    const [r, g, b] = [...context.getImageData(0, 0, 1, 1).data].slice(0, 3).map((value) => {
+    for (const css of layers) {
+      context.fillStyle = css;
+      context.fillRect(0, 0, 1, 1);
+    }
+    return [...context.getImageData(0, 0, 1, 1).data];
+  };
+  const luminance = ([r, g, b]) => {
+    const [red, green, blue] = [r, g, b].map((value) => {
       const channel = value / 255;
       return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
     });
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return 0.2126 * red + 0.7152 * green + 0.0722 * blue;
   };
-  const [high, low] = [luminance(getComputedStyle(document.querySelector(selector)).color), luminance(getComputedStyle(document.querySelector(background)).backgroundColor)].sort((a, b) => b - a);
+  const element = document.querySelector(selector);
+  // Stack the backgrounds behind the node, nearest on top, down to the first opaque one: a hovered link tints what is under it.
+  const layers = [];
+  for (let node = element; node; node = node.parentElement) {
+    const color = getComputedStyle(node).backgroundColor;
+    const alpha = pixel(color)[3];
+    if (alpha > 0) layers.unshift(color);
+    if (alpha === 255) break;
+  }
+  const [high, low] = [luminance(pixel(getComputedStyle(element).color)), luminance(pixel(...layers))].sort((x, y) => y - x);
   return (high + 0.05) / (low + 0.05);
 }
 
@@ -208,7 +234,7 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.getByRole('list', { name: 'Projects' }).count(), 1, label('Section is labelled by its visible text'));
           assert.ok(state.rootOverflow <= 0 && state.pageOverflow <= 0 && state.overflowing.length === 0, label(`no horizontal overflow when expanded (${JSON.stringify(state)})`));
           assert.equal(await tab.evaluate(boxOf, '.muxui-sidebar__nav-mark'), null, label('an expanded sidebar shows no stand-in mark'));
-          const labelContrast = await tab.evaluate(contrastOf, { selector: '.muxui-sidebar__section-label', background: 'aside' });
+          const labelContrast = await tab.evaluate(contrastOf, { selector: '.muxui-sidebar__section-label' });
           assert.ok(labelContrast >= 4.5, label(`the section label meets text contrast (${labelContrast.toFixed(2)}:1)`));
 
           await tab.getByRole('button', { name: 'Toggle sidebar' }).click();
@@ -220,12 +246,12 @@ for (const engine of browserEngines()) {
           const icon = await tab.evaluate(boxOf, 'a[href="#home"] .muxui-sidebar__nav-icon');
           const rootBox = await tab.evaluate(boxOf, 'aside');
           assert.ok(Math.abs(icon.left + icon.width / 2 - (rootBox.left + (state.railWidth - 1) / 2)) <= 1, label(`the icon column is centred in the rail (${icon.left + icon.width / 2} in ${state.railWidth}px)`));
-          // Every folded stand-in for a name meets non-text contrast: idle, hovered, keyboard-focused, and current.
-          const railContrasts = (selectors) => Promise.all(selectors.map((selector) => tab.evaluate(contrastOf, { selector, background: 'aside' })));
+          // Every folded stand-in for a name meets non-text contrast against what is painted behind it: idle, hovered (the current item and Search too), keyboard-focused, and current.
+          const railContrasts = (selectors) => Promise.all(selectors.map((selector) => tab.evaluate(contrastOf, { selector })));
           const essentials = ['.muxui-sidebar__search-icon', 'a[href="#home"] .muxui-sidebar__nav-icon', 'a[href="#overview"] .muxui-sidebar__nav-icon', 'a[href="#docs"] .muxui-sidebar__nav-mark', 'summary .muxui-sidebar__nav-icon'];
           const meets = async (state) => assert.ok((await railContrasts(essentials)).every((ratio) => ratio >= 3), label(`${state}: every folded icon and mark meets non-text contrast`));
           await meets('idle');
-          for (const item of ['a[href="#home"]', 'a[href="#docs"]', 'summary']) {
+          for (const item of ['a[href="#home"]', 'a[href="#docs"]', 'a[href="#overview"]', 'summary', '.muxui-sidebar__search-button']) {
             await tab.locator(item).hover();
             await tab.waitForTimeout(300);
             await meets(`hovering ${item}`);
@@ -244,8 +270,6 @@ for (const engine of browserEngines()) {
           assert.ok(mark !== null && Math.abs(mark.width - icon.width) < 0.5 && Math.abs(mark.left - icon.left) < 0.5, label('the icon-less item shows a mark in the icon column'));
           assert.equal(await tab.locator('a[href="#docs"] .muxui-sidebar__nav-mark').textContent(), 'D', label('the mark is the first letter of the label'));
           assert.equal(await tab.getByRole('link', { name: 'Docs', exact: true }).count(), 1, label('the mark is decorative: the item is still named by its label'));
-          const markContrast = await tab.evaluate(contrastOf, { selector: 'a[href="#docs"] .muxui-sidebar__nav-mark', background: 'aside' });
-          assert.ok(markContrast >= 3, label(`the mark meets non-text contrast (${markContrast.toFixed(2)}:1)`));
           // The mark reads through elements, and a label with no text gets a dot rather than a blank target.
           assert.equal(await tab.locator('a[href="#wiki"] .muxui-sidebar__nav-mark').textContent(), 'W', label('the mark reads the text inside an element label'));
           assert.equal(await tab.locator('a[href="#raw"] .muxui-sidebar__nav-mark').textContent(), '\u2022', label('a label with no text gets a dot'));
@@ -440,6 +464,15 @@ for (const engine of browserEngines()) {
         } finally {
           await controlled.context.close();
         }
+        const stuck = await open('?toggle=disabled');
+        try {
+          await focusByKeyboard(stuck.tab, '.muxui-sidebar__feature-card-dismiss');
+          await stuck.tab.keyboard.press(await chordOf(stuck.tab));
+          await settled(stuck.tab, true, `${engine}: the shortcut folds a sidebar whose Toggle is disabled`);
+          assert.ok(await hasFocus(stuck.tab, 'aside') && (await stuck.tab.locator('aside').getAttribute('tabindex')) === '-1', `${engine}: a disabled Toggle cannot take focus, so focus falls through to Root`);
+        } finally {
+          await stuck.context.close();
+        }
         const bare = await open('?toggle=none');
         try {
           await focusByKeyboard(bare.tab, '.muxui-sidebar__feature-card-dismiss');
@@ -482,6 +515,28 @@ for (const engine of browserEngines()) {
         }
       }
 
+      // The chord folds from a NavItem, whose Tooltip trigger stops keydown, but yields to a control outside Sidebar that handles it.
+      {
+        const { tab, context } = await open();
+        try {
+          const chord = await chordOf(tab);
+          await focusByKeyboard(tab, 'a[href="#home"]');
+          await tab.keyboard.press(chord);
+          await settled(tab, true, `${engine}: the shortcut folds with focus on a NavItem`);
+          await tab.keyboard.press(chord);
+          await settled(tab, false, `${engine}: and unfolds again`);
+          for (const id of ['#veto', '#veto-soft']) {
+            await focusByKeyboard(tab, id);
+            await tab.keyboard.press(chord);
+            await tab.waitForTimeout(200);
+            assert.ok(!(await read(tab)).collapsed, `${engine}: ${id} keeps the chord it handled`);
+          }
+          assert.deepEqual(await tab.evaluate(() => window.__vetoed), [false, false], `${engine}: the outside handlers saw an uncancelled chord`);
+        } finally {
+          await context.close();
+        }
+      }
+
       // Several Providers share one shortcut: the one holding focus handles the chord, else the latest; and the check
       // sees through shadow roots and ignores IME composition.
       {
@@ -490,6 +545,11 @@ for (const engine of browserEngines()) {
           const chord = await chordOf(tab);
           const folds = () => tab.evaluate(() => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-collapsed')));
           await tab.evaluate(() => { window.__prevented = []; window.addEventListener('keydown', (event) => { if (event.key.toLowerCase() === 'b') window.__prevented.push(event.defaultPrevented); }); });
+          // Changing the first Provider's shortcut away and back must not move it ahead of the later one.
+          for (const key of ['c', 'b']) {
+            await tab.evaluate((key) => window.__setShortcut(key), key);
+            await tab.waitForTimeout(100);
+          }
           await tab.keyboard.press(chord);
           await pollUntil(tab, () => document.querySelectorAll('aside')[1].hasAttribute('data-collapsed'), undefined, { message: `${engine}: the latest Provider handles a chord from outside both`, report: () => [...document.querySelectorAll('aside')].map((aside) => aside.hasAttribute('data-collapsed')) });
           assert.deepEqual(await folds(), [false, true], `${engine}: only the latest Provider folded`);
