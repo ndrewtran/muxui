@@ -320,8 +320,8 @@ interface SearchIndexEntry {
 
 /**
  * The catalog's indexed search terms. The query API answers searches but has no operation that
- * lists the indexed terms, and the rail's browser matcher needs them, so this is the one read
- * of the generated bundle (the declared `@muxui/catalog/bundle` export), limited to `searchIndex`.
+ * lists the indexed terms, and the rail's browser matcher needs them, so this reads the generated
+ * bundle (the declared `@muxui/catalog/bundle` export), limited to `searchIndex`.
  */
 function readSearchIndex(): readonly SearchIndexEntry[] {
 	const bundleModule: unknown = createRequire(import.meta.url)('@muxui/catalog/bundle');

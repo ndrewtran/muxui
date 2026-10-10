@@ -187,3 +187,36 @@ test('unmapped generator emissions fail with an actionable diagnostic', async ()
     /STORYBOOK_GENERATOR_OUTPUT_UNMAPPED.*unowned-output\.mjs/u,
   );
 });
+
+test('a base generator that cannot run against the head helpers is reported, not thrown; a failing head generator still throws', async () => {
+  const headFiles = {
+    'tree.stories.mjs': storySource(),
+    'tag-select.stories.mjs': storySource({ defaultTitle: 'TagSelect' }),
+  };
+  const afterSource = fixtureSource(headFiles);
+  // The base generator calls a helper whose signature changed at head.
+  const staleBaseSource = [
+    "const generatedRoot = '/redirected-by-the-impact-check';",
+    "const componentCategory = (category) => { if (category === 'autocomplete') throw new Error(`Component category ${category} has no navigation group.`); };",
+    "componentCategory('autocomplete');",
+  ].join('\n');
+
+  const impact = await compareStorybookGeneratorEmissions({ beforeSource: staleBaseSource, afterSource, pageIndex });
+  assert.equal(impact.baseRunFailed, true);
+  assert.deepEqual(impact.storyIds, []);
+  assert.match(impact.reason, /base generator could not run against the head helpers \(Error: Component category autocomplete has no navigation group\.\)/u);
+
+  // The head emission is still checked against the page index while the base cannot run.
+  await assert.rejects(
+    compareStorybookGeneratorEmissions({ beforeSource: staleBaseSource, afterSource: fixtureSource({ ...headFiles, 'orphan.stories.mjs': storySource() }), pageIndex }),
+    /STORYBOOK_GENERATOR_PAGE_OUTPUT_UNKNOWN.*orphan\.stories\.mjs/u,
+  );
+  await assert.rejects(
+    compareStorybookGeneratorEmissions({ beforeSource: fixtureSource(headFiles), afterSource: staleBaseSource, pageIndex }),
+    /STORYBOOK_GENERATOR_RUN_FAILED: head generator emission failed/u,
+  );
+  await assert.rejects(
+    compareStorybookGeneratorEmissions({ beforeSource: staleBaseSource, afterSource: staleBaseSource, pageIndex }),
+    /STORYBOOK_GENERATOR_RUN_FAILED: head generator emission failed/u,
+  );
+});

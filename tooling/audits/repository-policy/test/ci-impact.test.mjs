@@ -2288,6 +2288,27 @@ test('a Storybook tooling file with no focused unit route widens instead of fail
   assert.deepEqual((await route('test/storybook.test.mjs')).notices, []);
 });
 
+test('a generator whose base cannot run against the head helpers widens to the complete Storybook proof', async () => {
+  const path = 'apps/react-storybook/src/generate-stories.mjs';
+  const widened = await plan([path], {
+    packages: workspacePackages,
+    pageIndex: [...pageIndex, ...blockPages],
+    textSnapshots: { [path]: { before: 'export const before = true;', after: 'export const after = true;' } },
+    compareGeneratorEmissions: async () => ({ storyIds: [], baseRunFailed: true, reason: 'the base generator could not run against the head helpers (Error: helper changed), so its emissions cannot be compared' }),
+  });
+  assert.equal(widened.storyTooling, true);
+  assert.deepEqual(widened.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
+  assert.deepEqual(widened.storyIds, [
+    'muxui-block-poster-grid--css-grid',
+    'muxui-block-poster-grid--virtualized',
+    'muxui-block-task-filters--filter-bar',
+  ]);
+  assert.ok(widened.storyUnitTests.length >= 8);
+  assert.equal(widened.notices.length, 1);
+  assert.match(widened.notices[0], /^apps\/react-storybook\/src\/generate-stories\.mjs: the base generator could not run against the head helpers \(Error: helper changed\).*running the complete Storybook proof/u);
+  assert.ok(widened.reasons.includes(widened.notices[0]));
+});
+
 test('a CSS change no family owns widens to the full React and Storybook proof', async () => {
   const cssPath = 'packages/react/src/styles/base.css';
   const result = await plan([cssPath], {

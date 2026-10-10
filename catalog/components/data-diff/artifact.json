@@ -5,6 +5,7 @@
   "name": "DataDiff",
   "summary": "Review and select caller-supplied scalar table changes before an explicit Apply request.",
   "lifecycle": "experimental",
+  "category": "ai-agent",
   "intent": {
     "useWhen": [
       "Reviewing proposed additions, removals, and updates to a small scalar table before requesting their application."

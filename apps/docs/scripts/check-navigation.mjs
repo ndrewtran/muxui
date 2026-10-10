@@ -13,6 +13,7 @@ import { blocksPath } from '../src/lib/block-paths.ts';
 import { componentsPath, sectionOf } from '../src/lib/site-sections.ts';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 import { groupComponentNavigation } from '../../component-navigation.mjs';
+import { componentRecordCategory } from '../src/lib/component-categories.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsDist = process.argv[2] === undefined
@@ -92,7 +93,7 @@ for (const route of docsRoutes) {
 }
 
 // Sidebar order lists the AI Agent group first, so its first component follows the last guide.
-const groups = groupComponentNavigation(listComponents(), ({ id }) => id.slice(id.lastIndexOf(':') + 1))
+const groups = groupComponentNavigation(listComponents(), ({ id }) => componentRecordCategory(id.slice(id.lastIndexOf(':') + 1)))
 	.filter(({ items }) => items.length > 0);
 const componentRoutes = groups.flatMap(({ items }) => items.map(({ id }) => `${componentsPath}${id.slice(id.lastIndexOf(':') + 1)}/`));
 const groupLabels = groups.map(({ label }) => label);

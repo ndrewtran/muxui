@@ -20,7 +20,7 @@ export const QUERY_SELECTORS = Object.freeze(
       .map(([key, values]) => [key, Object.freeze([...values])]),
   ),
 );
-export const SCHEMA_VERSION = '2.3.0';
+export const SCHEMA_VERSION = '2.4.0';
 export const API_VERSION = '2.1.0';
 export const QUERY_SCHEMA_VERSION = '2.1.0';
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);

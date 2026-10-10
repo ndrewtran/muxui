@@ -5,6 +5,7 @@ import { parseFragment } from 'parse5';
 import { FOUNDATION_PAGES } from '../src/lib/foundations.ts';
 import { attributeValue, classNames, elements, textContent } from './html-tree.mjs';
 import { groupComponentNavigation } from '../../component-navigation.mjs';
+import { componentRecordCategory } from '../src/lib/component-categories.ts';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
 const docsDist = process.argv[2] === undefined
@@ -88,7 +89,7 @@ const home = parseFragment(readFileSync(homePath, 'utf8'));
 const showcases = elements(home).filter((node) => node.tagName === 'div' && classNames(node).has('home-showcase'));
 const showcaseItems = showcases.flatMap((showcase) => elements(showcase).filter((node) => node.tagName === 'div' && classNames(node).has('showcase-item')));
 const components = listComponents();
-const groups = groupComponentNavigation(components, ({ id }) => id.slice(id.lastIndexOf(':') + 1));
+const groups = groupComponentNavigation(components, ({ id }) => componentRecordCategory(id.slice(id.lastIndexOf(':') + 1)));
 assert(showcases.length === groups.length, 'Built Starlight home page must expose both component categories.');
 for (const { label, items } of groups) {
 	const showcase = showcases.find((node) => attributeValue(node, 'data-component-category') === label);

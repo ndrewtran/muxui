@@ -573,6 +573,22 @@ test('E-G0.1-02: canonical bytes ignore key order and whitespace but preserve me
   );
 });
 
+test('a component category is optional kebab-case navigation metadata that leaves the binding spec alone', () => {
+  const concept = component();
+  const categorized = structuredClone(concept);
+  categorized.category = 'ai-agent';
+  validateFamily('component', concept);
+  validateFamily('component', categorized);
+  assert.notEqual(contentRevision('component', categorized), contentRevision('component', concept));
+  const input = (record) => bindingSpecRevision({ ...revisionInput({ concept: record, examples: [example()], tokenSources: [tokenSource()], exampleSources: { [example().id]: normativeExampleSource } }) });
+  assert.equal(input(categorized), input(concept));
+  for (const category of ['AI Agent', 'ai_agent', '']) {
+    const invalid = structuredClone(concept);
+    invalid.category = category;
+    assert.throws(() => validateFamily('component', invalid), expectCode('MUXUI_SCHEMA_INVALID'), category);
+  }
+});
+
 test('E-G0.1-03: editorial content and normative binding closure affect the correct revision', () => {
   const concept = component();
   const token = tokenSource();

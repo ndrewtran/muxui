@@ -20,6 +20,7 @@ const outputDirectory = await mkdtemp(join(tmpdir(), 'muxui-docs-check-'));
 try {
 	runNode('Astro type check', [astroCli, 'check']);
 	runNode('Catalog docs contract', [resolve(import.meta.dirname, 'check-docs.mjs')]);
+	runNode('Component navigation categories', ['--test', resolve(docsRoot, 'test/component-navigation.test.mjs')]);
 	runNode('Blocks loader parity and drift guard', ['--test', resolve(docsRoot, 'test/blocks-loader.test.mjs'), resolve(docsRoot, 'test/authored-pattern-reference.test.mjs')]);
 	runNode('Astro build', [astroCli, 'build', '--outDir', outputDirectory]);
 	runNode('Rendered source contract', [resolve(import.meta.dirname, 'check-rendered-source.mjs'), outputDirectory]);

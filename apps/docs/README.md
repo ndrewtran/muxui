@@ -31,8 +31,10 @@ docs surface.
 The rail filters in the browser from `/blocks/filter-index.json`. Its query grammar
 and term matching are `@muxui/catalog/search`, the same code `searchArtifacts` runs,
 and its `uses` sets are the API's own `list --uses` answers. The index's search terms
-are the one read of the generated bundle (the declared `@muxui/catalog/bundle` export,
+are one of two reads of the generated bundle (the declared `@muxui/catalog/bundle` export,
 limited to `searchIndex`): the query API answers searches but has no operation that
-lists the indexed terms, and the browser matcher needs them.
+lists the indexed terms, and the browser matcher needs them. The other is each component
+record's `category`, which places it in the sidebar's AI Agent or Components group
+(`src/lib/component-categories.ts`); the query API's component brief does not carry it.
 `test/blocks-loader.test.mjs` proves the filter answers every query as the API does,
 over the shipped catalog and over test-only fixture patterns that give it several blocks.

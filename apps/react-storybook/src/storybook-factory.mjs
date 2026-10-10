@@ -3,7 +3,6 @@ import { StorybookThemeContext } from './storybook-theme.mjs';
 import * as MuxUI from '@muxui/react';
 import { Markdown } from '../../../packages/react/generated/markdown.mjs';
 import { TextEditor } from '../../../packages/react/generated/text-editor.mjs';
-import { componentCategory } from '../../component-navigation.mjs';
 
 // Keep the theme control and Storybook toolbar on the same mode.
 function ColorModeTogglePreview(args) {
@@ -2249,11 +2248,12 @@ export function createButtonMatrixStory(record) {
   };
 }
 
-export function createStoryMeta(record) {
+/** `category` is the navigation group label; the generator reads it from the canonical record, which browser code cannot. */
+export function createStoryMeta(record, category) {
   const component = MuxUI[record.family];
   if (!component) throw new Error(`Missing @muxui/react export for ${record.family}`);
   return {
-    title: `Mux UI React/${componentCategory(familySlug(record.family))}/${record.family}`,
+    title: `Mux UI React/${category}/${record.family}`,
     component,
     tags: ['autodocs'],
     parameters: {

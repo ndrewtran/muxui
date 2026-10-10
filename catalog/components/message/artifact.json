@@ -5,6 +5,7 @@
   "name": "Message",
   "summary": "Present caller-updated conversation content with compact actions, source disclosure and follow-up callbacks.",
   "lifecycle": "experimental",
+  "category": "ai-agent",
   "intent": {
     "useWhen": [
       "Present caller-updated conversation content with compact actions, source disclosure and follow-up callbacks."

@@ -33,6 +33,12 @@
       "enum": ["experimental", "stable", "deprecated", "removed"],
       "x-muxui-authoring": { "effect": "incompatible", "revisionAxes": ["content", "binding-spec"] }
     },
+    "category": {
+      "description": "Optional navigation category. Absent means the default Components group; ai-agent places the component in the AI Agent group of docs and Storybook navigation.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "x-muxui-authoring": { "effect": "editorial", "revisionAxes": ["content"] }
+    },
     "intent": {
       "type": "object",
       "additionalProperties": false,

@@ -15,6 +15,7 @@ import { convert } from 'storybook/theming';
 import { ToastProvider } from '@muxui/react';
 import defaultTheme from '../../../catalog/tokens/default-theme.json' with { type: 'json' };
 import { componentCategory, groupComponentNavigation } from '../../component-navigation.mjs';
+import { componentRecordCategory } from '../src/component-categories.mjs';
 import { exactLockedProblems, readLockfile } from '../../../packages/react/test/support/locked-dependencies.mjs';
 import {
   argTypesForBinding,
@@ -186,11 +187,11 @@ test('Storybook navigation is alphabetical with stable deep links', async () => 
   const preview = await readFile(resolve(appRoot, '.storybook/preview.mjs'), 'utf8');
   assert.match(preview, /parameters:\s*\{\s*options:\s*\{\s*storySort:\s*\{\s*method: 'alphabetical'\s*\}/u);
   const slugFor = ({ family }) => family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
-  const groups = groupComponentNavigation(manifest.families, slugFor);
+  const groups = groupComponentNavigation(manifest.families, (item) => componentRecordCategory(slugFor(item)));
   assert.deepEqual(groups.map(({ label }) => label), ['AI Agent', 'Components']);
   // Every family lands in exactly one group, the one its category names.
   for (const { label, items } of groups) {
-    assert.ok(items.every((item) => componentCategory(slugFor(item)) === label), label);
+    assert.ok(items.every((item) => componentCategory(componentRecordCategory(slugFor(item))) === label), label);
   }
   assert.equal(groups[0].items.length + groups[1].items.length, manifest.count);
   assert.equal(new Set(groups.flatMap(({ items }) => items)).size, manifest.count);
@@ -198,11 +199,12 @@ test('Storybook navigation is alphabetical with stable deep links', async () => 
     const slug = record.family.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     const tranche = record.tranche.replace('.', '-').toLowerCase();
     const story = await import(`../.storybook/generated/${tranche}-${slug}.stories.mjs`);
-    const title = `Mux UI React/${componentCategory(slug)}/${record.family}`;
+    const category = componentCategory(componentRecordCategory(slug));
+    const title = `Mux UI React/${category}/${record.family}`;
     assert.equal(story.default.title, title, record.family);
     const binding = descriptorSource.bindings.find(({ export: name }) => name === record.family);
     assert.ok(binding, record.family);
-    if (binding.module === '.') assert.equal(createStoryMeta({ ...record, binding }).title, title, record.family);
+    if (binding.module === '.') assert.equal(createStoryMeta({ ...record, binding }, category).title, title, record.family);
     assert.equal(story.default.id, `muxui-react-${tranche}-${slug}`, record.family);
   }
 });

@@ -3,6 +3,7 @@ import { componentSummaries, getComponentPage } from '../lib/catalog.ts';
 import ExampleHost from './ExampleHost.tsx';
 import TimeFieldExampleHost from './TimeFieldExampleHost.tsx';
 import { groupComponentNavigation } from '../../../component-navigation.mjs';
+import { componentRecordCategory } from '../lib/component-categories.ts';
 
 const showcaseItems = componentSummaries.map(({ id, name }) => {
 	const slug = id.slice(id.lastIndexOf(':') + 1);
@@ -15,7 +16,7 @@ const showcaseItems = componentSummaries.map(({ id, name }) => {
 		source: example.source.content,
 	};
 });
-const showcaseGroups = groupComponentNavigation(showcaseItems, ({ slug }) => slug);
+const showcaseGroups = groupComponentNavigation(showcaseItems, ({ slug }) => componentRecordCategory(slug));
 ---
 
 {showcaseGroups.map(({ label, items }) => (

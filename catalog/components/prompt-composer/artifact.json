@@ -5,6 +5,7 @@
   "name": "PromptComposer",
   "summary": "Compose local multiline messages with native validation and caller-owned send, model, file and suggestion actions.",
   "lifecycle": "experimental",
+  "category": "ai-agent",
   "intent": {
     "useWhen": [
       "Compose local multiline messages with native validation and caller-owned send, model, file and suggestion actions."

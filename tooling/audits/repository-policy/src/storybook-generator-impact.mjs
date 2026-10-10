@@ -15,6 +15,14 @@ function fail(code, message) {
   throw new Error(`MUXUI_CI_IMPACT_STORYBOOK_GENERATOR_${code}: ${message}`);
 }
 
+/** A generator process that exited non-zero; `detail` is its stderr. */
+class GeneratorRunFailed extends Error {
+  constructor(side, status, detail) {
+    super(`MUXUI_CI_IMPACT_STORYBOOK_GENERATOR_RUN_FAILED: ${side} generator emission failed (${status}): ${detail}`);
+    this.detail = detail;
+  }
+}
+
 function parseSource(source, side) {
   try {
     return parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
@@ -123,7 +131,7 @@ async function runGenerator(source, side) {
   if (result.error || result.status !== 0) {
     await rm(temporaryRoot, { recursive: true, force: true });
     const detail = (result.stderr || result.stdout || result.error?.message || 'generator process failed').trim();
-    fail('RUN_FAILED', `${side} generator emission failed (${result.status ?? result.signal ?? 'spawn error'}): ${detail}`);
+    throw new GeneratorRunFailed(side, result.status ?? result.signal ?? 'spawn error', detail);
   }
 
   try {
@@ -146,7 +154,12 @@ function outputModulePath(outputName) {
   return path.posix.join(generatedDirectory, outputName);
 }
 
-/** Compare generator outputs in isolation and return affected canonical Storybook page IDs. */
+/**
+ * Compare generator outputs in isolation and return affected canonical Storybook page IDs.
+ * Both generators run against the head tree's local helpers, so a helper whose contract changed at
+ * head can stop the base generator from running. That returns `baseRunFailed` with its reason instead
+ * of page IDs, for the caller to widen; a head generator that fails to run still throws.
+ */
 export async function compareStorybookGeneratorEmissions({ beforeSource, afterSource, pageIndex }) {
   if (typeof beforeSource !== 'string' || typeof afterSource !== 'string') {
     fail('SOURCE_MISSING', 'base and head generator sources must both be strings');
@@ -154,8 +167,14 @@ export async function compareStorybookGeneratorEmissions({ beforeSource, afterSo
   const { pagesByOutput, records } = validatePageIndex(pageIndex);
   let before;
   let after;
+  let baseRunFailure;
   try {
-    before = await runGenerator(beforeSource, 'base');
+    try {
+      before = await runGenerator(beforeSource, 'base');
+    } catch (error) {
+      if (!(error instanceof GeneratorRunFailed)) throw error;
+      baseRunFailure = error.detail.split('\n').find((line) => /^\w*Error\b/u.test(line)) ?? error.detail.split('\n')[0];
+    }
     after = await runGenerator(afterSource, 'head');
 
     const headStoryFiles = [...after.files.keys()].filter((name) => name.endsWith('.stories.mjs'));
@@ -179,6 +198,14 @@ export async function compareStorybookGeneratorEmissions({ beforeSource, afterSo
           fail('PAGE_EXPORT_UNKNOWN', `${page.family} emission ${outputName} has unindexed export ${exportName}`);
         }
       }
+    }
+
+    if (baseRunFailure !== undefined) {
+      return {
+        storyIds: [],
+        baseRunFailed: true,
+        reason: `the base generator could not run against the head helpers (${baseRunFailure}), so its emissions cannot be compared`,
+      };
     }
 
     const outputNames = new Set([...before.files.keys(), ...after.files.keys()]);
