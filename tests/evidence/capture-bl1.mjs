@@ -34,7 +34,8 @@
 // the catalog has a block that capture did not measure, and its E-BL1-11 record lists how the
 // thresholds changed since that close-out (a visible record, not an authority to change them). Its E-BL1-08 and E-BL1-09 are scoped to
 // the growth itself, not to every change since the close-out: each commit after the close-out that adds or changes a new block is
-// compared with its first parent (growth-scope.mjs), so other pull requests that landed in between do not fail it and are not claimed. The thresholds, the browser tests, and every count come from the
+// compared with its first parent (growth-scope.mjs), so other pull requests that landed in between do not fail it and are not claimed. A real capture refuses a
+// growth commit that is not a squash merge of one pull request (a rehearsal on a branch does not), so every change a growth pull request makes is audited. The thresholds, the browser tests, and every count come from the
 // source revision (the thresholds as committed there, the browser tests from the policy's
 // patternBrowserTests), not from this file. `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
@@ -173,7 +174,8 @@ const groupOf = new Map(patterns.map(({ id, group }) => [tail(id), group]));
 // A growth capture follows an added block: it needs a retained close-out capture and a pattern that capture did not measure.
 const growthBase = growth ? await assertGrowthSource({ evidenceRoot: repositoryRoot, root, patternIds: patterns.map(({ id }) => id) }) : null;
 // The commits after the close-out that added or changed those blocks: E-BL1-08 and E-BL1-09 are evaluated across them, not across the range since the close-out.
-const growthScope = growthBase === null ? null : growthCommits({ cwd: repositoryRoot, head: 'HEAD', since: growthBase.closeout.sourceRevision, patternIds: growthBase.added });
+// A rehearsal on a pull request branch audits commits that are not squash merges yet; a real capture refuses them.
+const growthScope = growthBase === null ? null : growthCommits({ cwd: repositoryRoot, head: 'HEAD', since: growthBase.closeout.sourceRevision, patternIds: growthBase.added, requireSquash: rehearsal === undefined });
 const shortCommits = growthScope?.map(({ commit }) => commit.slice(0, 8)).join(', ');
 
 // ---- E-BL1-08: repeated generation is a no-op, and the digest moves only for the added sources. ----
@@ -856,7 +858,7 @@ const extraNonClaims = {
     'The recorded before and after digests of each growth commit are bound by the artifact and index digests like the other retained values. The integrity test re-derives the growth commits, their parents, the added and changed blocks, the excluded sources, and the changed compiler and schema paths from git, but does not run a historical compiler to recompute the digests.',
   ],
   'E-BL1-09': [
-    ...(growthScope === null ? [] : [`The @muxui/react, dependency, stylesheet-name, and catalog-record checks cover the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, not every change since the pre-BL1 base: other pull requests changed them under their own authority.`]),
+    ...(growthScope === null ? [] : [`The @muxui/react, dependency, stylesheet-name, catalog-record, and workflow and hosting-file checks cover the growth commit${growthScope.length === 1 ? '' : 's'} (${shortCommits}) only, not every change since the pre-BL1 base: other pull requests changed them under their own authority.`]),
     ...(reactSource.nonBl1Changes === undefined ? [] : [`The pre-BL1 base is not the package these records ran against: ${reactSource.nonBl1Changes[0].commit} (#227, not a BL1 pull request) changed the shipped Sidebar styles before the last BL1 merge, so the packed package is not byte-identical to the pre-BL1 one.`]),
     ...(deployment.observations.observed ? [] : ['Deployments were not observed; the claim is only that no deployment configuration was added.']),
     ...(exitReview?.comparison?.proofToolsChangedSinceReviewed.length > 0 ? [`The exit review read the tools at ${exitReview.reviewedRevision.slice(0, 8)}; ${exitReview.comparison.proofToolsChangedSinceReviewed.length} proof tools differ at the source revision (${exitReview.comparison.proofToolsChangedSinceReviewed.join(', ')}), so it is not a review of them as they ran.`] : []),

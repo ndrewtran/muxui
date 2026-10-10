@@ -1300,6 +1300,20 @@ function parseGrowthToolPaths(source, label) {
 /** The `digestAffectingPaths` the growth-scope tool exports at `revision`, read from its source in git. */
 const growthToolPaths = (revision) => parseGrowthToolPaths(readAtRevision(repositoryRoot, revision, growthScopeTool).toString('utf8'), revision.slice(0, 8));
 
+const boundaryAuditTool = 'tests/evidence/bl1/boundary-audit.mjs';
+
+/** The checks the boundary-audit tool scopes to the growth commits at `revision`: each check object that declares a `growthClaim`. */
+function growthToolScopedChecks(revision) {
+  let current;
+  const scoped = [];
+  for (const line of readAtRevision(repositoryRoot, revision, boundaryAuditTool).toString('utf8').split('\n')) {
+    current = /^    id: '([^']+)',$/u.exec(line)?.[1] ?? current;
+    if (/^    growthClaim: /u.test(line)) scoped.push(current);
+  }
+  assert.ok(scoped.length > 0, `${boundaryAuditTool} at ${revision.slice(0, 8)} scopes checks to the growth commits`);
+  return scoped;
+}
+
 /**
  * A growth capture's E-BL1-08 and E-BL1-09 are scoped to the commits after the retained close-out that added or changed its
  * blocks, so they are derived from git at the capture's own source revision (the first-parent commits that touch a block the
@@ -1310,10 +1324,13 @@ const growthToolPaths = (revision) => parseGrowthToolPaths(readAtRevision(reposi
  * retained record to the compiler of a later day; like the other retained values they are bound by the artifact and index digests.
  * The capture is held to the digest-affecting paths the growth-scope tool bound at its source revision exports, read from git and
  * not from the record, so a record cannot narrow the list; a later change to the list in the tool never fails a retained capture.
+ * The same holds for the checks the boundary-audit tool scoped at its source revision, so a later check added to the scope
+ * (the workflow and hosting check) does not fail a capture made before it.
  */
 async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision = sourceRevision, added, verification, artifacts, records }) {
   const { growthCommits } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
-  const { auditBoundary, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const { auditBoundary } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const scopedChecks = growthToolScopedChecks(toolRevision);
   const catalog = artifacts['E-BL1-08'].observations;
   assert.equal(catalog.baseline, undefined, 'a growth capture does not carry the close-out digest pin');
   const bound = growthToolPaths(toolRevision);
@@ -1325,15 +1342,15 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
 
   const { audit } = artifacts['E-BL1-09'].observations;
   assert.deepEqual(audit.growthScope?.commits.map(({ commit, parent }) => [commit, parent]), derived.map(({ commit, parent }) => [commit, parent]), 'E-BL1-09 audits the commits that added or changed the blocks');
-  assert.deepEqual(audit.growthScope.scopedChecks, growthScopedChecks, 'E-BL1-09 scopes the checks that read @muxui/react and the catalog records');
+  assert.deepEqual(audit.growthScope.scopedChecks, scopedChecks, 'E-BL1-09 scopes the checks that read @muxui/react, the catalog records, and workflow and hosting files, as the bound tool does');
   for (const check of audit.checks) {
-    const scoped = growthScopedChecks.includes(check.id);
+    const scoped = scopedChecks.includes(check.id);
     assert.equal(check.observations.scope, scoped ? 'growth' : undefined, `E-BL1-09: ${check.id} is evaluated ${scoped ? 'across the growth commits' : 'over the range from the pre-BL1 base'}`);
     if (scoped) assert.deepEqual(check.observations.commits.map(({ commit }) => commit), derived.map(({ commit }) => commit), `E-BL1-09: ${check.id} is evaluated across every growth commit`);
   }
-  const recomputed = auditBoundary({ head: sourceRevision, growthCommits: derived.map(({ commit }) => commit), offline: true, only: growthScopedChecks, closeoutBase: null });
+  const recomputed = auditBoundary({ head: sourceRevision, growthCommits: derived.map(({ commit }) => commit), offline: true, only: scopedChecks, closeoutBase: null });
   assert.equal(recomputed.pass, true, 'E-BL1-09: the scoped checks hold across the growth commits in git');
-  assert.deepEqual(audit.checks.filter(({ id }) => growthScopedChecks.includes(id)).map(({ id, legs }) => [id, legs]), recomputed.checks.map(({ id, legs }) => [id, legs]), 'E-BL1-09: the recorded legs are the legs git gives');
+  assert.deepEqual(audit.checks.filter(({ id }) => scopedChecks.includes(id)).map(({ id, legs }) => [id, legs]), recomputed.checks.map(({ id, legs }) => [id, legs]), 'E-BL1-09: the recorded legs are the legs git gives');
   for (const claim of [records['E-BL1-08'].claim, records['E-BL1-09'].claim]) for (const prefix of short) assert.ok(claim.includes(prefix), `the claim names the audited commit ${prefix}`);
 
   const gitDerived = ({ commit, parent, subject, addedPatterns, changedPatterns, excludedDirectories, excludedEntries, digestAffectingPathsChanged }) => ({ commit, parent, subject, addedPatterns, changedPatterns, excludedDirectories, excludedEntries, digestAffectingPathsChanged });
@@ -1849,6 +1866,8 @@ test('a BL1 growth capture is held to the retained close-out revision, current o
   await rejects(({ artifacts: forged }) => { scopedAudit(forged).growthScope.commits[0].commit = own; }, 'E-BL1-09 audits the commits that added or changed the blocks');
   await rejects(({ artifacts: forged }) => { delete scopedAudit(forged).growthScope; }, 'E-BL1-09 audits the commits that added or changed the blocks');
   await rejects(({ artifacts: forged }) => { scopedAudit(forged).checks.find(({ id }) => id === 'react-source-files').observations = {}; }, 'react-source-files is evaluated across the growth commits');
+  // The scoped checks are those of the bound tool: a record cannot narrow the list.
+  await rejects(({ artifacts: forged }) => { scopedAudit(forged).growthScope.scopedChecks.pop(); }, 'as the bound tool does');
   await rejects(({ artifacts: forged }) => { scopedAudit(forged).checks.find(({ id }) => id === 'react-package-manifest').legs.manifestUnchanged = null; }, 'the recorded legs are the legs git gives');
   // E-BL1-08 records what git gives (the commits, parents, blocks, excluded sources, and changed compiler paths) and must match it exactly.
   const gitGiven = 'E-BL1-08 records the growth commits, their blocks, and their excluded sources as git gives them';
@@ -1906,6 +1925,7 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
   const table = 'e6d330ef19dab85e9f9fc65965a3404410e0c6d5'; // #234, a Table change in @muxui/react and its record
   const components = '51b90de31eba3ddb9ccec07913b16ad02e85eeb3'; // #235, five new components and a dependency change
   const latest = '46d66444bd2b1c3bc26988e3b47fd08aa6cda4ab'; // #236, a main with all three after the close-out
+  const workspaceNavigation = 'e9a470c26afec974dba93a2daa5b1c95b7071b00'; // #247, a growth commit on a main whose CI workflow #245 changed
   const collections = 'bb6097269c3a2683e8680d0d7be9a83b4f069958'; // #238, the first real growth merge, on top of #236
   // The four close-out blocks arrived in two commits since the pre-BL1 base, and the head need not be either of them. #226 also changed the
   // compiler and the catalog package manifest, which a growth commit may not: the digest comparison compiles both sides with one compiler and could not see it.
@@ -1924,6 +1944,11 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
   assert.deepEqual([growth.commit, growth.parent, growth.addedPatterns.map(slug), growth.changedPatterns, growth.digestAffectingPathsChanged], [collections, latest, ['company-records', 'task-filters'], [], []]);
   assert.ok(growth.excludedEntries.length > 0 && growth.excludedEntries.every(({ path }) => growth.excludedDirectories.some((directory) => path.startsWith(directory))));
   const scoped = (growth, head = latest) => auditBoundary({ head, growthCommits: growth, offline: true, only: growthScopedChecks, closeoutBase: null });
+  // The real growth merges are squash merges, so the selection accepts them: #238, then #247 on a main whose workflow #245 changed.
+  assert.deepEqual(
+    growthCommits({ head: workspaceNavigation, since: closeoutRevision, patternIds: ['muxui:pattern:company-records', 'muxui:pattern:task-filters', 'muxui:pattern:workspace-navigation'] }).map(({ commit, subject }) => [commit, subject.slice(subject.lastIndexOf(' (#'))]),
+    [[collections, ' (#238)'], [workspaceNavigation, ' (#247)']],
+  );
   const failed = (audit) => audit.checks.filter(({ pass }) => !pass).map(({ id }) => id);
   // The defect this scope removes: over the whole range, #234 to #236 fail the checks that read @muxui/react, the lockfile, and the component records.
   assert.deepEqual(failed(auditBoundary({ head: latest, offline: true, only: growthScopedChecks, closeoutBase: null })), ['react-package-manifest', 'react-source-files', 'no-dependency-change', 'no-new-component-token-capability-or-platform']);
@@ -1931,6 +1956,9 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
   assert.deepEqual([clean.pass, clean.growthScope.commits.map(({ commit }) => commit)], [true, [posterGrid, otherBlocks]]);
   assert.deepEqual(clean.growthScope.scopedChecks, growthScopedChecks);
   assert.equal(scoped([collections], collections).pass, true, 'the real growth merge passes the scoped checks');
+  // #245 changed the CI workflow after the close-out: the range from the pre-BL1 base blames the next growth commit for it, the scope does not.
+  assert.ok(failed(auditBoundary({ head: workspaceNavigation, offline: true, only: growthScopedChecks, closeoutBase: null })).includes('no-workflow-or-hosting-config'));
+  assert.equal(scoped([workspaceNavigation], workspaceNavigation).pass, true, 'a growth commit that changes no workflow passes although a later pull request did');
   // A growth commit that also changes @muxui/react source or a component record fails, and so does the other growth commit's company.
   assert.deepEqual(failed(scoped([otherBlocks, table])), ['react-source-files', 'no-new-component-token-capability-or-platform']);
   assert.deepEqual(failed(scoped([components])), ['react-package-manifest', 'react-source-files', 'no-dependency-change', 'no-new-component-token-capability-or-platform']);
@@ -1940,7 +1968,8 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
 /**
  * A throwaway repository holding this checkout's HEAD tree, rebuilt so its last two patterns arrive in two growth commits:
  * `base` has neither, `first` adds the first, `second` adds the other. `variant(change)` branches from `first`, adds the other
- * pattern back, and applies `change`, as a growth commit that also changes something else.
+ * pattern back, and applies `change`, as a growth commit that also changes something else. Its growth commits are squash merges
+ * (their subjects end with a pull request number), as growth commits must be; `rebased()` builds the pull request that is not one.
  */
 async function growthRepository() {
   const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-repo-'));
@@ -1974,25 +2003,36 @@ async function growthRepository() {
   const base = commitAll('base: neither block');
   await restore(directoryA);
   await writeFile(join(cwd, manifestPath), listing(directoryA));
-  const first = commitAll('first: adds one block');
+  const first = commitAll('first: adds one block (#101)');
   await restore(directoryB);
   await writeFile(join(cwd, manifestPath), original);
-  const second = commitAll('second: adds the other block');
+  const second = commitAll('second: adds the other block (#102)');
   const variant = async (change) => {
     gitIn(cwd, 'checkout', '-q', '--detach', first);
     await restore(directoryB);
     await writeFile(join(cwd, manifestPath), original);
     await change(edit);
-    return commitAll('growth that also changes something else');
+    return commitAll('growth that also changes something else (#103)');
   };
   // A later commit on top of `second`: the growth is over, and this one changes the second block, as a follow-up to the pull request does.
   const modify = async (change) => {
     gitIn(cwd, 'checkout', '-q', '--detach', second);
     await change(edit, cwd);
-    return commitAll('a later commit that changes the second block');
+    return commitAll('a later commit that changes the second block (#104)');
+  };
+  // One pull request rebase-merged as two commits on `base`, neither with a pull request number: the first adds a block, the second adds a
+  // workflow and touches no block.
+  const rebased = async () => {
+    gitIn(cwd, 'checkout', '-q', '--detach', base);
+    await restore(directoryA);
+    await writeFile(join(cwd, manifestPath), listing(directoryA));
+    const block = commitAll('feat(catalog): add the block');
+    await mkdir(join(cwd, '.github/workflows'), { recursive: true });
+    await writeFile(join(cwd, '.github/workflows/x.yml'), 'name: x\n');
+    return { block, workflow: commitAll('ci: add a workflow') };
   };
   const dispose = () => Promise.all([cwd, stash].map((path) => rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })));
-  return { cwd, base, first, second, variant, modify, edit, patternA, patternB, directoryA, directoryB, earlier, records, dispose };
+  return { cwd, base, first, second, variant, modify, rebased, edit, patternA, patternB, directoryA, directoryB, earlier, records, dispose };
 }
 
 test('each BL1 growth commit is audited against its first parent, and one that changes more than its blocks fails', async () => {
@@ -2025,6 +2065,21 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.throws(() => derive(later, [repo.earlier]), /BL1_GROWTH_COMMIT_MISSING: no commit after .* added or changed/u, 'a block no commit after the close-out touched is not growth');
     // Growth that only adds blocks passes every scoped check, whatever else the head holds.
     assert.deepEqual(failed([first, second]), []);
+
+    // Git cannot say which commits belong to one pull request, so each growth pull request must be one squash-merged commit. A pull request
+    // rebase-merged as several commits has a commit that touches no block (here a workflow): selection would never see it, and every scoped
+    // check would pass without it. The selection refuses the pull request instead.
+    const { block, workflow } = await repo.rebased();
+    assert.throws(() => derive(workflow, [patternA]), /BL1_GROWTH_NOT_SQUASHED: .* \(feat\(catalog\): add the block\) adds or changes a block but is not a squash merge/u);
+    // Without the rule the workflow commit escapes the selection and the scoped audit passes: the defect the rule closes.
+    const escaped = growthCommits({ cwd, head: workflow, since: base, patternIds: [patternA], requireSquash: false }).map(({ commit }) => commit);
+    assert.deepEqual(escaped, [block], 'the workflow commit is not a growth commit');
+    assert.deepEqual(failed(escaped), [], 'and so no scoped check sees the workflow');
+    assert.deepEqual(failed([block, workflow]), ['no-workflow-or-hosting-config'], 'while auditing the workflow commit does fail the check');
+    // A merge commit is refused the same way.
+    gitIn(cwd, 'checkout', '-q', '--detach', base);
+    gitIn(cwd, 'merge', '-q', '--no-ff', '-m', 'Merge pull request #7 from side', block);
+    assert.throws(() => derive(gitIn(cwd, 'rev-parse', 'HEAD'), [patternA]), /BL1_GROWTH_NOT_SQUASHED: .* is a merge commit/u);
     const clean = await catalogAcrossCommit({ cwd, ...found[1] });
     assert.deepEqual([clean.identical, clean.holds], [true, true], 'the catalog without the sources the commit added is the same before and after');
 
@@ -2040,6 +2095,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
       ['@muxui/react source', (edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`), ['react-source-files']],
       ['the lockfile', (edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`), ['no-dependency-change']],
       ['a component record', (edit) => edit('catalog/components/button/artifact.json', summaryEdit), ['no-new-component-token-capability-or-platform']],
+      ['a workflow', (edit) => edit('.github/workflows/ci.yml', (text) => `${text}\n# changed\n`), ['no-workflow-or-hosting-config']],
     ]) {
       const head = await repo.modify(async (edit) => { await edit(`${directoryB}/artifact.json`, summaryEdit); await extra(edit); });
       assert.deepEqual(failed([first, second]), [], `${label}: the commits that added the blocks alone are clean`);
@@ -2055,6 +2111,8 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     assert.deepEqual(failed([first, withLockfile]), ['no-dependency-change']);
     const withRecord = await repo.variant((edit) => edit('catalog/components/button/artifact.json', summaryEdit));
     assert.deepEqual(failed([first, withRecord]), ['no-new-component-token-capability-or-platform']);
+    const withWorkflow = await repo.variant((edit) => edit('.github/workflows/ci.yml', (text) => `${text}\n# changed\n`));
+    assert.deepEqual(failed([first, withWorkflow]), ['no-workflow-or-hosting-config']);
     // Only the commit that changed more is blamed: the clean one alone still passes.
     assert.deepEqual(failed([first]), []);
 

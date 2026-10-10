@@ -9,9 +9,9 @@
 // observations at the time they run. `--offline` skips them and the report says so; a
 // deployment that cannot be observed narrows the claim to "no deployment configuration added".
 //
-// A growth capture (`growthCommits`) scopes the checks that read @muxui/react and the catalog records to the commits that
-// added or changed the blocks, each against its first parent, because other pull requests change those under their own authority
-// between the close-out and a later capture. The other checks keep their range from the base to `head`.
+// A growth capture (`growthCommits`) scopes the checks that read @muxui/react, the catalog records, and workflow and hosting files
+// to the commits that added or changed the blocks, each against its first parent, because other pull requests change those under
+// their own authority between the close-out and a later capture. The other checks keep their range from the base to `head`.
 //
 // `negativeControls` proves each check can fail: git controls run a check over a range or a
 // head from this repository's history that is known to break it, and function controls feed
@@ -409,6 +409,7 @@ const checks = [
     id: 'no-workflow-or-hosting-config',
     legs: ['workflowsUnchanged', 'noHostingFiles', 'noAstroDeploymentSettings'],
     claim: 'BL1 added or changed no workflow, no hosting or deployment file, and no Astro site, base, adapter, or output setting.',
+    growthClaim: 'No growth commit added or changed a workflow, a hosting or deployment file, or an Astro site, base, adapter, or output setting.',
     run({ baseRevision, headRevision }) {
       const workflowChanges = names(baseRevision, headRevision, '.github');
       const hostingFilesAdded = statuses(baseRevision, headRevision).filter(({ status, path }) => status !== 'D' && hostingPaths.test(path)).map(({ path }) => path);
@@ -733,6 +734,7 @@ export const negativeControls = [
   { id: 'growth-commit-changed-react-source', kind: 'git', check: 'react-source-files', failingLegs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'], description: 'as a growth commit, #222 changed the GridList and Virtualizer sources in packages/react', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr222] },
   { id: 'growth-commit-changed-stylesheet-names', kind: 'git', check: 'react-stylesheet-names', failingLegs: ['classNamesUnchanged'], description: 'as a growth commit, #201 changed class names in the React stylesheet', base: `${commit.pr201}^`, head: commit.pr201, growthCommits: [commit.pr201] },
   { id: 'growth-commit-changed-dependency', kind: 'git', check: 'no-dependency-change', failingLegs: ['dependenciesUnchanged', 'lockfileAndWorkspaceUnchanged'], description: 'as a growth commit, #207 pinned a dependency and changed the lockfile', base: `${commit.pr207}^`, head: commit.pr207, growthCommits: [commit.pr207] },
+  { id: 'growth-commit-changed-workflow', kind: 'git', check: 'no-workflow-or-hosting-config', failingLegs: ['workflowsUnchanged', 'noHostingFiles'], description: 'as a growth commit, #213 changed the publish workflow', base: `${commit.pr213}^`, head: commit.pr213, growthCommits: [commit.pr213] },
   { id: 'growth-commit-changed-catalog-records', kind: 'git', check: 'no-new-component-token-capability-or-platform', failingLegs: ['catalogRecordsUnchanged'], description: 'as a growth commit, #222 changed the GridList and Virtualizer catalog records', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr222] },
   { id: 'growth-one-commit-of-two-changed-react-source', kind: 'git', check: 'react-source-files', failingLegs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'], description: 'with #228 (blocks only) and #222 (React sources) as growth commits, the one that changes packages/react fails the check', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr228, commit.pr222] },
   ...['distTags', 'integrity', 'shasum', 'versions', 'versionTimes'].map((leg) => ({
