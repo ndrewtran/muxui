@@ -124,8 +124,9 @@ export function atClaims(text) {
 /**
  * The legs on which an `npm view` observation shows that something the recorded R1 exit read-back published was rewritten.
  * Later release candidates are not a problem (Decision 0023 amendment 01): every recorded version is still listed with its
- * recorded publish time, `integrity` and `shasum` are those of the recorded `latest` version, and `latest` still names it.
- * `next` moves along the release-candidate sequence and is not claimed.
+ * recorded publish time, `integrity` and `shasum` are those of the recorded `latest` version, `latest` still names it, and that
+ * version is not deprecated (the read-back records none). `next` moves along the release-candidate sequence and is not claimed.
+ * A Decision 0023 rollback that deprecates the recorded version, or re-points `latest`, therefore needs a reviewed edit of this check.
  */
 export function registryProblems(observed, expected) {
   return [
@@ -134,6 +135,7 @@ export function registryProblems(observed, expected) {
     ['shasum', observed.shasum === expected.shasum],
     ['versions', expected.versions.every((version) => observed.versions.includes(version))],
     ['versionTimes', expected.versions.every((version) => observed.versionTimes[version] === expected.versionTimes[version])],
+    ['deprecated', (observed.deprecated ?? null) === (expected.deprecated ?? null)],
   ].filter(([, holds]) => !holds).map(([leg]) => leg);
 }
 
@@ -233,20 +235,23 @@ export function observeDeployments() {
 }
 
 /**
- * The registry as `npm view` reports it now. Read-only. `integrity` and `shasum` are those of `recordedVersion`, the version the
- * R1 exit read-back recorded as `latest`, because the unqualified view reports whichever version `latest` names now.
+ * The registry as `npm view` reports it now. Read-only. `integrity`, `shasum`, and `deprecated` (`null` when the version carries no
+ * deprecation) are those of `recordedVersion`, the version the R1 exit read-back recorded as `latest`, because the unqualified view
+ * reports whichever version `latest` names now.
  */
 function observeRegistry(recordedVersion) {
   const result = spawnSync('npm', ['view', '@muxui/react', '--json'], { cwd: repositoryRoot, encoding: 'utf8' });
   if (result.status !== 0) return { observed: null, failure: `npm view @muxui/react exited ${result.status}: ${result.stderr.trim().split('\n').at(-1)}` };
   const view = JSON.parse(result.stdout);
   const pinned = spawnSync('npm', ['view', `@muxui/react@${recordedVersion}`, '--json'], { cwd: repositoryRoot, encoding: 'utf8' });
-  const dist = pinned.status === 0 ? JSON.parse(pinned.stdout).dist : undefined;
+  const pinnedView = pinned.status === 0 ? JSON.parse(pinned.stdout) : undefined;
+  const dist = pinnedView?.dist;
   return {
     observed: {
       distTags: view['dist-tags'],
       integrity: dist?.integrity ?? null,
       shasum: dist?.shasum ?? null,
+      deprecated: pinnedView?.deprecated ?? null,
       versions: view.versions,
       versionTimes: Object.fromEntries(Object.entries(view.time ?? {}).filter(([key]) => key !== 'created' && key !== 'modified')),
     },
@@ -259,6 +264,7 @@ function recordedRegistry() {
     distTags: view.distTags,
     integrity: view.integrity,
     shasum: view.shasum,
+    deprecated: view.deprecated ?? null,
     versions: view.versions,
     versionTimes: Object.fromEntries(Object.entries(view.time).filter(([key]) => key !== 'created' && key !== 'modified')),
   };
@@ -473,17 +479,17 @@ const checks = [
   },
   {
     id: 'registry-unchanged',
-    legs: ['registryReadable', 'distTags', 'integrity', 'shasum', 'versions', 'versionTimes'],
-    claim: 'The npm registry still lists every version the R1 exit read-back recorded with its integrity, shasum, and publish time, and `latest` still names the version it named then. A later release candidate, or a moved `next`, is listed and not claimed (Decision 0023 amendment 01).',
+    legs: ['registryReadable', 'distTags', 'integrity', 'shasum', 'versions', 'versionTimes', 'deprecated'],
+    claim: 'The npm registry still lists every version the R1 exit read-back recorded with its integrity, shasum, and publish time, `latest` still names the version it named then, and that version is not deprecated. A later release candidate, or a moved `next`, is listed and not claimed (Decision 0023 amendment 01).',
     run({ offline, registry }) {
-      const unobserved = { registryReadable: null, distTags: null, integrity: null, shasum: null, versions: null, versionTimes: null };
+      const unobserved = { registryReadable: null, distTags: null, integrity: null, shasum: null, versions: null, versionTimes: null, deprecated: null };
       if (offline) return { legs: unobserved, observations: { skipped: 'offline' } };
       const expected = recordedRegistry();
       const { observed, failure } = registry(expected.distTags.latest);
       if (observed === null) return { legs: { ...unobserved, registryReadable: false }, observations: { failure } };
       const differing = registryProblems(observed, expected);
       return {
-        legs: { registryReadable: true, distTags: !differing.includes('distTags'), integrity: !differing.includes('integrity'), shasum: !differing.includes('shasum'), versions: !differing.includes('versions'), versionTimes: !differing.includes('versionTimes') },
+        legs: { registryReadable: true, distTags: !differing.includes('distTags'), integrity: !differing.includes('integrity'), shasum: !differing.includes('shasum'), versions: !differing.includes('versions'), versionTimes: !differing.includes('versionTimes'), deprecated: !differing.includes('deprecated') },
         observations: {
           observed,
           expectedFrom: 'tests/evidence/r1-exit/artifacts/registry-observation.json (the R1 exit registry read-back)',
@@ -721,6 +727,7 @@ const oldRegistry = {
   distTags: { latest: '0.1.0-rc.1', next: '0.1.0-rc.1' },
   integrity: 'sha512-a',
   shasum: 'a',
+  deprecated: null,
   versions: ['0.1.0-rc.1'],
   versionTimes: { '0.1.0-rc.1': '2026-10-04T13:05:33.917Z' },
 };
@@ -728,6 +735,7 @@ const changedRegistryField = {
   distTags: { latest: '0.1.0-rc.2', next: '0.1.0-rc.1' },
   integrity: 'sha512-b',
   shasum: 'b',
+  deprecated: 'a rollback deprecates the recorded release candidate',
   versions: ['0.1.0-rc.2'],
   versionTimes: { '0.1.0-rc.1': '2026-10-09T00:00:00.000Z' },
 };
@@ -802,7 +810,7 @@ export const negativeControls = [
   { id: 'growth-commit-changed-workflow', kind: 'git', check: 'no-workflow-or-hosting-config', failingLegs: ['workflowsUnchanged', 'noHostingFiles'], description: 'as a growth commit, #213 changed the publish workflow', base: `${commit.pr213}^`, head: commit.pr213, growthCommits: [commit.pr213] },
   { id: 'growth-commit-changed-catalog-records', kind: 'git', check: 'no-new-component-token-capability-or-platform', failingLegs: ['catalogRecordsUnchanged'], description: 'as a growth commit, #222 changed the GridList and Virtualizer catalog records', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr222] },
   { id: 'growth-one-commit-of-two-changed-react-source', kind: 'git', check: 'react-source-files', failingLegs: ['bl1CommitsTouchNoReactSource', 'onlyKnownCommits', 'onlyKnownPaths'], description: 'with #228 (blocks only) and #222 (React sources) as growth commits, the one that changes packages/react fails the check', base: commit.pr221, head: commit.pr222, growthCommits: [commit.pr228, commit.pr222] },
-  ...['distTags', 'integrity', 'shasum', 'versions', 'versionTimes'].map((leg) => ({
+  ...['distTags', 'integrity', 'shasum', 'versions', 'versionTimes', 'deprecated'].map((leg) => ({
     id: `registry-${leg}`,
     kind: 'function',
     check: 'registry-unchanged',

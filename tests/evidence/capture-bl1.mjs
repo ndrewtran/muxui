@@ -41,7 +41,7 @@
 // `growthGate` was made before Decision 0029 and is verified strictly. A real capture refuses a
 // growth commit that is not a squash merge of one pull request (a rehearsal on a branch does not), so every change a growth pull request makes is audited. The thresholds, the browser tests, the page widths
 // (apps/docs/src/lib/block-presets.ts), and every count come from the source revision (the thresholds as committed there, the browser tests from the policy's
-// patternBrowserTests), not from this file. A content review covers each block whose catalog/patterns/<slug> tree it read (capture-support.mjs). `--rehearsal=<dir>` runs every proof and writes the
+// patternBrowserTests), not from this file. A content review covers each block whose catalog/patterns/<slug> tree, participant component records, and React runtime sources it read (capture-support.mjs, coverageKey). `--rehearsal=<dir>` runs every proof and writes the
 // evidence under <dir> instead of the repository, skipping the main-history check and the exit
 // review, so the tool can be exercised before a merge; <dir> starts as a copy of the retained
 // evidence, so review reuse and supersession behave as in a real capture. When a capture replaces an earlier one,
@@ -570,7 +570,7 @@ if (!contentReview.verdictText?.includes('**Pass.**') || !contentReview.text.inc
   throw new Error('E-BL1-10: the review record does not state an overall pass');
 }
 // A close-out capture needs one review of every block as it stands. A growth capture needs an independent review only for a block
-// whose catalog/patterns/<slug> tree no retained review read (Decision 0029); the table below records which review covers each block.
+// whose coverage key (its tree, its participants' component records, and the React runtime sources) no retained review read (Decision 0029); the table below records which review covers each block.
 const namedBlocks = patternSlugs.filter((slug) => contentReview.text.includes(slug));
 let reviewedBlocksTree = null;
 let reviewCoverage = null;
@@ -586,7 +586,7 @@ if (!growth) {
   const earlier = (await retainedContentReviews({ outputRoot, root, sourceRevision })).filter(({ artifact, reviewedRevision }) => artifact.sha256 !== current.artifact.sha256 || reviewedRevision !== current.reviewedRevision);
   reviewCoverage = contentReviewCoverage({ cwd: repositoryRoot, sourceRevision, patternSlugs, reviews: [current, ...earlier] });
   if (reviewCoverage.uncovered.length > 0) {
-    throw new Error(`E-BL1-10: no retained independent content review read the current sources of ${reviewCoverage.uncovered.join(', ')} (the git tree of catalog/patterns/<slug> differs from every reviewed revision's). Pass --content-review=<record> --content-review-revision=<sha> for a review that read them`);
+    throw new Error(`E-BL1-10: no retained independent content review read the current sources of ${reviewCoverage.uncovered.join(', ')} (the git tree of catalog/patterns/<slug>, the catalog record of a participant component, or the React runtime sources differs from every reviewed revision's). Pass --content-review=<record> --content-review-revision=<sha> for a review that read them`);
   }
 }
 
@@ -813,7 +813,7 @@ const artifacts = {
         ? {}
         : {
           reviewCoverage: {
-            rule: 'A retained independent review covers a block when it names the block and the git tree of catalog/patterns/<slug> is the same at the revision the reviewer read as at the source revision of this capture, so the reviewer read exactly the sources scanned here. A capture needs a new independent review only for a block no retained review covers. Each row keeps its covering review\'s own reviewed revision and tree; the content scan and the content-rule tests are rerun at every capture.',
+            rule: 'A retained independent review covers a block when it names the block and the block\'s key is the same at the revision the reviewer read as at the source revision of this capture: the git tree of catalog/patterns/<slug>, the git tree of the catalog record of every participant component, and a digest of the path and blob of every file under packages/react/src except the ones named in key.reactRuntime.excluded, which render nothing. So the reviewer read the block sources and the copy-bearing inputs scanned here. The React runtime part is the whole of packages/react/src, which is conservative: any runtime change asks for a new review. A capture needs a new independent review only for a block no retained review covers. Each row keeps its covering review\'s own reviewed revision and tree; the content scan and the content-rule tests are rerun at every capture.',
             rows: reviewCoverage.rows,
           },
         }),
@@ -934,7 +934,7 @@ const extraNonClaims = {
   ],
   'E-BL1-10': [
     'The independent review is a read of the block sources and rules at the reviewed revision, advisory input to the human acceptance, and not a legal clearance of any brand, likeness, or license.',
-    ...(reviewCoverage === null ? [] : ['A review is reused for a block whose catalog/patterns/<slug> tree is unchanged since the reviewer read it. The reviewer judged the block against the content rules as they stood at its own reviewed revision; the content scan and the content-rule tests ran again at this capture.']),
+    ...(reviewCoverage === null ? [] : ['A review is reused for a block whose key (its tree, its participants\' component records, and the React runtime sources) is unchanged since the reviewer read it. The reviewer judged the block against the content rules as they stood at its own reviewed revision; the content scan and the content-rule tests ran again at this capture.']),
   ],
   'E-BL1-11': [`No claim that discovery by category term works: ${weaknessSummary}, a known weakness this baseline records and does not pass as a first-ranked result.`],
 };

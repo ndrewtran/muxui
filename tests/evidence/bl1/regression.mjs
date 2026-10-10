@@ -81,14 +81,67 @@ export function thresholdChanges(before, after) {
 }
 
 const hasExpectation = ({ expectedFirst, firstWithoutPatterns, expectedId, expectedWithin }) => Boolean(expectedFirst || firstWithoutPatterns || (expectedId && expectedWithin));
+const sameValue = (left, right) => canonicalJson(left ?? null) === canonicalJson(right ?? null);
+const has = (object, key) => Object.hasOwn(object, key);
+const show = (value) => (Array.isArray(value) ? `[${value.join(', ')}]` : JSON.stringify(value));
+
+/**
+ * Every difference between the thresholds `before` and `after` that a log entry must carry. A query field that is a scalar moves from one
+ * value to another (`null` for absent). A query field that is a list (`relevant`) is compared as a set: `added` and `removed`. A limit or
+ * budget (any changed value outside `provenance`, `seedSet`, and the query list) moves from one value to another. A query that only
+ * `after` has is a new block's own query and carries no difference.
+ */
+function thresholdTransitions(before, after) {
+  const transitions = [];
+  const was = new Map(before.discovery.queries.map((entry) => [entry.query, entry]));
+  for (const entry of after.discovery.queries) {
+    const old = was.get(entry.query);
+    if (old === undefined) continue;
+    for (const field of new Set([...Object.keys(old), ...Object.keys(entry)])) {
+      if (field === 'query') continue;
+      const [from, to] = [old[field] ?? null, entry[field] ?? null];
+      if (Array.isArray(from) || Array.isArray(to)) {
+        const [was_, now] = [new Set(from ?? []), new Set(to ?? [])];
+        const [added, removed] = [[...now].filter((item) => !was_.has(item)), [...was_].filter((item) => !now.has(item))];
+        if (added.length > 0 || removed.length > 0) transitions.push({ query: entry.query, field, list: true, from: [...was_], to: [...now], added, removed });
+      } else if (!sameValue(from, to)) {
+        transitions.push({ query: entry.query, field, from, to });
+      }
+    }
+  }
+  for (const { path, before: was_, after: now } of thresholdChanges(before, after).changedValues) {
+    if (path !== 'provenance' && !path.startsWith('provenance.')) transitions.push({ limit: path, from: was_ === null ? null : JSON.parse(was_), to: now === null ? null : JSON.parse(now) });
+  }
+  return transitions;
+}
+
+/** The value a transition reaches when the log entries `entries` about its target are followed from `from`; an entry that does not continue the running value is history from before it. */
+function followLog(transition, entries) {
+  let running = transition.list ? new Set(transition.from) : transition.from;
+  for (const entry of entries) {
+    if (transition.list) {
+      if (!Array.isArray(entry.added) || !Array.isArray(entry.removed)) continue;
+      if (entry.removed.every((item) => running.has(item)) && entry.added.every((item) => !running.has(item))) {
+        running = new Set([...running].filter((item) => !entry.removed.includes(item)).concat(entry.added));
+      }
+    } else if (has(entry, 'from') && has(entry, 'to') && sameValue(entry.from, running)) {
+      running = entry.to;
+    }
+  }
+  return transition.list ? [...running] : running;
+}
 
 /**
  * What a change from the thresholds `before` to `after` leaves unlogged or takes away (Decision 0029), as sentences; an empty
  * list means every change is on the record. A pull request may change a query, a limit, or a budget, but it states the change
  * and its reason before measuring and logs it in `provenance.revisions`; it never removes an expectation, and a change made
- * after its result was seen is also listed in `provenance.revisedAfterFirstMeasurement`.
- * - Every revised query, and every limit or budget that moved (any changed value outside `provenance`), has a log entry that is new
- *   since `before`, so an entry for an earlier revision of the same query or value does not cover a later one.
+ * after its result was seen is also listed in `provenance.revisedAfterFirstMeasurement`. "Before measuring" is the author's
+ * statement, made visible by the log and the pull request; nothing here proves when a change was made.
+ * - Each entry names its exact transition: a query and a field, or a limit or budget by its path, with the value it `from` and
+ *   `to` (a list field, `relevant`, with the items it `added` and `removed`).
+ * - Every difference between `before` and `after` is followed through the entries that are new since `before` (those not in its
+ *   own log), in log order, from the value in `before` to the value in `after`. An entry whose `from` is not the running value is
+ *   earlier history and is skipped, so an entry for 3 -> 4 does not cover 4 -> 999, and a later revision of a query needs its own entry.
  * - No query is removed, every query keeps an expectation, and the flag that makes the expectations bind stays true.
  * - A log entry names a query or a value that exists and says what changed and why. An entry made after a first
  *   measurement names a query listed in `revisedAfterFirstMeasurement`; a limit or budget is never changed after its result was seen.
@@ -96,7 +149,7 @@ const hasExpectation = ({ expectedFirst, firstWithoutPatterns, expectedId, expec
  */
 export function thresholdRevisionProblems(before, after) {
   const problems = [];
-  const { removedQueries, revisedQueries, changedValues } = thresholdChanges(before, after);
+  const { removedQueries } = thresholdChanges(before, after);
   const log = after.provenance?.revisions ?? [];
   const earlier = before.provenance?.revisions ?? [];
   const fresh = log.filter((entry) => !earlier.some((kept) => canonicalJson(kept) === canonicalJson(entry)));
@@ -104,11 +157,13 @@ export function thresholdRevisionProblems(before, after) {
   for (const query of removedQueries) problems.push(`the query "${query}" was removed; an expectation is never removed`);
   for (const entry of after.discovery.queries) if (!hasExpectation(entry)) problems.push(`the query "${entry.query}" has no expectation (expectedFirst, firstWithoutPatterns, or expectedId with expectedWithin)`);
   if (after.discovery.everyQueryMeetsItsExpectation !== true) problems.push('discovery.everyQueryMeetsItsExpectation is not true, so the expectations no longer bind');
-  for (const { query } of revisedQueries) {
-    if (!fresh.some((entry) => entry.query === query)) problems.push(`the query "${query}" was revised with no new entry in provenance.revisions`);
-  }
-  for (const { path } of changedValues.filter(({ path: changed }) => changed !== 'provenance' && !changed.startsWith('provenance.'))) {
-    if (!fresh.some((entry) => entry.limit === path)) problems.push(`${path} changed with no new entry in provenance.revisions`);
+  for (const transition of thresholdTransitions(before, after)) {
+    const entries = fresh.filter((entry) => (transition.query === undefined ? entry.limit === transition.limit : entry.query === transition.query && entry.field === transition.field));
+    const reached = followLog(transition, entries);
+    const [holds, label] = transition.list
+      ? [sameValue([...reached].sort(), [...transition.to].sort()), `the query "${transition.query}" field ${transition.field} changed (added ${show(transition.added)}; removed ${show(transition.removed)})`]
+      : [sameValue(reached, transition.to), `${transition.query === undefined ? transition.limit : `the query "${transition.query}" field ${transition.field}`} changed from ${show(transition.from)} to ${show(transition.to)}`];
+    if (!holds) problems.push(`${label} with no new entry in provenance.revisions that continues it`);
   }
   const afterMeasurement = new Set(after.provenance?.revisedAfterFirstMeasurement ?? []);
   for (const [position, entry] of log.entries()) {
@@ -116,6 +171,9 @@ export function thresholdRevisionProblems(before, after) {
     if ((entry.query === undefined) === (entry.limit === undefined)) problems.push(`${label} names exactly one of a query or a limit`);
     else if (entry.query !== undefined && !after.discovery.queries.some(({ query }) => query === entry.query)) problems.push(`${label} names the query "${entry.query}", which is not in the thresholds`);
     else if (entry.limit !== undefined && !afterLeaves.has(entry.limit)) problems.push(`${label} names the value ${entry.limit}, which is not in the thresholds`);
+    if (entry.query !== undefined && (typeof entry.field !== 'string' || entry.field === '')) problems.push(`${label} does not name the field of "${entry.query}" it changes`);
+    const [scalar, list] = [has(entry, 'from') && has(entry, 'to'), Array.isArray(entry.added) && Array.isArray(entry.removed)];
+    if (scalar === list || (entry.limit !== undefined && list)) problems.push(`${label} does not state its transition: from and to${entry.limit === undefined ? ', or added and removed for a list field' : ''}`);
     for (const field of ['change', 'reason']) if (typeof entry[field] !== 'string' || entry[field].trim() === '') problems.push(`${label} does not say its ${field}`);
     if (entry.afterFirstMeasurement === true && entry.limit !== undefined) problems.push(`${label} changes ${entry.limit} after its result was seen; a limit or budget is never fitted to a result`);
     else if (entry.afterFirstMeasurement === true && !afterMeasurement.has(entry.query)) problems.push(`${label} was made after a first measurement, so "${entry.query}" must be listed in provenance.revisedAfterFirstMeasurement`);
