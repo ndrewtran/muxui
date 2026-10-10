@@ -1174,14 +1174,15 @@ const Sidebar = {
     useIsomorphicLayoutEffect(() => { if (!setRootId || props.id === undefined) return undefined; setRootId(props.id); return () => setRootId(undefined); }, [setRootId, props.id]);
     useIsomorphicLayoutEffect(() => { const element = node.current; if (!roots) return undefined; roots.add(element); return () => roots.delete(element); }, [roots]);
     // Folding hides some content. If focus sat in it, move it to a control that survives: the group of a hidden
-    // nested link, else the Toggle, else Root itself.
+    // nested link, the folded Search button for the Search input, else the Toggle, else Root itself.
     useIsomorphicLayoutEffect(() => {
       const root = node.current;
       const active = root?.ownerDocument.activeElement;
       if (!sidebar?.collapsed || !root || !active || !root.contains(active) || !sidebarUnreachable(active)) return;
       const group = active.closest('.muxui-sidebar__nav-children')?.closest('details')?.querySelector(':scope > summary');
+      const search = active.closest('.muxui-sidebar__search')?.querySelector('.muxui-sidebar__search-button');
       const toggle = [...sidebar.toggles].find((candidate) => candidate.isConnected && !sidebarUnreachable(candidate));
-      const target = group ?? toggle ?? root;
+      const target = group ?? search ?? toggle ?? root;
       if (target === root && !root.hasAttribute('tabindex')) root.tabIndex = -1;
       target.focus({ preventScroll: true });
     }, [sidebar?.collapsed]);

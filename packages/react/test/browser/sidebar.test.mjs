@@ -399,7 +399,7 @@ for (const engine of browserEngines()) {
         }
       }
 
-      // Folding moves focus out of content it hides: to the group of a hidden child, else to Toggle, else to Root.
+      // Folding moves focus out of content it hides: to the group of a hidden child, the folded Search button for the Search input, else to Toggle, else to Root.
       {
         const { tab, context } = await open();
         try {
@@ -421,6 +421,12 @@ for (const engine of browserEngines()) {
           await tab.locator('.muxui-sidebar__toggle').evaluate((toggle) => toggle.click());
           await settled(tab, true, `${engine}: Toggle folds with focus on the account button`);
           assert.ok(await hasFocus(tab, '.muxui-sidebar__toggle'), `${engine}: focus moves from the hidden account button to Toggle`);
+          await tab.locator('.muxui-sidebar__toggle').evaluate((toggle) => toggle.click());
+          await settled(tab, false, `${engine}: Toggle unfolds before the Search case`);
+          await focusByKeyboard(tab, '.muxui-sidebar__search-input');
+          await tab.locator('.muxui-sidebar__toggle').evaluate((toggle) => toggle.click());
+          await settled(tab, true, `${engine}: Toggle folds with focus in the Search input`);
+          assert.ok(await hasFocus(tab, '.muxui-sidebar__search-button'), `${engine}: focus moves from the hidden Search input to the folded Search button`);
         } finally {
           await context.close();
         }
