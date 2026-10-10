@@ -110,7 +110,10 @@
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "Provider holds the folded state, controlled by collapsed or uncontrolled from defaultCollapsed, and folds with Cmd or Ctrl plus its shortcut key.",
         "A folded root animates to an icon rail; the transition is removed under reduced motion.",
-        "Folded search unfolds the sidebar and focuses the input; a folded nested group unfolds the sidebar and opens."
+        "Folded search unfolds the sidebar and focuses the input; a folded nested group unfolds the sidebar and opens.",
+        "A folded nav item without an icon shows the first character of its label in the icon column; the label stays in its accessible name and tooltip.",
+        "A folded header is clipped to the rail, so a text-only header shows only its first word; give it a leading mark.",
+        "When Root sets its own id, Toggle's aria-controls names the generated id until hydration."
       ],
       "accessibility": [
         "Nested nav items use native disclosure semantics.",

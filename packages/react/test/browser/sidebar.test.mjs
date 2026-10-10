@@ -38,6 +38,7 @@ function Shell() {
       h(Sidebar.NavList, { 'aria-label': 'Workspace' },
         h(Sidebar.NavItem, { href: '#home', icon: Icon }, 'Home'),
         h(Sidebar.NavItem, { href: '#inbox', icon: Icon, badge: '3' }, 'Inbox'),
+        h(Sidebar.NavItem, { href: '#docs' }, 'Docs'),
         h(Sidebar.Section, { label: 'Projects' },
           h(Sidebar.NavItem, { href: '#overview', icon: Icon, current: true }, 'Overview'),
           h(Sidebar.NavItem, { icon: Icon, items: [{ href: '#now', label: 'Now' }, { href: '#next', label: 'Next' }] }, 'Roadmap'))),
@@ -183,6 +184,7 @@ for (const engine of browserEngines()) {
           assert.equal(await tab.getByRole('button', { name: 'Toggle sidebar' }).count(), 1, label('Toggle is named by "Toggle sidebar"'));
           assert.equal(await tab.getByRole('list', { name: 'Projects' }).count(), 1, label('Section is labelled by its visible text'));
           assert.ok(state.rootOverflow <= 0 && state.pageOverflow <= 0 && state.overflowing.length === 0, label(`no horizontal overflow when expanded (${JSON.stringify(state)})`));
+          assert.equal(await tab.evaluate(boxOf, '.muxui-sidebar__nav-mark'), null, label('an expanded sidebar shows no stand-in mark'));
           const labelContrast = await tab.evaluate(contrastOf, { selector: '.muxui-sidebar__section-label', background: 'aside' });
           assert.ok(labelContrast >= 4.5, label(`the section label meets text contrast (${labelContrast.toFixed(2)}:1)`));
 
@@ -201,6 +203,13 @@ for (const engine of browserEngines()) {
           // Folded NavItems keep their names, Section its label, and the other parts fold away.
           assert.equal(await tab.getByRole('link', { name: 'Inbox 3' }).count(), 1, label('a folded NavItem keeps its label and badge in its accessible name'));
           assert.equal(await tab.getByRole('list', { name: 'Projects' }).count(), 1, label('a folded Section keeps its accessible label'));
+          // An item without an icon stays visible and named: its first letter stands in for the icon.
+          const mark = await tab.evaluate(boxOf, 'a[href="#docs"] .muxui-sidebar__nav-mark');
+          assert.ok(mark !== null && Math.abs(mark.width - icon.width) < 0.5 && Math.abs(mark.left - icon.left) < 0.5, label('the icon-less item shows a mark in the icon column'));
+          assert.equal(await tab.locator('a[href="#docs"] .muxui-sidebar__nav-mark').textContent(), 'D', label('the mark is the first letter of the label'));
+          assert.equal(await tab.getByRole('link', { name: 'Docs', exact: true }).count(), 1, label('the mark is decorative: the item is still named by its label'));
+          const markContrast = await tab.evaluate(contrastOf, { selector: 'a[href="#docs"] .muxui-sidebar__nav-mark', background: 'aside' });
+          assert.ok(markContrast >= 3, label(`the mark meets non-text contrast (${markContrast.toFixed(2)}:1)`));
           const hidden = await tab.evaluate(boxOf, 'a[href="#home"] .muxui-sidebar__nav-label');
           assert.ok(hidden.width <= 1 && hidden.height <= 1, label('the NavItem label is visually hidden'));
           assert.ok(await tab.evaluate(boxOf, '.muxui-sidebar__section-label').then((box) => box.width <= 1), label('the Section label is visually hidden'));
@@ -303,6 +312,11 @@ for (const engine of browserEngines()) {
           await focusByKeyboard(tab, 'a[href="#inbox"]');
           await tab.getByRole('tooltip').waitFor({ timeout: 5000 });
           assert.equal((await tab.getByRole('tooltip').textContent()).trim(), 'Inbox', `${engine}: the folded tooltip shows the label alone`);
+          await tab.keyboard.press('Escape');
+          await tab.getByRole('tooltip').waitFor({ state: 'detached', timeout: 5000 });
+          await focusByKeyboard(tab, 'a[href="#docs"]');
+          await tab.getByRole('tooltip').waitFor({ timeout: 5000 });
+          assert.equal((await tab.getByRole('tooltip').textContent()).trim(), 'Docs', `${engine}: an icon-less folded item shows its tooltip on keyboard focus`);
           await tab.keyboard.press('Escape');
           await tab.getByRole('tooltip').waitFor({ state: 'detached', timeout: 5000 });
 
