@@ -100,6 +100,23 @@ const pageIndex = [
   },
 ];
 
+// Block (pattern) pages are not component families; the planner selects them by story ID.
+const blockPages = [
+  {
+    family: 'Poster grid',
+    storyFile: 'apps/react-storybook/.storybook/generated/block-poster-grid.stories.mjs',
+    stories: [
+      { id: 'muxui-block-poster-grid--css-grid', exportName: 'CssGrid', name: 'CssGrid', source: 'catalog/patterns/poster-grid/examples/react/css-grid.tsx' },
+      { id: 'muxui-block-poster-grid--virtualized', exportName: 'Virtualized', name: 'Virtualized', source: 'catalog/patterns/poster-grid/examples/react/virtualized.tsx' },
+    ],
+  },
+  {
+    family: 'Task filters',
+    storyFile: 'apps/react-storybook/.storybook/generated/block-task-filters.stories.mjs',
+    stories: [{ id: 'muxui-block-task-filters--filter-bar', exportName: 'FilterBar', name: 'FilterBar', source: 'catalog/patterns/task-filters/examples/react/filter-bar.tsx' }],
+  },
+];
+
 // Workspace links mirror the real package.json files.
 const packages = [
   { name: '@muxui/catalog', path: 'packages/catalog', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
@@ -2246,21 +2263,6 @@ test('a Storybook tooling file with no focused unit route widens instead of fail
   assert.match(newTest.notices[0], /^apps\/react-storybook\/test\/storybook-new\.test\.mjs has no focused Storybook unit-test route; running that test file/u);
   // A helper with unknown importers gets the complete Storybook proof: every
   // component family, every Block page by story ID, and every unit test.
-  const blockPages = [
-    {
-      family: 'Poster grid',
-      storyFile: 'apps/react-storybook/.storybook/generated/block-poster-grid.stories.mjs',
-      stories: [
-        { id: 'muxui-block-poster-grid--css-grid', exportName: 'CssGrid', name: 'CssGrid', source: 'catalog/patterns/poster-grid/examples/react/css-grid.tsx' },
-        { id: 'muxui-block-poster-grid--virtualized', exportName: 'Virtualized', name: 'Virtualized', source: 'catalog/patterns/poster-grid/examples/react/virtualized.tsx' },
-      ],
-    },
-    {
-      family: 'Task filters',
-      storyFile: 'apps/react-storybook/.storybook/generated/block-task-filters.stories.mjs',
-      stories: [{ id: 'muxui-block-task-filters--filter-bar', exportName: 'FilterBar', name: 'FilterBar', source: 'catalog/patterns/task-filters/examples/react/filter-bar.tsx' }],
-    },
-  ];
   const helper = await plan(['apps/react-storybook/test/helpers/new-helper.mjs'], {
     packages: workspacePackages,
     pageIndex: [...pageIndex, ...blockPages],
@@ -2290,10 +2292,12 @@ test('a CSS change no family owns widens to the full React and Storybook proof',
   const cssPath = 'packages/react/src/styles/base.css';
   const result = await plan([cssPath], {
     packages: workspacePackages,
+    pageIndex: [...pageIndex, ...blockPages],
     textSnapshots: { [cssPath]: { before: ':root { --a: 1; }', after: ':root { --a: 2; }' } },
     moduleSources: cssModuleSources,
   });
   assert.equal(result.reactPackageFull, true);
+  assert.equal(result.storyIds.length, 3, 'the Block pages are part of the full Storybook proof');
   assert.equal(result.reactProjectionCheck, false);
   assert.equal(result.tailwind, true);
   assert.deepEqual(result.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']);
@@ -2323,6 +2327,27 @@ test('every pinned Storybook unit-test title still names a test in its file', as
     }
   }
   assert.equal(pinned, 9);
+});
+
+test('a shared Storybook path covers every page, Block pages included', async () => {
+  const blockIds = blockPages.flatMap(({ stories }) => stories.map(({ id }) => id)).sort();
+  for (const path of [
+    'apps/react-storybook/.storybook/preview.mjs',
+    'apps/react-storybook/.storybook/main.mjs',
+    'apps/react-storybook/src/storybook-factory.mjs',
+  ]) {
+    const result = await plan([path], { packages: workspacePackages, pageIndex: [...pageIndex, ...blockPages] });
+    assert.deepEqual(result.storyFamilies, ['MultiSelect', 'NumberField', 'TagSelect', 'Tree'], path);
+    assert.deepEqual(result.storyIds, blockIds, path);
+    // main.mjs also adds the manager chrome proof.
+    assert.deepEqual(result.storyRuns.filter(({ proof }) => proof !== 'chrome').map(({ proof, families }) => [proof, families]), [
+      ['component', ['MultiSelect', 'NumberField', 'TagSelect', 'Tree']],
+      ['story', ['Poster grid', 'Task filters']],
+    ], path);
+  }
+  // Without Block pages in the index the plan is the component families alone.
+  const plain = await plan(['apps/react-storybook/.storybook/preview.mjs'], { packages: workspacePackages });
+  assert.deepEqual(plain.storyIds, []);
 });
 
 // Plans every tracked path as a no-op edit with the generated React records,

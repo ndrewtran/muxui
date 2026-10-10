@@ -1035,10 +1035,21 @@ export async function buildPullRequestImpact({
     plan.notices.push(message);
     plan.reasons.push(message);
   };
+  // Every Storybook page: each component family, and each Block page by story
+  // ID, since Blocks are not component families.
+  const addEveryStoryPage = () => {
+    const families = storybookFamilies(records);
+    families.forEach((family) => plan.storyFamilies.add(family));
+    for (const page of pageIndex.filter(({ family }) => !families.includes(family))) {
+      for (const story of page.stories) {
+        plan.storyIds.add(story.id);
+        plan.storyIdFamilies.set(story.id, page.family);
+      }
+    }
+  };
   // A Storybook tooling file with no focused unit route: a test file runs
   // itself, and any other file (a helper whose importers are unknown) gets the
-  // complete Storybook proof: every component family, every Block page, and
-  // every Storybook unit test.
+  // complete Storybook proof: every page and every Storybook unit test.
   const routeStoryUnit = (path) => {
     plan.storyTooling = true;
     if (addStoryUnitRoute(plan, path)) return;
@@ -1047,15 +1058,7 @@ export async function buildPullRequestImpact({
       widen(`${path} has no focused Storybook unit-test route; running that test file`);
       return;
     }
-    const families = storybookFamilies(records);
-    families.forEach((family) => plan.storyFamilies.add(family));
-    // Block pages are not component families, so their stories are selected by ID.
-    for (const page of pageIndex.filter(({ family }) => !families.includes(family))) {
-      for (const story of page.stories) {
-        plan.storyIds.add(story.id);
-        plan.storyIdFamilies.set(story.id, page.family);
-      }
-    }
+    addEveryStoryPage();
     for (const file of storybookTestFiles()) {
       for (const route of [storybookUnitRoute(`apps/react-storybook/${file}`) ?? { file }].flat()) addStoryUnitTest(plan, route);
     }
@@ -1239,7 +1242,7 @@ export async function buildPullRequestImpact({
           plan.reasons.push(`${path} changes Storybook manager chrome`);
         }
         if (shared) {
-          storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+          addEveryStoryPage();
           plan.reasons.push(`${path} is shared by every Storybook page`);
         }
         if (storybookUnitRoute(path)) {
@@ -1490,7 +1493,7 @@ export async function buildPullRequestImpact({
       // The analyzer cannot attribute the change to families, so every family is affected.
       plan.reactPackageFull = true;
       plan.reactProjectionCheck = false;
-      storybookFamilies(records).forEach((family) => plan.storyFamilies.add(family));
+      addEveryStoryPage();
       plan.tailwind = true;
       widen(`${path}: ${error.message.slice('MUXUI_CI_IMPACT_STYLE_OWNERSHIP: '.length)}; running the full React and Storybook proof`);
       continue;
