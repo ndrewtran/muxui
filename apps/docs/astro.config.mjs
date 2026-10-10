@@ -138,6 +138,7 @@ export default defineConfig({
 				}],
 			},
 			customCss: ['./src/styles/mux-docs.css'],
+			routeMiddleware: './src/starlight-route-data.ts',
 			sidebar: [
 				{ label: 'Home', slug: 'index' },
 				{ label: 'Installation', link: '/installation/' },
