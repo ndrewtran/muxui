@@ -140,23 +140,29 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # Proof environment: a group that runs a cross-engine React browser test
-      # (one calling the harness's browserEngines()) installs Playwright's
-      # Firefox and WebKit with their system libraries. Other groups use Chrome.
-      # The browser builds are cached per playwright-core version; the system
-      # libraries install every time.
+      # (one calling the harness's browserEngines()) installs only the
+      # Playwright engines it names (browser-firefox installs Firefox,
+      # browser-webkit WebKit) with their system libraries. Other groups,
+      # including browser-chromium, use Chrome. The browser builds are cached
+      # per playwright-core version and engine set; the system libraries
+      # install every time.
       - name: Read playwright-core version
         id: playwright
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
-        run: echo "version=$(node -p "require('./packages/react/package.json').devDependencies['playwright-core']")" >> "$GITHUB_OUTPUT"
+        env:
+          BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
+        run: |
+          echo "version=$(node -p "require('./packages/react/package.json').devDependencies['playwright-core']")" >> "$GITHUB_OUTPUT"
+          echo "engines=${BROWSER_ENGINES// /-}" >> "$GITHUB_OUTPUT"
 
       - name: Cache Playwright browsers
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-${{ steps.playwright.outputs.engines }}
 
-      - name: Install Playwright Firefox and WebKit
+      - name: Install Playwright browsers
         if: matrix.group.reusedFrom == '' && matrix.group.browserEngines != ''
         env:
           BROWSER_ENGINES: ${{ matrix.group.browserEngines }}
