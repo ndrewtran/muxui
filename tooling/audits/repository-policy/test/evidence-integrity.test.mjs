@@ -2144,6 +2144,21 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     const withValidator = await repo.variant((edit) => edit('packages/catalog/src/pattern-content.mjs', (text) => `${text}\n// changed\n`));
     assert.deepEqual(derive(withValidator)[1].digestAffectingPathsChanged, []);
 
+    // Decision 0028 removed `authorityDecisionPath` from the source manifest and the compiler rejects it, so trees from before then compile with that one key
+    // dropped, on both sides. It is not an escape hatch: any other unknown manifest key still fails the compiler.
+    const manifestEdit = (change) => jsonEdit((manifest) => ({ ...manifest, ...change }));
+    const legacy = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ authorityDecisionPath: 'decisions/0017-text-family-admission.md' })));
+    await repo.edit('README.md', (text) => `${text}\nLegacy.\n`);
+    gitIn(cwd, 'add', '-A');
+    gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree with the legacy manifest key (#105)');
+    const legacyChild = gitIn(cwd, 'rev-parse', 'HEAD');
+    const acrossLegacy = await catalogAcrossCommit({ cwd, commit: legacyChild, parent: legacy, excludedDirectories: [], digestAffectingPathsChanged: [] });
+    assert.deepEqual([acrossLegacy.identical, acrossLegacy.holds], [true, true], 'trees that carry the removed manifest key compile on both sides');
+    const acrossAdded = await catalogAcrossCommit({ cwd, commit: legacy, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] });
+    assert.deepEqual([acrossAdded.identical, acrossAdded.holds], [true, true], 'the key is dropped from the tree that carries it, and the one that does not is unchanged');
+    const unknownKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ unexpectedKey: true })));
+    await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), /MUXUI_CATALOG_SOURCE_INVALID/u, 'any other unknown manifest key still fails');
+
     // Renames are not tracked: a commit that renames, moves, or deletes the directory or record of a block added since the close-out fails, whatever
     // the block is called at the head, because the two sides could not exclude it consistently and its earlier commits would go unaudited.
     const movedMessage = /BL1_GROWTH_BLOCK_MOVED: .* the growth block .*; rename or remove a growth block in a separate, non-growth change/u;

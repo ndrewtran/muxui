@@ -14,7 +14,7 @@
 // several commits could carry a change (a workflow, a dependency) in a commit that touches no block, and that
 // commit would be neither selected nor audited. A growth commit that is not a squash merge stops the selection.
 import { execFileSync } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
@@ -139,6 +139,19 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
   return growth;
 }
 
+// Decision 0028 (#251) removed this key from the catalog source manifest and the compiler stopped accepting it, so a tree from before then
+// no longer compiles as committed. It is dropped from the extracted copy of each tree, on both sides of the comparison, and nothing else is.
+const removedManifestKey = 'authorityDecisionPath';
+
+/** Drops the removed `authorityDecisionPath` from the extracted tree's source manifest; any other unknown key still fails the compiler. */
+async function dropRemovedManifestKey(directory) {
+  const path = join(directory, manifestPath);
+  const manifest = JSON.parse(await readFile(path, 'utf8'));
+  if (!(removedManifestKey in manifest)) return;
+  delete manifest[removedManifestKey];
+  await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
 /** Extracts the tree of `revision` to a new temporary directory, runs `use` on it, and removes it. */
 async function withTree(cwd, revision, use) {
   const directory = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-tree-'));
@@ -156,10 +169,14 @@ async function withTree(cwd, revision, use) {
  * changed (`excludedDirectories`). The commit holds when the digests are equal, so the digest changed only for those
  * sources, and when it changed no `digestAffectingPaths` file, which the same-compiler comparison cannot see. A
  * growth commit that edits any other source, a close-out block included, or the catalog package version, moves the digest.
+ * A tree that still carries the manifest key Decision 0028 removed (`authorityDecisionPath`) is compiled with that key dropped.
  */
 export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged }) {
   const excluded = ({ path }) => excludedDirectories.some((directory) => path.startsWith(directory));
-  const digestAt = (revision) => withTree(cwd, revision, async (directory) => (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest);
+  const digestAt = (revision) => withTree(cwd, revision, async (directory) => {
+    await dropRemovedManifestKey(directory);
+    return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
+  });
   const [digestBefore, digestAfter] = await Promise.all([digestAt(parent), digestAt(commit)]);
   const identical = digestBefore === digestAfter;
   return { digestBefore, digestAfter, identical, holds: identical && digestAffectingPathsChanged.length === 0 };

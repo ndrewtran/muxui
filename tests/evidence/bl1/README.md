@@ -292,6 +292,10 @@ growth itself, found from git:
   `growth-scope.mjs` bound at its source revision exports, which the test reads from git, not from
   the record, so a record cannot narrow the list; the tool's bytes must match the proof tool the
   validation summary binds. A later change to the list never fails a retained capture.
+- `E-BL1-08` and trees from before #251: Decision 0028 removed `authorityDecisionPath` from the
+  catalog source manifest and the compiler no longer accepts it, so each extracted tree that still
+  carries the key is compiled with that one key dropped, on both sides of the comparison. Any other
+  unknown key still fails the compiler, and the record's non-claims say so.
 - A growth block is not tracked through a rename. A commit after the close-out that renames, moves,
   or deletes the record of a block added since the close-out stops the capture with
   `BL1_GROWTH_BLOCK_MOVED` ("rename or remove a growth block in a separate, non-growth change"),
