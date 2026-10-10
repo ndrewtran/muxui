@@ -155,7 +155,8 @@ export function affectedReason(group, delta) {
     const touched = delta.changedPaths.find((path) => group.packageDirectories.some((directory) => path.startsWith(`${directory}/`)));
     if (touched) return `changes touch ${touched}`;
     // Browser checks run React browser tests, which React test changes route to `react`.
-    const ids = group.kind === 'browser' ? ['browser', 'react'] : [group.id];
+    // Each engine's group (browser-chromium, ...) reruns only for its own routing.
+    const ids = group.kind === 'browser' ? [group.id, 'react'] : [group.id];
     return intersects(ids, delta.groupIds) ? `changes route to ${ids.filter((id) => delta.groupIds.includes(id)).join(', ')}` : null;
   }
   if (group.kind !== 'storybook' || !group.storyRun) return `no reuse rule for group ${group.id}`;

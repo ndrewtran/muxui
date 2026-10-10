@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -106,7 +106,7 @@ const packages = [
   { name: '@muxui/docs', path: 'apps/docs', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/react': 'workspace:*' }, devDependencies: { '@muxui/tooling': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/docs^... && check' } } },
   { name: '@muxui/figma', path: 'tooling/generators/figma', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { check: 'check' } } },
   { name: '@muxui/foundation', path: 'packages/foundation', manifest: { scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
+  { name: '@muxui/react', path: 'packages/react', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:browser': 'node --test --test-concurrency=1 test/browser/*.test.mjs', 'check:component': 'node ../../tooling/audits/repository-policy/src/run-component-check.mjs' } } },
   { name: '@muxui/react-native', path: 'packages/react-native', manifest: { dependencies: { '@muxui/foundation': 'workspace:*' }, devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/react-playground', path: 'apps/react-playground', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'check' } } },
   { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
@@ -401,7 +401,7 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
   assert.deepEqual(result.storyRuns, []);
   assert.equal(result.reasons[0], `${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'browser']);
+  assert.deepEqual(groupIds(groups), ['checks', 'browser-chromium']);
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
     ['--filter', '@muxui/catalog', 'run', 'check'],
@@ -490,7 +490,7 @@ test('Scale and docs changes run the Scale docs browser test as one ordinary che
   assert.match(scripts['check:browser:docs'], /^pnpm --filter @muxui\/docs build && /u);
   for (const path of ['apps/scale/src/App.jsx', 'apps/scale/test/browser/docs-theme.test.mjs', 'apps/docs/src/pages/scale.astro']) {
     const groups = executionGroups(await plan([path]), { packages, environment: {}, pageIndex });
-    const browser = groups.find(({ id }) => id === 'browser');
+    const browser = groups.find(({ id }) => id === 'browser-chromium');
     assert.ok(browser, path);
     const command = browser.commands.find(({ args }) => args.includes('check:browser:docs'));
     assert.deepEqual(command?.args, ['--filter', '@muxui/scale', 'run', 'check:browser:docs'], path);
@@ -498,7 +498,7 @@ test('Scale and docs changes run the Scale docs browser test as one ordinary che
     assert.ok(!browser.commands.some(({ args }) => args.includes('build')), path);
   }
   const policy = executionGroups(await plan(['.github/workflows/ci.yml']), { packages, environment: {}, pageIndex });
-  assert.ok(!policy.some(({ id }) => id === 'browser'));
+  assert.ok(!policy.some(({ kind }) => kind === 'browser'));
 });
 
 test('root package scripts remain policy-scoped while workspace toolchain inputs require full proof', async () => {
@@ -977,7 +977,7 @@ test('scoped plans split into independent groups that each repeat the generation
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
   // Docs, Scale, Figma, and the playground depend on React at runtime, so they
   // run whole (with the browser checks) while React and Storybook keep the Tree family scope.
-  assert.deepEqual(groupIds(groups), ['checks', 'browser', 'react', 'storybook-component']);
+  assert.deepEqual(groupIds(groups), ['checks', 'browser-chromium', 'react', 'storybook-component']);
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
   for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
@@ -996,11 +996,11 @@ test('scoped plans split into independent groups that each repeat the generation
   assert.ok(groups[2].commands.some(({ args }) => args.includes('check:component')));
   assert.equal(groups[3].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
   assert.deepEqual(groupMatrix(groups).map(({ id, kind }) => [id, kind]), [
-    ['checks', 'checks'], ['browser', 'browser'], ['react', 'react'], ['storybook-component', 'storybook'],
+    ['checks', 'checks'], ['browser-chromium', 'browser'], ['react', 'react'], ['storybook-component', 'storybook'],
   ]);
 
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(tokens), ['checks', 'browser', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
+  assert.deepEqual(groupIds(tokens), ['checks', 'browser-chromium', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
   assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
@@ -1009,7 +1009,9 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
   assert.equal(groupBrowserEngines([{ env: { MUXUI_BROWSER_ENGINES: 'chromium' } }]), '');
 
   const full = groupMatrix(executionGroups(fullWorkspacePlan('test'), { packages, environment: {} }));
-  assert.deepEqual(full.filter(({ browserEngines }) => browserEngines).map(({ id, browserEngines }) => [id, browserEngines]), [['browser', 'firefox webkit']]);
+  assert.deepEqual(full.filter(({ browserEngines }) => browserEngines).map(({ id, browserEngines }) => [id, browserEngines]), [
+    ['browser-firefox', 'firefox'], ['browser-webkit', 'webkit'],
+  ]);
 
   const tree = executionGroups(await plan([collectionsPath], treeRuntimeChange), { packages, environment: {}, pageIndex });
   assert.ok(tree.every(({ browserEngines }) => browserEngines === ''), 'Tree proof stays Chrome-only');
@@ -1021,9 +1023,176 @@ test('only groups that run a cross-engine browser test request Firefox and WebKi
   assert.equal(react.commands.find(({ args }) => args.includes(testFile) || args.includes('check:component')).env.MUXUI_BROWSER_ENGINES, 'chromium,firefox,webkit');
 });
 
-test('a browserEngines() call opts a test in; a mention does not', () => {
-  assert.equal(callsBrowserEngines("import { browserEngines } from './harness.mjs';\nfor (const engine of browserEngines()) {}"), true);
-  assert.equal(callsBrowserEngines('// browserEngines() runs every engine\nconst note = "browserEngines()";'), false);
+test('only calls through the harness browserEngines() binding opt a test in', () => {
+  const harness = "from './harness.mjs'";
+  // Hand-written classification, independent of the planner.
+  const supported = [
+    ['a direct call', `import { browserEngines } ${harness};\nfor (const engine of browserEngines()) {}`],
+    ['an import alias', `import { browserEngines as engines } ${harness};\nfor (const engine of engines()) {}`],
+    ['a namespace member', `import * as harness ${harness};\nfor (const engine of harness.browserEngines()) {}`],
+  ];
+  const ignored = [
+    ['a comment and a string', '// browserEngines() runs every engine\nconst note = "browserEngines()";'],
+    ['an unused import', `import { browserEngines } ${harness};`],
+    ['no opt-in', `import { launchBrowser } ${harness};\nawait launchBrowser();`],
+    ['an object key', "const metadata = { browserEngines: ['chromium'] };"],
+    ['a member of another object', 'const engines = options.browserEngines;'],
+    ['a local function of the same name', 'function browserEngines() { return []; }\nbrowserEngines();'],
+    ['a destructured option', 'const { browserEngines } = options;\nbrowserEngines();'],
+    ['an import from another module', "import { browserEngines } from './other.mjs';\nbrowserEngines();"],
+    ['another harness export', `import * as harness ${harness};\nawait harness.launchBrowser();`],
+    ['a member call on another object', `import { launchBrowser } ${harness};\nsettings.browserEngines();`],
+    ['unrelated names beside a harness import', `import { launchBrowser } ${harness};\nconst options = { browserEngines: [] };\nconst engines = options.browserEngines;`],
+  ];
+  for (const [name, source] of supported) assert.equal(callsBrowserEngines(source, 'x.test.mjs'), true, name);
+  for (const [name, source] of ignored) assert.equal(callsBrowserEngines(source, 'x.test.mjs'), false, name);
+  // A use of the harness binding the planner cannot follow would silently run Chromium only, so it throws.
+  for (const source of [
+    `import { browserEngines as engines } ${harness};\nconst pick = engines;\nfor (const engine of pick()) {}`,
+    `import * as harness ${harness};\nconst pick = harness.browserEngines;\nfor (const engine of pick()) {}`,
+    `import * as harness ${harness};\nconst module = harness;\nfor (const engine of module.browserEngines()) {}`,
+    `const { browserEngines: engines } = await import('./harness.mjs');\nfor (const engine of engines()) {}`,
+    `export { browserEngines } ${harness};`,
+  ]) assert.throws(() => callsBrowserEngines(source, 'x.test.mjs'), /MUXUI_CI_IMPACT_BROWSER_ENGINES_FORM: x\.test\.mjs/u);
+});
+
+const browserGroups = (groups) => groups.filter(({ kind }) => kind === 'browser');
+// A group's own commands, without the shared generation prerequisite.
+const ownCommands = (group) => group.commands.filter(({ prerequisite }) => !prerequisite);
+const argsLine = (command) => command.args.join(' ');
+const reactBrowserDirectory = resolve(repositoryRoot, 'packages/react/test/browser');
+const reactBrowserTests = readdirSync(reactBrowserDirectory)
+  .filter((name) => name.endsWith('.test.mjs')).sort().map((name) => `test/browser/${name}`);
+// The `engine file` runs a command list performs; an unset engine is Chromium, as in the harness.
+const reactBrowserRuns = (commands) => commands
+  .filter(({ args }) => args.includes('@muxui/react') && args.includes('--test-concurrency=1'))
+  .flatMap(({ args, env }) => args
+    .filter((arg) => arg.startsWith('test/browser/'))
+    .map((file) => `${env.MUXUI_BROWSER_ENGINES ?? 'chromium'} ${file}`));
+const fixedBrowserSources = (source) => Object.fromEntries(reactBrowserTests.map((file) => [file, source]));
+
+test('the full plan runs the browser checks as parallel groups, each React test once per engine', () => {
+  const crossEngine = reactBrowserTests
+    .filter((file) => callsBrowserEngines(readFileSync(resolve(repositoryRoot, 'packages/react', file), 'utf8')));
+  const chromiumOnly = reactBrowserTests.filter((file) => !crossEngine.includes(file));
+  assert.ok(crossEngine.includes('test/browser/autocomplete-dismissal.test.mjs'));
+  assert.ok(chromiumOnly.includes('test/browser/dialog-motion.test.mjs'), 'engine-agnostic tests are Chromium-only');
+
+  const plan = fullWorkspacePlan('test');
+  const groups = browserGroups(executionGroups(plan, { packages, environment: {} }));
+  assert.deepEqual(groups.map(({ id, browserEngines, timeoutMinutes }) => [id, browserEngines, timeoutMinutes]), [
+    ['browser-chromium', '', 30], ['browser-chromium-only', '', 30], ['browser-firefox', 'firefox', 30], ['browser-webkit', 'webkit', 30],
+  ]);
+  assert.ok(groupMatrix(groups).every(({ kind }) => kind === 'browser'));
+
+  const exec = ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1'];
+  const [chromium, only, firefox, webkit] = groups;
+  assert.deepEqual(ownCommands(chromium).map(argsLine), [
+    '--filter @muxui/scale run check:browser', [...exec, ...crossEngine].join(' '), '--filter @muxui/scale run check:browser:docs',
+  ]);
+  assert.deepEqual(ownCommands(chromium).map(({ env }) => env.MUXUI_BROWSER_ENGINES), [undefined, 'chromium', undefined]);
+  assert.deepEqual(ownCommands(only).map(({ args, env }) => [args, env]), [[[...exec, ...chromiumOnly], {}]]);
+  for (const [group, engine] of [[firefox, 'firefox'], [webkit, 'webkit']]) {
+    assert.deepEqual(ownCommands(group).map(({ args, env }) => [args, env]), [
+      [[...exec, ...crossEngine], { MUXUI_BROWSER_ENGINES: engine }],
+    ], group.id);
+  }
+
+  // Every file runs exactly once in each engine it supports, and none is missed.
+  const expected = [
+    ...reactBrowserTests.map((file) => `chromium ${file}`),
+    ...crossEngine.flatMap((file) => [`firefox ${file}`, `webkit ${file}`]),
+  ].sort();
+  const grouped = reactBrowserRuns(groups.flatMap(ownCommands)).sort();
+  assert.deepEqual(grouped, expected);
+  // Local serial runs cover the same runs, again once each.
+  assert.deepEqual(reactBrowserRuns(executionCommands(plan, { packages })).sort(), expected);
+  assert.ok(!groups.flatMap(ownCommands).some((command) => argsLine(command) === '--filter @muxui/react run check:browser'));
+});
+
+test('the browser groups follow how each test file opts in, and fail on a form they cannot classify', () => {
+  const harness = "from './harness.mjs'";
+  const source = (body) => `import { browserEngines, browserEngines as engines, launchBrowser } ${harness};\n${body}`;
+  const [direct, alias, plain, unrelated, stored] = ['activity', 'code-block', 'message', 'icon-button', 'text']
+    .map((name) => `test/browser/${name}.test.mjs`);
+  const sources = {
+    ...fixedBrowserSources('export {};'),
+    [direct]: source('for (const engine of browserEngines()) {}'),
+    [alias]: source('for (const engine of engines()) {}'),
+    [plain]: source('await launchBrowser();'),
+    // Same spelling, but not the harness binding: no opt-in, and planning does not fail.
+    [unrelated]: "const metadata = { browserEngines: ['chromium'] };\nconst engines = options.browserEngines;",
+  };
+  const groups = browserGroups(executionGroups(fullWorkspacePlan('test'), { packages, environment: {}, testSources: sources }));
+  const filesOf = (id) => ownCommands(groups.find((group) => group.id === id)).flatMap(({ args }) => args.filter((arg) => arg.startsWith('test/browser/')));
+  assert.deepEqual(filesOf('browser-firefox'), [direct, alias]);
+  assert.deepEqual(filesOf('browser-webkit'), [direct, alias]);
+  assert.ok(filesOf('browser-chromium-only').includes(plain) && filesOf('browser-chromium-only').includes(unrelated));
+  assert.ok(!filesOf('browser-chromium-only').includes(direct) && !filesOf('browser-chromium-only').includes(alias));
+
+  const unclassifiable = { ...sources, [stored]: source('const pick = engines;\nfor (const engine of pick()) {}') };
+  assert.throws(
+    () => executionGroups(fullWorkspacePlan('test'), { packages, environment: {}, testSources: unclassifiable }),
+    new RegExp(`MUXUI_CI_IMPACT_BROWSER_ENGINES_FORM: ${stored.replaceAll('.', '\\.')}`, 'u'),
+  );
+});
+
+test('planning fails when the React check:browser script drifts from what CI runs', async () => {
+  const drifted = packagesWithScript('@muxui/react', 'check:browser', 'node --test --test-concurrency=1 test/browser/**/*.test.mjs');
+  const react = await plan(['packages/react/src/generate.mjs']);
+  const contract = /MUXUI_CI_IMPACT_CHECK_BROWSER_CONTRACT: packages\/react\/package\.json check:browser is .*test\/browser\/\*\*.*Update reactBrowserScript .* in tooling\/audits\/repository-policy\/src\/ci-impact\.mjs/u;
+  assert.throws(() => executionGroups(react, { packages: drifted, environment: {}, pageIndex }), contract);
+  assert.throws(() => executionGroups(fullWorkspacePlan('test'), { packages: drifted, environment: {} }), contract);
+  // Whitespace is not part of the contract; a changed selector, runner, or flag is.
+  const reformatted = packagesWithScript('@muxui/react', 'check:browser', '  node   --test\t--test-concurrency=1\n  test/browser/*.test.mjs ');
+  assert.doesNotThrow(() => executionGroups(react, { packages: reformatted, environment: {}, pageIndex }));
+  for (const script of [
+    'node --test --test-concurrency=1 test/browser/*.spec.mjs', 'node --test test/browser/*.test.mjs',
+    'node --test --test-concurrency=1 test/browser/*.test.mjs test/extra/*.test.mjs',
+  ]) {
+    assert.throws(() => executionGroups(react, {
+      packages: packagesWithScript('@muxui/react', 'check:browser', script), environment: {}, pageIndex,
+    }), /MUXUI_CI_IMPACT_CHECK_BROWSER_CONTRACT/u, script);
+  }
+  const removed = packagesWithScript('@muxui/react', 'check:browser', undefined);
+  assert.throws(() => executionGroups(react, { packages: removed, environment: {}, pageIndex }), /check:browser is undefined/u);
+  // A plan without the React browser suite does not care.
+  const docs = await plan(['apps/docs/src/content/docs/foundations/index.mdx']);
+  assert.doesNotThrow(() => executionGroups(docs, { packages: drifted, environment: {}, pageIndex }));
+});
+
+test('scoped plans emit only the browser groups that have work', async () => {
+  const options = { packages, environment: {}, pageIndex };
+  const browserIds = (result, extra = {}) => groupIds(browserGroups(executionGroups(result, { ...options, ...extra })));
+  const optIn = "import { browserEngines } from './harness.mjs'; browserEngines();";
+
+  // The full React package proof runs every browser group.
+  const react = await plan(['packages/react/src/generate.mjs']);
+  assert.equal(react.reactPackageFull, true);
+  assert.deepEqual(browserIds(react), ['browser-chromium', 'browser-chromium-only', 'browser-firefox', 'browser-webkit']);
+  // Without a cross-engine test there is nothing for Firefox or WebKit.
+  const none = browserIds(react, { testSources: fixedBrowserSources('export {};') });
+  assert.ok(!none.some((id) => /firefox|webkit/u.test(id)) && none.includes('browser-chromium-only'), none.join(', '));
+  // Without a Chromium-only test there is no Chromium-only group.
+  const all = browserIds(react, { testSources: fixedBrowserSources(optIn) });
+  assert.deepEqual(all, ['browser-chromium', 'browser-firefox', 'browser-webkit']);
+
+  // Docs and Scale browser checks are Chromium-only and need no React browser group.
+  assert.deepEqual(browserIds(await plan(['apps/docs/src/content/docs/foundations/index.mdx'])), ['browser-chromium']);
+  assert.deepEqual(browserIds(await plan(['apps/scale/test/browser/theme-builder.test.mjs'])), ['browser-chromium']);
+
+  // A routed cross-engine test stays in the React group, so no browser group is planned.
+  assert.deepEqual(browserIds(await plan(['packages/react/test/browser/autocomplete-dismissal.test.mjs'])), []);
+});
+
+test('each browser group is reused on its own routing', () => {
+  const group = (id) => ({ id, kind: 'browser', packageDirectories: ['packages/react'] });
+  const delta = (groupIds) => ({ changedPaths: ['apps/docs/src/index.md'], groupIds, storyRuns: [], storyTooling: false });
+  assert.equal(affectedReason(group('browser-firefox'), delta(['browser-chromium'])), null);
+  assert.equal(affectedReason(group('browser-chromium-only'), delta(['browser-chromium'])), null);
+  assert.match(affectedReason(group('browser-chromium-only'), delta(['browser-chromium-only'])), /route to browser-chromium-only/u);
+  assert.match(affectedReason(group('browser-webkit'), delta(['browser-webkit'])), /route to browser-webkit/u);
+  assert.match(affectedReason(group('browser-chromium'), delta(['react'])), /route to react/u);
 });
 
 test('an Autocomplete runtime change runs its component check in every engine', async () => {
@@ -1070,7 +1239,7 @@ test('a React-test-only group generates the React closure it imports in its own 
 test('story page groups generate Storybook metadata unless this process already prepared it', async () => {
   const result = await plan([sizingExamplePath]);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'browser', 'react', 'storybook-story']);
+  assert.deepEqual(groupIds(groups), ['checks', 'browser-chromium', 'react', 'storybook-story']);
   for (const group of groups) {
     assert.equal(group.commands[0].prerequisite, true);
     assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
@@ -1152,7 +1321,10 @@ test('the full plan splits check:all into independently runnable groups', () => 
   const groups = executionGroups(fullWorkspacePlan('push runs the full workspace graph'), {
     packages, environment: { RUNNER_TEMP: '/tmp/runner' },
   });
-  assert.deepEqual(groupIds(groups), ['checks', 'react', 'browser', 'storybook-a11y', 'storybook', 'tailwind']);
+  assert.deepEqual(groupIds(groups), [
+    'checks', 'react', 'browser-chromium', 'browser-chromium-only', 'browser-firefox', 'browser-webkit',
+    'storybook-a11y', 'storybook', 'tailwind',
+  ]);
   for (const group of groups) {
     assert.deepEqual(group.commands[0].args, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate']);
     assert.equal(group.commands[0].prerequisite, true);
@@ -1165,10 +1337,15 @@ test('the full plan splits check:all into independently runnable groups', () => 
   ));
   assert.deepEqual(byId.checks.slice(1), ['generate:check']);
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
-  assert.deepEqual(byId.browser, [
-    '--filter @muxui/scale run check:browser', '--filter @muxui/react run check:browser',
-    '--filter @muxui/scale run check:browser:docs',
-  ]);
+  const reactBrowser = '--filter @muxui/react exec node --test --test-concurrency=1 test/browser/';
+  assert.equal(byId['browser-chromium'].length, 3);
+  assert.equal(byId['browser-chromium'][0], '--filter @muxui/scale run check:browser');
+  assert.ok(byId['browser-chromium'][1].startsWith(reactBrowser));
+  assert.equal(byId['browser-chromium'][2], '--filter @muxui/scale run check:browser:docs');
+  for (const id of ['browser-chromium-only', 'browser-firefox', 'browser-webkit']) {
+    assert.equal(byId[id].length, 1, id);
+    assert.ok(byId[id][0].startsWith(reactBrowser), id);
+  }
   assert.ok(byId['storybook-a11y'][0].endsWith('test/storybook-a11y.test.mjs'));
   assert.ok(!byId.storybook.at(-1).includes('storybook-a11y'));
   assert.ok(byId.storybook.at(-1).includes('test/storybook-colors.test.mjs'));
@@ -1351,7 +1528,7 @@ test('Storybook groups are affected only by overlapping families, tooling, or ch
   assert.equal(affectedReason(tree, numberField), null);
   assert.equal(affectedReason(chrome, numberField), null);
   assert.match(affectedReason(react, numberField), /changes route to react/u);
-  assert.match(affectedReason({ ...react, id: 'browser', kind: 'browser', packageDirectories: [] }, numberField), /react/u);
+  assert.match(affectedReason({ ...react, id: 'browser-firefox', kind: 'browser', packageDirectories: [] }, numberField), /react/u);
   assert.match(affectedReason(tree, storyDelta([{ proof: 'story', families: ['NumberField', 'Tree'] }])), /story proof for NumberField, Tree/u);
   assert.match(affectedReason(tree, storyDelta([{ proof: 'theme', families: [] }])), /every family/u);
   assert.match(affectedReason({ ...tree, storyRun: { proof: 'theme', families: [] } }, numberField), /NumberField/u);
@@ -1559,7 +1736,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     assert.equal(result.status, 0, result.stderr);
     const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
     assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
-    assert.deepEqual(delta.groupIds, ['checks', 'browser', 'react', 'storybook-story']);
+    assert.deepEqual(delta.groupIds, ['checks', 'browser-chromium', 'react', 'storybook-story']);
     assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
   } finally {
     rmSync(root, { recursive: true, force: true });
