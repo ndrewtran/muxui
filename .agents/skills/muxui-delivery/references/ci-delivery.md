@@ -23,20 +23,24 @@ PR.
 
 ## Wide-CI changes
 
-The planner decides CI breadth; component CSS and most story changes route
-per family. A component PR needs Andrew's OK before continuing when the
-preview shows any of:
+The planner decides CI breadth; component CSS and most story changes route per
+family. A broad plan is not an approval stop. When the preview shows any of the
+following, report the broadened scope to Andrew in one line and run the required
+checks:
 
 - `checks.fullWorkspace`, `checks.reactPackageFull`, `checks.tokens`, or
   `checks.reactTheme` set to `true`;
-- Storybook runs across every family; or
-- a `STYLE_OWNERSHIP` failure asking for the shared theme or style owner.
+- Storybook running across every family; or
+- a `STYLE_OWNERSHIP` failure asking for the shared theme or style owner, which
+  you resolve by changing the owner it names.
 
 Typical causes, as examples only: the token catalog under `catalog/tokens/`,
 `packages/foundation/`, global or selector-free rules in shared stylesheets,
 and the `reactStorybookSharedPaths` in
 `tooling/audits/repository-policy/repository-policy.json` such as the story
-factory and Storybook preview.
+factory and Storybook preview. Breadth alone never needs approval; ask Andrew
+only if the change itself alters the product's visual direction, a public
+contract, or a safety rule.
 
 ## Authority pull requests
 

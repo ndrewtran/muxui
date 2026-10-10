@@ -47,8 +47,11 @@ Amendment 02's exact successor tuple remains a historical record of the skill
 bytes at its materialization commit. This amendment, not that tuple, governs
 the current contents of `.agents/skills/muxui-delivery/`.
 
-Where amendment 05 says "the delivery guard's stops remain in force", those
-stops now live in the repository skill.
+Where amendment 05 refers to the delivery stops, they live in the repository
+skill. Decision 0028 narrows that stop list to publishing, dist-tags,
+production, writes to outside services, waived proof, activation of a new
+package, platform, or renderer, and stable, support, or assistive-technology
+claims.
 
 ## Proposed protection
 

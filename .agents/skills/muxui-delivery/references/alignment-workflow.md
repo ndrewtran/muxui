@@ -7,44 +7,40 @@ reconciling the Delivery Project, or claiming completion.
 
 | Class | Meaning | Disposition |
 | --- | --- | --- |
-| Aligned implementation | Fits a ready or active milestone, its Scope IDs, dependencies, evidence, and Project item. | Proceed within locked deliverables. `committed` is built for its named boundary; `admitted` gets only the bounded work its milestone authorizes and stays unavailable until activation evidence passes. |
+| Aligned implementation | Fits a Scope ID or the experimental React umbrella, its owners, and the standing development rule (Decision 0028). | Proceed. `committed` is built for its named boundary; `admitted` gets only the bounded work its milestone authorizes and stays unavailable until activation evidence passes. A new component, family, prop, example, token, or dependency inside React is aligned. |
 | Candidate discovery | Tests demand or prepares admission for a `candidate`. | Keep read-only or explicitly experimental; never a dependency or advertised surface. |
 | Required correction | Needed to satisfy an existing milestone assertion. | Keep in the milestone and cite the assertion. |
-| Adjacent improvement | Useful but not needed for the exit condition. | Exclude and track separately. |
-| New capability or ontology | New kind, relation, revision axis, package, public surface, operation, or outcome. | Stop; needs Roadmap scope admission and a Product Scope change. |
-| Later-gate work | Belongs to a deferred or later milestone with unproved entry. | Defer; never simulate through a shortcut. |
+| Adjacent improvement | Useful but not needed for the exit condition. | Do it in its own pull request or track it separately. |
+| New package, platform, renderer, or ontology | A new package, framework-free or native renderer, RSC support, artifact kind, relation, or revision axis. | Stop; needs a decision, and a Product Scope change when it is a commitment. |
+| Claim before its gate | A stable, support, or assistive-technology claim, or enabling a capability before its entry condition and evidence pass. | Stop. Development itself is ordinary; the claim or enablement waits. |
 | Rejected scope | Conflicts with a product boundary or rejected outcome. | Stop until an accepted Product Scope amendment exists. |
-| Non-waivable conflict | Breaks a Roadmap "Non-waivable rules" item or an Architecture invariant. | Stop; realign, amend, narrow support honestly, defer, or stop. |
-| Tracker mismatch | Missing Project item or reference contract, or the Project contradicts the documents. | Documents win; ask to reconcile the Project. |
-| Unverified | Authority or live Project state cannot be established. | Read-only analysis only; ask before writes. |
+| Non-waivable conflict | Breaks a Roadmap "Non-waivable rules" item or an Architecture invariant. | Realign, amend, narrow support honestly, defer, or stop. |
+| Tracker mismatch | Missing Project item or reference contract, or the Project contradicts the documents. | Documents win. Record "tracker sync pending" and continue; ask before changing tracker state beyond routine event synchronization. |
+| Unverified | Repository authority cannot be established, or live Project state cannot be read. | Unverified authority: read-only analysis; ask which checkout is authoritative. Unreadable Project: record "tracker sync pending" and continue. |
 
 ## Preflight
 
-Answer before writing. Any unknown that could change scope, sequence,
-authority, support, or completion is a potential deviation.
+Answer before writing. Any unknown that could change authority, support, or
+completion is a potential deviation. An unknown tracker state is not one.
 
 - Are the repository and source revision exact?
-- Does the task map to one primary milestone, every affected Scope ID, and any
-  affected upstream or downstream milestone?
-- Are entry conditions and hard dependencies proved by retained evidence, not
-  just marked complete?
+- Does the task map to its owner, any affected Scope ID, and one primary
+  milestone where it advances one?
 - Is each commitment state handled exactly (committed, admitted, candidate,
   deferred, rejected)?
-- Are applicable cross-cutting Scope IDs mapped to Roadmap evidence owners?
-- Does the live Project item exist, and do its `Work type`, issue form, and
-  reference contract agree with Product Scope?
+- Are enabling, claiming, and completing handled separately from developing?
+  Entry conditions gate enablement and claims, not work.
 - Is an automated Project transition kept separate from milestone status,
   commitment, lifecycle, availability, and release proof?
 - Does enabling-system work name the renderer slice or fixture it unblocks?
 - Are canonical owners and generated projections distinct?
 - Are platforms, profiles, lifecycle, evidence IDs, negative paths, acceptance
-  commands, disclosure, and retention known?
+  commands, disclosure, and retention known where the change affects them?
 - Are later capabilities absent or explicitly unavailable?
 
 ## Potential deviation format
 
-Ask before file writes, generated output, dependency changes, Project mutation,
-or status transitions:
+Ask before a write that SKILL.md section 4 lists as a stop:
 
 ```text
 Potential deviation: <decision or ambiguity>
@@ -65,17 +61,18 @@ Options:
 ```
 
 For option 2, name the exact authority files and follow Product Scope
-"Product-scope change control". Implement product work only after the amended
-chain is accepted and the milestone is ready.
+"Product-scope change control". Implement the committed change only after the
+amended chain is accepted.
 
 ## Project reconciliation
 
-1. Read the Project README, fields, views, enabled workflows, and item values.
+1. Read the Project README, fields, views, enabled workflows, and item values
+   when the task changes tracker state or makes a status or completion claim.
+   If the Project cannot be read, record "tracker sync pending" and continue.
    Check that the README links the three current strategy documents without
    stale readiness claims.
-2. Validate every tracker reference line independently of the form the item
-   was created with. Map real Scope IDs from Product Scope; never fill a value
-   by inference.
+2. Validate the tracker reference lines the change touches. Map real Scope IDs
+   from Product Scope; never fill a value by inference.
 3. Record the item's workflow status source as `manual`, `automated`, or
    `unverified`. When an API omits a workflow's trigger and it matters, inspect
    it read-only in a signed-in browser or mark it `unverified`.
@@ -102,13 +99,13 @@ release state.
 
 ## Routing examples
 
-- Implementing an admitted family inside its accepted milestone: aligned.
-- Adding a family outside the accepted React surface: Product Scope deviation;
-  ask first (Decisions 0017 and 0018 show the admission route).
+- Implementing a committed family: aligned.
+- Adding an experimental React family, prop, example, or token: aligned; no
+  decision (Decision 0028).
 - Editing generated Storybook or catalog output to fix a wrong prop:
   non-waivable projection conflict; fix the canonical owner or generator.
 - Adding RSC, framework-free web, React Native, or cross-renderer work:
-  later or separately admitted track; defer.
+  later or separately admitted track; stop and ask before activating it.
 - Running an allowlisted canonical proposal before its capability is enabled:
   unavailable later capability.
 - A useful refactor the active milestone does not need: adjacent improvement.

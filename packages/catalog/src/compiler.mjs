@@ -72,7 +72,6 @@ function validateSourceManifest(manifest) {
     || manifest.records.length === 0
     || Object.keys(manifest).some((key) => ![
       'schema',
-      'authorityDecisionPath',
       'commandRegistryPath',
       'pageBudgetProfilePath',
       'platformSafetyContractPath',
@@ -80,7 +79,6 @@ function validateSourceManifest(manifest) {
       'records',
       'supportedQueryApiVersions',
     ].includes(key))
-    || typeof manifest.authorityDecisionPath !== 'string'
     || typeof manifest.commandRegistryPath !== 'string'
     || typeof manifest.pageBudgetProfilePath !== 'string'
     || typeof manifest.platformSafetyContractPath !== 'string'
@@ -94,7 +92,6 @@ function validateSourceManifest(manifest) {
     throw new Error('MUXUI_CATALOG_SOURCE_INVALID: invalid catalog source manifest');
   }
   const paths = new Set();
-  assertRelativePath(manifest.authorityDecisionPath, 'authorityDecisionPath');
   assertRelativePath(manifest.commandRegistryPath, 'commandRegistryPath');
   assertRelativePath(manifest.pageBudgetProfilePath, 'pageBudgetProfilePath');
   assertRelativePath(manifest.platformSafetyContractPath, 'platformSafetyContractPath');
@@ -122,7 +119,6 @@ function validateSourceManifest(manifest) {
   }
   return {
     schema: manifest.schema,
-    authorityDecisionPath: manifest.authorityDecisionPath,
     commandRegistryPath: manifest.commandRegistryPath,
     pageBudgetProfilePath: manifest.pageBudgetProfilePath,
     platformSafetyContractPath: manifest.platformSafetyContractPath,
@@ -259,10 +255,6 @@ export async function compileCatalog({
   ) {
     throw new Error('MUXUI_CATALOG_SOURCE_INVALID: query-version CLI choices must project schema grammar');
   }
-  const authorityDecisionBytes = await readFile(
-    resolve(repositoryRoot, manifest.authorityDecisionPath),
-    'utf8',
-  );
   const pageBudgetProfileBytes = await readFile(
     resolve(repositoryRoot, manifest.pageBudgetProfilePath),
     'utf8',
@@ -450,7 +442,6 @@ export async function compileCatalog({
 
   const sourceRevision = canonicalDigest({
     manifest,
-    authorityDecisionDigest: sha256Digest(authorityDecisionBytes),
     commandRegistryDigest: sha256Digest(commandRegistryBytes),
     pageBudgetProfileDigest: sha256Digest(pageBudgetProfileBytes),
     platformSafetyContractDigest: canonicalDigest(platformSafetyContract),

@@ -45,18 +45,19 @@ lifecycle, capability availability, Project status, and evidence kept separate.
 ## 2. Classify
 
 Classify as aligned implementation, candidate discovery, required correction,
-adjacent improvement, new capability or ontology, later-gate work, rejected
-scope, non-waivable conflict, tracker mismatch, or unverified (definitions and
-dispositions in `alignment-workflow.md`). Any class whose disposition is Stop
-goes to step 4. Report a compact route: owner, milestone
+adjacent improvement, new package, platform, renderer, or ontology, claim before
+its gate, rejected scope, non-waivable conflict, tracker mismatch, or unverified
+(definitions and dispositions in `alignment-workflow.md`). Any class whose
+disposition is Stop goes to step 4. Report a compact route: owner, milestone
 relationship, required checks, review lenses, and the next protected-PR action.
 
 Done when: the class is stated before any write.
 
 ## 3. Deliver the aligned route
 
-Inside an already committed family or capability, initial API and
-implementation design is ordinary delivery (Decision 0011).
+Experimental React work is ordinary delivery: a new component or family, prop,
+example, token, or dependency needs no decision (Decisions 0011 and 0028).
+Milestones gate public claims and enablement, not work.
 
 1. Delegate through the named roles below.
 2. Change the earliest canonical owner and regenerate projections.
@@ -89,24 +90,30 @@ never spawn or delegate):
 - `browser_debugger`: optional advisory browser reproduction; it edits nothing
   and does not replace deterministic proof.
 
-## 4. Stop at a deviation
+## 4. Stop
 
 Stop before the affected write and ask Andrew, using the format in
-`alignment-workflow.md`, when work would:
+`alignment-workflow.md`, only when work would (Decision 0028):
 
-- change Architecture, a Roadmap entry or exit rule, a committed Scope ID or
-  family, a public package or platform, a support claim, lifecycle, release
-  boundary, or non-goal;
-- add a second canonical owner, patch generated output, broaden a dependency
-  or renderer boundary, or waive required proof;
-- activate a deferred renderer or capability, or add an undocumented
-  exception;
-- set a decision-bearing Project field without Andrew's recorded choice;
-- publish, change a dist-tag, merge the final R1-exit pull request, deploy,
-  touch production or a consumer project, or perform another external
-  mutation not already authorized; or
+- publish, change a dist-tag, deprecate or unpublish, merge the final R1-exit
+  pull request, deploy, or touch production or a consumer project;
+- write to an outside service: a Figma file, a registry, or tracker state beyond
+  routine event synchronization;
+- waive required proof (accessibility, licence, or evidence integrity);
+- activate a new package, platform, or renderer;
+- make a stable, support, or assistive-technology claim;
+- change a Product Scope commitment, release boundary, or non-goal, an
+  Architecture invariant, or a Roadmap exit rule; or
 - cross another stop recorded in accepted authority.
 
+These are not stops:
+
+- an unreachable tracker: record "tracker sync pending" and continue;
+- a wide CI plan or a style-ownership failure: report it and run the checks;
+- a new capability or component inside React, or a dependency added or upgraded.
+
+A break of a non-waivable rule, such as patching generated output or adding a
+second canonical owner, is never an option to ask about: realign the work.
 Solve delivery-process problems within existing owners; a new policy or
 verifier system is a product decision for Andrew.
 

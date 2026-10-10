@@ -37,4 +37,4 @@ If the concept you need isn't in the glossary yet, that's a signal: either you'r
 
 If your output contradicts an existing decision, surface it explicitly rather than silently overriding:
 
-> _Contradicts decision 0019 (React component motion), but worth reopening because…_
+> _Contradicts decision 0016 (pre-release compatibility), but worth reopening because…_

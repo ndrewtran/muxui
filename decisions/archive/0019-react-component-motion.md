@@ -3,9 +3,9 @@
 - Status: accepted user direction; repository adoption through a protected pull request
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0019`
-- Authority: accepted [Architecture](../strategy/monorepo-architecture.md),
-  [Roadmap](../strategy/milestone-roadmap.md), and
-  [Product Scope](../strategy/product-scope.md)
+- Authority: accepted [Architecture](../../strategy/monorepo-architecture.md),
+  [Roadmap](../../strategy/milestone-roadmap.md), and
+  [Product Scope](../../strategy/product-scope.md)
 
 - Accepted request: [acceptance record](./0019-react-component-motion-acceptance.md)
 
@@ -48,7 +48,7 @@ resolution.
 
 ## Mux motion contract
 
-The existing [Mux motion foundation](../catalog/guides/foundations-motion.md)
+The existing [Mux motion foundation](../../catalog/guides/foundations-motion.md)
 and canonical tokens own duration and easing meaning. Implementations use the
 role for the purpose of the behavior, such as interaction, reveal, dismissal,
 state, content resize, or progress;

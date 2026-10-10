@@ -5,7 +5,7 @@
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0011:amendment:06`
 - Amends by reference: [amendment 02](./0011-amendment-02-r1-icon-dependency.md)
-  and [amendment 03](./archive/0011-amendment-03-icon-affordance-additions.md),
+  and [amendment 03](./0011-amendment-03-icon-affordance-additions.md),
   the per-component Lucide affordance lists, and the R1.6 supplemental list in
   Architecture, Roadmap, and Product Scope
 - Accepted request: [acceptance record](./0011-amendment-06-lucide-all-components-acceptance.md)

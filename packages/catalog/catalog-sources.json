@@ -1,6 +1,5 @@
 {
   "schema": "muxui-catalog-source-manifest-v1",
-  "authorityDecisionPath": "decisions/0017-text-family-admission.md",
   "commandRegistryPath": "packages/tooling/command-registry.json",
   "pageBudgetProfilePath": "packages/catalog/token-section-page-budget-profile.json",
   "platformSafetyContractPath": "strategy/platform-safety-contract.json",

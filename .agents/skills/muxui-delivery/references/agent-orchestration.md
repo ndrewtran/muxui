@@ -71,7 +71,7 @@ review, mark it `blocked` instead of expanding disclosure.
 - Authority and product scope: authority order, owners, milestone
   dependencies, commitments, activation conditions, release boundaries,
   non-goals; detect new outcomes, support claims, packages, commands,
-  ontology, later-gate work, or undocumented exceptions, and name the exact
+  ontology, claims before their gate, or undocumented exceptions, and name the exact
   amendment needed.
 - Renderer and platform: renderer-first sequencing, binding versus renderer
   ownership, public API and observable behavior, platform and profile

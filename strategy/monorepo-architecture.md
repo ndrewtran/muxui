@@ -1033,102 +1033,92 @@ guidance may be deterministically compiled into its tarball by private build
 authorities without becoming runtime workspace dependencies or duplicate
 owners.
 
-For Mux UI value adapters, `@muxui/react` is approved to directly use
-`@internationalized/date@3.12.4` as an internal runtime dependency only for
-`DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-`RangeCalendar` (Decision 0011 amendment 05 moved the pin from `3.12.3`). It
-is the single resolved `3.12.4` instance in the pinned
-`react-aria-components@1.20.0` closure, so the direct declaration adds no
-installed package or version. Mux UI public values remain ISO dates
-`YYYY-MM-DD`, local times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}`
-ranges. No `@internationalized/date` or React Aria public type, value, import
-path, export, lifecycle, or ownership path may leak through the package; this
-is an internal, replaceable adapter dependency only.
+`@muxui/react` may use an internal, replaceable runtime dependency for a
+purpose that serves its components (Decision 0028). The purposes are:
 
-For internal decorative affordances, `@muxui/react` is also approved to
-directly use `lucide-react@1.37.0` as an exact internal, replaceable runtime
-dependency. Its npm integrity is
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
-its package license is ISC, its included Feather-derived artwork carries the
-MIT notice, and it is React peer-compatible with the existing React and React
-DOM peer boundary. Lucide is the default icon source for decorative
-affordances in every `@muxui/react` component, current and future, and no
-component needs a decision amendment or approval to use it (Decision 0011
-amendment 06, which supersedes the per-component lists of amendments 02 and 03
-and of R1.6). Mux UI owns all labels and public contracts. No Lucide export,
-type, name, prop, or import path, and no public Icon API, catalog, or package,
-may cross the package boundary. Existing Mux-drawn internal glyphs may stay.
-Changing the version or the package is still a dependency decision. Other renderers would
-need their own dependency decision for a Lucide package.
+- accessible behavior: React Aria Components as the substrate, and `react-aria`
+  hooks where a component needs a behavior the substrate does not expose;
+- date and time values: `@internationalized/date` behind Mux UI value
+  adapters;
+- decorative icons: `lucide-react`;
+- component motion: `motion`;
+- Markdown parsing: `marked` behind a Mux UI-owned typed parser and AST;
+- rich-text editing: the Tiptap packages, used today by `TextEditor`; and
+- code highlighting: `shiki`, used today by `CodeBlock`.
 
-Lucide icons are decorative and non-focusable unless a Mux UI binding
-explicitly requires a different semantic; an icon never supplies an
-undocumented accessible name, and icon-bearing controls retain their Mux
-UI-owned accessible label and state semantics. Any distributed package
-containing the dependency must preserve both the Lucide ISC and
-Feather-derived MIT license notices. A Lucide version, icon mapping,
-affordance set, geometry, or accessibility-semantic change invalidates the
-affected visual contract comparison and requires the affected visual,
-accessibility, SSR/hydration, tree-shaking, and packed-consumer proof to be
-rerun.
+Any component may use a dependency for an allowed purpose, and adding,
+upgrading, or removing one is a normal reviewed pull request, not a decision.
+`package.json` and `pnpm-lock.yaml` own every version; prose names the
+dependency and its purpose. A dependency that adds a new trust boundary (a
+network service, a code-execution privilege, or a public dependency API)
+needs a decision, and another renderer needs its own dependency decision.
 
-R1.6 additionally admits exact, internal, replaceable runtime dependencies
-needed by the applicable supplemental implementations: `react-aria@3.51.0` for
-`Resizable`'s `useMove` behavior. Decision 0018 extends this same pinned edge
-to `SelectNative`'s `useField` associations. These are the two admitted direct
-hook uses. It is the already-resolved React Aria
-closure of the pinned `react-aria-components@1.20.0` baseline, so the direct
-declaration must not introduce a second version. `marked@13.0.3` only for the `Markdown`
-lexer behind a Mux UI-owned typed parser/AST boundary; and
-`@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`, `@tiptap/react@3.31.4`,
-`@tiptap/starter-kit@3.31.4`, `@tiptap/extension-image@3.31.4`,
-`@tiptap/extension-placeholder@3.31.4`,
-`@tiptap/extension-text-align@3.31.4`, and
-`@tiptap/extension-text-style@3.31.4` only for `TextEditor` (Decision 0011
-amendment 04 moved the set from `3.22.3`). These are direct
-Mux package implementation edges, never source-package or runtime/build/dev/
-peer/generated-source dependencies. Their package licenses, notices, npm
-integrity, React peer compatibility, and exact lockfile pins are proof
-obligations, not completed evidence. Imports stay isolated to the owning
-component modules; tree-shaking and packed-consumer proof must show that
-ordinary Button consumers do not load the editor or Markdown parser. Tiptap
-types and editor objects never enter the Mux UI public API, and Markdown input
-retains typed AST, escaping, source-size bounds, and focused security proof.
+Every dependency follows these rules:
 
-Decision 0019 accepts `motion@13.4.0` as an exact, internal, replaceable
-runtime dependency for bounded Mux-owned component motion in already admitted
-`web.react` families. Owning renderer modules may import only the private
-`motion/react` and `motion/react-m` entries. The retained registry metadata is
-MIT with React peer metadata overlapping the package's declared React peers;
-this is authority input, not installed-graph or runtime proof. Mux UI owns
-public APIs and types, canonical motion tokens and modes, CSS, refs,
-accessibility, SSR, hydration, and lifecycle. CSS remains valid, and motion
-code may not expose dependency animation props, types, providers, exports, or
-import paths through the Mux UI API, or duplicate focus, dismissal, portal,
-inert/background, or scroll-lock ownership. Integrations preserve both system
-preference and explicit Mux reduced-mode paths. No React Native, `web.html`, or
-cross-renderer contract follows from this edge.
+- It is internal and replaceable. Mux UI owns every public contract, and no
+  dependency type, value, name, prop, import path, export, lifecycle, or
+  ownership path crosses the package boundary. React Aria types and exports are
+  not re-exported as Mux UI API.
+- It is pinned exactly in `package.json`, with its npm integrity in the
+  lockfile, because workspace overrides do not ship to a consumer's install.
+  The lockfile and a consumer install resolve one version of it. Its licence,
+  notices, and React peer compatibility are proof obligations, and a distributed
+  package preserves the licence and notice of every dependency and asset it
+  carries.
+- A heavy dependency (editor, parser, highlighter, motion entry points) is
+  imported only by the module that owns it, so that ordinary consumers, such as
+  Button, load none of them. Tree-shaking, SSR and hydration, and
+  packed-consumer proof cover it.
+- Work on caller text is bounded, and each bound has one defined outcome. An
+  input past its size limit is rejected: CodeBlock throws a `RangeError` for
+  more than its character or line limit. Excess diff work degrades to a
+  labelled replacement instead of a minimal diff. A highlighting limit falls
+  back to escaped plain text. No bound is relaxed to avoid a failure, no raw
+  HTML is rendered, and nothing is sent to a remote service. Markdown keeps a
+  typed AST, escaping, source-size bounds, and focused security proof. The
+  highlighter loads lazily in a client effect: the root import and SSR load no
+  engine or grammar, and Mux UI owns theme roles, spans, forced colors,
+  hydration, and asynchronous cleanup. The numbers are code constants.
 
-Decision 0024 amendment 01 admits exact `shiki@4.5.0` only for CodeBlock
-syntax highlighting. It is an internal, replaceable MIT dependency, compatible
-with the workspace Node engine, loaded through fine-grained client-effect
-imports of core, language map, Oniguruma engine and WebAssembly. Root imports
-and SSR load no Shiki module, engine or grammar. Bundled names and aliases use
-safe own-key lookups; escaped original text and plain fallback remain valid.
-Mux owns theme roles, spans, forced colors, hydration and asynchronous cleanup.
-No Shiki type, provider, public subpath or upstream API is exported. Exact pin,
-integrity, license/notice, bounded grammar-context behavior, tree-shaking and
-packed-consumer proof are required. TextEditor is outside this extension.
+Mux UI public temporal values remain ISO dates `YYYY-MM-DD`, local times
+`HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}` ranges. Tiptap types
+and editor objects never enter the public API.
+
+Lucide is the default icon source for decorative affordances in every
+`@muxui/react` component, current and future, and no component needs a decision
+or approval to use it. Renderer source imports individual icon modules, never
+the package barrel. Lucide icons are decorative and non-focusable unless a Mux
+UI binding explicitly requires a different semantic; an icon never supplies an
+accessible name, and icon-bearing controls retain their Mux UI-owned label and
+state semantics. No public Icon API, catalog, or package exists. Existing
+Mux-drawn internal glyphs may stay. A changed icon mapping, affordance set, or
+geometry invalidates the affected visual contract comparison and reruns the
+affected visual, accessibility, SSR/hydration, tree-shaking, and
+packed-consumer proof. Other renderers would need their own dependency decision
+for a Lucide package.
+
+Component motion uses `motion` privately. Owning renderer modules import only
+its `motion/react` and `motion/react-m` entries, and no animation prop, type,
+provider, export, or import path becomes Mux UI API. Duration and easing come
+from the canonical Mux UI motion tokens, and integrations honor both the system
+preference and the explicit Mux UI reduced mode, with the documented instant
+behavior for feedback, state, and exit and the separate reduced behavior for
+progress. State, opacity, color, focus, and content changes stay understandable
+when movement is shortened or removed. React remains the sole owner of focus
+restoration, Escape handling, outside-pointer dismissal, portal lifecycle,
+inert and background policy, and scroll lock, and motion code cleans up refs,
+interruption, unmount, and dismissal without leaving stale listeners, timers,
+or animation state. CSS remains valid for simple transitions.
 
 #### React styling and parity boundary
 
 Mux UI owns the React styling contract, including selectors, token mappings,
 CSS rules, public hooks, package surfaces, compatibility promises, and release
-claims. The fixed 53-family R1 inventory remains the release floor. R1.6 adds
-the applicable supplemental React Aria roots through explicit Mux UI-owned
-binding, CSS, interaction, export, and proof closure. Unrelated upstream
-material remains outside the component scope with an explicit exclusion
-reason.
+claims. The fixed React registry in Product Scope is the release floor. Every
+other family joins under the standing development rule (Decision 0028) through
+explicit Mux UI-owned binding, CSS, interaction, export, and proof closure, and
+the supplemental mapping lists it. Unrelated upstream material remains outside
+the component scope with an explicit exclusion reason.
 
 For every admitted family, the binding contract, accessibility obligations,
 platform-safety rules, and responsible fixes take precedence over copying an
@@ -1169,12 +1159,13 @@ lifecycle rather than attaching competing effects. A React-safe adapter is
 therefore either pure, or explicitly constructed and disposed by React—it does
 not start autonomous global lifecycle work on import.
 
-React Aria Components is the default internal React substrate and is pinned as
-an exact runtime dependency for each accepted baseline. Mux UI owns its public
-contract. React Aria types and exports are not re-exported as Mux UI API, and
-an upstream export does not become a Mux UI component without a canonical
-component mapping. `defer`, `exclude`, or `not-a-component` dispositions are
-for documented upstream material outside the fixed 53 committed families.
+React Aria Components is the default internal React substrate and is an exact
+runtime dependency. Upgrading it is an ordinary pull request with lockfile,
+integrity, and regression proof. Mux UI owns its public contract. React Aria
+types and exports are not re-exported as Mux UI API, and an upstream export does
+not become a Mux UI component without a canonical component mapping. `defer`,
+`exclude`, or `not-a-component` dispositions are for documented upstream
+material outside the committed families.
 
 React must not become the source for:
 
@@ -1238,15 +1229,15 @@ framework bindings demonstrate the repeated shape.
 flowchart TD
   canonical["private canonical/build authorities\nschema, tokens, foundation, catalog, tooling"]
   react["@muxui/react@0.1.0-alpha.N\nfirst public component package"]
-  aria["react-aria-components@1.20.0\nexact internal runtime dependency"]
-  temporal["@internationalized/date@3.12.4\napproved internal temporal adapter dependency"]
-  lucide["lucide-react@1.37.0\ninternal decorative affordances"]
-  motion["motion@13.4.0\ninternal component motion"]
-  resizable["react-aria@3.51.0\nResizable useMove + SelectNative useField"]
-  markdown["marked@13.0.3\nMarkdown lexer only"]
-  editor["Tiptap 3.31.4 packages\nTextEditor only"]
-  highlighter["shiki@4.5.0\nCodeBlock client highlighting only"]
-  peers["react + react-dom\n>=19.2.0 <20 peers"]
+  aria["react-aria-components\nexact internal runtime dependency"]
+  temporal["@internationalized/date\ninternal temporal adapter dependency"]
+  lucide["lucide-react\ninternal decorative affordances"]
+  motion["motion\ninternal component motion"]
+  hooks["react-aria\ndirect accessible-behavior hooks"]
+  markdown["marked\nMarkdown parsing"]
+  editor["Tiptap packages\nrich-text editing"]
+  highlighter["shiki\ncode highlighting"]
+  peers["react + react-dom\npeers"]
   web["@muxui/web\nlater W1 track"]
   native["@muxui/react-native\nlater N1 track"]
 
@@ -1255,7 +1246,7 @@ flowchart TD
   temporal --> react
   lucide --> react
   motion --> react
-  resizable --> react
+  hooks --> react
   markdown --> react
   editor --> react
   highlighter --> react
@@ -1264,42 +1255,19 @@ flowchart TD
   canonical -. later activation .-> native
 ```
 
-Decision 0019's `motion@13.4.0` edge is limited to component-local Mux UI
-motion in existing admitted React bindings. Its package integrity, notice,
-lockfile, import isolation, tree-shaking, SSR/hydration, and packed-consumer
-results remain implementation proof; the graph does not claim those results.
+The graph names each dependency by purpose, not as a permission limit; where a
+dependency is used today is an implementation fact. Versions are in
+`packages/react/package.json` and the lockfile, and the rules every dependency
+follows are in the `@muxui/react` section above. The graph claims no
+installed-graph, integrity, or packed-consumer result.
 
 The React-primary prerelease publishes exactly `@muxui/react`. It has no
-runtime dependency on another Mux UI workspace package or `@muxui/web`.
-React and React DOM are peers at `>=19.2.0 <20`; React Aria Components is the
-exact `1.20.0` runtime dependency for the accepted baseline, and
-`@internationalized/date@3.12.4` is the approved direct internal runtime
-dependency (Decision 0011 amendment 05) for
-Mux UI value adapters in exactly `DateField`, `DatePicker`, `DateRangePicker`,
-`TimeField`, `Calendar`, and `RangeCalendar`. The latter is the single
-resolved `3.12.4` instance in the React Aria closure, so direct declaration
-adds no installed package or version. Mux UI public values remain ISO dates
-`YYYY-MM-DD`, local times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}`
-ranges; neither `@internationalized/date` nor React Aria public type, value,
-import path, export, lifecycle, or ownership may leak. The packed tarball must
-contain no unresolved `workspace:` dependency, repository-only or source-tree
-import, undeclared file dependency, or `@muxui/web` import.
-
-The same graph includes the exact direct internal runtime dependency
-`lucide-react@1.37.0` for internal decorative affordances in any
-`@muxui/react` component (Decision 0011 amendment 06). Its npm
-integrity is
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`;
-the package is ISC with the Feather-derived MIT notice, and React
-peer-compatible. No Lucide export, type, name, prop, import path, or public
-Icon API/catalog/package is part of the Mux UI surface. R1.6 also admits
-`react-aria@3.51.0` for `Resizable`/`useMove`, extended by Decision 0018 to
-`SelectNative`/`useField`; `marked@13.0.3` for the typed
-`Markdown` parser boundary, and the exact eight `@tiptap/*@3.31.4` packages
-for `TextEditor` (Decision 0011 amendment 04). These module-local edges remain internal and replaceable; no
-upstream runtime types or editor/parser objects are public. Decision 0024
-amendment 01 adds only the exact private `shiki@4.5.0` CodeBlock edge described
-above; its engine and grammar evaluation remain client-effect-only.
+runtime dependency on another Mux UI workspace package or `@muxui/web`. React
+and React DOM are peers, with the supported range declared in the manifest.
+React Aria Components is an exact runtime dependency, and the other internal
+dependencies serve the purposes listed above. The packed tarball must contain
+no unresolved `workspace:` dependency, repository-only or source-tree import,
+undeclared file dependency, or `@muxui/web` import.
 
 | Package | Responsibility | Must not own |
 | --- | --- | --- |
@@ -2280,28 +2248,30 @@ canonical ownership, focused proof, protected CI, and protected pull requests.
 
 ### Adding a component
 
-1. Select the component through the fixed Roadmap-owned R1 family allocation
-   bound to the existing immutable Stage 1/R1.0 baseline.
-2. Add or update `catalog/components/<slug>/artifact.json` as the sole owner of
+Adding an experimental `web.react` component, prop, variant, example, or token
+is ordinary pull-request work and needs no decision (Decision 0028).
+
+1. Add or update `catalog/components/<slug>/artifact.json` as the sole owner of
    identity, renderer-neutral semantics, artifact lifecycle, risk, and
    alternatives.
-3. Add the `web.react` binding spec and canonical executable examples for its
+2. Add the `web.react` binding spec and canonical executable examples for its
    exact React contract.
-4. Resolve the component's canonical styling and token requirements, then
+3. Resolve the component's canonical styling and token requirements, then
    implement Mux UI-owned `@muxui/react` CSS without importing another
    package's selectors or implementation.
-5. Implement `@muxui/react` without creating a web or native counterpart
-   unless a later track separately admits one.
-6. Add deterministic and risk-proportionate behavior, accessibility, visual
+4. Implement `@muxui/react` without creating a web or native counterpart
+   unless a later track separately admits one. List an experimental family in
+   the supplemental mapping.
+5. Add deterministic and risk-proportionate behavior, accessibility, visual
    contract, descriptor, generation, and packed-package proof.
-7. Compile the catalog and generated binding-spec/export/package-guidance
-   surfaces and run the tranche closure.
-8. Run focused agent evaluation only as informational evidence.
+6. Compile the catalog and generated binding-spec/export/package-guidance
+   surfaces.
+7. Run focused agent evaluation only as informational evidence.
 
-Routine components inside the fixed R1 family allocation need no per-component
-authority or human acceptance. A new public-contract or ontology decision, dependency,
-security/privacy boundary, support expansion, stable promotion, or declared
-exception remains a decision-bearing delta before implementation.
+An addition that crosses a protected boundary still needs a decision: a new
+package, platform, or renderer; a stable, support, or assistive-technology
+claim; a new artifact kind, revision axis, or durable relation; or a dependency
+that adds a new trust boundary.
 
 No component index, prop table, website page, Storybook story, MCP tool, or
 agent snippet is updated manually.
@@ -2408,221 +2378,103 @@ And:
 - Multi-framework work does not begin by inventing an abstraction without a
   second real framework.
 
-## R1 ordinary React delivery
+## Standing development rule
 
-R1 is ordinary protected pull-request delivery over the accepted React `0.1`
-scope. The accepted 53-family inventory, immutable Stage 1 snapshot, and R1.0
-baseline are the existing lock for R1.1-R1.4. No further tranche-lock decision,
-digest acceptance, or per-component authorization is required.
+Ordinary React development is protected pull-request delivery under Decision
+0028. Experimental `web.react` components and families, props, variants,
+examples, canonical records, tokens, tests, guides, and the use or upgrade of
+dependencies need no decision. A decision is needed for a new package,
+platform, or renderer; a stable, support, or assistive-technology claim;
+publishing, a dist-tag change, production, or a write to an outside service; a
+waiver of required proof; and a new artifact kind, revision axis, or durable
+relation.
 
-React Aria Components `1.20.0` remains an internal replaceable substrate.
-Mux UI owns every public
-component contract and every committed family remains export-ready at R1 exit.
-Button is the first R1.1 component; R1.5 is breadth and release closure, not
-another implementation inventory.
+Milestones gate claims, not work. A milestone's entry conditions and exit
+assertions gate public enablement, its `ready` and `complete` status, and
+claims. They do not stop experimental development, which may proceed while a
+milestone is `not-ready` as long as it does not publish, advertise, or become a
+dependency of something that claims support.
+
+React Aria Components remains an internal replaceable substrate. Mux UI owns
+every public component contract, and every committed family remains
+export-ready at R1 exit.
 
 Each bounded component pull request changes the earliest canonical owners,
-regenerates projections, preserves the Mux UI-owned public boundary, runs focused
-type, unit, render, CSS, accessibility, generation, and packed-consumer checks,
-and uses the normal protected CI and review-bot workflow. Proof is proportional
-to the exported behavior; required evidence is retained from the tests and
-reviews that deliver the tranche. Ordinary implementation does not require a
-task-local operation descriptor or a separate human evidence-acceptance gate.
+regenerates projections, preserves the Mux UI-owned public boundary, runs
+focused type, unit, render, CSS, accessibility, generation, and packed-consumer
+checks, and uses the normal protected CI and review-bot workflow. Proof is
+proportional to the exported behavior; required evidence is retained from the
+tests and reviews that deliver the work. Ordinary implementation does not
+require a task-local operation descriptor or a separate human
+evidence-acceptance gate.
 
 RSC/client-boundary support, framework-free web, React Native, React Native Web,
 cross-renderer equivalence, stable support, and any `latest` claim or
 promotion remain later or separately admitted work. Under Decision 0023, the
 registry sets `latest` on first publish; apart from a separately authorized
 re-point of `latest` to the fix-forward rc during a rollback, no `latest` is
-claimed or promoted, and no stable `0.1.0` release is authorized. The private Scale theme-authoring capability is
-admitted only under the bounded R1.6 milestone below. Npm publication, dist-tag changes, and the final
-R1-exit pull-request merge remain separate exact human stops.
+claimed or promoted, and no stable `0.1.0` release is authorized. Npm
+publication, dist-tag changes, and the final R1-exit pull-request merge remain
+separate exact human stops.
 
-## Decision 0013: React parity and private Mux theme-authoring boundary
+## React parity and private Mux theme-authoring boundary
 
-Decision 0013 records a bounded expansion of the prepublication React
-baseline. It is accepted authority for the R1.6 parity and private
-theme-authoring work; implementation and milestone completion still require
-the evidence below.
+Decision 0013 records the prepublication React parity and private
+theme-authoring boundary.
 
-### Parity and supplemental-family boundary
+### Parity and supplemental families
 
-The fixed 53-family R1 release inventory remains the historical floor. R1.6
-adds applicable React Aria families outside that floor only through
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`, with explicit Mux UI-owned binding,
-CSS, interaction, export, and proof closure. Unrelated material remains
-outside the component scope with an explicit exclusion reason. There is no
-blanket standalone API/export requirement, and the parity claim remains
-unproved until the applicable mappings and matched fixtures pass.
+The fixed React registry in Product Scope is the release floor. Every other
+`web.react` family is experimental, belongs to
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`, and is listed only by the supplemental
+mapping (`catalog/react-r1-6/supplemental-components.json`). No prose lists or
+counts those families. Each has explicit Mux UI-owned binding, CSS, interaction,
+export, and proof closure. Unrelated material remains outside the component
+scope with an explicit exclusion reason. There is no blanket standalone
+API/export requirement.
 
-The current known supplemental roots are `AlertDialog`, `ButtonGroup`,
-`Card`, `CheckboxField`, `ColorModeToggle`, `CommandPalette`,
-`HeaderNav`, `InputTags`, `Input`, `MultiSelect`, `PaymentInput`,
-`ProgressCircle`, `RadioField`, `Sidebar`, `SwitchField`,
-`TagSelect`, `TextArea`, `TextEditor`, `Resizable`, `Lightbox`, and
-`Markdown`. `Resizable` uses `react-aria/useMove`; `Lightbox` and
-`Markdown` are indirect React Aria-backed roots. `Drawer` and
-`FileUpload` remain standalone controls outside this supplemental React Aria
-scope, while `RadioGroup` and `ToggleGroup` remain covered by existing
-mappings. These 21 roots are mapping targets, not current exports or
-availability claims. Each requires a Mux UI binding map and proof before it
-becomes available.
+The standalone `Field` family stays unavailable. Named fields and the `Input`
+parts cover ordinary field composition. A change that adds a generic Field
+states the consumer need: custom or multiple controls that share one field
+boundary with deliberate label, description, error, and validation association.
 
 Matched light and dark fixtures cover Mux UI-owned CSS, anatomy, interaction,
-variants, and states. Token values, modes, font families, typography roles,
-and standard/mono presets are canonical Mux UI facts. Mux UI owns their names,
+variants, and states. Token values, modes, font families, typography roles, and
+standard/mono presets are canonical Mux UI facts. Mux UI owns their names,
 values, and role definitions; any bundled third-party asset retains its
-applicable license notice. No external source or source identity is part of
-the public API.
+applicable license notice. No external source or source identity is part of the
+public API.
 
 ### Canonical ownership and private Scale projection
 
 `catalog/tokens/` remains the sole canonical source for token and theme data.
-`@muxui/tokens` owns deterministic web, native, and consumer-build
-transforms. `@muxui/react` owns React DOM behavior and CSS. The private
-`apps/scale` capability is a maintainer projection/editor over those owners;
-it does not create a token registry, theme database, component inventory, or
-CSS owner. Current Storybook examples consume canonical Mux UI tokens and
-themes and remain the active visual/example surface for R1 work.
+`@muxui/tokens` owns deterministic web, native, and consumer-build transforms.
+`@muxui/react` owns React DOM behavior and CSS. The private `apps/scale`
+capability is a maintainer projection/editor over those owners; it does not
+create a token registry, theme database, component inventory, or CSS owner.
+Current Storybook examples consume canonical Mux UI tokens and themes and remain
+the active visual/example surface for React work.
 
 The private Scale capability must load, edit, preview, import, export, persist,
 and round-trip themes under canonical types, modes, aliases, and override
-policy. Import/export is bounded by stable Mux UI identity and explicit loss
-or rejection diagnostics. It does not imply a public hosted deployment,
-general external design-tool interchange, stable support, or a package
-release. Accessibility, platform, and runtime ownership rules remain binding.
+policy. Import/export is bounded by stable Mux UI identity and explicit loss or
+rejection diagnostics. It does not imply a public hosted deployment, general
+external design-tool interchange, stable support, or a package release.
+Accessibility, platform, and runtime ownership rules remain binding.
 
 ### Optional Tailwind consumer integration
 
 Tailwind is an optional consumer build integration generated from Mux UI-owned
 token/theme transforms. It remains a consumer build dependency and never enters
 the Mux UI runtime, peer, generated-source, or styling-engine closure. The
-integration is accepted only with clean consumer compilation proof; its
-absence or failure cannot change React CSS ownership or canonical theme/token
-truth.
+integration is accepted only with clean consumer compilation proof; its absence
+or failure cannot change React CSS ownership or canonical theme/token truth.
 
 ### Platform and release boundaries
 
 Shared token and semantic sources remain renderer-neutral and contain no React,
 DOM, or CSS runtime assumptions. Framework-free web and React Native remain
-separately activated tracks; this authority adds no native or vanilla parity,
+separately activated tracks; this boundary adds no native or vanilla parity,
 support, or release claim. General design-tool interchange remains the later
 G3.5 capability. No package publication, dist-tag mutation, production or
-consumer mutation, stable promotion, or `latest` support claim follows from
-Decision 0013.
-
-
-## Decision 0014: supplemental IconButton
-
-[Decision 0014](../decisions/0014-icon-button-and-field-deferral.md) adds the
-Mux-owned IconButton family after the initial migration. It reuses Button and
-its internal React Aria substrate; caller-supplied decorative icon content adds
-no public icon package or dependency. The current supplemental mapping includes
-22 families. Decision 0013's original 21-family list and evidence remain the
-historical migration baseline. Standalone Field is explicitly deferred.
-
-The existing ordinary React delivery and release boundaries apply. This addition
-requires focused public API, accessible-name, keyboard/focus, state, sizing,
-hydration, generation, and packed-consumer proof. It does not activate a platform,
-change accessibility obligations, or authorize publication or production use.
-
-## Decision 0017: supplemental Text
-
-Decision 0017 adds the Mux-owned `Text` family after the IconButton addition.
-Text applies existing typography roles and sizes to a selected native host and
-preserves caller DOM, ARIA, event, data, and React Aria TextContext slot props.
-At that admission, the supplemental mapping contained 23 families, and the
-React union contained 76 families with 74 root exports and the two existing isolated
-subpaths. The fixed 53-family floor and completed R1.6 evidence remain
-historical and unchanged.
-
-Text's field and collection slots have bounded meaning: description slots are
-proved inside fields, and label and description slots are proved inside
-collection items. Field label association remains owned by the field
-component; `as="label"` with `htmlFor` is the native labeling path. No new
-token values, platform binding, support claim, publication, or release
-authorization follows from this addition. Its ordinary React proof covers
-native refs/types, SSR/hydration, token-derived styles, truncation, and exact
-generated and packed-consumer surfaces.
-
-## Decision 0018: native image and select families
-
-[Decision 0018](../decisions/0018-image-avatar-select-native-admission.md)
-explicitly extends the post-R1.6 supplemental boundary with Image, Avatar,
-and SelectNative. The current supplemental mapping under
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` remains their single inventory owner.
-This named expansion admits native-backed Image and Avatar without implying
-that they are React Aria primitives or rewriting the historical Aria-only
-R1.6 migration. SelectNative composes internal React Aria `useField` with a
-visible native select; it does not use a hidden form bridge as its UI. This
-extends the existing pinned `react-aria@3.51.0` direct dependency allowance
-from Resizable's `useMove` to also include SelectNative's `useField`, retaining
-the same version, internal ownership, module isolation, and package proof.
-
-Mux owns the three public APIs, selectors, token-based styling, native host
-semantics, and accessibility obligations. Native loading/error recovery,
-fallback-only composition, native form/reset behavior, SSR/hydration, and
-generated/packed-consumer identity receive focused proof and independent
-review. No dependency or token values are added; generic Field stays deferred.
-
-Following Text's admission, that expansion established 26 supplemental
-families and a React union of 79 families, with 77 root exports and
-the two existing isolated subpaths. Historical inventories, completed
-evidence, renderer activation, support, and release boundaries remain intact.
-
-## Decision 0024: supplemental CodeBlock
-
-[Decision 0024](../decisions/0024-code-block-admission.md) explicitly admits
-the experimental CodeBlock family in the existing React root under
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`. Its selected rendered design basis is
-Beautiful UI's compact code listing and unified diff; Mux owns its API, native
-host semantics, accessible changes, selectors, CSS, and existing token use.
-The initial admission added no external component source, styling, assets,
-or runtime dependency. The 7 October 2026 amendment adds only the private Shiki
-highlighter described above, without importing another component design.
-Two component-owned added/removed background tokens derive from existing
-status accents; this bounded token addition requires token/dependent proof.
-
-CodeBlock renders escaped code with lazy client syntax highlighting, offers
-exact explicit copying with
-truthful live status, and presents bounded line diffs with original/updated
-numbers and labels beyond color. Large diff middles use an explicit replacement
-fallback; documented character/line limits reject excessive input. Highlighting
-uses independent ordered grammar streams for before/after, smaller workload
-bounds and whole-input plain fallback. Editors, general parsers, patch
-application and task engines remain outside this addition. Focused runtime,
-type, accessibility, light/dark, hydration,
-generation, module-isolation, and packed-consumer proof remain required.
-
-At Decision 0024's admission, the supplemental mapping contained 27 families and the React union
-contained 80 families, with 78 root exports and the two existing isolated
-subpaths. The historical 53-family floor and completed evidence are unchanged.
-This addition activates no other renderer, G3 capability, support, or release.
-
-
-## Decision 0025: remaining Beautiful UI candidates
-
-[Decision 0025](../decisions/0025-remaining-candidates-admission.md) admits
-PromptComposer, Message, Activity and DataDiff as experimental React root
-families under the existing `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` route. Their
-rendered Beautiful UI design basis is adapted with canonical Mux tokens and
-independently authored native React implementation. No upstream source,
-assets, CSS, public API or dependency boundary is imported.
-
-PromptComposer preserves native form and textarea semantics while exposing
-separate domain callbacks. Message composes caller content and independently
-imported Markdown, keeping the root free of parser/editor imports. Activity
-presents finite supplied task states without executing or timing work. DataDiff
-renders escaped scalar records and supplies selected IDs only on explicit
-Apply activation. Each family owns its runtime, types, CSS and binding facts;
-canonical examples and supplemental mapping generate all projections.
-
-The current mapping is 31 supplemental families, 84 total families and 82 root
-exports plus the two existing isolated subpaths. Two DataDiff component tokens
-add translucent success/invalid-derived paint independently of CodeBlock's
-existing roles; token contract 5.2.0 requires affected-dependent proof. The October 6, 2026 user correction aligns these five admitted families
-with the existing internal pinned Lucide route and Mux control states. No
-additional direct React Aria hook affordance is introduced.
-No package, schema, platform, capability, G3 activation, lifecycle promotion,
-support claim, release or backend service enters this addition. Historical
-inventories and completed evidence remain immutable.
+consumer mutation, stable promotion, or `latest` support claim follows from it.

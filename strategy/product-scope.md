@@ -1,5 +1,5 @@
 ---
-scopeVersion: 19.0.1
+scopeVersion: 20.0.0
 status: execution-baseline
 product: Mux UI
 architecture: ./monorepo-architecture.md
@@ -202,7 +202,7 @@ stable release is promoted, and install guidance uses `@muxui/react@next`.
 | `SCOPE-OUTCOME-REACT-PRIMARY` | `committed` | Installable React prerelease using Mux UI-owned experimental bindings and generated package guidance. | R1.0–R1 exit |
 | `SCOPE-SYSTEM-REACT` | `committed` | Standalone React substrate, CSS/runtime ownership, exact React Aria baseline, Mux UI-owned styling and tranche delivery. | R1.0–R1.5 |
 | `SCOPE-REACT-BREADTH-001` | `committed` | Disposition-complete Mux UI coverage of the applicable pinned React Aria component surface. | R1.1–R1.5 |
-| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned bindings, CSS, interaction contracts, and exports outside the historical fixed 53-family table: the exact R1.6 React Aria inventory plus explicitly named post-R1.6 admissions in Decisions 0014, 0017, 0018, 0024, and 0025, including native-backed Image and Avatar. Each admission requires its declared proof and the single current supplemental mapping. | R1.6, named post-R1.6 additions, and R1 exit |
+| `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` | `committed` | Mux UI-owned experimental bindings, CSS, interaction contracts, and exports outside the fixed React registry: the R1.6 inventory and every later experimental React family, prop, example, or token added under the standing development rule (Decision 0028). The single current supplemental mapping lists the families. | R1.6, later React additions, and R1 exit |
 | `SCOPE-PRODUCT-REACT-PRERELEASE` | `committed` | Exact `@muxui/react@0.1.0-alpha.N`/`rc.1` tarball and release manifest under `next`, or any number of later exact `0.1.0-rc.N` candidates published in sequence under Decision 0023 amendment 01. | R1 tranche exits and R1 exit |
 | `SCOPE-SURFACE-REACT-PACKAGE-GUIDANCE` | `committed` | Generated version-bound install, API, export/component, styling, and compatibility guidance in the tarball. | R1.0 and every tranche |
 
@@ -223,10 +223,10 @@ deferred to `S1.0`; those bindings are exported with assistive-technology
 support unproved and not claimed. The risk-profile half of `E-R1.5-03` is
 deferred the same way.
 
-#### Fixed 53-family React registry
+#### Fixed React registry
 
-This is the complete immutable 53-family React Scope registry. It reuses the
-eight earlier React commitments above without renaming or repurposing them.
+This is the complete immutable fixed React Scope registry. It reuses the eight
+earlier React commitments above without renaming or repurposing them.
 
 | Upstream family | Mux UI public family | Immutable Scope ID | Tranche |
 | --- | --- | --- | --- |
@@ -285,25 +285,22 @@ eight earlier React commitments above without renaming or repurposing them.
 | `Virtualizer` | `Virtualizer` | `SCOPE-COMP-VIRTUALIZER-REACT` | R1.3 |
 
 Each row is `committed`; its package/platform is `@muxui/react` / `web.react`;
-its activation uses the fixed 53-family table, immutable Stage 1/R1.0
-baseline, Mux UI-owned contract, applicable styling disposition,
-risk-selected deterministic and manual proof, and the unchanged React
-prerelease release boundary. No row commits
+its activation uses the fixed registry, the Mux UI-owned contract, the
+applicable styling disposition, risk-selected deterministic and manual proof,
+and the unchanged React prerelease release boundary. No row commits
 a React Aria public name, raw helper/type export, secondary renderer,
 cross-platform counterpart, stable lifecycle, or independent release.
 
-`SCOPE-REACT-BREADTH-001` requires complete delivery of all 53 exact snapshot
-families rather than disposition-complete applicable coverage with permitted
-exclusions. `SCOPE-METRIC-REACT-COVERAGE`
-measures exact 53-of-53 Mux UI contract/export/proof closure plus complete raw
-disposition and cannot be satisfied by upstream name or raw export count.
+`SCOPE-REACT-BREADTH-001` requires complete delivery of every family in this
+registry rather than disposition-complete applicable coverage with permitted
+exclusions. `SCOPE-METRIC-REACT-COVERAGE` measures complete Mux UI
+contract/export/proof closure of the registry plus complete raw disposition and
+cannot be satisfied by upstream name or raw export count.
 
-Changing the 53-family commitment, family boundary, ID mapping, tranche
-allocation, React Aria identity, public ownership model, package graph,
-styling rule, support boundary, or release boundary requires a new accepted
-decision, a Product Scope major amendment when applicable, affected lock
-reconciliation, and bounded reproof. Removal of a committed family is a major
-scope change.
+Removing a family from this registry, or changing its ID mapping, the public
+ownership model, the package graph, the support boundary, or the release
+boundary, is a commitment change and a Product Scope major amendment. Adding
+an experimental family outside the registry is not.
 
 ### Deferred cross-platform successors
 
@@ -640,7 +637,7 @@ explicit no-activation decision without making Mux UI incomplete.
 
 | Scope ID | State | Capability | Activation trigger | Roadmap |
 | --- | --- | --- | --- | --- |
-| `SCOPE-CAP-BREADTH` | `admitted` | Deliberate component and pattern breadth | P2 exit plus R1.3/R1.4 (Tabs, Toast) for comparable risk; every candidate has observed workflow demand, owner, platform disposition, risk class, and proof path. Blocks inside the Decision 0026 boundary are ordinary protected-PR delivery under BL1 and do not use this trigger. All other component and pattern breadth keeps it. | G3.1 |
+| `SCOPE-CAP-BREADTH` | `admitted` | Deliberate stable or cross-platform component and pattern breadth | P2 exit plus R1.3/R1.4 (Tabs, Toast) for comparable risk; each candidate that claims stable or cross-platform support has observed workflow demand, an owner, a platform disposition, a risk class, and a proof path. Experimental React additions under the standing development rule, and Blocks inside the Decision 0026 boundary, do not use this trigger. | G3.1 |
 | `SCOPE-CAP-MIGRATION` | `deferred` | Declarative migrations and reviewed codemods | A real version-bounded supported migration need with retrievable old/new specs and bounded transformation. | G3.2 |
 | `SCOPE-CAP-MCP-HOSTED` | `deferred` | Read-only hosted MCP | Stable query/compatibility policy plus privacy, security, availability, cache isolation, and failure separation. | G3.3 |
 | `SCOPE-CAP-AGENT-GATES` | `admitted` | Promote selected agent evaluations | Repeated baseline, predeclared threshold/variance/retry policy, canonical prompt IDs, and a failure owner. | G3.4 |
@@ -655,7 +652,7 @@ explicit no-activation decision without making Mux UI incomplete.
 | `SCOPE-CAP-A2UI` | `deferred` | Agent-to-UI protocol binding | Named protocol/workflow and proof that it remains an optional compatibility-aware adapter. | G3.10 |
 | `SCOPE-CAP-CONSUMER-PATTERN` | `deferred` | Consumer pattern validation and pattern-derived scaffolds | Stable planner, observed demand, maintained parser/version boundaries, precision/recall budget, and safe write preview. | G3.11 |
 
-### Component and pattern breadth admission
+### Component and pattern breadth
 
 The Scale application is a private Mux UI projection for the existing
 additional-theme/design-tool capability, not an R1 deliverable or dependency.
@@ -665,22 +662,13 @@ consumer validation, accessibility, privacy, security, lifecycle, and release
 evidence. R1 may preserve compatible static theme outputs but does not port or
 publish Scale.
 
-`SCOPE-CAP-BREADTH` remains the later cross-platform breadth capability and
-does not commit an unnamed inventory. React-primary breadth is instead owned by
-`SCOPE-REACT-BREADTH-001`: the fixed family table names the exact upstream
-snapshot items, Mux UI IDs, and dispositions. No per-family Product Scope
-amendment is required inside that committed inventory. Each family record has:
-
-- the user workflow and unmet intent;
-- component versus pattern ownership;
-- platform target/disposition matrix;
-- interaction risk class and evidence requirements;
-- canonical example and pitfall needs;
-- required token/foundation/runtime changes;
-- package, compatibility, query, and migration effects;
-- expected effect on discovery precision, dense budgets, package policy,
-  maintainer throughput, and agent generation; and
-- explicit non-goals.
+`SCOPE-CAP-BREADTH` remains the later breadth capability for stable and
+cross-platform support claims and does not commit an unnamed inventory.
+React-primary breadth is owned by `SCOPE-REACT-BREADTH-001`: the fixed registry
+names the committed families, Mux UI IDs, and tranches. Experimental React
+families beyond it need no Product Scope amendment, no per-family dossier, and
+no Scope ID (Decision 0028). Each family's canonical record owns its workflow,
+risk class, platform disposition, examples, and non-goals.
 
 Raw component count is never a scope objective.
 
@@ -771,28 +759,16 @@ accessibility, package, compatibility, integrity, or generation failures.
 - every exported binding has Mux UI-owned CSS, a canonical token/style contract,
   and visual comparison; unsupported styling or behavior remains unexported
   until a bounded Mux UI decision resolves it;
-- the standalone `@muxui/react` tarball has exact React/React DOM peers,
-  `react-aria-components@1.20.0`, and the approved direct internal
-  `@internationalized/date@3.12.4` dependency (Decision 0011 amendment 05)
-  limited to Mux UI value adapters
-  in `DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`, and
-  `RangeCalendar`; the approved direct internal, replaceable
-  `lucide-react@1.37.0` dependency (npm integrity
-  `sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
-  ISC license with its Feather-derived MIT notice, React peer-compatible with
-  the existing React and React DOM peer boundary) as the default icon source
-  for decorative affordances in every `@muxui/react` component, with no
-  per-component approval (Decision 0011 amendment 06), decorative and
-  non-focusable icons that never supply an undocumented accessible name, and
-  no Lucide export, type, name, prop, import path, or public Icon API, catalog,
-  or package; plus the R1.6 internal, replaceable edges
-  `react-aria@3.51.0` for `Resizable` and Decision 0018's `SelectNative`, `marked@13.0.3` for the typed Markdown
-  parser boundary, and the eight `@tiptap/*@3.31.4` packages for `TextEditor`
-  (Decision 0011 amendment 04);
-  `motion@13.4.0` for bounded component motion in existing admitted React
-  bindings; exact `shiki@4.5.0` only for CodeBlock client highlighting under
-  Decision 0024 amendment 01; no Mux UI workspace runtime edge or dependency public API/type
-  leak is permitted;
+- the standalone `@muxui/react` tarball has React and React DOM peers and
+  exact internal runtime dependencies, with versions in its manifest and the
+  lockfile only: React Aria Components as the accessible-behavior substrate,
+  `@internationalized/date` behind Mux UI date and time value adapters,
+  `lucide-react` as the default icon source for decorative affordances in every
+  component, `motion` for component motion, and the Markdown, rich-text, and
+  code-highlighting dependencies for their owning components; each carries its
+  licence and notice material, none exposes a type, value, name, prop, or
+  import path through the public API, and no Mux UI workspace runtime edge is
+  permitted (Decision 0028);
 - the first-party default token/theme system satisfies every applicable React
   requirement and accessibility adaptation;
 - package exports, types, CSS, guidance, descriptors, compatibility metadata,
@@ -859,6 +835,23 @@ not required and cannot be inferred from React `0.1` completion.
 
 ## Product-scope change control
 
+Product Scope changes only for a real commitment (Decision 0028). These are:
+
+- a new package, platform, or renderer;
+- a release boundary;
+- a support, compatibility, stable, or assistive-technology claim;
+- a non-goal;
+- a committed capability or outcome row, including an artifact kind, durable
+  relation, public command, adapter, or operation type, whether added, removed,
+  replaced, or materially redefined; and
+- moving a deferred or admitted capability into committed scope, or claiming a
+  new form of product completeness.
+
+Adding or changing a React family, prop, variant, example, token, or dependency
+under an existing row changes no Product Scope version. Experimental families
+need no Scope ID or dossier, and a clarification that changes no meaning is an
+editorial pull request.
+
 ### Scope-version effects
 
 | Change | `scopeVersion` effect |
@@ -870,27 +863,13 @@ not required and cannot be inferred from React `0.1` completion.
 Changing a tracker status, assignee, priority, iteration, or target date never
 changes `scopeVersion`.
 
-A product-scope change is required when a proposal would:
+A commitment change states:
 
-- add, remove, split, or replace a committed scope item;
-- change a release boundary or platform commitment;
-- add an artifact kind, durable relation, package, public command, adapter, or
-  operation type;
-- broaden support or compatibility;
-- move a deferred capability into admitted or committed scope;
-- change an explicit non-goal; or
-- claim a new form of product completeness.
-
-Every change must include:
-
-1. observed user workflow and product outcome;
-2. affected scope IDs and commitment transitions;
-3. architecture compatibility;
-4. roadmap milestone/evidence coverage or required roadmap amendment;
-5. platform, package, version, migration, authoring, proof, privacy, security,
-   and rollback effects;
-6. explicit additions and removals from release scope; and
-7. tracker migration for open work without rewriting completed evidence.
+1. the product outcome and the user workflow it serves;
+2. the affected scope IDs and commitment transitions;
+3. the Roadmap milestone and evidence effect;
+4. explicit additions and removals from release scope; and
+5. open tracker work, without rewriting completed evidence.
 
 An adjacent implementation detail that does not alter product outcome,
 platform support, public surface, ownership, compatibility, or proof remains a
@@ -898,19 +877,20 @@ tracker decision and does not require this document to change.
 
 ## Tracker reference contract
 
-Every implementation issue must reference:
+Ordinary work records its goal, the canonical owner it changes, the behavior it
+affects, and how it is verified. An implementation issue also references, where
+they apply:
 
 ```text
 Scope ID(s):
 Roadmap milestone:
-Architecture requirements:
 Evidence ID(s):
-Dependencies:
-Deliverables:
-Acceptance commands:
-Explicit non-goals:
 Pull request or change record:
 ```
+
+An experimental React addition may reuse the umbrella Scope ID
+`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`. A commitment change carries the five
+items in "Product-scope change control".
 
 The tracker owns assignee, priority, workflow status, iteration, target date,
 blockers, and pull-request linkage. This document owns product commitment. The
@@ -927,7 +907,8 @@ This product scope remains valid only while:
 - every public surface reports capability availability honestly;
 - the React `0.1` tranche and release boundaries remain unchanged unless
   Product Scope and Architecture are explicitly revised;
-- future component breadth receives stable scope IDs before implementation;
+- future breadth that claims stable or cross-platform support receives stable
+  scope IDs before the claim;
 - platform divergence is expressed through binding strategy and evidence rather
   than hidden substitutions;
 - product scope does not duplicate live tracker status;
