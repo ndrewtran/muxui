@@ -1,5 +1,12 @@
 'use strict';
 
+const fs = require('node:fs');
+const path = require('node:path');
+
+// The checkout root. The planning-policy workflow runs this from the PR merge
+// checkout, so a decision added in the PR exists here.
+const REPO_ROOT = path.resolve(__dirname, '..', '..');
+
 const AUTHORITY_FILES = new Set([
   'strategy/monorepo-architecture.md',
   'strategy/milestone-roadmap.md',
@@ -12,15 +19,18 @@ const AUTHORITY_LABELS = new Set([
   'type:decision',
 ]);
 
-// The machinery that enforces protection, plus the publishing workflow and the
-// registry preflight it runs.
+// The machinery that enforces protection, the publishing workflow, and the
+// files it runs to prepare, prove, and guard a release.
 const PLANNING_CONTROL_FILES = new Set([
   '.github/CODEOWNERS',
   '.github/workflows/repository-planning-policy.yml',
-  '.github/workflows/npm-publish.yml',
-  'tooling/audits/repository-policy/src/npm-publication.mjs',
   '.github/scripts/validate-planning-pr.cjs',
   '.github/scripts/validate-planning-pr.test.cjs',
+  '.github/workflows/npm-publish.yml',
+  'tooling/audits/repository-policy/src/npm-publication.mjs',
+  'tooling/audits/repository-policy/src/release-prepare.mjs',
+  'tooling/audits/repository-policy/src/release-proof.mjs',
+  'packages/react/src/publish-guard.mjs',
 ]);
 
 function isProtectedPlanningFile(file) {
@@ -38,21 +48,43 @@ function changedPaths(files) {
   return [...paths];
 }
 
+// The value on the label's own line. An empty value is missing; the next
+// line's label is never its value.
 function fieldValue(body, label) {
   const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = body.match(new RegExp(`^\\s*-?\\s*${escaped}:\\s*(.+?)\\s*$`, 'im'));
+  const match = body.match(new RegExp(`^[ \\t]*(?:[-*][ \\t]+)?${escaped}:[ \\t]*(.*?)[ \\t]*$`, 'im'));
   return match ? match[1].trim() : '';
 }
 
-// A filled-in answer; an honest "None" or "N/A" counts, a placeholder does not.
-function isFilledIn(value) {
-  return Boolean(value) && !/^(?:pending|tbd|not assigned)[\s.!-]*$/i.test(value);
+// Drops Markdown emphasis and code wrappers: `x`, *x*, **x**, _x_, ~x~.
+function unwrap(value) {
+  return value.replace(/^[\s`*_~]+|[\s`*_~]+$/g, '');
 }
 
-// An issue number or the path of a decision that records the change.
-const CHANGE_RECORD = /^`?(?:#\d+|decisions\/\d{4}-[\w.-]+\.md)\b/;
+// A filled-in answer. An honest "None" or "N/A" counts; an empty value, a
+// placeholder word, or a template placeholder such as <Scope IDs> does not.
+const PLACEHOLDER = /^(?:pending|tbd|not assigned)[\s.!-]*$|^(?:<[^<>]*>[\s,;/|]*)+$/i;
 
-function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
+function isFilledIn(value) {
+  const text = unwrap(value);
+  return text !== '' && !PLACEHOLDER.test(text);
+}
+
+// A decision record is exactly decisions/<NNNN-name>.md: no subdirectory, no
+// "..", no suffix.
+const DECISION_REFERENCE = /^decisions\/\d{4}-[a-z0-9-]+\.md$/;
+
+function decisionFileExists(reference) {
+  return fs.statSync(path.join(REPO_ROOT, reference), { throwIfNoEntry: false })?.isFile() === true;
+}
+
+// An issue number, or the path of a decision file that exists in the checkout.
+function isChangeRecord(value, exists) {
+  const reference = unwrap(value);
+  return /^#\d+\b/.test(reference) || (DECISION_REFERENCE.test(reference) && exists(reference));
+}
+
+function validatePlanningPullRequest({ files = [], labels = [], body = '', exists = decisionFileExists }) {
   const errors = [];
 
   if (!files.some(isProtectedPlanningFile)) return errors;
@@ -63,9 +95,9 @@ function validatePlanningPullRequest({ files = [], labels = [], body = '' }) {
     );
   }
 
-  if (!CHANGE_RECORD.test(fieldValue(body, 'Authority change record'))) {
+  if (!isChangeRecord(fieldValue(body, 'Authority change record'), exists)) {
     errors.push(
-      'Authority-source changes require an Authority change record: #… or decisions/NNNN-….md reference.',
+      'Authority-source changes require an Authority change record: #… or the path of an existing decisions/NNNN-….md file.',
     );
   }
 

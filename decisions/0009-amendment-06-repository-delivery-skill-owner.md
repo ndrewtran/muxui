@@ -65,13 +65,14 @@ change to the skill needs no authority label or change record.
 The planning-policy validator, `.github/scripts/validate-planning-pr.cjs`, owns
 the protected-file list. It protects the strategy documents and the platform
 safety contract, the validator with its test and the workflow and CODEOWNERS
-entry that enforce it, and the publishing workflow with its registry preflight
-module. Issue forms, the pull-request template, READMEs, route maps, and the
-repository-policy package manifest are ordinary files. A change to a protected file needs the
+entry that enforce it, and the publishing workflow with the files it runs to
+prepare, prove, and guard a release. Issue forms, the pull-request template,
+READMEs, route maps, the repository-policy package manifest, and the root
+`package.json` are ordinary files. A change to a protected file needs the
 `type:decision` or `type:architecture-maintenance` label and an `Authority
-change record` that is an issue number or a decision path. Product Scope also
-states its version effect, and its change packet when that effect is not
-`none`.
+change record` that is an issue number or the path of an existing decision file.
+Product Scope also states its version effect, and its change packet when that
+effect is not `none`.
 
 ## Unchanged
 

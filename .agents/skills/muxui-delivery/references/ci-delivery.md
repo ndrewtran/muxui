@@ -46,13 +46,19 @@ contract, or a safety rule.
 
 A PR that touches a file listed in `.github/scripts/validate-planning-pr.cjs`
 needs the `type:decision` or `type:architecture-maintenance` label and an
-`Authority change record:` line, which is an issue (`#N`) or a decision path
-(`decisions/NNNN-….md`). The list is short: the strategy documents, the
-platform safety contract, the validator with its test, the planning-policy
-workflow, `CODEOWNERS`, and the publishing workflow with its registry
-preflight (`npm-publication.mjs`). A Product Scope change also states
-`Scope version effect`; an effect other than `none` adds the four change-packet
-fields from the PR template, where `None` is a valid answer.
+`Authority change record:` line. The record is an issue (`#N`) or the exact path
+of a decision file in the PR checkout (`decisions/NNNN-name.md`, which may be
+added by the same PR). The list is short: the strategy documents, the platform
+safety contract, the validator with its test, the planning-policy workflow,
+`CODEOWNERS`, and the publishing workflow with the files it runs to prepare,
+prove, and guard a release (`npm-publication.mjs`, `release-prepare.mjs`,
+`release-proof.mjs`, and the React package's `publish-guard.mjs`). The root
+`release:prepare` script and `package.json` are reviewed like any other change.
+
+A Product Scope change also states `Scope version effect` on its own line; an
+effect other than `none` adds the four change-packet fields from the PR
+template, each filled in on its own line, where `None` is a valid answer and a
+placeholder such as `TBD` or `<…>` is not.
 
 The PR template's authority section is only for those PRs. Edits to this skill,
 the PR template, issue forms, READMEs, and route maps are ordinary PRs.

@@ -25,11 +25,11 @@ or publishing machinery (see the protected files in
 `.github/scripts/validate-planning-pr.cjs`). Delete it otherwise. Add the
 `type:decision` or `type:architecture-maintenance` label.
 
-- Authority change record: <#issue or decisions/NNNN-….md>
+- Authority change record: <#issue or an existing decisions/NNNN-name.md path>
 - Scope version effect: <none, patch, minor, or major; only if strategy/product-scope.md changes>
 
-Fill these four only when Product Scope changes with a version effect other than
-`none`. `None` is a valid answer.
+Fill these four, each on its own line, only when Product Scope changes with a
+version effect other than `none`. `None` is a valid answer.
 
 - Affected Scope IDs / commitment transitions:
 - Roadmap / evidence effect:
