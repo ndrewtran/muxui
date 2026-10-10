@@ -90,6 +90,7 @@ const foundationSidebar = [
 
 // https://astro.build/config
 export default defineConfig({
+	devToolbar: { enabled: false },
 	vite: {
 		plugins: [{
 			name: 'muxui-theme-prepaint',
