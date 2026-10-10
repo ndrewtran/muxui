@@ -2,7 +2,7 @@
 
 Mux UI is a versioned design-system knowledge graph. Delivery is React-first:
 `@muxui/react` implements the fixed React registry plus experimental
-supplemental families under Product Scope 20.0.0. Framework-free web and React
+supplemental families under Product Scope 20.0.1. Framework-free web and React
 Native are deferred later tracks. Only `@muxui/react` release candidates are
 published, on npm's `next` tag, and this repository makes no stable release or
 component-support claim.

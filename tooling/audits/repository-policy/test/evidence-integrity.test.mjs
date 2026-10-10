@@ -5,7 +5,8 @@ import { copyFileSync, readFileSync, writeFileSync } from 'node:fs';
 import { chmod, cp, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
-import test from 'node:test';
+import { pathToFileURL } from 'node:url';
+import test, { after } from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { REVISION_BOUND_INPUTS, hasUnsanitizedEvidenceOutput, readAtRevision, verifyEvidence } from '../src/evidence-verify.mjs';
 import { DEFERRED_R1_EVIDENCE } from '../../../../packages/react/src/r1-deferred-evidence.mjs';
@@ -840,17 +841,31 @@ test('the BL1 boundary audit fails exactly the legs each negative control names,
   }
 });
 
-test('the BL1 close-out scope check is skipped only for a growth capture, and the page widths match the amendment', async () => {
+test('the BL1 close-out scope check is skipped only for a growth capture', async () => {
   const { auditBoundary } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
   const only = ['closeout-scope', 'react-package-manifest'];
   assert.deepEqual(auditBoundary({ offline: true, only }).checks.map(({ id }) => id), ['react-package-manifest', 'closeout-scope']);
   assert.deepEqual(auditBoundary({ offline: true, only, closeoutBase: null }).checks.map(({ id }) => id), ['react-package-manifest']);
-  // The capture takes the page widths from the accepted amendment and refuses a docs module that disagrees.
+});
+
+// The page widths live only in code (Decision 0029): the capture imports apps/docs/src/lib/block-presets.ts, and a retained capture
+// is held to the list that file has at the capture's own source revision. No decision text is read.
+const pageWidthsSource = 'apps/docs/src/lib/block-presets.ts';
+
+/** The `pageWidths` list in the source of the docs presets module. */
+function parsePageWidths(source) {
+  const body = /export const pageWidths = \[([^\]]*)\] as const;/u.exec(source)?.[1];
+  assert.ok(body !== undefined, `${pageWidthsSource} exports pageWidths as a literal list`);
+  return [...body.matchAll(/\d+/gu)].map(([width]) => Number(width));
+}
+const pageWidthsAt = (revision) => parsePageWidths(readAtRevision(repositoryRoot, revision, pageWidthsSource).toString('utf8'));
+
+test('the BL1 page widths are the list in the docs presets module, read at the capture\'s own revision', async () => {
   const { pageWidths } = await import('../../../../apps/docs/src/lib/block-presets.ts');
-  const amendment = await readFile(join(repositoryRoot, 'decisions/0026-amendment-01-page-width-presets.md'), 'utf8');
-  const widths = [...(/page-width presets are \*\*([^*]+)\*\*/u.exec(amendment)?.[1] ?? '').matchAll(/\d+/gu)].map(([width]) => Number(width));
-  assert.deepEqual(widths, [360, 768, 1024, 1280, 1920]);
-  assert.deepEqual([...pageWidths], widths);
+  assert.deepEqual(parsePageWidths(await readFile(join(repositoryRoot, pageWidthsSource), 'utf8')), [...pageWidths], 'the list the integrity test reads from code is the list the capture imports');
+  assert.ok(pageWidths.length > 0);
+  assert.deepEqual(parsePageWidths('export const pageWidths = [320, 640] as const;'), [320, 640]);
+  assert.throws(() => parsePageWidths('export const widths = [1];'), /exports pageWidths as a literal list/u);
 });
 
 // BL1 close-out: the capture's refusals and carry-forwards, on throwaway repositories.
@@ -1255,6 +1270,37 @@ function catalogAt(revision) {
   };
 }
 
+/** The git tree of `catalog/patterns/<block>` at `revision`, or null when the revision holds no such block. */
+function blockTreeAt(revision, block) {
+  const result = spawnSync('git', ['rev-parse', `${revision}:catalog/patterns/${block}`], { cwd: repositoryRoot, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+const reviewCoverageTool = 'tests/evidence/bl1/capture-support.mjs';
+
+/** The React sources that render nothing, as the capture-support tool bound at `revision` lists them (a literal list of file names). */
+function boundNonRenderingSources(revision) {
+  const body = /export const nonRenderingReactSources = \[([^\]]*)\]\.map/u.exec(readAtRevision(repositoryRoot, revision, reviewCoverageTool).toString('utf8'))?.[1];
+  assert.ok(body !== undefined, `${reviewCoverageTool} at ${revision.slice(0, 8)} lists the React sources that render nothing`);
+  return [...body.matchAll(/'([^']+)'/gu)].map(([, name]) => `packages/react/src/${name}`);
+}
+
+/**
+ * What a review of `block` read at `revision`, derived here from git and not by the capture tool: the block's tree, the catalog record
+ * tree of every participant component, and a digest of the path and blob of every file under packages/react/src except `excluded`.
+ */
+function expectedCoverageKey(revision, block, excluded) {
+  const blockTree = blockTreeAt(revision, block);
+  if (blockTree === null) return null;
+  const participants = [...new Set(jsonAt(revision, `catalog/patterns/${block}/artifact.json`).participants.map(({ component }) => component))].sort().map((component) => {
+    const result = spawnSync('git', ['rev-parse', `${revision}:catalog/components/${component.slice('muxui:component:'.length)}`], { cwd: repositoryRoot, encoding: 'utf8' });
+    return { component, tree: result.status === 0 ? result.stdout.trim() : null };
+  });
+  const files = gitOut('ls-tree', '-r', revision, '--', 'packages/react/src').split('\n').map((line) => /^\d+ blob ([0-9a-f]+)\t(.+)$/u.exec(line))
+    .filter((match) => match !== null && !excluded.includes(match[2])).map(([, blob, path]) => `${path}\0${blob}\n`).sort();
+  return { blockTree, participants, reactRuntime: { root: 'packages/react/src', excluded, files: files.length, digest: digest(files.join('')) } };
+}
+
 /** The titles of the cross-engine tests in a browser test file at `revision`: its `test(\`... in ${engine}\`)` declarations. */
 function browserTestTitles(revision, file) {
   const titles = [...readAtRevision(repositoryRoot, revision, file).toString('utf8').matchAll(/^\s*test\(`([^`]*?) in \$\{engine\}`/gmu)].map(([, title]) => title);
@@ -1276,7 +1322,7 @@ async function loadCapture({ repo = repositoryRoot, directory = bl1 } = {}) {
     records[assertionId] = await read(into(path));
     artifacts[assertionId] = await read(into(records[assertionId].artifact.path));
   }
-  return { directory, index, verification: await read(into(index.validation.path)), records, artifacts, retained: new Map(index.artifacts.map(({ path, sha256 }) => [path, sha256])) };
+  return { repo, directory, index, verification: await read(into(index.validation.path)), records, artifacts, retained: new Map(index.artifacts.map(({ path, sha256 }) => [path, sha256])) };
 }
 
 /** An archived capture is a byte-for-byte copy: every file its index names is in the archive at that digest. */
@@ -1302,6 +1348,30 @@ const growthToolPaths = (revision) => parseGrowthToolPaths(readAtRevision(reposi
 
 const boundaryAuditTool = 'tests/evidence/bl1/boundary-audit.mjs';
 
+const boundTools = new Map();
+const boundToolDirectories = [];
+after(() => Promise.all(boundToolDirectories.map((directory) => rm(directory, { recursive: true, force: true }))));
+
+/**
+ * The boundary-audit tool as it was at `revision`, imported from a copy of its bytes in git (with the canonical-JSON module it imports,
+ * at that revision), so a retained capture is re-derived by the functions that made it and a later change to the tool never changes
+ * how an earlier capture is read. Its git reads run in this repository (`cwd`), so only the checks that read git objects apply.
+ */
+function boundBoundaryAudit(revision) {
+  if (!boundTools.has(revision)) {
+    boundTools.set(revision, (async () => {
+      const directory = await mkdtemp(join(tmpdir(), 'muxui-bl1-bound-tool-'));
+      boundToolDirectories.push(directory);
+      for (const path of [boundaryAuditTool, 'tooling/audits/repository-policy/src/canonical-json.mjs']) {
+        await mkdir(dirname(join(directory, path)), { recursive: true });
+        await writeFile(join(directory, path), readAtRevision(repositoryRoot, revision, path));
+      }
+      return import(pathToFileURL(join(directory, boundaryAuditTool)).href);
+    })());
+  }
+  return boundTools.get(revision);
+}
+
 /** The checks the boundary-audit tool scopes to the growth commits at `revision`: each check object that declares a `growthClaim`. */
 function growthToolScopedChecks(revision) {
   let current;
@@ -1313,6 +1383,21 @@ function growthToolScopedChecks(revision) {
   assert.ok(scoped.length > 0, `${boundaryAuditTool} at ${revision.slice(0, 8)} scopes checks to the growth commits`);
   return scoped;
 }
+
+/** The legs the boundary-audit tool at `revision` records without gating on them for an informational growth capture: each check object's `growthInformational` line. */
+function growthToolInformationalLegs(revision) {
+  let current;
+  const informational = {};
+  for (const line of readAtRevision(repositoryRoot, revision, boundaryAuditTool).toString('utf8').split('\n')) {
+    current = /^    id: '([^']+)',$/u.exec(line)?.[1] ?? current;
+    const body = /^    growthInformational: \[([^\]]*)\],$/u.exec(line)?.[1];
+    if (body !== undefined) informational[current] = [...body.matchAll(/'([^']+)'/gu)].map(([, leg]) => leg);
+  }
+  return informational;
+}
+
+/** The non-claim an informational growth record states (Decision 0029): a growth commit may change what it records and the record claims nothing about it. */
+const growthNonClaim = /^A growth commit may change @muxui\/react, dependencies, and component records; this record lists what it changed and claims nothing about it\.$/u;
 
 /**
  * A growth capture's E-BL1-08 and E-BL1-09 are scoped to the commits after the retained close-out that added or changed its
@@ -1327,10 +1412,13 @@ function growthToolScopedChecks(revision) {
  * The same holds for the checks the boundary-audit tool scoped at its source revision, so a later check added to the scope
  * (the workflow and hosting check) does not fail a capture made before it.
  */
-async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision = sourceRevision, added, verification, artifacts, records }) {
+async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision = sourceRevision, added, verification, artifacts, records, informational = false }) {
   const { growthCommits } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
-  const { auditBoundary } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const { auditBoundary } = await boundBoundaryAudit(toolRevision);
   const scopedChecks = growthToolScopedChecks(toolRevision);
+  // The legs the bound tool records without gating on them. A capture without `growthGate` has none: every leg gates.
+  const boundInformational = informational ? growthToolInformationalLegs(toolRevision) : {};
+  if (informational) assert.ok(Object.keys(boundInformational).length > 0, 'the bound boundary-audit tool declares informational legs');
   const catalog = artifacts['E-BL1-08'].observations;
   assert.equal(catalog.baseline, undefined, 'a growth capture does not carry the close-out digest pin');
   const bound = growthToolPaths(toolRevision);
@@ -1343,14 +1431,30 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
   const { audit } = artifacts['E-BL1-09'].observations;
   assert.deepEqual(audit.growthScope?.commits.map(({ commit, parent }) => [commit, parent]), derived.map(({ commit, parent }) => [commit, parent]), 'E-BL1-09 audits the commits that added or changed the blocks');
   assert.deepEqual(audit.growthScope.scopedChecks, scopedChecks, 'E-BL1-09 scopes the checks that read @muxui/react, the catalog records, and workflow and hosting files, as the bound tool does');
+  if (informational) {
+    assert.equal(audit.growthScope.growthGate, 'informational');
+    assert.deepEqual(audit.growthScope.informationalLegs, boundInformational, 'E-BL1-09 records the informational legs of the bound tool and no others');
+  } else {
+    assert.equal(audit.growthScope.growthGate, undefined, 'a capture without growthGate does not claim one');
+    assert.equal(audit.growthScope.informationalLegs, undefined, 'a capture without growthGate gates every leg');
+  }
   for (const check of audit.checks) {
+    assert.deepEqual(check.informationalLegs, boundInformational[check.id], `E-BL1-09: ${check.id} records the informational legs of the bound tool and no others`);
     const scoped = scopedChecks.includes(check.id);
     assert.equal(check.observations.scope, scoped ? 'growth' : undefined, `E-BL1-09: ${check.id} is evaluated ${scoped ? 'across the growth commits' : 'over the range from the pre-BL1 base'}`);
     if (scoped) assert.deepEqual(check.observations.commits.map(({ commit }) => commit), derived.map(({ commit }) => commit), `E-BL1-09: ${check.id} is evaluated across every growth commit`);
   }
-  const recomputed = auditBoundary({ head: sourceRevision, growthCommits: derived.map(({ commit }) => commit), offline: true, only: scopedChecks, closeoutBase: null });
-  assert.equal(recomputed.pass, true, 'E-BL1-09: the scoped checks hold across the growth commits in git');
+  // Every leg is recomputed from git. The gate is read from the bound tool's own list, so a record cannot widen what it records without gating.
+  const recomputed = auditBoundary({ cwd: repositoryRoot, head: sourceRevision, growthCommits: derived.map(({ commit }) => commit), growthGate: informational ? 'informational' : undefined, offline: true, only: scopedChecks, closeoutBase: null });
+  const gateHolds = ({ id, legs }) => Object.entries(legs).every(([leg, value]) => value !== false || (boundInformational[id] ?? []).includes(leg));
+  assert.ok(recomputed.checks.every(gateHolds), 'E-BL1-09: every gate leg of the scoped checks holds across the growth commits in git');
+  if (!informational) assert.equal(recomputed.pass, true, 'E-BL1-09: the scoped checks hold across the growth commits in git');
   assert.deepEqual(audit.checks.filter(({ id }) => scopedChecks.includes(id)).map(({ id, legs }) => [id, legs]), recomputed.checks.map(({ id, legs }) => [id, legs]), 'E-BL1-09: the recorded legs are the legs git gives');
+  assert.ok(audit.checks.filter(({ id }) => scopedChecks.includes(id)).every(({ pass, ...check }) => pass === gateHolds(check)), 'E-BL1-09: a scoped check passes exactly when its gate legs hold');
+  // Everything a scoped check records per commit (parents, per-commit legs, changed files, dependency fields, records) is what git gives,
+  // derived by the tool bound at the capture's revision, and so are the growth scope and its commits' subjects.
+  assert.equal(canonicalJson(audit.checks.filter(({ id }) => scopedChecks.includes(id))), canonicalJson(recomputed.checks), 'E-BL1-09: the recorded scoped checks, per-commit observations included, are what git gives');
+  assert.equal(canonicalJson(audit.growthScope), canonicalJson(recomputed.growthScope), 'E-BL1-09: the recorded growth scope, its commits and their subjects included, is what git gives');
   for (const claim of [records['E-BL1-08'].claim, records['E-BL1-09'].claim]) for (const prefix of short) assert.ok(claim.includes(prefix), `the claim names the audited commit ${prefix}`);
 
   const gitDerived = ({ commit, parent, subject, addedPatterns, changedPatterns, excludedDirectories, excludedEntries, digestAffectingPathsChanged }) => ({ commit, parent, subject, addedPatterns, changedPatterns, excludedDirectories, excludedEntries, digestAffectingPathsChanged });
@@ -1358,10 +1462,24 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
   for (const { commit, digestBefore, digestAfter, identical, holds, digestAffectingPathsChanged } of catalog.growthScope.commits) {
     assert.match(digestBefore, /^sha256:[0-9a-f]{64}$/u);
     assert.match(digestAfter, /^sha256:[0-9a-f]{64}$/u);
-    assert.deepEqual(digestAffectingPathsChanged, [], `E-BL1-08: ${commit.slice(0, 8)} changed no compiler or schema path that moves the digest`);
-    assert.ok(identical === true && holds === true && digestBefore === digestAfter, `E-BL1-08: the catalog without the sources ${commit.slice(0, 8)} added or changed has the same digest before and after`);
+    if (informational) {
+      // An observation: the recorded values only have to agree with each other, whatever the commit changed.
+      assert.equal(identical, digestBefore === digestAfter, `E-BL1-08: ${commit.slice(0, 8)} records whether the digest moved`);
+      assert.equal(holds, identical && digestAffectingPathsChanged.length === 0, `E-BL1-08: ${commit.slice(0, 8)} records whether the comparison held`);
+    } else {
+      assert.deepEqual(digestAffectingPathsChanged, [], `E-BL1-08: ${commit.slice(0, 8)} changed no compiler or schema path that moves the digest`);
+      assert.ok(identical === true && holds === true && digestBefore === digestAfter, `E-BL1-08: the catalog without the sources ${commit.slice(0, 8)} added or changed has the same digest before and after`);
+    }
   }
   assert.ok(records['E-BL1-08'].nonClaims.some((claim) => /does not run a historical compiler/u.test(claim)), 'E-BL1-08 states that the digests are not recomputed from historical trees');
+  if (informational) {
+    assert.equal(catalog.growthScope.gate, 'informational', 'E-BL1-08 records the per-commit digest comparison as an observation');
+    // What the claim is: generation identity, two identical compiles, and that the pattern entries add only their own artifacts.
+    assert.deepEqual(catalog.repeatedCompile, { compiles: 2, bytesIdentical: true }, 'E-BL1-08 records two identical compiles');
+    assert.equal(catalog.addedSources.remainderIdenticalToBaseline, true, 'E-BL1-08: the pattern entries add only their own artifacts');
+    assert.match(catalog.generationIdentity.digest, /^sha256:[0-9a-f]{64}$/u, 'E-BL1-08 records generation identity');
+    for (const id of ['E-BL1-08', 'E-BL1-09']) assert.ok(records[id].nonClaims.some((claim) => growthNonClaim.test(claim)), `${id} states that a growth commit may change @muxui/react, dependencies, and component records and the record claims nothing about it`);
+  }
 }
 
 /**
@@ -1369,11 +1487,14 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
  * and a growth capture to the facts derived from the catalog, the browser test routes, and the thresholds at its own
  * revision, and to the retained close-out at `closeoutRevision`, whether it is the current capture or an archived one.
  */
-async function assertCapture({ directory, index, verification, records, artifacts, retained }, { closeoutRevision, growthToolRevision } = {}) {
-  const { assertUniqueQueries, parseThresholds, thresholdChanges } = await import('../../../../tests/evidence/bl1/regression.mjs');
+async function assertCapture({ repo = repositoryRoot, directory, index, verification, records, artifacts, retained }, { closeoutRevision, growthToolRevision, thresholdsRevision } = {}) {
+  const { assertUniqueQueries, parseThresholds, thresholdChanges, thresholdRevisionProblems } = await import('../../../../tests/evidence/bl1/regression.mjs');
   const { sourceRevision, sourceTree } = index;
-  const { scope } = verification;
+  const { scope, growthGate } = verification;
   assert.ok(scope === 'close-out' || scope === 'growth', `${directory}: the validation summary records its scope`);
+  // A capture made before Decision 0029 records no growth gate and is verified strictly, as it always was.
+  assert.ok(growthGate === undefined || (growthGate === 'informational' && scope === 'growth'), `${directory}: growthGate is absent (a capture made before Decision 0029) or informational on a growth capture`);
+  const informational = growthGate === 'informational';
   assert.equal(index.milestone, 'BL1');
   assert.equal(index.disclosureClass, 'public-sanitized');
   assert.equal(index.sourceRevisionInMainHistory, true, `${directory}: the source revision is in main's history`);
@@ -1444,7 +1565,10 @@ async function assertCapture({ directory, index, verification, records, artifact
 
   // E-BL1-06: every capture is retained at its digest, and none overflows.
   const visual = artifacts['E-BL1-06'].observations;
-  assert.deepEqual(visual.pageWidths.widths, [360, 768, 1024, 1280, 1920]);
+  const widths = pageWidthsAt(sourceRevision);
+  assert.deepEqual(visual.pageWidths.widths, widths, 'E-BL1-06 captures the page widths the docs presets module lists at the source revision');
+  assert.deepEqual(visual.expected.pageWidths, widths);
+  if (informational) assert.deepEqual([visual.pageWidths.source, visual.pageWidths.blob], [pageWidthsSource, gitOut('rev-parse', `${sourceRevision}:${pageWidthsSource}`)], 'E-BL1-06 names the module and blob the widths were read from');
   assert.equal(visual.expected.variants, catalog.variantIds.length, 'E-BL1-06 captures every variant');
   assert.equal(visual.captures.length, visual.expected.variants * 2 * visual.expected.toolbarPresets.length + visual.expected.marketingVariants.length * 2 * visual.expected.pageWidths.length);
   assert.equal(visual.overflowReport.measurements, visual.captures.length);
@@ -1468,8 +1592,28 @@ async function assertCapture({ directory, index, verification, records, artifact
   assert.deepEqual(content.scan.failures, []);
   assert.equal(content.scan.variantSources, catalog.variantIds.length, 'E-BL1-10 scans every variant source');
   assert.equal(content.review.verdict, 'pass');
-  assert.deepEqual([...content.review.blocks].sort(), catalog.patternSlugs, 'E-BL1-10 reviews every block');
-  assert.equal(content.review.reviewedCatalogPatternsTree, gitOut('rev-parse', `${sourceRevision}:catalog/patterns`), 'E-BL1-10: the reviewer read the block sources this capture scanned');
+  if (!informational) {
+    assert.deepEqual([...content.review.blocks].sort(), catalog.patternSlugs, 'E-BL1-10 reviews every block');
+    assert.equal(content.review.reviewedCatalogPatternsTree, gitOut('rev-parse', `${sourceRevision}:catalog/patterns`), 'E-BL1-10: the reviewer read the block sources this capture scanned');
+    assert.equal(content.reviewCoverage, undefined, 'a capture without growthGate records one review of the whole catalog/patterns tree');
+  } else {
+    // A review covers a block when it names the block and the reviewer read what this capture scanned: the block's tree, the catalog record of
+    // every participant, and the React runtime sources. The key is derived here from git with the tool bound at the capture's revision; each row keeps the review's own revision and tree.
+    assert.ok(content.reviewCoverage, 'E-BL1-10 records its reviewCoverage');
+    assert.deepEqual(content.reviewCoverage.rows.map(({ block }) => block).sort(), catalog.patternSlugs, 'E-BL1-10 covers every block with a retained review');
+    const excluded = boundNonRenderingSources(growthToolRevision ?? sourceRevision);
+    for (const { block, key, review } of content.reviewCoverage.rows) {
+      assert.deepEqual(key, expectedCoverageKey(sourceRevision, block, excluded), `E-BL1-10: ${block} is covered at the key its sources, participants, and React runtime have at the source revision`);
+      assert.match(review.reviewedRevision, /^[0-9a-f]{40}$/u);
+      assert.deepEqual(review.keyAtReviewedRevision, expectedCoverageKey(review.reviewedRevision, block, excluded), `E-BL1-10: the row for ${block} records the key at its review's reviewed revision`);
+      assert.deepEqual(review.keyAtReviewedRevision, key, `E-BL1-10: the reviewer of ${block} read the sources, participants, and React runtime this capture scanned`);
+      assert.equal(review.reviewedTree, gitOut('rev-parse', `${review.reviewedRevision}^{tree}`), `E-BL1-10: the row for ${block} keeps its review's own reviewed tree`);
+      assert.equal(retained.get(review.artifact.path), review.artifact.sha256, `E-BL1-10: the review covering ${block} is retained at its digest`);
+      const reviewText = await readFile(join(repo, capturePath(directory)(review.artifact.path)), 'utf8');
+      assert.equal(digest(reviewText), review.artifact.sha256);
+      assert.ok(reviewText.includes(`catalog/patterns/${block}`) && /\*\*Pass\.\*\*/u.test(reviewText), `E-BL1-10: the review covering ${block} names it and passes`);
+    }
+  }
   const exitReview = boundary.exitReview;
   for (const review of [content.review, ...(exitReview === null ? [] : [exitReview])]) {
     assert.equal(retained.get(review.artifact.path), review.artifact.sha256);
@@ -1496,6 +1640,21 @@ async function assertCapture({ directory, index, verification, records, artifact
   assert.deepEqual(baseline.failures, []);
   assert.deepEqual(baseline.knownDiscoveryWeaknesses.map(({ query }) => query).sort(), queries.filter(({ knownWeakness }) => knownWeakness !== undefined).map(({ query }) => query).sort());
   assert.match(records['E-BL1-11'].claim, new RegExp(`${revised.length} of ${queries.length} discovery expectations were revised`, 'u'));
+
+  if (informational) {
+    // Decision 0029: a change to a query, limit, or budget since the close-out is on the record. The log is read at `thresholdsRevision`
+    // (the source revision unless a forged capture stands on a later one).
+    assert.ok(baseline.revisionLog, 'E-BL1-11 records its revisionLog');
+    const logged = parseThresholds(readAtRevision(repositoryRoot, thresholdsRevision ?? sourceRevision, baseline.thresholds.path));
+    assert.deepEqual(thresholdRevisionProblems(parseThresholds(readAtRevision(repositoryRoot, closeoutRevision, baseline.thresholds.path)), logged), [], 'E-BL1-11: every threshold change since the close-out is logged and no expectation is removed');
+    // Against the capture this one replaces, a later revision of a query already on the log still needs its own new entry.
+    const replaced = records['E-BL1-11'].supersedes.sourceRevision;
+    assert.deepEqual(thresholdRevisionProblems(parseThresholds(readAtRevision(repositoryRoot, replaced, baseline.thresholds.path)), logged), [], 'E-BL1-11: every threshold change since the capture this one replaces has a new log entry');
+    assert.deepEqual(baseline.revisionLog.unlogged, [], 'E-BL1-11 records no unlogged threshold change');
+    assert.equal(baseline.revisionLog.entries, (logged.provenance.revisions ?? []).length, 'E-BL1-11 counts the log entries');
+  } else {
+    assert.equal(baseline.revisionLog, undefined, 'a capture without growthGate records no revision log');
+  }
 
   if (scope === 'close-out') {
     // The close-out facts stay pinned, so a later change to the derivations above cannot soften what the close-out claims.
@@ -1535,7 +1694,7 @@ async function assertCapture({ directory, index, verification, records, artifact
     assert.ok(added.length > 0, 'E-BL1-11: a growth capture adds a block to the close-out');
     assert.deepEqual([...addedPatterns].sort(), added, 'E-BL1-11 names the blocks added since the close-out');
     for (const [id, record] of Object.entries(records)) assert.ok(record.supersedes !== undefined, `${id}: a growth capture replaces the capture before it`);
-    await assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision: growthToolRevision, added, verification, artifacts, records });
+    await assertGrowthScope({ sourceRevision, closeoutRevision, toolRevision: growthToolRevision, added, verification, artifacts, records, informational });
   }
   return { scope, sourceRevision, catalog };
 }
@@ -2106,7 +2265,7 @@ test('each BL1 growth commit is audited against its first parent, and one that c
     const withSource = await repo.variant((edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`));
     assert.deepEqual(failed([first, withSource]), ['react-source-files']);
     const withManifest = await repo.variant((edit) => edit('packages/react/package.json', jsonEdit((manifest) => ({ ...manifest, version: '9.9.9' }))));
-    assert.deepEqual(failed([first, withManifest]), ['react-package-manifest', 'react-source-files']);
+    assert.deepEqual(failed([first, withManifest]), ['react-package-manifest', 'react-source-files', 'versions-follow-decision-0026']);
     const withLockfile = await repo.variant((edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`));
     assert.deepEqual(failed([first, withLockfile]), ['no-dependency-change']);
     const withRecord = await repo.variant((edit) => edit('catalog/components/button/artifact.json', summaryEdit));
@@ -2194,4 +2353,441 @@ test('the BL1 growth scope lists every module the catalog compiler runs that can
   // The two validators only reject records: neither is listed, and the compiler throws on their issues before it builds any artifact.
   assert.ok(!digestAffectingPaths.some((path) => /pattern-(?:content|imports)/u.test(path)));
   assert.match(compiler, /if \(importIssues\.length \+ contentIssues\.length > 0\) \{\s*throw new SchemaValidationError/u);
+});
+
+// ---- Decision 0029: thresholds, the informational growth gate, re-scoped release checks, and content-review coverage. ----
+
+test('a BL1 threshold change is refused unless it is logged, and no expectation is ever removed', async () => {
+  const { assertThresholdsLogged, loadThresholds, thresholdRevisionProblems } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const closeout = await retainedCloseout();
+  const current = JSON.parse(await readFile(join(repositoryRoot, bl1, 'verification.json'), 'utf8')).sourceRevision;
+  const now = await loadThresholds();
+  // The standing guard: the thresholds in the working tree differ from the close-out's, and from the last retained capture's, only in logged ways.
+  assert.deepEqual(thresholdRevisionProblems(await loadThresholds(closeout.sourceRevision), now), [], 'every change since the close-out is logged');
+  assert.deepEqual(thresholdRevisionProblems(await loadThresholds(current), now), [], 'every change since the last retained capture is logged');
+
+  const limit = 'denseBudgets.examplesSection.variantSourceLexemes';
+  const problems = (change, before = now) => {
+    const after = structuredClone(before);
+    change(after);
+    return thresholdRevisionProblems(before, after);
+  };
+  // An entry states its exact transition: a query field `from` and `to` (a list field `added` and `removed`), or a limit by its path.
+  const entry = (extra) => ({ change: 'raised', reason: 'a stated reason', ...extra });
+  const query = (thresholds, name) => thresholds.discovery.queries.find((candidate) => candidate.query === name);
+  const collections = (thresholds) => query(thresholds, 'collections');
+  const component = (thresholds) => thresholds.discovery.queries.find(({ firstWithoutPatterns }) => firstWithoutPatterns);
+  const raise = (after, from, to) => {
+    collections(after).expectedWithin = to;
+    after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from, to, afterFirstMeasurement: true }));
+  };
+
+  // A revised expectation, a changed list, a changed limit or budget, and a changed metric each need a new entry that names the exact transition.
+  assert.deepEqual(problems(() => {}), []);
+  assert.match(problems((after) => { collections(after).expectedWithin += 1; })[0], /the query "collections" field expectedWithin changed from 4 to 5 with no new entry in provenance\.revisions that continues it/u);
+  assert.match(problems((after) => { component(after).relevant.push('muxui:pattern:x'); })[0], /field relevant changed \(added \[muxui:pattern:x\]; removed \[\]\) with no new entry/u);
+  assert.match(problems((after) => { component(after).relevant.pop(); })[0], /field relevant changed \(added \[\]; removed \[.+\]\) with no new entry/u);
+  assert.match(problems((after) => { collections(after).knownWeakness = 'something else'; })[0], /field knownWeakness changed from .* to "something else"/u);
+  assert.match(problems((after) => { collections(after).extra = true; })[0], /field extra changed from null to true/u);
+  assert.match(problems((after) => { after.denseBudgets.examplesSection.variantSourceLexemes += 100; })[0], new RegExp(`${limit} changed from 700 to 800 with no new entry`, 'u'));
+  assert.match(problems((after) => { after.discovery.minimumMeanPrecisionAt3 = 0.1; })[0], /discovery\.minimumMeanPrecisionAt3 changed from 0\.5 to 0\.1 with no new entry/u);
+  assert.match(problems((after) => { after.search.maximumDisplacedComponentQueries = 3; })[0], /search\.maximumDisplacedComponentQueries changed from 0 to 3 with no new entry/u);
+
+  // An entry covers exactly the transition it states. The backfilled 3 -> 4 entry for `collections` does not cover 4 -> 999, and neither does an
+  // entry for the wrong field, the wrong starting value, the wrong end value, or another query.
+  assert.match(problems((after) => { collections(after).expectedWithin = 999; })[0], /changed from 4 to 999/u);
+  const wrong = (extra) => problems((after) => { collections(after).expectedWithin = 999; after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from: 4, to: 999, ...extra })); });
+  assert.deepEqual(wrong({}), [], 'the exact transition is covered');
+  assert.deepEqual(wrong({ afterFirstMeasurement: true }), [], 'and so is one disclosed as made after a first measurement, as collections is already listed');
+  assert.match(wrong({ from: 3 })[0], /changed from 4 to 999/u);
+  assert.match(wrong({ to: 998 })[0], /changed from 4 to 999/u);
+  assert.match(wrong({ field: 'expectedId' })[0], /changed from 4 to 999/u);
+  assert.match(wrong({ query: 'poster grid' })[0], /changed from 4 to 999/u);
+  // The same holds for a list and for a limit, and a chain of entries is followed in order.
+  assert.deepEqual(problems((after) => {
+    component(after).relevant.push('muxui:pattern:x');
+    after.provenance.revisions.push(entry({ query: component(after).query, field: 'relevant', added: ['muxui:pattern:x'], removed: [] }));
+  }), []);
+  assert.match(problems((after) => {
+    component(after).relevant.push('muxui:pattern:x');
+    after.provenance.revisions.push(entry({ query: component(after).query, field: 'relevant', added: ['muxui:pattern:y'], removed: [] }));
+  })[0], /added \[muxui:pattern:x\]/u);
+  assert.deepEqual(problems((after) => {
+    after.denseBudgets.examplesSection.variantSourceLexemes += 100;
+    after.provenance.revisions.push(entry({ limit, from: 700, to: 800 }));
+  }), []);
+  assert.match(problems((after) => {
+    after.denseBudgets.examplesSection.variantSourceLexemes += 100;
+    after.provenance.revisions.push(entry({ limit, from: 700, to: 900 }));
+  })[0], new RegExp(`${limit} changed from 700 to 800`, 'u'));
+  assert.deepEqual(problems((after) => {
+    after.denseBudgets.examplesSection.variantSourceLexemes += 200;
+    after.provenance.revisions.push(entry({ limit, from: 700, to: 800 }), entry({ limit, from: 800, to: 900 }));
+  }), [], 'two entries that chain from the base value to the current one');
+  assert.match(problems((after) => {
+    after.denseBudgets.examplesSection.variantSourceLexemes += 200;
+    after.provenance.revisions.push(entry({ limit, from: 800, to: 900 }));
+  })[0], /changed from 700 to 900/u, 'an entry that does not start at the base value is history, not a cover');
+
+  // An expectation is never removed: not the query, not its expectation fields, not the flag that makes them bind.
+  assert.match(problems((after) => { after.discovery.queries = after.discovery.queries.slice(1); })[0], /was removed; an expectation is never removed/u);
+  assert.match(problems((after) => { const { expectedFirst: _first, ...rest } = after.discovery.queries[0]; after.discovery.queries[0] = rest; })[0], /has no expectation/u);
+  assert.ok(problems((after) => { after.discovery.everyQueryMeetsItsExpectation = false; }).some((problem) => /no longer bind/u.test(problem)));
+
+  // An entry names one thing that exists, its field, its transition, what changed and why; an entry made after a first measurement is listed as such.
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', limit, field: 'expectedWithin', from: 1, to: 2 })); })[0], /names exactly one of a query or a limit/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'no such query', field: 'relevant', added: [], removed: [] })); })[0], /names the query "no such query", which is not in the thresholds/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit: 'denseBudgets.nothing', from: 1, to: 2 })); })[0], /names the value denseBudgets\.nothing/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin', from: 4, to: 4, reason: ' ' })); })[0], /does not say its reason/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', from: 4, to: 4 })); })[0], /does not name the field of "collections"/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'collections', field: 'expectedWithin' })); })[0], /does not state its transition: from and to, or added and removed/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit, added: [], removed: [] })); })[0], /does not state its transition: from and to$/u);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ query: 'poster grid', field: 'expectedFirst', from: 'a', to: 'a', afterFirstMeasurement: true })); })[0], /must be listed in provenance\.revisedAfterFirstMeasurement/u);
+  assert.deepEqual(problems((after) => {
+    after.provenance.revisions.push(entry({ query: 'poster grid', field: 'expectedFirst', from: 'a', to: 'a', afterFirstMeasurement: true }));
+    after.provenance.revisedAfterFirstMeasurement.push('poster grid');
+  }), []);
+  assert.match(problems((after) => { after.provenance.revisions.push(entry({ limit, from: 700, to: 700, afterFirstMeasurement: true })); })[0], /never fitted to a result/u);
+
+  // The log and the list of expectations revised after a first measurement only grow, and a dropped entry leaves its own revision unlogged.
+  assert.match(problems((after) => { after.provenance.revisions.pop(); })[0], /dropped or changed an earlier entry for menu; the log only grows/u);
+  const withoutFirstEntry = structuredClone(now);
+  withoutFirstEntry.provenance.revisions.shift();
+  assert.match(thresholdRevisionProblems(await loadThresholds(closeout.sourceRevision), withoutFirstEntry)[0], /"collections" field expectedWithin changed from 3 to 4 with no new entry/u);
+  assert.ok(problems((after) => { after.provenance.revisedAfterFirstMeasurement.pop(); }).some((problem) => /the list only grows/u.test(problem)));
+
+  // The refusal the capture makes, against the real revisions. The same 4 -> 999 is refused against the close-out (3 -> 4 is followed, 999 is not
+  // reached) and against the last retained capture (which has 4, and for which the backfilled entry is history); logged, it is accepted against both.
+  assert.deepEqual(await assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: now }), []);
+  const unlogged = structuredClone(now);
+  collections(unlogged).expectedWithin = 999;
+  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, thresholds: unlogged }), /BL1_THRESHOLDS_UNLOGGED: .*field expectedWithin changed from 3 to 999/su);
+  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: unlogged }), /BL1_THRESHOLDS_UNLOGGED: .*since the capture at [0-9a-f]{8}: the query "collections" field expectedWithin changed from 4 to 999/su);
+  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: 'HEAD', thresholds: unlogged }), /BL1_THRESHOLDS_UNLOGGED: .*since the capture at HEAD: the query "collections" field expectedWithin changed from 4 to 999/su);
+  const logged = structuredClone(now);
+  raise(logged, 4, 999);
+  assert.deepEqual(await assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, previousRevision: current, thresholds: logged }), []);
+  await assert.rejects(assertThresholdsLogged({ closeoutRevision: closeout.sourceRevision, thresholds: { ...now, discovery: { ...now.discovery, queries: now.discovery.queries.slice(1) } } }), /BL1_THRESHOLDS_UNLOGGED: .*an expectation is never removed/su);
+});
+
+/**
+ * The retained growth capture made before Decision 0029 (no growth gate), at its source revision: the current capture, or the one
+ * archived when a later capture replaced it. Forged into an informational capture for the tests below.
+ */
+async function retainedLegacyGrowth() {
+  const { retainedCaptures } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const legacy = (await retainedCaptures({ outputRoot: repositoryRoot, root: bl1 })).find(({ sourceRevision }) => sourceRevision === 'a7237f58d8706ec54d21b88e0363241a936695f0');
+  assert.ok(legacy, 'the growth capture at a7237f58 is retained');
+  return legacy;
+}
+
+/**
+ * That capture forged into one made under Decision 0029: the informational growth gate, the scoped audit recomputed with it, the
+ * non-claim on E-BL1-08 and E-BL1-09, the page widths' source, the content-review coverage table, and the threshold revision log.
+ * Its source revision predates the gate, so the tools of this checkout stand in as the bound ones (`growthToolRevision: 'HEAD'`) and its
+ * thresholds are read at HEAD (`thresholdsRevision`).
+ */
+async function forgeInformational(capture) {
+  const { auditBoundary, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const { parseThresholds } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const forged = structuredClone(capture);
+  const source = capture.index.sourceRevision;
+  forged.verification.growthGate = 'informational';
+  for (const tool of forged.verification.proofTools) {
+    if ([growthScopeTool, boundaryAuditTool].includes(tool.path)) tool.sha256 = digest(readAtRevision(repositoryRoot, 'HEAD', tool.path));
+  }
+  const audit = forged.artifacts['E-BL1-09'].observations.audit;
+  const scoped = auditBoundary({ head: source, growthCommits: audit.growthScope.commits.map(({ commit }) => commit), growthGate: 'informational', offline: true, only: growthScopedChecks, closeoutBase: null });
+  audit.growthScope = scoped.growthScope;
+  audit.checks = audit.checks.map((check) => scoped.checks.find(({ id }) => id === check.id) ?? check);
+  for (const id of ['E-BL1-08', 'E-BL1-09']) forged.records[id].nonClaims.push('A growth commit may change @muxui/react, dependencies, and component records; this record lists what it changed and claims nothing about it.');
+  forged.artifacts['E-BL1-08'].observations.growthScope.gate = 'informational';
+  Object.assign(forged.artifacts['E-BL1-06'].observations.pageWidths, { source: pageWidthsSource, blob: gitOut('rev-parse', `${source}:${pageWidthsSource}`) });
+  const { review } = forged.artifacts['E-BL1-10'].observations;
+  forged.artifacts['E-BL1-10'].observations.reviewCoverage = {
+    rule: 'forged',
+    rows: catalogAt(source).patternSlugs.map((block) => ({
+      block,
+      key: expectedCoverageKey(source, block, boundNonRenderingSources('HEAD')),
+      // The retained review read e9a470c2, before #251 and #256 changed the generator; its key no longer matches the source revision's, so the forged rows stand a review of the source revision in for it.
+      review: { artifact: review.artifact, reviewer: review.reviewer, reviewedRevision: source, reviewedTree: capture.index.sourceTree, keyAtReviewedRevision: expectedCoverageKey(source, block, boundNonRenderingSources('HEAD')) },
+    })),
+  };
+  const logged = parseThresholds(readAtRevision(repositoryRoot, 'HEAD', forged.artifacts['E-BL1-11'].observations.thresholds.path));
+  forged.artifacts['E-BL1-11'].observations.revisionLog = { rule: 'forged', entries: (logged.provenance.revisions ?? []).length, unlogged: [] };
+  return forged;
+}
+
+test('an informational BL1 growth capture is held to what it claims, and a capture made before Decision 0029 stays strict', async () => {
+  const closeout = await retainedCloseout();
+  const legacy = await retainedLegacyGrowth();
+  const capture = await loadCapture({ directory: legacy.directory });
+  const options = { closeoutRevision: closeout.sourceRevision, growthToolRevision: 'HEAD', thresholdsRevision: 'HEAD' };
+  const informational = await forgeInformational(capture);
+  assert.equal((await assertCapture(informational, options)).scope, 'growth');
+  const rejects = (change, message, base = informational, withOptions = options) => {
+    const forged = structuredClone(base);
+    change(forged);
+    return assert.rejects(assertCapture(forged, withOptions), (error) => error.message.includes(message), message);
+  };
+  const audit = (forged) => forged.artifacts['E-BL1-09'].observations.audit;
+  const check = (forged, id) => audit(forged).checks.find((candidate) => candidate.id === id);
+
+  // The non-claim is present on both records.
+  await rejects(({ records }) => { records['E-BL1-09'].nonClaims = records['E-BL1-09'].nonClaims.filter((claim) => !/^A growth commit may change/u.test(claim)); }, 'E-BL1-09 states that a growth commit may change @muxui/react');
+  await rejects(({ records }) => { records['E-BL1-08'].nonClaims = records['E-BL1-08'].nonClaims.filter((claim) => !/^A growth commit may change/u.test(claim)); }, 'E-BL1-08 states that a growth commit may change @muxui/react');
+  // The legs recorded without gating are those of the bound tool: a record cannot widen them to hide a failing gate.
+  await rejects((forged) => { audit(forged).growthScope.informationalLegs['no-workflow-or-hosting-config'] = ['workflowsUnchanged']; }, 'E-BL1-09 records the informational legs of the bound tool and no others');
+  await rejects((forged) => { check(forged, 'no-workflow-or-hosting-config').informationalLegs = ['workflowsUnchanged']; }, 'records the informational legs of the bound tool and no others');
+  await rejects((forged) => { delete check(forged, 'react-source-files').informationalLegs; }, 'records the informational legs of the bound tool and no others');
+  // A gate leg that fails is not accepted, and no leg is recorded as other than git gives it, informational or not.
+  await rejects((forged) => { const workflow = check(forged, 'no-workflow-or-hosting-config'); workflow.legs.workflowsUnchanged = false; workflow.pass = false; }, 'E-BL1-09: every audit check passes');
+  await rejects((forged) => { check(forged, 'no-workflow-or-hosting-config').legs.workflowsUnchanged = false; }, 'the recorded legs are the legs git gives');
+  await rejects((forged) => { check(forged, 'react-source-files').legs.onlyKnownPaths = false; }, 'the recorded legs are the legs git gives');
+  await rejects((forged) => { check(forged, 'versions-follow-decision-0026').legs.onlyDecidedVersionsChanged = false; }, 'the recorded legs are the legs git gives');
+  // Nothing recorded per commit is taken on trust: parents, per-commit legs, changed files, dependency fields, records, and subjects are what git gives.
+  const observed = 'E-BL1-09: the recorded scoped checks, per-commit observations included, are what git gives';
+  await rejects((forged) => { check(forged, 'react-package-manifest').observations.commits[0].parent = 'f'.repeat(40); }, observed);
+  await rejects((forged) => { check(forged, 'react-package-manifest').observations.commits[0].legs.manifestUnchanged = false; }, observed);
+  await rejects((forged) => { check(forged, 'react-source-files').observations.commits[0].observations.bl1PullRequestCommits[0].nonTestReactFiles = ['packages/react/src/imaginary.mjs']; }, observed);
+  await rejects((forged) => { check(forged, 'react-source-files').observations.commits[1].observations.nonTestChangesInRange.push('packages/react/src/imaginary.mjs'); }, observed);
+  await rejects((forged) => { check(forged, 'no-dependency-change').observations.commits[0].observations.dependencyChanges.push({ path: 'packages/react/package.json', field: 'dependencies' }); }, observed);
+  await rejects((forged) => { check(forged, 'no-new-component-token-capability-or-platform').observations.commits[0].observations.changedCatalogRecords.push('catalog/components/button/artifact.json'); }, observed);
+  await rejects((forged) => { check(forged, 'react-package-manifest').claim = 'A growth commit changed nothing.'; }, observed);
+  await rejects((forged) => { audit(forged).growthScope.commits[0].subject = 'another subject'; }, 'E-BL1-09: the recorded growth scope, its commits and their subjects included, is what git gives');
+  // The gate is recorded once and only on a growth capture.
+  await rejects((forged) => { delete forged.verification.growthGate; }, 'a capture without growthGate records one review of the whole catalog/patterns tree');
+  await rejects((forged) => { forged.verification.growthGate = 'advisory'; }, 'growthGate is absent');
+  await rejects((forged) => { delete forged.artifacts['E-BL1-08'].observations.growthScope.gate; }, 'E-BL1-08 records the per-commit digest comparison as an observation');
+  const closeoutCapture = await loadCapture({ directory: closeout.directory });
+  closeoutCapture.verification.growthGate = 'informational';
+  await assert.rejects(assertCapture(closeoutCapture), (error) => error.message.includes('growthGate is absent'), 'a close-out capture has no growth gate');
+
+  // An unlogged threshold change is refused: against the close-out, and against the capture this one replaces.
+  await assert.rejects(assertCapture(informational, { ...options, thresholdsRevision: capture.index.sourceRevision }), (error) => error.message.includes('every threshold change since the close-out is logged'));
+  await rejects((forged) => { forged.artifacts['E-BL1-11'].observations.revisionLog.unlogged = ['collections']; }, 'E-BL1-11 records no unlogged threshold change');
+  await rejects((forged) => { forged.artifacts['E-BL1-11'].observations.revisionLog.entries += 1; }, 'E-BL1-11 counts the log entries');
+  await rejects((forged) => { delete forged.artifacts['E-BL1-11'].observations.revisionLog; }, 'revisionLog');
+
+  // The page widths are the code's at the source revision.
+  await rejects((forged) => { forged.artifacts['E-BL1-06'].observations.pageWidths.widths.pop(); }, 'E-BL1-06 captures the page widths the docs presets module lists at the source revision');
+  await rejects((forged) => { forged.artifacts['E-BL1-06'].observations.pageWidths.blob = 'c'.repeat(40); }, 'E-BL1-06 names the module and blob the widths were read from');
+
+  // A content review covers a block only for the tree it read, and every block needs one.
+  const rows = (forged) => forged.artifacts['E-BL1-10'].observations.reviewCoverage.rows;
+  await rejects((forged) => { rows(forged).pop(); }, 'E-BL1-10 covers every block with a retained review');
+  await rejects((forged) => { rows(forged)[0].key.blockTree = 'c'.repeat(40); }, 'is covered at the key its sources, participants, and React runtime have at the source revision');
+  await rejects((forged) => { rows(forged)[0].key.participants[0].tree = 'c'.repeat(40); }, 'is covered at the key its sources, participants, and React runtime have at the source revision');
+  await rejects((forged) => { rows(forged)[0].key.participants.pop(); }, 'is covered at the key its sources, participants, and React runtime have at the source revision');
+  await rejects((forged) => { rows(forged)[0].key.reactRuntime.digest = `sha256:${'0'.repeat(64)}`; }, 'is covered at the key its sources, participants, and React runtime have at the source revision');
+  await rejects((forged) => { rows(forged)[0].key.reactRuntime.excluded = []; }, 'is covered at the key its sources, participants, and React runtime have at the source revision');
+  await rejects((forged) => { rows(forged).at(-1).review.reviewedRevision = closeout.sourceRevision; }, 'the row for workspace-navigation records the key at its review\'s reviewed revision');
+  await rejects((forged) => { rows(forged)[0].review.reviewedTree = 'c'.repeat(40); }, 'keeps its review\'s own reviewed tree');
+  await rejects((forged) => { rows(forged)[0].review.artifact.sha256 = `sha256:${'0'.repeat(64)}`; }, 'is retained at its digest');
+  await rejects((forged) => { delete forged.artifacts['E-BL1-10'].observations.reviewCoverage; }, 'reviewCoverage');
+
+  // A capture without growthGate cannot borrow any of it: the same records are held to the strict facts.
+  assert.equal((await assertCapture(capture, { closeoutRevision: closeout.sourceRevision })).scope, 'growth');
+  const strict = (change, message) => rejects(change, message, capture, { closeoutRevision: closeout.sourceRevision });
+  await strict((forged) => { audit(forged).growthScope.informationalLegs = { 'react-source-files': ['onlyKnownPaths'] }; }, 'a capture without growthGate gates every leg');
+  await strict((forged) => { check(forged, 'react-source-files').informationalLegs = ['onlyKnownPaths']; }, 'records the informational legs of the bound tool and no others');
+  await strict((forged) => { forged.artifacts['E-BL1-11'].observations.revisionLog = { entries: 0, unlogged: [] }; }, 'a capture without growthGate records no revision log');
+  await strict((forged) => { forged.artifacts['E-BL1-10'].observations.reviewCoverage = { rows: [] }; }, 'a capture without growthGate records one review of the whole catalog/patterns tree');
+  await strict((forged) => { forged.artifacts['E-BL1-09'].observations.audit.checks.find(({ id }) => id === 'react-source-files').legs.onlyKnownPaths = false; }, 'the recorded legs are the legs git gives');
+  await strict((forged) => { forged.artifacts['E-BL1-08'].observations.growthScope.commits[0].identical = false; }, 'has the same digest before and after');
+});
+
+test('an informational growth gate records what a growth commit changed in @muxui/react, dependencies, and component records, and still fails a workflow, a version bump, or a platform', async () => {
+  const { auditBoundary, growthInformationalLegs, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const repo = await growthRepository();
+  const { cwd, base, first, second, directoryB } = repo;
+  const jsonEdit = (change) => (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`;
+  const audit = (growth, growthGate) => auditBoundary({ cwd, base, head: growth.at(-1), mergeRevision: base, closeoutBase: null, growthCommits: growth, offline: true, only: growthScopedChecks, growthGate });
+  const failed = (growth, growthGate) => audit(growth, growthGate).checks.filter(({ pass }) => !pass).map(({ id }) => id);
+  try {
+    const reactSource = (await readdir(join(cwd, 'packages/react/src'))).find((name) => name.endsWith('.mjs'));
+    // Every check that reads @muxui/react, dependencies, and component records has legs that are recorded and do not gate; the gates are the rest.
+    assert.deepEqual(Object.keys(growthInformationalLegs), ['react-package-manifest', 'react-source-files', 'react-stylesheet-names', 'no-dependency-change', 'no-new-component-token-capability-or-platform']);
+    assert.deepEqual(growthInformationalLegs['no-new-component-token-capability-or-platform'], ['catalogRecordsUnchanged'], 'web.react-only stays a gate');
+    for (const gate of ['no-workflow-or-hosting-config', 'versions-follow-decision-0026']) assert.equal(growthInformationalLegs[gate], undefined, `${gate} gates every leg`);
+
+    const bumpVersion = jsonEdit((manifest) => ({ ...manifest, version: '0.1.0-rc.2' }));
+    for (const [label, change, checks] of [
+      ['@muxui/react source', (edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`), ['react-source-files']],
+      ['the lockfile', (edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`), ['no-dependency-change']],
+      ['a component record', (edit) => edit('catalog/components/button/artifact.json', jsonEdit((record) => ({ ...record, summary: `${record.summary} Edited.` }))), ['no-new-component-token-capability-or-platform']],
+    ]) {
+      const commit = await repo.variant(change);
+      assert.deepEqual(failed([first, commit]), checks, `${label}: a strict audit fails the commit, as every capture made before Decision 0029 did`);
+      const recorded = audit([first, commit], 'informational');
+      assert.equal(recorded.pass, true, `${label}: the informational audit passes`);
+      assert.deepEqual(recorded.growthScope.informationalLegs, growthInformationalLegs);
+      const check = recorded.checks.find(({ id }) => id === checks[0]);
+      assert.equal(Object.values(check.legs).includes(false), true, `${label}: the leg is still computed and recorded as failing`);
+      assert.deepEqual(check.informationalLegs, growthInformationalLegs[checks[0]]);
+      assert.equal(check.observations.commits.length, 2, `${label}: the per-commit list is recorded`);
+      assert.match(check.claim, /claims nothing about/u, `${label}: the claim says it claims nothing`);
+    }
+
+    // What stays a gate fails a growth commit whatever the gate: a workflow, a hosting file, a version bump, and a platform other than web.react.
+    const withWorkflow = await repo.variant((edit) => edit('.github/workflows/ci.yml', (text) => `${text}\n# changed\n`));
+    assert.deepEqual(failed([first, withWorkflow], 'informational'), ['no-workflow-or-hosting-config'], 'a growth commit that changes a workflow still fails');
+    const withHosting = await repo.variant(() => writeFile(join(cwd, 'netlify.toml'), '[build]\n'));
+    assert.deepEqual(failed([first, withHosting], 'informational'), ['no-workflow-or-hosting-config']);
+    const withVersion = await repo.variant((edit) => edit('packages/react/package.json', bumpVersion));
+    assert.deepEqual(failed([first, withVersion], 'informational'), ['versions-follow-decision-0026'], 'a growth commit that bumps a version fails, and the manifest leg it also changes is recorded');
+    const withCatalogVersion = await repo.variant((edit) => edit('packages/catalog/package.json', bumpVersion));
+    assert.ok(failed([first, withCatalogVersion], 'informational').includes('versions-follow-decision-0026'), 'the three packages Decision 0026 named may not be bumped by a growth commit either');
+    const withPlatform = await repo.variant((edit) => edit(`${directoryB}/artifact.json`, jsonEdit((record) => ({ ...record, platforms: [...record.platforms, 'web.html'] }))));
+    assert.deepEqual(failed([first, withPlatform], 'informational'), ['no-new-component-token-capability-or-platform'], 'web.react-only stays a gate');
+
+    // A later release candidate is not a growth commit: it bumps @muxui/react after the growth, and the range from the base blames the growth for it.
+    const later = await repo.modify((edit) => edit('packages/react/package.json', bumpVersion));
+    const versionsOver = (growthCommits) => auditBoundary({ cwd, base, head: later, mergeRevision: base, closeoutBase: null, growthCommits, offline: true, only: ['versions-follow-decision-0026'] }).pass;
+    assert.equal(versionsOver(undefined), false, 'the range from the base fails after a later release candidate');
+    assert.equal(versionsOver([first, second]), true, 'the growth commits do not');
+    assert.throws(() => audit([first], 'sideways'), /BL1_AUDIT_GROWTH_GATE: unknown growth gate/u);
+    assert.throws(() => auditBoundary({ cwd, base, head: first, closeoutBase: null, offline: true, growthGate: 'informational' }), /a growth gate needs growth commits/u);
+  } finally {
+    await repo.dispose();
+  }
+});
+
+test('the BL1 registry check passes after a later release candidate and fails when something already published was rewritten', async () => {
+  const { auditBoundary, registryProblems } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
+  const { view } = JSON.parse(readFileSync(join(repositoryRoot, 'tests/evidence/r1-exit/artifacts/registry-observation.json'), 'utf8'));
+  const [recordedVersion] = view.versions;
+  const recorded = { distTags: view.distTags, integrity: view.integrity, shasum: view.shasum, deprecated: view.deprecated ?? null, versions: view.versions, versionTimes: { [recordedVersion]: view.time[recordedVersion] } };
+  const observe = (observed) => auditBoundary({ only: ['registry-unchanged'], closeoutBase: null, observers: { registry: () => ({ observed }) } }).checks[0];
+  const failing = (observed) => Object.entries(observe(observed).legs).filter(([, value]) => value === false).map(([leg]) => leg).sort();
+  const nextVersion = '0.1.0-rc.2';
+  const later = { ...recorded, distTags: { ...recorded.distTags, next: nextVersion }, versions: [recordedVersion, nextVersion], versionTimes: { ...recorded.versionTimes, [nextVersion]: '2099-01-01T00:00:00.000Z' } };
+
+  const unchanged = observe(recorded);
+  assert.deepEqual([unchanged.pass, unchanged.observations.laterVersions], [true, []]);
+  // A later release candidate publishes a version and moves `next`: listed, not claimed, and not a failure.
+  const sequence = observe(later);
+  assert.deepEqual([sequence.pass, sequence.observations.laterVersions], [true, [nextVersion]]);
+  assert.deepEqual(registryProblems(later, recorded), []);
+  // Something the R1 exit published, rewritten, retagged, or removed, is a failure on its own leg.
+  assert.deepEqual(failing({ ...later, distTags: { ...later.distTags, latest: nextVersion } }), ['distTags']);
+  assert.deepEqual(failing({ ...later, integrity: 'sha512-other' }), ['integrity']);
+  assert.deepEqual(failing({ ...later, shasum: 'other' }), ['shasum']);
+  assert.deepEqual(failing({ ...later, versionTimes: { ...later.versionTimes, [recordedVersion]: '2099-01-01T00:00:00.000Z' } }), ['versionTimes']);
+  assert.deepEqual(failing({ ...later, versions: [nextVersion] }), ['versions']);
+  // A deprecation of the recorded version (a Decision 0023 rollback) is a failure too: it needs a reviewed edit of the check, like a re-point of `latest`.
+  assert.equal(recorded.deprecated, null, 'the R1 exit read-back records no deprecation');
+  assert.deepEqual(failing({ ...later, deprecated: 'rc.1 is bad; use rc.2' }), ['deprecated']);
+  assert.deepEqual(failing({ ...recorded, deprecated: 'rc.1 is bad' }), ['deprecated']);
+  assert.equal(auditBoundary({ only: ['registry-unchanged'], closeoutBase: null, observers: { registry: () => ({ observed: null, failure: 'unreachable' }) } }).checks[0].legs.registryReadable, false);
+});
+
+test('a content review covers a block only for the sources, participants, and React runtime it read, and a capture needs a new review only for a block no retained review covers', async () => {
+  const { contentReviewCoverage, coverageKey, nonRenderingReactSources } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-coverage-'));
+  try {
+    gitIn(cwd, 'init', '-q', '-b', 'main');
+    const pattern = (slug, text, ...components) => ({ [`catalog/patterns/${slug}/artifact.json`]: `${JSON.stringify({ text, participants: components.map((component) => ({ role: component, component: `muxui:component:${component}` })) })}\n` });
+    const component = (slug, text) => ({ [`catalog/components/${slug}/artifact.json`]: `${JSON.stringify({ text })}\n` });
+    // Block a renders Button; block b renders Button and Text. The Sidebar's default placeholder lives in the runtime and in its record.
+    const first = await commitFiles(cwd, {
+      ...pattern('a', 'a1', 'button'), ...pattern('b', 'b1', 'button', 'text'),
+      ...component('button', 'button1'), ...component('text', 'text1'), ...component('unrelated', 'unrelated1'),
+      'packages/react/src/button.mjs': 'export const Button = 1;\n', 'packages/react/src/generate.mjs': 'generate 1\n', 'packages/react/src/supplemental-mapping.mjs': 'mapping 1\n',
+      'packages/react/src/r1-contracts.mjs': 'contracts 1\n', 'packages/react/src/r1-deferred-evidence.mjs': 'deferred 1\n', 'packages/react/src/publish-guard.mjs': 'guard 1\n',
+    }, 'a and b');
+    const review = (name, reviewedRevision, blocks) => ({ artifact: { path: `reviews/${name}.md`, sha256: `sha256:${name}` }, reviewer: `reviewer ${name}`, reviewedRevision, reviewedTree: gitIn(cwd, 'rev-parse', `${reviewedRevision}^{tree}`), blocks });
+    const early = review('early', first, ['a', 'b']);
+    const coverage = (source, reviews, patternSlugs = ['a', 'b']) => contentReviewCoverage({ cwd, sourceRevision: source, patternSlugs, reviews });
+    const covering = ({ rows }) => Object.fromEntries(rows.map(({ block, review: { artifact } }) => [block, artifact.path]));
+    const uncoveredAfter = async (files, message, patternSlugs) => coverage(await commitFiles(cwd, files, message), [early], patternSlugs).uncovered;
+    gitIn(cwd, 'tag', 'base');
+
+    // The key is the block's tree, the catalog record tree of each participant, and the runtime files that can render, and it names what it leaves out.
+    const key = coverageKey(cwd, first, 'b');
+    assert.deepEqual(key.participants.map(({ component: name }) => name), ['muxui:component:button', 'muxui:component:text']);
+    assert.equal(key.participants[0].tree, gitIn(cwd, 'rev-parse', `${first}:catalog/components/button`));
+    assert.equal(key.blockTree, gitIn(cwd, 'rev-parse', `${first}:catalog/patterns/b`));
+    assert.deepEqual([key.reactRuntime.root, key.reactRuntime.files, key.reactRuntime.excluded], ['packages/react/src', 3, nonRenderingReactSources], 'the runtime module, the generator, and the mapping are in the key');
+    assert.deepEqual(nonRenderingReactSources, ['r1-contracts.mjs', 'r1-deferred-evidence.mjs', 'publish-guard.mjs'].map((name) => `packages/react/src/${name}`), 'only the contract checks, the deferred-evidence list, and the publish guard are left out');
+    assert.equal(coverageKey(cwd, first, 'missing'), null);
+    assert.deepEqual(coverage(first, [early]).uncovered, [], 'a review covers what it read');
+
+    // A change that reaches no copy a block renders does not ask for a new review: an unrelated component's record, and the files that neither render nor select anything.
+    assert.deepEqual(await uncoveredAfter(component('unrelated', 'unrelated2'), 'an unrelated component changes'), []);
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/r1-contracts.mjs': 'contracts 2\n', 'packages/react/src/r1-deferred-evidence.mjs': 'deferred 2\n', 'packages/react/src/publish-guard.mjs': 'guard 2\n' }, 'the contract checks, deferred evidence, and publish guard change'), []);
+    // The generator projects the runtime that blocks import and could turn a placeholder `Search` into `Find`, and the supplemental mapping selects the runtime sources
+    // and exports, so a change to either asks for a new review of every block.
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/generate.mjs': 'generate 2 (placeholder = "Find")\n' }, 'the generator changes'), ['a', 'b']);
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/supplemental-mapping.mjs': 'mapping 2\n' }, 'the supplemental mapping changes'), ['a', 'b']);
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
+    // A change to a participant's record asks for a new review of the blocks that render that participant, and of no other.
+    assert.deepEqual(await uncoveredAfter(component('text', 'text2'), 'Text changes'), ['b']);
+    assert.deepEqual(await uncoveredAfter(component('button', 'button2'), 'Button changes'), ['a', 'b']);
+    // A change to a runtime source module, which carries a default placeholder or label, asks for a new review of every block.
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/button.mjs': 'export const Button = 2;\n' }, 'the runtime changes'), ['a', 'b']);
+    assert.deepEqual(await uncoveredAfter({ 'packages/react/src/supplemental/index.mjs': 'export const placeholder = "Search";\n' }, 'a runtime module is added'), ['a', 'b']);
+    // The block's own sources, as before.
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
+    assert.deepEqual(await uncoveredAfter(pattern('b', 'b2', 'button', 'text'), 'b changes'), ['b']);
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
+    // A participant added to a block changes the block's own record, and a participant record that did not exist is a different key.
+    assert.deepEqual(await uncoveredAfter({ ...pattern('c', 'c1', 'missing') }, 'c is added', ['a', 'b', 'c']), ['c']);
+    assert.equal(coverageKey(cwd, 'HEAD', 'c').participants[0].tree, null);
+
+    // The early review is preferred where it covers, a later review covers what the early one cannot, and a review covers only the blocks it names.
+    gitIn(cwd, 'reset', '-q', '--hard', 'base');
+    const changed = await commitFiles(cwd, component('text', 'text2'), 'Text changes');
+    const late = review('late', changed, ['a', 'b']);
+    assert.deepEqual(covering(coverage(changed, [early, late])), { a: 'reviews/early.md', b: 'reviews/late.md' }, 'a is untouched by the Text change; b needs the later review');
+    assert.deepEqual(covering(coverage(changed, [late, early])), { a: 'reviews/late.md', b: 'reviews/late.md' });
+    assert.deepEqual(coverage(changed, [{ ...late, blocks: ['a'] }]).uncovered, ['b']);
+    assert.deepEqual(coverage(changed, [{ ...late, reviewedRevision: 'f'.repeat(40) }]).uncovered, ['a', 'b']);
+    assert.deepEqual(coverage(changed, [late], ['a', 'missing']).uncovered, ['missing']);
+    assert.deepEqual(coverage(changed, []).uncovered, ['a', 'b']);
+    // A row keeps the covering review's own reviewed revision, tree, and key.
+    const [row] = coverage(changed, [early, late]).rows;
+    assert.deepEqual(row, {
+      block: 'a',
+      key: coverageKey(cwd, changed, 'a'),
+      review: { artifact: early.artifact, reviewer: 'reviewer early', reviewedRevision: first, reviewedTree: early.reviewedTree, keyAtReviewedRevision: coverageKey(cwd, first, 'a') },
+    });
+    assert.deepEqual(row.key, row.review.keyAtReviewedRevision);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+  }
+});
+
+test('the content reviews earlier BL1 captures retained are the coverage candidates, at the paths they are retained at', async () => {
+  const { retainedContentReviews } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-reviews-'));
+  const root = 'tests/evidence/bl1';
+  const put = async (path, text) => {
+    await mkdir(join(outputRoot, path, '..'), { recursive: true });
+    await writeFile(join(outputRoot, path), text);
+  };
+  /** A capture at `directory` that retained `text` as its content review, naming `blocks`. */
+  const capture = async (directory, sourceRevision, text, blocks) => {
+    await put(`${directory}/verification.json`, JSON.stringify({ scope: 'growth', sourceRevision }));
+    await put(`${directory}/artifacts/E-BL1-10-content-review.md`, text);
+    await put(`${directory}/artifacts/E-BL1-10.json`, JSON.stringify({ observations: { review: { artifact: { path: `${root}/artifacts/E-BL1-10-content-review.md`, sha256: digest(text) }, reviewer: `reviewer of ${sourceRevision.slice(0, 1)}`, reviewedRevision: sourceRevision, reviewedTree: 't'.repeat(40), blocks } } }));
+  };
+  try {
+    const [revisionA, revisionB, revisionC] = ['a', 'b', 'c'].map((letter) => letter.repeat(40));
+    await capture(`${root}/superseded/${'a'.repeat(12)}`, revisionA, 'review of a\n', ['x']);
+    await capture(root, revisionB, 'review of b\n', ['x', 'y']);
+    // A capture at a new revision replaces the one at the root, whose review is then archived under its own revision.
+    assert.deepEqual((await retainedContentReviews({ outputRoot, root, sourceRevision: revisionC })).map(({ artifact, reviewer, blocks }) => [artifact.path, artifact.sha256, reviewer, blocks]), [
+      [`${root}/superseded/${'b'.repeat(12)}/artifacts/E-BL1-10-content-review.md`, digest('review of b\n'), 'reviewer of b', ['x', 'y']],
+      [`${root}/superseded/${'a'.repeat(12)}/artifacts/E-BL1-10-content-review.md`, digest('review of a\n'), 'reviewer of a', ['x']],
+    ]);
+    // A rerun at the revision already at the root replaces that review, so it is not a candidate.
+    assert.deepEqual((await retainedContentReviews({ outputRoot, root, sourceRevision: revisionB })).map(({ artifact }) => artifact.path), [`${root}/superseded/${'a'.repeat(12)}/artifacts/E-BL1-10-content-review.md`]);
+    // A retained review that no longer matches its digest is refused rather than relied on.
+    await put(`${root}/artifacts/E-BL1-10-content-review.md`, 'tampered\n');
+    await assert.rejects(retainedContentReviews({ outputRoot, root, sourceRevision: revisionC }), /no longer matches its recorded digest/u);
+  } finally {
+    await rm(outputRoot, { recursive: true, force: true });
+  }
 });

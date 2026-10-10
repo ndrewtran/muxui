@@ -13,7 +13,8 @@ const thresholds = await loadThresholds();
 const api = createCatalogApi(JSON.parse(catalogJson));
 const measured = measureRegression({ api, baselineApi: await compileApiWithoutPatterns(), thresholds });
 
-// Every block holds the thresholds committed before the BL1 baseline was captured (E-BL1-11).
+// Every block holds the thresholds in the working tree (E-BL1-11). A pull request may change a limit or a budget in
+// tests/evidence/bl1/regression-thresholds.json, logged in provenance.revisions (Decision 0029), and these tests follow it.
 test('E-BL1-11: the shipped patterns hold the regression thresholds', () => {
   assert.deepEqual(regressionFailures(measured, thresholds), []);
   // The measurement saw every shipped pattern, not an empty set.
@@ -30,6 +31,7 @@ test('E-BL1-11: each threshold fails when its measurement worsens', () => {
     return regressionFailures(copy, thresholds);
   };
   const [pattern] = measured.denseBudgets.patterns;
+  const { tokensPerVariant, envelopeTokens, variantSourceLexemes } = thresholds.denseBudgets.examplesSection;
   const only = (failures, pattern_) => {
     assert.equal(failures.length, 1, JSON.stringify(failures));
     assert.match(failures[0], pattern_);
@@ -42,6 +44,7 @@ test('E-BL1-11: each threshold fails when its measurement worsens', () => {
   only(mutate((copy) => { copy.discovery.meanPrecisionAt3 = 0.2; }), /mean precision at 3 is 0\.200/u);
   only(mutate((copy) => { copy.search.displaced.push({ query: 'Button', baselineFirst: 'a', first: 'b' }); }), /displace the first result of 1 component searches: Button/u);
   only(mutate((copy) => { copy.denseBudgets.patterns[0].rows[0].tokens = copy.denseBudgets.patterns[0].rows[0].budget + 1; }), /list pattern .* the registry budget is/u);
-  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.tokens = 1000 * pattern.examples.variants + 401; }), /get --section examples takes .* the ceiling is/u);
-  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.variantSourceLexemes[0].lexemes = 701; }), /source has 701 lexemes; the ceiling is 700/u);
+  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.tokens = tokensPerVariant * pattern.examples.variants + envelopeTokens + 1; }), /get --section examples takes .* the ceiling is/u);
+  // One lexeme past the size limit the thresholds set, whatever a pull request sets it to.
+  only(mutate((copy) => { copy.denseBudgets.patterns[0].examples.variantSourceLexemes[0].lexemes = variantSourceLexemes + 1; }), new RegExp(`source has ${variantSourceLexemes + 1} lexemes; the ceiling is ${variantSourceLexemes}$`, 'u'));
 });

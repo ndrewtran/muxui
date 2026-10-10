@@ -537,9 +537,10 @@ not implied by `PatternRecord` validation.
 
 **Staged fields (Decision 0026).** The first delivered `PatternRecord` schema,
 enabled with the Blocks showcase slice, requires identity, name, summary,
-lifecycle, keywords, a category from a closed enum in two groups (application
-and marketing), intent, platforms, participants, variants, accessibility notes,
-and unsupported cases. Composition relations,
+lifecycle, keywords, a category the registry (`catalog/patterns/categories.json`)
+declares, in one of two groups (application and marketing; adding a category is
+an ordinary pull request, Decision 0029), intent, platforms, participants,
+variants, accessibility notes, and unsupported cases. Composition relations,
 invariants, and the closed parameter schema are defined by the schema but
 optional, and the compiler validates whatever a record declares. `plan` and any
 other pattern-derived claim require them, so the planner never selects a
@@ -566,8 +567,9 @@ or a marketing page section, is a bounded composition under this section. It
 covers one page region, has no routing, no business state, and no data
 fetching, and is composed only of admitted Mux components plus plain layout
 markup (`section`, `div`, headings, and lists styled with semantic tokens).
-Anything that needs a new reusable component waits for that component's own
-family admission, and a block never introduces one implicitly. This is how a
+A block that needs a new reusable component ships with it under that
+component's own proof (Decision 0029), and a block never introduces one
+implicitly. This is how a
 block stays inside the v1 exclusion of page-archetype, journey, and flow kinds
 below. Block placeholder copy and imagery are demonstration material, never
 Mux UI product truth. Copy is generic and Mux-authored. Imagery is Mux-authored

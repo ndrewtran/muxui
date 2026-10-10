@@ -30,6 +30,8 @@ Each entry gives the last commit where the decision text was live in
 | 0024 (with its acceptance) | [CodeBlock family admission](./0024-code-block-admission.md) | Completed family admission. The bounded-work rule is restated and its numbers live in code. | [Decision 0028](../0028-standing-development-rule.md) | `bd85d3d5` |
 | 0025 (with its acceptance) | [Remaining candidates admission](./0025-remaining-candidates-admission.md) | Completed family admission. | [Decision 0028](../0028-standing-development-rule.md) | `bd85d3d5` |
 | 0009 amendment 02 (with its acceptance) | [Core UI delivery skill successor identity](./0009-amendment-02-skill-routing.md) | Byte-identity tuple for a retired verifier and a skill path that no longer exists. Its guidance semantics are restated in amendments 05 and 06. | [Decision 0009 amendment 06](../0009-amendment-06-repository-delivery-skill-owner.md) | `d195cad6` |
+| 0026 amendment 01 (with its acceptance) | [Blocks page-width presets](./0026-amendment-01-page-width-presets.md) | The page widths live only in code, in `apps/docs/src/lib/block-presets.ts`, and no decision text is read for them. | [Decision 0029](../0029-blocks-growth-rules.md) | `04db9be1` |
+| 0026 amendment 02 (with its acceptance) | [Category-name query expectations in block growth](./0026-amendment-02-category-name-queries.md) | A narrow exception to a rule that is now general: a pull request may change a threshold when it states the change before measuring and logs it. | [Decision 0029](../0029-blocks-growth-rules.md) | `04db9be1` |
 
 21 retired stubs were removed: Decisions 0007 and 0008, the Decision 0009 base
 and amendment 03, and Decision 0010 amendments 04 to 09, with their acceptance,

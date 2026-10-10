@@ -7,7 +7,9 @@
 // close-out revision, that adds or changes a block the close-out did not measure (its directory under
 // `catalog/patterns/` or its `catalog-sources.json` entries), each against its first parent. A later commit
 // that only edits a new block is a growth commit like the one that added it, so it cannot also change
-// `@muxui/react` or a dependency unaudited. The head need not be a growth commit.
+// `@muxui/react` or a dependency unaudited. The head need not be a growth commit. Since Decision 0029 the per-commit
+// comparisons of E-BL1-08 and the E-BL1-09 checks that read `@muxui/react`, dependencies, and component records are recorded
+// observations, not gates (see `growthGate` in boundary-audit.mjs); the audit still names every commit that changed them.
 //
 // Git cannot say which commits belonged to one pull request, so the scope is sound only when each growth pull
 // request is one commit: a squash merge, whose subject ends with GitHub's ` (#<number>)`. A pull request merged as
@@ -20,7 +22,10 @@ import { dirname, join } from 'node:path';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { compileBundle, repositoryRoot } from './regression.mjs';
 
-export const growthScopeRule = 'Each commit on the first-parent history of the source revision, after the retained close-out revision, that adds or changes a block the close-out did not measure (its directory under catalog/patterns or its catalog-sources.json entries) is compared with its first parent. E-BL1-08: the catalog compiled without the sources of the blocks that commit added or changed has the same digest before and after, and the commit changes no compiler or schema path that moves the digest. E-BL1-09: across that commit @muxui/react (sources, package.json, stylesheet names), every dependency and the lockfile, and the component, token, capability, and React family records are unchanged. Every growth commit is a squash merge of one pull request (a single-parent commit whose subject ends with " (#<number>)"), so no commit of a growth pull request escapes the audit. Changes other pull requests made between the close-out and the capture are outside both claims.';
+export const growthScopeRule = 'Each commit on the first-parent history of the source revision, after the retained close-out revision, that adds or changes a block the close-out did not measure (its directory under catalog/patterns or its catalog-sources.json entries) is compared with its first parent (Decision 0029). E-BL1-08 records, per commit, the catalog digest before and after with the sources of the blocks that commit added or changed left out of both sides, and the compiler and schema paths the commit changed; these are observations and gate nothing. E-BL1-09 records, per commit, whether @muxui/react (sources, package.json, stylesheet names), dependencies and the lockfile, and the component, token, capability, and React family records changed; these are observations and gate nothing, and a growth commit may change them under its own proof. A growth commit may not change a workflow, a hosting or deployment file, or an Astro deployment setting, or bump a package version. Every growth commit is a squash merge of one pull request (a single-parent commit whose subject ends with " (#<number>)"), so no commit of a growth pull request escapes the audit.';
+
+/** The text of the non-claim a growth record carries (Decision 0029); the integrity test requires it, and E-BL1-08 and E-BL1-09 each state it. */
+export const growthNonClaim = 'A growth commit may change @muxui/react, dependencies, and component records; this record lists what it changed and claims nothing about it.';
 
 /**
  * The paths that run when the catalog compiles and can move the digest of sources that did not change. Both sides of the

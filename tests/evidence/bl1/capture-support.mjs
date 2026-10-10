@@ -8,6 +8,9 @@
 //   when a later one replaces it, so replacing records never deletes the only copy.
 // - `retainedCaptures` and `assertGrowthSource` find the retained close-out capture a growth capture
 //   builds on, and refuse a growth capture that adds no block to it.
+// - `retainedContentReviews` and `contentReviewCoverage` decide which independent content review covers each block,
+//   by the git tree of `catalog/patterns/<slug>` and the copy-bearing inputs of its participants, so a capture needs a new review only
+//   for a block, or a participant it renders, that no retained review read.
 // - `blockBrowserTests` derives the cross-engine browser tests from the policy's pattern routes.
 // - `seedRehearsal` starts a rehearsal from a copy of the retained evidence, and refuses a destination
 //   that overlaps it before removing anything.
@@ -16,6 +19,7 @@ import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { cp, mkdir, readFile, readdir, realpath, rm } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, posix, relative, resolve, sep } from 'node:path';
+import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { hasUnsanitizedEvidenceOutput } from '../../../tooling/audits/repository-policy/src/evidence-verify.mjs';
 import { sanitizePaths } from './proof-run.mjs';
 
@@ -211,15 +215,122 @@ export async function measuredPatternIds({ outputRoot, directory }) {
 /**
  * A growth capture builds on a retained close-out capture, current or archived, and must add a block to
  * it: the catalog needs a pattern id the close-out's E-BL1-11 record did not measure. Returns the
- * close-out capture and the pattern ids added since it.
+ * close-out capture, the pattern ids added since it, and the source revision of the capture at the retained root,
+ * which a new capture replaces (the thresholds changed since it need new log entries).
  */
 export async function assertGrowthSource({ evidenceRoot, root, patternIds }) {
-  const closeout = (await retainedCaptures({ outputRoot: evidenceRoot, root })).find(({ scope }) => scope === 'close-out');
+  const captures = await retainedCaptures({ outputRoot: evidenceRoot, root });
+  const closeout = captures.find(({ scope }) => scope === 'close-out');
   if (closeout === undefined) throw new Error(`BL1_GROWTH_NO_CLOSEOUT: a growth capture builds on a retained close-out capture, and ${root} retains none`);
   const measured = await measuredPatternIds({ outputRoot: evidenceRoot, directory: closeout.directory });
   const added = patternIds.filter((id) => !measured.includes(id));
   if (added.length === 0) throw new Error(`BL1_GROWTH_NO_BLOCK: the catalog has no pattern beyond the ${measured.length} the close-out at ${closeout.sourceRevision.slice(0, 8)} measured; a growth capture follows an added block`);
-  return { closeout, added };
+  return { closeout, added, previousRevision: captures[0].sourceRevision };
+}
+
+/** The git tree of `catalog/patterns/<slug>` at `revision`, or null when the block or the revision is absent. */
+export function blockTreeAt(cwd, revision, slug) {
+  const result = spawnSync('git', ['rev-parse', `${revision}:catalog/patterns/${slug}`], { cwd, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+}
+
+const reactRuntimeRoot = 'packages/react/src';
+/**
+ * The files under `packages/react/src` that neither render a component nor decide what one renders: the contract checks that verify the
+ * generated package, the deferred-evidence list, and the publish guard. Every other file there is part of the coverage key: runtime modules
+ * and stylesheets can carry the copy a block renders (a default placeholder, an accessible label), the generator projects the runtime that
+ * blocks import and could transform that copy, and the supplemental mapping selects the runtime sources and exports.
+ */
+export const nonRenderingReactSources = ['r1-contracts.mjs', 'r1-deferred-evidence.mjs', 'publish-guard.mjs'].map((name) => `${reactRuntimeRoot}/${name}`);
+
+/**
+ * What a review of a block read, as far as the copy the block renders goes: the block's own sources (its git tree), the catalog
+ * record of every participant component (its git tree, `null` when the record is absent), and the React runtime sources, as a digest of
+ * the path and blob of every file under `packages/react/src` except `nonRenderingReactSources`. A participant's default copy lives in its
+ * record and in the runtime, and no per-component source mapping exists for every participant, so the runtime part is the whole of
+ * `packages/react/src`, which is conservative: any runtime change asks for a new review. Returns null when the block is absent.
+ */
+export function coverageKey(cwd, revision, slug) {
+  const blockTree = blockTreeAt(cwd, revision, slug);
+  if (blockTree === null) return null;
+  const record = JSON.parse(git(cwd, 'show', `${revision}:catalog/patterns/${slug}/artifact.json`));
+  const participants = [...new Set(record.participants.map(({ component }) => component))].sort().map((component) => {
+    const result = spawnSync('git', ['rev-parse', `${revision}:catalog/components/${component.slice('muxui:component:'.length)}`], { cwd, encoding: 'utf8' });
+    return { component, tree: result.status === 0 ? result.stdout.trim() : null };
+  });
+  const files = lines(git(cwd, 'ls-tree', '-r', revision, '--', reactRuntimeRoot))
+    .map((line) => /^\d+ blob ([0-9a-f]+)\t(.+)$/u.exec(line))
+    .filter((match) => match !== null && !nonRenderingReactSources.includes(match[2]))
+    .map(([, blob, path]) => `${path}\0${blob}\n`);
+  return { blockTree, participants, reactRuntime: { root: reactRuntimeRoot, excluded: nonRenderingReactSources, files: files.length, digest: sha256(files.sort().join('')) } };
+}
+
+/**
+ * The independent content reviews that earlier captures retained, as the coverage candidates of a capture at
+ * `sourceRevision`: the review of the capture at the retained root and of each archived capture, with where its file
+ * is (or will be) retained. The root capture is archived under `superseded/` when `sourceRevision` replaces it, so its
+ * review is reported at the archive path; a capture at `sourceRevision` itself is being rerun and its review is replaced,
+ * so it is skipped. Each file must still match the digest its capture recorded.
+ */
+export async function retainedContentReviews({ outputRoot, root, sourceRevision }) {
+  const reviews = [];
+  for (const { directory, sourceRevision: captured } of await retainedCaptures({ outputRoot, root })) {
+    const artifactFile = join(outputRoot, directory, 'artifacts/E-BL1-10.json');
+    if (!existsSync(artifactFile) || captured === sourceRevision) continue;
+    const { review } = JSON.parse(await readFile(artifactFile, 'utf8')).observations;
+    if (review?.artifact === undefined) continue;
+    const file = join(outputRoot, directory, 'artifacts', basename(review.artifact.path));
+    const text = await readFile(file, 'utf8');
+    if (sha256(text) !== review.artifact.sha256) throw new Error(`E-BL1-10: the content review retained with the capture at ${captured.slice(0, 8)} no longer matches its recorded digest`);
+    const retainedDirectory = directory === root ? posix.join(root, 'superseded', captured.slice(0, 12)) : directory;
+    reviews.push({
+      artifact: { path: posix.join(retainedDirectory, 'artifacts', basename(review.artifact.path)), sha256: review.artifact.sha256 },
+      reviewer: review.reviewer,
+      reviewedRevision: review.reviewedRevision,
+      reviewedTree: review.reviewedTree,
+      blocks: review.blocks,
+    });
+  }
+  return reviews;
+}
+
+/**
+ * Which retained independent content review covers each of `patternSlugs` at `sourceRevision` (Decision 0029). A review covers a block
+ * when it names the block and the block's `coverageKey` is the same at the revision the reviewer read as at `sourceRevision`: the same
+ * block sources, the same catalog record for every participant component, and the same React runtime sources, so the reviewer read
+ * exactly the sources and the copy-bearing inputs the capture scanned. `reviews` are candidates (`artifact`, `reviewer`,
+ * `reviewedRevision`, `reviewedTree`, `blocks`); the first is preferred, then the others by the date of the revision they read, newest
+ * first. A review that reads a revision this repository does not hold covers nothing. Returns `{ rows, uncovered }`: one row per
+ * covered block, with its key and the covering review's own reviewed revision, tree, and key, and the blocks no review covers, which
+ * need a new review.
+ */
+export function contentReviewCoverage({ cwd, sourceRevision, patternSlugs, reviews }) {
+  const readable = reviews.filter(({ reviewedRevision }) => gitStatus(cwd, 'cat-file', '-e', `${reviewedRevision}^{commit}`) === 0);
+  const dated = (review) => Number(git(cwd, 'log', '-1', '--format=%ct', review.reviewedRevision));
+  const [preferred, ...others] = readable;
+  const candidates = [...(preferred === undefined ? [] : [preferred]), ...others.sort((left, right) => dated(right) - dated(left))];
+  const rows = [];
+  const uncovered = [];
+  for (const slug of patternSlugs) {
+    const key = coverageKey(cwd, sourceRevision, slug);
+    const covering = key === null ? undefined : candidates.find((review) => review.blocks.includes(slug) && canonicalJson(coverageKey(cwd, review.reviewedRevision, slug)) === canonicalJson(key));
+    if (covering === undefined) {
+      uncovered.push(slug);
+      continue;
+    }
+    rows.push({
+      block: slug,
+      key,
+      review: {
+        artifact: covering.artifact,
+        reviewer: covering.reviewer,
+        reviewedRevision: covering.reviewedRevision,
+        reviewedTree: covering.reviewedTree,
+        keyAtReviewedRevision: coverageKey(cwd, covering.reviewedRevision, slug),
+      },
+    });
+  }
+  return { rows, uncovered };
 }
 
 /**
