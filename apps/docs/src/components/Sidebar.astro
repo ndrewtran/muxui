@@ -85,6 +85,12 @@ const { sidebar } = Astro.locals.starlightRoute;
 		border-block-start: 1px solid var(--muxui-semantic-border-subtle);
 	}
 
+	/* Component pages open with a group, which already sits under the search box and needs no divider. */
+	:global(.mux-sidebar-content .top-level > li:first-child > details > summary) {
+		margin-block-start: 0;
+		border-block-start: 0;
+	}
+
 	:global(.mux-sidebar-content a) {
 		border-radius: var(--muxui-semantic-control-radius);
 		color: var(--muxui-semantic-content-default);

@@ -1,17 +1,9 @@
 ---
 import { componentSidebar } from '../lib/catalog.ts';
 import { blocksPath } from '../lib/block-paths.ts';
+import { sectionOf, type Section } from '../lib/site-sections.ts';
 
-type Section = 'docs' | 'components' | 'blocks';
-
-interface Props {
-	/** Defaults to the section the request path belongs to. */
-	current?: Section;
-}
-
-const pathname = Astro.url.pathname;
-const current: Section = Astro.props.current
-	?? (pathname.startsWith(blocksPath) ? 'blocks' : pathname.startsWith('/components/') ? 'components' : 'docs');
+const current = sectionOf(Astro.url.pathname);
 // There is no components index, so the entry opens the first component the catalog lists.
 const links: readonly { section: Section; label: string; href: string }[] = [
 	{ section: 'docs', label: 'Docs', href: '/' },
