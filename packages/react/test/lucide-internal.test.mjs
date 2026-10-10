@@ -4,6 +4,7 @@ import test from 'node:test';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
+import { parseAst } from 'vite';
 import { JSDOM } from 'jsdom';
 import { resolve } from 'node:path';
 import { createDom, installDom } from './support/dom.mjs';
@@ -44,6 +45,30 @@ import { TextEditor } from '../generated/text-editor.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 
+// Every module specifier a source imports or re-exports, parsed rather than matched,
+// so formatting (such as a newline after `from`) cannot hide an import.
+function moduleSpecifiers(source) {
+  const specifiers = [];
+  const visit = (node) => {
+    if (Array.isArray(node)) return node.forEach(visit);
+    if (node === null || typeof node !== 'object') return undefined;
+    if (['ImportDeclaration', 'ExportNamedDeclaration', 'ExportAllDeclaration', 'ImportExpression'].includes(node.type) && typeof node.source?.value === 'string') specifiers.push(node.source.value);
+    return Object.values(node).forEach(visit);
+  };
+  visit(parseAst(source));
+  return specifiers;
+}
+const lucideSpecifiers = (source) => moduleSpecifiers(source).filter((specifier) => specifier.startsWith('lucide-react'));
+// Deep default imports keep unbundled Node consumers off the full icon barrel.
+const nonDeepLucideImports = (source) => lucideSpecifiers(source).filter((specifier) => !/^lucide-react\/dist\/esm\/icons\/[a-z0-9-]+\.mjs$/u.test(specifier));
+
+test('the Lucide import scan reads syntax, not source formatting', () => {
+  assert.deepEqual(nonDeepLucideImports("import Check from 'lucide-react/dist/esm/icons/check.mjs';"), []);
+  assert.deepEqual(nonDeepLucideImports("import { Bell } from\n  'lucide-react';"), ['lucide-react']);
+  assert.deepEqual(nonDeepLucideImports("export { Bell } from\n'lucide-react';\nexport * from 'lucide-react/dist/esm/lucide-react.mjs';"), ['lucide-react', 'lucide-react/dist/esm/lucide-react.mjs']);
+  assert.deepEqual(nonDeepLucideImports("const icons = await import(\n'lucide-react');"), ['lucide-react']);
+});
+
 test('Lucide stays an exact internal, tree-shakeable dependency with no public leakage', async () => {
   const manifest = JSON.parse(await readFile(resolve(packageRoot, 'package.json'), 'utf8'));
   const version = manifest.dependencies['lucide-react'];
@@ -57,10 +82,8 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   let lucideImports = 0;
   for (const file of sourceFiles.sort()) {
     const source = await readFile(resolve(sourceRoot, file), 'utf8');
-    for (const [, specifier] of source.matchAll(/from ['"](lucide-react[^'"]*)['"]/gu)) {
-      assert.match(specifier, /^lucide-react\/dist\/esm\/icons\/[a-z0-9-]+\.mjs$/u, `${file} imports ${specifier}`);
-      lucideImports += 1;
-    }
+    lucideImports += lucideSpecifiers(source).length;
+    assert.deepEqual(nonDeepLucideImports(source), [], `${file} imports Lucide only through per-icon modules`);
   }
   assert.ok(lucideImports > 0, 'renderer sources import Lucide icons');
 

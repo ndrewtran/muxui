@@ -8,6 +8,7 @@ import { createRoot, hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { JSDOM } from 'jsdom';
 import { Button } from '../src/button.mjs';
+import * as generated from '../generated/index.mjs';
 import { R1ButtonFixture } from '../src/button-fixture.mjs';
 
 test('Button owns MuxUI selectors and required token bindings', async () => {
@@ -192,6 +193,85 @@ test('Button generator guard binds the canonical finite API contract', async () 
     env: { ...process.env, npm_config_engine_strict: 'false' },
   });
   assert.equal(result.status, 0, result.stderr);
+});
+
+// How a catalog default shows in server-rendered markup. Expected values come
+// from the catalog artifact; only the markup each renderer exposes is named here.
+const markupFlags = {
+  disabled: '[disabled], [data-disabled], [aria-disabled="true"]',
+  readOnly: '[readonly], [data-readonly], [aria-readonly="true"]',
+  required: '[required], [data-required], [aria-required="true"]',
+  invalid: '[data-invalid], [aria-invalid="true"]',
+  pending: '[data-pending], [aria-busy="true"]',
+  indeterminate: '[data-indeterminate], [aria-checked="mixed"]',
+  selected: '[aria-pressed="true"], [data-selected]',
+  defaultSelected: '[aria-pressed="true"], [data-selected]',
+  defaultChecked: '[checked], [data-selected]',
+};
+const markupValues = {
+  size: (doc) => doc.querySelector('[data-size]')?.getAttribute('data-size'),
+  variant: (doc) => doc.querySelector('[data-variant]')?.getAttribute('data-variant'),
+  orientation: (doc) => doc.querySelector('[data-orientation]')?.getAttribute('data-orientation'),
+  defaultValue: (doc) => doc.querySelector('input')?.getAttribute('value'),
+  selectionMode: (doc) => ({ radiogroup: 'single', group: 'multiple' })[doc.querySelector('[role="radiogroup"], [role="group"]')?.getAttribute('role')],
+};
+const h = React.createElement;
+const minimalRenders = {
+  Button: () => h(generated.Button, null, 'Save'),
+  ToggleButton: () => h(generated.ToggleButton, null, 'Bold'),
+  ToggleButtonGroup: () => h(generated.ToggleButtonGroup, { 'aria-label': 'Format' }, h(generated.ToggleButton, { id: 'a' }, 'A'), h(generated.ToggleButton, { id: 'b' }, 'B')),
+  Checkbox: () => h(generated.Checkbox, null, 'Agree'),
+  CheckboxGroup: () => h(generated.CheckboxGroup, { label: 'Group' }, h(generated.Checkbox, { value: 'a' }, 'A')),
+  RadioGroup: () => h(generated.RadioGroup, { label: 'Choice', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] }),
+  Autocomplete: () => h(generated.Autocomplete, { label: 'City', items: ['Melbourne'] }),
+  Tabs: () => h(generated.Tabs, { 'aria-label': 'Sections', items: [{ id: 'one', label: 'One', panel: 'One' }, { id: 'two', label: 'Two', panel: 'Two' }] }),
+};
+const kebab = (name) => name.replace(/([a-z])([A-Z])/gu, '$1-$2').toLowerCase();
+
+/** Catalog defaults the markup contradicts. Defaults with no markup (such as keyboardActivation) are not observable here. */
+function defaultMismatches(markup, defaults) {
+  const { document } = new JSDOM(markup).window;
+  const mismatches = [];
+  for (const [key, expected] of Object.entries(defaults)) {
+    const observed = key in markupFlags ? document.querySelector(markupFlags[key]) !== null : markupValues[key]?.(document);
+    if ((key in markupFlags || key in markupValues) && observed !== expected) mismatches.push(`${key}: catalog ${JSON.stringify(expected)}, rendered ${JSON.stringify(observed)}`);
+  }
+  return mismatches;
+}
+
+/** Catalog props the generated declarations of `${name}Props` (and the interfaces it names) do not declare. */
+function undeclaredProps(types, name, props) {
+  const declaration = (identifier) => {
+    const start = types.search(new RegExp(`^export (?:interface|type) ${identifier}\\b`, 'mu'));
+    const end = types.indexOf('\nexport ', start + 1);
+    return start === -1 ? '' : types.slice(start, end === -1 ? undefined : end);
+  };
+  const seen = new Set();
+  const collect = (identifier) => {
+    if (seen.has(identifier)) return '';
+    seen.add(identifier);
+    const text = declaration(identifier);
+    return text + [...text.matchAll(/\b[A-Z][A-Za-z]+\b/gu)].map(([reference]) => collect(reference)).join('\n');
+  };
+  const surface = collect(`${name}Props`);
+  return props.filter((prop) => !new RegExp(`(?:\\b|['"])${prop}['"]?\\??\\s*:`, 'u').test(surface));
+}
+
+test('catalog defaults and props agree with the renderer for every generator-guarded component', async () => {
+  const types = await readFile(resolve(import.meta.dirname, '../generated/index.d.ts'), 'utf8');
+  for (const [name, render] of Object.entries(minimalRenders)) {
+    const artifact = JSON.parse(await readFile(resolve(import.meta.dirname, `../../../catalog/components/${kebab(name)}/artifact.json`), 'utf8'));
+    const { api } = artifact.bindings['web.react'];
+    const markup = renderToString(render());
+    assert.deepEqual(defaultMismatches(markup, api.defaults), [], `${name} renders the catalog defaults`);
+    assert.deepEqual(undeclaredProps(types, name, api.props), [], `${name} generated declarations list the catalog props`);
+    if ('size' in api.defaults) assert.equal(markupValues.size(new JSDOM(markup).window.document), api.defaults.size, `${name} exposes its size default`);
+  }
+  // Catalog drift is caught: a different size default or an undeclared prop fails.
+  const toggle = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../catalog/components/toggle-button/artifact.json'), 'utf8')).bindings['web.react'].api;
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, size: 'lg' }), ['size: catalog "lg", rendered "md"']);
+  assert.deepEqual(defaultMismatches(renderToString(minimalRenders.ToggleButton()), { ...toggle.defaults, disabled: true }), ['disabled: catalog true, rendered false']);
+  assert.deepEqual(undeclaredProps(types, 'ToggleButton', [...toggle.props, 'missingProp']), ['missingProp']);
 });
 
 test('MuxUI styles bind states and public theme hooks', async () => {
