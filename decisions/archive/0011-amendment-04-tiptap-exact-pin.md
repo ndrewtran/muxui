@@ -4,7 +4,7 @@
 - Parent decision: `muxui:decision:0011`
 - Decision owner: Andrew / `ndrewtran`
 - Decision: `muxui:decision:0011:amendment:04`
-- Amends by reference: [Decision 0013](./0013-theme-parity-and-private-authoring.md),
+- Amends by reference: [Decision 0013](../0013-theme-parity-and-private-authoring.md),
   "Required proof and boundaries", the clause naming "the eight
   `@tiptap/*@3.22.3` packages for `TextEditor`"
 - Accepted request: [acceptance record](./0011-amendment-04-tiptap-exact-pin-acceptance.md)

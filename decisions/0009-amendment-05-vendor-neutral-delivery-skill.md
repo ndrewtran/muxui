@@ -41,7 +41,8 @@ for every client; no client-specific instruction file is added.
 This amendment changes no Architecture, Roadmap entry or exit rule, Product
 Scope ID or commitment, milestone state, evidence record, public package,
 platform, support claim, lifecycle, or release boundary. Decision 0011's
-protected pull-request route and the delivery guard's stops remain in force.
+protected pull-request route and the skill's stops, as narrowed by Decision
+0028, remain in force.
 
 Historical decisions and receipts are not rewritten. Amendment 02's exact
 successor tuple still describes the skill bytes at its materialization commit,

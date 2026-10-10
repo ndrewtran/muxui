@@ -309,7 +309,6 @@ function validateManifest(manifest) {
   if (
     !isObject(manifest)
     || manifest.schema !== SOURCE_MANIFEST_SCHEMA
-    || typeof manifest.authorityDecisionPath !== 'string'
     || typeof manifest.commandRegistryPath !== 'string'
     || typeof manifest.pageBudgetProfilePath !== 'string'
     || typeof manifest.platformSafetyContractPath !== 'string'
@@ -322,7 +321,6 @@ function validateManifest(manifest) {
       'the declared catalog source manifest is invalid',
     );
   }
-  assertRelativePath(manifest.authorityDecisionPath, 'authorityDecisionPath');
   assertRelativePath(manifest.commandRegistryPath, 'commandRegistryPath');
   assertRelativePath(manifest.pageBudgetProfilePath, 'pageBudgetProfilePath');
   assertRelativePath(manifest.platformSafetyContractPath, 'platformSafetyContractPath');
@@ -959,8 +957,7 @@ function schemaSources(authoring = {}) {
 }
 
 function isCatalogSource(context, path) {
-  return context.sourceManifest.authorityDecisionPath === path
-    || context.sourceManifest.commandRegistryPath === path
+  return context.sourceManifest.commandRegistryPath === path
     || context.sourceManifest.pageBudgetProfilePath === path
     || context.sourceManifest.platformSafetyContractPath === path
     || context.sourceManifest.records.some((entry) => entry.path === path)

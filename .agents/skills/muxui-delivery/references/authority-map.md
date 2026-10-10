@@ -37,7 +37,7 @@ whole document for a change to that document, a new package, kind, relation,
 capability, platform, public surface, or release claim, or uncertain ownership.
 
 - Architecture: Executive decision, Controlled vocabulary, Canonical knowledge
-  model, R1 ordinary React delivery, Non-negotiable invariants, any later
+  model, Standing development rule, Non-negotiable invariants, any later
   Decision section for the affected family, and Lifecycle, versions, and trust
   when compatibility or release is affected.
 - Roadmap: Purpose and authority, How to use this roadmap, Execution
@@ -62,8 +62,9 @@ gh project item-list 1 --owner ndrewtran --format json --limit 500
 
 Read the README, fields, and enabled workflows before interpreting an item.
 Fetch every page when more than 500 items exist. If the Project is
-unavailable, mark tracker alignment `unverified`, keep to read-only analysis,
-and ask Andrew to restore access; never ask for credentials.
+unavailable, record "tracker sync pending" and continue with repository work;
+never ask for credentials. Read the Project live only to change tracker state or
+to make a status or completion claim.
 
 Interpret a field only after confirming it exists and reading its options:
 
@@ -84,24 +85,24 @@ alignment.
 
 `Work type` resolves to `.github/ISSUE_TEMPLATE/<type>.yml` (`milestone`,
 `evidence`, `architecture-maintenance`, `implementation`, `decision`, `bug`).
-Pull requests use `.github/pull_request_template.md`. A permissive or legacy
-form never waives a line of the Product Scope tracker reference contract.
+Pull requests use `.github/pull_request_template.md`.
 
 ## Task mapping
 
-Map every implementation task to the Product Scope "Tracker reference
-contract" lines, then record the live routing fields separately:
+Map every implementation task to its canonical owner, any affected Scope ID (the
+experimental React umbrella `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` when no
+committed row applies), and one primary milestone where it advances one. Record
+live routing fields only when the task changes tracker state:
 
 ```text
 Project item, work type, and workflow status (manual | automated | unverified):
-Gate / workstream / platform:
 Priority / target release / iteration:
 Blockers and linked pull requests:
 Designated reviewers and human decision state:
 ```
 
-An implementation slice names one primary milestone. An authority change names
-every affected milestone. Before a milestone is ready, map each applicable
-cross-cutting Scope ID from Product Scope "Cross-cutting product commitments"
-to an explicit Roadmap evidence owner; a Project item cannot supply one.
-Missing mapping is a potential deviation.
+An authority change names every affected milestone. Before a milestone becomes
+ready, map each applicable cross-cutting Scope ID from Product Scope
+"Cross-cutting product commitments" to an explicit Roadmap evidence owner; a
+Project item cannot supply one. A missing mapping blocks marking the milestone
+ready, not development work.

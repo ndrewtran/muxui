@@ -5,8 +5,9 @@ mappings and transport for the Figma component export; component behavior and
 CSS stay in `@muxui/react`, token facts in `catalog/tokens/` and
 `@muxui/tokens`, and variant axes in the catalog records.
 
-- `src/anatomy/`: one record per admitted family. Add a family only in an
-  admitted batch, after its dark overrides are tokens.
+- `src/anatomy/`: one record per exported family. Add a family when it meets
+  the eligibility criteria in Decision 0020 amendment 01, after its dark
+  overrides are tokens.
 - `src/css.mjs` and `src/measure.mjs`: winning declarations per mode.
 - `src/audit.mjs`, `src/spec.mjs`: mode consistency, spec, and coverage.
 - `src/applier.mjs`: embedded verbatim in batch scripts; keep it

@@ -65,25 +65,15 @@ async function setup() {
 
 async function temporaryCatalogRepository() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-g0-5-'));
-  const sourceManifest = JSON.parse(await readFile(
-    resolve(repositoryRoot, 'packages/catalog/catalog-sources.json'),
-    'utf8',
-  ));
-  const authorityDecisionPath = sourceManifest.authorityDecisionPath;
   await Promise.all([
     mkdir(resolve(temporaryRoot, 'packages/tooling'), { recursive: true }),
     mkdir(resolve(temporaryRoot, 'packages/tokens'), { recursive: true }),
-    mkdir(resolve(temporaryRoot, 'decisions'), { recursive: true }),
     mkdir(resolve(temporaryRoot, 'tooling/audits/repository-policy'), { recursive: true }),
     mkdir(resolve(temporaryRoot, 'packages/schema/schemas'), { recursive: true }),
     mkdir(resolve(temporaryRoot, 'strategy'), { recursive: true }),
   ]);
   await Promise.all([
     cp(resolve(repositoryRoot, 'catalog'), resolve(temporaryRoot, 'catalog'), { recursive: true }),
-    cp(
-      resolve(repositoryRoot, authorityDecisionPath),
-      resolve(temporaryRoot, authorityDecisionPath),
-    ),
     cp(
       resolve(repositoryRoot, 'packages/catalog'),
       resolve(temporaryRoot, 'packages/catalog'),

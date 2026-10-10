@@ -54,8 +54,7 @@ dashboard work, and unproved product ideas are not architectural blockers.
 
 A milestone is complete only when all of the following are true:
 
-1. Every entry condition was true when work began and remained true at
-   evidence capture.
+1. Every entry condition is true at evidence capture.
 2. Every required deliverable exists under its named owner.
 3. Every required assertion has retained evidence tied to exact source,
    artifact, binding, package, catalog, and environment revisions as
@@ -116,9 +115,20 @@ binding or bounded reproof.
   or required-proof rule without it.
 - Shared foundation code is added only after a real slice demonstrates the
   repeated semantic, logic, or interaction shape.
-- React breadth proceeds only inside the fixed family allocations against the exact
-  shared baseline. Framework-free/native breadth and broad tooling wait for
-  their own activation and entry evidence.
+- Experimental React breadth proceeds under the standing development rule
+  (Decision 0028) against the shared baseline. Framework-free/native breadth
+  and broad tooling wait for their own activation and entry evidence.
+
+### Milestones gate claims, not work
+
+Entry conditions and exit assertions gate public enablement (a capability or
+surface appears in a manifest), a milestone's `ready` and `complete` status, and
+support, stable, and assistive-technology claims. They do not stop experimental
+development (Decision 0028). Work may proceed while a milestone is `not-ready`,
+provided it publishes nothing, advertises nothing, and is not a dependency of
+something that claims support. A capability cannot be enabled, and a milestone
+cannot complete, until its entry conditions hold and its evidence passes. The
+activation packet below records readiness; it is not permission to start.
 
 ### Scope admission
 
@@ -283,54 +293,27 @@ separate later tracks and cannot block or inherit R1 proof.
 
 ### R1 shared tranche contract
 
-Every R1 tranche uses the exact React Aria Components 1.20.0 internal
-substrate, standalone package graph, reusable proof baseline, canonical
+Every R1 tranche uses the internal React Aria Components substrate, the
+standalone package graph, the reusable proof baseline, canonical
 component/binding/example revisions, deterministic closure, and risk-selected
-review appropriate to the exported behavior. The accepted immutable 53-family
-inventory, Stage 1 snapshot, and R1.0 baseline are the common lock for R1.1
-through R1.4. No further tranche-lock decision or per-component authorization
-is required for those families. Button is the first visible R1.1 component.
-Components may run in parallel after Button begins while consuming the same
-baseline and creating no decision-bearing exception.
+review appropriate to the exported behavior. The fixed React registry in
+Product Scope is the common lock for R1.1 through R1.4. No tranche-lock
+decision or per-component authorization is required for those families or for
+experimental additions (Decision 0028). Components may run in parallel while
+consuming the same baseline and creating no decision-bearing exception.
 
-The approved R1 package graph includes one resolved
-`@internationalized/date@3.12.4` instance (Decision 0011 amendment 05) as a
-direct internal runtime dependency of `@muxui/react`, used only for Mux UI value adapters in
-`DateField`, `DatePicker`, `DateRangePicker`, `TimeField`, `Calendar`,
-and `RangeCalendar`. Public values remain ISO dates `YYYY-MM-DD`, local
-times `HH:mm[:ss[.fraction]]`, and Mux UI-owned `{start,end}` ranges. No
-upstream temporal or React Aria public type, value, import path, export,
-lifecycle, or ownership crosses the public boundary.
-
-The graph also includes the exact internal, replaceable
-`lucide-react@1.37.0` edge as the default icon source for decorative
-affordances in every `@muxui/react` component, with no per-component
-approval (Decision 0011 amendment 06, which supersedes the component lists of
-amendments 02 and 03 and of R1.6). Its integrity, ISC license, Feather-derived
-MIT notice, React peer compatibility, lockfile pin, module isolation, and
-packed-consumer proof are required. A new or changed icon reruns the affected
-visual, accessibility, SSR/hydration, tree-shaking, and packed-consumer proof.
-No Lucide export, public Icon API, icon catalog, or icon package is admitted.
-
-R1.6 also admits the exact internal, replaceable `react-aria@3.51.0` edge
-for `Resizable`, extended by Decision 0018 to `SelectNative`'s `useField`;
-`marked@13.0.3` for the typed Markdown parser boundary,
-and the eight `@tiptap/*@3.31.4` packages for `TextEditor` (Decision 0011
-amendment 04). Their integrity, license/notice, peer-compatibility, lockfile, module-isolation,
-tree-shaking, SSR/hydration, packed-consumer, and Markdown security proof is
-required. No upstream implementation type or object is public.
-
-Decision 0019 adds the exact internal, replaceable `motion@13.4.0` edge for
-bounded Mux-owned component motion in existing admitted `web.react` families.
-Private `motion/react` and `motion/react-m` imports remain component-local;
-Mux-owned tokens, modes, CSS, accessibility, SSR/hydration, and lifecycle stay
-authoritative. Its registry metadata is not installed-graph evidence. Exact
-integrity, MIT license/notice, peer compatibility, lockfile, tree-shaking,
-SSR/hydration, and packed-consumer proof remain required, with no new milestone
-or delivery-status change. For each affected admitted binding, behavior proof
-covers refs, interruption, cleanup, focus/dismissal ownership, SSR/hydration,
-and system plus explicit reduced-mode paths as applicable; CSS remains a valid
-implementation. Routine integration requires no per-component adoption decision.
+The internal runtime dependencies of `@muxui/react` are allowed by purpose
+(Architecture, `@muxui/react`), with versions only in the manifest and the
+lockfile. Proof for a dependency retains its integrity, licence and notice,
+peer compatibility, lockfile pin, module isolation, tree-shaking, SSR/hydration,
+and packed-consumer resolution, plus a focused security review of Markdown
+input (typed AST, escaping, and source bounds) where a parser is used. A new or
+changed icon reruns the affected visual, accessibility, SSR/hydration,
+tree-shaking, and packed-consumer proof. Component motion adds proof of refs,
+interruption, cleanup, focus and dismissal ownership, SSR/hydration, and both
+the system and explicit reduced-mode paths as applicable; CSS remains a valid
+implementation. No Lucide export, public Icon API, icon catalog, or icon
+package is admitted, and no upstream implementation type or object is public.
 
 Each bounded change updates the earliest canonical owner, regenerates
 projections, keeps React Aria internal, and runs focused checks proportional to
@@ -341,12 +324,12 @@ proof, and the publication/final-merge boundaries remain required.
 
 | ID | Milestone | State and evidence |
 | --- | --- | --- |
-| R1.0 | Package and substrate baseline | Complete. The Stage 1 snapshot and baseline in `catalog/react-r1-0/` are fail-closed input. `E-R1.0-01` through `E-R1.0-05` were removed in c7e3fe71 and live in git history. |
+| R1.0 | Package and substrate baseline | Complete. The Stage 1 snapshot and baseline in `catalog/react-r1-0/` record the upstream evaluation of the committed registry. They are a historical record, not a gate. `E-R1.0-01` through `E-R1.0-05` were removed in c7e3fe71 and live in git history. |
 | R1.1 | Foundation and simple controls | Complete for the rc prerelease boundary. `E-R1.1-01` through `E-R1.1-04`: `tests/evidence/r1.1`. The `DisclosureGroup` manual half of `E-R1.1-04` is deferred to `S1.0` (Decision 0022). Review is author-reported only (Decision 0022 amendment 01). |
 | R1.2 | Forms and field controls | Complete for the rc prerelease boundary. `E-R1.2-01` through `E-R1.2-04`: `tests/evidence/r1.2` and `tests/evidence/r1-retro-review`. The manual and assistive-technology half of `E-R1.2-03` is deferred to `S1.0`. |
 | R1.3 | Collections and composites | Complete for the rc prerelease boundary. `E-R1.3-01` through `E-R1.3-05`: `tests/evidence/r1.3` and `tests/evidence/r1-retro-review`. The manual and assistive-technology half of `E-R1.3-04` is deferred to `S1.0`. |
 | R1.4 | Overlays and temporal interactions | Complete for the rc prerelease boundary. `E-R1.4-01` through `E-R1.4-06`: `tests/evidence/r1.4` and `tests/evidence/r1-retro-review`. `E-R1.4-04` is deferred to `S1.0`. |
-| R1.5 | React breadth closure | Complete for the rc prerelease boundary. The exact `53/53` closure is `catalog/react-r1-5/closure.json`, with `E-R1.5-01` through `E-R1.5-06` in `tests/evidence/r1.5`. The risk-profile half of `E-R1.5-03` is deferred to `S1.0`. Review is author-reported only. |
+| R1.5 | React breadth closure | Complete for the rc prerelease boundary. The closure of the fixed registry is `catalog/react-r1-5/closure.json`, with `E-R1.5-01` through `E-R1.5-06` in `tests/evidence/r1.5`. The risk-profile half of `E-R1.5-03` is deferred to `S1.0`. Review is author-reported only. |
 | R1.6 | Parity and private theme authoring | Complete. `E-R1.6-01` through `E-R1.6-07` below stay the standing assertions for supplemental additions. |
 
 ### R1.6 React parity and private Mux theme authoring
@@ -376,22 +359,20 @@ implementation or a continuing external comparison record.
 | `E-R1.6-06` | The optional Tailwind adapter compiles a clean consumer while Tailwind remains outside Mux runtime, peer, generated-source, and styling-engine closure. | Consumer compilation and dependency-closure report. |
 | `E-R1.6-07` | Shared token/theme sources remain renderer-neutral; React Native and framework-free web remain deferred; no publication, stable support, hosted Scale, or external design-tool interchange claim is inferred. | Platform, release, and negative-boundary audit. |
 
-**Scope controls:** The historical fixed 53-family R1 inventory remains
-unchanged; supplemental React Aria families are admitted only through
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and their mapping/list, never through a
-count shortcut. General external design-tool interchange remains G3.5. Scale
+**Scope controls:** The fixed React registry and the experimental families are
+separate lists. The supplemental mapping lists the experimental families, never
+a count shortcut. General external design-tool interchange remains G3.5. Scale
 is private and may be disabled without changing canonical truth. Safety,
 accessibility, runtime ownership, and platform differences are recorded
 explicitly and cannot be hidden to claim 100% parity.
 
-### Post-R1.6 supplemental admissions
+### Post-R1.6 React additions
 
-IconButton (Decision 0014), Text (0017), Image/Avatar/SelectNative (0018),
-CodeBlock including Shiki (0024), and PromptComposer/Message/Activity/DataDiff
-(0025) are ordinary protected-PR admissions under
-`SCOPE-REACT-DONOR-SUPPLEMENTAL-001`. The family list is owned by
-`catalog/react-r1-6/supplemental-components.json`. Each carries the focused
-proof its decision names, routed by `E-R1.6-01`, `-03`, `-04` and `-07`. None
+An experimental React family, prop, variant, example, or token is ordinary
+protected-PR delivery under `SCOPE-REACT-DONOR-SUPPLEMENTAL-001` and needs no
+decision (Decision 0028). The family list is owned by
+`catalog/react-r1-6/supplemental-components.json`. Each addition carries the
+focused proof its risk names, routed by `E-R1.6-01`, `-03`, `-04` and `-07`. None
 claims milestone completion, support, publication or G3 activation.
 
 ### Post-R1.6 Figma token export addition
@@ -416,11 +397,11 @@ completion, public package, support, or release claim.
 
 ### Post-R1.6 Figma component export addition
 
-Decision 0020 amendment 01 extends the export-only Figma slice to a named set
-of simple controls, delivered in batches; the first batch is Button,
-Checkbox, Switch, TextField, Tabs, and TagGroup. Each later batch first moves
-its component dark overrides into mode-aware tokens. The private, never
-published `@muxui/figma` package in `tooling/generators/figma`
+Decision 0020 amendment 01 extends the export-only Figma slice to components
+that meet its eligibility criteria: a supported anatomy, finite variants,
+mode-aware tokens, and passing export audits. No list of names is kept. Each
+batch first moves its components' dark overrides into mode-aware tokens. The
+private, never published `@muxui/figma` package in `tooling/generators/figma`
 owns only anatomy mappings and transport: it measures each family's winning
 CSS declarations in a browser across Light/Dark and Comfortable/Compact,
 audits mode consistency, compiles a component spec bound by token ID, and
@@ -436,11 +417,13 @@ committed.
 | `E-FIGMA-COMPONENTS-03` | Every painted colour binds to a variable or style; literal, derived, and lossy fields appear in the coverage report with a reason. | Package coverage test and local coverage report. |
 | `E-FIGMA-COMPONENTS-04` | A second applier run over an unchanged spec reports no creates or updates, a changed binding updates in place, and a removed variant is reported as an orphan without deletion. | Applier test against an in-memory Plugin API fake. |
 
-Import, round-trip, proposals, Code Connect, complex families, motion,
-additional themes, and pruning remain G3.5 or later. Andrew's direction
-covers writing the six families' components to file `Z1rFgLTe3lBr0nwm8UvFEx`;
-removing the pilot page, later batches' writes, and any other Figma file need
-his separate, explicit direction. This addition establishes no milestone
+Import, round-trip, proposals, Code Connect, motion, additional themes, and
+pruning remain G3.5 or later, and complex families stay outside until the
+anatomy mappings support them. Writing to any Figma file needs Andrew's
+explicit authorization for that file. His direction covers writing the six
+pilot families' components to file `Z1rFgLTe3lBr0nwm8UvFEx`; removing the pilot
+page, later batches' writes, and any other Figma file need his separate,
+explicit direction. This addition establishes no milestone
 completion, public package, support, or release claim.
 
 ### R1 exit — React prerelease publication
@@ -483,12 +466,12 @@ manifest say so. Existing automated accessibility, keyboard, and focus proof
 stays required. Assistive-technology evidence is required before any such
 claim and before `S1.0` stable promotion.
 
-The R1 exit package graph includes the same exact internal,
-replaceable `lucide-react@1.37.0` edge and its ISC plus Feather-derived MIT
-notices. Exit proof must retain the Mux UI-only public surface and verify exact
-SSR/hydration, tree-shaking, packed-consumer resolution, accessible labels and
-decorative semantics, and visual contract invalidation. This does not add a
-publication authorization or change the final R1-exit merge stop.
+The R1 exit package graph carries the same internal, replaceable icon
+dependency and its ISC plus Feather-derived MIT notices. Exit proof must retain
+the Mux UI-only public surface and verify exact SSR/hydration, tree-shaking,
+packed-consumer resolution, accessible labels and decorative semantics, and
+visual contract invalidation. This does not add a publication authorization or
+change the final R1-exit merge stop.
 
 ### Later tracks and Productization
 
@@ -672,7 +655,14 @@ deterministic, non-invented composition plans.
 
 **Entry conditions**
 
-- G1.8 is complete.
+These gate enabling `muxui plan`. Planner development may proceed before they
+hold, unreleased and unadvertised.
+
+- Pattern records with participant roles, relations, invariants, and a closed
+  parameter schema compile as one closed graph with their canonical examples,
+  and an internal deterministic planning fixture selects a known pattern and
+  binds only declared parameters. BL1 patterns that omit relations, invariants,
+  or the parameter schema do not satisfy this.
 - More than one observed composition request is covered by bounded patterns and
   canonical examples.
 - Unsupported requests and missing requirements have typed response schemas.
@@ -830,16 +820,22 @@ absent from manifests and product claims until its own exit evidence passes.
 
 ### G3.1 Deliberate component and pattern breadth
 
-**Objective:** Expand the catalog only after the fixed slices and Tabs/Toast
-have proved the reusable authoring, renderer, and evidence paths.
+**Objective:** Expand the supported catalog, with stable or cross-platform
+claims, only after the committed slices and Tabs/Toast have proved the reusable
+authoring, renderer, and evidence paths. Experimental React additions are
+ordinary work under the standing development rule (Decision 0028) and do not use
+this milestone.
 
 **Entry conditions**
+
+These gate claims and enablement, not development.
 
 - P2 exit is complete for package/catalog/consumer authority.
 - R1.3 and R1.4 are complete before adding broad component families with comparable
   keyboard, overlay, or temporal risks.
-- Each candidate has observed demand, platform disposition, owner, risk class,
-  and a named pattern or consumer need.
+- Each candidate that claims stable or cross-platform support has observed
+  demand, platform disposition, owner, risk class, and a named pattern or
+  consumer need.
 
 **Deliverables**
 
@@ -868,8 +864,8 @@ have proved the reusable authoring, renderer, and evidence paths.
 - Product-specific workflows stay in applications unless a bounded reusable
   pattern satisfies ontology admission.
 - Blocks inside the Decision 0026 boundary are delivered under BL1 as ordinary
-  protected-PR work and are outside this milestone's queue. All other
-  component and pattern breadth stays here.
+  protected-PR work and are outside this milestone's queue. Other breadth that
+  claims stable or cross-platform support stays here.
 
 **Exit condition:** Catalog breadth grows through proved user workflows without
 weakening ownership, renderer priority, retrieval quality, or evidence.
@@ -1019,7 +1015,7 @@ identities.
 
 **Early export slice:** Decision 0020 landed a Figma token export ahead of
 these entry conditions (see "Post-R1.6 Figma token export addition"), and its
-amendment 01 adds a Figma component export for named simple controls through
+amendment 01 adds a Figma component export for eligible components through
 the private `@muxui/figma` adapter (see "Post-R1.6 Figma component
 export addition"). The remaining deliverables and entry conditions below
 still apply to import, round-trip, and every other G3.5 capability.
@@ -1375,7 +1371,7 @@ wording.
 
 | ID | Milestone | Hard dependencies | Blocks |
 | --- | --- | --- | --- |
-| G2.4 | Grounded composition planning | G1.8, Gate 1 | Public `plan`, G3.11 |
+| G2.4 | Grounded composition planning | Closed pattern graph, R1 | Public `plan`, G3.11 |
 | G2.5 | Doctor and init | P2.2, R1.5 change intent | Enabled project writes |
 | G2.6 | Allowlisted canonical proposals | R1.5, P2.1, G2.5 primitives | Enabled maintainer proposals |
 | G3.1 | Component and pattern breadth | P2 exit; R1.3/R1.4 for comparable risks | Only its admitted families |
@@ -1537,30 +1533,16 @@ the failure evidence, and repair the earliest authoritative owner. Do not patch
 a projection, lower the evidence claim, or expand the milestone to hide the
 failure.
 
-## Roadmap reconciliation and fixed R1 family allocations
+## R1 tranche allocation and proof
 
-The immutable tranche family sets are:
-
-- R1.1, 11 families: `Breadcrumbs`, `Button`, `Checkbox`, `Disclosure`,
-  `DisclosureGroup`, `Group`, `Link`, `Meter`, `ProgressBar`, `Separator`,
-  `ToggleButton`. Button is implemented first.
-- R1.2, 11 families: `Autocomplete`, `CheckboxGroup`, `DateField`,
-  `DatePicker`, `DateRangePicker`, `Form`, `NumberField`, `SearchField`,
-  `Switch`, `TextField`, `TimeField`.
-- R1.3, 24 families: `Calendar`, `ColorArea`, `ColorField`, `ColorPicker`,
-  `ColorSlider`, `ColorSwatch`, `ColorSwatchPicker`, `ColorWheel`, `ComboBox`,
-  `GridList`, `ListBox`, `Menu`, `RadioGroup`, `RangeCalendar`, `Select`,
-  `Slider`, `Table`, `Tabs`, `TagGroup`, `ToggleButtonGroup`, `TokenField`,
-  `Toolbar`, `Tree`, `Virtualizer`.
-- R1.4, 7 families: `DropZone`, `FileTrigger`, `Modal`/Mux UI `Dialog`,
-  `Popover`, `PreviewTrigger`, `Toast`, `Tooltip`.
-- R1.5 adds no family implementation. It closes the exact `53/53` committed
-  family reconciliation, public export manifest, Mux UI contract and lifecycle
-  ledger, styling disposition, evidence and support matrix, packed
-  prerelease graph, generated guidance, and React `0.1` release candidate.
+The Product Scope fixed registry names each committed family and its tranche
+(R1.1 through R1.4). R1.5 adds no family implementation. It closes the committed
+family reconciliation, public export manifest, Mux UI contract and lifecycle
+ledger, styling disposition, evidence and support matrix, packed prerelease
+graph, generated guidance, and React `0.1` release candidate.
 
 After the common R1.0 baseline, R1.1 through R1.4 may proceed independently in
-Roadmap order; none may change another tranche or the 53-set. Each tranche
+Roadmap order; none may change another tranche or the registry. Each tranche
 freezes its Mux UI-owned public contracts and uses shared proof from the common
 baseline. Each retains focused deterministic proof, risk-selected review,
 applicable manual browser/AT proof before export, packed-consumer validation,
@@ -1576,31 +1558,14 @@ baseline failure is established; a shared baseline failure invalidates every
 affected tranche.
 
 R1 exit remains an exact prerelease of only `@muxui/react` under `next`, with
-the already-authorized React/React DOM peer boundary and exact internal runtime
-dependencies `react-aria-components@1.20.0`, `@internationalized/date@3.12.4`
-(Decision 0011 amendment 05) limited to the six named value-adapter families above, and
-`motion@13.4.0` for bounded Mux-owned component motion in existing admitted
-React bindings, and
-`lucide-react@1.37.0` for decorative affordances in any `@muxui/react`
-component (Decision 0011 amendment 06). R1.6 also permits `react-aria@3.51.0`
-for `Resizable`'s `useMove`, with Decision 0018 extending the same edge to
-SelectNative's `useField`; `marked@13.0.3` for the Mux-owned typed `Markdown`
-parser boundary, and `@tiptap/core@3.31.4`, `@tiptap/pm@3.31.4`,
-`@tiptap/react@3.31.4`, `@tiptap/starter-kit@3.31.4`, `@tiptap/extension-image@3.31.4`,
-`@tiptap/extension-placeholder@3.31.4`,
-`@tiptap/extension-text-align@3.31.4`, and
-`@tiptap/extension-text-style@3.31.4` for `TextEditor` only (Decision 0011
-amendment 04). Decision 0024 amendment 01 adds exact `shiki@4.5.0` only for
-CodeBlock client highlighting. All are
+the already-authorized React/React DOM peer boundary and the internal runtime
+dependencies that Architecture lists by purpose (`@muxui/react`). All are
 internal, replaceable, module-isolated implementation edges; no upstream public
-type, Tiptap editor object, or parser object crosses the Mux UI
-public boundary. The Lucide edge carries npm integrity
-`sha512-LPsB4rD1TD6wZu1djKOf9vUnS1jTNaHbolXebXDgiTdb6jeA1agIJhJsIybCmjKmQClcOaal1o1OaiYahEftyQ==`,
-ISC license with its Feather-derived MIT notice, and React peer compatibility.
-R1.6 dependency proof must retain package licenses/notices, exact npm integrity,
-React peer compatibility, lockfile pins, focused Markdown security review
-(typed AST, escaping, and source bounds), component-local import isolation,
+type, Tiptap editor object, or parser object crosses the Mux UI public
+boundary. Dependency proof retains package licences and notices, npm integrity,
+React peer compatibility, lockfile pins, focused Markdown security review (typed
+AST, escaping, and source bounds), component-local import isolation,
 tree-shaking, SSR/hydration, and exact packed-consumer resolution. Every
-registry mutation requires a
-separate exact publication authorization and a final registry/version/dist-tag
-collision and authorization-drift check. This authority publishes nothing.
+registry mutation requires a separate exact publication authorization and a
+final registry/version/dist-tag collision and authorization-drift check. This
+authority publishes nothing.
