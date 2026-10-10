@@ -8,7 +8,7 @@ const unquote = (value) => value.replace(/^'(.*)'$/u, '$1');
 const splitKey = (key) => [key.slice(0, key.indexOf('@', 1)), key.slice(key.indexOf('@', 1) + 1)];
 const baseVersion = (version) => version.split('(', 1)[0];
 
-/** Reads the pnpm v9 lockfile into its importer edges, package integrities, and required snapshot dependencies. */
+/** Reads the pnpm v9 lockfile into its importer edges, package integrities, and snapshot dependency edges. */
 export async function readLockfile() {
   const importers = new Map();
   const integrities = new Map();
@@ -25,7 +25,7 @@ export async function readLockfile() {
     if (indent === 2 && line.trim()) {
       key = unquote(line.trim().replace(/:(?: \{\})?$/u, ''));
       if (section === 'importers') importers.set(key, new Map());
-      if (section === 'snapshots') snapshots.set(key, new Map());
+      if (section === 'snapshots') snapshots.set(key, { dependencies: new Map(), optionalDependencies: new Map() });
       continue;
     }
     if (section === 'importers') {
@@ -40,9 +40,9 @@ export async function readLockfile() {
       if (integrity) integrities.set(key, integrity);
     } else if (section === 'snapshots') {
       if (indent === 4) edge = text;
-      else if (indent === 6 && edge === 'dependencies') {
+      else if (indent === 6 && (edge === 'dependencies' || edge === 'optionalDependencies')) {
         const [dependency, reference] = line.trim().split(': ');
-        snapshots.get(key).set(unquote(dependency), reference);
+        snapshots.get(key)[edge].set(unquote(dependency), reference);
       }
     }
   }
@@ -71,19 +71,30 @@ export function exactLockedProblems(lockfile, importer, manifest, edges = ['depe
 }
 
 /**
- * Every package a locked importer dependency requires, as sorted
- * `name@version` strings, optionally narrowed to names the caller owns.
+ * Walks everything one locked importer dependency reaches over `edges`. Every
+ * package reached needs a snapshot and a sha512 integrity, so a deleted record
+ * is reported instead of read as a dependency-free leaf. Returns the sorted
+ * `name@version` strings (optionally narrowed to names the caller owns) and the
+ * problems found anywhere in the walk.
  */
-export function lockedClosure(lockfile, importer, root, include = () => true) {
+export function lockedClosure(lockfile, importer, root, { edges = ['dependencies'], include = () => true } = {}) {
   const start = lockfile.importers.get(importer)?.get(`dependencies:${root}`)?.version;
-  if (!start) return [];
+  if (!start) return { packages: [], problems: [`${importer} does not lock ${root}`] };
+  const problems = [];
   const seen = new Set();
   const pending = [`${root}@${start}`];
   while (pending.length > 0) {
     const key = pending.pop();
     if (seen.has(key)) continue;
     seen.add(key);
-    for (const [name, reference] of lockfile.snapshots.get(key) ?? []) pending.push(`${name}@${reference}`);
+    const [name, version] = splitKey(key);
+    if (!lockfile.integrities.has(`${name}@${baseVersion(version)}`)) problems.push(`${key} has no lockfile integrity`);
+    const snapshot = lockfile.snapshots.get(key);
+    if (!snapshot) { problems.push(`${key} has no lockfile snapshot`); continue; }
+    for (const edge of edges) {
+      for (const [dependency, reference] of snapshot[edge]) if (!reference.startsWith('link:')) pending.push(`${dependency}@${reference}`);
+    }
   }
-  return [...new Set([...seen].map((key) => splitKey(key)).filter(([name]) => include(name)).map(([name, version]) => `${name}@${baseVersion(version)}`))].sort();
+  const packages = [...new Set([...seen].map(splitKey).filter(([name]) => include(name)).map(([name, version]) => `${name}@${baseVersion(version)}`))].sort();
+  return { packages, problems };
 }
