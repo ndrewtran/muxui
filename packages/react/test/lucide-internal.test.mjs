@@ -102,7 +102,7 @@ test('Lucide stays an exact internal, tree-shakeable dependency with no public l
   assert.equal(typeof checkModule.default, 'object');
 });
 
-test('MuxUI affordances render the accepted Lucide glyph mapping as decorative SVGs', () => {
+test('MuxUI affordances render the Lucide glyph mapping as decorative SVGs', () => {
   const markup = renderToString(React.createElement('div', null,
     React.createElement(Checkbox, { defaultChecked: true }, 'Complete'),
     React.createElement(Checkbox, { indeterminate: true }, 'Mixed'),
@@ -297,7 +297,7 @@ test('R1.6 Lucide roots keep icons decorative and take accessible names from the
 
 // Tabs renders its overflow scroll buttons only after measuring overflow, so
 // the viewport reports a scrollable extent that jsdom cannot lay out itself.
-test('Tabs overflow scroll buttons render the accepted Lucide chevrons as decorative SVGs', async () => {
+test('Tabs overflow scroll buttons render the Lucide chevrons as decorative SVGs', async () => {
   const dom = new JSDOM('<!doctype html><div id="root"></div>');
   const restore = installDom(dom, { layoutStubs: true });
   const viewportClass = 'muxui-tabs-motion-overflow-viewport';

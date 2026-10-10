@@ -234,8 +234,8 @@ const bulletList = (...items) => ({ type: 'bulletList', content: items.map((cont
 
 // Tiptap 3.30 added a ListKeymap Tab handler that nests a text block
 // (paragraph or heading) that starts right after a list into the list's last
-// item (Decision 0011 amendment 04). Tab and Shift+Tab must still leave the
-// editor everywhere else they did under 3.22.3.
+// item. Tab and Shift+Tab must still leave the editor everywhere else they did
+// under 3.22.3.
 test('TextEditor Tab and Shift+Tab leave the editor except when nesting after a list', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;
@@ -304,7 +304,7 @@ test('TextEditor Tab and Shift+Tab leave the editor except when nesting after a 
   }
 });
 
-// Pins two editing changes accepted by Decision 0011 amendment 04.
+// Pins two editing changes that Tiptap 3.31 made.
 test('TextEditor blockquote Backspace and leading code block ArrowUp follow Tiptap 3.31', { timeout: 60_000 }, async () => {
   const { url, close } = await startServer({ root: 'repository', entries: [fixtureEntry], pages: { '/heavy-fixture.html': fixtureDocument } });
   let browser;

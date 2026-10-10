@@ -6,15 +6,16 @@ id: muxui:guide:themes
 
 Mux UI styles are generated from the canonical default theme. Consumers use semantic roles through the generated stylesheet; component pages do not need a second palette or a parallel styling system.
 
-## Token contract 5.0
+## Token contract
 
-The current source uses token schema `2.1.0` and token contract `5.2.0`. The
+The canonical source, `muxui:token:default-theme`, declares the token schema
+(`schemaVersion`) and token contract (`tokenContractVersion`) versions. The
 contract removes provisional token IDs that had no Mux UI consumer. Removed
 names are absent from the generated stylesheet and rejected by authoring,
 Scale, and component recipes. See the [token contract migration guide](/token-migration/)
 for the direct change map.
 
-Authoring documents must declare `tokenContractVersion: "5.2.0"`. Validation
+Authoring documents must declare the source's `tokenContractVersion`. Validation
 requires an exact source contract match and does not normalize older documents
 or rewrite overrides. Preserve explicit values and mode branches while moving
 to current semantic roles.
