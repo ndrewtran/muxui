@@ -144,16 +144,33 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
   return growth;
 }
 
-// Decision 0028 (#251) removed this key from the catalog source manifest and the compiler stopped accepting it, so a tree from before then
-// no longer compiles as committed. It is dropped from the extracted copy of each tree, on both sides of the comparison, and nothing else is.
+// Decision 0028 (#251) removed `authorityDecisionPath` from the catalog source manifest and the compiler stopped accepting it, so a tree from
+// before then no longer compiles as committed. Block categories then became catalog data: the manifest names a registry (`patternCategoriesPath`)
+// the compiler requires, where a tree from before had the closed list in the pattern schema. Each extracted tree is normalized the same way on
+// both sides of the comparison: the removed key is dropped, and a tree without a registry gets the closed list it had. Nothing else is changed.
 const removedManifestKey = 'authorityDecisionPath';
+const categoryRegistryPath = 'catalog/patterns/categories.json';
+/**
+ * The closed list, byte for byte as `catalog/patterns/categories.json` shipped it, so a tree from before compiles to the same bundle as the
+ * tree that moved the list. The integrity test holds this text to the file as that change added it.
+ */
+export const closedCategoryRegistry = `{
+  "application": ["collections", "forms", "feedback", "conversation", "navigation"],
+  "marketing": ["hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"]
+}
+`;
 
-/** Drops the removed `authorityDecisionPath` from the extracted tree's source manifest; any other unknown key still fails the compiler. */
-async function dropRemovedManifestKey(directory) {
+/** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
+async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
   const manifest = JSON.parse(await readFile(path, 'utf8'));
-  if (!(removedManifestKey in manifest)) return;
+  const legacy = removedManifestKey in manifest || !('patternCategoriesPath' in manifest);
+  if (!legacy) return;
   delete manifest[removedManifestKey];
+  if (!('patternCategoriesPath' in manifest)) {
+    manifest.patternCategoriesPath = categoryRegistryPath;
+    await writeFile(join(directory, categoryRegistryPath), closedCategoryRegistry);
+  }
   await writeFile(path, `${JSON.stringify(manifest, null, 2)}\n`);
 }
 
@@ -174,12 +191,12 @@ async function withTree(cwd, revision, use) {
  * changed (`excludedDirectories`). The commit holds when the digests are equal, so the digest changed only for those
  * sources, and when it changed no `digestAffectingPaths` file, which the same-compiler comparison cannot see. A
  * growth commit that edits any other source, a close-out block included, or the catalog package version, moves the digest.
- * A tree that still carries the manifest key Decision 0028 removed (`authorityDecisionPath`) is compiled with that key dropped.
+ * A tree from before Decision 0028 or before block categories became catalog data is normalized first (`normalizeLegacyManifest`).
  */
 export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged }) {
   const excluded = ({ path }) => excludedDirectories.some((directory) => path.startsWith(directory));
   const digestAt = (revision) => withTree(cwd, revision, async (directory) => {
-    await dropRemovedManifestKey(directory);
+    await normalizeLegacyManifest(directory);
     return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
   });
   const [digestBefore, digestAfter] = await Promise.all([digestAt(parent), digestAt(commit)]);

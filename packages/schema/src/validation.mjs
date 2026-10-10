@@ -922,7 +922,66 @@ export function relationEdges(records) {
   return edges;
 }
 
-export function validateCatalogRecords(records, { schemas, ownership } = {}) {
+/**
+ * Validates the pattern category registry (`catalog/patterns/categories.json`):
+ * groups in display order, each with its categories in display order. The
+ * schema checks the shape; a category must also belong to one group only,
+ * because a pattern's group is derived from its category.
+ */
+export function validatePatternCategories(registry, { schemas } = {}) {
+  validateContractDocument('pattern-categories.schema.json', registry, { schemas });
+  const declared = new Map();
+  const issues = [];
+  for (const [group, categories] of Object.entries(registry)) {
+    for (const category of categories) {
+      if (declared.has(category)) {
+        issues.push({ path: `$/${group}`, message: `${category} is already declared under ${declared.get(category)}` });
+      }
+      declared.set(category, group);
+    }
+  }
+  if (issues.length > 0) throw new SchemaValidationError('MUXUI_SCHEMA_INVALID', issues);
+  return registry;
+}
+
+/**
+ * The registry as an ordered list of `{ group, categories }`, the form a bundle
+ * carries: canonical JSON sorts object keys, so an object would lose the group
+ * order the registry declares.
+ */
+export function patternCategoryGroups(registry) {
+  return Object.entries(registry).map(([group, categories]) => ({ group, categories }));
+}
+
+/** Reads an ordered group list back into a validated registry whose keys follow the list order. */
+export function patternCategoryRegistry(groups) {
+  if (!Array.isArray(groups)) {
+    throw new SchemaValidationError('MUXUI_SCHEMA_INVALID', [
+      { path: '$', message: 'must be an array of { group, categories }' },
+    ]);
+  }
+  const issues = [];
+  const seen = new Set();
+  const entries = [];
+  for (const [index, entry] of groups.entries()) {
+    if (!isObject(entry) || typeof entry.group !== 'string' || !Array.isArray(entry.categories) || Object.keys(entry).length !== 2) {
+      issues.push({ path: `$/${index}`, message: 'must be { group, categories }' });
+    } else if (seen.has(entry.group)) {
+      issues.push({ path: `$/${index}/group`, message: `${entry.group} is declared more than once` });
+    } else {
+      seen.add(entry.group);
+      entries.push([entry.group, entry.categories]);
+    }
+  }
+  if (issues.length > 0) throw new SchemaValidationError('MUXUI_SCHEMA_INVALID', issues);
+  return validatePatternCategories(Object.fromEntries(entries));
+}
+
+/**
+ * Checks the record graph. With `patternCategories` (a validated category
+ * registry), every pattern's category must be declared in it.
+ */
+export function validateCatalogRecords(records, { schemas, ownership, patternCategories } = {}) {
   validateFieldOwnershipRegistry(ownership ?? loadFieldOwnershipRegistry(), { schemas });
   validateRelationRegistry();
   const ids = new Map();
@@ -1012,9 +1071,14 @@ export function validateCatalogRecords(records, { schemas, ownership } = {}) {
 
   // Every participant must be a component with an implemented web.react
   // binding, and every example has exactly one owner: its component binding
-  // or one pattern variant listing.
+  // or one pattern variant listing. A pattern's category must be declared when
+  // a registry is supplied.
   const listings = new Map();
+  const declaredCategories = patternCategories === undefined ? undefined : new Set(Object.values(patternCategories).flat());
   for (const pattern of records.filter(({ kind }) => kind === 'pattern')) {
+    if (declaredCategories && !declaredCategories.has(pattern.category)) {
+      report(pattern.id, '$/category', `${pattern.category} is not a declared pattern category; declare it in catalog/patterns/categories.json`);
+    }
     for (const [index, participant] of pattern.participants.entries()) {
       const component = ids.get(participant.component);
       const path = `$/participants/${index}/component`;

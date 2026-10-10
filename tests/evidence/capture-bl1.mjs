@@ -270,11 +270,12 @@ const schemaTests = prove('E-BL1-01-schema-and-compiler-fixtures', {
 const closedSchema = 'E-BL1-01 negative: the closed schema names the earliest owner for each record error';
 const artifactGraph = 'E-BL1-01 negative: the artifact graph names the pattern field that owns each error';
 const undeclaredImport = 'E-BL1-01 negative: a variant importing an undeclared component names pattern.participants and its source';
+const undeclaredCategory = 'E-BL1-01 negative: a pattern category the registry does not declare names pattern.category and fails the compile';
 const positiveFixtures = [
   'E-BL1-01: a valid pattern and its variant example validate and derive one example-of edge',
   'E-BL1-01: the fixture pattern compiles with derived group, revision, and exact variant source',
 ];
-requirePassed(schemaTests, [closedSchema, artifactGraph, undeclaredImport, ...positiveFixtures]);
+requirePassed(schemaTests, [closedSchema, artifactGraph, undeclaredImport, undeclaredCategory, ...positiveFixtures]);
 // The authoring tests also hold the unknown-field owner assertion, so they run before the negatives are assembled.
 const authoringFile = 'packages/tooling/test/pattern-authoring.test.mjs';
 const authoringTests = prove('E-BL1-02-authoring-fixtures', { command: process.execPath, args: ['--test', authoringFile] }, { observed: ['authoring-fixtures'] });
@@ -299,6 +300,7 @@ const catalogSource = await readFile(join(repositoryRoot, catalogFile), 'utf8');
 const closedBlock = testSource(schemaSource, schemaFile, closedSchema);
 const graphBlock = testSource(schemaSource, schemaFile, artifactGraph);
 const importBlock = testSource(catalogSource, catalogFile, undeclaredImport);
+const categoryBlock = testSource(catalogSource, catalogFile, undeclaredCategory);
 const closedCases = declaredCases(closedBlock);
 const graphCases = declaredCases(graphBlock);
 const codeOf = (block) => /assertIssue\(error, \{ code: '([A-Z_]+)'/u.exec(block)?.[1];
@@ -324,6 +326,18 @@ const importCase = {
   owner: /resolveAuthoringField\('pattern', issue\.path\)\.owner, '([^']+)'/u.exec(importBlock)?.[1] ?? null,
 };
 if (Object.values(importCase).some((value) => value === undefined)) throw new Error('BL1_FIXTURE_MISSING: the undeclared-import test no longer asserts a code, path, and message');
+// Categories are catalog data (Decision 0029), so an undeclared one is rejected by the compiler, not by the schema.
+const categoryCase = {
+  negative: 'a pattern category the registry does not declare',
+  test: undeclaredCategory,
+  file: catalogFile,
+  case: 'the pattern names a well-formed category that catalog/patterns/categories.json does not list',
+  code: /assert\.equal\(error\.code, '([A-Z_]+)'\)/u.exec(categoryBlock)?.[1],
+  path: /assert\.equal\(issue\.path, '([^']+)'\)/u.exec(categoryBlock)?.[1],
+  messagePattern: /assert\.match\(issue\.message, \/(.*)\/u\)/u.exec(categoryBlock)?.[1],
+  owner: /resolveAuthoringField\('pattern', issue\.path\)\.owner, '([^']+)'/u.exec(categoryBlock)?.[1] ?? null,
+};
+if (Object.values(categoryCase).some((value) => value === undefined)) throw new Error('BL1_FIXTURE_MISSING: the undeclared-category test no longer asserts a code, path, and message');
 // An unknown field has no field-level owner, so canonical source diagnosis names the family contract through its fallback.
 const unknownFieldTitle = 'E-BL1-01: an unknown pattern field is diagnosed at the pattern contract through the family fallback';
 requirePassed(authoringTests, [unknownFieldTitle]);
@@ -345,7 +359,7 @@ const requiredNegatives = [
     ownerNote: `the schema diagnostic names the path only; canonical source diagnosis (diagnoseCanonicalSource) names ${unknownFieldDiagnosis.owner} at schema pointer ${unknownFieldDiagnosis.schemaPointer} through the family-contract fallback, because no field-level owner resolves for an undeclared field`,
     ownerProof: { file: authoringFile, test: unknownFieldTitle, proof: authoringTests.ref },
   },
-  fromCase('a category outside the enum', 'category outside the enum', closedCases, closedBlock, ownerOfClosed),
+  categoryCase,
   fromCase('an unknown participant', 'unknown participant', graphCases, graphBlock, ownerOfGraph),
   importCase,
   fromCase('a missing variant example', 'missing variant example', graphCases, graphBlock, ownerOfGraph),

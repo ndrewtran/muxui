@@ -6,6 +6,7 @@ import test from 'node:test';
 import {
   canonicalDigest,
   canonicalJson,
+  patternCategoryRegistry,
   resolveAuthoringField,
   sha256Digest,
 } from '@muxui/schema';
@@ -13,6 +14,7 @@ import { catalogJson } from '../generated/catalog.mjs';
 import { CatalogSourceError } from '../src/compiler.mjs';
 import { deriveSourceRecords } from '../src/completeness.mjs';
 import {
+  PATTERN_CATEGORY_GROUPS,
   createCatalogApi,
   getArtifact,
   getManifest,
@@ -143,6 +145,68 @@ test('E-BL1-01 negative: graph and record errors surface from the compile with t
   assert.equal(noVariants.code, 'MUXUI_SCHEMA_INVALID');
   assert.equal(noVariants.issues[0].path, '$/variants');
   assert.equal(resolveAuthoringField('pattern', noVariants.issues[0].path).owner, 'pattern-contract');
+});
+
+// `carousel` is a valid category name that the shipped registry does not declare.
+const withCategory = (category) => (files) => files.set('artifact.json', JSON.stringify({
+  ...JSON.parse(files.get('artifact.json')),
+  category,
+}));
+
+test('E-BL1-01 negative: a pattern category the registry does not declare names pattern.category and fails the compile', async () => {
+  const error = await compileFailure({ edit: withCategory('carousel') });
+  assert.equal(error.code, 'MUXUI_RELATION_INVALID');
+  const [issue] = error.issues;
+  assert.equal(issue.artifactId, patternId);
+  assert.equal(issue.path, '$/category');
+  assert.match(issue.message, /carousel is not a declared pattern category; declare it in catalog\/patterns\/categories\.json/u);
+  assert.equal(resolveAuthoringField('pattern', issue.path).owner, 'pattern-contract');
+  assert.equal(error.issues.length, 1);
+
+  // A name that is not kebab-case never reaches the registry: the schema rejects it.
+  const malformed = await compileFailure({ edit: withCategory('Carousel') });
+  assert.equal(malformed.code, 'MUXUI_SCHEMA_INVALID');
+  assert.equal(malformed.issues[0].path, '$/category');
+
+  // A registry that lists a category under two groups cannot derive one group, so it fails before any pattern is read.
+  const ambiguous = await compileFailure({ categories: (registry) => ({ ...registry, marketing: [...registry.marketing, 'collections'] }) });
+  assert.equal(ambiguous.code, 'MUXUI_SCHEMA_INVALID');
+  assert.match(ambiguous.issues[0].message, /collections is already declared under application/u);
+});
+
+test('E-BL1-01: adding a category to the registry lets a pattern use it, and the registry decides its group', async () => {
+  const declared = async (group) => (await compileFixtureCatalog({
+    minimal: true,
+    edit: withCategory('carousel'),
+    categories: (registry) => ({ ...registry, [group]: [...registry[group], 'carousel'] }),
+  })).bundle;
+  for (const group of ['application', 'marketing']) {
+    const bundle = await declared(group);
+    assert.equal(bundle.artifacts.find(({ id }) => id === patternId).group, group);
+    assert.ok(patternCategoryRegistry(bundle.patternCategories)[group].includes('carousel'));
+    // The bundle carries the registry, so it validates without the repository.
+    createCatalogApi(bundle);
+  }
+  // The real catalog carries the shipped registry, and the export keeps its declared group order.
+  const shipped = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../catalog/patterns/categories.json'), 'utf8'));
+  assert.deepEqual(patternCategoryRegistry(baseBundle.patternCategories), shipped);
+  assert.deepEqual(Object.entries(PATTERN_CATEGORY_GROUPS), Object.entries(shipped));
+});
+
+test('E-BL1-01: the bundle keeps the declared group order through serialization, which canonical JSON would sort', async () => {
+  // `marketing` is declared before `application`, against alphabetical order; `collections` is the fixture pattern's category.
+  const registry = { marketing: ['pricing', 'hero'], application: ['forms', 'collections'] };
+  const { bytes } = await compileFixtureCatalog({ minimal: true, categories: () => registry });
+  assert.deepEqual(Object.keys(JSON.parse(canonicalJson(registry))), ['application', 'marketing'], 'canonical JSON sorts object keys');
+  const serialized = JSON.parse(bytes);
+  assert.deepEqual(serialized.patternCategories, [
+    { group: 'marketing', categories: ['pricing', 'hero'] },
+    { group: 'application', categories: ['forms', 'collections'] },
+  ]);
+  const restored = patternCategoryRegistry(serialized.patternCategories);
+  assert.deepEqual(Object.entries(restored), Object.entries(registry));
+  assert.equal(serialized.artifacts.find(({ id }) => id === patternId).group, 'application');
+  createCatalogApi(serialized);
 });
 
 test('E-BL1-01 negative: variant sources must use LF newlines so the bundle keeps exact bytes', async () => {
@@ -355,6 +419,18 @@ test('E-BL1-01 negative: the bundle rejects altered variant source, group, or pa
     ['variant source text', (value) => { artifact(value, cssId).sourceText += '\n// edited\n'; }, /variant source text does not match/u],
     ['pattern group', (value) => { artifact(value, patternId).group = 'marketing'; }, /pattern group or revision/u],
     ['pattern revision', (value) => { artifact(value, patternId).patternRevision = sha256Digest('x'); }, /pattern group or revision/u],
+    ['registry that regroups the category', (value) => {
+      const [application, marketing] = ['application', 'marketing'].map((group) => value.patternCategories.find((entry) => entry.group === group));
+      application.categories = application.categories.filter((category) => category !== 'collections');
+      marketing.categories.push('collections');
+    }, /pattern group or revision/u],
+    ['registry that drops the category', (value) => {
+      const application = value.patternCategories.find((entry) => entry.group === 'application');
+      application.categories = application.categories.filter((category) => category !== 'collections');
+    }, /collections is not a declared pattern category/u],
+    ['registry that declares a group twice', (value) => { value.patternCategories.push({ group: 'application', categories: ['dashboards'] }); }, /application is declared more than once/u],
+    ['registry as an object', (value) => { value.patternCategories = Object.fromEntries(value.patternCategories.map(({ group, categories }) => [group, categories])); }, /must be an array/u],
+    ['missing registry', (value) => { delete value.patternCategories; }, /must be an array/u],
   ]) {
     assert.throws(() => createCatalogApi(tamper(mutate)), message, label);
   }

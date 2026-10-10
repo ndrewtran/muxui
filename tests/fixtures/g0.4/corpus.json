@@ -144,7 +144,7 @@
     {
       "id": "release-compatible",
       "releaseVersion": "1.0.0",
-      "schemaVersion": "2.2.0",
+      "schemaVersion": "2.3.0",
       "queryApiVersion": "2.1.0",
       "tokenContractVersion": "1.1.0",
       "sourceRevision": "sha256:1111111111111111111111111111111111111111111111111111111111111111",

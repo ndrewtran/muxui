@@ -212,7 +212,8 @@ function assertVariantSource(slug, sourceText) {
  * The scaffold checks schema shape, import form, and the content rules that need
  * no repository files (remote references and literal colours, reported with the
  * compiler's rule IDs). It does not check that imported components are declared
- * participants, that participants exist, that an id is free, or that a local
+ * participants, that participants exist, that the category is declared in
+ * `catalog/patterns/categories.json`, that an id is free, or that a local
  * reference names a licensed asset; the catalog and the pattern directory are
  * not consulted. Those fail at compile, and `diagnoseCompileFailure` maps them
  * to source-linked diagnostics.
@@ -312,6 +313,7 @@ function validateManifest(manifest) {
     || manifest.schema !== SOURCE_MANIFEST_SCHEMA
     || typeof manifest.commandRegistryPath !== 'string'
     || typeof manifest.pageBudgetProfilePath !== 'string'
+    || typeof manifest.patternCategoriesPath !== 'string'
     || typeof manifest.platformSafetyContractPath !== 'string'
     || typeof manifest.queryApiVersion !== 'string'
     || !Array.isArray(manifest.supportedQueryApiVersions)
@@ -324,6 +326,7 @@ function validateManifest(manifest) {
   }
   assertRelativePath(manifest.commandRegistryPath, 'commandRegistryPath');
   assertRelativePath(manifest.pageBudgetProfilePath, 'pageBudgetProfilePath');
+  assertRelativePath(manifest.patternCategoriesPath, 'patternCategoriesPath');
   assertRelativePath(manifest.platformSafetyContractPath, 'platformSafetyContractPath');
   for (const [index, entry] of manifest.records.entries()) {
     if (!isObject(entry) || typeof entry.family !== 'string') {
@@ -960,6 +963,7 @@ function schemaSources(authoring = {}) {
 function isCatalogSource(context, path) {
   return context.sourceManifest.commandRegistryPath === path
     || context.sourceManifest.pageBudgetProfilePath === path
+    || context.sourceManifest.patternCategoriesPath === path
     || context.sourceManifest.platformSafetyContractPath === path
     || context.sourceManifest.records.some((entry) => entry.path === path)
     // Content files are named by their record's `source`, not the manifest.

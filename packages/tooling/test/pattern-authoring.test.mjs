@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import test from 'node:test';
@@ -146,6 +146,9 @@ async function compileStaged(list, { edit = () => {} } = {}) {
     for (const name of await readdir(join(repositoryRoot, 'catalog'))) {
       if (name !== 'patterns') await symlink(join(repositoryRoot, 'catalog', name), join(root, 'catalog', name));
     }
+    // The category registry sits beside the pattern directories the staged copy replaces.
+    await mkdir(join(root, 'catalog/patterns'));
+    await copyFile(join(repositoryRoot, 'catalog/patterns/categories.json'), join(root, 'catalog/patterns/categories.json'));
     const files = new Map(list.flatMap(({ writeSet }) => writeSet.map(({ path, bytes }) => [path, bytes])));
     const entries = list.flatMap(({ manifestEntries }) => manifestEntries);
     edit(files, entries);
@@ -353,10 +356,13 @@ test('E-BL1-02 negative: a scaffold refuses missing decisions, unowned fields, a
   const accepted = posterGridInput();
   accepted.variants[0].sourceText = `// A leading comment.\nimport { useState } from 'react';\nimport { jsx } from 'react/jsx-runtime';\n${cssText}`;
   assert.equal(scaffoldPattern(accepted).mode, 'preview-only');
-  // An invalid record is a schema failure, not a scaffold rule.
+  // An invalid record is a schema failure, not a scaffold rule. The scaffold does not consult the category registry: an
+  // undeclared but well-formed category scaffolds, and the compile rejects it.
   const input = posterGridInput();
-  input.decisions.category = 'carousel';
+  input.decisions.category = 'Carousel';
   assert.throws(() => scaffoldPattern(input), SchemaValidationError);
+  input.decisions.category = 'carousel';
+  assert.equal(scaffoldPattern(input).record.category, 'carousel');
 });
 
 test('E-BL1-02: semantic diff separates editorial, compatible, and incompatible pattern edits', async () => {
@@ -568,8 +574,9 @@ test('E-BL1-02: affected closure reaches a pattern from a variant source, its sc
   const fromSchema = closure(['packages/schema/schemas/pattern.schema.json']);
   for (const id of ['muxui:pattern:poster-grid', 'muxui:pattern:callout']) assert.ok(fromSchema.artifacts.includes(id), id);
   assert.ok(fromSchema.canonicalSources.filter(isRecordPath).includes('catalog/patterns/callout/artifact.json'));
-  assert.ok(fromSchema.projections.includes('packages/schema/generated/types.d.ts'));
   assert.ok(fromSchema.requiredChecks.includes('pnpm --filter @muxui/schema check'));
+  // A schema that feeds a generated type lists that projection.
+  assert.ok(closure(['packages/schema/schemas/binding.schema.json']).projections.includes('packages/schema/generated/types.d.ts'));
   const fromExampleSchema = closure(['packages/schema/schemas/example.schema.json']);
   for (const id of [cssId, patternId]) assert.ok(fromExampleSchema.artifacts.includes(id), id);
 
@@ -688,6 +695,22 @@ test('E-BL1-02: an unknown participant is diagnosed at the participant component
   assert.match(diagnostic.message, /muxui:component:carousel does not exist/u);
 });
 
+test('E-BL1-02: an undeclared category is diagnosed at the pattern category with the registry named', async () => {
+  const { error, records } = await compileFailure({
+    edit: (files) => files.set(patternPath, files.get(patternPath).replace('"category":"collections"', '"category":"carousel"')),
+  });
+  const { diagnostics: [diagnostic] } = diagnoseCompileFailure({ error, records });
+  assert.equal(diagnostic.ruleId, 'authoring.compile.graph-invalid');
+  assert.equal(diagnostic.details.artifactId, patternId);
+  assert.deepEqual(diagnostic.details.source, { record: patternPath, path: '$/category' });
+  assert.deepEqual(diagnostic.details.owner, {
+    name: 'pattern-contract',
+    schema: 'pattern.schema.json',
+    schemaPointer: '#/properties/category',
+  });
+  assert.match(diagnostic.message, /carousel is not a declared pattern category; declare it in catalog\/patterns\/categories\.json/u);
+});
+
 test('E-BL1-02: a duplicate variant is diagnosed through the manifest entry the compiler stopped at', async () => {
   const { error, records } = await compileFailure({
     edit: (files) => {
@@ -783,7 +806,7 @@ test('E-BL1-02: pattern records diagnose at their field owners through canonical
   const context = await stagedContext();
   const [{ record, recordPath, examples }] = list;
   const invalid = structuredClone(record);
-  invalid.category = 'carousel';
+  invalid.category = 'Carousel';
   const [category] = diagnoseCanonicalSource({
     context,
     family: 'pattern',

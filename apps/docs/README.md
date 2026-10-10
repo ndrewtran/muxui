@@ -22,10 +22,11 @@ route (`/blocks/<block>/<variant>/preview/`) that runs the canonical example sou
 
 `src/lib/blocks.ts` reads blocks through the catalog query API (list, get with
 `--section examples`, `--uses`, and the derived `usedIn` view). Group and category
-order follow the schema's category groups, which `@muxui/catalog` re-exports as
-`PATTERN_CATEGORY_GROUPS`; the catalog owns no display labels, so a label is derived
-from its id. The app owns no block, pattern, example, search, or prose fact. The
-section is unpublished and claims nothing about a public docs surface.
+order follow the category registry in `catalog/patterns/categories.json`, which
+`@muxui/catalog` exports as `PATTERN_CATEGORY_GROUPS`; the catalog owns no display
+labels, so a label is derived from its id. The app owns no block, pattern, example,
+search, or prose fact. The section is unpublished and claims nothing about a public
+docs surface.
 
 The rail filters in the browser from `/blocks/filter-index.json`. Its query grammar
 and term matching are `@muxui/catalog/search`, the same code `searchArtifacts` runs,

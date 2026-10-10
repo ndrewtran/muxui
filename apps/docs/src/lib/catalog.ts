@@ -107,7 +107,7 @@ const catalog = loadedCatalog;
 /** The canonical query API. The Blocks loader reads patterns through it, never around it. */
 export const catalogApi: CatalogModule = catalog;
 
-/** The pattern taxonomy the catalog re-exports from the schema: each group, in declared order, with its categories in declared order. */
+/** The pattern taxonomy the catalog exports from `catalog/patterns/categories.json`: each group, in declared order, with its categories in declared order. */
 export const patternCategoryGroups: readonly (readonly [group: string, categories: readonly string[]])[] = Object.freeze(
 	(() => {
 		const groups = isRecord(loadedCatalog) ? loadedCatalog.PATTERN_CATEGORY_GROUPS : undefined;
