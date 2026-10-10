@@ -1728,22 +1728,80 @@ export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageB
 // workflow installs those engines only for their groups (see groupBrowserEngines).
 const crossEngineEnvironment = { MUXUI_BROWSER_ENGINES: 'chromium,firefox,webkit' };
 
-// True when the source calls browserEngines(); a mention in a comment or
-// string does not opt in.
-export function callsBrowserEngines(source) {
+// Browser suites run as parallel CI groups: one per engine for the React tests
+// that call browserEngines() plus, in the Chromium group, Scale and the docs
+// site. The React tests that are not engine-aware only exist in Chromium, so
+// they get their own group to keep the Chromium job from being the long pole.
+const browserGroup = (engine) => `browser-${engine}`;
+const chromiumGroup = browserGroup('chromium');
+const chromiumOnlyGroup = 'browser-chromium-only';
+
+// True when the source calls browserEngines() imported from the harness
+// module: by name, by import alias, or as a member of a namespace import of it.
+// Only bindings resolved from that import count, so an unrelated `browserEngines`
+// name, property, or mention in a comment or string is ignored. Any other use of
+// the harness binding itself (stored in a variable, re-exported, reached through
+// a dynamic import) throws, because the test would otherwise silently run in
+// Chromium only. There is no scope analysis: a shadowing declaration counts as
+// the binding.
+export function callsBrowserEngines(source, label = 'the source') {
   let ast;
   try {
     ast = parse(source, { ecmaVersion: 'latest', sourceType: 'module' });
   } catch {
     return false;
   }
-  const visit = (node) => {
-    if (!node || typeof node !== 'object') return false;
-    if (Array.isArray(node)) return node.some(visit);
-    if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'browserEngines') return true;
-    return Object.entries(node).some(([key, value]) => !['start', 'end', 'loc', 'range'].includes(key) && typeof value === 'object' && visit(value));
+  const isHarness = (node) => typeof node?.value === 'string' && /(?:^|\/)harness\.mjs$/u.test(node.value);
+  // Local names bound to the harness's browserEngines, and to the whole module.
+  const functions = new Set();
+  const namespaces = new Set();
+  for (const declaration of ast.body) {
+    if (declaration.type !== 'ImportDeclaration' || !isHarness(declaration.source)) continue;
+    for (const { type, imported, local } of declaration.specifiers) {
+      if (type === 'ImportNamespaceSpecifier') namespaces.add(local.name);
+      else if (type === 'ImportSpecifier' && (imported.name ?? imported.value) === 'browserEngines') functions.add(local.name);
+    }
+  }
+  const memberName = (node) => (node.computed ? node.property.value : node.property.name);
+  let called = false;
+  let otherUse = false;
+  const visit = (node, parent) => {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item, parent);
+      return;
+    }
+    if (node.type === 'ImportDeclaration') return;
+    if (node.type === 'ImportExpression' && isHarness(node.source)) otherUse = true;
+    if (node.type === 'ExportNamedDeclaration' && isHarness(node.source)) {
+      if (node.specifiers.some(({ local }) => (local.name ?? local.value) === 'browserEngines')) otherUse = true;
+      return;
+    }
+    let reference = node.type === 'Identifier' && (functions.has(node.name) || namespaces.has(node.name));
+    // A member of the harness namespace: only browserEngines (or an unknown computed member) matters.
+    const viaNamespace = node.type === 'MemberExpression' && node.object.type === 'Identifier' && namespaces.has(node.object.name);
+    if (viaNamespace) {
+      const name = memberName(node);
+      reference = name === 'browserEngines' || name === undefined;
+    }
+    if (reference) {
+      if (parent?.type === 'CallExpression' && parent.callee === node) called = true;
+      else otherUse = true;
+    }
+    if (viaNamespace) return;
+    for (const [key, value] of Object.entries(node)) {
+      if (['start', 'end', 'loc', 'range'].includes(key)) continue;
+      // Member and property names are not references to a binding.
+      if (key === 'property' && node.type === 'MemberExpression' && !node.computed) continue;
+      if (key === 'key' && !node.computed && !node.shorthand && ['Property', 'PropertyDefinition', 'MethodDefinition'].includes(node.type)) continue;
+      visit(value, node);
+    }
   };
-  return visit(ast);
+  visit(ast, null);
+  if (!called && otherUse) {
+    throw new Error(`MUXUI_CI_IMPACT_BROWSER_ENGINES_FORM: ${label} uses the harness's browserEngines in a form the planner cannot classify; import it statically and call it as browserEngines() (an import alias or namespace member is fine) so CI runs it in every engine`);
+  }
+  return called;
 }
 
 // Reads the planner's React test sources (paths relative to packages/react),
@@ -1757,7 +1815,7 @@ function runsInEveryEngine(testFile, testSources = {}) {
       return false;
     }
   }
-  return callsBrowserEngines(source);
+  return callsBrowserEngines(source, testFile);
 }
 
 // The Playwright-managed engines a group's commands need, space-separated for
@@ -1765,6 +1823,50 @@ function runsInEveryEngine(testFile, testSources = {}) {
 export function groupBrowserEngines(commands) {
   const engines = new Set(commands.flatMap(({ env = {} }) => (env.MUXUI_BROWSER_ENGINES ?? '').split(',')));
   return ['firefox', 'webkit'].filter((engine) => engines.has(engine)).join(' ');
+}
+
+// CI runs the React browser suite as explicit file lists so it can split the
+// files by engine. That repeats the package's `check:browser` script, so
+// planning fails when the script no longer matches what this planner assumes.
+const reactBrowserScript = 'node --test --test-concurrency=1 test/browser/*.test.mjs';
+
+function assertReactBrowserScript(packages) {
+  const actual = packages.find(({ name }) => name === '@muxui/react')?.manifest.scripts?.['check:browser'];
+  // Whitespace is not part of the contract: only the runner, flags, and selectors are.
+  const tokens = (script) => script?.trim().split(/\s+/u).join(' ');
+  if (tokens(actual) === tokens(reactBrowserScript)) return;
+  throw new Error(`MUXUI_CI_IMPACT_CHECK_BROWSER_CONTRACT: packages/react/package.json check:browser is ${JSON.stringify(actual)}, but CI runs the React browser suite as explicit test/browser/*.test.mjs file lists equivalent to ${JSON.stringify(reactBrowserScript)}. Update reactBrowserScript and addReactBrowserSuite in tooling/audits/repository-policy/src/ci-impact.mjs to match the script, or restore the script.`);
+}
+
+// Every React browser test file (paths relative to packages/react, sorted by
+// name): the files `check:browser` globs. A checkout without them has none.
+function reactBrowserTests() {
+  try {
+    return readdirSync(resolve(repositoryRoot, 'packages/react/test/browser'))
+      .filter((name) => name.endsWith('.test.mjs')).sort().map((name) => `test/browser/${name}`);
+  } catch {
+    return [];
+  }
+}
+
+// The React browser suite as explicit file lists, which together cover what
+// `check:browser` runs, each file once per engine it supports: files that call
+// browserEngines() run in every engine's group, the rest only in
+// browser-chromium-only. A group with no files is not planned.
+function addReactBrowserSuite(add, testSources, packages) {
+  assertReactBrowserScript(packages);
+  const tests = reactBrowserTests();
+  const crossEngine = tests.filter((file) => runsInEveryEngine(file, testSources));
+  const chromiumOnly = tests.filter((file) => !crossEngine.includes(file));
+  const addTests = (group, files, options) => add(group, [
+    '--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', ...files,
+  ], options);
+  if (crossEngine.length > 0) addTests(chromiumGroup, crossEngine, { env: { MUXUI_BROWSER_ENGINES: 'chromium' } });
+  if (chromiumOnly.length > 0) addTests(chromiumOnlyGroup, chromiumOnly);
+  if (crossEngine.length === 0) return;
+  for (const engine of ['firefox', 'webkit']) {
+    addTests(browserGroup(engine), crossEngine, { env: { MUXUI_BROWSER_ENGINES: engine } });
+  }
 }
 
 function storybookTestFiles() {
@@ -1777,10 +1879,10 @@ function storybookTestFiles() {
 // Scale's `check:browser:docs` builds `apps/docs/dist` and then serves it, so a
 // failed docs build fails only this command, never later checks.
 function addScaleDocsBrowserCommand(add) {
-  add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
+  add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
 }
 
-function fullPlannedCommands(environment) {
+function fullPlannedCommands(environment, testSources, packages) {
   const planned = [];
   const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
   const storybookEnv = {
@@ -1802,8 +1904,8 @@ function fullPlannedCommands(environment) {
   ], { unsetEnv: storybookSelectionKeys });
   add('checks', ['generate:check']);
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
-  add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser']);
-  add('browser', ['--filter', '@muxui/react', 'run', 'check:browser'], { env: crossEngineEnvironment });
+  add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
+  addReactBrowserSuite(add, testSources, packages);
   addScaleDocsBrowserCommand(add);
   add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
   add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
@@ -1824,7 +1926,7 @@ function plannedCommands(plan, {
   if (!plan.full && !plan.reactPackageFull && plan.reactFamilies?.length > 0) requiredEntrypoints.add('react');
   if (!plan.full && plan.storyRuns?.length > 0) requiredEntrypoints.add('storybook');
   validateScopedEntrypoints(packages, [...requiredEntrypoints]);
-  if (plan.full) return fullPlannedCommands(environment);
+  if (plan.full) return fullPlannedCommands(environment, testSources, packages);
 
   // Every group repeats this generation in its own fresh runner. Only skip
   // what metadata preparation already generated earlier in this same process:
@@ -1847,7 +1949,7 @@ function plannedCommands(plan, {
   if (plan.docs) add('checks', ['--filter', '@muxui/docs', 'run', 'check']);
   if (plan.scale) {
     add('checks', ['--filter', '@muxui/scale', 'run', 'check']);
-    add('browser', ['--filter', '@muxui/scale', 'run', 'check:browser']);
+    add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
   }
   if (plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
@@ -1858,7 +1960,7 @@ function plannedCommands(plan, {
   }
   if (plan.reactPackageFull) {
     add('react', ['--filter', '@muxui/react', 'run', 'check']);
-    add('browser', ['--filter', '@muxui/react', 'run', 'check:browser'], { env: crossEngineEnvironment });
+    addReactBrowserSuite(add, testSources, packages);
   } else if (plan.reactFamilies.length > 0) {
     const env = {
       MUXUI_COMPONENT_FAMILIES: plan.reactFamilies.join(','),
@@ -1928,7 +2030,8 @@ export function executionGroups(plan, options = {}) {
     if (storyRun) storyRuns.set(group, storyRun);
   }
   return [...groups].map(([id, commands]) => {
-    const kind = id.startsWith('storybook') ? 'storybook' : id;
+    // Sharded and per-engine groups (storybook-*, browser-*) share their family's kind.
+    const kind = id.match(/^(?:storybook|browser)(?=-|$)/u)?.[0] ?? id;
     return {
       id,
       kind,
