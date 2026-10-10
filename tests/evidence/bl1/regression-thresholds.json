@@ -2,7 +2,7 @@
   "schema": "muxui-bl1-regression-thresholds-v1",
   "authority": "strategy/milestone-roadmap.md: BL1 Blocks showcase, E-BL1-11",
   "provenance": {
-    "summary": "Committed before the baseline was captured, but not all fixed before measuring: a first measurement showed that seven of the nine discovery expectations needed revising, and a second commit rewrote them before capture. Six component queries moved from expecting a named first result to expecting the same first result as the catalog without patterns (firstWithoutPatterns): 'grid list' and 'virtualizer' already rank an example above their component with no pattern compiled, a ranking of the existing search model that no block causes, so the expectation changed for those two; 'button', 'image', 'link', and 'text' still rank their component first. 'collections' moved from expecting the Poster grid first to expecting it within the top three (expectedWithin), because a category term scores 20 points against the several fields of the components that mention collections; that ranks the Poster grid third, a known discovery weakness this baseline records and does not pass as a first-ranked result. The registry budgets are the existing command-registry.json tiers; the other numbers are judgement, and the only size looked at beforehand was the seed's own source (460 and 526 lexemes), which informed the headroom of variantSourceLexemes. BL1-B2 then added the hero, pricing plans, and account settings blocks. Its queries, the component queries for the new participants, and the new relevant ids for button and text were written before any of them was measured; a first measurement then showed two expectations were wrong, and they were revised before capture: \"split hero\" first expected the Marketing hero first, but the variant example id carries both query words, so the pattern is expected within the top three (it ranks second); \"billing toggle\" first expected the Pricing plans within the top three, but the Toggle component ids and names outscore any pattern for a component word, so it ranks ninth and is expected within the top ten, a known weakness recorded below. An earlier name for the settings block, Settings form, already displaced the Form component search, so the block is named Account settings. The collections blocks, Company records and Task filters, were added after the baseline. Their discovery queries and expectations (company records, records, companies, contacts, task filters, filters, filter tasks), the component queries for their new participants (table, tag group, menu, select, search field, each expecting the catalog's own first result), their seed set ids, and their ids in the relevant lists of the collections, button, text, and toggle button group queries were written from the blocks' intent in the commit that precedes the block sources, before either block was measured. Decision 0026 amendment 02: the Collections category gained Company records and Task filters, and every collections block scores 20 for the \"collections\" name query, so the Poster grid, which ranked third alone, ranks fourth: the Virtualizer scores 40, and the Avatar component, Company records, the Poster grid, and Task filters tie at 20 and sort by id. Its expectedWithin on that query moved from 3 to 4 in the pull request that adds the two blocks, keeping the expectation and the known weakness. No other expectation, limit, or budget changed, and revisedAfterFirstMeasurement is unchanged.",
+    "summary": "Committed before the baseline was captured, but not all fixed before measuring: a first measurement showed that seven of the nine discovery expectations needed revising, and a second commit rewrote them before capture. Six component queries moved from expecting a named first result to expecting the same first result as the catalog without patterns (firstWithoutPatterns): 'grid list' and 'virtualizer' already rank an example above their component with no pattern compiled, a ranking of the existing search model that no block causes, so the expectation changed for those two; 'button', 'image', 'link', and 'text' still rank their component first. 'collections' moved from expecting the Poster grid first to expecting it within the top three (expectedWithin), because a category term scores 20 points against the several fields of the components that mention collections; that ranks the Poster grid third, a known discovery weakness this baseline records and does not pass as a first-ranked result. The registry budgets are the existing command-registry.json tiers; the other numbers are judgement, and the only size looked at beforehand was the seed's own source (460 and 526 lexemes), which informed the headroom of variantSourceLexemes. BL1-B2 then added the hero, pricing plans, and account settings blocks. Its queries, the component queries for the new participants, and the new relevant ids for button and text were written before any of them was measured; a first measurement then showed two expectations were wrong, and they were revised before capture: \"split hero\" first expected the Marketing hero first, but the variant example id carries both query words, so the pattern is expected within the top three (it ranks second); \"billing toggle\" first expected the Pricing plans within the top three, but the Toggle component ids and names outscore any pattern for a component word, so it ranks ninth and is expected within the top ten, a known weakness recorded below. An earlier name for the settings block, Settings form, already displaced the Form component search, so the block is named Account settings. The collections blocks, Company records and Task filters, were added after the baseline. Their discovery queries and expectations (company records, records, companies, contacts, task filters, filters, filter tasks), the component queries for their new participants (table, tag group, menu, select, search field, each expecting the catalog's own first result), their seed set ids, and their ids in the relevant lists of the collections, button, text, and toggle button group queries were written from the blocks' intent in the commit that precedes the block sources, before either block was measured. Decision 0026 amendment 02: the Collections category gained Company records and Task filters, and every collections block scores 20 for the \"collections\" name query, so the Poster grid, which ranked third alone, ranks fourth: the Virtualizer scores 40, and the Avatar component, Company records, the Poster grid, and Task filters tie at 20 and sort by id. Its expectedWithin on that query moved from 3 to 4 in the pull request that adds the two blocks, keeping the expectation and the known weakness. No other expectation, limit, or budget changed, and revisedAfterFirstMeasurement is unchanged. The navigation block, Workspace navigation, was added after the baseline as the first block of its category. Its discovery queries and expectations (workspace navigation, workspace, navigation, side navigation, collapsible navigation), the component queries for its new participants (sidebar, breadcrumbs, avatar, each expecting the catalog's own first result), its seed set id, and its id in the relevant lists of the menu and text queries were written from the block's intent in the commit that precedes the block sources, before the block was measured. The category has no other block, so no existing expectation changes.",
     "revisedAfterFirstMeasurement": [
       "collections",
       "grid list",
@@ -21,7 +21,8 @@
     "muxui:pattern:pricing-plans",
     "muxui:pattern:account-settings",
     "muxui:pattern:company-records",
-    "muxui:pattern:task-filters"
+    "muxui:pattern:task-filters",
+    "muxui:pattern:workspace-navigation"
   ],
   "discovery": {
     "metric": "precision at 3 of `search <query>`: results in the first three that are in `relevant`, divided by min(3, results returned)",
@@ -138,7 +139,8 @@
           "muxui:pattern:pricing-plans",
           "muxui:pattern:account-settings",
           "muxui:pattern:company-records",
-          "muxui:pattern:task-filters"
+          "muxui:pattern:task-filters",
+          "muxui:pattern:workspace-navigation"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:text"
@@ -351,7 +353,8 @@
           "muxui:example:menu-basic-react",
           "muxui:example:menu-nested-react",
           "muxui:guide:menu-usage",
-          "muxui:pattern:company-records"
+          "muxui:pattern:company-records",
+          "muxui:pattern:workspace-navigation"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:menu"
@@ -381,6 +384,80 @@
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:search-field"
+      },
+      {
+        "query": "workspace navigation",
+        "expectedFirst": "muxui:pattern:workspace-navigation",
+        "relevant": [
+          "muxui:pattern:workspace-navigation",
+          "muxui:example:workspace-navigation-foldable"
+        ]
+      },
+      {
+        "query": "workspace",
+        "expectedFirst": "muxui:pattern:workspace-navigation",
+        "relevant": [
+          "muxui:pattern:workspace-navigation",
+          "muxui:example:workspace-navigation-foldable"
+        ]
+      },
+      {
+        "query": "navigation",
+        "relevant": [
+          "muxui:pattern:workspace-navigation",
+          "muxui:example:workspace-navigation-foldable"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:workspace-navigation"
+      },
+      {
+        "query": "side navigation",
+        "relevant": [
+          "muxui:pattern:workspace-navigation",
+          "muxui:example:workspace-navigation-foldable"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:workspace-navigation"
+      },
+      {
+        "query": "collapsible navigation",
+        "relevant": [
+          "muxui:pattern:workspace-navigation",
+          "muxui:example:workspace-navigation-foldable"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:workspace-navigation"
+      },
+      {
+        "query": "sidebar",
+        "relevant": [
+          "muxui:component:sidebar",
+          "muxui:example:sidebar-basic-react",
+          "muxui:pattern:workspace-navigation"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:sidebar"
+      },
+      {
+        "query": "breadcrumbs",
+        "relevant": [
+          "muxui:component:breadcrumbs",
+          "muxui:example:breadcrumbs-basic-react",
+          "muxui:guide:breadcrumbs-usage",
+          "muxui:pattern:workspace-navigation"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:breadcrumbs"
+      },
+      {
+        "query": "avatar",
+        "relevant": [
+          "muxui:component:avatar",
+          "muxui:example:avatar-basic-react",
+          "muxui:pattern:workspace-navigation"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:avatar"
       }
     ],
     "queryRules": {
