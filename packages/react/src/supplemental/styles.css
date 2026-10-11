@@ -556,6 +556,14 @@
   border-radius: var(--muxui-semantic-control-radius);
 }
 
+/* The trigger draws the same keyboard ring as Button. */
+.muxui-command-palette__trigger:focus-visible,
+.muxui-command-palette__trigger[data-focus-visible] {
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-ring);
+}
+
 .muxui-command-palette__trigger[data-size='sm'],
 .muxui-command-palette__input[data-size='sm'] {
   --muxui-control-target-size: var(--muxui-control-size-sm);

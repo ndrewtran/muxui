@@ -491,6 +491,8 @@
 .muxui-text-area__textarea[data-focused],
 .muxui-payment-input__input:focus,
 .muxui-payment-input__input[data-focused],
+.muxui-command-palette__input:focus,
+.muxui-command-palette__input[data-focused],
 .muxui-date-field > .muxui-date-input:focus-within,
 .muxui-time-field > .muxui-date-input:focus-within {
   outline-color: var(--muxui-field-focus-border);
