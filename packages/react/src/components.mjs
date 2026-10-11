@@ -220,7 +220,7 @@ Group.displayName = 'Group';
 export const Link = React.forwardRef(function Link({
   children,
   href,
-  disabled = false,
+  disabled,
   current = false,
   target,
   rel,
@@ -228,11 +228,14 @@ export const Link = React.forwardRef(function Link({
   onActivate,
   ...props
 }, ref) {
+  // Like Button, an undefined disabled lets a Link inherit its container's state, such as a
+  // disabled GridList item; an explicit false still wins. A Link without an href is always disabled.
+  const isDisabled = href ? disabled : true;
   return React.createElement(AriaLink, {
     ...props,
     ref,
     href,
-    isDisabled: disabled || !href,
+    ...(isDisabled === undefined ? {} : { isDisabled }),
     target,
     rel,
     className: classNames('muxui-link', className),
