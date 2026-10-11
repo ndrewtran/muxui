@@ -102,6 +102,7 @@
   "unsupported": [
     "Running, streaming, or stopping a task: the steps, tools, counts, and times are placeholders",
     "A list layout for the task rows: Activity draws one stack of rows",
+    "The running task's details open at mount: Activity has no option to start a row open, so every row starts closed",
     "A transparent Disclosure trigger as an option: Disclosure fills its trigger and has no prop to clear it, so Tool calls clears the fill with a rule in the example",
     "Coloured diff counts: the counts use the muted text colour"
   ],
