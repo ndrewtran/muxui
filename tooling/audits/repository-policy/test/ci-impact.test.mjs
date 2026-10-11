@@ -543,8 +543,8 @@ test('policy-run fixture tests and retained evidence route to the repository-pol
   }
 });
 
-// The retained-evidence tests (tooling/audits/repository-policy/test/evidence-integrity.test.mjs, `check:evidence`)
-// take about four of the policy check's five minutes, so a pull request runs them only when the change reaches
+// The retained-evidence tests (tooling/audits/repository-policy/test/evidence-*.test.mjs, `check:evidence`)
+// take most of the policy check's time, so a pull request runs them only when the change reaches
 // something they load or read. This is the set `pullRequestImpact.evidenceInputs` names; the closure test below fails
 // when the tests' imports outgrow it. Besides these paths, the tests also load the packages policy depends on
 // (catalog, schema, tokens, tooling), which reach policy through the workspace links.
@@ -563,7 +563,7 @@ const evidenceInputs = [
   'tooling/audits/repository-policy/src/policy.mjs',
   'tooling/audits/repository-policy/src/release-proof.mjs',
   'tooling/audits/repository-policy/src/workspace-packages.mjs',
-  'tooling/audits/repository-policy/test/evidence-integrity.test.mjs',
+  'tooling/audits/repository-policy/test/evidence-',
 ];
 // Path classes a prefix cannot name: every package manifest (the auditor reads each one's version, publish configuration,
 // and dependencies, and the fixture edits several), an attributes file at any depth (`git archive` of HEAD, and of each
@@ -599,7 +599,8 @@ test('the evidence trigger set is the one the route test names, and planning ref
 // A change to any of those files must plan the evidence tests, however it routes: through the named inputs here, or
 // through a package policy depends on.
 test('every module the evidence tests load plans check:evidence when it changes', async () => {
-  const testFile = 'tooling/audits/repository-policy/test/evidence-integrity.test.mjs';
+  const testFiles = globSync('tooling/audits/repository-policy/test/evidence-*.test.mjs', { cwd: repositoryRoot }).sort();
+  assert.ok(testFiles.length >= 4 && testFiles.includes('tooling/audits/repository-policy/test/evidence-integrity.test.mjs'), testFiles.join(', '));
   const seen = new Set();
   const workspaceImports = new Set();
   const visit = async (file) => {
@@ -624,7 +625,7 @@ test('every module the evidence tests load plans check:evidence when it changes'
     }
     specifiers.filter((value) => value.startsWith('@muxui/')).forEach((value) => workspaceImports.add(value.split('/').slice(0, 2).join('/')));
   };
-  await visit(testFile);
+  for (const testFile of testFiles) await visit(testFile);
 
   const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
   // Workspace packages the loaded modules import by name must be ones policy depends on, so changing them plans policy.
@@ -634,7 +635,8 @@ test('every module the evidence tests load plans check:evidence when it changes'
   const loaded = [...seen].filter((file) => tracked.has(file)).sort();
   // The tests reach the compiler, the tooling API, the capture tools, and the docs presets, not only their own helpers.
   for (const file of ['tests/evidence/capture-r1-exit.mjs', 'tests/evidence/bl1/growth-scope.mjs', 'packages/catalog/src/compiler.mjs',
-    'packages/tooling/src/index.mjs', 'packages/react/src/r1-deferred-evidence.mjs', 'tooling/audits/repository-policy/src/release-proof.mjs']) {
+    'packages/tooling/src/index.mjs', 'packages/react/src/r1-deferred-evidence.mjs', 'tooling/audits/repository-policy/src/release-proof.mjs',
+    'tooling/audits/repository-policy/test/evidence-growth-repository.mjs']) {
     assert.ok(loaded.includes(file), `${file} is expected in the tests' import closure`);
   }
   for (const file of loaded) {
@@ -716,14 +718,14 @@ test('the data the growth auditor and its fixture read, not only the modules the
   // Ignore rules are not read: every `git add` in the growth fixture is forced, so a nested .gitignore cannot change what a commit holds.
   // The root .gitignore stays a trigger only as a conservative input.
   assert.equal(await editReaches('.gitignore'), true, '.gitignore');
-  const growthFixture = read('tooling/audits/repository-policy/test/evidence-integrity.test.mjs');
-  const stagings = [...growthFixture.slice(growthFixture.indexOf('async function growthRepository')).matchAll(/gitIn\(cwd, 'add'[^)]*\)/gu)].map(([call]) => call);
+  // The growth fixture and every test that builds on it (the tests stage commits of their own).
+  const growthSources = globSync('tooling/audits/repository-policy/test/evidence-growth-*.mjs', { cwd: repositoryRoot }).sort().map((path) => read(path)).join('\n');
+  const stagings = [...growthSources.matchAll(/gitIn\(cwd, 'add'[^)]*\)/gu)].map(([call]) => call);
   assert.ok(stagings.length >= 4, `the growth fixture stages its commits ${stagings.length} times`);
   for (const call of stagings) assert.match(call, /'-f'/u, `${call} must force-add, or ignore files become evidence inputs`);
 
   // Every file the fixture edits by a literal path, whichever way it is reached.
-  const fixture = read('tooling/audits/repository-policy/test/evidence-integrity.test.mjs');
-  const edits = [...new Set([...fixture.matchAll(/\bedit\(\s*'([^'$`]+)'/gu)].map(([, path]) => path))];
+  const edits = [...new Set([...growthSources.matchAll(/\bedit\(\s*'([^'$`]+)'/gu)].map(([, path]) => path))];
   for (const path of ['README.md', '.github/workflows/ci.yml', 'pnpm-lock.yaml', 'catalog/components/button/artifact.json', 'packages/react/package.json',
     'packages/schema/src/index.mjs', 'packages/catalog/src/pattern-content.mjs', 'packages/catalog/catalog-sources.json']) {
     assert.ok(edits.includes(path), `${path} is expected among the files the fixture edits`);
@@ -848,15 +850,18 @@ test('adding or removing a looked-up file plans the evidence tests; editing it d
 test('the policy package splits its check script from the evidence script without dropping a test', async () => {
   const policyDirectory = resolve(repositoryRoot, 'tooling/audits/repository-policy');
   const { scripts } = JSON.parse(readFileSync(resolve(policyDirectory, 'package.json'), 'utf8'));
-  // `check` globs every test file but the evidence one; `check:evidence` names it and verifies the retained evidence.
+  // `check` globs every test file but the evidence ones; `check:evidence` globs those and verifies the retained evidence. The evidence
+  // tests are separate files so they run in parallel processes, one per file, which the explicit concurrency keeps true on a small runner.
   const glob = scripts.check.match(/node --test '(test\/[^']+)'/u)?.[1];
-  assert.equal(glob, 'test/!(evidence-integrity).test.mjs');
+  assert.equal(glob, 'test/!(evidence-*).test.mjs');
   const everyTest = globSync('test/*.test.mjs', { cwd: policyDirectory }).sort();
   const checked = globSync(glob, { cwd: policyDirectory }).sort();
-  assert.deepEqual(everyTest.filter((file) => !checked.includes(file)), ['test/evidence-integrity.test.mjs']);
+  const evidenceTests = everyTest.filter((file) => !checked.includes(file));
+  assert.ok(evidenceTests.length >= 4 && evidenceTests.every((file) => file.startsWith('test/evidence-')), evidenceTests.join(', '));
+  assert.deepEqual(globSync('test/evidence-*.test.mjs', { cwd: policyDirectory }).sort(), evidenceTests);
   assert.ok(checked.length >= 10 && checked.includes('test/ci-impact.test.mjs'));
   assert.match(scripts.check, /^node src\/cli\.mjs && node src\/evidence-verify\.mjs && node --test /u);
-  assert.equal(scripts['check:evidence'], 'node src/evidence-verify.mjs && node --test test/evidence-integrity.test.mjs');
+  assert.equal(scripts['check:evidence'], `node src/evidence-verify.mjs && node --test --test-concurrency=${evidenceTests.length} 'test/evidence-*.test.mjs'`);
 });
 
 test('Scale and docs changes run the Scale docs browser test as one ordinary check', async () => {
