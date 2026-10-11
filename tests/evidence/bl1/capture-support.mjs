@@ -4,7 +4,8 @@
 // - `assertDurableSource` refuses a source revision that is not in main's history.
 // - `retainReview` retains an independent review record as an input, with its own
 //   reviewed revision and tree, and compares them with the source revision.
-// - `reviewVerdict` and `assertExitReviewPasses` read a review's verdict section and refuse an exit review that does not state a pass.
+// - `reviewVerdict`, `assertContentReviewPasses`, and `assertExitReviewPasses` read a review's one verdict section and refuse a review
+//   that has none, has more than one, or does not open it with **Pass.**.
 // - `archiveSupersededCapture` and `supersededFiles` keep an earlier capture in the tree
 //   when a later one replaces it, so replacing records never deletes the only copy.
 // - `retainedCaptures` and `assertGrowthSource` find the retained close-out capture a growth capture
@@ -65,42 +66,45 @@ function compareWithSource({ cwd, reviewedRevision, sourceRevision, sourceTree, 
   };
 }
 
-const verdictHeading = /^##+ (?:Overall verdict|Verdict)[ \t]*$/u;
-// A fence opens with three or more backticks (whose info string has none) or tildes, indented by at most three spaces, and closes with
-// the same character at least as many times and nothing else on the line.
-const fenceOpen = /^ {0,3}(`{3,}(?=[^`]*$)|~{3,})/u;
-const fenceClose = /^ {0,3}(`{3,}|~{3,})[ \t]*$/u;
+// A verdict heading is `Verdict` or `Overall verdict`, in any case, as an ATX heading (1 to 6 `#`, up to three leading spaces, optional closing
+// `#`s) or a setext heading (the name alone above a line of only `=` or `-`). The parser does not follow Markdown block context, so fences,
+// comments, and lists do not hide a heading from it: every such line counts.
+const atxVerdictHeading = /^ {0,3}#{1,6}[ \t]+(overall verdict|verdict)[ \t#]*$/iu;
+const setextVerdictHeading = /^ {0,3}(overall verdict|verdict)[ \t]*$/iu;
+const setextUnderline = /^ {0,3}(?:=+|-+)[ \t]*$/u;
+const atxHeading = /^ {0,3}#{1,6}[ \t]/u;
 
 /**
- * The text under a review's `## Overall verdict` or `## Verdict` heading, up to the next `##` heading, or undefined when it has none.
- * Lines are split on LF or CRLF for parsing only; the retained review keeps its own bytes. A heading inside a fenced code block (``` or ~~~)
- * is text, not a section, and a review with more than one verdict heading outside fences has no single verdict, so it throws instead of
- * letting one section stand for the other. `label` names the review in that error.
+ * A review's one verdict: `{ heading, text }`, where `heading` is `verdict` or `overall verdict` and `text` runs from the heading to the next
+ * ATX heading or the end of the file, trimmed. Returns undefined when the review has no verdict heading, and throws when it has more than one
+ * (a quoted or fenced template counts, so a review that quotes one is refused) rather than let one section stand for the other. Lines are
+ * split on LF or CRLF for parsing only; the retained review keeps its own bytes. `label` names the review in the error.
  */
 export function reviewVerdict(text, label = 'the review') {
-  const sections = [];
-  let section = null;
-  let fence = null;
-  for (const line of text.split(/\r?\n/u)) {
-    if (fence !== null) {
-      const close = fenceClose.exec(line)?.[1];
-      if (close !== undefined && close[0] === fence[0] && close.length >= fence.length) fence = null;
-    } else {
-      const open = fenceOpen.exec(line)?.[1];
-      if (open !== undefined) {
-        fence = open;
-      } else if (verdictHeading.test(line)) {
-        section = [];
-        sections.push(section);
-        continue;
-      } else if (/^##+ /u.test(line)) {
-        section = null;
-      }
-    }
-    section?.push(line);
+  const lines = text.split(/\r?\n/u);
+  const headings = [];
+  lines.forEach((line, index) => {
+    const atx = atxVerdictHeading.exec(line)?.[1];
+    const setext = atx === undefined && setextUnderline.test(lines[index + 1] ?? '') ? setextVerdictHeading.exec(line)?.[1] : undefined;
+    if (atx !== undefined) headings.push({ heading: atx.toLowerCase(), start: index + 1 });
+    else if (setext !== undefined) headings.push({ heading: setext.toLowerCase(), start: index + 2 });
+  });
+  if (headings.length > 1) throw new Error(`${label} has ${headings.length} verdict headings, so its verdict is ambiguous`);
+  if (headings.length === 0) return undefined;
+  const [{ heading, start }] = headings;
+  const end = lines.findIndex((line, index) => index >= start && atxHeading.test(line));
+  return { heading, text: lines.slice(start, end === -1 ? undefined : end).join('\n').trim() };
+}
+
+/** A verdict passes when its first non-empty line opens with `**Pass.**`, after an optional `- ` or `* ` bullet. */
+export const verdictPasses = (verdictText) => /^(?:[-*][ \t]+)?\*\*Pass\.\*\*/u.test(verdictText?.split('\n').find((line) => line.trim() !== '') ?? '');
+
+/** Throws unless a content review, as `retainReview` returns it, has one `Overall verdict` heading whose section passes. */
+export function assertContentReviewPasses({ text }) {
+  const verdict = reviewVerdict(text, 'E-BL1-10: the review record');
+  if (verdict?.heading !== 'overall verdict' || !verdictPasses(verdict.text)) {
+    throw new Error('E-BL1-10: the review record does not state an overall pass: its one verdict heading must be "Overall verdict" and open with **Pass.**');
   }
-  if (sections.length > 1) throw new Error(`${label} has ${sections.length} verdict headings outside code fences, so its verdict is ambiguous`);
-  return sections[0]?.join('\n').trim();
 }
 
 /**
@@ -111,7 +115,7 @@ export const proseVerdictExitReviews = new Set(['sha256:c58bfc1b8543e5bfe119b20f
 
 /** Throws unless an exit review, as `retainReview` returns it, states a pass: a verdict section opening with `**Pass.**`, or the pinned close-out review. */
 export function assertExitReviewPasses({ artifact, verdictText }) {
-  if (proseVerdictExitReviews.has(artifact.sha256) || /^(?:[-*]\s+)?\*\*Pass\.\*\*/u.test(verdictText ?? '')) return;
+  if (proseVerdictExitReviews.has(artifact.sha256) || verdictPasses(verdictText)) return;
   throw new Error('E-BL1-09: the exit review does not open its verdict with **Pass.**, so it does not state an overall pass');
 }
 
@@ -162,7 +166,7 @@ export async function retainReview({
   const reviewer = /\*\*Reviewer:\*\*\s*(.+)/u.exec(text)?.[1]?.trim();
   if (!reviewer) throw new Error(`${id}: the review record does not name its reviewer`);
   const { reviewedTree, comparison } = compareWithSource({ cwd, reviewedRevision: record.reviewedRevision, sourceRevision, sourceTree, proofToolPaths });
-  const verdict = reviewVerdict(text, `${id}: the review record`);
+  const verdict = reviewVerdict(text, `${id}: the review record`)?.text;
   return {
     artifact: { path: artifactPath, sha256: sha256(text) },
     raw: record.raw,

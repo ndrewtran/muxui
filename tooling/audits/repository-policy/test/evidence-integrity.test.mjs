@@ -1349,7 +1349,7 @@ test('a BL1 review is retained with its own revision and tree, compared with the
   }
 });
 
-test('a BL1 exit review is retained only when its verdict opens with a pass, or it is the pinned close-out review', async () => {
+test('a BL1 exit review is retained only when its one verdict opens with a pass, or it is the pinned close-out review', async () => {
   const { assertExitReviewPasses, proseVerdictExitReviews, retainReview, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
   const { cwd, source, sourceTree } = await reviewRepository();
   const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-exit-verdict-'));
@@ -1361,58 +1361,106 @@ test('a BL1 exit review is retained only when its verdict opens with a pass, or 
     await writeFile(input, text);
     return retainReview({ ...base, input });
   };
-  const retain = (verdict) => retainText(`${header}${verdict}`);
+  const retain = (body) => retainText(`${header}${body}`);
+  const passes = async (body, label) => {
+    const review = await retain(body);
+    assert.doesNotThrow(() => assertExitReviewPasses(review), label ?? body);
+    return review;
+  };
+  const refused = async (body, label) => {
+    const review = await retain(body);
+    assert.throws(() => assertExitReviewPasses(review), /does not open its verdict with \*\*Pass\.\*\*/u, label ?? body);
+  };
+  const ambiguous = (body, label) => assert.rejects(retain(body), /^Error: E-BL1-09: the review record has 2 verdict headings, so its verdict is ambiguous$/u, label ?? body);
   try {
-    for (const verdict of ['## Verdict\n\n**Pass.** The audit and the exit claim hold.\n', '## Verdict\n\n- **Pass.** The audit holds.\n- Follow-ups are advisory.\n']) {
-      assertExitReviewPasses(await retain(verdict));
-    }
-    // Anything else is refused: a failing, hedged, or buried verdict, a pass outside the verdict section, and a review with no verdict section.
-    for (const verdict of [
-      '## Verdict\n\n**Fail.** The boundary audit misses a leg.\n',
-      '## Verdict\n\nNot ready to merge. The exit claim does not hold.\n',
-      '## Verdict\n\nBlocked until the audit is fixed. **Pass.** once it is.\n',
-      '## Verdict\n\nThe audit holds.\n',
-      '## Method\n\n**Pass.** is written here, not under a verdict heading.\n',
-      '',
-    ]) {
-      const review = await retain(verdict);
-      assert.throws(() => assertExitReviewPasses(review), /does not open its verdict with \*\*Pass\.\*\*/u, verdict);
-    }
-    // A heading inside a fenced code block is text: a template that shows `## Verdict` and **Pass.** cannot stand for the review's own failing verdict.
-    const fenced = (fence, template, verdict) => `${fence}md\n${template}\n${fence}\n\n${verdict}`;
-    for (const fence of ['```', '~~~', '````']) {
-      const review = await retain(fenced(fence, '## Verdict\n\n**Pass.** The audit holds.', '## Overall verdict\n\n**Fail.** The boundary audit misses a leg.\n'));
-      assert.match(review.verdictText, /^\*\*Fail\.\*\*/u, fence);
-      assert.throws(() => assertExitReviewPasses(review), /does not open its verdict/u, fence);
-    }
-    // A fence closes only on the same character and at least as many of it, so a shorter or different run inside it stays text.
-    const nested = await retain(fenced('````', '```\n## Verdict\n\n**Pass.**\n```\n~~~', '## Verdict\n\n**Fail.** Not accepted.\n'));
-    assert.match(nested.verdictText, /^\*\*Fail\./u);
-    // A fenced block inside the real verdict section stays in it, and its `##` lines do not end the section.
-    const inside = await retain('## Verdict\n\n**Pass.** Output of the run:\n\n```\n## not a heading\n```\n\n## Notes\n\n**Fail.** is not the verdict.\n');
-    assert.match(inside.verdictText, /^\*\*Pass\.\*\* Output of the run:\n\n```\n## not a heading\n```$/u);
-    assertExitReviewPasses(inside);
-    // More than one real verdict section is ambiguous, in either order and under either heading, and is refused rather than read as the first.
-    for (const verdict of ['## Verdict\n\n**Pass.**\n\n## Overall verdict\n\n**Fail.**\n', '## Overall verdict\n\n**Fail.**\n\n## Verdict\n\n**Pass.**\n', '## Verdict\n\n**Pass.**\n\n## Verdict\n\n**Pass.**\n']) {
-      await assert.rejects(retain(verdict), /E-BL1-09: the review record has 2 verdict headings outside code fences, so its verdict is ambiguous/u, verdict);
-    }
+    // Accepted: a verdict whose first non-empty line opens with **Pass.**, bare or after a bullet, under either heading name, in LF or CRLF.
+    await passes('## Verdict\n\n**Pass.** The audit and the exit claim hold.\n');
+    await passes('## Verdict\n\n- **Pass.** The audit holds.\n- Follow-ups are advisory.\n');
+    await passes('## Verdict\n\n* **Pass.** The audit holds.\n');
+    await passes('## Overall verdict ##\n\n**Pass.**\n', 'a closing run of # is not part of the name');
+    await passes('Overall verdict\n===============\n\n**Pass.** A setext heading counts too.\n');
+    // A stray fence in an HTML comment is not tracked, so it cannot swallow the one real verdict.
+    await passes('<!-- the template used ``` and ~~~ fences -->\n\n## Verdict\n\n**Pass.** The audit holds.\n', 'backticks in an HTML comment');
+    await passes('<!--\n```\n-->\n\n## Verdict\n\n**Pass.**\n', 'an unclosed fence in an HTML comment');
+    // A section ends at the next ATX heading of any level, and a later section is not the verdict.
+    const sectioned = await passes('## Verdict\n\n**Pass.** Holds.\n\n# Notes\n\n**Fail.** is not the verdict.\n');
+    assert.deepEqual(reviewVerdict(`${header}## Verdict\n\n**Pass.** Holds.\n\n# Notes\n\n**Fail.** is not the verdict.\n`), { heading: 'verdict', text: '**Pass.** Holds.' });
+    assert.equal(sectioned.verdictText, '**Pass.** Holds.');
     // A CRLF review reads like an LF one, and the retained text and its digest are the bytes that were read.
-    const crlf = `${header}## Verdict\n\n**Pass.** The audit and the exit claim hold.\n\n## Notes\n\nNone.\n`.replaceAll('\n', '\r\n');
+    const crlf = `${header}## Verdict\n\n- **Pass.** The audit and the exit claim hold.\n\n## Notes\n\nNone.\n`.replaceAll('\n', '\r\n');
     const crlfReview = await retainText(crlf);
-    assert.equal(crlfReview.verdictText, '**Pass.** The audit and the exit claim hold.');
+    assert.equal(crlfReview.verdictText, '- **Pass.** The audit and the exit claim hold.');
     assert.equal(crlfReview.text, crlf);
     assert.equal(crlfReview.artifact.sha256, digest(crlf));
     assertExitReviewPasses(crlfReview);
-    assert.match((await retainText(crlf.replace('**Pass.**', '**Fail.**'))).verdictText, /^\*\*Fail\./u);
+    await assert.rejects(retainText(crlf.replace('## Notes', '## Verdict')), /has 2 verdict headings/u, 'CRLF headings count too');
+
+    // Refused: a failing, hedged, or buried verdict, a pass outside the verdict section, and a review with no verdict section.
+    await refused('## Verdict\n\n**Fail.** The boundary audit misses a leg.\n');
+    await refused('## Verdict\n\nNot ready to merge. The exit claim does not hold.\n');
+    await refused('## Verdict\n\nBlocked until the audit is fixed. **Pass.** once it is.\n');
+    await refused('## Verdict\n\nThe audit holds.\n');
+    await refused('## Verdict\n\n**Fail.**\n\n**Pass.** later in the section does not help.\n');
+    await refused('## Method\n\n**Pass.** is written here, not under a verdict heading.\n');
+    await refused('');
+    // A block context does not hide the real verdict: a fence opened in a list and never closed does not swallow the heading after it.
+    await refused('## Notes\n\n- Example output:\n\n  ```md\n  the run printed this\n\n## Verdict\n\n**Fail.** The boundary audit misses a leg.\n', 'an unclosed fence in a list before a real Fail');
+    // A verdict heading is counted wherever it is written, so a second section cannot hide behind spelling: closing #s, up to three leading
+    // spaces, a tab, another case, or a setext underline. A quoted or fenced template also counts, so such a review is ambiguous, not read as one of them.
+    const pass = '## Verdict\n\n**Pass.** The audit holds.\n\n';
+    for (const second of [
+      '## Overall verdict\n\n**Fail.**\n',
+      '## Overall verdict ##\n\n**Fail.**\n',
+      '   ## Overall verdict\n\n**Fail.**\n',
+      '##\tOverall verdict\n\n**Fail.**\n',
+      '## OVERALL VERDICT\n\n**Fail.**\n',
+      '# verdict\n\n**Fail.**\n',
+      'Overall verdict\n---\n\n**Fail.**\n',
+      '```md\n## Verdict\n\n**Pass.**\n```\n',
+      '~~~\n## Overall verdict\n\n**Pass.**\n~~~\n',
+      '<!--\n## Verdict\n\n**Pass.**\n-->\n',
+    ]) {
+      await ambiguous(`${pass}${second}`, `a pass, then ${second}`);
+      await ambiguous(`${second}\n${pass}`, `${second}, then a pass`);
+    }
+    // The failing-first order a reviewer reproduced: a real Fail, then a fenced template that says Pass.
+    await ambiguous('## Overall verdict\n\n**Fail.** The boundary audit misses a leg.\n\n```md\n## Verdict\n\n**Pass.**\n```\n');
+    // A template the parser does not read as a heading cannot replace the real verdict: an indented code block or a quoted line is no heading.
+    await refused('## Verdict\n\n**Fail.** The boundary audit misses a leg.\n\n    ## Overall verdict\n    **Pass.**\n\n> ## Overall verdict\n> **Pass.**\n');
+
     // The close-out's retained exit review states its verdict in prose and is accepted only at its pinned digest.
     const closeoutReview = await readFile(join(repositoryRoot, root, 'artifacts/E-BL1-09-exit-review.md'), 'utf8');
     assert.deepEqual([...proseVerdictExitReviews], [digest(closeoutReview)]);
-    assertExitReviewPasses({ artifact: { sha256: digest(closeoutReview) }, verdictText: reviewVerdict(closeoutReview) });
-    assert.throws(() => assertExitReviewPasses({ artifact: { sha256: digest(`${closeoutReview}edited`) }, verdictText: reviewVerdict(`${closeoutReview}edited`) }), /does not open its verdict/u);
+    assertExitReviewPasses({ artifact: { sha256: digest(closeoutReview) }, verdictText: reviewVerdict(closeoutReview).text });
+    assert.throws(() => assertExitReviewPasses({ artifact: { sha256: digest(`${closeoutReview}edited`) }, verdictText: reviewVerdict(`${closeoutReview}edited`).text }), /does not open its verdict/u);
   } finally {
     await rm(cwd, { recursive: true, force: true });
     await rm(outputRoot, { recursive: true, force: true });
   }
+});
+
+test('a BL1 content review is accepted only with one Overall verdict that opens with a pass', async () => {
+  const { assertContentReviewPasses } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const review = (body) => ({ text: `# Content review\n\n**Reviewer:** an independent reviewer.\n\n${body}` });
+  const accepts = (body) => assert.doesNotThrow(() => assertContentReviewPasses(review(body)), body);
+  const refuses = (body, message = /does not state an overall pass/u) => assert.throws(() => assertContentReviewPasses(review(body)), message, body);
+  accepts('## Overall verdict\n\n**Pass.** All blocks meet the assertions.\n');
+  accepts('## OVERALL VERDICT ##\r\n\r\n- **Pass.** All blocks meet the assertions.\r\n');
+  accepts('## Verdict table\n\n| Block | Verdict |\n| --- | --- |\n| a | **Pass** |\n\n## Overall verdict\n\n**Pass.** All blocks meet the assertions.\n');
+  accepts('<!-- ``` -->\n\n## Overall verdict\n\n**Pass.**\n');
+  // The reviewer's case: a real Fail, then a fenced template that says Pass, is ambiguous, in either order and with every spelling of the heading.
+  const ambiguous = /^Error: E-BL1-10: the review record has 2 verdict headings, so its verdict is ambiguous$/u;
+  refuses('## Overall verdict\n\n**Fail.** One block has a literal colour.\n\n```md\n## Verdict\n\n**Pass.**\n```\n', ambiguous);
+  refuses('```md\n## Overall verdict\n\n**Pass.**\n```\n\n## Overall verdict\n\n**Fail.** One block has a literal colour.\n', ambiguous);
+  refuses('## Overall verdict\n\n**Pass.**\n\n##\tOverall verdict\n\n**Fail.**\n', ambiguous);
+  refuses('## Overall verdict\n\n**Pass.**\n\n   ## Overall verdict ##\n\n**Fail.**\n', ambiguous);
+  // One heading, but not a pass, not an Overall verdict, or not there at all.
+  refuses('## Overall verdict\n\n**Fail.** One block has a literal colour.\n');
+  refuses('## Overall verdict\n\nAll blocks pass.\n');
+  refuses('## Verdict\n\n**Pass.** All blocks meet the assertions.\n');
+  refuses('## Verdict table\n\n| a | **Pass.** |\n');
+  refuses('**Pass.** with no verdict heading, and the words ## Overall verdict only in the text.\n');
+  refuses('## Overall verdict\n\n**Fail.**\n\n    ## Verdict\n    **Pass.**\n');
 });
 
 test('a BL1 capture that replaces an earlier one keeps it in the tree and names it, and a rerun carries the reference forward', async () => {
@@ -1963,6 +2011,7 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
  */
 async function assertCapture({ repo = repositoryRoot, directory, index, verification, records, artifacts, retained }, { closeoutRevision, growthToolRevision, thresholdsRevision } = {}) {
   const { assertUniqueQueries, parseThresholds, thresholdChanges, thresholdRevisionProblems } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const { assertContentReviewPasses, assertExitReviewPasses, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
   const { sourceRevision, sourceTree } = index;
   const { scope, growthGate } = verification;
   assert.ok(scope === 'close-out' || scope === 'growth', `${directory}: the validation summary records its scope`);
@@ -2085,7 +2134,8 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
       assert.equal(retained.get(review.artifact.path), review.artifact.sha256, `E-BL1-10: the review covering ${block} is retained at its digest`);
       const reviewText = await readFile(join(repo, capturePath(directory)(review.artifact.path)), 'utf8');
       assert.equal(digest(reviewText), review.artifact.sha256);
-      assert.ok(reviewText.includes(`catalog/patterns/${block}`) && /\*\*Pass\.\*\*/u.test(reviewText), `E-BL1-10: the review covering ${block} names it and passes`);
+      assert.ok(reviewText.includes(`catalog/patterns/${block}`), `E-BL1-10: the review covering ${block} names it`);
+      assertContentReviewPasses({ text: reviewText });
     }
   }
   const exitReview = boundary.exitReview;
@@ -2096,12 +2146,16 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
     assert.equal(review.comparison.equalTrees, review.reviewedTree === sourceTree, 'the recorded tree comparison agrees with the recorded trees');
     assert.deepEqual(Object.keys(review.sanitization.replacements).sort(), ['home', 'repositoryRoot', 'temporary']);
   }
+  // Each review is read from the capture's own directory at the digest recorded, and states a pass by the rules the capture applied.
+  const reviewTextOf = async ({ artifact }) => {
+    const text = await readFile(join(repo, capturePath(directory)(artifact.path)), 'utf8');
+    assert.equal(digest(text), artifact.sha256, `${directory}: ${artifact.path} is retained at its recorded digest`);
+    return text;
+  };
+  assertContentReviewPasses({ text: await reviewTextOf(content.review) });
   if (exitReview !== null) {
-    // The exit review is read from the capture's own directory, and its verdict must state a pass (or be the pinned close-out review).
-    const { assertExitReviewPasses, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
-    const reviewText = await readFile(join(repo, capturePath(directory)(exitReview.artifact.path)), 'utf8');
-    assert.equal(digest(reviewText), exitReview.artifact.sha256, `${directory}: the exit review is retained at its recorded digest`);
-    assertExitReviewPasses({ artifact: exitReview.artifact, verdictText: reviewVerdict(reviewText) });
+    const verdict = reviewVerdict(await reviewTextOf(exitReview), `${directory}: the exit review`);
+    assertExitReviewPasses({ artifact: exitReview.artifact, verdictText: verdict?.text });
   }
 
   // E-BL1-11: the thresholds are the ones committed at the source revision, and the expectations revised and the known weaknesses stay on the record.
