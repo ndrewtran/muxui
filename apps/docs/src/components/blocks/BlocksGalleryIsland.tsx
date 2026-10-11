@@ -1,4 +1,4 @@
-import { Link, Text } from '@muxui/react';
+import { Text } from '@muxui/react';
 import { useEffect, useRef, useState } from 'react';
 import { useBrowseState } from '../../scripts/blocks-browse.ts';
 import { onSiteThemeChange, setFrameTheme, siteTheme } from '../../scripts/blocks-dom.ts';
@@ -94,7 +94,7 @@ export default function BlocksGalleryIsland({ categories }: BlocksGalleryProps) 
 								<div className="blocks-card">
 									<Thumbnail src={block.previewSrc} />
 									<div className="blocks-card-row">
-										<Link className="blocks-card-link" href={block.href}>{block.name}</Link>
+										<Text as="h3" variant="label" size="sm"><a className="blocks-card-link" href={block.href}>{block.name}</a></Text>
 										<Text size="xs" color="muted">{plural(block.variantCount, 'variant')}</Text>
 									</div>
 									<Text as="p" size="xs" color="muted">{block.summary}</Text>

@@ -1,4 +1,4 @@
-import { Button, Link, Text, ToggleButton, ToggleButtonGroup } from '@muxui/react';
+import { Button, Text, ToggleButton, ToggleButtonGroup } from '@muxui/react';
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { announce, onSiteThemeChange, setFrameTheme, siteTheme, useSiteTheme } from '../../scripts/blocks-dom.ts';
 import { getView, isMode, MIN_WIDTH, setView, useView } from '../../scripts/blocks-view.ts';
@@ -147,7 +147,7 @@ export default function BlockViewerIsland({
 					<nav aria-label="Breadcrumb">
 						<ol className="blocks-crumbs">
 							<li><Text variant="title" size="sm" color="muted">{categoryLabel}</Text></li>
-							<li><Text variant="title" size="sm"><Link href={blockHref}>{blockName}</Link></Text></li>
+							<li><Text variant="title" size="sm"><a href={blockHref}>{blockName}</a></Text></li>
 							<li><Text as="h1" variant="title" size="sm">{variantName}</Text></li>
 						</ol>
 					</nav>

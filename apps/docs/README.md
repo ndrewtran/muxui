@@ -31,11 +31,16 @@ docs surface.
 The section's own controls are Mux UI components, not imitations. The rail
 (`BlocksRailIsland.tsx`), the gallery (`BlocksGalleryIsland.tsx`), and the block
 toolbar and stage (`BlockViewerIsland.tsx`) are React islands over the server-rendered
-pages, built from `@muxui/react` components (SearchField, SelectNative, DisclosureGroup,
-Link, Text, ToggleButtonGroup, Button), and `styles/blocks.css` holds only layout and the
-preview and code surfaces, so it must not restyle a Mux component. The preview resize handle
-is the one custom control: Resizable sizes adjacent panels in percent, while the handle sets
-the preview's width in pixels. `scripts/blocks-browse.ts` holds the filter and the open page,
+pages, built from `@muxui/react` components (Sidebar, SearchField, SelectNative, Text,
+ToggleButtonGroup, Button), and `styles/blocks.css` holds only layout and the preview and
+code surfaces, so it must not restyle a Mux component. The rail is Sidebar navigation: groups
+are Sections, categories are items, a block is a link group (its link opens the first variant,
+a toggle opens its variants), and variants are links, with the open page as the current item.
+The rail island keeps which groups are collapsed, so the choice survives the in-place swap, and
+opening a page opens the groups that hold it. The breadcrumb and a gallery card's title are
+navigation, not inline text links, so they are plain anchors inside Mux headings that take their
+colour and focus ring from Mux tokens. The preview resize handle is the one custom control:
+Resizable sizes adjacent panels in percent, while the handle sets the preview's width in pixels. `scripts/blocks-browse.ts` holds the filter and the open page,
 `scripts/blocks-view.ts` the toolbar's width, theme, and view (remembered for the tab), and
 `scripts/blocks-client.ts` only swaps the pane in place when a Blocks link is followed.
 

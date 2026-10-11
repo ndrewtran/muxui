@@ -2,7 +2,7 @@
 //
 //   node scripts/check-blocks.mjs [dist]
 //
-// Every enabled pattern appears in the rail and opens its block, each preview
+// Every enabled pattern appears in the Sidebar-built rail and opens its block, each preview
 // route loads its canonical example, the Code view equals the example source
 // bytes, every built /blocks/ page is noindex, the toolbar is Mux ToggleButtonGroups
 // with a Mux Button for Copy, and component pages list only
@@ -64,20 +64,29 @@ function find(root, predicate, message) {
 const patterns = allItems('listArtifacts', { kind: 'pattern' });
 assert(patterns.length === blocks.length, `The Blocks section has ${blocks.length} blocks, but the catalog enables ${patterns.length} patterns.`);
 
-/** The rail of one built page must list every enabled pattern and variant, each linking to a built block page. */
+/**
+ * The rail of one built page must list every enabled pattern and variant, each linking to a built block page.
+ * The rail is Sidebar navigation: a block is a link group, so its row holds the block link and a toggle, and
+ * the list beside the row holds its variant links.
+ */
 function checkRail(root, route) {
-	const rail = find(root, (node) => node.tagName === 'aside' && attributeValue(node, 'data-blocks-rail') !== undefined, `${route} has no Blocks rail.`);
+	const rail = find(root, (node) => node.tagName === 'aside' && attributeValue(node, 'data-blocks-rail') !== undefined && classNames(node).has('muxui-sidebar'), `${route} has no Blocks rail built on Sidebar.`);
 	const tree = elements(rail);
+	const rows = new Map(tree
+		.filter((node) => node.tagName === 'div' && classNames(node).has('muxui-sidebar__nav-row'))
+		.map((row) => [attributeValue(elements(row).find((node) => node.tagName === 'a'), 'href'), row]));
 	for (const pattern of patterns) {
-		const slug = tail(pattern.id);
-		const item = tree.find((node) => node.tagName === 'li' && attributeValue(node, 'data-block') === slug);
-		assert(item !== undefined, `${route} rail does not list ${pattern.id}.`);
-		const links = elements(item).filter((node) => node.tagName === 'a');
 		const block = blocks.find((candidate) => candidate.id === pattern.id);
 		assert(block !== undefined, `The Blocks loader has no block for ${pattern.id}.`);
-		const blockLink = links.find((node) => attributeValue(node, 'data-block-link') !== undefined);
-		assert(attributeValue(blockLink, 'href') === variantPath(block, block.variants[0]), `${route} rail block link for ${pattern.id} does not open its first variant.`);
-		const variantLinks = links.filter((node) => attributeValue(node, 'data-variant-link') !== undefined);
+		const row = rows.get(variantPath(block, block.variants[0]));
+		assert(row !== undefined, `${route} rail does not list ${pattern.id} with a block link to its first variant.`);
+		const list = row.parentNode.childNodes.find((node) => node.tagName === 'ul');
+		const toggle = elements(row).find((node) => node.tagName === 'button');
+		assert(
+			list !== undefined && toggle !== undefined && attributeValue(toggle, 'aria-controls') === attributeValue(list, 'id') && ['true', 'false'].includes(attributeValue(toggle, 'aria-expanded')),
+			`${route} rail block ${pattern.id} has no toggle that reports and controls its variants.`,
+		);
+		const variantLinks = elements(list).filter((node) => node.tagName === 'a');
 		const expected = getArtifact({ id: pattern.id, section: 'examples' }).value.map(({ id }) => id);
 		assert(
 			variantLinks.map((node) => attributeValue(node, 'href')).join() === block.variants.map((variant) => variantPath(block, variant)).join()
@@ -91,8 +100,8 @@ function checkRail(root, route) {
 	}
 	const groups = tree
 		.filter((node) => node.tagName === 'li' && attributeValue(node, 'data-group') !== undefined)
-		.map((group) => elements(group).find((node) => node.tagName === 'h2'))
-		.filter((heading) => heading !== undefined)
+		.map((group) => elements(group).find((node) => node.tagName === 'span' && classNames(node).has('muxui-sidebar__section-label')))
+		.filter((label) => label !== undefined)
 		.map(textContent);
 	assert(groups.length > 0, `${route} rail has no groups.`);
 	return tree;
@@ -125,7 +134,9 @@ for (const block of blocks) {
 	const card = cards.find((node) => attributeValue(node, 'data-block') === block.slug);
 	assert(card !== undefined, `The gallery has no card for ${block.id}.`);
 	const parts = elements(card);
-	assert(parts.some((node) => node.tagName === 'a' && attributeValue(node, 'href') === variantPath(block, block.variants[0])), `The ${block.id} card does not open its block.`);
+	const title = parts.find((node) => node.tagName === 'a' && attributeValue(node, 'href') === variantPath(block, block.variants[0]));
+	assert(title !== undefined, `The ${block.id} card does not open its block.`);
+	assert(classNames(title).has('blocks-card-link') && !classNames(title).has('muxui-link') && elements(card).some((node) => node.tagName === 'h3' && node.childNodes.includes(title)), `The ${block.id} card title is not a heading link.`);
 	const thumbnail = parts.find((node) => node.tagName === 'iframe');
 	assert(thumbnail !== undefined && attributeValue(thumbnail, 'src') === previewPath(block, block.variants[0]), `The ${block.id} thumbnail is not its preview route.`);
 	// Lazy thumbnails keep the gallery's load cost from growing with every block.
@@ -152,9 +163,12 @@ for (const pattern of patterns) {
 		const parts = elements(detail);
 		const h1 = parts.find((node) => node.tagName === 'h1');
 		assert(h1 !== undefined && textContent(h1) === example.name, `${route} heading is not the variant name.`);
-		assert(attributeValue(h1, 'aria-current') === undefined, `${route} marks its heading as the current page; only the rail link is current.`);
+		assert(parts.every((node) => attributeValue(node, 'aria-current') === undefined), `${route} marks something in its detail pane as the current page; only the rail link is current.`);
 		const crumbs = parts.filter((node) => node.tagName === 'li').map(textContent);
 		assert(crumbs.includes(block.name) && crumbs.includes(block.categoryLabel), `${route} breadcrumb does not name its category and block.`);
+		// The breadcrumb is navigation, not Mux's inline text link.
+		const crumbLink = parts.find((node) => node.tagName === 'a' && attributeValue(node, 'href') === variantPath(block, block.variants[0]));
+		assert(crumbLink !== undefined && !classNames(crumbLink).has('muxui-link'), `${route} breadcrumb link is missing or is an inline Mux Link.`);
 
 		// The preview is an isolated, named iframe on the variant's own preview route.
 		const iframe = parts.find((node) => node.tagName === 'iframe');

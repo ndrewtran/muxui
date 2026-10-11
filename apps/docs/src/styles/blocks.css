@@ -1,7 +1,8 @@
 /*
- * The Blocks section shell: layout, spacing, and the preview and code surfaces. Every controls,
- * link, and text style comes from the Mux components the islands render, so nothing here restyles
- * one; colours and sizes that remain come from Mux tokens.
+ * The Blocks section shell: layout, spacing, and the preview and code surfaces. Controls, the rail,
+ * and text styles come from the Mux components the islands render, so nothing here restyles one.
+ * The two plain anchors, the breadcrumb's block crumb and a gallery card's title, are navigation
+ * inside Mux headings and take their colour, underline, and focus ring from Mux tokens.
  */
 
 .blocks-body {
@@ -17,13 +18,14 @@
 	line-height: var(--muxui-semantic-typography-text-line-height);
 }
 
-.blocks-body :where(ul, ol) {
+/* Resets sit at zero specificity so a Mux component's own list and heading rules win. */
+:where(.blocks-body ul, .blocks-body ol) {
 	margin: 0;
 	padding: 0;
 	list-style: none;
 }
 
-.blocks-body :where(h1, h2, p) {
+:where(.blocks-body h1, .blocks-body h2, .blocks-body h3, .blocks-body p) {
 	margin: 0;
 }
 
@@ -74,55 +76,19 @@
 	outline: none;
 }
 
-/* Rail */
+/* Rail: Sidebar.Root is the rail. This only sizes it into the shell's grid cell. */
 
 .blocks-rail {
-	display: flex;
-	flex-direction: column;
 	min-height: 0;
-	overflow: auto;
 	border-inline-end: 1px solid var(--muxui-semantic-border-subtle);
 }
 
 .blocks-filters {
-	position: sticky;
-	inset-block-start: 0;
-	z-index: 1;
-	display: flex;
-	flex-direction: column;
-	gap: var(--muxui-reference-dimension-space-2xs);
-	padding: var(--muxui-reference-dimension-space-xs);
 	border-block-end: 1px solid var(--muxui-semantic-border-subtle);
-	background: var(--muxui-semantic-surface-canvas);
-}
-
-.blocks-all {
-	padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs) 0;
 }
 
 .blocks-none {
 	padding: var(--muxui-reference-dimension-space-xs);
-}
-
-.blocks-tree {
-	padding: var(--muxui-reference-dimension-space-2xs) var(--muxui-reference-dimension-space-xs) var(--muxui-reference-dimension-space-m);
-}
-
-.blocks-tree > li + li {
-	margin-block-start: var(--muxui-reference-dimension-space-xs);
-}
-
-.blocks-tree > li > h2 {
-	margin-block-end: var(--muxui-reference-dimension-space-3xs);
-}
-
-.blocks-tree li li {
-	margin-block-start: var(--muxui-reference-dimension-space-4xs);
-}
-
-/* A block's variants sit one step in from its name. */
-.blocks-tree li li li {
-	padding-inline-start: var(--muxui-reference-dimension-space-xs);
 }
 
 /* Gallery */
@@ -189,14 +155,34 @@
 }
 
 /* The link text is the card's one tab stop; its box stretches over the whole card. */
+/* A card title is a heading's link, so it reads as navigation: strong text, underlined on hover, with the focus ring on the thumbnail. */
+.blocks-card-link {
+	color: var(--muxui-semantic-content-strong);
+	text-decoration: none;
+}
+
 .blocks-card-link::after {
 	content: '';
 	position: absolute;
 	inset: 0;
 }
 
-.blocks-card:hover .blocks-thumb {
+.blocks-card-link:focus-visible {
+	outline: none;
+}
+
+.blocks-card:hover .blocks-card-link {
+	text-decoration: underline;
+}
+
+.blocks-card:hover .blocks-thumb,
+.blocks-card:has(.blocks-card-link:focus-visible) .blocks-thumb {
 	border-color: var(--muxui-semantic-border-strong);
+}
+
+.blocks-card:has(.blocks-card-link:focus-visible) .blocks-thumb {
+	outline: 2px solid var(--muxui-semantic-focus-ring);
+	outline-offset: 2px;
 }
 
 .blocks-card-row {
@@ -246,6 +232,21 @@
 	content: '/';
 	margin-inline: 0.5em;
 	color: var(--muxui-semantic-content-muted);
+}
+
+/* The block crumb is navigation, so it reads as strong text rather than as an inline text link. */
+.blocks-crumbs a {
+	color: var(--muxui-semantic-content-strong);
+	text-decoration: none;
+}
+
+.blocks-crumbs a:hover {
+	text-decoration: underline;
+}
+
+.blocks-crumbs a:focus-visible {
+	outline: 2px solid var(--muxui-semantic-focus-ring);
+	outline-offset: 2px;
 }
 
 .blocks-tools {
@@ -431,7 +432,7 @@
 	}
 
 	.blocks-rail {
-		max-height: 26rem;
+		max-height: 32rem;
 		border-inline-end: 0;
 		border-block-end: 1px solid var(--muxui-semantic-border-subtle);
 	}

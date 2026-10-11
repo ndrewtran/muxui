@@ -60,17 +60,23 @@ async function withSite(run) {
 	}
 }
 
+// The rail is Sidebar navigation. A block is a link group: a row holding the block link and its toggle, and the list of
+// its variants beside the row. Groups are the Sidebar sections.
+const railRows = '[data-blocks-rail] .muxui-sidebar__nav-row';
+const railVariantLink = (page, href) => page.locator(`[data-blocks-rail] .muxui-sidebar__nav-children .muxui-sidebar__nav-children a[href="${href}"]`);
+const railBlockToggle = (page, href) => page.locator(railRows, { has: page.locator(`a[href="${href}"]`) }).getByRole('button');
+
 /** Blocks and variants as the built rail lists them, with each block's derived group. */
 async function railVariants(page) {
-	return page.evaluate(() => [...document.querySelectorAll('[data-blocks-rail] li[data-block]')].flatMap((item) => {
-		const group = item.closest('[data-group]')?.dataset.group;
-		return [...item.querySelectorAll('a[data-variant-link]')].map((link) => ({
-			block: item.dataset.block,
-			group,
+	return page.evaluate(() => [...document.querySelectorAll('[data-blocks-rail] [data-group]')].flatMap((section) => [...section.querySelectorAll('.muxui-sidebar__nav-row')].flatMap((row) => {
+		const block = new URL(row.querySelector('a').href).pathname.split('/')[2];
+		return [...row.parentElement.querySelectorAll(':scope > ul a[href]')].map((link) => ({
+			block,
+			group: section.dataset.group,
 			name: link.textContent.trim(),
 			href: link.getAttribute('href'),
 		}));
-	}));
+	})));
 }
 
 /** Waits until the page's own islands (the rail, the gallery, the block viewer) have hydrated, so its controls respond. */
@@ -124,7 +130,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		// Every rail variant opens its block in place, without a document reload.
 		await page.evaluate(() => { window.__sameDocument = true; });
 		for (const variant of variants) {
-			await page.locator(`[data-blocks-rail] a[data-variant-link][href="${variant.href}"]`).click();
+			await railVariantLink(page, variant.href).click();
 			await page.waitForURL(`**${variant.href}`);
 			await page.locator('[data-blocks-detail] h1').waitFor();
 			assert.equal(await page.locator('[data-blocks-detail] h1').textContent(), variant.name);
@@ -135,7 +141,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 			assert.notEqual((await page.locator('[data-iframe]').getAttribute('title')).trim(), '');
 		}
 		const [first, second = first] = variants;
-		await page.locator(`[data-blocks-rail] a[data-variant-link][href="${first.href}"]`).click();
+		await railVariantLink(page, first.href).click();
 		await page.waitForURL(`**${first.href}`);
 		await previewReady(page);
 
@@ -217,7 +223,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		// The toolbar's width, theme, and view survive a move to another variant.
 		await widthButton(page, widthLabels[1]).click();
 		await toolbarButton(page, 'Preview theme', 'Light preview').click();
-		await page.locator(`[data-blocks-rail] a[data-variant-link][href="${second.href}"]`).click();
+		await railVariantLink(page, second.href).click();
 		await page.waitForURL(`**${second.href}`);
 		await previewReady(page);
 		assert.equal(await page.locator('[data-stage]').getAttribute('data-mode'), 'split');
@@ -232,6 +238,28 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 			assert.equal(await page.evaluate(() => window.__sameDocument), true);
 		}
 
+		// A block the reader collapsed stays collapsed through in-place navigation, and reaching it again opens it.
+		const other = variants.find(({ block }) => block !== first.block);
+		if (other) {
+			const blockToggle = railBlockToggle(page, first.href);
+			assert.equal(await blockToggle.getAttribute('aria-expanded'), 'true', 'the rail starts with the block open');
+			await blockToggle.click();
+			assert.equal(await blockToggle.getAttribute('aria-expanded'), 'false');
+			assert.equal(await railVariantLink(page, first.href).isVisible(), false, 'a collapsed block hides its variants');
+			await railVariantLink(page, other.href).click();
+			await page.waitForURL(`**${other.href}`);
+			await page.locator('[data-blocks-detail] h1').waitFor();
+			assert.equal(await blockToggle.getAttribute('aria-expanded'), 'false', 'the collapsed block survives the in-place swap');
+			await page.getByRole('link', { name: 'All blocks', exact: true }).click();
+			await page.locator('[data-blocks-gallery]').waitFor();
+			await page.locator(`[data-blocks-gallery] a.blocks-card-link[href="${first.href}"]`).click();
+			await page.waitForURL(`**${first.href}`);
+			await page.locator('[data-blocks-detail] h1').waitFor();
+			assert.equal(await blockToggle.getAttribute('aria-expanded'), 'true', 'reaching a block opens the groups that hold it');
+			assert.equal(await railVariantLink(page, first.href).getAttribute('aria-current'), 'page');
+			assert.equal(await page.evaluate(() => window.__sameDocument), true);
+		}
+
 		// Search and the Uses filter narrow the rail by the catalog's own terms.
 		const search = page.getByRole('searchbox', { name: 'Search blocks' });
 		const count = page.locator('[data-blocks-count]');
@@ -241,9 +269,9 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		await search.fill('zzzzqq');
 		await page.waitForFunction(() => document.querySelector('[data-blocks-count]').textContent.startsWith('0 of'));
 		assert.equal(await page.locator('[data-blocks-none]').isVisible(), true);
-		assert.equal(await page.locator('.blocks-rail li[data-block]:not([hidden])').count(), 0);
+		assert.equal(await page.locator(railRows).count(), 0);
 		await search.fill(first.block.split('-')[0]);
-		await page.waitForFunction((slug) => document.querySelector(`.blocks-rail li[data-block="${slug}"]`)?.hidden === false, first.block);
+		await page.waitForFunction(({ rows, slug }) => [...document.querySelectorAll(`${rows} > a`)].some((link) => link.pathname.split('/')[2] === slug), { rows: railRows, slug: first.block });
 		assert.ok(new URL(page.url()).searchParams.get('q') !== null, 'the query is kept in the URL');
 		await search.fill('');
 		const participants = await page.getByLabel('Uses component').locator('option').evaluateAll((options) => options.map((option) => option.value).filter(Boolean));
@@ -252,10 +280,10 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		for (const component of participants) {
 			await page.getByLabel('Uses component').selectOption(component);
 			const wanted = [...usesIndex[component]].sort();
-			await page.waitForFunction((slugs) => {
-				const shown = [...document.querySelectorAll('.blocks-rail li[data-block]:not([hidden])')].map((item) => item.dataset.block).sort();
+			await page.waitForFunction(({ rows, slugs }) => {
+				const shown = [...document.querySelectorAll(`${rows} > a`)].map((link) => link.pathname.split('/')[2]).sort();
 				return shown.join() === slugs.join();
-			}, wanted);
+			}, { rows: railRows, slugs: wanted });
 			assert.equal(await count.textContent(), noun(wanted.length));
 		}
 		await page.getByLabel('Uses component').selectOption('');
@@ -304,7 +332,7 @@ test('a filter index that fails to load shows a status, and the next change retr
 		await search.fill('poster');
 		await page.waitForFunction(() => /unavailable/u.test(document.querySelector('[data-blocks-count]').textContent), null, { timeout: 5000 });
 		assert.equal(await status.isVisible(), true, 'the status is visible');
-		assert.equal(await page.locator('.blocks-rail li[data-block]:not([hidden])').count() > 0, true, 'blocks stay listed');
+		assert.equal(await page.locator(railRows).count() > 0, true, 'blocks stay listed');
 		await page.unroute('**/blocks/filter-index.json');
 		await search.fill('poster ');
 		await page.waitForFunction(() => /^\d+ of \d+ block/u.test(document.querySelector('[data-blocks-count]').textContent));
@@ -371,6 +399,7 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 		await page.goto(`${origin}/blocks/`);
 		await islandsReady(page);
 		const variants = await railVariants(page);
+		assert.ok(variants.length > 0, 'the rail lists variants');
 		const report = [];
 		// Preset images come from a second page, so the toolbar page keeps its theme and preset while each is captured.
 		const capturePage = captureDir ? await page.context().newPage() : null;
