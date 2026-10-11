@@ -3,16 +3,20 @@
 The Roadmap "BL1 Blocks showcase" slice requires `E-BL1-01` through
 `E-BL1-11`. This root retains all eleven for the seven shipped blocks, captured in
 one run of `tests/evidence/capture-bl1.mjs` in growth scope at main commit
-`82873337a4f9551240bf89af7f6978841c3e4d1a` (the squash of #264, tree
-`5c871efc042ca74ddd8cb1384c8269e6e803bf96`), which is in `origin/main`'s history.
+`1899324c8aed2d94a6324c4656d2149af5571f39` (the squash of #266, tree
+`415c23b15a5740fb1bce2bc5f3b90000acb9c6db`), which is in `origin/main`'s history.
 The growth commits it audits are `bb6097269c3a2683e8680d0d7be9a83b4f069958` (#238), which
 added the company records and task filters blocks,
 `e9a470c26afec974dba93a2daa5b1c95b7071b00` (#247), which added the workspace navigation
-block, and `c1e5c437c385af91b38f72e04597571bb28be5b2` (#261), which applied the previous
+block, `c1e5c437c385af91b38f72e04597571bb28be5b2` (#261), which applied the previous
 content review's copy advisories to five blocks (poster grid, marketing hero, pricing plans,
-account settings, and workspace navigation). The earlier growth capture, at
-`a7237f58d8706ec54d21b88e0363241a936695f0` (the squash of #253), is archived under
-`superseded/a7237f58d870/`, the growth capture before it, at
+account settings, and workspace navigation), and `1899324c8aed2d94a6324c4656d2149af5571f39`
+(#266), which applied that review's two new copy advisories (the virtualized poster grid's
+disabled titles and the company records' aria-sort wording). The earlier growth capture, at
+`82873337a4f9551240bf89af7f6978841c3e4d1a` (the squash of #264), is archived under
+`superseded/82873337a4f9/`, the growth capture before it, at
+`a7237f58d8706ec54d21b88e0363241a936695f0` (the squash of #253), under
+`superseded/a7237f58d870/`, the growth capture before that, at
 `0c3cf6626ffde8c15c970018733672d3731cdaf3` (the squash of #239), under
 `superseded/0c3cf6626ffd/`, and the close-out capture of the first four blocks, at
 `c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b` (the squash of #230), under
@@ -56,11 +60,12 @@ capture at the same revision copies nothing new and carries each `supersedes`
 forward; a later capture archives the capture it replaces the same way, so the chain
 stays walkable. The growth capture at `0c3cf662` archived the close-out capture at
 `c8f3e7cb` the same way, under `superseded/c8f3e7cbc18b/`, the growth capture at
-`a7237f58` archived that growth capture under `superseded/0c3cf6626ffd/`, and the growth
-capture at `82873337` archived the capture at `a7237f58` under `superseded/a7237f58d870/`
-(131 files, byte for byte). Every new record carries `supersedes` naming its predecessor at
-`a7237f58`, whose own records keep the `supersedes` that name `0c3cf662`, and so on back to the
-close-out. The index's `supersessions` list is not used.
+`a7237f58` archived that growth capture under `superseded/0c3cf6626ffd/`, the growth
+capture at `82873337` archived the capture at `a7237f58` under `superseded/a7237f58d870/`, and
+the growth capture at `1899324c` archived the capture at `82873337` under
+`superseded/82873337a4f9/` (131 files, byte for byte). Every new record carries `supersedes`
+naming its predecessor at `82873337`, whose own records keep the `supersedes` that name
+`a7237f58`, and so on back to the close-out. The index's `supersessions` list is not used.
 That reasoning is historical wording: Architecture once defined the list as an
 `EvidenceApplicabilitySupersession` certificate that closed an applicability chain after an
 accepted authority change, and no longer does (Decision 0027, #248, removed that machinery).
@@ -69,31 +74,25 @@ accepted authority change, and no longer does (Decision 0027, #248, removed that
 ## Independent reviews retained
 
 - **Content review (`E-BL1-10`).** Read the block sources at
-  `c1e5c437c385af91b38f72e04597571bb28be5b2` (#261), by an independent reviewer
+  `1899324c8aed2d94a6324c4656d2149af5571f39` (#266), by an independent reviewer
   (Claude Opus 5.5) that authored none of the blocks (Sonnet agents did) and did not review
   their code (GPT-6.1-Sol did). Verdict: pass for all seven blocks, with advisories the
   capture lists and does not fix, because changing a block source would invalidate the
-  reviewed revision. The review confirms that #261 resolved the advisories of the `e9a470c2`
-  review: the poster grid's virtualized title mismatch, the assistive-technology and aria
-  wording in the marketing hero, pricing plans, and workspace navigation records, and the
-  stale-prone "Mux has no X" lines in the marketing hero, account settings, and pricing plans
-  records. It adds two advisories (the "Disabled A ..." title prefix in the poster grid, and
-  "report ... through aria-sort" in the company records) and carries forward the unmarked
-  pricing offer copy, the "Card.Root has none" note, the forced-colours notes of the company
-  records and workspace navigation (backed by emulated tests, not a real forced-colours run),
-  the generic-word echoes "Generic Supply" and "Review the draft outline", the Lucide-identical
-  `Switch` chevron glyph, the shared Cmd or Ctrl plus B fold shortcut, and that workspace
-  navigation is the block closest to a page shell. The reviewed tree
-  (`26581cb3d36a8476b1d7007f0c9fa6a7660318e9`) is in main's history and differs from the source
-  tree by 37 paths (the navigation, Storybook, schema, and CI planner changes of #263, five
-  non-participant component records, and the browser-test changes of #264), which the review
-  predates and did not read. None is under `catalog/patterns` or `packages/react/src`, and
-  every block's coverage key is the same at both revisions, so the review covers all seven
-  blocks (`reviewCoverage` in the `E-BL1-10` artifact has seven rows, each citing this review).
-  No proof tool differs between the reviewed and source revisions. The `e9a470c2` content
-  review is archived with its capture under `superseded/a7237f58d870/`, and the close-out
-  content review of `670cb188` and the earlier growth content review of `bb609726` with
-  theirs.
+  reviewed revision. The reviewed revision is the source revision: it is in main's history,
+  its tree (`415c23b15a5740fb1bce2bc5f3b90000acb9c6db`) equals the source tree, no path differs,
+  and no proof tool differs, so the review covers all seven blocks (`reviewCoverage` in the
+  `E-BL1-10` artifact has seven rows, each citing this review). The review confirms that #266
+  resolved the two advisories the `c1e5c437` review added: the "Disabled A ..." title prefix and
+  differing disabled-title phrasing in the virtualized poster grid, and "report ... through
+  aria-sort" in the company records. It adds no new advisory and carries forward, not fixed, the
+  unmarked pricing offer copy, the "Card.Root has none" note, the forced-colours notes of the
+  company records and workspace navigation (backed by emulated tests, not a real forced-colours
+  run), the generic-word echoes "Generic Supply" and "Review the draft outline", the
+  Lucide-identical `Switch` chevron glyph, the shared Cmd or Ctrl plus B fold shortcut, and that
+  workspace navigation is the block closest to a page shell. The `c1e5c437` content review is
+  archived with its capture under `superseded/82873337a4f9/`, the `e9a470c2` content review under
+  `superseded/a7237f58d870/`, and the close-out content review of `670cb188` and the earlier
+  growth content review of `bb609726` with theirs.
 - **Exit review (`E-BL1-09`).** A growth capture takes no new exit review and reuses
   the close-out's: the final review of the step 1 tooling at
   `509d870216ea00a0afbca717fa39188afffbd21a`, tree
@@ -257,7 +256,7 @@ publish guard). A participant's default copy, such as a placeholder or an access
 and its runtime module; no per-component source mapping exists for every participant, so the runtime part is
 the whole of `packages/react/src`, which is conservative: any runtime change asks for a new review. That
 includes `generate.mjs`, which projects the runtime that blocks import and could transform its copy, and
-`supplemental-mapping.mjs`, which selects the runtime sources and exports. The retained content review (`c1e5c437`)
+`supplemental-mapping.mjs`, which selects the runtime sources and exports. The retained content review (`1899324c`)
 read the blocks after #256 changed `generate.mjs`, so it covers all seven blocks at the capture's source
 revision; a later change to a block, to a participant's record, or to a rendering file under
 `packages/react/src` asks for a new independent content review (`--content-review`) for the blocks it
