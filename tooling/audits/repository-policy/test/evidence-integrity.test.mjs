@@ -10,12 +10,38 @@ import test, { after } from 'node:test';
 import { canonicalJson } from '../src/canonical-json.mjs';
 import { REVISION_BOUND_INPUTS, hasUnsanitizedEvidenceOutput, readAtRevision, verifyEvidence } from '../src/evidence-verify.mjs';
 import { DEFERRED_R1_EVIDENCE } from '../../../../packages/react/src/r1-deferred-evidence.mjs';
+import { gitIn } from './evidence-growth-repository.mjs';
 
 const repositoryRoot = resolve(import.meta.dirname, '../../../..');
 
 function digest(bytes) {
   return `sha256:${createHash('sha256').update(bytes).digest('hex')}`;
 }
+
+/**
+ * Caches `compute` by its arguments. Everything cached here reads git objects at a commit (or at `HEAD`, which no test here moves),
+ * and those never change, while the retained captures these tests forge and re-check ask for the same reads thousands of times.
+ * Results are shared between callers and are not edited.
+ */
+function cached(compute) {
+  const results = new Map();
+  return (...args) => {
+    const key = JSON.stringify(args);
+    if (!results.has(key)) results.set(key, compute(...args));
+    return results.get(key);
+  };
+}
+
+const computed = new Map();
+/** The value of `compute()` for `key`, computed once; for a derivation of git objects that is not a function of one call's arguments alone. */
+function once(key, compute) {
+  const id = JSON.stringify(key);
+  if (!computed.has(id)) computed.set(id, compute());
+  return computed.get(id);
+}
+
+/** The bytes of `path` at `revision` in this checkout. */
+const readAt = cached((revision, path) => readAtRevision(repositoryRoot, revision, path));
 
 test('evidence output privacy recognizes public token IDs without accepting credentials', () => {
   const root = '/tmp/muxui-evidence';
@@ -1211,7 +1237,7 @@ function parsePageWidths(source) {
   assert.ok(body !== undefined, `${pageWidthsSource} exports pageWidths as a literal list`);
   return [...body.matchAll(/\d+/gu)].map(([width]) => Number(width));
 }
-const pageWidthsAt = (revision) => parsePageWidths(readAtRevision(repositoryRoot, revision, pageWidthsSource).toString('utf8'));
+const pageWidthsAt = (revision) => parsePageWidths(readAt(revision, pageWidthsSource).toString('utf8'));
 
 test('the BL1 page widths are the list in the docs presets module, read at the capture\'s own revision', async () => {
   const { pageWidths } = await import('../../../../apps/docs/src/lib/block-presets.ts');
@@ -1222,8 +1248,6 @@ test('the BL1 page widths are the list in the docs presets module, read at the c
 });
 
 // BL1 close-out: the capture's refusals and carry-forwards, on throwaway repositories.
-const gitIn = (cwd, ...args) => execFileSync('git', ['-c', 'user.name=Test', '-c', 'user.email=test@example.invalid', '-c', 'commit.gpgsign=false', ...args], { cwd, encoding: 'utf8' }).trim();
-
 async function commitFiles(cwd, files, message) {
   for (const [path, text] of Object.entries(files)) {
     await mkdir(join(cwd, path, '..'), { recursive: true });
@@ -1464,7 +1488,7 @@ test('a capture reads the thresholds as committed at a revision, and lists what 
   const { readThresholds, loadThresholds, thresholdChanges, thresholdsPath } = await import('../../../../tests/evidence/bl1/regression.mjs');
   // The revision a capture binds holds the thresholds it measured, whatever the working tree has now.
   const bound = JSON.parse(await readFile(join(repositoryRoot, 'tests/evidence/bl1/index.json'), 'utf8')).sourceRevision;
-  assert.deepEqual(await readThresholds(bound), readAtRevision(repositoryRoot, bound, thresholdsPath));
+  assert.deepEqual(await readThresholds(bound), readAt(bound, thresholdsPath));
   assert.equal((await loadThresholds(bound)).schema, 'muxui-bl1-regression-thresholds-v1');
   await assert.rejects(readThresholds('f'.repeat(40)), /EVIDENCE_REVISION_UNAVAILABLE/u);
 
@@ -1606,8 +1630,14 @@ test('a BL1 rehearsal starts from a copy of the retained evidence and refuses a 
 // replaced is archived at tests/evidence/bl1/superseded/<revision>, with the paths it cites still naming the root it was written to.
 const bl1 = 'tests/evidence/bl1';
 const closeoutRevision = 'c8f3e7cbc18bebe1a4d6292dddf5dde88875e88b';
-const jsonAt = (revision, path) => JSON.parse(readAtRevision(repositoryRoot, revision, path).toString('utf8'));
-const gitOut = (...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' }).trim();
+const jsonAt = (revision, path) => JSON.parse(readAt(revision, path).toString('utf8'));
+const gitOut = cached((...args) => execFileSync('git', args, { cwd: repositoryRoot, encoding: 'utf8' }).trim());
+/** The object `spec` (`<revision>:<path>`) names in this checkout, or null when the revision holds no such path. */
+const objectAt = cached((spec) => {
+  const result = spawnSync('git', ['rev-parse', spec], { cwd: repositoryRoot, encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : null;
+});
+const isAncestor = cached((ancestor, descendant) => spawnSync('git', ['merge-base', '--is-ancestor', ancestor, descendant], { cwd: repositoryRoot }).status === 0);
 
 /**
  * The block browser tests of `slugs` at `revision` by convention: each block's own `pattern-<slug>.test.mjs` in that revision's tree,
@@ -1639,16 +1669,13 @@ function catalogAt(revision) {
 }
 
 /** The git tree of `catalog/patterns/<block>` at `revision`, or null when the revision holds no such block. */
-function blockTreeAt(revision, block) {
-  const result = spawnSync('git', ['rev-parse', `${revision}:catalog/patterns/${block}`], { cwd: repositoryRoot, encoding: 'utf8' });
-  return result.status === 0 ? result.stdout.trim() : null;
-}
+const blockTreeAt = (revision, block) => objectAt(`${revision}:catalog/patterns/${block}`);
 
 const reviewCoverageTool = 'tests/evidence/bl1/capture-support.mjs';
 
 /** The React sources that render nothing, as the capture-support tool bound at `revision` lists them (a literal list of file names). */
 function boundNonRenderingSources(revision) {
-  const body = /export const nonRenderingReactSources = \[([^\]]*)\]\.map/u.exec(readAtRevision(repositoryRoot, revision, reviewCoverageTool).toString('utf8'))?.[1];
+  const body = /export const nonRenderingReactSources = \[([^\]]*)\]\.map/u.exec(readAt(revision, reviewCoverageTool).toString('utf8'))?.[1];
   assert.ok(body !== undefined, `${reviewCoverageTool} at ${revision.slice(0, 8)} lists the React sources that render nothing`);
   return [...body.matchAll(/'([^']+)'/gu)].map(([, name]) => `packages/react/src/${name}`);
 }
@@ -1660,10 +1687,8 @@ function boundNonRenderingSources(revision) {
 function expectedCoverageKey(revision, block, excluded) {
   const blockTree = blockTreeAt(revision, block);
   if (blockTree === null) return null;
-  const participants = [...new Set(jsonAt(revision, `catalog/patterns/${block}/artifact.json`).participants.map(({ component }) => component))].sort().map((component) => {
-    const result = spawnSync('git', ['rev-parse', `${revision}:catalog/components/${component.slice('muxui:component:'.length)}`], { cwd: repositoryRoot, encoding: 'utf8' });
-    return { component, tree: result.status === 0 ? result.stdout.trim() : null };
-  });
+  const participants = [...new Set(jsonAt(revision, `catalog/patterns/${block}/artifact.json`).participants.map(({ component }) => component))].sort()
+    .map((component) => ({ component, tree: objectAt(`${revision}:catalog/components/${component.slice('muxui:component:'.length)}`) }));
   const files = gitOut('ls-tree', '-r', revision, '--', 'packages/react/src').split('\n').map((line) => /^\d+ blob ([0-9a-f]+)\t(.+)$/u.exec(line))
     .filter((match) => match !== null && !excluded.includes(match[2])).map(([, blob, path]) => `${path}\0${blob}\n`).sort();
   return { blockTree, participants, reactRuntime: { root: 'packages/react/src', excluded, files: files.length, digest: digest(files.join('')) } };
@@ -1671,7 +1696,7 @@ function expectedCoverageKey(revision, block, excluded) {
 
 /** The titles of the cross-engine tests in a browser test file at `revision`: its `test(\`... in ${engine}\`)` declarations. */
 function browserTestTitles(revision, file) {
-  const titles = [...readAtRevision(repositoryRoot, revision, file).toString('utf8').matchAll(/^\s*test\(`([^`]*?) in \$\{engine\}`/gmu)].map(([, title]) => title);
+  const titles = [...readAt(revision, file).toString('utf8').matchAll(/^\s*test\(`([^`]*?) in \$\{engine\}`/gmu)].map(([, title]) => title);
   assert.ok(titles.length > 0, `${file} declares a test titled "... in \${engine}"`);
   return titles;
 }
@@ -1712,7 +1737,7 @@ function parseGrowthToolPaths(source, label) {
 }
 
 /** The `digestAffectingPaths` the growth-scope tool exports at `revision`, read from its source in git. */
-const growthToolPaths = (revision) => parseGrowthToolPaths(readAtRevision(repositoryRoot, revision, growthScopeTool).toString('utf8'), revision.slice(0, 8));
+const growthToolPaths = (revision) => parseGrowthToolPaths(readAt(revision, growthScopeTool).toString('utf8'), revision.slice(0, 8));
 
 const boundaryAuditTool = 'tests/evidence/bl1/boundary-audit.mjs';
 
@@ -1732,7 +1757,7 @@ function boundBoundaryAudit(revision) {
       boundToolDirectories.push(directory);
       for (const path of [boundaryAuditTool, 'tooling/audits/repository-policy/src/canonical-json.mjs']) {
         await mkdir(dirname(join(directory, path)), { recursive: true });
-        await writeFile(join(directory, path), readAtRevision(repositoryRoot, revision, path));
+        await writeFile(join(directory, path), readAt(revision, path));
       }
       return import(pathToFileURL(join(directory, boundaryAuditTool)).href);
     })());
@@ -1744,7 +1769,7 @@ function boundBoundaryAudit(revision) {
 function growthToolScopedChecks(revision) {
   let current;
   const scoped = [];
-  for (const line of readAtRevision(repositoryRoot, revision, boundaryAuditTool).toString('utf8').split('\n')) {
+  for (const line of readAt(revision, boundaryAuditTool).toString('utf8').split('\n')) {
     current = /^    id: '([^']+)',$/u.exec(line)?.[1] ?? current;
     if (/^    growthClaim: /u.test(line)) scoped.push(current);
   }
@@ -1756,7 +1781,7 @@ function growthToolScopedChecks(revision) {
 function growthToolInformationalLegs(revision) {
   let current;
   const informational = {};
-  for (const line of readAtRevision(repositoryRoot, revision, boundaryAuditTool).toString('utf8').split('\n')) {
+  for (const line of readAt(revision, boundaryAuditTool).toString('utf8').split('\n')) {
     current = /^    id: '([^']+)',$/u.exec(line)?.[1] ?? current;
     const body = /^    growthInformational: \[([^\]]*)\],$/u.exec(line)?.[1];
     if (body !== undefined) informational[current] = [...body.matchAll(/'([^']+)'/gu)].map(([, leg]) => leg);
@@ -1790,9 +1815,9 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
   const catalog = artifacts['E-BL1-08'].observations;
   assert.equal(catalog.baseline, undefined, 'a growth capture does not carry the close-out digest pin');
   const bound = growthToolPaths(toolRevision);
-  assert.equal(verification.proofTools.find(({ path }) => path === growthScopeTool)?.sha256, digest(readAtRevision(repositoryRoot, toolRevision, growthScopeTool)), 'E-BL1-08 binds the growth-scope tool at the source revision');
+  assert.equal(verification.proofTools.find(({ path }) => path === growthScopeTool)?.sha256, digest(readAt(toolRevision, growthScopeTool)), 'E-BL1-08 binds the growth-scope tool at the source revision');
   assert.deepEqual(catalog.growthScope?.digestAffectingPaths, bound, 'E-BL1-08 declares the digest-affecting paths of the bound growth-scope tool');
-  const derived = growthCommits({ cwd: repositoryRoot, head: sourceRevision, since: closeoutRevision, patternIds: added, digestPaths: bound });
+  const derived = once(['growthCommits', sourceRevision, closeoutRevision, added, bound], () => growthCommits({ cwd: repositoryRoot, head: sourceRevision, since: closeoutRevision, patternIds: added, digestPaths: bound }));
   assert.ok(derived.length > 0, 'a growth capture follows at least one commit that added a block');
   const short = derived.map(({ commit }) => commit.slice(0, 8));
 
@@ -1813,7 +1838,7 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
     if (scoped) assert.deepEqual(check.observations.commits.map(({ commit }) => commit), derived.map(({ commit }) => commit), `E-BL1-09: ${check.id} is evaluated across every growth commit`);
   }
   // Every leg is recomputed from git. The gate is read from the bound tool's own list, so a record cannot widen what it records without gating.
-  const recomputed = auditBoundary({ cwd: repositoryRoot, head: sourceRevision, growthCommits: derived.map(({ commit }) => commit), growthGate: informational ? 'informational' : undefined, offline: true, only: scopedChecks, closeoutBase: null });
+  const recomputed = once(['auditBoundary', toolRevision, sourceRevision, derived.map(({ commit }) => commit), informational, scopedChecks], () => auditBoundary({ cwd: repositoryRoot, head: sourceRevision, growthCommits: derived.map(({ commit }) => commit), growthGate: informational ? 'informational' : undefined, offline: true, only: scopedChecks, closeoutBase: null }));
   const gateHolds = ({ id, legs }) => Object.entries(legs).every(([leg, value]) => value !== false || (boundInformational[id] ?? []).includes(leg));
   assert.ok(recomputed.checks.every(gateHolds), 'E-BL1-09: every gate leg of the scoped checks holds across the growth commits in git');
   if (!informational) assert.equal(recomputed.pass, true, 'E-BL1-09: the scoped checks hold across the growth commits in git');
@@ -1887,7 +1912,7 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
   }
   // The proof tools are bound at revisions in main's history.
   for (const { path, revision } of verification.proofTools) {
-    assert.equal(spawnSync('git', ['merge-base', '--is-ancestor', revision, sourceRevision], { cwd: repositoryRoot }).status, 0, `${path} is bound at an ancestor of the source revision`);
+    assert.equal(isAncestor(revision, sourceRevision), true, `${path} is bound at an ancestor of the source revision`);
   }
   // A record a later capture replaced names the copy of its predecessor kept in the tree, and the index retains that copy at the digest it names.
   for (const [id, { supersedes }] of Object.entries(records).filter(([, record]) => record.supersedes !== undefined)) {
@@ -1993,7 +2018,7 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
 
   // E-BL1-11: the thresholds are the ones committed at the source revision, and the expectations revised and the known weaknesses stay on the record.
   const baseline = artifacts['E-BL1-11'].observations;
-  const thresholdBytes = readAtRevision(repositoryRoot, sourceRevision, baseline.thresholds.path);
+  const thresholdBytes = readAt(sourceRevision, baseline.thresholds.path);
   assert.equal(digest(thresholdBytes), baseline.thresholds.sha256, 'E-BL1-11 binds the thresholds committed at the source revision');
   assert.equal(retained.get(baseline.thresholds.path), baseline.thresholds.sha256);
   const thresholds = parseThresholds(thresholdBytes);
@@ -2013,11 +2038,11 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
     // Decision 0029: a change to a query, limit, or budget since the close-out is on the record. The log is read at `thresholdsRevision`
     // (the source revision unless a forged capture stands on a later one).
     assert.ok(baseline.revisionLog, 'E-BL1-11 records its revisionLog');
-    const logged = parseThresholds(readAtRevision(repositoryRoot, thresholdsRevision ?? sourceRevision, baseline.thresholds.path));
-    assert.deepEqual(thresholdRevisionProblems(parseThresholds(readAtRevision(repositoryRoot, closeoutRevision, baseline.thresholds.path)), logged), [], 'E-BL1-11: every threshold change since the close-out is logged and no expectation is removed');
+    const logged = parseThresholds(readAt(thresholdsRevision ?? sourceRevision, baseline.thresholds.path));
+    assert.deepEqual(thresholdRevisionProblems(parseThresholds(readAt(closeoutRevision, baseline.thresholds.path)), logged), [], 'E-BL1-11: every threshold change since the close-out is logged and no expectation is removed');
     // Against the capture this one replaces, a later revision of a query already on the log still needs its own new entry.
     const replaced = records['E-BL1-11'].supersedes.sourceRevision;
-    assert.deepEqual(thresholdRevisionProblems(parseThresholds(readAtRevision(repositoryRoot, replaced, baseline.thresholds.path)), logged), [], 'E-BL1-11: every threshold change since the capture this one replaces has a new log entry');
+    assert.deepEqual(thresholdRevisionProblems(parseThresholds(readAt(replaced, baseline.thresholds.path)), logged), [], 'E-BL1-11: every threshold change since the capture this one replaces has a new log entry');
     assert.deepEqual(baseline.revisionLog.unlogged, [], 'E-BL1-11 records no unlogged threshold change');
     assert.equal(baseline.revisionLog.entries, (logged.provenance.revisions ?? []).length, 'E-BL1-11 counts the log entries');
   } else {
@@ -2054,7 +2079,7 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
     assert.match(closeoutRevision ?? '', /^[0-9a-f]{40}$/u, `${directory}: a growth capture is checked against a retained close-out revision`);
     const { against, addedPatterns, ...changes } = baseline.thresholdChanges;
     assert.deepEqual([against.revision, against.path], [closeoutRevision, baseline.thresholds.path], 'E-BL1-11 compares the thresholds with the retained close-out revision');
-    const before = readAtRevision(repositoryRoot, closeoutRevision, against.path);
+    const before = readAt(closeoutRevision, against.path);
     assert.equal(digest(before), against.sha256);
     assert.deepEqual(changes, thresholdChanges(parseThresholds(before), thresholds), 'E-BL1-11 lists every change to the thresholds since the close-out');
     const closeoutPatterns = catalogAt(closeoutRevision).patternIds;
@@ -2283,12 +2308,12 @@ async function forgeGrowth(capture, closeout) {
   boundary.closeoutScope = { run: false, reason: 'forged' };
   boundary.audit.checks = boundary.audit.checks.filter(({ id }) => id !== 'closeout-scope');
   const path = forged.artifacts['E-BL1-11'].observations.thresholds.path;
-  const before = readAtRevision(repositoryRoot, closeout, path);
+  const before = readAt(closeout, path);
   const closeoutPatterns = catalogAt(closeout).patternIds;
   forged.artifacts['E-BL1-11'].observations.thresholdChanges = {
     against: { revision: closeout, path, sha256: digest(before) },
     addedPatterns: catalogAt(capture.index.sourceRevision).patternIds.filter((id) => !closeoutPatterns.includes(id)),
-    ...thresholdChanges(parseThresholds(before), parseThresholds(readAtRevision(repositoryRoot, capture.index.sourceRevision, path))),
+    ...thresholdChanges(parseThresholds(before), parseThresholds(readAt(capture.index.sourceRevision, path))),
   };
   for (const [id, record] of Object.entries(forged.records)) {
     record.supersedes = { path: `${bl1}/superseded/${closeout.slice(0, 12)}/records/${id}.json`, sha256: digest(id), sourceRevision: closeout };
@@ -2303,7 +2328,7 @@ async function forgeGrowth(capture, closeout) {
     const { digestAffectingPaths } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
     const commits = growthCommits({ cwd: repositoryRoot, head: source, since: closeout, patternIds: added });
     // The forged source revision predates the tool, so the fixture binds the committed tool and reads it at HEAD (see `growthToolRevision`).
-    forged.verification.proofTools.push({ ...forged.verification.proofTool, path: growthScopeTool, sha256: digest(readAtRevision(repositoryRoot, 'HEAD', growthScopeTool)) });
+    forged.verification.proofTools.push({ ...forged.verification.proofTool, path: growthScopeTool, sha256: digest(readAt('HEAD', growthScopeTool)) });
     const scoped = auditBoundary({ head: source, growthCommits: commits.map(({ commit }) => commit), offline: true, only: growthScopedChecks, closeoutBase: null });
     boundary.audit.growthScope = scoped.growthScope;
     boundary.audit.checks = boundary.audit.checks.map((check) => scoped.checks.find(({ id }) => id === check.id) ?? check);
@@ -2497,244 +2522,6 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
   assert.throws(() => scoped([]), /BL1_AUDIT_GROWTH/u);
 });
 
-/**
- * A throwaway repository holding this checkout's HEAD tree, rebuilt so its last two patterns arrive in two growth commits:
- * `base` has neither, `first` adds the first, `second` adds the other. `variant(change)` branches from `first`, adds the other
- * pattern back, and applies `change`, as a growth commit that also changes something else. Its growth commits are squash merges
- * (their subjects end with a pull request number), as growth commits must be; `rebased()` builds the pull request that is not one.
- * Every commit adds its files with `git add -f`, so what HEAD's `.gitignore` ignores (a hosting file the fixture writes as a negative control)
- * cannot drop one of the fixture's own changes.
- */
-async function growthRepository() {
-  const cwd = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-repo-'));
-  const stash = await mkdtemp(join(tmpdir(), 'muxui-bl1-growth-stash-'));
-  gitIn(cwd, 'init', '-q', '-b', 'main');
-  gitIn(cwd, 'config', 'gc.auto', '0');
-  execFileSync('tar', ['-x', '-C', cwd], { input: execFileSync('git', ['archive', '--format=tar', 'HEAD'], { cwd: repositoryRoot, maxBuffer: 1 << 29 }), maxBuffer: 1 << 26 });
-  const manifestPath = 'packages/catalog/catalog-sources.json';
-  const original = await readFile(join(cwd, manifestPath), 'utf8');
-  const manifest = JSON.parse(original);
-  const records = manifest.records.filter(({ family }) => family === 'pattern');
-  const entries = records.slice(-2);
-  const [directoryA, directoryB] = entries.map(({ path }) => dirname(path));
-  const [patternA, patternB] = entries.map(({ path }) => JSON.parse(readFileSync(join(cwd, path), 'utf8')).id);
-  const earlier = JSON.parse(readFileSync(join(cwd, records[0].path), 'utf8')).id;
-  // The manifest without the entries under the two directories, except those under `kept`.
-  const listing = (...kept) => JSON.stringify({ ...manifest, records: manifest.records.filter(({ path }) => ![directoryA, directoryB].some((directory) => path.startsWith(`${directory}/`)) || kept.some((directory) => path.startsWith(`${directory}/`))) }, null, 2);
-  const commitAll = (message) => {
-    gitIn(cwd, 'add', '-A', '-f');
-    gitIn(cwd, 'commit', '-q', '-m', message);
-    return gitIn(cwd, 'rev-parse', 'HEAD');
-  };
-  for (const directory of [directoryA, directoryB]) {
-    await mkdir(join(stash, directory, '..'), { recursive: true });
-    await cp(join(cwd, directory), join(stash, directory), { recursive: true });
-    await rm(join(cwd, directory), { recursive: true });
-  }
-  const restore = (directory) => cp(join(stash, directory), join(cwd, directory), { recursive: true });
-  const edit = async (path, change) => writeFile(join(cwd, path), change(await readFile(join(cwd, path), 'utf8')));
-  await writeFile(join(cwd, manifestPath), listing());
-  const base = commitAll('base: neither block');
-  await restore(directoryA);
-  await writeFile(join(cwd, manifestPath), listing(directoryA));
-  const first = commitAll('first: adds one block (#101)');
-  await restore(directoryB);
-  await writeFile(join(cwd, manifestPath), original);
-  const second = commitAll('second: adds the other block (#102)');
-  const variant = async (change) => {
-    gitIn(cwd, 'checkout', '-q', '--detach', first);
-    await restore(directoryB);
-    await writeFile(join(cwd, manifestPath), original);
-    await change(edit);
-    return commitAll('growth that also changes something else (#103)');
-  };
-  // A later commit on top of `second`: the growth is over, and this one changes the second block, as a follow-up to the pull request does.
-  const modify = async (change) => {
-    gitIn(cwd, 'checkout', '-q', '--detach', second);
-    await change(edit, cwd);
-    return commitAll('a later commit that changes the second block (#104)');
-  };
-  // One pull request rebase-merged as two commits on `base`, neither with a pull request number: the first adds a block, the second adds a
-  // workflow and touches no block.
-  const rebased = async () => {
-    gitIn(cwd, 'checkout', '-q', '--detach', base);
-    await restore(directoryA);
-    await writeFile(join(cwd, manifestPath), listing(directoryA));
-    const block = commitAll('feat(catalog): add the block');
-    await mkdir(join(cwd, '.github/workflows'), { recursive: true });
-    await writeFile(join(cwd, '.github/workflows/x.yml'), 'name: x\n');
-    return { block, workflow: commitAll('ci: add a workflow') };
-  };
-  const dispose = () => Promise.all([cwd, stash].map((path) => rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })));
-  return { cwd, base, first, second, variant, modify, rebased, edit, patternA, patternB, directoryA, directoryB, earlier, records, dispose };
-}
-
-test('each BL1 growth commit is audited against its first parent, and one that changes more than its blocks fails', async () => {
-  const { growthCommits, catalogAcrossCommit } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
-  const { auditBoundary, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
-  const repo = await growthRepository();
-  const { cwd, base, first, second, patternA, patternB, directoryA, directoryB } = repo;
-  // The retained close-out stands at `base`: neither new block exists yet, and the older blocks predate it.
-  const derive = (head, patternIds = [patternA, patternB]) => growthCommits({ cwd, head, since: base, patternIds });
-  const audit = (growth) => auditBoundary({ cwd, base, head: growth.at(-1), mergeRevision: base, closeoutBase: null, growthCommits: growth, offline: true, only: growthScopedChecks });
-  const failed = (growth) => audit(growth).checks.filter(({ pass }) => !pass).map(({ id }) => id);
-  const commitsOf = (head) => derive(head).map(({ commit }) => commit);
-  const jsonEdit = (change) => (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`;
-  const summaryEdit = jsonEdit((record) => ({ ...record, summary: `${record.summary} Edited.` }));
-  try {
-    const reactSource = (await readdir(join(cwd, 'packages/react/src'))).find((name) => name.endsWith('.mjs'));
-    // Blocks that arrived in two commits are found one commit at a time, from a head that is later than both.
-    gitIn(cwd, 'checkout', '-q', '--detach', second);
-    await repo.edit('README.md', (text) => `${text}\nMore.\n`);
-    gitIn(cwd, 'add', '-A', '-f');
-    gitIn(cwd, 'commit', '-q', '-m', 'an unrelated change after the growth');
-    const later = gitIn(cwd, 'rev-parse', 'HEAD');
-    const found = derive(later);
-    assert.deepEqual(
-      found.map(({ commit, parent, addedPatterns, changedPatterns, excludedDirectories, digestAffectingPathsChanged }) => [commit, parent, addedPatterns, changedPatterns, excludedDirectories, digestAffectingPathsChanged]),
-      [[first, base, [patternA], [], [`${directoryA}/`], []], [second, first, [patternB], [], [`${directoryB}/`], []]],
-    );
-    assert.ok(found[1].excludedEntries.length > 0 && found[1].excludedEntries.every(({ path }) => path.startsWith(`${directoryB}/`)), 'the excluded sources are the ones the commit added');
-    assert.throws(() => derive(later, ['muxui:pattern:missing']), /BL1_GROWTH_COMMIT_MISSING: muxui:pattern:missing is not a pattern/u);
-    assert.throws(() => derive(later, [repo.earlier]), /BL1_GROWTH_COMMIT_MISSING: no commit after .* added or changed/u, 'a block no commit after the close-out touched is not growth');
-    // Growth that only adds blocks passes every scoped check, whatever else the head holds.
-    assert.deepEqual(failed([first, second]), []);
-
-    // Git cannot say which commits belong to one pull request, so each growth pull request must be one squash-merged commit. A pull request
-    // rebase-merged as several commits has a commit that touches no block (here a workflow): selection would never see it, and every scoped
-    // check would pass without it. The selection refuses the pull request instead.
-    const { block, workflow } = await repo.rebased();
-    assert.throws(() => derive(workflow, [patternA]), /BL1_GROWTH_NOT_SQUASHED: .* \(feat\(catalog\): add the block\) adds or changes a block but is not a squash merge/u);
-    // Without the rule the workflow commit escapes the selection and the scoped audit passes: the defect the rule closes.
-    const escaped = growthCommits({ cwd, head: workflow, since: base, patternIds: [patternA], requireSquash: false }).map(({ commit }) => commit);
-    assert.deepEqual(escaped, [block], 'the workflow commit is not a growth commit');
-    assert.deepEqual(failed(escaped), [], 'and so no scoped check sees the workflow');
-    assert.deepEqual(failed([block, workflow]), ['no-workflow-or-hosting-config'], 'while auditing the workflow commit does fail the check');
-    // A merge commit is refused the same way.
-    gitIn(cwd, 'checkout', '-q', '--detach', base);
-    gitIn(cwd, 'merge', '-q', '--no-ff', '-m', 'Merge pull request #7 from side', block);
-    assert.throws(() => derive(gitIn(cwd, 'rev-parse', 'HEAD'), [patternA]), /BL1_GROWTH_NOT_SQUASHED: .* is a merge commit/u);
-    const clean = await catalogAcrossCommit({ cwd, ...found[1] });
-    assert.deepEqual([clean.identical, clean.holds], [true, true], 'the catalog without the sources the commit added is the same before and after');
-
-    // A later commit that only edits a new block is a growth commit too, audited with that block left out of both sides.
-    const edited = await repo.modify((edit) => edit(`${directoryB}/artifact.json`, summaryEdit));
-    const [, , editCommit] = derive(edited);
-    assert.deepEqual([editCommit.commit, editCommit.parent, editCommit.addedPatterns, editCommit.changedPatterns], [edited, second, [], [patternB]]);
-    assert.deepEqual(failed(commitsOf(edited)), []);
-    assert.deepEqual([(await catalogAcrossCommit({ cwd, ...editCommit })).holds], [true], 'the edited block is left out of both sides');
-    // The add-then-modify escape: the same later commit also changes React source, a dependency, or a component record. Only the commits that first
-    // added the blocks pass; every commit that touches them is audited, so the later one fails.
-    for (const [label, extra, checks] of [
-      ['@muxui/react source', (edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`), ['react-source-files']],
-      ['the lockfile', (edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`), ['no-dependency-change']],
-      ['a component record', (edit) => edit('catalog/components/button/artifact.json', summaryEdit), ['no-new-component-token-capability-or-platform']],
-      ['a workflow', (edit) => edit('.github/workflows/ci.yml', (text) => `${text}\n# changed\n`), ['no-workflow-or-hosting-config']],
-    ]) {
-      const head = await repo.modify(async (edit) => { await edit(`${directoryB}/artifact.json`, summaryEdit); await extra(edit); });
-      assert.deepEqual(failed([first, second]), [], `${label}: the commits that added the blocks alone are clean`);
-      assert.deepEqual(failed(commitsOf(head)), checks, `${label}: a later commit that edits a new block and also changes it fails`);
-    }
-
-    // A growth commit that also changes @muxui/react source, its package.json, the lockfile, or a component record fails the check that reads it.
-    const withSource = await repo.variant((edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`));
-    assert.deepEqual(failed([first, withSource]), ['react-source-files']);
-    const withManifest = await repo.variant((edit) => edit('packages/react/package.json', jsonEdit((manifest) => ({ ...manifest, version: `${manifest.version}+bumped` }))));
-    assert.deepEqual(failed([first, withManifest]), ['react-package-manifest', 'react-source-files', 'versions-follow-decision-0026']);
-    const withLockfile = await repo.variant((edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`));
-    assert.deepEqual(failed([first, withLockfile]), ['no-dependency-change']);
-    const withRecord = await repo.variant((edit) => edit('catalog/components/button/artifact.json', summaryEdit));
-    assert.deepEqual(failed([first, withRecord]), ['no-new-component-token-capability-or-platform']);
-    const withWorkflow = await repo.variant((edit) => edit('.github/workflows/ci.yml', (text) => `${text}\n# changed\n`));
-    assert.deepEqual(failed([first, withWorkflow]), ['no-workflow-or-hosting-config']);
-    // Only the commit that changed more is blamed: the clean one alone still passes.
-    assert.deepEqual(failed([first]), []);
-
-    // A growth commit that changes the catalog without the sources of its blocks moves the digest: a component record, or a close-out block, which is
-    // not one of the new blocks and so is never left out of either side.
-    const [, recordCommit] = derive(withRecord);
-    const recordCatalog = await catalogAcrossCommit({ cwd, ...recordCommit });
-    assert.deepEqual([recordCatalog.identical, recordCatalog.holds], [false, false], 'a changed component record moves the digest');
-    const withCloseoutBlock = await repo.variant((edit) => edit(`${dirname(repo.records[0].path)}/artifact.json`, summaryEdit));
-    assert.deepEqual(failed([first, withCloseoutBlock]), [], 'an edit to a close-out block is outside the E-BL1-09 record checks');
-    const [, closeoutBlockCommit] = derive(withCloseoutBlock);
-    assert.ok(!closeoutBlockCommit.excludedDirectories.some((directory) => directory.startsWith(dirname(repo.records[0].path))), 'a close-out block is not left out of either side, so its edit moves the digest');
-
-    // A growth commit that changes a compiler or schema path fails even though the one-compiler digest comparison cannot see it.
-    // The copy is this checkout's HEAD, so bump whatever SCHEMA_VERSION it holds, and fail loudly if the edit finds nothing to change.
-    const bumpSchemaVersion = (text) => {
-      const bumped = text.replace(/(SCHEMA_VERSION = '\d+\.\d+\.)(\d+)'/u, (_, head, patch) => `${head}${Number(patch) + 1}'`);
-      assert.notEqual(bumped, text, 'the schema source edit must change packages/schema/src/index.mjs');
-      return bumped;
-    };
-    const withSchema = await repo.variant((edit) => edit('packages/schema/src/index.mjs', bumpSchemaVersion));
-    const [, schemaCommit] = derive(withSchema);
-    assert.deepEqual(schemaCommit.digestAffectingPathsChanged, ['packages/schema/src/index.mjs']);
-    const schemaCatalog = await catalogAcrossCommit({ cwd, ...schemaCommit });
-    assert.deepEqual([schemaCatalog.identical, schemaCatalog.holds], [true, false], 'the same compiler compiles both sides, so only the changed path fails the commit');
-    // Export resolution decides which module the compiler loads, so redirecting a package's exports fails like changing the module: the
-    // same compiler compiles both sides and the digest cannot show it. A growth pull request never touches these files.
-    const redirect = (name) => repo.variant((edit) => edit(`packages/${name}/package.json`, jsonEdit((manifest) => ({ ...manifest, exports: { ...manifest.exports, '.': './src/elsewhere.mjs' } }))));
-    const [, redirectCommit] = derive(await redirect('schema'));
-    assert.deepEqual(redirectCommit.digestAffectingPathsChanged, ['packages/schema/package.json']);
-    const redirected = await catalogAcrossCommit({ cwd, ...redirectCommit });
-    assert.deepEqual([redirected.identical, redirected.holds], [true, false], 'a redirected schema export leaves the digest alone and fails the commit');
-    for (const name of ['tokens', 'catalog']) assert.deepEqual(derive(await redirect(name))[1].digestAffectingPathsChanged, [`packages/${name}/package.json`], `a redirected ${name} export is a digest-affecting change`);
-    // A commit that changes only a pattern validator, which writes nothing to the compiled output, is not held to the compiler paths.
-    const withValidator = await repo.variant((edit) => edit('packages/catalog/src/pattern-content.mjs', (text) => `${text}\n// changed\n`));
-    assert.deepEqual(derive(withValidator)[1].digestAffectingPathsChanged, []);
-
-    // Decision 0028 removed `authorityDecisionPath` from the source manifest and the compiler rejects it, so trees from before then compile with that one key
-    // dropped, on both sides. It is not an escape hatch: any other unknown manifest key still fails the compiler.
-    const manifestEdit = (change) => jsonEdit((manifest) => ({ ...manifest, ...change }));
-    const legacy = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ authorityDecisionPath: 'decisions/0017-text-family-admission.md' })));
-    await repo.edit('README.md', (text) => `${text}\nLegacy.\n`);
-    gitIn(cwd, 'add', '-A', '-f');
-    gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree with the legacy manifest key (#105)');
-    const legacyChild = gitIn(cwd, 'rev-parse', 'HEAD');
-    const acrossLegacy = await catalogAcrossCommit({ cwd, commit: legacyChild, parent: legacy, excludedDirectories: [], digestAffectingPathsChanged: [] });
-    assert.deepEqual([acrossLegacy.identical, acrossLegacy.holds], [true, true], 'trees that carry the removed manifest key compile on both sides');
-    const acrossAdded = await catalogAcrossCommit({ cwd, commit: legacy, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] });
-    assert.deepEqual([acrossAdded.identical, acrossAdded.holds], [true, true], 'the key is dropped from the tree that carries it, and the one that does not is unchanged');
-    // Block categories became catalog data after the close-out: trees from before have no registry and compile with the closed list they had.
-    const unregistered = await repo.modify(async (edit, root) => {
-      await edit('packages/catalog/catalog-sources.json', jsonEdit(({ patternCategoriesPath: _registry, ...manifest }) => manifest));
-      await rm(join(root, 'catalog/patterns/categories.json'));
-    });
-    await repo.edit('README.md', (text) => `${text}\nUnregistered.\n`);
-    gitIn(cwd, 'add', '-A', '-f');
-    gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree without a category registry (#106)');
-    const unregisteredChild = gitIn(cwd, 'rev-parse', 'HEAD');
-    const acrossUnregistered = await catalogAcrossCommit({ cwd, commit: unregisteredChild, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] });
-    assert.deepEqual([acrossUnregistered.identical, acrossUnregistered.holds], [true, true], 'trees from before categories were catalog data compile with the closed list');
-    // The injected list is the shipped file, so a tree without the registry and the same tree with it compile to one bundle.
-    const withRegistry = await catalogAcrossCommit({ cwd, commit: second, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] });
-    assert.deepEqual([withRegistry.identical, withRegistry.holds], [true, true], 'a tree compiles to the same digest with the registry injected or shipped');
-    const unknownKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ unexpectedKey: true })));
-    await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), /MUXUI_CATALOG_SOURCE_INVALID/u, 'any other unknown manifest key still fails');
-
-    // Renames are not tracked: a commit that renames, moves, or deletes the directory or record of a block added since the close-out fails, whatever
-    // the block is called at the head, because the two sides could not exclude it consistently and its earlier commits would go unaudited.
-    const movedMessage = /BL1_GROWTH_BLOCK_MOVED: .* the growth block .*; rename or remove a growth block in a separate, non-growth change/u;
-    const renamed = await repo.modify(async (edit, root) => {
-      const target = join(dirname(directoryB), 'zz-renamed-block');
-      await cp(join(root, directoryB), join(root, target), { recursive: true });
-      await rm(join(root, directoryB), { recursive: true });
-      await edit('packages/catalog/catalog-sources.json', (text) => text.replaceAll(`${directoryB}/`, `${target}/`));
-    });
-    assert.throws(() => derive(renamed), movedMessage, 'a growth block renamed after its addition');
-    const deleted = await repo.modify(async (edit, root) => {
-      await rm(join(root, directoryB), { recursive: true });
-      await edit('packages/catalog/catalog-sources.json', jsonEdit((manifest) => ({ ...manifest, records: manifest.records.filter(({ path }) => !path.startsWith(`${directoryB}/`)) })));
-    });
-    assert.throws(() => derive(deleted, [patternA]), movedMessage, 'a growth block deleted after its addition');
-    // Only the record's move counts: the other blocks, and later edits to an unmoved block, are untouched by this rule.
-    assert.doesNotThrow(() => derive(edited));
-  } finally {
-    await repo.dispose();
-  }
-});
-
 // A tree from before block categories were catalog data is compiled with the closed list injected. The text is held to the registry file as the
 // change that moved the list added it, so the injected tree and the shipped one compile to the same bundle.
 test('the closed category list injected into pre-registry trees is the registry file as it was added', async () => {
@@ -2899,7 +2686,7 @@ async function forgeInformational(capture) {
   const source = capture.index.sourceRevision;
   forged.verification.growthGate = 'informational';
   for (const tool of forged.verification.proofTools) {
-    if ([growthScopeTool, boundaryAuditTool].includes(tool.path)) tool.sha256 = digest(readAtRevision(repositoryRoot, 'HEAD', tool.path));
+    if ([growthScopeTool, boundaryAuditTool].includes(tool.path)) tool.sha256 = digest(readAt('HEAD', tool.path));
   }
   const audit = forged.artifacts['E-BL1-09'].observations.audit;
   const scoped = auditBoundary({ head: source, growthCommits: audit.growthScope.commits.map(({ commit }) => commit), growthGate: 'informational', offline: true, only: growthScopedChecks, closeoutBase: null });
@@ -2918,7 +2705,7 @@ async function forgeInformational(capture) {
       review: { artifact: review.artifact, reviewer: review.reviewer, reviewedRevision: source, reviewedTree: capture.index.sourceTree, keyAtReviewedRevision: expectedCoverageKey(source, block, boundNonRenderingSources('HEAD')) },
     })),
   };
-  const logged = parseThresholds(readAtRevision(repositoryRoot, 'HEAD', forged.artifacts['E-BL1-11'].observations.thresholds.path));
+  const logged = parseThresholds(readAt('HEAD', forged.artifacts['E-BL1-11'].observations.thresholds.path));
   forged.artifacts['E-BL1-11'].observations.revisionLog = { rule: 'forged', entries: (logged.provenance.revisions ?? []).length, unlogged: [] };
   return forged;
 }
@@ -3000,63 +2787,6 @@ test('an informational BL1 growth capture is held to what it claims, and a captu
   await strict((forged) => { forged.artifacts['E-BL1-10'].observations.reviewCoverage = { rows: [] }; }, 'a capture without growthGate records one review of the whole catalog/patterns tree');
   await strict((forged) => { forged.artifacts['E-BL1-09'].observations.audit.checks.find(({ id }) => id === 'react-source-files').legs.onlyKnownPaths = false; }, 'the recorded legs are the legs git gives');
   await strict((forged) => { forged.artifacts['E-BL1-08'].observations.growthScope.commits[0].identical = false; }, 'has the same digest before and after');
-});
-
-test('an informational growth gate records what a growth commit changed in @muxui/react, dependencies, and component records, and still fails a workflow, a version bump, or a platform', async () => {
-  const { auditBoundary, growthInformationalLegs, growthScopedChecks } = await import('../../../../tests/evidence/bl1/boundary-audit.mjs');
-  const repo = await growthRepository();
-  const { cwd, base, first, second, directoryB } = repo;
-  const jsonEdit = (change) => (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`;
-  const audit = (growth, growthGate) => auditBoundary({ cwd, base, head: growth.at(-1), mergeRevision: base, closeoutBase: null, growthCommits: growth, offline: true, only: growthScopedChecks, growthGate });
-  const failed = (growth, growthGate) => audit(growth, growthGate).checks.filter(({ pass }) => !pass).map(({ id }) => id);
-  try {
-    const reactSource = (await readdir(join(cwd, 'packages/react/src'))).find((name) => name.endsWith('.mjs'));
-    // Every check that reads @muxui/react, dependencies, and component records has legs that are recorded and do not gate; the gates are the rest.
-    assert.deepEqual(Object.keys(growthInformationalLegs), ['react-package-manifest', 'react-source-files', 'react-stylesheet-names', 'no-dependency-change', 'no-new-component-token-capability-or-platform']);
-    assert.deepEqual(growthInformationalLegs['no-new-component-token-capability-or-platform'], ['catalogRecordsUnchanged'], 'web.react-only stays a gate');
-    for (const gate of ['no-workflow-or-hosting-config', 'versions-follow-decision-0026']) assert.equal(growthInformationalLegs[gate], undefined, `${gate} gates every leg`);
-
-    // Computed from the checkout's own version, so the bump changes it whatever release candidate HEAD is at.
-    const bumpVersion = jsonEdit((manifest) => ({ ...manifest, version: `${manifest.version}+bumped` }));
-    for (const [label, change, checks] of [
-      ['@muxui/react source', (edit) => edit(`packages/react/src/${reactSource}`, (text) => `${text}\n// changed\n`), ['react-source-files']],
-      ['the lockfile', (edit) => edit('pnpm-lock.yaml', (text) => `${text}\n# changed\n`), ['no-dependency-change']],
-      ['a component record', (edit) => edit('catalog/components/button/artifact.json', jsonEdit((record) => ({ ...record, summary: `${record.summary} Edited.` }))), ['no-new-component-token-capability-or-platform']],
-    ]) {
-      const commit = await repo.variant(change);
-      assert.deepEqual(failed([first, commit]), checks, `${label}: a strict audit fails the commit, as every capture made before Decision 0029 did`);
-      const recorded = audit([first, commit], 'informational');
-      assert.equal(recorded.pass, true, `${label}: the informational audit passes`);
-      assert.deepEqual(recorded.growthScope.informationalLegs, growthInformationalLegs);
-      const check = recorded.checks.find(({ id }) => id === checks[0]);
-      assert.equal(Object.values(check.legs).includes(false), true, `${label}: the leg is still computed and recorded as failing`);
-      assert.deepEqual(check.informationalLegs, growthInformationalLegs[checks[0]]);
-      assert.equal(check.observations.commits.length, 2, `${label}: the per-commit list is recorded`);
-      assert.match(check.claim, /claims nothing about/u, `${label}: the claim says it claims nothing`);
-    }
-
-    // What stays a gate fails a growth commit whatever the gate: a workflow, a hosting file, a version bump, and a platform other than web.react.
-    const withWorkflow = await repo.variant((edit) => edit('.github/workflows/ci.yml', (text) => `${text}\n# changed\n`));
-    assert.deepEqual(failed([first, withWorkflow], 'informational'), ['no-workflow-or-hosting-config'], 'a growth commit that changes a workflow still fails');
-    const withHosting = await repo.variant(() => writeFile(join(cwd, 'netlify.toml'), '[build]\n'));
-    assert.deepEqual(failed([first, withHosting], 'informational'), ['no-workflow-or-hosting-config']);
-    const withVersion = await repo.variant((edit) => edit('packages/react/package.json', bumpVersion));
-    assert.deepEqual(failed([first, withVersion], 'informational'), ['versions-follow-decision-0026'], 'a growth commit that bumps a version fails, and the manifest leg it also changes is recorded');
-    const withCatalogVersion = await repo.variant((edit) => edit('packages/catalog/package.json', bumpVersion));
-    assert.ok(failed([first, withCatalogVersion], 'informational').includes('versions-follow-decision-0026'), 'the three packages Decision 0026 named may not be bumped by a growth commit either');
-    const withPlatform = await repo.variant((edit) => edit(`${directoryB}/artifact.json`, jsonEdit((record) => ({ ...record, platforms: [...record.platforms, 'web.html'] }))));
-    assert.deepEqual(failed([first, withPlatform], 'informational'), ['no-new-component-token-capability-or-platform'], 'web.react-only stays a gate');
-
-    // A later release candidate is not a growth commit: it bumps @muxui/react after the growth, and the range from the base blames the growth for it.
-    const later = await repo.modify((edit) => edit('packages/react/package.json', bumpVersion));
-    const versionsOver = (growthCommits) => auditBoundary({ cwd, base, head: later, mergeRevision: base, closeoutBase: null, growthCommits, offline: true, only: ['versions-follow-decision-0026'] }).pass;
-    assert.equal(versionsOver(undefined), false, 'the range from the base fails after a later release candidate');
-    assert.equal(versionsOver([first, second]), true, 'the growth commits do not');
-    assert.throws(() => audit([first], 'sideways'), /BL1_AUDIT_GROWTH_GATE: unknown growth gate/u);
-    assert.throws(() => auditBoundary({ cwd, base, head: first, closeoutBase: null, offline: true, growthGate: 'informational' }), /a growth gate needs growth commits/u);
-  } finally {
-    await repo.dispose();
-  }
 });
 
 test('the BL1 registry check passes after a later release candidate and fails when something already published was rewritten', async () => {

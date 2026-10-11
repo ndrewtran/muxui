@@ -109,17 +109,27 @@ checked in dependency order within `checks`.
 
 ### Retained-evidence tests
 
-`evidence-integrity.test.mjs` (the retained BL1 and R1 evidence, the capture
-tools, and the growth audit over an archive of HEAD) is about four minutes of
-this package's five. The package therefore has two scripts. `check` runs the
-repository audit, `evidence-verify.mjs`, and every test file except that one.
-`check:evidence` runs `evidence-verify.mjs` and that file.
+The `test/evidence-*.test.mjs` files were four minutes of this package's five
+when they were one file: `evidence-integrity.test.mjs` (the retained BL1 and R1
+evidence and the capture tools) and the growth audit over an archive of HEAD,
+split into `evidence-growth-scope`, `-catalog`, and `-normalization` around the
+fixture they share, `evidence-growth-repository.mjs`. The package has two
+scripts. `check` runs the repository audit, `evidence-verify.mjs`, and every other
+test file. `check:evidence` runs `evidence-verify.mjs` and the evidence files, one
+process each, with `--test-concurrency` set to their count so a small runner still
+overlaps them (the growth files compile the catalog about twenty times and are the
+longest). The fixture archives HEAD without `tests/evidence/`, which the audit
+reads from the checkout and which was most of the bytes, and a test holds its
+tree to HEAD's tree minus that directory, so it cannot stop standing for the
+repository. The integrity tests re-derive each retained capture from git many
+times, so they cache reads of a commit's objects for the run.
 
 A pull request's `checks-policy` group runs `check:evidence` only when the change
 reaches what the tests load or read, through imports or as data:
 
-- `pullRequestImpact.evidenceInputs` lists paths (a trailing slash is a
-  directory): `tests/evidence/`, the policy modules and test the suite imports,
+- `pullRequestImpact.evidenceInputs` lists path prefixes (a trailing slash is a
+  directory): `tests/evidence/`, the policy modules the suite imports, the
+  `test/evidence-` files (the tests and the fixture they share),
   `apps/docs/src/lib/block-presets.ts`, `packages/react/src/r1-deferred-evidence.mjs`,
   Decision 0022, which the R1 exit capture reads, and the data the growth audit
   and its fixture read from the archive of HEAD: `.github/workflows/`,

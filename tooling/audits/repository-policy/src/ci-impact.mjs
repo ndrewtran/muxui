@@ -982,7 +982,7 @@ function refreshStoryRuns(plan, pageIndex) {
 // React package, when the checkout has it: adding the file is the whole declaration.
 const blockBrowserTest = (slug) => patternBrowserTest(resolve(repositoryRoot, 'packages/react'), slug);
 
-// The retained-evidence tests (`check:evidence`, about 4 minutes) run when a
+// The retained-evidence tests (`check:evidence`, about a minute) run when a
 // change reaches something they load or read, not for every policy-routed path.
 // `pullRequestImpact` names those inputs three ways:
 // - `evidenceInputs`: path prefixes (a directory ends in a slash);

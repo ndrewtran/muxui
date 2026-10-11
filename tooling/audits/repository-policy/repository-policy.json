@@ -177,7 +177,7 @@
       "tooling/audits/repository-policy/src/policy.mjs",
       "tooling/audits/repository-policy/src/release-proof.mjs",
       "tooling/audits/repository-policy/src/workspace-packages.mjs",
-      "tooling/audits/repository-policy/test/evidence-integrity.test.mjs"
+      "tooling/audits/repository-policy/test/evidence-"
     ],
     "evidenceInputPatterns": [
       "(?:^|/)package\\.json$",

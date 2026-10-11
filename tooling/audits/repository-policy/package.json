@@ -14,8 +14,8 @@
     "css-tree": "3.2.1"
   },
   "scripts": {
-    "check": "node src/cli.mjs && node src/evidence-verify.mjs && node --test 'test/!(evidence-integrity).test.mjs' ../../../.github/scripts/validate-planning-pr.test.cjs ../../../tests/fixtures/g0.4/fixture-corpus.test.mjs ../../../tests/fixtures/g1.0/entry-contract.test.mjs",
-    "check:evidence": "node src/evidence-verify.mjs && node --test test/evidence-integrity.test.mjs",
+    "check": "node src/cli.mjs && node src/evidence-verify.mjs && node --test 'test/!(evidence-*).test.mjs' ../../../.github/scripts/validate-planning-pr.test.cjs ../../../tests/fixtures/g0.4/fixture-corpus.test.mjs ../../../tests/fixtures/g1.0/entry-contract.test.mjs",
+    "check:evidence": "node src/evidence-verify.mjs && node --test --test-concurrency=4 'test/evidence-*.test.mjs'",
     "proof:pattern-variants": "node src/pattern-variant-proof.mjs",
     "generate": "node src/generate.mjs",
     "generate:check": "node src/generate.mjs --check"
