@@ -1152,6 +1152,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/approval-request/examples/react/question-stepper.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/property-inspector/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/property-inspector/examples/react/adjust-panel.example.json"
     }
   ]
 }

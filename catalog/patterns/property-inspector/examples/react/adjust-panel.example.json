@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:property-inspector-adjust-panel",
+  "kind": "example",
+  "name": "Adjust panel",
+  "summary": "A card with an Adjust action, a layout toggle, number fields, and a type select.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/property-inspector/examples/react/adjust-panel.tsx"
+}
