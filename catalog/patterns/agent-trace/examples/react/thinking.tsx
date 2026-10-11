@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { Activity, Avatar, Button, CodeBlock, Disclosure, Link, Tabs, Text } from '@muxui/react';
+import { Markdown } from '@muxui/react/markdown';
 
 // One stroke path per icon.
 const icon = (path: string) => ({ className }: { className?: string }) => (
@@ -38,6 +39,7 @@ function Step({ title, children }: { title: string; children: ReactNode }) {
 export function AgentTraceThinkingExample() {
   // Local presentation state only: the trace shows placeholder steps and never runs a task.
   const [diff, setDiff] = useState(true);
+  const diffId = useId();
   const panels = {
     steps: (
       <Activity
@@ -50,7 +52,7 @@ export function AgentTraceThinkingExample() {
     ),
     reasoning: (
       <Step title="Thinking">
-        <Text as="p" color="muted">Two items gate the launch. The billing copy still needs review, and the export fix has a failing check. Ownership is clear for both, so the next step is to confirm the review date.</Text>
+        <Markdown source={'Two items gate the launch:\n\n- The **billing copy** still needs review.\n- The **export fix** has a failing check.\n\nOwnership is clear for both, so the next step is to confirm the review date.'} />
       </Step>
     ),
     search: (
@@ -72,7 +74,7 @@ export function AgentTraceThinkingExample() {
         <div className="trace-row"><Text size="sm" variant="label">Read</Text><Text size="sm" variant="mono" color="muted">launch-plan.md</Text></div>
         <div className="trace-row">
           <Text size="sm" variant="label">Edit</Text>
-          <Button variant="neutral" size="sm" aria-expanded={diff} aria-controls="trace-diff" onActivate={() => setDiff(!diff)}>
+          <Button variant="neutral" size="sm" aria-expanded={diff} aria-controls={diffId} onActivate={() => setDiff(!diff)}>
             <span className="trace-chip">
               <Text as="span" size="sm" variant="mono" color="muted">checklist.ts</Text>
               <Text as="span" size="sm" variant="mono" color="muted">+2</Text>
@@ -80,7 +82,7 @@ export function AgentTraceThinkingExample() {
             </span>
           </Button>
         </div>
-        <div id="trace-diff" hidden={!diff}>
+        <div id={diffId} hidden={!diff}>
           <CodeBlock mode="diff" filename="checklist.ts" language="typescript" before={before} after={after} />
         </div>
       </Step>

@@ -78,6 +78,11 @@
       "role": "progress",
       "component": "muxui:component:progress-bar",
       "requirement": "optional"
+    },
+    {
+      "role": "reasoning",
+      "component": "muxui:component:markdown",
+      "requirement": "optional"
     }
   ],
   "variants": [

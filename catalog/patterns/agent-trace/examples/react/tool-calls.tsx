@@ -32,6 +32,11 @@ export function AgentTraceToolCallsExample() {
           padding: var(--muxui-semantic-layout-inset-xlarge) var(--muxui-semantic-layout-viewport-inset);
         }
 
+        /* The header rests as plain text; the Disclosure fills its trigger, so this block clears it. */
+        .calls .calls-disclosure button[aria-expanded] {
+          background-color: transparent;
+        }
+
         .calls-title {
           display: inline-flex;
           align-items: center;
@@ -69,6 +74,7 @@ export function AgentTraceToolCallsExample() {
         }
       `}</style>
       <Disclosure
+        className="calls-disclosure"
         expanded={open}
         onExpandedChange={setOpen}
         title={<span className="calls-title" data-open={open}><Chevron className="calls-icon" />4 tool calls, 2 messages</span>}

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { assertFits, expectRendered, measurePageFit, openBlock, patternVariant, reachableStops, ringWalk, startVariantServer, tabWalk } from './pattern-probes.mjs';
+import { assertFits, assertUniqueIds, expectRendered, measurePageFit, openBlock, patternVariant, reachableStops, ringWalk, startVariantServer, tabWalk } from './pattern-probes.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the three agent trace variants, loaded from their canonical
@@ -56,6 +56,10 @@ async function thinkingTests(t, browser, url) {
       const reasoning = tab.getByRole('button', { name: 'Thinking', exact: true });
       const paragraph = tab.getByText('Two items gate the launch', { exact: false });
       await expectRendered(paragraph, true);
+      // Reasoning is rich text: a list of two items with the key phrases in bold.
+      const reasoningPanel = tab.getByRole('tabpanel', { name: 'Reasoning' });
+      assert.equal(await reasoningPanel.getByRole('listitem').count(), 2);
+      assert.deepEqual(await reasoningPanel.locator('strong').allTextContents(), ['billing copy', 'export fix']);
       assert.equal(await expanded(reasoning), 'true');
       assert.equal(await reasoning.locator('.trace-title').getAttribute('data-open'), 'true');
       await reasoning.click();
@@ -74,7 +78,10 @@ async function thinkingTests(t, browser, url) {
 
       // Coding: the Edit chip shows and hides the diff.
       const chip = tab.getByRole('button', { name: /^checklist\.ts/u });
-      const diff = tab.locator('#trace-diff');
+      // The chip controls the diff by a generated id, not a fixed one.
+      const diffId = await chip.getAttribute('aria-controls');
+      assert.ok(diffId && diffId !== 'trace-diff', 'the diff id is generated per instance');
+      const diff = tab.locator(`[id="${diffId}"]`);
       assert.equal(await expanded(chip), 'true');
       await diff.waitFor({ state: 'visible' });
       assert.match(await diff.textContent(), /"export"/u);
@@ -94,6 +101,13 @@ async function thinkingTests(t, browser, url) {
     await walkBothSchemes(browser, url, ['tab Reasoning', 'button Thinking'], 'reasoning', (tab) => tab.getByRole('tab', { name: 'Reasoning' }).click());
     await walkBothSchemes(browser, url, ['tab Search', 'button Searching the web', 'link Rollout checklist basics', 'link Staged release runbook'], 'search', (tab) => tab.getByRole('tab', { name: 'Search' }).click());
     await walkBothSchemes(browser, url, ['tab Coding', 'button Running tools', 'button checklist.ts +2 -1', 'button Copy updated code', 'pre const owners = ['], 'coding', (tab) => tab.getByRole('tab', { name: 'Coding' }).click());
+  });
+
+  await t.test('thinking: two instances share no ids, with the coding diff shown', async () => {
+    await assertUniqueIds(browser, url, 'thinking', async (tab) => {
+      const coding = tab.getByRole('tab', { name: 'Coding' });
+      for (let index = 0; index < await coding.count(); index += 1) await coding.nth(index).click();
+    });
   });
 
   await t.test('thinking: never scrolls the page horizontally in any kind', async () => {
@@ -122,6 +136,8 @@ async function toolCallsTests(t, browser, url) {
       const chip = (name) => tab.getByRole('button', { name, exact: true });
       await chip('rollout.tsx').waitFor();
       assert.equal(await expanded(header), 'true');
+      // The header rests as plain text, with no fill of its own.
+      assert.equal(await header.evaluate((node) => getComputedStyle(node).backgroundColor), 'rgba(0, 0, 0, 0)');
       assert.equal(await header.locator('.calls-title').getAttribute('data-open'), 'true');
       await header.click();
       await chip('rollout.tsx').waitFor({ state: 'hidden' });
@@ -162,6 +178,10 @@ async function toolCallsTests(t, browser, url) {
       'button npm run build',
       'button timeline.png',
     ], 'tool calls');
+  });
+
+  await t.test('tool calls: two instances share no ids', async () => {
+    await assertUniqueIds(browser, url, 'tool calls');
   });
 
   await t.test('tool calls: never scrolls the page horizontally, and keeps a long chip inside the row', async () => {
@@ -218,6 +238,10 @@ async function taskRowsTests(t, browser, url) {
       'summary Verified vendor records',
       'summary Build reorder list',
     ], 'task rows');
+  });
+
+  await t.test('task rows: two instances share no ids', async () => {
+    await assertUniqueIds(browser, url, 'task rows');
   });
 
   await t.test('task rows: never scrolls the page horizontally with every row open', async () => {
