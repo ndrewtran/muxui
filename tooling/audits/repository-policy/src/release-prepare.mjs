@@ -160,11 +160,17 @@ function exampleImports(source) {
 const yarnVersion = '1.22.22';
 const workspacePnpmVersion = JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8')).packageManager.replace(/^pnpm@/u, '');
 
+// The workspace's pinned pnpm for consumers outside the workspace: the pnpm running
+// this script, else the pin through Corepack (a bare `pnpm` there is Corepack's floating default).
+function pinnedPnpmCommand() {
+  const execPath = process.env.npm_execpath ?? '';
+  return /pnpm/iu.test(execPath) ? [process.execPath, execPath] : [process.execPath, nodeBundledCli('corepack'), `pnpm@${workspacePnpmVersion}`];
+}
+
 // The pinned package managers of the online matrix; every one is required.
 function packageManagerMatrix() {
-  const execPath = process.env.npm_execpath ?? '';
   return [
-    { name: 'pnpm', command: /pnpm/iu.test(execPath) ? [process.execPath, execPath] : ['pnpm'], expectedVersion: workspacePnpmVersion },
+    { name: 'pnpm', command: pinnedPnpmCommand(), expectedVersion: workspacePnpmVersion },
     { name: 'npm', command: [process.execPath, nodeBundledCli('npm')] },
     { name: 'yarn', command: [process.execPath, nodeBundledCli('corepack'), `yarn@${yarnVersion}`], expectedVersion: yarnVersion },
   ];
@@ -680,15 +686,30 @@ try {
     assertIncludes(styles, `.muxui-${slug}`, 'R1.5_PACK_STYLE_MISSING');
   }
 
-  const consumer = join(temp, 'consumer');
-  mkdirSync(consumer);
-  writeFileSync(join(consumer, 'package.json'), `${JSON.stringify({
+  const consumerManifest = `${JSON.stringify({
     name: 'muxui-r1-5-clean-consumer', private: true, type: 'module',
     dependencies: { '@muxui/react': `file:../muxui-react-${candidateVersion}.tgz`, react: '19.2.8', 'react-dom': '19.2.8' },
-  }, null, 2)}\n`);
-  const install = runChild('offline consumer install', 'pnpm', ['install', '--offline', '--ignore-scripts'], {
+  }, null, 2)}\n`;
+  const [consumerPnpm, ...consumerPnpmArguments] = pinnedPnpmCommand();
+  const consumerEnvironment = { ...process.env, npm_config_engine_strict: 'false' };
+  // The offline install below resolves the registry packages from pnpm's cache, so an
+  // online install of the same manifest fills that cache first, in a sibling directory.
+  // It must not depend on an earlier check having done so: a dry run that reuses main's
+  // CI skips the check graph (Decision 0030).
+  const warmConsumer = mkdtempSync(join(temp, 'consumer-warm-'));
+  writeFileSync(join(warmConsumer, 'package.json'), consumerManifest);
+  const warm = runChild('consumer cache warm-up install', consumerPnpm, [...consumerPnpmArguments, 'install', '--ignore-scripts'], {
+    cwd: warmConsumer,
+    env: consumerEnvironment,
+    timeout: 600_000,
+  });
+  if (warm.status !== 0) fail('R1_EXIT_CONSUMER_CACHE_WARMUP_FAILED', childOutput(warm));
+  const consumer = join(temp, 'consumer');
+  mkdirSync(consumer);
+  writeFileSync(join(consumer, 'package.json'), consumerManifest);
+  const install = runChild('offline consumer install', consumerPnpm, [...consumerPnpmArguments, 'install', '--offline', '--ignore-scripts'], {
     cwd: consumer,
-    env: { ...process.env, npm_config_engine_strict: 'false' },
+    env: consumerEnvironment,
   });
   if (install.status !== 0) fail('R1.5_PACK_CONSUMER_INSTALL_FAILED', childOutput(install));
 
