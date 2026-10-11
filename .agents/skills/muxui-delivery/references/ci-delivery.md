@@ -11,7 +11,10 @@ are in root `AGENTS.md` (Verification).
    most fast CI failures come from there. For React or Storybook changes, run
    the scoped generation it asks for first.
 2. Run at most one scoped check for what changed: the focused test files you
-   edited, or `pnpm check --component <family>`. CI runs the planned groups on
+   edited, `pnpm check --component <family>`, or `pnpm check --files <paths>`
+   (its Storybook lane runs the same story selection CI plans for those paths,
+   and the full audit with a printed notice when that selection is wide or
+   cannot be planned). CI runs the planned groups on
    every browser engine and reuses groups that already passed, so do not
    repeat that locally: no `pnpm check:all`, package-wide checks, repeated
    browser runs, or stress loops by habit.

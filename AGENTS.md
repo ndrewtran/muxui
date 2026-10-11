@@ -33,7 +33,10 @@ executable path, slug, alias, and generated-marker contract is owned by
   `--component <family-or-slug>` selectors, repeatable `--package <name|path>`
   selectors, or `--files <path[,path]>` for the exact task files. The
   `--dry-run` and `--preview` aliases print the plan without executing it.
-  Explicit scopes ignore unrelated concurrent dirty files.
+  Explicit scopes ignore unrelated concurrent dirty files. With `--files` and
+  the default scope, the Storybook lane runs the story selection CI plans for
+  those paths, or the full Storybook audit with a printed notice when that
+  selection spans more than one CI shard or cannot be planned.
 - `pnpm generate`: full workspace generation by default; explicit package or
   file scopes bind generation to the required prerequisites.
 - `pnpm check:all`: the complete deterministic workspace graph and accepts no

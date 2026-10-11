@@ -168,6 +168,9 @@ test('component resolution fails clearly for unknown IDs', () => {
   assert.throws(() => resolveComponents(['does-not-exist'], records), /MUXUI_COMPONENT_UNKNOWN/u);
 });
 
+// A step is a pnpm argument list; lanes run their steps in order.
+const step = (...args) => ({ args });
+
 test('affected check args exclude the workspace root that dependent filters would select', () => {
   const plan = planWithoutInheritedStorybookSelection({
     options: parseTaskArguments(['check', '--affected']),
@@ -176,14 +179,14 @@ test('affected check args exclude the workspace root that dependent filters woul
     changedPaths: ['packages/schema/src/index.mjs'],
   });
   assert.deepEqual(checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace' }), [
-    [['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check']],
+    [[step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check')]],
     [
-      ['--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check'],
-      [
+      [step('--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check')],
+      [step(
         '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
         '--filter', '...@muxui/schema', '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook',
         '--filter', '!@muxui/workspace', 'run', 'check',
-      ],
+      )],
     ],
   ]);
 });
@@ -195,20 +198,84 @@ test('scoped check stages isolate React and run Storybook beside the remaining c
     policy,
   });
   assert.deepEqual(checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace' }), [
-    [['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check']],
+    [[step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check')]],
     [
-      ['--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check'],
-      [
+      [step('--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check')],
+      [step(
         '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
         '--filter', '@muxui/schema', '--filter', '@muxui/docs', '--filter', '@muxui/repository-policy', 'run', 'check',
-      ],
+      )],
     ],
   ]);
   const only = (name) => ({ ...plan, checkPackages: packages.filter((item) => item.name === name) });
   assert.deepEqual(checkStages(only('@muxui/react'), { task: 'check' }).map((stage) => stage.length), [1]);
   assert.deepEqual(checkStages(only('@muxui/react-storybook'), { task: 'check' }), [
-    [['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check']],
+    [[step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react-storybook', 'run', 'check')]],
   ]);
+});
+
+test('selected Storybook commands replace only the Storybook lane and keep their own environment', () => {
+  const plan = planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--files', 'packages/react/src/fields.mjs']),
+    packages,
+    policy,
+  });
+  const storybookCommands = [
+    { command: 'pnpm', args: ['--filter', '@muxui/react-storybook', 'run', 'generate:check'], env: {}, unsetEnv: [] },
+    {
+      command: 'pnpm',
+      args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
+      env: { MUXUI_STORYBOOK_AUDIT_PROOF: 'component', MUXUI_STORYBOOK_FAMILIES: 'DatePicker' },
+      unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
+    },
+  ];
+  assert.deepEqual(checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands }), [
+    [[step('--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail', '--filter', '@muxui/react', 'run', 'check')]],
+    [
+      // One lane: its steps run in order, each with its own environment.
+      [
+        { args: ['--stream', '--filter', '@muxui/react-storybook', 'run', 'generate:check'], env: {}, unsetEnv: [] },
+        {
+          args: ['--stream', '--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
+          env: { MUXUI_STORYBOOK_AUDIT_PROOF: 'component', MUXUI_STORYBOOK_FAMILIES: 'DatePicker' },
+          unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
+        },
+      ],
+      [step(
+        '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
+        '--filter', '@muxui/docs', 'run', 'check',
+      )],
+    ],
+  ]);
+
+  // CI plans no Storybook proof: the lane is dropped, the other checks stay.
+  const without = checkStages(plan, { task: 'check', workspaceRootName: '@muxui/workspace', storybookCommands: [] });
+  assert.deepEqual(without.map((stage) => stage.length), [1, 1]);
+  assert.match(without[1][0][0].args.join(' '), /--filter @muxui\/docs run check$/u);
+});
+
+test('file and affected scopes expose the exact paths whose Storybook selection CI can plan', () => {
+  const files = planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--files', './packages/react/src/fields.mjs,packages\\react\\src\\button.mjs']),
+    packages,
+    policy,
+  });
+  assert.deepEqual(files.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.mjs']);
+
+  const affected = planWithoutInheritedStorybookSelection({
+    options: parseTaskArguments(['check', '--affected']),
+    packages,
+    policy,
+    changedPaths: ['packages/react/src/fields.mjs', 'packages/react/src/button.mjs'],
+  });
+  assert.deepEqual(affected.selectionPaths, ['packages/react/src/button.mjs', 'packages/react/src/fields.mjs']);
+
+  // Package, component, and full scopes keep their current behaviour.
+  for (const args of [['--package', '@muxui/react'], ['--full']]) {
+    assert.deepEqual(planWithoutInheritedStorybookSelection({
+      options: parseTaskArguments(['check', ...args]), packages, policy,
+    }).selectionPaths, []);
+  }
 });
 
 test('repository policy routes navigation and CI paths to the policy check with React generation', async () => {

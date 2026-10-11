@@ -23,12 +23,14 @@ import {
   needsStorybookGeneration,
   normalizeCommand,
   parseCliArguments,
+  planStorybookCommands,
   preparedCommandRunner,
   prepareStorybookMetadata,
   reactPackageWideChanges,
   rootPackageWideChanges,
   runCiImpact,
   shardStoryRun,
+  storybookSelection,
   storyShardPageBudget,
   validateScopedEntrypoints,
   workspaceDependentRoutes,
@@ -1355,6 +1357,84 @@ test('large Storybook runs shard by family into balanced jobs within the page bu
   };
   const sharded = executionGroups(componentOnly, { packages, environment: {}, pageIndex: realIndex });
   assert.deepEqual(groupIds(sharded), componentShards.map((_, index) => `storybook-component-${index + 1}`));
+});
+
+const storybookSlice = (selection) => selection.commands.map(({ args, env }) => ({ args, env }));
+const storybookEnv = { MUXUI_STORYBOOK_A11Y_WORKERS: '1', MUXUI_STORYBOOK_COLORS_WORKERS: '2' };
+
+test('a family runtime change gives the local run one scoped Storybook audit with CI environment', async () => {
+  const result = await plan([collectionsPath], treeRuntimeChange);
+  const selection = storybookSelection(result, { packages, environment: {}, pageIndex });
+
+  assert.equal(selection.full, false);
+  assert.equal(selection.pages, 3);
+  assert.deepEqual(storybookSlice(selection), [
+    { args: ['--filter', '@muxui/react-storybook', 'run', 'generate:check'], env: {} },
+    {
+      args: ['--filter', '@muxui/react-storybook', 'run', 'check:scoped'],
+      env: { MUXUI_STORYBOOK_AUDIT_PROOF: 'component', MUXUI_STORYBOOK_FAMILIES: 'Tree', ...storybookEnv },
+    },
+  ]);
+  // The audit clears inherited page selections, and nothing but Storybook is in the slice.
+  assert.deepEqual(selection.commands.at(-1).unsetEnv, ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS']);
+  assert.ok(executionCommands(result, { packages, environment: {}, pageIndex }).length > selection.commands.length);
+
+  // The slice is what CI's own Storybook group runs.
+  const group = executionGroups(result, { packages, environment: {}, pageIndex }).find(({ id }) => id === 'storybook-component');
+  assert.deepEqual(selection.commands.at(-1), group.commands.at(-1));
+});
+
+test('mixed proofs keep one command each with their own page selection', async () => {
+  const result = await plan([collectionsPath, sizingExamplePath, 'catalog/tokens/default-theme.json'], treeRuntimeChange);
+  const selection = storybookSelection(result, { packages, environment: {}, pageIndex });
+
+  assert.equal(selection.full, false);
+  assert.deepEqual(selection.commands.slice(1).map(({ env }) => [env.MUXUI_STORYBOOK_AUDIT_PROOF, env.MUXUI_STORYBOOK_FAMILIES, env.MUXUI_STORYBOOK_STORY_IDS]), [
+    ['component', 'Tree', undefined],
+    ['story', 'NumberField', sizingStoryId],
+    ['theme', 'MultiSelect,NumberField,TagSelect', undefined],
+    ['chrome', undefined, undefined],
+  ]);
+});
+
+test('a plan with no Storybook proof gives the local run nothing to run', async () => {
+  const result = await plan(['packages/react/test/browser/tree-toggle-browser.test.mjs']);
+  assert.deepEqual(storybookSelection(result, { packages, environment: {}, pageIndex }), { full: false, pages: 0, commands: [] });
+});
+
+test('a selection CI would shard, or cannot bound, keeps the full local audit with its reason', async () => {
+  // A shared path selects every page: pad the index past one shard.
+  const filler = { family: 'Filler', stories: Array.from({ length: storyShardPageBudget }, (_, index) => ({ id: `filler--${index}`, exportName: 'Default' })) };
+  const wideIndex = [...pageIndex, filler];
+  const shared = await plan(['apps/react-storybook/src/storybook-factory.mjs'], { pageIndex: wideIndex });
+  assert.match(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).reason, /shard the selection of \d+ pages \(more than 80 per shard\)/u);
+  assert.equal(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).full, true);
+
+  // Chrome proof audits the manager UI, not pages, so a wide index never shards it.
+  const chrome = await plan(['apps/react-storybook/.storybook/manager.mjs'], { pageIndex: wideIndex });
+  assert.deepEqual(chrome.storyRuns.map(({ proof }) => proof), ['chrome']);
+  const chromeSelection = storybookSelection(chrome, { packages, environment: {}, pageIndex: wideIndex });
+  assert.equal(chromeSelection.full, false);
+  assert.equal(chromeSelection.pages, 0);
+  assert.deepEqual(chromeSelection.commands.map(({ env }) => env.MUXUI_STORYBOOK_AUDIT_PROOF).filter(Boolean), ['chrome']);
+  assert.equal(chromeSelection.commands.filter(({ args }) => args.includes('check:scoped')).length, 1);
+
+  // The same shared path fits one shard in the small fixture index.
+  const narrow = await plan(['apps/react-storybook/src/storybook-factory.mjs']);
+  assert.equal(storybookSelection(narrow, { packages, environment: {}, pageIndex }).full, false);
+
+  const theme = await plan(['catalog/tokens/default-theme.json'], { pageIndex: [] });
+  assert.match(storybookSelection(theme, { packages, environment: {}, pageIndex: [] }).reason, /page index is unavailable/u);
+
+  const full = storybookSelection(fullWorkspacePlan('a workspace-wide input changed'));
+  assert.equal(full.full, true);
+  assert.match(full.reason, /full workspace graph \(a workspace-wide input changed\)/u);
+});
+
+test('a planner failure keeps the full local audit instead of throwing', async () => {
+  const selection = await planStorybookCommands({ changedPaths: [collectionsPath], baseRef: 'refs/heads/muxui-no-such-base' });
+  assert.equal(selection.full, true);
+  assert.match(selection.reason, /the CI planner could not plan these paths \(MUXUI_CI_IMPACT_BASE_UNAVAILABLE/u);
 });
 
 test('the CI plan job prepares missing metadata while --preview and --plan run no checks', () => {

@@ -1729,8 +1729,10 @@ const storybookSelectionKeys = [
   'MUXUI_STORYBOOK_FAMILY_FILTER', 'MUXUI_STORYBOOK_FAMILY', 'MUXUI_COMPONENT_FAMILIES',
 ];
 
+// Pages a run audits per family. Chrome proof audits the manager and docs UI, not pages.
 function storyRunPageCounts(storyRun, pageIndex) {
   const counts = new Map();
+  if (storyRun.proof === 'chrome') return counts;
   const add = (family) => counts.set(family, (counts.get(family) ?? 0) + 1);
   if (storyRun.storyIds.length > 0) {
     for (const page of pageIndex) {
@@ -1975,6 +1977,11 @@ function plannedCommands(plan, {
 } = {}) {
   const planned = [];
   const add = (group, args, options) => planned.push({ group, command: pnpmCommand(args, options) });
+  // Storybook-owned commands are tagged so local runs can take just this slice.
+  const addStorybook = (group, args, options) => {
+    add(group, args, options);
+    planned.at(-1).storybook = true;
+  };
   const requiredEntrypoints = new Set(plan.scopedEntrypointChecks ?? []);
   if (!plan.full && !plan.reactPackageFull && plan.reactFamilies?.length > 0) requiredEntrypoints.add('react');
   if (!plan.full && plan.storyRuns?.length > 0) requiredEntrypoints.add('storybook');
@@ -2034,11 +2041,11 @@ function plannedCommands(plan, {
   }
   for (const packageName of plan.packageChecks) add('checks', ['--filter', packageName, 'run', 'check']);
   if (plan.storyTooling || plan.storybookGenerationCheck) {
-    add('checks', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
+    addStorybook('checks', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   }
   if (plan.storyTooling) {
     for (const { file, testNamePattern } of plan.storyUnitTests) {
-      add('checks', [
+      addStorybook('checks', [
         '--filter', '@muxui/react-storybook', 'exec', 'node', '--test',
         ...(testNamePattern ? [`--test-name-pattern=${testNamePattern}`] : []),
         file,
@@ -2050,7 +2057,7 @@ function plannedCommands(plan, {
   for (const storyRun of plan.storyRuns) {
     const shards = shardStoryRun(storyRun, pageIndex);
     shards.forEach((shard, index) => {
-      add(`storybook-${storyRun.proof}${shards.length > 1 ? `-${index + 1}` : ''}`, scopedEntrypointArgs('storybook', packages), {
+      addStorybook(`storybook-${storyRun.proof}${shards.length > 1 ? `-${index + 1}` : ''}`, scopedEntrypointArgs('storybook', packages), {
         env: storyProofEnvironment(shard, environment),
         unsetEnv: ['MUXUI_STORYBOOK_FAMILIES', 'MUXUI_STORYBOOK_STORY_IDS'],
       });
@@ -2095,6 +2102,32 @@ export function executionGroups(plan, options = {}) {
       ...(storyRuns.has(id) ? { storyRun: storyRuns.get(id) } : {}),
     };
   });
+}
+
+// The Storybook slice of a plan for a local run: the generation check, the
+// focused unit tests, and the scoped page audits, each with CI's environment.
+// A local run executes them serially in one lane, so it takes the selection
+// only when CI would run it as a single shard; a wider or unboundable
+// selection returns `full` with the reason, and the caller keeps the full audit.
+export function storybookSelection(plan, options = {}) {
+  const { pageIndex = [] } = options;
+  if (plan.full) {
+    return { full: true, reason: `CI plans the full workspace graph (${plan.fullReasons.join('; ')})` };
+  }
+  if (plan.storyRuns.some(({ proof }) => proof !== 'chrome') && pageIndex.length === 0) {
+    return { full: true, reason: 'the Storybook page index is unavailable, so the page selection cannot be bounded' };
+  }
+  const pages = plan.storyRuns
+    .flatMap((storyRun) => [...storyRunPageCounts(storyRun, pageIndex).values()])
+    .reduce((sum, count) => sum + count, 0);
+  if (pages > storyShardPageBudget) {
+    return {
+      full: true,
+      reason: `CI would shard the selection of ${pages} pages (more than ${storyShardPageBudget} per shard)`,
+    };
+  }
+  const commands = plannedCommands(plan, options).filter(({ storybook }) => storybook).map(({ command }) => command);
+  return { full: false, pages, commands };
 }
 
 export function executeCommand(command, {
@@ -2315,11 +2348,35 @@ async function planAgainstBase({ base: mergeBase, changedPaths, preview }) {
   return { plan, packages, pageIndex, metadataPrepared, testSources: componentTestSources };
 }
 
+const baseRefFor = (environment) => environment.MUXUI_BASE_REF ?? (environment.GITHUB_BASE_REF ? `origin/${environment.GITHUB_BASE_REF}` : 'origin/main');
+
 async function pullRequestPlan({ preview, includeWorktree, environment }) {
-  const baseRef = environment.MUXUI_BASE_REF ?? (environment.GITHUB_BASE_REF ? `origin/${environment.GITHUB_BASE_REF}` : 'origin/main');
+  const baseRef = baseRefFor(environment);
   const mergeBase = resolveMergeBase(baseRef);
   const changedPaths = collectPullRequestPaths({ baseRef: mergeBase, includeWorktree });
   return { ...(await planAgainstBase({ base: mergeBase, changedPaths, preview })), baseRef, mergeBase };
+}
+
+// The Storybook commands CI would plan for exactly `changedPaths`, compared
+// with the merge base of `baseRef`, for the local `pnpm check` runner. It never
+// generates metadata, so it needs the generation the runner performs first.
+// Any planner failure returns `full` with its message instead of throwing.
+export async function planStorybookCommands({
+  changedPaths,
+  environment = process.env,
+  baseRef = baseRefFor(environment),
+}) {
+  try {
+    const paths = normalizeTaskPaths(changedPaths);
+    const { plan, packages, pageIndex, metadataPrepared, testSources } = await planAgainstBase({
+      base: resolveMergeBase(baseRef),
+      changedPaths: paths,
+      preview: true,
+    });
+    return storybookSelection(plan, { packages, metadataPrepared, environment, pageIndex, testSources });
+  } catch (error) {
+    return { full: true, reason: `the CI planner could not plan these paths (${error.message})` };
+  }
 }
 
 function ensureCommit(commit) {

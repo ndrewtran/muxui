@@ -34,8 +34,12 @@ pnpm --filter @muxui/react-storybook build
 
 For bounded verification, `pnpm check --component <family-or-slug>` runs
 selected React and Storybook family audits and `pnpm check --package
-@muxui/react-storybook` covers the package scope. Common scope and proof rules
-live in the root [`AGENTS.md`](../../AGENTS.md) Verification section.
+@muxui/react-storybook` covers the package scope. `pnpm check --files <paths>`
+and the default `pnpm check` run the same story selection, with the same
+`MUXUI_STORYBOOK_*` environment, that CI plans for those paths, and keep the
+complete audit, with a printed notice, when that selection needs more than one
+CI shard (80 pages) or cannot be planned. Common scope and proof rules live in
+the root [`AGENTS.md`](../../AGENTS.md) Verification section.
 
 Direct package checks run the complete browser audits. The colour audit uses
 two isolated browser contexts by default. The a11y audit defaults to one worker

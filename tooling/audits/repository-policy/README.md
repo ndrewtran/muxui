@@ -46,8 +46,25 @@ plan is reserved for identified workspace-wide inputs such as the Node/pnpm
 toolchain, workspace layout, or shared root dependency/engine fields. Lockfile
 changes route through verified workspace importers; changes whose consumers
 cannot be resolved fail with an actionable ownership error. Manual and
-scheduled CI keep the explicit full graph and broad browser checks. Local
-`pnpm check`, `pnpm check:all`, and generation commands keep their existing
+scheduled CI keep the explicit full graph and broad browser checks.
+
+Local `pnpm check --files <paths>` and the default changed-owner `pnpm check`
+run the Storybook lane CI would plan for the same paths: the story-index
+generation check, any focused Storybook unit tests, and the scoped page audits,
+each with CI's `MUXUI_STORYBOOK_*` environment, one after another in the lane.
+`--files` plans exactly the given files against the merge base with
+`MUXUI_BASE_REF` (default `origin/main`); the default scope plans the changed
+paths it collects, uncommitted, new, and deleted files included. The runner
+loads `planStorybookCommands` from `src/ci-impact.mjs` after generation, so the
+page index is current; `--preview` plans from the existing index. Other
+dependents of the selected paths keep their full package checks. If CI plans no
+Storybook proof for the paths, the lane is skipped with a printed notice. The
+lane keeps the full Storybook audit, with a printed notice naming the cause,
+when the selection is more than one CI shard (80 pages in total), when the
+planner widens to the full workspace, needs a page index that is missing, or
+throws, or, in the default scope, when a forced-full Storybook event is active
+(`--files` rejects that event with `MUXUI_TASK_SCOPE_CONFLICT`). `pnpm check:all`,
+`--package`, `--component`, and generation commands keep their existing
 semantics.
 
 Evidence capture and disclosure remain owned by the architecture, Product Scope,
