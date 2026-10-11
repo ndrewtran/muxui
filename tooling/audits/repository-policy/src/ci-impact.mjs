@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { appendFile, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
@@ -9,7 +10,7 @@ import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from
 import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
 import { dependencyClosure, dependencyOrder, familyRecordsFromContract } from './scoped-verification.mjs';
-import { componentTestSelection } from './component-test-selection.mjs';
+import { componentTestSelection, isBrowserTestFile, testNamePattern } from './component-test-selection.mjs';
 import { loadPolicy, normalizePath } from './policy.mjs';
 import { changedPatternSlugs, patternBrowserTest, patternParticipants } from './pattern-variants.mjs';
 import { discoverWorkspacePackages } from './workspace-packages.mjs';
@@ -1064,6 +1065,7 @@ export async function buildPullRequestImpact({
     reactFamilies: new Set(),
     reactBehaviorProofFamilies: [],
     reactComponentTests: [],
+    reactComponentTestNames: {},
     scopedEntrypointChecks: new Set(),
     storyIds: new Set(),
     storyIdFamilies: new Map(),
@@ -1668,6 +1670,7 @@ export async function buildPullRequestImpact({
     componentRoutedTestFiles = new Set(selection.files);
     plan.reactBehaviorProofFamilies = selection.behaviorProofFamilies;
     plan.reactComponentTests = selection.files;
+    plan.reactComponentTestNames = selection.testNamesByFile;
     // A family proven only by its Storybook BrowserProof needs that page even
     // when no other page of the family is selected.
     for (const family of selection.behaviorProofFamilies) {
@@ -1839,12 +1842,34 @@ export function shardStoryRun(storyRun, pageIndex = [], budget = storyShardPageB
 const crossEngineEnvironment = { MUXUI_BROWSER_ENGINES: 'chromium,firefox,webkit' };
 
 // Browser suites run as parallel CI groups: one per engine for the React tests
-// that call browserEngines() plus, in the Chromium group, Scale and the docs
-// site. The React tests that are not engine-aware only exist in Chromium, so
-// they get their own group to keep the Chromium job from being the long pole.
+// that call browserEngines() plus, in the Chromium group, Scale. The React tests
+// that are not engine-aware only exist in Chromium, so they get their own group
+// to keep the Chromium job from being the long pole. A long list splits further
+// into numbered shards (browser-chromium-only-1, ...).
 const browserGroup = (engine) => `browser-${engine}`;
 const chromiumGroup = browserGroup('chromium');
 const chromiumOnlyGroup = 'browser-chromium-only';
+
+// A browser list runs as ceil(files / limit) shards, at most the plan's cap. A
+// cross-engine file takes about 35 s per engine and a Chromium-only file about
+// 13 s, so a full shard of 6 or 18 files runs about 4 minutes. A pull request
+// that selects test files splits a long cross-engine list in two. A plan that
+// runs the whole browser suite (main, the weekly run, and a pull request that
+// needs the full React proof) keeps those lists whole: main's matrix stays near
+// 14 jobs so that a main push and a pull request fit in the 20 concurrent jobs
+// of GitHub's Free plan, and the Chromium-only list is its long pole, so that
+// list takes the shards.
+const browserShardLimit = { crossEngine: 6, chromiumOnly: 18 };
+const browserShardCap = {
+  selected: { crossEngine: 2, chromiumOnly: 3 },
+  suite: { crossEngine: 1, chromiumOnly: 3 },
+};
+
+// The shard a test file belongs to: a hash of its path, so a file keeps its
+// shard, and a shard its identity, while other files are added or removed.
+export function browserShardIndex(file, count) {
+  return createHash('sha256').update(file).digest().readUInt32BE(0) % count;
+}
 
 // True when the source calls browserEngines() imported from the harness
 // module: by name, by import alias, or as a member of a namespace import of it.
@@ -1945,7 +1970,7 @@ function assertReactBrowserScript(packages) {
   // Whitespace is not part of the contract: only the runner, flags, and selectors are.
   const tokens = (script) => script?.trim().split(/\s+/u).join(' ');
   if (tokens(actual) === tokens(reactBrowserScript)) return;
-  throw new Error(`MUXUI_CI_IMPACT_CHECK_BROWSER_CONTRACT: packages/react/package.json check:browser is ${JSON.stringify(actual)}, but CI runs the React browser suite as explicit test/browser/*.test.mjs file lists equivalent to ${JSON.stringify(reactBrowserScript)}. Update reactBrowserScript and addReactBrowserSuite in tooling/audits/repository-policy/src/ci-impact.mjs to match the script, or restore the script.`);
+  throw new Error(`MUXUI_CI_IMPACT_CHECK_BROWSER_CONTRACT: packages/react/package.json check:browser is ${JSON.stringify(actual)}, but CI runs the React browser suite as explicit test/browser/*.test.mjs file lists equivalent to ${JSON.stringify(reactBrowserScript)}. Update reactBrowserScript and browserLayout in tooling/audits/repository-policy/src/ci-impact.mjs to match the script, or restore the script.`);
 }
 
 // Every React browser test file (paths relative to packages/react, sorted by
@@ -1959,23 +1984,55 @@ function reactBrowserTests() {
   }
 }
 
-// The React browser suite as explicit file lists, which together cover what
-// `check:browser` runs, each file once per engine it supports: files that call
-// browserEngines() run in every engine's group, the rest only in
-// browser-chromium-only. A group with no files is not planned.
-function addReactBrowserSuite(add, testSources, packages) {
+// Every React browser test as a run (paths relative to packages/react): the
+// files `check:browser` globs.
+function reactBrowserSuiteRuns(packages) {
   assertReactBrowserScript(packages);
-  const tests = reactBrowserTests();
-  const crossEngine = tests.filter((file) => runsInEveryEngine(file, testSources));
-  const chromiumOnly = tests.filter((file) => !crossEngine.includes(file));
-  const addTests = (group, files, options) => add(group, [
-    '--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', ...files,
-  ], options);
-  if (crossEngine.length > 0) addTests(chromiumGroup, crossEngine, { env: { MUXUI_BROWSER_ENGINES: 'chromium' } });
-  if (chromiumOnly.length > 0) addTests(chromiumOnlyGroup, chromiumOnly);
-  if (crossEngine.length === 0) return;
-  for (const engine of ['firefox', 'webkit']) {
-    addTests(browserGroup(engine), crossEngine, { env: { MUXUI_BROWSER_ENGINES: engine } });
+  return reactBrowserTests().map((file) => ({ file }));
+}
+
+// The groups one browser list runs in: the plain group, or numbered shards
+// (`-1`, `-2`, ...) named by hash bucket. Empty shards are dropped, and a list
+// that lands in one shard keeps the plain id.
+function browserShards(group, runs, kind, caps) {
+  const count = Math.max(1, Math.min(caps[kind], Math.ceil(runs.length / browserShardLimit[kind])));
+  const shards = Array.from({ length: count }, (_, index) => ({
+    id: `${group}-${index + 1}`,
+    runs: runs.filter(({ file }) => browserShardIndex(file, count) === index),
+  })).filter((shard) => shard.runs.length > 0);
+  return shards.length === 1 ? [{ id: group, runs: shards[0].runs }] : shards;
+}
+
+// Where browser test runs execute, `{ file, names? }` each (`names` narrows a
+// component check to its own test cases). Files that call browserEngines() run
+// in every engine's groups, the rest only in browser-chromium-only, so each
+// file runs once per engine it supports. Groups with no files are not planned.
+function browserLayout(runs, testSources, caps) {
+  const crossEngine = runs.filter(({ file }) => runsInEveryEngine(file, testSources));
+  const chromiumOnly = runs.filter((run) => !crossEngine.includes(run));
+  const inEngine = (engine, shards) => shards.map((shard) => ({ ...shard, env: { MUXUI_BROWSER_ENGINES: engine } }));
+  return {
+    chromium: inEngine('chromium', browserShards(chromiumGroup, crossEngine, 'crossEngine', caps)),
+    chromiumOnly: browserShards(chromiumOnlyGroup, chromiumOnly, 'chromiumOnly', caps).map((shard) => ({ ...shard, env: {} })),
+    firefox: inEngine('firefox', browserShards(browserGroup('firefox'), crossEngine, 'crossEngine', caps)),
+    webkit: inEngine('webkit', browserShards(browserGroup('webkit'), crossEngine, 'crossEngine', caps)),
+  };
+}
+
+// The group for Scale's browser checks, one of which builds the docs site (~95 s).
+// Pull requests keep them in the browser-chromium family, whatever else the plan
+// runs: reuse routes a docs or Scale change to that family, so an earlier and a
+// later plan must host them in the same one. Main never reuses, so the full plan
+// puts them in the last Chromium-only shard, which has the slack and keeps the
+// cross-engine groups, its long pole, clear of them.
+const scaleHost = (layout, full) => (full ? layout.chromiumOnly.at(-1)?.id : undefined) ?? layout.chromium[0]?.id ?? chromiumGroup;
+
+function addBrowserLayout(add, layout) {
+  for (const { id, runs, env } of [...layout.chromium, ...layout.chromiumOnly, ...layout.firefox, ...layout.webkit]) {
+    const addTests = (args) => add(id, ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', ...args], { env });
+    const whole = runs.filter(({ names }) => !names).map(({ file }) => file);
+    if (whole.length > 0) addTests(whole);
+    for (const { file, names } of runs) if (names) addTests([`--test-name-pattern=${testNamePattern(names)}`, file]);
   }
 }
 
@@ -1988,8 +2045,8 @@ function storybookTestFiles() {
 
 // Scale's `check:browser:docs` builds `apps/docs/dist` and then serves it, so a
 // failed docs build fails only this command, never later checks.
-function addScaleDocsBrowserCommand(add) {
-  add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
+function addScaleDocsBrowserCommand(add, group) {
+  add(group, ['--filter', '@muxui/scale', 'run', 'check:browser:docs']);
 }
 
 function fullPlannedCommands(environment, testSources, packages) {
@@ -2022,9 +2079,10 @@ function fullPlannedCommands(environment, testSources, packages) {
   }
   add(checksGroup, ['generate:check']);
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
-  add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
-  addReactBrowserSuite(add, testSources, packages);
-  addScaleDocsBrowserCommand(add);
+  const browser = browserLayout(reactBrowserSuiteRuns(packages), testSources, browserShardCap.suite);
+  addBrowserLayout(add, browser);
+  add(scaleHost(browser, true), ['--filter', '@muxui/scale', 'run', 'check:browser']);
+  addScaleDocsBrowserCommand(add, scaleHost(browser, true));
   add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
   add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   // Storybook's own-interface colour proofs are not release proof (Decision 0030): a main push skips
@@ -2036,6 +2094,20 @@ function fullPlannedCommands(environment, testSources, packages) {
   add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
   add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
   return planned;
+}
+
+// The browser tests a pull request plan runs, sorted by path: the whole suite
+// for the full React proof, else the family check's browser tests (each with its
+// focused test names) and the selected test files, each once.
+function pullRequestBrowserRuns(plan, packages) {
+  const runs = new Map();
+  const addRun = (file, names) => {
+    if (!runs.has(file)) runs.set(file, { file, ...(names?.length ? { names } : {}) });
+  };
+  if (plan.reactPackageFull) reactBrowserSuiteRuns(packages).forEach(({ file }) => addRun(file));
+  else (plan.reactComponentTests ?? []).filter(isBrowserTestFile).forEach((file) => addRun(file, plan.reactComponentTestNames?.[file]));
+  (plan.reactTestFiles ?? []).filter(isBrowserTestFile).forEach((file) => addRun(file));
+  return [...runs.values()].sort((left, right) => (left.file < right.file ? -1 : 1));
 }
 
 function plannedCommands(plan, {
@@ -2053,6 +2125,10 @@ function plannedCommands(plan, {
   if (!plan.full && plan.storyRuns?.length > 0) requiredEntrypoints.add('storybook');
   validateScopedEntrypoints(packages, [...requiredEntrypoints]);
   if (plan.full) return fullPlannedCommands(environment, testSources, packages);
+  const browser = browserLayout(
+    pullRequestBrowserRuns(plan, packages), testSources, plan.reactPackageFull ? browserShardCap.suite : browserShardCap.selected,
+  );
+  const scaleGroup = scaleHost(browser, false);
 
   // Every group repeats this generation in its own fresh runner. Only skip
   // what metadata preparation already generated earlier in this same process:
@@ -2079,7 +2155,7 @@ function plannedCommands(plan, {
   if (plan.docs) add(checksGroup, ['--filter', '@muxui/docs', 'run', 'check']);
   if (plan.scale) {
     add(checksGroup, ['--filter', '@muxui/scale', 'run', 'check']);
-    add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
+    add(scaleGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
   }
   if (plan.reactTheme) {
     add('react', ['--filter', '@muxui/react', 'run', 'generate:check']);
@@ -2090,25 +2166,27 @@ function plannedCommands(plan, {
   }
   if (plan.reactPackageFull) {
     add('react', ['--filter', '@muxui/react', 'run', 'check']);
-    addReactBrowserSuite(add, testSources, packages);
   } else if (plan.reactFamilies.length > 0) {
     const env = {
       MUXUI_COMPONENT_FAMILIES: plan.reactFamilies.join(','),
       MUXUI_COMPONENT_INCLUDE_SHARED_SOURCE: '0',
       ...(plan.reactBehaviorProofFamilies.length ? { MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES: plan.reactBehaviorProofFamilies.join(',') } : {}),
-      ...(plan.reactComponentTests.some((file) => runsInEveryEngine(file, testSources)) ? crossEngineEnvironment : {}),
+      // The family's browser tests run in the browser groups below, not here.
+      ...(plan.reactComponentTests.some(isBrowserTestFile) ? { MUXUI_COMPONENT_SKIP_BROWSER_TESTS: '1' } : {}),
+      ...(plan.reactComponentTests.some((file) => !isBrowserTestFile(file) && runsInEveryEngine(file, testSources)) ? crossEngineEnvironment : {}),
     };
     add('react', scopedEntrypointArgs('react', packages), {
       env,
       unsetEnv: ['MUXUI_COMPONENT_BROWSER_PROOF_FAMILIES'],
     });
   }
-  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add);
-  for (const testFile of plan.reactTestFiles) {
+  if (plan.docs || plan.scale) addScaleDocsBrowserCommand(add, scaleGroup);
+  for (const testFile of plan.reactTestFiles.filter((file) => !isBrowserTestFile(file))) {
     add('react', ['--filter', '@muxui/react', 'exec', 'node', '--test', '--test-concurrency=1', testFile], {
       env: runsInEveryEngine(testFile, testSources) ? crossEngineEnvironment : {},
     });
   }
+  addBrowserLayout(add, browser);
   for (const packageName of packageChecks) add(checksGroup, ['--filter', packageName, 'run', 'check']);
   if (plan.storyTooling || plan.storybookGenerationCheck) {
     addStorybook(checksGroup, ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
@@ -2490,14 +2568,47 @@ export async function deltaImpact(testedCommit, { environment = process.env } = 
   };
 }
 
+// The package selectors a command line names: `--filter <name>`, `--filter=<name>`,
+// `-F <name>`, and `-F=<name>`. Null when a filter flag is spelled in a way this
+// does not read (`--filter-prod`, a missing value), so the caller does not guess.
+function filterSelectors(tokens) {
+  const selectors = [];
+  for (const [index, token] of tokens.entries()) {
+    const flag = token.match(/^(?:--filter|-F)(?:=(.*))?$/u);
+    if (!flag) {
+      if (/^(?:--filter|-F)/u.test(token)) return null;
+      continue;
+    }
+    const value = (flag[1] ?? tokens[index + 1] ?? '').replace(/^(['"])(.*)\1$/u, '$2');
+    if (value === '') return null;
+    selectors.push(value);
+  }
+  return selectors;
+}
+
 // Directories of the packages a group's commands operate on plus their
 // dependency closure; null when any command's package scope is not explicit.
+// A script that builds another package (Scale's docs browser check runs
+// `pnpm --filter @muxui/docs build`) makes that package an input too. Only a
+// selector that is exactly a workspace package name is understood: a glob, a
+// `...` closure, a path, a `!` exclusion, or an unknown name returns null, so
+// the group is never reused.
 export function groupPackageDirectories(commands, packages) {
   const roots = new Set();
   const directories = new Set();
   for (const { args } of commands) {
-    const filters = args.filter((_, index) => args[index - 1] === '--filter');
+    const filters = filterSelectors(args);
+    if (filters === null) return null;
     const directory = args[args.indexOf('--dir') + 1];
+    if (args.includes('run')) {
+      const script = args[args.indexOf('run') + 1];
+      for (const name of filters) {
+        const text = packages.find((item) => item.name === name)?.manifest.scripts?.[script] ?? '';
+        const built = filterSelectors(text.split(/\s+/u).filter(Boolean));
+        if (built === null) return null;
+        built.forEach((target) => roots.add(target));
+      }
+    }
     if (args.includes('--dir')) {
       if (directory !== tailwindFixture) return null;
       // The fixture consumes the published React and token outputs.

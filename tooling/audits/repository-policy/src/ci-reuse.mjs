@@ -139,6 +139,11 @@ export function loadEarlierRuns({ client, environment, log = console.log }) {
 
 const intersects = (left, right) => left.some((value) => right.includes(value));
 
+// Browser shards (browser-chromium-1, -2) belong to their engine's family. A
+// shard's membership moves with the files a plan selects, so changes route to a
+// family, never to one shard.
+const browserFamily = (id) => id.replace(/-\d+$/u, '');
+
 // Why the changes since the tested commit affect `group`, or null when they
 // do not. `delta` is `{ changedPaths, full?, groupIds?, storyRuns?, storyTooling?, error? }`.
 export function affectedReason(group, delta) {
@@ -154,10 +159,11 @@ export function affectedReason(group, delta) {
     if (!Array.isArray(group.packageDirectories)) return `package set of ${group.id} is unknown`;
     const touched = delta.changedPaths.find((path) => group.packageDirectories.some((directory) => path.startsWith(`${directory}/`)));
     if (touched) return `changes touch ${touched}`;
-    // Browser checks run React browser tests, which React test changes route to `react`.
-    // Each engine's group (browser-chromium, ...) reruns only for its own routing.
-    const ids = group.kind === 'browser' ? [group.id, 'react'] : [group.id];
-    return intersects(ids, delta.groupIds) ? `changes route to ${ids.filter((id) => delta.groupIds.includes(id)).join(', ')}` : null;
+    // Each engine's group family (browser-chromium and its shards, ...) reruns
+    // only for its own routing, or when the React group reruns.
+    const ids = group.kind === 'browser' ? [browserFamily(group.id), 'react'] : [group.id];
+    const routed = group.kind === 'browser' ? delta.groupIds.map(browserFamily) : delta.groupIds;
+    return intersects(ids, routed) ? `changes route to ${ids.filter((id) => routed.includes(id)).join(', ')}` : null;
   }
   if (group.kind !== 'storybook' || !group.storyRun) return `no reuse rule for group ${group.id}`;
   // Storybook groups trust the planner's family routing: the same routing that
