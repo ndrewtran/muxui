@@ -978,7 +978,8 @@ for (const engine of browserEngines()) {
 }
 
 // Cross-engine proof for how Sidebar groups are named and where their focus goes: a link group's toggle is named by
-// its rendered label, text or component, at any depth. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+// its rendered label, text or component, at any depth, and a group that closes under its caller hands focus from a link
+// it hides to its own summary or toggle. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const groupsEntry = `
 import React from 'react';
@@ -1047,6 +1048,78 @@ for (const engine of browserEngines()) {
           assert.equal(await toggle.getAttribute('aria-expanded'), 'true', `${engine}: and reports its state`);
         }
         assert.equal(await tab.locator('.muxui-sidebar__nav-toggle[aria-label]').count(), 0, `${engine}: no toggle carries a string copy of its label`);
+        assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+      } finally {
+        await context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+for (const engine of browserEngines()) {
+  test(`Sidebar hands focus to a group's control when the group closes in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-groups.html': groupsPage },
+      modules: { '/sidebar-groups-entry.mjs': groupsEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-groups.html`, 'aside');
+      const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+      const tab = await context.newPage();
+      const errors = [];
+      tab.on('pageerror', (error) => errors.push(error.message));
+      tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+      await tab.goto(`${url}/sidebar-groups.html`, { waitUntil: 'networkidle' });
+      await tab.locator('aside').waitFor({ timeout: 15_000 });
+      try {
+        const focused = () => tab.evaluate(() => {
+          const node = document.activeElement;
+          const labelled = node.getAttribute('aria-labelledby');
+          return node === document.body ? 'body' : `${node.tagName.toLowerCase()} ${(labelled && document.getElementById(labelled).textContent) || node.querySelector('.muxui-sidebar__nav-label')?.textContent || node.textContent.trim()}`;
+        });
+        // The caller changes `expanded` from outside, as a route change or a filter would, and focus is read once React has committed.
+        const setOpen = (id, next) => tab.evaluate(([group, value]) => {
+          window.__setOpen(group, value);
+          return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        }, [id, next]);
+        const reopen = async () => { for (const id of ['settings', 'profile', 'tools']) await setOpen(id, true); };
+
+        await tab.locator('a[href="#avatar"]').focus();
+        await setOpen('profile', false);
+        assert.equal(await focused(), 'button Profile', `${engine}: closing a link group moves focus from its hidden link to its toggle`);
+        await reopen();
+        await tab.locator('a[href="#avatar"]').focus();
+        await setOpen('settings', false);
+        assert.equal(await focused(), 'button Settings', `${engine}: closing the outer group moves focus from a deeper link to its toggle`);
+        await reopen();
+        await tab.locator('a[href="#hammer"]').focus();
+        await setOpen('tools', false);
+        assert.equal(await focused(), 'summary Tools', `${engine}: closing a disclosure group moves focus to its summary`);
+        await reopen();
+        // Focus the group does not hide stays where it is.
+        for (const [id, selector, name] of [['settings', '#before', 'button Before'], ['settings', 'a[href="#settings"]', 'a Settings'], ['tools', '#after', 'button After']]) {
+          await tab.locator(selector).focus();
+          await setOpen(id, false);
+          assert.equal(await focused(), name, `${engine}: closing ${id} leaves focus on ${selector}`);
+          await reopen();
+        }
+        // The user closes a group with a pointer press, which WebKit does not let focus the button, so focus on a hidden link needs the same hand-off.
+        await tab.locator('a[href="#billing"]').focus();
+        await tab.getByRole('button', { name: 'Settings', exact: true }).click();
+        assert.equal(await tab.getByRole('button', { name: 'Settings', exact: true }).getAttribute('aria-expanded'), 'false', `${engine}: the press closed the group`);
+        assert.equal(await focused(), 'button Settings', `${engine}: a pointer press on the toggle leaves focus on it`);
+        await reopen();
+        // The control that takes focus is the one a keyboard user can reopen the group from.
+        await tab.locator('a[href="#billing"]').focus();
+        await setOpen('settings', false);
+        await tab.keyboard.press('Enter');
+        assert.equal(await tab.getByRole('button', { name: 'Settings', exact: true }).getAttribute('aria-expanded'), 'true', `${engine}: Enter on the focused toggle reopens the group`);
         assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
       } finally {
         await context.close();

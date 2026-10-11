@@ -1200,11 +1200,20 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
   const sidebar = React.useContext(SidebarContext);
   const [open, setOpen] = useSidebarExpanded({ expanded, defaultExpanded, onExpandedChange });
   const detailsRef = React.useRef(null);
+  const listRef = React.useRef(null);
+  // The group's visible control: the summary of a disclosure group, the toggle of a link group.
+  const controlRef = React.useRef(null);
   const listId = React.useId();
   const labelId = React.useId();
   const [, rerender] = React.useReducer((count) => count + 1, 0);
   // The browser can open a details group itself (find in page); a caller that refuses the change gets its state back.
   useIsomorphicLayoutEffect(() => { if (detailsRef.current && detailsRef.current.open !== open) detailsRef.current.open = open; });
+  // Closing the group, by the user or by the caller's `expanded`, hides the links inside it. Focus on one of them moves to the group's control, which stays visible.
+  useIsomorphicLayoutEffect(() => {
+    const list = listRef.current;
+    if (open || !list || !list.contains(list.getRootNode().activeElement)) return;
+    controlRef.current?.focus({ preventScroll: true });
+  }, [open]);
   // Folded, an item without an icon keeps a mark in the icon column: the first character of its label, or a dot if it has no text.
   const initial = child || Icon || !sidebar ? undefined : [...sidebarLabelText(label).trim()][0]?.toUpperCase() ?? '•';
   const leading = Icon ? h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }) : initial && h('span', { className: 'muxui-sidebar__nav-mark', 'aria-hidden': true }, initial);
@@ -1214,7 +1223,7 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
   const named = (node) => (child ? node : h(SidebarRailTooltip, { label }, node));
   const className = cx('muxui-sidebar__nav-link', child && 'muxui-sidebar__nav-child-link', current && 'muxui-sidebar__nav-link--current');
   const chevron = h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' });
-  const nested = items?.length ? h('ul', { id: href ? listId : undefined, className: 'muxui-sidebar__nav-children', hidden: href ? !open : undefined }, items.map((entry, index) => h(SidebarNavNode, { key: entry.id ?? entry.href ?? index, ...entry, child: true }))) : null;
+  const nested = items?.length ? h('ul', { ref: listRef, id: href ? listId : undefined, className: 'muxui-sidebar__nav-children', hidden: href ? !open : undefined }, items.map((entry, index) => h(SidebarNavNode, { key: entry.id ?? entry.href ?? index, ...entry, child: true }))) : null;
   let content;
   if (!nested) {
     content = named(h(AriaLink, { href, className, 'aria-current': current ? 'page' : undefined }, ...body(external && h(ExternalLinkIcon, { className: 'muxui-sidebar__nav-external', 'aria-hidden': true, focusable: 'false' }))));
@@ -1222,13 +1231,13 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
     content = h(React.Fragment, null,
       h('div', { className: 'muxui-sidebar__nav-row' },
         named(h(AriaLink, { id: child ? labelId : undefined, href, className, 'aria-current': current ? 'page' : undefined }, ...body())),
-        h(AriaButton, { className: 'muxui-sidebar__nav-btn muxui-sidebar__nav-toggle', 'aria-labelledby': labelId, 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
+        h(AriaButton, { ref: controlRef, className: 'muxui-sidebar__nav-btn muxui-sidebar__nav-toggle', 'aria-labelledby': labelId, 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
       nested);
   } else {
     // Folded, the group has no room to open: activating it unfolds the sidebar and opens the group.
     const onClick = (event) => { event.preventDefault(); if (sidebar?.collapsed) { sidebar.setCollapsed(false); setOpen(true); } else setOpen(!open); };
     const onToggle = (event) => { if (event.currentTarget.open === open) return; setOpen(event.currentTarget.open); rerender(); };
-    content = h('details', { ref: detailsRef, open, onToggle }, named(h('summary', { className, onClick }, ...body(chevron))), nested);
+    content = h('details', { ref: detailsRef, open, onToggle }, named(h('summary', { ref: controlRef, className, onClick }, ...body(chevron))), nested);
   }
   return h('li', { className: 'muxui-sidebar__nav-item' }, content);
 }
