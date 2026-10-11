@@ -1,0 +1,72 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:context-sources",
+  "kind": "pattern",
+  "name": "Context sources",
+  "summary": "A count and a list of excerpt cards, each with a title, a size, the excerpt text, and a source chip that previews where it came from.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "excerpts",
+    "chunks",
+    "citations",
+    "retrieval",
+    "files"
+  ],
+  "platforms": ["web.react"],
+  "category": "collections",
+  "intent": {
+    "useWhen": [
+      "Showing which passages and files an answer drew on",
+      "Reviewing retrieved excerpts with their size and source"
+    ],
+    "avoidWhen": [
+      "The passages are long documents that need a reader of their own",
+      "The list must be searched, filtered, or paged"
+    ]
+  },
+  "participants": [
+    {
+      "role": "container",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "rule",
+      "component": "muxui:component:separator",
+      "requirement": "required"
+    },
+    {
+      "role": "mark",
+      "component": "muxui:component:avatar",
+      "requirement": "required"
+    },
+    {
+      "role": "source",
+      "component": "muxui:component:link",
+      "requirement": "required"
+    },
+    {
+      "role": "preview",
+      "component": "muxui:component:preview-trigger",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:context-sources-excerpts" }],
+  "accessibility": [
+    "The section is named by its All chunks heading, and each excerpt is a list item with its own h3.",
+    "The source chip is a Link inside a PreviewTrigger named for its file: the preview opens on hover or keyboard focus and holds the location.",
+    "The file type mark is decorative and hidden from assistive technology, and the file name is the link text.",
+    "The count is plain text beside the heading."
+  ],
+  "unsupported": [
+    "Retrieving, ranking, or opening sources: the excerpts, sizes, and count are placeholders, and the link goes to #source",
+    "Paging or loading more of the 32 chunks",
+    "Highlighting the matched words in an excerpt"
+  ],
+  "workflowValue": "Replaces laying out retrieved excerpts by hand: one record shape drives the card header, the excerpt, and the source chip with its preview, so you swap the chunks and keep the card layout."
+}

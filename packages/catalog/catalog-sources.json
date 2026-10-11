@@ -1136,6 +1136,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/agent-trace/examples/react/tool-calls.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/context-sources/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/context-sources/examples/react/excerpts.example.json"
     }
   ]
 }
