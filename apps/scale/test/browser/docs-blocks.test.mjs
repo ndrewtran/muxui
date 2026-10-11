@@ -64,7 +64,7 @@ async function withSite(run) {
 async function railVariants(page) {
 	return page.evaluate(() => [...document.querySelectorAll('[data-blocks-rail] li[data-block]')].flatMap((item) => {
 		const group = item.closest('[data-group]')?.dataset.group;
-		return [...item.querySelectorAll('a.blocks-variant')].map((link) => ({
+		return [...item.querySelectorAll('a[data-variant-link]')].map((link) => ({
 			block: item.dataset.block,
 			group,
 			name: link.textContent.trim(),
@@ -73,8 +73,12 @@ async function railVariants(page) {
 	}));
 }
 
-/** Waits until the preview document is loaded and its example island hydrated. */
+/** Waits until the page's own islands (the rail, the gallery, the block viewer) have hydrated, so its controls respond. */
+const islandsReady = (page) => page.waitForFunction(() => document.querySelector('astro-island[ssr]') === null);
+
+/** Waits until the page's islands have hydrated and the preview document is loaded with its example island hydrated. */
 async function previewReady(page) {
+	await islandsReady(page);
 	await page.waitForFunction(() => {
 		const doc = document.querySelector('[data-iframe]')?.contentDocument;
 		return doc?.readyState === 'complete' && doc.querySelector('astro-island') !== null && doc.querySelector('astro-island[ssr]') === null;
@@ -82,6 +86,14 @@ async function previewReady(page) {
 }
 
 const previewDocument = (page) => page.locator('[data-iframe]').evaluate((frame) => frame.contentDocument.documentElement.dataset.theme);
+
+// The toolbar's three groups are Mux ToggleButtonGroups: single-selection radio groups of radio buttons.
+const toolbarGroup = (page, name) => page.getByRole('radiogroup', { name, exact: true });
+const toolbarButton = (page, group, name) => toolbarGroup(page, group).getByRole('radio', { name, exact: true });
+const widthButton = (page, name) => toolbarButton(page, 'Preview width', name);
+const widthLabels = toolbarPresets.map(({ key, width }) => `${key} ${width}`);
+/** Whether a radio group shows its selection: exactly the named radio is checked. */
+const checkedRadios = (group) => group.getByRole('radio').evaluateAll((radios) => radios.filter((radio) => radio.getAttribute('aria-checked') === 'true').map((radio) => radio.textContent.trim()));
 
 /** Waits until the standalone preview page's example island is hydrated. */
 const standalonePreviewReady = (page) => page.waitForFunction(() => document.querySelector('astro-island') !== null && document.querySelector('astro-island[ssr]') === null);
@@ -101,6 +113,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 	await withSite(async ({ page, origin }) => {
 		await page.goto(`${origin}/blocks/`);
 		await page.locator('[data-blocks-gallery]').waitFor();
+		await islandsReady(page);
 		const variants = await railVariants(page);
 		assert.ok(variants.length > 0, 'the rail lists variants');
 		const blocks = new Set(variants.map(({ block }) => block));
@@ -111,38 +124,37 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		// Every rail variant opens its block in place, without a document reload.
 		await page.evaluate(() => { window.__sameDocument = true; });
 		for (const variant of variants) {
-			await page.locator(`.blocks-rail a.blocks-variant[href="${variant.href}"]`).click();
+			await page.locator(`[data-blocks-rail] a[data-variant-link][href="${variant.href}"]`).click();
 			await page.waitForURL(`**${variant.href}`);
 			await page.locator('[data-blocks-detail] h1').waitFor();
 			assert.equal(await page.locator('[data-blocks-detail] h1').textContent(), variant.name);
 			assert.equal(await page.evaluate(() => window.__sameDocument), true, `${variant.href} swapped in place`);
-			assert.deepEqual(await page.locator('.blocks-rail [aria-current="page"]').evaluateAll((links) => links.map((link) => link.getAttribute('href'))), [variant.href]);
+			assert.deepEqual(await page.locator('[data-blocks-rail] [aria-current="page"]').evaluateAll((links) => links.map((link) => link.getAttribute('href'))), [variant.href]);
 			assert.equal(await page.locator('[data-blocks-detail] [aria-current]').count(), 0, 'only the rail link marks the current page');
 			assert.equal(await page.locator('[data-iframe]').getAttribute('src'), `${variant.href}preview/`);
 			assert.notEqual((await page.locator('[data-iframe]').getAttribute('title')).trim(), '');
 		}
 		const [first, second = first] = variants;
-		await page.locator(`.blocks-rail a.blocks-variant[href="${first.href}"]`).click();
+		await page.locator(`[data-blocks-rail] a[data-variant-link][href="${first.href}"]`).click();
 		await page.waitForURL(`**${first.href}`);
 		await previewReady(page);
 
-		// Width presets set the preview's logical width; the readout and aria-pressed follow.
-		const presets = await page.locator('[data-width-group] button[data-width]:not([data-width="full"])').evaluateAll((buttons) => buttons.map((button) => Number(button.dataset.width)));
-		assert.deepEqual(presets, toolbarPresets.map(({ width }) => width));
+		// Width presets set the preview's logical width; the readout and the checked radio follow.
+		assert.deepEqual(await toolbarGroup(page, 'Preview width').getByRole('radio').allTextContents(), [...widthLabels, 'Full']);
 		const frameWidth = () => page.locator('[data-iframe]').evaluate((frame) => frame.contentWindow.innerWidth);
-		for (const width of presets) {
-			await page.locator(`[data-width-group] button[data-width="${width}"]`).click();
+		for (const { key, width } of toolbarPresets) {
+			await widthButton(page, `${key} ${width}`).click();
 			assert.equal(await frameWidth(), width);
-			assert.equal(await page.locator(`[data-width-group] button[data-width="${width}"]`).getAttribute('aria-pressed'), 'true');
+			assert.deepEqual(await checkedRadios(toolbarGroup(page, 'Preview width')), [`${key} ${width}`]);
 			assert.match(await page.locator('[data-readout]').textContent(), new RegExp(`^${width} px`, 'u'));
 		}
-		await page.locator('[data-width-group] button[data-width="full"]').click();
+		await widthButton(page, 'Full').click();
 		const available = await page.locator('[data-frame]').evaluate((frame) => frame.clientWidth - 24);
 		assert.equal(await frameWidth(), available);
 
 		// The handle resizes from the keyboard and by dragging, and exposes its value.
 		const handle = page.getByRole('separator', { name: 'Resize preview' });
-		await page.locator('[data-width-group] button[data-width="360"]').click();
+		await widthButton(page, widthLabels[0]).click();
 		// A key press puts the page in keyboard modality, so programmatic focus matches :focus-visible.
 		await page.keyboard.press('Shift');
 		await handle.focus();
@@ -156,7 +168,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		await page.keyboard.press('Home');
 		assert.equal(await handle.getAttribute('aria-valuenow'), '280');
 		await page.keyboard.press('End');
-		assert.equal(await page.locator('[data-width-group] button[data-width="full"]').getAttribute('aria-pressed'), 'true');
+		assert.deepEqual(await checkedRadios(toolbarGroup(page, 'Preview width')), ['Full']);
 		const box = await handle.boundingBox();
 		await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 		await page.mouse.down();
@@ -169,7 +181,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		// The preview theme is independent of the site theme.
 		const siteTheme = await page.evaluate(() => document.documentElement.dataset.theme);
 		for (const theme of ['light', 'dark']) {
-			await page.getByRole('button', { name: `${theme === 'light' ? 'Light' : 'Dark'} preview` }).click();
+			await toolbarButton(page, 'Preview theme', `${theme === 'light' ? 'Light' : 'Dark'} preview`).click();
 			assert.equal(await previewDocument(page), theme);
 			await page.waitForFunction((expected) => document.querySelector('[data-iframe]').contentDocument.documentElement.dataset.muxuiColorScheme === expected, theme);
 			assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), siteTheme, 'the site theme did not change');
@@ -177,31 +189,35 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 
 		// Preview, Code, and Split.
 		const stage = page.locator('[data-stage]');
-		await page.getByRole('button', { name: 'Code', exact: true }).click();
+		await toolbarButton(page, 'View', 'Code').click();
 		assert.equal(await stage.getAttribute('data-mode'), 'code');
 		assert.equal(await page.locator('[data-frame]').isVisible(), false);
 		assert.equal(await page.locator('[data-code]').isVisible(), true);
-		assert.equal(await page.locator('.blocks-width').evaluate((node) => node.inert), true, 'width controls rest while only code shows');
-		for (const control of ['.blocks-width', '[data-theme-group]']) {
-			assert.ok(Number(await page.locator(control).evaluate((node) => getComputedStyle(node).opacity)) < 1, `${control} dims while inert`);
+		// The groups that only apply to the preview are disabled, and the Mux disabled state dims them.
+		for (const group of ['Preview width', 'Preview theme']) {
+			const radios = toolbarGroup(page, group).getByRole('radio');
+			assert.equal(await radios.evaluateAll((nodes) => nodes.every((node) => node.disabled)), true, `${group} rests while only code shows`);
+			assert.ok(Number(await radios.first().evaluate((node) => getComputedStyle(node).opacity)) < 1, `${group} dims while disabled`);
 		}
-		await page.getByRole('button', { name: 'Split', exact: true }).click();
+		await toolbarButton(page, 'View', 'Split').click();
 		assert.equal(await page.locator('[data-frame]').isVisible() && await page.locator('[data-code]').isVisible(), true);
-		assert.equal(await page.locator('.blocks-width').evaluate((node) => getComputedStyle(node).opacity), '1', 'width controls are not dimmed while the preview shows');
-		await page.getByRole('button', { name: 'Preview', exact: true }).click();
+		for (const group of ['Preview width', 'Preview theme']) {
+			assert.equal(await toolbarGroup(page, group).getByRole('radio').first().evaluate((node) => getComputedStyle(node).opacity), '1', `${group} is not dimmed while the preview shows`);
+		}
+		await toolbarButton(page, 'View', 'Preview').click();
 		assert.equal(await page.locator('[data-code]').isVisible(), false);
 
 		// Copy puts the exact Code view text on the clipboard.
-		await page.getByRole('button', { name: 'Split', exact: true }).click();
+		await toolbarButton(page, 'View', 'Split').click();
 		const codeText = await page.locator('[data-code-body] code').evaluate((node) => node.textContent);
 		await page.getByRole('button', { name: 'Copy', exact: true }).click();
 		assert.equal(await page.evaluate(() => navigator.clipboard.readText()), codeText);
 		assert.equal(await page.locator('[data-copy]').textContent(), 'Copied');
 
 		// The toolbar's width, theme, and view survive a move to another variant.
-		await page.locator('[data-width-group] button[data-width="768"]').click();
-		await page.getByRole('button', { name: 'Light preview' }).click();
-		await page.locator(`.blocks-rail a.blocks-variant[href="${second.href}"]`).click();
+		await widthButton(page, widthLabels[1]).click();
+		await toolbarButton(page, 'Preview theme', 'Light preview').click();
+		await page.locator(`[data-blocks-rail] a[data-variant-link][href="${second.href}"]`).click();
 		await page.waitForURL(`**${second.href}`);
 		await previewReady(page);
 		assert.equal(await page.locator('[data-stage]').getAttribute('data-mode'), 'split');
@@ -230,7 +246,7 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 		await page.waitForFunction((slug) => document.querySelector(`.blocks-rail li[data-block="${slug}"]`)?.hidden === false, first.block);
 		assert.ok(new URL(page.url()).searchParams.get('q') !== null, 'the query is kept in the URL');
 		await search.fill('');
-		const participants = await page.locator('[data-blocks-uses] option').evaluateAll((options) => options.map((option) => option.value).filter(Boolean));
+		const participants = await page.getByLabel('Uses component').locator('option').evaluateAll((options) => options.map((option) => option.value).filter(Boolean));
 		assert.ok(participants.length > 0, 'the Uses filter lists participant components');
 		const usesIndex = (await page.evaluate(async () => (await fetch('/blocks/filter-index.json')).json())).uses;
 		for (const component of participants) {
@@ -257,15 +273,17 @@ test('the Blocks section: rail, filters, presets, handle, theme, views, and copy
 /** Opens the first variant the built rail lists. */
 async function openFirstVariant(page, origin) {
 	await page.goto(`${origin}/blocks/`);
+	await islandsReady(page);
 	const [first] = await railVariants(page);
 	await page.goto(`${origin}${first.href}`);
+	await islandsReady(page);
 	return first;
 }
 
 test('Copy returns to its label after clicks inside the confirmation', async () => {
 	await withSite(async ({ page, origin }) => {
 		await openFirstVariant(page, origin);
-		await page.getByRole('button', { name: 'Split', exact: true }).click();
+		await toolbarButton(page, 'View', 'Split').click();
 		const copy = page.locator('[data-copy]');
 		await copy.click();
 		await copy.click();
@@ -280,6 +298,7 @@ test('a filter index that fails to load shows a status, and the next change retr
 	await withSite(async ({ page, origin }) => {
 		await page.route('**/blocks/filter-index.json', (route) => route.abort());
 		await page.goto(`${origin}/blocks/`);
+		await islandsReady(page);
 		const search = page.getByRole('searchbox', { name: 'Search blocks' });
 		const status = page.locator('[data-blocks-count]');
 		await search.fill('poster');
@@ -319,6 +338,7 @@ test('the Blocks header keeps its actions at the end, with search shown or hidde
 		for (const [width, searchShown] of [[1440, true], [480, false]]) {
 			await page.setViewportSize({ width, height: 800 });
 			await page.goto(`${origin}/blocks/`);
+			await islandsReady(page);
 			const fit = await headerFit(page);
 			assert.equal(fit.searchShown, searchShown, `search at ${width}px`);
 			assert.ok(Math.abs(fit.actionsGap) <= 1, `the actions end ${fit.actionsGap}px from the header's end at ${width}px`);
@@ -332,6 +352,7 @@ test('the site header fits a phone on Starlight docs pages and Blocks pages', as
 			for (const width of [320, 360]) {
 				await page.setViewportSize({ width, height: 800 });
 				await page.goto(`${origin}${route}`);
+				await islandsReady(page);
 				const fit = await headerFit(page);
 				const name = `${route} at ${width}px`;
 				assert.equal(fit.hasMenu, route === '/installation/', `${name} shows the menu button only with a sidebar`);
@@ -348,6 +369,7 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 	await withSite(async ({ page, origin }) => {
 		if (captureDir) await mkdir(captureDir, { recursive: true });
 		await page.goto(`${origin}/blocks/`);
+		await islandsReady(page);
 		const variants = await railVariants(page);
 		const report = [];
 		// Preset images come from a second page, so the toolbar page keeps its theme and preset while each is captured.
@@ -367,11 +389,13 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 			for (const theme of THEMES) {
 				await page.goto(`${origin}${variant.href}`);
 				await previewReady(page);
-				await page.getByRole('button', { name: `${theme === 'light' ? 'Light' : 'Dark'} preview` }).click();
+				await toolbarButton(page, 'Preview theme', `${theme === 'light' ? 'Light' : 'Dark'} preview`).click();
 				await page.waitForFunction((expected) => document.querySelector('[data-iframe]').contentDocument.documentElement.dataset.muxuiColorScheme === expected, theme);
-				const widths = await page.locator('[data-width-group] button[data-width]').evaluateAll((buttons) => buttons.map((button) => button.dataset.width));
-				for (const width of widths) {
-					await page.locator(`[data-width-group] button[data-width="${width}"]`).click();
+				const radios = toolbarGroup(page, 'Preview width').getByRole('radio');
+				// A preset's key is its pixel width, or `full`, as in the capture file names.
+				const widths = (await radios.allTextContents()).map((label) => (label === 'Full' ? 'full' : label.split(' ').at(-1)));
+				for (const [index, width] of widths.entries()) {
+					await radios.nth(index).click();
 					await page.waitForFunction(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => done(true)))));
 					const name = `${slug}--${theme}--preset-${width}`;
 					const entry = { kind: 'preset', block: variant.block, variant: variant.href, theme, preset: width, ...await measure(page.locator('[data-iframe]')) };

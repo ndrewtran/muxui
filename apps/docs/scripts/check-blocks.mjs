@@ -4,7 +4,8 @@
 //
 // Every enabled pattern appears in the rail and opens its block, each preview
 // route loads its canonical example, the Code view equals the example source
-// bytes, every built /blocks/ page is noindex, and component pages list only
+// bytes, every built /blocks/ page is noindex, the toolbar is Mux ToggleButtonGroups
+// with a Mux Button for Copy, and component pages list only
 // component-bound examples while showing "Used in blocks" from the derived
 // usedIn view.
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
@@ -74,9 +75,9 @@ function checkRail(root, route) {
 		const links = elements(item).filter((node) => node.tagName === 'a');
 		const block = blocks.find((candidate) => candidate.id === pattern.id);
 		assert(block !== undefined, `The Blocks loader has no block for ${pattern.id}.`);
-		const blockLink = links.find((node) => classNames(node).has('blocks-block'));
+		const blockLink = links.find((node) => attributeValue(node, 'data-block-link') !== undefined);
 		assert(attributeValue(blockLink, 'href') === variantPath(block, block.variants[0]), `${route} rail block link for ${pattern.id} does not open its first variant.`);
-		const variantLinks = links.filter((node) => classNames(node).has('blocks-variant'));
+		const variantLinks = links.filter((node) => attributeValue(node, 'data-variant-link') !== undefined);
 		const expected = getArtifact({ id: pattern.id, section: 'examples' }).value.map(({ id }) => id);
 		assert(
 			variantLinks.map((node) => attributeValue(node, 'href')).join() === block.variants.map((variant) => variantPath(block, variant)).join()
@@ -88,7 +89,11 @@ function checkRail(root, route) {
 			assert(existsSync(resolve(docsDist, href.replace(/^\//u, ''), 'index.html')), `${route} rail link ${href} has no built page.`);
 		}
 	}
-	const groups = tree.filter((node) => node.tagName === 'h2' && classNames(node).has('blocks-group')).map(textContent);
+	const groups = tree
+		.filter((node) => node.tagName === 'li' && attributeValue(node, 'data-group') !== undefined)
+		.map((group) => elements(group).find((node) => node.tagName === 'h2'))
+		.filter((heading) => heading !== undefined)
+		.map(textContent);
 	assert(groups.length > 0, `${route} rail has no groups.`);
 	return tree;
 }
@@ -165,7 +170,11 @@ for (const pattern of patterns) {
 		const pre = elements(codeBody).find((node) => node.tagName === 'pre');
 		assert(pre !== undefined && textContent(pre) === sourceBytes, `${route} Code view does not equal ${example.source.content}.`);
 		assert(elements(codeBody).every(({ tagName }) => !['a', 'button', 'iframe', 'input', 'select', 'textarea'].includes(tagName)), `${route} Code view contains interactive HTML.`);
-		assert(parts.some((node) => node.tagName === 'button' && attributeValue(node, 'data-copy') !== undefined), `${route} has no Copy button.`);
+		const copy = parts.find((node) => node.tagName === 'button' && attributeValue(node, 'data-copy') !== undefined);
+		assert(copy !== undefined && classNames(copy).has('muxui-button'), `${route} has no Mux Button for Copy.`);
+		// The toolbar is made of Mux toggle button groups, not hand-rolled controls.
+		const toolbarGroups = parts.filter((node) => classNames(node).has('muxui-toggle-button-group')).map((node) => attributeValue(node, 'aria-label'));
+		assert(toolbarGroups.join() === 'Preview width,Preview theme,View', `${route} toolbar groups are ${toolbarGroups.join()}, not the Mux ToggleButtonGroups for width, theme, and view.`);
 		const path = parts.find((node) => attributeValue(node, 'data-source-path') !== undefined);
 		assert(textContent(path) === example.source.content && example.source.content.startsWith(`catalog/patterns/${tail(pattern.id)}/`), `${route} source path is not the canonical pattern source.`);
 

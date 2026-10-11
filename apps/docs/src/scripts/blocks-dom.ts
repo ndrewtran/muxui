@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from 'react';
+
 export type Theme = 'dark' | 'light';
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -21,6 +23,11 @@ export function onSiteThemeChange(listener: (theme: Theme) => void): () => void 
 	const observer = new MutationObserver(() => listener(siteTheme()));
 	observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 	return () => observer.disconnect();
+}
+
+/** The site theme, which follows the picker. The server render assumes the layout's default, dark. */
+export function useSiteTheme(): Theme {
+	return useSyncExternalStore(onSiteThemeChange, siteTheme, () => 'dark');
 }
 
 /** Sets an isolated preview document's theme. Previews are same-origin, so the parent can reach in. */
