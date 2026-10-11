@@ -137,8 +137,8 @@ for (const engine of browserEngines()) {
       await t.test('walks every control in order in light and dark, each with a focus ring that differs from rest', async () => {
         for (const scheme of ['light', 'dark']) {
           for (const [label, prepare, expected] of [
-            ['empty draft', async () => {}, ['tab Plan', 'log Plan thread', 'button New chat', 'button History', 'button More actions', 'textbox Message']],
-            ['typed draft', (tab) => message(tab).fill('Draft'), ['tab Plan', 'log Plan thread', 'button New chat', 'button History', 'button More actions', 'textbox Message', 'button Send message']],
+            ['empty draft', async () => {}, ['tab Plan', 'tabpanel Plan', 'button New chat', 'button History', 'button More actions', 'textbox Message']],
+            ['typed draft', (tab) => message(tab).fill('Draft'), ['tab Plan', 'tabpanel Plan', 'button New chat', 'button History', 'button More actions', 'textbox Message', 'button Send message']],
           ]) {
             const { context, tab } = await openBlock(browser, url, { scheme });
             try {

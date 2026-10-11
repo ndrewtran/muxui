@@ -94,15 +94,21 @@ async function overlayTests(t, browser, url) {
       try {
         const seen = await tabWalk(tab, ringWalk(tab), `overlay ${scheme}`);
         assert.deepEqual(seen, ['button Quick find'], `${scheme}: Tab reaches the trigger`);
-        // Opened by keyboard, the field takes focus and shows its own ring.
+        // Opened by keyboard, the field takes focus. The dialog keeps focus inside, so there is no unfocused read of the field:
+        // its focus outline is compared with the resting colour the component draws it in (--muxui-field-border-color).
         await tab.locator('#before').focus();
         await tab.keyboard.press('Tab');
         await tab.keyboard.press('Enter');
         await tab.getByRole('dialog', { name: 'Quick find' }).waitFor();
-        const walk = ringWalk(tab);
-        await walk.land('textbox Find');
-        await tab.evaluate(() => document.activeElement.blur());
-        await walk.finish();
+        assert.equal(await stopOf(tab), 'textbox Find');
+        await pollUntil(tab, () => {
+          const probe = document.createElement('span');
+          probe.style.color = 'var(--muxui-field-border-color)';
+          document.activeElement.parentElement.append(probe);
+          const rest = getComputedStyle(probe).color;
+          probe.remove();
+          return getComputedStyle(document.activeElement).outlineColor !== rest;
+        }, undefined, { message: `${scheme}: the focused field draws an outline that differs from its resting colour` });
       } finally {
         await context.close();
       }

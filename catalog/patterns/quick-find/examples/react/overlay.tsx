@@ -25,7 +25,7 @@ export function QuickFindOverlayExample() {
           padding: var(--muxui-semantic-layout-inset-xlarge) var(--muxui-semantic-layout-viewport-inset);
         }
 
-        /* The trigger rests as plain text with no focus style of its own, so this block draws both. */
+        /* The trigger rests as plain text, so this block gives it an outline. */
         .find .find-trigger {
           border: 1px solid var(--muxui-semantic-border-default);
           color: var(--muxui-semantic-content-default);
@@ -33,19 +33,6 @@ export function QuickFindOverlayExample() {
 
         .find .find-trigger:hover {
           background-color: var(--muxui-semantic-surface-hover);
-        }
-
-        /* A transparent outline stays visible in forced colors, where the box-shadow ring is dropped. */
-        .find .find-trigger:focus-visible {
-          outline: 2px solid transparent;
-          outline-offset: 2px;
-          box-shadow: 0 0 0 2px var(--muxui-semantic-focus-inner), 0 0 0 4px var(--muxui-semantic-focus-ring);
-        }
-
-        /* The palette's field rests with an outline and shows no focus style of its own; an inset ring cannot be clipped by the popup. */
-        .find-input:focus-visible {
-          outline: 2px solid var(--muxui-semantic-focus-ring);
-          outline-offset: -2px;
         }
 
         .find-empty {
@@ -61,7 +48,7 @@ export function QuickFindOverlayExample() {
         <CommandPalette.Backdrop>
           <CommandPalette.Popup aria-label="Quick find">
             <CommandPalette.Content>
-              <CommandPalette.Input className="find-input" aria-label="Find" placeholder="Find a plan, issue, or action" value={palette.query} onChange={(event) => palette.setQuery(event.currentTarget.value)} />
+              <CommandPalette.Input aria-label="Find" placeholder="Find a plan, issue, or action" value={palette.query} onChange={(event) => palette.setQuery(event.currentTarget.value)} />
               <CommandPalette.ListBox>
                 {palette.groupedCommands.map((group) => (
                   <CommandPalette.Section key={group.id}>

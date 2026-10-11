@@ -86,7 +86,7 @@ export function ChatPanelTabbedThreadExample() {
           background-color: var(--muxui-semantic-surface-hover);
         }
 
-        /* A transparent outline stays visible in forced colors, where the box-shadow ring is dropped. */
+        /* Menu.Trigger shows only the browser's default outline, so this block draws the Mux ring. A transparent outline stays visible in forced colors. */
         .chat-menu:focus-visible {
           outline: 2px solid transparent;
           outline-offset: 2px;
@@ -99,12 +99,6 @@ export function ChatPanelTabbedThreadExample() {
           gap: var(--muxui-semantic-layout-group-gap);
           min-block-size: 12rem;
           padding-inline: var(--muxui-semantic-layout-inset-medium);
-        }
-
-        /* The thread takes focus so a keyboard can reach it, and the panel around it has no focus style of its own. */
-        .chat-thread:focus-visible {
-          outline: 2px solid var(--muxui-semantic-focus-ring);
-          outline-offset: -2px;
         }
 
         /* Right alignment for your own messages. */
@@ -136,7 +130,7 @@ export function ChatPanelTabbedThreadExample() {
               id,
               label,
               panel: (
-                <div className="chat-thread" role="log" tabIndex={0} aria-label={`${label} thread`}>
+                <div className="chat-thread" role="log" aria-label={`${label} thread`}>
                   <Message className="chat-user" sender="user"><p>{question}</p></Message>
                   {replies.map(({ id: reply, text, step }) => (
                     <Message key={reply}>
