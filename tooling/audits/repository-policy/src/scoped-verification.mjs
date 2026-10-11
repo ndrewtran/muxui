@@ -98,6 +98,23 @@ export function dependencyClosure(packages, names) {
   return packages.filter(({ name }) => selected.has(name));
 }
 
+/** The packages ordered so each follows the workspace packages it depends on; otherwise they keep their order. */
+export function dependencyOrder(packages) {
+  const byName = new Map(packages.map((item) => [item.name, item]));
+  const visited = new Set();
+  const ordered = [];
+  const visit = (item) => {
+    if (visited.has(item.name)) return;
+    visited.add(item.name);
+    for (const name of localDependencies(item.manifest)) {
+      if (byName.has(name)) visit(byName.get(name));
+    }
+    ordered.push(item);
+  };
+  packages.forEach(visit);
+  return ordered;
+}
+
 export function dependentClosure(packages, names) {
   const dependents = new Map(packages.map(({ name }) => [name, []]));
   for (const item of packages) {
@@ -379,6 +396,7 @@ export function generationArgs(plan) {
 export const isolatedCheckPackages = ['@muxui/react'];
 export const storybookPackage = '@muxui/react-storybook';
 export const laneCheckPackages = [storybookPackage];
+export const evidencePackage = '@muxui/repository-policy';
 export const checkConcurrency = 2;
 
 function checkCommand(concurrency, filters, task) {
@@ -415,6 +433,12 @@ export function checkStages(plan, { task, workspaceRootName, storybookCommands }
       if (workspaceRootName) filters.push('--filter', `!${workspaceRootName}`);
     }
     shared.push([{ args: checkCommand(checkConcurrency, filters, task) }]);
+  }
+  // Policy's `check` leaves out the retained-evidence tests so CI can run them
+  // only when their inputs change. Every workspace run (`pnpm check`,
+  // `check:all`, and so `release:prepare`) still runs them, in a lane of their own.
+  if (task === 'check' && selected([evidencePackage]).length > 0) {
+    shared.push([{ args: checkCommand(1, ['--filter', evidencePackage], 'check:evidence') }]);
   }
   // Parallel lanes interleave output, so pnpm prefixes each line with its package.
   if (shared.length > 1) stages.push(shared.map((lane) => lane.map((step) => ({ ...step, args: ['--stream', ...step.args] }))));

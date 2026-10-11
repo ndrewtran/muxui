@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { globSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { parse } from 'acorn';
 import test from 'node:test';
 import {
   buildPullRequestImpact,
@@ -129,11 +130,11 @@ const packages = [
   { name: '@muxui/react-native', path: 'packages/react-native', manifest: { dependencies: { '@muxui/foundation': 'workspace:*' }, devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/react-playground', path: 'apps/react-playground', manifest: { dependencies: { '@muxui/react': 'workspace:*' }, scripts: { check: 'check' } } },
   { name: '@muxui/react-storybook', path: 'apps/react-storybook', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', 'check:scoped': 'node src/check-scoped.mjs' } } },
-  { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
+  { name: '@muxui/repository-policy', path: 'tooling/audits/repository-policy', manifest: { dependencies: { '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*', '@muxui/tooling': 'workspace:*' }, scripts: { generate: 'generate', check: 'check', 'check:evidence': 'check:evidence' } } },
   { name: '@muxui/scale', path: 'apps/scale', manifest: { dependencies: { '@muxui/react': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { check: 'node ../../tooling/audits/repository-policy/src/prepare-prerequisites.mjs @muxui/react... && check' } } },
   { name: '@muxui/schema', path: 'packages/schema', manifest: { dependencies: {}, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/tokens', path: 'packages/tokens', manifest: { dependencies: { '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
-  { name: '@muxui/tooling', path: 'packages/tooling', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate' } } },
+  { name: '@muxui/tooling', path: 'packages/tooling', manifest: { dependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
   { name: '@muxui/web', path: 'packages/web', manifest: { devDependencies: { '@muxui/catalog': 'workspace:*', '@muxui/schema': 'workspace:*', '@muxui/tokens': 'workspace:*' }, scripts: { generate: 'generate', check: 'check' } } },
 ];
 
@@ -181,6 +182,10 @@ function packagesWithScript(packageName, scriptName, value) {
 function plan(changedPaths, options = {}) {
   return buildPullRequestImpact(inputFor(changedPaths, options));
 }
+
+// Snapshots of files that exist before and after the change. The planner counts
+// an evidence presence input (README.md, the CI workflow) only when it is added or removed.
+const edited = (...paths) => ({ textSnapshots: Object.fromEntries(paths.map((path) => [path, { before: 'before\n', after: 'after\n' }])) });
 
 function selectComponentTests(families) {
   return componentTestSelection(
@@ -444,13 +449,17 @@ test('foundation guide changes validate the catalog, tooling dense goldens, and 
   assert.deepEqual(result.storyRuns, []);
   assert.equal(result.reasons[0], `${path} is a canonical guide; validate the catalog, its dense goldens, and the docs that render it`);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'browser-chromium']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium']);
+  // A catalog change reaches policy through tooling, so the evidence tests run too.
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
+    ['--filter', '@muxui/repository-policy', 'run', 'check:evidence'],
+  ]);
+  assert.deepEqual(groups[1].commands.slice(1).map(({ args }) => args), [['--filter', '@muxui/tooling', 'run', 'check']]);
+  assert.deepEqual(groups[2].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/react-native', 'run', 'check'],
-    ['--filter', '@muxui/tooling', 'run', 'check'],
     ['--filter', '@muxui/web', 'run', 'check'],
   ]);
 });
@@ -488,7 +497,7 @@ test('Scale, Starlight docs, and CI policy edits stay in their independent owner
   assert.equal(docs.scale || docs.reactPackageFull || docs.tailwind || docs.storyTooling, false);
   assert.deepEqual(docs.storyRuns, []);
 
-  const policy = await plan(['.github/workflows/ci.yml']);
+  const policy = await plan(['.github/workflows/ci.yml'], edited('.github/workflows/ci.yml'));
   assert.equal(policy.policy, true);
   assert.equal(policy.full, false);
   assert.equal(policy.docs || policy.scale || policy.reactPackageFull || policy.storyTooling, false);
@@ -505,26 +514,213 @@ test('root and directory guidance docs without another owner take the policy rou
     'packages/AGENTS.md', 'tests/AGENTS.md', 'tests/evidence/README.md', 'tests/fixtures/g1.2/AGENTS.md',
   ];
   for (const path of guidancePaths) {
-    const result = await plan([path]);
+    const result = await plan([path], edited(path));
     assert.equal(result.policy, true, path);
+    // Only the retained evidence's own guidance is an input of the evidence tests.
+    assert.equal(result.evidence, path === 'tests/evidence/README.md', path);
     assert.equal(result.full || result.catalog || result.docs || result.storyTooling, false, path);
     assert.deepEqual(result.storyRuns, [], path);
   }
 });
 
 test('policy-run fixture tests and retained evidence route to the repository-policy check', async () => {
-  const paths = [
-    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/consumers/button-web.consumer.mjs',
-    'tests/evidence/README.md', 'tests/evidence/g0.4/index.json',
-  ];
-  for (const path of paths) {
+  const policyCheck = ['--filter', '@muxui/repository-policy', 'run', 'check'];
+  const evidenceCheck = ['--filter', '@muxui/repository-policy', 'run', 'check:evidence'];
+  const paths = new Map([
+    ['tests/fixtures/g0.4/corpus.json', [policyCheck]],
+    ['tests/fixtures/g1.0/consumers/button-web.consumer.mjs', [policyCheck]],
+    ['tests/evidence/README.md', [policyCheck, evidenceCheck]],
+    ['tests/evidence/g0.4/index.json', [policyCheck, evidenceCheck]],
+  ]);
+  for (const [path, expected] of paths) {
     const result = await plan([path]);
     assert.equal(result.policy, true, path);
     assert.equal(result.full || result.docs || result.scale || result.catalog || result.storyTooling, false, path);
-    assert.deepEqual(executionCommands(result, { packages }).slice(1).map(({ args }) => args), [
-      ['--filter', '@muxui/repository-policy', 'run', 'check'],
-    ], path);
+    assert.deepEqual(executionCommands(result, { packages }).slice(1).map(({ args }) => args), expected, path);
   }
+});
+
+// The retained-evidence tests (tooling/audits/repository-policy/test/evidence-integrity.test.mjs, `check:evidence`)
+// take about four of the policy check's five minutes, so a pull request runs them only when the change reaches
+// something they load or read. This is the set `pullRequestImpact.evidenceInputs` names; the closure test below fails
+// when the tests' imports outgrow it. Besides these paths, the tests also load the packages policy depends on
+// (catalog, schema, tokens, tooling), which reach policy through the workspace links.
+const evidenceInputs = [
+  '.gitattributes',
+  'apps/docs/src/lib/block-presets.ts',
+  'decisions/0022-rc1-assistive-technology-non-claim.md',
+  'packages/react/src/r1-deferred-evidence.mjs',
+  'tests/evidence/',
+  'tooling/audits/repository-policy/package.json',
+  'tooling/audits/repository-policy/src/canonical-json.mjs',
+  'tooling/audits/repository-policy/src/evidence-verify.mjs',
+  'tooling/audits/repository-policy/src/npm-publication.mjs',
+  'tooling/audits/repository-policy/src/pattern-variants.mjs',
+  'tooling/audits/repository-policy/src/policy.mjs',
+  'tooling/audits/repository-policy/src/release-proof.mjs',
+  'tooling/audits/repository-policy/src/workspace-packages.mjs',
+  'tooling/audits/repository-policy/test/evidence-integrity.test.mjs',
+];
+// Files the tests only look up by name, so adding or removing one matters: the growth fixture edits the README and the
+// workflow in an archive of HEAD, and every shipped `pattern-<slug>` browser test must belong to an enabled pattern.
+const evidencePresenceInputs = ['.github/workflows/ci.yml', 'README.md', 'packages/react/test/browser/pattern-'];
+const policyCommand = ['--filter', '@muxui/repository-policy', 'run', 'check'];
+const evidenceCommand = ['--filter', '@muxui/repository-policy', 'run', 'check:evidence'];
+
+const policyGroupArgs = async (paths, options = {}) => {
+  const groups = executionGroups(await plan(paths, options), { packages, environment: {}, pageIndex });
+  return groups.find(({ id }) => id === 'checks-policy')?.commands.slice(1).map(({ args }) => args);
+};
+
+test('the evidence trigger set is the one the route test names, and planning refuses a policy without it', async () => {
+  assert.deepEqual(config.evidenceInputs, evidenceInputs);
+  assert.deepEqual(config.evidencePresenceInputs, evidencePresenceInputs);
+  await assert.rejects(plan(['AGENTS.md'], { config: { ...config, evidenceInputs: undefined } }), /MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact\.evidenceInputs/u);
+  await assert.rejects(plan(['AGENTS.md'], { config: { ...config, evidencePresenceInputs: [''] } }), /MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact\.evidencePresenceInputs/u);
+});
+
+// Everything the evidence tests import, statically or by a literal `import()`, and everything those modules import.
+// A change to any of those files must plan the evidence tests, however it routes: through the named inputs here, or
+// through a package policy depends on.
+test('every module the evidence tests load plans check:evidence when it changes', async () => {
+  const testFile = 'tooling/audits/repository-policy/test/evidence-integrity.test.mjs';
+  const seen = new Set();
+  const workspaceImports = new Set();
+  const visit = async (file) => {
+    if (seen.has(file)) return;
+    seen.add(file);
+    if (!/\.m?js$/u.test(file)) return;
+    const source = await readFile(resolve(repositoryRoot, file), 'utf8').catch(() => null);
+    // Generated projections have no source file in a clean checkout; their sources are in the closure.
+    if (source === null) return;
+    const specifiers = [];
+    const walk = (node) => {
+      if (Array.isArray(node)) return node.forEach(walk);
+      if (!node || typeof node !== 'object') return;
+      if (node.source?.type === 'Literal' && ['ImportDeclaration', 'ExportAllDeclaration', 'ExportNamedDeclaration', 'ImportExpression'].includes(node.type)) {
+        specifiers.push(node.source.value);
+      }
+      Object.entries(node).filter(([key]) => !['start', 'end', 'loc'].includes(key)).forEach(([, value]) => walk(value));
+    };
+    walk(parse(source, { ecmaVersion: 'latest', sourceType: 'module' }));
+    for (const specifier of specifiers.filter((value) => value.startsWith('.'))) {
+      await visit(join(dirname(file), specifier).split('\\').join('/'));
+    }
+    specifiers.filter((value) => value.startsWith('@muxui/')).forEach((value) => workspaceImports.add(value.split('/').slice(0, 2).join('/')));
+  };
+  await visit(testFile);
+
+  const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+  // Workspace packages the loaded modules import by name must be ones policy depends on, so changing them plans policy.
+  const policyDependencies = dependencyClosure(workspacePackages, ['@muxui/repository-policy']).map(({ name }) => name);
+  for (const name of workspaceImports) assert.ok(policyDependencies.includes(name), `${name} is imported by the evidence tests but policy does not depend on it; name its paths in evidenceInputs`);
+  const tracked = new Set(execFileSync('git', ['ls-files', '-z'], { cwd: repositoryRoot, encoding: 'utf8' }).split('\0'));
+  const loaded = [...seen].filter((file) => tracked.has(file)).sort();
+  // The tests reach the compiler, the tooling API, the capture tools, and the docs presets, not only their own helpers.
+  for (const file of ['tests/evidence/capture-r1-exit.mjs', 'tests/evidence/bl1/growth-scope.mjs', 'packages/catalog/src/compiler.mjs',
+    'packages/tooling/src/index.mjs', 'packages/react/src/r1-deferred-evidence.mjs', 'tooling/audits/repository-policy/src/release-proof.mjs']) {
+    assert.ok(loaded.includes(file), `${file} is expected in the tests' import closure`);
+  }
+  for (const file of loaded) {
+    const result = await plan([file], { packages: workspacePackages });
+    assert.equal(result.evidence, true, `${file} is loaded by the evidence tests but changing it skips check:evidence`);
+  }
+  // The block presets are read as a module and as source text by path.
+  assert.ok(config.evidenceInputs.includes('apps/docs/src/lib/block-presets.ts'));
+});
+
+test('policy-run paths that no evidence test reads skip check:evidence', async () => {
+  for (const path of [
+    'decisions/0028-release-proof.md', 'strategy/milestone-roadmap.md', '.github/workflows/npm-publish.yml', '.github/CODEOWNERS',
+    'AGENTS.md', 'docs/agents/domain.md', '.agents/skills/muxui-delivery/SKILL.md', 'catalog/AGENTS.md',
+    'tooling/audits/repository-policy/README.md', 'tooling/audits/repository-policy/src/ci-impact.mjs',
+    'tooling/audits/repository-policy/test/ci-impact.test.mjs', 'tooling/audits/repository-policy/repository-policy.json',
+    'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/entry-contract.test.mjs',
+  ]) {
+    const result = await plan([path]);
+    assert.equal(result.policy, true, path);
+    assert.equal(result.evidence, false, path);
+    assert.deepEqual(await policyGroupArgs([path]), [policyCommand], path);
+  }
+  // A workflow, the README, or a pattern browser test that is edited, not added or removed, is not a lookup change.
+  const editedLookups = ['.github/workflows/ci.yml', 'README.md', 'packages/react/test/browser/pattern-poster-grid.test.mjs'];
+  for (const path of editedLookups) {
+    assert.equal((await plan([path], edited(path))).evidence, false, path);
+  }
+  // Test-only edits in a package policy depends on are not dependent-facing, so policy is not planned at all.
+  const toolingTest = await plan(['packages/tooling/test/authoring.test.mjs']);
+  assert.equal(toolingTest.policy || toolingTest.evidence, false);
+  assert.deepEqual(toolingTest.packageChecks, ['@muxui/tooling']);
+});
+
+test('the evidence tests run beside the policy check when a change reaches their inputs', async () => {
+  const policyAndEvidence = [policyCommand, evidenceCommand];
+  const named = evidenceInputs.map((path) => (path.endsWith('/') ? `${path}bl1/index.json` : path));
+  for (const path of named) {
+    const result = await plan([path]);
+    assert.equal(result.evidence, true, path);
+    assert.ok(result.reasons.some((reason) => reason.includes('retained-evidence tests; run check:evidence')), path);
+    // Retained evidence and the policy modules and tests are also policy machinery; the others are not.
+    const args = await policyGroupArgs([path]);
+    assert.ok(args.some((command) => command.at(-1) === 'check:evidence'), path);
+    assert.deepEqual(args, result.policy ? policyAndEvidence : [evidenceCommand], path);
+  }
+
+  // Packages the tests load reach policy through the workspace links, as they did before the split.
+  for (const path of ['packages/tooling/src/index.mjs', 'packages/catalog/src/compiler.mjs', 'packages/schema/src/index.mjs', 'packages/tokens/src/index.mjs',
+    'catalog/patterns/poster-grid/artifact.json', 'catalog/guides/foundations-component-tokens.md']) {
+    const result = await plan([path]);
+    assert.equal(result.policy && result.evidence, true, path);
+    assert.deepEqual(await policyGroupArgs([path]), policyAndEvidence, path);
+  }
+
+  // A change no route owns widens to the whole policy proof, evidence included.
+  const unowned = await plan(['scripts/unowned-change.mjs']);
+  assert.equal(unowned.policy && unowned.evidence, true);
+});
+
+test('an evidence input alone plans a policy group that runs only the evidence tests', async () => {
+  const result = await plan(['apps/docs/src/lib/block-presets.ts']);
+  assert.equal(result.policy, false);
+  assert.equal(result.evidence, true);
+  const groups = executionGroups(result, { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium']);
+  assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [evidenceCommand]);
+  // The group generates what policy's closure needs, like any policy group.
+  const generation = groups[0].commands[0].args.filter((_, index, args) => args[index - 1] === '--filter');
+  for (const name of ['@muxui/catalog', '@muxui/react', '@muxui/repository-policy', '@muxui/tooling']) assert.ok(generation.includes(name), name);
+});
+
+test('adding or removing a looked-up file plans the evidence tests; editing it does not', async () => {
+  const added = (path) => ({ textSnapshots: { [path]: { before: null, after: 'new\n' } } });
+  const removed = (path) => ({ textSnapshots: { [path]: { before: 'old\n', after: null } } });
+  const patternTest = 'packages/react/test/browser/pattern-new-block.test.mjs';
+  for (const path of ['.github/workflows/ci.yml', 'README.md', patternTest]) {
+    for (const options of [added(path), removed(path)]) {
+      const result = await plan([path], options);
+      assert.equal(result.evidence, true, path);
+      assert.match(result.reasons.join('\n'), new RegExp(`${path.replaceAll('.', '\\.')} is added or removed, and is looked up by the retained-evidence tests`, 'u'));
+    }
+  }
+  // Another browser test, added or removed, is not looked up by name.
+  assert.equal((await plan(['packages/react/test/browser/tree-toggle-browser.test.mjs'], added('packages/react/test/browser/tree-toggle-browser.test.mjs'))).evidence, false);
+  // A pattern test added alone still plans its own browser proof and now the evidence check that pairs it with a pattern.
+  const groups = executionGroups(await plan([patternTest], added(patternTest)), { packages, environment: {}, pageIndex });
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'react']);
+});
+
+test('the policy package splits its check script from the evidence script without dropping a test', async () => {
+  const policyDirectory = resolve(repositoryRoot, 'tooling/audits/repository-policy');
+  const { scripts } = JSON.parse(readFileSync(resolve(policyDirectory, 'package.json'), 'utf8'));
+  // `check` globs every test file but the evidence one; `check:evidence` names it and verifies the retained evidence.
+  const glob = scripts.check.match(/node --test '(test\/[^']+)'/u)?.[1];
+  assert.equal(glob, 'test/!(evidence-integrity).test.mjs');
+  const everyTest = globSync('test/*.test.mjs', { cwd: policyDirectory }).sort();
+  const checked = globSync(glob, { cwd: policyDirectory }).sort();
+  assert.deepEqual(everyTest.filter((file) => !checked.includes(file)), ['test/evidence-integrity.test.mjs']);
+  assert.ok(checked.length >= 10 && checked.includes('test/ci-impact.test.mjs'));
+  assert.match(scripts.check, /^node src\/cli\.mjs && node src\/evidence-verify\.mjs && node --test /u);
+  assert.equal(scripts['check:evidence'], 'node src/evidence-verify.mjs && node --test test/evidence-integrity.test.mjs');
 });
 
 test('Scale and docs changes run the Scale docs browser test as one ordinary check', async () => {
@@ -540,7 +736,7 @@ test('Scale and docs changes run the Scale docs browser test as one ordinary che
     assert.notEqual(command.prerequisite, true, path);
     assert.ok(!browser.commands.some(({ args }) => args.includes('build')), path);
   }
-  const policy = executionGroups(await plan(['.github/workflows/ci.yml']), { packages, environment: {}, pageIndex });
+  const policy = executionGroups(await plan(['.github/workflows/ci.yml'], edited('.github/workflows/ci.yml')), { packages, environment: {}, pageIndex });
   assert.ok(!policy.some(({ kind }) => kind === 'browser'));
 });
 
@@ -657,6 +853,8 @@ test('policy-only lockfile changes stay scoped and other importer changes map to
     lockfileAfter: policyOnlyLockfile,
   });
   assert.equal(policy.policy, true);
+  // Policy's own parser dependencies are loaded by the evidence tests.
+  assert.equal(policy.evidence, true);
   assert.equal(policy.full, false);
   assert.deepEqual(policy.storyRuns, []);
 
@@ -777,7 +975,7 @@ test('a failed CI prerequisite stops the run before dependent checks', () => {
 
 test('generation and install commands are marked as CI prerequisites', async () => {
   const catalogCommands = executionCommands(await plan(['packages/catalog/src/compiler.mjs']), { packages });
-  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(7).fill(false)]);
+  assert.deepEqual(catalogCommands.map(({ prerequisite }) => prerequisite === true), [true, ...Array(8).fill(false)]);
 });
 
 test('clean owner checks schedule only their generation dependencies before checks', async () => {
@@ -800,17 +998,18 @@ test('clean owner checks schedule only their generation dependencies before chec
   ]);
   assert.deepEqual(catalogCommands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
+    ['--filter', '@muxui/repository-policy', 'run', 'check:evidence'],
+    ['--filter', '@muxui/tooling', 'run', 'check'],
     ['--filter', '@muxui/catalog', 'run', 'check'],
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
     ['--filter', '@muxui/react-native', 'run', 'check'],
-    ['--filter', '@muxui/tooling', 'run', 'check'],
     ['--filter', '@muxui/web', 'run', 'check'],
   ]);
   assert.equal(catalog.reactPackageFull, false);
   assert.deepEqual(catalog.storyRuns, []);
 
-  const policy = await plan(['.github/workflows/ci.yml']);
+  const policy = await plan(['.github/workflows/ci.yml'], edited('.github/workflows/ci.yml'));
   const policyCommands = executionCommands(policy, { packages });
   assert.ok(policyCommands[0].args.includes('--filter'));
   assert.ok(policyCommands[0].args.includes('@muxui/react'));
@@ -1023,34 +1222,41 @@ test('React runtime changes run the Motion bundle boundary test; stylesheet-only
 });
 
 test('scoped plans split into independent groups that each repeat the generation prerequisite', async () => {
-  const result = await plan([collectionsPath, '.github/workflows/ci.yml'], treeRuntimeChange);
+  const result = await plan([collectionsPath, '.github/workflows/ci.yml'], {
+    ...treeRuntimeChange,
+    textSnapshots: { ...treeRuntimeChange.textSnapshots, ...edited('.github/workflows/ci.yml').textSnapshots },
+  });
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
   // Docs, Scale, Figma, and the playground depend on React at runtime, so they
   // run whole (with the browser checks) while React and Storybook keep the Tree family scope.
-  assert.deepEqual(groupIds(groups), ['checks', 'browser-chromium', 'react', 'storybook-component']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks', 'browser-chromium', 'react', 'storybook-component']);
   const generation = executionCommands(result, { packages })[0];
   assert.equal(generation.prerequisite, true);
   for (const group of groups) assert.deepEqual(group.commands[0], generation, `${group.id} starts with generation`);
+  // The workflow is policy machinery, not an input of the evidence tests.
   assert.deepEqual(groups[0].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/repository-policy', 'run', 'check'],
+  ]);
+  assert.deepEqual(groups[1].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/docs', 'run', 'check'],
     ['--filter', '@muxui/scale', 'run', 'check'],
     ['--filter', '@muxui/figma', 'run', 'check'],
     ['--filter', '@muxui/react-playground', 'run', 'check'],
     ['--filter', '@muxui/react-storybook', 'run', 'generate:check'],
   ]);
-  assert.deepEqual(groups[1].commands.slice(1).map(({ args }) => args), [
+  assert.deepEqual(groups[2].commands.slice(1).map(({ args }) => args), [
     ['--filter', '@muxui/scale', 'run', 'check:browser'],
     ['--filter', '@muxui/scale', 'run', 'check:browser:docs'],
   ]);
-  assert.ok(groups[2].commands.some(({ args }) => args.includes('check:component')));
-  assert.equal(groups[3].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
+  assert.ok(groups[3].commands.some(({ args }) => args.includes('check:component')));
+  assert.equal(groups[4].commands.at(-1).env.MUXUI_STORYBOOK_FAMILIES, 'Tree');
   assert.deepEqual(groupMatrix(groups).map(({ id, kind }) => [id, kind]), [
-    ['checks', 'checks'], ['browser-chromium', 'browser'], ['react', 'react'], ['storybook-component', 'storybook'],
+    ['checks-policy', 'checks'], ['checks', 'checks'], ['browser-chromium', 'browser'], ['react', 'react'], ['storybook-component', 'storybook'],
   ]);
 
+  // Tokens reach policy through tooling and the workspace links, so its evidence tests run as well.
   const tokens = executionGroups(await plan(['catalog/tokens/default-theme.json']), { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(tokens), ['checks', 'browser-chromium', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
+  assert.deepEqual(groupIds(tokens), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-theme', 'storybook-chrome', 'tailwind']);
   assert.deepEqual(tokens.at(-1).commands.slice(1).map(({ prerequisite }) => prerequisite === true), [true, false]);
 });
 
@@ -1289,7 +1495,7 @@ test('a React-test-only group generates the React closure it imports in its own 
 test('story page groups generate Storybook metadata unless this process already prepared it', async () => {
   const result = await plan([sizingExamplePath]);
   const groups = executionGroups(result, { packages, environment: {}, pageIndex });
-  assert.deepEqual(groupIds(groups), ['checks', 'browser-chromium', 'react', 'storybook-story']);
+  assert.deepEqual(groupIds(groups), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-story']);
   for (const group of groups) {
     assert.equal(group.commands[0].prerequisite, true);
     assert.ok(generationFilters(group.commands[0]).includes('@muxui/react-storybook'), `${group.id} generates Storybook`);
@@ -1450,7 +1656,7 @@ test('the full plan splits check:all into independently runnable groups', () => 
     packages, environment: { RUNNER_TEMP: '/tmp/runner' },
   });
   assert.deepEqual(groupIds(groups), [
-    'checks', 'react', 'browser-chromium', 'browser-chromium-only', 'browser-firefox', 'browser-webkit',
+    'checks-policy', 'checks-tooling', 'checks', 'react', 'browser-chromium', 'browser-chromium-only', 'browser-firefox', 'browser-webkit',
     'storybook-a11y', 'storybook', 'tailwind',
   ]);
   for (const group of groups) {
@@ -1459,11 +1665,22 @@ test('the full plan splits check:all into independently runnable groups', () => 
     assert.ok(group.timeoutMinutes > 0);
   }
   const byId = Object.fromEntries(groups.map((group) => [group.id, group.commands.slice(1).map(({ args }) => args.join(' '))]));
-  // The workspace root's `check` is the affected-scope runner, so it must stay excluded.
-  assert.ok(byId.checks[0].endsWith(
-    '--no-bail --filter !@muxui/workspace --filter !@muxui/react --filter !@muxui/react-storybook run check',
-  ));
-  assert.deepEqual(byId.checks.slice(1), ['generate:check']);
+  // Policy keeps both its scripts on the full plan, and tooling has its own group.
+  assert.deepEqual(byId['checks-policy'], ['--filter @muxui/repository-policy run check', '--filter @muxui/repository-policy run check:evidence']);
+  assert.deepEqual(byId['checks-tooling'], ['--filter @muxui/tooling run check']);
+  // Every other package check is one command per package, as in pull-request plans, and the root's `check` (the affected-scope runner) stays out.
+  assert.equal(byId.checks.at(-1), 'generate:check');
+  const rest = byId.checks.slice(0, -1);
+  assert.ok(rest.every((command) => /^--filter \S+ run check$/u.test(command)), rest.join('\n'));
+  assert.ok(!rest.some((command) => /@muxui\/(?:workspace|react|react-storybook|repository-policy|tooling) /u.test(command)));
+  for (const { name, manifest } of packages) {
+    const dependencies = Object.keys({ ...manifest.dependencies, ...manifest.devDependencies });
+    const position = rest.indexOf(`--filter ${name} run check`);
+    for (const dependency of dependencies) {
+      const earlier = rest.indexOf(`--filter ${dependency} run check`);
+      if (position !== -1 && earlier !== -1) assert.ok(earlier < position, `${dependency} is checked before ${name}`);
+    }
+  }
   assert.deepEqual(byId.react, ['--filter @muxui/react run check']);
   const reactBrowser = '--filter @muxui/react exec node --test --test-concurrency=1 test/browser/';
   assert.equal(byId['browser-chromium'].length, 3);
@@ -1481,6 +1698,37 @@ test('the full plan splits check:all into independently runnable groups', () => 
   assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_EVENT, 'check:all');
   assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_FORCE, '1');
   assert.equal(storybookEnv.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR, '/tmp/runner/storybook-colour-audit');
+});
+
+// Before the split, main ran `pnpm --recursive --sort --if-present --filter '!<root>' --filter '!@muxui/react'
+// --filter '!@muxui/react-storybook' run check`: every workspace project with a `check` script except those three.
+test('the full plan runs the package checks the recursive command ran, once each, in dependency order', async () => {
+  const projects = JSON.parse(execFileSync('pnpm', ['--recursive', 'ls', '--depth', '-1', '--json'], { cwd: repositoryRoot, encoding: 'utf8' }));
+  const rootName = JSON.parse(readFileSync(resolve(repositoryRoot, 'package.json'), 'utf8')).name;
+  const before = projects
+    .filter(({ name }) => ![rootName, '@muxui/react', '@muxui/react-storybook'].includes(name))
+    .filter(({ path }) => typeof JSON.parse(readFileSync(resolve(path, 'package.json'), 'utf8')).scripts?.check === 'string')
+    .map(({ name }) => name)
+    .sort();
+  assert.ok(before.length >= 10 && before.includes('@muxui/repository-policy') && before.includes('@muxui/tooling'), before.join(', '));
+
+  const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
+  const groups = executionGroups(fullWorkspacePlan(), { packages: workspacePackages, environment: {} });
+  const checkGroups = groups.filter(({ kind }) => kind === 'checks');
+  assert.deepEqual(checkGroups.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks']);
+  const packageChecks = checkGroups.flatMap(({ commands }) => commands)
+    .filter(({ args }) => args[0] === '--filter' && args.slice(2).join(' ') === 'run check')
+    .map(({ args }) => args[1]);
+  assert.deepEqual([...packageChecks].sort(), before, 'every package that ran before still runs, and none twice');
+
+  // Within the `checks` group each package follows the packages it depends on.
+  const rest = packageChecks.filter((name) => !['@muxui/repository-policy', '@muxui/tooling'].includes(name));
+  for (const { name, manifest } of workspacePackages) {
+    const position = rest.indexOf(name);
+    for (const dependency of Object.keys({ ...manifest.dependencies, ...manifest.devDependencies, ...manifest.peerDependencies })) {
+      if (position !== -1 && rest.includes(dependency)) assert.ok(rest.indexOf(dependency) < position, `${dependency} is checked before ${name}`);
+    }
+  }
 });
 
 test('CLI arguments select preview, full, group, and GitHub output modes', () => {
@@ -1668,6 +1916,60 @@ test('Storybook groups are affected only by overlapping families, tooling, or ch
 test('an identical tree reuses every earlier pass', async () => {
   const all = { checks: 'success', react: 'success', 'storybook-component': 'success' };
   assert.deepEqual(Object.values(outcome(await decide([earlierRun(7, all)]))), ['reused', 'reused', 'reused']);
+});
+
+test('checks-* groups keep kind checks and the checks timeout in pull-request and full plans', async () => {
+  const pullRequest = executionGroups(await plan(['catalog/guides/foundations-component-tokens.md']), { packages, environment: {}, pageIndex });
+  const full = executionGroups(fullWorkspacePlan(), { packages, environment: {} });
+  for (const groups of [pullRequest, full]) {
+    const checks = groups.filter(({ id }) => id === 'checks' || id.startsWith('checks-'));
+    assert.deepEqual(checks.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks']);
+    for (const group of checks) {
+      assert.equal(group.kind, 'checks', group.id);
+      assert.equal(group.timeoutMinutes, 30, group.id);
+    }
+    assert.deepEqual(groupMatrix(groups).filter(({ id }) => id.startsWith('checks')).map(({ id, kind, timeoutMinutes }) => [id, kind, timeoutMinutes]), [
+      ['checks-policy', 'checks', 30], ['checks-tooling', 'checks', 30], ['checks', 'checks', 30],
+    ]);
+  }
+});
+
+// A pass reused for `checks-policy` or `checks-tooling` follows the same rules as any package group: its own id decides
+// whether the changes since the tested commit route to it, and a changed command signature reruns it.
+test('checks-policy and checks-tooling are reused and rerun independently of the other check groups', async () => {
+  const signedGroups = async (paths, options = {}) => executionGroups(await plan(paths, options), { packages, environment: {}, pageIndex })
+    .map(({ id, kind, commands }) => ({ id, kind, signature: groupSignature(commands), packageDirectories: groupPackageDirectories(commands, packages) }));
+  const groups = await signedGroups(['catalog/guides/foundations-component-tokens.md']);
+  assert.deepEqual(groups.map(({ id }) => id), ['checks-policy', 'checks-tooling', 'checks', 'browser-chromium']);
+  const passed = earlierRun(3, Object.fromEntries(groups.map(({ id }) => [id, 'success'])), { groups });
+  const decideAll = (delta, earlier = [passed], current = groups) => decide(earlier, delta, current);
+  const reused = (decisions) => Object.fromEntries(decisions.map(({ id, reusedFrom }) => [id, reusedFrom !== '']));
+
+  assert.deepEqual(reused(await decideAll(noDelta)), { 'checks-policy': true, 'checks-tooling': true, checks: true, 'browser-chromium': true });
+  // A follow-up that routes only to `checks` leaves the two long suites reused.
+  const docsOnly = { changedPaths: ['apps/docs/src/index.md'], groupIds: ['checks'], storyRuns: [], storyTooling: false };
+  const afterDocs = await decideAll(docsOnly);
+  assert.deepEqual(reused(afterDocs), { 'checks-policy': true, 'checks-tooling': true, checks: false, 'browser-chromium': true });
+  assert.match(afterDocs.find(({ id }) => id === 'checks').reason, /affected since .*: changes (?:touch apps\/docs|route to checks)/u);
+  // Each group reruns for its own id, never for a sibling's.
+  for (const [id, others] of [['checks-tooling', ['checks-policy', 'checks']], ['checks-policy', ['checks-tooling', 'checks']]]) {
+    const own = { changedPaths: ['x'], groupIds: [id], storyRuns: [], storyTooling: false };
+    const decisions = await decideAll(own);
+    assert.match(decisions.find((decision) => decision.id === id).reason, new RegExp(`changes route to ${id}`, 'u'));
+    for (const other of others) assert.equal(reused(decisions)[other], true, `${other} stays reused when only ${id} is affected`);
+  }
+
+  // Planning the evidence tests changes the policy group's commands, so the earlier pass no longer applies; the rest stays reusable.
+  const withEvidence = await signedGroups(['catalog/guides/foundations-component-tokens.md', 'tests/evidence/README.md']);
+  const policyOnly = await signedGroups(['decisions/0028-release-proof.md']);
+  assert.notEqual(policyOnly[0].signature, withEvidence[0].signature);
+  const earlierPolicyOnly = earlierRun(4, { 'checks-policy': 'success' }, { groups: policyOnly });
+  const regrouped = await decide([earlierPolicyOnly], noDelta, withEvidence.slice(0, 1));
+  assert.deepEqual(outcome(regrouped), { 'checks-policy': 'signature changed' });
+
+  // The reusable kind covers the new ids: a `checks` kind with no known package set never reuses.
+  assert.match(affectedReason({ ...groups[0], packageDirectories: null }, docsOnly), /package set of checks-policy is unknown/u);
+  assert.equal(affectedReason({ id: 'checks-policy', kind: 'checks', packageDirectories: [] }, docsOnly), null);
 });
 
 const reuseEnvironment = {
@@ -1864,7 +2166,7 @@ test('deltaImpact diffs trees directly and maps story IDs to families in a real 
     assert.equal(result.status, 0, result.stderr);
     const delta = JSON.parse(result.stdout.trim().split('\n').at(-1));
     assert.deepEqual(delta.changedPaths, ['apps/docs/guide.md', 'apps/docs/handbook.md', 'apps/scale/src/app.mjs', example]);
-    assert.deepEqual(delta.groupIds, ['checks', 'browser-chromium', 'react', 'storybook-story']);
+    assert.deepEqual(delta.groupIds, ['checks-tooling', 'checks', 'browser-chromium', 'react', 'storybook-story']);
     assert.deepEqual(delta.storyRuns, [{ proof: 'story', families: ['NumberField'] }]);
   } finally {
     rmSync(root, { recursive: true, force: true });
