@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { Card, ListBox, SearchField, Text } from '@muxui/react';
 
+// One stroke path per icon.
+const SearchX = () => (
+  <svg viewBox="0 0 24 24" width="1.5rem" height="1.5rem" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m13.5 8.5-5 5m0-5 5 5M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM21 21l-4.3-4.3" />
+  </svg>
+);
+
 type Item = { id: string; title: string; hint?: string };
 
 const groups: { id: string; title: string; items: Item[] }[] = [
@@ -40,6 +47,11 @@ export function QuickFindInlineExample() {
           gap: var(--muxui-semantic-layout-action-gap);
         }
 
+        .find-empty-icon {
+          display: inline-flex;
+          color: var(--muxui-semantic-content-muted);
+        }
+
         .find-empty {
           display: grid;
           justify-items: center;
@@ -69,7 +81,7 @@ export function QuickFindInlineExample() {
             ))}
           </ListBox>
         ) : (
-          <div className="find-empty"><Text variant="label">No results found</Text><Text size="sm" color="muted">Adjust your search to try again</Text></div>
+          <div className="find-empty"><span className="find-empty-icon"><SearchX /></span><Text variant="label">No results found</Text><Text size="sm" color="muted">Adjust your search to try again</Text></div>
         )}
         <Text className="find-status" size="sm" color="muted" role="status">{chosen ? `Chose ${chosen}` : `${count} ${count === 1 ? 'result' : 'results'}`}</Text>
       </Card.Root>

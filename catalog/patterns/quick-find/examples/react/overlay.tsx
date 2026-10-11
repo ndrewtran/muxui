@@ -1,6 +1,13 @@
 import { useState } from 'react';
 import { CommandPalette, Text, useCommandPalette, type CommandPaletteCommand } from '@muxui/react';
 
+// One stroke path per icon.
+const SearchX = () => (
+  <svg viewBox="0 0 24 24" width="1.5rem" height="1.5rem" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m13.5 8.5-5 5m0-5 5 5M11 3a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM21 21l-4.3-4.3" />
+  </svg>
+);
+
 const commands: readonly CommandPaletteCommand[] = [
   { id: 'plan', title: 'Open launch plan', subtitle: 'Plans', group: 'Jump to', keywords: ['roadmap'] },
   { id: 'issues', title: 'Review open issues', subtitle: 'Support', group: 'Jump to' },
@@ -35,6 +42,11 @@ export function QuickFindOverlayExample() {
           background-color: var(--muxui-semantic-surface-hover);
         }
 
+        .find-empty-icon {
+          display: inline-flex;
+          color: var(--muxui-semantic-content-muted);
+        }
+
         .find-empty {
           display: grid;
           justify-items: center;
@@ -59,7 +71,7 @@ export function QuickFindOverlayExample() {
               </CommandPalette.ListBox>
               {palette.filteredCommands.length === 0 && (
                 <CommandPalette.Empty>
-                  <div className="find-empty"><Text variant="label">No results found</Text><Text size="sm" color="muted">Adjust your search to try again</Text></div>
+                  <div className="find-empty"><span className="find-empty-icon"><SearchX /></span><Text variant="label">No results found</Text><Text size="sm" color="muted">Adjust your search to try again</Text></div>
                 </CommandPalette.Empty>
               )}
             </CommandPalette.Content>

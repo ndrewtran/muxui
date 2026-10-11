@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { assertFits, measureBox, openBlock, patternVariant, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
+import { assertFits, assertUniqueIds, measureBox, openBlock, patternVariant, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the two quick find variants, loaded from their canonical
@@ -54,6 +54,7 @@ async function overlayTests(t, browser, url) {
       await dialog.getByRole('option', { name: 'Open launch plan Plans' }).waitFor();
       await tab.getByRole('textbox', { name: 'Find' }).fill('zzz');
       await dialog.getByText('No results found').waitFor();
+      await dialog.locator('.find-empty-icon svg').waitFor();
       await dialog.getByText('Adjust your search to try again').waitFor();
       assert.equal(await dialog.getByRole('option').count(), 0);
       await tab.getByRole('textbox', { name: 'Find' }).fill('export');
@@ -115,6 +116,13 @@ async function overlayTests(t, browser, url) {
     }
   });
 
+  await t.test('overlay: two instances share no ids, with a palette open', async () => {
+    await assertUniqueIds(browser, url, 'overlay', async (tab) => {
+      await tab.getByRole('button', { name: 'Quick find' }).first().click();
+      await tab.getByRole('dialog', { name: 'Quick find' }).waitFor();
+    });
+  });
+
   await t.test('overlay: never scrolls the page horizontally, and the open palette stays inside the viewport', async () => {
     await assertFits(browser, url, '.find', 'overlay');
     for (const scheme of ['light', 'dark']) {
@@ -154,6 +162,7 @@ async function inlineTests(t, browser, url) {
       await field.fill('zzz');
       await expectStatus(tab, '0 results');
       await tab.getByText('No results found').waitFor();
+      await tab.locator('.find-empty-icon svg').waitFor();
       assert.equal(await results.count(), 0, 'the list gives way to the empty message');
 
       // Escape clears the field and restores every result.
@@ -191,6 +200,10 @@ async function inlineTests(t, browser, url) {
         await context.close();
       }
     }
+  });
+
+  await t.test('inline: two instances share no ids', async () => {
+    await assertUniqueIds(browser, url, 'inline');
   });
 
   await t.test('inline: never scrolls the page horizontally, with results or the empty message', async () => {
