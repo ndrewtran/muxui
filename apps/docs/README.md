@@ -33,7 +33,8 @@ The section's own controls are Mux UI components, not imitations. The rail
 toolbar and stage (`BlockViewerIsland.tsx`) are React islands over the server-rendered
 pages, built from `@muxui/react` components (Sidebar, SearchField, SelectNative, Text,
 ToggleButtonGroup, Button), and `styles/blocks.css` holds only layout and the preview and
-code surfaces, so it must not restyle a Mux component. The rail is Sidebar navigation: groups
+code surfaces, so it must not restyle a Mux component. The rail is Sidebar navigation at
+`density="compact"`: groups
 are Sections, categories are items, a block is a link group (its link opens the first variant,
 a toggle opens its variants), and variants are links, with the open page as the current item.
 The rail island keeps which groups are collapsed, so the choice survives the in-place swap, and

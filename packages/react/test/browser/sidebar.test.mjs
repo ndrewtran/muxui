@@ -1178,3 +1178,159 @@ for (const engine of browserEngines()) {
     }
   });
 }
+
+// Cross-engine proof for Sidebar density. A Root without density and one with density="default" compute exactly the
+// spacing the Sidebar always had, each from its own token; compact tightens rows, gaps, section labels, and nesting from
+// other existing tokens, keeps every interactive row above the 24px target minimum, and leaves text, icons, and focus rings alone.
+// Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+
+const densityEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Sidebar } from '/src/supplemental/index.mjs';
+
+const h = React.createElement;
+const Icon = ({ className }) => h('svg', { className, viewBox: '0 0 24 24', 'aria-hidden': true }, h('rect', { x: 4, y: 4, width: 16, height: 16 }));
+// The same navigation under each density: a link, then a section holding a link group of link groups and a details group.
+const rail = (name, props) => h(Sidebar.Root, { 'aria-label': name, ...props },
+  h(Sidebar.NavList, { 'aria-label': name + ' pages' },
+    h(Sidebar.Section, { label: 'Pages' }, h(Sidebar.NavItem, { href: '#home-' + name, icon: Icon }, 'Home')),
+    h(Sidebar.Section, { label: 'Library' },
+      h(Sidebar.NavItem, { href: '#catalog-' + name, defaultExpanded: true, items: [
+        { id: 'button', label: 'Button', href: '#button-' + name, defaultExpanded: true, items: [{ label: 'Primary', href: '#primary-' + name, current: true }] },
+      ] }, 'Catalog'),
+      h(Sidebar.NavItem, { defaultExpanded: true, items: [{ label: 'Alpha', href: '#alpha-' + name }] }, 'Group'))));
+createRoot(document.getElementById('root')).render(h(React.Fragment, null,
+  h('button', { id: 'before', type: 'button' }, 'Before'),
+  h('div', { className: 'rails' }, rail('implicit', {}), rail('default', { density: 'default' }), rail('compact', { density: 'compact' }))));
+`;
+
+const densityPage = () => pageShell({
+  attributes: 'data-muxui-color-scheme="light"',
+  head: '<link rel="stylesheet" href="/generated/styles.css"><style>.rails { display: flex; align-items: flex-start; gap: 16px; } .rails > aside { inline-size: 16rem; block-size: auto; }</style>',
+  bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<div id="root"></div>',
+  entry: '/sidebar-density-entry.mjs',
+});
+
+/** Spacing, sizes, and focus ring of one rail, and the tokens that spacing comes from, in px; runs in the page. */
+function densityMetrics(name) {
+  const root = document.querySelector(`aside[aria-label="${name}"]`);
+  const px = (value) => Number.parseFloat(value);
+  const style = (selector, context = root) => getComputedStyle(context.querySelector(selector));
+  const token = (id) => {
+    const probe = document.createElement('div');
+    probe.style.inlineSize = `var(--muxui-${id})`;
+    root.append(probe);
+    const { width } = probe.getBoundingClientRect();
+    probe.remove();
+    return width;
+  };
+  const blockGroup = root.querySelector('.muxui-sidebar__nav-children');
+  const link = style('.muxui-sidebar__nav-link');
+  const children = getComputedStyle(blockGroup);
+  const nested = style('.muxui-sidebar__nav-children', blockGroup);
+  const sections = root.querySelectorAll('.muxui-sidebar__section');
+  const label = style('.muxui-sidebar__section-label');
+  const toggle = style('.muxui-sidebar__nav-toggle');
+  const rows = [...root.querySelectorAll('a[href], summary, button')].filter((node) => node.getClientRects().length > 0).map((node) => node.getBoundingClientRect().height);
+  return {
+    density: root.getAttribute('data-density'),
+    tokens: {
+      insetTiny: token('semantic-layout-inset-tiny'), insetTight: token('semantic-layout-inset-tight'), insetSmall: token('semantic-layout-inset-small'),
+      insetMedium: token('semantic-layout-inset-medium'), insetLarge: token('semantic-layout-inset-large'), insetXlarge: token('semantic-layout-inset-xlarge'),
+      denseGap: token('semantic-layout-dense-gap'), groupGap: token('semantic-layout-group-gap'), controlGap: token('semantic-layout-control-gap'),
+      sizeSm: token('control-size-sm'), sizeMd: token('control-size-md'),
+    },
+    spacing: {
+      linkPaddingBlock: px(link.paddingTop), linkMinBlock: px(link.minBlockSize), navListGap: px(style('.muxui-sidebar__nav-list').rowGap),
+      childrenGap: px(children.rowGap), childrenPaddingBlockStart: px(children.paddingTop), childrenMarginBlockStart: px(children.marginTop), childrenIndent: px(children.paddingLeft),
+      nestedIndent: px(nested.paddingLeft), sectionMarginBlockStart: px(getComputedStyle(sections[1]).marginTop),
+      labelPaddingBlockStart: px(label.paddingTop), labelPaddingBlockEnd: px(label.paddingBottom), toggleBlock: px(toggle.height),
+    },
+    // What density must not change: sizes, the inline padding, and the toggle's width.
+    kept: {
+      linkPaddingInline: px(link.paddingLeft), linkFontSize: px(link.fontSize), childFontSize: px(style('.muxui-sidebar__nav-child-link').fontSize), labelFontSize: px(label.fontSize),
+      iconSize: px(style('.muxui-sidebar__nav-icon').width), toggleInline: px(toggle.width), navListPaddingInline: px(style('.muxui-sidebar__nav-list').paddingLeft),
+    },
+    shortestRow: Math.min(...rows),
+    tallestRow: Math.max(...rows),
+  };
+}
+
+/** The ring of the focused element; runs in the page. */
+function densityFocusRing() {
+  const { outlineStyle, outlineWidth, outlineOffset, outlineColor } = getComputedStyle(document.activeElement);
+  return { outlineStyle, outlineWidth, outlineOffset, outlineColor };
+}
+
+// Layout snaps lengths to 1/64px, so a token read from a probe box can differ from the computed value by a hair.
+const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 0.05, `${message} (${actual} vs ${expected})`);
+
+for (const engine of browserEngines()) {
+  test(`Sidebar density compacts rows without touching the default in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-density.html': densityPage },
+      modules: { '/sidebar-density-entry.mjs': densityEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-density.html`, 'aside');
+      const context = await browser.newContext({ viewport: { width: 1000, height: 900 }, locale: 'en-US' });
+      try {
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        await tab.goto(`${url}/sidebar-density.html`, { waitUntil: 'networkidle' });
+        await tab.locator('aside[aria-label="compact"] a[href="#primary-compact"]').waitFor();
+        const [implicit, explicit, compact] = await Promise.all(['implicit', 'default', 'compact'].map((name) => tab.evaluate(densityMetrics, name)));
+
+        assert.equal(implicit.density, null, `${engine}: a Root without density has no data-density`);
+        assert.equal(explicit.density, null, `${engine}: density="default" has no data-density`);
+        assert.equal(compact.density, 'compact', `${engine}: a compact Root says so`);
+        assert.deepEqual(explicit.spacing, implicit.spacing, `${engine}: density="default" computes the spacing of no density`);
+        assert.deepEqual(explicit.kept, implicit.kept, `${engine}: density="default" keeps the sizes of no density`);
+
+        // The default spacing is the one the Sidebar has always drawn, each value from its own token.
+        const { tokens: t } = implicit;
+        const defaults = {
+          linkPaddingBlock: t.insetTiny, linkMinBlock: t.sizeMd, navListGap: t.denseGap, childrenGap: t.denseGap, childrenPaddingBlockStart: t.insetTiny,
+          childrenMarginBlockStart: t.denseGap, childrenIndent: t.insetXlarge, nestedIndent: t.insetLarge, sectionMarginBlockStart: t.groupGap,
+          labelPaddingBlockStart: t.insetSmall, labelPaddingBlockEnd: t.insetTight, toggleBlock: t.sizeMd,
+        };
+        for (const [property, expected] of Object.entries(defaults)) near(implicit.spacing[property], expected, `${engine}: default ${property}`);
+
+        // Compact steps down to other existing tokens: the small control height, the tight inset, and smaller nesting steps.
+        const compacted = {
+          linkPaddingBlock: t.insetTight, linkMinBlock: t.sizeSm, navListGap: 0, childrenGap: 0, childrenPaddingBlockStart: 0,
+          childrenMarginBlockStart: 0, childrenIndent: t.insetLarge, nestedIndent: t.insetMedium, sectionMarginBlockStart: t.controlGap,
+          labelPaddingBlockStart: t.insetTight, labelPaddingBlockEnd: t.insetTight, toggleBlock: t.sizeSm,
+        };
+        for (const [property, expected] of Object.entries(compacted)) near(compact.spacing[property], expected, `${engine}: compact ${property}`);
+        assert.deepEqual(compact.kept, implicit.kept, `${engine}: compact keeps text and icon sizes, inline padding, and the toggle's width`);
+        assert.ok(compact.tallestRow < implicit.shortestRow, `${engine}: every compact row is shorter than a default row (${compact.tallestRow} vs ${implicit.shortestRow})`);
+        assert.ok(compact.shortestRow >= 24, `${engine}: every compact row stays at least 24px tall (${compact.shortestRow})`);
+        assert.ok(implicit.shortestRow >= 24, `${engine}: every default row is at least 24px tall (${implicit.shortestRow})`);
+
+        // Keyboard focus draws the same ring either way.
+        await tab.locator('#before').focus();
+        await tab.keyboard.press('Tab');
+        const rings = [];
+        for (const name of ['implicit', 'compact']) {
+          await tab.locator(`aside[aria-label="${name}"] a[href="#home-${name}"]`).focus();
+          rings.push(await tab.evaluate(densityFocusRing));
+        }
+        assert.equal(rings[0].outlineStyle, 'solid', `${engine}: the focus ring shows`);
+        assert.deepEqual(rings[1], rings[0], `${engine}: compact keeps the focus ring`);
+        assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+      } finally {
+        await context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}

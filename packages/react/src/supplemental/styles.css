@@ -2890,6 +2890,42 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   list-style: none;
 }
 
+/* Compact density: nav rows, the gaps between them, section labels, and nesting step in from the same spacing tokens.
+   Text and icon sizes and focus rings stay as they are. Every row keeps the small control height, above the 24px
+   minimum target size, and border-box makes that height the row's own whatever box model the page sets. Placed before
+   the folded rules so a folded rail wins ties. */
+.muxui-sidebar[data-density='compact'] :is(.muxui-sidebar__nav-list, .muxui-sidebar__section-items, .muxui-sidebar__nav-children) {
+  gap: 0;
+}
+
+.muxui-sidebar[data-density='compact'] .muxui-sidebar__nav-link {
+  box-sizing: border-box;
+  padding-block: var(--muxui-semantic-layout-inset-tight);
+  min-block-size: var(--muxui-control-size-sm);
+}
+
+.muxui-sidebar[data-density='compact'] .muxui-sidebar__nav-toggle {
+  block-size: var(--muxui-control-size-sm);
+}
+
+.muxui-sidebar[data-density='compact'] .muxui-sidebar__nav-children {
+  margin-block-start: 0;
+  padding-block-start: 0;
+  padding-inline-start: var(--muxui-semantic-layout-inset-large);
+}
+
+.muxui-sidebar[data-density='compact'] .muxui-sidebar__nav-children .muxui-sidebar__nav-children {
+  padding-inline-start: var(--muxui-semantic-layout-inset-medium);
+}
+
+.muxui-sidebar[data-density='compact'] .muxui-sidebar__section:not(:first-child) {
+  margin-block-start: var(--muxui-semantic-layout-control-gap);
+}
+
+.muxui-sidebar[data-density='compact'] .muxui-sidebar__section-label {
+  padding-block: var(--muxui-semantic-layout-inset-tight);
+}
+
 /* Folding icon rail: a Root inside Sidebar.Provider sizes itself and animates between the expanded width and the rail. */
 .muxui-sidebar[data-foldable] {
   /* Nav icons keep their offset from the edge, so the rail is the icon column plus an equal gutter on each side. */

@@ -302,7 +302,11 @@ export declare const RadioField: {
   Error: React.ForwardRefExoticComponent<PartProps<HTMLElement> & React.RefAttributes<HTMLElement>>;
 };
 
-export type SidebarProps = React.HTMLAttributes<HTMLElement> & { hideBorder?: boolean };
+export type SidebarProps = React.HTMLAttributes<HTMLElement> & {
+  hideBorder?: boolean;
+  /** `compact` tightens nav rows, gaps, section labels, and nesting; text sizes and focus rings are unchanged. */
+  density?: 'default' | 'compact';
+};
 export type SidebarProviderProps = {
   /** Folded state; supply it with `onCollapsedChange` to control the rail. */
   collapsed?: boolean;

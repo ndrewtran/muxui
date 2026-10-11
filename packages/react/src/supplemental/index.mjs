@@ -1281,7 +1281,7 @@ const Sidebar = {
     const value = React.useMemo(() => ({ collapsed: current, setCollapsed, toggle, rootId: customRootId ?? generatedRootId, setRootId, roots, toggles, menuButtons, requests }), [current, setCollapsed, toggle, customRootId, generatedRootId, roots, toggles, menuButtons]);
     return h(SidebarContext.Provider, { value }, children);
   },
-  Root: React.forwardRef(function SidebarRoot({ hideBorder = false, ...props }, ref) {
+  Root: React.forwardRef(function SidebarRoot({ hideBorder = false, density = 'default', ...props }, ref) {
     const sidebar = React.useContext(SidebarContext);
     const node = React.useRef(null);
     React.useImperativeHandle(ref, () => node.current);
@@ -1325,7 +1325,7 @@ const Sidebar = {
         root.removeEventListener('focusout', track);
       };
     }, [menuButtons, roots]);
-    return h('aside', { ...props, ref: node, id: props.id ?? sidebar?.rootId, 'data-foldable': dataState(sidebar), 'data-collapsed': dataState(sidebar?.collapsed), className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) });
+    return h('aside', { ...props, ref: node, id: props.id ?? sidebar?.rootId, 'data-foldable': dataState(sidebar), 'data-collapsed': dataState(sidebar?.collapsed), 'data-density': density === 'compact' ? 'compact' : undefined, className: cx('muxui-sidebar', hideBorder && 'muxui-sidebar--no-border', props.className) });
   }),
   Toggle: React.forwardRef(function SidebarToggle({ onActivate, className, children, ...props }, ref) {
     const sidebar = useSidebarPart('Toggle');
