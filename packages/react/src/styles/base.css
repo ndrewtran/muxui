@@ -511,10 +511,6 @@
 .muxui-combo-box-arrow,
 .muxui-select-arrow {
   transition: transform var(--muxui-semantic-motion-reveal-duration) var(--muxui-semantic-motion-interaction-easing);
-}
-
-.muxui-combo-box-arrow,
-.muxui-select-arrow {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -706,18 +702,6 @@
   box-shadow: var(--muxui-popup-shadow);
   outline: none;
   overflow: hidden;
-}
-
-.muxui-select-popover,
-.muxui-combo-box-popover,
-.muxui-autocomplete-list,
-.muxui-menu,
-.muxui-popover,
-.muxui-alert-dialog__popup,
-.muxui-command-palette__popup,
-.muxui-multi-select__popup,
-.muxui-tag-select__popup,
-.muxui-text-editor__color-popover {
   transition:
     opacity var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing),
     transform var(--muxui-popup-transition-duration) var(--muxui-popup-transition-easing);
