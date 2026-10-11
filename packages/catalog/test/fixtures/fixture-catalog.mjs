@@ -24,7 +24,7 @@ async function fixtureFiles(directory = fixtureDirectory, prefix = '') {
 }
 
 // The sources the poster-grid fixture needs, for fast negative compiles.
-const MINIMAL_SOURCES = /^catalog\/(?:capabilities\/|tokens\/|components\/(?:button|grid-list|virtualizer)\/)/u;
+const MINIMAL_SOURCES = /^catalog\/(?:capabilities\/|tokens\/|components\/(?:button|grid-list|markdown|virtualizer)\/)/u;
 
 /**
  * Compiles the real catalog (or, with `minimal`, only the sources the fixture
