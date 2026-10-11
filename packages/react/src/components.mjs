@@ -19,6 +19,7 @@ import {
 } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
+import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { MotionHeight, useDisclosureIconMotion } from './motion-components.mjs';
 
 function classNames(base, className) {
@@ -228,14 +229,14 @@ export const Link = React.forwardRef(function Link({
   onActivate,
   ...props
 }, ref) {
-  // Like Button, an undefined disabled lets a Link inherit its container's state, such as a
-  // disabled GridList item; an explicit false still wins. A Link without an href is always disabled.
-  const isDisabled = href ? disabled : true;
+  // Like Button, an undefined disabled inherits a disabled GridList item; an explicit false still
+  // wins. A Link without an href is always disabled. The RAC Link always gets an explicit value.
+  const inheritedDisabled = React.useContext(GridListItemDisabledContext);
   return React.createElement(AriaLink, {
     ...props,
     ref,
     href,
-    ...(isDisabled === undefined ? {} : { isDisabled }),
+    isDisabled: !href || (disabled ?? inheritedDisabled),
     target,
     rel,
     className: classNames('muxui-link', className),

@@ -35,7 +35,6 @@ import {
   ComboBoxValue as AriaComboBoxValue,
   GridList as AriaGridList,
   GridListItem as AriaGridListItem,
-  LinkContext,
   ListBox as AriaListBox,
   ListBoxItem as AriaListBoxItem,
   ListBoxSection as AriaListBoxSection,
@@ -91,6 +90,7 @@ import {
 } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
+import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { parseDate } from '@internationalized/date';
 import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
@@ -795,9 +795,6 @@ export const ListBox = /*#__PURE__*/ (() => {
 
 const GridListContext = React.createContext({ disabled: false });
 
-// React Aria's GridListItem hands a disabled item's state to nested Buttons but not Links.
-const DISABLED_LINK = Object.freeze({ isDisabled: true });
-
 // A grid Virtualizer provides this so its GridList can report the CSS gap it
 // resolves to; the Virtualizer turns that gap into layout spacing.
 const GridVirtualizerContext = React.createContext(null);
@@ -966,7 +963,7 @@ export const GridList = /*#__PURE__*/ (() => {
       'data-disabled': effectiveDisabled || undefined,
       'aria-disabled': effectiveDisabled || undefined,
       className: classNames('muxui-grid-list-item', className),
-    }, React.createElement(LinkContext.Provider, { value: effectiveDisabled ? DISABLED_LINK : null }, children));
+    }, React.createElement(GridListItemDisabledContext.Provider, { value: effectiveDisabled }, children));
   });
   return component;
 })();

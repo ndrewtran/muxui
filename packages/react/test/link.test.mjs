@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { act } from 'react';
+import { Breadcrumb, Breadcrumbs as AriaBreadcrumbs, LinkContext } from 'react-aria-components';
 import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { Button } from '../src/button.mjs';
@@ -150,4 +151,38 @@ test('Link renders the same server markup inside and outside a GridList', () => 
   const html = renderToString(fixture());
   assert.match(html, /<span[^>]*class="[^"]*muxui-link[^"]*"[^>]*data-disabled="true"/u, 'the blocked item server-renders an inert Link');
   assert.equal([...html.matchAll(/<a [^>]*class="[^"]*muxui-link/gu)].length, 1, 'only the open item renders an anchor');
+});
+
+// Link reads a private GridList item context, so every React Aria LinkContext outside a disabled
+// item behaves as it did in rc.3, where Link always passed an explicit isDisabled.
+test('a Link in a React Aria Breadcrumb current item stays an enabled anchor', async () => {
+  const view = await mount(h(AriaBreadcrumbs, { 'aria-label': 'Trail' },
+    h(Breadcrumb, { id: 'home' }, h(Link, { href: '/' }, 'Home')),
+    h(Breadcrumb, { id: 'now' }, h(Link, { href: '/now' }, 'Now'))));
+  try {
+    const links = [...view.container.querySelectorAll('.muxui-link')];
+    assert.deepEqual(links.map(state), [['a', null, null], ['a', null, null]], 'the current item no longer disables the Link');
+    assert.equal(links[1].getAttribute('aria-current'), 'page', 'the Breadcrumb still supplies aria-current');
+    assert.equal(links[1].getAttribute('href'), '/now');
+  } finally {
+    await view.dispose();
+  }
+});
+
+test('a Link in an enabled GridList item still receives an outer LinkContext', async () => {
+  const pressed = [];
+  const log = [];
+  const outer = { 'aria-current': 'page', onPress: () => pressed.push('outer') };
+  const view = await mount(h(LinkContext.Provider, { value: outer }, fixture({}, log)));
+  try {
+    const [open, blocked] = [...view.container.querySelectorAll('[role="row"]')];
+    assert.equal(linkIn(open).getAttribute('aria-current'), 'page', 'the outer provider reaches a Link in an enabled item');
+    assert.equal(linkIn(blocked).getAttribute('aria-current'), 'page', 'and a Link in a disabled item');
+    assert.equal(state(linkIn(open))[0], 'a');
+    await act(async () => linkIn(open).click());
+    assert.deepEqual(pressed, ['outer'], 'its onPress still runs beside the Link\'s own');
+    assert.deepEqual(log, [['link', 'open']]);
+  } finally {
+    await view.dispose();
+  }
 });

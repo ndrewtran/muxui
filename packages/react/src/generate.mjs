@@ -34,6 +34,7 @@ const buttonSource = await readFile(resolve(packageRoot, 'src/button.mjs'), 'utf
 const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
+const gridListItemContextSource = await readFile(resolve(packageRoot, 'src/grid-list-item-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
 const calendarSelectionMotionSource = await readFile(resolve(packageRoot, 'src/calendar-selection-motion.mjs'), 'utf8');
@@ -1048,6 +1049,7 @@ const outputs = new Map([
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
   ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],
+  ['grid-list-item-context.mjs', generatedText('packages/react/src/grid-list-item-context.mjs', gridListItemContextSource)],
   ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', flatIconButtonImport(fieldsSource))],
