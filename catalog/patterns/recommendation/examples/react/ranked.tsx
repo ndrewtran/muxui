@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Button, Card, Meter, RadioGroup, Text } from '@muxui/react';
 
 const Check = () => (
@@ -19,6 +19,12 @@ export function RecommendationRankedExample() {
   // Local presentation state only: accepting locks the choice and nothing is booked.
   const [value, setValue] = useState(choices[0].value);
   const [accepted, setAccepted] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Accept disables itself, so focus moves to the heading, which the status below then reports on.
+  const accept = () => {
+    setAccepted(true);
+    heading.current?.focus();
+  };
   const chosen = choices.find((choice) => choice.value === value) ?? choices[0];
   return (
     <section className="ranked" aria-labelledby={`${id}-title`}>
@@ -70,7 +76,7 @@ export function RecommendationRankedExample() {
         }
       `}</style>
       <Card.Root variant="elevated" padding="md">
-        <Card.Header><Text as="h2" id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
+        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
         <Card.Body>
           <RadioGroup
             aria-label="Options, best match first"
@@ -90,7 +96,7 @@ export function RecommendationRankedExample() {
         </Card.Body>
         <Card.Footer className="ranked-foot">
           <Meter className="ranked-meter" label="Confidence" value={chosen.confidence} minValue={0} maxValue={1} formatOptions={{ style: 'percent' }} />
-          <Button className="ranked-accept" disabled={accepted} onActivate={() => setAccepted(true)}>{accepted ? <span className="ranked-label"><Check />Accepted</span> : 'Accept'}</Button>
+          <Button className="ranked-accept" disabled={accepted} onActivate={accept}>{accepted ? <span className="ranked-label"><Check />Accepted</span> : 'Accept'}</Button>
           <Text className="ranked-hidden" role="status">{accepted ? `Accepted ${chosen.label}. Nothing was booked.` : ''}</Text>
         </Card.Footer>
       </Card.Root>

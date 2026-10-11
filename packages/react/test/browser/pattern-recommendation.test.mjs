@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { assertFits, measurePageFit, openBlock, patternVariant, ringWalk, startVariantServer, tabWalk } from './pattern-probes.mjs';
+import { assertFits, assertUniqueIds, measurePageFit, openBlock, patternVariant, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that both recommendation variants, loaded from their canonical
@@ -55,6 +55,20 @@ async function compactTests(t, browser, url) {
     }
   });
 
+  await t.test('compact: accepting by keyboard moves focus to the heading, which the status then reports on', async () => {
+    const { context, tab, errors } = await openBlock(browser, url);
+    try {
+      await accept(tab).focus();
+      await tab.keyboard.press('Enter');
+      await tab.getByRole('button', { name: 'Accepted' }).waitFor();
+      assert.equal(await stopOf(tab), 'heading Want me to book the team offsite?', 'focus is on the heading, not lost to the page');
+      await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted. Nothing was booked.', undefined, { message: 'the status announces the accepted state', report: () => document.querySelector('[role="status"]').textContent });
+      assert.deepEqual(errors, []);
+    } finally {
+      await context.close();
+    }
+  });
+
   await t.test('compact: walks every control in order in light and dark', async () => {
     for (const scheme of ['light', 'dark']) {
       const { context, tab } = await openBlock(browser, url, { scheme });
@@ -64,6 +78,13 @@ async function compactTests(t, browser, url) {
         await context.close();
       }
     }
+  });
+
+  await t.test('compact: two instances share no ids, with the alternatives open', async () => {
+    await assertUniqueIds(browser, url, 'compact', async (tab) => {
+      const toggles = tab.getByRole('button', { name: 'Alternatives' });
+      for (let index = 0; index < await toggles.count(); index += 1) await toggles.nth(index).click();
+    });
   });
 
   await t.test('compact: never scrolls the page horizontally, with the alternatives open or accepted', async () => {
@@ -117,6 +138,22 @@ async function rankedTests(t, browser, url) {
     }
   });
 
+  await t.test('ranked: accepting by keyboard moves focus to the heading and locks the choice', async () => {
+    const { context, tab, errors } = await openBlock(browser, url);
+    try {
+      await tab.getByRole('radio', { name: /Hold the lakeside lodge/u }).focus();
+      await tab.keyboard.press('ArrowDown');
+      await accept(tab).focus();
+      await tab.keyboard.press('Enter');
+      await tab.getByRole('button', { name: 'Accepted' }).waitFor();
+      assert.equal(await stopOf(tab), 'heading Want me to book the team offsite?', 'focus is on the heading, not lost to the page');
+      await pollUntil(tab, () => document.querySelector('[role="status"]').textContent === 'Accepted Switch to the harbor loft. Nothing was booked.', undefined, { message: 'the status names the accepted option', report: () => document.querySelector('[role="status"]').textContent });
+      assert.deepEqual(errors, []);
+    } finally {
+      await context.close();
+    }
+  });
+
   await t.test('ranked: walks every control in order in light and dark', async () => {
     for (const scheme of ['light', 'dark']) {
       const { context, tab } = await openBlock(browser, url, { scheme });
@@ -126,6 +163,10 @@ async function rankedTests(t, browser, url) {
         await context.close();
       }
     }
+  });
+
+  await t.test('ranked: two instances share no ids', async () => {
+    await assertUniqueIds(browser, url, 'ranked');
   });
 
   await t.test('ranked: never scrolls the page horizontally', async () => {

@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import { Avatar, Button, Card, Meter, Text } from '@muxui/react';
 
 // One stroke path per icon.
@@ -21,6 +21,12 @@ export function RecommendationCompactExample() {
   // Local presentation state only: accepting marks the card and nothing is booked.
   const [open, setOpen] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Accept disables itself, so focus moves to the heading, which the status below then reports on.
+  const accept = () => {
+    setAccepted(true);
+    heading.current?.focus();
+  };
   return (
     <section className="reco" aria-labelledby={`${id}-title`}>
       <style>{`
@@ -101,7 +107,7 @@ export function RecommendationCompactExample() {
         }
       `}</style>
       <Card.Root variant="elevated" padding="md">
-        <Card.Header><Text as="h2" id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
+        <Card.Header><Text as="h2" ref={heading} tabIndex={-1} id={`${id}-title`} variant="title" size="sm">Want me to book the team offsite?</Text></Card.Header>
         <Card.Body>
           <Text color="muted">
             Hold the lakeside lodge from <span className="reco-source"><Avatar.Root size="sm" aria-hidden="true"><Avatar.Fallback>L</Avatar.Fallback></Avatar.Root>Larch Lodge</span> with a deposit due in <span className="reco-value">5 days</span>
@@ -118,7 +124,7 @@ export function RecommendationCompactExample() {
           <Meter className="reco-meter" label="Confidence" value={0.86} minValue={0} maxValue={1} formatOptions={{ style: 'percent' }} />
           <div className="reco-actions">
             <Button className="reco-more-toggle" variant="neutral" aria-expanded={open} aria-controls={`${id}-more`} onActivate={() => setOpen(!open)}><span className="reco-label">Alternatives<Down /></span></Button>
-            <Button disabled={accepted} onActivate={() => setAccepted(true)}>{accepted ? <span className="reco-label"><Check />Accepted</span> : 'Accept'}</Button>
+            <Button disabled={accepted} onActivate={accept}>{accepted ? <span className="reco-label"><Check />Accepted</span> : 'Accept'}</Button>
           </div>
           <Text className="reco-hidden" role="status">{accepted ? 'Accepted. Nothing was booked.' : ''}</Text>
         </Card.Footer>
