@@ -71,7 +71,7 @@
     "Arrow keys move between cards by their rendered position; Tab and Shift+Tab reach the nested Details link and Save button of the focused card.",
     "A nested link or button runs only its own action and never changes the card selection.",
     "Each card sets textValue to its visible title, which names the card and drives typeahead, and the artwork carries an empty alt because the title already names it.",
-    "A disabled card disables its nested Button; pass disabled to the nested Link as well, because a Link does not inherit the card state.",
+    "A disabled card disables its nested Button and Link, which follow the card state unless one sets its own disabled prop.",
     "The virtualized variant mounts only the visible rows, so cards outside the viewport are absent from the document until they scroll into view."
   ],
   "unsupported": [

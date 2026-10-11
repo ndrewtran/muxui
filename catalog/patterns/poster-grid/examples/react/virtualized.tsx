@@ -96,8 +96,8 @@ export function PosterGridVirtualizedExample() {
               <Text as="div" variant="title" size="sm">{poster.title}</Text>
               <Text as="div" size="sm" color="muted">#{index + 1} · {poster.year}</Text>
               <div className="poster-actions">
-                {/* A Link does not inherit the item's disabled state, so pass it. */}
-                <Link href={`#${poster.id}`} disabled={poster.disabled}>Details</Link>
+                {/* The Link and the Button follow the item's disabled state. */}
+                <Link href={`#${poster.id}`}>Details</Link>
                 <Button size="sm" variant="neutral">Save</Button>
               </div>
             </GridList.Item>
