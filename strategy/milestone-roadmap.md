@@ -115,9 +115,10 @@ binding or bounded reproof.
   or required-proof rule without it.
 - Shared code is added only after a real slice demonstrates the repeated
   semantic, logic, or interaction shape, and lives in the renderer that uses it
-  until a second renderer shares it. `@muxui/foundation` is parked and returns
-  only with an activation that names that shared code and its two real
-  consumers (Architecture, "Deferred renderer tracks").
+  until a second renderer shares it. `@muxui/foundation` is parked: once the
+  parking pull request removes it, it returns only with an activation that names
+  that shared code and its two real consumers (Architecture, "Deferred renderer
+  tracks").
 - Experimental React breadth proceeds under the standing development rule
   (Decision 0028) against the shared baseline. Framework-free/native breadth
   and broad tooling wait for their own activation and entry evidence.
@@ -791,7 +792,7 @@ creating an arbitrary model-driven patch path.
 | Operation | Authoritative owner | Minimum required review packet |
 | --- | --- | --- |
 | `example.create` | Example record plus one executable source file and binding relation | Purpose/profile/prerequisites, normative impact, selected owner paths, compile/behavior/selection proof. |
-| `binding.variant.add` | Binding spec | Intent and allowed values/defaults, renderer/example/token changes, compatibility/version effect, affected profiles and proof. |
+| `binding.variant.add` | The component's canonical API owner: `@muxui/react` TypeScript source once the component has moved, the authored binding `api` block until then; never the derived block | Intent and allowed values/defaults, renderer/example/token changes, compatibility/version effect, affected profiles and proof. |
 | `binding.prop.deprecate` | Binding lifecycle/migration data | Replacement or no-replacement reason, notice window, version effect, examples, diagnostics, migration artifact. |
 | `token.alias.propose` | Canonical token source | Alias direction/type/meaning, cycle check, deprecation purpose, affected requirement sets/themes/renderers, migration effect. |
 

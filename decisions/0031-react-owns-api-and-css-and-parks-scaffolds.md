@@ -77,13 +77,30 @@ Part 1, React TypeScript owns the `web.react` binding API:
 3. **The catalog block is derived.** At generation time an extraction step reads
    the compiled types and writes the binding's `api` block: each Mux UI-owned
    prop with its type, enum members, required flag, default, and description,
-   and its events. A type outside the closed set the schema defines, which
-   includes any dependency type, fails extraction naming the prop. The block is
-   a projection: never authored, never edited, and kept outside `catalog/`. It
-   enters `specRevision` like any API field and stays out of `contentRevision`
-   because it is not authored, so the semantic diff still classifies removing a
-   prop as incompatible. `api.parts` already equals the concept `anatomy` in all
-   84 records, so parts stay with the concept record and are not extracted.
+   and its events. The block is a projection: never authored, never edited, and
+   kept outside `catalog/`. It enters `specRevision` like any API field and
+   stays out of `contentRevision` because it is not authored, so the semantic
+   diff still classifies removing a prop as incompatible. `api.parts` already
+   equals the concept `anatomy` in all 84 records, so parts stay with the
+   concept record and are not extracted.
+   - **Defaults come from executable source.** Compiled types cannot carry a
+     default: `size?: 'sm' | 'md' | 'lg'` is the same type whether Button
+     defaults to `md` or `lg`. The extraction therefore reads a default only
+     from the value the component executes, a destructuring default in its props
+     parameter or a named defaults constant that the component itself reads. A
+     default it cannot resolve to a static value fails extraction. The runtime
+     default observers stay as in item 5.
+   - **Derivation is conditional on a closed grammar.** The pull request that
+     first adds the extraction (the first tranche's pull request may be that
+     pull request) must establish, with tests, before any authored block is
+     deleted: the closed type grammar; how callback types for event props are
+     represented; an exact allowlist of host references, such as
+     `React.ReactNode`; recursive rejection of any dependency type reachable from
+     a prop's type, naming the prop; and which part of a referenced Mux UI-owned
+     named type's definition is recorded and enters `specRevision`, so a change
+     inside the definition changes the revision and not only the type's name.
+     Until those exist, no component moves and every authored block stays
+     canonical.
 4. **What `artifact.json` keeps.** On the concept record: identity, intent,
    anatomy, states, accessibility obligations, relations, and lifecycle. On each
    binding record: lifecycle, strategy, behavior, accessibility fulfillment and
@@ -96,10 +113,17 @@ Part 1, React TypeScript owns the `web.react` binding API:
    Architecture already says differs per platform.
 5. **Transition.** Until a component has moved, its authored `api` block stays
    canonical and its existing conformance tests apply. The pull request that
-   moves a component deletes its authored block and those tests and adds the
-   derivation, so no component has two owners at any commit. A moved
-   component's derived block must equal what is published: the packed-consumer
-   check parses the tarball's declarations and compares them with the block.
+   moves a component deletes its authored block and adds the derivation, so no
+   component has two owners at any commit. A moved component's derived block
+   must equal what is published: the packed-consumer check parses the tarball's
+   declarations and compares names, types, enum members, and required flags
+   with the block. That check never proves defaults. The existing runtime
+   default observers (the render and behaviour comparisons in
+   `packages/react/test/fixture.test.mjs`, with their check that every default
+   has an observer) stay, re-pointed at the derived block, and a derived default
+   that differs from what the component renders or does fails them. They are
+   removed only when a named successor that checks executed defaults replaces
+   them.
 6. **Guides do not restate unchecked API facts.** A guide states no prop,
    variant, enum member, default, event, or import path in prose unless a check
    compares it with the API block. Otherwise it links to the generated
@@ -114,9 +138,10 @@ Part 2, the unused renderer scaffolds are parked:
 
 8. **Park three packages.** `@muxui/foundation`, `@muxui/web`, and
    `@muxui/react-native` leave the workspace in a later implementation pull
-   request, with their tests, policy routing entries, and fixtures. Their
+   request, with their tests, policy routing entries, and fixtures. Until that
+   pull request lands they remain private scaffolds that claim nothing. Their
    intended design moves into a short "Deferred renderer tracks" section of
-   Architecture. W1.0 restores `@muxui/web` and N1.0 restores
+   Architecture. After removal, W1.0 restores `@muxui/web` and N1.0 restores
    `@muxui/react-native`. `@muxui/foundation` returns only with an activation
    that names shared code and its two real consumers, the Roadmap's existing
    shared-code guardrail. Nothing depends on the three: `@muxui/react` has no
@@ -138,7 +163,7 @@ Part 2, the unused renderer scaffolds are parked:
 11. **The picture.** Architecture's one picture is redrawn with the edges the
     code has: tokens to React, React source through API extraction into the
     catalog compiler, the catalog into the packed React package, and the later
-    tracks as one dotted node with no packages.
+    tracks as one dotted node with no support claim.
 12. **Unaffected.** `@muxui/tokens`, including its native theme transform as the
     retained N1 input, and every tool `@muxui/react` or the Figma generator
     uses.
@@ -193,12 +218,13 @@ Part 3, React owns its public CSS contract, in three stages:
     signal, and a `next` consumer already accepts breaking changes between rcs
     with no support claim.
 19. **Proof.** A test in `@muxui/react` renders the exported components and
-    checks the published surface. The classes and state attributes the rendered
-    DOM emits are in the contract, every contract class exists in the
-    stylesheet, every public custom property is read and changes computed style
-    in a browser, the layers and style entries exist, and canonical examples use
-    only contract hooks. It adapts `compile-surface` and the example-topology
-    test and replaces them.
+    checks the published surface. Every declared public class and state
+    attribute is emitted in its applicable fixtures and has CSS coverage, every
+    public custom property is read and changes computed style in a browser, the
+    layers and style entries exist, and canonical examples rely on no internal
+    hook. Internal classes and substrate attributes may be emitted; they are
+    simply not part of the contract. The test adapts `compile-surface` and the
+    example-topology test and replaces them.
 20. **Order.** The intended order is the parking pull request (moving the surface
     check first), Stage 1, the TypeScript move tranche by tranche, Stages 2 and
     3, then the public package graph for P2.1. It is not a gate. Stages 1 and 2
@@ -213,7 +239,8 @@ Part 3, React owns its public CSS contract, in three stages:
 - **Architecture** changes in the same pull request. The binding-spec wording,
   "One owner per fact", and the invariants say that `web.react` API facts have
   one author, the component's TypeScript props type, and that the catalog block
-  is derived, with the transition rule of item 5. The `@muxui/foundation`,
+  is derived, conditional on the extraction grammar of item 3, with the
+  transition rule and the runtime default observers of item 5. The `@muxui/foundation`,
   `@muxui/web`, and `@muxui/react-native` sections become one "Deferred renderer
   tracks" section. The `@muxui/react` section takes the public CSS contract, its
   compatibility table, its proof, and its staged adoption. The one picture, the
@@ -221,8 +248,11 @@ Part 3, React owns its public CSS contract, in three stages:
   component record are corrected to the real record shape and the derived API.
   Platform-safety wording moves to defaults and overrides.
 - **The Roadmap** says that W1.0 and N1.0 activation also restore their package,
-  rewrites the shared-code guardrail and the foundation traceability row, and
-  names the Decision 0031 work as ordinary post-R1.6 React delivery. P2.1's
+  rewrites the shared-code guardrail and the foundation traceability row, routes
+  the G2.6 `binding.variant.add` operation to the component's canonical API
+  owner (React TypeScript source once the component moves, the authored binding
+  `api` block until then), so no operation edits the derived block, and names
+  the Decision 0031 work as ordinary post-R1.6 React delivery. P2.1's
   entry, "accepted public package graph", stays. No evidence ID is added,
   removed, or weakened.
 - **Product Scope** takes a major version, `21.0.0`, under its own rule: "Add,
@@ -240,8 +270,10 @@ Part 3, React owns its public CSS contract, in three stages:
     `SCOPE-SYSTEM-WEB`.
   - `SCOPE-API-BINDING`, `SCOPE-API-REACT-ERGONOMICS`,
     `SCOPE-PROOF-CONFORMANCE`, and `SCOPE-THEME-PLATFORM-SAFETY` are restated
-    for derived API ownership, the declarations the build emits, and
-    platform-safety defaults.
+    for derived API ownership, executed defaults, the declarations the build
+    emits, and platform-safety defaults. `SCOPE-PROPOSAL-VARIANT` keeps its ID
+    and `admitted` state and names the component's canonical API owner as its
+    owner.
   - No Scope ID is renumbered, reused, or removed.
   - Release additions and removals: none. Nothing was published, so no release
     scope loses a package. Evidence effect: none. Open tracker work: one issue

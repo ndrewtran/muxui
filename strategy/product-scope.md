@@ -362,9 +362,9 @@ part of this boundary and satisfies none of these rows.
 
 | Scope ID | Commitment | Platform/binding | Product commitment |
 | --- | --- | --- | --- |
-| `SCOPE-PLATFORM-WEB-HTML` | `deferred` | `web.html` | Later W1 HTML binding spec, CSS, semantic markup, progressive enhancement, and optional controllers. Declared `unsupported` with a reason until W1.0. |
+| `SCOPE-PLATFORM-WEB-HTML` | `deferred` | `web.html` | Later W1 HTML binding spec, CSS, semantic markup, progressive enhancement, and optional controllers. Carries an `unsupported` disposition with a reason until W1.0, set by the parking pull request (Decision 0031). |
 | `SCOPE-PLATFORM-WEB-REACT` | `committed` | `web.react` | Primary typed React bindings with Mux UI-owned DOM, behavior, accessibility, styling-hook, and compatibility contracts. |
-| `SCOPE-PLATFORM-NATIVE-RN` | `deferred` | `native.react-native` | Later N1 React Native renderer using native primitives and platform-appropriate bindings. Declared `unsupported` with a reason until N1.0. |
+| `SCOPE-PLATFORM-NATIVE-RN` | `deferred` | `native.react-native` | Later N1 React Native renderer using native primitives and platform-appropriate bindings. Carries an `unsupported` disposition with a reason until N1.0, set by the parking pull request (Decision 0031). |
 | `SCOPE-PROFILE-IOS` | `deferred` | iOS | N1 validation profile, lifecycle/strategy, native evidence, and adaptations. |
 | `SCOPE-PROFILE-ANDROID` | `deferred` | Android | N1 validation profile, lifecycle/strategy, native evidence, and adaptations. |
 | `SCOPE-PROFILE-RNW` | `deferred` | React Native Web | N1 binding strategy/profile; never assumed equivalent to `web.react`. |
@@ -395,7 +395,9 @@ behavior, or implementation across platforms. No parity claim exists at R1.
 
 For `web.react`, the binding's API block is derived from `@muxui/react`
 TypeScript source and never authored, and a component's authored block stays
-canonical until that component moves (Decision 0031). Renderer source is also
+canonical until that component moves, which waits for the extraction grammar
+that Architecture requires (Decision 0031). Defaults are read from what the
+component executes and stay under the runtime default observers. Renderer source is also
 responsible for host-language inference, generic constraints, refs, narrowed
 events, and platform-owned props, with conformance checks preventing those
 refinements from becoming undocumented product API.
@@ -446,10 +448,10 @@ the site.
 | --- | --- | --- | --- | --- |
 | `SCOPE-PKG-SCHEMA` | `committed` | `@muxui/schema` | Versioned source/response schemas, generated types, platform IDs, authoring helpers, token-source `sourceCrosswalk` grammar, and bounded sectional query shapes. | Product semantics, renderer implementation, or site content. |
 | `SCOPE-PKG-TOKENS` | `committed` | `@muxui/tokens` | Canonical Mux UI-owned token data and deterministic web/native/design-tool transforms. | Component behavior, documentation rendering, or another live owner. |
-| `SCOPE-PKG-FOUNDATION` | `deferred` | `@muxui/foundation` | Parked: enforced semantic, pure-logic, and optional portable-interaction boundaries, restored only by a W1.0 or N1.0 activation that names shared code and its two real consumers (Decision 0031). No workspace package exists meanwhile. | Selectors, React hooks, browser globals, native views, or mandatory transitions. |
-| `SCOPE-PKG-WEB` | `deferred` | `@muxui/web` | Later W1 HTML/CSS/controller implementation for `web.html` binding specs, restored only by W1.0 activation (Decision 0031). No workspace package exists meanwhile. | React or native implementation; a React prerequisite, shared React runtime, or shared React CSS owner. |
+| `SCOPE-PKG-FOUNDATION` | `deferred` | `@muxui/foundation` | Parked (Decision 0031): enforced semantic, pure-logic, and optional portable-interaction boundaries. The existing private scaffold stays, claiming nothing, until the parking pull request removes it; afterwards the package is restored only by a W1.0 or N1.0 activation that names shared code and its two real consumers. | Selectors, React hooks, browser globals, native views, or mandatory transitions. |
+| `SCOPE-PKG-WEB` | `deferred` | `@muxui/web` | Later W1 HTML/CSS/controller implementation for `web.html` binding specs, restored only by W1.0 activation once the parking pull request has removed the existing private scaffold, which claims nothing (Decision 0031). | React or native implementation; a React prerequisite, shared React runtime, or shared React CSS owner. |
 | `SCOPE-PKG-REACT` | `committed` | `@muxui/react` | Standalone React rendering, the `web.react` API as TypeScript props types, Mux UI-owned CSS and its public CSS contract, required third-party license/notice material, SSR/hydration, effects, exports, descriptors, and generated package guidance for `web.react` contracts. | The component inventory or renderer-neutral component metadata, React Aria public API, another workspace runtime/build dependency, or a second style registry. |
-| `SCOPE-PKG-REACT-NATIVE` | `deferred` | `@muxui/react-native` | Later N1 native primitive/runtime implementation and explicit platform files, restored only by N1.0 activation (Decision 0031). No workspace package exists meanwhile. | React/React Aria authority, CSS parsing, DOM, Expo, or explorer hosts. |
+| `SCOPE-PKG-REACT-NATIVE` | `deferred` | `@muxui/react-native` | Later N1 native primitive/runtime implementation and explicit platform files, restored only by N1.0 activation once the parking pull request has removed the existing private scaffold, which claims nothing (Decision 0031). | React/React Aria authority, CSS parsing, DOM, Expo, or explorer hosts. |
 | `SCOPE-PKG-CATALOG` | `committed` | `@muxui/catalog` | Immutable compiled catalog, search index, pure discovery/query/planning API, canonical page-budget profiles/page selection, current-version validation, bounded token/crosswalk sections, and package-level catalog identity. | CLI parsing, MCP transport, renderer runtime, or project mutation. |
 | `SCOPE-PKG-TOOLING` | `committed` | `@muxui/tooling` | CLI, adapters, installed catalog/version selection, explicit query-version forwarding, response rendering, local validation, maintainer authoring, change-intent previews, and enabled safe operations. | A second artifact index, product/query-response decisions, page-boundary selection, or renderer implementation. |
 
@@ -576,7 +578,7 @@ recovery, and evidence pass.
 | Scope ID | Commitment | Operation | Canonical owner |
 | --- | --- | --- | --- |
 | `SCOPE-PROPOSAL-EXAMPLE` | `admitted` | `example.create` | Example record/source and binding relation |
-| `SCOPE-PROPOSAL-VARIANT` | `admitted` | `binding.variant.add` | Binding spec |
+| `SCOPE-PROPOSAL-VARIANT` | `admitted` | `binding.variant.add` | The component's canonical API owner: `@muxui/react` TypeScript source once the component has moved, the authored binding `api` block until then. Never the derived block. |
 | `SCOPE-PROPOSAL-DEPRECATE` | `admitted` | `binding.prop.deprecate` | Binding lifecycle/migration data |
 | `SCOPE-PROPOSAL-TOKEN-ALIAS` | `admitted` | `token.alias.propose` | Canonical token source |
 
@@ -592,7 +594,7 @@ proposal but is not proved merely because canonical changes were approved.
 | Scope ID | Commitment | Proof area | Product claim |
 | --- | --- | --- | --- |
 | `SCOPE-PROOF-SCHEMA` | `committed` | Schema and relations | Records are closed, versioned, uniquely identified, owned, and relationally complete. |
-| `SCOPE-PROOF-CONFORMANCE` | `committed` | Spec/code/export/token conformance | The API block derived from renderer source, package declarations and exports, CSS hooks, examples, and renderer declarations match canonical specs and each other. |
+| `SCOPE-PROOF-CONFORMANCE` | `committed` | Spec/code/export/token conformance | The API block derived from renderer source, its defaults as the component executes them, package declarations and exports, CSS hooks, examples, and renderer declarations match canonical specs and each other. |
 | `SCOPE-PROOF-BEHAVIOR` | `committed` | Unit, state, browser, and native behavior | Implementations satisfy binding transitions, runtime ownership, SSR/hydration, input, focus, and platform behavior. |
 | `SCOPE-PROOF-A11Y` | `committed` | Accessibility | Automated and risk-proportionate retained manual evidence supports every stable interaction/profile claim. |
 | `SCOPE-PROOF-VISUAL` | `committed` | Visual | Canonical examples are checked across applicable themes, modes, density, direction, and platforms; R1.6 additionally proves the complete applicable React Aria inventory, matched light/dark visual/interaction fixtures, and every intentional visual adaptation. |

@@ -182,7 +182,7 @@ flowchart TD
   catalog["Immutable catalog bundle\nversioned knowledge graph"]
   query["Pure query engine\nmanifest, list, search, get, plan"]
   package["Packed @muxui/react\nexports, declarations, styles, guidance"]
-  later["Later renderer tracks\nweb.html and native.react-native, parked, no packages"]
+  later["Later renderer tracks\nweb.html and native.react-native, parked, no support claim"]
 
   cli["CLI\nhuman, dense, JSON"]
   mcp["MCP\nlocal and hosted profiles"]
@@ -481,16 +481,33 @@ Mux UI-owned prop with its type, enum members, required flag, default, and
 description, and the component's events. Props inherited from a named host
 passthrough profile such as `html.button` are not listed. Parts stay with the
 concept record's anatomy. The block is a projection: it is never authored or
-edited, and it lives outside `catalog/`. A type outside the closed set the
-binding schema defines fails extraction naming the prop. That set is
-primitives, string-literal unions, arrays and records of them, Mux UI-owned
-named types, and bounded host references such as `React.ReactNode`, so a
-dependency type cannot enter the catalog. The block enters `specRevision` like
+edited, and it lives outside `catalog/`. The block enters `specRevision` like
 any API field, so removing a prop is still an incompatible change. It is not
 part of `contentRevision`, because it is not authored. The build emits the
 package's declaration files from the same source, and the packed-consumer check
-compares the derived block with the tarball's declarations, so the catalog
-cannot describe an API the package does not publish.
+compares the derived block's names, types, enum members, and required flags
+with the tarball's declarations, so the catalog cannot describe an API the
+package does not publish.
+
+Compiled types cannot carry a default: `size?: 'sm' | 'md' | 'lg'` is the same
+type whether the component defaults to `md` or `lg`. A default is therefore read
+only from the value the component executes, a destructuring default in its
+props parameter or a named defaults constant the component itself reads, and a
+default that cannot be resolved to a static value fails extraction. The runtime
+default observers, which render a component or exercise its behavior and
+compare the result with the recorded defaults, stay and check the derived block.
+They are removed only when a named successor that checks executed defaults
+replaces them.
+
+Derivation is conditional on a closed extraction grammar. The pull request that
+first adds the extraction establishes, with tests and before any authored block
+is deleted: the closed type grammar; how callback types for event props are
+represented; an exact allowlist of host references, such as `React.ReactNode`;
+recursive rejection of any dependency type reachable from a prop's type,
+naming the prop; and which part of a referenced Mux UI-owned named type's
+definition is recorded and enters `specRevision`, so a change inside the
+definition changes the revision and not only the type's name. Until then no
+component moves and every authored block stays canonical.
 
 Hand-authored renderer TypeScript also owns host-element passthrough, generic
 constraints, ref precision, event narrowing, platform-owned props, overloads,
@@ -502,8 +519,9 @@ properties.
 
 Until `@muxui/react` moves a component to TypeScript source, that component's
 authored `api` block is canonical and its existing conformance tests apply. The
-pull request that moves it deletes the authored block and those tests, so no
-component has an authored and a derived block at the same commit. A guide
+pull request that moves it deletes the authored block and re-points the tests
+at the derived one, so no component has an authored and a derived block at the
+same commit. The runtime default observers stay through the move, as above. A guide
 states no prop, variant, enum member, default, event, or import path in prose
 unless a check compares it with the block. A renderer that activates later
 states in its activation decision whether its API is derived from its own
@@ -1105,12 +1123,13 @@ narrow and machine-enumerated:
 A part class promises a semantic customization target, not an exact tag, depth,
 sibling order, or complete DOM snapshot. Component CSS consumes semantic or
 component tokens and never raw palette values. A test in `@muxui/react` renders
-the exported components and checks the published surface. The classes and state
-attributes the rendered DOM emits are in the contract, every contract class
-exists in the stylesheet, every public custom property is read and changes
-computed style in a browser, the layers and style entries exist, and canonical
-examples use only contract hooks. The catalog and that test expose only
-registered hooks and flag examples that rely on internal selectors. During the
+the exported components and checks the published surface. Every declared public
+class and state attribute is emitted in its applicable fixtures and has CSS
+coverage, every public custom property is read and changes computed style in a
+browser, the layers and style entries exist, and canonical examples rely on no
+internal hook. Internal classes and substrate attributes may be emitted; they
+are not part of the contract. The catalog and that test expose only registered
+hooks and flag examples that rely on internal selectors. During the
 current pre-release state a superseded hook is removed outright, with no alias
 (Decision 0016); a supported published contract keeps a deprecated hook as an
 alias for its declared notice window.
@@ -1172,14 +1191,16 @@ list (Decision 0031).
 ### Deferred renderer tracks
 
 Framework-free web, React Native, and the code they might share are deferred
-(Decision 0031). No workspace package exists for them. `@muxui/web` is restored
-only by an accepted W1.0 activation and `@muxui/react-native` only by an
-accepted N1.0 activation. `@muxui/foundation` is restored only by an activation
+(Decision 0031). Their existing private scaffolds stay in the workspace, claiming
+nothing, until the parking pull request removes them. After removal, `@muxui/web`
+is restored only by an accepted W1.0 activation and `@muxui/react-native` only
+by an accepted N1.0 activation, and `@muxui/foundation` only by an activation
 that names the shared code and its two real consumers. The schema keeps the
 platform vocabulary (`web.html`, `web.react`, `native.react-native`, and the
 runtime profiles `ios`, `android`, and `native.react-native-web`), and a binding
-with no responsible implementation declares `strategy: "unsupported"` with a
-reason, so the catalog stays honest without a scaffold. What follows is the
+with no responsible implementation is `strategy: "unsupported"` with a reason,
+which the parking pull request applies to the existing ones, so the catalog stays
+honest without a scaffold. What follows is the
 intended design, not a commitment or a claim. The activating decision may change
 it, and states whether its binding's API is derived from renderer source, as for
 `web.react`, or authored in its binding spec, so no fact has two owners.
@@ -1316,8 +1337,9 @@ undeclared file dependency, or `@muxui/web` import.
 | `@muxui/tooling` | Self-describing CLI, MCP adapters, local validation, maintainer scaffolds, semantic diffs, and (when separately admitted) safe project operations. | A second artifact index, product decisions, or renderer implementation. |
 
 At the React package-only boundary, schema, tokens, catalog, and tooling remain
-private authoring/build/proof authorities, and parked renderer packages return
-only through activation ("Deferred renderer tracks"). Productization later
+private authoring/build/proof authorities, and the parked renderer scaffolds
+stay outside the public graph and, once removed, return only through activation
+("Deferred renderer tracks"). Productization later
 publishes the compatible catalog/tooling portfolio and CLI-as-documentation.
 Their versions may move independently from renderer packages, but every
 enabled response and release manifest correlates all relevant versions and the
@@ -1717,7 +1739,7 @@ Deterministic proof runs before model-based evaluation.
 | Layer | Question answered |
 | --- | --- |
 | Schema | Is every artifact valid, versioned, uniquely identified, and relationally complete? |
-| Spec conformance | Does the API block derived from renderer source match the package's declarations, and do package exports, CSS hooks, examples, and renderer declarations match the concept records and binding specs? |
+| Spec conformance | Does the API block derived from renderer source match the package's declarations, do its defaults match what the component executes, and do package exports, CSS hooks, examples, and renderer declarations match the concept records and binding specs? |
 | Unit and state | Do declared portable machines and renderer-owned behavior implement their respective transitions? |
 | Browser | Does the HTML/React implementation handle layout, focus, events, SSR, hydration, and browser APIs? |
 | Native | Do iOS, Android, and declared React Native Web runtime profiles satisfy their binding behavior and accessibility obligations? |
@@ -2416,7 +2438,7 @@ And:
   another renderer's compiled output.
 - Public CSS/DOM hooks are enumerated; undocumented topology remains internal.
 - A binding without a responsible implementation is `unsupported` with a
-  reason, and no scaffold package stands in for it.
+  reason, and a scaffold package never stands in for it.
 - Shared meaning never requires a shared transition implementation when
   platform conventions conflict.
 - Model evaluation does not replace schema, type, behavior, accessibility, or
