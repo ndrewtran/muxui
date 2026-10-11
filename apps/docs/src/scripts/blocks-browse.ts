@@ -95,11 +95,19 @@ export function setPathname(next: string) {
 	emit();
 }
 
-/** The browser starts from the URL's filters. */
-if (typeof location !== 'undefined') {
+const urlFilter = (): BlockFilter => {
 	const params = new URL(location.href).searchParams;
-	applyFilter({ query: params.get('q') ?? '', uses: params.get('uses') ?? '' });
+	return { query: params.get('q') ?? '', uses: params.get('uses') ?? '' };
+};
+
+/** Takes the filter from the URL after a history step, which can land on an entry whose `q` and `uses` differ from the filter shown. */
+export function syncFilterFromUrl() {
+	const filter = urlFilter();
+	if (filter.query !== state.filter.query || filter.uses !== state.filter.uses) applyFilter(filter);
 }
+
+/** The browser starts from the URL's filters. */
+if (typeof location !== 'undefined') applyFilter(urlFilter());
 
 /** The filter and what it keeps. The server and the first client render show every block. */
 export function useBrowseState(): BrowseState {

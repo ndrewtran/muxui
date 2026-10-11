@@ -1,5 +1,5 @@
 import { announce, part } from './blocks-dom.ts';
-import { setPathname } from './blocks-browse.ts';
+import { setPathname, syncFilterFromUrl } from './blocks-browse.ts';
 
 /*
  * In-place navigation. The rail's filters, the gallery, and the block viewer are React islands that
@@ -75,4 +75,8 @@ document.addEventListener('click', (event) => {
 	event.preventDefault();
 	if (link.pathname !== location.pathname) void navigate(link.href, true);
 }, { capture: true });
-window.addEventListener('popstate', () => { void navigate(location.href, false); });
+// A history step can land on an entry whose filters differ from the ones shown, so the filter follows the URL with the page.
+window.addEventListener('popstate', () => {
+	syncFilterFromUrl();
+	void navigate(location.href, false);
+});

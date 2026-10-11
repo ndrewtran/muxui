@@ -322,6 +322,54 @@ test('Copy returns to its label after clicks inside the confirmation', async () 
 	});
 });
 
+test('history steps restore the filters in the URL, the search field, the Uses select, and the blocks shown', async () => {
+	await withSite(async ({ page, origin }) => {
+		await page.goto(`${origin}/blocks/`);
+		await islandsReady(page);
+		const variants = await railVariants(page);
+		const blocks = [...new Set(variants.map(({ block }) => block))];
+		const usesIndex = (await page.evaluate(async () => (await fetch('/blocks/filter-index.json')).json())).uses;
+		// A component that only some blocks use, so the Uses filter narrows the list.
+		const component = Object.keys(usesIndex).find((name) => usesIndex[name].length > 0 && usesIndex[name].length < blocks.length);
+		assert.ok(component, 'a Uses value narrows the rail');
+		const [slug] = usesIndex[component];
+		const search = page.getByRole('searchbox', { name: 'Search blocks' });
+		const uses = page.getByLabel('Uses component');
+		const shown = () => page.evaluate((rows) => [...new Set([...document.querySelectorAll(`${rows} > a`)].map((link) => link.pathname.split('/')[2]))].sort(), railRows);
+		const filters = () => ({ q: new URL(page.url()).searchParams.get('q'), uses: new URL(page.url()).searchParams.get('uses') });
+		/** Waits for the field, the select, and the rail to show one filter: the blocks `wanted`, or, with none given, some but not all of them. */
+		const expectFilter = async (query, component, wanted, message) => {
+			await page.waitForFunction(({ rows, query, component, wanted, total }) => {
+				const field = document.querySelector('input[type="search"][aria-label="Search blocks"]');
+				const select = [...document.querySelectorAll('select')].find((node) => node.labels?.[0]?.textContent === 'Uses component');
+				const list = [...new Set([...document.querySelectorAll(`${rows} > a`)].map((link) => link.pathname.split('/')[2]))].sort();
+				return field.value === query && select.value === component && (wanted ? list.join() === wanted.join() : list.length > 0 && list.length < total);
+			}, { rows: railRows, query, component, wanted: wanted && [...wanted].sort(), total: blocks.length }, { timeout: 10_000 }).catch(async () => { throw new Error(`${message}: shown ${JSON.stringify(await shown())}, field "${await search.inputValue()}", select "${await uses.inputValue()}", URL ${page.url()}`); });
+		};
+		// Filter, open a block, then clear the filter on that page: the entry the history step returns to keeps its own filters.
+		await uses.selectOption(component);
+		await search.fill(slug.split('-')[0]);
+		await expectFilter(slug.split('-')[0], component, null, 'the filter applies');
+		const kept = await shown();
+		assert.deepEqual(filters(), { q: slug.split('-')[0], uses: component });
+		await railVariantLink(page, variants.find((variant) => variant.block === kept[0]).href).click();
+		await page.locator('[data-blocks-detail] h1').waitFor();
+		assert.deepEqual(filters(), { q: slug.split('-')[0], uses: component }, 'the filters travel with the swap');
+		await search.fill('');
+		await uses.selectOption('');
+		await expectFilter('', '', blocks, 'clearing shows every block');
+		assert.deepEqual(filters(), { q: null, uses: null });
+		await page.goBack();
+		await page.locator('[data-blocks-gallery]').waitFor();
+		assert.deepEqual(filters(), { q: slug.split('-')[0], uses: component }, 'Back returns to the entry with its filters');
+		await expectFilter(slug.split('-')[0], component, kept, 'Back restores the field, the select, and the shown blocks');
+		await page.goForward();
+		await page.locator('[data-blocks-detail] h1').waitFor();
+		assert.deepEqual(filters(), { q: null, uses: null });
+		await expectFilter('', '', blocks, 'Forward clears them again');
+	});
+});
+
 test('pane swaps leave no document listener behind for the islands they remove', async () => {
 	await withSite(async ({ page, origin }) => {
 		// Astro parks a one-shot `astro:after-swap` listener on the document when it removes an island, and it only drops it when that event fires.
