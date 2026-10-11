@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:recommendation-compact",
+  "kind": "example",
+  "name": "Compact",
+  "summary": "One suggestion with source and value chips, a confidence meter, Alternatives, and Accept.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/recommendation/examples/react/compact.tsx"
+}

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:recommendation",
+  "kind": "pattern",
+  "name": "Recommendation",
+  "summary": "A card that suggests one action in a sentence with a source chip and a value chip, a confidence meter, an Alternatives reveal, and Accept, or a ranked choice of options.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "suggestion",
+    "confidence",
+    "alternatives",
+    "ranked",
+    "accept",
+    "proposal"
+  ],
+  "platforms": ["web.react"],
+  "category": "conversation",
+  "intent": {
+    "useWhen": [
+      "Proposing one action with its reason and how sure the suggestion is",
+      "Letting a person read the alternatives, or choose among ranked options, before accepting"
+    ],
+    "avoidWhen": [
+      "Accepting must place an order or change data, which needs your own handler",
+      "There are many options that need filtering or comparison"
+    ]
+  },
+  "participants": [
+    {
+      "role": "container",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "meter",
+      "component": "muxui:component:meter",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:button",
+      "requirement": "required"
+    },
+    {
+      "role": "mark",
+      "component": "muxui:component:avatar",
+      "requirement": "optional"
+    },
+    {
+      "role": "choices",
+      "component": "muxui:component:radio-group",
+      "requirement": "optional"
+    }
+  ],
+  "variants": [
+    { "example": "muxui:example:recommendation-compact" },
+    { "example": "muxui:example:recommendation-ranked" }
+  ],
+  "accessibility": [
+    "The section is named by its question heading.",
+    "Confidence is a Meter named Confidence that reads as a percent.",
+    "In Compact, Alternatives is a Button with aria-expanded and aria-controls for the list it reveals, and the list is named Alternatives.",
+    "In Ranked, the options are a RadioGroup named Options, best match first, and the Meter follows the selected option.",
+    "Accept ends disabled with a check, and a status region announces that nothing was booked.",
+    "The source and value chips are plain text, not controls, and the value chip border colour is decoration beside its text."
+  ],
+  "unsupported": [
+    "Booking or placing anything: Accept only marks the card",
+    "Updating the confidence or the options from a model",
+    "Undoing an accepted recommendation: reload to start again"
+  ],
+  "workflowValue": "Replaces wiring a suggestion card by hand: one list of options drives the alternatives, the ranked choice, and the confidence meter, and one accepted flag ends the card, so you swap the question and the options and keep the layout."
+}

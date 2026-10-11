@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:recommendation-ranked",
+  "kind": "example",
+  "name": "Ranked",
+  "summary": "Ranked options in a radio group, with a meter that follows the choice and Accept.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/recommendation/examples/react/ranked.tsx"
+}

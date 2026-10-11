@@ -1180,6 +1180,18 @@
     {
       "family": "example",
       "path": "catalog/patterns/chat-panel/examples/react/tabbed-thread.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/recommendation/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/recommendation/examples/react/compact.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/recommendation/examples/react/ranked.example.json"
     }
   ]
 }
