@@ -1,0 +1,169 @@
+# step: Re-verify candidate (raw lines 165-188)
+2026-10-11T01:18:33.7338343Z ##[group]Run set -euo pipefail
+2026-10-11T01:18:33.7411912Z shell: /usr/bin/bash -e {0}
+2026-10-11T01:18:33.7412252Z env:
+2026-10-11T01:18:33.7412458Z   EXPECTED_VERSION: 0.1.0-rc.2
+2026-10-11T01:18:33.7413060Z   EXPECTED_SHA512: sha512-l9wy+463OlZ4lXTAohi/O0Owldke7lqcIn9zLkUfuOKb55bUWUgCboDvrh3Nhl+OX+9MLnI4rTXtlVnvBDHJ9A==
+2026-10-11T01:18:33.7413729Z ##[endgroup]
+# step: Registry preflight (read-only) (raw lines 189-196)
+2026-10-11T01:18:33.7990898Z ##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs preflight
+2026-10-11T01:18:33.8057633Z shell: /usr/bin/bash -e {0}
+2026-10-11T01:18:33.8057889Z env:
+2026-10-11T01:18:33.8058081Z   VERSION: 0.1.0-rc.2
+2026-10-11T01:18:33.8058303Z ##[endgroup]
+2026-10-11T01:18:34.4788568Z @muxui/react@0.1.0-rc.2: 404 (no collision)
+2026-10-11T01:18:34.4789594Z @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.1
+# step: Publish to next (raw lines 197-330)
+2026-10-11T01:18:34.5204296Z ##[group]Run set -euo pipefail
+2026-10-11T01:18:34.5269265Z shell: /usr/bin/bash -e {0}
+2026-10-11T01:18:34.5269701Z env:
+2026-10-11T01:18:34.5269891Z   VERSION: 0.1.0-rc.2
+2026-10-11T01:18:34.5270250Z   TARBALL: <runner-temp>/muxui-react-0.1.0-rc.2.tgz
+2026-10-11T01:18:34.5270642Z   PRE_KIND: later
+2026-10-11T01:18:34.5270853Z   PRE_LATEST: 0.1.0-rc.1
+2026-10-11T01:18:34.5271086Z   PRE_NEXT: 0.1.0-rc.1
+2026-10-11T01:18:34.5271319Z   npm_config_engine_strict: false
+2026-10-11T01:18:34.5271595Z ##[endgroup]
+2026-10-11T01:18:34.7883796Z No drift since the preflight: @muxui/react dist-tags latest=0.1.0-rc.1 next=0.1.0-rc.1
+2026-10-11T01:18:35.4515801Z npm notice
+2026-10-11T01:18:35.4520531Z npm notice 📦  @muxui/react@0.1.0-rc.2
+2026-10-11T01:18:35.4521086Z npm notice Tarball Contents
+2026-10-11T01:18:35.4539180Z npm notice 1.1kB LICENSE
+2026-10-11T01:18:35.4540163Z npm notice 5.9kB NOTICE
+2026-10-11T01:18:35.4540691Z npm notice 40.9kB README.md
+2026-10-11T01:18:35.4541449Z npm notice 906.6kB assets/fonts/Inter-Italic[opsz,wght].ttf
+2026-10-11T01:18:35.4542380Z npm notice 876.6kB assets/fonts/Inter[opsz,wght].ttf
+2026-10-11T01:18:35.4543146Z npm notice 4.4kB assets/fonts/OFL.txt
+2026-10-11T01:18:35.4544069Z npm notice 278.7kB assets/fonts/PlayfairDisplay-Italic[wght].ttf
+2026-10-11T01:18:35.4545063Z npm notice 300.7kB assets/fonts/PlayfairDisplay[wght].ttf
+2026-10-11T01:18:35.4545793Z npm notice 196.8kB assets/fonts/RobotoMono-Italic[wght].ttf
+2026-10-11T01:18:35.4546286Z npm notice 183.7kB assets/fonts/RobotoMono[wght].ttf
+2026-10-11T01:18:35.4546689Z npm notice 1.2kB generated/activity.d.ts
+2026-10-11T01:18:35.4547060Z npm notice 7.8kB generated/activity.mjs
+2026-10-11T01:18:35.4547926Z npm notice 981B generated/avatar.d.ts
+2026-10-11T01:18:35.4548495Z npm notice 7.5kB generated/avatar.mjs
+2026-10-11T01:18:35.4549055Z npm notice 3.5kB generated/button.mjs
+2026-10-11T01:18:35.4549699Z npm notice 3.1kB generated/calendar-height-motion.mjs
+2026-10-11T01:18:35.4550460Z npm notice 5.1kB generated/calendar-selection-motion.mjs
+2026-10-11T01:18:35.4551173Z npm notice 3.2kB generated/candidate-motion.mjs
+2026-10-11T01:18:35.4551829Z npm notice 608B generated/choice-context.mjs
+2026-10-11T01:18:35.4552512Z npm notice 5.2kB generated/code-block-highlight.mjs
+2026-10-11T01:18:35.4583034Z npm notice 860B generated/code-block.d.ts
+2026-10-11T01:18:35.4583775Z npm notice 12.4kB generated/code-block.mjs
+2026-10-11T01:18:35.4584257Z npm notice 108.2kB generated/collections.mjs
+2026-10-11T01:18:35.4584710Z npm notice 7.0kB generated/color-slider-motion.mjs
+2026-10-11T01:18:35.4585141Z npm notice 4.0kB generated/color-wheel-motion.mjs
+2026-10-11T01:18:35.4585533Z npm notice 3.0kB generated/compatibility.mjs
+2026-10-11T01:18:35.4585905Z npm notice 12.6kB generated/components.mjs
+2026-10-11T01:18:35.4586265Z npm notice 1.9kB generated/data-diff.d.ts
+2026-10-11T01:18:35.4586612Z npm notice 13.4kB generated/data-diff.mjs
+2026-10-11T01:18:35.4586995Z npm notice 5.9kB generated/date-popover-motion.mjs
+2026-10-11T01:18:35.4587926Z npm notice 92.5kB generated/descriptor.json
+2026-10-11T01:18:35.4588451Z npm notice 289B generated/descriptor.json.provenance
+2026-10-11T01:18:35.4588881Z npm notice 10.2kB generated/dialog-motion.mjs
+2026-10-11T01:18:35.4589246Z npm notice 54.7kB generated/fields.mjs
+2026-10-11T01:18:35.4589613Z npm notice 19.0kB generated/grid-list-motion.mjs
+2026-10-11T01:18:35.4589984Z npm notice 688B generated/icon-button.d.ts
+2026-10-11T01:18:35.4590624Z npm notice 1.4kB generated/icon-button.mjs
+2026-10-11T01:18:35.4590972Z npm notice 674B generated/image.d.ts
+2026-10-11T01:18:35.4591283Z npm notice 4.0kB generated/image.mjs
+2026-10-11T01:18:35.4591613Z npm notice 37.0kB generated/index.d.ts
+2026-10-11T01:18:35.4591923Z npm notice 1.4kB generated/index.mjs
+2026-10-11T01:18:35.4592237Z npm notice 3.0kB generated/lightbox.d.ts
+2026-10-11T01:18:35.4592574Z npm notice 29.6kB generated/lightbox.mjs
+2026-10-11T01:18:35.4592918Z npm notice 7.4kB generated/listbox-motion.mjs
+2026-10-11T01:18:35.4593266Z npm notice 535B generated/markdown.d.ts
+2026-10-11T01:18:35.4593597Z npm notice 8.7kB generated/markdown.mjs
+2026-10-11T01:18:35.4594095Z npm notice 9.2kB generated/menu-motion.mjs
+2026-10-11T01:18:35.4594424Z npm notice 1.2kB generated/message.d.ts
+2026-10-11T01:18:35.4594743Z npm notice 4.6kB generated/message.mjs
+2026-10-11T01:18:35.4595102Z npm notice 24.1kB generated/motion-components.mjs
+2026-10-11T01:18:35.4595460Z npm notice 6.8kB generated/motion.mjs
+2026-10-11T01:18:35.4595825Z npm notice 1.9kB generated/overlay-positioning.mjs
+2026-10-11T01:18:35.4596203Z npm notice 44.1kB generated/overlays.mjs
+2026-10-11T01:18:35.4596555Z npm notice 3.2kB generated/popover-motion.mjs
+2026-10-11T01:18:35.4596929Z npm notice 2.0kB generated/prompt-composer.d.ts
+2026-10-11T01:18:35.4597479Z npm notice 18.2kB generated/prompt-composer.mjs
+2026-10-11T01:18:35.4597844Z npm notice 91.3kB generated/r1-5-closure.json
+2026-10-11T01:18:35.4598239Z npm notice 291B generated/r1-5-closure.json.provenance
+2026-10-11T01:18:35.4598641Z npm notice 54.5kB generated/r1-6-contract.json
+2026-10-11T01:18:35.4599083Z npm notice 292B generated/r1-6-contract.json.provenance
+2026-10-11T01:18:35.4599473Z npm notice 5.3kB generated/radio-motion.mjs
+2026-10-11T01:18:35.4599877Z npm notice 14.0kB generated/range-selection-motion.mjs
+2026-10-11T01:18:35.4600278Z npm notice 64.8kB generated/release.json
+2026-10-11T01:18:35.4600696Z npm notice 286B generated/release.json.provenance
+2026-10-11T01:18:35.4601074Z npm notice 1.3kB generated/resizable.d.ts
+2026-10-11T01:18:35.4601446Z npm notice 18.0kB generated/resizable.mjs
+2026-10-11T01:18:35.4601794Z npm notice 829B generated/select-native.d.ts
+2026-10-11T01:18:35.4602162Z npm notice 4.3kB generated/select-native.mjs
+2026-10-11T01:18:35.4602518Z npm notice 4.9kB generated/slider-motion.mjs
+2026-10-11T01:18:35.4602858Z npm notice 816.5kB generated/styles.css
+2026-10-11T01:18:35.4603208Z npm notice 116.6kB generated/supplemental.css
+2026-10-11T01:18:35.4603787Z npm notice 28.0kB generated/supplemental.d.ts
+2026-10-11T01:18:35.4604466Z npm notice 96.4kB generated/supplemental.mjs
+2026-10-11T01:18:35.4605017Z npm notice 21.6kB generated/tabs-motion.mjs
+2026-10-11T01:18:35.4605366Z npm notice 305B generated/testing.mjs
+2026-10-11T01:18:35.4605732Z npm notice 7.1kB generated/text-editor.d.ts
+2026-10-11T01:18:35.4606098Z npm notice 63.1kB generated/text-editor.mjs
+2026-10-11T01:18:35.4606481Z npm notice 779.0kB generated/themes.css
+2026-10-11T01:18:35.4606812Z npm notice 1.3kB generated/themes.d.ts
+2026-10-11T01:18:35.4607288Z npm notice 3.8kB generated/themes.mjs
+2026-10-11T01:18:35.4607854Z npm notice 627B generated/toggle-button-context.mjs
+2026-10-11T01:18:35.4608646Z npm notice 13.7kB generated/toggle-button-group-motion.mjs
+2026-10-11T01:18:35.4609227Z npm notice 17.5kB generated/tree-motion.mjs
+2026-10-11T01:18:35.4609601Z npm notice 1.1kB licenses/framer-motion.MIT.txt
+2026-10-11T01:18:35.4610117Z npm notice 11.3kB licenses/internationalized-date.Apache-2.0.txt
+2026-10-11T01:18:35.4610877Z npm notice 3.2kB licenses/lucide.ISC-MIT.txt
+2026-10-11T01:18:35.4611251Z npm notice 2.9kB licenses/marked.MIT.txt
+2026-10-11T01:18:35.4611610Z npm notice 1.1kB licenses/motion-dom.MIT.txt
+2026-10-11T01:18:35.4611978Z npm notice 1.1kB licenses/motion-utils.MIT.txt
+2026-10-11T01:18:35.4612330Z npm notice 1.1kB licenses/motion.MIT.txt
+2026-10-11T01:18:35.4612767Z npm notice 11.3kB licenses/react-aria-components.Apache-2.0.txt
+2026-10-11T01:18:35.4613235Z npm notice 11.3kB licenses/react-aria.Apache-2.0.txt
+2026-10-11T01:18:35.4613862Z npm notice 2.3kB licenses/shiki-oniguruma.NOTICES.txt
+2026-10-11T01:18:35.4614323Z npm notice 1.1kB licenses/shiki-vscode-textmate.MIT.txt
+2026-10-11T01:18:35.4614709Z npm notice 1.1kB licenses/shiki.MIT.txt
+2026-10-11T01:18:35.4615043Z npm notice 1.1kB licenses/tiptap.MIT.txt
+2026-10-11T01:18:35.4615386Z npm notice 645B licenses/tslib.0BSD.txt
+2026-10-11T01:18:35.4615689Z npm notice 3.7kB package.json
+2026-10-11T01:18:35.4615963Z npm notice Tarball Details
+2026-10-11T01:18:35.4616266Z npm notice name: @muxui/react
+2026-10-11T01:18:35.4616567Z npm notice version: 0.1.0-rc.2
+2026-10-11T01:18:35.4617055Z npm notice filename: muxui-react-0.1.0-rc.2.tgz
+2026-10-11T01:18:35.4617596Z npm notice package size: 1.9 MB
+2026-10-11T01:18:35.4617900Z npm notice unpacked size: 5.7 MB
+2026-10-11T01:18:35.4618287Z npm notice shasum: 364cb67c22518bd9fe4f7204e458243250fb4a7a
+2026-10-11T01:18:35.4618768Z npm notice integrity: sha512-l9wy+463OlZ4l[...]TXtlVnvBDHJ9A==
+2026-10-11T01:18:35.4619150Z npm notice total files: 98
+2026-10-11T01:18:35.4619386Z npm notice
+2026-10-11T01:18:36.5169516Z npm notice npm tokens that bypass 2FA are being restricted for account changes and direct publishing. Learn how to prepare: https://gh.io/npm-gat-bypass2fa-deprecation
+2026-10-11T01:18:36.6436410Z npm notice Publishing to https://registry.npmjs.org/ with tag next and public access
+2026-10-11T01:18:37.7045965Z npm notice publish Signed provenance statement with source and build information from GitHub Actions
+2026-10-11T01:18:37.7047440Z npm notice publish Provenance statement published to transparency log: https://search.sigstore.dev/?logIndex=3197056452
+2026-10-11T01:18:40.0412987Z npm notice Your package is being processed and may take a few minutes to become available.
+2026-10-11T01:18:40.0416266Z + @muxui/react@0.1.0-rc.2
+# step: Read back registry state (raw lines 331-355)
+2026-10-11T01:18:40.0838041Z ##[group]Run node tooling/audits/repository-policy/src/npm-publication.mjs read-back
+2026-10-11T01:18:40.0902100Z shell: /usr/bin/bash -e {0}
+2026-10-11T01:18:40.0902349Z env:
+2026-10-11T01:18:40.0902542Z   VERSION: 0.1.0-rc.2
+2026-10-11T01:18:40.0903074Z   EXPECTED_SHA512: sha512-l9wy+463OlZ4lXTAohi/O0Owldke7lqcIn9zLkUfuOKb55bUWUgCboDvrh3Nhl+OX+9MLnI4rTXtlVnvBDHJ9A==
+2026-10-11T01:18:40.0903657Z   PRE_KIND: later
+2026-10-11T01:18:40.0903868Z   PRE_LATEST: 0.1.0-rc.1
+2026-10-11T01:18:40.0904095Z   PRE_NEXT: 0.1.0-rc.1
+2026-10-11T01:18:40.0904302Z ##[endgroup]
+2026-10-11T01:18:40.2977542Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 1 of 21)
+2026-10-11T01:18:55.4920462Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 2 of 21)
+2026-10-11T01:19:10.6170397Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 3 of 21)
+2026-10-11T01:19:25.7570663Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 4 of 21)
+2026-10-11T01:19:40.8778050Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 5 of 21)
+2026-10-11T01:19:56.0080922Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 6 of 21)
+2026-10-11T01:20:11.1646838Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 7 of 21)
+2026-10-11T01:20:26.3718211Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 8 of 21)
+2026-10-11T01:20:41.4939289Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 9 of 21)
+2026-10-11T01:20:56.6167027Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 10 of 21)
+2026-10-11T01:21:11.7248623Z Waiting for @muxui/react@0.1.0-rc.2 (attempt 11 of 21)
+2026-10-11T01:21:26.8520569Z Waiting for @muxui/react dist-tags next=0.1.0-rc.2 (attempt 1 of 41)
+2026-10-11T01:21:41.9071750Z dist.integrity: sha512-l9wy+463OlZ4lXTAohi/O0Owldke7lqcIn9zLkUfuOKb55bUWUgCboDvrh3Nhl+OX+9MLnI4rTXtlVnvBDHJ9A==
+2026-10-11T01:21:41.9072605Z provenance: https://slsa.dev/provenance/v1
+2026-10-11T01:21:41.9073098Z dist-tags: {"next":"0.1.0-rc.2","latest":"0.1.0-rc.1"}
