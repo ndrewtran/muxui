@@ -75,7 +75,7 @@ export async function openBlock(browser, url, { width = 1280, height = 900, sche
   const errors = [];
   tab.on('pageerror', (error) => errors.push(error.message));
   tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  await tab.goto(`${url}/block.html?scheme=${scheme}&copies=${copies}`, { waitUntil: 'networkidle' });
+  await tab.goto(`${url}/block.html?scheme=${scheme}${copies > 1 ? `&copies=${copies}` : ''}`, { waitUntil: 'networkidle' });
   await tab.locator('#root > *').first().waitFor({ timeout: 15_000 });
   return { context, tab, errors };
 }
