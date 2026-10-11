@@ -93,7 +93,7 @@ const packageData = {
   catalogDigest: bundle.catalogDigest,
   queryApiVersion: bundle.apiVersion,
   supportedQueryApiVersions: bundle.supportedQueryApiVersions,
-  schemaRange: '^2.0.0',
+  schemaRange: '^3.0.0',
   sourceRevision: bundle.sourceRevision,
   tokenRequirementSets: Object.fromEntries(bindingDescriptors.map((descriptor) => [
     `${descriptor.ref}:${descriptor.profile}`,

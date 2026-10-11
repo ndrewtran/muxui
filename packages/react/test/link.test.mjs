@@ -6,7 +6,7 @@ import { createRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
 import { Button } from '../src/button.mjs';
 import { Breadcrumbs, Link } from '../src/components.mjs';
-import { GridList } from '../src/collections.mjs';
+import { GridList, Table, Tree } from '../src/collections.mjs';
 import { createDom } from './support/dom.mjs';
 
 const h = React.createElement;
@@ -107,6 +107,29 @@ test('a nested GridList restores its own items instead of inheriting the outer d
     assert.deepEqual(links.map((link) => link.getAttribute('data-disabled')), ['true', null]);
   } finally {
     await view.dispose();
+  }
+});
+
+// Link inherits an item's disabled state exactly where React Aria hands it to a nested Button, and in react-aria-components 1.20.0
+// that is a GridListItem alone. TreeItem and Table Row provide ButtonContext only for their chevron and drag slots, and ListBox
+// options and Menu items provide none (they cannot hold interactive content). If a React Aria upgrade starts handing the state to
+// a nested Button elsewhere, this test fails on that row: extend GridListItemDisabledContext to that collection.
+test('Link and Button stay enabled in a disabled Tree item or Table row, where React Aria hands neither a disabled state', async () => {
+  const controls = (id) => h('span', null, h(Link, { href: `#${id}` }, `Open ${id}`), h(Button, null, `Act ${id}`));
+  const columns = [{ id: 'name', label: 'Name', isRowHeader: true }];
+  const collections = {
+    'tree item': h(Tree, { 'aria-label': 'Tree', items: [{ id: 'a', label: controls('a'), textValue: 'a', disabled: true }] }),
+    'table row': h(Table, { 'aria-label': 'Table', columns, rows: [{ id: 'a', name: controls('a'), disabled: true }] }),
+    'disabled table': h(Table, { 'aria-label': 'Table', columns, disabled: true, rows: [{ id: 'a', name: controls('a') }] }),
+  };
+  for (const [name, element] of Object.entries(collections)) {
+    const view = await mount(element);
+    try {
+      assert.deepEqual(state(linkIn(view.container)), ['a', null, null], `${name}: a nested Link stays an anchor`);
+      assert.equal(view.container.querySelector('button.muxui-button').disabled, false, `${name}: a nested Button stays enabled`);
+    } finally {
+      await view.dispose();
+    }
   }
 });
 

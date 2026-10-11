@@ -418,6 +418,12 @@
   padding-inline-end: var(--muxui-semantic-layout-search-clear-inset);
 }
 
+/* Mux draws the clear action, so drop the cancel button Chromium and WebKit add to a search input. */
+.muxui-search-control .muxui-field-input::-webkit-search-cancel-button {
+  appearance: none;
+  display: none;
+}
+
 .muxui-field-description {
   color: var(--muxui-semantic-content-default);
   font-weight: var(--muxui-semantic-typography-body-weight);

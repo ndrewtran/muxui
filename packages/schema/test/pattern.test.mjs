@@ -296,12 +296,12 @@ test('E-BL1-01: the category registry owns the derived group, and the graph reje
   assert.equal(ownerOf('$/category'), 'pattern-contract');
 
   // Adding a category to the registry is all a pattern needs to use it.
-  const widened = { ...registry, application: [...registry.application, 'dashboards'] };
+  const widened = { ...registry, application: { ...registry.application, dashboards: 'Dashboards' } };
   validateCatalogRecords(records, { patternCategories: widened });
   assert.equal(patternGroup(widened, 'dashboards'), 'application');
 });
 
-test('E-BL1-01 negative: the category registry is kebab-case groups of unique categories, each under one group', () => {
+test('E-BL1-01 negative: the category registry is kebab-case groups of unique categories with explicit labels, each under one group', () => {
   const reject = (registry, path, message) => {
     assert.throws(() => validatePatternCategories(registry), (error) => (
       error instanceof SchemaValidationError
@@ -310,20 +310,37 @@ test('E-BL1-01 negative: the category registry is kebab-case groups of unique ca
     ), JSON.stringify(registry));
   };
   reject({}, '$', /at least 1 properties/u);
-  reject({ application: [] }, '$/application', /at least 1 items/u);
-  reject({ application: ['forms', 'forms'] }, '$/application', /unique|duplicate|more than once/u);
-  reject({ application: ['Forms'] }, '$/application/0', /does not match/u);
-  reject({ Application: ['forms'] }, '$/{propertyName}', /does not match/u);
-  reject({ 2024: ['forms'] }, '$/{propertyName}', /does not match/u);
-  reject({ application: ['forms'], marketing: ['forms'] }, '$/marketing', /forms is already declared under application/u);
+  reject({ application: {} }, '$/application', /at least 1 properties/u);
+  reject({ application: { Forms: 'Forms' } }, '$/application/{propertyName}', /does not match/u);
+  reject({ application: { 404: 'Not found' } }, '$/application/{propertyName}', /does not match/u);
+  reject({ Application: { forms: 'Forms' } }, '$/{propertyName}', /does not match/u);
+  reject({ 2024: { forms: 'Forms' } }, '$/{propertyName}', /does not match/u);
+  reject({ application: { forms: 'Forms' }, marketing: { forms: 'Forms' } }, '$/marketing', /forms is already declared under application/u);
+  // Every category carries its label as written: there is no derived or missing label.
+  reject({ application: { forms: '' } }, '$/application/forms', /at least 1/u);
+  reject({ application: { forms: ' Forms' } }, '$/application/forms', /does not match/u);
+  reject({ application: { forms: 'Forms\n' } }, '$/application/forms', /does not match/u);
+  reject({ application: { forms: null } }, '$/application/forms', /must be string/u);
+  // The old shape, a list of ids, has no label to read and is refused.
+  reject({ application: ['forms'] }, '$/application', /must be object/u);
 
-  // The ordered list a bundle carries restores the declared group order, and rejects what an object could not hold.
-  const declared = { marketing: ['hero'], application: ['forms'] };
-  assert.deepEqual(Object.entries(patternCategoryRegistry(patternCategoryGroups(declared))), Object.entries(declared));
+  // The ordered list a bundle carries restores the declared group and category order, labels included, and rejects what an object could not hold.
+  const declared = { marketing: { pricing: 'Pricing', faq: 'FAQ', hero: 'Hero' }, application: { forms: 'Forms' } };
+  assert.deepEqual(patternCategoryGroups(declared), [
+    { group: 'marketing', categories: [{ id: 'pricing', label: 'Pricing' }, { id: 'faq', label: 'FAQ' }, { id: 'hero', label: 'Hero' }] },
+    { group: 'application', categories: [{ id: 'forms', label: 'Forms' }] },
+  ]);
+  const restored = patternCategoryRegistry(patternCategoryGroups(declared));
+  assert.deepEqual(Object.entries(restored).map(([group, categories]) => [group, Object.entries(categories)]), Object.entries(declared).map(([group, categories]) => [group, Object.entries(categories)]));
+  const forms = { id: 'forms', label: 'Forms' };
   for (const [groups, path, message] of [
-    [{ application: ['forms'] }, '$', /must be an array/u],
-    [[{ group: 'application', categories: ['forms'] }, { group: 'application', categories: ['hero'] }], '$/1/group', /application is declared more than once/u],
+    [{ application: { forms: 'Forms' } }, '$', /must be an array/u],
+    [[{ group: 'application', categories: [forms] }, { group: 'application', categories: [{ id: 'hero', label: 'Hero' }] }], '$/1/group', /application is declared more than once/u],
     [[{ group: 'application' }], '$/0', /must be \{ group, categories \}/u],
+    [[{ group: 'application', categories: ['forms'] }], '$/0/categories/0', /must be \{ id, label \}/u],
+    [[{ group: 'application', categories: [{ id: 'forms' }] }], '$/0/categories/0', /must be \{ id, label \}/u],
+    [[{ group: 'application', categories: [forms, forms] }], '$/0/categories/1/id', /forms is declared more than once in application/u],
+    [[{ group: 'application', categories: [{ id: 'forms', label: '' }] }], '$/application/forms', /at least 1/u],
   ]) {
     assert.throws(() => patternCategoryRegistry(groups), (error) => (
       error instanceof SchemaValidationError && error.issues.some((issue) => issue.path === path && message.test(issue.message))

@@ -8,11 +8,12 @@ projections beside canonical records.
 Use the root verification commands until a narrower catalog-owned command is
 declared here by its implementing package.
 
-`patterns/categories.json` declares the block categories and their groups as
-`{ "<group>": ["<category>", ...] }`, in display order. A block's `category` must be
-listed there; the compiler rejects any other and derives the block's group from it.
-Adding, renaming, or regrouping a category edits that file (and the blocks that name
-it), not the schema.
+`patterns/categories.json` declares the block categories, their groups, and each
+category's display label as `{ "<group>": { "<category>": "<Label>", ... } }`, in display
+order. Every category has an explicit label (`faq` is "FAQ"), and docs show it as
+written. A block's `category` must be listed there; the compiler rejects any other and
+derives the block's group from it. Adding, renaming, relabelling, or regrouping a
+category edits that file (and the blocks that name it), not the schema.
 
 A component record's optional `category` is its navigation group in docs and
 Storybook: `"ai-agent"` places it in AI Agent, and no `category` leaves it in
@@ -26,8 +27,10 @@ source. Create them with `scaffoldPattern`. `pnpm generate` lists every
 canonical record in `packages/catalog/catalog-sources.json`, so add or remove
 the files and regenerate instead of editing that list. The compiler checks variant sources against the import and
 content rules (`packages/catalog/src/pattern-imports.mjs` and
-`pattern-content.mjs`): imports only in the leading header, no remote
-reference, no literal colour, an `<asset>.license.json` beside any asset
+`pattern-content.mjs`): imports only in the leading header, from `react`,
+`react/jsx-runtime`, `@muxui/react`, and `@muxui/react/markdown` (the last two
+as static named imports, and `pattern.participants` must declare each component
+they name; no other subpath), no remote reference, no literal colour, an `<asset>.license.json` beside any asset
 (dotfiles but `.DS_Store` included), and a local `src`, `href`, `url()`, or
 `srcSet` path only to a licensed asset inside the pattern directory (`#fragment`
 and `data:` references are fine; `action` and `formAction` count only as

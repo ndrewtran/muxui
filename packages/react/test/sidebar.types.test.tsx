@@ -17,8 +17,23 @@ const controlled = (
   </Sidebar.Provider>
 );
 const uncontrolled = <Sidebar.Provider defaultCollapsed><Sidebar.Toggle /></Sidebar.Provider>;
+// Category, block, and variant: entries nest through `items`, and each group is controlled or uncontrolled.
+const nested = (
+  <Sidebar.NavItem
+    href="/catalog"
+    expanded
+    onExpandedChange={(expanded: boolean) => void expanded}
+    items={[
+      { id: 'button', label: 'Button', href: '/catalog/button', defaultExpanded: true, items: [{ label: 'Primary', href: '/catalog/button/primary', current: true }] },
+      { label: <em>Group</em>, items: [{ label: 'Leaf', href: '/catalog/leaf' }] },
+    ]}
+  >
+    Catalog
+  </Sidebar.NavItem>
+);
 void controlled;
 void uncontrolled;
+void nested;
 
 // @ts-expect-error A Section needs a visible label for its nested list.
 const unlabelled = <Sidebar.Section><Sidebar.NavItem href="/">Home</Sidebar.NavItem></Sidebar.Section>;
@@ -26,3 +41,9 @@ const unlabelled = <Sidebar.Section><Sidebar.NavItem href="/">Home</Sidebar.NavI
 const wrongCallback = <Sidebar.Provider onCollapsedChange={(collapsed: string) => void collapsed} />;
 void unlabelled;
 void wrongCallback;
+// @ts-expect-error An entry without items is a link and needs an href.
+const leafWithoutHref = <Sidebar.NavItem items={[{ label: 'Nowhere' }]}>Group</Sidebar.NavItem>;
+// @ts-expect-error The expanded callback receives a boolean.
+const wrongExpanded = <Sidebar.NavItem onExpandedChange={(expanded: string) => void expanded}>Group</Sidebar.NavItem>;
+void leafWithoutHref;
+void wrongExpanded;

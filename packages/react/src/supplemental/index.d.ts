@@ -315,6 +315,30 @@ export type SidebarProviderProps = {
 /** Names the control "Toggle sidebar" unless `aria-label` or `aria-labelledby` says otherwise. */
 export type SidebarToggleProps = Omit<IconButtonProps, 'aria-label' | 'aria-labelledby'> & { 'aria-label'?: string; 'aria-labelledby'?: string };
 export type SidebarSectionProps = PartProps<HTMLLIElement> & { label: React.ReactNode };
+/** Open state shared by every nav group: supply `expanded` with `onExpandedChange` to control it, or `defaultExpanded` to start it open. */
+export type SidebarExpandedProps = {
+  expanded?: boolean;
+  defaultExpanded?: boolean;
+  onExpandedChange?: (expanded: boolean) => void;
+};
+/**
+ * A nested nav entry. An entry with `items` and no `href` is a disclosure group; with both, it is a link beside a
+ * toggle button. `id` is a stable React key and defaults to `href`.
+ */
+export type SidebarNavEntry = SidebarExpandedProps & { id?: string; label: React.ReactNode; current?: boolean } & (
+  | { href: string; items?: SidebarNavEntry[] }
+  | { href?: string; items: SidebarNavEntry[] }
+);
+export type SidebarNavItemProps = SidebarExpandedProps & {
+  href?: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  badge?: React.ReactNode;
+  /** Marks the item's page with `aria-current="page"`; on a group without `href` it only styles the header. */
+  current?: boolean;
+  children?: React.ReactNode;
+  items?: SidebarNavEntry[];
+  external?: boolean;
+};
 export declare const Sidebar: {
   Provider: React.ComponentType<SidebarProviderProps>;
   Root: React.ForwardRefExoticComponent<SidebarProps & React.RefAttributes<HTMLElement>>;
@@ -324,7 +348,7 @@ export declare const Sidebar: {
   Divider: React.ForwardRefExoticComponent<PartProps<HTMLHRElement> & React.RefAttributes<HTMLHRElement>>;
   NavList: React.ForwardRefExoticComponent<PartProps<HTMLUListElement> & React.RefAttributes<HTMLUListElement>>;
   Section: React.ForwardRefExoticComponent<SidebarSectionProps & React.RefAttributes<HTMLLIElement>>;
-  NavItem: React.ComponentType<{ href?: string; icon?: React.ComponentType<{ className?: string }>; badge?: React.ReactNode; current?: boolean; children?: React.ReactNode; items?: Array<{ href: string; label: string; current?: boolean }>; external?: boolean }>;
+  NavItem: React.ComponentType<SidebarNavItemProps>;
   NavButton: React.ForwardRefExoticComponent<React.AnchorHTMLAttributes<HTMLAnchorElement> & { icon?: React.ComponentType<{ className?: string }>; label?: string; current?: boolean } & React.RefAttributes<HTMLAnchorElement>>;
   AccountCard: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & { name: string; email: string; avatarSrc?: string; avatarAlt?: string; status?: 'online' | 'offline' } & React.RefAttributes<HTMLDivElement>>;
   AccountMenu: React.ForwardRefExoticComponent<PartProps<HTMLDivElement> & React.RefAttributes<HTMLDivElement>>;

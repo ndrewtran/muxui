@@ -20,26 +20,49 @@ test('pattern variants are enumerated from the catalog manifest in variant order
     assert.equal(variant.patternId, 'muxui:pattern:poster-grid');
     assert.equal(variant.patternName, 'Poster grid');
     assert.equal(variant.category, 'collections');
+    assert.equal(variant.categoryLabel, 'Collections', 'the label is the registry\'s, not derived');
     assert.equal(variant.source, `catalog/patterns/poster-grid/examples/react/${variant.variantSlug}.tsx`);
     assert.match(variant.text, /^import \{[^}]*\} from '@muxui\/react';$/mu);
   }
 });
 
+// Writes a hermetic catalog root with one pattern and a category registry, and returns it for `patternVariantExamples`.
+async function withCatalogRoot(root, { registry, category }) {
+  const write = async (path, value) => {
+    await mkdir(dirname(join(root, path)), { recursive: true });
+    await writeFile(join(root, path), typeof value === 'string' ? value : JSON.stringify(value));
+  };
+  await write('catalog-sources.json', { patternCategoriesPath: 'categories.json', records: [{ family: 'pattern', path: 'p/artifact.json' }] });
+  await write('categories.json', registry);
+  await write('p/artifact.json', { id: 'muxui:pattern:lonely', name: 'Lonely', category, variants: [{ example: 'muxui:example:lonely-one' }] });
+}
+
 test('a pattern variant the manifest does not declare fails closed', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-pattern-variants-'));
   try {
-    const write = async (path, value) => {
-      await mkdir(dirname(join(root, path)), { recursive: true });
-      await writeFile(join(root, path), typeof value === 'string' ? value : JSON.stringify(value));
-    };
-    await write('catalog-sources.json', { records: [{ family: 'pattern', path: 'p/artifact.json' }] });
-    await write('p/artifact.json', { id: 'muxui:pattern:lonely', name: 'Lonely', category: 'hero', variants: [{ example: 'muxui:example:lonely-one' }] });
+    await withCatalogRoot(root, { registry: { marketing: { hero: 'Hero' } }, category: 'hero' });
     await assert.rejects(
       patternVariantExamples(root, 'catalog-sources.json'),
       /MUXUI_PATTERN_VARIANT_MISSING: muxui:pattern:lonely lists muxui:example:lonely-one/u,
     );
   } finally {
     await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('a pattern category the registry does not declare with a label fails closed', async () => {
+  for (const [name, registry] of [['an undeclared category', { marketing: { pricing: 'Pricing' } }], ['a category listed without a label', { marketing: ['hero'] }]]) {
+    const root = await mkdtemp(join(tmpdir(), 'muxui-pattern-variants-'));
+    try {
+      await withCatalogRoot(root, { registry, category: 'hero' });
+      await assert.rejects(
+        patternVariantExamples(root, 'catalog-sources.json'),
+        /MUXUI_PATTERN_CATEGORY_UNDECLARED: muxui:pattern:lonely names the category hero/u,
+        name,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   }
 });
 

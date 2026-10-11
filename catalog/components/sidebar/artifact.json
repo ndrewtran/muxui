@@ -41,7 +41,7 @@
   "accessibility": {
     "nameRequired": true,
     "obligations": [
-      "Nested nav items use native disclosure semantics.",
+      "A nested group without a link uses native disclosure semantics; a group that is also a link pairs it with a toggle button that reports aria-expanded and controls the nested list.",
       "Mobile navigation traps focus and returns it to the trigger on close.",
       "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
       "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",
@@ -65,6 +65,9 @@
           "current",
           "external",
           "items",
+          "expanded",
+          "defaultExpanded",
+          "onExpandedChange",
           "badge",
           "icon",
           "placeholder",
@@ -79,6 +82,7 @@
         "events": [
           "change",
           "collapsedChange",
+          "expandedChange",
           "dismiss"
         ],
         "parts": [
@@ -102,17 +106,24 @@
           "hideBorder": false,
           "current": false,
           "external": false,
-          "placeholder": "Search"
+          "placeholder": "Search",
+          "defaultExpanded": false
         }
       },
       "behavior": [
-        "Nested nav items use native disclosure semantics.",
+        "A nested group without a link uses native disclosure semantics; a group that is also a link pairs it with a toggle button that reports aria-expanded and controls the nested list.",
+        "Nav items nest through items to any depth, so a category can hold blocks that hold variants. Each entry is a link, a group, or a link with a group, and entries take a stable id for their React key, defaulting to href.",
+        "A group opens under the caller with expanded and onExpandedChange, or manages itself from defaultExpanded; groups start closed. A controlled group stays as the caller left it when a change is refused.",
+        "Activating the link of a link group navigates; its toggle button opens or closes the nested list, which is hidden while closed. The toggle is named by the link's rendered label, so a label that is a component names it too.",
+        "current marks an item's page with aria-current=\"page\" and the sidebar's current style; on a group without a link it only styles the header.",
+        "A folded rail shows only top-level items: a link group keeps its link, and its toggle and nested list are hidden.",
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "Provider holds the folded state, controlled by collapsed or uncontrolled from defaultCollapsed, and folds with Cmd or Ctrl plus its shortcut key.",
         "A folded root animates to an icon rail; the transition is removed under reduced motion.",
         "Folded search unfolds the sidebar and focuses the input; a folded nested group unfolds the sidebar and opens.",
         "A folded nav item without an icon shows the first character of its label in the icon column, or a dot when the label has no text; the label stays in its accessible name and tooltip.",
-        "Folding moves focus out of content it hides: a hidden nested link goes to its group, the Search input to its folded button, anything else to the first Toggle that accepts focus, or to Root when none does.",
+        "Folding moves focus out of content it hides: a hidden nested link goes to the header of its outermost group, the Search input to its folded button, anything else to the first Toggle that accepts focus, or to Root when none does.",
+        "Closing a group, whether the user or the caller's expanded does it, moves focus from a link it hides to the group's own summary or toggle.",
         "With several Providers that set a shortcut, the one whose Root or Toggle holds the focus handles the chord, otherwise the one mounted last, whatever shortcut changes happened since; only that Provider prevents the default.",
         "The shortcut yields to a control outside Sidebar that handles the chord itself; only targets inside a Root or Toggle are taken before they can stop it.",
         "Inside a Provider, a MobileTrigger whose header layout hides while its drawer is open closes the drawer and moves focus to the matching column link, else the current link, a Toggle, or Root; a Root that layout hides while it holds focus hands focus to the rendered menu button.",
@@ -120,7 +131,7 @@
         "When Root sets its own id, Toggle's aria-controls names the generated id until hydration."
       ],
       "accessibility": [
-        "Nested nav items use native disclosure semantics.",
+        "A nested group without a link uses native disclosure semantics; a group that is also a link pairs it with a toggle button that reports aria-expanded and controls the nested list.",
         "Mobile navigation traps focus and returns it to the trigger on close.",
         "Toggle keeps one accessible name, reports aria-expanded, and controls the root by id.",
         "A folded rail keeps every nav label in its link's accessible name and names it in a tooltip on hover and keyboard focus.",

@@ -556,6 +556,14 @@
   border-radius: var(--muxui-semantic-control-radius);
 }
 
+/* The trigger draws the same keyboard ring as Button. */
+.muxui-command-palette__trigger:focus-visible,
+.muxui-command-palette__trigger[data-focus-visible] {
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-ring);
+}
+
 .muxui-command-palette__trigger[data-size='sm'],
 .muxui-command-palette__input[data-size='sm'] {
   --muxui-control-target-size: var(--muxui-control-size-sm);
@@ -2477,7 +2485,8 @@
   margin-left: auto;
 }
 
-details[open] > summary .muxui-sidebar__nav-chevron {
+details[open] > summary .muxui-sidebar__nav-chevron,
+.muxui-sidebar__nav-toggle[aria-expanded='true'] .muxui-sidebar__nav-chevron {
   transform: rotate(-180deg);
 }
 
@@ -2487,7 +2496,8 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-dense-gap);
-  padding: var(--muxui-semantic-layout-inset-tiny) 0 0 var(--muxui-semantic-layout-inset-xlarge);
+  padding-block: var(--muxui-semantic-layout-inset-tiny) 0;
+  padding-inline: var(--muxui-semantic-layout-inset-xlarge) 0;
   margin: var(--muxui-semantic-layout-dense-gap) 0 0;
   list-style: none;
 }
@@ -2495,6 +2505,27 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-sidebar__nav-child-link {
   font-weight: var(--muxui-semantic-typography-control-weight);
   font-size: var(--muxui-semantic-typography-tiny-size);
+}
+
+/* A group nested in a group indents less, so a category, a block, and its variants fit one column. */
+.muxui-sidebar__nav-children .muxui-sidebar__nav-children {
+  padding-inline-start: var(--muxui-semantic-layout-inset-large);
+}
+
+/* A collapsed link group keeps its children out of the layout, as a closed details does. */
+.muxui-sidebar__nav-children[hidden] {
+  display: none;
+}
+
+/* A group whose header is also a link: the link and its toggle share a row. */
+.muxui-sidebar__nav-row {
+  display: flex;
+  align-items: center;
+}
+
+.muxui-sidebar__nav-row > .muxui-sidebar__nav-link {
+  flex: 1;
+  min-inline-size: 0;
 }
 
 
@@ -2522,6 +2553,28 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 .muxui-sidebar__nav-btn--current {
   background: var(--muxui-semantic-color-neutral-16);
   color: var(--muxui-semantic-color-neutral-100);
+}
+
+/* The link group's toggle is a Mux nav button narrowed to its chevron. */
+:where(.muxui-sidebar__nav-toggle) {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+}
+
+.muxui-sidebar__nav-btn.muxui-sidebar__nav-toggle {
+  flex-shrink: 0;
+  inline-size: var(--muxui-control-size-sm);
+}
+
+.muxui-sidebar__nav-toggle .muxui-sidebar__nav-chevron {
+  margin-left: 0;
+}
+
+.muxui-sidebar__nav-toggle:focus-visible {
+  outline: 2px solid var(--muxui-semantic-color-color-60);
+  outline-offset: 2px;
 }
 
 .muxui-sidebar__nav-btn-icon {
@@ -2916,6 +2969,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 
 .muxui-sidebar[data-collapsed] :is(
   .muxui-sidebar__nav-chevron,
+  .muxui-sidebar__nav-toggle,
   .muxui-sidebar__nav-external,
   .muxui-sidebar__nav-children,
   .muxui-sidebar__account-trigger,

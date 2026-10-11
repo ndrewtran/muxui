@@ -258,7 +258,7 @@ for (const engine of browserEngines()) {
             await disabledRow.first().waitFor({ state: 'attached' });
             assert.equal(await disabledRow.getAttribute('aria-disabled'), 'true');
             assert.equal(await disabledRow.locator('button').isDisabled(), true, 'the nested Button follows its card');
-            assert.equal(await disabledRow.locator('.muxui-link').getAttribute('aria-disabled'), 'true', 'the nested Link is passed disabled');
+            assert.equal(await disabledRow.locator('.muxui-link').getAttribute('aria-disabled'), 'true', 'the nested Link follows its card like the Button');
             const box = await disabledRow.boundingBox();
             await tab.mouse.click(box.x + 4, box.y + 4);
             assert.deepEqual(await selected(), [], 'a disabled card is not selectable');

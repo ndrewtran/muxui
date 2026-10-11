@@ -100,6 +100,23 @@ test('E-BL1-01 negative: a variant importing an undeclared component names patte
   assert.equal(error.issues.length, 1);
 });
 
+test('E-BL1-01: a variant imports Markdown from its subpath only when the pattern declares the markdown participant', async () => {
+  const importMarkdown = (files) => files.set(cssPath, `import { Markdown } from '@muxui/react/markdown';\n${files.get(cssPath)}`);
+  const declareMarkdown = (files) => files.set('artifact.json', JSON.stringify({
+    ...JSON.parse(files.get('artifact.json')),
+    participants: [...JSON.parse(files.get('artifact.json')).participants, { role: 'content', component: 'muxui:component:markdown', requirement: 'optional' }],
+  }));
+  const error = await compileFailure({ edit: importMarkdown });
+  assert.equal(error.code, 'MUXUI_RELATION_INVALID');
+  assert.equal(error.issues.length, 1);
+  assert.equal(error.issues[0].path, '$/participants');
+  assert.match(error.issues[0].message, /css-grid\.tsx:1 imports Markdown, which pattern\.participants does not declare/u);
+  const { bundle } = await compileFixtureCatalog({ minimal: true, edit: (files) => { importMarkdown(files); declareMarkdown(files); } });
+  assert.ok(bundle.artifacts.find(({ id }) => id === cssId).sourceText.startsWith("import { Markdown } from '@muxui/react/markdown';"), 'the variant keeps its exact source');
+  const subpath = await compileFailure({ edit: (files) => files.set(cssPath, "import { TextEditor } from '@muxui/react/text-editor';\n") });
+  assert.match(subpath.issues[0].message, /subpath import of '@muxui\/react\/text-editor', outside the one allowed subpath @muxui\/react\/markdown/u);
+});
+
 test('E-BL1-01 negative: a non-canonical @muxui/react reference fails the compile closed', async () => {
   const error = await compileFailure({
     edit: (files) => files.set(cssPath, "import * as Mux from '@muxui/react';\n"),
@@ -169,42 +186,52 @@ test('E-BL1-01 negative: a pattern category the registry does not declare names 
   assert.equal(malformed.issues[0].path, '$/category');
 
   // A registry that lists a category under two groups cannot derive one group, so it fails before any pattern is read.
-  const ambiguous = await compileFailure({ categories: (registry) => ({ ...registry, marketing: [...registry.marketing, 'collections'] }) });
+  const ambiguous = await compileFailure({ categories: (registry) => ({ ...registry, marketing: { ...registry.marketing, collections: 'Collections' } }) });
   assert.equal(ambiguous.code, 'MUXUI_SCHEMA_INVALID');
   assert.match(ambiguous.issues[0].message, /collections is already declared under application/u);
+  // A category with no label is refused, so no label is ever derived from an id.
+  const unlabelled = await compileFailure({ categories: (registry) => ({ ...registry, marketing: Object.keys(registry.marketing) }) });
+  assert.equal(unlabelled.code, 'MUXUI_SCHEMA_INVALID');
+  assert.ok(unlabelled.issues.some(({ path, message }) => path === '$/marketing' && /must be object/u.test(message)));
 });
 
 test('E-BL1-01: adding a category to the registry lets a pattern use it, and the registry decides its group', async () => {
   const declared = async (group) => (await compileFixtureCatalog({
     minimal: true,
     edit: withCategory('carousel'),
-    categories: (registry) => ({ ...registry, [group]: [...registry[group], 'carousel'] }),
+    categories: (registry) => ({ ...registry, [group]: { ...registry[group], carousel: 'Carousel' } }),
   })).bundle;
   for (const group of ['application', 'marketing']) {
     const bundle = await declared(group);
     assert.equal(bundle.artifacts.find(({ id }) => id === patternId).group, group);
-    assert.ok(patternCategoryRegistry(bundle.patternCategories)[group].includes('carousel'));
+    assert.equal(patternCategoryRegistry(bundle.patternCategories)[group].carousel, 'Carousel');
     // The bundle carries the registry, so it validates without the repository.
     createCatalogApi(bundle);
   }
   // The real catalog carries the shipped registry, and the export keeps its declared group order.
   const shipped = JSON.parse(await readFile(resolve(import.meta.dirname, '../../../catalog/patterns/categories.json'), 'utf8'));
-  assert.deepEqual(patternCategoryRegistry(baseBundle.patternCategories), shipped);
-  assert.deepEqual(Object.entries(PATTERN_CATEGORY_GROUPS), Object.entries(shipped));
+  const ordered = (registry) => Object.entries(registry).map(([group, categories]) => [group, Object.entries(categories)]);
+  assert.deepEqual(ordered(patternCategoryRegistry(baseBundle.patternCategories)), ordered(shipped));
+  assert.deepEqual(ordered(PATTERN_CATEGORY_GROUPS), ordered(shipped));
+  // Every category carries an explicit label, so a display label is read from the catalog and never derived from the id.
+  assert.deepEqual(
+    Object.entries({ ...PATTERN_CATEGORY_GROUPS.application, ...PATTERN_CATEGORY_GROUPS.marketing }).filter(([id]) => ['faq', 'call-to-action', 'logo-cloud'].includes(id)),
+    [['call-to-action', 'Call to action'], ['faq', 'FAQ'], ['logo-cloud', 'Logo cloud']],
+  );
 });
 
 test('E-BL1-01: the bundle keeps the declared group order through serialization, which canonical JSON would sort', async () => {
   // `marketing` is declared before `application`, against alphabetical order; `collections` is the fixture pattern's category.
-  const registry = { marketing: ['pricing', 'hero'], application: ['forms', 'collections'] };
+  const registry = { marketing: { pricing: 'Pricing', faq: 'FAQ' }, application: { forms: 'Forms', collections: 'Collections' } };
   const { bytes } = await compileFixtureCatalog({ minimal: true, categories: () => registry });
   assert.deepEqual(Object.keys(JSON.parse(canonicalJson(registry))), ['application', 'marketing'], 'canonical JSON sorts object keys');
   const serialized = JSON.parse(bytes);
   assert.deepEqual(serialized.patternCategories, [
-    { group: 'marketing', categories: ['pricing', 'hero'] },
-    { group: 'application', categories: ['forms', 'collections'] },
+    { group: 'marketing', categories: [{ id: 'pricing', label: 'Pricing' }, { id: 'faq', label: 'FAQ' }] },
+    { group: 'application', categories: [{ id: 'forms', label: 'Forms' }, { id: 'collections', label: 'Collections' }] },
   ]);
   const restored = patternCategoryRegistry(serialized.patternCategories);
-  assert.deepEqual(Object.entries(restored), Object.entries(registry));
+  assert.deepEqual(Object.entries(restored).map(([group, categories]) => [group, Object.entries(categories)]), Object.entries(registry).map(([group, categories]) => [group, Object.entries(categories)]));
   assert.equal(serialized.artifacts.find(({ id }) => id === patternId).group, 'application');
   createCatalogApi(serialized);
 });
@@ -225,11 +252,13 @@ const components = baseBundle.artifacts
   .filter(({ kind }) => kind === 'component')
   .map(({ record }) => record);
 const patternRecord = JSON.parse(await readFile(join(fixtureDirectory, 'artifact.json'), 'utf8'));
-const issuesFor = (text) => patternImportIssues({
-  pattern: patternRecord,
+const issuesFor = (text, pattern = patternRecord) => patternImportIssues({
+  pattern,
   components,
   variants: [{ source: 'variant.tsx', text }],
 });
+// The same pattern with the markdown component declared as a participant.
+const withMarkdown = { ...patternRecord, participants: [...patternRecord.participants, { role: 'content', component: 'muxui:component:markdown', requirement: 'optional' }] };
 
 const header = "import { GridList } from '@muxui/react';\n";
 const messageOf = (issues) => issues.map(({ message }) => message.replace(/;.*$/su, ''));
@@ -243,6 +272,10 @@ test('E-BL1-01: the import scanner accepts only the canonical static named impor
     ['type specifier is ignored', "import { type Button, type Dialog as D, GridList } from '@muxui/react';", ['GridList']],
     ['header comments and blank lines are skipped', "// import { Button } from '@muxui/react'\n\n/* import { Dialog } from '@muxui/react' */\nimport { GridList } from '@muxui/react';", ['GridList']],
     ['react and its jsx runtime are allowed in any form', "import React, { useState } from 'react';\nimport * as Runtime from 'react/jsx-runtime';\nimport type { ReactNode } from 'react';", []],
+    ['the markdown subpath as a named import', "import { Markdown } from '@muxui/react/markdown';", ['Markdown']],
+    ['the markdown subpath with an alias, a type, and a constant', "import { Markdown as M, type MarkdownProps, MARKDOWN_SOURCE_LIMIT } from '@muxui/react/markdown';", ['Markdown', 'MARKDOWN_SOURCE_LIMIT']],
+    ['the markdown subpath beside @muxui/react', "import { GridList } from '@muxui/react';\nimport {\n  Markdown,\n} from '@muxui/react/markdown';", ['GridList', 'Markdown']],
+    ['import type from the markdown subpath is ignored', "import type { Markdown } from '@muxui/react/markdown';", []],
     ['an unpaired JSX apostrophe is text', `${header}export const x = <p>Don't</p>;`, ['GridList']],
     // Unmapped export names stay unchecked: they belong to no component record.
     ['unmapped exports', "import { GridListItem, useDragAndDrop, useToast, ToastProvider } from '@muxui/react';", ['GridListItem', 'useDragAndDrop', 'useToast', 'ToastProvider']],
@@ -279,7 +312,15 @@ test('E-BL1-01 negative: every other @muxui/react reference fails closed with a 
     ['default plus named import', "import Mux, { GridList } from '@muxui/react';", /default import/u],
     ['default specifier', "import { default as Mux } from '@muxui/react';", /default import/u],
     ['side-effect import', "import '@muxui/react';", /side-effect import/u],
-    ['subpath import', "import { Markdown } from '@muxui/react/markdown';", /subpath import of '@muxui\/react\/markdown'/u],
+    ['subpath import', "import { TextEditor } from '@muxui/react/text-editor';", /subpath import of '@muxui\/react\/text-editor'/u],
+    ['markdown subpath default import', "import Markdown from '@muxui/react/markdown';", /default import of '@muxui\/react\/markdown'/u],
+    ['markdown subpath default plus named import', "import Markdown, { MARKDOWN_SOURCE_LIMIT } from '@muxui/react/markdown';", /default import of '@muxui\/react\/markdown'/u],
+    ['markdown subpath default specifier', "import { default as Markdown } from '@muxui/react/markdown';", /default import from '@muxui\/react\/markdown'/u],
+    ['markdown subpath namespace import', "import * as MarkdownModule from '@muxui/react/markdown';", /namespace import of '@muxui\/react\/markdown'/u],
+    ['markdown subpath side-effect import', "import '@muxui/react/markdown';", /side-effect import of '@muxui\/react\/markdown'/u],
+    ['markdown subpath string specifier', "import { 'Markdown' as M } from '@muxui/react/markdown';", /unsupported import specifier from '@muxui\/react\/markdown'/u],
+    ['markdown subpath dynamic import', "const m = import('@muxui/react/markdown');", /dynamic import/u],
+    ['markdown subpath export from', "export { Markdown } from '@muxui/react/markdown';", /export \.\.\. from/u],
     ['dynamic import', "const m = import('@muxui/react');", /dynamic import/u],
     ['dynamic import of another module', "const m = import('./other');", /dynamic import/u],
     ['export named from', "export { GridList } from '@muxui/react';", /export \.\.\. from/u],
@@ -312,6 +353,19 @@ test('E-BL1-01 negative: every other @muxui/react reference fails closed with a 
   assert.match(violation.message, /useToast and ToastProvider, are not checked/u);
 });
 
+test('E-BL1-01: a Markdown import from its subpath needs the markdown participant, as an @muxui/react name does', () => {
+  const text = "import { GridList } from '@muxui/react';\nimport { Markdown as Prose } from '@muxui/react/markdown';";
+  const [undeclared] = issuesFor(text);
+  assert.equal(issuesFor(text).length, 1);
+  assert.match(undeclared.message, /^variant\.tsx:2 imports Markdown, which pattern\.participants does not declare for /u);
+  assert.equal(undeclared.path, '$/participants');
+  assert.deepEqual(issuesFor(text, withMarkdown), [], 'declared, the same import is clean');
+  // The constants the subpath exports belong to no component record, so they are unchecked.
+  assert.deepEqual(issuesFor("import { MARKDOWN_SOURCE_LIMIT } from '@muxui/react/markdown';"), []);
+  // The same name from the package root is held to the same participant.
+  assert.equal(issuesFor("import { Markdown } from '@muxui/react';").length, 1);
+});
+
 test('E-BL1-01 negative: every import must sit in the leading header', () => {
   for (const [label, text, line] of [
     ['after a statement', `const a = 1;\n${header}`, 2],
@@ -331,7 +385,7 @@ test('E-BL1-01 negative: every import must sit in the leading header', () => {
   assert.deepEqual(issuesFor(`/** doc */\n\n// note\n${header}\n/* more */\nimport React from 'react';\n\nconst a = 1;`), []);
 });
 
-test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, and @muxui/react', () => {
+test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, @muxui/react, and @muxui/react/markdown', () => {
   for (const [label, text, message] of [
     ['relative specifier', "import { a } from './a';", "an import of './a'"],
     ['parent specifier', "import { a } from '../a';", "an import of '../a'"],
@@ -342,6 +396,10 @@ test('E-BL1-01 negative: the header admits only react, react/jsx-runtime, and @m
     ['a lookalike @muxui package', "import { x } from '@muxui/react-native';", "an import of '@muxui/react-native'"],
     ['a react subpath', "import { x } from 'react/jsx-dev-runtime';", "an import of 'react/jsx-dev-runtime'"],
     ['a @muxui/react subpath', "import { x } from '@muxui/react/text-editor';", "a subpath import of '@muxui/react/text-editor'"],
+    ['a path under the markdown subpath', "import { x } from '@muxui/react/markdown/internal';", "a subpath import of '@muxui/react/markdown/internal'"],
+    ['the generated markdown file', "import { x } from '@muxui/react/generated/markdown.mjs';", "a subpath import of '@muxui/react/generated/markdown.mjs'"],
+    ['the markdown subpath with an extension', "import { x } from '@muxui/react/markdown.mjs';", "a subpath import of '@muxui/react/markdown.mjs'"],
+    ['a lookalike of the markdown subpath', "import { x } from '@muxui/react-markdown';", "an import of '@muxui/react-markdown'"],
   ]) {
     const issues = issuesFor(text);
     assert.equal(issues.length, 1, `${label}: ${JSON.stringify(issues)}`);
@@ -421,15 +479,15 @@ test('E-BL1-01 negative: the bundle rejects altered variant source, group, or pa
     ['pattern revision', (value) => { artifact(value, patternId).patternRevision = sha256Digest('x'); }, /pattern group or revision/u],
     ['registry that regroups the category', (value) => {
       const [application, marketing] = ['application', 'marketing'].map((group) => value.patternCategories.find((entry) => entry.group === group));
-      application.categories = application.categories.filter((category) => category !== 'collections');
-      marketing.categories.push('collections');
+      application.categories = application.categories.filter(({ id }) => id !== 'collections');
+      marketing.categories.push({ id: 'collections', label: 'Collections' });
     }, /pattern group or revision/u],
     ['registry that drops the category', (value) => {
       const application = value.patternCategories.find((entry) => entry.group === 'application');
-      application.categories = application.categories.filter((category) => category !== 'collections');
+      application.categories = application.categories.filter(({ id }) => id !== 'collections');
     }, /collections is not a declared pattern category/u],
-    ['registry that declares a group twice', (value) => { value.patternCategories.push({ group: 'application', categories: ['dashboards'] }); }, /application is declared more than once/u],
-    ['registry as an object', (value) => { value.patternCategories = Object.fromEntries(value.patternCategories.map(({ group, categories }) => [group, categories])); }, /must be an array/u],
+    ['registry that declares a group twice', (value) => { value.patternCategories.push({ group: 'application', categories: [{ id: 'dashboards', label: 'Dashboards' }] }); }, /application is declared more than once/u],
+    ['registry as an object', (value) => { value.patternCategories = Object.fromEntries(value.patternCategories.map(({ group, categories }) => [group, Object.fromEntries(categories.map(({ id, label }) => [id, label]))])); }, /must be an array/u],
     ['missing registry', (value) => { delete value.patternCategories; }, /must be an array/u],
   ]) {
     assert.throws(() => createCatalogApi(tamper(mutate)), message, label);

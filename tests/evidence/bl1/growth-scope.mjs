@@ -18,7 +18,8 @@
 import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, join, relative, resolve } from 'node:path';
+import { parseJsonStrict } from '../../../packages/schema/src/index.mjs';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { compileBundle, repositoryRoot } from './regression.mjs';
 
@@ -146,8 +147,12 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
 
 // Decision 0028 (#251) removed `authorityDecisionPath` from the catalog source manifest and the compiler stopped accepting it, so a tree from
 // before then no longer compiles as committed. Block categories then became catalog data: the manifest names a registry (`patternCategoriesPath`)
-// the compiler requires, where a tree from before had the closed list in the pattern schema. Each extracted tree is normalized the same way on
-// both sides of the comparison: the removed key is dropped, and a tree without a registry gets the closed list it had. Nothing else is changed.
+// the compiler requires, where a tree from before had the closed list in the pattern schema. The registry then gained an explicit display label
+// per category, so the group-to-id-list files before that no longer compile either. Each extracted tree is normalized the same way on both sides
+// of the comparison: the removed key is dropped, a tree without a registry gets the closed list it had, and a registry that lists category ids
+// is converted to the labelled shape. Nothing else is changed. Both files are read with the compiler's strict parser (`parseJsonStrict`), never
+// `JSON.parse`, which keeps the last of a duplicated key: rewriting such a file as valid JSON would hide the duplicate from the compiler that
+// rejects it, so a file the strict parser refuses is left as it is, and the compiler reports it.
 const removedManifestKey = 'authorityDecisionPath';
 const categoryRegistryPath = 'catalog/patterns/categories.json';
 /**
@@ -160,10 +165,36 @@ export const closedCategoryRegistry = `{
 }
 `;
 
+/** The label the docs derived before labels were catalog data: the id with its dashes as spaces and the first letter capitalised. */
+function derivedCategoryLabel(id) {
+  const text = id.replaceAll('-', ' ');
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}
+
+/**
+ * Converts the registry an older tree carries to the labelled shape, so the current compiler reads it. Two older files qualify: the closed list
+ * injected above and the group-to-id-list file that made categories catalog data (#259). Both map every group to a list of unique category ids,
+ * and each id gets the label the docs derived from it then. Any other registry, the labelled one included, is left as it is, so an unknown shape
+ * still fails the compiler and an old registry that was already invalid (an empty group or a repeated id) stays invalid.
+ */
+async function normalizeCategoryRegistry(directory) {
+  const manifest = parseJsonStrict(await readFile(join(directory, manifestPath), 'utf8'));
+  if (typeof manifest.patternCategoriesPath !== 'string') return;
+  const path = resolve(directory, manifest.patternCategoriesPath);
+  if (relative(directory, path).startsWith('..')) return;
+  // A registry the compiler cannot read (missing, not JSON, or a repeated key) is the compiler's to report.
+  const registry = await readFile(path, 'utf8').then(parseJsonStrict, () => undefined);
+  const groups = registry !== null && typeof registry === 'object' && !Array.isArray(registry) ? Object.entries(registry) : [];
+  const idList = (value) => Array.isArray(value) && value.length > 0 && value.every((id) => typeof id === 'string') && new Set(value).size === value.length;
+  if (groups.length === 0 || !groups.every(([, ids]) => idList(ids))) return;
+  const labelled = Object.fromEntries(groups.map(([group, ids]) => [group, Object.fromEntries(ids.map((id) => [id, derivedCategoryLabel(id)]))]));
+  await writeFile(path, `${JSON.stringify(labelled, null, 2)}\n`);
+}
+
 /** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
 async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
-  const manifest = JSON.parse(await readFile(path, 'utf8'));
+  const manifest = parseJsonStrict(await readFile(path, 'utf8'));
   const legacy = removedManifestKey in manifest || !('patternCategoriesPath' in manifest);
   if (!legacy) return;
   delete manifest[removedManifestKey];
@@ -191,12 +222,14 @@ async function withTree(cwd, revision, use) {
  * changed (`excludedDirectories`). The commit holds when the digests are equal, so the digest changed only for those
  * sources, and when it changed no `digestAffectingPaths` file, which the same-compiler comparison cannot see. A
  * growth commit that edits any other source, a close-out block included, or the catalog package version, moves the digest.
- * A tree from before Decision 0028 or before block categories became catalog data is normalized first (`normalizeLegacyManifest`).
+ * A tree from before Decision 0028, before block categories became catalog data, or before they carried labels is normalized first
+ * (`normalizeLegacyManifest` and `normalizeCategoryRegistry`).
  */
 export async function catalogAcrossCommit({ cwd = repositoryRoot, commit, parent, excludedDirectories, digestAffectingPathsChanged }) {
   const excluded = ({ path }) => excludedDirectories.some((directory) => path.startsWith(directory));
   const digestAt = (revision) => withTree(cwd, revision, async (directory) => {
     await normalizeLegacyManifest(directory);
+    await normalizeCategoryRegistry(directory);
     return (await compileBundle((entry) => !excluded(entry), directory)).bundle.catalogDigest;
   });
   const [digestBefore, digestAfter] = await Promise.all([digestAt(parent), digestAt(commit)]);

@@ -256,12 +256,6 @@ export default {
 ${storyPagesFor(record).map(({ emit }) => emit).join('\n')}${record.family === 'Autocomplete' ? '' : '\n'}`;
 }
 
-function categoryLabel(category) {
-  if (category === 'faq') return 'FAQ';
-  const words = category.replaceAll('-', ' ');
-  return `${words[0].toUpperCase()}${words.slice(1)}`;
-}
-
 // Groups the variants by pattern and fails when a variant cannot become a page.
 const blockPages = [];
 for (const [index, variant] of patternVariants.entries()) {
@@ -272,7 +266,7 @@ for (const [index, variant] of patternVariants.entries()) {
       slug: variant.patternSlug,
       family: variant.patternName,
       category: variant.category,
-      title: `Blocks/${categoryLabel(variant.category)}/${variant.patternName}`,
+      title: `Blocks/${variant.categoryLabel}/${variant.patternName}`,
       variants: [],
     };
     blockPages.push(page);

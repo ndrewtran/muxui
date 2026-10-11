@@ -236,8 +236,8 @@ export function variantExample(slug = 'poster-grid-css') {
 /** A small pattern category registry; the shipped one lives in catalog/patterns/categories.json. */
 export function patternCategories() {
   return {
-    application: ['collections', 'forms'],
-    marketing: ['hero', 'pricing'],
+    application: { collections: 'Collections', forms: 'Forms' },
+    marketing: { hero: 'Hero', pricing: 'Pricing' },
   };
 }
 

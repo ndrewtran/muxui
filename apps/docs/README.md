@@ -23,10 +23,26 @@ route (`/blocks/<block>/<variant>/preview/`) that runs the canonical example sou
 `src/lib/blocks.ts` reads blocks through the catalog query API (list, get with
 `--section examples`, `--uses`, and the derived `usedIn` view). Group and category
 order follow the category registry in `catalog/patterns/categories.json`, which
-`@muxui/catalog` exports as `PATTERN_CATEGORY_GROUPS`; the catalog owns no display
-labels, so a label is derived from its id. The app owns no block, pattern, example,
-search, or prose fact. The section is unpublished and claims nothing about a public
+`@muxui/catalog` exports as `PATTERN_CATEGORY_GROUPS`. The registry also declares each
+category's display label, which the app shows as written; a group reads as its
+capitalised id. The app owns no block, pattern, example, search, or prose fact. The section is unpublished and claims nothing about a public
 docs surface.
+
+The section's own controls are Mux UI components, not imitations. The rail
+(`BlocksRailIsland.tsx`), the gallery (`BlocksGalleryIsland.tsx`), and the block
+toolbar and stage (`BlockViewerIsland.tsx`) are React islands over the server-rendered
+pages, built from `@muxui/react` components (Sidebar, SearchField, SelectNative, Text,
+ToggleButtonGroup, Button), and `styles/blocks.css` holds only layout and the preview and
+code surfaces, so it must not restyle a Mux component. The rail is Sidebar navigation: groups
+are Sections, categories are items, a block is a link group (its link opens the first variant,
+a toggle opens its variants), and variants are links, with the open page as the current item.
+The rail island keeps which groups are collapsed, so the choice survives the in-place swap, and
+opening a page opens the groups that hold it. The breadcrumb and a gallery card's title are
+navigation, not inline text links, so they are plain anchors inside Mux headings that take their
+colour and focus ring from Mux tokens. The preview resize handle is the one custom control:
+Resizable sizes adjacent panels in percent, while the handle sets the preview's width in pixels. `scripts/blocks-browse.ts` holds the filter and the open page,
+`scripts/blocks-view.ts` the toolbar's width, theme, and view (remembered for the tab), and
+`scripts/blocks-client.ts` only swaps the pane in place when a Blocks link is followed.
 
 The rail filters in the browser from `/blocks/filter-index.json`. Its query grammar
 and term matching are `@muxui/catalog/search`, the same code `searchArtifacts` runs,

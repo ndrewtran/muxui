@@ -911,7 +911,7 @@ Object.assign(ADAPTERS, {
     e('span', { className: 'muxui-radio-field__description' }, 'Choose one option'),
     args.invalid ? e('span', { className: 'muxui-radio-field__error' }, 'Invalid choice') : null,
   ),
-  Sidebar: ({ collapsed, defaultCollapsed, onCollapsedChange, shortcut, ...args }) => {
+  Sidebar: ({ collapsed, defaultCollapsed, onCollapsedChange, expanded, defaultExpanded, onExpandedChange, shortcut, ...args }) => {
     return e(MuxUI.Sidebar.Provider, { collapsed, defaultCollapsed, onCollapsedChange, shortcut },
       e(MuxUI.Sidebar.Toggle),
       e(MuxUI.Sidebar.Root, { ...args },
@@ -920,6 +920,7 @@ Object.assign(ADAPTERS, {
         e(MuxUI.Sidebar.Divider),
         e(MuxUI.Sidebar.NavList, null,
           e(MuxUI.Sidebar.NavItem, { href: '#home', icon: SidebarSpecimenIcon, current: true }, 'Home'),
+          e(MuxUI.Sidebar.NavItem, { href: '#reports', icon: SidebarSpecimenIcon, expanded, defaultExpanded, onExpandedChange, items: [{ href: '#weekly', label: 'Weekly' }, { href: '#monthly', label: 'Monthly' }] }, 'Reports'),
           e(MuxUI.Sidebar.Section, { label: 'Projects' },
             e(MuxUI.Sidebar.NavItem, { href: '#settings', icon: SidebarSpecimenIcon }, 'Settings'),
           ),

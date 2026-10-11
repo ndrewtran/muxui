@@ -20,7 +20,7 @@ export const QUERY_SELECTORS = Object.freeze(
       .map(([key, values]) => [key, Object.freeze([...values])]),
   ),
 );
-export const SCHEMA_VERSION = '2.4.0';
+export const SCHEMA_VERSION = '3.0.0';
 export const API_VERSION = '2.1.0';
 export const QUERY_SCHEMA_VERSION = '2.1.0';
 export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
@@ -28,7 +28,7 @@ export const QUERY_API_VERSIONS = Object.freeze([API_VERSION]);
 /** The group a pattern category belongs to in `patternCategories` (the validated category registry), or undefined. */
 export function patternGroup(patternCategories, category) {
   return Object.entries(patternCategories)
-    .find(([, categories]) => categories.includes(category))?.[0];
+    .find(([, categories]) => Object.hasOwn(categories, category))?.[0];
 }
 
 export function parseArtifactRef(value, { requireEnabledRecordKind = false } = {}) {

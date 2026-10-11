@@ -2060,6 +2060,13 @@
   outline: none;
 }
 
+/* React Aria makes a panel focusable only when it has no tabbable content, so this ring marks that focus stop. */
+.muxui-tab-panel:focus-visible,
+.muxui-tab-panel[data-focus-visible] {
+  outline: 2px solid var(--muxui-semantic-focus-ring);
+  outline-offset: 2px;
+}
+
 .muxui-tabs[data-orientation='vertical'] .muxui-tab-panel {
   padding: 0 calc(var(--muxui-semantic-layout-inset-large) * 1.414141);
 }

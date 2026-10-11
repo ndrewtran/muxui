@@ -1,4 +1,21 @@
 {
-  "application": ["collections", "forms", "feedback", "conversation", "navigation"],
-  "marketing": ["hero", "features", "pricing", "call-to-action", "testimonials", "faq", "stats", "logo-cloud", "newsletter", "footer"]
+  "application": {
+    "collections": "Collections",
+    "forms": "Forms",
+    "feedback": "Feedback",
+    "conversation": "Conversation",
+    "navigation": "Navigation"
+  },
+  "marketing": {
+    "hero": "Hero",
+    "features": "Features",
+    "pricing": "Pricing",
+    "call-to-action": "Call to action",
+    "testimonials": "Testimonials",
+    "faq": "FAQ",
+    "stats": "Stats",
+    "logo-cloud": "Logo cloud",
+    "newsletter": "Newsletter",
+    "footer": "Footer"
+  }
 }

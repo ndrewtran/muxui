@@ -39,6 +39,13 @@ async function openCalendar(page) {
   await page.locator('.muxui-date-popover').waitFor();
 }
 
+// RAC restores trigger focus in the animation frame after the popup's FocusScope unmounts, so it
+// lands after the node detaches. Wait for that focus, bounded, instead of reading when the node is gone.
+async function assertTriggerFocus(page, message) {
+  const restored = await page.waitForFunction(() => document.activeElement?.matches('.muxui-date-trigger'), undefined, { timeout: 2_000 }).then(() => true, () => false);
+  assert.equal(restored, true, message);
+}
+
 async function closeCalendarWithEscape(page) {
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => {
@@ -52,7 +59,7 @@ async function closeCalendarWithEscape(page) {
     { duration: 120, easing: 'cubic-bezier(0.42, 0, 1, 1)' },
   ], 'both exit channels use the exit duration and dismiss easing');
   await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
-  assert.equal(await page.evaluate(() => document.activeElement?.matches('.muxui-date-trigger')), true, 'Escape restores trigger focus');
+  await assertTriggerFocus(page, 'Escape restores trigger focus');
 }
 
 async function closeReducedCalendar(page, label) {
@@ -219,7 +226,7 @@ test('date popup Motion entry and exit retain RAC focus, dismissal, and cleanup'
     assertEntryMotion(secondEntry);
     await page.mouse.click(8, 8);
     await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
-    assert.equal(await page.evaluate(() => document.activeElement?.matches('.muxui-date-trigger')), true, 'outside dismissal restores trigger focus');
+    await assertTriggerFocus(page, 'outside dismissal restores trigger focus');
 
     await openCalendar(page);
     await settleEntry(page);

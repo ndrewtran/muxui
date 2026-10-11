@@ -848,11 +848,15 @@ test('every pattern variant becomes a Block story that renders its canonical sou
   const variants = await patternVariantExamples(repositoryRoot);
   assert.ok(variants.length > 0, 'the catalog declares pattern variants');
   const groups = Map.groupBy(variants, ({ patternId }) => patternId);
+  // The title carries the label the category registry declares, read here from the registry itself.
+  const registry = JSON.parse(await readFile(resolve(repositoryRoot, 'catalog/patterns/categories.json'), 'utf8'));
+  const categoryLabels = Object.assign({}, ...Object.values(registry));
   assert.deepEqual(manifest.patterns.map(({ pattern }) => pattern), [...groups.keys()]);
   assert.equal(new Set(manifest.patterns.map(({ family }) => family)).size, groups.size);
   for (const [patternId, group] of groups) {
     const [{ patternSlug, patternName, category }] = group;
-    const label = category === 'faq' ? 'FAQ' : `${category[0].toUpperCase()}${category.slice(1).replaceAll('-', ' ')}`;
+    const label = categoryLabels[category];
+    assert.equal(typeof label, 'string', `${category} has a registry label`);
     const storyFile = `block-${patternSlug}.stories.mjs`;
     const source = await readFile(resolve(appRoot, '.storybook/generated', storyFile), 'utf8');
     generatedBody(source, storyFile);

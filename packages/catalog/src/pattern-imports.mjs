@@ -4,13 +4,16 @@
  *
  * Every import sits in the leading header: imports, comments, and blank lines
  * before the first other statement. A header import may name only `react`,
- * `react/jsx-runtime`, and `@muxui/react`, and `@muxui/react` only as
+ * `react/jsx-runtime`, `@muxui/react`, and the one subpath
+ * `@muxui/react/markdown`, and the two `@muxui/react` specifiers only as
  *
  *   import { A, B as C, type D } from '@muxui/react';
+ *   import { Markdown } from '@muxui/react/markdown';
  *
  * (possibly multi-line). `type` specifiers and `import type` are ignored.
- * Relative specifiers, every other package, and every other `@muxui/react`
- * form (default, namespace, side-effect, subpath) fail.
+ * Relative specifiers, every other package, every other `@muxui/react`
+ * subpath, and every other form of the two (default, namespace, side-effect)
+ * fail.
  *
  * Only the header is tokenized. A small tokenizer cannot read the rest of a
  * file (JSX text, regular expressions, and escapes defeat it, and `//` in JSX
@@ -21,8 +24,8 @@
  * `@muxui`, even in a comment or string. `a.import(` and the word "import" in
  * JSX text pass.
  *
- * Limits: imported names are matched by export name against component
- * records. Names that belong to no component record, such as the hook
+ * Limits: imported names, from either specifier, are matched by export name
+ * against component records. Names that belong to no component record, such as the hook
  * `useToast`, the provider `ToastProvider`, sub-parts, and types, are not
  * checked against `pattern.participants`, and use is not checked. An `import`
  * inside a template literal or a comment that starts a line is flagged (fail
@@ -30,9 +33,11 @@
  */
 
 /** The one accepted spelling and its header and allowlist rules, quoted by authoring diagnostics. */
-export const CANONICAL_IMPORT_FORM = "import { A, B } from '@muxui/react'; as a static named import in the leading header, which may also import from 'react' and 'react/jsx-runtime' and from no other module";
+export const CANONICAL_IMPORT_FORM = "import { A, B } from '@muxui/react'; (or from '@muxui/react/markdown') as a static named import in the leading header, which may also import from 'react' and 'react/jsx-runtime' and from no other module";
 
-const ALLOWED_SPECIFIERS = new Set(['react', 'react/jsx-runtime', '@muxui/react']);
+// The two specifiers a variant takes components from, only as static named imports.
+const COMPONENT_SPECIFIERS = new Set(['@muxui/react', '@muxui/react/markdown']);
+const ALLOWED_SPECIFIERS = new Set(['react', 'react/jsx-runtime', ...COMPONENT_SPECIFIERS]);
 const IDENTIFIER = /[\p{L}_$][\p{L}\p{N}_$]*/uy;
 const NAME = '[\\p{L}_$][\\p{L}\\p{N}_$]*';
 // A statement start: a line start, or after `;`, `}`, or a block comment. Keeps
@@ -162,7 +167,7 @@ function namedSpecifiers(clause) {
   return { names };
 }
 
-/** Checks one header import and returns the names it takes from `@muxui/react`. */
+/** Checks one header import and returns the names it takes from `@muxui/react` or `@muxui/react/markdown`. */
 function checkHeaderImport({ line, clause, specifier }, violate) {
   if (specifier === undefined) {
     violate(line, 'an unreadable import');
@@ -171,34 +176,35 @@ function checkHeaderImport({ line, clause, specifier }, violate) {
   const target = specifier.value;
   if (!ALLOWED_SPECIFIERS.has(target)) {
     violate(line, target.startsWith('@muxui/react/')
-      ? `a subpath import of '${target}'`
-      : `an import of '${target}', outside the allowed react, react/jsx-runtime, and @muxui/react`);
+      ? `a subpath import of '${target}', outside the one allowed subpath @muxui/react/markdown`
+      : `an import of '${target}', outside the allowed react, react/jsx-runtime, @muxui/react, and @muxui/react/markdown`);
     return [];
   }
   if (clause.length === 0) {
-    if (target === '@muxui/react') violate(line, "a side-effect import of '@muxui/react'");
+    if (COMPONENT_SPECIFIERS.has(target)) violate(line, `a side-effect import of '${target}'`);
     return [];
   }
   if (!isWord(clause.at(-1), 'from')) {
     violate(line, `an unreadable import of '${target}'`);
     return [];
   }
-  if (target !== '@muxui/react') return [];
+  if (!COMPONENT_SPECIFIERS.has(target)) return [];
   const words = clause.slice(0, -1);
   // `import type { A }` and `import type A` are type-only; `import type from` is a default import.
   if (isWord(words[0], 'type') && words[1] !== undefined && !isPunct(words[1], ',')) return [];
   if (!isPunct(words[0], '{') || !isPunct(words.at(-1), '}')) {
-    violate(line, `a ${words.some((token) => isPunct(token, '*')) ? 'namespace' : 'default'} import of '@muxui/react'`);
+    violate(line, `a ${words.some((token) => isPunct(token, '*')) ? 'namespace' : 'default'} import of '${target}'`);
     return [];
   }
   const result = namedSpecifiers(words);
-  if (result.violation) violate(line, `${result.violation} from '@muxui/react'`);
+  if (result.violation) violate(line, `${result.violation} from '${target}'`);
   return result.violation ? [] : result.names;
 }
 
 /**
- * Scans one source. Returns the names imported from `@muxui/react` and every
- * violation of the canonical form, each with its 1-based line.
+ * Scans one source. Returns the names imported from `@muxui/react` and
+ * `@muxui/react/markdown` and every violation of the canonical form, each with
+ * its 1-based line.
  */
 export function scanReactImports(source) {
   let header;
@@ -249,7 +255,7 @@ export function patternImportIssues({ pattern, components, variants }) {
       report(
         source,
         line,
-        `${message}; a variant keeps its imports in a leading header, imports only react, react/jsx-runtime, and @muxui/react, takes @muxui/react as a static named import, and pattern.participants must declare each component it imports (names no component record maps, such as useToast and ToastProvider, are not checked)`,
+        `${message}; a variant keeps its imports in a leading header, imports only react, react/jsx-runtime, @muxui/react, and @muxui/react/markdown, takes the last two as static named imports, and pattern.participants must declare each component it imports (names no component record maps, such as useToast and ToastProvider, are not checked)`,
       );
     }
     for (const { name, line } of imported) {

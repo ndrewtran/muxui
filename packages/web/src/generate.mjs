@@ -75,7 +75,7 @@ const compatibility = {
   schema: 'muxui-renderer-compatibility-v1',
   package: manifest.name,
   version: manifest.version,
-  bindingSchemaRange: '^2.0.0',
+  bindingSchemaRange: '^3.0.0',
   tokenContractRange: `^${graph.tokenContractVersion}`,
   sourceRevision: bundle.sourceRevision,
   bindings: Object.fromEntries(Object.entries(surfaces).map(([id, surface]) => [id, {
