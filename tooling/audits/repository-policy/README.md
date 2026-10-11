@@ -82,9 +82,12 @@ A dry run asks `main-ci` for the push run of `ci.yml` on `main` at its exact
 commit. It reuses that run only when the run succeeded and every group of the
 full plan, recomputed from the commit, has a successful job; otherwise it runs
 the full `pnpm release:prepare`. A publish run does not rebuild: `dry-run`
-verifies the dry run named by `dry-run-id`, and `candidate` verifies the
-downloaded artifact's digest, version, and manifest before the approval gate.
-The tests are `test/release-lineage.test.mjs`.
+verifies the dry run named by `dry-run-id`, read as one attempt; `fetch-candidate`
+downloads that artifact's ZIP by the verified id, checks it against the API
+digest, accepts only the two expected file names, and extracts them itself into a
+fresh directory outside the checkout; and `candidate` verifies the version,
+sha512, and manifest before the approval gate. The tests are
+`test/release-lineage.test.mjs`.
 
 Evidence capture and disclosure remain owned by the architecture, Product Scope,
 package, and evidence references. See

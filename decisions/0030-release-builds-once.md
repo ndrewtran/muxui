@@ -39,7 +39,8 @@ Item 8, the release builds once:
 1. **The dry run reuses main's proof.** In `mode=dry-run`, before preparing, the
    workflow looks for a `ci.yml` run for `github.sha` with event `push` on
    `main`, of this repository. The newest such run is used; a newer failure is
-   not skipped in favour of an older pass. The run is reused only when it is
+   not skipped in favour of an older pass. The run is read as its latest attempt
+   (the attempt's own record and jobs), and is reused only when that attempt is
    completed with conclusion `success`, its `plan` and aggregate `check` jobs
    succeeded, and every group of the full plan computed at that commit has a
    successful `run <group>` job. The plan is recomputed from the commit, not
@@ -50,29 +51,39 @@ Item 8, the release builds once:
    When there is no such run, or it failed, is still running, is incomplete, or
    cannot be read, the dry run runs the full `pnpm release:prepare` and says so.
    The step summary, the log, and the release manifest's `preparation` record
-   which path ran and, for a reuse, the main run's id and attempt.
+   which path ran and, for a reuse, the main run's id and the attempt judged.
 2. **The publish run promotes the dry run's candidate.** `mode=publish` takes a
    `dry-run-id` and does not run `release:prepare`. Before the approval gate it
-   fails closed unless the named run is a successful `workflow_dispatch` dry
-   run of `.github/workflows/npm-publish.yml` in this repository, on `main`, at
-   the same `github.sha`, whose `prepare` job succeeded and whose `publish` job
-   never ran, and its `npm-candidate` artifact is present and unexpired. It then downloads that artifact and checks the bytes itself, not
-   through the download action's warning: the tarball's version is the version
-   input, its sha512 equals the authorized `tarball-sha512` input, and the
-   release manifest names the same version and digest, this commit as its
-   source revision, and this commit's tree. The publish job keeps its own
-   version and digest re-verification, the registry preflight, the drift
-   recheck, the OIDC publish, and the read-back.
+   fails closed unless the named run, read as its latest attempt, is a
+   successful `workflow_dispatch` dry run of `.github/workflows/npm-publish.yml`
+   in this repository, on `main`, at the same `github.sha`, whose `prepare` job
+   succeeded and whose `publish` job never ran, and it has exactly one
+   unexpired `npm-candidate` artifact with an id, a size, and a sha256 digest.
+   That artifact id, digest, size, and the attempt are handed to the download
+   step, which verifies the dry run again and fails if any of them changed. No
+   general archive extractor reads the artifact. The workflow downloads the raw
+   ZIP by that artifact id, checks its size and sha256 against the API digest
+   before parsing it, accepts it only if it holds exactly the two expected file
+   names (plain names, once each, regular files, unencrypted), and writes only
+   those two files into a fresh directory outside the checkout. It then checks
+   the bytes itself: the tarball's version is the version input, its sha512
+   equals the authorized `tarball-sha512` input, and the release manifest names
+   the same version and digest, this commit as its source revision, and this
+   commit's tree. The publish job keeps its own version and digest
+   re-verification, the registry preflight, the drift recheck, the OIDC publish,
+   and the read-back.
 3. **Provenance.** The registry's provenance is signed by the publish run, for
    bytes built by the dry run of the same workflow at the same commit. That is
    accepted. The attestation names the commit and the publish run; the retained
-   R1 exit evidence binds the publish run to the dry run by id and digest.
+   R1 exit evidence binds the publish run to the dry run by id, attempt, artifact
+   id, and digest.
 4. **Retention.** The `npm-candidate` artifact is kept 30 days instead of 3. An
    expired or missing artifact means a new dry run, never a rebuild inside the
    publish run and never a substitute found by name.
 5. **Evidence stays honest.** The R1 exit capture records the main CI run a dry
-   run reused, or that it fell back to the full `release:prepare`, and that a
-   publish run promoted the dry run's artifact instead of preparing its own.
+   run reused (the attempt recorded, read as that attempt), or that it fell back
+   to the full `release:prepare`, and that a publish run promoted the dry run's
+   artifact at the dry run's recorded attempt instead of preparing its own.
    The retained rc.1 and rc.2 routes keep their original binding byte for byte.
 
 Item 9, Storybook's own-interface colour proofs are not release proof:

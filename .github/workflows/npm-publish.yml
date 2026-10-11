@@ -14,8 +14,8 @@ name: npm publish
 #   when given it must match.
 # - mode=publish (main only): `prepare` does not rebuild. It verifies the
 #   dry-run-id input (a successful dry run of this workflow on main at this
-#   commit), downloads that run's npm-candidate artifact, and checks its
-#   version, sha512, and manifest. Then the single `publish` job waits for
+#   commit), downloads that run's npm-candidate artifact by the verified id,
+#   inspects the archive, and checks its version, sha512, and manifest. Then the single `publish` job waits for
 #   Andrew's npm-publish environment approval. It re-verifies the uploaded
 #   tarball, runs the read-only registry preflight, publishes to `next`
 #   through npm trusted publishing (OIDC, no token), and reads back integrity,
@@ -96,7 +96,7 @@ jobs:
     # parallel), then packs.
     timeout-minutes: 90
     # actions: read lets the dry run look up main's CI run and a publish run
-    # download and verify the dry run's artifact. This job has no OIDC access.
+    # verify and download the dry run's artifact. This job has no OIDC access.
     permissions:
       contents: read
       actions: read
@@ -187,16 +187,23 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: node tooling/audits/repository-policy/src/release-lineage.mjs dry-run
 
-      - name: Download dry-run candidate
+      # Downloads exactly the artifact id and attempt the step above verified (not
+      # a name lookup), checks the ZIP against the API digest, inspects its entries,
+      # and extracts only the two expected files into a fresh directory outside the
+      # checkout. No general extractor sees the archive.
+      - name: Fetch dry-run candidate
         if: inputs.mode == 'publish'
-        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        with:
-          name: npm-candidate
-          run-id: ${{ inputs.dry-run-id }}
-          github-token: ${{ github.token }}
-          path: ${{ runner.temp }}/promoted
+        env:
+          VERSION: ${{ inputs.version }}
+          DRY_RUN_ID: ${{ inputs.dry-run-id }}
+          DRY_RUN_ATTEMPT: ${{ steps.dryrun.outputs.attempt }}
+          ARTIFACT_ID: ${{ steps.dryrun.outputs.artifact-id }}
+          ARTIFACT_DIGEST: ${{ steps.dryrun.outputs.artifact-digest }}
+          ARTIFACT_SIZE: ${{ steps.dryrun.outputs.artifact-size }}
+          CANDIDATE_DIR: ${{ runner.temp }}/promoted
+          GH_TOKEN: ${{ github.token }}
+        run: node tooling/audits/repository-policy/src/release-lineage.mjs fetch-candidate
 
-      # The download action only warns on a digest mismatch; this checks the bytes.
       - name: Verify promoted candidate
         if: inputs.mode == 'publish'
         env:

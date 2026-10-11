@@ -278,12 +278,15 @@ const ciWorkflowPath = '.github/workflows/ci.yml';
 const mainCiStep = { name: 'Find main CI proof', marker: 'release-lineage.mjs main-ci' };
 const promotionSteps = [
   { name: 'Verify dry run', marker: 'release-lineage.mjs dry-run' },
+  { name: 'Fetch dry-run candidate', marker: 'release-lineage.mjs fetch-candidate' },
   { name: 'Verify promoted candidate', marker: 'release-lineage.mjs candidate' },
   prepareSteps[1],
 ];
 const mainCiReused = /^Main CI proof: reusing run (\d+) attempt (\d+) \(/u;
 const mainCiFallback = /^Main CI proof: not reused \((.+)\); running the full release:prepare$/u;
-const promotedCandidate = /^Promoted candidate (\S+) (sha512-\S+) from dry run (\d+) attempt (\d+|unknown)$/u;
+const verifiedDryRun = /^Dry run (\d+) attempt (\d+) succeeded at ([0-9a-f]{40}); npm-candidate artifact (\d+) \((\d+) bytes, (sha256:[0-9a-f]{64})\)$/u;
+const fetchedCandidate = /^Fetched npm-candidate artifact (\d+) \((\d+) bytes, (sha256:[0-9a-f]{64})\) from dry run (\d+) attempt (\d+)$/u;
+const promotedCandidate = /^Promoted candidate (\S+) (sha512-\S+) from dry run (\d+) attempt (\d+)$/u;
 const promotesDryRun = (lines) => lines.some((line) => line.includes('##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs dry-run'));
 
 // How the dry run's checks ran, from its log and the manifest it uploaded, which must agree.
@@ -300,12 +303,14 @@ function bindPreparation({ lines, manifest, execution, mainCi }) {
     }
     if (!mainCi) fail('R1_EXIT_PREPARATION_MISMATCH', `main CI run ${runId} was not fetched`);
     const { run, jobs } = mainCi;
-    if (run.id !== runId || run.path !== ciWorkflowPath || run.event !== 'push' || run.head_branch !== 'main' || run.head_sha !== execution.headRevision) {
-      fail('R1_EXIT_PREPARATION_MISMATCH', `run ${runId} is not the push CI run on main for ${execution.headRevision}`);
+    // `mainCi` is attempt `attempt` of the run, read as that attempt; a later rerun cannot stand in for it.
+    if (run.id !== runId || run.run_attempt !== attempt || run.path !== ciWorkflowPath || run.event !== 'push' || run.head_branch !== 'main' || run.head_sha !== execution.headRevision) {
+      fail('R1_EXIT_PREPARATION_MISMATCH', `attempt ${run.run_attempt} of run ${run.id} is not attempt ${attempt} of the push CI run on main for ${execution.headRevision}`);
     }
     const check = jobs.find((job) => job.name === 'check');
-    if (run.status !== 'completed' || run.conclusion !== 'success' || check?.conclusion !== 'success') {
-      fail('R1_EXIT_PREPARATION_MISMATCH', `main CI run ${runId} did not pass its aggregate check`);
+    // A job from a later attempt cannot appear in this attempt's list.
+    if (run.status !== 'completed' || run.conclusion !== 'success' || check?.conclusion !== 'success' || (check.run_attempt ?? attempt) > attempt) {
+      fail('R1_EXIT_PREPARATION_MISMATCH', `main CI run ${runId} attempt ${attempt} did not pass its aggregate check`);
     }
     return {
       mode: 'main-ci-reused',
@@ -321,14 +326,26 @@ function bindPreparation({ lines, manifest, execution, mainCi }) {
   return { mode: 'full-checks', fallbackReason: sanitize(fallback[1]) };
 }
 
-// The publish run's promotion of the dry run's artifact: it names the captured dry run and the
-// candidate's digest, and no release:prepare step ran in the publish run.
+// The publish run's promotion of the dry run's artifact. Its three lines (verify, fetch, promote)
+// name the captured dry run and attempt, one artifact id and digest, and the candidate's digest;
+// and no release:prepare step ran in the publish run.
 function bindPromotion({ lines, dryRun, runId }) {
-  const promoted = lines.map((line) => content(line).match(promotedCandidate)).find(Boolean);
-  if (!promoted) fail('R1_EXIT_PROMOTION_MISSING', `run ${runId} prepare log has no promoted-candidate line`);
-  const [, version, integrity, dryRunId, attempt] = promoted;
-  if (Number(dryRunId) !== dryRun.execution.runId) {
-    fail('R1_EXIT_PROMOTION_MISMATCH', `run ${runId} promoted dry run ${dryRunId}; the captured dry run is ${dryRun.execution.runId}`);
+  const read = (pattern) => lines.map((line) => content(line).match(pattern)).find(Boolean);
+  const verified = read(verifiedDryRun);
+  const fetched = read(fetchedCandidate);
+  const promoted = read(promotedCandidate);
+  if (!verified || !fetched || !promoted) fail('R1_EXIT_PROMOTION_MISSING', `run ${runId} prepare log lacks its ${[['verify', verified], ['fetch', fetched], ['promoted-candidate', promoted]].filter(([, line]) => !line).map(([name]) => name).join(', ')} line`);
+  const { runId: dryRunId, runAttempt, headRevision } = dryRun.execution;
+  const [, verifiedRun, verifiedAttempt, verifiedSha, artifactId, size, artifactDigest] = verified;
+  const [, fetchedId, fetchedSize, fetchedDigest, fetchedRun, fetchedAttempt] = fetched;
+  const [, version, integrity, promotedRun, promotedAttempt] = promoted;
+  // Every line names the captured dry run at the captured attempt, so a rerun or another run cannot stand in.
+  const named = [[verifiedRun, verifiedAttempt], [fetchedRun, fetchedAttempt], [promotedRun, promotedAttempt]];
+  if (named.some(([id, attempt]) => Number(id) !== dryRunId || Number(attempt) !== runAttempt) || verifiedSha !== headRevision) {
+    fail('R1_EXIT_PROMOTION_MISMATCH', `run ${runId} promoted ${JSON.stringify(named)}; the captured dry run is run ${dryRunId} attempt ${runAttempt} at ${headRevision}`);
+  }
+  if (fetchedId !== artifactId || fetchedSize !== size || fetchedDigest !== artifactDigest) {
+    fail('R1_EXIT_PROMOTION_MISMATCH', `run ${runId} fetched artifact ${fetchedId} (${fetchedDigest}), not the verified ${artifactId} (${artifactDigest})`);
   }
   if (version !== dryRun.candidate.version || integrity !== dryRun.candidate.tarball.integrity) {
     fail('R1_EXIT_DIGEST_MISMATCH', `run ${runId} promoted ${version} ${integrity}; the dry run's candidate is ${dryRun.candidate.version} ${dryRun.candidate.tarball.integrity}`);
@@ -341,7 +358,10 @@ function bindPromotion({ lines, dryRun, runId }) {
     }
   })();
   if (prepared) fail('R1_EXIT_PROMOTION_MISMATCH', `run ${runId} ran release:prepare instead of promoting the dry run's candidate`);
-  return { source: 'dry-run-artifact', artifact: 'npm-candidate', dryRunId: dryRun.execution.runId, dryRunAttempt: attempt === 'unknown' ? null : Number(attempt), version, integrity };
+  return {
+    source: 'dry-run-artifact', artifact: 'npm-candidate', artifactId: Number(artifactId), artifactDigest, artifactBytes: Number(size),
+    dryRunId, dryRunAttempt: runAttempt, version, integrity,
+  };
 }
 
 /**
@@ -928,7 +948,7 @@ function buildOnceNote({ phases }) {
     ? `The dry run relied on main CI run ${preparation.mainCi.runId} (attempt ${preparation.mainCi.runAttempt}) for this commit's check graph and ran generation, \`generate:check\`, and \`release-prepare.mjs\` itself.`
     : `The dry run ran the full \`pnpm release:prepare\`${preparation ? ` (${preparation.fallbackReason})` : ''}.`;
   const promoted = phases.publish?.promotion
-    ? ` The publish run promoted dry run ${phases.publish.promotion.dryRunId}'s \`npm-candidate\` artifact and did not prepare its own.`
+    ? ` The publish run promoted \`npm-candidate\` artifact ${phases.publish.promotion.artifactId} of dry run ${phases.publish.promotion.dryRunId} attempt ${phases.publish.promotion.dryRunAttempt} and did not prepare its own.`
     : '';
   return `\n\n${checks}${promoted} Storybook's own-interface colour proofs are not release proof (Decision 0030).`;
 }
@@ -1341,7 +1361,7 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
       try {
         const artifact = github.download(runId, download) ? readCandidate(download) : null;
         // A dry run that reused main's CI is bound to that run as well (Decision 0030).
-        const reusedRunId = artifact ? JSON.parse(artifact.manifest.bytes.toString('utf8')).preparation?.mainCi?.runId : undefined;
+        const reused = artifact ? JSON.parse(artifact.manifest.bytes.toString('utf8')).preparation?.mainCi : undefined;
         const bound = bindDryRun({
           run,
           jobs,
@@ -1349,7 +1369,10 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
           artifact,
           sourceTree: github.tree(run.head_sha),
           credentials,
-          mainCi: reusedRunId ? { run: github.run(reusedRunId), jobs: github.jobs(reusedRunId) } : undefined,
+          // The attempt the dry run recorded, read as that attempt: a later rerun of main's run cannot stand in for it.
+          mainCi: Number.isSafeInteger(reused?.runId) && Number.isSafeInteger(reused?.runAttempt)
+            ? { run: github.attempt(reused.runId, reused.runAttempt), jobs: github.attemptJobs(reused.runId, reused.runAttempt) }
+            : undefined,
           rehearsal: options.rehearsal,
         });
         if (bound.candidate.version !== options.version) {

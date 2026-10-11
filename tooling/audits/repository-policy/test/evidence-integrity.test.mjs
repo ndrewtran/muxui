@@ -761,7 +761,8 @@ function buildOnceFixture({ tarballBytes } = {}) {
   const { head, version, facts } = fixture;
   const script = (line) => `\u001b[36;1m${line}\u001b[0m`;
   const retime = (lines) => lines.map((line, index) => `2026-10-04T07:48:${String(index % 60).padStart(2, '0')}.0000000Z ${line}`).join('\n');
-  const reusing = `Main CI proof: reusing run 4242 attempt 1 (https://github.com/ndrewtran/muxui/actions/runs/4242); running generate:check and release-prepare.mjs instead of the full check graph`;
+  const reusingAttempt = (attempt) => `Main CI proof: reusing run 4242 attempt ${attempt} (https://github.com/ndrewtran/muxui/actions/runs/4242); running generate:check and release-prepare.mjs instead of the full check graph`;
+  const reusing = reusingAttempt(1);
   const fallingBack = 'Main CI proof: not reused (main CI run 4242 concluded failure); running the full release:prepare';
   const dryRunLog = (proofLine) => {
     const lines = fixture.prepareLog('dry-run', '').split('\n').map((line) => line.replace(/^\S+Z /u, ''));
@@ -773,7 +774,12 @@ function buildOnceFixture({ tarballBytes } = {}) {
       ...(proofLine ? [proofLine] : []));
     return retime(lines);
   };
-  const promotedLog = ({ dryRunId = 1, integrity = facts.integrity, withPrepare = false, withLine = true } = {}) => retime([
+  const artifactDigest = `sha256:${'a'.repeat(64)}`;
+  // `attempt` and the per-line overrides let a test make the three lines disagree.
+  const promotedLog = ({
+    dryRunId = 1, attempt = 1, verifiedAttempt = attempt, fetchedAttempt = attempt, artifactId = 9, fetchedArtifactId = artifactId,
+    fetchedDigest = artifactDigest, integrity = facts.integrity, withPrepare = false, withLine = true, withFetch = true,
+  } = {}) => retime([
     '##[group]Run actions/checkout@v4',
     '[command]/usr/bin/git log -1 --format=%H',
     head,
@@ -781,11 +787,15 @@ function buildOnceFixture({ tarballBytes } = {}) {
     '##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs dry-run',
     script('node tooling/audits/repository-policy/src/release-lineage.mjs dry-run'),
     '##[endgroup]',
-    `Dry run ${dryRunId} attempt 1 succeeded at ${head}; npm-candidate artifact 9 (4096 bytes)`,
+    `Dry run ${dryRunId} attempt ${verifiedAttempt} succeeded at ${head}; npm-candidate artifact ${artifactId} (4096 bytes, ${artifactDigest})`,
+    '##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs fetch-candidate',
+    script('node tooling/audits/repository-policy/src/release-lineage.mjs fetch-candidate'),
+    '##[endgroup]',
+    ...(withFetch ? [`Fetched npm-candidate artifact ${fetchedArtifactId} (4096 bytes, ${fetchedDigest}) from dry run ${dryRunId} attempt ${fetchedAttempt}`] : []),
     '##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs candidate',
     script('node tooling/audits/repository-policy/src/release-lineage.mjs candidate'),
     '##[endgroup]',
-    ...(withLine ? [`Promoted candidate ${version} ${integrity} from dry run ${dryRunId} attempt 1`, 'Dry run preparation: reused main CI run 4242 attempt 1'] : []),
+    ...(withLine ? [`Promoted candidate ${version} ${integrity} from dry run ${dryRunId} attempt ${attempt}`, 'Dry run preparation: reused main CI run 4242 attempt 1'] : []),
     '##[group]Run set -euo pipefail',
     script('source_dir=$PROMOTED_DIR'),
     '##[endgroup]',
@@ -804,14 +814,15 @@ function buildOnceFixture({ tarballBytes } = {}) {
     manifest.preparation = preparation;
     return { manifest, artifact: { ...fixture.artifact, manifest: { ...fixture.artifact.manifest, bytes: Buffer.from(JSON.stringify(manifest)) } } };
   };
-  const reusedPreparation = { mode: 'main-ci-reused', mainCi: { runId: 4242, runAttempt: 1 } };
-  const mainCiRun = (overrides = {}) => ({ id: 4242, path: '.github/workflows/ci.yml', event: 'push', head_branch: 'main', head_sha: head, status: 'completed', conclusion: 'success', run_started_at: '2026-10-04T07:00:00Z', ...overrides });
-  const checkJob = (conclusion = 'success') => ({ id: 77, name: 'check', conclusion, completed_at: '2026-10-04T07:20:00Z' });
+  const preparationFor = (attempt) => ({ mode: 'main-ci-reused', mainCi: { runId: 4242, runAttempt: attempt } });
+  const reusedPreparation = preparationFor(1);
+  const mainCiRun = (overrides = {}) => ({ id: 4242, run_attempt: 1, path: '.github/workflows/ci.yml', event: 'push', head_branch: 'main', head_sha: head, status: 'completed', conclusion: 'success', run_started_at: '2026-10-04T07:00:00Z', ...overrides });
+  const checkJob = (conclusion = 'success', attempt = 1) => ({ id: 77, name: 'check', conclusion, run_attempt: attempt, completed_at: '2026-10-04T07:20:00Z' });
   const dryRunInput = (overrides = {}) => ({
     ...fixture.dryRunInput, credentials: undefined, prepareLog: dryRunLog(reusing), ...withPreparation(reusedPreparation),
     mainCi: { run: mainCiRun(), jobs: [checkJob()] }, ...overrides,
   });
-  return { ...fixture, reusing, fallingBack, dryRunLog, promotedLog, withPreparation, reusedPreparation, mainCiRun, checkJob, dryRunInput };
+  return { ...fixture, reusing, reusingAttempt, fallingBack, dryRunLog, promotedLog, withPreparation, reusedPreparation, preparationFor, artifactDigest, mainCiRun, checkJob, dryRunInput };
 }
 
 test('R1 exit capture records the main CI run a dry run reused and the artifact a publish run promoted', () => {
@@ -833,9 +844,10 @@ test('R1 exit capture records the main CI run a dry run reused and the artifact 
     prepareLog: fixture.promotedLog(), publishLog: fixture.oidcPublishLog(),
   });
   assert.deepEqual(publish.promotion, {
-    source: 'dry-run-artifact', artifact: 'npm-candidate', dryRunId: 1, dryRunAttempt: 1, version: fixture.version, integrity: fixture.facts.integrity,
+    source: 'dry-run-artifact', artifact: 'npm-candidate', artifactId: 9, artifactDigest: fixture.artifactDigest, artifactBytes: 4096,
+    dryRunId: 1, dryRunAttempt: 1, version: fixture.version, integrity: fixture.facts.integrity,
   });
-  assert.match(publish.excerpts.prepare.text, /# step: Verify dry run[\s\S]*Promoted candidate 0\.1\.0-rc\.3 sha512-\S+ from dry run 1 attempt 1[\s\S]*# step: Collect candidate/u);
+  assert.match(publish.excerpts.prepare.text, /# step: Verify dry run[\s\S]*# step: Fetch dry-run candidate[\s\S]*Fetched npm-candidate artifact 9[\s\S]*Promoted candidate 0\.1\.0-rc\.3 sha512-\S+ from dry run 1 attempt 1[\s\S]*# step: Collect candidate/u);
 
   const ref = { path: 'tests/evidence/r1-exit-0.1.0-rc.3/x', sha256: `sha256:${'0'.repeat(64)}` };
   const phase = (value) => ({ ...value, captureTimestamp: 't', proofTool: {} });
@@ -844,6 +856,7 @@ test('R1 exit capture records the main CI run a dry run reused and the artifact 
   }, { validation: ref, manifest: ref })).map(([id, text]) => [id, JSON.parse(text)]));
   assert.equal(records['E-R1-EXIT-01'].preparation.mainCi.runId, 4242);
   assert.equal(records['E-R1-EXIT-02'].postPublication.promotion.dryRunId, 1);
+  assert.equal(records['E-R1-EXIT-02'].postPublication.promotion.artifactId, 9);
   assert.equal(records['E-R1-EXIT-02'].outcome, 'partial', 'promotion does not replace the registry read-back');
 
   // A capture made before Decision 0030 records neither, so its records gain no field.
@@ -881,6 +894,12 @@ test('R1 exit capture rejects a reused main CI run, a log, or a promotion that d
   rejectsDryRun({ mainCi: { run: fixture.mainCiRun({ status: 'in_progress', conclusion: null }), jobs: [fixture.checkJob()] } });
   rejectsDryRun({ mainCi: { run: fixture.mainCiRun(), jobs: [fixture.checkJob('failure')] } });
   rejectsDryRun({ mainCi: { run: fixture.mainCiRun(), jobs: [] } });
+  // Attempt identity: the fetched run must be the attempt the dry run recorded, in the log and the manifest.
+  rejectsDryRun({ mainCi: { run: fixture.mainCiRun({ run_attempt: 2 }), jobs: [fixture.checkJob()] } });
+  rejectsDryRun({ mainCi: { run: fixture.mainCiRun(), jobs: [fixture.checkJob('success', 2)] } });
+  rejectsDryRun({ prepareLog: fixture.dryRunLog(fixture.reusingAttempt(2)) });
+  rejectsDryRun(fixture.withPreparation(fixture.preparationFor(2)));
+  rejectsDryRun({ prepareLog: fixture.dryRunLog(fixture.reusingAttempt(2)), ...fixture.withPreparation(fixture.preparationFor(2)) });
 
   const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput()), manifest: fixture.manifest };
   const publish = (prepareLog) => r1Exit.bindPublish({ dryRun, run: fixture.run(2), jobs: [fixture.job(21, 'prepare'), fixture.publishJob(22)], prepareLog, publishLog: fixture.oidcPublishLog() });
@@ -889,6 +908,15 @@ test('R1 exit capture rejects a reused main CI run, a log, or a promotion that d
   assert.throws(() => publish(fixture.promotedLog({ integrity: 'sha512-other' })), r1ExitCode('R1_EXIT_DIGEST_MISMATCH'), 'other bytes than the dry run built');
   assert.throws(() => publish(fixture.promotedLog({ withLine: false })), r1ExitCode('R1_EXIT_PROMOTION_MISSING'));
   assert.throws(() => publish(fixture.promotedLog({ withPrepare: true })), r1ExitCode('R1_EXIT_PROMOTION_MISMATCH'), 'a publish run that also prepared its own');
+  // Attempt identity: every line names the captured dry run at the captured attempt.
+  assert.equal(publish(fixture.promotedLog({ attempt: 1 })).promotion.dryRunAttempt, 1);
+  for (const attempts of [{ attempt: 2 }, { verifiedAttempt: 2 }, { fetchedAttempt: 2 }]) {
+    assert.throws(() => publish(fixture.promotedLog(attempts)), r1ExitCode('R1_EXIT_PROMOTION_MISMATCH'), JSON.stringify(attempts));
+  }
+  // One artifact between the steps: the fetch names the verified id and digest.
+  assert.throws(() => publish(fixture.promotedLog({ fetchedArtifactId: 10 })), r1ExitCode('R1_EXIT_PROMOTION_MISMATCH'), 'a different artifact id');
+  assert.throws(() => publish(fixture.promotedLog({ fetchedDigest: `sha256:${'b'.repeat(64)}` })), r1ExitCode('R1_EXIT_PROMOTION_MISMATCH'), 'a different artifact digest');
+  assert.throws(() => publish(fixture.promotedLog({ withFetch: false })), r1ExitCode('R1_EXIT_PROMOTION_MISSING'));
 });
 
 test('R1 exit capture fetches the reused main CI run and writes the build-once README', async () => {
@@ -903,12 +931,15 @@ test('R1 exit capture fetches the reused main CI run and writes the build-once R
     execFileSync('tar', ['-czf', join(root, 'candidate.tgz'), '-C', join(root, 'pack'), 'package']);
     const tarballBytes = await readFile(join(root, 'candidate.tgz'));
     const real = buildOnceFixture({ tarballBytes });
+    // Main's run was rerun after the dry run: its latest attempt failed, but the dry run recorded attempt 1.
     const github = {
-      run: (id) => {
-        fetched.push(id);
-        return id === 4242 ? real.mainCiRun() : real.run(id);
+      run: (id) => (id === 4242 ? real.mainCiRun({ run_attempt: 2, conclusion: 'failure' }) : real.run(id)),
+      jobs: (id) => (id === 4242 ? [real.checkJob('failure')] : real.dryRunInput().jobs),
+      attempt: (id, number) => {
+        fetched.push(`${id}/${number}`);
+        return real.mainCiRun({ run_attempt: number, ...(number === 1 ? {} : { conclusion: 'failure' }) });
       },
-      jobs: (id) => (id === 4242 ? [real.checkJob()] : real.dryRunInput().jobs),
+      attemptJobs: (id, number) => [real.checkJob(number === 1 ? 'success' : 'failure')],
       log: () => real.dryRunLog(real.reusing),
       tree: () => real.tree,
       approvals: () => [],
@@ -920,7 +951,7 @@ test('R1 exit capture fetches the reused main CI run and writes the build-once R
     };
     const out = join(root, 'out');
     await r1Exit.main(['--rehearsal', `--out=${out}`, `--version=${real.version}`, '--capture-timestamp=2026-10-05T10:00:00Z', '--dry-run-run=1'], github);
-    assert.ok(fetched.includes(4242), 'the reused main CI run is fetched and bound');
+    assert.deepEqual(fetched, ['4242/1'], 'the recorded attempt of the reused main CI run is fetched and bound');
     const verification = JSON.parse(await readFile(join(out, 'verification.json'), 'utf8'));
     assert.equal(verification.phases.dryRun.preparation.mainCi.runId, 4242);
     const record = JSON.parse(await readFile(join(out, 'records/E-R1-EXIT-01.json'), 'utf8'));
