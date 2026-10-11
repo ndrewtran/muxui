@@ -2,8 +2,8 @@
 // (E-BL1-05 behaviour, E-BL1-06 overflow). Run after `pnpm --filter @muxui/docs build`.
 //
 // MUXUI_BLOCKS_CAPTURE_DIR=<dir> also writes the E-BL1-06 captures and overflow
-// report there. The test reads blocks from the built rail, so it covers any number
-// of patterns and categories without naming one.
+// report there, each image at the full height of the block. The test reads blocks
+// from the built rail, so it covers any number of patterns and categories without naming one.
 import assert from 'node:assert/strict';
 import { createReadStream } from 'node:fs';
 import { access, mkdir, writeFile } from 'node:fs/promises';
@@ -82,6 +82,20 @@ async function previewReady(page) {
 }
 
 const previewDocument = (page) => page.locator('[data-iframe]').evaluate((frame) => frame.contentDocument.documentElement.dataset.theme);
+
+/** Waits until the standalone preview page's example island is hydrated. */
+const standalonePreviewReady = (page) => page.waitForFunction(() => document.querySelector('astro-island') !== null && document.querySelector('astro-island[ssr]') === null);
+
+/**
+ * Writes the standalone preview of a variant at `width` as one full-height image. The toolbar's frame is only as tall as the window
+ * and scrolls the preview inside it, so a screenshot of the frame would clip a long block; the standalone route scrolls the page.
+ */
+async function capturePreview(page, url, width, path) {
+	await page.setViewportSize({ width, height: 900 });
+	await page.goto(url);
+	await standalonePreviewReady(page);
+	await page.screenshot({ path, fullPage: true });
+}
 
 test('the Blocks section: rail, filters, presets, handle, theme, views, and copy', { timeout: 180_000 }, async () => {
 	await withSite(async ({ page, origin }) => {
@@ -336,6 +350,8 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 		await page.goto(`${origin}/blocks/`);
 		const variants = await railVariants(page);
 		const report = [];
+		// Preset images come from a second page, so the toolbar page keeps its theme and preset while each is captured.
+		const capturePage = captureDir ? await page.context().newPage() : null;
 		const record = async (entry, screenshot, name) => {
 			report.push(entry);
 			assert.equal(entry.overflowX, false, `${name} overflows horizontally (${entry.scrollWidth} > ${entry.clientWidth})`);
@@ -360,7 +376,7 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 					const name = `${slug}--${theme}--preset-${width}`;
 					const entry = { kind: 'preset', block: variant.block, variant: variant.href, theme, preset: width, ...await measure(page.locator('[data-iframe]')) };
 					entry.logicalWidth = await page.locator('[data-iframe]').evaluate((frame) => frame.contentWindow.innerWidth);
-					await record(entry, (path) => page.locator('[data-frame]').screenshot({ path }), name);
+					await record(entry, (path) => capturePreview(capturePage, `${origin}${variant.href}preview/?theme=${theme}`, entry.logicalWidth, path), name);
 				}
 			}
 
@@ -370,7 +386,7 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 					for (const width of pageWidths) {
 						await page.setViewportSize({ width, height: 900 });
 						await page.goto(`${origin}${variant.href}preview/?theme=${theme}`);
-						await page.waitForFunction(() => document.querySelector('astro-island') !== null && document.querySelector('astro-island[ssr]') === null);
+						await standalonePreviewReady(page);
 						const entry = await page.evaluate(() => {
 							const root = document.documentElement;
 							return { clientWidth: root.clientWidth, scrollWidth: root.scrollWidth, overflowX: root.scrollWidth > root.clientWidth };
@@ -382,6 +398,7 @@ test('E-BL1-06: every variant fits every width preset, light and dark, and marke
 			}
 		}
 		assert.ok(report.length >= variants.length * THEMES.length * 4, 'every variant was measured at every preset in both themes');
+		await capturePage?.close();
 		if (captureDir) await writeFile(join(captureDir, 'overflow-report.json'), `${JSON.stringify({ pageWidths, measurements: report }, null, 2)}\n`);
 	});
 });
