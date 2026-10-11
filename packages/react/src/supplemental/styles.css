@@ -2496,7 +2496,8 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   display: flex;
   flex-direction: column;
   gap: var(--muxui-semantic-layout-dense-gap);
-  padding: var(--muxui-semantic-layout-inset-tiny) 0 0 var(--muxui-semantic-layout-inset-xlarge);
+  padding-block: var(--muxui-semantic-layout-inset-tiny) 0;
+  padding-inline: var(--muxui-semantic-layout-inset-xlarge) 0;
   margin: var(--muxui-semantic-layout-dense-gap) 0 0;
   list-style: none;
 }
@@ -2508,7 +2509,7 @@ details[open] > summary .muxui-sidebar__nav-chevron,
 
 /* A group nested in a group indents less, so a category, a block, and its variants fit one column. */
 .muxui-sidebar__nav-children .muxui-sidebar__nav-children {
-  padding-left: var(--muxui-semantic-layout-inset-large);
+  padding-inline-start: var(--muxui-semantic-layout-inset-large);
 }
 
 /* A collapsed link group keeps its children out of the layout, as a closed details does. */

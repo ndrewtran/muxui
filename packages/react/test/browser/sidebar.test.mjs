@@ -979,7 +979,8 @@ for (const engine of browserEngines()) {
 
 // Cross-engine proof for how Sidebar groups are named and where their focus goes: a link group's toggle is named by
 // its rendered label, text or component, at any depth, and a group that closes under its caller hands focus from a link
-// it hides to its own summary or toggle. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+// it hides to its own summary or toggle, and nested rows indent from the inline start so right-to-left mirrors left-to-right.
+// Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
 
 const groupsEntry = `
 import React from 'react';
@@ -1124,6 +1125,53 @@ for (const engine of browserEngines()) {
       } finally {
         await context.close();
       }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+for (const engine of browserEngines()) {
+  test(`Sidebar nested indentation mirrors in right-to-left in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-groups.html': groupsPage },
+      modules: { '/sidebar-groups-entry.mjs': groupsEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-groups.html`, 'aside');
+      /** The category, the block, and the variant links' edges, and Root's content edges; runs in the page. */
+      const edges = () => {
+        const edge = (selector) => { const { left, right } = document.querySelector(selector).getBoundingClientRect(); return { left, right }; };
+        const root = document.querySelector('aside');
+        const content = root.getBoundingClientRect();
+        return { category: edge('a[href="#settings"]'), block: edge('a[href="#profile"]'), variant: edge('a[href="#avatar"]'), root: { left: content.left, right: content.right } };
+      };
+      const measure = async (dir) => {
+        const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: dir === 'rtl' ? 'ar' : 'en-US' });
+        try {
+          const tab = await context.newPage();
+          const errors = [];
+          tab.on('pageerror', (error) => errors.push(error.message));
+          await tab.goto(`${url}/sidebar-groups.html?dir=${dir}`, { waitUntil: 'networkidle' });
+          await tab.locator('a[href="#avatar"]').waitFor();
+          assert.equal(await tab.evaluate(() => getComputedStyle(document.querySelector('.muxui-sidebar__nav-children')).direction), dir, `${engine}: the page runs ${dir}`);
+          assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+          return await tab.evaluate(edges);
+        } finally {
+          await context.close();
+        }
+      };
+      const ltr = await measure('ltr');
+      const rtl = await measure('rtl');
+      // Each level steps in from the inline start by its own padding: the block by the base step, the variant by the smaller nested one.
+      const steps = { ltr: [ltr.block.left - ltr.category.left, ltr.variant.left - ltr.block.left], rtl: [rtl.category.right - rtl.block.right, rtl.block.right - rtl.variant.right] };
+      assert.ok(steps.ltr[0] > steps.ltr[1] && steps.ltr[1] > 0, `${engine}: each level indents, the nested step smaller (${steps.ltr})`);
+      assert.deepEqual(steps.rtl.map((step) => Math.round(step * 100)), steps.ltr.map((step) => Math.round(step * 100)), `${engine}: right-to-left indents from the right by the same steps`);
+      assert.ok(rtl.category.right > rtl.block.right && rtl.block.right > rtl.variant.right, `${engine}: right-to-left nests toward the left`);
     } finally {
       await browser?.close();
       await close();
