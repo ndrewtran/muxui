@@ -58,6 +58,16 @@ test('trees from before the manifest key was removed or before category labels c
       const unknownShape = await withRegistry(change);
       await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownShape, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'MUXUI_SCHEMA_INVALID', `${name} still fails the compiler`);
     }
+    // The compiler parses these files strictly, so a repeated key is an error there. Normalization uses the same parser: `JSON.parse` would keep only the
+    // last occurrence and the file would be rewritten as valid JSON, hiding the repeat. Each tree below is identical to its parent once the first occurrence is
+    // discarded, so only a strict parse tells them apart.
+    const duplicatedRegistry = await repo.modify((edit) => edit(registryPath, (text) => {
+      const groups = Object.entries(mapGroups(JSON.parse(text), (ids) => ids)).map(([group, ids]) => `  ${JSON.stringify(group)}: ${JSON.stringify(ids)}`);
+      return `{\n  "application": ["decoy"],\n${groups.join(',\n')}\n}\n`;
+    }));
+    await assert.rejects(catalogAcrossCommit({ cwd, commit: duplicatedRegistry, parent: lists, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'JSON_DUPLICATE_KEY', 'a legacy registry with a repeated group is rejected, not normalized');
+    const duplicatedKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', (text) => text.replace(/^\{\n/u, '{\n  "authorityDecisionPath": "decisions/old.md",\n  "authorityDecisionPath": "decisions/older.md",\n')));
+    await assert.rejects(catalogAcrossCommit({ cwd, commit: duplicatedKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'JSON_DUPLICATE_KEY', 'a manifest with the removed key twice is rejected, not normalized');
     const unknownKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ unexpectedKey: true })));
     await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), /MUXUI_CATALOG_SOURCE_INVALID/u, 'any other unknown manifest key still fails');
   } finally {

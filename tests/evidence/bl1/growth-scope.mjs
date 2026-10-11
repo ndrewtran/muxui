@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative, resolve } from 'node:path';
+import { parseJsonStrict } from '../../../packages/schema/src/index.mjs';
 import { canonicalJson } from '../../../tooling/audits/repository-policy/src/canonical-json.mjs';
 import { compileBundle, repositoryRoot } from './regression.mjs';
 
@@ -149,7 +150,9 @@ export function growthCommits({ cwd = repositoryRoot, head = 'HEAD', since, patt
 // the compiler requires, where a tree from before had the closed list in the pattern schema. The registry then gained an explicit display label
 // per category, so the group-to-id-list files before that no longer compile either. Each extracted tree is normalized the same way on both sides
 // of the comparison: the removed key is dropped, a tree without a registry gets the closed list it had, and a registry that lists category ids
-// is converted to the labelled shape. Nothing else is changed.
+// is converted to the labelled shape. Nothing else is changed. Both files are read with the compiler's strict parser (`parseJsonStrict`), never
+// `JSON.parse`, which keeps the last of a duplicated key: rewriting such a file as valid JSON would hide the duplicate from the compiler that
+// rejects it, so a file the strict parser refuses is left as it is, and the compiler reports it.
 const removedManifestKey = 'authorityDecisionPath';
 const categoryRegistryPath = 'catalog/patterns/categories.json';
 /**
@@ -175,12 +178,12 @@ function derivedCategoryLabel(id) {
  * still fails the compiler and an old registry that was already invalid (an empty group or a repeated id) stays invalid.
  */
 async function normalizeCategoryRegistry(directory) {
-  const manifest = JSON.parse(await readFile(join(directory, manifestPath), 'utf8'));
+  const manifest = parseJsonStrict(await readFile(join(directory, manifestPath), 'utf8'));
   if (typeof manifest.patternCategoriesPath !== 'string') return;
   const path = resolve(directory, manifest.patternCategoriesPath);
   if (relative(directory, path).startsWith('..')) return;
-  // A registry the compiler cannot read (missing, or not JSON) is the compiler's to report.
-  const registry = await readFile(path, 'utf8').then(JSON.parse, () => undefined);
+  // A registry the compiler cannot read (missing, not JSON, or a repeated key) is the compiler's to report.
+  const registry = await readFile(path, 'utf8').then(parseJsonStrict, () => undefined);
   const groups = registry !== null && typeof registry === 'object' && !Array.isArray(registry) ? Object.entries(registry) : [];
   const idList = (value) => Array.isArray(value) && value.length > 0 && value.every((id) => typeof id === 'string') && new Set(value).size === value.length;
   if (groups.length === 0 || !groups.every(([, ids]) => idList(ids))) return;
@@ -191,7 +194,7 @@ async function normalizeCategoryRegistry(directory) {
 /** Makes the extracted tree's source manifest compile: drops the removed `authorityDecisionPath`; any other unknown key still fails the compiler. */
 async function normalizeLegacyManifest(directory) {
   const path = join(directory, manifestPath);
-  const manifest = JSON.parse(await readFile(path, 'utf8'));
+  const manifest = parseJsonStrict(await readFile(path, 'utf8'));
   const legacy = removedManifestKey in manifest || !('patternCategoriesPath' in manifest);
   if (!legacy) return;
   delete manifest[removedManifestKey];
