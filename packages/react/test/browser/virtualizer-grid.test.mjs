@@ -256,9 +256,11 @@ for (const engine of browserEngines()) {
             await tab.goto(`${url}/virtualizer-grid.html?dir=${dir}&scheme=${scheme}&responsive=${responsive ? 1 : ''}&config=${encodeURIComponent(JSON.stringify(config))}`, { waitUntil: 'networkidle' });
             await tab.locator('[role="grid"] [role="row"]').first().waitFor({ timeout: 15_000 }).catch((error) => assert.fail(`no card rendered: ${error.message.split('\n')[0]}; page errors ${JSON.stringify(errors)}`));
             await tab.locator('[data-muxui-grid-list-motion-ready]').waitFor();
-            // A pointer left over from an earlier case would hover a card after reflow.
+            // A pointer left over from an earlier case would hover a card after reflow. Firefox
+            // does hover it before this move, so the hover layer is fading out when the grid settles.
             await tab.mouse.move(0, 0);
             await api.settle();
+            await settleMotion(api.root());
           },
           settle: () => tab.evaluate(() => window.__settled()),
           snapshot: () => tab.evaluate(() => window.__snapshot()),

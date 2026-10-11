@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 
 // Page-side probes shared by the GridList browser tests. Each probe is passed to
 // `page.evaluate` or `page.waitForFunction`, so it must stay self-contained. The
-// helpers from `settleMotion` on run in Node.
+// helpers from `settleMotion` on run in Node and serve every browser test.
 
 /** Reads the focused row's painted ring, and every ancestor that would clip it. */
 export function measureFocusRing() {
@@ -109,14 +109,15 @@ export function measureForcedSelection(rowSelector) {
 }
 
 /**
- * Resolves once nothing animates on the element or inside it, so the paint read next is a settled
- * value and not one frame of a transition: a read taken before the first frame still shows the
- * transition's start, and one taken while it runs shows a blend that can equal the paint it is
- * leaving. A transition that a later style change replaces rejects its `finished` promise, so each
- * pass looks again. Fails, naming what still runs, after `timeout`.
+ * Resolves once nothing animates on the element or inside it, pseudo-elements included, so the
+ * paint read next is a settled value and not one frame of a transition: a read taken before the
+ * first frame still shows the transition's start, and one taken while it runs shows a blend that
+ * can equal the paint it is leaving. `target` is a locator or an element handle. A transition that
+ * a later style change replaces rejects its `finished` promise, so each pass looks again. Fails,
+ * naming what still runs, after `timeout`.
  */
-export function settleMotion(locator, timeout = 5000) {
-  return locator.evaluate(async (node, limit) => {
+export function settleMotion(target, timeout = 5000) {
+  return target.evaluate(async (node, limit) => {
     const deadline = Date.now() + limit;
     const expired = new Promise((resolve) => setTimeout(resolve, limit));
     for (let running = node.getAnimations({ subtree: true }); running.length > 0; running = node.getAnimations({ subtree: true })) {
