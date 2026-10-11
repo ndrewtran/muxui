@@ -878,6 +878,16 @@
   display: inline-block;
 }
 
+/* The trigger draws the same keyboard ring as Button. The transparent outline replaces the browser's own and stays visible in forced colors. */
+.muxui-menu-trigger:focus-visible,
+.muxui-menu-trigger[data-focus-visible] {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 2px var(--muxui-semantic-focus-inner),
+    0 0 0 4px var(--muxui-semantic-focus-ring);
+}
+
 .muxui-menu-popup {
   outline: none;
   max-block-size: var(--available-height);
