@@ -20,6 +20,13 @@ import { backgroundOptions, buildTheme, managerThemeCss, previewThemeCss } from 
 import { projectMeasurePalette } from '../.storybook/measure-palette.mjs';
 
 const appRoot = resolve(import.meta.dirname, '..');
+// Storybook's own interface (manager, docs, onboarding, create-story, ArgsTable) is the
+// private host, not the library, so release preparation and the main push plan set
+// MUXUI_STORYBOOK_UI_PROOF=skip (Decision 0030). Pull requests that change Storybook
+// chrome, the weekly schedule, manual runs, and a direct package check keep them.
+const storybookUiSkip = process.env.MUXUI_STORYBOOK_UI_PROOF === 'skip'
+  ? 'Storybook own-interface proof is skipped by MUXUI_STORYBOOK_UI_PROOF=skip'
+  : false;
 // Preloaded into the audited `storybook dev` process with `node --import`.
 // Storybook fetches What's new data server-side, so browser routing cannot
 // intercept it. A fixed unread post keeps the Settings highlight dot and the
@@ -721,7 +728,7 @@ test('Storybook search status icons use canonical action and option-state colour
   } finally { await browser.close(); }
 });
 
-test('Storybook create-story dialog paints only Mux colours', { timeout: 90000 }, async () => {
+test('Storybook create-story dialog paints only Mux colours', { timeout: 90000, skip: storybookUiSkip }, async () => {
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   try {
@@ -801,7 +808,7 @@ test('Storybook create-story dialog paints only Mux colours', { timeout: 90000 }
   } finally { await browser.close(); server.stop(); }
 });
 
-test('Storybook completed and skipped onboarding states paint only Mux colours', { timeout: 120000 }, async () => {
+test('Storybook completed and skipped onboarding states paint only Mux colours', { timeout: 120000, skip: storybookUiSkip }, async () => {
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   try {
@@ -896,7 +903,7 @@ test('Storybook completed and skipped onboarding states paint only Mux colours',
   }
 });
 
-test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in light and dark', { timeout: 120000 }, async (t) => {
+test('Storybook Docs ArgsTable keeps prose readable and type badges distinct in light and dark', { timeout: 120000, skip: storybookUiSkip }, async (t) => {
   const server = await startStorybook();
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   try {
@@ -1730,6 +1737,7 @@ async function runColourWorker({ browser, schemes, workerId }) {
 
 test('Storybook manager and docs paint only canonical Mux colours in light and dark', {
   timeout: 420000,
+  skip: storybookUiSkip,
 }, async (t) => {
   const browser = await chromium.launch({ executablePath: await browserPath(), headless: true });
   const report = { storybookVersion: '10.5.10', tokenSource: 'catalog/tokens/default-theme.json', states: [] };

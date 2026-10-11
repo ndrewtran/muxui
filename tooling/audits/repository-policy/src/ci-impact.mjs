@@ -1964,8 +1964,11 @@ function fullPlannedCommands(environment, testSources, packages) {
   addScaleDocsBrowserCommand(add);
   add('storybook-a11y', [...nodeTest, a11yFile], { env: storybookEnv, unsetEnv: storybookSelectionKeys });
   add('storybook', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
+  // Storybook's own-interface colour proofs are not release proof (Decision 0030): a main push skips
+  // them. The schedule, manual runs, and pull request plans keep them.
   add('storybook', [...nodeTest, ...storybookTestFiles().filter((file) => file !== a11yFile)], {
-    env: storybookEnv, unsetEnv: storybookSelectionKeys,
+    env: { ...storybookEnv, ...(environment.GITHUB_EVENT_NAME === 'push' ? { MUXUI_STORYBOOK_UI_PROOF: 'skip' } : {}) },
+    unsetEnv: storybookSelectionKeys,
   });
   add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'install', '--ignore-workspace', '--frozen-lockfile'], { prerequisite: true });
   add('tailwind', ['--dir', 'tests/fixtures/tailwind-consumer', 'run', 'check']);
