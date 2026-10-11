@@ -73,7 +73,7 @@
   "accessibility": [
     "The thread tabs are a Tabs list named Chats: arrow keys move between tabs, and the open thread follows the selected tab.",
     "The open thread is the tab panel named by its tab, holding a log region, and the panel is a Tab stop that shows the Tabs focus ring.",
-    "The header actions are IconButtons named New chat and History, and a Menu trigger named More actions opens a menu named Chat actions.",
+    "The header actions are IconButtons named New chat and History, and a Menu trigger named More actions opens a menu with the same name.",
     "The composer is a form: Enter sends, Shift plus Enter adds a line, and Send stays disabled until there is text.",
     "Sending adds your text to the end of the open thread as a right-aligned message.",
     "Assistant replies render through Markdown, which removes raw HTML and unsafe links, and each reply starts with a muted trace line."

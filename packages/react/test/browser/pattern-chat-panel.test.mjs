@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { assertFits, openBlock, patternVariant, reachableStops, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
+import { assertFits, assertUniqueIds, openBlock, patternVariant, reachableStops, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the chat panel block, loaded from its canonical catalog
@@ -134,6 +134,21 @@ for (const engine of browserEngines()) {
         }
       });
 
+      await t.test('shows the Mux focus ring on the menu trigger, not the browser outline', async () => {
+        const { context, tab } = await openBlock(browser, url);
+        try {
+          await tab.locator('#before').focus();
+          for (let presses = 0; presses < 8 && await stopOf(tab) !== 'button More actions'; presses += 1) await tab.keyboard.press('Tab');
+          assert.equal(await stopOf(tab), 'button More actions');
+          await pollUntil(tab, () => {
+            const { boxShadow, outlineStyle } = getComputedStyle(document.activeElement);
+            return boxShadow !== 'none' && outlineStyle !== 'auto';
+          }, undefined, { message: 'the focused menu trigger draws the ring and not the default outline', report: () => { const { boxShadow, outlineStyle } = getComputedStyle(document.activeElement); return { boxShadow, outlineStyle }; } });
+        } finally {
+          await context.close();
+        }
+      });
+
       await t.test('walks every control in order in light and dark, each with a focus ring that differs from rest', async () => {
         for (const scheme of ['light', 'dark']) {
           for (const [label, prepare, expected] of [
@@ -151,6 +166,10 @@ for (const engine of browserEngines()) {
             }
           }
         }
+      });
+
+      await t.test('two instances share no ids', async () => {
+        await assertUniqueIds(browser, url, 'chat panel');
       });
 
       await t.test('never scrolls the page horizontally, even with a long unbroken message', async () => {
