@@ -114,7 +114,7 @@
         "A nested group without a link uses native disclosure semantics; a group that is also a link pairs it with a toggle button that reports aria-expanded and controls the nested list.",
         "Nav items nest through items to any depth, so a category can hold blocks that hold variants. Each entry is a link, a group, or a link with a group, and entries take a stable id for their React key, defaulting to href.",
         "A group opens under the caller with expanded and onExpandedChange, or manages itself from defaultExpanded; groups start closed. A controlled group stays as the caller left it when a change is refused.",
-        "Activating the link of a link group navigates; its toggle button opens or closes the nested list, which is hidden while closed.",
+        "Activating the link of a link group navigates; its toggle button opens or closes the nested list, which is hidden while closed. The toggle is named by the link's rendered label, so a label that is a component names it too.",
         "current marks an item's page with aria-current=\"page\" and the sidebar's current style; on a group without a link it only styles the header.",
         "A folded rail shows only top-level items: a link group keeps its link, and its toggle and nested list are hidden.",
         "Mobile navigation traps focus and returns it to the trigger on close.",

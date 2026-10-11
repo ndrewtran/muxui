@@ -95,16 +95,32 @@ test('groups render closed unless defaultExpanded or expanded says otherwise', (
 test('a link group pairs the link with a toggle that names and controls its list', () => {
   const html = renderToString(nav(catalog({ defaultExpanded: true })));
   const row = /<div class="muxui-sidebar__nav-row">(.*?)<\/div>/u.exec(html)?.[1] ?? '';
-  assert.match(row, /^<a [^>]*href="\/catalog"[^>]*><span class="muxui-sidebar__nav-label">Catalog<\/span><\/a><button /u);
+  assert.match(row, /^<a [^>]*href="\/catalog"[^>]*><span id="[^"]+" class="muxui-sidebar__nav-label">Catalog<\/span><\/a><button /u);
   const toggle = /<button [^>]*>/u.exec(row)?.[0] ?? '';
   const controls = /aria-controls="([^"]+)"/u.exec(toggle)?.[1];
   assert.ok(controls && html.includes(`<ul id="${controls}"`), 'the toggle points at the nested list');
-  assert.match(toggle, /aria-label="Catalog"/u);
+  const named = /aria-labelledby="([^"]+)"/u.exec(toggle)?.[1];
+  assert.ok(named && row.includes(`<span id="${named}" class="muxui-sidebar__nav-label">Catalog</span>`), 'the toggle is named by the rendered label');
   assert.match(toggle, /class="muxui-sidebar__nav-btn muxui-sidebar__nav-toggle/u);
   // The block group nests under the category list with its own row, and the current variant carries the marker.
   assert.equal([...html.matchAll(/muxui-sidebar__nav-row/gu)].length, 2);
   assert.match(html, /aria-current="page"[^>]*>Primary<\/a>/u);
   assert.equal([...html.matchAll(/aria-current="page"/gu)].length, 1);
+});
+
+test('a link group names its toggle from the rendered label, whether it is text or a component', async () => {
+  const Settings = () => h('span', null, 'Set', h('b', null, 'tings'));
+  const Profile = () => h('em', null, 'Profile');
+  const group = h(Sidebar.NavItem, { href: '/settings', defaultExpanded: true, items: [{ id: 'profile', label: h(Profile), href: '/settings/profile', defaultExpanded: true, items: [{ label: 'Avatar', href: '/settings/profile/avatar' }] }] }, h(Settings));
+  await withDom(nav(group), async (document) => {
+    const toggles = [...document.querySelectorAll('.muxui-sidebar__nav-toggle')];
+    assert.equal(toggles.length, 2);
+    const names = toggles.map((toggle) => {
+      assert.equal(toggle.hasAttribute('aria-label'), false, 'the name comes from the label, not a string copy of it');
+      return document.getElementById(toggle.getAttribute('aria-labelledby'))?.textContent;
+    });
+    assert.deepEqual(names, ['Settings', 'Profile'], 'a component label names the toggle at the top level and nested');
+  });
 });
 
 /** Renders into a jsdom window; `act` flushes the React updates a click causes. */
@@ -216,7 +232,7 @@ test('entries keep their state by id when siblings come and go', async () => {
     ] }, 'Group'));
   }
   await withDom(h(Filtered), async (document) => {
-    const second = () => document.querySelector('[aria-label="Second"]');
+    const second = () => [...document.querySelectorAll('.muxui-sidebar__nav-toggle')].find((toggle) => document.getElementById(toggle.getAttribute('aria-labelledby')).textContent === 'Second');
     assert.equal(second().getAttribute('aria-expanded'), 'true');
     await click(second());
     assert.equal(second().getAttribute('aria-expanded'), 'false');

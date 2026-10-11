@@ -803,7 +803,8 @@ function nestedBoxOf(selector) {
 /** The focused control as role and name; runs in the page. */
 function nestedFocusedControl() {
   const node = document.activeElement;
-  const name = node.querySelector?.('.muxui-sidebar__nav-label')?.textContent ?? node.getAttribute('aria-label') ?? node.textContent.trim();
+  const labelled = node.getAttribute('aria-labelledby');
+  const name = node.querySelector?.('.muxui-sidebar__nav-label')?.textContent ?? node.getAttribute('aria-label') ?? (labelled && document.getElementById(labelled).textContent) ?? node.textContent.trim();
   return `${node.tagName === 'A' ? 'link' : node.tagName === 'SUMMARY' ? 'group' : 'button'} ${name}`;
 }
 
@@ -968,6 +969,87 @@ for (const engine of browserEngines()) {
         assert.deepEqual(fold.errors, [], `${engine}: folding logs no errors`);
       } finally {
         await fold.context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
+
+// Cross-engine proof for how Sidebar groups are named and where their focus goes: a link group's toggle is named by
+// its rendered label, text or component, at any depth. Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+
+const groupsEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Sidebar } from '/src/supplemental/index.mjs';
+
+const h = React.createElement;
+// Labels that are components, so no string copy of them exists to name a toggle.
+const SettingsLabel = () => h('span', null, 'Set', h('b', null, 'tings'));
+const ProfileLabel = () => h('em', null, 'Profile');
+
+function Shell() {
+  const [open, setOpen] = React.useState({ settings: true, profile: true, tools: true });
+  window.__setOpen = (id, next) => setOpen((previous) => ({ ...previous, [id]: next }));
+  const control = (id) => ({ expanded: open[id], onExpandedChange: (next) => setOpen((previous) => ({ ...previous, [id]: next })) });
+  return h(React.Fragment, null,
+    h('button', { id: 'before', type: 'button' }, 'Before'),
+    h(Sidebar.Provider, null,
+      h(Sidebar.Root, { 'aria-label': 'Workspace' },
+        h(Sidebar.NavList, { 'aria-label': 'Workspace' },
+          h(Sidebar.NavItem, { href: '#settings', ...control('settings'), items: [
+            { id: 'profile', label: h(ProfileLabel), href: '#profile', ...control('profile'), items: [{ label: 'Avatar', href: '#avatar' }] },
+            { label: 'Billing', href: '#billing' },
+          ] }, h(SettingsLabel)),
+          h(Sidebar.NavItem, { ...control('tools'), items: [{ label: 'Hammer', href: '#hammer' }] }, 'Tools')))),
+    h('button', { id: 'after', type: 'button' }, 'After'));
+}
+createRoot(document.getElementById('root')).render(h(Shell));
+`;
+
+const groupsPage = (url) => pageShell({
+  attributes: `data-muxui-color-scheme="light"${url.searchParams.get('dir') === 'rtl' ? ' dir="rtl"' : ''}`,
+  head: '<link rel="stylesheet" href="/generated/styles.css">',
+  bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<div id="root"></div>',
+  entry: '/sidebar-groups-entry.mjs',
+});
+
+for (const engine of browserEngines()) {
+  test(`Sidebar groups are named by their labels in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-groups.html': groupsPage },
+      modules: { '/sidebar-groups-entry.mjs': groupsEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-groups.html`, 'aside');
+      const open = async (query = '') => {
+        const context = await browser.newContext({ viewport: { width: 900, height: 700 }, locale: 'en-US' });
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+        await tab.goto(`${url}/sidebar-groups.html${query}`, { waitUntil: 'networkidle' });
+        await tab.locator('aside').waitFor({ timeout: 15_000 });
+        return { tab, context, errors };
+      };
+      const { tab, context, errors } = await open();
+      try {
+        // The toggle beside a link whose label is a component is still named, at the top level and nested.
+        for (const name of ['Settings', 'Profile']) {
+          const toggle = tab.getByRole('button', { name, exact: true });
+          assert.equal(await toggle.count(), 1, `${engine}: the ${name} toggle is named by its rendered label`);
+          assert.equal(await toggle.getAttribute('aria-expanded'), 'true', `${engine}: and reports its state`);
+        }
+        assert.equal(await tab.locator('.muxui-sidebar__nav-toggle[aria-label]').count(), 0, `${engine}: no toggle carries a string copy of its label`);
+        assert.deepEqual(errors, [], `${engine}: the page logged no errors`);
+      } finally {
+        await context.close();
       }
     } finally {
       await browser?.close();

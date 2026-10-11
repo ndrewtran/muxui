@@ -1201,13 +1201,16 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
   const [open, setOpen] = useSidebarExpanded({ expanded, defaultExpanded, onExpandedChange });
   const detailsRef = React.useRef(null);
   const listId = React.useId();
+  const labelId = React.useId();
   const [, rerender] = React.useReducer((count) => count + 1, 0);
   // The browser can open a details group itself (find in page); a caller that refuses the change gets its state back.
   useIsomorphicLayoutEffect(() => { if (detailsRef.current && detailsRef.current.open !== open) detailsRef.current.open = open; });
   // Folded, an item without an icon keeps a mark in the icon column: the first character of its label, or a dot if it has no text.
   const initial = child || Icon || !sidebar ? undefined : [...sidebarLabelText(label).trim()][0]?.toUpperCase() ?? '•';
   const leading = Icon ? h(Icon, { className: 'muxui-sidebar__nav-icon', 'aria-hidden': true }) : initial && h('span', { className: 'muxui-sidebar__nav-mark', 'aria-hidden': true }, initial);
-  const body = (...trailing) => (child ? [label, ...trailing] : [leading, h('span', { className: 'muxui-sidebar__nav-label' }, label), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), ...trailing]);
+  // A link group's toggle takes its name from the rendered label, so a label that is a component still names it. A child's label is its link's whole content.
+  const linkGroup = Boolean(href && items?.length);
+  const body = (...trailing) => (child ? [label, ...trailing] : [leading, h('span', { id: linkGroup ? labelId : undefined, className: 'muxui-sidebar__nav-label' }, label), badge && h('span', { className: 'muxui-sidebar__nav-badge' }, badge), ...trailing]);
   const named = (node) => (child ? node : h(SidebarRailTooltip, { label }, node));
   const className = cx('muxui-sidebar__nav-link', child && 'muxui-sidebar__nav-child-link', current && 'muxui-sidebar__nav-link--current');
   const chevron = h(ChevronDownIcon, { className: 'muxui-sidebar__nav-chevron', 'aria-hidden': true, focusable: 'false' });
@@ -1218,8 +1221,8 @@ function SidebarNavNode({ label, href, icon: Icon, badge, current = false, exter
   } else if (href) {
     content = h(React.Fragment, null,
       h('div', { className: 'muxui-sidebar__nav-row' },
-        named(h(AriaLink, { href, className, 'aria-current': current ? 'page' : undefined }, ...body())),
-        h(AriaButton, { className: 'muxui-sidebar__nav-btn muxui-sidebar__nav-toggle', 'aria-label': sidebarLabelText(label), 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
+        named(h(AriaLink, { id: child ? labelId : undefined, href, className, 'aria-current': current ? 'page' : undefined }, ...body())),
+        h(AriaButton, { className: 'muxui-sidebar__nav-btn muxui-sidebar__nav-toggle', 'aria-labelledby': labelId, 'aria-expanded': open, 'aria-controls': listId, onPress: () => setOpen(!open) }, chevron)),
       nested);
   } else {
     // Folded, the group has no room to open: activating it unfolds the sidebar and opens the group.
