@@ -27,41 +27,51 @@ async function corpus() {
   ));
 }
 
-async function setup() {
+/** Freezes a value and everything it reaches, so a test that mutates the shared baseline throws. */
+function deepFreeze(value) {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const child of Object.values(value)) deepFreeze(child);
+  }
+  return value;
+}
+
+/** Loads the live repository's authoring context; throws when it drifts from `sourceRevision`. */
+function loadContext(sourceRevision) {
+  return loadRepositoryAuthoringContext({ repositoryRoot, expectedSourceRevision: sourceRevision });
+}
+
+async function buildBaseline() {
   const compiled = await compileCatalog({ repositoryRoot });
-  const context = await loadRepositoryAuthoringContext({
-    repositoryRoot,
-    expectedSourceRevision: compiled.bundle.sourceRevision,
-  });
-  const component = compiled.bundle.artifacts.find(
-    ({ id }) => id === 'muxui:component:button',
-  );
-  const examples = compiled.bundle.artifacts
-    .filter(({ kind }) => kind === 'example')
-    .map(({ record }) => record);
-  const tokenSources = compiled.bundle.artifacts
-    .filter(({ kind }) => kind === 'token')
-    .map(({ record }) => record);
+  // Frozen copies, so no test can change what the others read. Tests clone a record before changing it.
+  const { sourceRevision, artifacts } = deepFreeze(structuredClone(compiled.bundle));
+  const component = artifacts.find(({ id }) => id === 'muxui:component:button');
+  const exampleArtifacts = artifacts.filter(({ kind }) => kind === 'example');
   const exampleSources = {};
-  for (const artifact of compiled.bundle.artifacts.filter(({ kind }) => kind === 'example')) {
+  for (const artifact of exampleArtifacts) {
     exampleSources[artifact.id] = await readFile(
       resolve(repositoryRoot, artifact.source.content),
       'utf8',
     );
   }
   return {
-    compiled,
-    context,
+    sourceRevision,
+    context: await loadContext(sourceRevision),
     component,
-    revisionContext: {
-      examples,
-      tokenSources,
+    revisionContext: deepFreeze({
+      examples: exampleArtifacts.map(({ record }) => record),
+      tokenSources: artifacts.filter(({ kind }) => kind === 'token').map(({ record }) => record),
       exampleSources,
       tokenRequirementSets: component.tokenRequirementSets,
       platformSafetyRequirementSets: component.platformSafetyRequirementSets,
-    },
+    }),
   };
 }
+
+// One compile and context load serves every test that only reads the catalog. Tests that detect drift or
+// recompilation call the loader and compiler themselves instead of reading this.
+let baseline;
+const setup = () => (baseline ??= buildBaseline());
 
 async function temporaryCatalogRepository() {
   const temporaryRoot = await mkdtemp(join(tmpdir(), 'muxui-g0-5-'));
@@ -217,7 +227,9 @@ test('E-G0.5-01: scaffold, validation, compilation, retrieval, diagnosis, and re
 });
 
 test('E-G0.5-01 negative: diagnostics require an exact manifest source and source revision', async () => {
-  const { compiled, context, component } = await setup();
+  const { sourceRevision, component } = await setup();
+  // The drift and revision checks load the live repository themselves, so this test's context is not the shared one.
+  const context = await loadContext(sourceRevision);
   await assert.rejects(
     loadRepositoryAuthoringContext({
       repositoryRoot,
@@ -237,7 +249,7 @@ test('E-G0.5-01 negative: diagnostics require an exact manifest source and sourc
   });
   assert.equal(undeclared.valid, false);
   assert.equal(undeclared.diagnostics[0].ruleId, 'authoring.source.declared-owner');
-  assert.equal(context.sourceRevision, compiled.bundle.sourceRevision);
+  assert.equal(context.sourceRevision, sourceRevision);
 
   const temporaryRoot = await temporaryCatalogRepository();
   try {
@@ -247,7 +259,7 @@ test('E-G0.5-01 negative: diagnostics require an exact manifest source and sourc
     await assert.rejects(
       loadRepositoryAuthoringContext({
         repositoryRoot: temporaryRoot,
-        expectedSourceRevision: compiled.bundle.sourceRevision,
+        expectedSourceRevision: sourceRevision,
       }),
       (error) => {
         assert.ok(error instanceof AuthoringPolicyError);
