@@ -1,0 +1,41 @@
+# step: Verify dry run (raw lines 155-162)
+2026-10-11T10:18:16.8031189Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs dry-run
+2026-10-11T10:18:16.8077991Z shell: /usr/bin/bash -e {0}
+2026-10-11T10:18:16.8078314Z env:
+2026-10-11T10:18:16.8078434Z   DRY_RUN_ID: 38131265811
+2026-10-11T10:18:16.8079898Z   <redacted credential input>
+2026-10-11T10:18:16.8080012Z ##[endgroup]
+2026-10-11T10:18:17.6633528Z Dry run 38131265811 attempt 1 succeeded at 1ffcbbdb99cf598982d0c169f0e1b1ebd57a07df; npm-candidate artifact 11699390873 (1897442 bytes, sha256:bff131bd628545a3862f284a51fdf7fd1a429266898f2c7977c05605e8d45b4e)
+# step: Fetch dry-run candidate (raw lines 163-176)
+2026-10-11T10:18:17.6741894Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs fetch-candidate
+2026-10-11T10:18:17.6795518Z shell: /usr/bin/bash -e {0}
+2026-10-11T10:18:17.6795655Z env:
+2026-10-11T10:18:17.6795873Z   VERSION: 0.1.0-rc.3
+2026-10-11T10:18:17.6795996Z   DRY_RUN_ID: 38131265811
+2026-10-11T10:18:17.6796115Z   DRY_RUN_ATTEMPT: 1
+2026-10-11T10:18:17.6796244Z   ARTIFACT_ID: 11699390873
+2026-10-11T10:18:17.6796457Z   ARTIFACT_DIGEST: sha256:bff131bd628545a3862f284a51fdf7fd1a429266898f2c7977c05605e8d45b4e
+2026-10-11T10:18:17.6796700Z   ARTIFACT_SIZE: 1897442
+2026-10-11T10:18:17.6796841Z   CANDIDATE_DIR: <runner-temp>
+2026-10-11T10:18:17.6798309Z   <redacted credential input>
+2026-10-11T10:18:17.6798421Z ##[endgroup]
+2026-10-11T10:18:19.1302623Z Fetched npm-candidate artifact 11699390873 (1897442 bytes, sha256:bff131bd628545a3862f284a51fdf7fd1a429266898f2c7977c05605e8d45b4e) from dry run 38131265811 attempt 1
+# step: Verify promoted candidate (raw lines 177-188)
+2026-10-11T10:18:19.1386987Z ##[group]Run node tooling/audits/repository-policy/src/release-lineage.mjs candidate
+2026-10-11T10:18:19.1439764Z shell: /usr/bin/bash -e {0}
+2026-10-11T10:18:19.1439942Z env:
+2026-10-11T10:18:19.1440064Z   VERSION: 0.1.0-rc.3
+2026-10-11T10:18:19.1440362Z   EXPECTED_SHA512: sha512-FDkRExjP0Y30KmlJKdCFFOZLiejW1TFJVB7VZxN71jWtHYFa6WlHzV5TnkD1AtKhrLY9t/5zG+MPs17SwXTgHg==
+2026-10-11T10:18:19.1440664Z   DRY_RUN_ID: 38131265811
+2026-10-11T10:18:19.1440831Z   DRY_RUN_ATTEMPT: 1
+2026-10-11T10:18:19.1440973Z   CANDIDATE_DIR: <runner-temp>
+2026-10-11T10:18:19.1441141Z ##[endgroup]
+2026-10-11T10:18:19.2068272Z Promoted candidate 0.1.0-rc.3 sha512-FDkRExjP0Y30KmlJKdCFFOZLiejW1TFJVB7VZxN71jWtHYFa6WlHzV5TnkD1AtKhrLY9t/5zG+MPs17SwXTgHg== from dry run 38131265811 attempt 1
+2026-10-11T10:18:19.2069416Z Dry run preparation: reused main CI run 38130693973 attempt 1
+# step: Collect candidate (raw lines 189-229)
+2026-10-11T10:18:19.2130691Z ##[group]Run set -euo pipefail
+2026-10-11T10:18:19.2188935Z shell: /usr/bin/bash -e {0}
+2026-10-11T10:18:19.2189080Z env:
+2026-10-11T10:18:19.2189209Z   PROMOTED_DIR: <runner-temp>
+2026-10-11T10:18:19.2189368Z ##[endgroup]
+2026-10-11T10:18:19.2619376Z Candidate 0.1.0-rc.3 sha512-FDkRExjP0Y30KmlJKdCFFOZLiejW1TFJVB7VZxN71jWtHYFa6WlHzV5TnkD1AtKhrLY9t/5zG+MPs17SwXTgHg==
