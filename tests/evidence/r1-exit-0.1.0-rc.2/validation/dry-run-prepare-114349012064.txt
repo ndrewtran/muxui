@@ -1,0 +1,189 @@
+# step: Prepare release candidate (raw lines 207-2776)
+2026-10-11T00:26:10.0361012Z ##[group]Run set -euo pipefail
+2026-10-11T00:26:10.0443460Z shell: /usr/bin/bash -e {0}
+2026-10-11T00:26:10.0443725Z env:
+2026-10-11T00:26:10.0443987Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T00:26:10.0444370Z   MUXUI_RELEASE_CANDIDATE_VERSION: 0.1.0-rc.2
+2026-10-11T00:26:10.0444663Z ##[endgroup]
+2026-10-11T00:44:21.6980546Z [E-G0.0-04] independent clean checkouts 1899324c8aed2d94a6324c4656d2149af5571f39 generated identical projections with clean worktrees (sha256:aedbb7fb70875e528ae6d488d87eee1d1ef2149074284976073323b03b4963a9)
+2026-10-11T00:44:40.4333249Z R1.5 packed import 612.28ms / 2000ms; SSR 129.26ms / 1000ms
+2026-10-11T00:44:40.4609275Z R1 exit offline consumer resolves @tiptap/core 3.31.4 across 122 runtime packages
+2026-10-11T00:44:40.6205151Z R1 exit public-surface leak scan passed for 132 upstream names across 16 declarations, 6 public entries, README, and 7 guidance projections
+2026-10-11T00:44:40.7806483Z R1 exit side-effect scan passed for 46 packed JS modules
+2026-10-11T00:44:47.2833723Z R1 exit packed SSR/hydration: 117 renders (105 component examples, 9 pattern variants, plus fixtures) cover 105 runtime exports across @muxui/react, @muxui/react/markdown, @muxui/react/text-editor; SSR 796.89ms / 1000ms; 117 hydrations without mismatch
+2026-10-11T00:44:47.7657527Z R1 exit tree-shaking (vite 8.2.1, Button only): 114190 rendered JS bytes from 44 modules; @muxui/react keeps only generated/button.mjs; packages: react-aria 101260, react-aria-components 8600, @muxui/react 3384, clsx 615, react-stately 331; stylesheet 4472309 bytes kept
+2026-10-11T00:44:51.1598013Z R1 exit consumer matrix pnpm 10.33.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 122 runtime packages
+2026-10-11T00:45:02.7282810Z R1 exit consumer matrix npm 11.17.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 122 runtime packages
+2026-10-11T00:45:16.5133440Z R1 exit consumer matrix yarn 1.22.22: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 119 runtime packages
+2026-10-11T00:45:17.7609688Z R1 exit npm publish dry-run passed without lifecycle hooks or registry mutation
+2026-10-11T00:45:17.8123118Z R1 exit correlation: 84 binding-spec revisions, 73 generated outputs, 5 captured CI evidence indexes, 1 retained review evidence index, visual contract sha256:4e8dfc7d83328464a09256c854870e19cb888322dcdaa4b9bfc035e5c77e148e
+2026-10-11T00:45:17.8184531Z R1 exit artifacts written to <tmp>/muxui-r1-exit-output-B3JeAC
+2026-10-11T00:45:20.7292961Z R1 exit release preparation passed for 0.1.0-rc.2; source @muxui/react remains private and unpublished.
+# step: Collect candidate (raw lines 2777-2813)
+2026-10-11T00:45:20.7794683Z ##[group]Run set -euo pipefail
+2026-10-11T00:45:20.7869716Z shell: /usr/bin/bash -e {0}
+2026-10-11T00:45:20.7869967Z env:
+2026-10-11T00:45:20.7870218Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T00:45:20.7870539Z ##[endgroup]
+2026-10-11T00:45:20.8471913Z Candidate 0.1.0-rc.2 sha512-l9wy+463OlZ4lXTAohi/O0Owldke7lqcIn9zLkUfuOKb55bUWUgCboDvrh3Nhl+OX+9MLnI4rTXtlVnvBDHJ9A==
+# step: Rehearse npm publish (dry run) (raw lines 2814-2938)
+2026-10-11T00:45:20.8510687Z ##[group]Run set -euo pipefail
+2026-10-11T00:45:20.8569677Z shell: /usr/bin/bash -e {0}
+2026-10-11T00:45:20.8569968Z env:
+2026-10-11T00:45:20.8570223Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T00:45:20.8570674Z   TARBALL: <runner-temp>/muxui-react-0.1.0-rc.2.tgz
+2026-10-11T00:45:20.8571091Z   npm_config_engine_strict: false
+2026-10-11T00:45:20.8571342Z ##[endgroup]
+2026-10-11T00:45:21.4130856Z npm notice
+2026-10-11T00:45:21.4136728Z npm notice 📦  @muxui/react@0.1.0-rc.2
+2026-10-11T00:45:21.4137350Z npm notice Tarball Contents
+2026-10-11T00:45:21.4154085Z npm notice 1.1kB LICENSE
+2026-10-11T00:45:21.4154624Z npm notice 5.9kB NOTICE
+2026-10-11T00:45:21.4154912Z npm notice 40.9kB README.md
+2026-10-11T00:45:21.4155307Z npm notice 906.6kB assets/fonts/Inter-Italic[opsz,wght].ttf
+2026-10-11T00:45:21.4155758Z npm notice 876.6kB assets/fonts/Inter[opsz,wght].ttf
+2026-10-11T00:45:21.4156352Z npm notice 4.4kB assets/fonts/OFL.txt
+2026-10-11T00:45:21.4157179Z npm notice 278.7kB assets/fonts/PlayfairDisplay-Italic[wght].ttf
+2026-10-11T00:45:21.4158124Z npm notice 300.7kB assets/fonts/PlayfairDisplay[wght].ttf
+2026-10-11T00:45:21.4159559Z npm notice 196.8kB assets/fonts/RobotoMono-Italic[wght].ttf
+2026-10-11T00:45:21.4160065Z npm notice 183.7kB assets/fonts/RobotoMono[wght].ttf
+2026-10-11T00:45:21.4161085Z npm notice 1.2kB generated/activity.d.ts
+2026-10-11T00:45:21.4161733Z npm notice 7.8kB generated/activity.mjs
+2026-10-11T00:45:21.4162335Z npm notice 981B generated/avatar.d.ts
+2026-10-11T00:45:21.4162754Z npm notice 7.5kB generated/avatar.mjs
+2026-10-11T00:45:21.4163079Z npm notice 3.5kB generated/button.mjs
+2026-10-11T00:45:21.4163653Z npm notice 3.1kB generated/calendar-height-motion.mjs
+2026-10-11T00:45:21.4164229Z npm notice 5.1kB generated/calendar-selection-motion.mjs
+2026-10-11T00:45:21.4164657Z npm notice 3.2kB generated/candidate-motion.mjs
+2026-10-11T00:45:21.4165239Z npm notice 608B generated/choice-context.mjs
+2026-10-11T00:45:21.4165653Z npm notice 5.2kB generated/code-block-highlight.mjs
+2026-10-11T00:45:21.4166025Z npm notice 860B generated/code-block.d.ts
+2026-10-11T00:45:21.4166391Z npm notice 12.4kB generated/code-block.mjs
+2026-10-11T00:45:21.4166742Z npm notice 108.2kB generated/collections.mjs
+2026-10-11T00:45:21.4167134Z npm notice 7.0kB generated/color-slider-motion.mjs
+2026-10-11T00:45:21.4167553Z npm notice 4.0kB generated/color-wheel-motion.mjs
+2026-10-11T00:45:21.4167953Z npm notice 3.0kB generated/compatibility.mjs
+2026-10-11T00:45:21.4168301Z npm notice 12.6kB generated/components.mjs
+2026-10-11T00:45:21.4168630Z npm notice 1.9kB generated/data-diff.d.ts
+2026-10-11T00:45:21.4168966Z npm notice 13.4kB generated/data-diff.mjs
+2026-10-11T00:45:21.4169644Z npm notice 5.9kB generated/date-popover-motion.mjs
+2026-10-11T00:45:21.4170031Z npm notice 92.5kB generated/descriptor.json
+2026-10-11T00:45:21.4170419Z npm notice 289B generated/descriptor.json.provenance
+2026-10-11T00:45:21.4170808Z npm notice 10.2kB generated/dialog-motion.mjs
+2026-10-11T00:45:21.4171149Z npm notice 54.7kB generated/fields.mjs
+2026-10-11T00:45:21.4171496Z npm notice 19.0kB generated/grid-list-motion.mjs
+2026-10-11T00:45:21.4171857Z npm notice 688B generated/icon-button.d.ts
+2026-10-11T00:45:21.4172191Z npm notice 1.4kB generated/icon-button.mjs
+2026-10-11T00:45:21.4172515Z npm notice 674B generated/image.d.ts
+2026-10-11T00:45:21.4172820Z npm notice 4.0kB generated/image.mjs
+2026-10-11T00:45:21.4173133Z npm notice 37.0kB generated/index.d.ts
+2026-10-11T00:45:21.4173434Z npm notice 1.4kB generated/index.mjs
+2026-10-11T00:45:21.4173744Z npm notice 3.0kB generated/lightbox.d.ts
+2026-10-11T00:45:21.4174081Z npm notice 29.6kB generated/lightbox.mjs
+2026-10-11T00:45:21.4174639Z npm notice 7.4kB generated/listbox-motion.mjs
+2026-10-11T00:45:21.4175022Z npm notice 535B generated/markdown.d.ts
+2026-10-11T00:45:21.4175354Z npm notice 8.7kB generated/markdown.mjs
+2026-10-11T00:45:21.4175681Z npm notice 9.2kB generated/menu-motion.mjs
+2026-10-11T00:45:21.4176007Z npm notice 1.2kB generated/message.d.ts
+2026-10-11T00:45:21.4176324Z npm notice 4.6kB generated/message.mjs
+2026-10-11T00:45:21.4176675Z npm notice 24.1kB generated/motion-components.mjs
+2026-10-11T00:45:21.4177027Z npm notice 6.8kB generated/motion.mjs
+2026-10-11T00:45:21.4177378Z npm notice 1.9kB generated/overlay-positioning.mjs
+2026-10-11T00:45:21.4177752Z npm notice 44.1kB generated/overlays.mjs
+2026-10-11T00:45:21.4178139Z npm notice 3.2kB generated/popover-motion.mjs
+2026-10-11T00:45:21.4178514Z npm notice 2.0kB generated/prompt-composer.d.ts
+2026-10-11T00:45:21.4178911Z npm notice 18.2kB generated/prompt-composer.mjs
+2026-10-11T00:45:21.4179738Z npm notice 91.3kB generated/r1-5-closure.json
+2026-10-11T00:45:21.4180162Z npm notice 291B generated/r1-5-closure.json.provenance
+2026-10-11T00:45:21.4180568Z npm notice 54.5kB generated/r1-6-contract.json
+2026-10-11T00:45:21.4180966Z npm notice 292B generated/r1-6-contract.json.provenance
+2026-10-11T00:45:21.4181358Z npm notice 5.3kB generated/radio-motion.mjs
+2026-10-11T00:45:21.4181761Z npm notice 14.0kB generated/range-selection-motion.mjs
+2026-10-11T00:45:21.4182135Z npm notice 64.8kB generated/release.json
+2026-10-11T00:45:21.4182497Z npm notice 286B generated/release.json.provenance
+2026-10-11T00:45:21.4182861Z npm notice 1.3kB generated/resizable.d.ts
+2026-10-11T00:45:21.4183367Z npm notice 18.0kB generated/resizable.mjs
+2026-10-11T00:45:21.4183723Z npm notice 829B generated/select-native.d.ts
+2026-10-11T00:45:21.4184079Z npm notice 4.3kB generated/select-native.mjs
+2026-10-11T00:45:21.4184429Z npm notice 4.9kB generated/slider-motion.mjs
+2026-10-11T00:45:21.4184773Z npm notice 816.5kB generated/styles.css
+2026-10-11T00:45:21.4185116Z npm notice 116.6kB generated/supplemental.css
+2026-10-11T00:45:21.4185475Z npm notice 28.0kB generated/supplemental.d.ts
+2026-10-11T00:45:21.4185821Z npm notice 96.4kB generated/supplemental.mjs
+2026-10-11T00:45:21.4186159Z npm notice 21.6kB generated/tabs-motion.mjs
+2026-10-11T00:45:21.4186494Z npm notice 305B generated/testing.mjs
+2026-10-11T00:45:21.4186826Z npm notice 7.1kB generated/text-editor.d.ts
+2026-10-11T00:45:21.4187171Z npm notice 63.1kB generated/text-editor.mjs
+2026-10-11T00:45:21.4187500Z npm notice 779.0kB generated/themes.css
+2026-10-11T00:45:21.4187819Z npm notice 1.3kB generated/themes.d.ts
+2026-10-11T00:45:21.4188133Z npm notice 3.8kB generated/themes.mjs
+2026-10-11T00:45:21.4188492Z npm notice 627B generated/toggle-button-context.mjs
+2026-10-11T00:45:21.4188932Z npm notice 13.7kB generated/toggle-button-group-motion.mjs
+2026-10-11T00:45:21.4189851Z npm notice 17.5kB generated/tree-motion.mjs
+2026-10-11T00:45:21.4190218Z npm notice 1.1kB licenses/framer-motion.MIT.txt
+2026-10-11T00:45:21.4190683Z npm notice 11.3kB licenses/internationalized-date.Apache-2.0.txt
+2026-10-11T00:45:21.4191117Z npm notice 3.2kB licenses/lucide.ISC-MIT.txt
+2026-10-11T00:45:21.4191455Z npm notice 2.9kB licenses/marked.MIT.txt
+2026-10-11T00:45:21.4191950Z npm notice 1.1kB licenses/motion-dom.MIT.txt
+2026-10-11T00:45:21.4192593Z npm notice 1.1kB licenses/motion-utils.MIT.txt
+2026-10-11T00:45:21.4193103Z npm notice 1.1kB licenses/motion.MIT.txt
+2026-10-11T00:45:21.4193529Z npm notice 11.3kB licenses/react-aria-components.Apache-2.0.txt
+2026-10-11T00:45:21.4193981Z npm notice 11.3kB licenses/react-aria.Apache-2.0.txt
+2026-10-11T00:45:21.4194404Z npm notice 2.3kB licenses/shiki-oniguruma.NOTICES.txt
+2026-10-11T00:45:21.4194833Z npm notice 1.1kB licenses/shiki-vscode-textmate.MIT.txt
+2026-10-11T00:45:21.4195197Z npm notice 1.1kB licenses/shiki.MIT.txt
+2026-10-11T00:45:21.4195519Z npm notice 1.1kB licenses/tiptap.MIT.txt
+2026-10-11T00:45:21.4195837Z npm notice 645B licenses/tslib.0BSD.txt
+2026-10-11T00:45:21.4196289Z npm notice 3.7kB package.json
+2026-10-11T00:45:21.4196572Z npm notice Tarball Details
+2026-10-11T00:45:21.4196833Z npm notice name: @muxui/react
+2026-10-11T00:45:21.4197122Z npm notice version: 0.1.0-rc.2
+2026-10-11T00:45:21.4197449Z npm notice filename: muxui-react-0.1.0-rc.2.tgz
+2026-10-11T00:45:21.4197790Z npm notice package size: 1.9 MB
+2026-10-11T00:45:21.4198084Z npm notice unpacked size: 5.7 MB
+2026-10-11T00:45:21.4198453Z npm notice shasum: 364cb67c22518bd9fe4f7204e458243250fb4a7a
+2026-10-11T00:45:21.4198917Z npm notice integrity: sha512-l9wy+463OlZ4l[...]TXtlVnvBDHJ9A==
+2026-10-11T00:45:21.4199452Z npm notice total files: 98
+2026-10-11T00:45:21.4199689Z npm notice
+2026-10-11T00:45:21.4200206Z npm warn publish This command requires you to be logged in to https://registry.npmjs.org/ (dry-run)
+2026-10-11T00:45:21.5010442Z npm notice Publishing to https://registry.npmjs.org/ with tag next and public access (dry-run)
+2026-10-11T00:45:21.5011585Z + @muxui/react@0.1.0-rc.2
+# step: Check candidate against inputs (raw lines 2939-2967)
+2026-10-11T00:45:21.5146474Z ##[group]Run set -euo pipefail
+2026-10-11T00:45:21.5225207Z shell: /usr/bin/bash -e {0}
+2026-10-11T00:45:21.5225462Z env:
+2026-10-11T00:45:21.5225719Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T00:45:21.5226178Z   TARBALL: <runner-temp>/muxui-react-0.1.0-rc.2.tgz
+2026-10-11T00:45:21.5226760Z   MANIFEST: <runner-temp>/muxui-react-0.1.0-rc.2.release-manifest.json
+2026-10-11T00:45:21.5227204Z   MODE: dry-run
+2026-10-11T00:45:21.5227407Z   EXPECTED_VERSION: 0.1.0-rc.2
+2026-10-11T00:45:21.5227639Z   EXPECTED_SHA512: 
+2026-10-11T00:45:21.5227838Z ##[endgroup]
+2026-10-11T00:45:21.5798128Z ##[notice]No tarball-sha512 input; the candidate is sha512-l9wy+463OlZ4lXTAohi/O0Owldke7lqcIn9zLkUfuOKb55bUWUgCboDvrh3Nhl+OX+9MLnI4rTXtlVnvBDHJ9A==.
+# step: Upload candidate (raw lines 2968-2993)
+2026-10-11T00:45:21.5864935Z ##[group]Run actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+2026-10-11T00:45:21.5865341Z with:
+2026-10-11T00:45:21.5865544Z   name: npm-candidate
+2026-10-11T00:45:21.5865797Z   path: <runner-temp>
+2026-10-11T00:45:21.5866089Z   if-no-files-found: error
+2026-10-11T00:45:21.5866324Z   retention-days: 3
+2026-10-11T00:45:21.5866533Z   compression-level: 6
+2026-10-11T00:45:21.5866744Z   overwrite: false
+2026-10-11T00:45:21.5866952Z   include-hidden-files: false
+2026-10-11T00:45:21.5867186Z env:
+2026-10-11T00:45:21.5867411Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T00:45:21.5867717Z ##[endgroup]
+2026-10-11T00:45:21.7526174Z (node:33439) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-10-11T00:45:21.7527026Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-10-11T00:45:21.7601611Z With the provided path, there will be 2 files uploaded
+2026-10-11T00:45:21.7615023Z Artifact name is valid!
+2026-10-11T00:45:21.7615718Z Root directory input is valid!
+2026-10-11T00:45:21.9828607Z Beginning upload of artifact content to blob storage
+2026-10-11T00:45:22.0763154Z (node:33439) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-10-11T00:45:22.3751992Z Uploaded bytes 1897267
+2026-10-11T00:45:22.4118898Z Finished uploading artifact content to blob storage!
+2026-10-11T00:45:22.4120458Z SHA256 digest of uploaded artifact zip is a4ffe786b122f97d975afad646b92dd39ae1e8a3f5f84d6ebf0b711212bd72fc
+2026-10-11T00:45:22.4122384Z Finalizing artifact upload
+2026-10-11T00:45:22.6451488Z Artifact npm-candidate.zip successfully finalized. Artifact ID 11686268741
+2026-10-11T00:45:22.6452940Z Artifact npm-candidate has been successfully uploaded! Final size is 1897267 bytes. Artifact ID is 11686268741
+2026-10-11T00:45:22.6459688Z Artifact download URL: https://github.com/ndrewtran/muxui/actions/runs/38098393207/artifacts/11686268741

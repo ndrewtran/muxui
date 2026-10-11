@@ -1,0 +1,28 @@
+# step: Prepare release candidate (raw lines 207-2777)
+2026-10-11T00:49:05.3825949Z ##[group]Run set -euo pipefail
+2026-10-11T00:49:05.3892240Z shell: /usr/bin/bash -e {0}
+2026-10-11T00:49:05.3892493Z env:
+2026-10-11T00:49:05.3892759Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T00:49:05.3893376Z   MUXUI_RELEASE_CANDIDATE_VERSION: 0.1.0-rc.2
+2026-10-11T00:49:05.3893667Z ##[endgroup]
+2026-10-11T01:07:33.0499940Z [E-G0.0-04] independent clean checkouts 1899324c8aed2d94a6324c4656d2149af5571f39 generated identical projections with clean worktrees (sha256:aedbb7fb70875e528ae6d488d87eee1d1ef2149074284976073323b03b4963a9)
+2026-10-11T01:07:52.0232396Z R1.5 packed import 629.23ms / 2000ms; SSR 132.14ms / 1000ms
+2026-10-11T01:07:52.0509162Z R1 exit offline consumer resolves @tiptap/core 3.31.4 across 122 runtime packages
+2026-10-11T01:07:52.2110127Z R1 exit public-surface leak scan passed for 132 upstream names across 16 declarations, 6 public entries, README, and 7 guidance projections
+2026-10-11T01:07:52.3712232Z R1 exit side-effect scan passed for 46 packed JS modules
+2026-10-11T01:07:59.0728814Z R1 exit packed SSR/hydration: 117 renders (105 component examples, 9 pattern variants, plus fixtures) cover 105 runtime exports across @muxui/react, @muxui/react/markdown, @muxui/react/text-editor; SSR 818.47ms / 1000ms; 117 hydrations without mismatch
+2026-10-11T01:07:59.5545914Z R1 exit tree-shaking (vite 8.2.1, Button only): 114190 rendered JS bytes from 44 modules; @muxui/react keeps only generated/button.mjs; packages: react-aria 101260, react-aria-components 8600, @muxui/react 3384, clsx 615, react-stately 331; stylesheet 4472309 bytes kept
+2026-10-11T01:08:03.0774260Z R1 exit consumer matrix pnpm 10.33.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 122 runtime packages
+2026-10-11T01:08:14.0891408Z R1 exit consumer matrix npm 11.17.0: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 122 runtime packages
+2026-10-11T01:08:27.5481675Z R1 exit consumer matrix yarn 1.22.22: online install, 6 subpaths imported, 2 stylesheets resolved, SSR Button and TextEditor, one @tiptap/core 3.31.4 across 119 runtime packages
+2026-10-11T01:08:28.4885714Z R1 exit npm publish dry-run passed without lifecycle hooks or registry mutation
+2026-10-11T01:08:28.5412484Z R1 exit correlation: 84 binding-spec revisions, 73 generated outputs, 5 captured CI evidence indexes, 1 retained review evidence index, visual contract sha256:4e8dfc7d83328464a09256c854870e19cb888322dcdaa4b9bfc035e5c77e148e
+2026-10-11T01:08:28.5474713Z R1 exit artifacts written to <tmp>/muxui-r1-exit-output-X0Xxco
+2026-10-11T01:08:32.8329128Z R1 exit release preparation passed for 0.1.0-rc.2; source @muxui/react remains private and unpublished.
+# step: Collect candidate (raw lines 2778-2814)
+2026-10-11T01:08:32.8853636Z ##[group]Run set -euo pipefail
+2026-10-11T01:08:32.8927475Z shell: /usr/bin/bash -e {0}
+2026-10-11T01:08:32.8927721Z env:
+2026-10-11T01:08:32.8927967Z   PNPM_STORE: <runner-home>/.local/share/pnpm/store/v10
+2026-10-11T01:08:32.8928275Z ##[endgroup]
+2026-10-11T01:08:32.9531012Z Candidate 0.1.0-rc.2 sha512-l9wy+463OlZ4lXTAohi/O0Owldke7lqcIn9zLkUfuOKb55bUWUgCboDvrh3Nhl+OX+9MLnI4rTXtlVnvBDHJ9A==
