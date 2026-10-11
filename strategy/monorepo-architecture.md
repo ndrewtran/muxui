@@ -45,15 +45,18 @@ and MCP server use the same query library and responses.
 
 Mux UI delivers React first:
 
-- **Primary React track:** typed React bindings, DOM/CSS behavior, styling
-  hooks, SSR/hydration, and accessibility fulfillment owned by `web.react`
-  binding specs and `@muxui/react` source.
+- **Primary React track:** the typed React API, DOM/CSS behavior, public CSS
+  contract, SSR/hydration, and accessibility fulfillment, owned by
+  `@muxui/react` TypeScript source and the `web.react` binding specs that
+  describe it and carry its derived API block.
 - **Later framework-free web track:** separately activated `web.html` binding
-  specs and `@muxui/web` HTML/CSS/controller implementation.
+  specs and `@muxui/web` HTML/CSS/controller implementation. Its package is
+  parked until activation.
 - **Later native track:** separately activated `native.react-native` binding
   specs and `@muxui/react-native` implementations built from native
   primitives and renderer-neutral component records, never from React source,
-  React Aria, DOM behavior, or React types.
+  React Aria, DOM behavior, or React types. Its package is parked until
+  activation.
 
 React Aria Components is the default internal substrate for the React track.
 It does not own Mux UI identity, inventory, semantics, API, types, lifecycle,
@@ -80,6 +83,7 @@ consistently:
 | Concept record | Canonical shared semantics, lifecycle, guidance, relations, and platform dispositions for a component or pattern. |
 | Block | The public product name for a `pattern` artifact, shown in the Blocks showcase (Decision 0026). It is a display name only: there is no `block` kind, ID prefix, schema, or relation. |
 | Binding spec | Platform-specific Mux UI API, behavior, accessibility obligations, strategy, examples, and proof requirements. |
+| API block | The `api` field of a binding spec: Mux UI props with their types, enum members, defaults, and descriptions, and events. For `web.react` it is derived from `@muxui/react` TypeScript source and never authored. |
 | Decision context | Bounded rationale attached to an existing concept, pattern, or guide: the problem, constraints, preferred approach, alternatives, and trade-offs. It explains owned facts but is not a second source of product behavior. |
 | Guidance impact | `normative` content enters a binding-spec compatibility closure; `editorial` content may explain an already-owned fact but cannot define implementation behavior. |
 | Content revision | Digest of the complete canonical record, including editorial fields and inert extensions. It proves source identity, not renderer compatibility. |
@@ -89,7 +93,7 @@ consistently:
 | Query envelope | Versioned CLI/API/MCP response shape, including data, diagnostics, provenance, authority, and compatibility metadata. |
 | Compatibility descriptor | Generated package metadata identifying the exact binding spec plus its declared token and platform-safety requirement closures. Fulfillment/support remains tied to separate current evidence. |
 | Token requirement set | The binding-specific semantic/component token IDs, requirement levels, fallbacks, types, modes, and recipe revision needed for rendering. |
-| Platform safety contract | The closed architecture-defined safety-requirement registry plus each binding/profile's complete required/not-applicable declaration. It is separate from token identity and owns no renderer behavior result. |
+| Platform safety contract | The closed architecture-defined safety-requirement registry, its default dispositions per binding kind, and each binding's overrides of them. It is separate from token identity and owns no renderer behavior result. |
 | Platform safety requirement set | A derived per-binding/profile projection of the platform safety contract, bound to the registry and declaration revisions and consumed by renderer evidence and compatibility descriptors. |
 | Token contract version | SemVer for public token identity, type, layer, and semantic meaning. |
 | Evidence record | Produced proof metadata and references for one artifact, binding, revision, environment, and result. |
@@ -141,11 +145,12 @@ AI-operable only when all of the following are true.
   implicit modes, and stringly typed escape hatches are exceptional.
 - Composition is visible in the API. Required parents, children, labels, and
   providers are machine-readable.
-- Web components expose stable markup, roles, classes, slots, data attributes,
-  events, and progressive-enhancement behavior.
-- React bindings preserve the applicable web semantics, styling, and
-  externally observable DOM surface instead of inventing a second visual or
-  semantic model.
+- Web components expose stable markup, roles, classes, data attributes, and
+  typed events. A framework-free binding, when activated, adds slots and
+  progressive-enhancement behavior.
+- React bindings keep their DOM and styling surface stable and enumerated, and
+  consistent with the concept record's anatomy and states, instead of inventing
+  a second visual or semantic model.
 - React Native shares intent, state, tokens, and accessibility obligations but
   is free to use an appropriately native API and interaction pattern.
 - Defaults are deterministic. An underspecified request produces the canonical
@@ -170,15 +175,14 @@ discover capabilities
 ```mermaid
 flowchart TD
   sources["Canonical artifact sources\ncomponents, patterns, guides, tokens, lifecycle"]
+  tokens["Token compiler"]
+  react["@muxui/react source\nTypeScript API, CSS, behavior"]
+  extract["API extraction\nprops, types, defaults, events"]
   compiler["Catalog compiler\nschema validation, relations, search index, digest"]
   catalog["Immutable catalog bundle\nversioned knowledge graph"]
   query["Pure query engine\nmanifest, list, search, get, plan"]
-
-  tokens["Token compiler"]
-  foundation["Renderer-neutral foundation\nsemantics, pure logic, optional portable interaction"]
-  react["Primary React renderer\nweb.react contract, React + CSS"]
-  web["Later framework-free renderer\nweb.html contract, HTML/CSS/controllers"]
-  native["Later React Native renderer\nnative contract and primitives"]
+  package["Packed @muxui/react\nexports, declarations, styles, guidance"]
+  later["Later renderer tracks\nweb.html and native.react-native, parked, no packages"]
 
   cli["CLI\nhuman, dense, JSON"]
   mcp["MCP\nlocal and hosted profiles"]
@@ -187,10 +191,11 @@ flowchart TD
   proof["Proof graph\ntypes, behavior, a11y, visual, package, agent evals"]
 
   sources --> compiler --> catalog --> query
-  sources --> tokens --> foundation
-  foundation --> react
-  foundation -. later activation .-> web
-  foundation -. later activation .-> native
+  sources --> tokens --> react
+  react --> extract --> compiler
+  catalog --> package
+  react --> package
+  sources -. later activation .-> later
 
   query --> cli
   query --> mcp
@@ -200,8 +205,8 @@ flowchart TD
   proof -. verifies .-> sources
   proof -. verifies .-> catalog
   proof -. verifies .-> react
-  proof -. later verifies .-> web
-  proof -. later verifies .-> native
+  proof -. verifies .-> package
+  proof -. later verifies .-> later
   proof -. verifies parity .-> cli
   proof -. verifies parity .-> mcp
   proof -. verifies parity .-> site
@@ -210,7 +215,8 @@ flowchart TD
 Think of this as four cooperating systems:
 
 1. **The canonical-source system** owns stable product knowledge.
-2. **The renderer system** turns that knowledge into web, React, and native UI.
+2. **The renderer system** turns that knowledge into React UI, and into web and
+   native UI after their tracks activate.
 3. **The knowledge system** compiles and queries the artifact graph.
 4. **The proof system** prevents any public projection from drifting.
 
@@ -284,82 +290,70 @@ A component record owns shared intent before renderer details:
 - lifecycle and ownership; and
 - a binding record for every declared platform.
 
-Each platform binding spec owns its exact Mux UI API, lifecycle, strategy,
-deviations, validation profile, and relations to compatible examples. The
-compiler derives source locations, package exports, and package versions from
-the repository and package manifests.
+Each platform binding spec owns its lifecycle, strategy, behavior, deviations,
+validation profile, and relations to compatible examples, and carries its exact
+Mux UI API. For `web.react` that API block is derived from the component's
+TypeScript source (see "One owner per fact"). The compiler derives source
+locations, package exports, and package versions from the repository and
+package manifests.
 
-An abbreviated source record looks like this:
+An abbreviated source record looks like this. It shows the record shape: the
+bindings sit inside the concept record, the `web.react` API block is derived
+and the other fields are authored, a binding with no implementation is
+`unsupported` with a reason, and example records name the binding they exercise
+(`binding.ref`) instead of the record listing them.
 
 ```jsonc
 {
-  "$schema": "../../../packages/schema/schemas/component.schema.json",
   "schemaVersion": "1.0.0",
   "id": "muxui:component:button",
   "kind": "component",
   "name": "Button",
   "summary": "Triggers an immediate action.",
-  "lifecycle": "stable",
+  "lifecycle": "experimental",
   "intent": {
-    "useWhen": ["Submitting a form", "Confirming a user action"],
+    "useWhen": ["Triggering an immediate action"],
     "avoidWhen": ["Navigating to another location"]
   },
-  "anatomy": ["root", "label", "leading", "trailing", "progress"],
-  "states": ["idle", "disabled", "pending"],
+  "anatomy": ["root", "label"],
+  "states": ["idle", "pending", "disabled"],
   "accessibility": {
     "nameRequired": true,
-    "obligations": ["Expose disabled and busy state"]
+    "obligations": ["Expose disabled state", "Expose pending busy state"]
   },
   "bindings": {
     "web.html": {
-      "lifecycle": "stable",
-      "strategy": "direct",
-      "spec": "bindings/web.json",
-      "examples": [
-        {
-          "id": "muxui:example:button-basic-html",
-          "guidanceImpact": "normative"
-        }
-      ]
+      "schemaVersion": "2.0.0",
+      "strategy": "unsupported",
+      "reason": "No responsible implementation until the framework-free web track activates."
     },
     "web.react": {
-      "lifecycle": "stable",
+      "schemaVersion": "2.0.0",
+      "lifecycle": "experimental",
       "strategy": "direct",
-      "spec": "bindings/react.json",
-      "examples": [
-        {
-          "id": "muxui:example:button-basic-react",
-          "guidanceImpact": "normative"
-        }
-      ]
-    },
-    "native.react-native": {
-      "lifecycle": "stable",
-      "strategy": "adapted",
-      "spec": "bindings/react-native.json",
-      "examples": [
-        {
-          "id": "muxui:example:button-basic-react-native",
-          "guidanceImpact": "normative"
-        }
-      ],
-      "runtimeProfiles": {
-        "ios": {
-          "lifecycle": "stable",
-          "validationProfile": "native.ios"
-        },
-        "android": {
-          "lifecycle": "stable",
-          "validationProfile": "native.android"
-        },
-        "native.react-native-web": {
-          "strategy": "unsupported",
-          "reason": "No responsible implementation in the initial slice."
-        }
-      }
+      // Derived from the ButtonProps type in @muxui/react source; never authored.
+      // The block's exact shape is the binding schema's.
+      "api": {
+        "props": [
+          { "name": "pending", "type": "boolean", "default": false },
+          { "name": "size", "type": "enum", "members": ["sm", "md", "lg"], "default": "md" }
+          // ...
+        ],
+        "events": ["activate"]
+      },
+      "behavior": ["Pending suppresses activation while retaining focusability"],
+      "accessibility": ["Expose accessible name, disabled state, and busy state"],
+      "tokenRecipe": {
+        "source": "muxui:token:default-theme",
+        "requirements": [
+          { "token": "component.button.min-height", "requirement": "required" }
+        ]
+      },
+      "runtimeProfiles": {}
+      // Platform-safety dispositions come from the registry default for web.react
+      // unless this binding overrides one, with a reason.
     }
-  },
-  "pitfalls": ["muxui:pitfall:button-is-not-navigation"]
+  }
 }
 ```
 
@@ -416,12 +410,15 @@ The source hierarchy is explicit:
 
 1. Concept records own product semantics, artifact lifecycle, guidance,
    relations, renderer-neutral risk, and renderer-neutral alternatives.
-2. Platform binding specs own Mux UI-defined API fields, binding and
-   supported-profile lifecycle, strategy, deviations, validation profiles,
-   platform dispositions, and canonical-example relations.
+2. Platform binding specs own binding and supported-profile lifecycle,
+   strategy, behavior, deviations, validation profiles, platform dispositions,
+   and canonical-example relations. A `web.react` binding spec carries the Mux
+   UI-defined API as a block derived from renderer source (item 4); it never
+   authors it.
 3. Token sources own design values and semantic aliases.
 4. Renderer source owns implementation, effects, runtime/effect lifecycle,
-   host-language refinements, and platform-native passthrough types.
+   host-language refinements, platform-native passthrough types, and, for
+   `web.react`, the Mux UI API itself: each component's TypeScript props type.
 5. Executable example files own example code.
 6. Tests encode expected behavior.
 7. The proof system produces and retains evidence against those expectations.
@@ -435,8 +432,9 @@ fact.
 | Field class | Examples | Owner | Treatment |
 | --- | --- | --- | --- |
 | Product semantics | Intent, use/avoid guidance, decision context, artifact lifecycle | Artifact source | Author once. |
-| Portable semantics | Semantic parts, conceptual states, accessibility obligations | Concept record or foundation semantic source | Author once. |
-| Binding API | Mux UI-owned props, attributes, events, slots, defaults, deviations | Binding spec | Author the stable semantic surface; generate serializable types and reference output. |
+| Portable semantics | Semantic parts, conceptual states, accessibility obligations | Concept record | Author once. |
+| Binding API (`web.react`) | Mux UI-owned props, their types, enum members, defaults, descriptions, and events | Renderer TypeScript | Author in the component's props type; derive the binding's `api` block, reference output, and docs tables. |
+| Binding behavior | Behavior, accessibility fulfillment, deviations, token recipe, lifecycle, strategy, platform-safety overrides | Binding spec | Author. |
 | Host type ergonomics | Passthrough props, generic constraints, refs, narrowed platform events, JSX inference | Renderer TypeScript | Hand-author and validate; never introduce undocumented Mux UI semantics. |
 | Runtime implementation | CSS, DOM controller, React code, React Native code | Renderer package | Author and prove against the binding spec. |
 | Mechanical metadata | Package version, export/source path, source/content/spec revision | Package and build graph | Derive by convention, canonical serialization, or compiler inspection. |
@@ -476,14 +474,40 @@ props, variants, defaults, parts, events, conceptual controlled/uncontrolled
 modes, and accessibility or composition obligations. They do not attempt to
 encode all of TypeScript, JSX, DOM, or React Native's host type systems.
 
-Serializable Mux UI types may be generated from the binding spec.
-Hand-authored renderer TypeScript owns host-element passthrough, generic
+For `web.react`, the API half of that surface is written once, in the
+component's TypeScript props type in `@muxui/react` source (Decision 0031).
+Generation reads the compiled types and writes the binding's `api` block: each
+Mux UI-owned prop with its type, enum members, required flag, default, and
+description, and the component's events. Props inherited from a named host
+passthrough profile such as `html.button` are not listed. Parts stay with the
+concept record's anatomy. The block is a projection: it is never authored or
+edited, and it lives outside `catalog/`. A type outside the closed set the
+binding schema defines fails extraction naming the prop. That set is
+primitives, string-literal unions, arrays and records of them, Mux UI-owned
+named types, and bounded host references such as `React.ReactNode`, so a
+dependency type cannot enter the catalog. The block enters `specRevision` like
+any API field, so removing a prop is still an incompatible change. It is not
+part of `contentRevision`, because it is not authored. The build emits the
+package's declaration files from the same source, and the packed-consumer check
+compares the derived block with the tarball's declarations, so the catalog
+cannot describe an API the package does not publish.
+
+Hand-authored renderer TypeScript also owns host-element passthrough, generic
 constraints, ref precision, event narrowing, platform-owned props, overloads,
-and framework inference. Spec-to-code checks verify that these refinements
-satisfy the Mux UI surface without adding undocumented Mux UI variants,
-defaults, events, or behavior. Standard passthrough surfaces are named profiles
-such as `html.button` or `react-native.pressable`; they are not duplicated as
-thousands of catalog properties.
+and framework inference, and spec-to-code checks verify that these refinements
+add no undocumented Mux UI variants, defaults, events, or behavior. Standard
+passthrough surfaces are named profiles such as `html.button` or
+`react-native.pressable`; they are not duplicated as thousands of catalog
+properties.
+
+Until `@muxui/react` moves a component to TypeScript source, that component's
+authored `api` block is canonical and its existing conformance tests apply. The
+pull request that moves it deletes the authored block and those tests, so no
+component has an authored and a derived block at the same commit. A guide
+states no prop, variant, enum member, default, event, or import path in prose
+unless a check compares it with the block. A renderer that activates later
+states in its activation decision whether its API is derived from its own
+source or authored in its binding spec.
 
 If a projection is wrong, fix its earliest canonical input or compiler. Never
 patch the projection.
@@ -704,8 +728,7 @@ stderr. A success response has this shape:
         "bindingSpec": "sha256:..."
       },
       "targetPackages": {
-        "@muxui/react": "1.0.0",
-        "@muxui/web": "1.0.0"
+        "@muxui/react": "1.0.0"
       }
     },
     "platform": "web.react",
@@ -946,88 +969,24 @@ exists only when a capability relation explicitly claims it. A
 `native-alternative` can therefore conform fully without copying a web feature
 set.
 
-### `@muxui/foundation` internal boundaries
-
-The foundation is one package only while that remains the smallest coherent
-distribution unit, but its source has three enforced sub-boundaries:
-
-- `semantic/`: serializable intent, state vocabulary, token recipes, and
-  portable composition rules;
-- `logic/`: pure algorithms such as selection normalization, range
-  constraints, parsing, and form-state utilities; and
-- `interaction/`: optional renderer-neutral state machines only where the
-  transition model survives translation across actual renderers.
-
-`semantic` cannot depend on `logic` or `interaction`; `logic` cannot depend on
-`interaction`. A binding may share semantic state while implementing all
-transitions itself. No component is required to adopt a portable interaction
-machine merely because one can be abstracted.
-
-Every portable interaction machine declares the exact binding/runtime profiles
-on which its transitions have been proved and links to that evidence. Import
-purity alone does not establish portability, and a renderer outside the proved
-set does not inherit the claim. Promotion to a broadly shared machine requires
-evidence from materially different renderer mechanisms, not multiple wrappers
-over the same implementation.
-
-### `@muxui/web`
-
-The web package is the later, separately activated framework-free web product.
-It does not block React admission, implementation, merge, prerelease
-publication, or React breadth closure. When its `W1` track activates, it owns:
-
-- compiled token and theme CSS;
-- cascade-layer, customization-hook, DOM, role, class, slot, and state-
-  attribute implementation conforming to the `web.html` binding spec;
-- per-component CSS entry points;
-- semantic HTML rendering for canonical examples whose code remains owned by
-  the canonical example source; and
-- optional per-component vanilla JavaScript controllers.
-
-Vanilla controllers are imported explicitly and have bounded lifecycle:
-
-```ts
-const controller = connectDialog(root, options);
-controller.destroy();
-```
-
-They are idempotent, SSR-safe, and do not scan or mutate an entire document by
-default. Public events are typed and named by intent. Progressive enhancement
-is preferred whenever native HTML can carry the base behavior.
-
-The documented CSS surface is a public API. Component roots use a predictable
-class such as `.muxui-button`; named descendants use stable slots such as
-`[data-muxui-slot="label"]`; interaction state uses documented data attributes.
-Raw palette values are not consumed directly by component CSS: components use
-semantic or component tokens that can be compiled for both web and native.
-
-For supported published contracts, that promise is deliberately narrow and
-machine-enumerated in each web binding spec:
-
-| CSS/DOM surface | Compatibility policy |
-| --- | --- |
-| Root class, documented semantic slot attributes, documented state attributes, public custom properties, cascade-layer names, and exported style entry points | Stable throughout a major. Removal or incompatible meaning/anatomy change requires deprecation and a major with migration guidance. |
-| Element semantics, roles, and relationships required for behavior or accessibility | Binding spec; may change only with equivalent evidence and the version effect appropriate to consumer observability. |
-| Wrapper/utility classes, exact nesting and child position, selector chains, implementation-only attributes, generated identifiers, animation/keyframe names | Internal unless explicitly promoted into the binding spec. No customization may rely on them. |
-
-A named slot promises a semantic customization target, not an exact tag,
-depth, sibling order, or complete DOM snapshot. The catalog and CSS audit expose
-only registered hooks, flag examples that rely on internal selectors, and keep
-deprecated hooks as aliases for their declared notice window. This preserves a
-useful framework-free API without making every refactor a compatibility
-commitment.
-
 ### `@muxui/react`
 
 React is the primary component implementation and first public component
-package. Each `web.react` binding spec owns the Mux UI React DOM, public API and
-types, observable behavior, accessibility fulfillment and deviations, events,
-slots, styling hooks, defaults, lifecycle, strategy, validation profile,
-canonical-example relations, platform-safety declarations, and compatibility
-promises. `@muxui/react` source owns React rendering, controlled and
-uncontrolled state, runtime and effect lifecycle, portals, refs, host
-passthrough refinements, DOM implementation, compiled CSS implementation,
-SSR, hydration, and cleanup.
+package. `@muxui/react` TypeScript source owns the Mux UI React API: each
+component's props type declares its Mux UI props, their types, enum members,
+defaults, descriptions, and events, with the host passthrough refinements,
+refs, and generics around them. Each `web.react` binding spec owns the
+observable behavior, accessibility fulfillment and deviations, lifecycle,
+strategy, validation profile, canonical-example relations, platform-safety
+overrides, and compatibility promises, and carries the `api` block that
+generation derives from that source ("One owner per fact"). `@muxui/react`
+source also owns React rendering, controlled and uncontrolled state, runtime
+and effect lifecycle, portals, refs, the DOM implementation, the compiled CSS
+implementation and its public CSS contract (below), SSR, hydration, and
+cleanup. The source is TypeScript compiled by a build step that emits the
+package's JavaScript and declaration files. It moves one tranche of components
+per pull request (Decision 0031); until a component moves, its source is as it
+was and its authored `api` block stays canonical.
 
 `@muxui/react` does not consume `@muxui/web` at runtime. Canonical tokens,
 component records, binding specs, compatibility data, descriptors, and package
@@ -1112,6 +1071,56 @@ inert and background policy, and scroll lock, and motion code cleans up refs,
 interruption, unmount, and dismissal without leaving stale listeners, timers,
 or animation state. CSS remains valid for simple transitions.
 
+#### React public CSS contract
+
+The public CSS contract of `@muxui/react` is enumerated and owned by the package
+(Decision 0031). It is not derived from any other renderer's contract. It
+consists of:
+
+- **Cascade layers.** `muxui.tokens`, `muxui.components`, and
+  `muxui.utilities`, declared in that order. All Mux UI CSS sits in a layer, so
+  an unlayered consumer rule wins without specificity tricks.
+- **Classes.** A root class `.muxui-<slug>` per component and a part class for
+  each named part of its anatomy, in one naming scheme.
+- **State attributes.** A closed, documented set rooted in `data-muxui-`, set by
+  a thin Mux UI adapter over the substrate's render props. Stylesheets,
+  examples, and consumers use these and no substrate attribute, so replacing
+  React Aria Components changes the adapter, not the stylesheet.
+- **Custom properties.** The tokens whose override policy is `instance`. A token
+  keeps that policy only while the component's CSS reads the property and a test
+  shows that setting it on a rendered instance changes the computed style.
+- **Style entry points.** At least a core entry, a supplemental entry, and an
+  editor entry, so an ordinary consumer does not load the editor and Markdown
+  styles. Theme stylesheets are separate.
+
+For supported published contracts, the compatibility promise is deliberately
+narrow and machine-enumerated:
+
+| CSS/DOM surface | Compatibility policy |
+| --- | --- |
+| Layer names and order, root and part classes, documented state attributes, public custom properties, and exported style entry points | Stable throughout a major. Removal or incompatible meaning/anatomy change requires deprecation and a major with migration guidance. |
+| Element semantics, roles, and relationships required for behavior or accessibility | Binding spec; may change only with equivalent evidence and the version effect appropriate to consumer observability. |
+| Wrapper/utility classes, exact nesting and child position, selector chains, implementation-only attributes (substrate attributes included), generated identifiers, animation/keyframe names | Internal unless explicitly promoted into the contract. No customization may rely on them. |
+
+A part class promises a semantic customization target, not an exact tag, depth,
+sibling order, or complete DOM snapshot. Component CSS consumes semantic or
+component tokens and never raw palette values. A test in `@muxui/react` renders
+the exported components and checks the published surface. The classes and state
+attributes the rendered DOM emits are in the contract, every contract class
+exists in the stylesheet, every public custom property is read and changes
+computed style in a browser, the layers and style entries exist, and canonical
+examples use only contract hooks. The catalog and that test expose only
+registered hooks and flag examples that rely on internal selectors. During the
+current pre-release state a superseded hook is removed outright, with no alias
+(Decision 0016); a supported published contract keeps a deprecated hook as an
+alias for its declared notice window.
+
+The contract is adopted in three ordinary stages: cascade layers, with the
+`instance` hooks made real or dropped; one class scheme and the Mux-owned state
+attributes; then the split style entries. A listed hook is public from the stage
+that delivers it. Until then the stylesheet's selectors are internal and carry
+no promise.
+
 #### React styling and parity boundary
 
 Mux UI owns the React styling contract, including selectors, token mappings,
@@ -1141,26 +1150,6 @@ R1.0 owns the required license and attribution audit for distributed
 third-party material. Applicable notices remain Mux UI-owned release inputs
 and do not create an external runtime or live-owner dependency.
 
-Exactly one integration owns a mounted component root at runtime. A React
-binding does not attach the lifecycle-bearing vanilla controller to DOM it
-owns unless that controller exposes an explicitly React-safe adapter with one
-listener, focus, and teardown owner. React may reuse foundation algorithms or
-pure controller logic, but React owns effects, hydration, and cleanup for its
-tree. Conversely, the HTML controller cannot assume a React lifecycle, and a
-host cannot mount both paths on the same root. Development builds detect
-duplicate ownership where practical. Both paths still emit the public events
-and state attributes promised by the web binding spec.
-
-Ownership also covers effects outside the component root. For a mounted
-instance, exactly one integration owns focus restoration, Escape handling,
-outside-pointer dismissal, portal lifecycle, and any inert/background policy.
-A shared web service may coordinate document listeners or reference-counted
-scroll-lock leases across multiple instances, but it is the sole global owner;
-React and vanilla integrations acquire and release leases through their own
-lifecycle rather than attaching competing effects. A React-safe adapter is
-therefore either pure, or explicitly constructed and disposed by React—it does
-not start autonomous global lifecycle work on import.
-
 React Aria Components is the default internal React substrate and is an exact
 runtime dependency. Upgrading it is an ordinary pull request with lockfile,
 integrity, and regression proof. Mux UI owns its public contract. React Aria
@@ -1175,61 +1164,112 @@ React must not become the source for:
 - shared intent and lifecycle;
 - another renderer's API or implementation;
 - React Native parity; or
-- documentation content.
+- narrative documentation content.
 
-### `@muxui/react-native`
+It is the source for its own binding's API shape and for nothing else in this
+list (Decision 0031).
 
-React Native is a later, separately activated secondary product. It implements
+### Deferred renderer tracks
+
+Framework-free web, React Native, and the code they might share are deferred
+(Decision 0031). No workspace package exists for them. `@muxui/web` is restored
+only by an accepted W1.0 activation and `@muxui/react-native` only by an
+accepted N1.0 activation. `@muxui/foundation` is restored only by an activation
+that names the shared code and its two real consumers. The schema keeps the
+platform vocabulary (`web.html`, `web.react`, `native.react-native`, and the
+runtime profiles `ios`, `android`, and `native.react-native-web`), and a binding
+with no responsible implementation declares `strategy: "unsupported"` with a
+reason, so the catalog stays honest without a scaffold. What follows is the
+intended design, not a commitment or a claim. The activating decision may change
+it, and states whether its binding's API is derived from renderer source, as for
+`web.react`, or authored in its binding spec, so no fact has two owners.
+
+**Shared foundation (`@muxui/foundation`).** One package while that is the
+smallest coherent distribution unit, with three enforced sub-boundaries:
+
+- `semantic/`: serializable intent, state vocabulary, token recipes, and
+  portable composition rules;
+- `logic/`: pure algorithms such as selection normalization, range
+  constraints, parsing, and form-state utilities; and
+- `interaction/`: optional renderer-neutral state machines only where the
+  transition model survives translation across actual renderers.
+
+`semantic` cannot depend on `logic` or `interaction`; `logic` cannot depend on
+`interaction`. A binding may share semantic state while implementing all
+transitions itself, and no component is required to adopt a portable machine
+because one can be abstracted. Each machine declares the binding and runtime
+profiles on which its transitions are proved and links to that evidence. Import
+purity alone does not establish portability, a renderer outside the proved set
+does not inherit the claim, and promotion to a broadly shared machine needs
+evidence from materially different renderer mechanisms, not multiple wrappers
+over the same implementation.
+
+**Framework-free web (`@muxui/web`, `web.html`).** It never blocks React
+admission, implementation, merge, prerelease publication, or React breadth
+closure. When W1 activates it owns:
+
+- compiled token and theme CSS;
+- cascade-layer, customization-hook, DOM, role, class, slot, and state-attribute
+  implementation conforming to the `web.html` binding spec;
+- per-component CSS entry points;
+- semantic HTML rendering for canonical examples whose code remains owned by
+  the canonical example source; and
+- optional per-component vanilla controllers, imported explicitly
+  (`const controller = connectDialog(root, options)`, ended by
+  `controller.destroy()`), idempotent, SSR-safe, and not scanning or mutating a
+  document by default, with typed events named by intent and progressive
+  enhancement preferred where native HTML can carry the base behavior.
+
+W1.0 states its CSS and DOM contract and its relation to the React contract: it
+may adopt the React class and state-attribute scheme or declare its deviations.
+Slot attributes (`[data-muxui-slot="label"]`) and DOM events belong to its
+contract, not to React's. It gets the same enumerated-surface test as React.
+
+**React Native (`@muxui/react-native`, `native.react-native`).** It implements
 or adapts renderer-neutral component contracts through each component's
 `native.react-native` binding spec and depends on renderer-neutral foundation
-and token outputs, never on `@muxui/web`, `@muxui/react`, React Aria,
-React DOM, CSS, browser globals, Expo, or Storybook.
+and token outputs, never on `@muxui/web`, `@muxui/react`, React Aria, React DOM,
+CSS, browser globals, Expo, or Storybook. It owns native primitive composition;
+the implementation of binding-owned native roles, state, values, actions,
+announcements, and focus behavior; gesture, responder, effects, and
+runtime/effect lifecycle; and explicit iOS, Android, and React Native Web
+files when needed. It may contain fewer components than React and uses
+`direct`, `adapted`, `native-alternative`, or `unsupported` per binding and
+profile. Expo and native Storybook belong to a host application and are not
+runtime dependencies. React Native Web is a named runtime profile,
+`native.react-native-web`, not a claim of `web.react` parity: every native
+binding declares its strategy, and a supported profile declares or inherits
+lifecycle, names a validation profile, and has profile-specific evidence. It
+stays a profile of the React Native binding while it shares the package and
+public API, and is promoted to a separate binding only if sustained API or
+ownership divergence makes that real.
 
-It owns:
+**Coexistence.** Exactly one integration owns a mounted component root at
+runtime. A React binding does not attach a lifecycle-bearing vanilla controller
+to DOM it owns unless the controller exposes an explicitly React-safe adapter
+with one listener, focus, and teardown owner, and a host cannot mount both paths
+on the same root. Both paths still emit the public events and state attributes
+their binding specs promise. For a mounted instance, exactly one integration
+owns focus restoration, Escape handling, outside-pointer dismissal, portal
+lifecycle, and any inert or background policy. A shared web service may
+coordinate document listeners or reference-counted scroll-lock leases as the
+sole global owner. A React-safe adapter is either pure or constructed and
+disposed by React, and starts no global lifecycle work on import. Development
+builds detect duplicate ownership where practical.
 
-- native primitive composition;
-- implementation of binding-owned native roles, state, values, actions,
-  announcements, and focus behavior;
-- gesture, responder, effects, and runtime/effect lifecycle implementation;
-  and
-- explicit iOS, Android, and React Native Web implementation files when
-  needed.
-
-The binding spec, rather than React source, owns the native Mux UI API,
-observable platform behavior, accessibility fulfillment and deviations,
-binding and supported-profile lifecycle, strategy, validation profiles,
-canonical-example relations, platform-safety declarations, and compatibility
-promises. The renderer source owns primitive/runtime implementation,
-host-language refinements, effects, and runtime/effect lifecycle. Native may
-contain fewer components than React and may use `direct`, `adapted`,
-`native-alternative`, or `unsupported` dispositions per binding/profile.
-
-Expo and native Storybook belong to a host application. They are not runtime
-dependencies of the package.
-
-React Native Web is a named runtime profile, `native.react-native-web`, not an
-implicit claim of `web.react` parity. Every React Native binding declares that
-profile's strategy; a supported profile also declares or inherits lifecycle,
-names a validation profile, and has profile-specific evidence. It remains a
-runtime profile of the React Native binding while it shares the same package
-and public API; it should be promoted to a separate binding only if sustained
-API or ownership divergence makes that distinction real.
-
-### Later framework bindings
-
-A future Vue, Svelte, Web Components, or other framework package binds to the
-existing `web.html` binding spec and `@muxui/web` styles/controllers. It adds a
-new platform binding record and framework examples to existing component IDs.
-It does not fork shared guidance or create a parallel component registry.
-
-No generic “all frameworks” abstraction should be introduced until two real
-framework bindings demonstrate the repeated shape.
+**Later framework bindings.** A future Vue, Svelte, Web Components, or other
+framework package binds to the existing `web.html` binding spec and the
+restored `@muxui/web` styles and controllers. It adds a new platform binding
+record and framework examples to existing component IDs, and does not fork
+shared guidance or create a parallel component registry. No generic "all
+frameworks" abstraction is introduced until two real framework bindings
+demonstrate the repeated shape.
 
 ## Public package graph
 
 ```mermaid
 flowchart TD
-  canonical["private canonical/build authorities\nschema, tokens, foundation, catalog, tooling"]
+  canonical["private canonical/build authorities\nschema, tokens, catalog, tooling"]
   react["@muxui/react@0.1.0-alpha.N\nfirst public component package"]
   aria["react-aria-components\nexact internal runtime dependency"]
   temporal["@internationalized/date\ninternal temporal adapter dependency"]
@@ -1240,8 +1280,6 @@ flowchart TD
   editor["Tiptap packages\nrich-text editing"]
   highlighter["shiki\ncode highlighting"]
   peers["react + react-dom\npeers"]
-  web["@muxui/web\nlater W1 track"]
-  native["@muxui/react-native\nlater N1 track"]
 
   canonical -. deterministic compilation .-> react
   aria --> react
@@ -1253,8 +1291,6 @@ flowchart TD
   editor --> react
   highlighter --> react
   peers --> react
-  canonical -. later activation .-> web
-  canonical -. later activation .-> native
 ```
 
 The graph names each dependency by purpose, not as a permission limit; where a
@@ -1275,15 +1311,13 @@ undeclared file dependency, or `@muxui/web` import.
 | --- | --- | --- |
 | `@muxui/schema` | Versioned source and response schemas, generated types, platform IDs, and authoring helpers. A later admitted capability may add a `ChangeIntentEnvelope` grammar. | Product semantics, components, renderers, or site code. |
 | `@muxui/tokens` | Canonical tokens and deterministic web/native/design-tool transforms. | Component behavior or docs rendering. |
-| `@muxui/foundation` | Enforced `semantic`, pure `logic`, and optional portable `interaction` sub-boundaries. | Selectors, React hooks, browser globals, native views, or mandatory cross-platform transitions. |
-| `@muxui/web` | Later W1 HTML/CSS/controller implementation for `web.html` binding specs. | React or native implementation; a React prerequisite, shared React runtime, or shared React CSS owner. |
-| `@muxui/react` | React rendering, CSS, SSR/hydration, effects, host refinements, package guidance, and exports for `web.react` contracts. | Canonical component metadata, React Aria public API, or another renderer's contract. |
-| `@muxui/react-native` | Later N1 native primitive/runtime implementation and explicit platform files for native binding specs. | React/React Aria authority, CSS parsing, DOM, Expo, or Storybook hosts. |
+| `@muxui/react` | React rendering, the `web.react` API (TypeScript props types), the public CSS contract, SSR/hydration, effects, host refinements, package guidance, and exports. | The component inventory or renderer-neutral component metadata, React Aria public API, or another renderer's contract. |
 | `@muxui/catalog` | Compiled catalog assets and pure discovery/query/planning API. | CLI parsing, MCP transport, project mutation. |
 | `@muxui/tooling` | Self-describing CLI, MCP adapters, local validation, maintainer scaffolds, semantic diffs, and (when separately admitted) safe project operations. | A second artifact index, product decisions, or renderer implementation. |
 
-At the React package-only boundary, schema, tokens, foundation, catalog, and
-tooling remain private authoring/build/proof authorities. Productization later
+At the React package-only boundary, schema, tokens, catalog, and tooling remain
+private authoring/build/proof authorities, and parked renderer packages return
+only through activation ("Deferred renderer tracks"). Productization later
 publishes the compatible catalog/tooling portfolio and CLI-as-documentation.
 Their versions may move independently from renderer packages, but every
 enabled response and release manifest correlates all relevant versions and the
@@ -1433,18 +1467,10 @@ muxui/
 ├── catalog/                          # canonical public knowledge
 │   ├── components/
 │   │   └── button/
-│   │       ├── artifact.json
-│   │       ├── bindings/
-│   │       │   ├── web.json
-│   │       │   ├── react.json
-│   │       │   └── react-native.json
+│   │       ├── artifact.json         # concept record and its binding records
 │   │       └── examples/
-│   │           ├── html/basic.example.json
-│   │           ├── html/basic.html
 │   │           ├── react/basic.example.json
-│   │           ├── react/basic.tsx
-│   │           ├── react-native/basic.example.json
-│   │           └── react-native/basic.tsx
+│   │           └── react/basic.tsx
 │   ├── patterns/
 │   ├── foundations/
 │   ├── guides/
@@ -1453,13 +1479,7 @@ muxui/
 ├── packages/
 │   ├── schema/
 │   ├── tokens/
-│   ├── foundation/src/
-│   │   ├── semantic/
-│   │   ├── logic/
-│   │   └── interaction/
-│   ├── web/src/components/button/
 │   ├── react/src/components/button/
-│   ├── react-native/src/components/button/
 │   ├── catalog/
 │   └── tooling/
 ├── apps/
@@ -1467,16 +1487,16 @@ muxui/
 │   ├── react-playground/             # private R1 generated example/parity host
 │   ├── scale/                         # private R1.6 Mux theme-authoring projection/editor
 │   ├── explorer-web/                 # later P2.3 React, then W1 HTML examples
-│   └── explorer-native/              # Expo/native example host
+│   └── explorer-native/              # later N1 Expo/native example host
 ├── tooling/
 │   ├── catalog/                      # compiler and query build
 │   ├── generators/                   # bounded deterministic projections
 │   ├── audits/                       # cross-surface conformance checks
 │   └── evals/                        # cold-start and codegen evaluations
 ├── tests/
-│   ├── consumers/                    # packed HTML, React, and native fixtures
+│   ├── consumers/                    # packed React fixtures; HTML and native when W1/N1 activate
 │   ├── browser/
-│   ├── native/
+│   ├── native/                       # later N1
 │   ├── accessibility/
 │   ├── visual/
 │   ├── conformance/
@@ -1529,7 +1549,8 @@ package that owns them or to a declarative task graph.
 - One concept has one preferred public name.
 - The same variant or state uses the same semantic name wherever it has the
   same meaning.
-- Defaults are present in the binding spec, query schema, and executable examples.
+- Defaults are present in the binding spec (for `web.react`, derived from the
+  component's source), query schema, and executable examples.
 - Avoid convenience aliases such as both `pending` and `isPending`; aliases
   increase the agent's choice space and the migration surface.
 - Boolean names express state; event names express what happened or what is
@@ -1548,12 +1569,15 @@ package that owns them or to a declarative task graph.
 ### Styling
 
 - Components consume semantic and component tokens, not raw palette values.
-- Stable web classes, slots, states, and cascade layers are public contracts.
-- `@muxui/react` owns its component CSS implementation, compiled from the
-  canonical `web.react` styling-hook contract and token requirements. It does
-  not duplicate or become the owner of framework-free or native styles.
-- Mux UI selectors, tokens, CSS, and compatibility are owned by the canonical
-  binding and token records; no external source or synchronization is required.
+- The classes, state attributes, custom properties, cascade layers, and style
+  entry points that the React public CSS contract enumerates are public
+  contracts.
+- `@muxui/react` owns its component CSS and the contract that enumerates its
+  public hooks, and takes its token requirements from the binding's token
+  recipe. A later framework-free or native renderer owns its own styles.
+- Mux UI selectors, CSS, and compatibility are owned by `@muxui/react`, and
+  tokens by the canonical token records; no external source or synchronization
+  is required.
 - Native resolves the same semantic recipe to native values at build or
   runtime without parsing CSS.
 - Arbitrary styling is an explicit escape hatch, not the primary component API.
@@ -1668,6 +1692,8 @@ Permitted generation includes:
 - token formats;
 - compiled catalog bundles and search indices;
 - response and binding-spec types;
+- the `web.react` binding `api` block, extracted from renderer TypeScript
+  (it reads declared types and fails on any it cannot read);
 - package export maps derived from declared bindings;
 - site routes and static pages;
 - MCP input schemas and tool metadata;
@@ -1691,7 +1717,7 @@ Deterministic proof runs before model-based evaluation.
 | Layer | Question answered |
 | --- | --- |
 | Schema | Is every artifact valid, versioned, uniquely identified, and relationally complete? |
-| Spec conformance | Do generated Mux UI types, validated hand-authored type refinements, package exports, CSS hooks, examples, and renderer declarations match the concept records and binding specs? |
+| Spec conformance | Does the API block derived from renderer source match the package's declarations, and do package exports, CSS hooks, examples, and renderer declarations match the concept records and binding specs? |
 | Unit and state | Do declared portable machines and renderer-owned behavior implement their respective transitions? |
 | Browser | Does the HTML/React implementation handle layout, focus, events, SSR, hydration, and browser APIs? |
 | Native | Do iOS, Android, and declared React Native Web runtime profiles satisfy their binding behavior and accessibility obligations? |
@@ -2120,35 +2146,39 @@ the semantic dependency closure and its digest, so a broad SemVer range cannot
 hide a missing token or changed role.
 
 Platform safety is a separate binding fact, never a token requirement or a
-fourth token namespace. The single authored executable registry and normative
-ID meanings live in
+fourth token namespace. The single authored executable registry, its normative
+ID meanings, and its default dispositions live in
 [`platform-safety-contract.json`](./platform-safety-contract.json), a protected
 child of this architecture. Its initial contract version is `1.0.0`. The
 registry digest is `sha256:` plus SHA-256 of the entire registry document
 serialized as UTF-8 Mux UI canonical JSON: object keys sorted recursively,
 declared array order preserved, LF text, and no insignificant whitespace.
 Schema enums, generated types, compiler validation, and catalog/query/package
-projections derive from that source; none re-author its IDs or meanings.
+projections derive from that source; none re-author its IDs, meanings, or
+defaults.
 
-`@muxui/schema` owns only the closed declaration/projection grammar. A
-binding with no nested runtime profiles declares all six registry IDs against
-its binding ID, which is also its profile identity. A binding with nested
-runtime profiles declares all six IDs only for each concrete nested profile;
-it has no second abstract binding-profile declaration. Each entry is
-`required` or `not-applicable`; the latter includes a reason. An unsupported
-profile declares all six as `not-applicable` and carries no behavior or
-evidence claim.
+`@muxui/schema` owns only the closed declaration/projection grammar. The
+registry carries a default disposition for each of the six IDs for every
+binding kind and nested runtime profile that has an implementation, and one for
+an unsupported binding or profile (all six `not-applicable`, carrying no
+behavior or evidence claim). Each default entry is `required` or
+`not-applicable`; the latter includes a reason. A binding with no nested runtime
+profiles takes its kind's default against its binding ID, which is also its
+profile identity. A binding with nested runtime profiles takes the default of
+each concrete nested profile; it has no second abstract binding-profile
+declaration. A binding states a platform-safety entry only to override a
+default, with a reason, and never restates one (Decision 0031).
 
-The full binding-authored declaration enters the binding-spec revision. A
-compiler derives a separate `PlatformSafetyRequirementSet` for each binding/
-profile containing the registry version and digest, binding ID, profile
-identity, applicable validation-profile ID, declaration revision, complete
-dispositions, and its own digest. For a nested runtime profile, `profile` is
-the runtime-profile key (for example `ios`) and `validationProfile` is its
-separate validation identity (for example `native.ios`); they are never
-interchanged. A binding without nested profiles uses its binding ID as
-`profile` and omits `validationProfile`. Unknown, missing, duplicate, or
-wrong-profile declarations fail closed. Compatibility
+The resolved declaration, the default plus the binding's overrides, enters the
+binding-spec revision. A compiler derives a separate
+`PlatformSafetyRequirementSet` for each binding/profile containing the registry
+version and digest, binding ID, profile identity, applicable validation-profile
+ID, declaration revision, complete dispositions, and its own digest. For a
+nested runtime profile, `profile` is the runtime-profile key (for example
+`ios`) and `validationProfile` is its separate validation identity (for example
+`native.ios`); they are never interchanged. A binding without nested profiles
+uses its binding ID as `profile` and omits `validationProfile`. Unknown,
+missing, duplicate, or wrong-profile declarations fail closed. Compatibility
 descriptors and catalog/query projections carry that derived digest alongside,
 not inside, the `TokenRequirementSet` digest. Renderer evidence binds the exact
 per-profile safety-requirement-set digest; the release manifest correlates
@@ -2260,14 +2290,16 @@ is ordinary pull-request work and needs no decision (Decision 0028).
 1. Add or update `catalog/components/<slug>/artifact.json` as the sole owner of
    identity, renderer-neutral semantics, artifact lifecycle, risk, and
    alternatives.
-2. Add the `web.react` binding spec and canonical executable examples for its
-   exact React contract.
+2. Add the `web.react` binding record (behavior, accessibility fulfillment,
+   lifecycle, token recipe) and canonical executable examples for its exact
+   React contract. Do not author an `api` block.
 3. Resolve the component's canonical styling and token requirements, then
    implement Mux UI-owned `@muxui/react` CSS without importing another
    package's selectors or implementation.
-4. Implement `@muxui/react` without creating a web or native counterpart
-   unless a later track separately admits one. List an experimental family in
-   the supplemental mapping.
+4. Implement `@muxui/react` in TypeScript without creating a web or native
+   counterpart unless a later track separately admits one. The component's props
+   type is the sole author of its API, and generation derives the `api` block
+   from it. List an experimental family in the supplemental mapping.
 5. Add deterministic and risk-proportionate behavior, accessibility, visual
    contract, descriptor, generation, and packed-package proof.
 6. Compile the catalog and generated binding-spec/export/package-guidance
@@ -2284,10 +2316,12 @@ agent snippet is updated manually.
 
 ### Changing a public prop or state
 
-1. Change the binding spec and lifecycle/migration data.
+1. Change the component's props type in `@muxui/react` source (for a component
+   not yet moved to TypeScript, its authored `api` block) and, for a deprecation
+   or incompatible change, the binding's lifecycle and migration data.
 2. Update the implementation and the canonical examples that exercise it.
-3. Regenerate serializable Mux UI binding-spec types, validate hand-authored renderer
-   refinements, and regenerate exports, catalog, and rendered documentation.
+3. Regenerate the derived `api` block, exports, catalog, and rendered
+   documentation, and validate the declarations the build emits.
 4. Run cross-surface parity and consumer validation.
 5. Re-evaluate prompts tagged with the affected artifact ID.
 
@@ -2300,8 +2334,10 @@ agent snippet is updated manually.
 
 ### Adding a platform or framework binding
 
-1. Add the platform identifier and binding schema support.
-2. Attach binding records to existing component IDs.
+1. Activate the track (W1.0 or N1.0), which restores its parked package, and add
+   binding schema support for any new platform identifier.
+2. Attach binding records to existing component IDs, replacing their
+   `unsupported` dispositions.
 3. Implement against the existing concept record and relevant binding spec.
 4. Add platform examples, consumer fixtures, accessibility, and deviations.
 5. Extend CLI filtering and proof matrices; do not create parallel docs.
@@ -2355,7 +2391,9 @@ And:
 - Every canonical field is classified as authored, derived, or proved.
 - No variant, slot, event, default, import path, or example body has two
   authoring owners.
-- React is not the canonical component inventory.
+- React is not the canonical component inventory. It is the author of its own
+  binding's API shape, and the catalog's `web.react` `api` block derives from
+  that source.
 - The website is not the documentation source.
 - MCP does not implement separate search or retrieval logic.
 - Implementation guidance never silently resolves against hosted latest or an
@@ -2377,6 +2415,8 @@ And:
 - Components consume semantic or component tokens, never reference values or
   another renderer's compiled output.
 - Public CSS/DOM hooks are enumerated; undocumented topology remains internal.
+- A binding without a responsible implementation is `unsupported` with a
+  reason, and no scaffold package stands in for it.
 - Shared meaning never requires a shared transition implementation when
   platform conventions conflict.
 - Model evaluation does not replace schema, type, behavior, accessibility, or

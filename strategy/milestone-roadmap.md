@@ -113,8 +113,11 @@ binding or bounded reproof.
 - A later capability cannot block an earlier renderer milestone unless the
   renderer would violate a canonical-source, safety, compatibility, integrity,
   or required-proof rule without it.
-- Shared foundation code is added only after a real slice demonstrates the
-  repeated semantic, logic, or interaction shape.
+- Shared code is added only after a real slice demonstrates the repeated
+  semantic, logic, or interaction shape, and lives in the renderer that uses it
+  until a second renderer shares it. `@muxui/foundation` is parked and returns
+  only with an activation that names that shared code and its two real
+  consumers (Architecture, "Deferred renderer tracks").
 - Experimental React breadth proceeds under the standing development rule
   (Decision 0028) against the shared baseline. Framework-free/native breadth
   and broad tooling wait for their own activation and entry evidence.
@@ -375,6 +378,13 @@ decision (Decision 0028). The family list is owned by
 focused proof its risk names, routed by `E-R1.6-01`, `-03`, `-04` and `-07`. None
 claims milestone completion, support, publication or G3 activation.
 
+The Decision 0031 work is the same kind of delivery: moving `@muxui/react` to
+TypeScript source with its derived API block, and adopting the public CSS
+contract in three stages (`SCOPE-API-REACT-CSS`). Each step is an ordinary
+protected pull request, proved by the Architecture spec-conformance layer. It
+adds no milestone or evidence ID, and none claims completion, support, or
+publication.
+
 ### Post-R1.6 Figma token export addition
 
 Decision 0020 names Figma and pulls the export-only slice of G3.5 forward.
@@ -490,11 +500,13 @@ change the final R1-exit merge stop.
   P2.1 through P2.3 and without satisfying any of their evidence (Decision
   0026). Evidence: `E-BL1-01…11`.
 - `W1.0` activates framework-free web only after R1 exit, observed demand, an
-  accepted exact lock, and explicit human activation. `W1.1…W1 exit` own its
-  independent component/release proof.
+  accepted exact lock, and explicit human activation, and restores the parked
+  `@muxui/web` package (Decision 0031). `W1.1…W1 exit` own its independent
+  component/release proof.
 - `N1.0` activates native only after R1 exit, observed demand, an accepted
-  platform/profile/component lock, and explicit human activation. `N1.1…N1
-  exit` own independent per-profile proof and native dependency decisions.
+  platform/profile/component lock, and explicit human activation, and restores
+  the parked `@muxui/react-native` package (Decision 0031). `N1.1…N1 exit` own
+  independent per-profile proof and native dependency decisions.
 - `X1.0` owns any cross-platform semantic-comparison or feature-equivalence
   claim after the relevant renderer exits.
 - `S1.0` owns stable React promotion after a published R1 prerelease, observed
@@ -1363,8 +1375,8 @@ valid outcomes and do not make the core product incomplete.
 | P2.3 | React docs, explorer, bootstrap, local MCP | P2.2 | P2 exit |
 | P2 exit | React Productization | P2.1–P2.3 plus each enabled optional P2 capability | Later capabilities |
 | BL1 | Blocks showcase (private) | R1 exit; Decision 0026 and Product Scope 15.0.0 merged | Nothing; not an entry or exit condition of P2.1 through P2 exit |
-| W1.0 | Framework-free web activation | R1 exit, demand, accepted lock, explicit activation | W1 tranches |
-| N1.0 | React Native activation | R1 exit, demand, accepted platform/profile lock, explicit activation | N1 tranches |
+| W1.0 | Framework-free web activation | R1 exit, demand, accepted lock, explicit activation; restores `@muxui/web` | W1 tranches |
+| N1.0 | React Native activation | R1 exit, demand, accepted platform/profile lock, explicit activation; restores `@muxui/react-native` | N1 tranches |
 | X1.0 | Cross-platform comparison/equivalence | Relevant R1/W1/N1 exits | Exact claimed matrix only |
 | S1.0 | Stable React promotion | Published R1 prerelease, demand, accepted stable lock, a declared risk class for every exported component, and the deferred R1 manual/AT evidence (Decision 0022) | Stable React release only |
 
@@ -1433,7 +1445,7 @@ remove or weaken these assertions without changing the architecture.
 | CLI as documentation | G0.3 private baseline, P2.1/P2.2 public installed-local guidance, P2.3 site/bootstrap projection. R1 tarball guidance is narrower and generated. |
 | One query engine and thin adapters | G0.2 kernel, G0.3 private CLI, P2.1/P2.2 public query/CLI, P2.3 site/MCP, G3.3 hosted MCP. |
 | React binding conformance and later cross-platform comparison | R1 proves `web.react`; W1/N1 prove their own bindings/profiles; X1 alone may compare or claim equivalence. |
-| Foundation/React/later web/native ownership | R1.0 binds renderer-neutral foundation to standalone React; W1/N1 activate separate binding and renderer owners later. |
+| React/later web/native ownership | R1.0 establishes the standalone React package; the unused foundation, web, and React Native scaffolds are parked (Decision 0031); W1.0 and N1.0 restore their packages and activate separate binding and renderer owners later. |
 | Public package graph and compatibility descriptors | G0.0 boundaries, R1.0 standalone React graph, every R1 tranche packed derivation, R1 exit publication, P2.1 portfolio release. |
 | Project-local catalog resolution and typed taxonomy | G0.4 synthetic proof, P2.2 production packed proof. |
 | Predictable repository navigation/orchestration | G0.0 task graph/routes and G0.5 source-linked authoring. |
