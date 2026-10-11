@@ -2498,6 +2498,11 @@ details[open] > summary .muxui-sidebar__nav-chevron,
   font-size: var(--muxui-semantic-typography-tiny-size);
 }
 
+/* A group nested in a group indents less, so a category, a block, and its variants fit one column. */
+.muxui-sidebar__nav-children .muxui-sidebar__nav-children {
+  padding-left: var(--muxui-semantic-layout-inset-large);
+}
+
 /* A collapsed link group keeps its children out of the layout, as a closed details does. */
 .muxui-sidebar__nav-children[hidden] {
   display: none;
