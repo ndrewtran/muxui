@@ -1,3 +1,5 @@
+import { observeAncestorAttributes } from './motion-geometry.mjs';
+
 const MOTION_SCOPE_ATTRIBUTES = Object.freeze(['data-reduced-motion', 'data-muxui-motion']);
 const CSS_EASINGS = Object.freeze({
   ease: [0.25, 0.1, 0.25, 1],
@@ -67,18 +69,6 @@ function readSpringSettings(style, durationRole, easingRole) {
   };
 }
 
-function collectAncestors(...elements) {
-  const ancestors = new Set();
-  for (const element of elements) {
-    let current = element;
-    while (current) {
-      ancestors.add(current);
-      current = current.parentElement;
-    }
-  }
-  return [...ancestors];
-}
-
 function hasReducedScope(node) {
   let current = node;
   while (current) {
@@ -132,15 +122,12 @@ export function resolvedMotionSpring(node, triggerNode, durationRole = 'interact
 export function observeReducedMotion(node, triggerNode, onChange) {
   const update = () => onChange(isReducedMotion(node, triggerNode));
   update();
-  const observer = typeof MutationObserver === 'undefined' ? null : new MutationObserver(update);
-  collectAncestors(node, triggerNode).forEach((ancestor) => {
-    observer?.observe(ancestor, { attributes: true, attributeFilter: MOTION_SCOPE_ATTRIBUTES });
-  });
+  const stopObserving = observeAncestorAttributes([node, triggerNode], MOTION_SCOPE_ATTRIBUTES, update);
   const media = node.ownerDocument.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)');
   media?.addEventListener?.('change', update);
   if (!media?.addEventListener) media?.addListener?.(update);
   return () => {
-    observer?.disconnect();
+    stopObserving();
     media?.removeEventListener?.('change', update);
     if (!media?.removeEventListener) media?.removeListener?.(update);
   };

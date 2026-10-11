@@ -90,6 +90,7 @@ import {
 } from 'react-aria-components';
 import { normalizeToggleButtonSize, ToggleButtonSizeContext } from './toggle-button-context.mjs';
 import { normalizeChoiceControlSize, ChoiceControlSizeContext } from './choice-context.mjs';
+import { GridListItemDisabledContext } from './grid-list-item-context.mjs';
 import { parseDate } from '@internationalized/date';
 import { overlayGeometry, normalizeBoolean } from './overlay-positioning.mjs';
 import { PopoverMotion } from './popover-motion.mjs';
@@ -962,7 +963,7 @@ export const GridList = /*#__PURE__*/ (() => {
       'data-disabled': effectiveDisabled || undefined,
       'aria-disabled': effectiveDisabled || undefined,
       className: classNames('muxui-grid-list-item', className),
-    }, children);
+    }, React.createElement(GridListItemDisabledContext.Provider, { value: effectiveDisabled }, children));
   });
   return component;
 })();

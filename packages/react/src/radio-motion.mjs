@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { LayoutGroup, MotionConfig, motion } from 'motion/react';
+import { useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -11,11 +12,6 @@ const RadioMotionContext = React.createContext({
   reduced: false,
   root: null,
 });
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
-}
 
 function selectedIndicator(root) {
   const checkedInput = [...root.querySelectorAll('input[type="radio"]:checked')]
@@ -42,16 +38,11 @@ function motionTransition(value) {
  * between direct and compound radio indicators through one scoped layout ID.
  */
 export function RadioGroupMotion({ children, rootRef }) {
-  const [root, setRoot] = React.useState(null);
+  const [root, setRootRef] = useRootRef(rootRef);
   const [indicator, setIndicator] = React.useState(null);
   const [reduced, setReduced] = React.useState(false);
   const [travelTransition, setTravelTransition] = React.useState({ duration: 0 });
   const groupId = React.useId();
-
-  const setRootRef = React.useCallback((node) => {
-    setRoot(node);
-    assignRef(rootRef, node);
-  }, [rootRef]);
 
   useIsomorphicLayoutEffect(() => {
     if (!root) return undefined;

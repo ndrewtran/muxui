@@ -1,5 +1,6 @@
 import React from 'react';
 import { animate } from 'motion/react';
+import { sameGeometry, transformFrom, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -16,12 +17,6 @@ const INELIGIBLE_SELECTOR = /*#__PURE__*/ [
   '[data-dragging]', '[data-drop-target]', '[data-pressed]', '[aria-pressed="true"]',
   '[data-focus-visible]', ':focus-visible',
 ].join(', ');
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') return ref(value);
-  if (ref) ref.current = value;
-  return undefined;
-}
 
 function directRows(root) {
   return [...root.querySelectorAll(ROW_SELECTOR)].filter((row) => row.closest('[role="grid"]') === root);
@@ -50,14 +45,6 @@ function geometry(root, node) {
   };
 }
 
-function sameGeometry(previous, next) {
-  return previous && next
-    && Math.abs(previous.left - next.left) < 0.5
-    && Math.abs(previous.top - next.top) < 0.5
-    && Math.abs(previous.width - next.width) < 0.5
-    && Math.abs(previous.height - next.height) < 0.5;
-}
-
 function geometryStyle(target) {
   return {
     left: `${target.left}px`,
@@ -65,12 +52,6 @@ function geometryStyle(target) {
     width: `${target.width}px`,
     height: `${target.height}px`,
   };
-}
-
-function transformFrom(current, target) {
-  const scaleX = target.width > 0 ? current.width / target.width : 1;
-  const scaleY = target.height > 0 ? current.height / target.height : 1;
-  return `translate3d(${current.left - target.left}px, ${current.top - target.top}px, 0) scale(${scaleX}, ${scaleY})`;
 }
 
 function createHoverLayer(root) {
@@ -505,17 +486,7 @@ function observeGridListRipple(root) {
 }
 
 export function GridListMotion({ children, rootRef }) {
-  const [root, setRoot] = React.useState(null);
-
-  const setRootRef = React.useCallback((node) => {
-    setRoot(node);
-    const cleanup = assignRef(rootRef, node);
-    return () => {
-      if (typeof cleanup === 'function') cleanup();
-      else assignRef(rootRef, null);
-      setRoot(null);
-    };
-  }, [rootRef]);
+  const [root, setRootRef] = useRootRef(rootRef);
 
   useIsomorphicLayoutEffect(() => {
     const stopHover = observeGridListHover(root);

@@ -1,16 +1,12 @@
 import React from 'react';
 import { animate } from 'motion/react';
+import { sameGeometry, transformFrom, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const ROW_SELECTOR = '.muxui-tree-item[role="row"]';
 const READY_ATTRIBUTE = 'data-muxui-tree-motion-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-tree-motion-reduced';
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
-}
 
 function treeRows(root) {
   return [...root.querySelectorAll(ROW_SELECTOR)].filter((row) => (
@@ -37,13 +33,6 @@ function geometry(root, row) {
   };
 }
 
-function sameGeometry(previous, next) {
-  return previous && Math.abs(previous.left - next.left) < 0.5
-    && Math.abs(previous.top - next.top) < 0.5
-    && Math.abs(previous.width - next.width) < 0.5
-    && Math.abs(previous.height - next.height) < 0.5;
-}
-
 function setGeometry(node, target) {
   Object.assign(node.style, {
     left: `${target.left}px`,
@@ -51,12 +40,6 @@ function setGeometry(node, target) {
     width: `${target.width}px`,
     height: `${target.height}px`,
   });
-}
-
-function geometryTransform(from, to) {
-  const scaleX = to.width > 0 ? from.width / to.width : 1;
-  const scaleY = to.height > 0 ? from.height / to.height : 1;
-  return `translate3d(${from.left - to.left}px, ${from.top - to.top}px, 0) scale(${scaleX}, ${scaleY})`;
 }
 
 function clearRowReveal(row) {
@@ -248,7 +231,7 @@ function observeTreeMotion(root) {
       hover.style.transform = 'none';
       return;
     }
-    const from = geometryTransform(current, target);
+    const from = transformFrom(current, target);
     const to = 'translate3d(0px, 0px, 0px) scale(1, 1)';
     hover.style.transform = from;
     const controls = animate(hover, { transform: [from, to] }, transition);
@@ -466,12 +449,7 @@ function observeTreeMotion(root) {
 }
 
 export function TreeMotion({ children, rootRef, controllerRef }) {
-  const [root, setRoot] = React.useState(null);
-
-  const setRootRef = React.useCallback((node) => {
-    setRoot(node);
-    assignRef(rootRef, node);
-  }, [rootRef]);
+  const [root, setRootRef] = useRootRef(rootRef);
 
   useIsomorphicLayoutEffect(() => {
     const controller = observeTreeMotion(root);

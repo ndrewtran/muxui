@@ -4,6 +4,7 @@ import ChevronLeftIcon from 'lucide-react/dist/esm/icons/chevron-left.mjs';
 import ChevronRightIcon from 'lucide-react/dist/esm/icons/chevron-right.mjs';
 import ChevronUpIcon from 'lucide-react/dist/esm/icons/chevron-up.mjs';
 import ChevronDownIcon from 'lucide-react/dist/esm/icons/chevron-down.mjs';
+import { sameGeometry } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 import { IconButton } from './supplemental/icon-button.mjs';
 
@@ -15,13 +16,6 @@ function selectedTab(root) {
     ?? root.querySelector(`${TAB_SELECTOR}[aria-selected="true"]`);
   if (!tab) return null;
   return { tab, label: tab.querySelector('.muxui-tab-label') ?? tab };
-}
-
-function sameGeometry(previous, next) {
-  return previous && Math.abs(previous.left - next.left) < 0.5
-    && Math.abs(previous.top - next.top) < 0.5
-    && Math.abs(previous.width - next.width) < 0.5
-    && Math.abs(previous.height - next.height) < 0.5;
 }
 
 function sameEdges(previous, next) {

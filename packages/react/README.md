@@ -1,5 +1,5 @@
 <!-- @generated-from: packages/react/src/generate.mjs -->
-<!-- @generated-content-sha256: sha256:94437479afc7de2cc8b9ae78f17168629d644a6158af4fa6e5b5b2aca3cd4da1 -->
+<!-- @generated-content-sha256: sha256:2f0254227269adfb54cf7728f19bb537c9b08cf80bd058d3245d7031797baff0 -->
 # @muxui/react
 
 R1.6 current React union for the standalone Mux UI renderer.
@@ -204,7 +204,7 @@ Public parts: `root`, `section`, `header`, `item`.
 - Root disabled state disables every GridList.Item and suppresses selection and action callbacks. A child disabled=false cannot re-enable an item under a disabled root. Data-backed onAction returns the normalized item; compound onAction returns identity fields id, key, and value.
 - In the default vertical stack, Up and Down arrows move between items and Left and Right arrows reach controls nested in the focused item. With layout=grid or orientation=horizontal, arrow keys move between items by their rendered positions, mirrored in right-to-left, and Tab and Shift+Tab move through the nested controls of the focused item. layout=grid lays items out in auto-fill columns of at least 10rem whose content wraps; orientation=horizontal scrolls along the inline axis. The default column tracks have no specificity, so a plain class or inline style on the GridList sets grid-template-columns whatever the stylesheet order.
 - Nested links and buttons run only their own action and never change selection or run onAction.
-- A nested Button follows its GridList.Item through its context, so a disabled item disables it. A nested Link does not, so pass disabled to it as well as to its GridList.Item.
+- A nested Button or Link follows its GridList.Item, so a disabled item disables it. An explicit disabled prop on the Button or Link wins, so disabled={false} keeps it active.
 - Mux selectors are .muxui-grid-list and .muxui-grid-list-item. Root states include data-layout, data-orientation, and data-focus-visible; items expose data-selected, data-disabled, data-hovered, data-focused, and data-focus-visible. Root and Item refs target divs.
 - Inside a Virtualizer with layout=grid, a GridList must use layout=grid and the vertical orientation. It carries data-muxui-virtualized, mounts only the visible rows, renders each row inside positioned wrapper elements instead of as a direct child, and takes no padding because the layout spaces its items from the GridList CSS gap. Its own column-gap and row-gap set that spacing; see Virtualizer.
 

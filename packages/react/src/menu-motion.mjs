@@ -1,16 +1,11 @@
 import React from 'react';
 import { animate } from 'motion/react';
 import { PopoverContext } from 'react-aria-components';
+import { collectAncestors, observeAncestorAttributes, sameGeometry, transformFrom, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const MENU_ITEM_SELECTOR = '.muxui-menu-item';
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') return ref(value);
-  if (ref) ref.current = value;
-  return undefined;
-}
 
 function directMenuItems(root) {
   return [...root.querySelectorAll(MENU_ITEM_SELECTOR)]
@@ -42,36 +37,14 @@ function geometry(root, node) {
   };
 }
 
-function ancestorNodes(...nodes) {
-  const ancestors = new Set();
-  for (let node of nodes) {
-    while (node) {
-      ancestors.add(node);
-      node = node.parentElement;
-    }
-  }
-  return ancestors;
-}
+const POPOVER_REDUCED_ATTRIBUTE = 'data-muxui-motion-reduced';
 
 function hasReducedPopoverMotion(root, triggerNode) {
-  return [...ancestorNodes(root, triggerNode)].some((node) => node.hasAttribute('data-muxui-motion-reduced'));
+  return collectAncestors(root, triggerNode).some((node) => node.hasAttribute(POPOVER_REDUCED_ATTRIBUTE));
 }
 
 function observeReducedPopoverMotion(root, triggerNode, onChange) {
-  if (typeof MutationObserver === 'undefined') return () => {};
-  const observer = new MutationObserver(onChange);
-  for (const node of ancestorNodes(root, triggerNode)) {
-    observer.observe(node, { attributes: true, attributeFilter: ['data-muxui-motion-reduced'] });
-  }
-  return () => observer.disconnect();
-}
-
-function sameGeometry(first, second) {
-  return first && second
-    && Math.abs(first.left - second.left) <= 0.5
-    && Math.abs(first.top - second.top) <= 0.5
-    && Math.abs(first.width - second.width) <= 0.5
-    && Math.abs(first.height - second.height) <= 0.5;
+  return observeAncestorAttributes([root, triggerNode], [POPOVER_REDUCED_ATTRIBUTE], onChange);
 }
 
 function setDestination(node, target) {
@@ -81,12 +54,6 @@ function setDestination(node, target) {
   node.style.width = `${target.width}px`;
   node.style.height = `${target.height}px`;
   node.style.transform = 'none';
-}
-
-function transformFrom(current, target) {
-  const scaleX = target.width > 0 ? current.width / target.width : 1;
-  const scaleY = target.height > 0 ? current.height / target.height : 1;
-  return `translate3d(${current.left - target.left}px, ${current.top - target.top}px, 0) scale(${scaleX}, ${scaleY})`;
 }
 
 function createFocusNode(root) {
@@ -263,18 +230,9 @@ function observeMenuFocus(root, triggerNode) {
 }
 
 export function MenuMotion({ children, rootRef }) {
-  const [root, setRoot] = React.useState(null);
+  const [root, setRootRef] = useRootRef(rootRef);
   const popoverContext = React.useContext(PopoverContext);
   const triggerNode = popoverContext?.triggerRef?.current ?? null;
-  const setRootRef = React.useCallback((node) => {
-    setRoot(node);
-    const cleanup = assignRef(rootRef, node);
-    if (typeof cleanup !== 'function') return undefined;
-    return () => {
-      setRoot(null);
-      cleanup();
-    };
-  }, [rootRef]);
 
   useIsomorphicLayoutEffect(() => observeMenuFocus(root, triggerNode), [root, triggerNode]);
 

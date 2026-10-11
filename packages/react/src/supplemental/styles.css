@@ -60,16 +60,13 @@
 .muxui-icon-button.muxui-button[data-size='sm'] {
   inline-size: var(--muxui-control-size-sm);
   min-block-size: var(--muxui-control-size-sm);
+  padding: var(--muxui-semantic-layout-inset-tight);
+  border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 .muxui-icon-button.muxui-button[data-size='lg'] {
   inline-size: var(--muxui-control-size-lg);
   min-block-size: var(--muxui-control-size-lg);
-}
-
-.muxui-icon-button.muxui-button[data-size='sm'] {
-  padding: var(--muxui-semantic-layout-inset-tight);
-  border-radius: var(--muxui-semantic-shape-option-radius);
 }
 
 .muxui-icon-button.muxui-button[data-size='sm'] svg {
@@ -1691,14 +1688,14 @@
 }
 
 .muxui-multi-select__popup[data-entering] {
-  animation: multi-select-in var(--muxui-semantic-motion-selection-enter-duration) var(--muxui-semantic-motion-reveal-easing);
+  animation: muxui-popup-in var(--muxui-semantic-motion-selection-enter-duration) var(--muxui-semantic-motion-reveal-easing);
 }
 
 .muxui-multi-select__popup[data-exiting] {
-  animation: multi-select-out var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
+  animation: muxui-popup-out var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
 }
 
-@keyframes multi-select-in {
+@keyframes muxui-popup-in {
   from {
     opacity: 0;
     transform: translateY(-0.25rem);
@@ -1710,7 +1707,7 @@
   }
 }
 
-@keyframes multi-select-out {
+@keyframes muxui-popup-out {
   from {
     opacity: 1;
     transform: translateY(0);
@@ -3111,6 +3108,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-sidebar__account-trigger:hover {
     background: var(--muxui-semantic-color-neutral-20);
+    color: var(--muxui-semantic-color-neutral-100);
   }
 }
 
@@ -3234,10 +3232,6 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 @scope ([data-muxui-color-scheme='dark']) to ([data-muxui-color-scheme]) {
   :scope .muxui-sidebar__account-trigger {
     color: var(--muxui-semantic-color-neutral-60);
-  }
-
-  :scope .muxui-sidebar__account-trigger:hover {
-    color: var(--muxui-semantic-color-neutral-100);
   }
 }
 
@@ -3651,35 +3645,11 @@ details[open] > summary .muxui-sidebar__nav-chevron {
 }
 
 .muxui-tag-select__popup[data-entering] {
-  animation: tag-select-in var(--muxui-semantic-motion-selection-enter-duration) var(--muxui-semantic-motion-reveal-easing);
+  animation: muxui-popup-in var(--muxui-semantic-motion-selection-enter-duration) var(--muxui-semantic-motion-reveal-easing);
 }
 
 .muxui-tag-select__popup[data-exiting] {
-  animation: tag-select-out var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
-}
-
-@keyframes tag-select-in {
-  from {
-    opacity: 0;
-    transform: translateY(-0.25rem);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes tag-select-out {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(-0.25rem);
-  }
+  animation: muxui-popup-out var(--muxui-semantic-motion-feedback-duration) var(--muxui-semantic-motion-dismiss-easing);
 }
 
 
@@ -3842,18 +3812,6 @@ details[open] > summary .muxui-sidebar__nav-chevron {
     box-shadow: none !important;
   }
 
-  .muxui-input[data-disabled],
-  .muxui-input:disabled,
-  .muxui-text-area__textarea[data-disabled],
-  .muxui-text-area__textarea:disabled,
-  .muxui-input-tags__group[data-disabled],
-  .muxui-multi-select__trigger[data-disabled],
-  .muxui-payment-input__input[data-disabled],
-  .muxui-payment-input__input:disabled,
-  .muxui-tag-select__group[data-disabled] {
-    opacity: 1 !important;
-  }
-
   .muxui-input__root[data-disabled] .muxui-input__label,
   .muxui-text-area[data-disabled] .muxui-text-area__label,
   .muxui-input-tags[data-disabled] .muxui-input-tags__label,
@@ -3872,6 +3830,7 @@ details[open] > summary .muxui-sidebar__nav-chevron {
   .muxui-payment-input__input[data-disabled],
   .muxui-payment-input__input:disabled,
   .muxui-tag-select__group[data-disabled] {
+    opacity: 1 !important;
     color: GrayText !important;
   }
 

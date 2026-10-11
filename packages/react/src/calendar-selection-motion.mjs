@@ -1,6 +1,7 @@
 import React from 'react';
 import { LayoutGroup, motion } from 'motion/react';
 import { PopoverContext } from 'react-aria-components';
+import { useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -9,11 +10,6 @@ const CIRCLE_SCALE = { scaleX: 1, scaleY: 1 };
 const TRAVEL_SCALE = { scaleX: [1, 1.07, 1], scaleY: [1, 0.93, 1] };
 const SQUISH_TIMES = [0, 0.12, 1];
 const SQUISH_EASING = [0.22, 1, 0.36, 1];
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
-}
 
 function motionTransition(value) {
   if (!value) return undefined;
@@ -27,7 +23,7 @@ function motionTransition(value) {
 
 /** Keeps RAC in control while one selected date background travels within a month. */
 export function CalendarSelectionMotion({ children, rootRef }) {
-  const [root, setRoot] = React.useState(null);
+  const [root, setRootRef] = useRootRef(rootRef);
   const [reduced, setReduced] = React.useState(false);
   const [travelTransition, setTravelTransition] = React.useState({ duration: 0 });
   const squishTransition = React.useMemo(() => ({
@@ -37,11 +33,6 @@ export function CalendarSelectionMotion({ children, rootRef }) {
   }), [travelTransition]);
   const groupId = React.useId();
   const triggerRef = React.useContext(PopoverContext)?.triggerRef;
-
-  const setRootRef = React.useCallback((node) => {
-    setRoot(node);
-    assignRef(rootRef, node);
-  }, [rootRef]);
 
   useIsomorphicLayoutEffect(() => {
     if (!root) return undefined;

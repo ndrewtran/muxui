@@ -34,6 +34,7 @@ const buttonSource = await readFile(resolve(packageRoot, 'src/button.mjs'), 'utf
 const componentSource = await readFile(resolve(packageRoot, 'src/components.mjs'), 'utf8');
 const toggleButtonContextSource = await readFile(resolve(packageRoot, 'src/toggle-button-context.mjs'), 'utf8');
 const choiceContextSource = await readFile(resolve(packageRoot, 'src/choice-context.mjs'), 'utf8');
+const gridListItemContextSource = await readFile(resolve(packageRoot, 'src/grid-list-item-context.mjs'), 'utf8');
 const fieldsSource = await readFile(resolve(packageRoot, 'src/fields.mjs'), 'utf8');
 const calendarHeightMotionSource = await readFile(resolve(packageRoot, 'src/calendar-height-motion.mjs'), 'utf8');
 const calendarSelectionMotionSource = await readFile(resolve(packageRoot, 'src/calendar-selection-motion.mjs'), 'utf8');
@@ -46,6 +47,7 @@ const menuMotionSource = await readFile(resolve(packageRoot, 'src/menu-motion.mj
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
+const motionGeometrySource = await readFile(resolve(packageRoot, 'src/motion-geometry.mjs'), 'utf8');
 const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-components.mjs'), 'utf8');
 const candidateMotionSource = (await readFile(resolve(packageRoot, 'src/supplemental/candidate-motion.mjs'), 'utf8'))
   .replaceAll("from '../motion.mjs'", "from './motion.mjs'");
@@ -878,6 +880,7 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
       .replaceAll("from '../overlays.mjs'", "from './overlays.mjs'")
       .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'")
       .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
+      .replaceAll("from '../motion-geometry.mjs'", "from './motion-geometry.mjs'")
       .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
       .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
       .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'"),
@@ -1046,6 +1049,7 @@ const outputs = new Map([
   ['r1-6-contract.json', r16Contract],
   ['r1-6-contract.json.provenance', provenance('r1-6-contract.json', r16Contract)],
   ['choice-context.mjs', generatedText('packages/react/src/choice-context.mjs', choiceContextSource)],
+  ['grid-list-item-context.mjs', generatedText('packages/react/src/grid-list-item-context.mjs', gridListItemContextSource)],
   ['toggle-button-context.mjs', generatedText('packages/react/src/toggle-button-context.mjs', toggleButtonContextSource)],
   ['components.mjs', generatedText('packages/react/src/components.mjs', componentSource)],
   ['fields.mjs', generatedText('packages/react/src/fields.mjs', flatIconButtonImport(fieldsSource))],
@@ -1060,6 +1064,7 @@ const outputs = new Map([
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
   ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
+  ['motion-geometry.mjs', generatedText('packages/react/src/motion-geometry.mjs', motionGeometrySource)],
   ['motion-components.mjs', generatedText('packages/react/src/motion-components.mjs', motionComponentsSource)],
   ['candidate-motion.mjs', generatedText('packages/react/src/supplemental/candidate-motion.mjs', candidateMotionSource)],
   ['code-block-highlight.mjs', generatedText('packages/react/src/supplemental/code-block-highlight.mjs', await readFile(resolve(packageRoot, 'src/supplemental/code-block-highlight.mjs'), 'utf8'))],
