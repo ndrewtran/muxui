@@ -74,6 +74,65 @@ create-story, and the docs ArgsTable) prove the private host, not the library
 manual runs; a pull request that changes Storybook configuration or theme plans
 the manager and docs proof. `pnpm release:prepare` sets the same switch.
 
+### Check groups
+
+The package checks run in independent CI groups so the two long suites overlap
+instead of queueing behind the rest: `checks-policy` (this package),
+`checks-tooling` (`@muxui/tooling`), and `checks` (every other package check,
+the root `generate:check`, and the Storybook generation and unit checks). Each
+group repeats the plan's generation prerequisites in its own runner, keeps the
+`checks` kind (the 30-minute timeout and per-group reuse of an earlier pass),
+and exists only when it has work. Main and scheduled runs plan the same groups
+from the workspace packages: one `pnpm --filter <package> run check` per package
+with a `check` script except React and Storybook, which have their own groups,
+checked in dependency order within `checks`.
+
+### Retained-evidence tests
+
+`evidence-integrity.test.mjs` (the retained BL1 and R1 evidence, the capture
+tools, and the growth audit over an archive of HEAD) is about four minutes of
+this package's five. The package therefore has two scripts. `check` runs the
+repository audit, `evidence-verify.mjs`, and every test file except that one.
+`check:evidence` runs `evidence-verify.mjs` and that file.
+
+A pull request's `checks-policy` group runs `check:evidence` only when the change
+reaches what the tests load or read, through imports or as data:
+
+- `pullRequestImpact.evidenceInputs` lists paths (a trailing slash is a
+  directory): `tests/evidence/`, the policy modules and test the suite imports,
+  `apps/docs/src/lib/block-presets.ts`, `packages/react/src/r1-deferred-evidence.mjs`,
+  Decision 0022, which the R1 exit capture reads, and the data the growth audit
+  and its fixture read from the archive of HEAD: `.github/workflows/`,
+  `strategy/platform-safety-contract.json` (the compiler reads it), and the root
+  `.gitignore` (a conservative input: the fixture force-adds, so no ignore file
+  changes what its commits hold).
+- `evidenceInputPatterns` lists regular expressions for path classes:
+  every `package.json` (the audit checks each workspace package's version and
+  publish configuration), a `.gitattributes` at any depth (`git archive` of HEAD
+  honors `export-ignore` and `export-subst` from every directory, so a nested
+  file can drop a file the fixture reads), the hosting and deployment file names
+  the audit rejects (copied from `hostingPaths` in
+  `tests/evidence/bl1/boundary-audit.mjs`), and `apps/*/astro.config.*` (the
+  audit checks Astro site settings).
+- `evidencePresenceInputs` lists files the tests only look up by name
+  (`README.md`, `pnpm-lock.yaml`, the React stylesheet, and the `pattern-<slug>`
+  browser tests): adding or removing one runs the tests, editing it does not.
+- The packages this package depends on (catalog, schema, tokens, tooling) are
+  loaded by the tests, so a change to one runs them through the workspace links,
+  as it ran policy before.
+- A policy lockfile importer change, and a path no route owns, run them too.
+
+Decisions, strategy other than the safety contract, guidance, and the planner and
+its tests skip it. The route tests pin these lists, fail when a module the suite
+imports is not planned by them, and fail when a path class the audit or fixture
+reads as data does not plan `check:evidence`. The growth fixture does not depend
+on incidental HEAD state: it stages with `git add -f`, so an ignore rule, at any
+depth, cannot drop its own negative controls (a guard fails an unforced `git add`
+there), and computes its version bumps from the current version. Main,
+scheduled runs, `pnpm check`, `pnpm check:all`, and `pnpm release:prepare`
+always run both scripts: the workspace runner adds `check:evidence` beside any
+run that includes this package.
+
 ## Release lineage
 
 `.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).

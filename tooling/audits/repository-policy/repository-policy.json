@@ -162,6 +162,35 @@
       "catalog/react-r1-5/": { "reactGenerator": true, "policy": true },
       "catalog/react-r1-6/": { "reactGenerator": true, "policy": true }
     },
+    "evidenceInputs": [
+      ".github/workflows/",
+      ".gitignore",
+      "apps/docs/src/lib/block-presets.ts",
+      "decisions/0022-rc1-assistive-technology-non-claim.md",
+      "packages/react/src/r1-deferred-evidence.mjs",
+      "strategy/platform-safety-contract.json",
+      "tests/evidence/",
+      "tooling/audits/repository-policy/src/canonical-json.mjs",
+      "tooling/audits/repository-policy/src/evidence-verify.mjs",
+      "tooling/audits/repository-policy/src/npm-publication.mjs",
+      "tooling/audits/repository-policy/src/pattern-variants.mjs",
+      "tooling/audits/repository-policy/src/policy.mjs",
+      "tooling/audits/repository-policy/src/release-proof.mjs",
+      "tooling/audits/repository-policy/src/workspace-packages.mjs",
+      "tooling/audits/repository-policy/test/evidence-integrity.test.mjs"
+    ],
+    "evidenceInputPatterns": [
+      "(?:^|/)package\\.json$",
+      "(?:^|/)\\.gitattributes$",
+      "(?:^|\\/)(?:netlify\\.toml|vercel\\.json|wrangler\\.(?:toml|jsonc?)|firebase\\.json|fly\\.toml|render\\.yaml|Procfile|app\\.yaml|serverless\\.ya?ml|staticwebapp\\.config\\.json|CNAME|_headers|_redirects|Dockerfile[^/]*|docker-compose[^/]*\\.ya?ml|\\.vercel\\/.*|\\.netlify\\/.*|\\.github\\/workflows\\/.*)$",
+      "^apps/[^/]+/astro\\.config\\.[^/]+$"
+    ],
+    "evidencePresenceInputs": [
+      "README.md",
+      "packages/react/src/supplemental/styles.css",
+      "packages/react/test/browser/pattern-",
+      "pnpm-lock.yaml"
+    ],
     "packageFixtureOwners": {
       "packages/catalog/test/fixtures/": ["@muxui/catalog", "@muxui/tooling"],
       "tests/fixtures/g0.5/": "@muxui/tooling",

@@ -8,7 +8,7 @@ import { analyzeReactSourceChange, analyzeReactStyleChange, localModuleImports }
 import { planReuse, reuseBlockedPath, reuseCommandTimeoutMs, reuseSummary } from './ci-reuse.mjs';
 import { prerequisitesReadyVariable } from './prepare-prerequisites.mjs';
 import { compareStorybookGeneratorEmissions } from './storybook-generator-impact.mjs';
-import { dependencyClosure, familyRecordsFromContract } from './scoped-verification.mjs';
+import { dependencyClosure, dependencyOrder, familyRecordsFromContract } from './scoped-verification.mjs';
 import { componentTestSelection } from './component-test-selection.mjs';
 import { loadPolicy, normalizePath } from './policy.mjs';
 import { changedPatternSlugs, patternBrowserTest, patternParticipants } from './pattern-variants.mjs';
@@ -640,6 +640,9 @@ function addEveryStoryPage(plan, records, pageIndex) {
 function applyPackageImpact(plan, packageName, records, pageIndex) {
   if (packageName === '@muxui/repository-policy') {
     plan.policy = true;
+    // Reached through a dependency (tooling, catalog, schema, tokens) or its own
+    // lockfile importer: the evidence tests load those, so they run too.
+    plan.evidence = true;
     return 'repository-policy machinery';
   }
   if (packageName === '@muxui/catalog') {
@@ -886,7 +889,7 @@ function addStoryUnitTest(plan, route) {
 
 function selectedCheckOwners(plan, packages) {
   const names = new Set(plan.packageChecks);
-  if (plan.policy) {
+  if (plan.policy || plan.evidence) {
     names.add('@muxui/repository-policy');
     // The policy release-preparation proof consumes ignored React projections
     // without declaring React as a package dependency.
@@ -978,6 +981,37 @@ function refreshStoryRuns(plan, pageIndex) {
 // React package, when the checkout has it: adding the file is the whole declaration.
 const blockBrowserTest = (slug) => patternBrowserTest(resolve(repositoryRoot, 'packages/react'), slug);
 
+// The retained-evidence tests (`check:evidence`, about 4 minutes) run when a
+// change reaches something they load or read, not for every policy-routed path.
+// `pullRequestImpact` names those inputs three ways:
+// - `evidenceInputs`: path prefixes (a directory ends in a slash);
+// - `evidenceInputPatterns`: regular expressions for path classes a prefix
+//   cannot name, such as every package manifest;
+// - `evidencePresenceInputs`: files the tests only look up by name, where adding
+//   or removing one counts and editing it does not.
+// Changes to the packages policy depends on reach the tests through the
+// dependent routes instead.
+const startsWithAny = (path, prefixes) => prefixes.some((prefix) => path.startsWith(prefix));
+
+export function isEvidenceInput(path, config) {
+  return startsWithAny(path, config.evidenceInputs) || config.evidenceInputPatterns.some((source) => new RegExp(source, 'u').test(path));
+}
+
+function assertEvidenceInputs(config) {
+  for (const key of ['evidenceInputs', 'evidenceInputPatterns', 'evidencePresenceInputs']) {
+    if (!Array.isArray(config[key]) || config[key].some((entry) => typeof entry !== 'string' || entry === '')) {
+      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.${key} must list the retained-evidence test inputs as non-empty strings`);
+    }
+  }
+  for (const source of config.evidenceInputPatterns) {
+    try {
+      new RegExp(source, 'u');
+    } catch (error) {
+      throw new Error(`MUXUI_CI_IMPACT_POLICY_INVALID: pullRequestImpact.evidenceInputPatterns entry ${JSON.stringify(source)} is not a regular expression (${error.message})`);
+    }
+  }
+}
+
 // Plans every generated Block page whose variants live in the pattern's directory.
 function addPatternPages(plan, slug, pageIndex) {
   for (const page of pageIndex) {
@@ -1012,12 +1046,14 @@ export async function buildPullRequestImpact({
 }) {
   const changed = normalizeTaskPaths(changedPaths);
   if (changed.length === 0) throw new Error('MUXUI_CI_IMPACT_EMPTY: the pull request diff contains no changed paths');
+  assertEvidenceInputs(config);
   const plan = {
     schemaVersion: 1,
     changedPaths: changed,
     full: false,
     fullReasons: [],
     policy: false,
+    evidence: false,
     docs: false,
     scale: false,
     catalog: false,
@@ -1420,6 +1456,7 @@ export async function buildPullRequestImpact({
   if (changed.includes('pnpm-lock.yaml') && lockfileBefore !== undefined && lockfileAfter !== undefined) {
     if (isPolicyOnlyLockfileChange(lockfileBefore, lockfileAfter)) {
       plan.policy = true;
+      plan.evidence = true;
       plan.reasons.push('pnpm-lock.yaml changes only the repository-policy importer and adds its parser resolutions');
     } else if (plan.fullReasons.length === 0) {
       for (const importer of changedLockfileImporters(lockfileBefore, lockfileAfter)) {
@@ -1430,7 +1467,16 @@ export async function buildPullRequestImpact({
 
   if (missing.length > 0) {
     plan.policy = true;
+    plan.evidence = true;
     widen(`${missing.join(', ')} ${missing.length === 1 ? 'has' : 'have'} no owner route; running the repository policy check (add an owner route to pullRequestImpact to narrow this)`);
+  }
+  for (const path of changed) {
+    const input = isEvidenceInput(path, config);
+    const lookup = !input && startsWithAny(path, config.evidencePresenceInputs)
+      && (await readHeadText(path) === null || await readBaseText(path) === null);
+    if (!input && !lookup) continue;
+    plan.evidence = true;
+    plan.reasons.push(`${path} ${input ? 'is an input of' : 'is added or removed, and is looked up by'} the retained-evidence tests; run check:evidence`);
   }
   if (plan.fullReasons.length > 0) {
     plan.full = true;
@@ -1718,8 +1764,17 @@ function storyProofEnvironment(storyRun, environment) {
 export const storyShardPageBudget = 80;
 
 const sharedGroup = '*';
-const workspaceRootPackage = '@muxui/workspace';
 const groupTimeoutMinutes = { checks: 30, react: 30, browser: 30, tailwind: 15, storybook: 30 };
+
+// Package checks run in independent CI groups so the two long suites overlap
+// instead of queueing behind every other package check. Every `checks-*` id
+// keeps kind `checks` (timeout and reuse rules); other packages share `checks`.
+const policyPackage = '@muxui/repository-policy';
+const toolingPackage = '@muxui/tooling';
+const policyChecksGroup = 'checks-policy';
+const toolingChecksGroup = 'checks-tooling';
+const checksGroup = 'checks';
+const checksGroupFor = (name) => (name === policyPackage ? policyChecksGroup : name === toolingPackage ? toolingChecksGroup : checksGroup);
 const fullStorybookEnvironment = {
   MUXUI_STORYBOOK_AUDIT_EVENT: 'check:all',
   MUXUI_STORYBOOK_AUDIT_FORCE: '1',
@@ -1951,13 +2006,21 @@ function fullPlannedCommands(environment, testSources, packages) {
   // `pnpm check:all` split into independent groups: full generation, then each
   // package's own check script, with React and Storybook in their own jobs.
   add(sharedGroup, ['--recursive', '--sort', '--workspace-concurrency=1', '--if-present', 'run', 'generate'], { prerequisite: true });
-  // Exclusion-only filters select the workspace root too; its `check` script is
-  // the affected-scope runner, not a package check, so exclude it explicitly.
-  add('checks', [
-    '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
-    '--filter', `!${workspaceRootPackage}`, '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook', 'run', 'check',
-  ], { unsetEnv: storybookSelectionKeys });
-  add('checks', ['generate:check']);
+  // Every workspace package with a `check` script except React and Storybook,
+  // the same set `pnpm -r run check` covered, one command per package like the
+  // pull-request plan. The policy and tooling suites each get a group; the rest
+  // run together in dependency order. The root is not a workspace package here:
+  // its `check` is the affected-scope runner, not a package check.
+  const checked = dependencyOrder(packages)
+    .filter(({ name, manifest }) => typeof manifest.scripts?.check === 'string' && !['@muxui/react', '@muxui/react-storybook'].includes(name))
+    .map(({ name }) => name);
+  const longSuites = [policyPackage, toolingPackage].filter((name) => checked.includes(name));
+  for (const name of [...longSuites, ...checked.filter((name) => !longSuites.includes(name))]) {
+    add(checksGroupFor(name), ['--filter', name, 'run', 'check']);
+    // The pull-request plan runs this only when the change reaches its inputs.
+    if (name === policyPackage) add(policyChecksGroup, ['--filter', name, 'run', 'check:evidence']);
+  }
+  add(checksGroup, ['generate:check']);
   add('react', ['--filter', '@muxui/react', 'run', 'check']);
   add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
   addReactBrowserSuite(add, testSources, packages);
@@ -2006,12 +2069,16 @@ function plannedCommands(plan, {
     add(sharedGroup, args, { prerequisite: true });
   }
 
-  if (plan.policy) add('checks', ['--filter', '@muxui/repository-policy', 'run', 'check']);
-  if (plan.catalog) add('checks', ['--filter', '@muxui/catalog', 'run', 'check']);
-  if (plan.tokens) add('checks', ['--filter', '@muxui/tokens', 'run', 'check']);
-  if (plan.docs) add('checks', ['--filter', '@muxui/docs', 'run', 'check']);
+  if (plan.policy) add(policyChecksGroup, ['--filter', policyPackage, 'run', 'check']);
+  if (plan.evidence) add(policyChecksGroup, ['--filter', policyPackage, 'run', 'check:evidence']);
+  // Tooling is the other long package check, so its group is planned beside policy's.
+  const packageChecks = plan.packageChecks.filter((name) => name !== toolingPackage);
+  if (plan.packageChecks.includes(toolingPackage)) add(toolingChecksGroup, ['--filter', toolingPackage, 'run', 'check']);
+  if (plan.catalog) add(checksGroup, ['--filter', '@muxui/catalog', 'run', 'check']);
+  if (plan.tokens) add(checksGroup, ['--filter', '@muxui/tokens', 'run', 'check']);
+  if (plan.docs) add(checksGroup, ['--filter', '@muxui/docs', 'run', 'check']);
   if (plan.scale) {
-    add('checks', ['--filter', '@muxui/scale', 'run', 'check']);
+    add(checksGroup, ['--filter', '@muxui/scale', 'run', 'check']);
     add(chromiumGroup, ['--filter', '@muxui/scale', 'run', 'check:browser']);
   }
   if (plan.reactTheme) {
@@ -2042,13 +2109,13 @@ function plannedCommands(plan, {
       env: runsInEveryEngine(testFile, testSources) ? crossEngineEnvironment : {},
     });
   }
-  for (const packageName of plan.packageChecks) add('checks', ['--filter', packageName, 'run', 'check']);
+  for (const packageName of packageChecks) add(checksGroup, ['--filter', packageName, 'run', 'check']);
   if (plan.storyTooling || plan.storybookGenerationCheck) {
-    addStorybook('checks', ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
+    addStorybook(checksGroup, ['--filter', '@muxui/react-storybook', 'run', 'generate:check']);
   }
   if (plan.storyTooling) {
     for (const { file, testNamePattern } of plan.storyUnitTests) {
-      addStorybook('checks', [
+      addStorybook(checksGroup, [
         '--filter', '@muxui/react-storybook', 'exec', 'node', '--test',
         ...(testNamePattern ? [`--test-name-pattern=${testNamePattern}`] : []),
         file,
@@ -2093,8 +2160,8 @@ export function executionGroups(plan, options = {}) {
     if (storyRun) storyRuns.set(group, storyRun);
   }
   return [...groups].map(([id, commands]) => {
-    // Sharded and per-engine groups (storybook-*, browser-*) share their family's kind.
-    const kind = id.match(/^(?:storybook|browser)(?=-|$)/u)?.[0] ?? id;
+    // Sharded, per-engine and per-owner groups (storybook-*, browser-*, checks-*) share their family's kind.
+    const kind = id.match(/^(?:storybook|browser|checks)(?=-|$)/u)?.[0] ?? id;
     return {
       id,
       kind,
@@ -2230,6 +2297,7 @@ function planReport(plan, { baseRef, mergeBase, metadataPrepared, groups }) {
     generationPackages: plan.generationPackages,
     checks: {
       policy: plan.policy,
+      evidence: plan.evidence,
       catalog: plan.catalog,
       tokens: plan.tokens,
       docs: plan.docs,

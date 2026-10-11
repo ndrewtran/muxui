@@ -7,6 +7,7 @@ import {
   changedPackageSelection,
   checkStages,
   dependencyClosure,
+  dependencyOrder,
   parseTaskArguments,
   planScopedTask,
   resolveComponents,
@@ -170,6 +171,11 @@ test('component resolution fails clearly for unknown IDs', () => {
 
 // A step is a pnpm argument list; lanes run their steps in order.
 const step = (...args) => ({ args });
+// Policy's `check` leaves out the retained-evidence tests, so a workspace run that includes policy runs them in a lane of their own.
+const evidenceLane = [step(
+  '--stream', '--recursive', '--sort', '--workspace-concurrency=1', '--if-present', '--no-bail',
+  '--filter', '@muxui/repository-policy', 'run', 'check:evidence',
+)];
 
 test('affected check args exclude the workspace root that dependent filters would select', () => {
   const plan = planWithoutInheritedStorybookSelection({
@@ -187,6 +193,7 @@ test('affected check args exclude the workspace root that dependent filters woul
         '--filter', '...@muxui/schema', '--filter', '!@muxui/react', '--filter', '!@muxui/react-storybook',
         '--filter', '!@muxui/workspace', 'run', 'check',
       )],
+      evidenceLane,
     ],
   ]);
 });
@@ -205,6 +212,7 @@ test('scoped check stages isolate React and run Storybook beside the remaining c
         '--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail',
         '--filter', '@muxui/schema', '--filter', '@muxui/docs', '--filter', '@muxui/repository-policy', 'run', 'check',
       )],
+      evidenceLane,
     ],
   ]);
   const only = (name) => ({ ...plan, checkPackages: packages.filter((item) => item.name === name) });
@@ -276,6 +284,43 @@ test('file and affected scopes expose the exact paths whose Storybook selection 
       options: parseTaskArguments(['check', ...args]), packages, policy,
     }).selectionPaths, []);
   }
+});
+
+test('workspace check runs add the evidence lane only for runs that include policy and only for the check task', () => {
+  const stagesFor = (names, extra = {}, task = 'check') => checkStages(
+    { scope: 'package', full: false, directPackages: [], checkPackages: packages.filter(({ name }) => names.includes(name)), ...extra },
+    { task, workspaceRootName: '@muxui/workspace' },
+  );
+  // Policy alone: its own check, plus the evidence tests beside it.
+  assert.deepEqual(stagesFor(['@muxui/repository-policy']), [[
+    [step('--stream', '--recursive', '--sort', '--workspace-concurrency=2', '--if-present', '--no-bail', '--filter', '@muxui/repository-policy', 'run', 'check')],
+    evidenceLane,
+  ]]);
+  // Without policy, or for another task, there is nothing to add.
+  assert.equal(JSON.stringify(stagesFor(['@muxui/docs'])).includes('check:evidence'), false);
+  assert.equal(JSON.stringify(stagesFor(['@muxui/repository-policy'], {}, 'generate')).includes('check:evidence'), false);
+  // The full graph (check:all, and so release:prepare) runs them too, beside Storybook and the remaining checks.
+  const fullPlan = planWithoutInheritedStorybookSelection({ options: parseTaskArguments(['check', '--full']), packages, policy });
+  const lanes = checkStages(fullPlan, { task: 'check', workspaceRootName: '@muxui/workspace' }).at(-1);
+  assert.equal(lanes.length, 3);
+  assert.deepEqual(lanes.at(-1), evidenceLane);
+});
+
+test('dependencyOrder puts each package after the workspace packages it depends on and keeps the input order otherwise', () => {
+  const item = (name, dependencies = {}, devDependencies = {}) => ({ name, manifest: { dependencies, devDependencies } });
+  const input = [
+    item('@muxui/docs', { '@muxui/catalog': 'workspace:*' }, { '@muxui/tooling': 'workspace:*' }),
+    item('@muxui/catalog', { '@muxui/schema': 'workspace:*', 'not-in-workspace': '1.0.0' }),
+    item('@muxui/schema'),
+    item('@muxui/tooling', { '@muxui/catalog': 'workspace:*' }),
+    item('@muxui/web'),
+  ];
+  assert.deepEqual(dependencyOrder(input).map(({ name }) => name), [
+    '@muxui/schema', '@muxui/catalog', '@muxui/tooling', '@muxui/docs', '@muxui/web',
+  ]);
+  // A cycle (which the workspace forbids) cannot loop or drop a package.
+  const cyclic = [item('a', { b: '1' }), item('b', { a: '1' })];
+  assert.deepEqual(dependencyOrder(cyclic).map(({ name }) => name).sort(), ['a', 'b']);
 });
 
 test('repository policy routes navigation and CI paths to the policy check with React generation', async () => {
