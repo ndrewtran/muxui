@@ -383,7 +383,7 @@ test('generator tooling checks emitted page IDs only when the generator output c
     MUXUI_STORYBOOK_AUDIT_PROOF: 'story',
     MUXUI_STORYBOOK_FAMILIES: 'NumberField',
     MUXUI_STORYBOOK_STORY_IDS: sizingStoryId,
-    MUXUI_STORYBOOK_A11Y_WORKERS: '1',
+    MUXUI_STORYBOOK_A11Y_WORKERS: '2',
     MUXUI_STORYBOOK_COLORS_WORKERS: '2',
   });
 });
@@ -1934,7 +1934,7 @@ test('large Storybook runs shard by family into balanced jobs within the page bu
 });
 
 const storybookSlice = (selection) => selection.commands.map(({ args, env }) => ({ args, env }));
-const storybookEnv = { MUXUI_STORYBOOK_A11Y_WORKERS: '1', MUXUI_STORYBOOK_COLORS_WORKERS: '2' };
+const storybookEnv = { MUXUI_STORYBOOK_A11Y_WORKERS: '2', MUXUI_STORYBOOK_COLORS_WORKERS: '2' };
 
 test('a family runtime change gives the local run one scoped Storybook audit with CI environment', async () => {
   const result = await plan([collectionsPath], treeRuntimeChange);
@@ -3636,7 +3636,7 @@ test('pattern inputs select their generated Storybook pages for the scoped audit
     MUXUI_STORYBOOK_AUDIT_PROOF: 'story',
     MUXUI_STORYBOOK_FAMILIES: 'Poster grid',
     MUXUI_STORYBOOK_STORY_IDS: cssId,
-    MUXUI_STORYBOOK_A11Y_WORKERS: '1',
+    MUXUI_STORYBOOK_A11Y_WORKERS: '2',
     MUXUI_STORYBOOK_COLORS_WORKERS: '2',
   });
 
