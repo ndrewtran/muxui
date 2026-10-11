@@ -65,8 +65,43 @@ function compareWithSource({ cwd, reviewedRevision, sourceRevision, sourceTree, 
   };
 }
 
-/** The text under a review's `## Overall verdict` or `## Verdict` heading, or undefined when it has none. */
-export const reviewVerdict = (text) => /^##+ (?:Overall verdict|Verdict)[ \t]*\n([\s\S]*?)(?=\n##+ |(?![\s\S]))/mu.exec(text)?.[1]?.trim();
+const verdictHeading = /^##+ (?:Overall verdict|Verdict)[ \t]*$/u;
+// A fence opens with three or more backticks (whose info string has none) or tildes, indented by at most three spaces, and closes with
+// the same character at least as many times and nothing else on the line.
+const fenceOpen = /^ {0,3}(`{3,}(?=[^`]*$)|~{3,})/u;
+const fenceClose = /^ {0,3}(`{3,}|~{3,})[ \t]*$/u;
+
+/**
+ * The text under a review's `## Overall verdict` or `## Verdict` heading, up to the next `##` heading, or undefined when it has none.
+ * Lines are split on LF or CRLF for parsing only; the retained review keeps its own bytes. A heading inside a fenced code block (``` or ~~~)
+ * is text, not a section, and a review with more than one verdict heading outside fences has no single verdict, so it throws instead of
+ * letting one section stand for the other. `label` names the review in that error.
+ */
+export function reviewVerdict(text, label = 'the review') {
+  const sections = [];
+  let section = null;
+  let fence = null;
+  for (const line of text.split(/\r?\n/u)) {
+    if (fence !== null) {
+      const close = fenceClose.exec(line)?.[1];
+      if (close !== undefined && close[0] === fence[0] && close.length >= fence.length) fence = null;
+    } else {
+      const open = fenceOpen.exec(line)?.[1];
+      if (open !== undefined) {
+        fence = open;
+      } else if (verdictHeading.test(line)) {
+        section = [];
+        sections.push(section);
+        continue;
+      } else if (/^##+ /u.test(line)) {
+        section = null;
+      }
+    }
+    section?.push(line);
+  }
+  if (sections.length > 1) throw new Error(`${label} has ${sections.length} verdict headings outside code fences, so its verdict is ambiguous`);
+  return sections[0]?.join('\n').trim();
+}
 
 /**
  * The close-out's exit review (every retained capture reuses it) states its verdict in prose, "ready to merge as step 1", and was retained
@@ -127,7 +162,7 @@ export async function retainReview({
   const reviewer = /\*\*Reviewer:\*\*\s*(.+)/u.exec(text)?.[1]?.trim();
   if (!reviewer) throw new Error(`${id}: the review record does not name its reviewer`);
   const { reviewedTree, comparison } = compareWithSource({ cwd, reviewedRevision: record.reviewedRevision, sourceRevision, sourceTree, proofToolPaths });
-  const verdict = reviewVerdict(text);
+  const verdict = reviewVerdict(text, `${id}: the review record`);
   return {
     artifact: { path: artifactPath, sha256: sha256(text) },
     raw: record.raw,

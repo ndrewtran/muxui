@@ -1355,11 +1355,13 @@ test('a BL1 exit review is retained only when its verdict opens with a pass, or 
   const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-exit-verdict-'));
   const root = 'tests/evidence/bl1';
   const base = { cwd, outputRoot, root, id: 'E-BL1-09', artifactPath: `${root}/artifacts/E-BL1-09-exit-review.md`, previousKey: 'exitReview', required: true, sourceRevision: source, sourceTree, reviewedRevision: source };
-  const retain = async (verdict) => {
+  const header = `# Review\n\n**Reviewer:** an independent reviewer, not the author.\n**Revision:** \`${source.slice(0, 8)}\`\n\n`;
+  const retainText = async (text) => {
     const input = join(outputRoot, 'review.md');
-    await writeFile(input, `# Review\n\n**Reviewer:** an independent reviewer, not the author.\n**Revision:** \`${source.slice(0, 8)}\`\n\n${verdict}`);
+    await writeFile(input, text);
     return retainReview({ ...base, input });
   };
+  const retain = (verdict) => retainText(`${header}${verdict}`);
   try {
     for (const verdict of ['## Verdict\n\n**Pass.** The audit and the exit claim hold.\n', '## Verdict\n\n- **Pass.** The audit holds.\n- Follow-ups are advisory.\n']) {
       assertExitReviewPasses(await retain(verdict));
@@ -1376,6 +1378,32 @@ test('a BL1 exit review is retained only when its verdict opens with a pass, or 
       const review = await retain(verdict);
       assert.throws(() => assertExitReviewPasses(review), /does not open its verdict with \*\*Pass\.\*\*/u, verdict);
     }
+    // A heading inside a fenced code block is text: a template that shows `## Verdict` and **Pass.** cannot stand for the review's own failing verdict.
+    const fenced = (fence, template, verdict) => `${fence}md\n${template}\n${fence}\n\n${verdict}`;
+    for (const fence of ['```', '~~~', '````']) {
+      const review = await retain(fenced(fence, '## Verdict\n\n**Pass.** The audit holds.', '## Overall verdict\n\n**Fail.** The boundary audit misses a leg.\n'));
+      assert.match(review.verdictText, /^\*\*Fail\.\*\*/u, fence);
+      assert.throws(() => assertExitReviewPasses(review), /does not open its verdict/u, fence);
+    }
+    // A fence closes only on the same character and at least as many of it, so a shorter or different run inside it stays text.
+    const nested = await retain(fenced('````', '```\n## Verdict\n\n**Pass.**\n```\n~~~', '## Verdict\n\n**Fail.** Not accepted.\n'));
+    assert.match(nested.verdictText, /^\*\*Fail\./u);
+    // A fenced block inside the real verdict section stays in it, and its `##` lines do not end the section.
+    const inside = await retain('## Verdict\n\n**Pass.** Output of the run:\n\n```\n## not a heading\n```\n\n## Notes\n\n**Fail.** is not the verdict.\n');
+    assert.match(inside.verdictText, /^\*\*Pass\.\*\* Output of the run:\n\n```\n## not a heading\n```$/u);
+    assertExitReviewPasses(inside);
+    // More than one real verdict section is ambiguous, in either order and under either heading, and is refused rather than read as the first.
+    for (const verdict of ['## Verdict\n\n**Pass.**\n\n## Overall verdict\n\n**Fail.**\n', '## Overall verdict\n\n**Fail.**\n\n## Verdict\n\n**Pass.**\n', '## Verdict\n\n**Pass.**\n\n## Verdict\n\n**Pass.**\n']) {
+      await assert.rejects(retain(verdict), /E-BL1-09: the review record has 2 verdict headings outside code fences, so its verdict is ambiguous/u, verdict);
+    }
+    // A CRLF review reads like an LF one, and the retained text and its digest are the bytes that were read.
+    const crlf = `${header}## Verdict\n\n**Pass.** The audit and the exit claim hold.\n\n## Notes\n\nNone.\n`.replaceAll('\n', '\r\n');
+    const crlfReview = await retainText(crlf);
+    assert.equal(crlfReview.verdictText, '**Pass.** The audit and the exit claim hold.');
+    assert.equal(crlfReview.text, crlf);
+    assert.equal(crlfReview.artifact.sha256, digest(crlf));
+    assertExitReviewPasses(crlfReview);
+    assert.match((await retainText(crlf.replace('**Pass.**', '**Fail.**'))).verdictText, /^\*\*Fail\./u);
     // The close-out's retained exit review states its verdict in prose and is accepted only at its pinned digest.
     const closeoutReview = await readFile(join(repositoryRoot, root, 'artifacts/E-BL1-09-exit-review.md'), 'utf8');
     assert.deepEqual([...proseVerdictExitReviews], [digest(closeoutReview)]);
