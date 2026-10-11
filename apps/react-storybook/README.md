@@ -57,3 +57,10 @@ for all consumer pages unless family or page filters narrow it, and `chrome`
 checks manager and docs colours. `full` delegates to the complete package audit.
 Canonical page IDs and authored example source mappings come from the generated
 `.storybook/generated/manifest.mjs` page index.
+
+Storybook's own-interface colour proofs (manager and docs paint, onboarding,
+create-story, and the docs ArgsTable) prove this private host, not the library.
+`MUXUI_STORYBOOK_UI_PROOF=skip` skips exactly those four tests, which keep their
+names. `pnpm release:prepare` and the full plan for a push to `main` set it;
+direct package checks, pull requests that change Storybook configuration or
+theme, the weekly schedule, and manual CI runs keep the proofs (Decision 0030).

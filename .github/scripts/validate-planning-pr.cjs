@@ -28,6 +28,7 @@ const PLANNING_CONTROL_FILES = new Set([
   '.github/scripts/validate-planning-pr.test.cjs',
   '.github/workflows/npm-publish.yml',
   'tooling/audits/repository-policy/src/npm-publication.mjs',
+  'tooling/audits/repository-policy/src/release-lineage.mjs',
   'tooling/audits/repository-policy/src/release-prepare.mjs',
   'tooling/audits/repository-policy/src/release-proof.mjs',
   'packages/react/src/publish-guard.mjs',

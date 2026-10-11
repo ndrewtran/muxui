@@ -67,6 +67,25 @@ throws, or, in the default scope, when a forced-full Storybook event is active
 `--package`, `--component`, and generation commands keep their existing
 semantics.
 
+Storybook's own-interface colour proofs (manager and docs paint, onboarding,
+create-story, and the docs ArgsTable) prove the private host, not the library
+(Decision 0030). The full plan skips them on a push to `main` through
+`MUXUI_STORYBOOK_UI_PROOF=skip` and keeps them on the weekly schedule and
+manual runs; a pull request that changes Storybook configuration or theme plans
+the manager and docs proof. `pnpm release:prepare` sets the same switch.
+
+## Release lineage
+
+`.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).
+`src/release-lineage.mjs` is the part of that workflow that reads GitHub runs.
+A dry run asks `main-ci` for the push run of `ci.yml` on `main` at its exact
+commit. It reuses that run only when the run succeeded and every group of the
+full plan, recomputed from the commit, has a successful job; otherwise it runs
+the full `pnpm release:prepare`. A publish run does not rebuild: `dry-run`
+verifies the dry run named by `dry-run-id`, and `candidate` verifies the
+downloaded artifact's digest, version, and manifest before the approval gate.
+The tests are `test/release-lineage.test.mjs`.
+
 Evidence capture and disclosure remain owned by the architecture, Product Scope,
 package, and evidence references. See
 [`tests/evidence/README.md`](../../../tests/evidence/README.md) before retaining

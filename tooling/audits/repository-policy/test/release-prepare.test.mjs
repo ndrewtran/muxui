@@ -22,6 +22,7 @@ import {
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
+  derivePreparation,
   deriveVisualContract,
   digestFileSet,
   findModuleSideEffects,
@@ -663,6 +664,27 @@ test('the release manifest correlates exact source, lockfile, generated, catalog
   assert.throws(() => buildReleaseCorrelation({ ...options, catalogBundle: { ...options.catalogBundle, catalogDigest: `sha256:${'b'.repeat(64)}` } }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, retainedEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
   assert.throws(() => buildReleaseCorrelation({ ...options, reviewEvidence: [] }), /R1_EXIT_CORRELATION_INVALID/u);
+});
+
+// Decision 0030: the release manifest says which checks stand behind the candidate.
+test('the release manifest records the full checks, or the main CI run a dry run reused', () => {
+  const head = 'a'.repeat(40);
+  const notReleaseProof = ['Storybook manager, docs, onboarding, and create-story colour proofs (muxui:decision:0030)'];
+  assert.deepEqual(derivePreparation({}, head), { mode: 'full-checks', notReleaseProof });
+  assert.deepEqual(derivePreparation({ MUXUI_RELEASE_MAIN_CI_RUN: '', MUXUI_RELEASE_MAIN_CI_ATTEMPT: '' }, head), { mode: 'full-checks', notReleaseProof });
+  assert.deepEqual(derivePreparation({ MUXUI_RELEASE_MAIN_CI_RUN: '38100200147', MUXUI_RELEASE_MAIN_CI_ATTEMPT: '2' }, head), {
+    mode: 'main-ci-reused',
+    mainCi: { workflow: '.github/workflows/ci.yml', event: 'push', branch: 'main', headRevision: head, runId: 38100200147, runAttempt: 2 },
+    notReleaseProof,
+  });
+  // A run without an attempt, or either one malformed, is never read as a reuse.
+  for (const environment of [
+    { MUXUI_RELEASE_MAIN_CI_RUN: '38100200147' },
+    { MUXUI_RELEASE_MAIN_CI_ATTEMPT: '1' },
+    { MUXUI_RELEASE_MAIN_CI_RUN: '0', MUXUI_RELEASE_MAIN_CI_ATTEMPT: '1' },
+    { MUXUI_RELEASE_MAIN_CI_RUN: '12', MUXUI_RELEASE_MAIN_CI_ATTEMPT: 'one' },
+    { MUXUI_RELEASE_MAIN_CI_RUN: '12x', MUXUI_RELEASE_MAIN_CI_ATTEMPT: '1' },
+  ]) assert.throws(() => derivePreparation(environment, head), /R1_EXIT_PREPARATION_INVALID/u, JSON.stringify(environment));
 });
 
 // npm-publish.yml: candidate version rule, preflight, and propagation-tolerant read-back.

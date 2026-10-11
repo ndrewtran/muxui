@@ -1483,6 +1483,28 @@ test('the full plan splits check:all into independently runnable groups', () => 
   assert.equal(storybookEnv.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR, '/tmp/runner/storybook-colour-audit');
 });
 
+// Decision 0030: Storybook's own-interface colour proofs are not release proof, so only a main
+// push skips them; the weekly schedule, manual runs, and pull request plans keep them.
+test('a main push skips the Storybook own-interface colour proofs and every other event keeps them', async () => {
+  const colours = (event) => {
+    const groups = executionGroups(fullWorkspacePlan(`${event} runs the full workspace graph`), {
+      packages, environment: event ? { GITHUB_EVENT_NAME: event, RUNNER_TEMP: '/tmp/runner' } : {},
+    });
+    const storybook = groups.find(({ id }) => id === 'storybook').commands.find(({ args }) => args.includes('test/storybook-colors.test.mjs'));
+    assert.equal(groups.find(({ id }) => id === 'storybook-a11y').commands.at(-1).env.MUXUI_STORYBOOK_UI_PROOF, undefined, 'the a11y group has no own-interface proof');
+    return storybook.env.MUXUI_STORYBOOK_UI_PROOF;
+  };
+  assert.equal(colours('push'), 'skip');
+  for (const event of ['schedule', 'workflow_dispatch', 'pull_request', undefined]) assert.equal(colours(event), undefined, String(event));
+
+  // A pull request that changes Storybook chrome plans the manager and docs proof without the switch.
+  const chrome = executionGroups(await plan(['apps/react-storybook/.storybook/theme.mjs']), { packages, environment: { GITHUB_EVENT_NAME: 'pull_request' }, pageIndex });
+  const chromeRun = chrome.find(({ id }) => id === 'storybook-chrome');
+  assert.ok(chromeRun, 'a Storybook theme change plans the chrome proof');
+  assert.equal(chromeRun.commands.at(-1).env.MUXUI_STORYBOOK_UI_PROOF, undefined);
+  assert.equal(chromeRun.commands.at(-1).env.MUXUI_STORYBOOK_AUDIT_PROOF, 'chrome');
+});
+
 test('CLI arguments select preview, full, group, and GitHub output modes', () => {
   assert.deepEqual(parseCliArguments(['--full', '--group', 'react', '--github-output']), {
     preview: false, planOnly: false, includeWorktree: false, full: true, group: 'react', githubOutput: true, reuseRecord: null,
