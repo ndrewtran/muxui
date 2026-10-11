@@ -1410,6 +1410,15 @@ test('a selection CI would shard, or cannot bound, keeps the full local audit wi
   assert.match(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).reason, /shard the selection of \d+ pages \(more than 80 per shard\)/u);
   assert.equal(storybookSelection(shared, { packages, environment: {}, pageIndex: wideIndex }).full, true);
 
+  // Chrome proof audits the manager UI, not pages, so a wide index never shards it.
+  const chrome = await plan(['apps/react-storybook/.storybook/manager.mjs'], { pageIndex: wideIndex });
+  assert.deepEqual(chrome.storyRuns.map(({ proof }) => proof), ['chrome']);
+  const chromeSelection = storybookSelection(chrome, { packages, environment: {}, pageIndex: wideIndex });
+  assert.equal(chromeSelection.full, false);
+  assert.equal(chromeSelection.pages, 0);
+  assert.deepEqual(chromeSelection.commands.map(({ env }) => env.MUXUI_STORYBOOK_AUDIT_PROOF).filter(Boolean), ['chrome']);
+  assert.equal(chromeSelection.commands.filter(({ args }) => args.includes('check:scoped')).length, 1);
+
   // The same shared path fits one shard in the small fixture index.
   const narrow = await plan(['apps/react-storybook/src/storybook-factory.mjs']);
   assert.equal(storybookSelection(narrow, { packages, environment: {}, pageIndex }).full, false);

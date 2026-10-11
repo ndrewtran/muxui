@@ -62,7 +62,8 @@ Storybook proof for the paths, the lane is skipped with a printed notice. The
 lane keeps the full Storybook audit, with a printed notice naming the cause,
 when the selection is more than one CI shard (80 pages in total), when the
 planner widens to the full workspace, needs a page index that is missing, or
-throws, or when a forced-full Storybook event is active. `pnpm check:all`,
+throws, or, in the default scope, when a forced-full Storybook event is active
+(`--files` rejects that event with `MUXUI_TASK_SCOPE_CONFLICT`). `pnpm check:all`,
 `--package`, `--component`, and generation commands keep their existing
 semantics.
 

@@ -1729,8 +1729,10 @@ const storybookSelectionKeys = [
   'MUXUI_STORYBOOK_FAMILY_FILTER', 'MUXUI_STORYBOOK_FAMILY', 'MUXUI_COMPONENT_FAMILIES',
 ];
 
+// Pages a run audits per family. Chrome proof audits the manager and docs UI, not pages.
 function storyRunPageCounts(storyRun, pageIndex) {
   const counts = new Map();
+  if (storyRun.proof === 'chrome') return counts;
   const add = (family) => counts.set(family, (counts.get(family) ?? 0) + 1);
   if (storyRun.storyIds.length > 0) {
     for (const page of pageIndex) {
