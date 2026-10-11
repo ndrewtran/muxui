@@ -2,7 +2,7 @@
   "schema": "muxui-bl1-regression-thresholds-v1",
   "authority": "strategy/milestone-roadmap.md: BL1 Blocks showcase, E-BL1-11",
   "provenance": {
-    "summary": "Committed before the baseline was captured, but not all fixed before measuring: a first measurement showed that seven of the nine discovery expectations needed revising, and a second commit rewrote them before capture. Six component queries moved from expecting a named first result to expecting the same first result as the catalog without patterns (firstWithoutPatterns): 'grid list' and 'virtualizer' already rank an example above their component with no pattern compiled, a ranking of the existing search model that no block causes, so the expectation changed for those two; 'button', 'image', 'link', and 'text' still rank their component first. 'collections' moved from expecting the Poster grid first to expecting it within the top three (expectedWithin), because a category term scores 20 points against the several fields of the components that mention collections; that ranks the Poster grid third, a known discovery weakness this baseline records and does not pass as a first-ranked result. The registry budgets are the existing command-registry.json tiers; the other numbers are judgement, and the only size looked at beforehand was the seed's own source (460 and 526 lexemes), which informed the headroom of variantSourceLexemes. BL1-B2 then added the hero, pricing plans, and account settings blocks. Its queries, the component queries for the new participants, and the new relevant ids for button and text were written before any of them was measured; a first measurement then showed two expectations were wrong, and they were revised before capture: \"split hero\" first expected the Marketing hero first, but the variant example id carries both query words, so the pattern is expected within the top three (it ranks second); \"billing toggle\" first expected the Pricing plans within the top three, but the Toggle component ids and names outscore any pattern for a component word, so it ranks ninth and is expected within the top ten, a known weakness recorded below. An earlier name for the settings block, Settings form, already displaced the Form component search, so the block is named Account settings. The collections blocks, Company records and Task filters, were added after the baseline. Their discovery queries and expectations (company records, records, companies, contacts, task filters, filters, filter tasks), the component queries for their new participants (table, tag group, menu, select, search field, each expecting the catalog's own first result), their seed set ids, and their ids in the relevant lists of the collections, button, text, and toggle button group queries were written from the blocks' intent in the commit that precedes the block sources, before either block was measured. Decision 0026 amendment 02: the Collections category gained Company records and Task filters, and every collections block scores 20 for the \"collections\" name query, so the Poster grid, which ranked third alone, ranks fourth: the Virtualizer scores 40, and the Avatar component, Company records, the Poster grid, and Task filters tie at 20 and sort by id. Its expectedWithin on that query moved from 3 to 4 in the pull request that adds the two blocks, keeping the expectation and the known weakness. No other expectation, limit, or budget changed, and revisedAfterFirstMeasurement is unchanged. The navigation block, Workspace navigation, was added after the baseline as the first block of its category. Its discovery queries and expectations (workspace navigation, workspace, navigation, side navigation, collapsible navigation), the component queries for its new participants (sidebar, breadcrumbs, avatar, each expecting the catalog's own first result), its seed set id, and its id in the relevant lists of the menu and text queries were written from the block's intent in the commit that precedes the block sources, before the block was measured. The category has no other block, so no existing expectation changes. Since Decision 0029 (which supersedes Decision 0026 amendment 02, cited above) a pull request may change a query, a limit, or a budget when it states the change and its reason before measuring and logs it in revisions below; no expectation is removed, a change made after its result was seen is also in revisedAfterFirstMeasurement, and a threshold is never changed to fit a failure. The revisions below record each change since the close-out as an exact transition (the query and field, or the value, with what it was and what it became).",
+    "summary": "Committed before the baseline was captured, but not all fixed before measuring: a first measurement showed that seven of the nine discovery expectations needed revising, and a second commit rewrote them before capture. Six component queries moved from expecting a named first result to expecting the same first result as the catalog without patterns (firstWithoutPatterns): 'grid list' and 'virtualizer' already rank an example above their component with no pattern compiled, a ranking of the existing search model that no block causes, so the expectation changed for those two; 'button', 'image', 'link', and 'text' still rank their component first. 'collections' moved from expecting the Poster grid first to expecting it within the top three (expectedWithin), because a category term scores 20 points against the several fields of the components that mention collections; that ranks the Poster grid third, a known discovery weakness this baseline records and does not pass as a first-ranked result. The registry budgets are the existing command-registry.json tiers; the other numbers are judgement, and the only size looked at beforehand was the seed's own source (460 and 526 lexemes), which informed the headroom of variantSourceLexemes. BL1-B2 then added the hero, pricing plans, and account settings blocks. Its queries, the component queries for the new participants, and the new relevant ids for button and text were written before any of them was measured; a first measurement then showed two expectations were wrong, and they were revised before capture: \"split hero\" first expected the Marketing hero first, but the variant example id carries both query words, so the pattern is expected within the top three (it ranks second); \"billing toggle\" first expected the Pricing plans within the top three, but the Toggle component ids and names outscore any pattern for a component word, so it ranks ninth and is expected within the top ten, a known weakness recorded below. An earlier name for the settings block, Settings form, already displaced the Form component search, so the block is named Account settings. The collections blocks, Company records and Task filters, were added after the baseline. Their discovery queries and expectations (company records, records, companies, contacts, task filters, filters, filter tasks), the component queries for their new participants (table, tag group, menu, select, search field, each expecting the catalog's own first result), their seed set ids, and their ids in the relevant lists of the collections, button, text, and toggle button group queries were written from the blocks' intent in the commit that precedes the block sources, before either block was measured. Decision 0026 amendment 02: the Collections category gained Company records and Task filters, and every collections block scores 20 for the \"collections\" name query, so the Poster grid, which ranked third alone, ranks fourth: the Virtualizer scores 40, and the Avatar component, Company records, the Poster grid, and Task filters tie at 20 and sort by id. Its expectedWithin on that query moved from 3 to 4 in the pull request that adds the two blocks, keeping the expectation and the known weakness. No other expectation, limit, or budget changed, and revisedAfterFirstMeasurement is unchanged. The navigation block, Workspace navigation, was added after the baseline as the first block of its category. Its discovery queries and expectations (workspace navigation, workspace, navigation, side navigation, collapsible navigation), the component queries for its new participants (sidebar, breadcrumbs, avatar, each expecting the catalog's own first result), its seed set id, and its id in the relevant lists of the menu and text queries were written from the block's intent in the commit that precedes the block sources, before the block was measured. The category has no other block, so no existing expectation changes. Since Decision 0029 (which supersedes Decision 0026 amendment 02, cited above) a pull request may change a query, a limit, or a budget when it states the change and its reason before measuring and logs it in revisions below; no expectation is removed, a change made after its result was seen is also in revisedAfterFirstMeasurement, and a threshold is never changed to fit a failure. The revisions below record each change since the close-out as an exact transition (the query and field, or the value, with what it was and what it became). The agent composition blocks, Chat panel, Agent trace, Context sources, Approval request, Property inspector, and Quick find, were added after the navigation block. Their discovery queries and expectations (chat panel, chat, assistant, tabbed thread, agent trace, agent, trace, thinking, task rows, tool calls, context sources, context, sources, excerpts, citations, approval request, approval, request, question stepper, questions, property inspector, inspector, property, properties, quick find, find, quick, jump), the component queries for their new participants (message, prompt composer, tabs, icon button, markdown, activity, disclosure, code block, preview trigger, progress bar, radio group, checkbox group, checkbox, number field, command palette, list box, each expecting the catalog's own first result), their seed set ids, and their ids in the relevant lists of the existing queries were written in the commit that precedes every block source, before any block existed or was measured, and each rank they expect comes from the search scoring rules and the catalog without patterns, not from a result. Context sources is a Collections block, so it scores the same 20 as the other collections blocks for the \"collections\" name query and its id sorts before the Poster grid, which moves the expectedWithin of that query from 4 to 5 (logged below). Quick find is a Navigation block and no navigation expectation changes, because Workspace navigation carries the word in its id and name. The Tool calls variant example carries both words of \"tool calls\" and the Toolbar and Tooltip components match tool by prefix, so that query expects the pattern within the top ten and records the weakness. The variant source size limit variantSourceLexemes moves from 700 to 1000 because the conversation and agent blocks carry sample message and trace content; the revisions below log every transition.",
     "revisedAfterFirstMeasurement": [
       "collections",
       "grid list",
@@ -122,6 +122,169 @@
         "pullRequests": [
           247
         ]
+      },
+      {
+        "query": "collections",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
+        ],
+        "removed": [],
+        "change": "the Context sources and Excerpts ids added to relevant",
+        "reason": "Context sources is a collections block. Its ids were written into the relevant list before the block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "collections",
+        "field": "expectedWithin",
+        "from": 4,
+        "to": 5,
+        "change": "expectedWithin 4 -> 5",
+        "reason": "Context sources is a Collections block, so it scores the same 20 for the category-name query, and ties sort by id: the id muxui:pattern:context-sources sorts before muxui:pattern:poster-grid, so the Poster grid, which ranks fourth, ranks fifth. Stated from the scoring rule and the current order before the block exists; the expectation is kept and the weakness stays recorded.",
+        "pullRequests": []
+      },
+      {
+        "query": "collections",
+        "field": "knownWeakness",
+        "from": "A category term scores 20 points against the several fields of the components that mention collections, so the pattern ranks third alone. Every collections block scores the same 20 and ties sort by id, so the Poster grid ranks fourth once Company records, whose id sorts before it, joins the category.",
+        "to": "A category term scores 20 points against the several fields of the components that mention collections, so the pattern ranks third alone. Every collections block scores the same 20 and ties sort by id, so the Poster grid ranks fourth once Company records, whose id sorts before it, joins the category. Context sources joins the category at the same 20 and its id sorts before the Poster grid, so the Poster grid ranks fifth.",
+        "change": "knownWeakness extended to say the Poster grid ranks fifth once Context sources joins the category",
+        "reason": "The remaining weakness of the category-name query is stated, not passed as a first-ranked result.",
+        "pullRequests": []
+      },
+      {
+        "query": "navigation",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:quick-find",
+          "muxui:example:quick-find-overlay",
+          "muxui:example:quick-find-inline"
+        ],
+        "removed": [],
+        "change": "the Quick find, Overlay, and Inline ids added to relevant",
+        "reason": "Quick find is a navigation block. Its ids were written into the relevant list before the block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "button",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:approval-request",
+          "muxui:pattern:property-inspector"
+        ],
+        "removed": [],
+        "change": "the Agent trace, Approval request, and Property inspector ids added to relevant",
+        "reason": "Agent trace, Approval request, and Property inspector use Button as a participant. Their ids were written into the relevant list before any of the blocks was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "text",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:chat-panel",
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources",
+          "muxui:pattern:approval-request",
+          "muxui:pattern:property-inspector",
+          "muxui:pattern:quick-find"
+        ],
+        "removed": [],
+        "change": "the ids of the six agent composition blocks added to relevant",
+        "reason": "All six agent composition blocks use Text as a participant. Their ids were written into the relevant list before any of them was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "card",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:chat-panel",
+          "muxui:pattern:context-sources",
+          "muxui:pattern:approval-request",
+          "muxui:pattern:property-inspector",
+          "muxui:pattern:quick-find"
+        ],
+        "removed": [],
+        "change": "the Chat panel, Context sources, Approval request, Property inspector, and Quick find ids added to relevant",
+        "reason": "Those five blocks use Card as a participant. Their ids were written into the relevant list before any of them was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "link",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources"
+        ],
+        "removed": [],
+        "change": "the Agent trace and Context sources ids added to relevant",
+        "reason": "Agent trace and Context sources use Link as a participant. Their ids were written into the relevant list before either block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "avatar",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources"
+        ],
+        "removed": [],
+        "change": "the Agent trace and Context sources ids added to relevant",
+        "reason": "Agent trace and Context sources use Avatar as a participant. Their ids were written into the relevant list before either block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "menu",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:chat-panel"
+        ],
+        "removed": [],
+        "change": "the Chat panel id added to relevant",
+        "reason": "Chat panel uses Menu as a participant. Its id was written into the relevant list before the block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "select",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:property-inspector"
+        ],
+        "removed": [],
+        "change": "the Property inspector id added to relevant",
+        "reason": "Property inspector uses Select as a participant. Its id was written into the relevant list before the block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "search field",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:quick-find"
+        ],
+        "removed": [],
+        "change": "the Quick find id added to relevant",
+        "reason": "Quick find uses SearchField as a participant. Its id was written into the relevant list before the block was measured.",
+        "pullRequests": []
+      },
+      {
+        "query": "toggle button group",
+        "field": "relevant",
+        "added": [
+          "muxui:pattern:property-inspector"
+        ],
+        "removed": [],
+        "change": "the Property inspector id added to relevant",
+        "reason": "Property inspector uses ToggleButtonGroup as a participant. Its id was written into the relevant list before the block was measured.",
+        "pullRequests": []
+      },
+      {
+        "limit": "denseBudgets.examplesSection.variantSourceLexemes",
+        "from": 700,
+        "to": 1000,
+        "change": "variantSourceLexemes 700 -> 1000",
+        "reason": "The conversation and agent blocks carry sample message and trace content. The chat draft measures about 570 lexemes as a skeleton and is expected to grow 30 to 40 percent once it uses real components, and 1000 keeps a variant reviewable as one copyable file.",
+        "pullRequests": []
       }
     ]
   },
@@ -132,7 +295,13 @@
     "muxui:pattern:account-settings",
     "muxui:pattern:company-records",
     "muxui:pattern:task-filters",
-    "muxui:pattern:workspace-navigation"
+    "muxui:pattern:workspace-navigation",
+    "muxui:pattern:chat-panel",
+    "muxui:pattern:agent-trace",
+    "muxui:pattern:context-sources",
+    "muxui:pattern:approval-request",
+    "muxui:pattern:property-inspector",
+    "muxui:pattern:quick-find"
   ],
   "discovery": {
     "metric": "precision at 3 of `search <query>`: results in the first three that are in `relevant`, divided by min(3, results returned)",
@@ -167,11 +336,13 @@
           "muxui:example:company-records-sortable",
           "muxui:pattern:task-filters",
           "muxui:example:task-filters-status-buttons",
-          "muxui:example:task-filters-filter-bar"
+          "muxui:example:task-filters-filter-bar",
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
         ],
-        "expectedWithin": 4,
+        "expectedWithin": 5,
         "expectedId": "muxui:pattern:poster-grid",
-        "knownWeakness": "A category term scores 20 points against the several fields of the components that mention collections, so the pattern ranks third alone. Every collections block scores the same 20 and ties sort by id, so the Poster grid ranks fourth once Company records, whose id sorts before it, joins the category."
+        "knownWeakness": "A category term scores 20 points against the several fields of the components that mention collections, so the pattern ranks third alone. Every collections block scores the same 20 and ties sort by id, so the Poster grid ranks fourth once Company records, whose id sorts before it, joins the category. Context sources joins the category at the same 20 and its id sorts before the Poster grid, so the Poster grid ranks fifth."
       },
       {
         "query": "grid list",
@@ -212,7 +383,10 @@
           "muxui:pattern:pricing-plans",
           "muxui:pattern:account-settings",
           "muxui:pattern:company-records",
-          "muxui:pattern:task-filters"
+          "muxui:pattern:task-filters",
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:approval-request",
+          "muxui:pattern:property-inspector"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:button"
@@ -234,7 +408,9 @@
           "muxui:example:link-basic-react",
           "muxui:example:link-icon-composition-react",
           "muxui:guide:link-usage",
-          "muxui:pattern:poster-grid"
+          "muxui:pattern:poster-grid",
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:link"
@@ -250,7 +426,13 @@
           "muxui:pattern:account-settings",
           "muxui:pattern:company-records",
           "muxui:pattern:task-filters",
-          "muxui:pattern:workspace-navigation"
+          "muxui:pattern:workspace-navigation",
+          "muxui:pattern:chat-panel",
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources",
+          "muxui:pattern:approval-request",
+          "muxui:pattern:property-inspector",
+          "muxui:pattern:quick-find"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:text"
@@ -331,7 +513,12 @@
         "relevant": [
           "muxui:example:card-basic-react",
           "muxui:component:card",
-          "muxui:pattern:pricing-plans"
+          "muxui:pattern:pricing-plans",
+          "muxui:pattern:chat-panel",
+          "muxui:pattern:context-sources",
+          "muxui:pattern:approval-request",
+          "muxui:pattern:property-inspector",
+          "muxui:pattern:quick-find"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:card"
@@ -365,7 +552,8 @@
           "muxui:example:toggle-button-group-basic-react",
           "muxui:guide:toggle-button-group-usage",
           "muxui:pattern:pricing-plans",
-          "muxui:pattern:task-filters"
+          "muxui:pattern:task-filters",
+          "muxui:pattern:property-inspector"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:toggle-button-group"
@@ -464,7 +652,8 @@
           "muxui:example:menu-nested-react",
           "muxui:guide:menu-usage",
           "muxui:pattern:company-records",
-          "muxui:pattern:workspace-navigation"
+          "muxui:pattern:workspace-navigation",
+          "muxui:pattern:chat-panel"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:menu"
@@ -477,7 +666,8 @@
           "muxui:example:select-composition-react",
           "muxui:guide:select-usage",
           "muxui:pattern:account-settings",
-          "muxui:pattern:task-filters"
+          "muxui:pattern:task-filters",
+          "muxui:pattern:property-inspector"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:select"
@@ -490,7 +680,8 @@
           "muxui:example:search-field-native-input-react",
           "muxui:guide:search-field-usage",
           "muxui:pattern:company-records",
-          "muxui:pattern:task-filters"
+          "muxui:pattern:task-filters",
+          "muxui:pattern:quick-find"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:search-field"
@@ -515,7 +706,10 @@
         "query": "navigation",
         "relevant": [
           "muxui:pattern:workspace-navigation",
-          "muxui:example:workspace-navigation-foldable"
+          "muxui:example:workspace-navigation-foldable",
+          "muxui:pattern:quick-find",
+          "muxui:example:quick-find-overlay",
+          "muxui:example:quick-find-inline"
         ],
         "expectedWithin": 3,
         "expectedId": "muxui:pattern:workspace-navigation"
@@ -564,10 +758,448 @@
         "relevant": [
           "muxui:component:avatar",
           "muxui:example:avatar-basic-react",
-          "muxui:pattern:workspace-navigation"
+          "muxui:pattern:workspace-navigation",
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources"
         ],
         "firstWithoutPatterns": true,
         "component": "muxui:component:avatar"
+      },
+      {
+        "query": "chat panel",
+        "expectedFirst": "muxui:pattern:chat-panel",
+        "relevant": [
+          "muxui:pattern:chat-panel",
+          "muxui:example:chat-panel-tabbed-thread"
+        ]
+      },
+      {
+        "query": "chat",
+        "expectedFirst": "muxui:pattern:chat-panel",
+        "relevant": [
+          "muxui:pattern:chat-panel",
+          "muxui:example:chat-panel-tabbed-thread"
+        ]
+      },
+      {
+        "query": "assistant",
+        "relevant": [
+          "muxui:pattern:chat-panel",
+          "muxui:example:chat-panel-tabbed-thread",
+          "muxui:component:message",
+          "muxui:component:prompt-composer",
+          "muxui:component:activity"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:chat-panel"
+      },
+      {
+        "query": "tabbed thread",
+        "relevant": [
+          "muxui:pattern:chat-panel",
+          "muxui:example:chat-panel-tabbed-thread"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:chat-panel"
+      },
+      {
+        "query": "agent trace",
+        "expectedFirst": "muxui:pattern:agent-trace",
+        "relevant": [
+          "muxui:pattern:agent-trace",
+          "muxui:example:agent-trace-thinking",
+          "muxui:example:agent-trace-tool-calls",
+          "muxui:example:agent-trace-task-rows"
+        ]
+      },
+      {
+        "query": "agent",
+        "expectedFirst": "muxui:pattern:agent-trace",
+        "relevant": [
+          "muxui:pattern:agent-trace",
+          "muxui:example:agent-trace-thinking",
+          "muxui:example:agent-trace-tool-calls",
+          "muxui:example:agent-trace-task-rows"
+        ]
+      },
+      {
+        "query": "trace",
+        "expectedFirst": "muxui:pattern:agent-trace",
+        "relevant": [
+          "muxui:pattern:agent-trace",
+          "muxui:example:agent-trace-thinking",
+          "muxui:example:agent-trace-tool-calls",
+          "muxui:example:agent-trace-task-rows"
+        ]
+      },
+      {
+        "query": "thinking",
+        "relevant": [
+          "muxui:pattern:agent-trace",
+          "muxui:example:agent-trace-thinking",
+          "muxui:example:agent-trace-tool-calls",
+          "muxui:example:agent-trace-task-rows"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:agent-trace"
+      },
+      {
+        "query": "task rows",
+        "relevant": [
+          "muxui:pattern:agent-trace",
+          "muxui:example:agent-trace-thinking",
+          "muxui:example:agent-trace-tool-calls",
+          "muxui:example:agent-trace-task-rows"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:agent-trace"
+      },
+      {
+        "query": "tool calls",
+        "relevant": [
+          "muxui:pattern:agent-trace",
+          "muxui:example:agent-trace-thinking",
+          "muxui:example:agent-trace-tool-calls",
+          "muxui:example:agent-trace-task-rows"
+        ],
+        "expectedWithin": 10,
+        "expectedId": "muxui:pattern:agent-trace",
+        "knownWeakness": "The Toolbar and Tooltip components match the word tool by prefix on their ids and names, so they outrank the pattern for it, and the Tool calls variant example, whose id and name carry both words, ranks first."
+      },
+      {
+        "query": "context sources",
+        "expectedFirst": "muxui:pattern:context-sources",
+        "relevant": [
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
+        ]
+      },
+      {
+        "query": "context",
+        "expectedFirst": "muxui:pattern:context-sources",
+        "relevant": [
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
+        ]
+      },
+      {
+        "query": "sources",
+        "expectedFirst": "muxui:pattern:context-sources",
+        "relevant": [
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
+        ]
+      },
+      {
+        "query": "excerpts",
+        "relevant": [
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:context-sources"
+      },
+      {
+        "query": "citations",
+        "relevant": [
+          "muxui:pattern:context-sources",
+          "muxui:example:context-sources-excerpts"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:context-sources"
+      },
+      {
+        "query": "approval request",
+        "expectedFirst": "muxui:pattern:approval-request",
+        "relevant": [
+          "muxui:pattern:approval-request",
+          "muxui:example:approval-request-question-stepper"
+        ]
+      },
+      {
+        "query": "approval",
+        "expectedFirst": "muxui:pattern:approval-request",
+        "relevant": [
+          "muxui:pattern:approval-request",
+          "muxui:example:approval-request-question-stepper"
+        ]
+      },
+      {
+        "query": "request",
+        "expectedFirst": "muxui:pattern:approval-request",
+        "relevant": [
+          "muxui:pattern:approval-request",
+          "muxui:example:approval-request-question-stepper"
+        ]
+      },
+      {
+        "query": "question stepper",
+        "relevant": [
+          "muxui:pattern:approval-request",
+          "muxui:example:approval-request-question-stepper"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:approval-request"
+      },
+      {
+        "query": "questions",
+        "relevant": [
+          "muxui:pattern:approval-request",
+          "muxui:example:approval-request-question-stepper"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:approval-request"
+      },
+      {
+        "query": "property inspector",
+        "expectedFirst": "muxui:pattern:property-inspector",
+        "relevant": [
+          "muxui:pattern:property-inspector",
+          "muxui:example:property-inspector-adjust-panel"
+        ]
+      },
+      {
+        "query": "inspector",
+        "expectedFirst": "muxui:pattern:property-inspector",
+        "relevant": [
+          "muxui:pattern:property-inspector",
+          "muxui:example:property-inspector-adjust-panel"
+        ]
+      },
+      {
+        "query": "property",
+        "expectedFirst": "muxui:pattern:property-inspector",
+        "relevant": [
+          "muxui:pattern:property-inspector",
+          "muxui:example:property-inspector-adjust-panel"
+        ]
+      },
+      {
+        "query": "properties",
+        "relevant": [
+          "muxui:pattern:property-inspector",
+          "muxui:example:property-inspector-adjust-panel"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:property-inspector"
+      },
+      {
+        "query": "quick find",
+        "expectedFirst": "muxui:pattern:quick-find",
+        "relevant": [
+          "muxui:pattern:quick-find",
+          "muxui:example:quick-find-overlay",
+          "muxui:example:quick-find-inline"
+        ]
+      },
+      {
+        "query": "find",
+        "expectedFirst": "muxui:pattern:quick-find",
+        "relevant": [
+          "muxui:pattern:quick-find",
+          "muxui:example:quick-find-overlay",
+          "muxui:example:quick-find-inline"
+        ]
+      },
+      {
+        "query": "quick",
+        "expectedFirst": "muxui:pattern:quick-find",
+        "relevant": [
+          "muxui:pattern:quick-find",
+          "muxui:example:quick-find-overlay",
+          "muxui:example:quick-find-inline"
+        ]
+      },
+      {
+        "query": "jump",
+        "relevant": [
+          "muxui:pattern:quick-find",
+          "muxui:example:quick-find-overlay",
+          "muxui:example:quick-find-inline"
+        ],
+        "expectedWithin": 3,
+        "expectedId": "muxui:pattern:quick-find"
+      },
+      {
+        "query": "message",
+        "relevant": [
+          "muxui:component:message",
+          "muxui:example:message-basic-react",
+          "muxui:example:message-conversation-react",
+          "muxui:pattern:chat-panel"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:message"
+      },
+      {
+        "query": "prompt composer",
+        "relevant": [
+          "muxui:component:prompt-composer",
+          "muxui:example:prompt-composer-basic-react",
+          "muxui:example:prompt-composer-suggestions-react",
+          "muxui:pattern:chat-panel"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:prompt-composer"
+      },
+      {
+        "query": "tabs",
+        "relevant": [
+          "muxui:component:tabs",
+          "muxui:example:tabs-basic-react",
+          "muxui:example:tabs-variants-react",
+          "muxui:guide:tabs-usage",
+          "muxui:pattern:chat-panel",
+          "muxui:pattern:agent-trace"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:tabs"
+      },
+      {
+        "query": "icon button",
+        "relevant": [
+          "muxui:component:icon-button",
+          "muxui:example:icon-button-basic-react",
+          "muxui:guide:icon-button-usage",
+          "muxui:pattern:chat-panel",
+          "muxui:pattern:approval-request"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:icon-button"
+      },
+      {
+        "query": "markdown",
+        "relevant": [
+          "muxui:component:markdown",
+          "muxui:example:markdown-basic-react",
+          "muxui:pattern:chat-panel"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:markdown"
+      },
+      {
+        "query": "activity",
+        "relevant": [
+          "muxui:component:activity",
+          "muxui:example:activity-basic-react",
+          "muxui:pattern:agent-trace"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:activity"
+      },
+      {
+        "query": "disclosure",
+        "relevant": [
+          "muxui:component:disclosure",
+          "muxui:example:disclosure-basic-react",
+          "muxui:guide:disclosure-usage",
+          "muxui:pattern:agent-trace"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:disclosure"
+      },
+      {
+        "query": "code block",
+        "relevant": [
+          "muxui:component:code-block",
+          "muxui:example:code-block-basic-react",
+          "muxui:example:code-block-diff-react",
+          "muxui:pattern:agent-trace"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:code-block"
+      },
+      {
+        "query": "preview trigger",
+        "relevant": [
+          "muxui:component:preview-trigger",
+          "muxui:example:preview-trigger-basic-react",
+          "muxui:guide:preview-trigger-usage",
+          "muxui:pattern:agent-trace",
+          "muxui:pattern:context-sources"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:preview-trigger"
+      },
+      {
+        "query": "progress bar",
+        "relevant": [
+          "muxui:component:progress-bar",
+          "muxui:example:progress-bar-basic-react",
+          "muxui:guide:progress-bar-usage",
+          "muxui:pattern:agent-trace"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:progress-bar"
+      },
+      {
+        "query": "radio group",
+        "relevant": [
+          "muxui:component:radio-group",
+          "muxui:example:radio-group-basic-react",
+          "muxui:guide:radio-group-usage",
+          "muxui:pattern:approval-request"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:radio-group"
+      },
+      {
+        "query": "checkbox group",
+        "relevant": [
+          "muxui:component:checkbox-group",
+          "muxui:example:checkbox-group-basic-react",
+          "muxui:guide:checkbox-group-usage",
+          "muxui:pattern:approval-request"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:checkbox-group"
+      },
+      {
+        "query": "checkbox",
+        "relevant": [
+          "muxui:component:checkbox",
+          "muxui:example:checkbox-basic-react",
+          "muxui:guide:checkbox-usage",
+          "muxui:pattern:approval-request"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:checkbox"
+      },
+      {
+        "query": "number field",
+        "relevant": [
+          "muxui:component:number-field",
+          "muxui:example:number-field-basic-react",
+          "muxui:example:number-field-sizing-react",
+          "muxui:guide:number-field-usage",
+          "muxui:pattern:property-inspector"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:number-field"
+      },
+      {
+        "query": "command palette",
+        "relevant": [
+          "muxui:component:command-palette",
+          "muxui:example:command-palette-basic-react",
+          "muxui:example:command-palette-controlled-query-react",
+          "muxui:example:command-palette-managed-commands-react",
+          "muxui:pattern:quick-find"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:command-palette"
+      },
+      {
+        "query": "list box",
+        "relevant": [
+          "muxui:component:list-box",
+          "muxui:example:list-box-basic-react",
+          "muxui:example:list-box-grid-react",
+          "muxui:guide:list-box-usage",
+          "muxui:pattern:quick-find"
+        ],
+        "firstWithoutPatterns": true,
+        "component": "muxui:component:list-box"
       }
     ],
     "queryRules": {
@@ -586,7 +1218,7 @@
       "command": "get <pattern> --section examples",
       "tokensPerVariant": 1000,
       "envelopeTokens": 400,
-      "variantSourceLexemes": 700
+      "variantSourceLexemes": 1000
     }
   }
 }
