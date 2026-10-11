@@ -1,5 +1,6 @@
 import React from 'react';
 import { animate } from 'motion/react';
+import { sameGeometry, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const BUTTON_SELECTOR = '.muxui-toggle-button';
@@ -7,12 +8,6 @@ const SELECTED_SELECTOR = '[data-selected], [aria-checked="true"], [aria-pressed
 const READY_ATTRIBUTE = 'data-muxui-toggle-motion-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-toggle-motion-reduced';
 const INTERNAL_ATTRIBUTE = 'data-muxui-toggle-motion-internal';
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') return ref(value);
-  if (ref) ref.current = value;
-  return undefined;
-}
 
 function directButtons(root) {
   if (!root) return [];
@@ -40,14 +35,6 @@ function geometry(root, button) {
     width: buttonRect.width,
     height: buttonRect.height,
   };
-}
-
-function sameGeometry(first, second) {
-  if (!first || !second) return false;
-  return Math.abs(first.left - second.left) <= 0.5
-    && Math.abs(first.top - second.top) <= 0.5
-    && Math.abs(first.width - second.width) <= 0.5
-    && Math.abs(first.height - second.height) <= 0.5;
 }
 
 function readGeometry(node, fallback) {
@@ -367,11 +354,7 @@ function observeToggleButtonSelection(root, selectionMode) {
 export const ToggleButtonGroupMotion = /*#__PURE__*/ (() => {
   const component = function ToggleButtonGroupMotion({ children, selectionMode = 'single', disabled = false, rootRef }) {
     const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
-    const [root, setRoot] = React.useState(null);
-    const setRootRef = React.useCallback((node) => {
-      setRoot(node);
-      return assignRef(rootRef, node);
-    }, [rootRef]);
+    const [root, setRootRef] = useRootRef(rootRef);
 
     useIsomorphicLayoutEffect(() => {
       if (disabled) return undefined;

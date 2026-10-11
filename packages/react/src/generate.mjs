@@ -46,6 +46,7 @@ const menuMotionSource = await readFile(resolve(packageRoot, 'src/menu-motion.mj
 const datePopoverMotionSource = await readFile(resolve(packageRoot, 'src/date-popover-motion.mjs'), 'utf8');
 const dialogMotionSource = await readFile(resolve(packageRoot, 'src/dialog-motion.mjs'), 'utf8');
 const motionSource = await readFile(resolve(packageRoot, 'src/motion.mjs'), 'utf8');
+const motionGeometrySource = await readFile(resolve(packageRoot, 'src/motion-geometry.mjs'), 'utf8');
 const motionComponentsSource = await readFile(resolve(packageRoot, 'src/motion-components.mjs'), 'utf8');
 const candidateMotionSource = (await readFile(resolve(packageRoot, 'src/supplemental/candidate-motion.mjs'), 'utf8'))
   .replaceAll("from '../motion.mjs'", "from './motion.mjs'");
@@ -878,6 +879,7 @@ const currentMappedRecords = (await Promise.all(r16SupplementalComponents.map(as
       .replaceAll("from '../overlays.mjs'", "from './overlays.mjs'")
       .replaceAll("from '../supplemental/icon-button.mjs'", "from './icon-button.mjs'")
       .replaceAll("from '../motion.mjs'", "from './motion.mjs'")
+      .replaceAll("from '../motion-geometry.mjs'", "from './motion-geometry.mjs'")
       .replaceAll("from '../motion-components.mjs'", "from './motion-components.mjs'")
       .replaceAll("from '../popover-motion.mjs'", "from './popover-motion.mjs'")
       .replaceAll("from '../choice-context.mjs'", "from './choice-context.mjs'"),
@@ -1060,6 +1062,7 @@ const outputs = new Map([
   ['date-popover-motion.mjs', generatedText('packages/react/src/date-popover-motion.mjs', datePopoverMotionSource)],
   ['dialog-motion.mjs', generatedText('packages/react/src/dialog-motion.mjs', dialogMotionSource)],
   ['motion.mjs', generatedText('packages/react/src/motion.mjs', motionSource)],
+  ['motion-geometry.mjs', generatedText('packages/react/src/motion-geometry.mjs', motionGeometrySource)],
   ['motion-components.mjs', generatedText('packages/react/src/motion-components.mjs', motionComponentsSource)],
   ['candidate-motion.mjs', generatedText('packages/react/src/supplemental/candidate-motion.mjs', candidateMotionSource)],
   ['code-block-highlight.mjs', generatedText('packages/react/src/supplemental/code-block-highlight.mjs', await readFile(resolve(packageRoot, 'src/supplemental/code-block-highlight.mjs'), 'utf8'))],

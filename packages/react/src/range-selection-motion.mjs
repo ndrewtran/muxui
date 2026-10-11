@@ -1,6 +1,7 @@
 import React from 'react';
 import { animate } from 'motion/react';
 import { PopoverContext, RangeCalendarStateContext } from 'react-aria-components';
+import { sameGeometry } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring, resolvedMotionTransition } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
@@ -16,13 +17,6 @@ function setGeometry(node, target) {
   node.style.width = `${target.width}px`;
   node.style.height = `${target.height}px`;
   node.style.opacity = '1';
-}
-
-function sameGeometry(previous, next) {
-  return previous && Math.abs(previous.left - next.left) < 0.5
-    && Math.abs(previous.top - next.top) < 0.5
-    && Math.abs(previous.width - next.width) < 0.5
-    && Math.abs(previous.height - next.height) < 0.5;
 }
 
 function clearRangeMarkers(root) {

@@ -1,16 +1,12 @@
 import React from 'react';
 import { animate } from 'motion/react';
+import { sameGeometry, transformFrom, useRootRef } from './motion-geometry.mjs';
 import { observeReducedMotion, resolvedMotionSpring } from './motion.mjs';
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? React.useEffect : React.useLayoutEffect;
 const SELECTED_OPTION_SELECTOR = '[role="option"][aria-selected="true"], [role="option"][data-selected]';
 const READY_ATTRIBUTE = 'data-muxui-list-box-selection-ready';
 const REDUCED_ATTRIBUTE = 'data-muxui-list-box-reduced';
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
-}
 
 function directOptions(root) {
   return [...root.querySelectorAll('[role="option"]')]
@@ -37,14 +33,6 @@ function geometry(root, node) {
   };
 }
 
-function sameGeometry(first, second) {
-  if (!first || !second) return false;
-  return Math.abs(first.left - second.left) <= 0.5
-    && Math.abs(first.top - second.top) <= 0.5
-    && Math.abs(first.width - second.width) <= 0.5
-    && Math.abs(first.height - second.height) <= 0.5;
-}
-
 function setDestination(node, target) {
   node.hidden = false;
   node.style.left = `${target.left}px`;
@@ -52,12 +40,6 @@ function setDestination(node, target) {
   node.style.width = `${target.width}px`;
   node.style.height = `${target.height}px`;
   node.style.transform = 'none';
-}
-
-function transformFrom(current, target) {
-  const scaleX = target.width > 0 ? current.width / target.width : 1;
-  const scaleY = target.height > 0 ? current.height / target.height : 1;
-  return `translate3d(${current.left - target.left}px, ${current.top - target.top}px, 0) scale(${scaleX}, ${scaleY})`;
 }
 
 function createSelectionNode(root) {
@@ -218,12 +200,7 @@ function observeListBoxSelection(root, selectionMode) {
 }
 
 export function ListBoxMotion({ children, selectionMode = 'single', rootRef }) {
-  const [root, setRoot] = React.useState(null);
-
-  const setRootRef = React.useCallback((node) => {
-    setRoot(node);
-    assignRef(rootRef, node);
-  }, [rootRef]);
+  const [root, setRootRef] = useRootRef(rootRef);
 
   useIsomorphicLayoutEffect(() => observeListBoxSelection(root, selectionMode), [root, selectionMode]);
 

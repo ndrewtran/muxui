@@ -1,4 +1,5 @@
 import React from 'react';
+import { attachRef } from '../motion-geometry.mjs';
 
 const h = React.createElement;
 const IMAGE_RADII = new Set(['none', 'sm', 'md', 'lg', 'full']);
@@ -25,11 +26,6 @@ function declaredAspectRatio(width, height) {
   const w = Number(width);
   const h = Number(height);
   return w > 0 && h > 0 && Number.isFinite(w) && Number.isFinite(h) ? `${w} / ${h}` : undefined;
-}
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
 }
 
 function classNames(...values) {
@@ -59,7 +55,11 @@ export const Image = React.forwardRef(function Image({
   const imageRef = React.useRef(null);
   const setImageRef = React.useCallback((node) => {
     imageRef.current = node;
-    assignRef(ref, node);
+    const detach = attachRef(ref, node);
+    return () => {
+      detach();
+      imageRef.current = null;
+    };
   }, [ref]);
   const hasFallback = hasSource(fallbackSrc, fallbackSrcSet);
   const usingFallback = hasFallback && (recoveryMode === 'fallback' || recoveryMode === 'error');

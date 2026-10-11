@@ -1,4 +1,5 @@
 import React from 'react';
+import { attachRef } from '../motion-geometry.mjs';
 
 const h = React.createElement;
 const AVATAR_SIZES = new Set(['sm', 'md', 'lg']);
@@ -19,11 +20,6 @@ function imageSourceKey(src, srcSet) {
 
 function hasImageSource(src, srcSet) {
   return [src, srcSet].some((value) => typeof value === 'string' && value.trim().length > 0);
-}
-
-function assignRef(ref, value) {
-  if (typeof ref === 'function') ref(value);
-  else if (ref) ref.current = value;
 }
 
 function collectAvatarParts(children, parts = []) {
@@ -62,7 +58,11 @@ const AvatarImage = React.forwardRef(function AvatarImage({
   const imageRef = React.useRef(null);
   const setImageRef = React.useCallback((node) => {
     imageRef.current = node;
-    assignRef(ref, node);
+    const detach = attachRef(ref, node);
+    return () => {
+      detach();
+      imageRef.current = null;
+    };
   }, [ref]);
   React.useEffect(() => {
     context.reconcileImage(key, imageRef.current, sourceAvailable);
