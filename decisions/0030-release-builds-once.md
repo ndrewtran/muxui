@@ -84,7 +84,9 @@ Item 8, the release builds once:
    run reused (the attempt recorded, read as that attempt), or that it fell back
    to the full `release:prepare`, and that a publish run promoted the dry run's
    artifact at the dry run's recorded attempt instead of preparing its own.
-   The retained rc.1 and rc.2 routes keep their original binding byte for byte.
+   Replacing a dry run record keeps a later phase only if it names exactly that
+   dry run (id, attempt, artifact id and digest), and a route that mixes dry runs
+   does not assemble. The retained rc.1 and rc.2 routes keep their original binding byte for byte.
 
 Item 9, Storybook's own-interface colour proofs are not release proof:
 

@@ -364,12 +364,25 @@ function bindPromotion({ lines, dryRun, runId }) {
   };
 }
 
+// The dry run's one npm-candidate artifact, by the id, sha256 digest, and size the API reports. A publish run's
+// promotion must name exactly this artifact (see dryRunBindingProblems).
+function bindCandidateArtifact(artifacts, runId, headRevision) {
+  const found = (artifacts ?? []).filter(({ name }) => name === 'npm-candidate');
+  const [artifact] = found;
+  if (found.length !== 1 || artifact.expired || artifact.workflow_run?.id !== runId || artifact.workflow_run?.head_sha !== headRevision
+    || !Number.isSafeInteger(artifact.id) || !Number.isSafeInteger(artifact.size_in_bytes) || !/^sha256:[0-9a-f]{64}$/u.test(artifact.digest ?? '')) {
+    fail('R1_EXIT_ARTIFACT_MISSING', `run ${runId} needs exactly one unexpired npm-candidate artifact with an id, a size, and a sha256 digest`);
+  }
+  return { id: artifact.id, digest: artifact.digest, bytes: artifact.size_in_bytes };
+}
+
 /**
  * Binds the mode=dry-run run, its prepare-job log, the npm-candidate artifact,
  * and, for rc.1, the verify-credentials run. A dry run that reused main's CI also
- * needs that run (`mainCi`: { run, jobs }). Pure: every input is already fetched.
+ * needs that run (`mainCi`: { run, jobs }), and every dry run of the build-once workflow needs its
+ * `artifacts` list. Pure: every input is already fetched.
  */
-export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, credentials, mainCi, rehearsal = false }) {
+export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, credentials, mainCi, artifacts, rehearsal = false }) {
   const execution = assertRun(run, { mode: 'dry-run', rehearsal });
   const job = successfulJob(jobs, 'prepare', run.id);
   const lines = prepareLog.split('\n');
@@ -399,12 +412,13 @@ export function bindDryRun({ run, jobs, prepareLog, artifact, sourceTree, creden
     fail('R1_EXIT_TUPLE_MISMATCH', 'the tarball package.json, file list, and release manifest disagree');
   }
   const preparation = bindPreparation({ lines, manifest, execution, mainCi });
+  const candidateArtifact = preparation ? bindCandidateArtifact(artifacts, run.id, execution.headRevision) : undefined;
   const excerpt = stepExcerpt(lines, preparation ? [mainCiStep, ...prepareSteps] : prepareSteps);
   return {
     execution: { ...execution, ...job, executedRevision: revision, executedTree: sourceTree },
     environment: environmentFrom(lines),
     rawLog: rawLog(prepareLog),
-    ...(preparation ? { preparation } : {}),
+    ...(preparation ? { preparation, candidateArtifact } : {}),
     excerpt,
     candidate: {
       name: packed.name,
@@ -645,8 +659,11 @@ export function bindPublish({ dryRun, run, jobs, prepareLog, publishLog, approva
  * Binds an earlier publish attempt of the same candidate that failed in
  * "Publish to next" before anything was published (for example EOTP).
  */
-export function bindPriorPublish({ dryRun, run, jobs, publishLog, approvals = [], approvalMethod, rehearsal = false }) {
+export function bindPriorPublish({ dryRun, run, jobs, publishLog, prepareLog, approvals = [], approvalMethod, rehearsal = false }) {
   const attempt = bindPublishAttempt({ dryRun, run, jobs, publishLog, rehearsal });
+  // A prior publish run of the build-once workflow also promoted a dry run's artifact; say which.
+  const prepareLines = prepareLog ? prepareLog.split('\n') : [];
+  const promotion = promotesDryRun(prepareLines) ? bindPromotion({ lines: prepareLines, dryRun, runId: run.id }) : undefined;
   const publishJob = jobs.find((job) => job.name === 'publish');
   const step = stepOf(publishJob, 'Publish to next');
   const { lines, format } = attempt;
@@ -655,6 +672,7 @@ export function bindPriorPublish({ dryRun, run, jobs, publishLog, approvals = []
   }
   return {
     execution: attempt.execution,
+    ...(promotion ? { promotion } : {}),
     approvals: approvalFacts(approvals, approvalMethod),
     rawLog: rawLog(publishLog),
     excerpt: stepExcerpt(lines, publishStepsByFormat[format].slice(1, 3)),
@@ -796,7 +814,7 @@ export function buildRoute(verification, refs) {
     execution: dryRun.execution,
     environment: dryRun.environment,
     // Since Decision 0030: the main CI run this dry run reused, or its fallback to the full release:prepare.
-    ...(dryRun.preparation ? { preparation: dryRun.preparation } : {}),
+    ...(dryRun.preparation ? { preparation: dryRun.preparation, candidateArtifact: dryRun.candidateArtifact } : {}),
     observed: {
       tarball: dryRun.candidate.tarball,
       exports: Object.keys(dryRun.manifest.package.exports),
@@ -831,7 +849,10 @@ export function buildRoute(verification, refs) {
       ...(dryRun.credentials ? { verifyCredentials: { execution: dryRun.credentials.execution, observed: dryRun.credentials.observed, excerpt: refs.credentialsExcerpt } } : {}),
     },
     priorPublishAttempts: priorPublish
-      ? [{ captureTimestamp: priorPublish.captureTimestamp, execution: priorPublish.execution, environmentApprovals: priorPublish.approvals, observed: priorPublish.observed, excerpt: refs.priorPublishExcerpt }]
+      ? [{
+        captureTimestamp: priorPublish.captureTimestamp, execution: priorPublish.execution, environmentApprovals: priorPublish.approvals, observed: priorPublish.observed, excerpt: refs.priorPublishExcerpt,
+        ...(priorPublish.promotion ? { promotion: priorPublish.promotion } : {}),
+      }]
       : [],
     postPublication: publish
       ? {
@@ -1004,6 +1025,7 @@ function createGitHub() {
     approvals: (id) => json(`repos/${repository}/actions/runs/${id}/approvals`),
     log: (jobId) => gh('api', '--allow-escape-sequences', `repos/${repository}/actions/jobs/${jobId}/logs`),
     tree: (sha) => json(`repos/${repository}/git/commits/${sha}`).tree.sha,
+    artifacts: (id) => json(`repos/${repository}/actions/runs/${id}/artifacts?name=npm-candidate&per_page=100`).artifacts,
     attempt: (id, number) => json(`repos/${repository}/actions/runs/${id}/attempts/${number}`),
     attemptJobs: (id, number) => json(`repos/${repository}/actions/runs/${id}/attempts/${number}/jobs?per_page=100`).jobs,
     download(runId, directory) {
@@ -1180,12 +1202,67 @@ function proofToolIdentity(rehearsal) {
 const verificationPath = (root) => `${root}/verification.json`;
 
 /**
+ * Why each later phase does not belong to the captured dry run: { publish?, priorPublish?, registry? },
+ * empty when all do. A publish or prior publish run is bound by its commit and the candidate's digest. For
+ * a dry run of the build-once workflow (Decision 0030) it must also have promoted exactly this dry run's
+ * artifact: the same dry-run id and attempt, version and digest, and artifact id and digest. A dry run
+ * from before that workflow was never promoted. The registry read-back follows its publish run.
+ * Capture uses this to drop phases when a dry run is replaced, and assembleRoute refuses a mismatch.
+ */
+export function dryRunBindingProblems({ dryRun, publish, priorPublish, registry }) {
+  const problems = {};
+  if (!dryRun) return problems;
+  const { runId, runAttempt, headRevision } = dryRun.execution;
+  const { tarball } = dryRun.candidate;
+  const artifact = dryRun.candidateArtifact;
+  const publishProblem = (phase) => {
+    if (phase.execution.headRevision !== headRevision || phase.observed.inputDigest !== tarball.integrity) {
+      return `its run is not for commit ${headRevision} and candidate ${tarball.integrity}`;
+    }
+    const { promotion } = phase;
+    if (!dryRun.preparation) return promotion ? `it promoted dry run ${promotion.dryRunId}, but the captured dry run predates promotion` : null;
+    if (!promotion) return `it did not promote the captured dry run ${runId}'s artifact`;
+    const differs = [
+      ['dry run id', promotion.dryRunId, runId],
+      ['dry run attempt', promotion.dryRunAttempt, runAttempt],
+      ['version', promotion.version, dryRun.candidate.version],
+      ['candidate digest', promotion.integrity, tarball.integrity],
+      ['artifact id', promotion.artifactId, artifact?.id],
+      ['artifact digest', promotion.artifactDigest, artifact?.digest],
+      ['artifact bytes', promotion.artifactBytes, artifact?.bytes],
+    ].filter(([, actual, expected]) => actual !== expected);
+    return differs.length === 0 ? null : `it promoted ${differs.map(([name, actual, expected]) => `${name} ${actual} (the captured dry run has ${expected})`).join(', ')}`;
+  };
+  for (const [name, phase] of [['publish', publish], ['priorPublish', priorPublish]]) {
+    const problem = phase ? publishProblem(phase) : null;
+    if (problem) problems[name] = problem;
+  }
+  if (registry) {
+    const { gitCommit, invocationId = '' } = registry.provenance?.slsa ?? {};
+    if (registry.view?.integrity !== tarball.integrity || gitCommit !== headRevision) {
+      problems.registry = `its read-back is not for commit ${headRevision} and candidate ${tarball.integrity}`;
+    } else if (problems.publish) {
+      problems.registry = 'its publish run does not belong to the captured dry run';
+    } else if (publish && !invocationId.startsWith(`https://github.com/${repository}/actions/runs/${publish.execution.runId}/`)) {
+      problems.registry = `its provenance names ${invocationId}, not publish run ${publish.execution.runId}`;
+    }
+  }
+  return problems;
+}
+
+/**
  * Builds verification.json, the records, README, and index in memory from
  * `verification`. `read(relative)` returns a route file's current or staged
  * text. Returns the staged files (null removes a file); writes nothing.
  */
 export function assembleRoute(verification, read) {
   if (!verification.phases?.dryRun) fail('R1_EXIT_PHASE_ORDER', 'capture --dry-run-run first');
+  // Whatever order the phases were captured in, a route never holds a phase from another dry run.
+  const [mismatch] = Object.entries(dryRunBindingProblems(verification.phases));
+  if (mismatch) {
+    const { runId, runAttempt } = verification.phases.dryRun.execution;
+    fail('R1_EXIT_PHASE_MISMATCH', `${mismatch[0]} does not belong to dry run ${runId} attempt ${runAttempt}: ${mismatch[1]}`);
+  }
   const { version } = verification.phases.dryRun.candidate;
   const route = routeFor(version);
   const files = new Map();
@@ -1361,7 +1438,8 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
       try {
         const artifact = github.download(runId, download) ? readCandidate(download) : null;
         // A dry run that reused main's CI is bound to that run as well (Decision 0030).
-        const reused = artifact ? JSON.parse(artifact.manifest.bytes.toString('utf8')).preparation?.mainCi : undefined;
+        const recorded = artifact ? JSON.parse(artifact.manifest.bytes.toString('utf8')).preparation : undefined;
+        const reused = recorded?.mainCi;
         const bound = bindDryRun({
           run,
           jobs,
@@ -1370,6 +1448,8 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
           sourceTree: github.tree(run.head_sha),
           credentials,
           // The attempt the dry run recorded, read as that attempt: a later rerun of main's run cannot stand in for it.
+          // A dry run of the build-once workflow is bound to the one npm-candidate artifact a publish run promotes.
+          artifacts: recorded ? github.artifacts(runId) : undefined,
           mainCi: Number.isSafeInteger(reused?.runId) && Number.isSafeInteger(reused?.runAttempt)
             ? { run: github.attempt(reused.runId, reused.runAttempt), jobs: github.attemptJobs(reused.runId, reused.runAttempt) }
             : undefined,
@@ -1404,13 +1484,21 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
         }
         verification.sourceRevision = bound.execution.headRevision;
         verification.sourceTree = bound.execution.executedTree;
-        // A new dry run invalidates later phases bound to the previous candidate.
-        if (verification.phases.publish?.execution.headRevision !== bound.execution.headRevision
-          || verification.phases.publish?.observed.inputDigest !== bound.candidate.tarball.integrity) {
+        // A replaced dry run keeps a later phase only if that phase was bound to exactly this dry run
+        // (see dryRunBindingProblems): the same commit and digest and, for the build-once workflow, the
+        // same dry-run id and attempt and artifact. Anything else is captured again.
+        const problems = dryRunBindingProblems(verification.phases);
+        if (problems.publish) {
           delete verification.phases.publish;
+          drop('publishPrepareExcerpt', 'publishExcerpt');
+        }
+        if (problems.registry) {
           delete verification.phases.registry;
+          drop('registry');
+        }
+        if (problems.priorPublish) {
           delete verification.phases.priorPublish;
-          drop('publishPrepareExcerpt', 'publishExcerpt', 'priorPublishExcerpt', 'registry');
+          drop('priorPublishExcerpt');
         }
       } finally {
         rmSync(download, { recursive: true, force: true });
@@ -1423,9 +1511,9 @@ export async function main(argv = process.argv.slice(2), github = createGitHub()
         const job = jobs.find((candidate) => candidate.name === name);
         return job ? github.log(job.id) : '';
       };
-      const shared = { dryRun, run, jobs, publishLog: log('publish'), approvals: github.approvals(runId), approvalMethod: options.approvalMethods[runId], rehearsal: options.rehearsal };
+      const shared = { dryRun, run, jobs, publishLog: log('publish'), prepareLog: log('prepare'), approvals: github.approvals(runId), approvalMethod: options.approvalMethods[runId], rehearsal: options.rehearsal };
       if (phase === 'publish') {
-        const bound = bindPublish({ ...shared, prepareLog: log('prepare') });
+        const bound = bindPublish(shared);
         retain('publishPrepareExcerpt', `${route}/validation/publish-prepare-${bound.execution.prepare.jobId}.txt`, bound.excerpts.prepare.text);
         retain('publishExcerpt', `${route}/validation/publish-${bound.execution.publish.jobId}.txt`, bound.excerpts.publish.text);
         verification.phases.publish = {

@@ -818,11 +818,15 @@ function buildOnceFixture({ tarballBytes } = {}) {
   const reusedPreparation = preparationFor(1);
   const mainCiRun = (overrides = {}) => ({ id: 4242, run_attempt: 1, path: '.github/workflows/ci.yml', event: 'push', head_branch: 'main', head_sha: head, status: 'completed', conclusion: 'success', run_started_at: '2026-10-04T07:00:00Z', ...overrides });
   const checkJob = (conclusion = 'success', attempt = 1) => ({ id: 77, name: 'check', conclusion, run_attempt: attempt, completed_at: '2026-10-04T07:20:00Z' });
+  // The dry run's one npm-candidate artifact, as the artifacts API reports it.
+  const candidateArtifacts = (overrides = {}, runId = 1) => [{
+    id: 9, name: 'npm-candidate', expired: false, size_in_bytes: 4096, digest: artifactDigest, workflow_run: { id: runId, head_sha: head }, ...overrides,
+  }];
   const dryRunInput = (overrides = {}) => ({
     ...fixture.dryRunInput, credentials: undefined, prepareLog: dryRunLog(reusing), ...withPreparation(reusedPreparation),
-    mainCi: { run: mainCiRun(), jobs: [checkJob()] }, ...overrides,
+    mainCi: { run: mainCiRun(), jobs: [checkJob()] }, artifacts: candidateArtifacts(), ...overrides,
   });
-  return { ...fixture, reusing, reusingAttempt, fallingBack, dryRunLog, promotedLog, withPreparation, reusedPreparation, preparationFor, artifactDigest, mainCiRun, checkJob, dryRunInput };
+  return { ...fixture, reusing, reusingAttempt, fallingBack, dryRunLog, promotedLog, withPreparation, reusedPreparation, preparationFor, artifactDigest, candidateArtifacts, mainCiRun, checkJob, dryRunInput };
 }
 
 test('R1 exit capture records the main CI run a dry run reused and the artifact a publish run promoted', () => {
@@ -835,6 +839,7 @@ test('R1 exit capture records the main CI run a dry run reused and the artifact 
       conclusion: 'success', startedAt: '2026-10-04T07:00:00Z', checkJob: { jobId: 77, conclusion: 'success', completedAt: '2026-10-04T07:20:00Z' },
     },
   });
+  assert.deepEqual(bound.candidateArtifact, { id: 9, digest: fixture.artifactDigest, bytes: 4096 });
   assert.match(bound.excerpt.text, /# step: Find main CI proof[\s\S]*Main CI proof: reusing run 4242 attempt 1/u);
   assert.match(bound.excerpt.text, /# step: Prepare release candidate/u);
 
@@ -855,6 +860,7 @@ test('R1 exit capture records the main CI run a dry run reused and the artifact 
     phases: { dryRun: phase(dryRun), publish: phase(publish) }, sourceRevision: fixture.head, sourceTree: fixture.tree, proofTool: {},
   }, { validation: ref, manifest: ref })).map(([id, text]) => [id, JSON.parse(text)]));
   assert.equal(records['E-R1-EXIT-01'].preparation.mainCi.runId, 4242);
+  assert.equal(records['E-R1-EXIT-01'].candidateArtifact.id, 9);
   assert.equal(records['E-R1-EXIT-02'].postPublication.promotion.dryRunId, 1);
   assert.equal(records['E-R1-EXIT-02'].postPublication.promotion.artifactId, 9);
   assert.equal(records['E-R1-EXIT-02'].outcome, 'partial', 'promotion does not replace the registry read-back');
@@ -899,6 +905,12 @@ test('R1 exit capture rejects a reused main CI run, a log, or a promotion that d
   rejectsDryRun({ mainCi: { run: fixture.mainCiRun(), jobs: [fixture.checkJob('success', 2)] } });
   rejectsDryRun({ prepareLog: fixture.dryRunLog(fixture.reusingAttempt(2)) });
   rejectsDryRun(fixture.withPreparation(fixture.preparationFor(2)));
+  // The dry run's artifact is exactly one unexpired npm-candidate of this run and commit, with an id, size, and digest.
+  for (const artifacts of [
+    undefined, [], [...fixture.candidateArtifacts(), ...fixture.candidateArtifacts({ id: 10 })], fixture.candidateArtifacts({ expired: true }),
+    fixture.candidateArtifacts({}, 7), fixture.candidateArtifacts({ digest: null }), fixture.candidateArtifacts({ id: 'nine' }),
+    fixture.candidateArtifacts({ workflow_run: { id: 1, head_sha: 'f'.repeat(40) } }),
+  ]) rejectsDryRun({ artifacts }, 'R1_EXIT_ARTIFACT_MISSING');
   rejectsDryRun({ prepareLog: fixture.dryRunLog(fixture.reusingAttempt(2)), ...fixture.withPreparation(fixture.preparationFor(2)) });
 
   const dryRun = { ...r1Exit.bindDryRun(fixture.dryRunInput()), manifest: fixture.manifest };
@@ -919,44 +931,168 @@ test('R1 exit capture rejects a reused main CI run, a log, or a promotion that d
   assert.throws(() => publish(fixture.promotedLog({ withFetch: false })), r1ExitCode('R1_EXIT_PROMOTION_MISSING'));
 });
 
+// A scripted hosted run set for the build-once workflow: dry runs 1 and 5 of one commit and candidate, publish run 2,
+// a failed prior publish run 3, and main's CI run 4242, whose latest attempt failed after the recorded attempt 1 passed.
+// `root` is a scratch directory the caller created and removes.
+async function buildOnceCapture(root) {
+  const packageRoot = join(root, 'pack/package');
+  await mkdir(join(packageRoot, 'generated'), { recursive: true });
+  await writeFile(join(packageRoot, 'package.json'), JSON.stringify({ name: '@muxui/react', version: '0.1.0-rc.3', exports: { '.': './generated/index.mjs', './styles.css': './generated/styles.css' } }));
+  await writeFile(join(packageRoot, 'generated/index.mjs'), 'export {};\n');
+  await writeFile(join(packageRoot, 'generated/styles.css'), '\n');
+  execFileSync('tar', ['-czf', join(root, 'candidate.tgz'), '-C', join(root, 'pack'), 'package']);
+  const real = buildOnceFixture({ tarballBytes: await readFile(join(root, 'candidate.tgz')) });
+  const requested = [];
+  const dryRunJob = (id) => real.job(id === 1 ? 11 : 15, 'prepare');
+  const github = {
+    run: (id) => {
+      if (id === 4242) return real.mainCiRun({ run_attempt: 2, conclusion: 'failure' });
+      return id === 3 ? real.run(id, { conclusion: 'failure' }) : real.run(id);
+    },
+    jobs: (id) => {
+      if (id === 4242) return [real.checkJob('failure')];
+      if (id === 2) return [real.job(21, 'prepare'), real.publishJob(22)];
+      if (id === 3) return [real.job(31, 'prepare'), real.publishJob(32, 'eotp')];
+      return [dryRunJob(id)];
+    },
+    attempt: (id, number) => {
+      requested.push(`${id}/${number}`);
+      return real.mainCiRun({ run_attempt: number, ...(number === 1 ? {} : { conclusion: 'failure' }) });
+    },
+    attemptJobs: (id, number) => [real.checkJob(number === 1 ? 'success' : 'failure')],
+    artifacts: (id) => real.candidateArtifacts({ id: id === 1 ? 9 : 19, workflow_run: { id, head_sha: real.head } }, id),
+    log: (jobId) => {
+      if (jobId === 21 || jobId === 31) return real.promotedLog();
+      if (jobId === 22) return real.oidcPublishLog();
+      if (jobId === 32) return real.publishLog({ outcome: 'eotp' });
+      return real.dryRunLog(real.reusing);
+    },
+    tree: () => real.tree,
+    approvals: () => [],
+    download: (_runId, directory) => {
+      copyFileSync(join(root, 'candidate.tgz'), join(directory, `muxui-react-${real.version}.tgz`));
+      writeFileSync(join(directory, `muxui-react-${real.version}.release-manifest.json`), real.withPreparation(real.reusedPreparation).artifact.manifest.bytes);
+      return true;
+    },
+  };
+  const capture = (out, ...phases) => r1Exit.main(['--rehearsal', `--out=${out}`, `--version=${real.version}`, '--capture-timestamp=2026-10-05T10:00:00Z', ...phases], github);
+  return { real, github, requested, capture };
+}
+
+const routeFile = (out, route, relative) => readFileSync(join(out, relative.slice(route.length + 1)), 'utf8');
+
 test('R1 exit capture fetches the reused main CI run and writes the build-once README', async () => {
   const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-build-once-'));
   try {
-    const fetched = [];
-    const packageRoot = join(root, 'pack/package');
-    await mkdir(join(packageRoot, 'generated'), { recursive: true });
-    await writeFile(join(packageRoot, 'package.json'), JSON.stringify({ name: '@muxui/react', version: '0.1.0-rc.3', exports: { '.': './generated/index.mjs', './styles.css': './generated/styles.css' } }));
-    await writeFile(join(packageRoot, 'generated/index.mjs'), 'export {};\n');
-    await writeFile(join(packageRoot, 'generated/styles.css'), '\n');
-    execFileSync('tar', ['-czf', join(root, 'candidate.tgz'), '-C', join(root, 'pack'), 'package']);
-    const tarballBytes = await readFile(join(root, 'candidate.tgz'));
-    const real = buildOnceFixture({ tarballBytes });
-    // Main's run was rerun after the dry run: its latest attempt failed, but the dry run recorded attempt 1.
-    const github = {
-      run: (id) => (id === 4242 ? real.mainCiRun({ run_attempt: 2, conclusion: 'failure' }) : real.run(id)),
-      jobs: (id) => (id === 4242 ? [real.checkJob('failure')] : real.dryRunInput().jobs),
-      attempt: (id, number) => {
-        fetched.push(`${id}/${number}`);
-        return real.mainCiRun({ run_attempt: number, ...(number === 1 ? {} : { conclusion: 'failure' }) });
-      },
-      attemptJobs: (id, number) => [real.checkJob(number === 1 ? 'success' : 'failure')],
-      log: () => real.dryRunLog(real.reusing),
-      tree: () => real.tree,
-      approvals: () => [],
-      download: (_runId, directory) => {
-        copyFileSync(join(root, 'candidate.tgz'), join(directory, `muxui-react-${real.version}.tgz`));
-        writeFileSync(join(directory, `muxui-react-${real.version}.release-manifest.json`), real.withPreparation(real.reusedPreparation).artifact.manifest.bytes);
-        return true;
-      },
-    };
+    const { real, requested, capture } = await buildOnceCapture(root);
     const out = join(root, 'out');
-    await r1Exit.main(['--rehearsal', `--out=${out}`, `--version=${real.version}`, '--capture-timestamp=2026-10-05T10:00:00Z', '--dry-run-run=1'], github);
-    assert.deepEqual(fetched, ['4242/1'], 'the recorded attempt of the reused main CI run is fetched and bound');
+    await capture(out, '--dry-run-run=1');
+    assert.deepEqual(requested, ['4242/1'], 'the recorded attempt of the reused main CI run is fetched and bound');
     const verification = JSON.parse(await readFile(join(out, 'verification.json'), 'utf8'));
     assert.equal(verification.phases.dryRun.preparation.mainCi.runId, 4242);
+    assert.deepEqual(verification.phases.dryRun.candidateArtifact, { id: 9, digest: real.artifactDigest, bytes: 4096 });
     const record = JSON.parse(await readFile(join(out, 'records/E-R1-EXIT-01.json'), 'utf8'));
     assert.equal(record.preparation.mode, 'main-ci-reused');
+    assert.equal(record.candidateArtifact.id, 9);
     assert.match(await readFile(join(out, 'README.md'), 'utf8'), /The dry run relied on main CI run 4242 \(attempt 1\) for this commit's check graph[^\n]*Storybook's own-interface colour proofs are not release proof \(Decision 0030\)\./u);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('R1 exit capture replaces a dry run without keeping a publish run that promoted another one', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-replace-'));
+  try {
+    const { capture } = await buildOnceCapture(root);
+    const out = join(root, 'out');
+    const phases = async () => JSON.parse(await readFile(join(out, 'verification.json'), 'utf8')).phases;
+    await capture(out, '--dry-run-run=1', '--prior-publish-run=3', '--publish-run=2');
+    const first = await phases();
+    assert.equal(first.publish.promotion.dryRunId, 1);
+    assert.equal(first.priorPublish.promotion.artifactId, 9, 'a prior publish run records which artifact it promoted');
+    const retained = (await readdir(join(out, 'validation'))).sort();
+    assert.ok(retained.includes('publish-22.txt') && retained.includes('prior-publish-32.txt'));
+
+    // The same run and attempt again: the artifact, commit, and digest are the same, so the later phases stay.
+    await capture(out, '--dry-run-run=1');
+    const again = await phases();
+    assert.deepEqual(again.publish, { ...first.publish, proofTool: again.publish.proofTool });
+    assert.equal(again.priorPublish.promotion.dryRunId, 1);
+    assert.deepEqual((await readdir(join(out, 'validation'))).sort(), retained);
+
+    // Dry run B for the same commit, version, and tarball digest: A's promotion names another run, so it goes.
+    await capture(out, '--dry-run-run=5');
+    const replaced = await phases();
+    assert.equal(replaced.dryRun.execution.runId, 5);
+    assert.equal(replaced.dryRun.candidateArtifact.id, 19);
+    assert.equal(replaced.publish, undefined);
+    assert.equal(replaced.priorPublish, undefined);
+    assert.equal(replaced.registry, undefined);
+    assert.deepEqual((await readdir(join(out, 'validation'))).filter((name) => /publish/u.test(name)), [], 'the old publish excerpts are removed');
+    const record = JSON.parse(await readFile(join(out, 'records/E-R1-EXIT-02.json'), 'utf8'));
+    assert.equal(record.outcome, 'partial');
+    assert.deepEqual(record.postPublication, { status: 'pending-post-publication' });
+    assert.equal(record.priorPublishAttempts.length, 0);
+    // Publish run 2 promoted dry run 1, so it cannot be captured against dry run 5 either.
+    await assert.rejects(capture(out, '--publish-run=2'), r1ExitCode('R1_EXIT_PROMOTION_MISMATCH'));
+    assert.equal((await phases()).publish, undefined);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('R1 exit capture will not assemble a route whose later phase belongs to another dry run', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'muxui-r1-exit-assemble-'));
+  try {
+    const { real, capture } = await buildOnceCapture(root);
+    const out = join(root, 'out');
+    await capture(out, '--dry-run-run=1', '--prior-publish-run=3', '--publish-run=2');
+    const route = r1Exit.routeFor(real.version);
+    const read = (relative) => routeFile(out, route, relative);
+    const verification = () => JSON.parse(read(`${route}/verification.json`));
+    assert.equal(r1Exit.assembleRoute(verification(), read).files.size > 0, true, 'the captured route assembles');
+
+    const assembling = (change) => {
+      const mutated = verification();
+      change(mutated.phases);
+      return () => r1Exit.assembleRoute(mutated, read);
+    };
+    const mismatch = r1ExitCode('R1_EXIT_PHASE_MISMATCH');
+    // The promotion names another dry run, another attempt, another artifact or digest, or nothing.
+    assert.throws(assembling((phases) => { phases.publish.promotion.dryRunId = 5; }), mismatch);
+    assert.throws(assembling((phases) => { phases.publish.promotion.dryRunAttempt = 2; }), mismatch);
+    assert.throws(assembling((phases) => { phases.publish.promotion.artifactId = 19; }), mismatch);
+    assert.throws(assembling((phases) => { phases.publish.promotion.artifactDigest = `sha256:${'c'.repeat(64)}`; }), mismatch);
+    assert.throws(assembling((phases) => { phases.publish.promotion.artifactBytes = 1; }), mismatch);
+    assert.throws(assembling((phases) => { delete phases.publish.promotion; }), mismatch);
+    assert.throws(assembling((phases) => { phases.priorPublish.promotion.dryRunId = 5; }), mismatch);
+    assert.throws(assembling((phases) => { delete phases.priorPublish.promotion; }), mismatch);
+    // The dry run is replaced in the record by another run or attempt of the same candidate, whatever the capture order.
+    assert.throws(assembling((phases) => { phases.dryRun.execution.runId = 5; }), mismatch);
+    assert.throws(assembling((phases) => { phases.dryRun.execution.runAttempt = 2; }), mismatch);
+    assert.throws(assembling((phases) => { phases.dryRun.candidateArtifact.id = 19; }), mismatch);
+    // A phase for another commit or candidate, and a promotion on a dry run that predates promotion.
+    assert.throws(assembling((phases) => { phases.publish.execution.headRevision = 'f'.repeat(40); }), mismatch);
+    assert.throws(assembling((phases) => { phases.publish.observed.inputDigest = 'sha512-other'; }), mismatch);
+    assert.throws(assembling((phases) => { delete phases.dryRun.preparation; }), mismatch);
+    // A registry read-back must follow the same dry run and its publish run.
+    const registry = (overrides = {}) => ({
+      view: { integrity: real.facts.integrity },
+      provenance: { slsa: { gitCommit: real.head, invocationId: `https://github.com/ndrewtran/muxui/actions/runs/2/attempts/1`, ...overrides.slsa } },
+      ...overrides.registry,
+    });
+    const problems = (change) => {
+      const phases = verification().phases;
+      change(phases);
+      return r1Exit.dryRunBindingProblems(phases);
+    };
+    assert.deepEqual(problems((phases) => { phases.registry = registry(); }), {});
+    assert.match(problems((phases) => { phases.registry = registry({ slsa: { invocationId: 'https://github.com/ndrewtran/muxui/actions/runs/9/attempts/1' } }); }).registry, /names .*runs\/9\/attempts\/1, not publish run 2/u);
+    assert.match(problems((phases) => { phases.registry = registry({ registry: { view: { integrity: 'sha512-other' } } }); }).registry, /not for commit/u);
+    assert.match(problems((phases) => { phases.registry = registry(); phases.publish.promotion.dryRunId = 5; }).registry, /does not belong to the captured dry run/u);
+    // Replacing with another attempt of the same run drops the publish phase too.
+    assert.match(problems((phases) => { phases.dryRun.execution.runAttempt = 2; }).publish, /dry run attempt 1 \(the captured dry run has 2\)/u);
+    assert.match(problems((phases) => { phases.dryRun.execution.runId = 5; }).publish, /dry run id 1 \(the captured dry run has 5\)/u);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
