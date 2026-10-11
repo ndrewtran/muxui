@@ -322,6 +322,54 @@ test('Copy returns to its label after clicks inside the confirmation', async () 
 	});
 });
 
+test('pane swaps leave no document listener behind for the islands they remove', async () => {
+	await withSite(async ({ page, origin }) => {
+		// Astro parks a one-shot `astro:after-swap` listener on the document when it removes an island, and it only drops it when that event fires.
+		// Track the ones that are still waiting, so a swap that never sends the event shows up as a count that grows.
+		await page.addInitScript(() => {
+			const live = new Set();
+			const wrappers = new Map();
+			const { addEventListener, removeEventListener } = document;
+			window.__afterSwap = { live, registered: 0 };
+			document.addEventListener = function (type, listener, options) {
+				if (type !== 'astro:after-swap') return addEventListener.call(this, type, listener, options);
+				window.__afterSwap.registered += 1;
+				live.add(listener);
+				const once = typeof options === 'object' && options !== null && options.once === true;
+				const wrapper = once ? (event) => { live.delete(listener); wrappers.delete(listener); return listener.call(document, event); } : listener;
+				wrappers.set(listener, wrapper);
+				return addEventListener.call(this, type, wrapper, options);
+			};
+			document.removeEventListener = function (type, listener, options) {
+				if (type !== 'astro:after-swap') return removeEventListener.call(this, type, listener, options);
+				live.delete(listener);
+				const wrapper = wrappers.get(listener) ?? listener;
+				wrappers.delete(listener);
+				return removeEventListener.call(this, type, wrapper, options);
+			};
+		});
+		await page.goto(`${origin}/blocks/`);
+		await islandsReady(page);
+		const [first] = await railVariants(page);
+		const waiting = () => page.evaluate(() => ({ live: window.__afterSwap.live.size, registered: window.__afterSwap.registered }));
+		// The gallery and the block viewer are islands in the pane, so alternating between them removes hydrated islands on every swap.
+		for (let swap = 0; swap < 8; swap += 1) {
+			if (swap % 2 === 0) {
+				await railVariantLink(page, first.href).click();
+				await page.waitForURL(`**${first.href}`);
+				await page.locator('[data-blocks-detail] h1').waitFor();
+			} else {
+				await page.getByRole('link', { name: 'All blocks', exact: true }).click();
+				await page.waitForURL('**/blocks/');
+				await page.locator('[data-blocks-gallery]').waitFor();
+			}
+			await islandsReady(page);
+			assert.equal((await waiting()).live, 0, `swap ${swap + 1} left no island waiting on a swap event`);
+		}
+		assert.ok((await waiting()).registered >= 8, 'the probe saw the islands the swaps removed');
+	});
+});
+
 test('a filter index that fails to load shows a status, and the next change retries', async () => {
 	await withSite(async ({ page, origin }) => {
 		await page.route('**/blocks/filter-index.json', (route) => route.abort());

@@ -26,9 +26,13 @@ function fetchPage(pathname: string): Promise<Document> {
 	return page;
 }
 
-/** Hydrated islands unmount on this event, which Astro's own router sends and a plain swap does not. */
-function unmountIslands(root: ParentNode) {
-	root.querySelectorAll('astro-island').forEach((island) => island.dispatchEvent(new CustomEvent('astro:unmount')));
+/**
+ * Finishes removing the pane's islands the way Astro's own router does. A removed island waits for `astro:after-swap`: it
+ * unmounts its framework root then and drops its document listener, which a plain swap never gives it, so every swap
+ * would keep each island it removed.
+ */
+function finishSwap() {
+	document.dispatchEvent(new Event('astro:after-swap'));
 }
 
 let navigation = 0;
@@ -42,8 +46,8 @@ async function navigate(href: string, push: boolean) {
 		if (!next) throw new Error('The next page has no Blocks pane.');
 		if (current !== navigation) return;
 		const hadFocus = pane.contains(document.activeElement);
-		unmountIslands(pane);
 		pane.replaceChildren(...Array.from(next.childNodes, (node) => document.importNode(node, true)));
+		finishSwap();
 		pane.scrollTop = 0;
 		document.title = page.title;
 		if (push) history.pushState(null, '', `${url.pathname}${location.search}`);
