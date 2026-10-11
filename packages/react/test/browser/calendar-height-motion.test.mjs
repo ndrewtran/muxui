@@ -157,7 +157,8 @@ test('calendar month height interpolates without changing semantics or reduced m
       if (kind.includes('picker')) {
         await page.keyboard.press('Escape');
         await page.locator('.muxui-date-popover').waitFor({ state: 'detached' });
-        assert.equal(await page.locator('.muxui-date-trigger').evaluate((button) => document.activeElement === button), true);
+        // RAC restores trigger focus in the frame after the popup unmounts, not when its node detaches.
+        await page.waitForFunction(() => document.activeElement?.matches('.muxui-date-trigger'));
         await page.locator('.muxui-date-trigger').click();
         await page.locator('.muxui-calendar-grid').waitFor();
       }
