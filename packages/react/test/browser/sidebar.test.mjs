@@ -730,3 +730,248 @@ for (const engine of browserEngines()) {
     }
   });
 }
+
+// Cross-engine proof for Sidebar's nested navigation, in light and dark: details groups and
+// link groups (a link beside a toggle button) open and close from the pointer and the keyboard,
+// controlled groups follow their caller, the current page carries aria-current and the current
+// style at every depth, category then block then variant nests two groups deep, the folded
+// rail keeps only top-level links, and folding hands focus to the outermost group's header.
+// Runs in every engine named by MUXUI_BROWSER_ENGINES (see harness.mjs).
+
+const nestedEntry = `
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Sidebar } from '/src/supplemental/index.mjs';
+
+const h = React.createElement;
+const params = new URLSearchParams(location.search);
+window.__changes = [];
+
+function Shell() {
+  const [open, setOpen] = React.useState({ catalog: params.get('open') === '1', button: params.get('open') === '1', details: false });
+  // A caller that applies every change unless the page asks it to refuse them.
+  const control = (id) => ({
+    expanded: open[id],
+    onExpandedChange: (next) => {
+      window.__changes.push([id, next]);
+      if (params.get('reject') !== '1') setOpen((previous) => ({ ...previous, [id]: next }));
+    },
+  });
+  window.__setOpen = (id, next) => setOpen((previous) => ({ ...previous, [id]: next }));
+  return h(React.Fragment, null,
+    h('button', { id: 'before', type: 'button' }, 'Before'),
+    h(Sidebar.Provider, { defaultCollapsed: params.get('folded') === '1', shortcut: 'b' },
+      h(Sidebar.Root, { 'aria-label': 'Workspace' },
+        h(Sidebar.NavList, { 'aria-label': 'Workspace' },
+          h(Sidebar.NavItem, { items: [{ href: '#now', label: 'Now' }, { href: '#next', label: 'Next' }] }, 'Roadmap'),
+          h(Sidebar.NavItem, { defaultExpanded: true, items: [
+            { href: '#intro', label: 'Intro' },
+            { label: 'Deep', defaultExpanded: true, items: [{ href: '#deeper', label: 'Deeper' }] },
+          ] }, 'Guides'),
+          h(Sidebar.NavItem, { ...control('details'), items: [{ href: '#alpha', label: 'Alpha' }] }, 'Controlled'),
+          h(Sidebar.NavItem, { href: '#overview' }, 'Overview'),
+          h(Sidebar.NavItem, { href: '#catalog', ...control('catalog'), items: [
+            { id: 'button', label: 'Button', href: '#button', ...control('button'), items: [
+              { label: 'Primary', href: '#primary', current: true },
+              { label: 'Secondary', href: '#secondary' },
+            ] },
+            { id: 'card', label: 'Card', href: '#card', items: [{ label: 'Default', href: '#default' }] },
+          ] }, 'Catalog'),
+          h(Sidebar.NavItem, { href: '#settings' }, 'Settings'))),
+      h('main', null, h(Sidebar.Toggle, { size: 'sm' }))),
+    h('button', { id: 'after', type: 'button' }, 'After'));
+}
+createRoot(document.getElementById('root')).render(h(Shell));
+`;
+
+const nestedPage = (url) => pageShell({
+  attributes: `data-muxui-color-scheme="${url.searchParams.get('scheme') === 'dark' ? 'dark' : 'light'}"`,
+  head: '<link rel="stylesheet" href="/generated/styles.css"><style>.shell { display: flex; }</style>',
+  bodyAttributes: 'style="margin: 0; background: var(--muxui-semantic-surface-canvas)"',
+  body: '<div id="root"></div>',
+  entry: '/sidebar-nested-entry.mjs',
+});
+
+/** Box of a node, or null when it is not rendered: display:none, hidden, or inside a closed details; runs in the page. */
+function nestedBoxOf(selector) {
+  const node = document.querySelector(selector);
+  if (!node || node.getClientRects().length === 0 || !node.checkVisibility()) return null;
+  const { left, top, width, height } = node.getBoundingClientRect();
+  return { left, top, width, height };
+}
+
+/** The focused control as role and name; runs in the page. */
+function nestedFocusedControl() {
+  const node = document.activeElement;
+  const name = node.querySelector?.('.muxui-sidebar__nav-label')?.textContent ?? node.getAttribute('aria-label') ?? node.textContent.trim();
+  return `${node.tagName === 'A' ? 'link' : node.tagName === 'SUMMARY' ? 'group' : 'button'} ${name}`;
+}
+
+/** Paint of a node and its ring; runs in the page. */
+function nestedPaintOf(selector) {
+  const styles = getComputedStyle(document.querySelector(selector));
+  return { background: styles.backgroundColor, outlineStyle: styles.outlineStyle, outlineWidth: styles.outlineWidth };
+}
+
+for (const engine of browserEngines()) {
+  test(`Sidebar nested navigation works in ${engine}`, { timeout: 300_000 }, async () => {
+    const { url, close } = await startServer({
+      entries: ['src/supplemental/index.mjs'],
+      pages: { '/sidebar-nested.html': nestedPage },
+      modules: { '/sidebar-nested-entry.mjs': nestedEntry },
+    });
+    let browser;
+    try {
+      browser = await launchBrowser(engine);
+      await warmUpServer(browser, `${url}/sidebar-nested.html`, 'aside');
+      const open = async (query = '') => {
+        const context = await browser.newContext({ viewport: { width: 900, height: 900 }, locale: 'en-US' });
+        const tab = await context.newPage();
+        const errors = [];
+        tab.on('pageerror', (error) => errors.push(error.message));
+        tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
+        await tab.goto(`${url}/sidebar-nested.html${query}`, { waitUntil: 'networkidle' });
+        await tab.locator('aside').waitFor({ timeout: 15_000 });
+        return { tab, context, errors };
+      };
+      const visible = async (tab, selector) => (await tab.evaluate(nestedBoxOf, selector)) !== null;
+      const expanded = (tab, name) => tab.getByRole('button', { name, exact: true }).getAttribute('aria-expanded');
+      const tabbed = async (tab, count) => {
+        const stops = [];
+        for (let index = 0; index < count; index += 1) {
+          await tab.keyboard.press('Tab');
+          stops.push(await tab.evaluate(nestedFocusedControl));
+        }
+        return stops;
+      };
+
+      for (const scheme of ['light', 'dark']) {
+        const label = (message) => `${engine} ${scheme}: ${message}`;
+        const { tab, context, errors } = await open(`?scheme=${scheme}`);
+        try {
+          // Details groups: closed by default, open from defaultExpanded, and driven by pointer and keyboard.
+          const roadmap = tab.locator('summary', { hasText: 'Roadmap' });
+          assert.equal(await visible(tab, 'a[href="#now"]'), false, label('a details group starts closed'));
+          assert.equal(await visible(tab, 'a[href="#deeper"]'), true, label('defaultExpanded opens a group, nested ones included'));
+          await roadmap.click();
+          assert.equal(await visible(tab, 'a[href="#now"]'), true, label('clicking the summary opens the group'));
+          await roadmap.click();
+          assert.equal(await visible(tab, 'a[href="#now"]'), false, label('clicking again closes it'));
+          await roadmap.focus();
+          await tab.keyboard.press('Enter');
+          assert.equal(await visible(tab, 'a[href="#now"]'), true, label('Enter on the summary opens the group'));
+          await tab.keyboard.press('Space');
+          assert.equal(await visible(tab, 'a[href="#now"]'), false, label('Space closes it'));
+          // A controlled details group reports the change and follows the caller.
+          await tab.locator('summary', { hasText: 'Controlled' }).click();
+          assert.equal(await visible(tab, 'a[href="#alpha"]'), true, label('a controlled details group follows its caller'));
+          assert.deepEqual(await tab.evaluate(() => window.__changes), [['details', true]], label('and reports the request'));
+          await tab.evaluate(() => { window.__setOpen('details', false); return new Promise((resolve) => requestAnimationFrame(() => resolve())); });
+          assert.equal(await visible(tab, 'a[href="#alpha"]'), false, label('the caller can close it'));
+
+          // Link groups: the link is a plain link, and a separate toggle owns the state.
+          assert.equal(await expanded(tab, 'Catalog'), 'false', label('the toggle starts collapsed'));
+          assert.equal(await visible(tab, 'a[href="#button"]'), false, label('the nested list is hidden while collapsed'));
+          await tab.getByRole('link', { name: 'Catalog', exact: true }).click();
+          assert.equal(await expanded(tab, 'Catalog'), 'false', label('following the group link does not toggle it'));
+          await tab.getByRole('button', { name: 'Catalog', exact: true }).click();
+          assert.equal(await expanded(tab, 'Catalog'), 'true', label('the toggle expands the category'));
+          assert.equal(await visible(tab, 'a[href="#button"]'), true, label('the blocks appear'));
+          assert.equal(await visible(tab, 'a[href="#primary"]'), false, label('the variants wait for their block'));
+          await tab.getByRole('button', { name: 'Button', exact: true }).click();
+          assert.equal(await visible(tab, 'a[href="#primary"]'), true, label('the block toggle opens the variants'));
+          assert.equal(await expanded(tab, 'Card'), 'false', label('other blocks stay collapsed'));
+          const [category, block, variant] = await Promise.all(['a[href="#catalog"]', 'a[href="#button"]', 'a[href="#primary"]'].map((selector) => tab.evaluate(nestedBoxOf, selector)));
+          assert.ok(block.left > category.left && variant.left > block.left, label(`each level indents (${category.left}, ${block.left}, ${variant.left})`));
+          assert.deepEqual(await tab.evaluate(() => window.__changes.slice(1)), [['catalog', true], ['button', true]], label('the callers hear about each group'));
+
+          // The current page: one aria-current, styled like a current top-level item, at any depth.
+          assert.equal(await tab.locator('[aria-current="page"]').count(), 1, label('exactly one item is current'));
+          const current = await tab.evaluate(nestedPaintOf, 'a[href="#primary"]');
+          const other = await tab.evaluate(nestedPaintOf, 'a[href="#secondary"]');
+          assert.ok(current.background !== other.background && current.background !== 'rgba(0, 0, 0, 0)', label(`the current item is painted (${current.background} against ${other.background})`));
+
+          // Keyboard: the link and its toggle are separate stops, and a closed list leaves the tab order.
+          await tab.locator('#before').focus();
+          assert.deepEqual(await tabbed(tab, 15), [
+            'group Roadmap', 'group Guides', 'link Intro', 'group Deep', 'link Deeper', 'group Controlled', 'link Overview',
+            'link Catalog', 'button Catalog', 'link Button', 'button Button', 'link Primary', 'link Secondary', 'link Card', 'button Card',
+          ], label('Tab visits each header, link, and toggle once'));
+          await tab.getByRole('button', { name: 'Card', exact: true }).focus();
+          await tab.keyboard.press('Enter');
+          assert.equal(await expanded(tab, 'Card'), 'true', label('Enter on a toggle opens its group'));
+          assert.equal(await tab.evaluate(nestedFocusedControl), 'button Card', label('focus stays on the toggle'));
+          await tab.keyboard.press('Space');
+          assert.equal(await expanded(tab, 'Card'), 'false', label('Space closes it'));
+          await tab.getByRole('button', { name: 'Catalog', exact: true }).focus();
+          await tab.keyboard.press('Enter');
+          assert.equal(await visible(tab, 'a[href="#button"]'), false, label('collapsing a category hides every level below it'));
+          assert.deepEqual(await tabbed(tab, 2), ['link Settings', 'button Toggle sidebar'], label('a collapsed category drops its list from the tab order'));
+
+          // The focus ring is drawn on both link-group controls.
+          for (const target of [tab.getByRole('link', { name: 'Catalog', exact: true }), tab.getByRole('button', { name: 'Catalog', exact: true })]) {
+            await tab.keyboard.press('Escape');
+            await target.focus();
+            await tab.keyboard.press('Shift+Tab');
+            await tab.keyboard.press('Tab');
+            const ring = await tab.evaluate(() => {
+              const styles = getComputedStyle(document.activeElement);
+              return { style: styles.outlineStyle, width: styles.outlineWidth };
+            });
+            assert.deepEqual(ring, { style: 'solid', width: '2px' }, label('keyboard focus draws the 2px ring'));
+          }
+          const page = await tab.evaluate(() => ({ overflow: document.documentElement.scrollWidth - innerWidth, root: document.querySelector('aside').scrollWidth - document.querySelector('aside').clientWidth }));
+          assert.ok(page.overflow <= 0 && page.root <= 0, label(`nested rows do not overflow (${JSON.stringify(page)})`));
+          assert.deepEqual(errors, [], label('the page logged no errors'));
+        } finally {
+          await context.close();
+        }
+      }
+
+      // A caller that refuses every change keeps both kinds of group where they were.
+      const refusing = await open('?reject=1');
+      try {
+        await refusing.tab.locator('summary', { hasText: 'Controlled' }).click();
+        await refusing.tab.getByRole('button', { name: 'Catalog', exact: true }).click();
+        assert.equal(await visible(refusing.tab, 'a[href="#alpha"]'), false, `${engine}: a refused details group stays closed`);
+        assert.equal(await expanded(refusing.tab, 'Catalog'), 'false', `${engine}: a refused link group stays collapsed`);
+        assert.deepEqual(await refusing.tab.evaluate(() => window.__changes), [['details', true], ['catalog', true]], `${engine}: both requests were reported`);
+        assert.deepEqual(refusing.errors, [], `${engine}: refusing logs no errors`);
+      } finally {
+        await refusing.context.close();
+      }
+
+      // The folded rail keeps top-level links and drops toggles and nested lists; folding rescues focus.
+      const folded = await open('?folded=1&open=1');
+      try {
+        assert.equal(await visible(folded.tab, 'a[href="#catalog"]'), true, `${engine}: a folded link group keeps its link`);
+        assert.equal(await folded.tab.getByRole('link', { name: 'Catalog', exact: true }).count(), 1, `${engine}: the folded link keeps its name`);
+        for (const hidden of ['.muxui-sidebar__nav-toggle', 'a[href="#button"]', 'a[href="#primary"]', 'a[href="#deeper"]']) {
+          assert.equal(await visible(folded.tab, hidden), false, `${engine}: folded, ${hidden} leaves the layout`);
+        }
+        assert.deepEqual(folded.errors, [], `${engine}: the folded rail logs no errors`);
+      } finally {
+        await folded.context.close();
+      }
+      const fold = await open('?open=1');
+      try {
+        const chord = (await fold.tab.evaluate(() => /mac|iphone|ipad|ipod/iu.test(navigator.userAgentData?.platform ?? navigator.platform))) ? 'Meta+b' : 'Control+b';
+        for (const [nested, header] of [['#primary', 'link Catalog'], ['#deeper', 'group Guides']]) {
+          await fold.tab.keyboard.press('Escape');
+          await fold.tab.locator(`a[href="${nested}"]`).focus();
+          await fold.tab.keyboard.press(chord);
+          await fold.tab.waitForFunction(() => document.querySelector('aside').hasAttribute('data-collapsed'));
+          assert.equal(await fold.tab.evaluate(nestedFocusedControl), header, `${engine}: folding moves focus from ${nested} to the outermost group header`);
+          await fold.tab.keyboard.press(chord);
+          await fold.tab.waitForFunction(() => !document.querySelector('aside').hasAttribute('data-collapsed'));
+        }
+        assert.deepEqual(fold.errors, [], `${engine}: folding logs no errors`);
+      } finally {
+        await fold.context.close();
+      }
+    } finally {
+      await browser?.close();
+      await close();
+    }
+  });
+}
