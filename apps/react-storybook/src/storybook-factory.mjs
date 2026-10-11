@@ -243,12 +243,13 @@ const STATE_BOOLEAN_PROPS = Object.freeze([
 ]);
 
 const OVERLAY_FAMILIES = new Set(['Dialog', 'Popover', 'PreviewTrigger', 'Tooltip', 'Toast']);
-const INTERACTION_OPEN_FAMILIES = new Set(['DatePicker', 'DateRangePicker', 'ComboBox', 'Select']);
+const INTERACTION_OPEN_FAMILIES = new Set(['DatePicker', 'DateRangePicker', 'ComboBox', 'Select', 'CommandPalette']);
 const INTERACTION_OPEN_SELECTORS = Object.freeze({
   DatePicker: '.muxui-date-trigger',
   DateRangePicker: '.muxui-date-trigger',
   ComboBox: '.muxui-combo-box-trigger',
   Select: '.muxui-select-trigger',
+  CommandPalette: '.muxui-command-palette__trigger',
 });
 const LIFECYCLE_ATTRIBUTES = Object.freeze({
   entering: 'data-entering',
@@ -840,8 +841,20 @@ Object.assign(ADAPTERS, {
           e(MuxUI.CommandPalette.Description, null, 'Choose an action'),
           e(MuxUI.CommandPalette.Content, null,
             e(MuxUI.CommandPalette.SearchField, null, e(MuxUI.CommandPalette.Input, { placeholder: 'Search commands' })),
+            // A group heading, an item description, and an item's meta and shortcut each carry text the open palette must keep readable.
             e(MuxUI.CommandPalette.ListBox, null,
-              e(MuxUI.CommandPalette.Item, { id: 'save', title: 'Save' }, 'Save'),
+              e(MuxUI.CommandPalette.Section, null,
+                e(MuxUI.CommandPalette.SectionHeader, null, 'Suggestions'),
+                e(MuxUI.CommandPalette.Item, { id: 'save', textValue: 'Save' },
+                  e(MuxUI.CommandPalette.ItemContent, null,
+                    e(MuxUI.CommandPalette.ItemTitle, null, 'Save'),
+                    e(MuxUI.CommandPalette.ItemDescription, null, 'Write the open document'),
+                  ),
+                  e(MuxUI.CommandPalette.ItemMeta, null, 'File'),
+                  e(MuxUI.CommandPalette.Shortcut, { keys: ['Ctrl', 'S'] }),
+                ),
+                e(MuxUI.CommandPalette.Item, { id: 'open', title: 'Open', description: 'Choose a document' }),
+              ),
             ),
           ),
           e(MuxUI.CommandPalette.Close, null, 'Close'),

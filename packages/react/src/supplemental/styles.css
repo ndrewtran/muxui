@@ -588,7 +588,7 @@
   --muxui-item-color: var(--muxui-semantic-color-neutral-80);
   --muxui-item-focus-bg: var(--muxui-semantic-color-neutral-14);
   --muxui-item-focus-color: var(--muxui-semantic-color-neutral-90);
-  --muxui-group-label-color: var(--muxui-semantic-color-neutral-50);
+  --muxui-group-label-color: var(--muxui-semantic-content-muted);
 
   position: fixed;
   top: 12vh;
@@ -767,7 +767,7 @@
   border: none;
   border-radius: var(--muxui-semantic-shape-pill-radius);
   background: transparent;
-  color: var(--muxui-semantic-color-neutral-50);
+  color: var(--muxui-semantic-content-muted);
   cursor: pointer;
 }
 
@@ -947,7 +947,7 @@
 .muxui-command-palette__item-description {
   min-width: 0;
   overflow: hidden;
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-semantic-content-muted);
   font-family: var(--muxui-semantic-typography-text-font-family);
   font-size: var(--muxui-semantic-typography-tiny-size);
   line-height: var(--muxui-semantic-typography-supporting-line-height);
@@ -969,7 +969,7 @@
 
 .muxui-command-palette__item-meta {
   margin-left: auto;
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-semantic-content-muted);
   font-family: var(--muxui-semantic-typography-mono-font-family);
   font-size: var(--muxui-semantic-typography-mono-xs-font-size);
   white-space: nowrap;
@@ -980,7 +980,7 @@
   align-items: center;
   gap: var(--muxui-semantic-layout-shortcut-gap);
   margin-left: auto;
-  color: var(--muxui-semantic-color-neutral-60);
+  color: var(--muxui-semantic-content-muted);
   font-family: var(--muxui-semantic-typography-mono-font-family);
   font-size: var(--muxui-semantic-typography-mono-xs-font-size);
 }
