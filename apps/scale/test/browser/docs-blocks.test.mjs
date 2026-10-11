@@ -316,8 +316,8 @@ test('Copy returns to its label after clicks inside the confirmation', async () 
 		await copy.click();
 		await copy.click();
 		assert.equal(await copy.textContent(), 'Copied');
-		// The first click's timer must not leave a second "Copied" to stick.
-		await page.waitForTimeout(2200);
+		// The first click's timer must not leave a second "Copied" to stick: the label returns to its own.
+		await page.waitForFunction(() => document.querySelector('[data-copy]').textContent === 'Copy', null, { timeout: 5000 });
 		assert.equal(await copy.textContent(), 'Copy');
 	});
 });
