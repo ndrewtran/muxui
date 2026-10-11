@@ -1,0 +1,104 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:agent-trace",
+  "kind": "pattern",
+  "name": "Agent trace",
+  "summary": "Three ways to show what an agent did: thinking steps under a kind switcher, tool calls with previews, and task rows with progress.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "agent",
+    "trace",
+    "thinking",
+    "reasoning",
+    "steps",
+    "tool calls",
+    "task rows",
+    "progress",
+    "status"
+  ],
+  "platforms": ["web.react"],
+  "category": "conversation",
+  "intent": {
+    "useWhen": [
+      "Showing what an agent read, searched, ran, or changed beside its reply",
+      "Listing background tasks with a status, a count, and a time for each"
+    ],
+    "avoidWhen": [
+      "The trace must stream live or be controlled, which needs your own data layer",
+      "The work is the page itself and needs a full activity log"
+    ]
+  },
+  "participants": [
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    },
+    {
+      "role": "steps",
+      "component": "muxui:component:activity",
+      "requirement": "optional"
+    },
+    {
+      "role": "detail",
+      "component": "muxui:component:disclosure",
+      "requirement": "optional"
+    },
+    {
+      "role": "switcher",
+      "component": "muxui:component:tabs",
+      "requirement": "optional"
+    },
+    {
+      "role": "source",
+      "component": "muxui:component:link",
+      "requirement": "optional"
+    },
+    {
+      "role": "mark",
+      "component": "muxui:component:avatar",
+      "requirement": "optional"
+    },
+    {
+      "role": "chip",
+      "component": "muxui:component:button",
+      "requirement": "optional"
+    },
+    {
+      "role": "diff",
+      "component": "muxui:component:code-block",
+      "requirement": "optional"
+    },
+    {
+      "role": "preview",
+      "component": "muxui:component:preview-trigger",
+      "requirement": "optional"
+    },
+    {
+      "role": "progress",
+      "component": "muxui:component:progress-bar",
+      "requirement": "optional"
+    }
+  ],
+  "variants": [
+    { "example": "muxui:example:agent-trace-thinking" },
+    { "example": "muxui:example:agent-trace-tool-calls" },
+    { "example": "muxui:example:agent-trace-task-rows" }
+  ],
+  "accessibility": [
+    "In Thinking, the kind switcher is a Tabs list named Trace kind and the trace below it is the tab panel named by the selected kind.",
+    "Each Disclosure header is a button with aria-expanded, and the chevron in its title follows the open state.",
+    "The Edit chip is a Button with aria-expanded and aria-controls for the diff it shows or hides.",
+    "Search results are a list of Links, each with a decorative Avatar mark and its host as text.",
+    "In Tool calls, each chip is a Button inside a PreviewTrigger named for its call: the preview opens on hover or keyboard focus, and Escape returns focus to the chip.",
+    "In Task rows, Activity reports its aggregate status in a status region, and a row with details opens from its summary with Enter or Space.",
+    "Statuses, counts, and times are text, and each status mark is hidden from assistive technology."
+  ],
+  "unsupported": [
+    "Running, streaming, or stopping a task: the steps, tools, counts, and times are placeholders",
+    "A list layout for the task rows: Activity draws one stack of rows",
+    "A transparent Disclosure trigger: it keeps its own fill",
+    "Coloured diff counts: the counts use the muted text colour"
+  ],
+  "workflowValue": "Replaces wiring trace rows by hand: one status and meta shape feeds the Activity rows, the Disclosure bodies, and the tool chips, so you swap the steps and keep the kind switcher, the previews, and the progress."
+}

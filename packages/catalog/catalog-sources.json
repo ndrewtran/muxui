@@ -1120,6 +1120,22 @@
     {
       "family": "example",
       "path": "catalog/patterns/workspace-navigation/examples/react/foldable.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/agent-trace/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/agent-trace/examples/react/task-rows.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/agent-trace/examples/react/thinking.example.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/agent-trace/examples/react/tool-calls.example.json"
     }
   ]
 }

@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:agent-trace-tool-calls",
+  "kind": "example",
+  "name": "Tool calls",
+  "summary": "A counted list of tool calls, each with a verb and a chip that previews its result.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/agent-trace/examples/react/tool-calls.tsx"
+}
