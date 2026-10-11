@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
@@ -41,6 +41,16 @@ test('the repository mapping names unique components that each have a catalog ar
   assert.equal(new Set(mapping.map(({ export: componentExport }) => componentExport.name)).size, mapping.length);
   for (const { artifact, slug } of mapping) {
     assert.equal(JSON.parse(readFileSync(resolve(repositoryRoot, artifact), 'utf8')).id, `muxui:component:${slug}`, slug);
+  }
+});
+
+test('the repository mapping lists exactly the React example sources on disk', () => {
+  for (const { slug, examples } of readSupplementalMapping(repositoryRoot)) {
+    const directory = `catalog/components/${slug}/examples/react`;
+    const onDisk = readdirSync(resolve(repositoryRoot, directory))
+      .filter((file) => file.endsWith('.tsx'))
+      .map((file) => `${directory}/${file}`);
+    assert.deepEqual([...examples].sort(), onDisk.sort(), slug);
   }
 });
 

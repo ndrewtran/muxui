@@ -111,7 +111,9 @@
       "family": "CommandPalette",
       "slug": "command-palette",
       "examples": [
-        "catalog/components/command-palette/examples/react/basic.tsx"
+        "catalog/components/command-palette/examples/react/basic.tsx",
+        "catalog/components/command-palette/examples/react/controlled-query.tsx",
+        "catalog/components/command-palette/examples/react/managed-commands.tsx"
       ],
       "export": {
         "module": ".",
@@ -401,7 +403,8 @@
       "family": "TextEditor",
       "slug": "text-editor",
       "examples": [
-        "catalog/components/text-editor/examples/react/basic.tsx"
+        "catalog/components/text-editor/examples/react/basic.tsx",
+        "catalog/components/text-editor/examples/react/selection-actions.tsx"
       ],
       "export": {
         "module": "./text-editor",
