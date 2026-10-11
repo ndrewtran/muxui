@@ -340,6 +340,18 @@ packages, keeping them with corrected claims, or keeping them as they are; for
 the CSS contract, documenting today's React surface with `@layer` and no
 renames, or leaving the contract on `@muxui/web` until W1.0.
 
+On 12 October 2026 Andrew was shown the six calls this record makes beyond those
+answers, and replied "Confirmed.":
+
+1. Both Button `instance` hooks are dropped by default (item 15).
+2. Public part classes are derived from the concept record's `anatomy` (item 16).
+3. State attributes default to the spelling `data-muxui-state-<name>` (item 16).
+4. `@muxui/foundation` returns only with an activation that names shared code
+   and its two real consumers (item 8).
+5. The Stage 1 layers are `muxui.tokens`, `muxui.components`, and
+   `muxui.utilities`, in that order (item 15).
+6. The implementation order before P2.1 is a target, not a gate (item 20).
+
 This record does not claim that any check passed, that a pull request was opened
 or merged, that the repository has adopted the decision, that any implementation
 step was done, or that any package, release candidate, or dist-tag changed.
