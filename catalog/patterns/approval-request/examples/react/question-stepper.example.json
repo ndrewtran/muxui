@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:example:approval-request-question-stepper",
+  "kind": "example",
+  "name": "Question stepper",
+  "summary": "One question at a time with choices, a free answer, a pager, Skip, and Continue.",
+  "lifecycle": "experimental",
+  "complexity": "representative",
+  "prerequisites": [],
+  "source": "catalog/patterns/approval-request/examples/react/question-stepper.tsx"
+}

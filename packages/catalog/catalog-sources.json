@@ -1144,6 +1144,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/context-sources/examples/react/excerpts.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/approval-request/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/approval-request/examples/react/question-stepper.example.json"
     }
   ]
 }
