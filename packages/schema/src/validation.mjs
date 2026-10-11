@@ -924,16 +924,17 @@ export function relationEdges(records) {
 
 /**
  * Validates the pattern category registry (`catalog/patterns/categories.json`):
- * groups in display order, each with its categories in display order. The
- * schema checks the shape; a category must also belong to one group only,
- * because a pattern's group is derived from its category.
+ * groups in display order, each mapping its categories, in display order, to
+ * their display labels. The schema checks the shape; a category must also
+ * belong to one group only, because a pattern's group is derived from its
+ * category.
  */
 export function validatePatternCategories(registry, { schemas } = {}) {
   validateContractDocument('pattern-categories.schema.json', registry, { schemas });
   const declared = new Map();
   const issues = [];
   for (const [group, categories] of Object.entries(registry)) {
-    for (const category of categories) {
+    for (const category of Object.keys(categories)) {
       if (declared.has(category)) {
         issues.push({ path: `$/${group}`, message: `${category} is already declared under ${declared.get(category)}` });
       }
@@ -945,12 +946,15 @@ export function validatePatternCategories(registry, { schemas } = {}) {
 }
 
 /**
- * The registry as an ordered list of `{ group, categories }`, the form a bundle
- * carries: canonical JSON sorts object keys, so an object would lose the group
- * order the registry declares.
+ * The registry as an ordered list of `{ group, categories: [{ id, label }] }`,
+ * the form a bundle carries: canonical JSON sorts object keys, so an object
+ * would lose the group and category order the registry declares.
  */
 export function patternCategoryGroups(registry) {
-  return Object.entries(registry).map(([group, categories]) => ({ group, categories }));
+  return Object.entries(registry).map(([group, categories]) => ({
+    group,
+    categories: Object.entries(categories).map(([id, label]) => ({ id, label })),
+  }));
 }
 
 /** Reads an ordered group list back into a validated registry whose keys follow the list order. */
@@ -966,12 +970,26 @@ export function patternCategoryRegistry(groups) {
   for (const [index, entry] of groups.entries()) {
     if (!isObject(entry) || typeof entry.group !== 'string' || !Array.isArray(entry.categories) || Object.keys(entry).length !== 2) {
       issues.push({ path: `$/${index}`, message: 'must be { group, categories }' });
-    } else if (seen.has(entry.group)) {
-      issues.push({ path: `$/${index}/group`, message: `${entry.group} is declared more than once` });
-    } else {
-      seen.add(entry.group);
-      entries.push([entry.group, entry.categories]);
+      continue;
     }
+    if (seen.has(entry.group)) {
+      issues.push({ path: `$/${index}/group`, message: `${entry.group} is declared more than once` });
+      continue;
+    }
+    seen.add(entry.group);
+    const categories = [];
+    const ids = new Set();
+    for (const [position, category] of entry.categories.entries()) {
+      if (!isObject(category) || typeof category.id !== 'string' || typeof category.label !== 'string' || Object.keys(category).length !== 2) {
+        issues.push({ path: `$/${index}/categories/${position}`, message: 'must be { id, label }' });
+      } else if (ids.has(category.id)) {
+        issues.push({ path: `$/${index}/categories/${position}/id`, message: `${category.id} is declared more than once in ${entry.group}` });
+      } else {
+        ids.add(category.id);
+        categories.push([category.id, category.label]);
+      }
+    }
+    entries.push([entry.group, Object.fromEntries(categories)]);
   }
   if (issues.length > 0) throw new SchemaValidationError('MUXUI_SCHEMA_INVALID', issues);
   return validatePatternCategories(Object.fromEntries(entries));
@@ -1074,7 +1092,7 @@ export function validateCatalogRecords(records, { schemas, ownership, patternCat
   // or one pattern variant listing. A pattern's category must be declared when
   // a registry is supplied.
   const listings = new Map();
-  const declaredCategories = patternCategories === undefined ? undefined : new Set(Object.values(patternCategories).flat());
+  const declaredCategories = patternCategories === undefined ? undefined : new Set(Object.values(patternCategories).flatMap((categories) => Object.keys(categories)));
   for (const pattern of records.filter(({ kind }) => kind === 'pattern')) {
     if (declaredCategories && !declaredCategories.has(pattern.category)) {
       report(pattern.id, '$/category', `${pattern.category} is not a declared pattern category; declare it in catalog/patterns/categories.json`);

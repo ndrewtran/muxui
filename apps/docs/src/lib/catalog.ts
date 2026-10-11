@@ -108,12 +108,22 @@ const catalog = loadedCatalog;
 /** The canonical query API. The Blocks loader reads patterns through it, never around it. */
 export const catalogApi: CatalogModule = catalog;
 
-/** The pattern taxonomy the catalog exports from `catalog/patterns/categories.json`: each group, in declared order, with its categories in declared order. */
-export const patternCategoryGroups: readonly (readonly [group: string, categories: readonly string[]])[] = Object.freeze(
+export interface PatternCategory {
+	id: string;
+	/** The display label the registry declares, such as "FAQ" or "Call to action". */
+	label: string;
+}
+
+/** The pattern taxonomy the catalog exports from `catalog/patterns/categories.json`: each group, in declared order, with its categories and their labels in declared order. */
+export const patternCategoryGroups: readonly (readonly [group: string, categories: readonly PatternCategory[]])[] = Object.freeze(
 	(() => {
 		const groups = isRecord(loadedCatalog) ? loadedCatalog.PATTERN_CATEGORY_GROUPS : undefined;
 		if (!isRecord(groups)) throw new Error('Mux UI docs could not read the catalog pattern category groups.');
-		return Object.entries(groups).map(([group, categories]) => Object.freeze([group, stringArray(categories, `PATTERN_CATEGORY_GROUPS.${group}`)] as const));
+		return Object.entries(groups).map(([group, categories]) => {
+			if (!isRecord(categories)) throw new Error(`Canonical catalog response has an invalid PATTERN_CATEGORY_GROUPS.${group}.`);
+			const list = Object.entries(categories).map(([id, label]) => Object.freeze({ id, label: requiredString(label, `PATTERN_CATEGORY_GROUPS.${group}.${id}`) }));
+			return Object.freeze([group, Object.freeze(list)] as const);
+		});
 	})(),
 );
 

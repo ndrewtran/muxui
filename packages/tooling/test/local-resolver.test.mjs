@@ -87,7 +87,7 @@ function rendererDocuments(bundle, installed) {
     descriptorVersion: '1.0.0',
     package: '@muxui/react',
     version: '1.0.1',
-    bindingSchemaRange: '^2.0.0',
+    bindingSchemaRange: '^3.0.0',
     tokenContractRange: '^2.0.0',
     releaseProvenance: `muxui-release:1.0.1:${bundle.sourceRevision}`,
     bindings: Object.fromEntries(installed.map((binding) => {
@@ -110,7 +110,7 @@ function rendererDocuments(bundle, installed) {
     catalogDigest: bundle.catalogDigest,
     queryApiVersion: bundle.apiVersion,
     supportedQueryApiVersions: ['2.1.0'],
-    schemaRange: '^2.0.0',
+    schemaRange: '^3.0.0',
     sourceRevision: bundle.sourceRevision,
     provenance: { kind: 'source-revision', value: bundle.sourceRevision },
     tokenRequirementSets: Object.fromEntries(installed.map((binding) => [`${binding}:web.react`, tokenDigest])),
@@ -122,7 +122,7 @@ function rendererDocuments(bundle, installed) {
     releaseManifest: {
       id: descriptor.releaseProvenance,
       releaseVersion: '1.0.1',
-      schemaVersion: '2.4.0',
+      schemaVersion: '3.0.0',
       queryApiVersion: '2.1.0',
       tokenContractVersion: '2.0.0',
       sourceRevision: bundle.sourceRevision,

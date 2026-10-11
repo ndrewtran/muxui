@@ -176,7 +176,7 @@ export function getBlockExamples(id: string): readonly BlockExample[] {
 const blockSummaries = listBlocks();
 const componentById = new Map(componentSummaries.map((component) => [component.id, component]));
 
-/** The catalog owns no display labels, so a label is derived from the id: `call-to-action` reads "Call to action". */
+/** A group reads as its capitalised id: `marketing` is "Marketing". A category's label is catalog data (`categoryLabel`), never derived. */
 export function idLabel(id: string): string {
 	const text = id.replaceAll('-', ' ');
 	return text.charAt(0).toUpperCase() + text.slice(1);
@@ -251,7 +251,7 @@ function buildBlock(summary: BlockSummary): Block {
 		name: summary.name,
 		summary: summary.summary,
 		category: summary.category,
-		categoryLabel: idLabel(summary.category),
+		categoryLabel: categoryLabel(summary.category),
 		group: summary.group,
 		groupLabel: idLabel(summary.group),
 		participants: Object.freeze(participants),
@@ -261,11 +261,16 @@ function buildBlock(summary: BlockSummary): Block {
 }
 
 // Blocks list in the order the catalog declares its categories: groups first, then each group's categories.
-const categoryOrder = patternCategoryGroups.flatMap(([, categories]) => categories);
+const declaredCategories = patternCategoryGroups.flatMap(([, categories]) => categories);
 function categoryRank(category: string): number {
-	const index = categoryOrder.indexOf(category);
+	const index = declaredCategories.findIndex(({ id }) => id === category);
 	if (index === -1) throw new Error(`Mux UI docs found the category ${category} outside the catalog's category groups.`);
 	return index;
+}
+
+/** The display label the catalog's category registry declares for `category`. */
+export function categoryLabel(category: string): string {
+	return declaredCategories[categoryRank(category)].label;
 }
 
 /** Catalog category order, then name. */

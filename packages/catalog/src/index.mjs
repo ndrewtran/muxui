@@ -1241,5 +1241,5 @@ export const getManifest = defaultApi.getManifest;
 export const listArtifacts = defaultApi.listArtifacts;
 export const searchArtifacts = defaultApi.searchArtifacts;
 export const getArtifact = defaultApi.getArtifact;
-/** The pattern taxonomy from catalog/patterns/categories.json: each group, then its categories, in declared order (the keys follow the bundle's ordered list). */
+/** The pattern taxonomy from catalog/patterns/categories.json: each group, then its categories mapped to their display labels, in declared order (the keys follow the bundle's ordered list). */
 export const PATTERN_CATEGORY_GROUPS = deepFreeze(structuredClone(patternCategoryRegistry(defaultBundle.patternCategories)));

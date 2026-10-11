@@ -11,6 +11,7 @@ import {
 	blockGroups,
 	blocks,
 	buildBlockFilterIndex,
+	categoryLabel,
 	compareBlocks,
 	getBlockExamples,
 	getBlockRecord,
@@ -79,19 +80,23 @@ test('ordering and labels come from the catalog category groups, not the app', (
 	assert.ok(compareBlocks(named('pricing', 'A'), named('pricing', 'B')) < 0, 'then by name');
 	assert.throws(() => compareBlocks(named('unlisted'), named('hero')), /outside the catalog's category groups/u);
 
-	assert.deepEqual([
-		idLabel('application'), idLabel('hero'), idLabel('call-to-action'), idLabel('logo-cloud'), idLabel('faq'),
-	], ['Application', 'Hero', 'Call to action', 'Logo cloud', 'Faq']);
+	// A category reads as the label the registry declares, so `faq` is "FAQ", not the capitalised id "Faq".
+	assert.deepEqual(
+		['hero', 'call-to-action', 'logo-cloud', 'faq'].map(categoryLabel),
+		['Hero', 'Call to action', 'Logo cloud', 'FAQ'],
+	);
+	assert.throws(() => categoryLabel('unlisted'), /outside the catalog's category groups/u);
+	assert.equal(idLabel('application'), 'Application');
 
 	const groupOrder = Object.keys(api.PATTERN_CATEGORY_GROUPS);
 	const shown = blockGroups.map(({ group }) => group);
 	assert.deepEqual(shown, groupOrder.filter((group) => shown.includes(group)));
 	for (const { group, label, categories } of blockGroups) {
 		assert.equal(label, idLabel(group));
-		const order = api.PATTERN_CATEGORY_GROUPS[group];
+		const declared = api.PATTERN_CATEGORY_GROUPS[group];
 		const listed = categories.map(({ category }) => category);
-		assert.deepEqual(listed, order.filter((category) => listed.includes(category)), group);
-		for (const { category, label: categoryLabel } of categories) assert.equal(categoryLabel, idLabel(category));
+		assert.deepEqual(listed, Object.keys(declared).filter((category) => listed.includes(category)), group);
+		for (const { category, label: shownLabel } of categories) assert.equal(shownLabel, declared[category]);
 	}
 });
 

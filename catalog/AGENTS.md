@@ -8,11 +8,12 @@ projections beside canonical records.
 Use the root verification commands until a narrower catalog-owned command is
 declared here by its implementing package.
 
-`patterns/categories.json` declares the block categories and their groups as
-`{ "<group>": ["<category>", ...] }`, in display order. A block's `category` must be
-listed there; the compiler rejects any other and derives the block's group from it.
-Adding, renaming, or regrouping a category edits that file (and the blocks that name
-it), not the schema.
+`patterns/categories.json` declares the block categories, their groups, and each
+category's display label as `{ "<group>": { "<category>": "<Label>", ... } }`, in display
+order. Every category has an explicit label (`faq` is "FAQ"), and docs show it as
+written. A block's `category` must be listed there; the compiler rejects any other and
+derives the block's group from it. Adding, renaming, relabelling, or regrouping a
+category edits that file (and the blocks that name it), not the schema.
 
 A component record's optional `category` is its navigation group in docs and
 Storybook: `"ai-agent"` places it in AI Agent, and no `category` leaves it in
