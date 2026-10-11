@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { assertFits, measurePageFit, openBlock, patternVariant, ringWalk, startVariantServer, tabWalk } from './pattern-probes.mjs';
+import { assertFits, assertUniqueIds, measurePageFit, openBlock, patternVariant, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the approval request block, loaded from its canonical catalog
@@ -111,6 +111,66 @@ for (const engine of browserEngines()) {
         }
       });
 
+      await t.test('moves focus to the new question after Continue, Skip, Start over, and a pager button that disables, and reports the true answered count', async () => {
+        const { context, tab, errors } = await openBlock(browser, url);
+        // Presses a button by keyboard, as a keyboard user does.
+        const press = async (button) => {
+          await button.focus();
+          await tab.keyboard.press('Enter');
+        };
+        const focusedOn = (title) => pollUntil(tab, (expected) => document.activeElement === document.querySelector('h2') && document.activeElement.textContent === expected, title, {
+          message: `focus is on the heading ${title}`,
+          report: () => `${document.activeElement?.tagName} ${document.activeElement?.textContent}`,
+        });
+        try {
+          await expectQuestion(tab, 'How should the rollout be staged?', 1);
+          // Answer by keyboard, then Continue: the focused button disables on the next question, so focus must move.
+          await tab.getByRole('radio', { name: 'In two waves' }).focus();
+          await tab.keyboard.press('Space');
+          await press(next(tab));
+          await expectQuestion(tab, 'Which notices should go out?', 2);
+          await focusedOn('Which notices should go out?');
+          assert.equal(await stopOf(tab), 'heading Which notices should go out?');
+
+          // Skip keeps its own place nowhere: focus moves to the new question here too.
+          await press(tab.getByRole('button', { name: 'Skip' }));
+          await expectQuestion(tab, 'When should it start?', 3);
+          await focusedOn('When should it start?');
+
+          // A pager button keeps focus while it stays enabled, and gives it to the question when it disables.
+          await press(tab.getByRole('button', { name: 'Previous question' }));
+          await expectQuestion(tab, 'Which notices should go out?', 2);
+          assert.equal(await stopOf(tab), 'button Previous question', 'Previous keeps focus while it is enabled');
+          await press(tab.getByRole('button', { name: 'Next question' }));
+          await expectQuestion(tab, 'When should it start?', 3);
+          await focusedOn('When should it start?');
+
+          // Question two was skipped, so finishing reports two of three, not all three.
+          await tab.getByRole('radio', { name: 'Today' }).focus();
+          await tab.keyboard.press('Space');
+          await press(next(tab));
+          await tab.getByText('2 of 3 questions answered. Nothing was sent.').waitFor();
+          assert.equal(await tab.evaluate(() => document.activeElement.textContent), '2 of 3 questions answered. Nothing was sent.', 'focus moves to the message');
+
+          // Start over by keyboard returns focus to the first question.
+          await press(tab.getByRole('button', { name: 'Start over' }));
+          await expectQuestion(tab, 'How should the rollout be staged?', 1);
+          await focusedOn('How should the rollout be staged?');
+
+          // Skipping every question reports none answered.
+          for (const title of ['Which notices should go out?', 'When should it start?']) {
+            await press(tab.getByRole('button', { name: 'Skip' }));
+            await focusedOn(title);
+          }
+          await press(tab.getByRole('button', { name: 'Skip' }));
+          await tab.getByText('No questions answered. Nothing was sent.').waitFor();
+          assert.equal(await tab.evaluate(() => document.activeElement.textContent), 'No questions answered. Nothing was sent.');
+          assert.deepEqual(errors, []);
+        } finally {
+          await context.close();
+        }
+      });
+
       await t.test('walks every control in order in each question, in light and dark, each with a focus ring that differs from rest', async () => {
         for (const scheme of ['light', 'dark']) {
           assert.deepEqual(await walkFrom(browser, url, scheme, async () => {}), [
@@ -148,6 +208,10 @@ for (const engine of browserEngines()) {
             'button Continue',
           ], `${scheme}: Tab order on the last question with an answer`);
         }
+      });
+
+      await t.test('two instances share no ids', async () => {
+        await assertUniqueIds(browser, url, 'approval request');
       });
 
       await t.test('never scrolls the page horizontally at 360, 390, 768, and 1280 in light and dark', async () => {

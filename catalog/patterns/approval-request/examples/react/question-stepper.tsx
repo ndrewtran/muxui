@@ -24,15 +24,40 @@ export function ApprovalRequestQuestionStepperExample() {
   const [other, setOther] = useState<Record<string, string>>({});
   const [closed, setClosed] = useState<'answered' | 'dismissed' | null>(null);
   const message = useRef<HTMLParagraphElement>(null);
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Set by actions that replace the question, so focus follows to it.
+  const followFocus = useRef(false);
+  const shown = useRef({ step, closed });
   const question = questions[step];
   const picked = answers[question.id] ?? [];
   const ready = picked.length > 0 || (other[question.id] ?? '').trim() !== '';
   const last = step === questions.length - 1;
-  const next = () => (last ? setClosed('answered') : setStep(step + 1));
-  // The card's controls unmount when it closes, so focus moves to the message that replaces them.
+  const answered = questions.filter(({ id }) => (answers[id]?.length ?? 0) > 0 || (other[id] ?? '').trim() !== '').length;
+  const advance = () => {
+    followFocus.current = true;
+    if (last) setClosed('answered');
+    else setStep(step + 1);
+  };
+  const restart = () => {
+    followFocus.current = true;
+    setStep(0);
+    setAnswers({});
+    setOther({});
+    setClosed(null);
+  };
+  // Controls unmount or disable as the card changes, so focus moves to what replaces them: the message once it closes, the new question after Continue, Skip, or Start over, and the question when a pager button that held focus is disabled.
   useEffect(() => {
+    const changed = shown.current.step !== step || shown.current.closed !== closed;
+    shown.current = { step, closed };
+    if (!changed) return;
     if (closed) message.current?.focus();
-  }, [closed]);
+    else {
+      const held = document.activeElement;
+      const lost = !held || held === document.body || held.matches(':disabled');
+      if (followFocus.current || lost) heading.current?.focus();
+    }
+    followFocus.current = false;
+  }, [step, closed]);
   return (
     <section className="ask" aria-label="Approval request">
       <style>{`
@@ -78,13 +103,13 @@ export function ApprovalRequestQuestionStepperExample() {
       <Card.Root variant="elevated">
         {closed ? (
           <div className="ask-done">
-            <Text as="p" ref={message} tabIndex={-1}>{closed === 'answered' ? `All ${questions.length} questions answered. Nothing was sent.` : 'Request dismissed. Nothing was sent.'}</Text>
-            <Button variant="neutral" size="sm" onActivate={() => { setStep(0); setAnswers({}); setOther({}); setClosed(null); }}>Start over</Button>
+            <Text as="p" ref={message} tabIndex={-1}>{closed === 'dismissed' ? 'Request dismissed. Nothing was sent.' : `${answered === questions.length ? `All ${answered} questions` : answered === 0 ? 'No questions' : `${answered} of ${questions.length} questions`} answered. Nothing was sent.`}</Text>
+            <Button variant="neutral" size="sm" onActivate={restart}>Start over</Button>
           </div>
         ) : (
           <div className="ask-body">
             <div className="ask-head">
-              <Text as="h2" variant="title" size="sm">{question.title}</Text>
+              <Text as="h2" ref={heading} tabIndex={-1} variant="title" size="sm">{question.title}</Text>
               <IconButton aria-label="Dismiss" variant="ghost" size="sm" onActivate={() => setClosed('dismissed')}><Close /></IconButton>
             </div>
             {question.multiple ? (
@@ -107,8 +132,8 @@ export function ApprovalRequestQuestionStepperExample() {
                 <Text size="sm" color="muted" role="status">{step + 1}/{questions.length}</Text>
                 <IconButton aria-label="Next question" variant="ghost" size="sm" disabled={last} onActivate={() => setStep(step + 1)}><Down /></IconButton>
               </div>
-              <Button variant="neutral" size="sm" onActivate={next}>Skip</Button>
-              <Button size="sm" disabled={!ready} onActivate={next}>Continue</Button>
+              <Button variant="neutral" size="sm" onActivate={advance}>Skip</Button>
+              <Button size="sm" disabled={!ready} onActivate={advance}>Continue</Button>
             </div>
           </div>
         )}
