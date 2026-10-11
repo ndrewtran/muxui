@@ -28,6 +28,9 @@
 // capture's source revision; the record says how they differ. A later capture without the flag
 // reuses the retained review, which must still match its digest. The content review is refused
 // if catalog/patterns differs from the tree it read, and a close-out capture needs both reviews.
+// Both must state a pass: a review has exactly one verdict heading (`Verdict` or `Overall verdict`, counted anywhere in the file,
+// so a review that quotes a verdict template is refused), the content review's is `Overall verdict`, and its first non-empty line
+// opens with **Pass.** (the close-out's retained exit review is accepted at its digest).
 // `--growth` is for a capture after a block is added: the Roadmap gives a later block only
 // E-BL1-03 to E-BL1-08, E-BL1-10, and E-BL1-11, so it skips the close-out scope check and the
 // exit review, and records that it did. It refuses to run unless a close-out capture is retained and
@@ -60,7 +63,7 @@ import { patternVariantExamples } from '../../tooling/audits/repository-policy/s
 import { pageWidths, toolbarPresets } from '../../apps/docs/src/lib/block-presets.ts';
 import { auditBoundary, checksWithoutControl, legsWithoutControl, preBl1Base, runNegativeControls } from './bl1/boundary-audit.mjs';
 import { scanBlockContent } from './bl1/content-scan.mjs';
-import { archiveSupersededCapture, assertDurableSource, assertGrowthSource, blockBrowserTests, contentReviewCoverage, isAncestor as isAncestorIn, retainReview, retainedContentReviews, seedRehearsal, supersededFiles } from './bl1/capture-support.mjs';
+import { archiveSupersededCapture, assertContentReviewPasses, assertDurableSource, assertExitReviewPasses, assertGrowthSource, blockBrowserTests, contentReviewCoverage, isAncestor as isAncestorIn, retainReview, retainedContentReviews, seedRehearsal, supersededFiles } from './bl1/capture-support.mjs';
 import { catalogAcrossCommit, digestAffectingPaths, growthCommits, growthNonClaim, growthScopeRule } from './bl1/growth-scope.mjs';
 import { parseTestReport, runProof, sanitizationRules } from './bl1/proof-run.mjs';
 import {
@@ -571,6 +574,7 @@ const reviewSlot = (id, flag, artifactPath, previousKey, required) => retainRevi
 const contentReview = await reviewSlot('E-BL1-10', 'content-review', `${root}/artifacts/E-BL1-10-content-review.md`, 'review', true);
 // The exit review covers the close-out claim, so a close-out capture needs it; a growth capture or a rehearsal may go without.
 const exitReview = await reviewSlot('E-BL1-09', 'exit-review', `${root}/artifacts/E-BL1-09-exit-review.md`, 'exitReview', rehearsal === undefined && !growth);
+if (exitReview !== null) assertExitReviewPasses(exitReview);
 
 // ---- E-BL1-10: the content scan and the content review. ----
 const contentTests = prove('E-BL1-10-content-rule-tests', {
@@ -580,9 +584,7 @@ const contentTests = prove('E-BL1-10-content-rule-tests', {
 const contentScan = await scanBlockContent();
 if (contentScan.failures.length > 0) throw new Error(`E-BL1-10: ${contentScan.failures.join('; ')}`);
 if (contentScan.variantSources !== variants.length) throw new Error('E-BL1-10: the content scan did not read every variant source');
-if (!contentReview.verdictText?.includes('**Pass.**') || !contentReview.text.includes('## Overall verdict')) {
-  throw new Error('E-BL1-10: the review record does not state an overall pass');
-}
+assertContentReviewPasses(contentReview);
 // A close-out capture needs one review of every block as it stands. A growth capture needs an independent review only for a block
 // whose coverage key (its tree, its participants' component records, and the React runtime sources) no retained review read (Decision 0029); the table below records which review covers each block.
 const namedBlocks = patternSlugs.filter((slug) => contentReview.text.includes(slug));

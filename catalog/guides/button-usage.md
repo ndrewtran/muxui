@@ -11,7 +11,7 @@ or an accessible label. Use `pending` while an immediate action is in flight;
 pending Buttons remain focusable but do not activate again.
 
 React Buttons support the finite `variant` values `primary`, `neutral`, `ghost`,
-`danger`, `danger-neutral`, `danger-ghost`, `inverse`, and `secondary`, along
-with the orthogonal `tone` (`default` or `destructive`) and `size` (`sm`, `md`,
-or `lg`) properties. They default to `primary`, `default`, and `md`
-respectively.
+`danger`, `danger-neutral`, `danger-ghost`, and `inverse`, along with the `size`
+values `sm`, `md`, and `lg`. They default to `primary` and `md`. Express a
+destructive action with one of the `danger` variants; there is no separate
+`tone` property.

@@ -20,9 +20,9 @@ are rejected. The icon wrapper is decorative; avoid focusable or interactive
 children. A tooltip can help explain an unfamiliar icon but does not replace
 the required accessible name.
 
-The defaults are `variant="ghost"`, `size="md"`, `tone="default"`,
-`disabled={false}`, and `pending={false}`. Variants, tone, `onActivate`, refs,
-and native button/form attributes follow `Button`. The `sm`, `md`, and `lg`
+The defaults are `variant="ghost"`, `size="md"`, `disabled={false}`, and
+`pending={false}`. Variants, `onActivate`, refs, and native button/form
+attributes follow `Button`. The `sm`, `md`, and `lg`
 sizes are square, with minimum heights aligned to Mux buttons. Theme control and spacing
 tokens determine their dimensions. Use `Button` when visible text is needed.
 

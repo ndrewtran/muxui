@@ -1349,6 +1349,120 @@ test('a BL1 review is retained with its own revision and tree, compared with the
   }
 });
 
+test('a BL1 exit review is retained only when its one verdict opens with a pass, or it is the pinned close-out review', async () => {
+  const { assertExitReviewPasses, proseVerdictExitReviews, retainReview, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const { cwd, source, sourceTree } = await reviewRepository();
+  const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-exit-verdict-'));
+  const root = 'tests/evidence/bl1';
+  const base = { cwd, outputRoot, root, id: 'E-BL1-09', artifactPath: `${root}/artifacts/E-BL1-09-exit-review.md`, previousKey: 'exitReview', required: true, sourceRevision: source, sourceTree, reviewedRevision: source };
+  const header = `# Review\n\n**Reviewer:** an independent reviewer, not the author.\n**Revision:** \`${source.slice(0, 8)}\`\n\n`;
+  const retainText = async (text) => {
+    const input = join(outputRoot, 'review.md');
+    await writeFile(input, text);
+    return retainReview({ ...base, input });
+  };
+  const retain = (body) => retainText(`${header}${body}`);
+  const passes = async (body, label) => {
+    const review = await retain(body);
+    assert.doesNotThrow(() => assertExitReviewPasses(review), label ?? body);
+    return review;
+  };
+  const refused = async (body, label) => {
+    const review = await retain(body);
+    assert.throws(() => assertExitReviewPasses(review), /does not open its verdict with \*\*Pass\.\*\*/u, label ?? body);
+  };
+  const ambiguous = (body, label) => assert.rejects(retain(body), /^Error: E-BL1-09: the review record has 2 verdict headings, so its verdict is ambiguous$/u, label ?? body);
+  try {
+    // Accepted: a verdict whose first non-empty line opens with **Pass.**, bare or after a bullet, under either heading name, in LF or CRLF.
+    await passes('## Verdict\n\n**Pass.** The audit and the exit claim hold.\n');
+    await passes('## Verdict\n\n- **Pass.** The audit holds.\n- Follow-ups are advisory.\n');
+    await passes('## Verdict\n\n* **Pass.** The audit holds.\n');
+    await passes('## Overall verdict ##\n\n**Pass.**\n', 'a closing run of # is not part of the name');
+    await passes('Overall verdict\n===============\n\n**Pass.** A setext heading counts too.\n');
+    // A stray fence in an HTML comment is not tracked, so it cannot swallow the one real verdict.
+    await passes('<!-- the template used ``` and ~~~ fences -->\n\n## Verdict\n\n**Pass.** The audit holds.\n', 'backticks in an HTML comment');
+    await passes('<!--\n```\n-->\n\n## Verdict\n\n**Pass.**\n', 'an unclosed fence in an HTML comment');
+    // A section ends at the next ATX heading of any level, and a later section is not the verdict.
+    const sectioned = await passes('## Verdict\n\n**Pass.** Holds.\n\n# Notes\n\n**Fail.** is not the verdict.\n');
+    assert.deepEqual(reviewVerdict(`${header}## Verdict\n\n**Pass.** Holds.\n\n# Notes\n\n**Fail.** is not the verdict.\n`), { heading: 'verdict', text: '**Pass.** Holds.' });
+    assert.equal(sectioned.verdictText, '**Pass.** Holds.');
+    // A CRLF review reads like an LF one, and the retained text and its digest are the bytes that were read.
+    const crlf = `${header}## Verdict\n\n- **Pass.** The audit and the exit claim hold.\n\n## Notes\n\nNone.\n`.replaceAll('\n', '\r\n');
+    const crlfReview = await retainText(crlf);
+    assert.equal(crlfReview.verdictText, '- **Pass.** The audit and the exit claim hold.');
+    assert.equal(crlfReview.text, crlf);
+    assert.equal(crlfReview.artifact.sha256, digest(crlf));
+    assertExitReviewPasses(crlfReview);
+    await assert.rejects(retainText(crlf.replace('## Notes', '## Verdict')), /has 2 verdict headings/u, 'CRLF headings count too');
+
+    // Refused: a failing, hedged, or buried verdict, a pass outside the verdict section, and a review with no verdict section.
+    await refused('## Verdict\n\n**Fail.** The boundary audit misses a leg.\n');
+    await refused('## Verdict\n\nNot ready to merge. The exit claim does not hold.\n');
+    await refused('## Verdict\n\nBlocked until the audit is fixed. **Pass.** once it is.\n');
+    await refused('## Verdict\n\nThe audit holds.\n');
+    await refused('## Verdict\n\n**Fail.**\n\n**Pass.** later in the section does not help.\n');
+    await refused('## Method\n\n**Pass.** is written here, not under a verdict heading.\n');
+    await refused('');
+    // A block context does not hide the real verdict: a fence opened in a list and never closed does not swallow the heading after it.
+    await refused('## Notes\n\n- Example output:\n\n  ```md\n  the run printed this\n\n## Verdict\n\n**Fail.** The boundary audit misses a leg.\n', 'an unclosed fence in a list before a real Fail');
+    // A verdict heading is counted wherever it is written, so a second section cannot hide behind spelling: closing #s, up to three leading
+    // spaces, a tab, another case, or a setext underline. A quoted or fenced template also counts, so such a review is ambiguous, not read as one of them.
+    const pass = '## Verdict\n\n**Pass.** The audit holds.\n\n';
+    for (const second of [
+      '## Overall verdict\n\n**Fail.**\n',
+      '## Overall verdict ##\n\n**Fail.**\n',
+      '   ## Overall verdict\n\n**Fail.**\n',
+      '##\tOverall verdict\n\n**Fail.**\n',
+      '## OVERALL VERDICT\n\n**Fail.**\n',
+      '# verdict\n\n**Fail.**\n',
+      'Overall verdict\n---\n\n**Fail.**\n',
+      '```md\n## Verdict\n\n**Pass.**\n```\n',
+      '~~~\n## Overall verdict\n\n**Pass.**\n~~~\n',
+      '<!--\n## Verdict\n\n**Pass.**\n-->\n',
+    ]) {
+      await ambiguous(`${pass}${second}`, `a pass, then ${second}`);
+      await ambiguous(`${second}\n${pass}`, `${second}, then a pass`);
+    }
+    // The failing-first order a reviewer reproduced: a real Fail, then a fenced template that says Pass.
+    await ambiguous('## Overall verdict\n\n**Fail.** The boundary audit misses a leg.\n\n```md\n## Verdict\n\n**Pass.**\n```\n');
+    // A template the parser does not read as a heading cannot replace the real verdict: an indented code block or a quoted line is no heading.
+    await refused('## Verdict\n\n**Fail.** The boundary audit misses a leg.\n\n    ## Overall verdict\n    **Pass.**\n\n> ## Overall verdict\n> **Pass.**\n');
+
+    // The close-out's retained exit review states its verdict in prose and is accepted only at its pinned digest.
+    const closeoutReview = await readFile(join(repositoryRoot, root, 'artifacts/E-BL1-09-exit-review.md'), 'utf8');
+    assert.deepEqual([...proseVerdictExitReviews], [digest(closeoutReview)]);
+    assertExitReviewPasses({ artifact: { sha256: digest(closeoutReview) }, verdictText: reviewVerdict(closeoutReview).text });
+    assert.throws(() => assertExitReviewPasses({ artifact: { sha256: digest(`${closeoutReview}edited`) }, verdictText: reviewVerdict(`${closeoutReview}edited`).text }), /does not open its verdict/u);
+  } finally {
+    await rm(cwd, { recursive: true, force: true });
+    await rm(outputRoot, { recursive: true, force: true });
+  }
+});
+
+test('a BL1 content review is accepted only with one Overall verdict that opens with a pass', async () => {
+  const { assertContentReviewPasses } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
+  const review = (body) => ({ text: `# Content review\n\n**Reviewer:** an independent reviewer.\n\n${body}` });
+  const accepts = (body) => assert.doesNotThrow(() => assertContentReviewPasses(review(body)), body);
+  const refuses = (body, message = /does not state an overall pass/u) => assert.throws(() => assertContentReviewPasses(review(body)), message, body);
+  accepts('## Overall verdict\n\n**Pass.** All blocks meet the assertions.\n');
+  accepts('## OVERALL VERDICT ##\r\n\r\n- **Pass.** All blocks meet the assertions.\r\n');
+  accepts('## Verdict table\n\n| Block | Verdict |\n| --- | --- |\n| a | **Pass** |\n\n## Overall verdict\n\n**Pass.** All blocks meet the assertions.\n');
+  accepts('<!-- ``` -->\n\n## Overall verdict\n\n**Pass.**\n');
+  // The reviewer's case: a real Fail, then a fenced template that says Pass, is ambiguous, in either order and with every spelling of the heading.
+  const ambiguous = /^Error: E-BL1-10: the review record has 2 verdict headings, so its verdict is ambiguous$/u;
+  refuses('## Overall verdict\n\n**Fail.** One block has a literal colour.\n\n```md\n## Verdict\n\n**Pass.**\n```\n', ambiguous);
+  refuses('```md\n## Overall verdict\n\n**Pass.**\n```\n\n## Overall verdict\n\n**Fail.** One block has a literal colour.\n', ambiguous);
+  refuses('## Overall verdict\n\n**Pass.**\n\n##\tOverall verdict\n\n**Fail.**\n', ambiguous);
+  refuses('## Overall verdict\n\n**Pass.**\n\n   ## Overall verdict ##\n\n**Fail.**\n', ambiguous);
+  // One heading, but not a pass, not an Overall verdict, or not there at all.
+  refuses('## Overall verdict\n\n**Fail.** One block has a literal colour.\n');
+  refuses('## Overall verdict\n\nAll blocks pass.\n');
+  refuses('## Verdict\n\n**Pass.** All blocks meet the assertions.\n');
+  refuses('## Verdict table\n\n| a | **Pass.** |\n');
+  refuses('**Pass.** with no verdict heading, and the words ## Overall verdict only in the text.\n');
+  refuses('## Overall verdict\n\n**Fail.**\n\n    ## Verdict\n    **Pass.**\n');
+});
+
 test('a BL1 capture that replaces an earlier one keeps it in the tree and names it, and a rerun carries the reference forward', async () => {
   const { archiveSupersededCapture, supersededFiles } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
   const outputRoot = await mkdtemp(join(tmpdir(), 'muxui-bl1-supersede-'));
@@ -1701,8 +1815,23 @@ function browserTestTitles(revision, file) {
   return titles;
 }
 
-/** Maps a path a capture cites into the directory that holds the capture; archived copies keep the layout of the root. */
+/**
+ * Where the file a capture cites is, given the directory that holds the capture. An archived capture is a byte-for-byte copy under
+ * `superseded/<revision>/`, so its records and index keep the `artifact.path` and `validation.path` they had at the retained root
+ * (`tests/evidence/bl1/...`), which now name the replaced files. Those paths resolve under the archive; a path already under
+ * `superseded/` is a real location (a `supersedes.path`) and is read as written. For the retained root the mapping is the identity.
+ */
 const capturePath = (directory) => (path) => (path.startsWith(`${bl1}/superseded/`) ? path : path.replace(`${bl1}/`, `${directory}/`));
+
+/** Every `artifact` and `validation` reference of a capture's records resolves in the capture's own directory at the digest the record names. */
+async function assertRecordReferencesResolve({ repo = repositoryRoot, directory, records }) {
+  const into = capturePath(directory);
+  for (const [id, record] of Object.entries(records)) {
+    for (const [name, reference] of [['artifact', record.artifact], ['validation', record.validation]]) {
+      assert.equal(digest(await readFile(join(repo, into(reference.path)))), reference.sha256, `${directory}: ${id} ${name} ${reference.path} resolves in the capture's own directory`);
+    }
+  }
+}
 
 /** Reads the capture in `directory` of the tree `repo`: its index, validation summary, records, and artifacts. */
 async function loadCapture({ repo = repositoryRoot, directory = bl1 } = {}) {
@@ -1882,6 +2011,7 @@ async function assertGrowthScope({ sourceRevision, closeoutRevision, toolRevisio
  */
 async function assertCapture({ repo = repositoryRoot, directory, index, verification, records, artifacts, retained }, { closeoutRevision, growthToolRevision, thresholdsRevision } = {}) {
   const { assertUniqueQueries, parseThresholds, thresholdChanges, thresholdRevisionProblems } = await import('../../../../tests/evidence/bl1/regression.mjs');
+  const { assertContentReviewPasses, assertExitReviewPasses, reviewVerdict } = await import('../../../../tests/evidence/bl1/capture-support.mjs');
   const { sourceRevision, sourceTree } = index;
   const { scope, growthGate } = verification;
   assert.ok(scope === 'close-out' || scope === 'growth', `${directory}: the validation summary records its scope`);
@@ -2004,7 +2134,8 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
       assert.equal(retained.get(review.artifact.path), review.artifact.sha256, `E-BL1-10: the review covering ${block} is retained at its digest`);
       const reviewText = await readFile(join(repo, capturePath(directory)(review.artifact.path)), 'utf8');
       assert.equal(digest(reviewText), review.artifact.sha256);
-      assert.ok(reviewText.includes(`catalog/patterns/${block}`) && /\*\*Pass\.\*\*/u.test(reviewText), `E-BL1-10: the review covering ${block} names it and passes`);
+      assert.ok(reviewText.includes(`catalog/patterns/${block}`), `E-BL1-10: the review covering ${block} names it`);
+      assertContentReviewPasses({ text: reviewText });
     }
   }
   const exitReview = boundary.exitReview;
@@ -2014,6 +2145,17 @@ async function assertCapture({ repo = repositoryRoot, directory, index, verifica
     assert.equal(review.comparison.sourceTree, sourceTree);
     assert.equal(review.comparison.equalTrees, review.reviewedTree === sourceTree, 'the recorded tree comparison agrees with the recorded trees');
     assert.deepEqual(Object.keys(review.sanitization.replacements).sort(), ['home', 'repositoryRoot', 'temporary']);
+  }
+  // Each review is read from the capture's own directory at the digest recorded, and states a pass by the rules the capture applied.
+  const reviewTextOf = async ({ artifact }) => {
+    const text = await readFile(join(repo, capturePath(directory)(artifact.path)), 'utf8');
+    assert.equal(digest(text), artifact.sha256, `${directory}: ${artifact.path} is retained at its recorded digest`);
+    return text;
+  };
+  assertContentReviewPasses({ text: await reviewTextOf(content.review) });
+  if (exitReview !== null) {
+    const verdict = reviewVerdict(await reviewTextOf(exitReview), `${directory}: the exit review`);
+    assertExitReviewPasses({ artifact: exitReview.artifact, verdictText: verdict?.text });
   }
 
   // E-BL1-11: the thresholds are the ones committed at the source revision, and the expectations revised and the known weaknesses stay on the record.
@@ -2146,6 +2288,7 @@ async function assertLegacyCapture({ repo, summaryRevision }) {
     assert.equal(record.sourceRevision, sourceRevision, `${path}: the older record names its revision`);
     assert.equal(digest(await readFile(join(repo, into(record.artifact.path)))), record.artifact.sha256, `${path}: the older record names its artifact`);
   }
+  await assertRecordReferencesResolve({ repo, directory, records: Object.fromEntries(await Promise.all(index.records.map(async ({ assertionId, path }) => [assertionId, JSON.parse(await readFile(join(repo, into(path)), 'utf8'))]))) });
 }
 
 /**
@@ -2167,6 +2310,7 @@ async function assertRetainedCaptures({ repo = repositoryRoot } = {}) {
     const capture = await loadCapture({ repo, directory });
     if (directory !== bl1) await assertCopyMatchesIndex({ repo, ...capture });
     await assertCapture(capture, { closeoutRevision: closeout.sourceRevision });
+    await assertRecordReferencesResolve(capture);
   }
   return captures;
 }
@@ -2464,6 +2608,16 @@ test('a BL1 archived capture is read from its own directory and must match its i
     const archived = await loadCapture({ repo: outputRoot, directory: archive });
     await assertCopyMatchesIndex({ repo: outputRoot, ...archived });
     assert.deepEqual(await assertCapture(archived), await assertCapture(capture));
+    // The archived records keep the paths they had at the retained root; they resolve under the archive, and only a path already under superseded/ is read as written.
+    const into = capturePath(archive);
+    assert.equal(into(`${bl1}/artifacts/E-BL1-08.json`), `${archive}/artifacts/E-BL1-08.json`);
+    assert.equal(into(`${bl1}/verification.json`), `${archive}/verification.json`);
+    assert.equal(into(`${bl1}/superseded/${'a'.repeat(12)}/records/E-BL1-08.json`), `${bl1}/superseded/${'a'.repeat(12)}/records/E-BL1-08.json`);
+    assert.equal(capturePath(bl1)(`${bl1}/artifacts/E-BL1-08.json`), `${bl1}/artifacts/E-BL1-08.json`);
+    assert.equal(archived.records['E-BL1-08'].validation.path, `${bl1}/verification.json`, 'the archive keeps the path the record had');
+    await assertRecordReferencesResolve({ repo: outputRoot, ...archived });
+    const stale = { ...archived.records, 'E-BL1-08': { ...archived.records['E-BL1-08'], validation: { ...archived.records['E-BL1-08'].validation, sha256: digest('another summary') } } };
+    await assert.rejects(assertRecordReferencesResolve({ repo: outputRoot, directory: archive, records: stale }), /E-BL1-08 validation tests\/evidence\/bl1\/verification\.json resolves in the capture's own directory/u);
     await writeFile(join(outputRoot, archive, 'artifacts/E-BL1-05.json'), '{}');
     await assert.rejects(assertCopyMatchesIndex({ repo: outputRoot, ...archived }), /E-BL1-05\.json is archived at the digest its index names/u);
   } finally {
