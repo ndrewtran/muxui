@@ -1172,6 +1172,14 @@
     {
       "family": "example",
       "path": "catalog/patterns/quick-find/examples/react/overlay.example.json"
+    },
+    {
+      "family": "pattern",
+      "path": "catalog/patterns/chat-panel/artifact.json"
+    },
+    {
+      "family": "example",
+      "path": "catalog/patterns/chat-panel/examples/react/tabbed-thread.example.json"
     }
   ]
 }

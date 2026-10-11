@@ -1,0 +1,89 @@
+{
+  "schemaVersion": "1.0.0",
+  "id": "muxui:pattern:chat-panel",
+  "kind": "pattern",
+  "name": "Chat panel",
+  "summary": "A chat card with tabbed threads, header actions and a menu, assistant replies set in Markdown, and a prompt composer whose send adds your text to the open thread.",
+  "lifecycle": "experimental",
+  "keywords": [
+    "chat",
+    "assistant",
+    "thread",
+    "tabbed",
+    "conversation",
+    "composer",
+    "markdown",
+    "reply"
+  ],
+  "platforms": ["web.react"],
+  "category": "conversation",
+  "intent": {
+    "useWhen": [
+      "Talking with an assistant in a few named threads beside your work",
+      "Showing assistant replies with light formatting and the trace line that led to each one"
+    ],
+    "avoidWhen": [
+      "Replies stream from a model or a server, which needs your own data layer",
+      "The conversation is the whole page rather than a panel"
+    ]
+  },
+  "participants": [
+    {
+      "role": "container",
+      "component": "muxui:component:card",
+      "requirement": "required"
+    },
+    {
+      "role": "threads",
+      "component": "muxui:component:tabs",
+      "requirement": "required"
+    },
+    {
+      "role": "action",
+      "component": "muxui:component:icon-button",
+      "requirement": "required"
+    },
+    {
+      "role": "menu",
+      "component": "muxui:component:menu",
+      "requirement": "required"
+    },
+    {
+      "role": "turn",
+      "component": "muxui:component:message",
+      "requirement": "required"
+    },
+    {
+      "role": "reply",
+      "component": "muxui:component:markdown",
+      "requirement": "required"
+    },
+    {
+      "role": "composer",
+      "component": "muxui:component:prompt-composer",
+      "requirement": "required"
+    },
+    {
+      "role": "copy",
+      "component": "muxui:component:text",
+      "requirement": "required"
+    }
+  ],
+  "variants": [{ "example": "muxui:example:chat-panel-tabbed-thread" }],
+  "accessibility": [
+    "The thread tabs are a Tabs list named Chats: arrow keys move between tabs, and the open thread follows the selected tab.",
+    "The thread is a log region named by the open tab, and it is a Tab stop with its own focus ring.",
+    "The header actions are IconButtons named New chat and History, and a Menu trigger named More actions opens a menu named Chat actions.",
+    "The composer is a form: Enter sends, Shift plus Enter adds a line, and Send stays disabled until there is text.",
+    "Sending adds your text to the end of the open thread as a right-aligned message.",
+    "Assistant replies render through Markdown, which removes raw HTML and unsafe links, and each reply starts with a muted trace line."
+  ],
+  "unsupported": [
+    "Sending to a model or a server: send only adds your text to the open thread",
+    "Streaming replies, attachments, or model choice",
+    "New chat, History, and the menu items: they do nothing until you add handlers",
+    "Scrolling a long thread: the thread grows with its messages",
+    "Keeping sent text: it resets on reload"
+  ],
+  "workflowValue": "Replaces wiring a chat card by hand: one tab value picks the thread, the composer draft and send run through one handler, and replies render as Markdown, so you swap the threads and keep the header, the thread, and the composer."
+}
