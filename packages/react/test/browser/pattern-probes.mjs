@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { resolve } from 'node:path';
 import { patternVariantExamples } from '../../../../tooling/audits/repository-policy/src/pattern-variants.mjs';
+import { settleMotion } from './grid-list-probes.mjs';
 import { packageRoot, pageShell, repositoryRoot, startServer } from './harness.mjs';
 
 // Shared by the block browser tests (E-BL1-04, E-BL1-06): load a variant from its
@@ -95,16 +96,21 @@ export function isFocusVisible(element) {
   return element.matches(':focus-visible') || element.hasAttribute('data-focus-visible') || element.closest('label')?.hasAttribute('data-focus-visible') === true;
 }
 
-/** Reads until two reads agree, so a transition has finished; the last read after three seconds. */
-async function settled(tab, read) {
-  let previous;
-  for (const deadline = Date.now() + 3000; Date.now() < deadline;) {
-    const value = await read();
-    if (value === previous) return value;
-    previous = value;
-    await tab.waitForTimeout(100);
+/** The node whose subtree holds the focus-ring paint `paintSnapshot` reads: the control's label when it has one. */
+const paintScope = (element) => element.closest('label') ?? element;
+
+/**
+ * `paintSnapshot` once the control's motion has ended. A read taken sooner can land on a
+ * transition's start, which equals the paint it is leaving, or on a blend of the two.
+ */
+async function settledPaint(tab, handle) {
+  const scope = await tab.evaluateHandle(paintScope, handle);
+  try {
+    await settleMotion(scope);
+  } finally {
+    await scope.dispose();
   }
-  return previous;
+  return tab.evaluate(paintSnapshot, handle);
 }
 
 /**
@@ -118,7 +124,7 @@ export function ringWalk(tab) {
   let stop;
   const check = async () => {
     if (!stop) return;
-    const rest = await settled(tab, () => tab.evaluate(paintSnapshot, stop.handle));
+    const rest = await settledPaint(tab, stop.handle);
     assert.equal(stop.focusVisible, true, `${stop.name} matches :focus-visible when Tab reaches it`);
     assert.notEqual(stop.paint, rest, `${stop.name} paints a focus ring that differs from its rest state (${rest})`);
     await stop.handle.dispose();
@@ -129,7 +135,7 @@ export function ringWalk(tab) {
       await check();
       const handle = await tab.evaluateHandle(() => document.activeElement);
       const focusVisible = await tab.evaluate(isFocusVisible, handle);
-      stop = { name, handle, focusVisible, paint: await settled(tab, () => tab.evaluate(paintSnapshot, handle)) };
+      stop = { name, handle, focusVisible, paint: await settledPaint(tab, handle) };
     },
     finish: check,
   };
