@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process';
 import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { componentTestSelection } from './component-test-selection.mjs';
+import { componentTestSelection, isBrowserTestFile, testNamePattern } from './component-test-selection.mjs';
 
 const packageRoot = resolve(import.meta.dirname, '../../../../packages/react');
 const rawFamilyValues = process.env.MUXUI_COMPONENT_FAMILIES ?? '';
@@ -63,11 +63,16 @@ const focusedFiles = Object.entries(selection.testNamesByFile);
 if (focusedFiles.length > 0) {
   console.log(`[component-check] focused test names=${focusedFiles.map(([file, names]) => `${file}: ${names.join(' | ')}`).join('; ')}`);
 }
+// CI runs the selected browser tests in its own per-engine browser groups and
+// sets this to leave them out here; every other run keeps them in this check.
+const skipBrowserTests = process.env.MUXUI_COMPONENT_SKIP_BROWSER_TESTS === '1';
+if (skipBrowserTests) {
+  console.log(`[component-check] browser tests run in their own CI groups=${selection.files.filter(isBrowserTestFile).join(', ') || '(none)'}`);
+}
 for (const file of selection.files) {
+  if (skipBrowserTests && isBrowserTestFile(file)) continue;
   const names = selection.testNamesByFile[file];
-  const namePattern = names?.length
-    ? `^(?:${names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('|')})$`
-    : null;
+  const namePattern = names?.length ? testNamePattern(names) : null;
   const testResult = spawnSync(process.execPath, [
     '--test',
     '--test-concurrency=1',

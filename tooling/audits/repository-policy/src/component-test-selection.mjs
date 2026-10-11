@@ -195,6 +195,16 @@ export function componentTestSelection(records, availableFiles, {
   };
 }
 
+/** True for the real-browser tests `check:browser` globs (test/browser/*.test.mjs). */
+export function isBrowserTestFile(file) {
+  return /^test\/browser\/[^/]+\.test\.mjs$/u.test(file);
+}
+
+/** The `--test-name-pattern` value that runs exactly the named tests. */
+export function testNamePattern(names) {
+  return `^(?:${names.map((name) => name.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('|')})$`;
+}
+
 /** Resolve existing behavioral test groups for canonical component records. */
 export function selectComponentTestFiles(records, availableFiles, options) {
   return componentTestSelection(records, availableFiles, options).files;

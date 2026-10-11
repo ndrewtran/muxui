@@ -40,6 +40,26 @@ builds the docs site first. Repository-policy, workflow, policy-run fixture, and
 retained evidence changes run the policy checks. Mixed changes combine and
 deduplicate those scopes.
 
+React browser tests run in per-engine groups, in pull requests and in the full
+plan. A test that calls the harness's `browserEngines()` runs once in each of
+`browser-chromium`, `browser-firefox`, and `browser-webkit`; every other browser
+test runs once, in `browser-chromium-only`; unit tests stay in `react`. A group
+installs only its own engine. A component check leaves its browser tests to
+these groups (`MUXUI_COMPONENT_SKIP_BROWSER_TESTS=1`) and keeps their case
+filters. A long list splits into numbered shards, such as `browser-firefox-2`:
+more than six cross-engine files, or more than 18 Chromium-only files. A file's
+shard is a hash of its path, so shards keep their identity as the selection
+changes. A pull request that selects test files shards a cross-engine list at
+most two ways and the Chromium-only list at most three. A plan that runs the
+whole browser suite (main, the weekly run, and a pull request that needs the
+full React proof) keeps the cross-engine groups whole, so main's matrix stays
+near 14 jobs, and shards `browser-chromium-only` three ways. Main runs Scale's
+browser checks, including the docs build, in the last of those shards; pull
+requests keep them in the `browser-chromium` family, so reuse routes a docs or
+Scale change to the same family in every plan. Reuse treats a browser group and
+its shards as one family: a change routed to any shard reruns its siblings, and
+a shard is reused only when its id and file list match.
+
 The PR planner prepares ignored React or Storybook metadata only when those
 owners are needed to resolve canonical families or page IDs. A full workspace
 plan is reserved for identified workspace-wide inputs such as the Node/pnpm
