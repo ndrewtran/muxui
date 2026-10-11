@@ -5,10 +5,10 @@ import test from 'node:test';
 import { catalogAcrossCommit } from '../../../../tests/evidence/bl1/growth-scope.mjs';
 import { gitIn, growthRepository, jsonEdit } from './evidence-growth-repository.mjs';
 
-// BL1 growth, E-BL1-08: a tree from before Decision 0028 is normalized the same way on both sides of the comparison. Like
-// `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees per comparison, and `node --test` runs the two files in
-// parallel.
-test('trees from before the manifest key was removed compile the way they did, and a tree without category labels is refused', async () => {
+// BL1 growth, E-BL1-08: a tree from before Decision 0028, before block categories were catalog data, or before they carried labels is
+// normalized the same way on both sides of the comparison. Like `evidence-growth-catalog.test.mjs`, it compiles two full extracted trees
+// per comparison, and `node --test` runs the two files in parallel.
+test('trees from before the manifest key was removed or before category labels compile the way they did, and an unknown registry shape still fails', async () => {
   const repo = await growthRepository();
   const { cwd, second } = repo;
   try {
@@ -24,9 +24,9 @@ test('trees from before the manifest key was removed compile the way they did, a
     assert.deepEqual([acrossLegacy.identical, acrossLegacy.holds], [true, true], 'trees that carry the removed manifest key compile on both sides');
     const acrossAdded = await catalogAcrossCommit({ cwd, commit: legacy, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] });
     assert.deepEqual([acrossAdded.identical, acrossAdded.holds], [true, true], 'the key is dropped from the tree that carries it, and the one that does not is unchanged');
-    // Every category now carries an explicit label (schema 3.0.0, Decision 0016: the current product reads current contracts only). The closed list of ids
-    // that `normalizeLegacyManifest` injects into a tree without a registry has no labels, so the compiler refuses it. A growth capture over a tree from
-    // before the labels needs that tool, under tests/evidence/bl1/growth-scope.mjs, to inject and convert registries with labels; this pins the gap.
+    // Every category now carries an explicit label, so the older registry files are converted before compiling, with the label the docs derived from
+    // each id then (the id with dashes as spaces, capitalised). The closed list injected into a tree without a registry, and the group-to-id-list file
+    // that made categories catalog data, compile on both sides, and to the same digest as a labelled file that spells those labels out.
     const unregistered = await repo.modify(async (edit, root) => {
       await edit('packages/catalog/catalog-sources.json', jsonEdit(({ patternCategoriesPath: _registry, ...manifest }) => manifest));
       await rm(join(root, 'catalog/patterns/categories.json'));
@@ -35,11 +35,29 @@ test('trees from before the manifest key was removed compile the way they did, a
     gitIn(cwd, 'add', '-A', '-f');
     gitIn(cwd, 'commit', '-q', '-m', 'a later change to a tree without a category registry (#106)');
     const unregisteredChild = gitIn(cwd, 'rev-parse', 'HEAD');
-    await assert.rejects(
-      catalogAcrossCommit({ cwd, commit: unregisteredChild, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] }),
-      (error) => error.code === 'MUXUI_SCHEMA_INVALID' && /\$\/application must be object/u.test(error.message),
-      'the closed list of category ids has no labels and is refused',
-    );
+    const acrossUnregistered = await catalogAcrossCommit({ cwd, commit: unregisteredChild, parent: unregistered, excludedDirectories: [], digestAffectingPathsChanged: [] });
+    assert.deepEqual([acrossUnregistered.identical, acrossUnregistered.holds], [true, true], 'trees from before categories were catalog data compile with the closed list');
+    const registryPath = 'catalog/patterns/categories.json';
+    const withRegistry = (change) => repo.modify((edit) => edit(registryPath, (text) => `${JSON.stringify(change(JSON.parse(text)), null, 2)}\n`));
+    const derivedLabel = (id) => `${id.charAt(0).toUpperCase()}${id.replaceAll('-', ' ').slice(1)}`;
+    const mapGroups = (registry, change) => Object.fromEntries(Object.entries(registry).map(([group, categories]) => [group, change(Object.keys(categories))]));
+    const lists = await withRegistry((registry) => mapGroups(registry, (ids) => ids));
+    const derived = await withRegistry((registry) => mapGroups(registry, (ids) => Object.fromEntries(ids.map((id) => [id, derivedLabel(id)]))));
+    const sameDigest = async (commit, parent) => (await catalogAcrossCommit({ cwd, commit, parent, excludedDirectories: [], digestAffectingPathsChanged: [] })).identical;
+    assert.equal(await sameDigest(lists, derived), true, 'a group-to-id-list registry compiles as the labelled file with capitalised ids');
+    assert.equal(await sameDigest(unregistered, lists), true, 'the injected closed list is the same registry as the group-to-id-list file');
+    assert.equal(await sameDigest(lists, second), false, 'the labels are derived, so a file with explicit labels such as "FAQ" differs');
+    // Anything else is not converted, so the compiler still rejects it: a group that is not a list of ids, a list mixed with a labelled group, and a list the
+    // old schema already refused.
+    for (const [name, change] of [
+      ['a group that is a string', (registry) => ({ ...registry, application: 'forms' })],
+      ['a list beside a labelled group', (registry) => ({ ...registry, application: Object.keys(registry.application) })],
+      ['a list with a repeated id', (registry) => mapGroups(registry, (ids) => [...ids, ids[0]])],
+      ['a list with a non-string id', (registry) => mapGroups(registry, (ids) => [...ids, 7])],
+    ]) {
+      const unknownShape = await withRegistry(change);
+      await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownShape, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), (error) => error.code === 'MUXUI_SCHEMA_INVALID', `${name} still fails the compiler`);
+    }
     const unknownKey = await repo.modify((edit) => edit('packages/catalog/catalog-sources.json', manifestEdit({ unexpectedKey: true })));
     await assert.rejects(catalogAcrossCommit({ cwd, commit: unknownKey, parent: second, excludedDirectories: [], digestAffectingPathsChanged: [] }), /MUXUI_CATALOG_SOURCE_INVALID/u, 'any other unknown manifest key still fails');
   } finally {

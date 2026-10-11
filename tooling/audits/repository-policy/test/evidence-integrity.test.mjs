@@ -2677,7 +2677,8 @@ test('a BL1 growth scope audits the commits that added or changed the blocks, no
 });
 
 // A tree from before block categories were catalog data is compiled with the closed list injected. The text is held to the registry file as the
-// change that moved the list added it, so the injected tree and the shipped one compile to the same bundle.
+// change that moved the list added it, so the injected tree and the tree that moved the list convert to the same labelled registry
+// (evidence-growth-normalization.test.mjs).
 test('the closed category list injected into pre-registry trees is the registry file as it was added', async () => {
   const { closedCategoryRegistry } = await import('../../../../tests/evidence/bl1/growth-scope.mjs');
   const path = 'catalog/patterns/categories.json';
