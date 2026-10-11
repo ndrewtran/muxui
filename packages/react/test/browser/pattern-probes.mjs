@@ -32,7 +32,9 @@ const Example = Object.values(Variant).find((value) => typeof value === 'functio
 window.__sentinel = 'alive';
 window.__submits = [];
 document.addEventListener('submit', (event) => window.__submits.push(event.defaultPrevented));
-createRoot(document.getElementById('root')).render(React.createElement(Example));
+// \`?copies=2\` mounts the example twice, to prove its ids stay unique across instances.
+const copies = Number(new URLSearchParams(location.search).get('copies') ?? 1);
+createRoot(document.getElementById('root')).render(React.createElement(React.Fragment, null, Array.from({ length: copies }, (_, index) => React.createElement(Example, { key: index }))));
 `;
 
 /**
@@ -67,13 +69,13 @@ export function startVariantServer(variant) {
  * Opens a block page in a fresh context. The context collects page and console
  * errors in `errors`; the caller closes the context.
  */
-export async function openBlock(browser, url, { width = 1280, height = 900, scheme = 'light' } = {}) {
+export async function openBlock(browser, url, { width = 1280, height = 900, scheme = 'light', copies = 1 } = {}) {
   const context = await browser.newContext({ locale: 'en-US', viewport: { width, height } });
   const tab = await context.newPage();
   const errors = [];
   tab.on('pageerror', (error) => errors.push(error.message));
   tab.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
-  await tab.goto(`${url}/block.html?scheme=${scheme}`, { waitUntil: 'networkidle' });
+  await tab.goto(`${url}/block.html?scheme=${scheme}&copies=${copies}`, { waitUntil: 'networkidle' });
   await tab.locator('#root > *').first().waitFor({ timeout: 15_000 });
   return { context, tab, errors };
 }
@@ -241,6 +243,26 @@ export async function expectRendered(locator, expected, { timeout = 5000 } = {})
     if (rendered === expected) return;
     assert.ok(Date.now() < deadline, `${locator} did not become ${expected ? 'rendered' : 'folded'} within ${timeout}ms`);
     await locator.page().waitForTimeout(50);
+  }
+}
+
+/**
+ * Mounts the block twice and holds the document to unique ids, so no id is a fixed literal of the example.
+ * `prepare(tab)` opens whatever renders more ids (a tab, a disclosure, an overlay) before the check.
+ */
+export async function assertUniqueIds(browser, url, label, prepare = async () => {}) {
+  const { context, tab, errors } = await openBlock(browser, url, { copies: 2 });
+  try {
+    await prepare(tab);
+    const duplicates = await tab.evaluate(() => {
+      const counts = new Map();
+      for (const node of document.querySelectorAll('[id]')) counts.set(node.id, (counts.get(node.id) ?? 0) + 1);
+      return [...counts].filter(([, count]) => count > 1).map(([id]) => id);
+    });
+    assert.deepEqual(duplicates, [], `${label}: two instances share these ids`);
+    assert.deepEqual(errors, []);
+  } finally {
+    await context.close();
   }
 }
 

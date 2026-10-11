@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { browserEngines, launchBrowser } from './harness.mjs';
-import { assertFits, openBlock, patternVariant, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
+import { assertFits, assertUniqueIds, openBlock, patternVariant, ringWalk, startVariantServer, stopOf, tabWalk } from './pattern-probes.mjs';
 import { pollUntil, warmUpServer } from './grid-list-probes.mjs';
 
 // Cross-engine proof that the property inspector block, loaded from its canonical
@@ -135,6 +135,10 @@ for (const engine of browserEngines()) {
             }
           }
         }
+      });
+
+      await t.test('two instances share no ids', async () => {
+        await assertUniqueIds(browser, url, 'property inspector');
       });
 
       await t.test('never scrolls the page horizontally at 360, 390, 768, and 1280 in light and dark', async () => {
