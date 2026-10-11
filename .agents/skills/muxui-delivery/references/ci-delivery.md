@@ -55,6 +55,14 @@ factory and Storybook preview. Breadth alone never needs approval; ask Andrew
 only if the change itself alters the product's visual direction, a public
 contract, or a safety rule.
 
+## Main and releases
+
+A push to `main` plans the full graph. A release dry run for that exact commit
+reuses a green main run instead of rerunning the graph (Decision 0030), so a red
+or missing main run sends the dry run down the full `pnpm release:prepare`. Main
+skips Storybook's own-interface colour proofs; pull requests that change
+Storybook configuration or theme, the weekly schedule, and manual runs keep them.
+
 ## Authority pull requests
 
 A PR that touches a file listed in `.github/scripts/validate-planning-pr.cjs`
@@ -65,8 +73,9 @@ added by the same PR). The list is short: the strategy documents, the platform
 safety contract, the validator with its test, the planning-policy workflow,
 `CODEOWNERS`, and the publishing workflow with the files it runs to prepare,
 prove, and guard a release (`npm-publication.mjs`, `release-prepare.mjs`,
-`release-proof.mjs`, and the React package's `publish-guard.mjs`). The root
-`release:prepare` script and `package.json` are reviewed like any other change.
+`release-lineage.mjs`, `release-proof.mjs`, and the React package's
+`publish-guard.mjs`). The root `release:prepare` script and `package.json` are
+reviewed like any other change.
 
 A Product Scope change also states `Scope version effect` on its own line; an
 effect other than `none` adds the four change-packet fields from the PR

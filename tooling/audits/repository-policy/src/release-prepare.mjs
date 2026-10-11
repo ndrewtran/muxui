@@ -21,6 +21,7 @@ import {
   createUpstreamNameMatcher,
   deriveCurrentExportSurface,
   deriveExpectedPackageEntries,
+  derivePreparation,
   deriveVisualContract,
   findModuleSideEffects,
   findPinnedDuplicateVersions,
@@ -1071,6 +1072,8 @@ try {
         generatedEntries: expectedGeneratedEntries,
       },
     },
+    // Which checks stand behind this candidate: this process's full graph, or a green main CI run (Decision 0030).
+    preparation: derivePreparation(process.env, sourceRevision),
     artifact: {
       file: candidateArchiveName,
       bytes: archiveBytes.length,

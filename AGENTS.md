@@ -40,8 +40,12 @@ executable path, slug, alias, and generated-marker contract is owned by
 - `pnpm generate`: full workspace generation by default; explicit package or
   file scopes bind generation to the required prerequisites.
 - `pnpm check:all`: the complete deterministic workspace graph and accepts no
-  narrowing flags. `pnpm release:prepare` remains full release preparation and
-  never publishes.
+  narrowing flags.
+- `pnpm release:prepare`: release preparation, which never publishes. It runs
+  the check graph without Storybook's own-interface colour proofs (Decision
+  0030), then the generation identity, the candidate packing, and the consumer
+  matrix. The publish workflow's dry run may reuse main's green full CI run for
+  the same commit instead of rerunning the graph.
 - `pnpm generate:check`: repeated no-op generation identity.
 - `pnpm test:agent`: enabled opt-in or scheduled agent evaluations.
 

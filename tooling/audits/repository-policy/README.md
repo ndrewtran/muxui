@@ -67,6 +67,13 @@ throws, or, in the default scope, when a forced-full Storybook event is active
 `--package`, `--component`, and generation commands keep their existing
 semantics.
 
+Storybook's own-interface colour proofs (manager and docs paint, onboarding,
+create-story, and the docs ArgsTable) prove the private host, not the library
+(Decision 0030). The full plan skips them on a push to `main` through
+`MUXUI_STORYBOOK_UI_PROOF=skip` and keeps them on the weekly schedule and
+manual runs; a pull request that changes Storybook configuration or theme plans
+the manager and docs proof. `pnpm release:prepare` sets the same switch.
+
 ### Check groups
 
 The package checks run in independent CI groups so the two long suites overlap
@@ -95,15 +102,18 @@ reaches what the tests load or read, through imports or as data:
   directory): `tests/evidence/`, the policy modules and test the suite imports,
   `apps/docs/src/lib/block-presets.ts`, `packages/react/src/r1-deferred-evidence.mjs`,
   Decision 0022, which the R1 exit capture reads, and the data the growth audit
-  and its fixture read from the archive of HEAD: `.gitattributes`, `.gitignore`
-  (the fixture stages files with `git add`, so ignore rules decide what the
-  audited commits contain), `.github/workflows/`, and
-  `strategy/platform-safety-contract.json` (the compiler reads it).
+  and its fixture read from the archive of HEAD: `.github/workflows/`,
+  `strategy/platform-safety-contract.json` (the compiler reads it), and the root
+  `.gitignore` (a conservative input: the fixture force-adds, so no ignore file
+  changes what its commits hold).
 - `evidenceInputPatterns` lists regular expressions for path classes:
   every `package.json` (the audit checks each workspace package's version and
-  publish configuration), the hosting and deployment file names the audit
-  rejects (copied from `hostingPaths` in `tests/evidence/bl1/boundary-audit.mjs`),
-  and `apps/*/astro.config.*` (the audit checks Astro site settings).
+  publish configuration), a `.gitattributes` at any depth (`git archive` of HEAD
+  honors `export-ignore` and `export-subst` from every directory, so a nested
+  file can drop a file the fixture reads), the hosting and deployment file names
+  the audit rejects (copied from `hostingPaths` in
+  `tests/evidence/bl1/boundary-audit.mjs`), and `apps/*/astro.config.*` (the
+  audit checks Astro site settings).
 - `evidencePresenceInputs` lists files the tests only look up by name
   (`README.md`, `pnpm-lock.yaml`, the React stylesheet, and the `pattern-<slug>`
   browser tests): adding or removing one runs the tests, editing it does not.
@@ -116,11 +126,27 @@ Decisions, strategy other than the safety contract, guidance, and the planner an
 its tests skip it. The route tests pin these lists, fail when a module the suite
 imports is not planned by them, and fail when a path class the audit or fixture
 reads as data does not plan `check:evidence`. The growth fixture does not depend
-on incidental HEAD state: it stages with `git add -f`, so an ignore rule cannot
-drop its own negative controls, and computes its version bumps from the current
-version. Main, scheduled runs, `pnpm check`, `pnpm check:all`, and
-`pnpm release:prepare` always run both scripts: the workspace runner adds
-`check:evidence` beside any run that includes this package.
+on incidental HEAD state: it stages with `git add -f`, so an ignore rule, at any
+depth, cannot drop its own negative controls (a guard fails an unforced `git add`
+there), and computes its version bumps from the current version. Main,
+scheduled runs, `pnpm check`, `pnpm check:all`, and `pnpm release:prepare`
+always run both scripts: the workspace runner adds `check:evidence` beside any
+run that includes this package.
+
+## Release lineage
+
+`.github/workflows/npm-publish.yml` builds a candidate once (Decision 0030).
+`src/release-lineage.mjs` is the part of that workflow that reads GitHub runs.
+A dry run asks `main-ci` for the push run of `ci.yml` on `main` at its exact
+commit. It reuses that run only when the run succeeded and every group of the
+full plan, recomputed from the commit, has a successful job; otherwise it runs
+the full `pnpm release:prepare`. A publish run does not rebuild: `dry-run`
+verifies the dry run named by `dry-run-id`, read as one attempt; `fetch-candidate`
+downloads that artifact's ZIP by the verified id, checks it against the API
+digest, accepts only the two expected file names, and extracts them itself into a
+fresh directory outside the checkout; and `candidate` verifies the version,
+sha512, and manifest before the approval gate. The tests are
+`test/release-lineage.test.mjs`.
 
 Evidence capture and disclosure remain owned by the architecture, Product Scope,
 package, and evidence references. See

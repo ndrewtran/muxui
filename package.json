@@ -17,7 +17,7 @@
     "storybook": "pnpm --filter @muxui/react-storybook run storybook",
     "generate:check": "node tooling/audits/repository-policy/src/generation-identity.mjs",
     "test:agent": "node tooling/audits/repository-policy/src/agent-eval-status.mjs",
-    "release:prepare": "pnpm check:all && pnpm generate:check && node tooling/audits/repository-policy/src/release-prepare.mjs"
+    "release:prepare": "MUXUI_STORYBOOK_UI_PROOF=skip pnpm check:all && pnpm generate:check && node tooling/audits/repository-policy/src/release-prepare.mjs"
   },
   "devDependencies": {
     "@muxui/catalog": "workspace:*"

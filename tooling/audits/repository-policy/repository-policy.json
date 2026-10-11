@@ -163,7 +163,6 @@
       "catalog/react-r1-6/": { "reactGenerator": true, "policy": true }
     },
     "evidenceInputs": [
-      ".gitattributes",
       ".github/workflows/",
       ".gitignore",
       "apps/docs/src/lib/block-presets.ts",
@@ -182,6 +181,7 @@
     ],
     "evidenceInputPatterns": [
       "(?:^|/)package\\.json$",
+      "(?:^|/)\\.gitattributes$",
       "(?:^|\\/)(?:netlify\\.toml|vercel\\.json|wrangler\\.(?:toml|jsonc?)|firebase\\.json|fly\\.toml|render\\.yaml|Procfile|app\\.yaml|serverless\\.ya?ml|staticwebapp\\.config\\.json|CNAME|_headers|_redirects|Dockerfile[^/]*|docker-compose[^/]*\\.ya?ml|\\.vercel\\/.*|\\.netlify\\/.*|\\.github\\/workflows\\/.*)$",
       "^apps/[^/]+/astro\\.config\\.[^/]+$"
     ],

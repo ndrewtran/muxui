@@ -547,7 +547,6 @@ test('policy-run fixture tests and retained evidence route to the repository-pol
 // when the tests' imports outgrow it. Besides these paths, the tests also load the packages policy depends on
 // (catalog, schema, tokens, tooling), which reach policy through the workspace links.
 const evidenceInputs = [
-  '.gitattributes',
   '.github/workflows/',
   '.gitignore',
   'apps/docs/src/lib/block-presets.ts',
@@ -565,10 +564,12 @@ const evidenceInputs = [
   'tooling/audits/repository-policy/test/evidence-integrity.test.mjs',
 ];
 // Path classes a prefix cannot name: every package manifest (the auditor reads each one's version, publish configuration,
-// and dependencies, and the fixture edits several), the hosting and deployment names the auditor flags (the auditor's own
-// pattern, workflows included), and Astro's site settings.
+// and dependencies, and the fixture edits several), an attributes file at any depth (`git archive` of HEAD, and of each
+// revision the auditor extracts, honors export-ignore and export-subst from every directory's .gitattributes), the hosting
+// and deployment names the auditor flags (the auditor's own pattern, workflows included), and Astro's site settings.
+// Ignore files are not a class: the fixture stages with `git add -A -f`, so only the root .gitignore stays, as a conservative input.
 const hostingPaths = String.raw`(?:^|\/)(?:netlify\.toml|vercel\.json|wrangler\.(?:toml|jsonc?)|firebase\.json|fly\.toml|render\.yaml|Procfile|app\.yaml|serverless\.ya?ml|staticwebapp\.config\.json|CNAME|_headers|_redirects|Dockerfile[^/]*|docker-compose[^/]*\.ya?ml|\.vercel\/.*|\.netlify\/.*|\.github\/workflows\/.*)$`;
-const evidenceInputPatterns = [String.raw`(?:^|/)package\.json$`, hostingPaths, String.raw`^apps/[^/]+/astro\.config\.[^/]+$`];
+const evidenceInputPatterns = [String.raw`(?:^|/)package\.json$`, String.raw`(?:^|/)\.gitattributes$`, hostingPaths, String.raw`^apps/[^/]+/astro\.config\.[^/]+$`];
 // Files the tests only look up by name, so adding or removing one matters: the growth fixture edits the README and the
 // lockfile in an archive of HEAD, the stylesheet check shows the React stylesheet at both revisions, and every shipped
 // `pattern-<slug>` browser test must belong to an enabled pattern.
@@ -705,8 +706,18 @@ test('the data the growth auditor and its fixture read, not only the modules the
   }
   assert.equal(await reaches('packages/react/src/supplemental/styles.css'), true, 'the stylesheet check shows it at both revisions');
 
-  // What git itself reads while the fixture builds its repository: the archive honors attributes, and `git add` honors ignore rules.
-  for (const path of ['.gitignore', '.gitattributes']) assert.equal(await editReaches(path), true, path);
+  // What git itself reads while the fixture builds its repository: `git archive` honors the attributes file of every directory,
+  // so each depth is an input.
+  for (const path of ['.gitattributes', '.github/.gitattributes', 'apps/docs/.gitattributes', 'packages/react/src/deep/er/.gitattributes']) {
+    assert.equal(await reaches(path), true, path);
+  }
+  // Ignore rules are not read: every `git add` in the growth fixture is forced, so a nested .gitignore cannot change what a commit holds.
+  // The root .gitignore stays a trigger only as a conservative input.
+  assert.equal(await editReaches('.gitignore'), true, '.gitignore');
+  const growthFixture = read('tooling/audits/repository-policy/test/evidence-integrity.test.mjs');
+  const stagings = [...growthFixture.slice(growthFixture.indexOf('async function growthRepository')).matchAll(/gitIn\(cwd, 'add'[^)]*\)/gu)].map(([call]) => call);
+  assert.ok(stagings.length >= 4, `the growth fixture stages its commits ${stagings.length} times`);
+  for (const call of stagings) assert.match(call, /'-f'/u, `${call} must force-add, or ignore files become evidence inputs`);
 
   // Every file the fixture edits by a literal path, whichever way it is reached.
   const fixture = read('tooling/audits/repository-policy/test/evidence-integrity.test.mjs');
@@ -722,7 +733,7 @@ test('growth-fixture state the old trigger set skipped now plans check:evidence'
   const workspacePackages = await discoverWorkspacePackages(repositoryRoot);
   const version = (value) => JSON.stringify({ name: '@muxui/react', version: value, exports: { '.': './x.mjs' } });
   const cases = [
-    // `git add -A` in the fixture honors this: ignoring netlify.toml would drop its hosting negative control.
+    // The root ignore file stays a conservative input (the fixture force-adds, so it no longer decides what a commit holds).
     ['.gitignore', { textSnapshots: { '.gitignore': { before: 'dist\n', after: 'dist\nnetlify.toml\n' } } }],
     // The fixture bumps this version; HEAD already at the bumped value would make the bump a no-op.
     ['packages/react/package.json', {
@@ -734,6 +745,10 @@ test('growth-fixture state the old trigger set skipped now plans check:evidence'
     ['apps/react-playground/package.json', { textSnapshots: { 'apps/react-playground/package.json': { before: '{"devDependencies":{"vite":"1"}}', after: '{"devDependencies":{"vite":"2"}}' } } }],
     // The compiler reads the contract from the archived tree.
     ['strategy/platform-safety-contract.json', { textSnapshots: { 'strategy/platform-safety-contract.json': { before: '{}', after: '{ }' } } }],
+    // `git archive` of HEAD honors an attributes file in any directory: this one would leave the CI workflow out of the fixture.
+    ['.gitattributes', { textSnapshots: { '.gitattributes': { before: '* text=auto\n', after: '* text=auto\n.github/workflows/ci.yml export-ignore\n' } } }],
+    ['.github/.gitattributes', { textSnapshots: { '.github/.gitattributes': { before: null, after: 'workflows/ci.yml export-ignore\n' } } }],
+    ['apps/docs/.gitattributes', { textSnapshots: { 'apps/docs/.gitattributes': { before: null, after: 'src/lib/block-presets.ts export-ignore\n' } } }],
     ['.github/workflows/npm-publish.yml', { textSnapshots: { '.github/workflows/npm-publish.yml': { before: 'a', after: 'b' } } }],
     ['netlify.toml', { textSnapshots: { 'netlify.toml': { before: null, after: '[build]\n' } } }],
     ['apps/docs/astro.config.mjs', { textSnapshots: { 'apps/docs/astro.config.mjs': { before: 'a', after: 'b' } } }],
@@ -750,7 +765,7 @@ test('growth-fixture state the old trigger set skipped now plans check:evidence'
 test('policy-run paths that no evidence test reads skip check:evidence', async () => {
   for (const path of [
     'decisions/0028-release-proof.md', 'strategy/milestone-roadmap.md', '.github/CODEOWNERS', '.github/pull_request_template.md',
-    'AGENTS.md', 'docs/agents/domain.md', '.agents/skills/muxui-delivery/SKILL.md', 'catalog/AGENTS.md',
+    'AGENTS.md', 'apps/react-storybook/.gitignore', 'docs/agents/domain.md', '.agents/skills/muxui-delivery/SKILL.md', 'catalog/AGENTS.md',
     'tooling/audits/repository-policy/README.md', 'tooling/audits/repository-policy/src/ci-impact.mjs',
     'tooling/audits/repository-policy/test/ci-impact.test.mjs', 'tooling/audits/repository-policy/repository-policy.json',
     'tests/fixtures/g0.4/corpus.json', 'tests/fixtures/g1.0/entry-contract.test.mjs',
@@ -1813,6 +1828,28 @@ test('the full plan splits check:all into independently runnable groups', () => 
   assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_EVENT, 'check:all');
   assert.equal(storybookEnv.MUXUI_STORYBOOK_AUDIT_FORCE, '1');
   assert.equal(storybookEnv.MUXUI_STORYBOOK_COLORS_ARTIFACT_DIR, '/tmp/runner/storybook-colour-audit');
+});
+
+// Decision 0030: Storybook's own-interface colour proofs are not release proof, so only a main
+// push skips them; the weekly schedule, manual runs, and pull request plans keep them.
+test('a main push skips the Storybook own-interface colour proofs and every other event keeps them', async () => {
+  const colours = (event) => {
+    const groups = executionGroups(fullWorkspacePlan(`${event} runs the full workspace graph`), {
+      packages, environment: event ? { GITHUB_EVENT_NAME: event, RUNNER_TEMP: '/tmp/runner' } : {},
+    });
+    const storybook = groups.find(({ id }) => id === 'storybook').commands.find(({ args }) => args.includes('test/storybook-colors.test.mjs'));
+    assert.equal(groups.find(({ id }) => id === 'storybook-a11y').commands.at(-1).env.MUXUI_STORYBOOK_UI_PROOF, undefined, 'the a11y group has no own-interface proof');
+    return storybook.env.MUXUI_STORYBOOK_UI_PROOF;
+  };
+  assert.equal(colours('push'), 'skip');
+  for (const event of ['schedule', 'workflow_dispatch', 'pull_request', undefined]) assert.equal(colours(event), undefined, String(event));
+
+  // A pull request that changes Storybook chrome plans the manager and docs proof without the switch.
+  const chrome = executionGroups(await plan(['apps/react-storybook/.storybook/theme.mjs']), { packages, environment: { GITHUB_EVENT_NAME: 'pull_request' }, pageIndex });
+  const chromeRun = chrome.find(({ id }) => id === 'storybook-chrome');
+  assert.ok(chromeRun, 'a Storybook theme change plans the chrome proof');
+  assert.equal(chromeRun.commands.at(-1).env.MUXUI_STORYBOOK_UI_PROOF, undefined);
+  assert.equal(chromeRun.commands.at(-1).env.MUXUI_STORYBOOK_AUDIT_PROOF, 'chrome');
 });
 
 // Before the split, main ran `pnpm --recursive --sort --if-present --filter '!<root>' --filter '!@muxui/react'

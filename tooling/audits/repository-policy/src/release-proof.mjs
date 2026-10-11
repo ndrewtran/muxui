@@ -723,3 +723,27 @@ export function replaceVersions(text, rewrites) {
   const pattern = new RegExp(`(?<![\\d.])(?:${[...rewrites.keys()].map((key) => key.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('|')})(?!\\d)`, 'gu');
   return text.replace(pattern, (match) => rewrites.get(match));
 }
+
+/**
+ * How the checks behind a candidate ran, for the release manifest (Decision 0030): the
+ * full graph in this process's `pnpm release:prepare`, or a green full main CI run that
+ * the publish workflow's dry run relied on, named by MUXUI_RELEASE_MAIN_CI_RUN and
+ * MUXUI_RELEASE_MAIN_CI_ATTEMPT. Storybook's own-interface colour proofs are never
+ * release proof, in either mode.
+ */
+export function derivePreparation(environment, headRevision) {
+  const run = environment.MUXUI_RELEASE_MAIN_CI_RUN ?? '';
+  const attempt = environment.MUXUI_RELEASE_MAIN_CI_ATTEMPT ?? '';
+  const notReleaseProof = ['Storybook manager, docs, onboarding, and create-story colour proofs (muxui:decision:0030)'];
+  if (run === '' && attempt === '') return { mode: 'full-checks', notReleaseProof };
+  if (!/^[1-9]\d*$/u.test(run) || !/^[1-9]\d*$/u.test(attempt)) {
+    fail('R1_EXIT_PREPARATION_INVALID', 'MUXUI_RELEASE_MAIN_CI_RUN and MUXUI_RELEASE_MAIN_CI_ATTEMPT must both be positive integers');
+  }
+  return {
+    mode: 'main-ci-reused',
+    mainCi: {
+      workflow: '.github/workflows/ci.yml', event: 'push', branch: 'main', headRevision, runId: Number(run), runAttempt: Number(attempt),
+    },
+    notReleaseProof,
+  };
+}
